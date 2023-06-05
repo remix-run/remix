@@ -49,6 +49,7 @@ export let serve = async (
     host: string;
     port: number;
     restart: boolean;
+    clear: boolean;
     tlsKey?: string;
     tlsCert?: string;
   }
@@ -81,12 +82,12 @@ export let serve = async (
   let server =
     options.tlsKey && options.tlsCert
       ? https.createServer(
-          {
-            key: fs.readFileSync(options.tlsKey),
-            cert: fs.readFileSync(options.tlsCert),
-          },
-          app
-        )
+        {
+          key: fs.readFileSync(options.tlsKey),
+          cert: fs.readFileSync(options.tlsCert),
+        },
+        app
+      )
       : http.createServer(app);
   let websocket = Socket.serve(server);
 
@@ -179,6 +180,7 @@ export let serve = async (
       options: {
         mode: "development",
         sourcemap: true,
+        clear: options.clear,
         onWarning: warnOnce,
         devOrigin: origin,
       },
@@ -202,7 +204,7 @@ export let serve = async (
         if (!succeeded) return;
         websocket.log(
           (state.prevManifest ? "Rebuilt" : "Built") +
-            ` in ${prettyMs(durationMs)}`
+          ` in ${prettyMs(durationMs)}`
         );
 
         // accumulate new state, but only update state after updates are processed
@@ -265,7 +267,7 @@ export let serve = async (
     console.log("Remix dev server ready");
   });
 
-  return new Promise(() => {}).finally(async () => {
+  return new Promise(() => { }).finally(async () => {
     await kill(state.appServer);
     websocket.close();
     server.close();
@@ -276,7 +278,7 @@ export let serve = async (
 let clean = (config: RemixConfig) => {
   try {
     fs.emptyDirSync(config.relativeAssetsBuildDirectory);
-  } catch {}
+  } catch { }
 };
 
 let relativePath = (file: string) => path.relative(process.cwd(), file);

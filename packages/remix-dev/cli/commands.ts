@@ -105,9 +105,8 @@ export async function init(
     }
   } catch (error: unknown) {
     if (error instanceof Error) {
-      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
-        error.message
-      }`;
+      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${error.message
+        }`;
     }
     throw error;
   }
@@ -121,7 +120,7 @@ export async function setup(platformArg?: string) {
   ) {
     console.warn(
       `Using '${platformArg}' as a platform value is deprecated. Use ` +
-        "'cloudflare' instead."
+      "'cloudflare' instead."
     );
     console.log("HINT: check the `postinstall` script in `package.json`");
     platform = SetupPlatform.Cloudflare;
@@ -148,7 +147,8 @@ export async function routes(
 export async function build(
   remixRoot: string,
   modeArg?: string,
-  sourcemap: boolean = false
+  sourcemap: boolean = false,
+  clear: boolean = false
 ): Promise<void> {
   let mode = parseMode(modeArg) ?? "production";
 
@@ -160,9 +160,22 @@ export async function build(
     );
     console.warn(
       "You have enabled source maps in production. This will make your " +
-        "server-side code visible to the public and is highly discouraged! If " +
-        "you insist, please ensure you are using environment variables for " +
-        "secrets and not hard-coding them into your source!"
+      "server-side code visible to the public and is highly discouraged! If " +
+      "you insist, please ensure you are using environment variables for " +
+      "secrets and not hard-coding them into your source!"
+    );
+    console.warn(
+      "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
+    );
+  }
+
+  if (modeArg === 'development' && modeArg) {
+    console.warn(
+      "\n⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
+    );
+    console.warn(
+      "You have enabled clear in production. This will make your " +
+      "hide the code debugging content!"
     );
     console.warn(
       "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
@@ -174,6 +187,7 @@ export async function build(
   let options: Options = {
     mode,
     sourcemap,
+    clear,
     onWarning: warnOnce,
   };
   if (mode === "development" && config.future.unstable_dev) {
@@ -195,7 +209,8 @@ export async function build(
 // TODO: replace watch in v2
 export async function watch(
   remixRootOrConfig: string | RemixConfig,
-  modeArg?: string
+  modeArg?: string,
+  clear: boolean = false
 ): Promise<void> {
   let mode = parseMode(modeArg) ?? "development";
   console.log(`Watching Remix app in ${mode} mode...`);
@@ -205,14 +220,15 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  devServer.liveReload(config);
-  return await new Promise(() => {});
+  devServer.liveReload(config, clear);
+  return await new Promise(() => { });
 }
 
 export async function dev(
   remixRoot: string,
   flags: {
     debug?: boolean;
+    clear?: boolean;
 
     // unstable_dev
     command?: string;
@@ -237,8 +253,8 @@ export async function dev(
   let config = await readConfig(remixRoot);
 
   if (config.future.unstable_dev === false) {
-    await devServer.serve(config, flags.port);
-    return await new Promise(() => {});
+    await devServer.serve(config, flags.port, flags.clear);
+    return await new Promise(() => { });
   }
 
   await devServer_unstable.serve(config, await resolveDevServe(config, flags));
@@ -253,11 +269,11 @@ export async function codemod(
     console.error(colors.red("Error: Missing codemod name"));
     console.log(
       "Usage: " +
-        colors.gray(
-          `remix codemod <${colors.arg("codemod")}> [${colors.arg(
-            "projectDir"
-          )}]`
-        )
+      colors.gray(
+        `remix codemod <${colors.arg("codemod")}> [${colors.arg(
+          "projectDir"
+        )}]`
+      )
     );
     process.exit(1);
   }
@@ -341,10 +357,10 @@ export async function generateEntry(
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
     : deps["@remix-run/cloudflare"]
-    ? "cloudflare"
-    : deps["@remix-run/node"]
-    ? "node"
-    : undefined;
+      ? "cloudflare"
+      : deps["@remix-run/node"]
+        ? "node"
+        : undefined;
 
   if (!serverRuntime) {
     let serverRuntimes = [
@@ -387,15 +403,15 @@ export async function generateEntry(
 
   let contents = isServerEntry
     ? await createServerEntry(
-        config.rootDirectory,
-        config.appDirectory,
-        defaultEntryServer
-      )
+      config.rootDirectory,
+      config.appDirectory,
+      defaultEntryServer
+    )
     : await createClientEntry(
-        config.rootDirectory,
-        config.appDirectory,
-        defaultEntryClient
-      );
+      config.rootDirectory,
+      config.appDirectory,
+      defaultEntryClient
+    );
 
   let outputExtension = useTypeScript ? "tsx" : "jsx";
   let outputEntry = `${entry}.${outputExtension}`;
@@ -474,6 +490,7 @@ type DevOrigin = {
   scheme: string;
   host: string;
   port: number;
+  clear: boolean;
 };
 let resolveDevOrigin = async (
   config: RemixConfig,
@@ -488,8 +505,8 @@ let resolveDevOrigin = async (
   // prettier-ignore
   let scheme =
     flags.scheme ??
-    (dev === true ? undefined : dev.scheme) ??
-    (flags.tlsKey && flags.tlsCert) ? "https": "http";
+      (dev === true ? undefined : dev.scheme) ??
+      (flags.tlsKey && flags.tlsCert) ? "https" : "http";
   // prettier-ignore
   let host =
     flags.host ??
@@ -500,8 +517,10 @@ let resolveDevOrigin = async (
     flags.port ??
     (dev === true ? undefined : dev.port) ??
     (await findPort());
+  let clear = !!flags.clear;
 
   return {
+    clear,
     scheme,
     host,
     port,

@@ -105,6 +105,8 @@ const createEsbuildConfig = (
     );
   }
 
+  let drop: esbuild.Drop[] | undefined = ctx.options.clear ? ['console', 'debugger'] : undefined
+
   let matchPath = ctx.config.tsconfigPath
     ? createMatchPath(ctx.config.tsconfigPath)
     : undefined;
@@ -166,9 +168,9 @@ const createEsbuildConfig = (
             } catch (error: unknown) {
               ctx.options.onWarning(
                 `The path "${args.path}" is imported in ` +
-                  `${path.relative(process.cwd(), args.importer)} but ` +
-                  `"${args.path}" was not found in your node_modules. ` +
-                  `Did you forget to install it?`,
+                `${path.relative(process.cwd(), args.importer)} but ` +
+                `"${args.path}" was not found in your node_modules. ` +
+                `Did you forget to install it?`,
                 args.path
               );
             }
@@ -206,6 +208,7 @@ const createEsbuildConfig = (
     chunkNames: "_shared/[name]-[hash]",
     assetNames: "_assets/[name]-[hash]",
     publicPath: ctx.config.publicPath,
+    drop,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
       "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(

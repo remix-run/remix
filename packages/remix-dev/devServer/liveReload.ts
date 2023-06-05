@@ -19,7 +19,7 @@ let clean = (config: RemixConfig) => {
   }
 };
 
-export async function liveReload(config: RemixConfig) {
+export async function liveReload(config: RemixConfig, clear: boolean = false) {
   clean(config);
   let wss = new WebSocket.Server({ port: config.devServerPort });
   function broadcast(event: { type: string } & Record<string, unknown>) {
@@ -47,6 +47,7 @@ export async function liveReload(config: RemixConfig) {
       options: {
         mode: "development",
         sourcemap: true,
+        clear,
         onWarning: warnOnce,
       },
       fileWatchCache,

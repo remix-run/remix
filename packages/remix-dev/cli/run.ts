@@ -38,6 +38,7 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     --remix-version     The version of Remix to use
   \`build\` Options:
     --sourcemap         Generate source maps for production
+    --clear         Clear debugger and console
   \`dev\` Options:
     --debug             Attach Node.js inspector
     --port, -p          Choose the port from which to run your app
@@ -97,6 +98,7 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
 
     $ remix build
     $ remix build --sourcemap
+    $ remix build --clear
     $ remix build my-app
 
   ${colors.heading("Run your project locally in development")}:
@@ -179,6 +181,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--no-typescript": Boolean,
       "--version": Boolean,
       "-v": "--version",
+      "--clear": Boolean,
 
       // dev server
       "--command": String,
@@ -196,6 +199,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     }
   );
 
+  debugger
   let input = args._;
 
   let flags: any = Object.entries(args).reduce((acc, [key, value]) => {
@@ -244,6 +248,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     flags.template = "remix-ts";
   }
   flags.remixVersion = args["--remix-version"];
+  flags.clear = args["--clear"]
 
   let command = input[0];
 
@@ -284,41 +289,41 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       let projectDir = projectPath
         ? path.resolve(process.cwd(), projectPath)
         : await inquirer
-            .prompt<{ dir: string }>([
-              {
-                type: "input",
-                name: "dir",
-                message: "Where would you like to create your app?",
-                default: "./my-remix-app",
-                async validate(input) {
-                  try {
-                    await validateNewProjectPath(String(input));
-                    return true;
-                  } catch (error: unknown) {
-                    if (error instanceof Error && error.message) {
-                      return error.message;
-                    }
-                    throw error;
+          .prompt<{ dir: string }>([
+            {
+              type: "input",
+              name: "dir",
+              message: "Where would you like to create your app?",
+              default: "./my-remix-app",
+              async validate(input) {
+                try {
+                  await validateNewProjectPath(String(input));
+                  return true;
+                } catch (error: unknown) {
+                  if (error instanceof Error && error.message) {
+                    return error.message;
                   }
-                },
+                  throw error;
+                }
               },
-            ])
-            .then(async (input) => {
-              let inputDir = input.dir.startsWith("~")
-                ? input.dir.replace("~", os.homedir())
-                : input.dir;
-              if (path.isAbsolute(inputDir)) {
-                return inputDir;
-              }
-              return path.resolve(process.cwd(), inputDir);
-            })
-            .catch((error) => {
-              if (error.isTtyError) {
-                console.log(helpText);
-                return;
-              }
-              throw error;
-            });
+            },
+          ])
+          .then(async (input) => {
+            let inputDir = input.dir.startsWith("~")
+              ? input.dir.replace("~", os.homedir())
+              : input.dir;
+            if (path.isAbsolute(inputDir)) {
+              return inputDir;
+            }
+            return path.resolve(process.cwd(), inputDir);
+          })
+          .catch((error) => {
+            if (error.isTtyError) {
+              console.log(helpText);
+              return;
+            }
+            throw error;
+          });
 
       if (!projectDir) {
         console.log(helpText);
@@ -417,10 +422,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             console.warn(
               colors.warning(
                 "🚨 Your terminal doesn't support interactivity; using default " +
-                  "configuration.\n\n" +
-                  "If you'd like to use different settings, try passing them " +
-                  `as arguments. Run \`${packageManager} create remix@latest --help\` to see ` +
-                  "available options."
+                "configuration.\n\n" +
+                "If you'd like to use different settings, try passing them " +
+                `as arguments. Run \`${packageManager} create remix@latest --help\` to see ` +
+                "available options."
               )
             );
             return {
@@ -457,9 +462,9 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           console.log(
             colors.warning(
               "💿 You've opted out of installing dependencies so we won't run the " +
-                path.join("remix.init", "index.js") +
-                " script for you just yet. Once you've installed " +
-                `dependencies, you can run it manually with \`${npxInterop[packageManager]} remix init\``
+              path.join("remix.init", "index.js") +
+              " script for you just yet. Once you've installed " +
+              `dependencies, you can run it manually with \`${npxInterop[packageManager]} remix init\``
             )
           );
           console.log();
@@ -494,11 +499,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     case "build":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
-      await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap);
+      await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap, flags.clear);
       break;
     case "watch":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
-      await commands.watch(input[1], process.env.NODE_ENV);
+      await commands.watch(input[1], process.env.NODE_ENV, flags.clear);
       break;
     case "setup":
       await commands.setup(input[1]);

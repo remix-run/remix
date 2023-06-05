@@ -24,7 +24,7 @@ function tryImport(packageName: string) {
   }
 }
 
-export async function serve(config: RemixConfig, portPreference?: number) {
+export async function serve(config: RemixConfig, portPreference?: number, clear: boolean = false) {
   if (config.serverEntryPoint) {
     throw new Error("remix dev is not supported for custom servers.");
   }
@@ -42,8 +42,8 @@ export async function serve(config: RemixConfig, portPreference?: number) {
     port: portPreference
       ? Number(portPreference)
       : process.env.PORT
-      ? Number(process.env.PORT)
-      : makeRange(3000, 3100),
+        ? Number(process.env.PORT)
+        : makeRange(3000, 3100),
   });
 
   let app = express();
@@ -61,7 +61,7 @@ export async function serve(config: RemixConfig, portPreference?: number) {
     )
   );
 
-  let dispose = await liveReload(config);
+  let dispose = await liveReload(config, clear);
   let server: Server | undefined;
   let onListen = () => {
     let address =

@@ -40,6 +40,9 @@ const getExternals = (config: RemixConfig): string[] => {
 };
 
 const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
+
+  let drop: esbuild.Drop[] | undefined = ctx.options.clear ? ['console', 'debugger'] : undefined
+
   return {
     entryPoints: {
       "css-bundle": cssBundleEntryModuleId,
@@ -63,6 +66,7 @@ const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
     chunkNames: "_shared/[name]-[hash]",
     assetNames: "_assets/[name]-[hash]",
     publicPath: ctx.config.publicPath,
+    drop,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
       "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
