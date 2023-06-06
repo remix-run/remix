@@ -190,6 +190,11 @@ export interface AppConfig {
   serverModuleFormat?: ServerModuleFormat;
 
   /**
+   * Whether to polyfill Node.js built-in modules in the server build.
+   */
+  serverNodeModulesPolyfill?: boolean;
+
+  /**
    * The platform the server build is targeting. Defaults to "node".
    */
   serverPlatform?: ServerPlatform;
@@ -361,6 +366,11 @@ export interface RemixConfig {
   serverModuleFormat: ServerModuleFormat;
 
   /**
+   * Whether to polyfill Node.js built-in modules in the server build.
+   */
+  serverNodeModulesPolyfill: boolean;
+
+  /**
    * The platform the server build is targeting. Defaults to "node".
    */
   serverPlatform: ServerPlatform;
@@ -485,6 +495,11 @@ export async function readConfig(
   serverMainFields ??=
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
+
+  let serverNodeModulesPolyfill = serverPlatform !== "node";
+  if (typeof appConfig.serverNodeModulesPolyfill === "boolean") {
+    serverNodeModulesPolyfill = appConfig.serverNodeModulesPolyfill;
+  }
 
   if (appConfig.future) {
     if ("unstable_cssModules" in appConfig.future) {
@@ -771,6 +786,7 @@ export async function readConfig(
     serverMinify,
     serverMode,
     serverModuleFormat,
+    serverNodeModulesPolyfill,
     serverPlatform,
     mdx,
     postcss,
