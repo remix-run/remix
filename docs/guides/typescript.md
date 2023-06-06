@@ -36,7 +36,7 @@ The Remix compiler will not do any type checking (it simply removes the types). 
     "typescript": "^5.0.4"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   }
 }
 ```
