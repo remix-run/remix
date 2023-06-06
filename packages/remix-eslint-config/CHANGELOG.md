@@ -1,8 +1,6 @@
 # `@remix-run/eslint-config`
 
-## 1.17.0-pre.1
-
-## 1.17.0-pre.0
+## 1.17.0
 
 ### Patch Changes
 

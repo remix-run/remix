@@ -1,12 +1,6 @@
 # `@remix-run/react`
 
-## 1.17.0-pre.1
-
-### Patch Changes
-
-- Lock into react router 6.12.0 version ([#6548](https://github.com/remix-run/remix/pull/6548))
-
-## 1.17.0-pre.0
+## 1.17.0
 
 ### Minor Changes
 
@@ -57,6 +51,7 @@
 ### Patch Changes
 
 - retry HDR revalidations in development mode to aid in 3rd party server race conditions ([#6287](https://github.com/remix-run/remix/pull/6287))
+- Lock into react router 6.12.0 version ([#6548](https://github.com/remix-run/remix/pull/6548))
 
 ## 1.16.1
 
