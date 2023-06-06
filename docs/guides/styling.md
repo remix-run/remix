@@ -432,11 +432,11 @@ Now we can tell it which files to generate classes from:
 import type { Config } from "tailwindcss";
 
 export default {
-   content: ["./app/**/*.{js,jsx,ts,tsx}"],
-   theme: {
-      extend: {},
-   },
-   plugins: [],
+  content: ["./app/**/*.{js,jsx,ts,tsx}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
 } satisfies Config;
 ```
 
