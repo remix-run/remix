@@ -192,7 +192,7 @@ export interface AppConfig {
   /**
    * Whether to polyfill Node.js built-in modules in the server build.
    */
-  serverNodeModulesPolyfill?: boolean;
+  serverNodeBuiltinsPolyfill?: boolean;
 
   /**
    * The platform the server build is targeting. Defaults to "node".
@@ -368,7 +368,7 @@ export interface RemixConfig {
   /**
    * Whether to polyfill Node.js built-in modules in the server build.
    */
-  serverNodeModulesPolyfill: boolean;
+  serverNodeBuiltinsPolyfill: boolean;
 
   /**
    * The platform the server build is targeting. Defaults to "node".
@@ -496,9 +496,16 @@ export async function readConfig(
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
 
-  let serverNodeModulesPolyfill = serverPlatform !== "node";
-  if (typeof appConfig.serverNodeModulesPolyfill === "boolean") {
-    serverNodeModulesPolyfill = appConfig.serverNodeModulesPolyfill;
+  let serverNodeBuiltinsPolyfill = serverPlatform !== "node";
+  if (typeof appConfig.serverNodeBuiltinsPolyfill === "boolean") {
+    serverNodeBuiltinsPolyfill = appConfig.serverNodeBuiltinsPolyfill;
+  }
+
+  if (
+    serverPlatform !== "node" &&
+    typeof appConfig.serverNodeBuiltinsPolyfill !== "boolean"
+  ) {
+    warnOnce(serverNodeBuiltinsPolyfillWarning, "serverNodeBuiltinsPolyfill");
   }
 
   if (appConfig.future) {
@@ -786,7 +793,7 @@ export async function readConfig(
     serverMinify,
     serverMode,
     serverModuleFormat,
-    serverNodeModulesPolyfill,
+    serverNodeBuiltinsPolyfill,
     serverPlatform,
     mdx,
     postcss,
@@ -923,6 +930,13 @@ export const serverModuleFormatWarning =
   "from `cjs` to `esm`. You can prepare for this change by explicitly specifying `serverModuleFormat: 'cjs'`. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat";
+
+export const serverNodeBuiltinsPolyfillWarning =
+  "⚠️ REMIX FUTURE CHANGE: The `serverNodeBuiltinsPolyfill` config default option will be changing in v2 " +
+  "from `true` to `false` regardless of platform. You can prepare for this change by explicitly specifying " +
+  "serverNodeBuiltinsPolyfill: false` or `serverNodeBuiltinsPolyfill: true` if you are currently relying on them. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.16.0/pages/v2#servernodebuiltinspolyfill";
 
 export let flatRoutesWarning =
   "⚠️ REMIX FUTURE CHANGE: The route file convention is changing in v2. " +

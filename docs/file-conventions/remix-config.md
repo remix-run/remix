@@ -191,10 +191,9 @@ Whether to minify the server build in production or not. Defaults to `false`.
 The output format of the server build, which can either be `"cjs"` or `"esm"`.
 Defaults to `"cjs"`.
 
-## serverNodeModulesPolyfill
+## serverNodeBuiltinsPolyfill
 
-Whether to polyfill Node.js built-in modules in the server build. Defaults to true
-for non-node server platforms.
+Whether to polyfill Node.js built-in modules in the server build. Defaults to true for non-node server platforms.
 
 ## serverPlatform
 
