@@ -15,5 +15,4 @@
   "main": "./dist/index.js",
   "module": "./dist/esm/index.js",
   "typings": "./dist/index.d.ts"
-  }
 }
