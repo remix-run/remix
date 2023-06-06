@@ -30,6 +30,7 @@ declare global {
   };
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
+  var __remixRevalidation: number | undefined;
   var $RefreshRuntime$: {
     performReactRefresh: () => void;
   };
@@ -139,6 +140,7 @@ if (import.meta && import.meta.hot) {
           }, 1);
         }
       });
+      window.__remixRevalidation = (window.__remixRevalidation || 0) + 1;
       router.revalidate();
     }
   );
