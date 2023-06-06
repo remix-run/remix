@@ -90,8 +90,6 @@
   `remix-serve` does not yet support TLS.
   That means this only works for custom app server using the `-c` flag for now.
 
-- Add caching to PostCSS for regular stylesheets ([#6505](https://github.com/remix-run/remix/pull/6505))
-
 - Reuse dev server port for WebSocket (Live Reload,HMR,HDR) ([#6476](https://github.com/remix-run/remix/pull/6476))
 
   As a result the `webSocketPort`/`--websocket-port` option has been obsoleted.
@@ -111,6 +109,8 @@
   You probably don't need to use scheme/host/port option if you aren't configuring networking (e.g. for Docker or SSL).
 
 ### Patch Changes
+
+- Add caching to PostCSS for regular stylesheets ([#6505](https://github.com/remix-run/remix/pull/6505))
 
 - Fix warnings when importing CSS files with `future.unstable_dev` enabled ([#6506](https://github.com/remix-run/remix/pull/6506))
 
@@ -139,11 +139,11 @@
 
 - restore color for app server output ([#6485](https://github.com/remix-run/remix/pull/6485))
 
-- - Fix route ranking bug with pathless layout route next to a sibling index route ([#4421](https://github.com/remix-run/remix/pull/4421))
+- Fix route ranking bug with pathless layout route next to a sibling index route ([#4421](https://github.com/remix-run/remix/pull/4421))
 
-    - Under the hood this is done by removing the trailing slash from all generated `path` values since the number of slash-delimited segments counts towards route ranking so the trailing slash incorrectly increases the score for routes
+  - Under the hood this is done by removing the trailing slash from all generated `path` values since the number of slash-delimited segments counts towards route ranking so the trailing slash incorrectly increases the score for routes
 
-  - Support sibling pathless layout routes by removing pathless layout routes from the unique route path checks in conventional route generation since they inherently trigger duplicate paths
+- Support sibling pathless layout routes by removing pathless layout routes from the unique route path checks in conventional route generation since they inherently trigger duplicate paths ([#4421](https://github.com/remix-run/remix/pull/4421))
 
 - fix dev server crashes caused by ungraceful hdr error handling ([#6467](https://github.com/remix-run/remix/pull/6467))
 

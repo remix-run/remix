@@ -4,9 +4,9 @@
 
 ### Minor Changes
 
-- Add `errorHeaders` parameter to the leaf `headers()` function to expose headers from thrown responses that bubble up to ancestor route boundaries. If the throwing route contains the boundary, then `errorHeaders` will be the same object as `loaderHeaders`/`actionHeaders` for that route. ([#6425](https://github.com/remix-run/remix/pull/6425))
+- Add `errorHeaders` parameter to the leaf `headers()` function to expose headers from thrown responses that bubble up to ancestor route boundaries. If the throwing route contains the boundary, then `errorHeaders` will be the same object as `loaderHeaders`/`actionHeaders` for that route. ([#6425](https://github.com/remix-run/remix/pull/6425), [#6475](https://github.com/remix-run/remix/pull/6475))
 
-- Add optional `handleError` export for custom server-side error processing. This is a new optional export from your `entry.server.tsx` that will be called with any encountered error on the Remix server (loader, action, or render error): ([#6524](https://github.com/remix-run/remix/pull/6524))
+- Add optional `handleError` export for custom server-side error processing. This is a new optional export from your `entry.server.tsx` that will be called with any encountered error on the Remix server (loader, action, or render error) ([#6495](https://github.com/remix-run/remix/pull/6495]), [#6524](https://github.com/remix-run/remix/pull/6524)):
 
   ```ts
   // entry.server.tsx
@@ -68,8 +68,6 @@
 
 ### Patch Changes
 
-- Automatically include set-cookie headers from bubbled thrown responses ([#6475](https://github.com/remix-run/remix/pull/6475))
-
 - Properly handle thrown `ErrorResponse` instances inside resource routes ([#6320](https://github.com/remix-run/remix/pull/6320))
 
 - Add `HeadersArgs` type to be consistent with loaders/actions/meta and allows for using a `function` declaration in addition to an arrow function expression ([#6247](https://github.com/remix-run/remix/pull/6247))
@@ -86,7 +84,9 @@
 
 - Ensure un-sanitized server errors are logged on the server during document requests ([#6495](https://github.com/remix-run/remix/pull/6495))
 
-- Lock into react router 6.12.0 version ([#6548](https://github.com/remix-run/remix/pull/6548))
+- Updated dependencies:
+  - [`react-router-dom@6.12.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.12.0)
+  - [`@remix-run/router@1.6.3`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#163)
 
 ## 1.16.1
 
