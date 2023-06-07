@@ -67,10 +67,12 @@ it("allows override of clean git repository check", async () => {
 
     let error = await cli.shouldError([
       "codemod",
-     "some-codemod-name",
+      "some-codemod-name",
       projectDir,
       "--force",
     ]);
-    expect(error.stdout).toContain("! Force mode: uncommitted changes may be lost");
+    expect(error.stdout).toContain(
+      "! Force mode: uncommitted changes may be lost"
+    );
   });
-})
+});
