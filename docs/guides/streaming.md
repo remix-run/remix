@@ -80,11 +80,12 @@ Let's take a dive into how to accomplish this.
 
 First, to enable streaming with React 18, you'll update your `entry.server.tsx` file to use `renderToPipeableStream`. Here's a simple (and incomplete) version of that:
 
-```tsx filename=app/entry.server.tsx lines=[1,9,18,25,30,35]
+```tsx filename=app/entry.server.tsx lines=[1,10,20,27,32,37]
 import { PassThrough } from "stream";
 
 import { Response } from "@remix-run/node"; // or cloudflare/deno
 import type {
+  AppLoadContext,
   EntryContext,
   Headers,
 } from "@remix-run/node"; // or cloudflare/deno
@@ -95,7 +96,8 @@ export default function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixContext: EntryContext
+  remixContext: EntryContext,
+  loadContext: AppLoadContext
 ) {
   return new Promise((resolve) => {
     const { pipe } = renderToPipeableStream(
@@ -126,7 +128,7 @@ export default function handleRequest(
 <details>
   <summary>For a more complete example, expand this</summary>
 
-This handles errors and properly disables streaming for bots which you typically want to force waiting so you can display all the content for SEO purposes.
+This handles errors and properly disables streaming for bots which you typically want to force waiting, so you can display all the content for SEO purposes.
 
 ```tsx filename=app/entry.server.tsx
 import { PassThrough } from "stream";
@@ -146,7 +148,8 @@ export default function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixContext: EntryContext
+  remixContext: EntryContext,
+  loadContext: AppLoadContext
 ) {
   // If the request is from a bot, we want to wait for the full
   // response to render before sending it to the client. This

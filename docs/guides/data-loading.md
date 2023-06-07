@@ -45,7 +45,7 @@ export default function Products() {
 }
 ```
 
-The component renders on the server and in the browser. The loader _only runs on the server_. That means our hard-coded products array doesn't get included in the browser bundles and it's safe to use server-only for APIs and SDKs for things like database, payment processing, content management systems, etc.
+The component renders on the server and in the browser. The loader _only runs on the server_. That means our hard-coded products array doesn't get included in the browser bundles, and it's safe to use server-only for APIs and SDKs for things like database, payment processing, content management systems, etc.
 
 If your server-side modules end up in client bundles, move the imports for those modules to a file named `{something}.server.ts` with the `.server.ts` suffix to ensure they are excluded.
 
@@ -107,9 +107,9 @@ While you may be uncomfortable throwing errors like this with `invariant` when i
 
 ## External APIs
 
-Remix polyfills the `fetch` API on your server so it's very easy to fetch data from existing JSON APIs. Instead of managing state, errors, race conditions, and more yourself, you can do the fetch from your loader (on the server) and let Remix handle the rest.
+Remix polyfills the `fetch` API on your server, so it's very easy to fetch data from existing JSON APIs. Instead of managing state, errors, race conditions, and more yourself, you can do the fetch from your loader (on the server) and let Remix handle the rest.
 
-```tsx filename=app/routes/gists.jsx lines=[5]
+```tsx filename=app/routes/gists.tsx lines=[5]
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
@@ -314,7 +314,7 @@ Given the following URLs, the search params would be parsed as follows:
 
 ### Data Reloads
 
-When multiple nested routes are rendering and the search params change, all of the routes will be reloaded (instead of just the new or changed routes). This is because search params are a cross-cutting concern and could affect any loader. If you would like to prevent some of your routes from reloading in this scenario, use [shouldRevalidate][should-revalidate].
+When multiple nested routes are rendering and the search params change, all the routes will be reloaded (instead of just the new or changed routes). This is because search params are a cross-cutting concern and could affect any loader. If you would like to prevent some of your routes from reloading in this scenario, use [shouldRevalidate][should-revalidate].
 
 ### Search Params in Components
 
@@ -471,7 +471,7 @@ export default function ProductFilters() {
 
 Often you want to keep some inputs, like checkboxes, in sync with the search params in the URL. This can get a little tricky with React's controlled component concept.
 
-This is only needed if the search params can be set in two ways and we want the inputs to stay in sync with the search params. For example, both the `<input type="checkbox">` and the `Link` can change the brand in this component:
+This is only needed if the search params can be set in two ways, and we want the inputs to stay in sync with the search params. For example, both the `<input type="checkbox">` and the `Link` can change the brand in this component:
 
 ```tsx bad lines=[11-18]
 import { useSearchParams } from "@remix-run/react";
@@ -514,7 +514,7 @@ If the user clicks the checkbox and submits the form, the URL updates and the ch
 
 Now we have the opposite problem: clicking the link updates both the URL and the checkbox state but _the checkbox no longer works_ because React prevents the state from changing until the URL that controls it changes--and it never will because we can't change the checkbox and resubmit the form.
 
-React wants you to control it with some state but we want the user to control it until they submit the form, and then we want the URL to control it when it changes. So we're in this "sorta-controlled" spot.
+React wants you to control it with some state, but we want the user to control it until they submit the form, and then we want the URL to control it when it changes. So we're in this "sorta-controlled" spot.
 
 You have two choices, and what you pick depends on the user experience you want.
 
@@ -657,9 +657,9 @@ function SearchCheckbox({ name, value }) {
 
 Remix optimizes the user experiences by only loading the data for the parts of the page that are changing on navigation. For example, consider the UI you're using right now in these docs. The navbar on the side is in a parent route that fetched the dynamically-generated menu of all the docs, and the child route fetched the document you're reading right now. If you click a link in the sidebar, Remix knows that the parent route will remain on the page - but the child route's data will change because the url param for the document will change. With this insight, Remix _will not refetch the parent route's data_.
 
-Without Remix the next question is "how do I reload all of the data?". This is built into Remix as well. Whenever an [action][action] is called (the user submitted a form or you, the programmer, called `submit` from `useSubmit`), Remix will automatically reload all of the routes on the page to capture any changes that might have happened.
+Without Remix the next question is "how do I reload all the data?". This is built into Remix as well. Whenever an [action][action] is called (the user submitted a form or you, the programmer, called `submit` from `useSubmit`), Remix will automatically reload all the routes on the page to capture any changes that might have happened.
 
-You don't have to worry about expiring caches or avoid overfetching data as the user interacts with your app, it's all automatic.
+You don't have to worry about expiring caches or avoid over-fetching data as the user interacts with your app, it's all automatic.
 
 There are three cases where Remix will reload all of your routes:
 
@@ -671,7 +671,7 @@ All of these behaviors emulate the browser's default behavior. In these cases, R
 
 ## Data Libraries
 
-Thanks to Remix's data conventions and nested routes, you'll usually find you don't need to reach for client side data libraries like React Query, SWR, Apollo, Relay, urql and others. If you're using global state management libraries like redux, primarily for interacting with data on the server, it's also unlikely you'll need those.
+Thanks to Remix's data conventions and nested routes, you'll usually find you don't need to reach for client side data libraries like React Query, SWR, Apollo, Relay, `urql` and others. If you're using global state management libraries like redux, primarily for interacting with data on the server, it's also unlikely you'll need those.
 
 Of course, Remix doesn't prevent you from using them (unless they require bundler integration). You can bring whatever React data libraries you like and use them wherever you think they'll serve your UI better than the Remix APIs. In some cases you can use Remix for the initial server render and then switch over to your favorite library for the interactions afterward.
 
