@@ -58,8 +58,7 @@ export async function loadPostcssPlugins({
       let postcssConfig = await loadConfig(
         // We're nesting our custom context values in a "remix"
         // namespace to avoid clashing with other tools.
-        // @ts-expect-error Custom context values aren't type safe.
-        { remix: context },
+        { remix: postcssContext } as loadConfig.ConfigContext, // Custom config extensions aren't type safe
         rootDirectory
       );
 
