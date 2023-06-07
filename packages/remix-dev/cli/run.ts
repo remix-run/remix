@@ -504,7 +504,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.setup(input[1]);
       break;
     case "codemod": {
-      await commands.codemod(input[1], input[2]);
+      await commands.codemod(input[1], input[2], flags);
       break;
     }
     case "reveal": {
