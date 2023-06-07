@@ -635,8 +635,11 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
 2. Your `entry.server.tsx` will look something like this:
 
-   ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
-   import type { EntryContext } from "@remix-run/node"; // or cloudflare/deno
+   ```tsx filename=entry.server.tsx lines=[7,16,19-24,26-27]
+   import type {
+     AppLoadContext,
+     EntryContext,
+   } from "@remix-run/node"; // or cloudflare/deno
    import { RemixServer } from "@remix-run/react";
    import { renderToString } from "react-dom/server";
    import { ServerStyleSheet } from "styled-components";
@@ -645,7 +648,8 @@ Here's some sample code to show how you might use Styled Components with Remix (
      request: Request,
      responseStatusCode: number,
      responseHeaders: Headers,
-     remixContext: EntryContext
+     remixContext: EntryContext,
+     loadContext: AppLoadContext
    ) {
      const sheet = new ServerStyleSheet();
 
