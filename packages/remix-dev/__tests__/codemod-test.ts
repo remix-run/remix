@@ -56,3 +56,21 @@ it("checks that the specified codemod exists", async () => {
     expect(error.stderr).toContain(`Unrecognized codemod: ${codemodName}`);
   });
 });
+
+it("allows override of clean git repository check", async () => {
+  await withApp(FIXTURE, async (projectDir) => {
+    // initialize git repo in project
+    await git.initialCommit(projectDir);
+
+    // make some uncommitted changes
+    fs.appendFileSync(path.join(projectDir, "package.json"), "change");
+
+    let error = await cli.shouldError([
+      "codemod",
+     "some-codemod-name",
+      projectDir,
+      "--force",
+    ]);
+    expect(error.stdout).toContain("! Force mode: uncommitted changes may be lost");
+  });
+})
