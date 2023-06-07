@@ -1,9 +1,10 @@
 const path = require("path");
-const express = require("express");
-const compression = require("compression");
-const morgan = require("morgan");
+
 const { createRequestHandler } = require("@remix-run/express");
 const { installGlobals } = require("@remix-run/node");
+const compression = require("compression");
+const express = require("express");
+const morgan = require("morgan");
 
 installGlobals();
 

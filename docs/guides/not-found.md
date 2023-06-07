@@ -4,7 +4,7 @@ title: Not Found Handling
 
 # Not Found (404) Handling
 
-When a document isn't found on a web server, it should send a [404 status code][404-status-code]. This indicates to machines that the document is not there: search engines won't index it, CDNS won't cache it, etc. Most SPAs today just serve everything as 200 whether the page exists or not, but for you that stops today!
+When a document isn't found on a web server, it should send a [404 status code][404-status-code]. This indicates to machines that the document is not there: search engines won't index it, CDNs won't cache it, etc. Most SPAs today just serve everything as 200 whether the page exists or not, but for you that stops today!
 
 There are two primary cases where a Remix site should send a 404:
 
@@ -24,8 +24,9 @@ export async function loader({ params }: LoaderArgs) {
   });
 
   if (!page) {
-    throw new Response("Not Found", {
+    throw new Response(null, {
       status: 404,
+      statusText: "Not Found",
     });
   }
 
@@ -82,8 +83,9 @@ export async function loader({ params }: LoaderArgs) {
   });
 
   if (!page) {
-    throw new Response("Not Found", {
+    throw new Response(null, {
       status: 404,
+      statusText: "Not Found",
     });
   }
 

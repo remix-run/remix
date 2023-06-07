@@ -7,7 +7,6 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
-  ErrorResponse,
   Navigation,
   TrackedPromise,
 } from "@remix-run/router";
@@ -174,23 +173,14 @@ export function RemixRouteError({ id }: { id: string }) {
   }
 
   if (isRouteErrorResponse(error)) {
-    let tError = error as any;
-    if (
-      tError?.error instanceof Error &&
-      tError.status !== 404 &&
-      ErrorBoundary
-    ) {
+    let tError = error;
+    if (!!tError?.error && tError.status !== 404 && ErrorBoundary) {
       // Internal framework-thrown ErrorResponses
       return <ErrorBoundary error={tError.error} />;
     }
     if (CatchBoundary) {
       // User-thrown ErrorResponses
-      return (
-        <RemixCatchBoundary
-          component={CatchBoundary!}
-          catch={error as ErrorResponse}
-        />
-      );
+      return <RemixCatchBoundary catch={error} component={CatchBoundary} />;
     }
   }
 
@@ -222,11 +212,11 @@ export interface RemixNavLinkProps extends NavLinkProps {
 }
 
 interface PrefetchHandlers {
-  onFocus?: FocusEventHandler<Element>;
-  onBlur?: FocusEventHandler<Element>;
-  onMouseEnter?: MouseEventHandler<Element>;
-  onMouseLeave?: MouseEventHandler<Element>;
-  onTouchStart?: TouchEventHandler<Element>;
+  onFocus?: FocusEventHandler;
+  onBlur?: FocusEventHandler;
+  onMouseEnter?: MouseEventHandler;
+  onMouseLeave?: MouseEventHandler;
+  onTouchStart?: TouchEventHandler;
 }
 
 function usePrefetchBehavior(
@@ -364,19 +354,19 @@ export function composeEventHandlers<
 
 let linksWarning =
   "⚠️ REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. " +
-  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`." +
+  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
 
 let useTransitionWarning =
   "⚠️ REMIX FUTURE CHANGE: `useTransition` will be removed in v2 in favor of `useNavigation`. " +
-  "You can prepare for this change at your convenience by updating to `useNavigation`." +
+  "You can prepare for this change at your convenience by updating to `useNavigation`. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#usetransition";
 
 let fetcherTypeWarning =
   "⚠️ REMIX FUTURE CHANGE: `fetcher.type` will be removed in v2. " +
-  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX." +
+  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#usefetcher";
 
@@ -1087,13 +1077,8 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   let preloads = isHydrated ? [] : manifest.entry.imports.concat(routePreloads);
 
-  return (
+  return isHydrated ? null : (
     <>
-      <link
-        rel="modulepreload"
-        href={manifest.url}
-        crossOrigin={props.crossOrigin}
-      />
       <link
         rel="modulepreload"
         href={manifest.entry.module}
@@ -1107,8 +1092,8 @@ import(${JSON.stringify(manifest.entry.module)});`;
           crossOrigin={props.crossOrigin}
         />
       ))}
-      {!isHydrated && initialScripts}
-      {!isHydrated && deferredScripts}
+      {initialScripts}
+      {deferredScripts}
     </>
   );
 }
@@ -1719,7 +1704,7 @@ export const LiveReload =
     ? () => null
     : function LiveReload({
         // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
-        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
+        port,
         timeoutMs = 1000,
         nonce = undefined,
       }: {
@@ -1737,9 +1722,9 @@ export const LiveReload =
                 function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let port = (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.websocketPort) || ${String(
-                    port
-                  )};
+                  let port = ${port} || (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.port) || ${Number(
+                process.env.REMIX_DEV_SERVER_WS_PORT || 8002
+              )};
                   let socketPath = protocol + "//" + host + ":" + port + "/socket";
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = async (message) => {
