@@ -47,14 +47,18 @@ export interface ActionFunction {
 /**
  * A React component that is rendered when the server throws a Response.
  *
- * @deprecated Please use `@remix-run/react`'s `CatchBoundaryComponent` type instead
+ * @deprecated Please enable the v2_errorBoundary flag to eliminate the need
+ * for this type.  If you are still using this, please use `@remix-run/react`'s
+ * `CatchBoundaryComponent` type
  */
 export type CatchBoundaryComponent = any;
 
 /**
  * A React component that is rendered when there is an error on a route.
  *
- * @deprecated Please use `@remix-run/react`'s `ErrorBoundaryComponent` type instead
+ * @deprecated Please enable the v2_errorBoundary flag to eliminate the need
+ * for this type.  If you are still using this, please use `@remix-run/react`'s
+ * `ErrorBoundaryComponent` type
  */
 export type ErrorBoundaryComponent = any;
 
@@ -63,7 +67,9 @@ export type ErrorBoundaryComponent = any;
  * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
  * errors with useRouteError()
  *
- * @deprecated Please use `@remix-run/react`'s `V2_ErrorBoundaryComponent` type instead
+ * @deprecated Please enable the v2_errorBoundary flag to eliminate the need
+ * for this type.  If you are still using this, please use `@remix-run/react`'s
+ * `V2_ErrorBoundaryComponent` type
  */
 export type V2_ErrorBoundaryComponent = any;
 
