@@ -1864,6 +1864,11 @@
   resolved "https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.17.6.tgz#a38a789d0ed157495a6b5b4469ec7868b59e5278"
   integrity sha512-ujp8uoQCM9FRcbDfkqECoARsLnLfCUhKARTP56TFPog8ie9JG83D5GVKjQ6yVrEVdMie1djH86fm98eY3quQkQ==
 
+"@esbuild/linux-loong64@0.14.54":
+  version "0.14.54"
+  resolved "https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.14.54.tgz#de2a4be678bd4d0d1ffbb86e6de779cde5999028"
+  integrity sha512-bZBrLAIX1kpWelV0XemxBZllyRmM6vgFQQG2GdNb+r3Fkp0FOh1NJSvekXDs7jq70k4euu1cryLMfU+mTXlEpw==
+
 "@esbuild/linux-loong64@0.17.19":
   version "0.17.19"
   resolved "https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.17.19.tgz#0f887b8bb3f90658d1a0117283e55dbd4c9dcf72"
@@ -6315,6 +6320,33 @@ esbuild@0.17.6:
     "@esbuild/win32-arm64" "0.17.6"
     "@esbuild/win32-ia32" "0.17.6"
     "@esbuild/win32-x64" "0.17.6"
+
+esbuild@^0.14.54:
+  version "0.14.54"
+  resolved "https://registry.npmjs.org/esbuild/-/esbuild-0.14.54.tgz#8b44dcf2b0f1a66fc22459943dccf477535e9aa2"
+  integrity sha512-Cy9llcy8DvET5uznocPyqL3BFRrFXSVqbgpMJ9Wz8oVjZlh/zUSNbPRbov0VX7VxN2JH1Oa0uNxZ7eLRb62pJA==
+  optionalDependencies:
+    "@esbuild/linux-loong64" "0.14.54"
+    esbuild-android-64 "0.14.54"
+    esbuild-android-arm64 "0.14.54"
+    esbuild-darwin-64 "0.14.54"
+    esbuild-darwin-arm64 "0.14.54"
+    esbuild-freebsd-64 "0.14.54"
+    esbuild-freebsd-arm64 "0.14.54"
+    esbuild-linux-32 "0.14.54"
+    esbuild-linux-64 "0.14.54"
+    esbuild-linux-arm "0.14.54"
+    esbuild-linux-arm64 "0.14.54"
+    esbuild-linux-mips64le "0.14.54"
+    esbuild-linux-ppc64le "0.14.54"
+    esbuild-linux-riscv64 "0.14.54"
+    esbuild-linux-s390x "0.14.54"
+    esbuild-netbsd-64 "0.14.54"
+    esbuild-openbsd-64 "0.14.54"
+    esbuild-sunos-64 "0.14.54"
+    esbuild-windows-32 "0.14.54"
+    esbuild-windows-64 "0.14.54"
+    esbuild-windows-arm64 "0.14.54"
 
 esbuild@^0.17.5:
   version "0.17.19"
