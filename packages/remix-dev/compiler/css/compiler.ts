@@ -1,6 +1,6 @@
 import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
-import { polyfillNode as NodeModulesPolyfillPlugin } from "esbuild-plugin-polyfill-node";
+import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 
 import type { RemixConfig } from "../../config";
 import { getAppDependencies } from "../../dependencies";
@@ -85,7 +85,7 @@ const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
       externalPlugin(/^https?:\/\//, { sideEffects: false }),
       mdxPlugin(ctx),
       emptyModulesPlugin(ctx, /\.server(\.[jt]sx?)?$/),
-      NodeModulesPolyfillPlugin(),
+      nodeModulesPolyfillPlugin(),
       externalPlugin(/^node:.*/, { sideEffects: false }),
     ],
     supported: {
@@ -101,10 +101,10 @@ export let create = async (ctx: Context) => {
   });
   let compile = async () => {
     let { outputFiles } = await compiler.rebuild();
-    let bundle = outputFiles.find((outputFile) =>
+    let bundleOutputFile = outputFiles.find((outputFile) =>
       isBundle(ctx, outputFile, ".css")
     );
-    return { bundle, outputFiles };
+    return { bundleOutputFile, outputFiles };
   };
   return {
     compile,
