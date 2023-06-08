@@ -8,7 +8,6 @@ import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
 import NPMCliPackageJson from "@npmcli/package-json";
 import { coerce } from "semver";
-import pc from "picocolors";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -225,11 +224,12 @@ export async function dev(
   // clear screen
   process.stdout.write("\x1Bc");
 
+  // TODO: statically get version
+  let version = "1.17.0";
+  console.log(`\n 💿  remix dev v${version}\n`);
+
   if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
-    logger.warn(
-      "forcing `NODE_ENV=development`" +
-        pc.gray(` (was ${JSON.stringify(process.env.NODE_ENV)})`)
-    );
+    logger.warn(`overriding NODE_ENV=${process.env.NODE_ENV} to development`);
   }
   process.env.NODE_ENV = "development";
   if (flags.debug) inspector.open();

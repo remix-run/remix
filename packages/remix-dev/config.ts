@@ -5,6 +5,7 @@ import fse from "fs-extra";
 import getPort from "get-port";
 import NPMCliPackageJson from "@npmcli/package-json";
 import { coerce } from "semver";
+import pc from "picocolors";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -14,6 +15,7 @@ import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
 import { detectPackageManager } from "./cli/detectPackageManager";
 import { warnOnce } from "./warnOnce";
+import { logger } from "./tux/logger";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -430,19 +432,19 @@ export async function readConfig(
   }
 
   if (!appConfig.future?.v2_errorBoundary) {
-    warnOnce(errorBoundaryWarning, "v2_errorBoundary");
+    logger.warn(...errorBoundaryWarning);
   }
 
   if (!appConfig.future?.v2_normalizeFormMethod) {
-    warnOnce(formMethodWarning, "v2_normalizeFormMethod");
+    logger.warn(...formMethodWarning);
   }
 
   if (!appConfig.future?.v2_meta) {
-    warnOnce(metaWarning, "v2_meta");
+    logger.warn(...metaWarning);
   }
 
   if (!appConfig.future?.v2_headers) {
-    warnOnce(headersWarning, "v2_headers");
+    logger.warn(...headersWarning);
   }
 
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
@@ -462,7 +464,7 @@ export async function readConfig(
   let serverMinify = appConfig.serverMinify;
 
   if (!appConfig.serverModuleFormat) {
-    warnOnce(serverModuleFormatWarning, "serverModuleFormatWarning");
+    logger.warn(...serverModuleFormatWarning);
   }
 
   let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
@@ -690,7 +692,7 @@ export async function readConfig(
   if (appConfig.future?.v2_routeConvention) {
     routesConvention = flatRoutes;
   } else {
-    warnOnce(flatRoutesWarning, "v2_routeConvention");
+    logger.warn(...flatRoutesWarning);
     routesConvention = defineConventionalRoutes;
   }
 
@@ -884,6 +886,23 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
   type: "disjunction",
 });
 
+let futureWarn = (
+  message: string,
+  options: {
+    flag: string;
+    link: string;
+  }
+): Parameters<typeof logger.warn> => [
+  pc.yellow("future") + " " + message,
+  {
+    details: [
+      `You can use the \`${options.flag}\` future flag to opt-in early`,
+      `-> ${options.link}`,
+    ],
+    key: options.flag,
+  },
+];
+
 export let browserBuildDirectoryWarning =
   "⚠️ REMIX FUTURE CHANGE: The `browserBuildDirectory` config option will be removed in v2. " +
   "Use `assetsBuildDirectory` instead. " +
@@ -902,39 +921,48 @@ export let serverBuildTargetWarning =
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#serverbuildtarget";
 
-export const serverModuleFormatWarning =
-  "⚠️ REMIX FUTURE CHANGE: The `serverModuleFormat` config default option will be changing in v2 " +
-  "from `cjs` to `esm`. You can prepare for this change by explicitly specifying `serverModuleFormat: 'cjs'`. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat";
+const serverModuleFormatWarning = futureWarn(
+  "The `serverModuleFormat` config default option will be changing in v2",
+  {
+    flag: "TODO",
+    // "from `cjs` to `esm`. You can prepare for this change by explicitly specifying `serverModuleFormat: 'cjs'`. ";
+    link: "https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat",
+  }
+);
 
-export let flatRoutesWarning =
-  "⚠️ REMIX FUTURE CHANGE: The route file convention is changing in v2. " +
-  "You can prepare for this change at your convenience with the `v2_routeConvention` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention";
+const flatRoutesWarning = futureWarn(
+  "The route file convention is changing in v2",
+  {
+    flag: "v2_routeConvention",
+    link: "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention",
+  }
+);
 
-export const errorBoundaryWarning =
-  "⚠️ REMIX FUTURE CHANGE: The behaviors of `CatchBoundary` and `ErrorBoundary` are changing in v2. " +
-  "You can prepare for this change at your convenience with the `v2_errorBoundary` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#catchboundary-and-errorboundary";
+const errorBoundaryWarning = futureWarn(
+  "The behaviors of `CatchBoundary` and `ErrorBoundary` are changing in v2",
+  {
+    flag: "v2_errorBoundary",
+    link: "https://remix.run/docs/en/v1.15.0/pages/v2#catchboundary-and-errorboundary",
+  }
+);
 
-export const formMethodWarning =
-  "⚠️ REMIX FUTURE CHANGE: APIs that provide `formMethod` will be changing in v2. " +
-  "All values will be uppercase (GET, POST, etc.) instead of lowercase (get, post, etc.) " +
-  "You can prepare for this change at your convenience with the `v2_normalizeFormMethod` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#formMethod";
+const formMethodWarning = futureWarn(
+  "APIs that provide `formMethod` will be changing in v2",
+  {
+    flag: "v2_normalizeFormMethod",
+    link: "https://remix.run/docs/en/v1.15.0/pages/v2#formMethod",
+  }
+);
 
-export const metaWarning =
-  "⚠️ REMIX FUTURE CHANGE: The route `meta` export signature is changing in v2. " +
-  "You can prepare for this change at your convenience with the `v2_meta` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#meta";
+const metaWarning = futureWarn(
+  "route `meta` export signature is changing in v2",
+  {
+    flag: "v2_meta",
+    link: "https://remix.run/docs/en/v1.15.0/pages/v2#meta",
+  }
+);
 
-export const headersWarning =
-  "⚠️ REMIX FUTURE CHANGE: The route `headers` export behavior is changing in v2. " +
-  "You can prepare for this change at your convenience with the `v2_headers` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.17.0/pages/v2#route-headers";
+const headersWarning = futureWarn("`headers` export is changing in v2", {
+  flag: "v2_headers",
+  link: "https://remix.run/docs/en/v1.17.0/pages/v2#route-headers",
+});

@@ -106,7 +106,7 @@ export let serve = async (
       )}`;
     let newAppServer = execa
       .command(cmd, {
-        stdio: "pipe",
+        // stdio: "pipe",
         env: {
           NODE_ENV: "development",
           PATH:
@@ -124,17 +124,13 @@ export let serve = async (
         invariant("path" in e && typeof e.path === "string", "path missing");
 
         if (command === undefined) {
-          logger.error(
-            `command not found: ${e.path}\n` +
-              [
-                ` ┃ \`remix dev\` did not receive \`--command\` nor \`-c\`, defaulting to \`${cmd}\`.`,
-                " ┃ You probably meant to use `-c` for your app server command.",
-                " ┗ For example: `remix dev -c 'node ./server.js'`",
-                "",
-              ]
-                .map(pc.gray)
-                .join("\n")
-          );
+          logger.error(`command not found: ${e.path}`, {
+            details: [
+              `\`remix dev\` did not receive \`--command\` nor \`-c\`, defaulting to \`${cmd}\`.`,
+              "You probably meant to use `-c` for your app server command.",
+              "For example: `remix dev -c 'node ./server.js'`",
+            ],
+          });
           process.exit(1);
         }
         logger.error("app failed to start" + pc.gray(` (${command})`));

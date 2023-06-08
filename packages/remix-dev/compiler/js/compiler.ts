@@ -163,7 +163,7 @@ const createEsbuildConfig = (
                   `${path.relative(process.cwd(), args.importer)} but ` +
                   `"${args.path}" was not found in your node_modules. ` +
                   `Did you forget to install it?`,
-                args.path
+                { key: args.path }
               );
             }
           }

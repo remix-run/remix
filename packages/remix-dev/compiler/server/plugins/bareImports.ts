@@ -92,7 +92,7 @@ export function serverBareModulesPlugin(ctx: Context): Plugin {
                 `${relative(process.cwd(), importer)} but ` +
                 `"${path}" was not found in your node_modules. ` +
                 `Did you forget to install it?`,
-              path
+              { key: path }
             );
           }
         }
@@ -158,7 +158,7 @@ function warnOnceIfEsmOnlyPackage(
     let packageJsonFile = path.join(packageDir, "package.json");
 
     if (!fs.existsSync(packageJsonFile)) {
-      ctx.options.logger.warn(packageJsonFile, `does not exist`);
+      ctx.options.logger.warn(`${packageJsonFile} does not exist`);
       return;
     }
     let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf-8"));
@@ -183,7 +183,7 @@ function warnOnceIfEsmOnlyPackage(
         ctx.options.logger.warn(
           `${packageName} is possibly an ESM only package and should be bundled with ` +
             `"serverDependenciesToBundle" in remix.config.js.`,
-          packageName + ":esm-only"
+          { key: packageName + ":esm-only" }
         );
       }
     }
