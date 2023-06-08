@@ -24,13 +24,13 @@ npx create-remix@latest
   <a href="/pages/v2" aria-label="Preparing for v2">
     <docs-card>
       <h4>Preparing for v2</h4> 
-      <p>Remix v2 is coming soon! All of the new APIs and behaviors are available already in v1 behind Future Flags. This doc will help you incrementally adopt each one so that when its time to update to v2, you don't have to change a thing.</p>
+      <p>Remix v2 is coming soon! All of the new APIs and behaviors are available already in v1 behind Future Flags. This doc will help you incrementally adopt each one so that when it's time to update to v2, you don't have to change a thing.</p>
     </docs-card>
   </a>
   <a href="/tutorials/blog" aria-label="Developer Blog Tutorial">
     <docs-card>
       <h4>Blog Tutorial</h4>
-      <p>Spend your first few minutes with Remix here and let us introduce some of the core features as quickly as possible. After this you can go explore the docs or dive deeper with the other tutorials. We'll build a little markdown blog with data loading, actions, form validation, redirects, and more.</p>
+      <p>Spend your first few minutes with Remix here and let us introduce some of the core features as quickly as possible. After this, you can go explore the docs or dive deeper with the other tutorials. We'll build a little markdown blog with data loading, actions, form validation, redirects, and more.</p>
     </docs-card>
   </a>
   <a href="/tutorials/jokes" aria-label="Jokes App Tutorial">
