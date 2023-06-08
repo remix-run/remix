@@ -21,5 +21,9 @@
     "@remix-run/testing": "1.17.0",
     "@remix-run/vercel": "1.17.0"
   },
-  "changesets": []
+  "changesets": [
+    "large-taxis-tie",
+    "lazy-css-bundle",
+    "polyfill-replacement"
+  ]
 }
