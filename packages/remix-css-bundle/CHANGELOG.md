@@ -1,5 +1,11 @@
 # @remix-run/css-bundle
 
+## 1.17.1
+
+### Patch Changes
+
+- Lazily generate CSS bundle when import of `@remix-run/css-bundle` is detected ([`a1855e476`](https://github.com/remix-run/remix/commit/a1855e4766a9dc0be1e9358a4c4a80d470822c6e))
+
 ## 1.17.0
 
 ### Patch Changes
