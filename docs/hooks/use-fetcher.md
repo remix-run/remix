@@ -161,7 +161,7 @@ function SomeComponent() {
     if (fetcher.state === "idle" && fetcher.data == null) {
       fetcher.load("/some/route");
     }
-  }, [fetcher]);
+  }, []);
 
   fetcher.data; // the data from the loader
 }
