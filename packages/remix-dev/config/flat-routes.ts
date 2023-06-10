@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import globToRegex from "glob-to-regexp";
+import { makeRe } from "minimatch";
 
 import type { ConfigRoute, RouteManifest } from "./routes";
 import { normalizeSlashes } from "./routes";
@@ -77,9 +77,9 @@ export function flatRoutes(
   ignoredFilePatterns: string[] = [],
   prefix = "routes"
 ) {
-  let ignoredFileRegex = ignoredFilePatterns.map((pattern) => {
-    return globToRegex(pattern);
-  });
+  let ignoredFileRegex = ignoredFilePatterns
+    .map((re) => makeRe(re))
+    .filter((re: any): re is RegExp => !!re);
   let routesDir = path.join(appDirectory, prefix);
 
   let rootRoute = findConfig(appDirectory, "root", routeModuleExts);
@@ -214,10 +214,57 @@ export function flatRoutesUniversal(
         .replace(/\/$/, "");
     }
 
+    if (!config.parentId) config.parentId = "root";
+
+    /**
+     * We do not try to detect path collisions for pathless layout route
+     * files because, by definition, they create the potential for route
+     * collisions _at that level in the tree_.
+     *
+     * Consider example where a user may want multiple pathless layout routes
+     * for different subfolders
+     *
+     *   routes/
+     *     account.tsx
+     *     account._private.tsx
+     *     account._private.orders.tsx
+     *     account._private.profile.tsx
+     *     account._public.tsx
+     *     account._public.login.tsx
+     *     account._public.perks.tsx
+     *
+     * In order to support both a public and private layout for `/account/*`
+     * URLs, we are creating a mutually exclusive set of URLs beneath 2
+     * separate pathless layout routes.  In this case, the route paths for
+     * both account._public.tsx and account._private.tsx is the same
+     * (/account), but we're again not expecting to match at that level.
+     *
+     * By only ignoring this check when the final portion of the filename is
+     * pathless, we will still detect path collisions such as:
+     *
+     *   routes/parent._pathless.foo.tsx
+     *   routes/parent._pathless2.foo.tsx
+     *
+     * and
+     *
+     *   routes/parent._pathless/index.tsx
+     *   routes/parent._pathless2/index.tsx
+     */
+    let lastRouteSegment = config.id
+      .replace(new RegExp(`^${prefix}/`), "")
+      .split(".")
+      .pop();
+    let isPathlessLayoutRoute =
+      lastRouteSegment &&
+      lastRouteSegment.startsWith("_") &&
+      lastRouteSegment !== "_index";
+    if (isPathlessLayoutRoute) {
+      continue;
+    }
+
     let conflictRouteId = originalPathname + (config.index ? "?index" : "");
     let conflict = uniqueRoutes.get(conflictRouteId);
 
-    if (!config.parentId) config.parentId = "root";
     config.path = pathname || undefined;
     uniqueRoutes.set(conflictRouteId, config);
 

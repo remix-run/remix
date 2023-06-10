@@ -70,30 +70,35 @@ export class RemixErrorBoundary extends React.Component<
  * When app's don't provide a root level ErrorBoundary, we default to this.
  */
 export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
-  console.error(error);
+  // Only log client side to avoid double-logging on the server
+  React.useEffect(() => {
+    console.error(error);
+  }, [error]);
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta
           name="viewport"
-          content="width=device-width,initial-scale=1,viewport-fit=cover"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
         <title>Application Error!</title>
       </head>
       <body>
         <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
           <h1 style={{ fontSize: "24px" }}>Application Error</h1>
-          <pre
-            style={{
-              padding: "2rem",
-              background: "hsla(10, 50%, 50%, 0.1)",
-              color: "red",
-              overflow: "auto",
-            }}
-          >
-            {error.stack}
-          </pre>
+          {error.stack ? (
+            <pre
+              style={{
+                padding: "2rem",
+                background: "hsla(10, 50%, 50%, 0.1)",
+                color: "red",
+                overflow: "auto",
+              }}
+            >
+              {error.stack}
+            </pre>
+          ) : null}
         </main>
         <script
           dangerouslySetInnerHTML={{
@@ -183,7 +188,7 @@ function RemixRootDefaultCatchBoundaryImpl({
         <meta charSet="utf-8" />
         <meta
           name="viewport"
-          content="width=device-width,initial-scale=1,viewport-fit=cover"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
         <title>Unhandled Thrown Response!</title>
       </head>

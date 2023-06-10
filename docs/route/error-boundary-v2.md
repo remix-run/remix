@@ -35,7 +35,7 @@ import {
 } from "@remix-run/react";
 
 export function ErrorBoundary() {
-  let error = useRouteError();
+  const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
     return (

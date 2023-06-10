@@ -41,7 +41,7 @@ export default function Report() {
 
 It's linking to a PDF version of the page. To make this work we can create a Resource Route below it. Notice that it has no component: that makes it a Resource Route.
 
-```tsx filename=app/routes/reports/$id/pdf.ts
+```tsx filename=app/routes/reports/$id/pdf.tsx
 export async function loader({ params }: LoaderArgs) {
   const report = await getReport(params.id);
   const pdf = await generateReportPDF(report);
@@ -124,9 +124,10 @@ export const action = async ({ request }: ActionArgs) => {
 Resource routes can be used to handle webhooks. For example, you can create a webhook that receives notifications from GitHub when a new commit is pushed to a repository:
 
 ```tsx
+import crypto from "crypto";
+
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import crypto from "crypto";
 
 export const action = async ({ request }: ActionArgs) => {
   if (request.method !== "POST") {

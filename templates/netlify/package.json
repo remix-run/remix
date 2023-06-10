@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@netlify/functions": "^1.4.0",
+    "@remix-run/css-bundle": "*",
     "@remix-run/netlify": "*",
     "@remix-run/node": "*",
     "@remix-run/react": "*",
@@ -24,9 +25,9 @@
     "@types/react": "^18.0.35",
     "@types/react-dom": "^18.0.11",
     "eslint": "^8.38.0",
-    "typescript": "^4.9.5"
+    "typescript": "^5.0.4"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   }
 }

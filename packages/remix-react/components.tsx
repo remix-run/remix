@@ -7,7 +7,6 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
-  ErrorResponse,
   Navigation,
   TrackedPromise,
 } from "@remix-run/router";
@@ -22,6 +21,7 @@ import {
   Await as AwaitRR,
   Link as RouterLink,
   NavLink as RouterNavLink,
+  Outlet,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
   isRouteErrorResponse,
@@ -113,7 +113,7 @@ function useRemixContext(): RemixContextObject {
 // RemixRoute
 
 export function RemixRoute({ id }: { id: string }) {
-  let { routeModules } = useRemixContext();
+  let { routeModules, future } = useRemixContext();
 
   invariant(
     routeModules,
@@ -121,7 +121,15 @@ export function RemixRoute({ id }: { id: string }) {
       "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
   );
 
-  let { default: Component } = routeModules[id];
+  let { default: Component, ErrorBoundary, CatchBoundary } = routeModules[id];
+
+  // Default Component to Outlet if we expose boundary UI components
+  if (
+    !Component &&
+    (ErrorBoundary || (!future.v2_errorBoundary && CatchBoundary))
+  ) {
+    Component = Outlet;
+  }
 
   invariant(
     Component,
@@ -165,23 +173,14 @@ export function RemixRouteError({ id }: { id: string }) {
   }
 
   if (isRouteErrorResponse(error)) {
-    let tError = error as any;
-    if (
-      tError?.error instanceof Error &&
-      tError.status !== 404 &&
-      ErrorBoundary
-    ) {
+    let tError = error;
+    if (!!tError?.error && tError.status !== 404 && ErrorBoundary) {
       // Internal framework-thrown ErrorResponses
       return <ErrorBoundary error={tError.error} />;
     }
     if (CatchBoundary) {
       // User-thrown ErrorResponses
-      return (
-        <RemixCatchBoundary
-          component={CatchBoundary!}
-          catch={error as ErrorResponse}
-        />
-      );
+      return <RemixCatchBoundary catch={error} component={CatchBoundary} />;
     }
   }
 
@@ -213,11 +212,11 @@ export interface RemixNavLinkProps extends NavLinkProps {
 }
 
 interface PrefetchHandlers {
-  onFocus?: FocusEventHandler<Element>;
-  onBlur?: FocusEventHandler<Element>;
-  onMouseEnter?: MouseEventHandler<Element>;
-  onMouseLeave?: MouseEventHandler<Element>;
-  onTouchStart?: TouchEventHandler<Element>;
+  onFocus?: FocusEventHandler;
+  onBlur?: FocusEventHandler;
+  onMouseEnter?: MouseEventHandler;
+  onMouseLeave?: MouseEventHandler;
+  onTouchStart?: TouchEventHandler;
 }
 
 function usePrefetchBehavior(
@@ -355,19 +354,19 @@ export function composeEventHandlers<
 
 let linksWarning =
   "⚠️ REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. " +
-  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`." +
+  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
 
 let useTransitionWarning =
   "⚠️ REMIX FUTURE CHANGE: `useTransition` will be removed in v2 in favor of `useNavigation`. " +
-  "You can prepare for this change at your convenience by updating to `useNavigation`." +
+  "You can prepare for this change at your convenience by updating to `useNavigation`. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#usetransition";
 
 let fetcherTypeWarning =
   "⚠️ REMIX FUTURE CHANGE: `fetcher.type` will be removed in v2. " +
-  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX." +
+  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#usefetcher";
 
@@ -384,7 +383,14 @@ let fetcherSubmissionWarning =
  */
 export function Links() {
   let { manifest, routeModules } = useRemixContext();
-  let { matches } = useDataRouterStateContext();
+  let { errors, matches: routerMatches } = useDataRouterStateContext();
+
+  let matches = errors
+    ? routerMatches.slice(
+        0,
+        routerMatches.findIndex((m) => errors![m.route.id]) + 1
+      )
+    : routerMatches;
 
   let links = React.useMemo(
     () => getLinksForMatches(matches, routeModules, manifest),
@@ -569,8 +575,19 @@ function PrefetchPageLinksImpl({
  */
 function V1Meta() {
   let { routeModules } = useRemixContext();
-  let { matches, loaderData } = useDataRouterStateContext();
+  let {
+    errors,
+    matches: routerMatches,
+    loaderData,
+  } = useDataRouterStateContext();
   let location = useLocation();
+
+  let matches = errors
+    ? routerMatches.slice(
+        0,
+        routerMatches.findIndex((m) => errors![m.route.id]) + 1
+      )
+    : routerMatches;
 
   let meta: V1_HtmlMetaDescriptor = {};
   let parentsData: { [routeId: string]: AppData } = {};
@@ -667,8 +684,19 @@ function V1Meta() {
 
 function V2Meta() {
   let { routeModules } = useRemixContext();
-  let { matches: _matches, loaderData } = useDataRouterStateContext();
+  let {
+    errors,
+    matches: routerMatches,
+    loaderData,
+  } = useDataRouterStateContext();
   let location = useLocation();
+
+  let _matches = errors
+    ? routerMatches.slice(
+        0,
+        routerMatches.findIndex((m) => errors![m.route.id]) + 1
+      )
+    : routerMatches;
 
   let meta: V2_MetaDescriptor[] = [];
   let leafMeta: V2_MetaDescriptor[] | null = null;
@@ -1049,13 +1077,8 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   let preloads = isHydrated ? [] : manifest.entry.imports.concat(routePreloads);
 
-  return (
+  return isHydrated ? null : (
     <>
-      <link
-        rel="modulepreload"
-        href={manifest.url}
-        crossOrigin={props.crossOrigin}
-      />
       <link
         rel="modulepreload"
         href={manifest.entry.module}
@@ -1069,8 +1092,8 @@ import(${JSON.stringify(manifest.entry.module)});`;
           crossOrigin={props.crossOrigin}
         />
       ))}
-      {!isHydrated && initialScripts}
-      {!isHydrated && deferredScripts}
+      {initialScripts}
+      {deferredScripts}
     </>
   );
 }
@@ -1680,7 +1703,8 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
-        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
+        // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
+        port,
         timeoutMs = 1000,
         nonce = undefined,
       }: {
@@ -1698,9 +1722,9 @@ export const LiveReload =
                 function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let port = (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(
-                    port
-                  )};
+                  let port = ${port} || (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.port) || ${Number(
+                process.env.REMIX_DEV_SERVER_WS_PORT || 8002
+              )};
                   let socketPath = protocol + "//" + host + ":" + port + "/socket";
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = async (message) => {
@@ -1720,10 +1744,12 @@ export const LiveReload =
                       }
                       if (!event.updates || !event.updates.length) return;
                       let updateAccepted = false;
+                      let needsRevalidation = new Set();
                       for (let update of event.updates) {
                         console.log("[HMR] " + update.reason + " [" + update.id +"]")
                         if (update.revalidate) {
-                          console.log("[HMR] Revalidating [" + update.id + "]");
+                          needsRevalidation.add(update.routeId);
+                          console.log("[HMR] Revalidating [" + update.routeId + "]");
                         }
                         let imported = await import(update.url +  '?t=' + event.assetsManifest.hmr.timestamp);
                         if (window.__hmr__.contexts[update.id]) {
@@ -1738,7 +1764,7 @@ export const LiveReload =
                       }
                       if (event.assetsManifest && window.__hmr__.contexts["remix:manifest"]) {
                         let accepted = window.__hmr__.contexts["remix:manifest"].emit(
-                          event.assetsManifest
+                          { needsRevalidation, assetsManifest: event.assetsManifest }
                         );
                         if (accepted) {
                           console.log("[HMR] Updated accepted by", "remix:manifest");

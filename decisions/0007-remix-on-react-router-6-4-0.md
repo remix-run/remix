@@ -61,7 +61,7 @@ For example, pseudo code for this might look like the following, where we enable
 const ENABLE_REMIX_ROUTER = false;
 
 async function handleDocumentRequest({ request }) {
-  let appState = {
+  const appState = {
     trackBoundaries: true,
     trackCatchBoundaries: true,
     catchBoundaryRouteId: null,
@@ -73,14 +73,14 @@ async function handleDocumentRequest({ request }) {
 
   // ... do all the current stuff
 
-  let serverHandoff = {
+  const serverHandoff = {
     actionData,
     appState: appState,
     matches: entryMatches,
     routeData,
   };
 
-  let entryContext = {
+  const entryContext = {
     ...serverHandoff,
     manifest: build.assets,
     routeModules,
@@ -90,8 +90,8 @@ async function handleDocumentRequest({ request }) {
   // If the flag is enabled, process the request again with the new static
   // handler and confirm we get the same data on the other side
   if (ENABLE_REMIX_ROUTER) {
-    let staticHandler = unstable_createStaticHandler(routes);
-    let context = await staticHandler.query(request);
+    const staticHandler = unstable_createStaticHandler(routes);
+    const context = await staticHandler.query(request);
 
     // Note: == only used for brevity ;)
     assert(entryContext.matches === context.matches);

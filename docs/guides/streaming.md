@@ -80,21 +80,24 @@ Let's take a dive into how to accomplish this.
 
 First, to enable streaming with React 18, you'll update your `entry.server.tsx` file to use `renderToPipeableStream`. Here's a simple (and incomplete) version of that:
 
-```tsx filename=app/entry.server.tsx lines=[1-2,17,24,29,34]
+```tsx filename=app/entry.server.tsx lines=[1,10,20,27,32,37]
 import { PassThrough } from "stream";
-import { renderToPipeableStream } from "react-dom/server";
-import { RemixServer } from "@remix-run/react";
+
 import { Response } from "@remix-run/node"; // or cloudflare/deno
 import type {
+  AppLoadContext,
   EntryContext,
   Headers,
 } from "@remix-run/node"; // or cloudflare/deno
+import { RemixServer } from "@remix-run/react";
+import { renderToPipeableStream } from "react-dom/server";
 
 export default function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixContext: EntryContext
+  remixContext: EntryContext,
+  loadContext: AppLoadContext
 ) {
   return new Promise((resolve) => {
     const { pipe } = renderToPipeableStream(
@@ -125,18 +128,19 @@ export default function handleRequest(
 <details>
   <summary>For a more complete example, expand this</summary>
 
-This handles errors and properly disables streaming for bots which you typically want to force waiting so you can display all the content for SEO purposes.
+This handles errors and properly disables streaming for bots which you typically want to force waiting, so you can display all the content for SEO purposes.
 
 ```tsx filename=app/entry.server.tsx
 import { PassThrough } from "stream";
-import { renderToPipeableStream } from "react-dom/server";
-import { RemixServer } from "@remix-run/react";
+
 import { Response } from "@remix-run/node"; // or cloudflare/deno
 import type {
   EntryContext,
   Headers,
 } from "@remix-run/node"; // or cloudflare/deno
+import { RemixServer } from "@remix-run/react";
 import isbot from "isbot";
+import { renderToPipeableStream } from "react-dom/server";
 
 const ABORT_DELAY = 5000;
 
@@ -144,7 +148,8 @@ export default function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixContext: EntryContext
+  remixContext: EntryContext,
+  loadContext: AppLoadContext
 ) {
   // If the request is from a bot, we want to wait for the full
   // response to render before sending it to the client. This
@@ -183,7 +188,7 @@ function serveTheBots(
         // Use onAllReady to wait for the entire document to be ready
         onAllReady() {
           responseHeaders.set("Content-Type", "text/html");
-          let body = new PassThrough();
+          const body = new PassThrough();
           pipe(body);
           resolve(
             new Response(body, {
@@ -219,7 +224,7 @@ function serveBrowsers(
         // use onShellReady to wait until a suspense boundary is triggered
         onShellReady() {
           responseHeaders.set("Content-Type", "text/html");
-          let body = new PassThrough();
+          const body = new PassThrough();
           pipe(body);
           resolve(
             new Response(body, {
@@ -259,11 +264,11 @@ With just that in place, you're unlikely to see any significant performance impr
 
 With React streaming set up, now you can start adding `Await` usage for your slow data requests where you'd rather render a fallback UI. Let's do that for our example above:
 
-```tsx lines=[1,3,4,9-11,13-15,24-33,38-40]
-import { Suspense } from "react";
+```tsx lines=[2-4,9-11,13-15,24-33,38-40]
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { defer } from "@remix-run/node"; // or cloudflare/deno
 import { Await, useLoaderData } from "@remix-run/react";
+import { Suspense } from "react";
 
 import { getPackageLocation } from "~/models/packages";
 

@@ -115,6 +115,15 @@ describe("remix CLI", () => {
           \`dev\` Options:
             --debug             Attach Node.js inspector
             --port, -p          Choose the port from which to run your app
+
+            [unstable_dev]
+            --command, -c       Command used to run your app server
+            --scheme            Scheme for the dev server. Default: http
+            --host              Host for the dev server. Default: localhost
+            --port              Port for the dev server. Default: any open port
+            --no-restart        Do not restart the app server when rebuilds occur.
+            --tls-key           Path to TLS key (key.pem)
+            --tls-cert          Path to TLS certificate (cert.pem)
           \`init\` Options:
             --no-delete         Skip deleting the \`remix.init\` script
           \`routes\` Options:

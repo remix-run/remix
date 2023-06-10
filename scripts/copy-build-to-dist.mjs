@@ -141,9 +141,9 @@ async function getPackageBuildPaths(moduleRootDir) {
       if (path.basename(moduleDir) === "@remix-run") {
         packageBuilds.push(...(await getPackageBuildPaths(moduleDir)));
       } else if (
-        /node_modules\/@remix-run\//.test(moduleDir) ||
-        /node_modules\/create-remix/.test(moduleDir) ||
-        /node_modules\/remix/.test(moduleDir)
+        /node_modules[/\\]@remix-run[/\\]/.test(moduleDir) ||
+        /node_modules[/\\]create-remix/.test(moduleDir) ||
+        /node_modules[/\\]remix/.test(moduleDir)
       ) {
         packageBuilds.push(moduleDir);
       }

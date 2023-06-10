@@ -55,6 +55,7 @@ module.exports = {
         "no-unused-expressions": OFF,
         "no-unused-labels": OFF,
         "no-unused-vars": OFF,
+        "prefer-const": WARN,
         "jsx-a11y/alt-text": OFF,
         "jsx-a11y/anchor-has-content": OFF,
         "prefer-let/prefer-let": OFF,

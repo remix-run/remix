@@ -1,5 +1,27 @@
 # `@remix-run/cloudflare-workers`
 
+## 1.17.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.17.0`
+
+## 1.16.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.16.1`
+
+## 1.16.0
+
+### Patch Changes
+
+- feat: support async `getLoadContext` in all adapters ([#6170](https://github.com/remix-run/remix/pull/6170))
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.16.0`
+
 ## 1.15.0
 
 ### Patch Changes

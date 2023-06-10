@@ -23,7 +23,7 @@ import {
 export type GetLoadContextFunction = (
   req: VercelRequest,
   res: VercelResponse
-) => AppLoadContext;
+) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler = (
   req: VercelRequest,
@@ -47,7 +47,7 @@ export function createRequestHandler({
 
   return async (req, res) => {
     let request = createRemixRequest(req, res);
-    let loadContext = getLoadContext?.(req, res);
+    let loadContext = await getLoadContext?.(req, res);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
