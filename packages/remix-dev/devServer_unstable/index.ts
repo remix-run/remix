@@ -15,7 +15,6 @@ import { type RemixConfig } from "../config";
 import { loadEnv } from "./env";
 import * as Socket from "./socket";
 import * as HMR from "./hmr";
-import { warnOnce } from "../warnOnce";
 import { detectPackageManager } from "../cli/detectPackageManager";
 import * as HDR from "./hdr";
 import type { Result } from "../result";
@@ -180,7 +179,6 @@ export let serve = async (
       options: {
         mode: "development",
         sourcemap: true,
-        onWarning: warnOnce,
         devOrigin: origin,
       },
       fileWatchCache,
