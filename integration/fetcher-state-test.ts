@@ -165,7 +165,11 @@ test.describe("fetcher states", () => {
     await app.goto("/page", true);
     await app.clickElement(`#${TYPES.actionSubmission}`);
     await page.waitForSelector("#loading", { state: "hidden" });
-    let text = (await app.getElement("#states")).text();
+    let text = await (
+      await page.waitForSelector("#states:has-text('done')")
+    ).textContent();
+    if (!text) throw new Error("states not found");
+
     expect(JSON.parse(text)).toEqual([
       {
         state: "submitting",
@@ -213,7 +217,11 @@ test.describe("fetcher states", () => {
     await app.goto("/page", true);
     await app.clickElement(`#${TYPES.loaderSubmission}`);
     await page.waitForSelector("#loading", { state: "hidden" });
-    let text = (await app.getElement("#states")).text();
+    let text = await (
+      await page.waitForSelector("#states:has-text('done')")
+    ).textContent();
+    if (!text) throw new Error("states not found");
+
     expect(JSON.parse(text)).toEqual([
       {
         state: "submitting",
@@ -247,7 +255,10 @@ test.describe("fetcher states", () => {
     await app.goto("/page", true);
     await app.clickElement(`#${TYPES.actionRedirect}`);
     await page.waitForSelector("#loading", { state: "hidden" });
-    let text = (await app.getElement("#states")).text();
+    let text = await (
+      await page.waitForSelector("#states:has-text('done')")
+    ).textContent();
+    if (!text) throw new Error("states not found");
     expect(JSON.parse(text)).toEqual([
       {
         state: "submitting",
@@ -289,7 +300,10 @@ test.describe("fetcher states", () => {
     await app.goto("/page", true);
     await app.clickElement(`#${TYPES.normalLoad}`);
     await page.waitForSelector("#loading", { state: "hidden" });
-    let text = (await app.getElement("#states")).text();
+    let text = await (
+      await page.waitForSelector("#states:has-text('done')")
+    ).textContent();
+    if (!text) throw new Error("states not found");
     expect(JSON.parse(text)).toEqual([
       {
         state: "loading",

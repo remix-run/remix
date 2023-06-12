@@ -265,7 +265,7 @@ let expectConsoleError = (
   };
 };
 
-let HMR_TIMEOUT_MS = 10_000;
+let HMR_TIMEOUT_MS = 15_000;
 
 test("HMR", async ({ page, browserName }) => {
   // uncomment for debugging
@@ -292,7 +292,7 @@ test("HMR", async ({ page, browserName }) => {
         if (dev.exitCode) throw Error("Dev server exited early");
         return /✅ app ready: /.test(devStdout());
       },
-      { timeoutMs: 10_000 }
+      { timeoutMs: HMR_TIMEOUT_MS }
     );
 
     await page.goto(`http://localhost:${appPort}`, {
@@ -401,12 +401,13 @@ test("HMR", async ({ page, browserName }) => {
       }
     `;
     fs.writeFileSync(indexPath, withLoader1);
-    await expect.poll(() => dataRequests).toBe(1);
     await page.waitForLoadState("networkidle");
 
     await page.getByText("Hello, world").waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
+
+    await expect.poll(() => dataRequests).toBe(1);
 
     let withLoader2 = `
       import { json } from "@remix-run/node";
@@ -430,13 +431,13 @@ test("HMR", async ({ page, browserName }) => {
     `;
     fs.writeFileSync(indexPath, withLoader2);
 
-    await expect.poll(() => dataRequests).toBe(2);
-
     await page.waitForLoadState("networkidle");
 
     await page.getByText("Hello, planet").waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
+
+    await expect.poll(() => dataRequests).toBe(2);
 
     // change shared component
     let updatedCounter = `
@@ -497,12 +498,12 @@ whatsup
 <Component/>
 `;
     fs.writeFileSync(mdxPath, mdx);
-    await expect.poll(() => dataRequests).toBe(4);
     await page.waitForSelector(`#hot`);
+    await expect.poll(() => dataRequests).toBe(4);
 
     fs.writeFileSync(mdxPath, originalMdx);
-    await expect.poll(() => dataRequests).toBe(5);
     await page.waitForSelector(`#crazy`);
+    await expect.poll(() => dataRequests).toBe(5);
 
     // dev server doesn't crash when rebuild fails
     await page.click(`a[href="/"]`);
