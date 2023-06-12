@@ -21,6 +21,7 @@ import * as HDR from "./hdr";
 import type { Result } from "../result";
 import { err, ok } from "../result";
 import invariant from "../invariant";
+import { logger } from "../tux";
 
 type Origin = {
   scheme: string;
@@ -183,6 +184,7 @@ export let serve = async (
         devOrigin: origin,
       },
       fileWatchCache,
+      logger,
     },
     {
       onBuildStart: async (ctx) => {

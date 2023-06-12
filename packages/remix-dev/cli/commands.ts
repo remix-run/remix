@@ -26,6 +26,7 @@ import { transpile as convertFileToJS } from "./useJavascript";
 import { warnOnce } from "../warnOnce";
 import type { Options } from "../compiler/options";
 import { createFileWatchCache } from "../compiler/fileWatchCache";
+import { logger } from "../tux";
 
 export async function create({
   appTemplate,
@@ -184,10 +185,12 @@ export async function build(
   let fileWatchCache = createFileWatchCache();
 
   fse.emptyDirSync(config.assetsBuildDirectory);
-  await compiler.build({ config, options, fileWatchCache }).catch((thrown) => {
-    compiler.logThrown(thrown);
-    process.exit(1);
-  });
+  await compiler
+    .build({ config, options, fileWatchCache, logger })
+    .catch((thrown) => {
+      compiler.logThrown(thrown);
+      process.exit(1);
+    });
 
   console.log(`Built in ${prettyMs(Date.now() - start)}`);
 }
