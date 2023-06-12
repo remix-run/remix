@@ -15,6 +15,11 @@ const config: PlaywrightTestConfig = {
   retries: process.env.CI ? 3 : 0,
   reporter: process.env.CI ? "dot" : [["html", { open: "never" }]],
   use: { actionTimeout: 0 },
+  webServer: {
+    reuseExistingServer: true,
+    port: 9000,
+    command: "node ./get-port-process.mjs"
+  },
 
   projects: [
     {

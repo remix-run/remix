@@ -2,7 +2,6 @@ import type { Writable } from "node:stream";
 import path from "node:path";
 import fse from "fs-extra";
 import express from "express";
-import getPort from "get-port";
 import dedent from "dedent";
 import stripIndent from "strip-indent";
 import serializeJavaScript from "serialize-javascript";
@@ -14,6 +13,7 @@ import { ServerMode } from "@remix-run/server-runtime/mode";
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
+import { getPort } from "./get-port";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 

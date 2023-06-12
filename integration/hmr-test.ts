@@ -3,10 +3,10 @@ import execa from "execa";
 import fs from "node:fs";
 import path from "node:path";
 import type { Readable } from "node:stream";
-import getPort, { makeRange } from "get-port";
 
 import type { FixtureInit } from "./helpers/create-fixture";
 import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
+import { getPort } from "./helpers/get-port";
 
 test.setTimeout(120_000);
 
@@ -279,9 +279,7 @@ test("HMR", async ({ page, browserName }) => {
     }
   });
 
-  let portRange = makeRange(3080, 3099);
-  let appPort = await getPort({ port: portRange });
-  let devPort = await getPort({ port: portRange });
+  let [appPort, devPort] = await Promise.all([getPort(), getPort()]);
   let projectDir = await createFixtureProject(fixture({ appPort, devPort }));
 
   // spin up dev server
