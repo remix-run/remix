@@ -264,6 +264,7 @@ async function handleDocumentRequestRR(
     routeModules: createEntryRouteModules(build.routes),
     staticHandlerContext: context,
     serverHandoffString: createServerHandoffString({
+      url: context.location.pathname + context.location.search,
       state: {
         loaderData: context.loaderData,
         actionData: context.actionData,
@@ -307,6 +308,7 @@ async function handleDocumentRequestRR(
       ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString({
+        url: context.location.pathname + context.location.search,
         state: {
           loaderData: context.loaderData,
           actionData: context.actionData,
