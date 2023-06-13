@@ -230,11 +230,7 @@ export async function dev(
   console.log(`\n 💿  remix dev\n`);
 
   if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
-    console.warn(
-      `Forcing NODE_ENV to be 'development'. Was: ${JSON.stringify(
-        process.env.NODE_ENV
-      )}`
-    );
+    logger.warn(`overriding NODE_ENV=${process.env.NODE_ENV} to development`);
   }
   process.env.NODE_ENV = "development";
   if (flags.debug) inspector.open();
