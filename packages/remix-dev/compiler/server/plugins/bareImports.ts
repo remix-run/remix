@@ -162,7 +162,7 @@ function warnOnceIfEsmOnlyPackage(
     let packageJsonFile = path.join(packageDir, "package.json");
 
     if (!fs.existsSync(packageJsonFile)) {
-      console.log(packageJsonFile, `does not exist`);
+      ctx.logger.warn(`could not find package.json for ${packageName}`);
       return;
     }
     let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf-8"));
