@@ -277,11 +277,20 @@ export const createSessionStorageFactory =
       },
       async commitSession(session, options) {
         let { id, data } = session;
+        let expires = cookie.expires;
+
+        if (options?.expires) {
+          expires = options.expires;
+        }
+
+        if (options?.maxAge) {
+          expires = new Date(Date.now() + options.maxAge * 1000);
+        }
 
         if (id) {
-          await updateData(id, data, cookie.expires);
+          await updateData(id, data, expires);
         } else {
-          id = await createData(data, cookie.expires);
+          id = await createData(data, expires);
         }
 
         return cookie.serialize(id, options);
