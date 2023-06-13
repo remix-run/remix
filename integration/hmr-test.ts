@@ -267,6 +267,13 @@ let expectConsoleError = (
 
 let HMR_TIMEOUT_MS = 10_000;
 
+test.beforeEach(async ({ context }) => {
+  await context.route(/_data/, async (route) => {
+    await new Promise((r) => setTimeout(r, 50));
+    route.continue();
+  });
+});
+
 test("HMR", async ({ page, browserName }) => {
   // uncomment for debugging
   // page.on("console", (msg) => console.log(msg.text()));
