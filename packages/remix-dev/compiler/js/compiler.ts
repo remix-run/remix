@@ -163,7 +163,7 @@ const createEsbuildConfig = (
               (pkgManager === "yarn" && process.versions.pnp == null))
           ) {
             try {
-              require.resolve(args.path);
+              require.resolve(args.path, { paths: [args.importer] });
             } catch (error: unknown) {
               ctx.options.onWarning(
                 `The path "${args.path}" is imported in ` +
