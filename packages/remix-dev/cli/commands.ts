@@ -8,6 +8,7 @@ import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
 import NPMCliPackageJson from "@npmcli/package-json";
 import { coerce } from "semver";
+import pc from "picocolors";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -152,21 +153,18 @@ export async function build(
 ): Promise<void> {
   let mode = parseMode(modeArg) ?? "production";
 
-  console.log(`Building Remix app in ${mode} mode...`);
+  logger.info(`building...` + pc.gray(` (NODE_ENV=${mode})`));
 
   if (modeArg === "production" && sourcemap) {
-    console.warn(
-      "\n⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
-    );
-    console.warn(
-      "You have enabled source maps in production. This will make your " +
-        "server-side code visible to the public and is highly discouraged! If " +
-        "you insist, please ensure you are using environment variables for " +
-        "secrets and not hard-coding them into your source!"
-    );
-    console.warn(
-      "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
-    );
+    logger.warn("🚨  source maps enabled in production", {
+      details: [
+        "You are using `--sourcemap` to enable source maps in production,",
+        "making your server-side code publicly visible in the browser.",
+        "This is highly discouraged!",
+        "If you insist, ensure that you are using environment variables for secrets",
+        "and are not hard-coding them in your source.",
+      ],
+    });
   }
 
   let start = Date.now();
@@ -190,7 +188,7 @@ export async function build(
       process.exit(1);
     });
 
-  console.log(`Built in ${prettyMs(Date.now() - start)}`);
+  logger.info("built" + pc.gray(` (${prettyMs(Date.now() - start)})`));
 }
 
 // TODO: replace watch in v2
