@@ -410,7 +410,7 @@ test("HMR", async ({ page, browserName }) => {
       }
     `;
     fs.writeFileSync(indexPath, withLoader1);
-    await expect.poll(() => dataRequests).toBe(1);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(1);
     await page.waitForLoadState("networkidle");
 
     await page.getByText("Hello, world").waitFor({ timeout: HMR_TIMEOUT_MS });
@@ -439,7 +439,7 @@ test("HMR", async ({ page, browserName }) => {
     `;
     fs.writeFileSync(indexPath, withLoader2);
 
-    await expect.poll(() => dataRequests).toBe(2);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(2);
 
     await page.waitForLoadState("networkidle");
 
@@ -506,11 +506,11 @@ whatsup
 <Component/>
 `;
     fs.writeFileSync(mdxPath, mdx);
-    await expect.poll(() => dataRequests).toBe(4);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(4);
     await page.waitForSelector(`#hot`);
 
     fs.writeFileSync(mdxPath, originalMdx);
-    await expect.poll(() => dataRequests).toBe(5);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(5);
     await page.waitForSelector(`#crazy`);
 
     // dev server doesn't crash when rebuild fails
