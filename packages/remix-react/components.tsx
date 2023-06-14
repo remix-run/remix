@@ -1049,7 +1049,9 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   if (!isStatic && typeof __remixContext === "object" && __remixContext.a) {
     for (let i = 0; i < __remixContext.a; i++) {
-      deferredScripts.push(<DeferredHydrationScript key={i} scriptProps={props} />);
+      deferredScripts.push(
+        <DeferredHydrationScript key={i} scriptProps={props} />
+      );
     }
   }
 
@@ -1140,7 +1142,11 @@ function DeferredHydrationScript({
         <Await
           resolve={deferredData.data[dataKey]}
           errorElement={
-            <ErrorDeferredHydrationScript dataKey={dataKey} routeId={routeId} scriptProps={scriptProps} />
+            <ErrorDeferredHydrationScript
+              dataKey={dataKey}
+              routeId={routeId}
+              scriptProps={scriptProps}
+            />
           }
           children={(data) => (
             <script
