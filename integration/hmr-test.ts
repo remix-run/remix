@@ -267,13 +267,6 @@ let expectConsoleError = (
 
 let HMR_TIMEOUT_MS = 10_000;
 
-test.beforeEach(async ({ context }) => {
-  await context.route(/_data/, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    route.continue();
-  });
-});
-
 test("HMR", async ({ page, browserName }) => {
   // uncomment for debugging
   // page.on("console", (msg) => console.log(msg.text()));
@@ -301,7 +294,7 @@ test("HMR", async ({ page, browserName }) => {
         if (dev.exitCode) throw Error("Dev server exited early");
         return /✅ app ready: /.test(devStdout());
       },
-      { timeoutMs: 10_000 }
+      { timeoutMs: HMR_TIMEOUT_MS }
     );
 
     await page.goto(`http://localhost:${appPort}`, {
