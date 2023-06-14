@@ -1,3 +1,9 @@
+> **Warning**  
+> The `@remix-run/vercel` runtime adapter has been deprecated in favor of out of
+> the box Vercel functionality and will be removed in Remix v2.  
+> This means you don't have to use the Vercel template & can just use the Remix
+> template instead.
+
 # Welcome to Remix!
 
 - [Remix Docs](https://remix.run/docs)
