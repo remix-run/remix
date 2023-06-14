@@ -269,7 +269,7 @@ let HMR_TIMEOUT_MS = 10_000;
 
 test.beforeEach(async ({ context }) => {
   await context.route(/_data/, async (route) => {
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
     route.continue();
   });
 });

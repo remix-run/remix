@@ -19,7 +19,7 @@ test.describe("fetcher states", () => {
 
   test.beforeEach(async ({ context }) => {
     await context.route(/_data/, async (route) => {
-      await new Promise((r) => setTimeout(r, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
       route.continue();
     });
   });
