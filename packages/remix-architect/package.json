@@ -15,10 +15,10 @@
   "typings": "dist/index.d.ts",
   "dependencies": {
     "@architect/functions": "^5.2.0",
-    "@remix-run/node": "1.17.0"
+    "@remix-run/node": "1.17.0",
+    "@types/aws-lambda": "^8.10.82"
   },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.82",
     "@types/lambda-tester": "^3.6.1",
     "lambda-tester": "^4.0.1"
   },
