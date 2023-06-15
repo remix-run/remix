@@ -4,8 +4,8 @@
 
 ### Patch Changes
 
-- Bump to react-router 6.12.1 ([#6572](https://github.com/remix-run/remix/pull/6572))
-- Bump to `react-router-dom@6.13.0` and opt-into `React.startTransition` usage ([#6609](https://github.com/remix-run/remix/pull/6609))
+- Updated dependencies:
+  - [`react-router-dom@6.13.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.13.0)
 
 ## 1.17.0
 
