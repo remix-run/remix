@@ -950,6 +950,7 @@ export function Scripts(props: ScriptProps) {
                       deferredData={deferredData}
                       routeId={routeId}
                       dataKey={key}
+                      scriptProps={props}
                     />
                   );
 
@@ -1048,7 +1049,9 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   if (!isStatic && typeof __remixContext === "object" && __remixContext.a) {
     for (let i = 0; i < __remixContext.a; i++) {
-      deferredScripts.push(<DeferredHydrationScript key={i} />);
+      deferredScripts.push(
+        <DeferredHydrationScript key={i} scriptProps={props} />
+      );
     }
   }
 
@@ -1102,10 +1105,12 @@ function DeferredHydrationScript({
   dataKey,
   deferredData,
   routeId,
+  scriptProps,
 }: {
   dataKey?: string;
   deferredData?: DeferredData;
   routeId?: string;
+  scriptProps?: ScriptProps;
 }) {
   if (typeof document === "undefined" && deferredData && dataKey && routeId) {
     invariant(
@@ -1125,6 +1130,7 @@ function DeferredHydrationScript({
         dataKey &&
         routeId ? null : (
           <script
+            {...scriptProps}
             async
             suppressHydrationWarning
             dangerouslySetInnerHTML={{ __html: " " }}
@@ -1136,10 +1142,15 @@ function DeferredHydrationScript({
         <Await
           resolve={deferredData.data[dataKey]}
           errorElement={
-            <ErrorDeferredHydrationScript dataKey={dataKey} routeId={routeId} />
+            <ErrorDeferredHydrationScript
+              dataKey={dataKey}
+              routeId={routeId}
+              scriptProps={scriptProps}
+            />
           }
           children={(data) => (
             <script
+              {...scriptProps}
               async
               suppressHydrationWarning
               dangerouslySetInnerHTML={{
@@ -1154,6 +1165,7 @@ function DeferredHydrationScript({
         />
       ) : (
         <script
+          {...scriptProps}
           async
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: " " }}
@@ -1166,9 +1178,11 @@ function DeferredHydrationScript({
 function ErrorDeferredHydrationScript({
   dataKey,
   routeId,
+  scriptProps,
 }: {
   dataKey: string;
   routeId: string;
+  scriptProps?: ScriptProps;
 }) {
   let error = useAsyncError() as Error;
   let toSerialize: { message: string; stack?: string } =
@@ -1184,6 +1198,7 @@ function ErrorDeferredHydrationScript({
 
   return (
     <script
+      {...scriptProps}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{
         __html: `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(

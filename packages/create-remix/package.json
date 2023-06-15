@@ -20,7 +20,7 @@
     "@remix-run/dev": "1.17.0"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   },
   "files": [
     "dist/",
