@@ -23,7 +23,7 @@
     "@netlify/functions": "^0.10.0 || ^0.11.0 || ^1.0.0"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   },
   "files": [
     "dist/",
