@@ -222,7 +222,7 @@ interface PrefetchHandlers {
 function usePrefetchBehavior<T extends HTMLAnchorElement>(
   prefetch: PrefetchBehavior,
   theirElementProps: PrefetchHandlers
-): [boolean, React.RefObject<T> | null, Required<PrefetchHandlers>] {
+): [boolean, React.RefObject<T>, Required<PrefetchHandlers>] {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
   let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
@@ -276,7 +276,7 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 
   return [
     shouldPrefetch,
-    prefetch === "viewport" ? ref : null,
+    ref,
     {
       onFocus: composeEventHandlers(onFocus, setIntent),
       onBlur: composeEventHandlers(onBlur, cancelIntent),
@@ -309,7 +309,7 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
         <RouterNavLink
           {...props}
           {...prefetchHandlers}
-          ref={ref ? mergeRefs(forwardedRef, ref) : forwardedRef}
+          ref={mergeRefs(forwardedRef, ref)}
           to={to}
         />
         {shouldPrefetch && !isAbsolute ? (
@@ -343,7 +343,7 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
         <RouterLink
           {...props}
           {...prefetchHandlers}
-          ref={ref ? mergeRefs(forwardedRef, ref) : forwardedRef}
+          ref={mergeRefs(forwardedRef, ref)}
           to={to}
         />
         {shouldPrefetch && !isAbsolute ? (
