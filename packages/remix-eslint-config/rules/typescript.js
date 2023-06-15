@@ -41,9 +41,13 @@ module.exports = {
   // These rules are turned on in the core rules but aren't needed for TypeScript code
   "no-dupe-class-members": "off",
   "no-undef": "off",
-  "no-duplicate-imports": "off",
 
   // These stylistic rules don't match our preferences
   "no-use-before-define": "off",
   "prefer-const": "off",
+
+  // These rules should eventually come from @typescript-eslint/stylistic
+  // in typescript-eslint@6
+  "@typescript-eslint/consistent-type-assertions": "warn",
+  "@typescript-eslint/consistent-type-imports": "warn",
 };
