@@ -223,7 +223,11 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         location={location}
         component={RemixRootDefaultErrorBoundary}
       >
-        <RouterProvider router={router} fallbackElement={null} />
+        <RouterProvider
+          router={router}
+          fallbackElement={null}
+          future={{ v7_startTransition: true }}
+        />
       </RemixErrorBoundary>
     </RemixContext.Provider>
   );
