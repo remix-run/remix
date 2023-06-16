@@ -52,6 +52,7 @@ export let serve = async (
     restart: boolean;
     tlsKey?: string;
     tlsCert?: string;
+    perfDebug: boolean;
   }
 ) => {
   await loadEnv(initialConfig.rootDirectory);
@@ -177,6 +178,7 @@ export let serve = async (
       options: {
         mode: "development",
         sourcemap: true,
+        perfDebug: options.perfDebug,
         devOrigin: origin,
       },
       fileWatchCache,

@@ -1,4 +1,6 @@
 import * as path from "path";
+import prettyMs from "pretty-ms";
+import pc from "picocolors";
 
 import type { Context } from "./context";
 import * as CSS from "./css";
@@ -18,6 +20,31 @@ type Compiler = {
   }) => Promise<Manifest>;
   cancel: () => Promise<void>;
   dispose: () => Promise<void>;
+};
+
+let time = async <T>(ctx: Context, tag: string, callback: () => Promise<T>) => {
+  let begin = performance.now();
+  let result = await callback();
+  let end = performance.now();
+  if (ctx.options.perfDebug) {
+    ctx.logger.debug(tag + pc.gray(` (${prettyMs(end - begin)})`));
+  }
+  return result;
+};
+
+let task = <T>(ctx: Context, tag: string, callback: () => Promise<T>) => {
+  let result: Promise<T> | undefined = undefined;
+  let start = () => {
+    result = callback();
+  };
+  return {
+    start,
+    wait: async () =>
+      time(ctx, tag, () => {
+        if (result === undefined) start();
+        return result!;
+      }),
+  };
 };
 
 export let create = async (ctx: Context): Promise<Compiler> => {
@@ -51,6 +78,21 @@ export let create = async (ctx: Context): Promise<Compiler> => {
   let compile = async (
     options: { onManifest?: (manifest: Manifest) => void } = {}
   ) => {
+    if (ctx.options.perfDebug) {
+      ctx.logger.warn(
+        "running compiler serially, not in parallel" +
+          pc.gray(" (--perf-debug)"),
+        {
+          details: [
+            "Normally, subcompilations are run in parallel for speed.",
+            "But execution can be interwoven so start/stop times won't be reliable.",
+            "For perf debugging, subcompilations are run in series instead.",
+            "That way, each subcompilation is independently measurable.",
+          ],
+        }
+      );
+    }
+
     let error: unknown | undefined = undefined;
     let errCancel = (thrown: unknown) => {
       if (error === undefined) {
@@ -71,7 +113,11 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     refs.manifestChannel = Channel.create();
     refs.lazyCssBundleHref = createLazyValue({
       async get() {
-        let { bundleOutputFile, outputFiles } = await subcompiler.css.compile();
+        let { bundleOutputFile, outputFiles } = await time(
+          ctx,
+          "css",
+          subcompiler.css.compile
+        );
 
         if (bundleOutputFile) {
           writes.cssBundle = CSS.writeBundle(ctx, outputFiles);
@@ -91,14 +137,25 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       },
     });
 
+    if (ctx.options.perfDebug) {
+      await refs.lazyCssBundleHref.get();
+    }
+
     // kickoff compilations in parallel
     let tasks = {
-      js: subcompiler.js.compile().then(ok, errCancel),
-      server: subcompiler.server.compile().then(ok, errCancel),
+      js: task(ctx, "js", () => subcompiler.js.compile().then(ok, errCancel)),
+      server: task(ctx, "server", () =>
+        subcompiler.server.compile().then(ok, errCancel)
+      ),
     };
 
+    if (!ctx.options.perfDebug) {
+      tasks.js.start();
+      tasks.server.start();
+    }
+
     // js compilation (implicitly writes artifacts/js)
-    let js = await tasks.js;
+    let js = await tasks.js.wait();
     if (!js.ok) throw error ?? js.error;
     let { metafile, hmr } = js.value;
 
@@ -114,7 +171,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     writes.manifest = writeManifest(ctx.config, manifest);
 
     // server compilation
-    let server = await tasks.server;
+    let server = await tasks.server.wait();
     if (!server.ok) throw error ?? server.error;
     // artifacts/server
     writes.server = Server.write(ctx.config, server.value);

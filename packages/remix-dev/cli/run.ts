@@ -190,6 +190,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--no-restart": Boolean,
       "--tls-key": String,
       "--tls-cert": String,
+
+      "--perf-debug": Boolean,
     },
     {
       argv,
@@ -221,6 +223,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
   if (flags["tls-cert"]) {
     flags.tlsCert = flags["tls-cert"];
     delete flags["tls-cert"];
+  }
+
+  if (flags["perf-debug"]) {
+    flags.perfDebug = true;
+    delete flags["perf-debug"];
   }
 
   if (args["--no-delete"]) {
@@ -494,7 +501,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     case "build":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
-      await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap);
+      await commands.build(input[1], {
+        rawMode: process.env.NODE_ENV,
+        sourcemap: flags.sourcemap,
+        perfDebug: flags.perfDebug,
+      });
       break;
     case "watch":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";

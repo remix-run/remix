@@ -148,14 +148,13 @@ export async function routes(
 
 export async function build(
   remixRoot: string,
-  modeArg?: string,
-  sourcemap: boolean = false
+  { rawMode = "production", sourcemap = false, perfDebug = false } = {}
 ): Promise<void> {
-  let mode = parseMode(modeArg) ?? "production";
+  let mode = parseMode(rawMode) ?? "production";
 
   logger.info(`building...` + pc.gray(` (NODE_ENV=${mode})`));
 
-  if (modeArg === "production" && sourcemap) {
+  if (mode === "production" && sourcemap) {
     logger.warn("🚨  source maps enabled in production", {
       details: [
         "You are using `--sourcemap` to enable source maps in production,",
@@ -172,6 +171,7 @@ export async function build(
   let options: Options = {
     mode,
     sourcemap,
+    perfDebug,
   };
   if (mode === "development" && config.future.v2_dev) {
     let origin = await resolveDevOrigin(config);
@@ -512,6 +512,7 @@ type DevServeFlags = DevOrigin & {
   restart: boolean;
   tlsKey?: string;
   tlsCert?: string;
+  perfDebug: boolean;
 };
 let resolveDevServe = async (
   config: RemixConfig,
@@ -535,11 +536,14 @@ let resolveDevServe = async (
   let tlsCert = flags.tlsCert ?? (dev === true ? undefined : dev.tlsCert);
   if (tlsCert) tlsCert = path.resolve(tlsCert);
 
+  let perfDebug = flags.perfDebug ?? false;
+
   return {
     command,
     ...origin,
     restart,
     tlsKey,
     tlsCert,
+    perfDebug,
   };
 };

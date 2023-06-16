@@ -47,6 +47,7 @@ export async function liveReload(config: RemixConfig) {
       options: {
         mode: "development",
         sourcemap: true,
+        perfDebug: false,
       },
       fileWatchCache,
       logger,
