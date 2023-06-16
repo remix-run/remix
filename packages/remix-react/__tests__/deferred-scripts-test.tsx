@@ -1,6 +1,5 @@
 import * as React from "react";
-import { createMemoryRouter } from "react-router-dom";
-import { defer } from "react-router-dom";
+import { createMemoryRouter, defer } from "react-router-dom";
 import { StaticRouterProvider } from "react-router-dom/server";
 import { render } from "@testing-library/react";
 import type { EntryContext } from "@remix-run/server-runtime";

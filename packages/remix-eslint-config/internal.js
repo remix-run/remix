@@ -67,6 +67,7 @@ module.exports = {
       // all ```ts & ```tsx code blocks in .md files
       files: ["**/*.md/*.ts?(x)"],
       rules: {
+        "import/no-duplicates": "off",
         "@typescript-eslint/no-unused-expressions": OFF,
         "@typescript-eslint/no-unused-vars": OFF,
       },
@@ -83,6 +84,9 @@ module.exports = {
       files: ["integration/**/*.*"],
       env: {
         "jest/globals": false,
+      },
+      rules: {
+        "import/no-duplicates": "off",
       },
     },
   ],
