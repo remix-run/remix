@@ -63,6 +63,7 @@ export const cssSideEffectImportsPlugin = (
 
               let code = await fse.readFile(args.path, "utf8");
 
+              // Don't process file if it doesn't contain any references to CSS files
               if (!code.includes(".css")) {
                 return {
                   fileDependencies,
