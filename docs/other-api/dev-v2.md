@@ -223,7 +223,7 @@ export const db = remember("db", new PrismaClient());
 
 ### How to set up local HTTPS
 
-For this example, let's use [mkcert][mkcert].
+For this example, let's use \[mkcert]\[mkcert].
 After you have it installed, make sure to:
 
 - Create a local Certificate Authority if you haven't already done so
@@ -260,7 +260,7 @@ const app = express();
 
 // ... code setting up your express app goes here ...
 
-let server = https.createServer(
+const server = https.createServer(
   {
     key: fs.readFileSync("path/to/key.pem"),
     cert: fs.readFileSync("path/to/cert.pem"),
@@ -268,7 +268,7 @@ let server = https.createServer(
   app
 );
 
-let port = 3000;
+const port = 3000;
 server.listen(port, () => {
   console.log(`👉 https://localhost:${port}`);
 
