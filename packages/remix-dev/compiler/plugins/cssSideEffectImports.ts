@@ -55,7 +55,7 @@ export const cssSideEffectImportsPlugin = (
       build.onLoad(
         { filter: allJsFilesFilter, namespace: "file" },
         async (args) => {
-          let cacheKey = `css-side-effect-imports-plugin:${args.path}`;
+          let cacheKey = `css-side-effect-imports-plugin:${args.path}&hmr=${hmr}`;
           let { cacheValue } = await ctx.fileWatchCache.getOrSet(
             cacheKey,
             async () => {
