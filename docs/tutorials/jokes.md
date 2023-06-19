@@ -1978,6 +1978,23 @@ But if there's an error, you can return an object with the error messages and th
 
 <details>
 
+<summary>app/utils/request.server.ts</summary>
+
+```ts filename=app/utils/request.server.ts
+import { json } from "@remix-run/node";
+
+/**
+ * This helper function helps us to return the accurate HTTP status,
+ * 400 Bad Request, to the client.
+ */
+export const badRequest = <T>(data: T) =>
+  json<T>(data, { status: 400 });
+```
+
+</details>
+
+<details>
+
 <summary>app/routes/jokes.new.tsx</summary>
 
 ```tsx filename=app/routes/jokes.new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,63,66-73,76-84,90,92-99,102-110,113-120]
@@ -2109,23 +2126,6 @@ export default function NewJokeRoute() {
     </div>
   );
 }
-```
-
-</details>
-
-<details>
-
-<summary>app/utils/request.server.ts</summary>
-
-```ts filename=app/utils/request.server.ts
-import { json } from "@remix-run/node";
-
-/**
- * This helper function helps us to return the accurate HTTP status,
- * 400 Bad Request, to the client.
- */
-export const badRequest = <T>(data: T) =>
-  json<T>(data, { status: 400 });
 ```
 
 </details>
