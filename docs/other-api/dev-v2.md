@@ -37,6 +37,22 @@ The dev server will:
 3. Restart your app server whenever rebuilds succeed
 4. Send code updates to the browser via Live Reload and HMR + Hot Data Revalidation
 
+<docs-info>
+
+What is "Hot Data Revalidation"?
+
+Like HMR, HDR is a way of hot updating your app without needing to refresh the page.
+That way you can keep your app state as your edits are applied in your app.
+HMR handles client-side code updates like when you change the components, markup, or styles in your app.
+Likewise, HDR handles server-side code updates.
+
+That means any time your change a `loader` on your current page (or any code that your `loader` depends on), Remix will re-fetch data from your changed loader.
+That way your app is _always_ up-to-date with the latest code changes, client-side or server-side.
+
+To learn more about how HMR and HDR work together, check out [Pedro's talk at Remix Conf 2023][legendary-dx].
+
+</docs-info>
+
 ### With `remix-serve`
 
 Enable the v2 dev server:
@@ -342,6 +358,7 @@ That way the dev server can detect loader changes on rebuilds.
 
 While the initial build slowdown is inherently a cost for HDR, we plan to optimize rebuilds so that there is no perceivable slowdown for HDR rebuilds.
 
+[legendary-dx]: https://www.youtube.com/watch?v=79M4vYZi-po
 [templates]: https://github.com/remix-run/remix/tree/main/templates
 [watch-paths]: https://remix.run/docs/en/1.17.1/file-conventions/remix-config#watchpaths
 [jenseng-code]: https://github.com/jenseng/abuse-the-platform/blob/main/app/utils/singleton.ts
