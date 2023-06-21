@@ -1,5 +1,11 @@
 # `@remix-run/eslint-config`
 
+## 1.18.0-pre.0
+
+### Minor Changes
+
+- Update `@remix-run/eslint-config` to inherit rules from `@typescript-eslint/recommended` ([#6614](https://github.com/remix-run/remix/pull/6614))
+
 ## 1.17.1
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.17.1) for an overview of all changes in v1.17.1.
