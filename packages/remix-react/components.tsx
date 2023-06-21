@@ -1620,7 +1620,7 @@ function convertRouterFetcherToRemixFetcher(
     formMethod &&
     formAction &&
     formEncType &&
-    (formData || json || text)
+    (formData || json !== undefined || text !== undefined)
   ) {
     if (isActionSubmission) {
       // Actively submitting to an action

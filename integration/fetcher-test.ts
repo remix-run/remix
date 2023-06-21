@@ -154,11 +154,15 @@ test.describe("useFetcher", () => {
           export async function action({ request }) {
             await new Promise(r => setTimeout(r, 1000));
             let contentType = request.headers.get('Content-Type');
-            let value = contentType.includes('application/json') ?
-              (await request.json()).value :
-              contentType.includes('text/plain') ?
-              (await request.text()) :
-              (await request.formData()).get('value');
+            let value;
+            if (contentType.includes('application/json')) {
+              let json = await request.json();
+              value = json === null ? json : json.value;
+            } else if (contentType.includes('text/plain')) {
+              value = await request.text();
+            } else {
+              value = (await request.formData()).get('value');
+            }
             return json({ data: "ACTION (" + contentType + ") " + value })
           }
 
@@ -199,10 +203,16 @@ test.describe("useFetcher", () => {
                   let value = document.getElementById('fetcher-input').value;
                   fetcher.submit({ value }, { method: 'post', action: '/fetcher-echo', encType: 'application/json' })
                 }}>Submit JSON</button>
+                <button id="fetcher-submit-json-null" onClick={() => {
+                  fetcher.submit(null, { method: 'post', action: '/fetcher-echo', encType: 'application/json' })
+                }}>Submit Null JSON</button>
                 <button id="fetcher-submit-text" onClick={() => {
                   let value = document.getElementById('fetcher-input').value;
                   fetcher.submit(value, { method: 'post', action: '/fetcher-echo', encType: 'text/plain' })
-                }}>Submit JSON</button>
+                }}>Submit Text</button>
+                <button id="fetcher-submit-text-empty" onClick={() => {
+                  fetcher.submit("", { method: 'post', action: '/fetcher-echo', encType: 'text/plain' })
+                }}>Submit Empty Text</button>
 
                 {fetcher.state === 'idle' ? <p id="fetcher-idle">IDLE</p> : null}
                 <pre>{JSON.stringify(fetcherValues)}</pre>
@@ -273,8 +283,17 @@ test.describe("useFetcher", () => {
     await app.clickElement("#fetcher-submit-json");
     await page.waitForSelector(`#fetcher-idle`);
     expect(await app.getHtml()).toMatch(
-      "ACTION (application/json) input value"
+      'ACTION (application/json) input value"'
     );
+  });
+
+  test("submit can hit an action with null json", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/fetcher-echo", true);
+    await app.clickElement("#fetcher-submit-json-null");
+    await new Promise((r) => setTimeout(r, 1000));
+    await page.waitForSelector(`#fetcher-idle`);
+    expect(await app.getHtml()).toMatch('ACTION (application/json) null"');
   });
 
   test("submit can hit an action with text", async ({ page }) => {
@@ -284,8 +303,17 @@ test.describe("useFetcher", () => {
     await app.clickElement("#fetcher-submit-text");
     await page.waitForSelector(`#fetcher-idle`);
     expect(await app.getHtml()).toMatch(
-      "ACTION (text/plain;charset=UTF-8) input value"
+      'ACTION (text/plain;charset=UTF-8) input value"'
     );
+  });
+
+  test("submit can hit an action with empty text", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/fetcher-echo", true);
+    await app.clickElement("#fetcher-submit-text-empty");
+    await new Promise((r) => setTimeout(r, 1000));
+    await page.waitForSelector(`#fetcher-idle`);
+    expect(await app.getHtml()).toMatch('ACTION (text/plain;charset=UTF-8) "');
   });
 
   test("submit can hit an action only route", async ({ page }) => {
