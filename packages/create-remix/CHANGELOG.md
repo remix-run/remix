@@ -1,5 +1,12 @@
 # `create-remix`
 
+## 1.18.0-pre.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.18.0-pre.0`
+
 ## 1.17.1
 
 ### Patch Changes
