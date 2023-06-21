@@ -8,14 +8,14 @@ import getPort, { makeRange } from "get-port";
 import type { FixtureInit } from "./helpers/create-fixture";
 import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
 
-test.setTimeout(120_000);
+test.setTimeout(150_000);
 
 let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
   config: {
     serverModuleFormat: "cjs",
     postcss: true,
     future: {
-      unstable_dev: {
+      v2_dev: {
         port: options.devPort,
       },
       v2_routeConvention: true,
@@ -51,7 +51,7 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
         typescript: "0.0.0-local-version",
       },
       engines: {
-        node: ">=14",
+        node: ">=14.0.0",
       },
     }),
 
@@ -120,8 +120,24 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
       }
     `,
 
-    "app/styles.module.css": css`
+    "app/sideEffectStylesWithImport.css": css`
+      @import "./importedSideEffectStyle.css";
+    `,
+
+    "app/importedSideEffectStyle.css": css`
+      .importedSideEffectStyle {
+        font-size: initial;
+      }
+    `,
+
+    "app/style.module.css": css`
       .test {
+        composes: color from "./composedStyle.module.css";
+      }
+    `,
+
+    "app/composedStyle.module.css": css`
+      .color {
         color: initial;
       }
     `,
@@ -134,6 +150,7 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
       import Counter from "./components/counter";
       import tailwindStyles from "./tailwind.css";
       import stylesWithImport from "./stylesWithImport.css";
+      import "./sideEffectStylesWithImport.css";
 
       export const links: LinksFunction = () => [
         { rel: "stylesheet", href: tailwindStyles },
@@ -294,7 +311,7 @@ test("HMR", async ({ page, browserName }) => {
         if (dev.exitCode) throw Error("Dev server exited early");
         return /✅ app ready: /.test(devStdout());
       },
-      { timeoutMs: 10_000 }
+      { timeoutMs: HMR_TIMEOUT_MS }
     );
 
     await page.goto(`http://localhost:${appPort}`, {
@@ -318,19 +335,35 @@ test("HMR", async ({ page, browserName }) => {
     let originalCounter = fs.readFileSync(counterPath, "utf8");
     let importedStylePath = path.join(projectDir, "app", "importedStyle.css");
     let originalImportedStyle = fs.readFileSync(importedStylePath, "utf8");
-    let cssModulePath = path.join(projectDir, "app", "styles.module.css");
-    let originalCssModule = fs.readFileSync(cssModulePath, "utf8");
+    let composedCssModulePath = path.join(
+      projectDir,
+      "app",
+      "composedStyle.module.css"
+    );
+    let originalComposedCssModule = fs.readFileSync(
+      composedCssModulePath,
+      "utf8"
+    );
     let mdxPath = path.join(projectDir, "app", "routes", "mdx.mdx");
     let originalMdx = fs.readFileSync(mdxPath, "utf8");
+    let importedSideEffectStylePath = path.join(
+      projectDir,
+      "app",
+      "importedSideEffectStyle.css"
+    );
+    let originalImportedSideEffectStyle = fs.readFileSync(
+      importedSideEffectStylePath,
+      "utf8"
+    );
 
     // make content and style changed to index route
-    let newCssModule = `
-      .test {
+    let newComposedCssModule = `
+      .color {
         background: black;
         color: white;
       }
     `;
-    fs.writeFileSync(cssModulePath, newCssModule);
+    fs.writeFileSync(composedCssModulePath, newComposedCssModule);
 
     // make changes to imported styles
     let newImportedStyle = `
@@ -340,10 +373,18 @@ test("HMR", async ({ page, browserName }) => {
     `;
     fs.writeFileSync(importedStylePath, newImportedStyle);
 
+    // // make changes to imported side-effect styles
+    let newImportedSideEffectStyle = `
+      .importedSideEffectStyle {
+        font-size: 32px;
+      }
+    `;
+    fs.writeFileSync(importedSideEffectStylePath, newImportedSideEffectStyle);
+
     // change text, add updated styles, add new Tailwind class ("italic")
     let newIndex = `
       import { useLoaderData } from "@remix-run/react";
-      import styles from "~/styles.module.css";
+      import styles from "~/style.module.css";
       export function shouldRevalidate(args) {
         return true;
       }
@@ -351,7 +392,7 @@ test("HMR", async ({ page, browserName }) => {
         const t = useLoaderData();
         return (
           <main>
-            <h1 className={styles.test + ' italic importedStyle'}>Changed</h1>
+            <h1 className={styles.test + ' italic importedStyle importedSideEffectStyle'}>Changed</h1>
           </main>
         )
       }
@@ -367,6 +408,7 @@ test("HMR", async ({ page, browserName }) => {
     expect(h1).toHaveCSS("background-color", "rgb(0, 0, 0)");
     expect(h1).toHaveCSS("font-style", "italic");
     expect(h1).toHaveCSS("font-weight", "800");
+    expect(h1).toHaveCSS("font-size", "32px");
 
     // verify that `<input />` value was persisted (i.e. hmr, not full page refresh)
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
@@ -375,7 +417,11 @@ test("HMR", async ({ page, browserName }) => {
     // undo change
     fs.writeFileSync(indexPath, originalIndex);
     fs.writeFileSync(importedStylePath, originalImportedStyle);
-    fs.writeFileSync(cssModulePath, originalCssModule);
+    fs.writeFileSync(composedCssModulePath, originalComposedCssModule);
+    fs.writeFileSync(
+      importedSideEffectStylePath,
+      originalImportedSideEffectStyle
+    );
     await page.getByText("Index Title").waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
@@ -403,7 +449,7 @@ test("HMR", async ({ page, browserName }) => {
       }
     `;
     fs.writeFileSync(indexPath, withLoader1);
-    await expect.poll(() => dataRequests).toBe(1);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(1);
     await page.waitForLoadState("networkidle");
 
     await page.getByText("Hello, world").waitFor({ timeout: HMR_TIMEOUT_MS });
@@ -432,7 +478,7 @@ test("HMR", async ({ page, browserName }) => {
     `;
     fs.writeFileSync(indexPath, withLoader2);
 
-    await expect.poll(() => dataRequests).toBe(2);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(2);
 
     await page.waitForLoadState("networkidle");
 
@@ -499,11 +545,11 @@ whatsup
 <Component/>
 `;
     fs.writeFileSync(mdxPath, mdx);
-    await expect.poll(() => dataRequests).toBe(4);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(4);
     await page.waitForSelector(`#hot`);
 
     fs.writeFileSync(mdxPath, originalMdx);
-    await expect.poll(() => dataRequests).toBe(5);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(5);
     await page.waitForSelector(`#crazy`);
 
     // dev server doesn't crash when rebuild fails

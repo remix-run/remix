@@ -8,6 +8,7 @@ import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
 import NPMCliPackageJson from "@npmcli/package-json";
 import { coerce } from "semver";
+import pc from "picocolors";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -23,9 +24,9 @@ import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
-import { warnOnce } from "../warnOnce";
 import type { Options } from "../compiler/options";
 import { createFileWatchCache } from "../compiler/fileWatchCache";
+import { logger } from "../tux";
 
 export async function create({
   appTemplate,
@@ -152,21 +153,18 @@ export async function build(
 ): Promise<void> {
   let mode = parseMode(modeArg) ?? "production";
 
-  console.log(`Building Remix app in ${mode} mode...`);
+  logger.info(`building...` + pc.gray(` (NODE_ENV=${mode})`));
 
   if (modeArg === "production" && sourcemap) {
-    console.warn(
-      "\n⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
-    );
-    console.warn(
-      "You have enabled source maps in production. This will make your " +
-        "server-side code visible to the public and is highly discouraged! If " +
-        "you insist, please ensure you are using environment variables for " +
-        "secrets and not hard-coding them into your source!"
-    );
-    console.warn(
-      "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
-    );
+    logger.warn("🚨  source maps enabled in production", {
+      details: [
+        "You are using `--sourcemap` to enable source maps in production,",
+        "making your server-side code publicly visible in the browser.",
+        "This is highly discouraged!",
+        "If you insist, ensure that you are using environment variables for secrets",
+        "and are not hard-coding them in your source.",
+      ],
+    });
   }
 
   let start = Date.now();
@@ -174,9 +172,8 @@ export async function build(
   let options: Options = {
     mode,
     sourcemap,
-    onWarning: warnOnce,
   };
-  if (mode === "development" && config.future.unstable_dev) {
+  if (mode === "development" && config.future.v2_dev) {
     let origin = await resolveDevOrigin(config);
     options.devOrigin = origin;
   }
@@ -184,12 +181,14 @@ export async function build(
   let fileWatchCache = createFileWatchCache();
 
   fse.emptyDirSync(config.assetsBuildDirectory);
-  await compiler.build({ config, options, fileWatchCache }).catch((thrown) => {
-    compiler.logThrown(thrown);
-    process.exit(1);
-  });
+  await compiler
+    .build({ config, options, fileWatchCache, logger })
+    .catch((thrown) => {
+      compiler.logThrown(thrown);
+      process.exit(1);
+    });
 
-  console.log(`Built in ${prettyMs(Date.now() - start)}`);
+  logger.info("built" + pc.gray(` (${prettyMs(Date.now() - start)})`));
 }
 
 // TODO: replace watch in v2
@@ -214,7 +213,7 @@ export async function dev(
   flags: {
     debug?: boolean;
 
-    // unstable_dev
+    // v2_dev
     command?: string;
     scheme?: string;
     host?: string;
@@ -224,19 +223,19 @@ export async function dev(
     tlsCert?: string;
   } = {}
 ) {
+  // clear screen
+  process.stdout.write("\x1Bc");
+  console.log(`\n 💿  remix dev\n`);
+
   if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
-    console.warn(
-      `Forcing NODE_ENV to be 'development'. Was: ${JSON.stringify(
-        process.env.NODE_ENV
-      )}`
-    );
+    logger.warn(`overriding NODE_ENV=${process.env.NODE_ENV} to development`);
   }
   process.env.NODE_ENV = "development";
   if (flags.debug) inspector.open();
 
   let config = await readConfig(remixRoot);
 
-  if (config.future.unstable_dev === false) {
+  if (config.future.v2_dev === false) {
     await devServer.serve(config, flags.port);
     return await new Promise(() => {});
   }
@@ -482,7 +481,7 @@ let resolveDevOrigin = async (
     tlsCert?: string;
   } = {}
 ): Promise<DevOrigin> => {
-  let dev = config.future.unstable_dev;
+  let dev = config.future.v2_dev;
   if (dev === false) throw Error("This should never happen");
 
   // prettier-ignore
@@ -518,7 +517,7 @@ let resolveDevServe = async (
   config: RemixConfig,
   flags: Partial<DevServeFlags> = {}
 ): Promise<DevServeFlags> => {
-  let dev = config.future.unstable_dev;
+  let dev = config.future.v2_dev;
   if (dev === false) throw Error("Cannot resolve dev options");
 
   let origin = await resolveDevOrigin(config, flags);

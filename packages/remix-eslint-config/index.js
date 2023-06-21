@@ -62,15 +62,14 @@ const config = {
   overrides: [
     {
       files: ["**/*.ts?(x)"],
-      extends: ["plugin:import/typescript"],
+      extends: [
+        "plugin:import/typescript",
+        "plugin:@typescript-eslint/recommended",
+      ],
       parser: "@typescript-eslint/parser",
       parserOptions: {
         sourceType: "module",
         ecmaVersion: 2019,
-        ecmaFeatures: {
-          jsx: true,
-        },
-        warnOnUnsupportedTypeScriptVersion: true,
       },
       plugins: ["@typescript-eslint"],
       rules: {
