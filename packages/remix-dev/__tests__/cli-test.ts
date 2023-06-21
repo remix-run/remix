@@ -116,7 +116,7 @@ describe("remix CLI", () => {
             --debug             Attach Node.js inspector
             --port, -p          Choose the port from which to run your app
 
-            [unstable_dev]
+            [v2_dev]
             --command, -c       Command used to run your app server
             --scheme            Scheme for the dev server. Default: http
             --host              Host for the dev server. Default: localhost
@@ -289,7 +289,7 @@ function defer() {
 async function interactWithShell(
   proc: childProcess.ChildProcessWithoutNullStreams,
   qAndA: Array<
-    | { question: RegExp; type: Array<String>; answer?: never }
+    | { question: RegExp; type: Array<string>; answer?: never }
     | { question: RegExp; answer: RegExp; type?: never }
   >
 ) {

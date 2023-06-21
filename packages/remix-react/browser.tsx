@@ -19,6 +19,7 @@ import {
 /* eslint-disable prefer-let/prefer-let */
 declare global {
   var __remixContext: {
+    url: string;
     state: HydrationState;
     future: FutureConfig;
     // The number of active deferred keys rendered on the server
@@ -179,6 +180,21 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
           window.__remixContext.future.v2_normalizeFormMethod,
       },
     });
+
+    // Hard reload if the URL we tried to load is not the current URL.
+    // This is usually the result of 2 rapid backwards/forward clicks from an
+    // external site into a Remix app, where we initially start the load for
+    // one URL and while the JS chunks are loading a second forward click moves
+    // us to a new URL
+    let initialUrl = window.__remixContext.url;
+    let hydratedUrl = window.location.pathname + window.location.search;
+    if (initialUrl !== hydratedUrl) {
+      let errorMsg =
+        `Initial URL (${initialUrl}) does not match URL at time of hydration ` +
+        `(${hydratedUrl}), reloading page...`;
+      console.error(errorMsg);
+      window.location.reload();
+    }
   }
 
   let [location, setLocation] = React.useState(router.state.location);
@@ -207,7 +223,11 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         location={location}
         component={RemixRootDefaultErrorBoundary}
       >
-        <RouterProvider router={router} fallbackElement={null} />
+        <RouterProvider
+          router={router}
+          fallbackElement={null}
+          future={{ v7_startTransition: true }}
+        />
       </RemixErrorBoundary>
     </RemixContext.Provider>
   );

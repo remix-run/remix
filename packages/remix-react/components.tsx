@@ -201,7 +201,7 @@ export function RemixRouteError({ id }: { id: string }) {
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
  */
-type PrefetchBehavior = "intent" | "render" | "none";
+type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
 export interface RemixLinkProps extends LinkProps {
   prefetch?: PrefetchBehavior;
@@ -219,18 +219,34 @@ interface PrefetchHandlers {
   onTouchStart?: TouchEventHandler;
 }
 
-function usePrefetchBehavior(
+function usePrefetchBehavior<T extends HTMLAnchorElement>(
   prefetch: PrefetchBehavior,
   theirElementProps: PrefetchHandlers
-): [boolean, Required<PrefetchHandlers>] {
+): [boolean, React.RefObject<T>, Required<PrefetchHandlers>] {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
   let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
     theirElementProps;
 
+  let ref = React.useRef<T>(null);
+
   React.useEffect(() => {
     if (prefetch === "render") {
       setShouldPrefetch(true);
+    }
+
+    if (prefetch === "viewport") {
+      let callback: IntersectionObserverCallback = (entries) => {
+        entries.forEach((entry) => {
+          setShouldPrefetch(entry.isIntersecting);
+        });
+      };
+      let observer = new IntersectionObserver(callback, { threshold: 0.5 });
+      if (ref.current) observer.observe(ref.current);
+
+      return () => {
+        observer.disconnect();
+      };
     }
   }, [prefetch]);
 
@@ -260,6 +276,7 @@ function usePrefetchBehavior(
 
   return [
     shouldPrefetch,
+    ref,
     {
       onFocus: composeEventHandlers(onFocus, setIntent),
       onBlur: composeEventHandlers(onBlur, cancelIntent),
@@ -282,17 +299,18 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
-    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+    let [shouldPrefetch, ref, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
+
     return (
       <>
         <RouterNavLink
-          ref={forwardedRef}
-          to={to}
           {...props}
           {...prefetchHandlers}
+          ref={mergeRefs(forwardedRef, ref)}
+          to={to}
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -315,7 +333,7 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
-    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+    let [shouldPrefetch, ref, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
@@ -323,10 +341,10 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
     return (
       <>
         <RouterLink
-          ref={forwardedRef}
-          to={to}
           {...props}
           {...prefetchHandlers}
+          ref={mergeRefs(forwardedRef, ref)}
+          to={to}
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -950,6 +968,7 @@ export function Scripts(props: ScriptProps) {
                       deferredData={deferredData}
                       routeId={routeId}
                       dataKey={key}
+                      scriptProps={props}
                     />
                   );
 
@@ -1048,7 +1067,9 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   if (!isStatic && typeof __remixContext === "object" && __remixContext.a) {
     for (let i = 0; i < __remixContext.a; i++) {
-      deferredScripts.push(<DeferredHydrationScript key={i} />);
+      deferredScripts.push(
+        <DeferredHydrationScript key={i} scriptProps={props} />
+      );
     }
   }
 
@@ -1102,10 +1123,12 @@ function DeferredHydrationScript({
   dataKey,
   deferredData,
   routeId,
+  scriptProps,
 }: {
   dataKey?: string;
   deferredData?: DeferredData;
   routeId?: string;
+  scriptProps?: ScriptProps;
 }) {
   if (typeof document === "undefined" && deferredData && dataKey && routeId) {
     invariant(
@@ -1125,6 +1148,7 @@ function DeferredHydrationScript({
         dataKey &&
         routeId ? null : (
           <script
+            {...scriptProps}
             async
             suppressHydrationWarning
             dangerouslySetInnerHTML={{ __html: " " }}
@@ -1136,10 +1160,15 @@ function DeferredHydrationScript({
         <Await
           resolve={deferredData.data[dataKey]}
           errorElement={
-            <ErrorDeferredHydrationScript dataKey={dataKey} routeId={routeId} />
+            <ErrorDeferredHydrationScript
+              dataKey={dataKey}
+              routeId={routeId}
+              scriptProps={scriptProps}
+            />
           }
           children={(data) => (
             <script
+              {...scriptProps}
               async
               suppressHydrationWarning
               dangerouslySetInnerHTML={{
@@ -1154,6 +1183,7 @@ function DeferredHydrationScript({
         />
       ) : (
         <script
+          {...scriptProps}
           async
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: " " }}
@@ -1166,9 +1196,11 @@ function DeferredHydrationScript({
 function ErrorDeferredHydrationScript({
   dataKey,
   routeId,
+  scriptProps,
 }: {
   dataKey: string;
   routeId: string;
+  scriptProps?: ScriptProps;
 }) {
   let error = useAsyncError() as Error;
   let toSerialize: { message: string; stack?: string } =
@@ -1184,6 +1216,7 @@ function ErrorDeferredHydrationScript({
 
   return (
     <script
+      {...scriptProps}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{
         __html: `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(
@@ -1851,3 +1884,17 @@ export const LiveReload =
           />
         );
       };
+
+function mergeRefs<T = any>(
+  ...refs: Array<React.MutableRefObject<T> | React.LegacyRef<T>>
+): React.RefCallback<T> {
+  return (value) => {
+    refs.forEach((ref) => {
+      if (typeof ref === "function") {
+        ref(value);
+      } else if (ref != null) {
+        (ref as React.MutableRefObject<T | null>).current = value;
+      }
+    });
+  };
+}

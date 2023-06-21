@@ -50,7 +50,7 @@
     "typescript": "^5.0.4"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   },
   "prisma": {
     "seed": "ts-node --require tsconfig-paths/register prisma/seed.ts"
