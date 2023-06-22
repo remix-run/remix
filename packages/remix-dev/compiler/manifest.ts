@@ -22,11 +22,17 @@ export async function create({
   hmr?: Manifest["hmr"];
   fileWatchCache: FileWatchCache;
 }): Promise<Manifest> {
+  let outputMap: {[path: string]: string} = {};
+
   function resolveUrl(outputPath: string): string {
-    return createUrl(
-      config.publicPath,
-      path.relative(config.assetsBuildDirectory, path.resolve(outputPath))
-    );
+    let filePath;
+    if (outputMap[outputPath]) {
+      filePath = outputMap[outputPath]
+    } else {
+      filePath = path.relative(config.assetsBuildDirectory, path.resolve(outputPath));
+      outputMap[outputPath] = filePath;
+    }
+    return createUrl(config.publicPath, filePath);
   }
 
   function resolveImports(
