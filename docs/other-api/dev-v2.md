@@ -381,3 +381,5 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
 [react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
 [binode]: https://github.com/kentcdodds/binode
+[msw]: https://mswjs.io/
+[mkcert]: https://github.com/FiloSottile/mkcert
