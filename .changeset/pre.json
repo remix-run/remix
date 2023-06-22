@@ -22,6 +22,7 @@
     "@remix-run/vercel": "1.17.1"
   },
   "changesets": [
+    "blue-dots-glow",
     "cache-regular-stylesheets",
     "chilly-shoes-scream",
     "clever-ways-love",
