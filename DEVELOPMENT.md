@@ -136,6 +136,32 @@ LOCAL_BUILD_DIRECTORY=../my-remix-app yarn watch
 
 Now - any time you make changes in the Remix repository, they will be written out to the appropriate locations in `../my-remix-app/node_modules` and you can restart the `npm run dev` command to pick them up 🎉.
 
+**`DEBUG`**
+
+Adding `DEBUG=1` when building your app will enable more logs during the build process, including CSS JIT and compiler build times.
+
+```sh
+DEBUG=1 yarn run dev
+...
+  Source path: ./blog-tutorial/app/tailwind.css
+  Setting up new context...
+  Finding changed files: 4.53ms
+  Reading changed files: 8.2ms
+  Sorting candidates: 0.504ms
+  Generate rules: 20.772ms
+  Build stylesheet: 0.869ms
+  Potential classes:  897
+  Active contexts:  1
+  JIT TOTAL: 119.014ms
+
+  debug  ⏳ esbuild css compiled (173ms)
+  debug  ⏳ esbuild js compiled (250ms)
+  debug  ⏳ Manifest created (1ms)
+  debug  ⏳ esbuild server compiled (2ms)
+
+  💿 Rebuilt in 534ms
+```
+
 ### Transition Manager Flows
 
 The transition manager is a complex and heavily async bit of logic that is foundational to Remix's ability to manage data loading, submission, error handling, and interruptions. Due to the user-driven nature of interruptions we don't quite believe it can be modeled as a finite state machine, however we have modeled some of the happy path flows below for clarity.
