@@ -70,7 +70,7 @@ const createEsbuildConfig = (
 
   if (
     ctx.options.mode === "development" &&
-    ctx.config.future.unstable_dev !== false
+    ctx.config.future.v2_dev !== false
   ) {
     let defaultsDirectory = path.resolve(
       __dirname,
@@ -94,18 +94,21 @@ const createEsbuildConfig = (
     cssSideEffectImportsPlugin(ctx, {
       hmr:
         ctx.options.mode === "development" &&
-        ctx.config.future.unstable_dev !== false,
+        ctx.config.future.v2_dev !== false,
     }),
     cssFilePlugin(ctx),
     absoluteCssUrlsPlugin(),
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
     mdxPlugin(ctx),
     emptyModulesPlugin(ctx, /\.server(\.[jt]sx?)?$/),
+    emptyModulesPlugin(ctx, /^@remix-run\/(deno|cloudflare|node)(\/.*)?$/, {
+      includeNodeModules: true,
+    }),
     nodeModulesPolyfillPlugin(),
     externalPlugin(/^node:.*/, { sideEffects: false }),
   ];
 
-  if (ctx.options.mode === "development" && ctx.config.future.unstable_dev) {
+  if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {
     plugins.push(hmrPlugin(ctx));
   }
 
@@ -159,7 +162,7 @@ export const create = async (
     let { metafile } = await compiler.rebuild();
 
     let hmr: Manifest["hmr"] | undefined = undefined;
-    if (ctx.options.mode === "development" && ctx.config.future.unstable_dev) {
+    if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {
       let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
         ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
       )?.[0];

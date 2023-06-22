@@ -15,7 +15,7 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
     serverModuleFormat: "cjs",
     tailwind: true,
     future: {
-      unstable_dev: {
+      v2_dev: {
         port: options.devPort,
       },
       v2_routeConvention: true,
@@ -50,7 +50,7 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
         typescript: "0.0.0-local-version",
       },
       engines: {
-        node: ">=14",
+        node: ">=14.0.0",
       },
     }),
 

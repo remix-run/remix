@@ -201,7 +201,7 @@ export function RemixRouteError({ id }: { id: string }) {
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
  */
-type PrefetchBehavior = "intent" | "render" | "none";
+type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
 export interface RemixLinkProps extends LinkProps {
   prefetch?: PrefetchBehavior;
@@ -219,18 +219,34 @@ interface PrefetchHandlers {
   onTouchStart?: TouchEventHandler;
 }
 
-function usePrefetchBehavior(
+function usePrefetchBehavior<T extends HTMLAnchorElement>(
   prefetch: PrefetchBehavior,
   theirElementProps: PrefetchHandlers
-): [boolean, Required<PrefetchHandlers>] {
+): [boolean, React.RefObject<T>, Required<PrefetchHandlers>] {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
   let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
     theirElementProps;
 
+  let ref = React.useRef<T>(null);
+
   React.useEffect(() => {
     if (prefetch === "render") {
       setShouldPrefetch(true);
+    }
+
+    if (prefetch === "viewport") {
+      let callback: IntersectionObserverCallback = (entries) => {
+        entries.forEach((entry) => {
+          setShouldPrefetch(entry.isIntersecting);
+        });
+      };
+      let observer = new IntersectionObserver(callback, { threshold: 0.5 });
+      if (ref.current) observer.observe(ref.current);
+
+      return () => {
+        observer.disconnect();
+      };
     }
   }, [prefetch]);
 
@@ -260,6 +276,7 @@ function usePrefetchBehavior(
 
   return [
     shouldPrefetch,
+    ref,
     {
       onFocus: composeEventHandlers(onFocus, setIntent),
       onBlur: composeEventHandlers(onBlur, cancelIntent),
@@ -282,17 +299,18 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
-    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+    let [shouldPrefetch, ref, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
+
     return (
       <>
         <RouterNavLink
-          ref={forwardedRef}
-          to={to}
           {...props}
           {...prefetchHandlers}
+          ref={mergeRefs(forwardedRef, ref)}
+          to={to}
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -315,7 +333,7 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
-    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+    let [shouldPrefetch, ref, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
@@ -323,10 +341,10 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
     return (
       <>
         <RouterLink
-          ref={forwardedRef}
-          to={to}
           {...props}
           {...prefetchHandlers}
+          ref={mergeRefs(forwardedRef, ref)}
+          to={to}
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -1471,8 +1489,10 @@ export function useFetchers(): Fetcher[] {
       data: f.data,
       formMethod: f.formMethod,
       formAction: f.formAction,
-      formData: f.formData,
       formEncType: f.formEncType,
+      formData: f.formData,
+      json: f.json,
+      text: f.text,
       " _hasFetcherDoneAnything ": f[" _hasFetcherDoneAnything "],
     });
     addFetcherDeprecationWarnings(fetcher);
@@ -1505,8 +1525,10 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
       data: fetcherRR.data,
       formMethod: fetcherRR.formMethod,
       formAction: fetcherRR.formAction,
-      formData: fetcherRR.formData,
       formEncType: fetcherRR.formEncType,
+      formData: fetcherRR.formData,
+      json: fetcherRR.json,
+      text: fetcherRR.text,
       " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
     });
     let fetcherWithComponents = {
@@ -1557,8 +1579,16 @@ function addFetcherDeprecationWarnings(fetcher: Fetcher) {
 function convertRouterFetcherToRemixFetcher(
   fetcherRR: Omit<ReturnType<typeof useFetcherRR>, "load" | "submit" | "Form">
 ): Fetcher {
-  let { state, formMethod, formAction, formEncType, formData, data } =
-    fetcherRR;
+  let {
+    state,
+    formMethod,
+    formAction,
+    formEncType,
+    formData,
+    json,
+    text,
+    data,
+  } = fetcherRR;
 
   let isActionSubmission =
     formMethod != null &&
@@ -1571,8 +1601,10 @@ function convertRouterFetcherToRemixFetcher(
         type: "done",
         formMethod: undefined,
         formAction: undefined,
-        formData: undefined,
         formEncType: undefined,
+        formData: undefined,
+        json: undefined,
+        text: undefined,
         submission: undefined,
         data,
       };
@@ -1588,7 +1620,7 @@ function convertRouterFetcherToRemixFetcher(
     formMethod &&
     formAction &&
     formEncType &&
-    formData
+    (formData || json !== undefined || text !== undefined)
   ) {
     if (isActionSubmission) {
       // Actively submitting to an action
@@ -1596,14 +1628,21 @@ function convertRouterFetcherToRemixFetcher(
         state,
         type: "actionSubmission",
         formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-        formAction: formAction,
-        formEncType: formEncType,
-        formData: formData,
+        formAction,
+        formEncType,
+        formData,
+        json,
+        text,
+        // @ts-expect-error formData/json/text are mutually exclusive in the type,
+        // so TS can't be sure these meet that criteria, but as a straight
+        // assignment from the RR fetcher we know they will
         submission: {
           method: formMethod.toUpperCase() as ActionSubmission["method"],
           action: formAction,
           encType: formEncType,
-          formData: formData,
+          formData,
+          json,
+          text,
           key: "",
         },
         data,
@@ -1619,7 +1658,7 @@ function convertRouterFetcherToRemixFetcher(
   }
 
   if (state === "loading") {
-    if (formMethod && formAction && formEncType && formData) {
+    if (formMethod && formAction && formEncType) {
       if (isActionSubmission) {
         if (data) {
           // In a loading state but we have data - must be an actionReload
@@ -1627,14 +1666,21 @@ function convertRouterFetcherToRemixFetcher(
             state,
             type: "actionReload",
             formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-            formAction: formAction,
-            formEncType: formEncType,
-            formData: formData,
+            formAction,
+            formEncType,
+            formData,
+            json,
+            text,
+            // @ts-expect-error formData/json/text are mutually exclusive in the type,
+            // so TS can't be sure these meet that criteria, but as a straight
+            // assignment from the RR fetcher we know they will
             submission: {
               method: formMethod.toUpperCase() as ActionSubmission["method"],
               action: formAction,
               encType: formEncType,
-              formData: formData,
+              formData,
+              json,
+              text,
               key: "",
             },
             data,
@@ -1645,14 +1691,21 @@ function convertRouterFetcherToRemixFetcher(
             state,
             type: "actionRedirect",
             formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-            formAction: formAction,
-            formEncType: formEncType,
-            formData: formData,
+            formAction,
+            formEncType,
+            formData,
+            json,
+            text,
+            // @ts-expect-error formData/json/text are mutually exclusive in the type,
+            // so TS can't be sure these meet that criteria, but as a straight
+            // assignment from the RR fetcher we know they will
             submission: {
               method: formMethod.toUpperCase() as ActionSubmission["method"],
               action: formAction,
               encType: formEncType,
-              formData: formData,
+              formData,
+              json,
+              text,
               key: "",
             },
             data: undefined,
@@ -1666,27 +1719,36 @@ function convertRouterFetcherToRemixFetcher(
         // will fix this bug.
         let url = new URL(formAction, window.location.origin);
 
-        // This typing override should be safe since this is only running for
-        // GET submissions and over in @remix-run/router we have an invariant
-        // if you have any non-string values in your FormData when we attempt
-        // to convert them to URLSearchParams
-        url.search = new URLSearchParams(
-          formData.entries() as unknown as [string, string][]
-        ).toString();
+        if (formData) {
+          // This typing override should be safe since this is only running for
+          // GET submissions and over in @remix-run/router we have an invariant
+          // if you have any non-string values in your FormData when we attempt
+          // to convert them to URLSearchParams
+          url.search = new URLSearchParams(
+            formData.entries() as unknown as [string, string][]
+          ).toString();
+        }
 
         // Actively "submitting" to a loader
         let fetcher: FetcherStates["SubmittingLoader"] = {
           state: "submitting",
           type: "loaderSubmission",
           formMethod: formMethod.toUpperCase() as LoaderSubmission["method"],
-          formAction: formAction,
-          formEncType: formEncType,
-          formData: formData,
+          formAction,
+          formEncType,
+          formData,
+          json,
+          text,
+          // @ts-expect-error formData/json/text are mutually exclusive in the type,
+          // so TS can't be sure these meet that criteria, but as a straight
+          // assignment from the RR fetcher we know they will
           submission: {
             method: formMethod.toUpperCase() as LoaderSubmission["method"],
             action: url.pathname + url.search,
             encType: formEncType,
-            formData: formData,
+            formData,
+            json,
+            text,
             key: "",
           },
           data,
@@ -1703,6 +1765,8 @@ function convertRouterFetcherToRemixFetcher(
     formMethod: undefined,
     formAction: undefined,
     formData: undefined,
+    json: undefined,
+    text: undefined,
     formEncType: undefined,
     submission: undefined,
     data,
@@ -1820,3 +1884,17 @@ export const LiveReload =
           />
         );
       };
+
+function mergeRefs<T = any>(
+  ...refs: Array<React.MutableRefObject<T> | React.LegacyRef<T>>
+): React.RefCallback<T> {
+  return (value) => {
+    refs.forEach((ref) => {
+      if (typeof ref === "function") {
+        ref(value);
+      } else if (ref != null) {
+        (ref as React.MutableRefObject<T | null>).current = value;
+      }
+    });
+  };
+}
