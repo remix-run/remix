@@ -22,6 +22,7 @@
     "@remix-run/vercel": "1.17.1"
   },
   "changesets": [
+    "blue-crabs-refuse",
     "blue-dots-glow",
     "cache-regular-stylesheets",
     "chilly-shoes-scream",
@@ -34,12 +35,14 @@
     "fix-react-types",
     "json-text-encoding",
     "neat-poets-scream",
+    "old-glasses-serve",
     "orange-beds-explode",
     "postcss-cache-css-modules",
     "postcss-cache-side-effect-imports",
     "prefetch-viewport",
     "rude-meals-move",
     "thin-rings-sparkle",
+    "three-birds-shave",
     "two-cobras-float",
     "types-cookie",
     "typescript-eslint-recommended",
