@@ -1,7 +1,10 @@
+import prettyMs from 'pretty-ms';
 import pc from "picocolors";
 import type { Formatter } from "picocolors/types";
 
 import { format } from "./format";
+
+const DEBUG_MODE = !!process.env.DEBUG;
 
 type Log = (
   message: string,
@@ -13,6 +16,7 @@ export type Logger = {
   info: Log;
   warn: Log;
   error: Log;
+  time<T>(label: string): (result: T) => T;
 };
 
 type LogArgs = {
@@ -57,4 +61,11 @@ export let logger: Logger = {
     color: pc.red,
     dest: process.stderr,
   }),
+  time: (label) => {
+    let start = Date.now();
+    return (result) => {
+      if (DEBUG_MODE) logger.debug(`${label} (${prettyMs(Date.now() - start)})`);
+      return result;
+    };
+  },
 };

@@ -73,7 +73,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     refs.manifestChannel = Channel.create();
     refs.lazyCssBundleHref = createLazyValue({
       async get() {
-        let { bundleOutputFile, outputFiles } = await subcompiler.css.compile();
+        let { bundleOutputFile, outputFiles } = await subcompiler.css.compile().then(ctx.logger.time('⏳ esbuild css compiled'));
 
         if (bundleOutputFile) {
           writes.cssBundle = CSS.writeBundle(ctx, outputFiles);
@@ -100,7 +100,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     };
 
     // js compilation (implicitly writes artifacts/js)
-    let js = await tasks.js;
+    let js = await tasks.js.then(ctx.logger.time('⏳ esbuild js compiled'));
     if (!js.ok) throw error ?? js.error;
     let { metafile, outputFiles, hmr } = js.value;
     writes.js = JS.write(ctx.config, outputFiles);
@@ -111,13 +111,13 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       metafile,
       hmr,
       fileWatchCache: ctx.fileWatchCache,
-    });
+    }).then(ctx.logger.time('⏳ Manifest created'));
     refs.manifestChannel.ok(manifest);
     options.onManifest?.(manifest);
     writes.manifest = writeManifest(ctx.config, manifest);
 
     // server compilation
-    let server = await tasks.server;
+    let server = await tasks.server.then(ctx.logger.time('⏳ esbuild server compiled'));
     if (!server.ok) throw error ?? server.error;
     // artifacts/server
     writes.server = Server.write(ctx.config, server.value).then(() => {
