@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.18.0-pre.3
+
+### Patch Changes
+
+- Bump router 6.14.0-pre.1 ([#6662](https://github.com/remix-run/remix/pull/6662))
+
 ## 1.18.0-pre.2
 
 ## 1.18.0-pre.1
