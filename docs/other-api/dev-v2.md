@@ -237,9 +237,43 @@ import { remember } from "~/utils/remember";
 export const db = remember("db", new PrismaClient());
 ```
 
+### How to set up MSW
+
+To use [Mock Service Worker][msw] in development, you'll need to:
+
+1. Run MSW as part of your app server
+2. Configure MSW to not mock internal "dev ready" messages to the dev server
+
+For example, if you are using [binode][binode] to integrate with MSW,
+make sure that the call to `binode` is within the `remix dev -c` subcommand.
+That way, the MSW server will have access to the `REMIX_DEV_HTTP_ORIGIN` environment variable:
+
+```json filename=package.json
+{
+  "scripts": {
+    "dev": "remix dev -c 'npm run dev:app'",
+    "dev:app": "binode --require ./mocks -- @remix-run/serve:remix-serve ./build"
+  }
+}
+```
+
+Next, you can use `REMIX_DEV_HTTP_ORIGIN` to let MSW forward internal "dev ready" messages on `/ping`:
+
+```ts
+import { rest } from "msw";
+
+export const server = setupServer(
+  rest.post(
+    `${process.env.REMIX_DEV_HTTP_ORIGIN}/ping`,
+    (req) => req.passthrough()
+  )
+  // ... other request handlers go here ...
+);
+```
+
 ### How to set up local HTTPS
 
-For this example, let's use \[mkcert]\[mkcert].
+For this example, let's use [mkcert][mkcert].
 After you have it installed, make sure to:
 
 - Create a local Certificate Authority if you haven't already done so
@@ -296,25 +330,6 @@ server.listen(port, () => {
 
 ### Troubleshooting
 
-#### Using MSW with `v2_dev`
-
-The dev server uses the `REMIX_DEV_HTTP_ORIGIN` environment variable to communicate its origin to the app server.
-You can use that to mock out the `/ping` endpoint used for hot update coordination:
-
-```ts
-import { rest } from "msw";
-
-export const server = setupServer(
-  rest.post(
-    `${process.env.REMIX_DEV_HTTP_ORIGIN}/ping`,
-    (req) => {
-      return req.passthrough();
-    }
-  )
-  // ... other request handlers go here ...
-);
-```
-
 #### HMR: hot updates losing app state
 
 Hot Module Replacement is supposed to keep your app's state around between hot updates.
@@ -365,3 +380,4 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [jenseng-talk]: https://www.youtube.com/watch?v=lbzNnN0F67Y
 [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
 [react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
+[binode]: https://github.com/kentcdodds/binode
