@@ -239,7 +239,7 @@ export const db = remember("db", new PrismaClient());
 
 ### How to set up local HTTPS
 
-For this example, let's use \[mkcert]\[mkcert].
+For this example, let's use [mkcert][mkcert].
 After you have it installed, make sure to:
 
 - Create a local Certificate Authority if you haven't already done so
