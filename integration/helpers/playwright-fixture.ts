@@ -298,7 +298,7 @@ async function doAndWait(
   //     locator resolved to hidden <div id="root-boundary">ROOT_BOUNDARY_TEXT</div>
   //     ... and so on until the test times out
   let userAgent = await page.evaluate(() => navigator.userAgent);
-  if (/Safari/i.test(userAgent)) {
+  if (/Safari\//i.test(userAgent) && !/Chrome\//i.test(userAgent)) {
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(r)));
   }
 
