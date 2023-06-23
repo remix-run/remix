@@ -1,5 +1,12 @@
 # `@remix-run/cloudflare-pages`
 
+## 1.18.0-pre.4
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.18.0-pre.4`
+
 ## 1.18.0-pre.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.18.0-pre.4
+
+### Patch Changes
+
+- Lock in react router 6.14.0 ([#6677](https://github.com/remix-run/remix/pull/6677))
+
 ## 1.18.0-pre.3
 
 ### Patch Changes
