@@ -56,7 +56,6 @@ module.exports = {
   "no-duplicate-case": WARN,
   "no-empty-character-class": WARN,
   "no-empty-pattern": WARN,
-  "no-duplicate-imports": WARN,
   "no-empty": [WARN, { allowEmptyCatch: true }],
   "no-eval": ERROR,
   "no-ex-assign": WARN,
