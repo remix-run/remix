@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/dev",
-  "version": "1.17.1",
+  "version": "1.18.0",
   "description": "Dev tools and CLI for Remix",
   "homepage": "https://remix.run",
   "bugs": {
@@ -28,7 +28,7 @@
     "@babel/traverse": "^7.21.5",
     "@babel/types": "^7.21.5",
     "@npmcli/package-json": "^2.0.0",
-    "@remix-run/server-runtime": "1.17.1",
+    "@remix-run/server-runtime": "1.18.0",
     "@vanilla-extract/integration": "^6.2.0",
     "arg": "^5.0.1",
     "cacache": "^15.0.5",
@@ -36,7 +36,7 @@
     "chokidar": "^3.5.1",
     "dotenv": "^16.0.0",
     "esbuild": "0.17.6",
-    "esbuild-plugins-node-modules-polyfill": "^1.0.13",
+    "esbuild-plugins-node-modules-polyfill": "^1.0.16",
     "execa": "5.1.1",
     "exit-hook": "2.2.1",
     "express": "^4.17.1",
@@ -49,11 +49,12 @@
     "json5": "^2.2.2",
     "lodash": "^4.17.21",
     "lodash.debounce": "^4.0.8",
-    "lru-cache": "^7.14.1",
     "minimatch": "^9.0.0",
     "node-fetch": "^2.6.9",
     "ora": "^5.4.1",
+    "picocolors": "^1.0.0",
     "picomatch": "^2.3.1",
+    "pidtree": "^0.6.0",
     "postcss": "^8.4.19",
     "postcss-discard-duplicates": "^5.1.0",
     "postcss-load-config": "^4.0.1",
@@ -73,7 +74,7 @@
     "xdm": "^2.0.0"
   },
   "devDependencies": {
-    "@remix-run/serve": "1.17.1",
+    "@remix-run/serve": "1.18.0",
     "@types/cacache": "^15.0.0",
     "@types/gunzip-maybe": "^1.4.0",
     "@types/inquirer": "^8.2.0",
@@ -93,7 +94,7 @@
     "type-fest": "^2.16.0"
   },
   "peerDependencies": {
-    "@remix-run/serve": "^1.17.1"
+    "@remix-run/serve": "^1.18.0"
   },
   "peerDependenciesMeta": {
     "@remix-run/serve": {
@@ -101,7 +102,7 @@
     }
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   },
   "files": [
     "dist/",
