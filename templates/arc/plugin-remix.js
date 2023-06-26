@@ -4,6 +4,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+
 import { logDevReady } from "@remix-run/node";
 
 const buildPath = "server/index.mjs";
