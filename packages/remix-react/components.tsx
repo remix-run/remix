@@ -1725,7 +1725,7 @@ export const LiveReload =
                   let port = ${port} || (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.port) || ${Number(
                 process.env.REMIX_DEV_SERVER_WS_PORT || 8002
               )};
-                  let socketPath = protocol + "//" + host + ":" + port + "/socket";
+                  let socketPath = process.env.REMIX_DEV_LIVE_RELOAD_URL || protocol + "//" + host + ":" + port + "/socket";
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = async (message) => {
                     let event = JSON.parse(message.data);
