@@ -1,22 +1,6 @@
 # `@remix-run/react`
 
-## 1.18.0-pre.4
-
-### Patch Changes
-
-- Lock in react router 6.14.0 ([#6677](https://github.com/remix-run/remix/pull/6677))
-
-## 1.18.0-pre.3
-
-### Patch Changes
-
-- Bump router 6.14.0-pre.1 ([#6662](https://github.com/remix-run/remix/pull/6662))
-
-## 1.18.0-pre.2
-
-## 1.18.0-pre.1
-
-## 1.18.0-pre.0
+## 1.18.0
 
 ### Minor Changes
 
@@ -26,7 +10,9 @@
 
 ### Patch Changes
 
+- Bump router 6.14.0-pre.1 ([#6662](https://github.com/remix-run/remix/pull/6662))
 - Detect mismatches between the initially loaded URL and the URL at the time we hydrate and trigger a hard reload if they do not match. This is an edge-case that can happen when the network is slowish and the user clicks forward into a Remix app and then clicks forward again while the initial JS chunks are loading. ([#6409](https://github.com/remix-run/remix/pull/6409))
+- Lock in react router 6.14.0 ([#6677](https://github.com/remix-run/remix/pull/6677))
 - properly pass <Scripts /> props to inline script tags for deferred data ([#6389](https://github.com/remix-run/remix/pull/6389))
 
 ## 1.17.1
