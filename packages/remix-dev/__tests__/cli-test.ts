@@ -116,13 +116,14 @@ describe("remix CLI", () => {
             --debug             Attach Node.js inspector
             --port, -p          Choose the port from which to run your app
 
-            [unstable_dev]
+            [v2_dev]
             --command, -c       Command used to run your app server
-            --http-scheme       HTTP(S) scheme for the dev server. Default: http
-            --http-host         HTTP(S) host for the dev server. Default: localhost
-            --http-port         HTTP(S) port for the dev server. Default: any open port
+            --scheme            Scheme for the dev server. Default: http
+            --host              Host for the dev server. Default: localhost
+            --port              Port for the dev server. Default: any open port
             --no-restart        Do not restart the app server when rebuilds occur.
-            --websocket-port    WebSocket port for the dev server. Default: any open port
+            --tls-key           Path to TLS key (key.pem)
+            --tls-cert          Path to TLS certificate (cert.pem)
           \`init\` Options:
             --no-delete         Skip deleting the \`remix.init\` script
           \`routes\` Options:
@@ -288,7 +289,7 @@ function defer() {
 async function interactWithShell(
   proc: childProcess.ChildProcessWithoutNullStreams,
   qAndA: Array<
-    | { question: RegExp; type: Array<String>; answer?: never }
+    | { question: RegExp; type: Array<string>; answer?: never }
     | { question: RegExp; answer: RegExp; type?: never }
   >
 ) {

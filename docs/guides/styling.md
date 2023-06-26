@@ -206,8 +206,9 @@ And then a `<PrimaryButton>` that extends it:
 }
 ```
 
-```tsx filename=app/components/primary-button/index.js lines=[1,5,12]
+```tsx filename=app/components/primary-button/index.js lines=[1,6,13]
 import { Button, links as buttonLinks } from "../button";
+
 import styles from "./styles.css";
 
 export const links = () => [
@@ -231,12 +232,12 @@ Because these buttons are not routes, and therefore not associated with a URL se
 
 Consider that `routes/index.js` uses the primary button component:
 
-```tsx filename=app/routes/index.js lines=[2-5,9]
-import styles from "~/styles/index.css";
+```tsx filename=app/routes/index.js lines=[1-4,9]
 import {
   PrimaryButton,
   links as primaryButtonLinks,
 } from "~/components/primary-button";
+import styles from "~/styles/index.css";
 
 export function links() {
   return [
@@ -255,10 +256,10 @@ import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import { TileGrid } from "~/components/tile-grid";
-import { ProductTile } from "~/components/product-tile";
-import { ProductDetails } from "~/components/product-details";
 import { AddFavoriteButton } from "~/components/add-favorite-button";
+import { ProductDetails } from "~/components/product-details";
+import { ProductTile } from "~/components/product-tile";
+import { TileGrid } from "~/components/tile-grid";
 import styles from "~/styles/$category.css";
 
 export function links() {
@@ -292,21 +293,21 @@ The component imports are already there, we just need to surface the assets:
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 import {
-  TileGrid,
-  links as tileGridLinks,
-} from "~/components/tile-grid";
-import {
-  ProductTile,
-  links as productTileLinks,
-} from "~/components/product-tile";
+  AddFavoriteButton,
+  links as addFavoriteLinks,
+} from "~/components/add-favorite-button";
 import {
   ProductDetails,
   links as productDetailsLinks,
 } from "~/components/product-details";
 import {
-  AddFavoriteButton,
-  links as addFavoriteLinks,
-} from "~/components/add-favorite-button";
+  ProductTile,
+  links as productTileLinks,
+} from "~/components/product-tile";
+import {
+  TileGrid,
+  links as tileGridLinks,
+} from "~/components/tile-grid";
 import styles from "~/styles/$category.css";
 
 export const links: LinksFunction = () => {
@@ -431,11 +432,11 @@ Now we can tell it which files to generate classes from:
 import type { Config } from "tailwindcss";
 
 export default {
-   content: ["./app/**/*.{js,jsx,ts,tsx}"],
-   theme: {
-      extend: {},
-   },
-   plugins: [],
+  content: ["./app/**/*.{js,jsx,ts,tsx}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
 } satisfies Config;
 ```
 
@@ -461,11 +462,13 @@ export const links: LinksFunction = () => [
 ];
 ```
 
-With this setup in place, you can also use [Tailwind's functions and directives][tailwind-functions-and-directives] anywhere in your CSS.
+With this setup in place, you can also use [Tailwind's functions and directives][tailwind-functions-and-directives] anywhere in your CSS. Note that Tailwind will warn that no utility classes were detected in your source files if you never used it before.
 
-Note that if you're also using Remix's [built-in PostCSS support][built-in-post-css-support], the Tailwind PostCSS plugin will be automatically included if it's missing, but you can also choose to manually include the Tailwind plugin in your PostCSS config instead if you'd prefer.
+If you're also using Remix's [built-in PostCSS support][built-in-post-css-support], the Tailwind PostCSS plugin will be automatically included if it's missing, but you can also choose to manually include the Tailwind plugin in your PostCSS config instead if you prefer.
 
 If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension][tailwind-intelli-sense-extension] for the best developer experience.
+
+<docs-warning>It's recommended that you avoid Tailwind's `@import` syntax (e.g. `@import 'tailwindcss/base'`) in favor of Tailwind directives (e.g. `@tailwind base`). Tailwind replaces its import statements with inlined CSS but this can result in the interleaving of styles and import statements. This clashes with the restriction that all import statements must be at the start of the file. Alternatively, you can use [PostCSS][built-in-post-css-support] with the [postcss-import] plugin to process imports before passing them to esbuild.</docs-warning>
 
 ## Remote Stylesheets
 
@@ -606,7 +609,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
    export const meta: MetaFunction = () => ({
      charset: "utf-8",
-     viewport: "width=device-width,initial-scale=1",
+     viewport: "width=device-width, initial-scale=1",
    });
 
    export default function App() {
@@ -632,17 +635,21 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
 2. Your `entry.server.tsx` will look something like this:
 
-   ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
-   import { renderToString } from "react-dom/server";
+   ```tsx filename=entry.server.tsx lines=[7,16,19-24,26-27]
+   import type {
+     AppLoadContext,
+     EntryContext,
+   } from "@remix-run/node"; // or cloudflare/deno
    import { RemixServer } from "@remix-run/react";
-   import type { EntryContext } from "@remix-run/node"; // or cloudflare/deno
+   import { renderToString } from "react-dom/server";
    import { ServerStyleSheet } from "styled-components";
 
    export default function handleRequest(
      request: Request,
      responseStatusCode: number,
      responseHeaders: Headers,
-     remixContext: EntryContext
+     remixContext: EntryContext,
+     loadContext: AppLoadContext
    ) {
      const sheet = new ServerStyleSheet();
 
@@ -688,9 +695,9 @@ npm install @remix-run/css-bundle
 
 Then, import `cssBundleHref` and add it to a link descriptor—most likely in `root.tsx` so that it applies to your entire application.
 
-```tsx filename=root.tsx lines=[2,6-8]
-import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=root.tsx lines=[1,6-8]
 import { cssBundleHref } from "@remix-run/css-bundle";
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const links: LinksFunction = () => {
   return [
@@ -816,8 +823,9 @@ module.exports = {
 [built-in-post-css-support]: #postcss
 [vanilla-extract-2]: #vanilla-extract
 [css-side-effect-imports]: #css-side-effect-imports
-[tailwind-2]: #tailwind
+[tailwind-2]: #tailwind-css
 [post-css]: #postcss
 [css-modules]: #css-modules
 [vanilla-extract-3]: #vanilla-extract
 [css-side-effect-imports-2]: #css-side-effect-imports
+[postcss-import]: https://github.com/postcss/postcss-import

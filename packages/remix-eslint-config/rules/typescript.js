@@ -1,30 +1,20 @@
-const OFF = 0;
-const WARN = 1;
-const ERROR = 2;
-
 module.exports = {
-  "no-dupe-class-members": OFF,
-  "no-undef": OFF,
+  // TODO: These rules might be nice to enable... we should investigate eventually!
+  "@typescript-eslint/ban-ts-comment": "off",
+  "@typescript-eslint/ban-types": "off",
+  "@typescript-eslint/no-empty-function": "off",
+  "@typescript-eslint/no-empty-interface": "off",
+  "@typescript-eslint/no-explicit-any": "off",
+  "@typescript-eslint/no-inferrable-types": "off",
+  "@typescript-eslint/no-namespace": "off",
+  "@typescript-eslint/no-non-null-assertion": "off",
+  "@typescript-eslint/no-var-requires": "off",
+  "no-var": "off",
+  "prefer-rest-params": "off",
 
-  // Add TypeScript specific rules (and turn off ESLint equivalents)
-  "@typescript-eslint/consistent-type-assertions": WARN,
-  "@typescript-eslint/consistent-type-imports": WARN,
-
-  "no-array-constructor": OFF,
-  "@typescript-eslint/no-array-constructor": WARN,
-
-  // There is a bug w/ @typescript-eslint/no-duplicate-imports triggered
-  // by multiple imports inside of module declarations. We should reenable
-  // this rule when the bug is fixed.
-  // https://github.com/typescript-eslint/typescript-eslint/issues/3071
-  "no-duplicate-imports": OFF,
-  // "@typescript-eslint/no-duplicate-imports": WARN,
-
-  "no-redeclare": OFF,
-  "@typescript-eslint/no-redeclare": ERROR,
-  "no-use-before-define": OFF,
+  // These rules are nice and we want to configure over the defaults
   "@typescript-eslint/no-use-before-define": [
-    WARN,
+    "error",
     {
       functions: false,
       classes: false,
@@ -32,23 +22,32 @@ module.exports = {
       typedefs: false,
     },
   ],
-  "no-unused-expressions": OFF,
   "@typescript-eslint/no-unused-expressions": [
-    WARN,
+    "error",
     {
       allowShortCircuit: true,
       allowTernary: true,
       allowTaggedTemplates: true,
     },
   ],
-  "no-unused-vars": OFF,
   "@typescript-eslint/no-unused-vars": [
-    WARN,
+    "error",
     {
       args: "none",
       ignoreRestSiblings: true,
     },
   ],
-  "no-useless-constructor": OFF,
-  "@typescript-eslint/no-useless-constructor": WARN,
+
+  // These rules are turned on in the core rules but aren't needed for TypeScript code
+  "no-dupe-class-members": "off",
+  "no-undef": "off",
+
+  // These stylistic rules don't match our preferences
+  "no-use-before-define": "off",
+  "prefer-const": "off",
+
+  // These rules should eventually come from @typescript-eslint/stylistic
+  // in typescript-eslint@6
+  "@typescript-eslint/consistent-type-assertions": "warn",
+  "@typescript-eslint/consistent-type-imports": "warn",
 };

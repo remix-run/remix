@@ -1,5 +1,94 @@
 # `@remix-run/react`
 
+## 1.18.0
+
+### Minor Changes
+
+- stabilize v2 dev server ([#6615](https://github.com/remix-run/remix/pull/6615))
+- Support `application/json` and `text/plain` submission encodings in `useSubmit`/`fetcher.submit` ([#6570](https://github.com/remix-run/remix/pull/6570))
+- Add support for `<Link prefetch="viewport">` to prefetch links when they enter the viewport via an [Intersection Observer](https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver) ([#6433](https://github.com/remix-run/remix/pull/6433))
+
+### Patch Changes
+
+- Bump router 6.14.0-pre.1 ([#6662](https://github.com/remix-run/remix/pull/6662))
+- Detect mismatches between the initially loaded URL and the URL at the time we hydrate and trigger a hard reload if they do not match. This is an edge-case that can happen when the network is slowish and the user clicks forward into a Remix app and then clicks forward again while the initial JS chunks are loading. ([#6409](https://github.com/remix-run/remix/pull/6409))
+- Lock in react router 6.14.0 ([#6677](https://github.com/remix-run/remix/pull/6677))
+- properly pass <Scripts /> props to inline script tags for deferred data ([#6389](https://github.com/remix-run/remix/pull/6389))
+
+## 1.17.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - [`react-router-dom@6.13.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.13.0)
+
+## 1.17.0
+
+### Minor Changes
+
+- Faster server export removal for routes when `unstable_dev` is enabled. ([#6455](https://github.com/remix-run/remix/pull/6455))
+
+  Also, only render modulepreloads on SSR.
+  Do not render modulepreloads when hydrated.
+
+- Force Typescript to simplify type produced by `Serialize`. ([#6449](https://github.com/remix-run/remix/pull/6449))
+
+  As a result, the following types and functions have simplified return types:
+
+  - SerializeFrom
+  - useLoaderData
+  - useActionData
+  - useFetcher
+
+  ```ts
+  type Data = { hello: string; when: Date };
+
+  // BEFORE
+  type Unsimplified = SerializeFrom<Data>;
+  //   ^? SerializeObject<UndefinedToOptional<{ hello: string; when: Date }>>
+
+  // AFTER
+  type Simplified = SerializeFrom<Data>;
+  //   ^? { hello: string; when: string }
+  ```
+
+- Reuse dev server port for WebSocket (Live Reload,HMR,HDR) ([#6476](https://github.com/remix-run/remix/pull/6476))
+
+  As a result the `webSocketPort`/`--websocket-port` option has been obsoleted.
+  Additionally, scheme/host/port options for the dev server have been renamed.
+
+  Available options are:
+
+  | Option     | flag               | config           | default                           |
+  | ---------- | ------------------ | ---------------- | --------------------------------- |
+  | Command    | `-c` / `--command` | `command`        | `remix-serve <server build path>` |
+  | Scheme     | `--scheme`         | `scheme`         | `http`                            |
+  | Host       | `--host`           | `host`           | `localhost`                       |
+  | Port       | `--port`           | `port`           | Dynamically chosen open port      |
+  | No restart | `--no-restart`     | `restart: false` | `restart: true`                   |
+
+  Note that scheme/host/port options are for the _dev server_, not your app server.
+  You probably don't need to use scheme/host/port option if you aren't configuring networking (e.g. for Docker or SSL).
+
+### Patch Changes
+
+- retry HDR revalidations in development mode to aid in 3rd party server race conditions ([#6287](https://github.com/remix-run/remix/pull/6287))
+- Updated dependencies:
+  - [`react-router-dom@6.12.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.12.0)
+  - [`@remix-run/router@1.6.3`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#163)
+
+## 1.16.1
+
+### Patch Changes
+
+- Cross-module `loader` change detection for HDR ([#6299](https://github.com/remix-run/remix/pull/6299))
+- Better opt-out of `loader` revalidation on UI only changes ([#6278](https://github.com/remix-run/remix/pull/6278))
+- Add `useMatch` re-export from `react-router-dom` ([#5257](https://github.com/remix-run/remix/pull/5257))
+- Fix `data` parameter typing on `V2_MetaFunction` to include `undefined` for scenarios in which the `loader` threw to it's own boundary. ([#6231](https://github.com/remix-run/remix/pull/6231))
+- Updated dependencies:
+  - [`react-router-dom@6.11.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.2)
+  - [`@remix-run/router@1.6.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#162)
+
 ## 1.16.0
 
 ### Minor Changes

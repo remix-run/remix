@@ -1,12 +1,13 @@
 import * as path from "path";
 import * as fse from "fs-extra";
 import esbuild from "esbuild";
-import type { Processor } from "postcss";
 
 import invariant from "../../invariant";
-import type { RemixConfig } from "../../config";
-import type { Options } from "../options";
-import { getPostcssProcessor } from "../utils/postcss";
+import type { Context } from "../context";
+import {
+  getPostcssProcessor,
+  populateDependenciesFromMessages,
+} from "../utils/postcss";
 import { absoluteCssUrlsPlugin } from "./absoluteCssUrlsPlugin";
 
 const isExtendedLengthPath = /^\\\\\?\\/;
@@ -19,13 +20,7 @@ function normalizePathSlashes(p: string) {
  * This plugin loads css files with the "css" loader (bundles and moves assets to assets directory)
  * and exports the url of the css file as its default export.
  */
-export function cssFilePlugin({
-  config,
-  options,
-}: {
-  config: RemixConfig;
-  options: Options;
-}): esbuild.Plugin {
+export function cssFilePlugin(ctx: Context): esbuild.Plugin {
   return {
     name: "css-file",
 
@@ -49,127 +44,152 @@ export function cssFilePlugin({
         target,
       } = build.initialOptions;
 
-      let postcssProcessor = await getPostcssProcessor({ config });
+      // eslint-disable-next-line prefer-let/prefer-let -- Avoid needing to repeatedly check for null since const can't be reassigned
+      const postcssProcessor = await getPostcssProcessor(ctx);
 
       build.onLoad({ filter: /\.css$/ }, async (args) => {
-        let { metafile, outputFiles, warnings, errors } = await esbuild.build({
-          absWorkingDir,
-          assetNames,
-          chunkNames,
-          conditions,
-          define,
-          external,
-          format,
-          mainFields,
-          nodePaths,
-          platform,
-          publicPath,
-          sourceRoot,
-          target,
-          treeShaking,
-          tsconfig,
-          minify: options.mode === "production",
-          bundle: true,
-          minifySyntax: true,
-          metafile: true,
-          write: false,
-          sourcemap: Boolean(options.sourcemap && postcssProcessor), // We only need source maps if we're processing the CSS with PostCSS
-          splitting: false,
-          outdir: config.assetsBuildDirectory,
-          entryNames: assetNames,
-          entryPoints: [args.path],
-          loader: {
-            ...loader,
-            ".css": "css",
-          },
-          plugins: [
-            absoluteCssUrlsPlugin(),
-            ...(postcssProcessor
-              ? [postcssPlugin({ postcssProcessor, options })]
-              : []),
-          ],
-        });
+        let cacheKey = `css-file:${args.path}`;
+        let {
+          cacheValue: { contents, watchFiles, warnings },
+        } = await ctx.fileWatchCache.getOrSet(cacheKey, async () => {
+          let fileDependencies = new Set([args.path]);
+          let globDependencies = new Set<string>();
 
-        if (errors && errors.length) {
-          return { errors };
-        }
+          let { metafile, outputFiles, warnings, errors } = await esbuild.build(
+            {
+              absWorkingDir,
+              assetNames,
+              chunkNames,
+              conditions,
+              define,
+              external,
+              format,
+              mainFields,
+              nodePaths,
+              platform,
+              publicPath,
+              sourceRoot,
+              target,
+              treeShaking,
+              tsconfig,
+              minify: ctx.options.mode === "production",
+              bundle: true,
+              minifySyntax: true,
+              metafile: true,
+              write: false,
+              sourcemap: Boolean(ctx.options.sourcemap && postcssProcessor), // We only need source maps if we're processing the CSS with PostCSS
+              splitting: false,
+              outdir: ctx.config.assetsBuildDirectory,
+              entryNames: assetNames,
+              entryPoints: [args.path],
+              loader: {
+                ...loader,
+                ".css": "css",
+              },
+              plugins: [
+                absoluteCssUrlsPlugin(),
+                ...(postcssProcessor
+                  ? [
+                      {
+                        name: "postcss-plugin",
+                        async setup(build) {
+                          build.onLoad(
+                            { filter: /\.css$/, namespace: "file" },
+                            async (args) => {
+                              let contents = await fse.readFile(
+                                args.path,
+                                "utf-8"
+                              );
 
-        invariant(metafile, "metafile is missing");
-        let { outputs } = metafile;
-        let entry = Object.keys(outputs).find((out) => outputs[out].entryPoint);
-        invariant(entry, "entry point not found");
+                              let { css, messages } =
+                                await postcssProcessor.process(contents, {
+                                  from: args.path,
+                                  to: args.path,
+                                  map: ctx.options.sourcemap,
+                                });
 
-        let normalizedEntry = path.resolve(
-          config.rootDirectory,
-          normalizePathSlashes(entry)
-        );
-        let entryFile = outputFiles.find((file) => {
-          return (
-            path.resolve(
-              config.rootDirectory,
-              normalizePathSlashes(file.path)
-            ) === normalizedEntry
+                              populateDependenciesFromMessages({
+                                messages,
+                                fileDependencies,
+                                globDependencies,
+                              });
+
+                              return {
+                                contents: css,
+                                loader: "css",
+                              };
+                            }
+                          );
+                        },
+                      } satisfies esbuild.Plugin,
+                    ]
+                  : []),
+              ],
+            }
           );
-        });
 
-        invariant(entryFile, "entry file not found");
+          if (errors && errors.length) {
+            throw { errors };
+          }
 
-        let outputFilesWithoutEntry = outputFiles.filter(
-          (file) => file !== entryFile
-        );
+          invariant(metafile, "metafile is missing");
+          let { outputs } = metafile;
+          let entry = Object.keys(outputs).find(
+            (out) => outputs[out].entryPoint
+          );
+          invariant(entry, "entry point not found");
 
-        // write all assets
-        await Promise.all(
-          outputFilesWithoutEntry.map(({ path: filepath, contents }) =>
-            fse.outputFile(filepath, contents)
-          )
-        );
+          let normalizedEntry = path.resolve(
+            ctx.config.rootDirectory,
+            normalizePathSlashes(entry)
+          );
+          let entryFile = outputFiles.find((file) => {
+            return (
+              path.resolve(
+                ctx.config.rootDirectory,
+                normalizePathSlashes(file.path)
+              ) === normalizedEntry
+            );
+          });
 
-        return {
-          contents: entryFile.contents,
-          loader: "file",
-          // add all css assets to watchFiles
-          watchFiles: Object.values(outputs).reduce<string[]>(
-            (arr, { inputs }) => {
-              let resolvedInputs = Object.keys(inputs).map((input) => {
-                return path.resolve(input);
-              });
-              arr.push(...resolvedInputs);
-              return arr;
+          invariant(entryFile, "entry file not found");
+
+          let outputFilesWithoutEntry = outputFiles.filter(
+            (file) => file !== entryFile
+          );
+
+          // add all css assets to dependencies
+          for (let { inputs } of Object.values(outputs)) {
+            for (let input of Object.keys(inputs)) {
+              let resolvedInput = path.resolve(input);
+              fileDependencies.add(resolvedInput);
+            }
+          }
+
+          // write all assets
+          await Promise.all(
+            outputFilesWithoutEntry.map(({ path: filepath, contents }) =>
+              fse.outputFile(filepath, contents)
+            )
+          );
+
+          return {
+            cacheValue: {
+              contents: entryFile.contents,
+              // add all dependencies to watchFiles
+              watchFiles: Array.from(fileDependencies),
+              warnings,
             },
-            []
-          ),
-          warnings,
-        };
-      });
-    },
-  };
-}
-
-function postcssPlugin({
-  postcssProcessor,
-  options,
-}: {
-  postcssProcessor: Processor;
-  options: Options;
-}): esbuild.Plugin {
-  return {
-    name: "postcss-plugin",
-    async setup(build) {
-      build.onLoad({ filter: /\.css$/, namespace: "file" }, async (args) => {
-        let contents = await fse.readFile(args.path, "utf-8");
-
-        contents = (
-          await postcssProcessor.process(contents, {
-            from: args.path,
-            to: args.path,
-            map: options.sourcemap,
-          })
-        ).css;
+            fileDependencies,
+            globDependencies,
+          };
+        });
 
         return {
           contents,
-          loader: "css",
+          loader: "file",
+          watchFiles,
+          warnings,
         };
       });
     },

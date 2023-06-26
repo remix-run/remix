@@ -124,10 +124,11 @@ export function createRemixStub(
     if (remixContextRef.current == null) {
       remixContextRef.current = {
         future: {
-          unstable_dev: false,
+          v2_dev: false,
           unstable_postcss: false,
           unstable_tailwind: false,
           v2_errorBoundary: false,
+          v2_headers: false,
           v2_meta: false,
           v2_normalizeFormMethod: false,
           v2_routeConvention: false,

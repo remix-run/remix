@@ -12,7 +12,9 @@ test.describe("Custom Server Entry", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
+      config: {
+        future: { v2_routeConvention: true },
+      },
       files: {
         "app/entry.server.jsx": js`
           export default function handleRequest() {
@@ -101,7 +103,7 @@ test.describe("Default Server Entry (React 17)", () => {
             typescript: "0.0.0-local-version",
           },
           engines: {
-            node: ">=14",
+            node: ">=14.0.0",
           },
         }),
       },
