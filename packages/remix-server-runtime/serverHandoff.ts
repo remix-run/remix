@@ -19,7 +19,7 @@ export function createServerHandoffString<T>(serverHandoff: {
   // Don't allow StaticHandlerContext to be passed in verbatim, since then
   // we'd end up including duplicate info
   state: ValidateShape<T, HydrationState>;
-  url: string;
+  pathname: string;
   future: FutureConfig;
   dev?: { port: number };
 }): string {
