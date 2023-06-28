@@ -328,6 +328,16 @@ server.listen(port, () => {
 });
 ```
 
+Now that the app server is set up, you should be able to build and run your app in production mode with TLS.
+To get the dev server to interop with TLS, you'll need to specify the TLS cert and key you created:
+
+```sh
+remix dev --tls-key=key.pem --tls-cert=cert.pem -c 'node ./server.js'
+```
+
+Alternatively, you can specify the TLS key and cert via the `v2_dev.tlsCert` and `v2_dev.tlsKey` config options.
+Now your app server and dev server are TLS ready!
+
 ### Troubleshooting
 
 #### HMR: hot updates losing app state
