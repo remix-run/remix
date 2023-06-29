@@ -181,11 +181,13 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       },
     });
 
-    // Hard reload if the URL we tried to load is not the current URL.
-    // This is usually the result of 2 rapid backwards/forward clicks from an
+    // Hard reload if the path we tried to load is not the current path.
+    // This is usually the result of 2 rapid back/forward clicks from an
     // external site into a Remix app, where we initially start the load for
     // one URL and while the JS chunks are loading a second forward click moves
-    // us to a new URL
+    // us to a new URL.  Avoid comparing search params because of CDNs which
+    // can be configured to ignore certain params and only pathname is relevant
+    // towards determining the route matches.
     let initialPathname = window.__remixContext.pathname;
     let hydratedPathname = window.location.pathname;
     if (initialPathname !== hydratedPathname) {
