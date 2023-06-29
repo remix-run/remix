@@ -203,7 +203,7 @@ You may notice an `?index` query parameter showing up on your URLs from time to 
     ├── root.tsx
     └── routes
         ├── sales.invoices._index.tsx   <-- /sales/invoices?index
-        ├── sales.invoices.invoices.tsx <-- /sales/invoices
+        └── sales.invoices.tsx <-- /sales/invoices
 ```
 
 This is handled automatically for you when you submit from a `<Form>` contained within either the layout route or the index route. But if you are submitting forms to different routes, or using `fetcher.submit`/`fetcher.load` you may need to be aware of this URL pattern, so you can target the correct route.

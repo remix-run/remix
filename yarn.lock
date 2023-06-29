@@ -2569,13 +2569,13 @@
     tiny-glob "^0.2.9"
     tslib "^2.4.0"
 
-"@playwright/test@^1.35.1":
-  version "1.35.1"
-  resolved "https://registry.npmjs.org/@playwright/test/-/test-1.35.1.tgz#a596b61e15b980716696f149cc7a2002f003580c"
-  integrity sha512-b5YoFe6J9exsMYg0pQAobNDR85T1nLumUYgUTtKm4d21iX2L7WqKq9dW8NGJ+2vX0etZd+Y7UeuqsxDXm9+5ZA==
+"@playwright/test@1.33.0":
+  version "1.33.0"
+  resolved "https://registry.npmjs.org/@playwright/test/-/test-1.33.0.tgz#669ef859efb81b143dfc624eef99d1dd92a81b67"
+  integrity sha512-YunBa2mE7Hq4CfPkGzQRK916a4tuZoVx/EpLjeWlTVOnD4S2+fdaQZE0LJkbfhN5FTSKNLdcl7MoT5XB37bTkg==
   dependencies:
     "@types/node" "*"
-    playwright-core "1.35.1"
+    playwright-core "1.33.0"
   optionalDependencies:
     fsevents "2.3.2"
 
@@ -2589,10 +2589,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/router@1.7.0-pre.0":
-  version "1.7.0-pre.0"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.7.0-pre.0.tgz#913e0803ac70291c47537eb20397e01532dbc1a2"
-  integrity sha512-i0sJFZG0glzgAt6fXfkSHk5rsKOM8DSSH063gKO5sKUHvfQJZn8av4d/BMrwymr3KaFLqkl9m3FXepbEk7XzqA==
+"@remix-run/router@1.7.0":
+  version "1.7.0"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.7.0.tgz#550a8d5760b78efc5d60f62b5829b0f74c1fde81"
+  integrity sha512-Eu1V3kz3mV0wUpVTiFHuaT8UD1gj/0VnoFHQYX35xlslQUpe8CuYoKFn9d4WZFHm3yDywz6ALZuGdnUPKrNeAw==
 
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
@@ -10947,6 +10947,11 @@ pidtree@^0.3.0:
   resolved "https://registry.npmjs.org/pidtree/-/pidtree-0.3.1.tgz"
   integrity sha512-qQbW94hLHEqCg7nhby4yRC7G2+jYHY4Rguc2bjw7Uug4GIJuu1tvf2uHaZv5Q8zdt+WKJ6qK1FOI6amaWUo5FA==
 
+pidtree@^0.6.0:
+  version "0.6.0"
+  resolved "https://registry.npmjs.org/pidtree/-/pidtree-0.6.0.tgz#90ad7b6d42d5841e69e0a2419ef38f8883aa057c"
+  integrity sha512-eG2dWTVw5bzqGRztnHExczNxt5VGsE6OwTeCG3fdUf9KBsZzO3R5OIIIzWR+iZA0NtZ+RDVdaoE2dK1cn6jH4g==
+
 pify@^2.2.0, pify@^2.3.0:
   version "2.3.0"
   resolved "https://registry.npmjs.org/pify/-/pify-2.3.0.tgz"
@@ -10983,10 +10988,10 @@ pkg-types@^1.0.1:
     mlly "^1.0.0"
     pathe "^1.0.0"
 
-playwright-core@1.35.1:
-  version "1.35.1"
-  resolved "https://registry.npmjs.org/playwright-core/-/playwright-core-1.35.1.tgz#52c1e6ffaa6a8c29de1a5bdf8cce0ce290ffb81d"
-  integrity sha512-pNXb6CQ7OqmGDRspEjlxE49w+4YtR6a3X6mT1hZXeJHWmsEz7SunmvZeiG/+y1yyMZdHnnn73WKYdtV1er0Xyg==
+playwright-core@1.33.0:
+  version "1.33.0"
+  resolved "https://registry.npmjs.org/playwright-core/-/playwright-core-1.33.0.tgz#269efe29a927cd6d144d05f3c2d2f72bd72447a1"
+  integrity sha512-aizyPE1Cj62vAECdph1iaMILpT0WUDCq3E6rW6I+dleSbBoGbktvJtzS6VHkZ4DKNEOG9qJpiom/ZxO+S15LAw==
 
 pointer-symbol@^1.0.0:
   version "1.0.0"
@@ -11437,20 +11442,20 @@ react-refresh@^0.14.0:
   resolved "https://registry.npmjs.org/react-refresh/-/react-refresh-0.14.0.tgz"
   integrity sha512-wViHqhAd8OHeLS/IRMJjTSDHF3U9eWi62F/MledQGPdJGDhodXJ9PBLNGr6WWL7qlH12Mt3TyTpbS+hGXMjCzQ==
 
-react-router-dom@6.14.0-pre.0:
-  version "6.14.0-pre.0"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.14.0-pre.0.tgz#8e106739c776f48c0d3710aae69bac42ddf09a3f"
-  integrity sha512-NndsLa0FHP8BDUePOnpiQqunDaoY1e0PljjqTQDxHMeCZqf1148S8hl54ZF6rXoA4EuACszVSrURIrAhZ++ljg==
+react-router-dom@6.14.0:
+  version "6.14.0"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.14.0.tgz#7ce6c3f73549e4d40216ba150253d3bf30812b33"
+  integrity sha512-YEwlApKwzMMMbGbhh+Q7MsloTldcwMgHxUY/1g0uA62+B1hZo2jsybCWIDCL8zvIDB1FA0pBKY9chHbZHt+2dQ==
   dependencies:
-    "@remix-run/router" "1.7.0-pre.0"
-    react-router "6.14.0-pre.0"
+    "@remix-run/router" "1.7.0"
+    react-router "6.14.0"
 
-react-router@6.14.0-pre.0:
-  version "6.14.0-pre.0"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-6.14.0-pre.0.tgz#38d8ace45232b5d6cbcaf8b68d6af76a584f5e02"
-  integrity sha512-xNXcEDQ7pjKpw4ueFhmbksnVaRuyXng4OXXBg9RsM16FyJDSUUKXruygjrDiVeyGeAGjIiDDNUX/G6EwF3aS9w==
+react-router@6.14.0:
+  version "6.14.0"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-6.14.0.tgz#1c3e8e922d934d43a253fd862c72c82167c0a7f1"
+  integrity sha512-OD+vkrcGbvlwkspUFDgMzsu1RXwdjNh83YgG/28lBnDzgslhCgxIqoExLlxsfTpIygp7fc+Hd3esloNwzkm2xA==
   dependencies:
-    "@remix-run/router" "1.7.0-pre.0"
+    "@remix-run/router" "1.7.0"
 
 react@^18.2.0:
   version "18.2.0"

@@ -1,21 +1,18 @@
 {
   "private": true,
   "sideEffects": false,
+  "type": "module",
   "scripts": {
     "build": "remix build",
-    "deploy": "wrangler publish",
-    "dev:remix": "remix watch",
-    "dev:miniflare": "cross-env NODE_ENV=development miniflare ./build/index.js --watch",
-    "dev": "npm-run-all build --parallel \"dev:*\"",
-    "start": "cross-env NODE_ENV=production miniflare ./build/index.js",
+    "deploy": "remix build && wrangler publish",
+    "dev": "remix dev --no-restart -c \"npm start\"",
+    "start": "wrangler dev ./build/index.js",
     "typecheck": "tsc"
   },
   "dependencies": {
     "@remix-run/cloudflare": "*",
-    "@remix-run/cloudflare-workers": "*",
     "@remix-run/css-bundle": "*",
     "@remix-run/react": "*",
-    "cross-env": "^7.0.3",
     "isbot": "^3.6.8",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -27,10 +24,8 @@
     "@types/react": "^18.0.35",
     "@types/react-dom": "^18.0.11",
     "eslint": "^8.38.0",
-    "miniflare": "^2.13.0",
-    "npm-run-all": "^4.1.5",
     "typescript": "^5.0.4",
-    "wrangler": "^2.15.1"
+    "wrangler": "^3.1.1"
   },
   "engines": {
     "node": ">=16.13.0"
