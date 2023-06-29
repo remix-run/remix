@@ -21,5 +21,8 @@
     "@remix-run/testing": "1.18.0",
     "@remix-run/vercel": "1.18.0"
   },
-  "changesets": []
+  "changesets": [
+    "famous-games-film",
+    "fix-reload-loops"
+  ]
 }
