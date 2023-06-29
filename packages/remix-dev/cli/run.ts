@@ -9,6 +9,7 @@ import * as colors from "../colors";
 import * as commands from "./commands";
 import { validateNewProjectPath, validateTemplate } from "./create";
 import { detectPackageManager } from "./detectPackageManager";
+import { logger } from "../tux";
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -212,6 +213,25 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     let version = require("../package.json").version;
     console.log(version);
     return;
+  }
+
+  // TODO: remove in v2
+  if (flags["scheme"]) {
+    logger.warn("`--scheme` flag is deprecated", {
+      details: [
+        "Use `REMIX_DEV_ORIGIN` instead",
+        "-> https://remix.run/docs/en/main/other-api/dev-v2#how-to-integrate-with-a-reverse-proxy",
+      ],
+    });
+  }
+  // TODO: remove in v2
+  if (flags["host"]) {
+    logger.warn("`--host` flag is deprecated", {
+      details: [
+        "Use `REMIX_DEV_ORIGIN` instead",
+        "-> https://remix.run/docs/en/main/other-api/dev-v2#how-to-integrate-with-a-reverse-proxy",
+      ],
+    });
   }
 
   if (flags["tls-key"]) {
