@@ -19,7 +19,7 @@ import {
 /* eslint-disable prefer-let/prefer-let */
 declare global {
   var __remixContext: {
-    pathname: string;
+    url: string;
     state: HydrationState;
     future: FutureConfig;
     // The number of active deferred keys rendered on the server
@@ -188,7 +188,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     // us to a new URL.  Avoid comparing search params because of CDNs which
     // can be configured to ignore certain params and only pathname is relevant
     // towards determining the route matches.
-    let initialPathname = window.__remixContext.pathname;
+    let initialPathname = window.__remixContext.url;
     let hydratedPathname = window.location.pathname;
     if (initialPathname !== hydratedPathname) {
       let errorMsg =
