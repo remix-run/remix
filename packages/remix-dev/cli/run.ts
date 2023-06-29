@@ -44,8 +44,6 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
 
     [v2_dev]
     --command, -c       Command used to run your app server
-    --scheme            Scheme for the dev server. Default: http
-    --host              Host for the dev server. Default: localhost
     --port              Port for the dev server. Default: any open port
     --no-restart        Do not restart the app server when rebuilds occur.
     --tls-key           Path to TLS key (key.pem)
@@ -183,13 +181,15 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       // dev server
       "--command": String,
       "-c": "--command",
-      "--scheme": String,
-      "--host": String,
       "--port": Number,
       "-p": "--port",
       "--no-restart": Boolean,
       "--tls-key": String,
       "--tls-cert": String,
+
+      // deprecated, remove in v2
+      "--scheme": String,
+      "--host": String,
     },
     {
       argv,
