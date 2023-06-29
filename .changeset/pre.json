@@ -23,6 +23,7 @@
   },
   "changesets": [
     "famous-games-film",
-    "fix-reload-loops"
+    "fix-reload-loops",
+    "stale-houses-grin"
   ]
 }
