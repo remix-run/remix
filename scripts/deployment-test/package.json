@@ -17,6 +17,7 @@
     "netlify": "^10.1.1",
     "node-fetch": "^2.6.9",
     "semver": "^7.3.7",
-    "start-server-and-test": "^1.14.0"
+    "start-server-and-test": "^1.14.0",
+    "@remix-run/dev": "0.0.0-nightly-4ef7a88-20230629"
   }
 }
