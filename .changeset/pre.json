@@ -22,8 +22,10 @@
     "@remix-run/vercel": "1.18.0"
   },
   "changesets": [
+    "angry-flowers-matter",
     "famous-games-film",
     "fix-reload-loops",
+    "popular-beers-bake",
     "stale-houses-grin"
   ]
 }
