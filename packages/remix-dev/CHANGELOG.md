@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- ignore missing react-dom/client for react 17 ([`0eff92c5b`](https://github.com/remix-run/remix/commit/0eff92c5b436c5e03442ea591680179c3f342895))
+- Ignore missing `react-dom/client` for React 17 ([#6725](https://github.com/remix-run/remix/pull/6725))
 - Updated dependencies:
   - `@remix-run/server-runtime@1.18.1`
 

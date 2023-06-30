@@ -4,10 +4,10 @@
 
 ### Patch Changes
 
-- Bump to latest router versions ([#6737](https://github.com/remix-run/remix/pull/6737))
 - Fix reload loops in scenarios where CDNs ignore search params ([#6707](https://github.com/remix-run/remix/pull/6707))
-- Bump router version ([#6727](https://github.com/remix-run/remix/pull/6727))
-- Bump to stable router version 6.14.1 ([#6740](https://github.com/remix-run/remix/pull/6740))
+- Updated dependencies:
+  - [`react-router-dom@6.14.1`](https://github.com/remix-run/react-router/releases/tag/react-router%406.14.1)
+  - [`@remix-run/router@1.7.1`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#171)
 
 ## 1.18.0
 
