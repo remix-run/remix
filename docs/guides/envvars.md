@@ -52,7 +52,7 @@ Then, in your `loader` functions, you can access environment variables directly 
 
 ```tsx
 export const loader = async ({ context }: LoaderArgs) => {
-  console.log(context.SOME_SECRET);
+  console.log(context.env.SOME_SECRET);
 };
 ```
 
