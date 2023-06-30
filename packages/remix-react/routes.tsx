@@ -203,7 +203,7 @@ async function loadRouteModuleWithBlockingLinks(
   routeModules: RouteModules
 ) {
   let routeModule = await loadRouteModule(route, routeModules);
-  // Should we not call this is the route is already active?
+  // TODO: Should we not call this if the route is already active?
   await prefetchStyleLinks(routeModule);
   return routeModule;
 }

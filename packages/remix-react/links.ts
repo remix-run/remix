@@ -239,7 +239,6 @@ export function getLinksForMatches(
 export async function prefetchStyleLinks(
   routeModule: RouteModule
 ): Promise<void> {
-  debugger;
   if (!routeModule.links) return;
   let descriptors = routeModule.links();
   if (!descriptors) return;
