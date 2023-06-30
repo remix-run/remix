@@ -1,28 +1,13 @@
 # `@remix-run/react`
 
-## 1.18.1-pre.3
-
-### Patch Changes
-
-- Bump to stable router version 6.14.1 ([#6740](https://github.com/remix-run/remix/pull/6740))
-
-## 1.18.1-pre.2
+## 1.18.1
 
 ### Patch Changes
 
 - Bump to latest router versions ([#6737](https://github.com/remix-run/remix/pull/6737))
-
-## 1.18.1-pre.1
-
-### Patch Changes
-
-- Bump router version ([#6727](https://github.com/remix-run/remix/pull/6727))
-
-## 1.18.1-pre.0
-
-### Patch Changes
-
 - Fix reload loops in scenarios where CDNs ignore search params ([#6707](https://github.com/remix-run/remix/pull/6707))
+- Bump router version ([#6727](https://github.com/remix-run/remix/pull/6727))
+- Bump to stable router version 6.14.1 ([#6740](https://github.com/remix-run/remix/pull/6740))
 
 ## 1.18.0
 

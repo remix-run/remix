@@ -1,16 +1,13 @@
 # `@remix-run/server-runtime`
 
-## 1.18.1-pre.3
-
-### Patch Changes
-
-- Bump to stable router version 6.14.1 ([#6740](https://github.com/remix-run/remix/pull/6740))
-
-## 1.18.1-pre.2
+## 1.18.1
 
 ### Patch Changes
 
 - Bump to latest router versions ([#6737](https://github.com/remix-run/remix/pull/6737))
+
+- Fix reload loops in scenarios where CDNs ignore search params ([#6707](https://github.com/remix-run/remix/pull/6707))
+
 - Avoid circular references and infinite recursion in types ([#6736](https://github.com/remix-run/remix/pull/6736))
 
   "Pretty" or simplified Typescript types are evaluated by eagerly resolving types.
@@ -18,13 +15,7 @@
 
   To fix this, pretty types are reverted as a built-in DX feature of useLoaderData, useActionData, etc...
 
-## 1.18.1-pre.1
-
-## 1.18.1-pre.0
-
-### Patch Changes
-
-- Fix reload loops in scenarios where CDNs ignore search params ([#6707](https://github.com/remix-run/remix/pull/6707))
+- Bump to stable router version 6.14.1 ([#6740](https://github.com/remix-run/remix/pull/6740))
 
 ## 1.18.0
 
