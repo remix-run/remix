@@ -9,7 +9,7 @@ export type ServerEffectsMap = Map<string, ServerEffect<Array<unknown>>>;
 export const SERVER_EFFECTS_KEY = Symbol("remixServerEffects");
 
 /**
- * Creates a server-side effect persisted on tihs Node.js process.
+ * Creates a server-side effect that persists on this Node.js process.
  * Cleans up and re-evaluates the effect on HMR and HDR.
  * @param id Unique string ID of the effect. Effects are persisted
  * and deduplicated by their IDs.
