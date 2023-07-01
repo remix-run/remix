@@ -11,6 +11,10 @@ type JsonPrimitive =
   | null;
 type NonJsonPrimitive = undefined | Function | symbol;
 
+// force Typescript to simplify the type
+type Pretty<T> = { [K in keyof T]: T[K] } & {};
+type PrettyTransform<T, U> = [T] extends [U] ? T : Pretty<U>;
+
 /*
  * `any` is the only type that can let you equate `0` with `1`
  * See https://stackoverflow.com/a/49928360/1490091
@@ -18,39 +22,40 @@ type NonJsonPrimitive = undefined | Function | symbol;
 type IsAny<T> = 0 extends 1 & T ? true : false;
 
 // prettier-ignore
-type Serialize<T> =
+type Serialize<T, Depth extends number[] = []> =
+  Depth['length'] extends 25 ? never :
   IsAny<T> extends true ? any :
-  T extends TypedDeferredData<infer U> ? SerializeDeferred<U> :
+  T extends TypedDeferredData<infer U> ? SerializeDeferred<U, [...Depth, 0]> :
   T extends JsonPrimitive ? T :
   T extends NonJsonPrimitive ? never :
   T extends { toJSON(): infer U } ? U :
   T extends [] ? [] :
-  T extends [unknown, ...unknown[]] ? SerializeTuple<T> :
-  T extends ReadonlyArray<infer U> ? (U extends NonJsonPrimitive ? null : Serialize<U>)[] :
-  T extends object ? SerializeObject<UndefinedToOptional<T>> :
+  T extends [unknown, ...unknown[]] ? PrettyTransform<T, SerializeTuple<T, [...Depth, 0]>> :
+  T extends ReadonlyArray<infer U> ? (U extends NonJsonPrimitive ? null : Serialize<U, [...Depth, 0]>)[] :
+  T extends object ? PrettyTransform<T, SerializeObject<UndefinedToOptional<T>, [...Depth, 0]>> :
   never
 ;
 
 /** JSON serialize [tuples](https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types) */
-type SerializeTuple<T extends unknown[]> = T extends [infer F, ...infer R]
-  ? [Serialize<F>, ...SerializeTuple<R>]
+type SerializeTuple<T extends unknown[], Depth extends number[]> = T extends [infer F, ...infer R]
+  ? [Serialize<F, Depth>, ...SerializeTuple<R, Depth>]
   : [];
 
 /** JSON serialize objects (not including arrays) and classes */
-type SerializeObject<T extends object> = {
-  [k in keyof T as T[k] extends NonJsonPrimitive ? never : k]: Serialize<T[k]>;
+type SerializeObject<T extends object, Depth extends number[]> = {
+  [k in keyof T as T[k] extends NonJsonPrimitive ? never : k]: Serialize<T[k], Depth>;
 };
 
 // prettier-ignore
-type SerializeDeferred<T extends Record<string, unknown>> = {
+type SerializeDeferred<T extends Record<string, unknown>, Depth extends number[]> = {
   [k in keyof T as
     T[k] extends Promise<unknown> ? k :
     T[k] extends NonJsonPrimitive ? never :
     k
   ]:
     T[k] extends Promise<infer U>
-    ? Promise<Serialize<U>> extends never ? "wtf" : Promise<Serialize<U>>
-    : Serialize<T[k]>  extends never ? k : Serialize<T[k]>;
+    ? Promise<Serialize<U, Depth>> extends never ? "wtf" : Promise<Serialize<U, Depth>>
+    : Serialize<T[k], Depth>  extends never ? k : Serialize<T[k], Depth>;
 };
 
 /*
