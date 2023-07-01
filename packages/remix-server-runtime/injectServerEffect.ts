@@ -6,7 +6,7 @@ export type ServerCleanupFunction = () => Promise<void> | void;
 
 export type ServerEffectsMap = Map<string, ServerEffect<Array<unknown>>>;
 
-const SERVER_EFFECTS_KEY = Symbol("remixServerEffects");
+export const SERVER_EFFECTS_KEY = Symbol("remixServerEffects");
 
 /**
  * Creates a server-side effect persisted on tihs Node.js process.
@@ -30,7 +30,7 @@ export async function injectServerEffect<Dependencies extends Array<unknown>>(
   id: string,
   callback: ServerEffectFunction<Dependencies>,
   dependencies: Dependencies
-) {
+): Promise<ServerEffect<Dependencies>> {
   let lastEffect = getGlobalEffectById(id);
 
   if (typeof lastEffect !== "undefined") {
@@ -46,7 +46,7 @@ export async function injectServerEffect<Dependencies extends Array<unknown>>(
     // and effect entry methods in the global reference.
     await lastEffect.run(...dependencies);
 
-    return;
+    return lastEffect;
   }
 
   // Create a new effect and run it.
@@ -55,6 +55,8 @@ export async function injectServerEffect<Dependencies extends Array<unknown>>(
 
   // Whenever the process is terminated, remove the effect.
   process.on("SIGTERM", effect.dispose).on("SIGINT", effect.dispose);
+
+  return effect;
 }
 
 class ServerEffect<Dependencies extends Array<unknown>> {
@@ -98,7 +100,7 @@ class ServerEffect<Dependencies extends Array<unknown>> {
   }
 }
 
-function storeGlobalEffect(id: string, effect: ServerEffect<any>): void {
+export function storeGlobalEffect(id: string, effect: ServerEffect<any>): void {
   let effectsMap =
     (Reflect.get(globalThis, SERVER_EFFECTS_KEY) as
       | ServerEffectsMap
@@ -107,7 +109,7 @@ function storeGlobalEffect(id: string, effect: ServerEffect<any>): void {
   effectsMap.set(id, effect);
 }
 
-function getGlobalEffectById(id: string): ServerEffect<any> | undefined {
+export function getGlobalEffectById(id: string): ServerEffect<any> | undefined {
   let effectsMap = Reflect.get(globalThis, SERVER_EFFECTS_KEY) as
     | ServerEffectsMap
     | undefined;
@@ -117,7 +119,7 @@ function getGlobalEffectById(id: string): ServerEffect<any> | undefined {
   }
 }
 
-function deleteGlobalEffectById(id: string): void {
+export function deleteGlobalEffectById(id: string): void {
   let effectsMap = Reflect.get(globalThis, SERVER_EFFECTS_KEY) as
     | ServerEffectsMap
     | undefined;
