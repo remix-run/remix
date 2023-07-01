@@ -26,6 +26,7 @@ export {
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
+  injectServerEffect,
 } from "@remix-run/server-runtime";
 
 export type {
@@ -79,4 +80,6 @@ export type {
   V2_ServerRuntimeMetaDescriptor as V2_HtmlMetaDescriptor,
   V2_ServerRuntimeMetaDescriptor as V2_MetaDescriptor,
   V2_ServerRuntimeMetaFunction as V2_MetaFunction,
+  ServerEffectFunction,
+  ServerCleanupFunction,
 } from "@remix-run/server-runtime";
