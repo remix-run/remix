@@ -4,6 +4,10 @@ export type ServerEffectFunction<Args extends Array<unknown>> = (
 
 export type ServerCleanupFunction = () => Promise<void> | void;
 
+export type ServerEffectsMap = Map<string, ServerEffect<Array<unknown>>>;
+
+const SERVER_EFFECTS_KEY = Symbol("remixServerEffects");
+
 /**
  * Creates a server-side effect persisted on tihs Node.js process.
  * Cleans up and re-evaluates the effect on HMR and HDR.
@@ -27,9 +31,7 @@ export async function injectServerEffect<Dependencies extends Array<unknown>>(
   callback: ServerEffectFunction<Dependencies>,
   dependencies: Dependencies
 ) {
-  let lastEffect = Reflect.get(globalThis, id) as
-    | ServerEffect<Dependencies>
-    | undefined;
+  let lastEffect = getGlobalEffectById(id);
 
   if (typeof lastEffect !== "undefined") {
     // First, clean up the last effect.
@@ -77,9 +79,7 @@ class ServerEffect<Dependencies extends Array<unknown>> {
 
     // Every effect run updates its global reference so that
     // HMR and HDR could access the up-to-date effect methods.
-    Reflect.defineProperty(globalThis, this.id, {
-      value: this,
-    });
+    storeGlobalEffect(this.id, this);
   }
 
   public async dispose(): Promise<void> {
@@ -94,6 +94,35 @@ class ServerEffect<Dependencies extends Array<unknown>> {
       }
     }
 
-    Reflect.deleteProperty(globalThis, this.id);
+    deleteGlobalEffectById(this.id);
+  }
+}
+
+function storeGlobalEffect(id: string, effect: ServerEffect<any>): void {
+  let effectsMap =
+    (Reflect.get(globalThis, SERVER_EFFECTS_KEY) as
+      | ServerEffectsMap
+      | undefined) || (new Map() as ServerEffectsMap);
+
+  effectsMap.set(id, effect);
+}
+
+function getGlobalEffectById(id: string): ServerEffect<any> | undefined {
+  let effectsMap = Reflect.get(globalThis, SERVER_EFFECTS_KEY) as
+    | ServerEffectsMap
+    | undefined;
+
+  if (effectsMap) {
+    return effectsMap.get(id);
+  }
+}
+
+function deleteGlobalEffectById(id: string): void {
+  let effectsMap = Reflect.get(globalThis, SERVER_EFFECTS_KEY) as
+    | ServerEffectsMap
+    | undefined;
+
+  if (effectsMap) {
+    effectsMap.delete(id);
   }
 }
