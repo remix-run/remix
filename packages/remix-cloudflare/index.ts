@@ -38,6 +38,7 @@ export {
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
+  injectServerEffect,
 } from "@remix-run/server-runtime";
 
 export type {
@@ -91,4 +92,6 @@ export type {
   UnsignFunction,
   UploadHandler,
   UploadHandlerPart,
+  ServerEffectFunction,
+  ServerCleanupFunction,
 } from "@remix-run/server-runtime";
