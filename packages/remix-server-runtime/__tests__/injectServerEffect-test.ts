@@ -1,6 +1,7 @@
 import {
   injectServerEffect,
   SERVER_EFFECTS_KEY,
+  ServerEffect,
   getGlobalEffectById,
 } from "../injectServerEffect";
 
@@ -14,8 +15,8 @@ describe(injectServerEffect, () => {
     await injectServerEffect("myEffect", callback, [1, {}]);
 
     expect(callback).toHaveBeenCalledTimes(1);
-    expect(callback).toHaveBeenCalledWith([1, {}]);
-    expect(Reflect.get(globalThis, "myEffect")).toBeInstanceOf(Function);
+    expect(callback).toHaveBeenCalledWith(1, {});
+    expect(getGlobalEffectById("myEffect")).toBeInstanceOf(ServerEffect);
   });
 
   it("removes the global reference when disposing of the effect", async () => {

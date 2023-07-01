@@ -35,12 +35,7 @@ export async function injectServerEffect<Dependencies extends Array<unknown>>(
 
   if (typeof lastEffect !== "undefined") {
     // First, clean up the last effect.
-    await lastEffect.dispose().catch((error) => {
-      console.error(
-        `Failed to dispose server effect "${id}": ${error.message}`
-      );
-      throw error;
-    });
+    await lastEffect.dispose();
 
     // Then, re-run the effect, updating its result
     // and effect entry methods in the global reference.
@@ -59,7 +54,7 @@ export async function injectServerEffect<Dependencies extends Array<unknown>>(
   return effect;
 }
 
-class ServerEffect<Dependencies extends Array<unknown>> {
+export class ServerEffect<Dependencies extends Array<unknown>> {
   public cleanup: ServerCleanupFunction;
 
   constructor(
@@ -86,7 +81,9 @@ class ServerEffect<Dependencies extends Array<unknown>> {
 
   public async dispose(): Promise<void> {
     try {
-      await this.cleanup();
+      if (typeof this.cleanup === "function") {
+        await this.cleanup();
+      }
     } catch (error) {
       if (error instanceof Error) {
         console.error(
@@ -107,6 +104,12 @@ export function storeGlobalEffect(id: string, effect: ServerEffect<any>): void {
       | undefined) || (new Map() as ServerEffectsMap);
 
   effectsMap.set(id, effect);
+
+  Reflect.defineProperty(globalThis, SERVER_EFFECTS_KEY, {
+    value: effectsMap,
+    writable: true,
+    enumerable: true,
+  });
 }
 
 export function getGlobalEffectById(id: string): ServerEffect<any> | undefined {
