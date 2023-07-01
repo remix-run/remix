@@ -16,6 +16,7 @@ export { createMemorySessionStorageFactory } from "./sessions/memoryStorage";
 export { createMemoryUploadHandler as unstable_createMemoryUploadHandler } from "./upload/memoryUploadHandler";
 export { MaxPartSizeExceededError } from "./upload/errors";
 export { broadcastDevReady, logDevReady } from "./dev";
+export { injectServerEffect } from "./injectServerEffect";
 
 // Types for the Remix server runtime interface
 export type {
@@ -82,3 +83,8 @@ export type {
   UploadHandler,
   UploadHandlerPart,
 } from "./reexport";
+
+export type {
+  ServerEffectFunction,
+  ServerCleanupFunction,
+} from "./injectServerEffect";
