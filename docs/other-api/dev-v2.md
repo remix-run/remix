@@ -218,10 +218,10 @@ Luckily, there's a trick to get around this: use `global` as a cache for keeping
 Here's a nifty utility adapted from [Jon Jensen's code][jenseng-code] for [his Remix Conf 2023 talk][jenseng-talk]:
 
 ```ts filename=app/utils/remember.ts
-export function remember<T>(key: string, value: T) {
+export function remember<T>(key: string, valueFactory: () => T) {
   const g = global as any;
   g.__singletons ??= {};
-  g.__singletons[key] ??= value;
+  g.__singletons[key] ??= valueFactory();
   return g.__singletons[key];
 }
 ```
@@ -234,7 +234,7 @@ import { PrismaClient } from "@prisma/client";
 import { remember } from "~/utils/remember";
 
 // hard-code a unique key so we can look up the client when this module gets re-imported
-export const db = remember("db", new PrismaClient());
+export const db = remember("db", () => new PrismaClient());
 ```
 
 ### How to set up MSW
