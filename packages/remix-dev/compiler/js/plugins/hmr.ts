@@ -183,7 +183,6 @@ $id$
 ${lastModified ? `import.meta.hot.lastModified = "${lastModified}";` : ""}
 }`.replace(/\$id\$/g, hmrId);
   let sourceCodeWithHMR = hmrPrefix + sourceCode;
-  let resultCode = sourceCodeWithHMR;
 
   // run babel to add react-refresh
   let transformResult = babel.transformSync(sourceCodeWithHMR, {
@@ -201,28 +200,26 @@ ${lastModified ? `import.meta.hot.lastModified = "${lastModified}";` : ""}
 
   // auto opt-in to accepting fast refresh updates if the module
   // has react components
-  if (IS_FAST_REFRESH_ENABLED.test(jsWithReactRefresh)) {
-    resultCode =
-      `
-        if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
-          console.warn('remix:hmr: React Fast Refresh only works when the Remix compiler is running in development mode.');
-        } else {
-          var prevRefreshReg = window.$RefreshReg$;
-          var prevRefreshSig = window.$RefreshSig$;
-          window.$RefreshReg$ = (type, id) => {
-            window.$RefreshRuntime$.register(type, ${JSON.stringify(
-              hmrId
-            )} + id);
-          }
-          window.$RefreshSig$ = window.$RefreshRuntime$.createSignatureFunctionForTransform;
-        }
-      ` +
-      jsWithReactRefresh +
-      `
-        window.$RefreshReg$ = prevRefreshReg;
-        window.$RefreshSig$ = prevRefreshSig;
-      `;
+  if (!IS_FAST_REFRESH_ENABLED.test(jsWithReactRefresh)) {
+    return sourceCodeWithHMR;
   }
-
-  return resultCode;
+  return (
+    `
+      if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
+        console.warn('remix:hmr: React Fast Refresh only works when the Remix compiler is running in development mode.');
+      } else {
+        var prevRefreshReg = window.$RefreshReg$;
+        var prevRefreshSig = window.$RefreshSig$;
+        window.$RefreshReg$ = (type, id) => {
+          window.$RefreshRuntime$.register(type, ${JSON.stringify(hmrId)} + id);
+        }
+        window.$RefreshSig$ = window.$RefreshRuntime$.createSignatureFunctionForTransform;
+      }
+    ` +
+    jsWithReactRefresh +
+    `
+      window.$RefreshReg$ = prevRefreshReg;
+      window.$RefreshSig$ = prevRefreshSig;
+    `
+  );
 }
