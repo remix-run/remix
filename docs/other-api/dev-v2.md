@@ -263,7 +263,9 @@ Next, you can use `REMIX_DEV_ORIGIN` to let MSW forward internal "dev ready" mes
 ```ts
 import { rest } from "msw";
 
-const REMIX_DEV_PING = new URL(process.env.REMIX_DEV_ORIGIN);
+const REMIX_DEV_PING = new URL(
+  process.env.REMIX_DEV_ORIGIN
+);
 REMIX_DEV_PING.pathname = "/ping";
 
 export const server = setupServer(
