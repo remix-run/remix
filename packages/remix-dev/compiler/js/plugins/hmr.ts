@@ -181,7 +181,9 @@ import.meta.hot = __hmr__.createHotContext(
 $id$
 );
 ${lastModified ? `import.meta.hot.lastModified = "${lastModified}";` : ""}
-}`.replace(/\$id\$/g, hmrId);
+}
+// REMIX HMR END
+\n`.replace(/\$id\$/g, hmrId);
   let sourceCodeWithHMR = hmrPrefix + sourceCode;
 
   // run babel to add react-refresh
@@ -201,25 +203,23 @@ ${lastModified ? `import.meta.hot.lastModified = "${lastModified}";` : ""}
   // auto opt-in to accepting fast refresh updates if the module
   // has react components
   if (!IS_FAST_REFRESH_ENABLED.test(jsWithReactRefresh)) {
-    return sourceCodeWithHMR;
+    return "// REMIX HMR BEGIN\n" + sourceCodeWithHMR;
   }
   return (
-    `
-      if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
-        console.warn('remix:hmr: React Fast Refresh only works when the Remix compiler is running in development mode.');
-      } else {
-        var prevRefreshReg = window.$RefreshReg$;
-        var prevRefreshSig = window.$RefreshSig$;
-        window.$RefreshReg$ = (type, id) => {
-          window.$RefreshRuntime$.register(type, ${JSON.stringify(hmrId)} + id);
-        }
-        window.$RefreshSig$ = window.$RefreshRuntime$.createSignatureFunctionForTransform;
-      }
-    ` +
+    `// REMIX HMR BEGIN
+if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
+  console.warn('remix:hmr: React Fast Refresh only works when the Remix compiler is running in development mode.');
+} else {
+  var prevRefreshReg = window.$RefreshReg$;
+  var prevRefreshSig = window.$RefreshSig$;
+  window.$RefreshReg$ = (type, id) => {
+    window.$RefreshRuntime$.register(type, ${JSON.stringify(hmrId)} + id);
+  }
+  window.$RefreshSig$ = window.$RefreshRuntime$.createSignatureFunctionForTransform;
+}\n` +
     jsWithReactRefresh +
-    `
-      window.$RefreshReg$ = prevRefreshReg;
-      window.$RefreshSig$ = prevRefreshSig;
-    `
+    `\n
+window.$RefreshReg$ = prevRefreshReg;
+window.$RefreshSig$ = prevRefreshSig;`
   );
 }
