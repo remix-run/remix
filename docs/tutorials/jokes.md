@@ -2353,7 +2353,7 @@ We're going to create a login page, and I've got some CSS for you to use on that
 
 <details>
 
-<summary>💿 Copy this CSS into `app/styles/login.css`</summary>
+<summary>💿 Copy this CSS into app/styles/login.css</summary>
 
 ```css
 /*
