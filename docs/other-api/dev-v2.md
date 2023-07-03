@@ -218,7 +218,10 @@ Luckily, there's a trick to get around this: use `global` as a cache for keeping
 Here's a nifty utility adapted from [Jon Jensen's code][jenseng-code] for [his Remix Conf 2023 talk][jenseng-talk]:
 
 ```ts filename=app/utils/remember.ts
-export function remember<T>(key: string, valueFactory: () => T) {
+export function remember<T>(
+  key: string,
+  valueFactory: () => T
+) {
   const g = global as any;
   g.__singletons ??= {};
   g.__singletons[key] ??= valueFactory();
