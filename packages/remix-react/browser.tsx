@@ -48,6 +48,15 @@ declare global {
 
 let router: Router;
 let hmrAbortController: AbortController | undefined;
+let hmrRouterReadyResolve: ((router: Router) => void) | undefined;
+// There's a race condition with HMR where the remix:manifest is signaled before
+// the router is assigned in the RemixBrowser component. This promise gates the
+// HMR handler until the router is ready
+let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
+  // body of a promise is executed immediately, so this can be resolved outside
+  // of the promise body
+  hmrRouterReadyResolve = resolve;
+});
 
 if (import.meta && import.meta.hot) {
   import.meta.hot.accept(
@@ -59,6 +68,7 @@ if (import.meta && import.meta.hot) {
       assetsManifest: EntryContext["manifest"];
       needsRevalidation: Set<string>;
     }) => {
+      const router = await hmrRouterReadyPromise;
       let routeIds = [
         ...new Set(
           router.state.matches
@@ -180,6 +190,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
           window.__remixContext.future.v2_normalizeFormMethod,
       },
     });
+    hmrRouterReadyResolve?.(router);
 
     // Hard reload if the path we tried to load is not the current path.
     // This is usually the result of 2 rapid back/forward clicks from an
