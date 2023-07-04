@@ -468,7 +468,7 @@ import invariant from "tiny-invariant";
 import { getPost } from "~/models/post.server";
 
 export const loader = async ({ params }: LoaderArgs) => {
-  invariant(params.slug, `params.slug is required`);
+  invariant(params.slug, "params.slug is required");
 
   const post = await getPost(params.slug);
   invariant(post, `Post not found: ${params.slug}`);
@@ -514,7 +514,7 @@ import invariant from "tiny-invariant";
 import { getPost } from "~/models/post.server";
 
 export const loader = async ({ params }: LoaderArgs) => {
-  invariant(params.slug, `params.slug is required`);
+  invariant(params.slug, "params.slug is required");
 
   const post = await getPost(params.slug);
   invariant(post, `Post not found: ${params.slug}`);
@@ -708,7 +708,7 @@ We're going to get serious now. Let's build a form to create a new post in our n
 ```tsx filename=app/routes/posts.admin.new.tsx
 import { Form } from "@remix-run/react";
 
-const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
+const inputClassName = "w-full rounded border border-gray-500 px-2 py-1 text-lg";
 
 export default function NewPost() {
   return (
@@ -870,7 +870,7 @@ import { Form, useActionData } from "@remix-run/react";
 
 // ...
 
-const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
+const inputClassName = "w-full rounded border border-gray-500 px-2 py-1 text-lg";
 
 export default function NewPost() {
   const errors = useActionData<typeof action>();
