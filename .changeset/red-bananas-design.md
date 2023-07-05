@@ -5,6 +5,7 @@
 Output esbuild metafiles for bundle analysis
 
 Written to server build directory (`build/` by default):
+
 - `metafile.css.json`
 - `metafile.js.json` (browser JS)
 - `metafile.server.json` (server JS)
