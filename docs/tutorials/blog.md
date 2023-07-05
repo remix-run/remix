@@ -558,7 +558,7 @@ Put that anywhere in the component. I stuck it right under the `<h1>`.
 
 <docs-info>Did you notice that the `to` prop is just "admin" and it linked to `/posts/admin`? With Remix, you get relative links.</docs-info>
 
-💿 Create an admin route within the `posts` directory:
+💿 Create an admin route at `app/routes/posts.admin.tsx`:
 
 ```sh
 touch app/routes/posts.admin.tsx
