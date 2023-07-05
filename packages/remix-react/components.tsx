@@ -1295,7 +1295,9 @@ export function useLoaderData<T = AppData>(): SerializeFrom<T> {
  *
  * @see https://remix.run/hooks/use-route-loader-data
  */
-export function useRouteLoaderData<T = AppData>(routeId: string): SerializeFrom<T> | undefined {
+export function useRouteLoaderData<T = AppData>(
+  routeId: string
+): SerializeFrom<T> | undefined {
   return useRouteLoaderDataRR(routeId) as SerializeFrom<T> | undefined;
 }
 
