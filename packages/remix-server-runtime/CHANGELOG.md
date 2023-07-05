@@ -1,5 +1,28 @@
 # `@remix-run/server-runtime`
 
+## 1.18.1
+
+### Patch Changes
+
+- Fix reload loops in scenarios where CDNs ignore search params ([#6707](https://github.com/remix-run/remix/pull/6707))
+- Avoid circular references and infinite recursion in types ([#6736](https://github.com/remix-run/remix/pull/6736))
+  - "Pretty" or simplified Typescript types are evaluated by eagerly resolving types. For complex types with circular references, this can cause TS to recurse infinitely.
+  - To fix this, pretty types are reverted as a built-in DX feature of `useLoaderData`, `useActionData`, etc...
+- Updated dependencies:
+  - [`@remix-run/router@1.7.1`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#171)
+
+## 1.18.0
+
+### Minor Changes
+
+- stabilize v2 dev server ([#6615](https://github.com/remix-run/remix/pull/6615))
+
+### Patch Changes
+
+- Fix typing issues when using React 17 stemming from `@remix/server-runtime` including `@types/react` as a `devDependency` when it doesn't actually do anything React-specific and was just re-exporting `ComponentType` in values such as `CatchBoundaryComponent`/`ErrorBoundaryComponent`/`V2_ErrorBoundaryComponent`. These types are more correctly exported from `@remix-run/react` which is React-aware so that is the correct place to be importing those types from. In order to avoid breaking existing builds, the types in `@remix/server-runtime` have been loosened to `any` and `@deprecated` warnings have been added informing users to switch to the corresponding types in `@remix-run/react`. ([#5713](https://github.com/remix-run/remix/pull/5713))
+- fix(types): better tuple serialization types ([#6616](https://github.com/remix-run/remix/pull/6616))
+- Move `@types/cookie` to `dependencies` since we re-export types from there ([#5713](https://github.com/remix-run/remix/pull/5713))
+
 ## 1.17.1
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.17.1) for an overview of all changes in v1.17.1.

@@ -7740,7 +7740,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [the-http-api]: https://developer.mozilla.org/en-US/docs/Web/HTTP
 [the-basic-example]: https://codesandbox.io/s/github/remix-run/examples/tree/main/basic
 [express]: https://expressjs.com
-[hydrate]: https://reactjs.org/docs/react-dom.html#hydrate
+[hydrate]: https://react.dev/reference/react-dom/client/hydrateRoot
 [http-localhost-3000]: http://localhost:3000
 [bare-bones-hello-world-app]: /jokes-tutorial/img/bare-bones.png
 [remix-config-js]: ../file-conventions/remix-config

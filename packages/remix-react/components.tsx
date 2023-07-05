@@ -31,6 +31,7 @@ import {
   useFetchers as useFetchersRR,
   useActionData as useActionDataRR,
   useLoaderData as useLoaderDataRR,
+  useRouteLoaderData as useRouteLoaderDataRR,
   useMatches as useMatchesRR,
   useLocation,
   useNavigation,
@@ -1290,6 +1291,17 @@ export function useLoaderData<T = AppData>(): SerializeFrom<T> {
 }
 
 /**
+ * Returns the loaderData for the given routeId.
+ *
+ * @see https://remix.run/hooks/use-route-loader-data
+ */
+export function useRouteLoaderData<T = AppData>(
+  routeId: string
+): SerializeFrom<T> | undefined {
+  return useRouteLoaderDataRR(routeId) as SerializeFrom<T> | undefined;
+}
+
+/**
  * Returns the JSON parsed data from the current route's `action`.
  *
  * @see https://remix.run/hooks/use-action-data
@@ -1782,7 +1794,6 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
-        // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
         port,
         timeoutMs = 1000,
         nonce = undefined,
@@ -1799,13 +1810,25 @@ export const LiveReload =
             dangerouslySetInnerHTML={{
               __html: js`
                 function remixLiveReloadConnect(config) {
-                  let protocol = location.protocol === "https:" ? "wss:" : "ws:";
-                  let host = location.hostname;
-                  let port = ${port} || (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.port) || ${Number(
-                process.env.REMIX_DEV_SERVER_WS_PORT || 8002
-              )};
-                  let socketPath = protocol + "//" + host + ":" + port + "/socket";
-                  let ws = new WebSocket(socketPath);
+                  let REMIX_DEV_ORIGIN = ${JSON.stringify(
+                    process.env.REMIX_DEV_ORIGIN
+                  )};
+                  let protocol =
+                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).protocol.replace(/^http/, "ws") :
+                    location.protocol === "https:" ? "wss:" : "ws:"; // remove in v2?
+                  let hostname = location.hostname;
+                  let url = new URL(protocol + "//" + hostname + "/socket");
+
+                  url.port =
+                    ${port} ||
+                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port :
+                    Number(${
+                      // TODO: remove in v2
+                      process.env.REMIX_DEV_SERVER_WS_PORT
+                    }) ||
+                    8002;
+
+                  let ws = new WebSocket(url.href);
                   ws.onmessage = async (message) => {
                     let event = JSON.parse(message.data);
                     if (event.type === "LOG") {
