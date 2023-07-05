@@ -203,7 +203,6 @@ async function loadRouteModuleWithBlockingLinks(
   routeModules: RouteModules
 ) {
   let routeModule = await loadRouteModule(route, routeModules);
-  // TODO: Should we not call this if the route is already active?
   await prefetchStyleLinks(routeModule);
   return routeModule;
 }

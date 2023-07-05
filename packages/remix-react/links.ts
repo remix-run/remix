@@ -259,9 +259,7 @@ export async function prefetchStyleLinks(
   let matchingLinks = styleLinks.filter(
     (link) =>
       (!link.media || window.matchMedia(link.media).matches) &&
-      document.querySelector(
-        `head link[rel="stylesheet"][href="${link.href}"]`
-      ) != null
+      !document.querySelector(`link[rel="stylesheet"][href="${link.href}"]`)
   );
 
   await Promise.all(matchingLinks.map(prefetchStyleLink));
