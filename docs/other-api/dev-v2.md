@@ -37,6 +37,12 @@ The dev server will:
 3. Restart your app server whenever rebuilds succeed
 4. Send code updates to the browser via Live Reload and HMR + Hot Data Revalidation
 
+🎥 For an introduction and deep dive into HMR and HDR in Remix, check out our videos:
+
+- [HMR and Hot Data Revalidation with v2_dev 🔥][hmr-and-hdr]
+- [Mental model for the new dev server 🧠][mental-model]
+- [Migrating your project to v2_dev 🚚][migrating]
+
 <docs-info>
 
 What is "Hot Data Revalidation"?
@@ -386,6 +392,9 @@ That way the dev server can detect loader changes on rebuilds.
 
 While the initial build slowdown is inherently a cost for HDR, we plan to optimize rebuilds so that there is no perceivable slowdown for HDR rebuilds.
 
+[hmr-and-hdr]: https://www.youtube.com/watch?v=2c2oeqox72s
+[mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
+[migrating]: https://www.youtube.com/watch?v=6jTL8GGbIuc
 [legendary-dx]: https://www.youtube.com/watch?v=79M4vYZi-po
 [templates]: https://github.com/remix-run/remix/tree/main/templates
 [watch-paths]: https://remix.run/docs/en/1.17.1/file-conventions/remix-config#watchpaths
