@@ -368,12 +368,10 @@ test.describe("other scenarios", () => {
             }
 
             export async function action() {
-              await new Promise(r => setTimeout(r, 100));
               return null;
             }
 
             export async function loader() {
-              await new Promise(r => setTimeout(r, 100));
               return null;
             }
 
@@ -428,7 +426,7 @@ test.describe("other scenarios", () => {
     await app.goto("/");
     await page.click("#submit-fetcher");
     await page.waitForSelector("#fetcher-state--idle");
-    // We should not send a second request for4 this root stylesheet that's
+    // We should not send a second request for this root stylesheet that's
     // already been rendered in the DOM
     let stylesheets = requests.filter(
       (r) => r.type === "stylesheet" && /\/global-[a-z0-9]+\.css/i.test(r.url)
