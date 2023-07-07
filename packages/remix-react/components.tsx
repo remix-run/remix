@@ -894,7 +894,8 @@ export type ScriptProps = Omit<
  * @see https://remix.run/components/scripts
  */
 export function Scripts(props: ScriptProps) {
-  let { manifest, serverHandoffString, abortDelay } = useRemixContext();
+  let { manifest, serverHandoffString, abortDelay, serializeError } =
+    useRemixContext();
   let { router, static: isStatic, staticContext } = useDataRouterContext();
   let { matches } = useDataRouterStateContext();
   let navigation = useNavigation();
@@ -902,6 +903,16 @@ export function Scripts(props: ScriptProps) {
   React.useEffect(() => {
     isHydrated = true;
   }, []);
+
+  let serializeErrorImp = (error: unknown) => {
+    let toSerialize: unknown;
+    if (serializeError && error instanceof Error) {
+      toSerialize = serializeError(error);
+    } else {
+      toSerialize = error;
+    }
+    return toSerialize;
+  };
 
   let deferredScripts: any[] = [];
   let initialScripts = React.useMemo(() => {
@@ -981,16 +992,7 @@ export function Scripts(props: ScriptProps) {
                 } else {
                   let trackedPromise = deferredData.data[key] as TrackedPromise;
                   if (typeof trackedPromise._error !== "undefined") {
-                    let toSerialize: { message: string; stack?: string } =
-                      process.env.NODE_ENV === "development"
-                        ? {
-                            message: trackedPromise._error.message,
-                            stack: trackedPromise._error.stack,
-                          }
-                        : {
-                            message: "Unexpected Server Error",
-                            stack: undefined,
-                          };
+                    let toSerialize = serializeErrorImp(trackedPromise._error);
                     return `${JSON.stringify(
                       key
                     )}:__remixContext.p(!1, ${escapeHtml(
@@ -1008,7 +1010,14 @@ export function Scripts(props: ScriptProps) {
                     try {
                       serializedData = JSON.stringify(data);
                     } catch (error) {
-                      console.error(error);
+                      let toSerialize = serializeErrorImp(
+                        trackedPromise._error
+                      );
+                      return `${JSON.stringify(
+                        key
+                      )}:__remixContext.p(!1, ${escapeHtml(
+                        JSON.stringify(toSerialize)
+                      )})`;
                     }
                     return `${JSON.stringify(
                       key
