@@ -997,16 +997,22 @@ export function Scripts(props: ScriptProps) {
                       JSON.stringify(toSerialize)
                     )})`;
                   } else {
-                    if (typeof trackedPromise._data === "undefined") {
-                      throw new Error(
-                        `The deferred data for ${key} was not resolved, did you forget to return data from a deferred promise?`
+                    let data = trackedPromise._data;
+                    if (typeof data === "undefined") {
+                      console.error(
+                        `Deferred data for ${routeId} ${key} resolved to undefined, defaulting to null.`
                       );
+                      data = null;
+                    }
+                    let serializedData = "null";
+                    try {
+                      serializedData = JSON.stringify(data);
+                    } catch (error) {
+                      console.error(error);
                     }
                     return `${JSON.stringify(
                       key
-                    )}:__remixContext.p(${escapeHtml(
-                      JSON.stringify(trackedPromise._data)
-                    )})`;
+                    )}:__remixContext.p(${escapeHtml(serializedData)})`;
                   }
                 }
               })
