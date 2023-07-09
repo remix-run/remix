@@ -520,19 +520,6 @@ export async function readConfig(
   }
 
   if (appConfig.future) {
-    if ("unstable_cssModules" in appConfig.future) {
-      logger.warn(
-        "The `future.unstable_cssModules` config option has been removed",
-        {
-          details: [
-            "CSS Modules are now enabled automatically.",
-            "You should remove the `unstable_cssModules` option from your Remix config.",
-          ],
-          key: "unstable_cssModules",
-        }
-      );
-    }
-
     if ("unstable_cssSideEffectImports" in appConfig.future) {
       logger.warn(
         "The `future.unstable_cssSideEffectImports` config option has been removed",
