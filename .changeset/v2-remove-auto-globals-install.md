@@ -4,7 +4,6 @@
 "@remix-run/netlify": major
 "@remix-run/node": major
 "@remix-run/serve": major
-"@remix-run/vercel": major
 ---
 
 For preparation of using Node's built in fetch implementation, installing the fetch globals is now a responsibility of the app server. If you are using `remix-serve`, nothing is required. If you are using your own app server, you will need to install the globals yourself.

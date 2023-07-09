@@ -19,8 +19,7 @@
     "packages/remix-react",
     "packages/remix-serve",
     "packages/remix-server-runtime",
-    "packages/remix-testing",
-    "packages/remix-vercel"
+    "packages/remix-testing"
   ],
   "scripts": {
     "bug-report-test": "yarn test:integration bug-report --project chromium",

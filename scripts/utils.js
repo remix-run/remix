@@ -14,7 +14,6 @@ let remixPackages = {
     "cloudflare-workers",
     "express",
     "netlify",
-    "vercel",
   ],
   runtimes: ["cloudflare", "deno", "node"],
   core: [
