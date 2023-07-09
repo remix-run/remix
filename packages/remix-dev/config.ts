@@ -431,19 +431,6 @@ export async function readConfig(
       );
     }
 
-    if ("unstable_vanillaExtract" in appConfig.future) {
-      logger.warn(
-        "The `future.unstable_vanillaExtract` config option has been removed.",
-        {
-          details: [
-            "Vanilla Extract is now enabled automatically.",
-            "You should remove the `unstable_vanillaExtract` option from your Remix config",
-          ],
-          key: "unstable_vanillaExtract",
-        }
-      );
-    }
-
     if ("unstable_dev" in appConfig.future) {
       logger.warn("The `future.unstable_dev` config option has been removed", {
         details: [
