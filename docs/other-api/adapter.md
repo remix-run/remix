@@ -14,7 +14,6 @@ Idiomatic Remix apps can generally be deployed anywhere because Remix adapts the
 - `@remix-run/cloudflare-workers`
 - `@remix-run/express`
 - `@remix-run/netlify`
-- `@remix-run/vercel`
 
 These adapters are imported into your server's entry and are not used inside of your Remix app itself.
 
@@ -28,7 +27,8 @@ Each adapter has the same API. In the future we may have helpers specific to the
 
 - [`@fastly/remix-server-adapter`][fastly-remix-server-adapter] - For [Fastly Compute@Edge][fastly-compute-at-edge].
 - [`@mcansh/remix-fastify`][remix-fastify] - For [Fastify][fastify].
-- [`@mcansh/remix-raw-http`][remix-raw-http] - For a good ol barebones Node server.
+- [`@mcansh/remix-raw-http`][remix-raw-http] - For a good old bare bones Node server.
+- [`@vercel/remix`][vercel-remix] - For [Vercel][vercel].
 - [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
 
 ## Creating an Adapter
@@ -79,17 +79,6 @@ const {
   createRequestHandler,
 } = require("@remix-run/architect");
 exports.handler = createRequestHandler({
-  build: require("./build"),
-});
-```
-
-Here's an example with Vercel:
-
-```ts
-const {
-  createRequestHandler,
-} = require("@remix-run/vercel");
-module.exports = createRequestHandler({
   build: require("./build"),
 });
 ```
@@ -189,3 +178,5 @@ addEventListener("fetch", (event) => {
 [remix-fastify]: https://github.com/mcansh/remix-fastify
 [fastify]: https://www.fastify.io
 [remix-raw-http]: https://github.com/mcansh/remix-node-http-server
+[vercel-remix]: https://github.com/vercel/remix/blob/main/packages/vercel-remix
+[vercel]: https://vercel.com

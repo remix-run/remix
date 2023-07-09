@@ -15,7 +15,6 @@
 "@remix-run/serve": major
 "@remix-run/server-runtime": major
 "@remix-run/testing": major
-"@remix-run/vercel": major
 ---
 
 Require Node >=18.0.0
