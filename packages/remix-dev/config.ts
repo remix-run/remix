@@ -520,19 +520,6 @@ export async function readConfig(
   }
 
   if (appConfig.future) {
-    if ("unstable_cssSideEffectImports" in appConfig.future) {
-      logger.warn(
-        "The `future.unstable_cssSideEffectImports` config option has been removed",
-        {
-          details: [
-            "CSS side-effect imports are now enabled automatically.",
-            "You should remove the `unstable_cssSideEffectImports` option from your Remix config",
-          ],
-          key: "unstable_cssSideEffectImports",
-        }
-      );
-    }
-
     if ("unstable_vanillaExtract" in appConfig.future) {
       logger.warn(
         "The `future.unstable_vanillaExtract` config option has been removed.",
