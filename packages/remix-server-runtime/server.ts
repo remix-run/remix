@@ -289,14 +289,13 @@ async function handleDocumentRequestRR(
     routeModules: createEntryRouteModules(build.routes),
     staticHandlerContext: context,
     serverHandoffString: createServerHandoffString({
-      url: context.location.pathname + context.location.search,
+      url: context.location.pathname,
       state: {
         loaderData: context.loaderData,
         actionData: context.actionData,
         errors: serializeErrors(context.errors, serverMode),
       },
       future: build.future,
-      dev: build.dev,
     }),
     future: build.future,
   };
@@ -335,7 +334,7 @@ async function handleDocumentRequestRR(
       ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString({
-        url: context.location.pathname + context.location.search,
+        url: context.location.pathname,
         state: {
           loaderData: context.loaderData,
           actionData: context.actionData,
