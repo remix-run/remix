@@ -6,6 +6,7 @@ on:
       - main
       - dev
       - v2
+      - v2_rebased
     paths-ignore:
       - "docs/**"
       - "scripts/**"
