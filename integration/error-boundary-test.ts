@@ -1250,6 +1250,98 @@ test.describe("Default ErrorBoundary", () => {
   });
 });
 
+test("Allows back-button out of an error boundary after a hard reload", async ({
+  page,
+}) => {
+  let _consoleError = console.error;
+  console.error = () => {};
+
+  let fixture = await createFixture({
+    config: {
+      future: {
+        v2_routeConvention: true,
+        v2_errorBoundary: false,
+      },
+    },
+    files: {
+      "app/root.jsx": js`
+        import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+        export default function App() {
+          return (
+            <html lang="en">
+              <head>
+                <Meta />
+                <Links />
+              </head>
+              <body>
+                <Outlet />
+                <Scripts />
+              </body>
+            </html>
+          );
+        }
+
+        export function ErrorBoundary({ error }) {
+          return (
+            <html>
+              <head>
+                <title>Oh no!</title>
+                <Meta />
+                <Links />
+              </head>
+              <body>
+                <h1 id="error">ERROR BOUNDARY</h1>
+                <Scripts />
+              </body>
+            </html>
+          );
+        }
+      `,
+      "app/routes/_index.jsx": js`
+        import { Link } from "@remix-run/react";
+
+        export default function Index() {
+          return (
+            <div>
+              <h1 id="index">INDEX</h1>
+              <Link to="/boom">This will error</Link>
+            </div>
+          );
+        }
+      `,
+
+      "app/routes/boom.jsx": js`
+        import { json } from "@remix-run/node";
+        export function loader() { return boom(); }
+        export default function() { return <b>my page</b>; }
+      `,
+    },
+  });
+
+  let appFixture = await createAppFixture(fixture);
+  let app = new PlaywrightFixture(appFixture, page);
+
+  await app.goto("/");
+  await page.waitForSelector("#index");
+  expect(app.page.url()).not.toMatch("/boom");
+
+  await app.clickLink("/boom");
+  await page.waitForSelector("#error");
+  expect(app.page.url()).toMatch("/boom");
+
+  await app.reload();
+  await page.waitForSelector("#error");
+  expect(app.page.url()).toMatch("boom");
+
+  await app.goBack();
+  await page.waitForSelector("#index");
+  expect(app.page.url()).not.toContain("boom");
+
+  appFixture.close();
+  console.error = _consoleError;
+});
+
 // Copy/Paste of the above tests altered to use v2_errorBoundary.  In v2 we can:
 // - delete the above tests
 // - remove this describe block
@@ -2517,5 +2609,98 @@ test.describe("v2_errorBoundary", () => {
         });
       });
     });
+  });
+
+  test("Allows back-button out of an error boundary after a hard reload", async ({
+    page,
+  }) => {
+    let _consoleError = console.error;
+    console.error = () => {};
+
+    let fixture = await createFixture({
+      config: {
+        future: {
+          v2_routeConvention: true,
+          v2_errorBoundary: true,
+        },
+      },
+      files: {
+        "app/root.jsx": js`
+          import { Links, Meta, Outlet, Scripts, useRouteError } from "@remix-run/react";
+
+          export default function App() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <Scripts />
+                </body>
+              </html>
+            );
+          }
+
+          export function ErrorBoundary() {
+            let error = useRouteError();
+            return (
+              <html>
+                <head>
+                  <title>Oh no!</title>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <h1 id="error">ERROR BOUNDARY</h1>
+                  <Scripts />
+                </body>
+              </html>
+            );
+          }
+        `,
+        "app/routes/_index.jsx": js`
+          import { Link } from "@remix-run/react";
+
+          export default function Index() {
+            return (
+              <div>
+                <h1 id="index">INDEX</h1>
+                <Link to="/boom">This will error</Link>
+              </div>
+            );
+          }
+        `,
+
+        "app/routes/boom.jsx": js`
+          import { json } from "@remix-run/node";
+          export function loader() { return boom(); }
+          export default function() { return <b>my page</b>; }
+        `,
+      },
+    });
+
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/");
+    await page.waitForSelector("#index");
+    expect(app.page.url()).not.toMatch("/boom");
+
+    await app.clickLink("/boom");
+    await page.waitForSelector("#error");
+    expect(app.page.url()).toMatch("/boom");
+
+    await app.reload();
+    await page.waitForSelector("#error");
+    expect(app.page.url()).toMatch("boom");
+
+    await app.goBack();
+    await page.waitForSelector("#index");
+    expect(app.page.url()).not.toContain("boom");
+
+    appFixture.close();
+    console.error = _consoleError;
   });
 });
