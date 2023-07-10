@@ -1,5 +1,6 @@
 ---
 title: TypeScript
+toc: false
 ---
 
 # TypeScript
@@ -17,7 +18,7 @@ The Remix compiler will not do any type checking (it simply removes the types). 
     "build": "remix build",
     "dev": "remix dev",
     "start": "remix-serve build",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@remix-run/node": "latest",
@@ -32,15 +33,15 @@ The Remix compiler will not do any type checking (it simply removes the types). 
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
     "eslint": "^8.23.1",
-    "typescript": "^4.7.4"
+    "typescript": "^5.0.4"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   }
 }
 ```
 
-Then you can run that script as part of continuous integration alongside your tests.
+Then you can run that script as part of continuous integration, alongside your tests.
 
 Remix has TypeScript type definitions built-in as well. The starter templates create a `remix.env.d.ts` file that is referenced by the `tsconfig.json`:
 
@@ -74,6 +75,6 @@ Remix has TypeScript type definitions built-in as well. The starter templates cr
 /// <reference types="@remix-run/node" />
 ```
 
-<docs-info>Note that the types referenced in `remix.env.d.ts` will depend on which environment you're running your app in. For example, there are different globals available in Cloudflare</docs-info>
+<docs-info>Note that the types referenced in `remix.env.d.ts` will depend on which environment you're running your app in. For example, there are different globals available in Cloudflare.</docs-info>
 
 [with-jsx]: https://www.typescriptlang.org/docs/handbook/jsx.html

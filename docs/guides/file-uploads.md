@@ -9,13 +9,16 @@ Most of the time, you'll probably want to proxy the file to a file host.
 **Example:**
 
 ```tsx
-import type { UploadHandler } from "@remix-run/{runtime}";
+import type {
+  ActionArgs,
+  UploadHandler,
+} from "@remix-run/node"; // or cloudflare/deno
 import {
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
-} from "@remix-run/{runtime}";
-// writeAsyncIterableToWritable is a Node-only utility
-import { writeAsyncIterableToWritable } from "@remix-run/node";
+  unstable_parseMultipartFormData,
+} from "@remix-run/node"; // or cloudflare/deno
+import { writeAsyncIterableToWritable } from "@remix-run/node"; // `writeAsyncIterableToWritable` is a Node-only utility
 import type {
   UploadApiOptions,
   UploadApiResponse,
@@ -51,9 +54,7 @@ async function uploadImageToCloudinary(
   return uploadPromise;
 }
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const userId = getUserId(request);
 
   const uploadHandler = unstable_composeUploadHandlers(

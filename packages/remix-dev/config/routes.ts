@@ -22,7 +22,7 @@ export interface ConfigRoute {
 
   /**
    * The unique id for this route, named like its `file` but without the
-   * extension. So `app/routes/gists/$username.jsx` will have an `id` of
+   * extension. So `app/routes/gists/$username.tsx` will have an `id` of
    * `routes/gists/$username`.
    */
   id: string;
@@ -151,7 +151,7 @@ export function defineRoutes(
       parentId:
         parentRoutes.length > 0
           ? parentRoutes[parentRoutes.length - 1].id
-          : undefined,
+          : "root",
       file,
     };
 

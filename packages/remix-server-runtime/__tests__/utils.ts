@@ -48,7 +48,13 @@ export function mockServerBuild(
     entry: {
       module: {
         default: jest.fn(
-          async (request, responseStatusCode, responseHeaders, entryContext) =>
+          async (
+            request,
+            responseStatusCode,
+            responseHeaders,
+            entryContext,
+            loadContext
+          ) =>
             new Response(null, {
               status: responseStatusCode,
               headers: responseHeaders,
@@ -80,6 +86,9 @@ export function mockServerBuild(
       },
       {}
     ),
+    future: {
+      v2_dev: {},
+    },
   };
 }
 
@@ -90,3 +99,5 @@ export function prettyHtml(source: string): string {
 export function isEqual<A, B>(
   arg: A extends B ? (B extends A ? true : false) : false
 ): void {}
+
+export type IsNever<T> = [T] extends [never] ? true : false;

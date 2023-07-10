@@ -47,14 +47,14 @@ describe("<LiveReload />", () => {
       LiveReload = require("../components").LiveReload;
       let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        `8002 + "/socket"`
+        "url.port = undefined || REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : Number(undefined) || 8002;"
       );
     });
 
     it("can set the port explicitly", () => {
       let { container } = render(<LiveReload port={4321} />);
       expect(container.querySelector("script")).toHaveTextContent(
-        `4321 + "/socket"`
+        "url.port = 4321 || REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : Number(undefined) || 8002;"
       );
     });
 
@@ -62,7 +62,15 @@ describe("<LiveReload />", () => {
       process.env.REMIX_DEV_SERVER_WS_PORT = "1234";
       let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        `1234 + "/socket"`
+        "url.port = undefined || REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : Number(1234) || 8002;"
+      );
+    });
+
+    it("timeout of reload is set to 200ms", () => {
+      LiveReload = require("../components").LiveReload;
+      let { container } = render(<LiveReload timeoutMs={200} />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        "setTimeout( () => remixLiveReloadConnect({ onOpen: () => window.location.reload(), }), 200 );"
       );
     });
   });

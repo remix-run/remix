@@ -1,5 +1,6 @@
 ---
 title: root
+toc: false
 ---
 
 # Root Route
@@ -31,7 +32,7 @@ export const links: LinksFunction = () => {
 export const meta: MetaFunction = () => ({
   charset: "utf-8",
   title: "My Amazing App",
-  viewport: "width=device-width,initial-scale=1",
+  viewport: "width=device-width, initial-scale=1",
 });
 
 export default function App() {

@@ -1,5 +1,6 @@
 ---
 title: unstable_createFileUploadHandler
+toc: false
 ---
 
 # `unstable_createFileUploadHandler`
@@ -9,9 +10,7 @@ A Node.js upload handler that will write parts with a filename to disk to keep t
 **Example:**
 
 ```tsx
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const uploadHandler = unstable_composeUploadHandlers(
     unstable_createFileUploadHandler({
       maxPartSize: 5_000_000,

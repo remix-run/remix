@@ -18,7 +18,7 @@ Let's say you have a banner on your e-commerce site that prompts users to check 
 
 First, create a cookie:
 
-```js filename=app/cookies.js
+```ts filename=app/cookies.ts
 import { createCookie } from "@remix-run/node"; // or cloudflare/deno
 
 export const userPrefs = createCookie("user-prefs", {
@@ -30,7 +30,11 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
-```tsx filename=app/routes/index.tsx lines=[4,8-9,15-16,20]
+```tsx filename=app/routes/index.tsx lines=[8,12-13,19-20,24]
+import type {
+  ActionArgs,
+  LoaderArgs,
+} from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
   useLoaderData,
@@ -40,14 +44,14 @@ import {
 
 import { userPrefs } from "~/cookies";
 
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
   return json({ showBanner: cookie.showBanner });
 }
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
@@ -65,7 +69,7 @@ export async function action({ request }) {
 }
 
 export default function Home() {
-  const { showBanner } = useLoaderData();
+  const { showBanner } = useLoaderData<typeof loader>();
 
   return (
     <div>
@@ -92,7 +96,7 @@ export default function Home() {
 
 Cookies have [several attributes][cookie-attrs] that control when they expire, how they are accessed, and where they are sent. Any of these attributes may be specified either in `createCookie(name, options)`, or during `serialize()` when the `Set-Cookie` header is generated.
 
-```js
+```ts
 const cookie = createCookie("user-prefs", {
   // These are defaults for this cookie.
   domain: "remix.run",
@@ -119,7 +123,7 @@ It is possible to sign a cookie to automatically verify its contents when it is 
 
 To sign a cookie, provide one or more `secrets` when you first create the cookie:
 
-```js
+```ts
 const cookie = createCookie("user-prefs", {
   secrets: ["s3cret1"],
 });
@@ -129,14 +133,16 @@ Cookies that have one or more `secrets` will be stored and verified in a way tha
 
 Secrets may be rotated by adding new secrets to the front of the `secrets` array. Cookies that have been signed with old secrets will still be decoded successfully in `cookie.parse()`, and the newest secret (the first one in the array) will always be used to sign outgoing cookies created in `cookie.serialize()`.
 
-```js
-// app/cookies.js
-const cookie = createCookie("user-prefs", {
+```ts filename=app/cookies.ts
+export const cookie = createCookie("user-prefs", {
   secrets: ["n3wsecr3t", "olds3cret"],
 });
+```
 
-// in your route module...
-export async function loader({ request }) {
+```tsx filename=app/routes/route.tsx
+import { cookie } from "~/cookies";
+
+export async function loader({ request }: LoaderArgs) {
   const oldCookie = request.headers.get("Cookie");
   // oldCookie may have been signed with "olds3cret", but still parses ok
   const value = await cookie.parse(oldCookie);
@@ -185,7 +191,7 @@ console.log(isCookie(cookie));
 
 ## Cookie API
 
-A cookie container is returned from `createCookie` and has handful of properties and methods.
+A cookie container is returned from `createCookie` and has a handful of properties and methods.
 
 ```ts
 const cookie = createCookie(name);
@@ -202,7 +208,7 @@ The name of the cookie, used in `Cookie` and `Set-Cookie` HTTP headers.
 
 Extracts and returns the value of this cookie in a given `Cookie` header.
 
-```js
+```ts
 const value = await cookie.parse(
   request.headers.get("Cookie")
 );
@@ -212,7 +218,7 @@ const value = await cookie.parse(
 
 Serializes a value and combines it with this cookie's options to create a `Set-Cookie` header, suitable for use in an outgoing `Response`.
 
-```js
+```ts
 new Response("...", {
   headers: {
     "Set-Cookie": await cookie.serialize({
@@ -226,7 +232,7 @@ new Response("...", {
 
 Will be `true` if the cookie uses any `secrets`, `false` otherwise.
 
-```js
+```ts
 let cookie = createCookie("user-prefs");
 console.log(cookie.isSigned); // false
 
@@ -240,7 +246,7 @@ console.log(cookie.isSigned); // true
 
 The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will be the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
-```js
+```ts
 const cookie = createCookie("user-prefs", {
   expires: new Date("2021-01-01"),
 });

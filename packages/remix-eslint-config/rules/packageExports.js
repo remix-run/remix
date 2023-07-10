@@ -35,6 +35,7 @@ const defaultRuntimeExports = {
     "ErrorBoundaryComponent",
     "HandleDataRequestFunction",
     "HandleDocumentRequestFunction",
+    "HeadersArgs",
     "HeadersFunction",
     "HtmlLinkDescriptor",
     "HtmlMetaDescriptor",
@@ -45,6 +46,7 @@ const defaultRuntimeExports = {
     "MemoryUploadHandlerOptions",
     "MetaDescriptor",
     "MetaFunction",
+    "HandleErrorFunction",
     "PageLinkDescriptor",
     "RequestHandler",
     "RouteComponent",
@@ -66,7 +68,7 @@ const architectSpecificExports = {
 };
 
 const cloudflareSpecificExports = {
-  value: ["createCloudflareKVSessionStorage"],
+  value: ["createCloudflareKVSessionStorage", "createWorkersKVSessionStorage"],
   type: [],
 };
 

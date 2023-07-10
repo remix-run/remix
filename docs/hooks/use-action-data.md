@@ -1,23 +1,27 @@
 ---
 title: useActionData
+toc: false
 ---
 
 # `useActionData`
 
+<docs-info>This hook is simply a re-export of [React Router's `useActionData`][rr-useactiondata].</docs-info>
+
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
-```tsx lines=[2,11,20]
+```tsx lines=[3,12,21]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import { useActionData, Form } from "@remix-run/react";
+import { Form, useActionData } from "@remix-run/react";
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const body = await request.formData();
   const name = body.get("visitorsName");
   return json({ message: `Hello, ${name}` });
 }
 
 export default function Invoices() {
-  const data = useActionData();
+  const data = useActionData<typeof action>();
   return (
     <Form method="post">
       <p>
@@ -34,11 +38,12 @@ export default function Invoices() {
 
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
-```tsx lines=[22, 31, 39-41, 45-47]
-import { redirect, json } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[23,32,40-42,46-48]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form, useActionData } from "@remix-run/react";
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const form = await request.formData();
   const email = form.get("email");
   const password = form.get("password");
@@ -65,7 +70,7 @@ export async function action({ request }) {
 }
 
 export default function Signup() {
-  const errors = useActionData();
+  const errors = useActionData<typeof action>();
 
   return (
     <>
@@ -98,7 +103,7 @@ When using `<Form>` (instead of `<form>` or `<Form reloadDocument>`), Remix _doe
 
 <docs-info>Remix client-side navigation does not resubmit forms on pop events like browsers.</docs-info>
 
-Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't ever want this to happen.
+Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't want this to happen.
 
 For example, consider this user flow:
 
@@ -149,6 +154,8 @@ If you're using `<Form>` and don't care to support the cases above, you don't ne
 
 <docs-info>In general, if the form validation fails, return data from the action and render it in the component. But, once you actually change data (in your database, or otherwise), you should redirect.</docs-info>
 
+<docs-info>For more information and usage, please refer to the [React Router `useActionData` docs][rr-useactiondata].</docs-info>
+
 See also:
 
 - [`action`][action]
@@ -156,3 +163,4 @@ See also:
 
 [action]: ../route/action
 [usetransition]: ../hooks/use-transition
+[rr-useactiondata]: https://reactrouter.com/hooks/use-action-data

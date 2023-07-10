@@ -12,6 +12,9 @@ test.describe("loader", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      config: {
+        future: { v2_routeConvention: true },
+      },
       files: {
         "app/root.jsx": js`
         import { json } from "@remix-run/node";
@@ -35,7 +38,7 @@ test.describe("loader", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import { json } from "@remix-run/node";
 
           export function loader() {
@@ -53,7 +56,7 @@ test.describe("loader", () => {
   test("returns responses for a specific route", async () => {
     let [root, index] = await Promise.all([
       fixture.requestData("/", "root"),
-      fixture.requestData("/", "routes/index"),
+      fixture.requestData("/", "routes/_index"),
     ]);
 
     expect(root.headers.get("Content-Type")).toBe(
@@ -75,6 +78,11 @@ test.describe("loader in an app", () => {
   test.beforeAll(async () => {
     appFixture = await createAppFixture(
       await createFixture({
+        config: {
+          future: {
+            v2_routeConvention: true,
+          },
+        },
         files: {
           "app/root.jsx": js`
             import { Outlet } from '@remix-run/react'

@@ -1,6 +1,21 @@
 import "./globals";
 
-export { createCloudflareKVSessionStorage } from "./sessions/cloudflareKVSessionStorage";
+import { createWorkersKVSessionStorage } from "./sessions/workersKVStorage";
+
+const warn = <T extends Function>(fn: T, message: string): T =>
+  ((...args: unknown[]) => {
+    console.warn(message);
+
+    return fn(...args);
+  }) as unknown as T;
+
+/** @deprecated Use `createWorkersKVSessionStorage` instead. */
+export const createCloudflareKVSessionStorage = warn(
+  createWorkersKVSessionStorage,
+  "`createCloudflareKVSessionStorage` is deprecated. Please use `createWorkersKVSessionStorage` instead."
+);
+
+export { createWorkersKVSessionStorage } from "./sessions/workersKVStorage";
 
 export {
   createCookie,
@@ -12,6 +27,9 @@ export {
 export {
   createRequestHandler,
   createSession,
+  defer,
+  broadcastDevReady,
+  logDevReady,
   isCookie,
   isSession,
   json,
@@ -37,10 +55,11 @@ export type {
   ErrorBoundaryComponent,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
+  HeadersArgs,
   HeadersFunction,
   HtmlLinkDescriptor,
   HtmlMetaDescriptor,
-  V2_HtmlMetaDescriptor,
+  JsonFunction,
   LinkDescriptor,
   LinksFunction,
   LoaderArgs,
@@ -49,7 +68,7 @@ export type {
   MemoryUploadHandlerOptions,
   MetaDescriptor,
   MetaFunction,
-  V2_MetaFunction,
+  HandleErrorFunction,
   PageLinkDescriptor,
   RequestHandler,
   RouteComponent,
@@ -57,11 +76,17 @@ export type {
   SerializeFrom,
   ServerBuild,
   ServerEntryModule,
+  V2_ServerRuntimeMetaArgs as V2_MetaArgs,
+  V2_ServerRuntimeMetaDescriptor as V2_MetaDescriptor,
+  // TODO: Remove in v2
+  V2_ServerRuntimeMetaDescriptor as V2_HtmlMetaDescriptor,
+  V2_ServerRuntimeMetaFunction as V2_MetaFunction,
   Session,
   SessionData,
   SessionIdStorageStrategy,
   SessionStorage,
   SignFunction,
+  TypedDeferredData,
   TypedResponse,
   UnsignFunction,
   UploadHandler,

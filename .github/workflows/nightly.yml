@@ -51,7 +51,7 @@ jobs:
           SHORT_SHA=${SHA::7}
 
           # get latest nightly tag
-          LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-committerdate | head -n 1)
+          LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-creatordate | head -n 1)
 
           # check if last commit to dev starts would be the nightly tag we're about to create (minus the date)
           # if it is, we'll skip the nightly creation
@@ -72,7 +72,7 @@ jobs:
         run: |
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
-          git checkout -b nightly/${{steps.version.outputs.NEXT_VERSION}}
+          git checkout -b nightly/${{ steps.version.outputs.NEXT_VERSION }}
           yarn run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
           git push origin --tags
 
@@ -94,10 +94,7 @@ jobs:
     needs: [nightly]
     name: 📝 Comment on related issues and pull requests
     if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
-    uses: remix-run/remix/.github/workflows/release-comments.yml@main
-    with:
-      ref: "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}"
-      packageVersionToFollow: "remix"
+    uses: ./.github/workflows/release-comments.yml
 
   deployments:
     needs: [nightly]

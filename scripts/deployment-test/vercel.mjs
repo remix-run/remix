@@ -2,7 +2,6 @@ import path from "path";
 import { sync as spawnSync } from "cross-spawn";
 import fse from "fs-extra";
 import fetch from "node-fetch";
-import { createApp } from "@remix-run/dev";
 import PackageJson from "@npmcli/package-json";
 
 import {
@@ -19,15 +18,6 @@ import {
 let APP_NAME = getAppName("vercel");
 let PROJECT_DIR = getAppDirectory(APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:3000";
-
-async function createNewApp() {
-  await createApp({
-    appTemplate: "vercel",
-    installDeps: false,
-    useTypeScript: true,
-    projectDir: PROJECT_DIR,
-  });
-}
 
 function vercelClient(input, init) {
   let url = new URL(input, "https://api.vercel.com");
@@ -80,7 +70,20 @@ let spawnOpts = getSpawnOpts(PROJECT_DIR, {
 });
 
 async function createAndDeployApp() {
-  await createNewApp();
+  // create a new remix app
+  spawnSync(
+    "npx",
+    [
+      "--yes",
+      "create-remix@latest",
+      PROJECT_DIR,
+      "--template",
+      "vercel",
+      "--no-install",
+      "--typescript",
+    ],
+    getSpawnOpts()
+  );
 
   // validate dependencies are available
   let [valid, errors] = await validatePackageVersions(PROJECT_DIR);

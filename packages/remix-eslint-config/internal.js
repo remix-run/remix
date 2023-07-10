@@ -55,6 +55,7 @@ module.exports = {
         "no-unused-expressions": OFF,
         "no-unused-labels": OFF,
         "no-unused-vars": OFF,
+        "prefer-const": WARN,
         "jsx-a11y/alt-text": OFF,
         "jsx-a11y/anchor-has-content": OFF,
         "prefer-let/prefer-let": OFF,
@@ -66,6 +67,7 @@ module.exports = {
       // all ```ts & ```tsx code blocks in .md files
       files: ["**/*.md/*.ts?(x)"],
       rules: {
+        "import/no-duplicates": "off",
         "@typescript-eslint/no-unused-expressions": OFF,
         "@typescript-eslint/no-unused-vars": OFF,
       },
@@ -82,6 +84,9 @@ module.exports = {
       files: ["integration/**/*.*"],
       env: {
         "jest/globals": false,
+      },
+      rules: {
+        "import/no-duplicates": "off",
       },
     },
   ],

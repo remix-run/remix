@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
-import type { ErrorResponse } from "@remix-run/router";
-import type { Location } from "react-router-dom";
+import type { ErrorResponse, Location } from "@remix-run/router";
+import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 
 import type {
   CatchBoundaryComponent,
@@ -70,30 +70,35 @@ export class RemixErrorBoundary extends React.Component<
  * When app's don't provide a root level ErrorBoundary, we default to this.
  */
 export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
-  console.error(error);
+  // Only log client side to avoid double-logging on the server
+  React.useEffect(() => {
+    console.error(error);
+  }, [error]);
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta
           name="viewport"
-          content="width=device-width,initial-scale=1,viewport-fit=cover"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
         <title>Application Error!</title>
       </head>
       <body>
         <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
           <h1 style={{ fontSize: "24px" }}>Application Error</h1>
-          <pre
-            style={{
-              padding: "2rem",
-              background: "hsla(10, 50%, 50%, 0.1)",
-              color: "red",
-              overflow: "auto",
-            }}
-          >
-            {error.stack}
-          </pre>
+          {error.stack ? (
+            <pre
+              style={{
+                padding: "2rem",
+                background: "hsla(10, 50%, 50%, 0.1)",
+                color: "red",
+                overflow: "auto",
+              }}
+            >
+              {error.stack}
+            </pre>
+          ) : null}
         </main>
         <script
           dangerouslySetInnerHTML={{
@@ -109,12 +114,31 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
   );
 }
 
+export function V2_RemixRootDefaultErrorBoundary() {
+  let error = useRouteError();
+  if (isRouteErrorResponse(error)) {
+    return <RemixRootDefaultCatchBoundaryImpl caught={error} />;
+  } else if (error instanceof Error) {
+    return <RemixRootDefaultErrorBoundary error={error} />;
+  } else {
+    let errorString =
+      error == null
+        ? "Unknown Error"
+        : typeof error === "object" && "toString" in error
+        ? error.toString()
+        : JSON.stringify(error);
+    return <RemixRootDefaultErrorBoundary error={new Error(errorString)} />;
+  }
+}
+
 let RemixCatchContext = React.createContext<ThrownResponse | undefined>(
   undefined
 );
 
 /**
  * Returns the status code and thrown response data.
+ *
+ * @deprecated Please enable the v2_errorBoundary flag
  *
  * @see https://remix.run/route/catch-boundary
  */
@@ -150,13 +174,21 @@ export function RemixCatchBoundary({
  */
 export function RemixRootDefaultCatchBoundary() {
   let caught = useCatch();
+  return <RemixRootDefaultCatchBoundaryImpl caught={caught} />;
+}
+
+function RemixRootDefaultCatchBoundaryImpl({
+  caught,
+}: {
+  caught: ThrownResponse;
+}) {
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta
           name="viewport"
-          content="width=device-width,initial-scale=1,viewport-fit=cover"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
         <title>Unhandled Thrown Response!</title>
       </head>

@@ -4,6 +4,8 @@ title: useTransition
 
 # `useTransition`
 
+<docs-warning>`useTransition` will be removed in v2 in favor of [`useNavigation`][use-navigation]. You can prepare for this change at your convenience by updating to [`useNavigation`][use-navigation]. For instructions on making this change see the [v2 guide][v2guide]</docs-warning>
+
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=y4VLIFjFq8k&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Pending UI</a>, <a href="https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Clearing Inputs After Form Submissions</a>, and <a href="https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Optimistic UI</a></docs-success>
 
 This hook tells you everything you need to know about a page transition to build pending navigation indicators and optimistic UI on data mutations. Things like:
@@ -15,7 +17,7 @@ This hook tells you everything you need to know about a page transition to build
 - Optimistically showing a new record while it's being created on the server
 - Optimistically showing the new state of a record while it's being updated
 
-```js
+```tsx
 import { useTransition } from "@remix-run/react";
 
 function SomeComponent() {
@@ -27,7 +29,7 @@ function SomeComponent() {
 }
 ```
 
-#### `transition.state`
+## `transition.state`
 
 You can know the state of the transition with `transition.state`. It will be one of:
 
@@ -68,7 +70,7 @@ function SubmitButton() {
 }
 ```
 
-#### `transition.type`
+## `transition.type`
 
 Most pending UI only cares about `transition.state`, but the transition can tell you even more information on `transition.type`.
 
@@ -114,13 +116,11 @@ function SubmitButton() {
 }
 ```
 
-#### `transition.submission`
+## `transition.submission`
 
 Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`][form-data] object.
 
-TODO: Example
-
-#### `transition.location`
+## `transition.location`
 
 This tells you what the next location is going to be. It's most useful when matching against the next URL for custom links and hooks.
 
@@ -151,3 +151,5 @@ Note that this link will not appear "pending" if a form is being submitted to th
 
 [usefetcher]: ./use-fetcher
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
+[use-navigation]: ./use-navigation
+[v2guide]: ../pages/v2#usetransition

@@ -11,6 +11,9 @@ let BANNER_MESSAGE = "you do not have permission to view /protected";
 
 test.beforeAll(async () => {
   fixture = await createFixture({
+    config: {
+      future: { v2_routeConvention: true },
+    },
     files: {
       "app/session.server.js": js`
         import { createCookieSessionStorage } from "@remix-run/node";
@@ -69,7 +72,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         import { Link } from "@remix-run/react";
 
         export default function Index() {
@@ -111,7 +114,7 @@ test.beforeAll(async () => {
     },
   });
 
-  // This creates an interactive app using puppeteer.
+  // This creates an interactive app using playwright.
   appFixture = await createAppFixture(fixture);
 });
 

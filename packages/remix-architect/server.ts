@@ -29,7 +29,7 @@ import { isBinaryType } from "./binaryTypes";
  */
 export type GetLoadContextFunction = (
   event: APIGatewayProxyEventV2
-) => AppLoadContext;
+) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler = APIGatewayProxyHandlerV2;
 
@@ -50,7 +50,7 @@ export function createRequestHandler({
 
   return async (event) => {
     let request = createRemixRequest(event);
-    let loadContext = getLoadContext?.(event);
+    let loadContext = await getLoadContext?.(event);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
@@ -62,7 +62,7 @@ export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let scheme = process.env.ARC_SANDBOX ? "http" : "https";
-  let url = new URL(event.rawPath + search, `${scheme}://${host}`);
+  let url = new URL(`${scheme}://${host}${event.rawPath}${search}`);
   let isFormData = event.headers["content-type"]?.includes(
     "multipart/form-data"
   );

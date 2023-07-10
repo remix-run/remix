@@ -1,0 +1,18 @@
+{
+  "include": ["**/*.ts"],
+  "exclude": ["dist", "__tests__", "node_modules"],
+  "compilerOptions": {
+    "lib": ["ES2019", "DOM.Iterable"],
+    "target": "ES2019",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "outDir": "../../build/node_modules/@remix-run/css-bundle/dist",
+    "rootDir": "."
+  }
+}

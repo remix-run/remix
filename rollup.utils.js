@@ -267,6 +267,7 @@ function getMagicExports(packageName) {
         "createCookieSessionStorage",
         "createMemorySessionStorage",
         "createSessionStorage",
+        "createWorkersKVSessionStorage",
       ],
     },
     "@remix-run/node": {
@@ -347,6 +348,7 @@ function getMagicExports(packageName) {
         "ErrorBoundaryComponent",
         "HandleDataRequestFunction",
         "HandleDocumentRequestFunction",
+        "HeadersArgs",
         "HeadersFunction",
         "HtmlLinkDescriptor",
         "HtmlMetaDescriptor",
@@ -356,6 +358,7 @@ function getMagicExports(packageName) {
         "LoaderFunction",
         "MetaDescriptor",
         "MetaFunction",
+        "HandleErrorFunction",
         "PageLinkDescriptor",
         "RequestHandler",
         "RouteComponent",

@@ -67,7 +67,7 @@ You can reference your frontmatter data through "attributes". The title of this 
 
 ### Advanced Example
 
-You can even export all the other things in this module that you can in regular route modules in your mdx files like `loader` and `action`:
+You can even export all the other things in this module that you can in regular route modules in your mdx files like `loader`, `action`, and `handle`:
 
 ```mdx
 ---
@@ -77,6 +77,9 @@ meta:
 
 headers:
   Cache-Control: no-cache
+
+handle:
+  someData: abc
 ---
 
 import styles from "./first-post.css";
@@ -84,10 +87,6 @@ import styles from "./first-post.css";
 export const links = () => [
   { rel: "stylesheet", href: styles },
 ];
-
-export const handle = {
-  someData: "abc",
-};
 
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -127,9 +126,7 @@ import Component, {
 
 The following example demonstrates how you might build a simple blog with MDX, including individual pages for the posts themselves and an index page that shows all posts.
 
-In `app/routes/index.jsx`:
-
-```tsx
+```tsx filename=app/routes/index.tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { Link, useLoaderData } from "@remix-run/react";
 
@@ -183,7 +180,7 @@ Clearly this is not a scalable solution for a blog with thousands of posts. Real
 
 If you wish to configure your own remark plugins you can do so through the `remix.config.js`'s `mdx` export:
 
-```js
+```js filename=remix.config.js
 const {
   remarkMdxFrontmatter,
 } = require("remark-mdx-frontmatter");

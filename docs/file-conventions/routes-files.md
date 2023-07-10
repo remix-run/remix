@@ -4,9 +4,11 @@ title: Route File Naming
 
 # Route File Naming
 
+<docs-warning>The route file convention is changing in v2. You can prepare for this change at your convenience with the `v2_routeConvention` future flag. For instructions on making this change see the [v2 guide][v2guide].</docs-warning>
+
 Setting up routes in Remix is as simple as creating files in your `app` directory. These are the conventions you should know to understand how routing in Remix works.
 
-Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
+Please note that you can use either `.js`, `.jsx`, `.ts` or `.tsx` file extensions. We'll stick with `.tsx` in the examples to avoid duplication.
 
 ## Root Route
 
@@ -81,21 +83,17 @@ For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app][view-example-app]) and all parameters can be accessed within components via [`useParams`][use-params] and within loaders/actions via the argument's [`params`][params] property:
 
 ```tsx filename=app/routes/blog/$postId.tsx
-import { useParams } from "@remix-run/react";
 import type {
-  LoaderFunction,
-  ActionFunction,
+  ActionArgs,
+  LoaderArgs,
 } from "@remix-run/node"; // or cloudflare/deno
+import { useParams } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params.postId);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action = async ({ params }: ActionArgs) => {
   console.log(params.postId);
 };
 
@@ -108,6 +106,36 @@ export default function PostRoute() {
 Nested routes can also contain dynamic segments by using the `$` character in the parent's directory name. For example, `app/routes/blog/$postId/edit.tsx` might represent the editor page for blog entries.
 
 See the [routing guide][routing-guide] for more information.
+
+## Optional Segments
+
+Wrapping a route segment in parens will make the segment optional.
+
+<!-- prettier-ignore -->
+```markdown lines=[3]
+app/
+├── routes/
+│   ├── ($lang)/
+│   │   ├── $pid.tsx
+│   │   ├── categories.tsx
+│   └── index.tsx
+└── root.tsx
+```
+
+<details>
+
+<summary>URL Route Matches</summary>
+
+| URL                        | Matched Route                       |
+| -------------------------- | ----------------------------------- |
+| `/categories`              | `app/routes/($lang)/categories.tsx` |
+| `/en/categories`           | `app/routes/($lang)/categories.tsx` |
+| `/fr/categories`           | `app/routes/($lang)/categories.tsx` |
+| `/american-flag-speedo`    | `app/routes/($lang)/$pid.tsx`       |
+| `/en/american-flag-speedo` | `app/routes/($lang)/$pid.tsx`       |
+| `/fr/american-flag-speedo` | `app/routes/($lang)/$pid.tsx`       |
+
+</details>
 
 ## Layout Routes
 
@@ -139,7 +167,7 @@ app/
 
 </details>
 
-In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name as its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all of the routes inside that directory ("child routes"). Similar to your [root route][root-route], the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
+In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name as its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all the routes inside that directory ("child routes"). Similar to your [root route][root-route], the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
 
 ## Pathless Layout Routes
 
@@ -244,21 +272,17 @@ Files that are named `$.tsx` are called "splat" (or "catch-all") routes. These r
 Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
 
 ```tsx filename=app/routes/$.tsx
-import { useParams } from "@remix-run/react";
 import type {
-  LoaderFunction,
-  ActionFunction,
+  ActionArgs,
+  LoaderArgs,
 } from "@remix-run/node"; // or cloudflare/deno
+import { useParams } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params["*"]);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action = async ({ params }: ActionArgs) => {
   console.log(params["*"]);
 };
 
@@ -279,7 +303,7 @@ Because some characters have special meaning, you must use our escaping syntax i
 [loader]: ../route/loader
 [action]: ../route/action
 [meta]: ../route/meta
-[headers]: ../routes/headers
+[headers]: ../route/headers
 [links]: ../route/links
 [error-boundary]: ../route/error-boundary
 [catch-boundary]: ../route/catch-boundary
@@ -290,3 +314,4 @@ Because some characters have special meaning, you must use our escaping syntax i
 [routing-guide]: ../guides/routing
 [root-route]: #root-route
 [resource-route]: ../guides/resource-routes
+[v2guide]: ../pages/v2#file-system-route-convention

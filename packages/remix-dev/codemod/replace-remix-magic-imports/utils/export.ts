@@ -57,6 +57,7 @@ const defaultRuntimeExports: ExportNames = {
     "ErrorBoundaryComponent",
     "HandleDataRequestFunction",
     "HandleDocumentRequestFunction",
+    "HeadersArgs",
     "HeadersFunction",
     "HtmlLinkDescriptor",
     "HtmlMetaDescriptor",
@@ -67,6 +68,7 @@ const defaultRuntimeExports: ExportNames = {
     "MemoryUploadHandlerOptions",
     "MetaDescriptor",
     "MetaFunction",
+    "HandleErrorFunction",
     "PageLinkDescriptor",
     "RequestHandler",
     "RouteComponent",
@@ -100,7 +102,10 @@ const defaultRuntimeExports: ExportNames = {
 
 const exportNamesByRuntime: Record<Runtime, Partial<ExportNames>> = {
   cloudflare: {
-    value: ["createCloudflareKVSessionStorage"],
+    value: [
+      "createCloudflareKVSessionStorage",
+      "createWorkersKVSessionStorage",
+    ],
   },
   node: {
     type: ["HeadersInit", "RequestInfo", "RequestInit", "ResponseInit"],

@@ -1,5 +1,6 @@
 ---
 title: Scripts
+toc: false
 ---
 
 # `<Scripts />`

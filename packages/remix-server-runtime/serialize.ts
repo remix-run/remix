@@ -1,5 +1,5 @@
 import type { AppData } from "./data";
-import type { TypedResponse } from "./responses";
+import type { TypedDeferredData, TypedResponse } from "./responses";
 
 type JsonPrimitive =
   | string
@@ -20,6 +20,7 @@ type IsAny<T> = 0 extends 1 & T ? true : false;
 // prettier-ignore
 type Serialize<T> =
   IsAny<T> extends true ? any :
+  T extends TypedDeferredData<infer U> ? SerializeDeferred<U> :
   T extends JsonPrimitive ? T :
   T extends NonJsonPrimitive ? never :
   T extends { toJSON(): infer U } ? U :
@@ -27,16 +28,29 @@ type Serialize<T> =
   T extends [unknown, ...unknown[]] ? SerializeTuple<T> :
   T extends ReadonlyArray<infer U> ? (U extends NonJsonPrimitive ? null : Serialize<U>)[] :
   T extends object ? SerializeObject<UndefinedToOptional<T>> :
-  never;
+  never
+;
 
 /** JSON serialize [tuples](https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types) */
-type SerializeTuple<T extends [unknown, ...unknown[]]> = {
-  [k in keyof T]: T[k] extends NonJsonPrimitive ? null : Serialize<T[k]>;
-};
+type SerializeTuple<T extends unknown[]> = T extends [infer F, ...infer R]
+  ? [Serialize<F>, ...SerializeTuple<R>]
+  : [];
 
 /** JSON serialize objects (not including arrays) and classes */
 type SerializeObject<T extends object> = {
   [k in keyof T as T[k] extends NonJsonPrimitive ? never : k]: Serialize<T[k]>;
+};
+
+// prettier-ignore
+type SerializeDeferred<T extends Record<string, unknown>> = {
+  [k in keyof T as
+    T[k] extends Promise<unknown> ? k :
+    T[k] extends NonJsonPrimitive ? never :
+    k
+  ]:
+    T[k] extends Promise<infer U>
+    ? Promise<Serialize<U>> extends never ? "wtf" : Promise<Serialize<U>>
+    : Serialize<T[k]>  extends never ? k : Serialize<T[k]>;
 };
 
 /*

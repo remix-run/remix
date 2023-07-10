@@ -14,10 +14,12 @@ type ValidateShape<T, Shape> =
         never
     : never;
 
+// TODO: Remove Promises from serialization
 export function createServerHandoffString<T>(serverHandoff: {
   // Don't allow StaticHandlerContext to be passed in verbatim, since then
   // we'd end up including duplicate info
   state: ValidateShape<T, HydrationState>;
+  url: string;
   future: FutureConfig;
 }): string {
   // Uses faster alternative of jsesc to escape data returned from the loaders.

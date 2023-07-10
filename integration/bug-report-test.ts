@@ -40,16 +40,26 @@ let appFixture: AppFixture;
 //    ```
 ////////////////////////////////////////////////////////////////////////////////
 
+test.beforeEach(async ({ context }) => {
+  await context.route(/_data/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    route.continue();
+  });
+});
+
 test.beforeAll(async () => {
   fixture = await createFixture({
+    config: {
+      future: { v2_routeConvention: true },
+    },
     ////////////////////////////////////////////////////////////////////////////
     // 💿 Next, add files to this object, just like files in a real app,
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { redirect } from "@remix-run/node";
-        import { Form, Link } from "@remix-run/react";
+      "app/routes/_index.jsx": js`
+        import { json, redirect } from "@remix-run/node";
+        import { useLoaderData, Link, Form } from "@remix-run/react";
 
         export const action = async ({ request }) => {
           let url = new URL(request.url);
@@ -89,13 +99,13 @@ test.beforeAll(async () => {
 
       "app/routes/test.jsx": js`
         export default function Index() {
-          return <div>Success!</div>;
+          return <div id="success">Success!</div>;
         }
       `,
     },
   });
 
-  // This creates an interactive app using puppeteer.
+  // This creates an interactive app using playwright.
   appFixture = await createAppFixture(fixture);
 });
 

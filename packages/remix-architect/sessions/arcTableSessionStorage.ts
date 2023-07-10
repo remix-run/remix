@@ -1,8 +1,12 @@
 import * as crypto from "crypto";
-import type { SessionStorage, SessionIdStorageStrategy } from "@remix-run/node";
+import type {
+  SessionData,
+  SessionStorage,
+  SessionIdStorageStrategy,
+} from "@remix-run/node";
 import { createSessionStorage } from "@remix-run/node";
 import arc from "@architect/functions";
-import type { ArcTable } from "@architect/functions/tables";
+import type { ArcTable } from "@architect/functions/types/tables";
 
 interface ArcTableSessionStorageOptions {
   /**
@@ -15,7 +19,7 @@ interface ArcTableSessionStorageOptions {
    * The table used to store sessions, or its name as it appears in your
    * project's app.arc file.
    */
-  table: ArcTable | string;
+  table: ArcTable<SessionData> | string;
 
   /**
    * The name of the DynamoDB attribute used to store the session ID.
@@ -40,10 +44,13 @@ interface ArcTableSessionStorageOptions {
  *     _idx *String
  *     _ttl TTL
  */
-export function createArcTableSessionStorage({
+export function createArcTableSessionStorage<
+  Data = SessionData,
+  FlashData = Data
+>({
   cookie,
   ...props
-}: ArcTableSessionStorageOptions): SessionStorage {
+}: ArcTableSessionStorageOptions): SessionStorage<Data, FlashData> {
   async function getTable() {
     if (typeof props.table === "string") {
       let tables = await arc.tables();
@@ -70,7 +77,7 @@ export function createArcTableSessionStorage({
           continue;
         }
 
-        let params = {
+        let params: Record<string, unknown> = {
           [props.idx]: id,
           ...data,
         };
@@ -95,7 +102,7 @@ export function createArcTableSessionStorage({
     },
     async updateData(id, data, expires) {
       let table = await getTable();
-      let params = {
+      let params: Record<string, unknown> = {
         [props.idx]: id,
         ...data,
       };

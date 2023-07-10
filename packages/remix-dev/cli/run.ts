@@ -1,7 +1,6 @@
 import * as path from "path";
 import os from "os";
 import arg from "arg";
-import inspector from "inspector";
 import inquirer from "inquirer";
 import semver from "semver";
 import fse from "fs-extra";
@@ -9,7 +8,8 @@ import fse from "fs-extra";
 import * as colors from "../colors";
 import * as commands from "./commands";
 import { validateNewProjectPath, validateTemplate } from "./create";
-import { getPreferredPackageManager } from "./getPreferredPackageManager";
+import { detectPackageManager } from "./detectPackageManager";
+import { logger } from "../tux";
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -42,6 +42,13 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
   \`dev\` Options:
     --debug             Attach Node.js inspector
     --port, -p          Choose the port from which to run your app
+
+    [v2_dev]
+    --command, -c       Command used to run your app server
+    --port              Port for the dev server. Default: any open port
+    --no-restart        Do not restart the app server when rebuilds occur.
+    --tls-key           Path to TLS key (key.pem)
+    --tls-cert          Path to TLS certificate (cert.pem)
   \`init\` Options:
     --no-delete         Skip deleting the \`remix.init\` script
   \`routes\` Options:
@@ -110,12 +117,19 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix routes
     $ remix routes my-app
     $ remix routes --json
+
+  ${colors.heading("Reveal the used entry point")}:
+
+    $ remix reveal entry.client
+    $ remix reveal entry.server
+    $ remix reveal entry.client --no-typescript
+    $ remix reveal entry.server --no-typescript
 `;
 
 const templateChoices = [
   { name: "Remix App Server", value: "remix" },
   { name: "Express Server", value: "express" },
-  { name: "Architect (AWS Lambda)", value: "arc" },
+  { name: "Architect", value: "arc" },
   { name: "Fly.io", value: "fly" },
   { name: "Netlify", value: "netlify" },
   { name: "Vercel", value: "vercel" },
@@ -129,15 +143,6 @@ const npxInterop = {
   yarn: "yarn",
   pnpm: "pnpm exec",
 };
-
-async function dev(
-  projectDir: string,
-  flags: { debug?: boolean; port?: number }
-) {
-  if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
-  if (flags.debug) inspector.open();
-  await commands.dev(projectDir, process.env.NODE_ENV, flags.port);
-}
 
 /**
  * Programmatic interface for running the Remix CLI with the given command line
@@ -165,8 +170,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--interactive": Boolean,
       "--no-interactive": Boolean,
       "--json": Boolean,
-      "--port": Number,
-      "-p": "--port",
       "--remix-version": String,
       "--sourcemap": Boolean,
       "--template": String,
@@ -175,6 +178,19 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--no-typescript": Boolean,
       "--version": Boolean,
       "-v": "--version",
+
+      // dev server
+      "--command": String,
+      "-c": "--command",
+      "--port": Number,
+      "-p": "--port",
+      "--no-restart": Boolean,
+      "--tls-key": String,
+      "--tls-cert": String,
+
+      // deprecated, remove in v2
+      "--scheme": String,
+      "--host": String,
     },
     {
       argv,
@@ -199,6 +215,34 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     return;
   }
 
+  // TODO: remove in v2
+  if (flags["scheme"]) {
+    logger.warn("`--scheme` flag is deprecated", {
+      details: [
+        "Use `REMIX_DEV_ORIGIN` instead",
+        "-> https://remix.run/docs/en/main/other-api/dev-v2#how-to-integrate-with-a-reverse-proxy",
+      ],
+    });
+  }
+  // TODO: remove in v2
+  if (flags["host"]) {
+    logger.warn("`--host` flag is deprecated", {
+      details: [
+        "Use `REMIX_DEV_ORIGIN` instead",
+        "-> https://remix.run/docs/en/main/other-api/dev-v2#how-to-integrate-with-a-reverse-proxy",
+      ],
+    });
+  }
+
+  if (flags["tls-key"]) {
+    flags.tlsKey = flags["tls-key"];
+    delete flags["tls-key"];
+  }
+  if (flags["tls-cert"]) {
+    flags.tlsCert = flags["tls-cert"];
+    delete flags["tls-cert"];
+  }
+
   if (args["--no-delete"]) {
     flags.delete = false;
   }
@@ -209,6 +253,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     flags.interactive = false;
   }
   flags.interactive = flags.interactive ?? require.main === module;
+  if (args["--no-restart"]) {
+    flags.restart = false;
+    delete flags["no-restart"];
+  }
   if (args["--no-typescript"]) {
     flags.typescript = false;
   }
@@ -297,7 +345,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         return;
       }
 
-      let packageManager = getPreferredPackageManager();
+      let packageManager = detectPackageManager() ?? "npm";
       let answers = await inquirer
         .prompt<{
           appType: "template" | "stack";
@@ -479,11 +527,16 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.codemod(input[1], input[2]);
       break;
     }
+    case "reveal": {
+      // TODO: simplify getting started guide
+      await commands.generateEntry(input[1], input[2], flags.typescript);
+      break;
+    }
     case "dev":
-      await dev(input[1], flags);
+      await commands.dev(input[1], flags);
       break;
     default:
       // `remix ./my-project` is shorthand for `remix dev ./my-project`
-      await dev(input[0], flags);
+      await commands.dev(input[0], flags);
   }
 }

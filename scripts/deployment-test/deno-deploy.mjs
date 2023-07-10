@@ -1,5 +1,4 @@
 import { sync as spawnSync } from "cross-spawn";
-import { createApp } from "@remix-run/dev";
 
 import {
   getAppDirectory,
@@ -12,18 +11,21 @@ let DENO_DEPLOY_PROJECT_NAME = "remix-deno-deploy-test";
 let APP_NAME = getAppName(DENO_DEPLOY_PROJECT_NAME);
 let PROJECT_DIR = getAppDirectory(APP_NAME);
 
-async function createNewApp() {
-  await createApp({
-    appTemplate: "deno",
-    installDeps: false,
-    useTypeScript: true,
-    projectDir: PROJECT_DIR,
-  });
-}
-
 try {
   // create a new remix app
-  await createNewApp();
+  spawnSync(
+    "npx",
+    [
+      "--yes",
+      "create-remix@latest",
+      PROJECT_DIR,
+      "--template",
+      "deno",
+      "--no-install",
+      "--typescript",
+    ],
+    getSpawnOpts()
+  );
 
   // validate dependencies are available
   let [valid, errors] = await validatePackageVersions(PROJECT_DIR);

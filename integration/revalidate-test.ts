@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import type { AppFixture } from "./helpers/create-fixture";
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 test.describe("Revalidation", () => {
@@ -10,6 +10,11 @@ test.describe("Revalidation", () => {
   test.beforeAll(async () => {
     appFixture = await createAppFixture(
       await createFixture({
+        config: {
+          future: {
+            v2_routeConvention: true,
+          },
+        },
         files: {
           "app/root.jsx": js`
             import { Link, Outlet, Scripts, useNavigation } from "@remix-run/react";
@@ -61,7 +66,6 @@ test.describe("Revalidation", () => {
             };
 
             export function shouldRevalidate({ nextUrl, formData }) {
-              debugger;
               if (nextUrl.searchParams.get('revalidate')?.split(',')?.includes('parent')) {
                 return true;
               }
@@ -82,7 +86,7 @@ test.describe("Revalidation", () => {
             }
           `,
 
-          "app/routes/parent/child.jsx": js`
+          "app/routes/parent.child.jsx": js`
             import { json } from "@remix-run/node";
             import { Form, useLoaderData, useRevalidator } from "@remix-run/react";
 

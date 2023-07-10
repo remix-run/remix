@@ -45,7 +45,7 @@ export async function loader({ request }: LoaderArgs) {
 
 And then `useFetcher` along with Reach UI's combobox input:
 
-```tsx [2,11,14,19,21,23]
+```tsx lines=[2,11,14,19,21,23]
 function CitySearchCombobox() {
   const cities = useFetcher();
 

@@ -1,4 +1,10 @@
-import { json, isResponse } from "./responses";
+import {
+  redirect,
+  json,
+  isDeferredData,
+  isResponse,
+  isRedirectStatusCode,
+} from "./responses";
 import type {
   ActionFunction,
   DataFunctionArgs,
@@ -15,6 +21,8 @@ export interface AppLoadContext {
 
 /**
  * Data for a route that was returned from a `loader()`.
+ *
+ * Note: This moves to unknown in ReactRouter and eventually likely in Remix
  */
 export type AppData = any;
 
@@ -71,6 +79,16 @@ export async function callRouteLoaderRR({
       `You defined a loader for route "${routeId}" but didn't return ` +
         `anything from your \`loader\` function. Please return a value or \`null\`.`
     );
+  }
+
+  if (isDeferredData(result)) {
+    if (result.init && isRedirectStatusCode(result.init.status || 200)) {
+      return redirect(
+        new Headers(result.init.headers).get("Location")!,
+        result.init
+      );
+    }
+    return result;
   }
 
   return isResponse(result) ? result : json(result);

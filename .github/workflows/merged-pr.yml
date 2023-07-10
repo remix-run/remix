@@ -14,11 +14,16 @@ permissions:
 jobs:
   merged:
     name: Add label to merged PR
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions-ecosystem/action-add-labels@v1
+      - uses: actions/github-script@v6
         with:
-          labels: "awaiting release"
-          number: ${{ github.event.pull_request.number }}
-          repo: ${{ github.repository }}
+          retries: 3
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['awaiting release'],
+            })

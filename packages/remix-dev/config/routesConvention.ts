@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
-import minimatch from "minimatch";
+import { Minimatch } from "minimatch";
 
 import type { RouteManifest, DefineRouteFunction } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
 
-const routeModuleExts = [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"];
+export const routeModuleExts = [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"];
 
 export function isRouteModuleFile(filename: string): boolean {
   return routeModuleExts.includes(path.extname(filename));
@@ -32,7 +32,10 @@ export function defineConventionalRoutes(
   visitFiles(path.join(appDir, "routes"), (file) => {
     if (
       ignoredFilePatterns &&
-      ignoredFilePatterns.some((pattern) => minimatch(file, pattern))
+      ignoredFilePatterns.some((pattern) => {
+        let minimatch = new Minimatch(pattern);
+        return minimatch.match(file);
+      })
     ) {
       return;
     }
@@ -70,11 +73,52 @@ export function defineConventionalRoutes(
       let isIndexRoute = routeId.endsWith("/index");
       let fullPath = createRoutePath(routeId.slice("routes".length + 1));
       let uniqueRouteId = (fullPath || "") + (isIndexRoute ? "?index" : "");
+      let isPathlessLayoutRoute =
+        routeId.split("/").pop()?.startsWith("__") === true;
 
-      if (uniqueRouteId) {
+      /**
+       * We do not try to detect path collisions for pathless layout route
+       * files because, by definition, they create the potential for route
+       * collisions _at that level in the tree_.
+       *
+       * Consider example where a user may want multiple pathless layout routes
+       * for different subfolders
+       *
+       *   routes/
+       *     account.tsx
+       *     account/
+       *       __public/
+       *         login.tsx
+       *         perks.tsx
+       *       __private/
+       *         orders.tsx
+       *         profile.tsx
+       *       __public.tsx
+       *       __private.tsx
+       *
+       * In order to support both a public and private layout for `/account/*`
+       * URLs, we are creating a mutually exclusive set of URLs beneath 2
+       * separate pathless layout routes.  In this case, the route paths for
+       * both account/__public.tsx and account/__private.tsx is the same
+       * (/account), but we're again not expecting to match at that level.
+       *
+       * By only ignoring this check when the final portion of the filename is
+       * pathless, we will still detect path collisions such as:
+       *
+       *   routes/parent/__pathless/foo.tsx
+       *   routes/parent/__pathless2/foo.tsx
+       *
+       * and
+       *
+       *   routes/parent/__pathless/index.tsx
+       *   routes/parent/__pathless2/index.tsx
+       */
+      if (uniqueRouteId && !isPathlessLayoutRoute) {
         if (uniqueRoutes.has(uniqueRouteId)) {
           throw new Error(
-            `Path ${JSON.stringify(fullPath)} defined by route ${JSON.stringify(
+            `Path ${JSON.stringify(
+              fullPath || "/"
+            )} defined by route ${JSON.stringify(
               routeId
             )} conflicts with route ${JSON.stringify(
               uniqueRoutes.get(uniqueRouteId)
@@ -110,11 +154,12 @@ export function defineConventionalRoutes(
   return defineRoutes(defineNestedRoutes);
 }
 
-let escapeStart = "[";
-let escapeEnd = "]";
+export let paramPrefixChar = "$" as const;
+export let escapeStart = "[" as const;
+export let escapeEnd = "]" as const;
 
-let optionalStart = "(";
-let optionalEnd = ")";
+export let optionalStart = "(" as const;
+export let optionalEnd = ")" as const;
 
 // TODO: Cleanup and write some tests for this function
 export function createRoutePath(partialRouteId: string): string | undefined {
@@ -127,13 +172,13 @@ export function createRoutePath(partialRouteId: string): string | undefined {
   let skipSegment = false;
   for (let i = 0; i < partialRouteId.length; i++) {
     let char = partialRouteId.charAt(i);
-    let lastChar = i > 0 ? partialRouteId.charAt(i - 1) : undefined;
+    let prevChar = i > 0 ? partialRouteId.charAt(i - 1) : undefined;
     let nextChar =
       i < partialRouteId.length - 1 ? partialRouteId.charAt(i + 1) : undefined;
 
     function isNewEscapeSequence() {
       return (
-        !inEscapeSequence && char === escapeStart && lastChar !== escapeStart
+        !inEscapeSequence && char === escapeStart && prevChar !== escapeStart
       );
     }
 
@@ -145,17 +190,11 @@ export function createRoutePath(partialRouteId: string): string | undefined {
       return char === "_" && nextChar === "_" && !rawSegmentBuffer;
     }
 
-    function isSegmentSeparator(checkChar = char) {
-      return (
-        checkChar === "/" || checkChar === "." || checkChar === path.win32.sep
-      );
-    }
-
     function isNewOptionalSegment() {
       return (
         char === optionalStart &&
-        lastChar !== optionalStart &&
-        (isSegmentSeparator(lastChar) || lastChar === undefined) &&
+        prevChar !== optionalStart &&
+        (isSegmentSeparator(prevChar) || prevChar === undefined) &&
         !inOptionalSegment &&
         !inEscapeSequence
       );
@@ -172,7 +211,7 @@ export function createRoutePath(partialRouteId: string): string | undefined {
     }
 
     if (skipSegment) {
-      if (isSegmentSeparator()) {
+      if (isSegmentSeparator(char)) {
         skipSegment = false;
       }
       continue;
@@ -191,7 +230,7 @@ export function createRoutePath(partialRouteId: string): string | undefined {
     if (isNewOptionalSegment()) {
       inOptionalSegment++;
       optionalSegmentIndex = result.length;
-      result += "(";
+      result += optionalStart;
       continue;
     }
 
@@ -212,7 +251,7 @@ export function createRoutePath(partialRouteId: string): string | undefined {
       continue;
     }
 
-    if (isSegmentSeparator()) {
+    if (isSegmentSeparator(char)) {
       if (rawSegmentBuffer === "index" && result.endsWith("index")) {
         result = result.replace(/\/?index$/, "");
       } else {
@@ -232,8 +271,8 @@ export function createRoutePath(partialRouteId: string): string | undefined {
 
     rawSegmentBuffer += char;
 
-    if (char === "$") {
-      if (nextChar === ")") {
+    if (char === paramPrefixChar) {
+      if (nextChar === optionalEnd) {
         throw new Error(
           `Invalid route path: ${partialRouteId}. Splat route $ is already optional`
         );
@@ -247,15 +286,22 @@ export function createRoutePath(partialRouteId: string): string | undefined {
 
   if (rawSegmentBuffer === "index" && result.endsWith("index")) {
     result = result.replace(/\/?index$/, "");
+  } else {
+    result = result.replace(/\/$/, "");
   }
 
   if (rawSegmentBuffer === "index" && result.endsWith("index?")) {
     throw new Error(
-      `Invalid route path: ${partialRouteId}. Make index route optional by using [index]`
+      `Invalid route path: ${partialRouteId}. Make index route optional by using (index)`
     );
   }
 
   return result || undefined;
+}
+
+export function isSegmentSeparator(checkChar: string | undefined) {
+  if (!checkChar) return false;
+  return ["/", ".", path.win32.sep].includes(checkChar);
 }
 
 function getParentRouteIds(
