@@ -23,7 +23,7 @@ It is common for Remix newcomers to see this hook and think it is the primary wa
 - [`useLoaderData`][useloaderdata]
 - [`Form`][form]
 - [`useActionData`][useactiondata]
-- [`useTransition`][usetransition]
+- [`useNavigation`][usenavigation]
 
 If you're building a highly interactive, "app-like" user interface, you will use `useFetcher` often.
 
@@ -435,7 +435,7 @@ function CitySearchCombobox() {
 
 [form]: ../components/form
 [index query param]: ../guides/routing#what-is-the-index-query-param
-[usetransition]: ./use-transition
+[usenavigation]: ./use-navigation
 [useactiondata]: ./use-action-data
 [useloaderdata]: ./use-loader-data
 [v2guide]: ../pages/v2#usefetcher
