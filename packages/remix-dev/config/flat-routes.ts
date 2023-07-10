@@ -1,8 +1,10 @@
+import fs from "node:fs";
 import path from "node:path";
-import fg from "fast-glob";
+import { makeRe } from "minimatch";
 
-import type { ConfigRoute, DefineRouteFunction, RouteManifest } from "./routes";
-import { createRouteId, defineRoutes } from "./routes";
+import type { ConfigRoute, RouteManifest } from "./routes";
+import { normalizeSlashes } from "./routes";
+import { findConfig } from "../config";
 import {
   escapeEnd,
   escapeStart,
@@ -13,99 +15,327 @@ import {
   routeModuleExts,
 } from "./routesConvention";
 
+const PrefixLookupTrieEndSymbol = Symbol("PrefixLookupTrieEndSymbol");
+type PrefixLookupNode = {
+  [key: string]: PrefixLookupNode;
+} & Record<typeof PrefixLookupTrieEndSymbol, boolean>;
+
+class PrefixLookupTrie {
+  root: PrefixLookupNode = {
+    [PrefixLookupTrieEndSymbol]: false,
+  };
+
+  add(value: string) {
+    if (!value) throw new Error("Cannot add empty string to PrefixLookupTrie");
+
+    let node = this.root;
+    for (let char of value) {
+      if (!node[char]) {
+        node[char] = {
+          [PrefixLookupTrieEndSymbol]: false,
+        };
+      }
+      node = node[char];
+    }
+    node[PrefixLookupTrieEndSymbol] = true;
+  }
+
+  findAndRemove(
+    prefix: string,
+    filter: (nodeValue: string) => boolean
+  ): string[] {
+    let node = this.root;
+    for (let char of prefix) {
+      if (!node[char]) return [];
+      node = node[char];
+    }
+
+    return this.#findAndRemoveRecursive([], node, prefix, filter);
+  }
+
+  #findAndRemoveRecursive(
+    values: string[],
+    node: PrefixLookupNode,
+    prefix: string,
+    filter: (nodeValue: string) => boolean
+  ): string[] {
+    for (let char of Object.keys(node)) {
+      this.#findAndRemoveRecursive(values, node[char], prefix + char, filter);
+    }
+
+    if (node[PrefixLookupTrieEndSymbol] && filter(prefix)) {
+      node[PrefixLookupTrieEndSymbol] = false;
+      values.push(prefix);
+    }
+
+    return values;
+  }
+}
+
 export function flatRoutes(
   appDirectory: string,
-  ignoredFilePatterns?: string[]
-): RouteManifest {
-  let extensions = routeModuleExts.join(",");
+  ignoredFilePatterns: string[] = [],
+  prefix = "routes"
+) {
+  let ignoredFileRegex = ignoredFilePatterns
+    .map((re) => makeRe(re))
+    .filter((re: any): re is RegExp => !!re);
+  let routesDir = path.join(appDirectory, prefix);
 
-  let routePaths = fg.sync(`**/*{${extensions}}`, {
-    absolute: true,
-    cwd: path.join(appDirectory, "routes"),
-    ignore: ignoredFilePatterns,
+  let rootRoute = findConfig(appDirectory, "root", routeModuleExts);
+
+  if (!rootRoute) {
+    throw new Error(
+      `Could not find a root route module in the app directory: ${appDirectory}`
+    );
+  }
+
+  if (!fs.existsSync(rootRoute)) {
+    throw new Error(
+      `Could not find the routes directory: ${routesDir}. Did you forget to create it?`
+    );
+  }
+
+  // Only read the routes directory
+  let entries = fs.readdirSync(routesDir, {
+    withFileTypes: true,
+    encoding: "utf-8",
   });
 
-  return flatRoutesUniversal(appDirectory, routePaths);
+  let routes: string[] = [];
+  for (let entry of entries) {
+    let filepath = path.join(routesDir, entry.name);
+
+    let route: string | null = null;
+    // If it's a directory, don't recurse into it, instead just look for a route module
+    if (entry.isDirectory()) {
+      route = findRouteModuleForFolder(
+        appDirectory,
+        filepath,
+        ignoredFileRegex
+      );
+    } else if (entry.isFile()) {
+      route = findRouteModuleForFile(appDirectory, filepath, ignoredFileRegex);
+    }
+
+    if (route) routes.push(route);
+  }
+
+  let routeManifest = flatRoutesUniversal(appDirectory, routes, prefix);
+  return routeManifest;
 }
 
-interface RouteInfo extends ConfigRoute {
-  name: string;
-  segments: string[];
-}
-
-/**
- * Create route configs from a list of routes using the flat routes conventions.
- * @param {string} appDirectory - The absolute root directory the routes were looked up from.
- * @param {string[]} routePaths - The absolute route paths.
- * @param {string} [prefix=routes] - The prefix to strip off of the routes.
- */
 export function flatRoutesUniversal(
   appDirectory: string,
-  routePaths: string[],
+  routes: string[],
   prefix: string = "routes"
 ): RouteManifest {
-  let routeMap = getRouteMap(appDirectory, routePaths, prefix);
+  let urlConflicts = new Map<string, ConfigRoute[]>();
+  let routeManifest: RouteManifest = {};
+  let prefixLookup = new PrefixLookupTrie();
+  let uniqueRoutes = new Map<string, ConfigRoute>();
+  let routeIdConflicts = new Map<string, string[]>();
 
-  let uniqueRoutes = new Map<string, string>();
+  // id -> file
+  let routeIds = new Map<string, string>();
 
-  function defineNestedRoutes(
-    defineRoute: DefineRouteFunction,
-    parentId?: string
-  ): void {
-    let childRoutes = Array.from(routeMap.values()).filter(
-      (routeInfo) => routeInfo.parentId === parentId
-    );
-    let parentRoute = parentId ? routeMap.get(parentId) : undefined;
-    let parentRoutePath = parentRoute?.path ?? "/";
-    for (let childRoute of childRoutes) {
-      let routePath = childRoute.path?.slice(parentRoutePath.length) ?? "";
-      // remove leading slash
-      routePath = routePath.replace(/^\//, "");
-      let index = childRoute.index;
-      let fullPath = childRoute.path;
+  for (let file of routes) {
+    let normalizedFile = normalizeSlashes(file);
+    let routeExt = path.extname(normalizedFile);
+    let routeDir = path.dirname(normalizedFile);
+    let normalizedApp = normalizeSlashes(appDirectory);
+    let routeId =
+      routeDir === path.posix.join(normalizedApp, prefix)
+        ? path.posix
+            .relative(normalizedApp, normalizedFile)
+            .slice(0, -routeExt.length)
+        : path.posix.relative(normalizedApp, routeDir);
 
-      let uniqueRouteId = (fullPath || "") + (index ? "?index" : "");
-      if (uniqueRouteId) {
-        let conflict = uniqueRoutes.get(uniqueRouteId);
-        if (conflict) {
-          throw new Error(
-            `Path ${JSON.stringify(fullPath)} defined by route ${JSON.stringify(
-              childRoute.id
-            )} conflicts with route ${JSON.stringify(conflict)}`
-          );
-        }
-        uniqueRoutes.set(uniqueRouteId, childRoute.id);
+    let conflict = routeIds.get(routeId);
+    if (conflict) {
+      let currentConflicts = routeIdConflicts.get(routeId);
+      if (!currentConflicts) {
+        currentConflicts = [path.posix.relative(normalizedApp, conflict)];
       }
-      if (index) {
-        let invalidChildRoutes = Object.values(routeMap).filter(
-          (routeInfo) => routeInfo.parentId === childRoute.id
-        );
+      currentConflicts.push(path.posix.relative(normalizedApp, normalizedFile));
+      routeIdConflicts.set(routeId, currentConflicts);
+      continue;
+    }
 
-        if (invalidChildRoutes.length > 0) {
-          throw new Error(
-            `Child routes are not allowed in index routes. Please remove child routes of ${childRoute.id}`
-          );
-        }
+    routeIds.set(routeId, normalizedFile);
+  }
 
-        defineRoute(routePath, routeMap.get(childRoute.id!)!.file, {
-          index: true,
-        });
-      } else {
-        defineRoute(routePath, routeMap.get(childRoute.id!)!.file, () => {
-          defineNestedRoutes(defineRoute, childRoute.id);
-        });
+  let sortedRouteIds = Array.from(routeIds).sort(
+    ([a], [b]) => b.length - a.length
+  );
+
+  for (let [routeId, file] of sortedRouteIds) {
+    let index = routeId.endsWith("_index");
+    let [segments, raw] = getRouteSegments(routeId.slice(prefix.length + 1));
+    let pathname = createRoutePath(segments, raw, index);
+
+    routeManifest[routeId] = {
+      file: file.slice(appDirectory.length + 1),
+      id: routeId,
+      path: pathname,
+    };
+    if (index) routeManifest[routeId].index = true;
+    let childRouteIds = prefixLookup.findAndRemove(routeId, (value) => {
+      return [".", "/"].includes(value.slice(routeId.length).charAt(0));
+    });
+    prefixLookup.add(routeId);
+
+    if (childRouteIds.length > 0) {
+      for (let childRouteId of childRouteIds) {
+        routeManifest[childRouteId].parentId = routeId;
       }
     }
   }
 
-  let routes = defineRoutes(defineNestedRoutes);
+  // path creation
+  let parentChildrenMap = new Map<string, ConfigRoute[]>();
+  for (let [routeId] of sortedRouteIds) {
+    let config = routeManifest[routeId];
+    if (!config.parentId) continue;
+    let existingChildren = parentChildrenMap.get(config.parentId) || [];
+    existingChildren.push(config);
+    parentChildrenMap.set(config.parentId, existingChildren);
+  }
 
-  return routes;
+  for (let [routeId] of sortedRouteIds) {
+    let config = routeManifest[routeId];
+    let originalPathname = config.path || "";
+    let pathname = config.path;
+    let parentConfig = config.parentId ? routeManifest[config.parentId] : null;
+    if (parentConfig?.path && pathname) {
+      pathname = pathname
+        .slice(parentConfig.path.length)
+        .replace(/^\//, "")
+        .replace(/\/$/, "");
+    }
+
+    if (!config.parentId) config.parentId = "root";
+    config.path = pathname || undefined;
+
+    /**
+     * We do not try to detect path collisions for pathless layout route
+     * files because, by definition, they create the potential for route
+     * collisions _at that level in the tree_.
+     *
+     * Consider example where a user may want multiple pathless layout routes
+     * for different subfolders
+     *
+     *   routes/
+     *     account.tsx
+     *     account._private.tsx
+     *     account._private.orders.tsx
+     *     account._private.profile.tsx
+     *     account._public.tsx
+     *     account._public.login.tsx
+     *     account._public.perks.tsx
+     *
+     * In order to support both a public and private layout for `/account/*`
+     * URLs, we are creating a mutually exclusive set of URLs beneath 2
+     * separate pathless layout routes.  In this case, the route paths for
+     * both account._public.tsx and account._private.tsx is the same
+     * (/account), but we're again not expecting to match at that level.
+     *
+     * By only ignoring this check when the final portion of the filename is
+     * pathless, we will still detect path collisions such as:
+     *
+     *   routes/parent._pathless.foo.tsx
+     *   routes/parent._pathless2.foo.tsx
+     *
+     * and
+     *
+     *   routes/parent._pathless/index.tsx
+     *   routes/parent._pathless2/index.tsx
+     */
+    let lastRouteSegment = config.id
+      .replace(new RegExp(`^${prefix}/`), "")
+      .split(".")
+      .pop();
+    let isPathlessLayoutRoute =
+      lastRouteSegment &&
+      lastRouteSegment.startsWith("_") &&
+      lastRouteSegment !== "_index";
+    if (isPathlessLayoutRoute) {
+      continue;
+    }
+
+    let conflictRouteId = originalPathname + (config.index ? "?index" : "");
+    let conflict = uniqueRoutes.get(conflictRouteId);
+    uniqueRoutes.set(conflictRouteId, config);
+
+    if (conflict && (originalPathname || config.index)) {
+      let currentConflicts = urlConflicts.get(originalPathname);
+      if (!currentConflicts) currentConflicts = [conflict];
+      currentConflicts.push(config);
+      urlConflicts.set(originalPathname, currentConflicts);
+      continue;
+    }
+  }
+
+  if (routeIdConflicts.size > 0) {
+    for (let [routeId, files] of routeIdConflicts.entries()) {
+      console.error(getRouteIdConflictErrorMessage(routeId, files));
+    }
+  }
+
+  // report conflicts
+  if (urlConflicts.size > 0) {
+    for (let [path, routes] of urlConflicts.entries()) {
+      // delete all but the first route from the manifest
+      for (let i = 1; i < routes.length; i++) {
+        delete routeManifest[routes[i].id];
+      }
+      let files = routes.map((r) => r.file);
+      console.error(getRoutePathConflictErrorMessage(path, files));
+    }
+  }
+
+  return routeManifest;
 }
 
-export function isIndexRoute(routeId: string) {
-  let isFlatFile = !routeId.includes(path.posix.sep);
-  return isFlatFile ? routeId.endsWith("_index") : /\/index$/.test(routeId);
+function findRouteModuleForFile(
+  appDirectory: string,
+  filepath: string,
+  ignoredFileRegex: RegExp[]
+): string | null {
+  let relativePath = path.relative(appDirectory, filepath);
+  let isIgnored = ignoredFileRegex.some((regex) => regex.test(relativePath));
+  if (isIgnored) return null;
+  return filepath;
+}
+
+function findRouteModuleForFolder(
+  appDirectory: string,
+  filepath: string,
+  ignoredFileRegex: RegExp[]
+): string | null {
+  let relativePath = path.relative(appDirectory, filepath);
+  let isIgnored = ignoredFileRegex.some((regex) => regex.test(relativePath));
+  if (isIgnored) return null;
+
+  let routeRouteModule = findConfig(filepath, "route", routeModuleExts);
+  let routeIndexModule = findConfig(filepath, "index", routeModuleExts);
+
+  // if both a route and index module exist, throw a conflict error
+  // preferring the route module over the index module
+  if (routeRouteModule && routeIndexModule) {
+    let [segments, raw] = getRouteSegments(
+      path.relative(appDirectory, filepath)
+    );
+    let routePath = createRoutePath(segments, raw, false);
+    console.error(
+      getRoutePathConflictErrorMessage(routePath || "/", [
+        routeRouteModule,
+        routeIndexModule,
+      ])
+    );
+  }
+
+  return routeRouteModule || routeIndexModule || null;
 }
 
 type State =
@@ -115,17 +345,19 @@ type State =
   | "ESCAPE"
   // we hit a `(` and are now in an optional segment until we hit a `)` or an escape sequence
   | "OPTIONAL"
-  // we previously were in a optional segment and hit a `[` and are now in an escape sequence until we hit a `]` - take characters literally and skip isSegmentSeparator checks - afterwards go back to OPTIONAL state
+  // we previously were in a opt fional segment and hit a `[` and are now in an escape sequence until we hit a `]` - take characters literally and skip isSegmentSeparator checks - afterwards go back to OPTIONAL state
   | "OPTIONAL_ESCAPE";
 
-export function getRouteSegments(routeId: string) {
+export function getRouteSegments(routeId: string): [string[], string[]] {
   let routeSegments: string[] = [];
+  let rawRouteSegments: string[] = [];
   let index = 0;
   let routeSegment = "";
   let rawRouteSegment = "";
   let state: State = "NORMAL";
-  let pushRouteSegment = (routeSegment: string) => {
-    if (!routeSegment) return;
+
+  let pushRouteSegment = (segment: string, rawSegment: string) => {
+    if (!segment) return;
 
     let notSupportedInRR = (segment: string, char: string) => {
       throw new Error(
@@ -134,18 +366,20 @@ export function getRouteSegments(routeId: string) {
       );
     };
 
-    if (rawRouteSegment.includes("*")) {
-      return notSupportedInRR(rawRouteSegment, "*");
+    if (rawSegment.includes("*")) {
+      return notSupportedInRR(rawSegment, "*");
     }
 
-    if (rawRouteSegment.includes(":")) {
-      return notSupportedInRR(rawRouteSegment, ":");
+    if (rawSegment.includes(":")) {
+      return notSupportedInRR(rawSegment, ":");
     }
 
-    if (rawRouteSegment.includes("/")) {
-      return notSupportedInRR(routeSegment, "/");
+    if (rawSegment.includes("/")) {
+      return notSupportedInRR(segment, "/");
     }
-    routeSegments.push(routeSegment);
+
+    routeSegments.push(segment);
+    rawRouteSegments.push(rawSegment);
   };
 
   while (index < routeId.length) {
@@ -155,7 +389,7 @@ export function getRouteSegments(routeId: string) {
     switch (state) {
       case "NORMAL": {
         if (isSegmentSeparator(char)) {
-          pushRouteSegment(routeSegment);
+          pushRouteSegment(routeSegment, rawRouteSegment);
           routeSegment = "";
           rawRouteSegment = "";
           state = "NORMAL";
@@ -163,10 +397,12 @@ export function getRouteSegments(routeId: string) {
         }
         if (char === escapeStart) {
           state = "ESCAPE";
+          rawRouteSegment += char;
           break;
         }
         if (char === optionalStart) {
           state = "OPTIONAL";
+          rawRouteSegment += char;
           break;
         }
         if (!routeSegment && char == paramPrefixChar) {
@@ -187,6 +423,7 @@ export function getRouteSegments(routeId: string) {
       case "ESCAPE": {
         if (char === escapeEnd) {
           state = "NORMAL";
+          rawRouteSegment += char;
           break;
         }
 
@@ -197,13 +434,14 @@ export function getRouteSegments(routeId: string) {
       case "OPTIONAL": {
         if (char === optionalEnd) {
           routeSegment += "?";
-          rawRouteSegment += "?";
+          rawRouteSegment += char;
           state = "NORMAL";
           break;
         }
 
         if (char === escapeStart) {
           state = "OPTIONAL_ESCAPE";
+          rawRouteSegment += char;
           break;
         }
 
@@ -225,6 +463,7 @@ export function getRouteSegments(routeId: string) {
       case "OPTIONAL_ESCAPE": {
         if (char === escapeEnd) {
           state = "OPTIONAL";
+          rawRouteSegment += char;
           break;
         }
 
@@ -236,102 +475,71 @@ export function getRouteSegments(routeId: string) {
   }
 
   // process remaining segment
-  pushRouteSegment(routeSegment);
-  return routeSegments;
+  pushRouteSegment(routeSegment, rawRouteSegment);
+  return [routeSegments, rawRouteSegments];
 }
 
-function findParentRouteId(
-  routeInfo: RouteInfo,
-  nameMap: Map<string, RouteInfo>
+export function createRoutePath(
+  routeSegments: string[],
+  rawRouteSegments: string[],
+  isIndex?: boolean
 ) {
-  let parentName = routeInfo.segments.slice(0, -1).join("/");
-  while (parentName) {
-    let parentRoute = nameMap.get(parentName);
-    if (parentRoute) return parentRoute.id;
-    parentName = parentName.substring(0, parentName.lastIndexOf("/"));
-  }
-  return undefined;
-}
-
-function getRouteInfo(
-  appDirectory: string,
-  routeDirectory: string,
-  filePath: string
-): RouteInfo {
-  let filePathWithoutApp = filePath.slice(appDirectory.length + 1);
-  let routeId = createRouteId(filePathWithoutApp);
-  let routeIdWithoutRoutes = routeId.slice(routeDirectory.length + 1);
-  let index = isIndexRoute(routeIdWithoutRoutes);
-  let routeSegments = getRouteSegments(routeIdWithoutRoutes);
-  let routePath = createRoutePath(routeSegments, index);
-
-  return {
-    id: routeIdWithoutRoutes,
-    path: routePath,
-    file: filePathWithoutApp,
-    name: routeSegments.join("/"),
-    segments: routeSegments,
-    index,
-  };
-}
-
-export function createRoutePath(routeSegments: string[], isIndex: boolean) {
-  let result = "";
+  let result: string[] = [];
 
   if (isIndex) {
     routeSegments = routeSegments.slice(0, -1);
   }
 
-  for (let segment of routeSegments) {
+  for (let index = 0; index < routeSegments.length; index++) {
+    let segment = routeSegments[index];
+    let rawSegment = rawRouteSegments[index];
+
     // skip pathless layout segments
-    if (segment.startsWith("_")) {
+    if (segment.startsWith("_") && rawSegment.startsWith("_")) {
       continue;
     }
 
     // remove trailing slash
-    if (segment.endsWith("_")) {
+    if (segment.endsWith("_") && rawSegment.endsWith("_")) {
       segment = segment.slice(0, -1);
     }
 
-    result += `/${segment}`;
+    result.push(segment);
   }
 
-  return result || undefined;
+  return result.length ? result.join("/") : undefined;
 }
 
-function getRouteMap(
-  appDirectory: string,
-  routePaths: string[],
-  prefix: string = "routes"
+export function getRoutePathConflictErrorMessage(
+  pathname: string,
+  routes: string[]
 ) {
-  let routeMap = new Map<string, RouteInfo>();
-  let nameMap = new Map<string, RouteInfo>();
+  let [taken, ...others] = routes;
 
-  for (let routePath of routePaths) {
-    let routesDirectory = path.join(appDirectory, prefix);
-    let pathWithoutAppRoutes = routePath.slice(routesDirectory.length + 1);
-    if (isRouteModuleFile(pathWithoutAppRoutes)) {
-      let routeInfo = getRouteInfo(appDirectory, prefix, routePath);
-      routeMap.set(routeInfo.id, routeInfo);
-      nameMap.set(routeInfo.name, routeInfo);
-    }
+  if (!pathname.startsWith("/")) {
+    pathname = "/" + pathname;
   }
 
-  // update parentIds for all routes
-  for (let routeInfo of routeMap.values()) {
-    let parentId = findParentRouteId(routeInfo, nameMap);
-    routeInfo.parentId = parentId;
-  }
-
-  return routeMap;
+  return (
+    `⚠️ Route Path Collision: "${pathname}"\n\n` +
+    `The following routes all define the same URL, only the first one will be used\n\n` +
+    `🟢 ${taken}\n` +
+    others.map((route) => `⭕️️ ${route}`).join("\n") +
+    "\n"
+  );
 }
 
-function isRouteModuleFile(filepath: string) {
-  // flat files only need correct extension
-  let isFlatFile = !filepath.includes(path.sep);
-  if (isFlatFile) {
-    return routeModuleExts.includes(path.extname(filepath));
-  }
+export function getRouteIdConflictErrorMessage(
+  routeId: string,
+  files: string[]
+) {
+  let [taken, ...others] = files;
 
-  return isIndexRoute(createRouteId(filepath));
+  return (
+    `⚠️ Route ID Collision: "${routeId}"\n\n` +
+    `The following routes all define the same Route ID, only the first one will be used\n\n` +
+    `🟢 ${taken}\n` +
+    others.map((route) => `⭕️️ ${route}`).join("\n") +
+    "\n"
+  );
 }

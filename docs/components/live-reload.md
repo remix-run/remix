@@ -1,5 +1,6 @@
 ---
 title: LiveReload
+toc: false
 ---
 
 # `<LiveReload />`

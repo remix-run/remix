@@ -4,12 +4,12 @@ title: shouldRevalidate
 
 # `shouldRevalidate`
 
-This function lets apps optimize which routes data should be reloaded after actions and for client side navigations.
+This function lets apps optimize which routes data should be reloaded after actions and for client-side navigations.
 
-```ts
+```tsx
 import type { ShouldRevalidateFunction } from "@remix-run/react";
 
-export const shouldRevalidate: ShouldReloadFunction = ({
+export const shouldRevalidate: ShouldRevalidateFunction = ({
   actionResult,
   currentParams,
   currentUrl,
@@ -85,26 +85,26 @@ export function shouldRevalidate() {
 
 ## `currentParams`
 
-These are the \[URL params]\[url-params] from the URL that can be compared to the `nextParams` to decide if you need to reload or not. Perhaps you're using only a partial piece of the param for data loading, you don't need to revalidate if a superfluous part of the param changed.
+These are the [URL params][url-params] from the URL that can be compared to the `nextParams` to decide if you need to reload or not. Perhaps you're using only a partial piece of the param for data loading, you don't need to revalidate if a superfluous part of the param changed.
 
 For instance, consider an event slug with the id and an human-friendly title:
 
 - `/events/blink-182-united-center-saint-paul--ae3f9`
 - `/events/blink-182-little-caesars-arena-detroit--e87ad`
 
-```jsx filename=app/routes/events/$slug.tsx
-export async function loader({ params }) {
-  let id = params.slug.split("--")[1];
+```tsx filename=app/routes/events/$slug.tsx
+export async function loader({ params }: LoaderArgs) {
+  const id = params.slug.split("--")[1];
   return loadEvent(id);
 }
 
-export async function shouldRevalidate({
+export function shouldRevalidate({
   currentParams,
   nextParams,
   defaultShouldRevalidate,
 }) {
-  let currentId = currentParams.slug.split("--")[1];
-  let nextID = nextParams.slug.split("--")[1];
+  const currentId = currentParams.slug.split("--")[1];
+  const nextID = nextParams.slug.split("--")[1];
   if (currentId !== nextID) {
     return true;
   }
@@ -119,7 +119,7 @@ This is the url the navigation started from.
 
 ## `nextParams`
 
-In the case of navigation, these are the \[URL params]\[url-params] from the next location the user is requesting. Some revalidations are not navigation, so it will simply be the same as `currentParams`.
+In the case of navigation, these are the [URL params][url-params] from the next location the user is requesting. Some revalidations are not navigation, so it will simply be the same as `currentParams`.
 
 ## `nextUrl`
 
@@ -213,7 +213,7 @@ In this UI, that's wasted bandwidth for the user, your server, and your database
 
 ```tsx
 export async function loader({ params }: LoaderArgs) {
-  let data = await fakedb.findProject(params.projectId);
+  const data = await fakedb.findProject(params.projectId);
   return json(data);
 }
 ```
@@ -242,3 +242,5 @@ export function shouldRevalidate({
   return defaultShouldRevalidate;
 }
 ```
+
+[url-params]: ../guides/routing#dynamic-segments

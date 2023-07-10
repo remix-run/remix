@@ -10,8 +10,8 @@ Remix will automatically catch errors and render the nearest error boundary for 
 
 - rendering in the browser
 - rendering on the server
-- in a loader during the initial server rendered document request
-- in an action during the initial server rendered document request
+- in a loader during the initial server-rendered document request
+- in an action during the initial server-rendered document request
 - in a loader during a client-side transition in the browser (Remix serializes the error and sends it over the network to the browser)
 - in an action during a client-side transition in the browser
 

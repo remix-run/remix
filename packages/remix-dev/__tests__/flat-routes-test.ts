@@ -1,96 +1,97 @@
 import path from "node:path";
 
 import {
-  createRoutePath,
   flatRoutesUniversal,
+  getRoutePathConflictErrorMessage,
+  getRouteIdConflictErrorMessage,
   getRouteSegments,
-  isIndexRoute,
 } from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
+import { normalizeSlashes } from "../config/routes";
 
 let APP_DIR = path.join("test", "root", "app");
 
 describe("flatRoutes", () => {
   describe("creates proper route paths", () => {
     let tests: [string, string | undefined][] = [
-      ["routes/$", "/routes/*"],
-      ["routes/sub/$", "/routes/sub/*"],
-      ["routes.sub/$", "/routes/sub/*"],
-      ["routes/$slug", "/routes/:slug"],
-      ["routes/sub/$slug", "/routes/sub/:slug"],
-      ["routes.sub/$slug", "/routes/sub/:slug"],
-      ["$", "/*"],
-      ["nested/$", "/nested/*"],
-      ["flat.$", "/flat/*"],
-      ["$slug", "/:slug"],
-      ["nested/$slug", "/nested/:slug"],
-      ["flat.$slug", "/flat/:slug"],
-      ["flat.sub", "/flat/sub"],
-      ["nested/index", "/nested"],
-      ["flat._index", "/flat"],
+      ["routes.$", "routes/*"],
+      ["routes.sub.$", "routes/sub/*"],
+      ["routes.$slug", "routes/:slug"],
+      ["routes.sub.$slug", "routes/sub/:slug"],
+      ["$", "*"],
+      ["flat.$", "flat/*"],
+      ["$slug", ":slug"],
+      ["nested/index", "nested"],
+      ["nested.$", "*"],
+      ["nested.$slug", ":slug"],
+      ["nested._layout.$param", ":param"],
+
+      ["flat.$slug", "flat/:slug"],
+      ["flat.sub", "flat/sub"],
+      ["flat._index", "flat"],
       ["_index", undefined],
       ["_layout/index", undefined],
-      ["_layout/test", "/test"],
-      ["_layout.test", "/test"],
-      ["_layout/$slug", "/:slug"],
-      ["nested/_layout/$slug", "/nested/:slug"],
-      ["$slug[.]json", "/:slug.json"],
-      ["sub/[sitemap.xml]", "/sub/sitemap.xml"],
-      ["posts/$slug/[image.jpg]", "/posts/:slug/image.jpg"],
-      ["sub.[[]", "/sub/["],
-      ["sub.]", "/sub/]"],
-      ["sub.[[]]", "/sub/[]"],
-      ["sub.[[]", "/sub/["],
-      ["beef]", "/beef]"],
-      ["[index]", "/index"],
-      ["test/inde[x]", "/test/index"],
-      ["[i]ndex/[[].[[]]", "/index/[/[]"],
+      ["_layout.test", "test"],
+      ["_layout.$param", ":param"],
+      ["$slug[.]json", ":slug.json"],
+      ["sub.[sitemap.xml]", "sub/sitemap.xml"],
+      ["posts.$slug.[image.jpg]", "posts/:slug/image.jpg"],
+      ["sub.[[]", "sub/["],
+      ["sub.]", "sub/]"],
+      ["sub.[[]]", "sub/[]"],
+      ["beef]", "beef]"],
+      ["[index]", "index"],
+      ["test.inde[x]", "test/index"],
+      ["[i]ndex.[[].[[]]", "index/[/[]"],
 
       // Optional segment routes
-      ["(routes)/$", "/routes?/*"],
-      ["(routes)/(sub)/$", "/routes?/sub?/*"],
-      ["(routes).(sub)/$", "/routes?/sub?/*"],
-      ["(routes)/($slug)", "/routes?/:slug?"],
-      ["(routes)/sub/($slug)", "/routes?/sub/:slug?"],
-      ["(routes).sub/($slug)", "/routes?/sub/:slug?"],
-      ["(nested)/$", "/nested?/*"],
-      ["(flat).$", "/flat?/*"],
-      ["($slug)", "/:slug?"],
-      ["(nested)/($slug)", "/nested?/:slug?"],
-      ["(flat).($slug)", "/flat?/:slug?"],
-      ["flat.(sub)", "/flat/sub?"],
-      ["_layout/(test)", "/test?"],
-      ["_layout.(test)", "/test?"],
-      ["_layout/($slug)", "/:slug?"],
-      ["(nested)/_layout/($slug)", "/nested?/:slug?"],
-      ["($slug[.]json)", "/:slug.json?"],
-      ["(sub)/([sitemap.xml])", "/sub?/sitemap.xml?"],
-      ["(sub)/[(sitemap.xml)]", "/sub?/(sitemap.xml)"],
-      ["(posts)/($slug)/([image.jpg])", "/posts?/:slug?/image.jpg?"],
+      ["(routes).$", "routes?/*"],
+      ["(routes).(sub).$", "routes?/sub?/*"],
+      ["(routes).($slug)", "routes?/:slug?"],
+      ["(routes).sub.($slug)", "routes?/sub/:slug?"],
+      ["(nested).$", "nested?/*"],
+      ["(flat).$", "flat?/*"],
+      ["($slug)", ":slug?"],
+      ["(nested).($slug)", "nested?/:slug?"],
+      ["(flat).($slug)", "flat?/:slug?"],
+      ["flat.(sub)", "flat/sub?"],
+      ["_layout.(test)", "test?"],
+      ["_layout.($user)", ":user?"],
+      ["(nested)._layout.($param)", "nested?/:param?"],
+      ["($slug[.]json)", ":slug.json?"],
+      ["(sub).([sitemap.xml])", "sub?/sitemap.xml?"],
+      ["(sub).[(sitemap.xml)]", "sub?/(sitemap.xml)"],
+      ["(posts).($slug).([image.jpg])", "posts?/:slug?/image.jpg?"],
       [
-        "($[$dollabills]).([.]lol)/(what)/([$]).($up)",
-        "/:$dollabills?/.lol?/what?/$?/:up?",
+        "($[$dollabills]).([.]lol).(what).([$]).($up)",
+        ":$dollabills?/.lol?/what?/$?/:up?",
       ],
-      ["(sub).([[])", "/sub?/[?"],
-      ["(sub).(])", "/sub?/]?"],
-      ["(sub).([[]])", "/sub?/[]?"],
-      ["(sub).([[])", "/sub?/[?"],
-      ["(beef])", "/beef]?"],
-      ["([index])", "/index?"],
-      ["(test)/(inde[x])", "/test?/index?"],
-      ["([i]ndex)/([[]).([[]])", "/index?/[?/[]?"],
+      ["(sub).(])", "sub?/]?"],
+      ["(sub).([[]])", "sub?/[]?"],
+      ["(sub).([[])", "sub?/[?"],
+      ["(beef])", "beef]?"],
+      ["([index])", "index?"],
+      ["(test).(inde[x])", "test?/index?"],
+      ["([i]ndex).([[]).([[]])", "index?/[?/[]?"],
 
       // Opting out of parent layout
-      ["app_.projects/$id.roadmap", "/app/projects/:id/roadmap"],
-      ["app.projects_/$id.roadmap", "/app/projects/:id/roadmap"],
-      ["app_.projects_/$id.roadmap", "/app/projects/:id/roadmap"],
+      ["user_.projects.$id.roadmap", "user/projects/:id/roadmap"],
+      ["app.projects_.$id.roadmap", "app/projects/:id/roadmap"],
+      ["shop_.projects_.$id.roadmap", "shop/projects/:id/roadmap"],
     ];
+
+    let manifest = flatRoutesUniversal(
+      APP_DIR,
+      tests.map((t) => path.join(APP_DIR, "routes", t[0] + ".tsx"))
+    );
 
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
-        let routeSegments = getRouteSegments(input);
-        let isIndex = isIndexRoute(input);
-        expect(createRoutePath(routeSegments, isIndex)).toBe(expected);
+        if (input.endsWith("/route") || input.endsWith("/index")) {
+          input = input.replace(/\/(route|index)$/, "");
+        }
+        let routeInfo = manifest[path.posix.join("routes", input)];
+        expect(routeInfo.path).toBe(expected);
       });
     }
 
@@ -182,7 +183,7 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/_landing.tsx",
+        "routes/_landing/index.tsx",
         {
           id: "routes/_landing",
           parentId: "root",
@@ -190,12 +191,12 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/_landing._index.tsx",
+        "routes/_landing._index/index.tsx",
         {
           id: "routes/_landing._index",
-          index: true,
           parentId: "routes/_landing",
           path: undefined,
+          index: true,
         },
       ],
       [
@@ -207,43 +208,26 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/about.tsx",
+        "routes/_about.tsx",
         {
-          id: "routes/about",
+          id: "routes/_about",
           parentId: "root",
-          path: "about",
-        },
-      ],
-      [
-        "routes/about._index.tsx",
-        {
-          id: "routes/about._index",
-          index: true,
-          parentId: "routes/about",
           path: undefined,
         },
       ],
       [
-        "routes/about.$.tsx",
+        "routes/_about.faq.tsx",
         {
-          id: "routes/about.$",
-          parentId: "routes/about",
-          path: "*",
-        },
-      ],
-      [
-        "routes/about.faq.tsx",
-        {
-          id: "routes/about.faq",
-          parentId: "routes/about",
+          id: "routes/_about.faq",
+          parentId: "routes/_about",
           path: "faq",
         },
       ],
       [
-        "routes/about.$splat.tsx",
+        "routes/_about.$splat.tsx",
         {
-          id: "routes/about.$splat",
-          parentId: "routes/about",
+          id: "routes/_about.$splat",
+          parentId: "routes/_about",
           path: ":splat",
         },
       ],
@@ -288,6 +272,47 @@ describe("flatRoutes", () => {
           path: ":id",
         },
       ],
+      [
+        "routes/app._pathless.tsx",
+        {
+          id: "routes/app._pathless",
+          parentId: "routes/app",
+          path: undefined,
+        },
+      ],
+      [
+        "routes/app._pathless._index.tsx",
+        {
+          id: "routes/app._pathless._index",
+          parentId: "routes/app._pathless",
+          index: true,
+          path: undefined,
+        },
+      ],
+      [
+        "routes/app._pathless.child.tsx",
+        {
+          id: "routes/app._pathless.child",
+          parentId: "routes/app._pathless",
+          path: "child",
+        },
+      ],
+      [
+        "routes/folder/route.tsx",
+        {
+          id: "routes/folder",
+          parentId: "root",
+          path: "folder",
+        },
+      ],
+      [
+        "routes/[route].tsx",
+        {
+          id: "routes/[route]",
+          parentId: "root",
+          path: "route",
+        },
+      ],
 
       // Opt out of parent layout
       [
@@ -326,17 +351,9 @@ describe("flatRoutes", () => {
       ],
 
       [
-        "routes/app.skipall.tsx",
+        "routes/app_.skipall_._index.tsx",
         {
-          id: "routes/app.skipall",
-          parentId: "routes/app",
-          path: "skipall",
-        },
-      ],
-      [
-        "routes/app_.skipall_/index.tsx",
-        {
-          id: "routes/app_.skipall_/index",
+          id: "routes/app_.skipall_._index",
           index: true,
           parentId: "root",
           path: "app/skipall",
@@ -345,34 +362,34 @@ describe("flatRoutes", () => {
 
       // Escaping route segments
       [
-        "routes/about.[$splat].tsx",
+        "routes/_about.[$splat].tsx",
         {
-          id: "routes/about.[$splat]",
-          parentId: "routes/about",
+          id: "routes/_about.[$splat]",
+          parentId: "routes/_about",
           path: "$splat",
         },
       ],
       [
-        "routes/about.[[].tsx",
+        "routes/_about.[[].tsx",
         {
-          id: "routes/about.[[]",
-          parentId: "routes/about",
+          id: "routes/_about.[[]",
+          parentId: "routes/_about",
           path: "[",
         },
       ],
       [
-        "routes/about.[]].tsx",
+        "routes/_about.[]].tsx",
         {
-          id: "routes/about.[]]",
-          parentId: "routes/about",
+          id: "routes/_about.[]]",
+          parentId: "routes/_about",
           path: "]",
         },
       ],
       [
-        "routes/about.[.].tsx",
+        "routes/_about.[.].tsx",
         {
-          id: "routes/about.[.]",
-          parentId: "routes/about",
+          id: "routes/_about.[.]",
+          parentId: "routes/_about",
           path: ".",
         },
       ],
@@ -477,19 +494,19 @@ describe("flatRoutes", () => {
 
       // Optional + escaped route segments
       [
-        "routes/([index]).tsx",
+        "routes/([_index]).tsx",
         {
-          id: "routes/([index])",
+          id: "routes/([_index])",
           parentId: "root",
-          path: "index?",
+          path: "_index?",
         },
       ],
       [
-        "routes/([i]ndex).([[]).([[]]).tsx",
+        "routes/(_[i]ndex).([[]).([[]]).tsx",
         {
-          id: "routes/([i]ndex).([[]).([[]])",
-          parentId: "routes/([index])",
-          path: "[?/[]?",
+          id: "routes/(_[i]ndex).([[]).([[]])",
+          parentId: "root",
+          path: "_index?/[?/[]?",
         },
       ],
       [
@@ -582,11 +599,18 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/brand/index.tsx",
+        "routes/brand.tsx",
         {
-          id: "routes/brand/index",
+          id: "routes/brand",
           parentId: "root",
           path: "brand",
+        },
+      ],
+      [
+        "routes/brand._index.tsx",
+        {
+          id: "routes/brand._index",
+          parentId: "routes/brand",
           index: true,
         },
       ],
@@ -600,12 +624,9 @@ describe("flatRoutes", () => {
       ],
     ];
 
-    let files: [string, Omit<ConfigRoute, "file">][] = testFiles.map(
-      ([file, route]) => {
-        let filepath = file.split("/").join(path.sep);
-        return [filepath, { ...route, file: filepath }];
-      }
-    );
+    let files: [string, ConfigRoute][] = testFiles.map(([file, route]) => {
+      return [file, { ...route, file }];
+    });
 
     let routeManifest = flatRoutesUniversal(
       APP_DIR,
@@ -620,5 +641,251 @@ describe("flatRoutes", () => {
         expect(routes).toContainEqual(route);
       });
     }
+  });
+
+  describe("doesn't warn when there's not a route collision", () => {
+    let consoleError = jest
+      .spyOn(global.console, "error")
+      .mockImplementation(() => {});
+
+    afterEach(consoleError.mockReset);
+
+    test("same number of segments and the same dynamic segment index", () => {
+      let testFiles = [
+        path.join(APP_DIR, "routes", "_user.$username.tsx"),
+        path.join(APP_DIR, "routes", "sneakers.$sneakerId.tsx"),
+      ];
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+
+      let routes = Object.values(routeManifest);
+
+      expect(routes).toHaveLength(testFiles.length);
+      expect(consoleError).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("warns when there's a route collision", () => {
+    let consoleError = jest
+      .spyOn(global.console, "error")
+      .mockImplementation(() => {});
+
+    afterEach(consoleError.mockReset);
+
+    test("index files", () => {
+      let testFiles = [
+        path.join("routes", "_dashboard._index.tsx"),
+        path.join("routes", "_landing._index.tsx"),
+        path.join("routes", "_index.tsx"),
+      ];
+
+      // route manifest uses the full path
+      let fullPaths = testFiles.map((file) => path.join(APP_DIR, file));
+
+      // this is for the expected error message,
+      // which uses the relative path from the app directory internally
+      let normalizedTestFiles = testFiles.map((file) => normalizeSlashes(file));
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, fullPaths);
+
+      let routes = Object.values(routeManifest);
+
+      expect(routes).toHaveLength(1);
+      expect(consoleError).toHaveBeenCalledWith(
+        getRoutePathConflictErrorMessage("/", normalizedTestFiles)
+      );
+    });
+
+    test("folder/route.tsx matching folder.tsx", () => {
+      let testFiles = [
+        path.join("routes", "dashboard", "route.tsx"),
+        path.join("routes", "dashboard.tsx"),
+      ];
+
+      // route manifest uses the full path
+      let fullPaths = testFiles.map((file) => path.join(APP_DIR, file));
+
+      // this is for the expected error message,
+      // which uses the relative path from the app directory internally
+      let normalizedTestFiles = testFiles.map((file) => normalizeSlashes(file));
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, fullPaths);
+
+      let routes = Object.values(routeManifest);
+
+      expect(routes).toHaveLength(1);
+      expect(consoleError).toHaveBeenCalledWith(
+        getRouteIdConflictErrorMessage(
+          path.posix.join("routes", "dashboard"),
+          normalizedTestFiles
+        )
+      );
+    });
+
+    test.skip("same path, different param name", () => {
+      let testFiles = [
+        path.join(APP_DIR, "routes", "products.$pid.tsx"),
+        path.join(APP_DIR, "routes", "products.$productId.tsx"),
+      ];
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+
+      let routes = Object.values(routeManifest);
+
+      expect(routes).toHaveLength(1);
+      expect(consoleError).toHaveBeenCalledWith(
+        getRoutePathConflictErrorMessage("/products/:pid", testFiles)
+      );
+    });
+
+    test("pathless layouts should not collide", () => {
+      let testFiles = [
+        path.join(APP_DIR, "routes", "_a.tsx"),
+        path.join(APP_DIR, "routes", "_a._index.tsx"),
+        path.join(APP_DIR, "routes", "_a.a.tsx"),
+        path.join(APP_DIR, "routes", "_b.tsx"),
+        path.join(APP_DIR, "routes", "_b.b.tsx"),
+      ];
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+
+      let routes = Object.values(routeManifest);
+
+      expect(consoleError).not.toHaveBeenCalled();
+      expect(routes).toHaveLength(5);
+
+      // When using folders and route.tsx files
+      testFiles = [
+        path.join(APP_DIR, "routes", "_a", "route.tsx"),
+        path.join(APP_DIR, "routes", "_a._index", "route.tsx"),
+        path.join(APP_DIR, "routes", "_a.a", "route.tsx"),
+        path.join(APP_DIR, "routes", "_b", "route.tsx"),
+        path.join(APP_DIR, "routes", "_b.b", "route.tsx"),
+      ];
+
+      routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+
+      routes = Object.values(routeManifest);
+
+      expect(consoleError).not.toHaveBeenCalled();
+      expect(routes).toHaveLength(5);
+    });
+
+    test("nested pathless layouts should not collide", () => {
+      let testFiles = [
+        path.join(APP_DIR, "routes", "nested._a.tsx"),
+        path.join(APP_DIR, "routes", "nested._a._index.tsx"),
+        path.join(APP_DIR, "routes", "nested._a.a.tsx"),
+        path.join(APP_DIR, "routes", "nested._b.tsx"),
+        path.join(APP_DIR, "routes", "nested._b.b.tsx"),
+      ];
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+
+      let routes = Object.values(routeManifest);
+
+      expect(consoleError).not.toHaveBeenCalled();
+      expect(routes).toHaveLength(5);
+
+      // When using folders and route.tsx files
+      testFiles = [
+        path.join(APP_DIR, "routes", "nested._a", "route.tsx"),
+        path.join(APP_DIR, "routes", "nested._a._index", "route.tsx"),
+        path.join(APP_DIR, "routes", "nested._a.a", "route.tsx"),
+        path.join(APP_DIR, "routes", "nested._b", "route.tsx"),
+        path.join(APP_DIR, "routes", "nested._b.b", "route.tsx"),
+      ];
+
+      routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+
+      routes = Object.values(routeManifest);
+
+      expect(consoleError).not.toHaveBeenCalled();
+      expect(routes).toHaveLength(5);
+    });
+
+    test("legit collisions without nested pathless layouts should collide (paths)", () => {
+      let testFiles = [
+        path.join(APP_DIR, "routes", "nested._a.tsx"),
+        path.join(APP_DIR, "routes", "nested._a.a.tsx"),
+        path.join(APP_DIR, "routes", "nested._b.tsx"),
+        path.join(APP_DIR, "routes", "nested._b.a.tsx"),
+      ];
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+
+      let routes = Object.values(routeManifest);
+
+      expect(consoleError).toHaveBeenCalledWith(
+        getRoutePathConflictErrorMessage("/nested/a", [
+          "routes/nested._a.a.tsx",
+          "routes/nested._b.a.tsx",
+        ])
+      );
+      expect(routes).toHaveLength(3);
+
+      // When using folders and route.tsx files
+      consoleError.mockClear();
+      testFiles = [
+        path.join(APP_DIR, "routes", "nested._a", "route.tsx"),
+        path.join(APP_DIR, "routes", "nested._a.a", "route.tsx"),
+        path.join(APP_DIR, "routes", "nested._b", "route.tsx"),
+        path.join(APP_DIR, "routes", "nested._b.a", "route.tsx"),
+      ];
+
+      routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+
+      routes = Object.values(routeManifest);
+
+      expect(consoleError).toHaveBeenCalledWith(
+        getRoutePathConflictErrorMessage("/nested/a", [
+          "routes/nested._a.a/route.tsx",
+          "routes/nested._b.a/route.tsx",
+        ])
+      );
+      expect(routes).toHaveLength(3);
+    });
+
+    test("legit collisions without nested pathless layouts should collide (index routes)", () => {
+      let testFiles = [
+        path.join(APP_DIR, "routes", "nested._a.tsx"),
+        path.join(APP_DIR, "routes", "nested._a._index.tsx"),
+        path.join(APP_DIR, "routes", "nested._b.tsx"),
+        path.join(APP_DIR, "routes", "nested._b._index.tsx"),
+      ];
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+
+      let routes = Object.values(routeManifest);
+
+      expect(consoleError).toHaveBeenCalledWith(
+        getRoutePathConflictErrorMessage("/nested", [
+          "routes/nested._a._index.tsx",
+          "routes/nested._b._index.tsx",
+        ])
+      );
+      expect(routes).toHaveLength(3);
+
+      // When using folders and route.tsx files
+      consoleError.mockClear();
+      testFiles = [
+        path.join(APP_DIR, "routes", "nested._a", "route.tsx"),
+        path.join(APP_DIR, "routes", "nested._a._index", "route.tsx"),
+        path.join(APP_DIR, "routes", "nested._b", "route.tsx"),
+        path.join(APP_DIR, "routes", "nested._b._index", "route.tsx"),
+      ];
+
+      routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+
+      routes = Object.values(routeManifest);
+
+      expect(consoleError).toHaveBeenCalledWith(
+        getRoutePathConflictErrorMessage("/nested", [
+          "routes/nested._a._index/route.tsx",
+          "routes/nested._b._index/route.tsx",
+        ])
+      );
+      expect(routes).toHaveLength(3);
+    });
   });
 });

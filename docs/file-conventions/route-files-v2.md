@@ -1,12 +1,14 @@
 ---
 title: Route File Naming (v2)
+new: true
 ---
 
 # Route File Naming (v2)
 
-You can opt-in to the new route file naming convention with a future flag in Remix config. It will be the default behavior in the future when v2 ships. For background on this change, [see the RFC][flatroutes-rfc].
+You can opt in to the new route file naming convention with a future flag in Remix config.
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_routeConvention: true,
@@ -14,13 +16,9 @@ module.exports = {
 };
 ```
 
-We encourage you to make this change early so upgrading is easy. We'll be providing a helper function to use the old convention in v2 if you prefer it.
-
----
-
 While you can configure routes in [remix.config.js][remix-config], most routes are created with this file system convention. Add a file, get a route.
 
-Please note that you can use either `.jsx` or `.tsx` file extensions. We'll stick with `.tsx` in the examples to avoid duplication.
+Please note that you can use either `.js`, `.jsx`, `.ts` or `.tsx` file extensions. We'll stick with `.tsx` in the examples to avoid duplication.
 
 ## Root Route
 
@@ -31,11 +29,11 @@ app/
 └── root.tsx
 ```
 
-The file in `app/root.tsx` is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes so you can export a [`loader`][loader], [`action`][action], etc.
+The file in `app/root.tsx` is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes, so you can export a [`loader`][loader], [`action`][action], etc.
 
 The root route typically looks something like this. It serves as the root layout of the entire app, all other routes will render inside the `<Outlet />`.
 
-```jsx
+```tsx
 import {
   Links,
   Meta,
@@ -86,7 +84,7 @@ Note that these routes will be rendered in the outlet of `app/root.tsx` because 
 Adding a `.` to a route filename will create a `/` in the URL.
 
 <!-- prettier-ignore -->
-```markdown lines=[4-6]
+```markdown lines=[5-7]
 app/
 ├── routes/
 │   ├── _index.tsx
@@ -128,8 +126,8 @@ app/
 
 Remix will parse the value from the URL and pass it to various APIs. We call these values "URL Parameters". The most useful places to access the URL params are in [loaders][loader] and [actions][action].
 
-```jsx
-export function loader({ params }) {
+```tsx
+export function loader({ params }: LoaderArgs) {
   return fakeDb.getAllConcertsForCity(params.city);
 }
 ```
@@ -138,8 +136,8 @@ You'll note the property name on the `params` object maps directly to the name o
 
 Routes can have multiple dynamic segments, like `concerts.$city.$date`, both are accessed on the params object by name:
 
-```jsx
-export function loader({ params }) {
+```tsx
+export function loader({ params }: LoaderArgs) {
   return fake.db.getConcerts({
     date: params.date,
     city: params.city,
@@ -168,7 +166,7 @@ app/
 └── root.tsx
 ```
 
-All of the routes that start with `concerts.` will be child routes of `concerts.tsx` and render inside the parent route's [outlet][outlet].
+All the routes that start with `concerts.` will be child routes of `concerts.tsx` and render inside the parent route's [outlet][outlet].
 
 | URL                        | Matched Route           | Layout         |
 | -------------------------- | ----------------------- | -------------- |
@@ -182,16 +180,17 @@ Note you typically want to add an index route when you add nested routes so that
 
 ## Nested URLs without Layout Nesting
 
-Sometimes you want the URL to be nested but you don't want the automatic layout nesting. You can opt-out of nesting with a trailing underscore on the parent segment:
+Sometimes you want the URL to be nested, but you don't want the automatic layout nesting. You can opt out of nesting with a trailing underscore on the parent segment:
 
 <!-- prettier-ignore -->
-```markdown lines=[7]
+```markdown lines=[8]
 app/
 ├── routes/
 │   ├── _index.tsx
 │   ├── about.tsx
 │   ├── concerts.$city.tsx
 │   ├── concerts.trending.tsx
+│   ├── concerts.tsx
 │   └── concerts_.mine.tsx
 └── root.tsx
 ```
@@ -261,7 +260,7 @@ app/
 
 ## Splat Routes
 
-While [dynamic segments][dynamic-segments] match a single path segment (the stuff between two `/` in a url), a splat route will match the rest of a URL, including the slashes.
+While [dynamic segments][dynamic-segments] match a single path segment (the stuff between two `/` in a URL), a splat route will match the rest of a URL, including the slashes.
 
 <!-- prettier-ignore -->
 ```markdown lines=[4,6]
@@ -279,7 +278,7 @@ app/
 | `/`                                          | `_index.tsx`  |
 | `/beef/and/cheese`                           | `$.tsx`       |
 | `/files`                                     | `files.$.tsx` |
-| `/files/talks/remix-conf_old.pdf`            | `files/$.tsx` |
+| `/files/talks/remix-conf_old.pdf`            | `files.$.tsx` |
 | `/files/talks/remix-conf_final.pdf`          | `files.$.tsx` |
 | `/files/talks/remix-conf-FINAL-MAY_2022.pdf` | `files.$.tsx` |
 
@@ -287,7 +286,7 @@ Similar to dynamic route parameters, you can access the value of the matched pat
 
 ```tsx filename=app/routes/files.$.tsx
 export function loader({ params }) {
-  let filePath = params["*"];
+  const filePath = params["*"];
   return fake.getFileInfo(filePath);
 }
 ```
@@ -306,50 +305,68 @@ If you want one of the special characters Remix uses for these route conventions
 
 ## Folders for Organization
 
-Routes can also be folders with a conventional `index.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
+Routes can also be folders with a `route.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
+
+<docs-info>The files inside a folder have no meaning for the route paths, the route path is completely defined by the folder name</docs-info>
 
 Consider these routes:
 
 ```
 routes/
+  _landing._index.tsx
   _landing.about.tsx
-  _landing.index.tsx
   _landing.tsx
+  app._index.tsx
   app.projects.tsx
   app.tsx
   app_.projects.$id.roadmap.tsx
 ```
 
-Some, or all of them can be folders holding their own modules inside:
+Some, or all of them can be folders holding their own `route` module inside.
 
 ```
 routes/
+  _landing._index/
+    route.tsx
+    scroll-experience.tsx
   _landing.about/
-    index.tsx
     employee-profile-card.tsx
     get-employee-data.server.tsx
+    route.tsx
     team-photo.jpg
-  _landing.index/
-    index.tsx
-    scroll-experience.tsx
   _landing/
-    index.tsx
     header.tsx
     footer.tsx
+    route.tsx
+  app._index/
+    route.tsx
+    stats.tsx
   app.projects/
-    index.tsx
-    project-card.tsx
     get-projects.server.tsx
+    project-card.tsx
     project-buttons.tsx
+    route.tsx
   app/
-    index.tsx
     primary-nav.tsx
+    route.tsx
     footer.tsx
   app_.projects.$id.roadmap/
-    index.tsx
+    route.tsx
     chart.tsx
     update-timeline.server.tsx
   contact-us.tsx
+```
+
+Note that when you turn a route module into a folder, the route module becomes `folder/route.tsx`, all other modules in the folder will not become routes. For example:
+
+```
+# these are the same route:
+routes/app.tsx
+routes/app/route.tsx
+
+# as are these
+routes/app._index.tsx
+routes/app._index/route.tsx
 ```
 
 ## Scaling
@@ -357,7 +374,7 @@ routes/
 Our general recommendation for scale is to make every route a folder and put the modules used exclusively by that route in the folder, then put the shared modules outside of routes folder elsewhere. This has a couple benefits:
 
 - Easy to identify shared modules, so tread lightly when changing them
-- Easy to organize an refactor the modules for a specific route without creating "file organization fatigue" and cluttering up other parts of the app
+- Easy to organize and refactor the modules for a specific route without creating "file organization fatigue" and cluttering up other parts of the app
 
 ## More Flexibility
 

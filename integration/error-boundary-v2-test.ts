@@ -13,8 +13,11 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        v2_errorBoundary: true,
+      config: {
+        future: {
+          v2_errorBoundary: true,
+          v2_routeConvention: true,
+        },
       },
       files: {
         "app/root.jsx": js`
@@ -79,7 +82,7 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
           }
         `,
 
-        "app/routes/parent/child-with-boundary.jsx": js`
+        "app/routes/parent.child-with-boundary.jsx": js`
           import {
             isRouteErrorResponse,
             useLoaderData,
@@ -113,7 +116,7 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
           }
         `,
 
-        "app/routes/parent/child-without-boundary.jsx": js`
+        "app/routes/parent.child-without-boundary.jsx": js`
           import { useLoaderData, useLocation } from "@remix-run/react";
 
           export function loader({ request }) {

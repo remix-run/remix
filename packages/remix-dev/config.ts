@@ -1,15 +1,19 @@
-import * as path from "path";
-import { pathToFileURL } from "url";
-import * as fse from "fs-extra";
+import { execSync } from "node:child_process";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import fse from "fs-extra";
 import getPort from "get-port";
+import NPMCliPackageJson from "@npmcli/package-json";
+import { coerce } from "semver";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
-import { serverBuildVirtualModule } from "./compiler/virtualModules";
-import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
+import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
+import { detectPackageManager } from "./cli/detectPackageManager";
+import { logger } from "./tux";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -33,19 +37,28 @@ export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
 type Dev = {
+  command?: string;
   port?: number;
-  appServerPort?: number;
-  remixRequestHandlerPath?: string;
-  rebuildPollIntervalMs?: number;
+  restart?: boolean;
+  tlsKey?: string;
+  tlsCert?: string;
+
+  /** @deprecated remove in v2 */
+  scheme?: string;
+  /** @deprecated remove in v2 */
+  host?: string;
 };
 
 interface FutureConfig {
-  unstable_cssModules: boolean;
-  unstable_cssSideEffectImports: boolean;
-  unstable_dev: boolean | Dev;
-  unstable_vanillaExtract: boolean;
+  v2_dev: boolean | Dev;
+  /** @deprecated Use the `postcss` config option instead */
+  unstable_postcss: boolean;
+  /** @deprecated Use the `tailwind` config option instead */
+  unstable_tailwind: boolean;
   v2_errorBoundary: boolean;
+  v2_headers: boolean;
   v2_meta: boolean;
+  v2_normalizeFormMethod: boolean;
   v2_routeConvention: boolean;
 }
 
@@ -75,23 +88,6 @@ export interface AppConfig {
   ) => Promise<ReturnType<DefineRoutesFunction>>;
 
   /**
-   * The path to the server build, relative to `remix.config.js`. Defaults to
-   * "build".
-   *
-   * @deprecated Use {@link ServerConfig.serverBuildPath} instead.
-   */
-  serverBuildDirectory?: string;
-
-  /**
-   * The path to the server build file, relative to `remix.config.js`. This file
-   * should end in a `.js` extension and should be deployed to your server.
-   *
-   * If omitted, the default build path will be based on your
-   * {@link ServerConfig.serverBuildTarget}.
-   */
-  serverBuildPath?: string;
-
-  /**
    * The path to the browser build, relative to `remix.config.js`. Defaults to
    * "public/build".
    */
@@ -101,7 +97,7 @@ export interface AppConfig {
    * The path to the browser build, relative to remix.config.js. Defaults to
    * "public/build".
    *
-   * @deprecated Use `{@link ServerConfig.assetsBuildDirectory}` instead
+   * @deprecated Use `{@link AppConfig.assetsBuildDirectory}` instead
    */
   browserBuildDirectory?: string;
 
@@ -128,23 +124,10 @@ export interface AppConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * The output format of the server build. Defaults to "cjs".
-   *
-   * @deprecated Use {@link ServerConfig.serverBuildTarget} instead.
+   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Defaults to `false`.
    */
-  serverModuleFormat?: ServerModuleFormat;
-
-  /**
-   * The platform the server build is targeting. Defaults to "node".
-   *
-   * @deprecated Use {@link ServerConfig.serverBuildTarget} instead.
-   */
-  serverPlatform?: ServerPlatform;
-
-  /**
-   * The target of the server build. Defaults to "node-cjs".
-   */
-  serverBuildTarget?: ServerBuildTarget;
+  postcss?: boolean;
 
   /**
    * A server entrypoint, relative to the root directory that becomes your
@@ -155,18 +138,77 @@ export interface AppConfig {
   server?: string;
 
   /**
-   * A list of filenames or a glob patterns to match files in the `app/routes`
-   * directory that Remix will ignore. Matching files will not be recognized as
-   * routes.
+   * The path to the server build, relative to `remix.config.js`. Defaults to
+   * "build".
+   *
+   * @deprecated Use {@link AppConfig.serverBuildPath} instead.
    */
-  ignoredRouteFiles?: string[];
+  serverBuildDirectory?: string;
+
+  /**
+   * The path to the server build file, relative to `remix.config.js`. This file
+   * should end in a `.js` extension and should be deployed to your server.
+   */
+  serverBuildPath?: string;
+
+  /**
+   * The target of the server build. Defaults to "node-cjs".
+   *
+   * @deprecated Use a combination of `{@link AppConfig.publicPath}`, `{@link AppConfig.serverBuildPath}`, `{@link AppConfig.serverConditions}`, `{@link AppConfig.serverDependenciesToBundle}`, `{@link AppConfig.serverMainFields}`, `{@link AppConfig.serverMinify}`, `{@link AppConfig.serverModuleFormat}` and/or `{@link AppConfig.serverPlatform}` instead.
+   */
+  serverBuildTarget?: ServerBuildTarget;
+
+  /**
+   * The order of conditions to use when resolving server dependencies'
+   * `exports` field in `package.json`.
+   *
+   * For more information, see: https://esbuild.github.io/api/#conditions
+   */
+  serverConditions?: string[];
 
   /**
    * A list of patterns that determined if a module is transpiled and included
    * in the server bundle. This can be useful when consuming ESM only packages
    * in a CJS build.
    */
-  serverDependenciesToBundle?: Array<string | RegExp>;
+  serverDependenciesToBundle?: "all" | Array<string | RegExp>;
+
+  /**
+   * The order of main fields to use when resolving server dependencies.
+   * Defaults to `["main", "module"]`.
+   *
+   * For more information, see: https://esbuild.github.io/api/#main-fields
+   */
+  serverMainFields?: string[];
+
+  /**
+   * Whether to minify the server build in production or not.
+   * Defaults to `false`.
+   */
+  serverMinify?: boolean;
+
+  /**
+   * The output format of the server build. Defaults to "cjs".
+   */
+  serverModuleFormat?: ServerModuleFormat;
+
+  /**
+   * The platform the server build is targeting. Defaults to "node".
+   */
+  serverPlatform?: ServerPlatform;
+
+  /**
+   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
+   * Defaults to `false`.
+   */
+  tailwind?: boolean;
+
+  /**
+   * A list of filenames or a glob patterns to match files in the `app/routes`
+   * directory that Remix will ignore. Matching files will not be recognized as
+   * routes.
+   */
+  ignoredRouteFiles?: string[];
 
   /**
    * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
@@ -204,20 +246,24 @@ export interface RemixConfig {
   entryClientFile: string;
 
   /**
+   * The absolute path to the entry.client file.
+   */
+  entryClientFilePath: string;
+
+  /**
    * The path to the entry.server file, relative to `config.appDirectory`.
    */
   entryServerFile: string;
 
   /**
+   * The absolute path to the entry.server file.
+   */
+  entryServerFilePath: string;
+
+  /**
    * An object of all available routes, keyed by route id.
    */
   routes: RouteManifest;
-
-  /**
-   * The path to the server build file. This file should end in a `.js`. Defaults
-   * are based on {@link ServerConfig.serverBuildTarget}.
-   */
-  serverBuildPath: string;
 
   /**
    * The absolute path to the assets build directory.
@@ -235,11 +281,6 @@ export interface RemixConfig {
   publicPath: string;
 
   /**
-   * The mode to use to run the server.
-   */
-  serverMode: ServerMode;
-
-  /**
    * The port number to use for the dev (asset) server.
    */
   devServerPort: number;
@@ -255,6 +296,69 @@ export interface RemixConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
+   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Defaults to `false`.
+   */
+  postcss: boolean;
+
+  /**
+   * The path to the server build file. This file should end in a `.js`.
+   */
+  serverBuildPath: string;
+
+  /**
+   * The target of the server build. Defaults to "node-cjs".
+   *
+   * @deprecated Use a combination of `{@link AppConfig.publicPath}`, `{@link AppConfig.serverBuildPath}`, `{@link AppConfig.serverConditions}`, `{@link AppConfig.serverDependenciesToBundle}`, `{@link AppConfig.serverMainFields}`, `{@link AppConfig.serverMinify}`, `{@link AppConfig.serverModuleFormat}` and/or `{@link AppConfig.serverPlatform}` instead.   */
+  serverBuildTarget?: ServerBuildTarget;
+
+  /**
+   * The default entry module for the server build if a {@see AppConfig.server}
+   * is not provided.
+   */
+  serverBuildTargetEntryModule: string;
+
+  /**
+   * The order of conditions to use when resolving server dependencies'
+   * `exports` field in `package.json`.
+   *
+   * For more information, see: https://esbuild.github.io/api/#conditions
+   */
+  serverConditions?: string[];
+
+  /**
+   * A list of patterns that determined if a module is transpiled and included
+   * in the server bundle. This can be useful when consuming ESM only packages
+   * in a CJS build.
+   */
+  serverDependenciesToBundle: "all" | Array<string | RegExp>;
+
+  /**
+   * A server entrypoint relative to the root directory that becomes your
+   * server's main module.
+   */
+  serverEntryPoint?: string;
+
+  /**
+   * The order of main fields to use when resolving server dependencies.
+   * Defaults to `["main", "module"]`.
+   *
+   * For more information, see: https://esbuild.github.io/api/#main-fields
+   */
+  serverMainFields: string[];
+
+  /**
+   * Whether to minify the server build in production or not.
+   * Defaults to `false`.
+   */
+  serverMinify: boolean;
+
+  /**
+   * The mode to use to run the server.
+   */
+  serverMode: ServerMode;
+
+  /**
    * The output format of the server build. Defaults to "cjs".
    */
   serverModuleFormat: ServerModuleFormat;
@@ -265,26 +369,10 @@ export interface RemixConfig {
   serverPlatform: ServerPlatform;
 
   /**
-   * The target of the server build.
+   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
+   * Defaults to `false`.
    */
-  serverBuildTarget?: ServerBuildTarget;
-
-  /**
-   * The default entry module for the server build if a {@see RemixConfig.customServer} is not provided.
-   */
-  serverBuildTargetEntryModule: string;
-
-  /**
-   * A server entrypoint relative to the root directory that becomes your server's main module.
-   */
-  serverEntryPoint?: string;
-
-  /**
-   * A list of patterns that determined if a module is transpiled and included
-   * in the server bundle. This can be useful when consuming ESM only packages
-   * in a CJS build.
-   */
-  serverDependenciesToBundle: Array<string | RegExp>;
+  tailwind: boolean;
 
   /**
    * A list of directories to watch.
@@ -316,7 +404,7 @@ export async function readConfig(
   }
 
   let rootDirectory = path.resolve(remixRoot);
-  let configFile = findConfig(rootDirectory, "remix.config");
+  let configFile = findConfig(rootDirectory, "remix.config", configExts);
 
   let appConfig: AppConfig = {};
   if (configFile) {
@@ -340,22 +428,150 @@ export async function readConfig(
     }
   }
 
-  let customServerEntryPoint = appConfig.server;
-  let serverBuildTarget: ServerBuildTarget | undefined =
-    appConfig.serverBuildTarget;
-  let serverModuleFormat: ServerModuleFormat =
-    appConfig.serverModuleFormat || "cjs";
-  let serverPlatform: ServerPlatform = appConfig.serverPlatform || "node";
-  switch (appConfig.serverBuildTarget) {
-    case "cloudflare-pages":
-    case "cloudflare-workers":
-    case "deno":
-      serverModuleFormat = "esm";
-      serverPlatform = "neutral";
-      break;
+  if (appConfig.serverBuildTarget) {
+    serverBuildTargetWarning();
+  }
+
+  if (!appConfig.future?.v2_errorBoundary) {
+    errorBoundaryWarning();
+  }
+
+  if (!appConfig.future?.v2_normalizeFormMethod) {
+    formMethodWarning();
+  }
+
+  if (!appConfig.future?.v2_meta) {
+    metaWarning();
+  }
+
+  if (!appConfig.future?.v2_headers) {
+    headersWarning();
+  }
+
+  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
+    appConfig.serverBuildTarget ?? ""
+  );
+  let isDenoRuntime = appConfig.serverBuildTarget === "deno";
+
+  let serverBuildPath = resolveServerBuildPath(rootDirectory, appConfig);
+  let serverBuildTarget = appConfig.serverBuildTarget;
+  let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
+    serverBuildVirtualModule.id
+  )};`;
+  let serverConditions = appConfig.serverConditions;
+  let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
+  let serverEntryPoint = appConfig.server;
+  let serverMainFields = appConfig.serverMainFields;
+  let serverMinify = appConfig.serverMinify;
+
+  if (!appConfig.serverModuleFormat) {
+    serverModuleFormatWarning();
+  }
+
+  let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
+  let serverPlatform = appConfig.serverPlatform || "node";
+  if (isCloudflareRuntime) {
+    serverConditions ??= ["worker"];
+    serverDependenciesToBundle = "all";
+    serverMainFields ??= ["browser", "module", "main"];
+    serverMinify ??= true;
+    serverModuleFormat = "esm";
+    serverPlatform = "neutral";
+  }
+  if (isDenoRuntime) {
+    serverConditions ??= ["deno", "worker"];
+    serverDependenciesToBundle = "all";
+    serverMainFields ??= ["module", "main"];
+    serverModuleFormat = "esm";
+    serverPlatform = "neutral";
+  }
+  serverMainFields ??=
+    serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
+  serverMinify ??= false;
+
+  if (appConfig.future) {
+    if ("unstable_cssModules" in appConfig.future) {
+      logger.warn(
+        "The `future.unstable_cssModules` config option has been removed",
+        {
+          details: [
+            "CSS Modules are now enabled automatically.",
+            "You should remove the `unstable_cssModules` option from your Remix config.",
+          ],
+          key: "unstable_cssModules",
+        }
+      );
+    }
+
+    if ("unstable_cssSideEffectImports" in appConfig.future) {
+      logger.warn(
+        "The `future.unstable_cssSideEffectImports` config option has been removed",
+        {
+          details: [
+            "CSS side-effect imports are now enabled automatically.",
+            "You should remove the `unstable_cssSideEffectImports` option from your Remix config",
+          ],
+          key: "unstable_cssSideEffectImports",
+        }
+      );
+    }
+
+    if ("unstable_vanillaExtract" in appConfig.future) {
+      logger.warn(
+        "The `future.unstable_vanillaExtract` config option has been removed.",
+        {
+          details: [
+            "Vanilla Extract is now enabled automatically.",
+            "You should remove the `unstable_vanillaExtract` option from your Remix config",
+          ],
+          key: "unstable_vanillaExtract",
+        }
+      );
+    }
+
+    if (appConfig.future.unstable_postcss !== undefined) {
+      logger.warn(
+        "The `future.unstable_postcss` config option has been deprecated.",
+        {
+          details: [
+            "PostCSS support is now stable.",
+            "Use the `postcss` config option instead.",
+          ],
+          key: "unstable_postcss",
+        }
+      );
+    }
+
+    if (appConfig.future.unstable_tailwind !== undefined) {
+      logger.warn(
+        "The `future.unstable_tailwind` config option has been deprecated.",
+        {
+          details: [
+            "Tailwind support is now stable.",
+            "Use the `tailwind` config option instead.",
+          ],
+          key: "unstable_tailwind",
+        }
+      );
+    }
+
+    if ("unstable_dev" in appConfig.future) {
+      logger.warn("The `future.unstable_dev` config option has been removed", {
+        details: [
+          "The v2 dev server is now stable.",
+          "Use the `future.v2_dev` config option instead.",
+          "-> https://remix.run/docs/en/main/pages/v2#dev-server",
+        ],
+        key: "unstable_dev",
+      });
+    }
   }
 
   let mdx = appConfig.mdx;
+  let postcss =
+    appConfig.postcss ?? appConfig.future?.unstable_postcss === true;
+  let tailwind =
+    appConfig.tailwind ?? appConfig.future?.unstable_tailwind === true;
 
   let appDirectory = path.resolve(
     rootDirectory,
@@ -367,43 +583,125 @@ export async function readConfig(
     appConfig.cacheDirectory || ".cache"
   );
 
-  let entryClientFile = findEntry(appDirectory, "entry.client");
-  if (!entryClientFile) {
-    throw new Error(`Missing "entry.client" file in ${appDirectory}`);
+  let defaultsDirectory = path.resolve(__dirname, "config", "defaults");
+
+  let userEntryClientFile = findEntry(appDirectory, "entry.client");
+  let userEntryServerFile = findEntry(appDirectory, "entry.server");
+
+  let entryServerFile: string;
+  let entryClientFile: string;
+
+  let pkgJson = await NPMCliPackageJson.load(remixRoot);
+  let deps = pkgJson.content.dependencies ?? {};
+
+  if (userEntryServerFile) {
+    entryServerFile = userEntryServerFile;
+  } else {
+    let serverRuntime = deps["@remix-run/deno"]
+      ? "deno"
+      : deps["@remix-run/cloudflare"]
+      ? "cloudflare"
+      : deps["@remix-run/node"]
+      ? "node"
+      : undefined;
+
+    if (!serverRuntime) {
+      let serverRuntimes = [
+        "@remix-run/deno",
+        "@remix-run/cloudflare",
+        "@remix-run/node",
+      ];
+      let formattedList = disjunctionListFormat.format(serverRuntimes);
+      throw new Error(
+        `Could not determine server runtime. Please install one of the following: ${formattedList}`
+      );
+    }
+
+    let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
+
+    if (!clientRenderer) {
+      throw new Error(
+        `Could not determine renderer. Please install the following: @remix-run/react`
+      );
+    }
+
+    let maybeReactVersion = coerce(deps.react);
+    if (!maybeReactVersion) {
+      let react = ["react", "react-dom"];
+      let list = conjunctionListFormat.format(react);
+      throw new Error(
+        `Could not determine React version. Please install the following packages: ${list}`
+      );
+    }
+
+    let type: "stream" | "string" =
+      maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+        ? "stream"
+        : "string";
+
+    if (!deps["isbot"] && type === "stream") {
+      console.log(
+        "adding `isbot` to your package.json, you should commit this change"
+      );
+
+      pkgJson.update({
+        dependencies: {
+          ...pkgJson.content.dependencies,
+          isbot: "latest",
+        },
+      });
+
+      await pkgJson.save();
+
+      let packageManager = detectPackageManager() ?? "npm";
+
+      execSync(`${packageManager} install`, {
+        cwd: remixRoot,
+        stdio: "inherit",
+      });
+    }
+
+    entryServerFile = `${serverRuntime}/entry.server.${clientRenderer}-${type}.tsx`;
   }
 
-  let entryServerFile = findEntry(appDirectory, "entry.server");
-  if (!entryServerFile) {
-    throw new Error(`Missing "entry.server" file in ${appDirectory}`);
+  if (userEntryClientFile) {
+    entryClientFile = userEntryClientFile;
+  } else {
+    let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
+
+    if (!clientRenderer) {
+      throw new Error(
+        `Could not determine runtime. Please install the following: @remix-run/react`
+      );
+    }
+
+    let maybeReactVersion = coerce(deps.react);
+    if (!maybeReactVersion) {
+      let react = ["react", "react-dom"];
+      let list = conjunctionListFormat.format(react);
+      throw new Error(
+        `Could not determine React version. Please install the following packages: ${list}`
+      );
+    }
+
+    let type: "stream" | "string" =
+      maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+        ? "stream"
+        : "string";
+
+    entryClientFile = `entry.client.${clientRenderer}-${type}.tsx`;
   }
 
-  let serverBuildPath = "build/index.js";
-  switch (serverBuildTarget) {
-    case "arc":
-      serverBuildPath = "server/index.js";
-      break;
-    case "cloudflare-pages":
-      serverBuildPath = "functions/[[path]].js";
-      break;
-    case "netlify":
-      serverBuildPath = ".netlify/functions-internal/server.js";
-      break;
-    case "vercel":
-      serverBuildPath = "api/index.js";
-      break;
-  }
-  serverBuildPath = path.resolve(rootDirectory, serverBuildPath);
+  let entryClientFilePath = userEntryClientFile
+    ? path.resolve(appDirectory, userEntryClientFile)
+    : path.resolve(defaultsDirectory, entryClientFile);
 
-  // retain deprecated behavior for now
-  if (appConfig.serverBuildDirectory) {
-    serverBuildPath = path.resolve(
-      rootDirectory,
-      path.join(appConfig.serverBuildDirectory, "index.js")
-    );
-  }
+  let entryServerFilePath = userEntryServerFile
+    ? path.resolve(appDirectory, userEntryServerFile)
+    : path.resolve(defaultsDirectory, entryServerFile);
 
-  if (appConfig.serverBuildPath) {
-    serverBuildPath = path.resolve(rootDirectory, appConfig.serverBuildPath);
+  if (appConfig.browserBuildDirectory) {
+    browserBuildDirectoryWarning();
   }
 
   let assetsBuildDirectory =
@@ -420,16 +718,11 @@ export async function readConfig(
     Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
     (await getPort({ port: Number(appConfig.devServerPort) || 8002 }));
   // set env variable so un-bundled servers can use it
-  process.env.REMIX_DEV_SERVER_WS_PORT = `${devServerPort}`;
+  process.env.REMIX_DEV_SERVER_WS_PORT = String(devServerPort);
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
-  let defaultPublicPath = "/build/";
-  switch (serverBuildTarget) {
-    case "arc":
-      defaultPublicPath = "/_static/build/";
-      break;
-  }
-
+  let defaultPublicPath =
+    appConfig.serverBuildTarget === "arc" ? "/_static/build/" : "/build/";
   let publicPath = addTrailingSlash(appConfig.publicPath || defaultPublicPath);
 
   let rootRouteFile = findEntry(appDirectory, "root");
@@ -441,9 +734,14 @@ export async function readConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  let routesConvention = appConfig.future?.v2_routeConvention
-    ? flatRoutes
-    : defineConventionalRoutes;
+  let routesConvention: typeof flatRoutes;
+
+  if (appConfig.future?.v2_routeConvention) {
+    routesConvention = flatRoutes;
+  } else {
+    flatRoutesWarning();
+    routesConvention = defineConventionalRoutes;
+  }
 
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
     let conventionalRoutes = routesConvention(
@@ -475,12 +773,6 @@ export async function readConfig(
     );
   }
 
-  let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
-    serverBuildVirtualModule.id
-  )};`;
-
-  let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
-
   // When tsconfigPath is undefined, the default "tsconfig.json" is not
   // found in the root directory.
   let tsconfigPath: string | undefined;
@@ -493,18 +785,14 @@ export async function readConfig(
     tsconfigPath = rootJsConfig;
   }
 
-  if (tsconfigPath) {
-    writeConfigDefaults(tsconfigPath);
-  }
-
   let future: FutureConfig = {
-    unstable_cssModules: appConfig.future?.unstable_cssModules === true,
-    unstable_cssSideEffectImports:
-      appConfig.future?.unstable_cssSideEffectImports === true,
-    unstable_dev: appConfig.future?.unstable_dev ?? false,
-    unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract === true,
+    v2_dev: appConfig.future?.v2_dev ?? false,
+    unstable_postcss: appConfig.future?.unstable_postcss === true,
+    unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
+    v2_headers: appConfig.future?.v2_headers === true,
     v2_meta: appConfig.future?.v2_meta === true,
+    v2_normalizeFormMethod: appConfig.future?.v2_normalizeFormMethod === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
@@ -512,7 +800,9 @@ export async function readConfig(
     appDirectory,
     cacheDirectory,
     entryClientFile,
+    entryClientFilePath,
     entryServerFile,
+    entryServerFilePath,
     devServerPort,
     devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
@@ -521,14 +811,19 @@ export async function readConfig(
     rootDirectory,
     routes,
     serverBuildPath,
+    serverBuildTarget,
+    serverBuildTargetEntryModule,
+    serverConditions,
+    serverDependenciesToBundle,
+    serverEntryPoint,
+    serverMainFields,
+    serverMinify,
     serverMode,
     serverModuleFormat,
     serverPlatform,
-    serverBuildTarget,
-    serverBuildTargetEntryModule,
-    serverEntryPoint: customServerEntryPoint,
-    serverDependenciesToBundle,
     mdx,
+    postcss,
+    tailwind,
     watchPaths,
     tsconfigPath,
     future,
@@ -552,11 +847,173 @@ function findEntry(dir: string, basename: string): string | undefined {
 
 const configExts = [".js", ".cjs", ".mjs"];
 
-function findConfig(dir: string, basename: string): string | undefined {
-  for (let ext of configExts) {
-    let file = path.resolve(dir, basename + ext);
+export function findConfig(
+  dir: string,
+  basename: string,
+  extensions: string[]
+): string | undefined {
+  for (let ext of extensions) {
+    let name = basename + ext;
+    let file = path.join(dir, name);
     if (fse.existsSync(file)) return file;
   }
 
   return undefined;
 }
+
+const resolveServerBuildPath = (
+  rootDirectory: string,
+  appConfig: AppConfig
+) => {
+  let serverBuildPath = "build/index.js";
+
+  switch (appConfig.serverBuildTarget) {
+    case "arc":
+      serverBuildPath = "server/index.js";
+      break;
+    case "cloudflare-pages":
+      serverBuildPath = "functions/[[path]].js";
+      break;
+    case "netlify":
+      serverBuildPath = ".netlify/functions-internal/server.js";
+      break;
+    case "vercel":
+      serverBuildPath = "api/index.js";
+      break;
+  }
+
+  // retain deprecated behavior for now
+  if (appConfig.serverBuildDirectory) {
+    serverBuildDirectoryWarning();
+
+    serverBuildPath = path.join(appConfig.serverBuildDirectory, "index.js");
+  }
+
+  if (appConfig.serverBuildPath) {
+    serverBuildPath = appConfig.serverBuildPath;
+  }
+
+  return path.resolve(rootDirectory, serverBuildPath);
+};
+
+// adds types for `Intl.ListFormat` to the global namespace
+// we could also update our `tsconfig.json` to include `lib: ["es2021"]`
+declare namespace Intl {
+  type ListType = "conjunction" | "disjunction";
+
+  interface ListFormatOptions {
+    localeMatcher?: "lookup" | "best fit";
+    type?: ListType;
+    style?: "long" | "short" | "narrow";
+  }
+
+  interface ListFormatPart {
+    type: "element" | "literal";
+    value: string;
+  }
+
+  class ListFormat {
+    constructor(locales?: string | string[], options?: ListFormatOptions);
+    format(values: any[]): string;
+    formatToParts(values: any[]): ListFormatPart[];
+    supportedLocalesOf(
+      locales: string | string[],
+      options?: ListFormatOptions
+    ): string[];
+  }
+}
+
+let conjunctionListFormat = new Intl.ListFormat("en", {
+  style: "long",
+  type: "conjunction",
+});
+
+let disjunctionListFormat = new Intl.ListFormat("en", {
+  style: "long",
+  type: "disjunction",
+});
+
+let browserBuildDirectoryWarning = () =>
+  logger.warn(
+    "The `browserBuildDirectory` config option will be removed in v2",
+    {
+      details: [
+        "You can use the `assetsBuildDirectory` config option instead.",
+        "-> https://remix.run/docs/en/v1.15.0/pages/v2#browserbuilddirectory",
+      ],
+      key: "browserBuildDirectoryWarning",
+    }
+  );
+
+let serverBuildDirectoryWarning = () =>
+  logger.warn(
+    "The `serverBuildDirectory` config option will be removed in v2",
+    {
+      details: [
+        "You can use the `serverBuildPath` config option instead.",
+        "-> https://remix.run/docs/en/v1.15.0/pages/v2#serverbuilddirectory",
+      ],
+      key: "serverBuildDirectoryWarning",
+    }
+  );
+
+let serverBuildTargetWarning = () =>
+  logger.warn("The `serverBuildTarget` config option will be removed in v2", {
+    details: [
+      "You can specify multiple server module config options instead to achieve the same result.",
+      "-> https://remix.run/docs/en/v1.15.0/pages/v2#serverbuildtarget",
+    ],
+    key: "serverBuildTargetWarning",
+  });
+
+let serverModuleFormatWarning = () =>
+  logger.warn("The default server module format is changing in v2", {
+    details: [
+      "The default format will change from `cjs` to `esm`.",
+      "You can keep using `cjs` by explicitly specifying `serverModuleFormat: 'cjs'`.",
+      "You can opt-in early to this change by explicitly specifying `serverModuleFormat: 'esm'`",
+      "-> https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat",
+    ],
+    key: "serverModuleFormatWarning",
+  });
+
+let futureFlagWarning =
+  (args: { message: string; flag: string; link: string }) => () => {
+    logger.warn(args.message, {
+      key: args.flag,
+      details: [
+        `You can use the \`${args.flag}\` future flag to opt-in early.`,
+        `-> ${args.link}`,
+      ],
+    });
+  };
+
+let flatRoutesWarning = futureFlagWarning({
+  message: "The route file convention is changing in v2",
+  flag: "v2_routeConvention",
+  link: "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention",
+});
+
+let errorBoundaryWarning = futureFlagWarning({
+  message: "The `CatchBoundary` and `ErrorBoundary` API is changing in v2",
+  flag: "v2_errorBoundary",
+  link: "https://remix.run/docs/en/v1.15.0/pages/v2#catchboundary-and-errorboundary",
+});
+
+let formMethodWarning = futureFlagWarning({
+  message: "The `formMethod` API is changing in v2",
+  flag: "v2_normalizeFormMethod",
+  link: "https://remix.run/docs/en/v1.15.0/pages/v2#formMethod",
+});
+
+let metaWarning = futureFlagWarning({
+  message: "The route `meta` API is changing in v2",
+  flag: "v2_meta",
+  link: "https://remix.run/docs/en/v1.15.0/pages/v2#meta",
+});
+
+let headersWarning = futureFlagWarning({
+  message: "The route `headers` API is changing in v2",
+  flag: "v2_headers",
+  link: "https://remix.run/docs/en/v1.17.0/pages/v2#route-headers",
+});

@@ -4,11 +4,11 @@ title: Route File Naming
 
 # Route File Naming
 
-<docs-info>The Route file naming convention is changing in v2, you can opt-in to the new convention today, [see the Route Convention v2 page][routeconvention-v2]</docs-info>
+<docs-warning>The route file convention is changing in v2. You can prepare for this change at your convenience with the `v2_routeConvention` future flag. For instructions on making this change see the [v2 guide][v2guide].</docs-warning>
 
 Setting up routes in Remix is as simple as creating files in your `app` directory. These are the conventions you should know to understand how routing in Remix works.
 
-Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication.
+Please note that you can use either `.js`, `.jsx`, `.ts` or `.tsx` file extensions. We'll stick with `.tsx` in the examples to avoid duplication.
 
 ## Root Route
 
@@ -118,7 +118,6 @@ app/
 │   ├── ($lang)/
 │   │   ├── $pid.tsx
 │   │   ├── categories.tsx
-│   │   └── index.tsx
 │   └── index.tsx
 └── root.tsx
 ```
@@ -168,7 +167,7 @@ app/
 
 </details>
 
-In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name as its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all of the routes inside that directory ("child routes"). Similar to your [root route][root-route], the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
+In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name as its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all the routes inside that directory ("child routes"). Similar to your [root route][root-route], the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
 
 ## Pathless Layout Routes
 
@@ -304,7 +303,7 @@ Because some characters have special meaning, you must use our escaping syntax i
 [loader]: ../route/loader
 [action]: ../route/action
 [meta]: ../route/meta
-[headers]: ../routes/headers
+[headers]: ../route/headers
 [links]: ../route/links
 [error-boundary]: ../route/error-boundary
 [catch-boundary]: ../route/catch-boundary
@@ -315,5 +314,4 @@ Because some characters have special meaning, you must use our escaping syntax i
 [routing-guide]: ../guides/routing
 [root-route]: #root-route
 [resource-route]: ../guides/resource-routes
-[routeconvention-v2]: ./route-files-v2
-[flatroutes-rfc]: https://github.com/remix-run/remix/discussions/4482
+[v2guide]: ../pages/v2#file-system-route-convention

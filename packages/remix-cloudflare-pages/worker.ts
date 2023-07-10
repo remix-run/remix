@@ -8,9 +8,9 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cl
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export type GetLoadContextFunction<Env = any> = (
-  context: EventContext<Env, any, any>
-) => AppLoadContext;
+export type GetLoadContextFunction<Env = unknown> = (
+  context: Parameters<PagesFunction<Env>>[0]
+) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler<Env = any> = PagesFunction<Env>;
 
@@ -27,8 +27,8 @@ export function createRequestHandler<Env = any>({
 }: createPagesFunctionHandlerParams<Env>): RequestHandler<Env> {
   let handleRequest = createRemixRequestHandler(build, mode);
 
-  return (context) => {
-    let loadContext = getLoadContext?.(context);
+  return async (context) => {
+    let loadContext = await getLoadContext?.(context);
 
     return handleRequest(context.request, loadContext);
   };
@@ -54,7 +54,7 @@ export function createPagesFunctionHandler<Env = any>({
     context.request.headers.delete("if-none-match");
 
     try {
-      response = await (context.env as any).ASSETS.fetch(
+      response = await context.env.ASSETS.fetch(
         context.request.url,
         context.request.clone()
       );

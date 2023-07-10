@@ -9,9 +9,12 @@ let fixture: Fixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
+    config: {
+      future: { v2_routeConvention: true },
+    },
     sourcemap: true,
     files: {
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData } from "@remix-run/react";
 

@@ -346,7 +346,7 @@ describe("the create command", () => {
       "--no-install",
       "--no-typescript",
     ]);
-    expect(output.trim()).toBe(
+    expect(output.trim()).toContain(
       getOptOutOfInstallMessage() +
         "\n\n" +
         getSuccessMessage(path.join("<TEMP_DIR>", "template-to-js"))

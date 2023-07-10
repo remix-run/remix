@@ -14,7 +14,7 @@ This document will familiarize you with our development process as well as how t
 
 ## Contributor License Agreement
 
-All contributors sending Pull Request need to sign the Contributor License Agreement (CLA) that explicitly assigns ownership of the contribution to us.
+All contributors sending a Pull Request need to sign the Contributor License Agreement (CLA) that explicitly assigns ownership of the contribution to us.
 
 When you start a pull request, the remix-cla-bot will prompt you to review the CLA and sign it by adding your name to [contributors.yml][contributorsyaml]
 
@@ -25,7 +25,7 @@ When you start a pull request, the remix-cla-bot will prompt you to review the C
 This document refers to contributors with the following roles:
 
 - **Admins**: GitHub organization team with admin rights, they set and manage the Roadmap.
-- **Collaborators**: GitHub organization team with write access. They manage issues, prs, discussion, etc.
+- **Collaborators**: GitHub organization team with write access. They manage issues, PRs, discussion, etc.
 - **Contributors**: you!
 
 ---
@@ -46,7 +46,7 @@ If you have an idea for a new feature, please don't send a Pull Request, but fol
 4. Owners create an **RFC** from the Proposal and development can begin.
 5. Pairing is highly encouraged, particularly at the start.
 
-### Bug Fix Pull Requests
+### Bug-Fix Pull Requests
 
 If you think you've found a bug we'd love a PR that fixes it! Please follow these guidelines:
 
@@ -54,8 +54,8 @@ If you think you've found a bug we'd love a PR that fixes it! Please follow thes
    - It's ideal if the first commit is a failing test followed by the changes to the code that fix it.
    - This is not strictly enforced but very appreciated!
 2. The Admins will review open bugfix PRs as part of Roadmap Planning.
-   - Simple bugfixes will be merged on the spot
-   - Others will be added to the Roadmap and assigned an Owner to review the work and get it over the finish line
+   - Simple bugfixes will be merged on the spot.
+   - Others will be added to the Roadmap and assigned an Owner to review the work and get it over the finish line.
 
 Bug fix PRs without a test case might be closed immediately (some things are hard to test, we’ll use discretion here)
 
@@ -67,7 +67,7 @@ If you think you've found a bug but don't have the time to send a PR, please fol
 
    - [https://remix.new][https-remix-new] makes this really easy
 
-2. If this is not possible (related to some hosting setup, etc.) please create a GitHub repo that we can run with clear instructions in the README to observe the bug
+2. If this is not possible (related to some hosting setup, etc.) please create a GitHub repo that we can run with clear instructions in the README to observe the bug.
 
 3. Open an issue and link to the reproduction.
 
@@ -75,38 +75,38 @@ Bug reports without a reproduction will be immediately closed asking for a repro
 
 ### Roadmap Planning Meeting
 
-You can always check in on Remix development in our live streamed planning meeting:
+You can always check in on Remix development in our live-streamed planning meeting:
 
 - The Remix Admin team will meet weekly to report progress to the community and add Proposals and Verified Bugs to the Roadmap.
-  - Unanimous agreement among the Remix Admin is required to add a Proposal to the Roadmap
-  - Proposals are not “rejected”, only “accepted” onto the Roadmap
-  - Contributors can continue to up-vote and comment on Proposals, they will bubble up for a future review if it’s getting new activity
-  - The Remix Admin team may lock Proposals for any reason
-- The meeting will be live streamed on the [Remix YouTube channel][youtube]
-  - Everyone is invited to the [Discord][discord] #roadmap-livestream-chat while the meeting is in progress
-  - Remix Collaborators are invited to attend
+  - Unanimous agreement among the Remix Admin is required to add a Proposal to the Roadmap.
+  - Proposals are not “rejected”, only “accepted” onto the Roadmap.
+  - Contributors can continue to up-vote and comment on Proposals, they will bubble up for a future review if it’s getting new activity.
+  - The Remix Admin team may lock Proposals for any reason.
+- The meeting will be live streamed on the [Remix YouTube channel][youtube].
+  - Everyone is invited to the [Discord][discord] #roadmap-livestream-chat while the meeting is in progress.
+  - Remix Collaborators are invited to attend.
 
 ### Issue Tracking
 
 If a Roadmap Issue is expected to be large (involving multiple tasks, authors, PRs, etc.) a temporary project board will be created by the Admin team.
 
-- The original issue will remain on the Roadmap project to see general progress
-- The sub-tasks will be tracked on the temporary project
-- When the work is complete, the temporary project will be archived
-- The Owner is responsible for populating the sub-project with issues and splitting the work up into shippable chunks of work
-- Build / feature flags are encouraged over long running branches
+- The original issue will remain on the Roadmap project to see general progress.
+- The subtasks will be tracked on the temporary project.
+- When the work is complete, the temporary project will be archived.
+- The Owner is responsible for populating the sub-project with issues and splitting the work up into shippable chunks of work.
+- Build / feature flags are encouraged over long-running branches.
 
 ### RFCs
 
-- All Issues that are planned must have an RFC posted in the Official RFCs Discussion category before the Issue moves from _Planned_ to _In Progress_
-- Some Proposals may already be a sufficient RFC and can simply be moved to the Official RFCs Discussion category
-- Once the RFC is posted, development can begin, though Owners are expected to consider the community's feedback to alter their direction when needed
+- All Issues that are planned must have an RFC posted in the Official RFCs Discussion category before the Issue moves from _Planned_ to _In Progress_.
+- Some Proposals may already be a sufficient RFC and can simply be moved to the Official RFCs Discussion category.
+- Once the RFC is posted, development can begin, though Owners are expected to consider the community's feedback to alter their direction when needed.
 
 ### Support for Owners
 
-- Owners will be added to the `#collaborators` private channel on [discord][discord] to get help with architecture and implementation. This channel is private to help keep noise to a minimum so Admins don't miss messages and owner's can get unblocked. Owners can also discuss these questions in any channel or anywhere!
-- Admins will actively work with owners to ensure their issues and projects are organized (correct status, links to related issues, etc.), documented, and moving forward
-- An issue's Owner may be reassigned if progress is stagnating
+- Owners will be added to the `#collaborators` private channel on [discord][discord] to get help with architecture and implementation. This channel is private to help keep noise to a minimum so Admins don't miss messages and owners can get unblocked. Owners can also discuss these questions in any channel or anywhere!
+- Admins will actively work with owners to ensure their issues and projects are organized (correct status, links to related issues, etc.), documented, and moving forward.
+- An issue's Owner may be reassigned if progress is stagnating.
 
 ### Weekly Roadmap Reviews
 
@@ -122,14 +122,14 @@ To help keep the repositories clean and organized, Collaborators will take the f
 ### Issues Tab
 
 - Bug reports without a reproduction will be immediately closed asking for a reproduction.
-- Issues that should be proposals will be converted to a Proposal
-- Questions will be converted to a **Q\&A Discussion**
+- Issues that should be proposals will be converted to a Proposal.
+- Questions will be converted to a **Q\&A Discussion**.
 - Issues with valid reproduction will be labeled as **Verified Bugs** and added to the Roadmap by the Admins in the Roadmap Planning Meeting.
 
 ### Pull Requests Tab
 
-- Features that did not go through the **Development Process** will be immediately closed and asked to open a discussion instead
-- Bug fix PRs without a test case might be closed immediately asking for a test (some things are hard to test, Collaborators will use discretion here)
+- Features that did not go through the **Development Process** will be immediately closed and asked to open a discussion instead.
+- Bug fix PRs without a test case might be closed immediately asking for a test. (Some things are hard to test, Collaborators will use discretion here.)
 
 ---
 
@@ -139,9 +139,9 @@ Before you can contribute to the codebase, you will need to fork the repo. This 
 
 The following steps will get you setup to contribute changes to this repo:
 
-1. Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page][this-page])
+1. Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page][this-page]).
 
-2. Clone your fork locally
+2. Clone your fork locally.
 
    ```bash
    # in a terminal, cd to parent directory where you want your clone to be, then
@@ -154,16 +154,16 @@ The following steps will get you setup to contribute changes to this repo:
 
 3. Install dependencies by running `yarn`. Remix uses [Yarn (version 1)][yarn-version-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
 
-4. Install Playwright to be able to run tests properly by running `npx playwright install`, or [use the Visual Studio Code plugin][vscode-playwright]
+4. Install Playwright to be able to run tests properly by running `npx playwright install`, or [use the Visual Studio Code plugin][vscode-playwright].
 
-5. Verify you've got everything set up for local development by running `yarn test`
+5. Verify you've got everything set up for local development by running `yarn test`.
 
 ### Branches
 
 **Important:** When creating the PR in GitHub, make sure that you set the base to the correct branch.
 
-- **`dev`** is for changes to code
-- **`main`**: is for changes to documentation and some templates
+- **`dev`** is for changes to code.
+- **`main`**: is for changes to documentation and some templates.
 
 You can set the base in GitHub when authoring the PR with the dropdown below the "Compare changes" heading:
 
@@ -173,7 +173,7 @@ You can set the base in GitHub when authoring the PR with the dropdown below the
 
 We use a mix of `jest` and `playwright` for our testing in this project. We have a suite of integration tests in the integration folder and packages have their own jest configuration, which are then referenced by the primary jest config in the root of the project.
 
-The integration tests, and the primary tests can be run in parallel using `npm-run-all` to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently you'll need to run the individual script:
+The integration tests and the primary tests can be run in parallel using `npm-run-all` to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently you'll need to run the individual script:
 
 - `yarn test:primary`
 - `yarn test:integration`
@@ -239,7 +239,7 @@ There may be other branches for various features and experimentation, but all of
 
 ## How the heck do nightly releases work?
 
-Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly-action-comment] and the explicit branch appended to the reusable workflows in the [postrelease action][postrelease-action], however they checkout the `dev` branch during their set up as that's where we want our nightly releases to be cut from. From there, we check if the git sha is the same and only cut a new nightly if something has changed.
+Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly-action-comment] and the explicit branch appended to the reusable workflows in the [postrelease action][postrelease-action], however they checkout the `dev` branch during their set up as that's where we want our nightly releases to be cut from. From there, we check if the git SHA is the same and only cut a new nightly if something has changed.
 
 ## End to end testing
 

@@ -16,9 +16,9 @@ export const loader = async () => {
 };
 ```
 
-This function is only ever run on the server. On the initial server render it will provide data to the HTML document, On navigations in the browser, Remix will call the function via [`fetch`][fetch] from the browser.
+This function is only ever run on the server. On the initial server render, it will provide data to the HTML document. On navigations in the browser, Remix will call the function via [`fetch`][fetch] from the browser.
 
-This means you can talk directly to your database, use server only API secrets, etc. Any code that isn't used to render the UI will be removed from the browser bundle.
+This means you can talk directly to your database, use server-only API secrets, etc. Any code that isn't used to render the UI will be removed from the browser bundle.
 
 Using the database ORM Prisma as an example:
 
@@ -45,6 +45,10 @@ export default function Users() {
 
 Because `prisma` is only used in the loader it will be removed from the browser bundle by the compiler, as illustrated by the highlighted lines.
 
+<docs-error>
+Note that whatever you return from your loader will be exposed to the client, even if the component doesn't render it. Treat your loaders with the same care as public API endpoints.
+</docs-error>
+
 ## Type Safety
 
 You can get type safety over the network for your loader and component with `LoaderArgs` and `useLoaderData<typeof loader>`.
@@ -54,7 +58,7 @@ import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export async function loader(args: LoaderArgs) {
+export async function loader() {
   return json({ name: "Ryan", date: new Date() });
 }
 
@@ -113,7 +117,7 @@ This is the context passed in to your server adapter's `getLoadContext()` functi
 
 Using the express adapter as an example:
 
-```js filename=server.js
+```ts filename=server.ts
 const {
   createRequestHandler,
 } = require("@remix-run/express");
@@ -190,9 +194,12 @@ See also:
 
 ## Throwing Responses in Loaders
 
-Along with returning responses, you can also throw Response objects from your loaders, allowing you to break through the call stack and show an alternate UI with contextual data through the `CatchBoundary`.
+Along with returning responses, you can also throw `Response` objects from your loaders. This allows you to break through the call stack and do one of two things:
 
-Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and move over to an alternative UI.
+- Redirect to another URL
+- Show an alternate UI with contextual data through the `CatchBoundary`
+
+Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and show an alternative UI.
 
 ```ts filename=app/db.ts
 import { json } from "@remix-run/node"; // or cloudflare/deno
@@ -222,8 +229,10 @@ export async function requireUserSession(request) {
     request.headers.get("cookie")
   );
   if (!session) {
-    // can throw our helpers like `redirect` and `json` because they
-    // return responses.
+    // You can throw our helpers like `redirect` and `json` because they
+    // return `Response` objects. A `redirect` response will redirect to
+    // another URL, while other  responses will trigger the UI rendered
+    // in the `CatchBoundary`.
     throw redirect("/login", 302);
   }
   return session.get("user");
@@ -236,9 +245,9 @@ import { json } from "@remix-run/node"; // or cloudflare/deno
 import type { ThrownResponse } from "@remix-run/react";
 import { useCatch, useLoaderData } from "@remix-run/react";
 
-import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
 import type { InvoiceNotFoundResponse } from "~/db";
+import { requireUserSession } from "~/http";
 
 type InvoiceCatchData = {
   invoiceOwnerEmail: string;

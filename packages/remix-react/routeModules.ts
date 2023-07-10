@@ -1,15 +1,18 @@
 import type { ComponentType } from "react";
+import type { RouterState } from "@remix-run/router";
 import type {
   DataRouteMatch,
   Params,
   Location,
   ShouldRevalidateFunction,
 } from "react-router-dom";
+import type { LoaderFunction, SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { EntryRoute } from "./routes";
-import type { RouteData } from "./routeData";
+
+type RouteData = RouterState["loaderData"];
 
 export interface RouteModules {
   [routeId: string]: RouteModule;
@@ -25,12 +28,14 @@ export interface RouteModule {
     | V1_MetaFunction
     | V1_HtmlMetaDescriptor
     | V2_MetaFunction
-    | V2_HtmlMetaDescriptor[];
+    | V2_MetaDescriptor[];
   shouldRevalidate?: ShouldRevalidateFunction;
 }
 
 /**
  * A React component that is rendered when the server throws a Response.
+ *
+ * @deprecated Please enable the v2_errorBoundary flag
  *
  * @see https://remix.run/route/catch-boundary
  */
@@ -38,6 +43,8 @@ export type CatchBoundaryComponent = ComponentType<{}>;
 
 /**
  * A React component that is rendered when there is an error on a route.
+ *
+ * @deprecated Please enable the v2_errorBoundary flag
  *
  * @see https://remix.run/route/error-boundary
  */
@@ -80,17 +87,49 @@ export interface V1_MetaFunction {
 export type MetaFunction = V1_MetaFunction;
 
 export interface RouteMatchWithMeta extends DataRouteMatch {
-  meta: V2_HtmlMetaDescriptor[];
+  meta: V2_MetaDescriptor[];
 }
 
-export interface V2_MetaFunction {
-  (args: {
-    data: AppData;
-    parentsData: RouteData;
-    params: Params;
-    location: Location;
-    matches: RouteMatchWithMeta[];
-  }): V2_HtmlMetaDescriptor[] | undefined;
+export interface V2_MetaMatch<
+  RouteId extends string = string,
+  Loader extends LoaderFunction | unknown = unknown
+> {
+  id: RouteId;
+  pathname: DataRouteMatch["pathname"];
+  data: Loader extends LoaderFunction ? SerializeFrom<Loader> : unknown;
+  handle?: unknown;
+  params: DataRouteMatch["params"];
+  meta: V2_MetaDescriptor[];
+}
+
+export type V2_MetaMatches<
+  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+> = Array<
+  {
+    [K in keyof MatchLoaders]: V2_MetaMatch<
+      Exclude<K, number | symbol>,
+      MatchLoaders[K]
+    >;
+  }[keyof MatchLoaders]
+>;
+
+export interface V2_MetaArgs<
+  Loader extends LoaderFunction | unknown = unknown,
+  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+> {
+  data:
+    | (Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData)
+    | undefined;
+  params: Params;
+  location: Location;
+  matches: V2_MetaMatches<MatchLoaders>;
+}
+
+export interface V2_MetaFunction<
+  Loader extends LoaderFunction | unknown = unknown,
+  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+> {
+  (args: V2_MetaArgs<Loader, MatchLoaders>): V2_MetaDescriptor[] | undefined;
 }
 
 /**
@@ -114,13 +153,22 @@ export interface V1_HtmlMetaDescriptor {
 // TODO: Replace in v2
 export type HtmlMetaDescriptor = V1_HtmlMetaDescriptor;
 
-export type V2_HtmlMetaDescriptor =
+export type V2_MetaDescriptor =
   | { charSet: "utf-8" }
   | { title: string }
   | { name: string; content: string }
   | { property: string; content: string }
   | { httpEquiv: string; content: string }
-  | { [name: string]: string };
+  | { "script:ld+json": LdJsonObject }
+  | { tagName: "meta" | "link"; [name: string]: string }
+  | { [name: string]: unknown };
+
+type LdJsonObject = { [Key in string]: LdJsonValue } & {
+  [Key in string]?: LdJsonValue | undefined;
+};
+type LdJsonArray = LdJsonValue[] | readonly LdJsonValue[];
+type LdJsonPrimitive = string | number | boolean | null;
+type LdJsonValue = LdJsonPrimitive | LdJsonObject | LdJsonArray;
 
 /**
  * A React component that is rendered for a route.

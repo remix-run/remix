@@ -1,10 +1,11 @@
 ---
 title: redirect
+toc: false
 ---
 
 # `redirect`
 
-This is shortcut for sending 30x responses.
+This is a shortcut for sending 30x responses.
 
 ```tsx lines=[1,7]
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
@@ -57,4 +58,12 @@ return new Response(null, {
     Location: "/else/where",
   },
 });
+```
+
+And you can throw redirects to break through the call stack and redirect right away:
+
+```ts
+if (!session) {
+  throw redirect("/login", 302);
+}
 ```

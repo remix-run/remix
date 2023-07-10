@@ -40,95 +40,51 @@ let appFixture: AppFixture;
 //    ```
 ////////////////////////////////////////////////////////////////////////////////
 
+test.beforeEach(async ({ context }) => {
+  await context.route(/_data/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    route.continue();
+  });
+});
+
 test.beforeAll(async () => {
   fixture = await createFixture({
+    config: {
+      future: { v2_routeConvention: true },
+    },
     ////////////////////////////////////////////////////////////////////////////
     // 💿 Next, add files to this object, just like files in a real app,
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/root.jsx": js`
-       import {
-        Links,
-        LiveReload,
-        Meta,
-        Outlet,
-        Scripts,
-        ScrollRestoration,
-        useCatch,
-      } from "@remix-run/react";
-      
-      export const meta = () => ({
-        charset: "utf-8",
-        title: "New Remix App",
-        viewport: "width=device-width,initial-scale=1",
-      });
-    
-      
-      export function ErrorBoundary({ error }) {
-        console.error(error);
-        return (
-          <html>
-            <head>
-              <title>Oh no!</title>
-              <Meta />
-              <Links />
-            </head>
-            <body>
-              ERROR BOUNDARY
-            </body>
-          </html>
-        );
-      }
-      
-      export default function App() {
-        return (
-          <html lang="en">
-            <head>
-              <Meta />
-              <Links />
-            </head>
-            <body>
-              <Outlet />
-              <ScrollRestoration />
-              <Scripts />
-              <LiveReload />
-            </body>
-          </html>
-        );
-      }
-      
-      `,
-      "app/routes/index.jsx": js`
-      import { Link } from "@remix-run/react";
+      "app/routes/_index.jsx": js`
+        import { json } from "@remix-run/node";
+        import { useLoaderData, Link } from "@remix-run/react";
 
-      export default function Index() {
-        return (
-          <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }}>
-            <p>Index file, working fine</p>
-            <Link to="/boom">This will error</Link>
-          </div>
-        );
-      }
-      
+        export function loader() {
+          return json("pizza");
+        }
+
+        export default function Index() {
+          let data = useLoaderData();
+          return (
+            <div>
+              {data}
+              <Link to="/burgers">Other Route</Link>
+            </div>
+          )
+        }
       `,
 
-      "app/routes/boom.jsx": js`
-      import { json } from "@remix-run/node";
-
-      export function loader() {
-          boom()
-          return null;
-      }
-      
-      export default function() {
-          return <b>my page</b>
-      }
+      "app/routes/burgers.jsx": js`
+        export default function Index() {
+          return <div>cheeseburger</div>;
+        }
       `,
     },
   });
 
-  // This creates an interactive app using puppeteer.
+  // This creates an interactive app using playwright.
   appFixture = await createAppFixture(fixture);
 });
 
@@ -141,26 +97,16 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("Should rended the index file contents", async ({ page }) => {
+test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  
+  // You can test any request your app might get using `fixture`.
+  let response = await fixture.requestDocument("/");
+  expect(await response.text()).toMatch("pizza");
+
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/boom");
-  expect(await app.getHtml()).toMatch("ERROR BOUNDARY");
-
-  await app.reload();
-  expect(await app.getHtml()).toMatch("ERROR BOUNDARY");
-
-  expect(app.page.url()).toMatch("boom");
-
-  await app.goBack();
- 
-  // we're on / again
-  expect(app.page.url()).not.toContain("boom");
-
-  expect(await app.getHtml()).toMatch("working fine");
-
+  await app.clickLink("/burgers");
+  expect(await app.getHtml()).toMatch("cheeseburger");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!

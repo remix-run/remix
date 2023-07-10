@@ -1,5 +1,6 @@
 ---
 title: json
+toc: false
 ---
 
 # `json`

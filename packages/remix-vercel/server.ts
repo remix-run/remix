@@ -23,7 +23,7 @@ import {
 export type GetLoadContextFunction = (
   req: VercelRequest,
   res: VercelResponse
-) => AppLoadContext;
+) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler = (
   req: VercelRequest,
@@ -47,7 +47,7 @@ export function createRequestHandler({
 
   return async (req, res) => {
     let request = createRemixRequest(req, res);
-    let loadContext = getLoadContext?.(req, res);
+    let loadContext = await getLoadContext?.(req, res);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
@@ -82,7 +82,7 @@ export function createRemixRequest(
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
   // doesn't seem to be available on their req object!
   let protocol = req.headers["x-forwarded-proto"] || "https";
-  let url = new URL(req.url!, `${protocol}://${host}`);
+  let url = new URL(`${protocol}://${host}${req.url}`);
 
   // Abort action/loaders once we can no longer write a response
   let controller = new NodeAbortController();

@@ -3,11 +3,13 @@ import path from "node:path";
 import fse from "fs-extra";
 import express from "express";
 import getPort from "get-port";
+import dedent from "dedent";
 import stripIndent from "strip-indent";
+import serializeJavaScript from "serialize-javascript";
 import { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
-import type { ServerMode } from "@remix-run/server-runtime/mode";
-import type { FutureConfig } from "@remix-run/server-runtime/entry";
+import type { AppConfig } from "@remix-run/dev";
+import { ServerMode } from "@remix-run/server-runtime/mode";
 
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
@@ -15,13 +17,13 @@ import { createRequestHandler as createExpressHandler } from "../../build/node_m
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 
-interface FixtureInit {
+export interface FixtureInit {
   buildStdio?: Writable;
   sourcemap?: boolean;
   files?: { [filename: string]: string };
   template?: "cf-template" | "deno-template" | "node-template";
   setup?: "node" | "cloudflare";
-  future?: Partial<FutureConfig>;
+  config?: Partial<AppConfig>;
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -34,11 +36,11 @@ export function json(value: JsonObject) {
   return JSON.stringify(value, null, 2);
 }
 
-export async function createFixture(init: FixtureInit) {
-  let projectDir = await createFixtureProject(init);
+export async function createFixture(init: FixtureInit, mode?: ServerMode) {
+  let projectDir = await createFixtureProject(init, mode);
   let buildPath = path.resolve(projectDir, "build");
   let app: ServerBuild = await import(buildPath);
-  let handler = createRequestHandler(app, "production");
+  let handler = createRequestHandler(app, mode || ServerMode.Production);
 
   let requestDocument = async (href: string, init?: RequestInit) => {
     let url = new URL(href, "test://test");
@@ -106,7 +108,7 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
         "*",
         createExpressHandler({
           build: fixture.build,
-          mode: mode || "production",
+          mode: mode || ServerMode.Production,
         })
       );
 
@@ -141,7 +143,8 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function createFixtureProject(
-  init: FixtureInit = {}
+  init: FixtureInit = {},
+  mode?: ServerMode
 ): Promise<string> {
   let template = init.template ?? "node-template";
   let integrationTemplateDir = path.join(__dirname, template);
@@ -177,33 +180,58 @@ export async function createFixtureProject(
     }
   }
 
-  if (init.future) {
-    let contents = fse.readFileSync(
-      path.join(projectDir, "remix.config.js"),
-      "utf-8"
-    );
-    if (!contents.includes("future: {},")) {
-      throw new Error("Invalid formatted remix.config.js in template");
-    }
-    contents = contents.replace(
-      "future: {},",
-      "future: " + JSON.stringify(init.future) + ","
-    );
-    fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
-  }
-
   await writeTestFiles(init, projectDir);
-  build(projectDir, init.buildStdio, init.sourcemap);
+
+  // We update the config file *after* writing test files so that tests can provide a custom
+  // `remix.config.js` file while still supporting the type-checked `config`
+  // property on the fixture object. This is useful for config values that can't
+  // be serialized, e.g. usage of imported functions within `remix.config.js`.
+  let contents = fse.readFileSync(
+    path.join(projectDir, "remix.config.js"),
+    "utf-8"
+  );
+  if (
+    init.config &&
+    !contents.includes("global.INJECTED_FIXTURE_REMIX_CONFIG")
+  ) {
+    throw new Error(dedent`
+      Cannot provide a \`config\` fixture option and a \`remix.config.js\` file
+      at the same time, unless the \`remix.config.js\` file contains a reference
+      to the \`global.INJECTED_FIXTURE_REMIX_CONFIG\` placeholder so it can
+      accept the injected config values. Either move all config values into
+      \`remix.config.js\` file, or spread the  injected config, 
+      e.g. \`module.exports = { ...global.INJECTED_FIXTURE_REMIX_CONFIG }\`.
+    `);
+  }
+  contents = contents.replace(
+    "global.INJECTED_FIXTURE_REMIX_CONFIG",
+    `${serializeJavaScript(init.config ?? {})}`
+  );
+  fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
+
+  build(projectDir, init.buildStdio, init.sourcemap, mode);
 
   return projectDir;
 }
 
-function build(projectDir: string, buildStdio?: Writable, sourcemap?: boolean) {
+function build(
+  projectDir: string,
+  buildStdio?: Writable,
+  sourcemap?: boolean,
+  mode?: ServerMode
+) {
   let buildArgs = ["node_modules/@remix-run/dev/dist/cli.js", "build"];
   if (sourcemap) {
     buildArgs.push("--sourcemap");
   }
-  let buildSpawn = spawnSync("node", buildArgs, { cwd: projectDir });
+
+  let buildSpawn = spawnSync("node", buildArgs, {
+    cwd: projectDir,
+    env: {
+      ...process.env,
+      NODE_ENV: mode || ServerMode.Production,
+    },
+  });
 
   // These logs are helpful for debugging. Remove comments if needed.
   // console.log("spawning @remix-run/dev/cli.js `build`:\n");

@@ -1,8 +1,11 @@
 ---
 title: useActionData
+toc: false
 ---
 
 # `useActionData`
+
+<docs-info>This hook is simply a re-export of [React Router's `useActionData`][rr-useactiondata].</docs-info>
 
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
@@ -100,7 +103,7 @@ When using `<Form>` (instead of `<form>` or `<Form reloadDocument>`), Remix _doe
 
 <docs-info>Remix client-side navigation does not resubmit forms on pop events like browsers.</docs-info>
 
-Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't ever want this to happen.
+Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't want this to happen.
 
 For example, consider this user flow:
 
@@ -151,6 +154,8 @@ If you're using `<Form>` and don't care to support the cases above, you don't ne
 
 <docs-info>In general, if the form validation fails, return data from the action and render it in the component. But, once you actually change data (in your database, or otherwise), you should redirect.</docs-info>
 
+<docs-info>For more information and usage, please refer to the [React Router `useActionData` docs][rr-useactiondata].</docs-info>
+
 See also:
 
 - [`action`][action]
@@ -158,3 +163,4 @@ See also:
 
 [action]: ../route/action
 [usetransition]: ../hooks/use-transition
+[rr-useactiondata]: https://reactrouter.com/hooks/use-action-data

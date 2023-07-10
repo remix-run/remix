@@ -55,13 +55,13 @@ We can do this on the server using the [strangler pattern][strangler-pattern] so
 
 For example, pseudo code for this might look like the following, where we enable via a flag during local development and potentially unit/integration tests. We can throw exceptions anytime the new static handler results in different SSR data. Once we're confident, we delete the current code and remove the flag conditional.
 
-```js
+```tsx
 // Runtime-agnostic flag to enable behavior, will always be committed as
 // `false` initially, and toggled to true during local dev
 const ENABLE_REMIX_ROUTER = false;
 
 async function handleDocumentRequest({ request }) {
-  let appState = {
+  const appState = {
     trackBoundaries: true,
     trackCatchBoundaries: true,
     catchBoundaryRouteId: null,
@@ -73,14 +73,14 @@ async function handleDocumentRequest({ request }) {
 
   // ... do all the current stuff
 
-  let serverHandoff = {
+  const serverHandoff = {
     actionData,
     appState: appState,
     matches: entryMatches,
     routeData,
   };
 
-  let entryContext = {
+  const entryContext = {
     ...serverHandoff,
     manifest: build.assets,
     routeModules,
@@ -90,8 +90,8 @@ async function handleDocumentRequest({ request }) {
   // If the flag is enabled, process the request again with the new static
   // handler and confirm we get the same data on the other side
   if (ENABLE_REMIX_ROUTER) {
-    let staticHandler = unstable_createStaticHandler(routes);
-    let context = await staticHandler.query(request);
+    const staticHandler = unstable_createStaticHandler(routes);
+    const context = await staticHandler.query(request);
 
     // Note: == only used for brevity ;)
     assert(entryContext.matches === context.matches);

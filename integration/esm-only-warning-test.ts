@@ -10,6 +10,9 @@ test.beforeAll(async () => {
 
   await createFixtureProject({
     buildStdio,
+    config: {
+      future: { v2_routeConvention: true },
+    },
     files: {
       "package.json": json({
         name: "remix-integration-9v4bpv66vd",
@@ -24,6 +27,7 @@ test.beforeAll(async () => {
           "@remix-run/node": "0.0.0-local-version",
           "@remix-run/react": "0.0.0-local-version",
           "@remix-run/serve": "0.0.0-local-version",
+          isbot: "0.0.0-local-version",
           react: "0.0.0-local-version",
           "react-dom": "0.0.0-local-version",
           "esm-only-no-exports": "0.0.0-local-version",
@@ -35,7 +39,7 @@ test.beforeAll(async () => {
           "@remix-run/dev": "0.0.0-local-version",
         },
       }),
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         import { json } from "@remix-run/node";
         import { Link, useLoaderData } from "@remix-run/react";
         import a from "esm-only-no-exports";
@@ -175,25 +179,11 @@ test.beforeAll(async () => {
 });
 
 test("logs warnings for ESM only packages", async () => {
-  expect(buildOutput).toContain(
-    "esm-only-no-exports is possibly an ESM only package"
-  );
-  expect(buildOutput).toContain(
-    "esm-only-exports is possibly an ESM only package"
-  );
-  expect(buildOutput).not.toContain(
-    "esm-only-exports-b is possibly an ESM only package"
-  );
-  expect(buildOutput).not.toContain(
-    "esm-only-exports-c is possibly an ESM only package"
-  );
-  expect(buildOutput).not.toContain(
-    "cjs-dynamic-import is possibly an ESM only package"
-  );
-  expect(buildOutput).toContain(
-    "esm-only-sub-exports is possibly an ESM only package"
-  );
-  expect(buildOutput).not.toContain(
-    "esm-cjs-exports is possibly an ESM only package"
-  );
+  expect(buildOutput).toContain("esm-only package: esm-only-no-exports");
+  expect(buildOutput).toContain("esm-only package: esm-only-exports");
+  expect(buildOutput).not.toContain("esm-only package: esm-only-exports-b");
+  expect(buildOutput).not.toContain("esm-only package: esm-only-exports-c");
+  expect(buildOutput).not.toContain("esm-only package: cjs-dynamic-import");
+  expect(buildOutput).toContain("esm-only package: esm-only-sub-exports");
+  expect(buildOutput).not.toContain("esm-only package: esm-cjs-exports");
 });

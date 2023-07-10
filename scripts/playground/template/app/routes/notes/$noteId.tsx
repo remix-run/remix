@@ -1,4 +1,4 @@
-import type { ActionArgs, LoaderArgs } from "@remix-run/node";
+import type { V2_MetaFunction, ActionArgs, LoaderArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form, useCatch, useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
@@ -9,13 +9,16 @@ import { requireUserId } from "~/session.server";
 export async function loader({ request, params }: LoaderArgs) {
   let userId = await requireUserId(request);
   invariant(params.noteId, "noteId not found");
-
   let note = await getNote({ userId, id: params.noteId });
   if (!note) {
     throw new Response("Not Found", { status: 404 });
   }
   return json({ note });
 }
+
+export const meta: V2_MetaFunction<typeof loader> = ({ data }) => {
+  return [{ title: "Note: " + data.note.title }];
+};
 
 export async function action({ request, params }: ActionArgs) {
   let userId = await requireUserId(request);

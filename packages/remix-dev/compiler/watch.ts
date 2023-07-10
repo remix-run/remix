@@ -4,11 +4,11 @@ import * as path from "path";
 
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
-import type { AssetsManifest } from "./assets";
-import { logCompileFailure } from "./onCompileFailure";
-import type { CompileOptions } from "./options";
-import { compile, createRemixCompiler, dispose } from "./remixCompiler";
-import { warnOnce } from "./warnings";
+import * as Compiler from "./compiler";
+import type { Context } from "./context";
+import { logThrown } from "./utils/log";
+import { normalizeSlashes } from "../config/routes";
+import type { Manifest } from "../manifest";
 
 function isEntryPoint(config: RemixConfig, file: string): boolean {
   let appFile = path.relative(config.appDirectory, file);
@@ -17,84 +17,84 @@ function isEntryPoint(config: RemixConfig, file: string): boolean {
     config.entryServerFile,
     ...Object.values(config.routes).map((route) => route.file),
   ];
-  return entryPoints.includes(appFile);
+  let normalized = normalizeSlashes(appFile);
+  return entryPoints.includes(normalized);
 }
 
-export type WatchOptions = Partial<CompileOptions> & {
+export type WatchOptions = {
   reloadConfig?(root: string): Promise<RemixConfig>;
-  onRebuildStart?(): void;
-  onRebuildFinish?(durationMs: number, assetsManifest?: AssetsManifest): void;
+  onBuildStart?(ctx: Context): void;
+  onBuildManifest?(manifest: Manifest): void;
+  onBuildFinish?(ctx: Context, durationMs: number, ok: boolean): void;
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;
   onFileDeleted?(file: string): void;
-  onInitialBuild?(durationMs: number): void;
 };
 
 export async function watch(
-  config: RemixConfig,
+  ctx: Context,
   {
-    mode = "development",
-    liveReloadPort,
-    target = "node14",
-    sourcemap = true,
     reloadConfig = readConfig,
-    onWarning = warnOnce,
-    onCompileFailure = logCompileFailure,
-    onRebuildStart,
-    onRebuildFinish,
+    onBuildStart,
+    onBuildManifest,
+    onBuildFinish,
     onFileCreated,
     onFileChanged,
     onFileDeleted,
-    onInitialBuild,
   }: WatchOptions = {}
 ): Promise<() => Promise<void>> {
-  let options: CompileOptions = {
-    mode,
-    liveReloadPort,
-    target,
-    sourcemap,
-    onCompileFailure,
-    onWarning,
-  };
-
   let start = Date.now();
-  let compiler = createRemixCompiler(config, options);
+  let compiler = await Compiler.create(ctx);
+  let compile = () =>
+    compiler.compile({ onManifest: onBuildManifest }).catch((thrown) => {
+      logThrown(thrown);
+      return undefined;
+    });
 
   // initial build
-  await compile(compiler);
-  onInitialBuild?.(Date.now() - start);
+  onBuildStart?.(ctx);
+  let manifest = await compile();
+  onBuildFinish?.(ctx, Date.now() - start, manifest !== undefined);
 
   let restart = debounce(async () => {
-    onRebuildStart?.();
     let start = Date.now();
-    dispose(compiler);
+    compiler.dispose();
 
     try {
-      config = await reloadConfig(config.rootDirectory);
-    } catch (error: unknown) {
-      onCompileFailure(error as Error);
+      ctx.config = await reloadConfig(ctx.config.rootDirectory);
+    } catch (thrown: unknown) {
+      logThrown(thrown);
       return;
     }
+    onBuildStart?.(ctx);
 
-    compiler = createRemixCompiler(config, options);
-    let assetsManifest = await compile(compiler);
-    onRebuildFinish?.(Date.now() - start, assetsManifest);
+    compiler = await Compiler.create(ctx);
+    let manifest = await compile();
+    onBuildFinish?.(ctx, Date.now() - start, manifest !== undefined);
   }, 500);
 
   let rebuild = debounce(async () => {
-    onRebuildStart?.();
+    await compiler.cancel();
+    onBuildStart?.(ctx);
     let start = Date.now();
-    let assetsManifest = await compile(compiler, { onCompileFailure });
-    onRebuildFinish?.(Date.now() - start, assetsManifest);
+    let manifest = await compile();
+    onBuildFinish?.(ctx, Date.now() - start, manifest !== undefined);
   }, 100);
 
-  let toWatch = [config.appDirectory];
-  if (config.serverEntryPoint) {
-    toWatch.push(config.serverEntryPoint);
-  }
+  let toWatch = [ctx.config.appDirectory];
 
-  config.watchPaths?.forEach((watchPath) => {
-    toWatch.push(watchPath);
+  // WARNING: Chokidar returns different paths in change events depending on
+  // whether the path provided to the watcher is absolute or relative. If the
+  // path is absolute, change events will contain absolute paths, and the
+  // opposite for relative paths. We need to ensure that the paths we provide
+  // are always absolute to ensure consistency in change events.
+  if (ctx.config.serverEntryPoint) {
+    toWatch.push(
+      path.resolve(ctx.config.rootDirectory, ctx.config.serverEntryPoint)
+    );
+  }
+  ctx.config.watchPaths?.forEach((watchPath) => {
+    toWatch.push(path.resolve(ctx.config.rootDirectory, watchPath));
   });
 
   let watcher = chokidar
@@ -106,7 +106,7 @@ export async function watch(
         pollInterval: 100,
       },
     })
-    .on("error", (error) => console.error(error))
+    .on("error", (error) => ctx.logger.error(String(error)))
     .on("change", async (file) => {
       onFileChanged?.(file);
       await rebuild();
@@ -115,21 +115,21 @@ export async function watch(
       onFileCreated?.(file);
 
       try {
-        config = await reloadConfig(config.rootDirectory);
-      } catch (error: unknown) {
-        onCompileFailure(error as Error);
+        ctx.config = await reloadConfig(ctx.config.rootDirectory);
+      } catch (thrown: unknown) {
+        logThrown(thrown);
         return;
       }
 
-      await (isEntryPoint(config, file) ? restart : rebuild)();
+      await (isEntryPoint(ctx.config, file) ? restart : rebuild)();
     })
     .on("unlink", async (file) => {
       onFileDeleted?.(file);
-      await (isEntryPoint(config, file) ? restart : rebuild)();
+      await (isEntryPoint(ctx.config, file) ? restart : rebuild)();
     });
 
   return async () => {
     await watcher.close().catch(() => undefined);
-    dispose(compiler);
+    compiler.dispose();
   };
 }

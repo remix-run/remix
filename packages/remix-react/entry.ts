@@ -10,7 +10,7 @@ export interface RemixContextObject {
   serverHandoffString?: string;
   future: FutureConfig;
   abortDelay?: number;
-  dev?: { liveReloadPort: number };
+  dev?: { port: number };
 }
 
 // Additional React-Router information needed at runtime, but not hydrated
@@ -19,12 +19,24 @@ export interface EntryContext extends RemixContextObject {
   staticHandlerContext: StaticHandlerContext;
 }
 
+type Dev = {
+  port?: number;
+  appServerPort?: number;
+  remixRequestHandlerPath?: string;
+  rebuildPollIntervalMs?: number;
+};
+
 export interface FutureConfig {
-  unstable_cssModules: boolean;
-  unstable_cssSideEffectImports: boolean;
-  unstable_vanillaExtract: boolean;
+  v2_dev: boolean | Dev;
+  /** @deprecated Use the `postcss` config option instead */
+  unstable_postcss: boolean;
+  /** @deprecated Use the `tailwind` config option instead */
+  unstable_tailwind: boolean;
   v2_errorBoundary: boolean;
+  v2_headers: boolean;
   v2_meta: boolean;
+  v2_normalizeFormMethod: boolean;
+  v2_routeConvention: boolean;
 }
 
 export interface AssetsManifest {
@@ -35,4 +47,8 @@ export interface AssetsManifest {
   routes: RouteManifest<EntryRoute>;
   url: string;
   version: string;
+  hmr?: {
+    timestamp: number;
+    runtime: string;
+  };
 }

@@ -1,5 +1,96 @@
 # `create-remix`
 
+## 1.18.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.18.1`
+
+## 1.18.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.18.0`
+
+## 1.17.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.17.1`
+
+## 1.17.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.17.0`
+
+## 1.16.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.16.1`
+
+## 1.16.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.16.0`
+
+## 1.15.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.15.0`
+
+## 1.14.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.14.3`
+
+## 1.14.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.14.2`
+
+## 1.14.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.14.1`
+
+## 1.14.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.14.0`
+
+## 1.13.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.13.0`
+
+## 1.12.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.12.0`
+
 ## 1.11.1
 
 ### Patch Changes

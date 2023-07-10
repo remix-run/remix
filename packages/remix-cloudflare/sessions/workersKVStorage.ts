@@ -1,6 +1,7 @@
 import type {
   SessionStorage,
   SessionIdStorageStrategy,
+  SessionData,
 } from "@remix-run/server-runtime";
 
 import { createSessionStorage } from "../implementations";
@@ -24,10 +25,13 @@ interface WorkersKVSessionStorageOptions {
  * The advantage of using this instead of cookie session storage is that
  * KV Store may contain much more data than cookies.
  */
-export function createWorkersKVSessionStorage({
+export function createWorkersKVSessionStorage<
+  Data = SessionData,
+  FlashData = Data
+>({
   cookie,
   kv,
-}: WorkersKVSessionStorageOptions): SessionStorage {
+}: WorkersKVSessionStorageOptions): SessionStorage<Data, FlashData> {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {

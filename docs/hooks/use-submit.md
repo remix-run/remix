@@ -1,8 +1,11 @@
 ---
 title: useSubmit
+toc: false
 ---
 
 # `useSubmit`
+
+<docs-info>This hook is simply a re-export of [React Router's `useSubmit`][rr-usesubmit].</docs-info>
 
 Returns the function that may be used to submit a `<form>` (or some raw `FormData`) to the server using the same process that `<Form>` uses internally `onSubmit`. If you're familiar with React Router's `useNavigate`, you can think about this as the same thing but for `<Form>` instead of `<Link>`.
 
@@ -68,3 +71,7 @@ function useSessionTimeout() {
   }, [submit, transition]);
 }
 ```
+
+<docs-info>For more information and usage, please refer to the [React Router `useSubmit` docs][rr-usesubmit].</docs-info>
+
+[rr-usesubmit]: https://reactrouter.com/hooks/use-submit

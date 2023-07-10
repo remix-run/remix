@@ -24,7 +24,7 @@ import {
 export type GetLoadContextFunction = (
   req: express.Request,
   res: express.Response
-) => AppLoadContext;
+) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler = (
   req: express.Request,
@@ -53,7 +53,7 @@ export function createRequestHandler({
   ) => {
     try {
       let request = createRemixRequest(req, res);
-      let loadContext = getLoadContext?.(req, res);
+      let loadContext = await getLoadContext?.(req, res);
 
       let response = (await handleRequest(
         request,
@@ -93,8 +93,7 @@ export function createRemixRequest(
   req: express.Request,
   res: express.Response
 ): NodeRequest {
-  let origin = `${req.protocol}://${req.get("host")}`;
-  let url = new URL(req.url, origin);
+  let url = new URL(`${req.protocol}://${req.get("host")}${req.url}`);
 
   // Abort action/loaders once we can no longer write a response
   let controller = new NodeAbortController();

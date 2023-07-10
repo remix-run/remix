@@ -1,5 +1,6 @@
 ---
 title: Meta
+toc: false
 ---
 
 # `<Meta />`

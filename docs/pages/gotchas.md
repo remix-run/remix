@@ -4,7 +4,7 @@ title: Gotchas
 
 # Gotchas
 
-As we've built Remix, we've been laser focused on production results and scalability for your users and team working in it. Because of this, some developer experience and ecosystem compatibility issues exist that we haven't smoothed over yet.
+As we've built Remix, we've been laser focused on production results and scalability for your users and team working in it. Because of this, some developer-experience and ecosystem-compatibility issues exist that we haven't smoothed over yet.
 
 This document should help you get over these bumps.
 
@@ -18,7 +18,7 @@ TypeError: Cannot read properties of undefined (reading 'root')
 
 For example, you can't import "fs-extra" directly into a route module:
 
-```jsx bad filename=app/routes/index.jsx lines=[2] nocopy
+```tsx bad filename=app/routes/index.tsx lines=[2] nocopy
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import fs from "fs-extra";
 
@@ -33,13 +33,13 @@ export default function SomeRoute() {
 
 To fix it, move the import into a different module named `*.server.js` or `*.server.ts` and import from there. In our example here, we create a new file at `utils/fs-extra.server.js`:
 
-```js filename=app/utils/fs-extra.server.js
+```ts filename=app/utils/fs-extra.server.ts
 export { default } from "fs-extra";
 ```
 
 And then change our import in the route to the new "wrapper" module:
 
-```jsx filename=app/routes/index.jsx lines=[3]
+```tsx filename=app/routes/index.tsx lines=[3]
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import fs from "~/utils/fs-extra.server";
@@ -61,7 +61,7 @@ For example, [Remix upload handlers like `unstable_createFileUploadHandler` and 
 
 So instead of doing:
 
-```jsx bad filename=app/routes/some-route.jsx lines=[3-6]
+```tsx bad filename=app/routes/some-route.tsx lines=[3-6]
 import { unstable_createFileUploadHandler } from "@remix-run/node"; // or cloudflare/deno
 
 const uploadHandler = unstable_createFileUploadHandler({
@@ -76,7 +76,7 @@ export async function action() {
 
 You should be doing:
 
-```jsx filename=app/routes/some-route.jsx good lines=[4-7]
+```tsx filename=app/routes/some-route.tsx good lines=[4-7]
 import { unstable_createFileUploadHandler } from "@remix-run/node"; // or cloudflare/deno
 
 export async function action() {
@@ -93,7 +93,7 @@ export async function action() {
 
 Remix uses "tree shaking" to remove server code from browser bundles. Anything inside of Route module `loader`, `action`, and `headers` exports will be removed. It's a great approach but suffers from ecosystem compatibility.
 
-When you import a third party module, Remix checks the `package.json` of that package for `"sideEffects": false`. If that is configured, Remix knows it can safely remove the code from the client bundles. Without it, the imports remain because code may depend on the module's side effects (like setting global polyfills, etc.).
+When you import a third-party module, Remix checks the `package.json` of that package for `"sideEffects": false`. If that is configured, Remix knows it can safely remove the code from the client bundles. Without it, the imports remain because code may depend on the module's side effects (like setting global polyfills, etc.).
 
 ## Importing ESM Packages
 
@@ -106,7 +106,7 @@ Instead change the require of /app/project/node_modules/dot-prop/index.js in /ap
 
 To fix it, add the ESM package to the `serverDependenciesToBundle` option in your `remix.config.js` file.
 
-In our case here we're using the `dot-prop` package, so we would do it like this:
+In our case here, we're using the `dot-prop` package, so we would do it like this:
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
@@ -168,4 +168,19 @@ This is a hydration warning from React, and is most likely due to one of your br
 
 Check out the page in incognito mode, the warning should disappear.
 
+## CSS bundle being incorrectly tree-shaken
+
+When using [CSS bundling features][css-bundling] in combination with `export *` (e.g. when using an index file like `components/index.ts` that re-exports from all sub-directories) you may find that styles from the re-exported modules are missing from the build output.
+
+This is due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue]. As a workaround, you should use named re-exports instead.
+
+```diff
+-export * from "./Button";
++export { Button } from "./Button";
+```
+
+Note that, even if this issue didn't exist, we'd still recommend using named re-exports! While it may introduce a bit more boilerplate, you get explicit control over the module's public interface rather than inadvertently exposing everything.
+
 [remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../utils/parse-multipart-form-data#uploadhandler
+[css-bundling]: ../guides/styling#css-bundling
+[esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370

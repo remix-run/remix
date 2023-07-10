@@ -30,7 +30,7 @@ import { isBinaryType } from "./binaryTypes";
 export type GetLoadContextFunction = (
   event: HandlerEvent,
   context: HandlerContext
-) => AppLoadContext;
+) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler = Handler;
 
@@ -47,7 +47,7 @@ export function createRequestHandler({
 
   return async (event, context) => {
     let request = createRemixRequest(event);
-    let loadContext = getLoadContext?.(event, context);
+    let loadContext = await getLoadContext?.(event, context);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
@@ -63,7 +63,7 @@ export function createRemixRequest(event: HandlerEvent): NodeRequest {
   } else {
     let origin = event.headers.host;
     let rawPath = getRawPath(event);
-    url = new URL(rawPath, `http://${origin}`);
+    url = new URL(`http://${origin}${rawPath}`);
   }
 
   // Note: No current way to abort these for Netlify, but our router expects

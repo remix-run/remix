@@ -2,7 +2,6 @@ import path from "path";
 import { sync as spawnSync } from "cross-spawn";
 import { NetlifyAPI } from "netlify";
 import fse from "fs-extra";
-import { createApp } from "@remix-run/dev";
 import PackageJson from "@npmcli/package-json";
 
 import {
@@ -20,15 +19,6 @@ let APP_NAME = getAppName("netlify");
 let PROJECT_DIR = getAppDirectory(APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:3000";
 
-async function createNewApp() {
-  await createApp({
-    appTemplate: "netlify",
-    installDeps: false,
-    useTypeScript: true,
-    projectDir: PROJECT_DIR,
-  });
-}
-
 let client = new NetlifyAPI(process.env.NETLIFY_AUTH_TOKEN);
 
 function createNetlifySite() {
@@ -43,7 +33,20 @@ let spawnOpts = getSpawnOpts(PROJECT_DIR, {
 });
 
 async function createAndDeployApp() {
-  await createNewApp();
+  // create a new remix app
+  spawnSync(
+    "npx",
+    [
+      "--yes",
+      "create-remix@latest",
+      PROJECT_DIR,
+      "--template",
+      "netlify",
+      "--no-install",
+      "--typescript",
+    ],
+    getSpawnOpts()
+  );
 
   // validate dependencies are available
   let [valid, errors] = await validatePackageVersions(PROJECT_DIR);

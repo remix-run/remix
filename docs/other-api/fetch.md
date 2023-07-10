@@ -8,13 +8,13 @@ When browsers added `window.fetch`, they also add three other objects: `Headers`
 
 When you do this:
 
-```js
+```ts
 const res = await fetch(url);
 ```
 
 That `res` is an instance of `Response`. And you can make a response yourself:
 
-```js
+```ts
 const res = new Response(
   JSON.stringify({ hello: "there" })
 );

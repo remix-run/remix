@@ -1,5 +1,98 @@
 # `@remix-run/architect`
 
+## 1.18.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.18.1`
+
+## 1.18.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.18.0`
+
+## 1.17.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.17.1`
+
+## 1.17.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.17.0`
+
+## 1.16.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.16.1`
+
+## 1.16.0
+
+### Patch Changes
+
+- feat: support async `getLoadContext` in all adapters ([#6170](https://github.com/remix-run/remix/pull/6170))
+- Updated dependencies:
+  - `@remix-run/node@1.16.0`
+
+## 1.15.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.15.0`
+
+## 1.14.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.14.3`
+
+## 1.14.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.14.2`
+
+## 1.14.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.14.1`
+
+## 1.14.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.14.0`
+
+## 1.13.0
+
+### Patch Changes
+
+- Fix fetch `Request` creation for incoming URLs with double slashes ([#5336](https://github.com/remix-run/remix/pull/5336))
+- Updated dependencies:
+  - `@remix-run/node@1.13.0`
+
+## 1.12.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.12.0`
+
 ## 1.11.1
 
 ### Patch Changes

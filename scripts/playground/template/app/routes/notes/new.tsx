@@ -1,4 +1,4 @@
-import type { ActionArgs } from "@remix-run/node";
+import type { ActionArgs, V2_MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 import * as React from "react";
@@ -31,6 +31,10 @@ export async function action({ request }: ActionArgs) {
 
   return redirect(`/notes/${note.id}`);
 }
+
+export const meta: V2_MetaFunction = () => {
+  return [{ title: "Create a Note" }];
+};
 
 export default function NewNotePage() {
   let actionData = useActionData<typeof action>();

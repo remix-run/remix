@@ -3,14 +3,10 @@
   "private": true,
   "sideEffects": false,
   "scripts": {
-    "build": "run-s \"build:*\"",
-    "build:css": "npm run generate:css -- --minify",
-    "build:remix": "node ./node_modules/@remix-run/dev/dist/cli build",
+    "build": "node ./node_modules/@remix-run/dev/dist/cli build",
     "dev": "run-p \"dev:*\"",
-    "dev:css": "cross-env NODE_ENV=development npm run generate:css -- --watch",
     "dev:remix": "cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli watch",
     "dev:server": "cross-env NODE_ENV=development node --inspect --require ./node_modules/dotenv/config ./server.js",
-    "generate:css": "tailwindcss -o ./app/styles/tailwind.css",
     "setup": "prisma generate && prisma migrate deploy && prisma db seed",
     "start": "cross-env NODE_ENV=production node --inspect --require ./node_modules/dotenv/config ./server.js"
   },
@@ -21,6 +17,7 @@
   ],
   "dependencies": {
     "@prisma/client": "^3.15.2",
+    "@remix-run/css-bundle": "*",
     "@remix-run/express": "*",
     "@remix-run/node": "*",
     "@remix-run/react": "*",
@@ -50,10 +47,10 @@
     "tailwindcss": "^3.1.8",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.1.0",
-    "typescript": "^4.8.2"
+    "typescript": "^5.0.4"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   },
   "prisma": {
     "seed": "ts-node --require tsconfig-paths/register prisma/seed.ts"

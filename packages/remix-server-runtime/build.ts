@@ -1,6 +1,7 @@
 import type { DataFunctionArgs } from "./routeModules";
 import type { AssetsManifest, EntryContext, FutureConfig } from "./entry";
 import type { ServerRouteManifest } from "./routes";
+import type { AppLoadContext } from "./data";
 
 /**
  * The output of the compiler for the server build.
@@ -14,7 +15,6 @@ export interface ServerBuild {
   publicPath: string;
   assetsBuildDirectory: string;
   future: FutureConfig;
-  dev?: { liveReloadPort: number };
 }
 
 export interface HandleDocumentRequestFunction {
@@ -22,12 +22,17 @@ export interface HandleDocumentRequestFunction {
     request: Request,
     responseStatusCode: number,
     responseHeaders: Headers,
-    context: EntryContext
+    context: EntryContext,
+    loadContext: AppLoadContext
   ): Promise<Response> | Response;
 }
 
 export interface HandleDataRequestFunction {
   (response: Response, args: DataFunctionArgs): Promise<Response> | Response;
+}
+
+export interface HandleErrorFunction {
+  (error: unknown, args: DataFunctionArgs): void;
 }
 
 /**
@@ -37,4 +42,5 @@ export interface HandleDataRequestFunction {
 export interface ServerEntryModule {
   default: HandleDocumentRequestFunction;
   handleDataRequest?: HandleDataRequestFunction;
+  handleError?: HandleErrorFunction;
 }

@@ -16,6 +16,9 @@ test.describe("ErrorBoundary", () => {
     };
 
     fixture = await createFixture({
+      config: {
+        future: { v2_routeConvention: true },
+      },
       files: {
         "app/root.jsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -36,7 +39,7 @@ test.describe("ErrorBoundary", () => {
         }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import { Link, Form } from "@remix-run/react";
 
           export default function () {
@@ -106,39 +109,35 @@ test.describe("ErrorBoundary", () => {
   }
 
   test("returns a 400 x-remix-error on a data fetch to a path with no loader", async () => {
-    let response = await fixture.requestData("/", "routes/index");
+    let response = await fixture.requestData("/", "routes/_index");
     expect(response.status).toBe(400);
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
     assertConsoleError(
-      'Error: You made a GET request to "/" but did not provide a `loader` for route "routes/index", so there is no way to handle the request.'
+      'Error: You made a GET request to "/" but did not provide a `loader` for route "routes/_index", so there is no way to handle the request.'
     );
   });
 
   test("returns a 405 x-remix-error on a data fetch POST to a path with no action", async () => {
-    let response = await fixture.requestData("/?index", "routes/index", {
+    let response = await fixture.requestData("/?index", "routes/_index", {
       method: "POST",
     });
     expect(response.status).toBe(405);
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
     assertConsoleError(
-      'Error: You made a POST request to "/" but did not provide an `action` for route "routes/index", so there is no way to handle the request.'
+      'Error: You made a POST request to "/" but did not provide an `action` for route "routes/_index", so there is no way to handle the request.'
     );
   });
 
   test("returns a 405 x-remix-error on a data fetch with a bad method", async () => {
-    let response = await fixture.requestData(
-      `/loader-return-json`,
-      "routes/loader-return-json",
-      {
+    expect(() =>
+      fixture.requestData("/loader-return-json", "routes/loader-return-json", {
         method: "TRACE",
-      }
+      })
+    ).rejects.toThrowError(
+      `Failed to construct 'Request': 'TRACE' HTTP method is unsupported.`
     );
-    expect(response.status).toBe(405);
-    expect(response.headers.get("X-Remix-Error")).toBe("yes");
-    expect(await response.text()).toMatch("Unexpected Server Error");
-    assertConsoleError('Error: Invalid request method "TRACE"');
   });
 
   test("returns a 403 x-remix-error on a data fetch GET to a bad path", async () => {

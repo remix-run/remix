@@ -1,8 +1,11 @@
 ---
 title: useLoaderData
+toc: false
 ---
 
 # `useLoaderData`
+
+<docs-info>This hook is simply a re-export of [React Router's `useLoaderData`][rr-useloaderdata].</docs-info>
 
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
 
@@ -21,3 +24,7 @@ export default function Invoices() {
   // ...
 }
 ```
+
+<docs-info>For more information and usage, please refer to the [React Router `useLoaderData` docs][rr-useloaderdata].</docs-info>
+
+[rr-useloaderdata]: https://reactrouter.com/hooks/use-loader-data

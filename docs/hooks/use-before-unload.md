@@ -1,8 +1,11 @@
 ---
 title: useBeforeUnload
+toc: false
 ---
 
 # `useBeforeUnload`
+
+<docs-info>This hook is simply a re-export of [React Router's `useBeforeUnload`][rr-usebeforeunload].</docs-info>
 
 This hook is just a helper around `window.onbeforeunload`.
 
@@ -35,3 +38,7 @@ function SomeForm() {
   return <>{/*... */}</>;
 }
 ```
+
+<docs-info>For more information and usage, please refer to the [React Router `useBeforeUnload` docs][rr-usebeforeunload].</docs-info>
+
+[rr-usebeforeunload]: https://reactrouter.com/hooks/use-before-unload

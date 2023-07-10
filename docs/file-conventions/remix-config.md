@@ -6,7 +6,7 @@ title: remix.config.js
 
 This file has a few build and development configuration options, but does not actually run on your server.
 
-```tsx filename=remix.config.js
+```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
@@ -19,7 +19,6 @@ module.exports = {
     });
   },
   serverBuildPath: "build/index.js",
-  serverBuildTarget: "node-cjs",
 };
 ```
 
@@ -28,7 +27,7 @@ module.exports = {
 The path to the `app` directory, relative to remix.config.js. Defaults to
 `"app"`.
 
-```js
+```js filename=remix.config.js
 // default
 exports.appDirectory = "./app";
 
@@ -67,12 +66,16 @@ dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
 The URL prefix of the browser build with a trailing slash. Defaults to
 `"/build/"`. This is the path the browser will use to find assets.
 
+## postcss
+
+Whether to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `false`.
+
 ## routes
 
 A function for defining custom routes, in addition to those already defined
 using the filesystem convention in `app/routes`. Both sets of routes will be merged.
 
-```tsx
+```js filename=remix.config.js
 exports.routes = async (defineRoutes) => {
   // If you need to do async work, do it before calling `defineRoutes`, we use
   // the call stack of `route` inside to set nesting.
@@ -103,7 +106,8 @@ either a `.js` or `.ts` file extension.
 ## serverBuildDirectory
 
 <docs-warning>This option is deprecated and will likely be removed in a future
-stable release. Use [`serverBuildPath`][server-build-path] instead.</docs-warning>
+stable release. Use [`serverBuildPath`][server-build-path]
+instead.</docs-warning>
 
 The path to the server build, relative to `remix.config.js`. Defaults to
 "build". This needs to be deployed to your server.
@@ -111,12 +115,17 @@ The path to the server build, relative to `remix.config.js`. Defaults to
 ## serverBuildPath
 
 The path to the server build file, relative to `remix.config.js`. This file
-should end in a `.js` extension and should be deployed to your server.
-
-If omitted, the default build path will be based on your
-[`serverBuildTarget`][server-build-target].
+should end in a `.js` extension and should be deployed to your server. Defaults
+to `"build/index.js"`.
 
 ## serverBuildTarget
+
+<docs-warning>This option is deprecated and will be removed in the next major version release. Use a combination of [`publicPath`][public-path],
+[`serverBuildPath`][server-build-path], [`serverConditions`][server-conditions],
+[`serverDependenciesToBundle`][server-dependencies-to-bundle]
+[`serverMainFields`][server-main-fields], [`serverMinify`][server-minify],
+[`serverModuleFormat`][server-module-format] and/or
+[`serverPlatform`][server-platform] instead.</docs-warning>
 
 The target of the server build. Defaults to `"node-cjs"`.
 
@@ -130,13 +139,24 @@ The `serverBuildTarget` can be one of the following:
 - [`"node-cjs"`][node-cjs]
 - [`"vercel"`][vercel]
 
+## serverConditions
+
+The order of conditions to use when resolving server dependencies' `exports`
+field in `package.json`.
+
 ## serverDependenciesToBundle
 
-A list of regex patterns that determines if a module is transpiled and included in the server bundle. This can be useful when consuming ESM only packages in a CJS build, or when consuming packages with [CSS side-effect imports][css-side-effect-imports].
+A list of regex patterns that determines if a module is transpiled and included
+in the server bundle. This can be useful when consuming ESM only packages in a
+CJS build, or when consuming packages with [CSS side effect
+imports][css-side-effect-imports].
 
-For example, the `unified` ecosystem is all ESM-only. Let's also say we're using a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be able to consume those packages in a CJS app without having to use dynamic imports:
+For example, the `unified` ecosystem is all ESM-only. Let's also say we're using
+a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be
+able to consume those packages in a CJS app without having to use dynamic
+imports:
 
-```ts filename=remix.config.js lines=[8-13]
+```js filename=remix.config.js lines=[8-13]
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
@@ -153,11 +173,38 @@ module.exports = {
 };
 ```
 
+If you want to bundle all server dependencies, you can set
+`serverDependenciesToBundle` to `"all"`.
+
+## serverMainFields
+
+The order of main fields to use when resolving server dependencies. Defaults to
+`["main", "module"]` when `serverModuleFormat` is set to `"cjs"`. Defaults to
+`["module", "main"]` when `serverModuleFormat` is set to `"esm"`.
+
+## serverMinify
+
+Whether to minify the server build in production or not. Defaults to `false`.
+
+## serverModuleFormat
+
+The output format of the server build, which can either be `"cjs"` or `"esm"`.
+Defaults to `"cjs"`.
+
+## serverPlatform
+
+The platform the server build is targeting, which can either be `"neutral"` or
+`"node"`. Defaults to `"node"`.
+
+## tailwind
+
+Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `false`.
+
 ## watchPaths
 
 An array, string, or async function that defines custom directories, relative to the project root, to watch while running [remix dev][remix-dev]. These directories are in addition to [`appDirectory`][app-directory].
 
-```tsx
+```js filename=remix.config.js
 exports.watchPaths = async () => {
   return ["./some/path/*"];
 };
@@ -173,8 +220,14 @@ There are a few conventions that Remix uses you should be aware of.
 <docs-info>[Dilum Sanjaya][dilum-sanjaya] made [an awesome visualization][an-awesome-visualization] of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
 
 [minimatch]: https://www.npmjs.com/package/minimatch
+[public-path]: #publicpath
 [server-build-path]: #serverbuildpath
-[server-build-target]: #serverbuildtarget
+[server-conditions]: #serverconditions
+[server-dependencies-to-bundle]: #serverdependenciestobundle
+[server-main-fields]: #servermainfields
+[server-minify]: #serverminify
+[server-module-format]: #servermoduleformat
+[server-platform]: #serverplatform
 [arc]: https://arc.codes
 [cloudflare-pages]: https://pages.cloudflare.com
 [cloudflare-workers]: https://workers.cloudflare.com
@@ -187,3 +240,5 @@ There are a few conventions that Remix uses you should be aware of.
 [remix-dev]: ../other-api/dev#remix-dev
 [app-directory]: #appDirectory
 [css-side-effect-imports]: ../guides/styling#css-side-effect-imports
+[postcss]: https://postcss.org
+[tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives

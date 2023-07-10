@@ -4,7 +4,7 @@ title: Module Constraints
 
 # Module Constraints
 
-In order for Remix to run your app in both the server and browser environments, your application modules and third party dependencies need to be careful about **module side effects**.
+In order for Remix to run your app in both the server and browser environments, your application modules and third-party dependencies need to be careful about **module side effects**.
 
 - **Server-only code** - Remix will remove server-only code but it can't if you have module side effects that use server-only code.
 - **Browser-only code** - Remix renders on the server so your modules can't have module side effects or first-rendering logic that call browser-only APIs
@@ -22,8 +22,8 @@ Consider a route module that exports `loader`, `meta`, and a component:
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db";
+import PostsView from "../PostsView";
 
 export async function loader() {
   return json(await prisma.post.findMany());
@@ -43,7 +43,7 @@ The server needs everything in this file but the browser only needs the componen
 
 To remove the server code from the browser bundles, the Remix compiler creates a proxy module in front of your route and bundles that instead. The proxy for this route would look like:
 
-```ts
+```tsx
 export { meta, default } from "./routes/posts.tsx";
 ```
 
@@ -80,8 +80,8 @@ Taking our code from earlier, we saw how the compiler can remove the exports and
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db";
+import PostsView from "../PostsView";
 
 console.log(prisma);
 
@@ -101,11 +101,11 @@ export default function Posts() {
 
 That `console.log` _does something_. The module is imported and then immediately logs to the console. The compiler won't remove it because it has to run when the module is imported. It will bundle something like this:
 
-```tsx bad lines=[4,6]
+```tsx bad lines=[3,6]
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db"; //😬
+import PostsView from "../PostsView";
 
 console.log(prisma); //🥶
 
@@ -119,7 +119,7 @@ export default function Posts() {
 }
 ```
 
-The loader is gone but the prisma dependency stayed! Had we logged something harmless like `console.log("hello!")` it would be fine. But we logged the `prisma` module so the browser's gonna have a hard time with that.
+The loader is gone but the prisma dependency stayed! Had we logged something harmless like `console.log("hello!")` it would be fine. But we logged the `prisma` module so the browser's going to have a hard time with that.
 
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
@@ -127,8 +127,8 @@ To fix this, remove the side effect by simply moving the code _into the loader_.
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db";
+import PostsView from "../PostsView";
 
 export async function loader() {
   console.log(prisma);
@@ -153,7 +153,7 @@ Occasionally, the build may have trouble tree-shaking code that should only run 
 
 Some Remix newcomers try to abstract their loaders with "higher order functions". Something like this:
 
-```js bad filename=app/http.js
+```ts bad filename=app/http.ts
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 export function removeTrailingSlash(loader) {
@@ -175,19 +175,21 @@ export function removeTrailingSlash(loader) {
 
 And then try to use it like this:
 
-```js bad filename=app/root.js
+```ts bad filename=app/root.ts
+import { json } from "@remix-run/node"; // or cloudflare/deno
+
 import { removeTrailingSlash } from "~/http";
 
 export const loader = removeTrailingSlash(({ request }) => {
-  return { some: "data" };
+  return json({ some: "data" });
 });
 ```
 
 You can probably now see that this is a module side effect so the compiler can't prune out the `removeTrailingSlash` code.
 
-This type of abstraction is introduced to try to return a response early. Since you can throw a Response in a loader, we can make this simpler and remove the module side effect at the same time so that the server code can be pruned:
+This type of abstraction is introduced to try to return a response early. Since you can throw a Response in a `loader`, we can make this simpler and remove the module side effect at the same time so that the server code can be pruned:
 
-```js filename=app/http.js
+```ts filename=app/http.ts
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 export function removeTrailingSlash(url) {
@@ -201,7 +203,7 @@ export function removeTrailingSlash(url) {
 
 And then use it like this:
 
-```tsx bad filename=app/root.tsx
+```tsx filename=app/root.tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import { removeTrailingSlash } from "~/http";
@@ -245,27 +247,29 @@ Unlike the browser bundles, Remix doesn't try to remove _browser only code_ from
 
 <docs-error>This will break your app:</docs-error>
 
-```js bad lines=3
+```ts bad lines=3
 import { loadStripe } from "@stripe/stripe-js";
 
 const stripe = await loadStripe(window.ENV.stripe);
 
-export async function redirectToStripeCheckout(sessionId) {
+export async function redirectToStripeCheckout(
+  sessionId: string
+) {
   return stripe.redirectToCheckout({ sessionId });
 }
 ```
 
 <docs-info>You need to avoid any browser-only module side effects like accessing window or initializing APIs in the module scope.</docs-info>
 
-### Initializing Browser Only APIs
+### Initializing Browser-Only APIs
 
-The most common scenario is initializing a third party API when your module is imported. There are a couple ways to easily deal with this.
+The most common scenario is initializing a third-party API when your module is imported. There are a couple ways to easily deal with this.
 
 #### Document Guard
 
 This ensures the library is only initialized if there is a `document`, meaning you're in the browser. We recommend `document` over `window` because server runtimes like Deno have a global `window` available.
 
-```js [3]
+```ts lines=[3]
 import firebase from "firebase/app";
 
 if (typeof document !== "undefined") {
@@ -279,10 +283,12 @@ export { firebase };
 
 This strategy defers initialization until the library is actually used:
 
-```js [4]
+```ts lines=[4]
 import { loadStripe } from "@stripe/stripe-js";
 
-export async function redirectToStripeCheckout(sessionId) {
+export async function redirectToStripeCheckout(
+  sessionId: string
+) {
   const stripe = await loadStripe(window.ENV.stripe);
   return stripe.redirectToCheckout({ sessionId });
 }
@@ -290,7 +296,7 @@ export async function redirectToStripeCheckout(sessionId) {
 
 You may want to avoid initializing the library multiple times by storing it in a module-scoped variable.
 
-```js
+```ts
 import { loadStripe } from "@stripe/stripe-js";
 
 let _stripe;
@@ -301,7 +307,9 @@ async function getStripe() {
   return _stripe;
 }
 
-export async function redirectToStripeCheckout(sessionId) {
+export async function redirectToStripeCheckout(
+  sessionId: string
+) {
   const stripe = await getStripe();
   return stripe.redirectToCheckout({ sessionId });
 }
@@ -315,8 +323,8 @@ Another common case is code that calls browser-only APIs while rendering. When s
 
 <docs-error>This will break your app because the server will try to use local storage</docs-error>
 
-```js bad lines=2
-function useLocalStorage(key) {
+```ts bad lines=2
+function useLocalStorage(key: string) {
   const [state, setState] = useState(
     localStorage.getItem(key)
   );
@@ -331,8 +339,8 @@ function useLocalStorage(key) {
 
 You can fix this by moving the code into `useEffect`, which only runs in the browser.
 
-```js [2,4-6]
-function useLocalStorage(key) {
+```tsx lines=[2,4-6]
+function useLocalStorage(key: string) {
   const [state, setState] = useState(null);
 
   useEffect(() => {
@@ -364,7 +372,7 @@ It is **not** good for setting state that is rendered inside of elements. Just m
 
 If you know you're calling `useLayoutEffect` correctly and just want to silence the warning, a popular solution in libraries is to create your own hook that doesn't call anything on the server. `useLayoutEffect` only runs in the browser anyway, so this should do the trick. **Please use this carefully, because the warning is there for a good reason!**
 
-```js
+```ts
 import * as React from "react";
 
 const canUseDOM = !!(

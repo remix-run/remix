@@ -5,6 +5,7 @@ import {
   createFixture,
   js,
   mdx,
+  css,
 } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
@@ -15,9 +16,12 @@ test.describe("mdx", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      config: {
+        future: { v2_routeConvention: true },
+      },
       files: {
         "app/root.jsx": js`
-        import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
             return (
@@ -51,7 +55,7 @@ test.describe("mdx", () => {
           }
         `,
 
-        "app/routes/blog/post.mdx": mdx`---
+        "app/routes/blog.post.mdx": mdx`---
 meta:
   title: My First Post
   description: Isn't this awesome?
@@ -61,8 +65,10 @@ headers:
   Cache-Control: no-cache
 ---
 
+import stylesheetHref from "../app.css"
+
 export const links = () => [
-  { rel: "stylesheet", href: "app.css" }
+  { rel: "stylesheet", href: stylesheetHref }
 ]
 
 import { useLoaderData } from '@remix-run/react';
@@ -85,6 +91,13 @@ export function ComponentUsingData() {
         "app/routes/basic.mdx": mdx`
 # This is some basic markdown!
         `.trim(),
+
+        "app/app.css": css`
+          body {
+            background-color: #eee;
+            color: #000;
+          }
+        `,
       },
     });
     appFixture = await createAppFixture(fixture);
@@ -112,6 +125,8 @@ export function ComponentUsingData() {
     expect(await app.getHtml("title")).toMatch("My First Post");
     expect(await app.getHtml("#loader")).toMatch(/Mambo Number:.+5/s);
     expect(await app.getHtml("#handle")).toMatch("abc");
-    expect(await app.getHtml('link[rel="stylesheet"]')).toMatch("app.css");
+    expect(await app.getHtml('link[rel="stylesheet"]')).toMatch(
+      /app-[\dA-Z]+\.css/
+    );
   });
 });

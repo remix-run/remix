@@ -22,6 +22,21 @@ test.describe("compiler", () => {
     fixture = await createFixture({
       setup: "node",
       files: {
+        // We need a custom config file here to test usage of `getDependenciesToBundle`
+        // since this can't be serialized from the fixture object.
+        "remix.config.js": js`
+          let { getDependenciesToBundle } = require("@remix-run/dev");
+          module.exports = {
+            future: {
+              v2_routeConvention: true,
+            },
+            serverDependenciesToBundle: [
+              "esm-only-pkg",
+              "esm-only-single-export",
+              ...getDependenciesToBundle("esm-only-exports-pkg"),
+            ],
+          };
+        `,
         "app/fake.server.js": js`
           export const hello = "server";
         `,
@@ -33,8 +48,7 @@ test.describe("compiler", () => {
           import { hello as serverHello } from "./fake.server.js";
           export default clientHello || serverHello;
         `,
-
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import fake from "~/fake.js";
 
           export default function Index() {
@@ -100,17 +114,6 @@ test.describe("compiler", () => {
           export default function PackageWithSubModule() {
             return <div id="package-with-submodule">{submodule()}</div>;
           }
-        `,
-
-        "remix.config.js": js`
-          let { getDependenciesToBundle } = require("@remix-run/dev");
-          module.exports = {
-            serverDependenciesToBundle: [
-              "esm-only-pkg",
-              "esm-only-single-export",
-              ...getDependenciesToBundle("esm-only-exports-pkg"),
-            ],
-          };
         `,
         "node_modules/esm-only-pkg/package.json": json({
           name: "esm-only-pkg",
@@ -385,9 +388,12 @@ test.describe("compiler", () => {
 
       await expect(() =>
         createFixtureProject({
+          config: {
+            future: { v2_routeConvention: true },
+          },
           buildStdio,
           files: {
-            "app/routes/index.jsx": js`
+            "app/routes/_index.jsx": js`
             import { json } from "@remix-run/node";
             import { useLoaderData } from "@remix-run/react";
             import notInstalledMain from "some-not-installed-module";
@@ -419,13 +425,19 @@ test.describe("compiler", () => {
         });
       });
 
-      let importer = path.join("app", "routes", "index.jsx");
+      let importer = path.join("app", "routes", "_index.jsx");
 
       expect(buildOutput).toContain(
-        `The path "some-not-installed-module" is imported in ${importer} but "some-not-installed-module" was not found in your node_modules. Did you forget to install it?`
+        `could not resolve "some-not-installed-module"`
       );
       expect(buildOutput).toContain(
-        `The path "some-not-installed-module/sub" is imported in ${importer} but "some-not-installed-module/sub" was not found in your node_modules. Did you forget to install it?`
+        `You imported "some-not-installed-module" in ${importer},`
+      );
+      expect(buildOutput).toContain(
+        `could not resolve "some-not-installed-module/sub"`
+      );
+      expect(buildOutput).toContain(
+        `You imported "some-not-installed-module/sub" in ${importer},`
       );
     });
   });
