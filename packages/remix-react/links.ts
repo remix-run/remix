@@ -254,9 +254,12 @@ export async function prefetchStyleLinks(
     }
   }
 
-  // don't block for non-matching media queries
+  // don't block for non-matching media queries, or for stylesheets that are
+  // already in the DOM (active route revalidations)
   let matchingLinks = styleLinks.filter(
-    (link) => !link.media || window.matchMedia(link.media).matches
+    (link) =>
+      (!link.media || window.matchMedia(link.media).matches) &&
+      !document.querySelector(`link[rel="stylesheet"][href="${link.href}"]`)
   );
 
   await Promise.all(matchingLinks.map(prefetchStyleLink));

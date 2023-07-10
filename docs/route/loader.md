@@ -16,7 +16,7 @@ export const loader = async () => {
 };
 ```
 
-This function is only ever run on the server. On the initial server render it will provide data to the HTML document, On navigations in the browser, Remix will call the function via [`fetch`][fetch] from the browser.
+This function is only ever run on the server. On the initial server render, it will provide data to the HTML document. On navigations in the browser, Remix will call the function via [`fetch`][fetch] from the browser.
 
 This means you can talk directly to your database, use server-only API secrets, etc. Any code that isn't used to render the UI will be removed from the browser bundle.
 
@@ -58,7 +58,7 @@ import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export async function loader(args: LoaderArgs) {
+export async function loader() {
   return json({ name: "Ryan", date: new Date() });
 }
 
@@ -117,7 +117,7 @@ This is the context passed in to your server adapter's `getLoadContext()` functi
 
 Using the express adapter as an example:
 
-```js filename=server.js
+```ts filename=server.ts
 const {
   createRequestHandler,
 } = require("@remix-run/express");
@@ -245,9 +245,9 @@ import { json } from "@remix-run/node"; // or cloudflare/deno
 import type { ThrownResponse } from "@remix-run/react";
 import { useCatch, useLoaderData } from "@remix-run/react";
 
-import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
 import type { InvoiceNotFoundResponse } from "~/db";
+import { requireUserSession } from "~/http";
 
 type InvoiceCatchData = {
   invoiceOwnerEmail: string;

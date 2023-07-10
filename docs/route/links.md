@@ -89,10 +89,10 @@ export const links: LinksFunction = () => {
 
 These descriptors allow you to prefetch the resources for a page the user is likely to navigate to. While this API is useful, you might get more mileage out of `<Link prefetch="render">` instead. But if you'd like, you can get the same behavior with this API.
 
-```js
-export function links() {
+```tsx
+export const links: LinksFunction = () => {
   return [{ page: "/posts/public" }];
-}
+};
 ```
 
 This loads up the JavaScript modules, loader data, and the stylesheets (defined in the `links` exports of the next routes) into the browser cache before the user even navigates there.

@@ -1,7 +1,7 @@
 import "./env";
 import path from "path";
 import os from "os";
-import { devReady } from "@remix-run/node";
+import { broadcastDevReady } from "@remix-run/node";
 
 import { createApp } from "./index";
 
@@ -34,10 +34,10 @@ let onListen = () => {
     );
   }
   if (
-    build.future?.unstable_dev !== false &&
+    build.future?.v2_dev !== false &&
     process.env.NODE_ENV === "development"
   ) {
-    devReady(build);
+    broadcastDevReady(build);
   }
 };
 

@@ -6,7 +6,7 @@ title: shouldRevalidate
 
 This function lets apps optimize which routes data should be reloaded after actions and for client-side navigations.
 
-```ts
+```tsx
 import type { ShouldRevalidateFunction } from "@remix-run/react";
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -92,13 +92,13 @@ For instance, consider an event slug with the id and an human-friendly title:
 - `/events/blink-182-united-center-saint-paul--ae3f9`
 - `/events/blink-182-little-caesars-arena-detroit--e87ad`
 
-```jsx filename=app/routes/events/$slug.tsx
-export async function loader({ params }) {
+```tsx filename=app/routes/events/$slug.tsx
+export async function loader({ params }: LoaderArgs) {
   const id = params.slug.split("--")[1];
   return loadEvent(id);
 }
 
-export async function shouldRevalidate({
+export function shouldRevalidate({
   currentParams,
   nextParams,
   defaultShouldRevalidate,

@@ -50,13 +50,6 @@ ${Object.keys(config.routes)
   export const future = ${JSON.stringify(config.future)};
   export const publicPath = ${JSON.stringify(config.publicPath)};
   export const entry = { module: entryServer };
-  ${
-    options.devWebsocketPort
-      ? `export const dev = ${JSON.stringify({
-          websocketPort: options.devWebsocketPort,
-        })}`
-      : ""
-  }
   export const routes = {
     ${Object.keys(config.routes)
       .map((key, index) => {

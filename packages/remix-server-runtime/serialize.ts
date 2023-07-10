@@ -28,12 +28,13 @@ type Serialize<T> =
   T extends [unknown, ...unknown[]] ? SerializeTuple<T> :
   T extends ReadonlyArray<infer U> ? (U extends NonJsonPrimitive ? null : Serialize<U>)[] :
   T extends object ? SerializeObject<UndefinedToOptional<T>> :
-  never;
+  never
+;
 
 /** JSON serialize [tuples](https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types) */
-type SerializeTuple<T extends [unknown, ...unknown[]]> = {
-  [k in keyof T]: T[k] extends NonJsonPrimitive ? null : Serialize<T[k]>;
-};
+type SerializeTuple<T extends unknown[]> = T extends [infer F, ...infer R]
+  ? [Serialize<F>, ...SerializeTuple<R>]
+  : [];
 
 /** JSON serialize objects (not including arrays) and classes */
 type SerializeObject<T extends object> = {
@@ -42,7 +43,11 @@ type SerializeObject<T extends object> = {
 
 // prettier-ignore
 type SerializeDeferred<T extends Record<string, unknown>> = {
-  [k in keyof T as T[k] extends Promise<unknown> ? k : T[k] extends NonJsonPrimitive ? never : k]:
+  [k in keyof T as
+    T[k] extends Promise<unknown> ? k :
+    T[k] extends NonJsonPrimitive ? never :
+    k
+  ]:
     T[k] extends Promise<infer U>
     ? Promise<Serialize<U>> extends never ? "wtf" : Promise<Serialize<U>>
     : Serialize<T[k]>  extends never ? k : Serialize<T[k]>;

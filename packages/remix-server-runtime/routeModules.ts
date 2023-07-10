@@ -4,7 +4,6 @@ import type {
   Params,
   RouterState,
 } from "@remix-run/router";
-import type { ComponentType } from "react";
 
 import type { AppLoadContext, AppData } from "./data";
 import type { LinkDescriptor } from "./links";
@@ -48,34 +47,45 @@ export interface ActionFunction {
 /**
  * A React component that is rendered when the server throws a Response.
  *
- * @deprecated Please enable the v2_errorBoundary flag
+ * @deprecated Please enable the v2_errorBoundary flag to eliminate the need
+ * for this type.  If you are still using this, please use `@remix-run/react`'s
+ * `CatchBoundaryComponent` type
  */
-export type CatchBoundaryComponent = ComponentType;
+export type CatchBoundaryComponent = any;
 
 /**
  * A React component that is rendered when there is an error on a route.
  *
- * @deprecated Please enable the v2_errorBoundary flag
+ * @deprecated Please enable the v2_errorBoundary flag to eliminate the need
+ * for this type.  If you are still using this, please use `@remix-run/react`'s
+ * `ErrorBoundaryComponent` type
  */
-export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
+export type ErrorBoundaryComponent = any;
 
 /**
  * V2 version of the ErrorBoundary that eliminates the distinction between
  * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
  * errors with useRouteError()
+ *
+ * @deprecated Please enable the v2_errorBoundary flag to eliminate the need
+ * for this type.  If you are still using this, please use `@remix-run/react`'s
+ * `V2_ErrorBoundaryComponent` type
  */
-export type V2_ErrorBoundaryComponent = ComponentType;
+export type V2_ErrorBoundaryComponent = any;
+
+export type HeadersArgs = {
+  loaderHeaders: Headers;
+  parentHeaders: Headers;
+  actionHeaders: Headers;
+  errorHeaders: Headers | undefined;
+};
 
 /**
  * A function that returns HTTP headers to be used for a route. These headers
  * will be merged with (and take precedence over) headers from parent routes.
  */
 export interface HeadersFunction {
-  (args: {
-    loaderHeaders: Headers;
-    parentHeaders: Headers;
-    actionHeaders: Headers;
-  }): Headers | HeadersInit;
+  (args: HeadersArgs): Headers | HeadersInit;
 }
 
 /**
@@ -200,7 +210,9 @@ export interface V2_ServerRuntimeMetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
   MatchLoaders extends Record<string, unknown> = Record<string, unknown>
 > {
-  data: Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData;
+  data:
+    | (Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData)
+    | undefined;
   params: Params;
   location: Location;
   matches: V2_ServerRuntimeMetaMatches<MatchLoaders>;
@@ -257,8 +269,10 @@ type LdJsonValue = LdJsonPrimitive | LdJsonObject | LdJsonArray;
 
 /**
  * A React component that is rendered for a route.
+ *
+ * @deprecated Please use `@remix-run/react`'s `RouteComponent` type instead
  */
-export type RouteComponent = ComponentType<{}>;
+export type RouteComponent = any;
 
 /**
  * An arbitrary object that is associated with a route.
