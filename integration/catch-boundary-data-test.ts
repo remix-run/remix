@@ -24,9 +24,18 @@ let HAS_BOUNDARY_NESTED_LOADER = "/yes/loader-self-boundary" as const;
 let ROOT_DATA = "root data";
 let LAYOUT_DATA = "root data";
 
+test.beforeEach(async ({ context }) => {
+  await context.route(/_data/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    route.continue();
+  });
+});
+
 test.beforeAll(async () => {
   fixture = await createFixture({
-    future: { v2_routeConvention: true },
+    config: {
+      future: { v2_routeConvention: true },
+    },
     files: {
       "app/root.jsx": js`
         import { json } from "@remix-run/node";
@@ -236,9 +245,11 @@ test("renders self boundary with layout data available on transition", async ({
 test.describe("v2_errorBoundary", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        v2_routeConvention: true,
-        v2_errorBoundary: true,
+      config: {
+        future: {
+          v2_routeConvention: true,
+          v2_errorBoundary: true,
+        },
       },
       files: {
         "app/root.jsx": js`

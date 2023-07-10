@@ -357,6 +357,7 @@ function getMagicExports(packageName) {
         "LoaderFunction",
         "MetaDescriptor",
         "MetaFunction",
+        "HandleErrorFunction",
         "PageLinkDescriptor",
         "RequestHandler",
         "RouteComponent",

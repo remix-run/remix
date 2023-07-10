@@ -1,6 +1,6 @@
 ---
 title: "@remix-run/{adapter}"
-order: 2
+order: 3
 ---
 
 # Server Adapters

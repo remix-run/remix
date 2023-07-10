@@ -7,7 +7,6 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
-  ErrorResponse,
   Navigation,
   TrackedPromise,
 } from "@remix-run/router";
@@ -32,6 +31,7 @@ import {
   useFetchers as useFetchersRR,
   useActionData as useActionDataRR,
   useLoaderData as useLoaderDataRR,
+  useRouteLoaderData as useRouteLoaderDataRR,
   useMatches as useMatchesRR,
   useLocation,
   useNavigation,
@@ -174,23 +174,14 @@ export function RemixRouteError({ id }: { id: string }) {
   }
 
   if (isRouteErrorResponse(error)) {
-    let tError = error as any;
-    if (
-      tError?.error instanceof Error &&
-      tError.status !== 404 &&
-      ErrorBoundary
-    ) {
+    let tError = error;
+    if (!!tError?.error && tError.status !== 404 && ErrorBoundary) {
       // Internal framework-thrown ErrorResponses
       return <ErrorBoundary error={tError.error} />;
     }
     if (CatchBoundary) {
       // User-thrown ErrorResponses
-      return (
-        <RemixCatchBoundary
-          component={CatchBoundary!}
-          catch={error as ErrorResponse}
-        />
-      );
+      return <RemixCatchBoundary catch={error} component={CatchBoundary} />;
     }
   }
 
@@ -211,7 +202,7 @@ export function RemixRouteError({ id }: { id: string }) {
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
  */
-type PrefetchBehavior = "intent" | "render" | "none";
+type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
 export interface RemixLinkProps extends LinkProps {
   prefetch?: PrefetchBehavior;
@@ -222,25 +213,41 @@ export interface RemixNavLinkProps extends NavLinkProps {
 }
 
 interface PrefetchHandlers {
-  onFocus?: FocusEventHandler<Element>;
-  onBlur?: FocusEventHandler<Element>;
-  onMouseEnter?: MouseEventHandler<Element>;
-  onMouseLeave?: MouseEventHandler<Element>;
-  onTouchStart?: TouchEventHandler<Element>;
+  onFocus?: FocusEventHandler;
+  onBlur?: FocusEventHandler;
+  onMouseEnter?: MouseEventHandler;
+  onMouseLeave?: MouseEventHandler;
+  onTouchStart?: TouchEventHandler;
 }
 
-function usePrefetchBehavior(
+function usePrefetchBehavior<T extends HTMLAnchorElement>(
   prefetch: PrefetchBehavior,
   theirElementProps: PrefetchHandlers
-): [boolean, Required<PrefetchHandlers>] {
+): [boolean, React.RefObject<T>, Required<PrefetchHandlers>] {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
   let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
     theirElementProps;
 
+  let ref = React.useRef<T>(null);
+
   React.useEffect(() => {
     if (prefetch === "render") {
       setShouldPrefetch(true);
+    }
+
+    if (prefetch === "viewport") {
+      let callback: IntersectionObserverCallback = (entries) => {
+        entries.forEach((entry) => {
+          setShouldPrefetch(entry.isIntersecting);
+        });
+      };
+      let observer = new IntersectionObserver(callback, { threshold: 0.5 });
+      if (ref.current) observer.observe(ref.current);
+
+      return () => {
+        observer.disconnect();
+      };
     }
   }, [prefetch]);
 
@@ -270,6 +277,7 @@ function usePrefetchBehavior(
 
   return [
     shouldPrefetch,
+    ref,
     {
       onFocus: composeEventHandlers(onFocus, setIntent),
       onBlur: composeEventHandlers(onBlur, cancelIntent),
@@ -292,17 +300,18 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
-    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+    let [shouldPrefetch, ref, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
+
     return (
       <>
         <RouterNavLink
-          ref={forwardedRef}
-          to={to}
           {...props}
           {...prefetchHandlers}
+          ref={mergeRefs(forwardedRef, ref)}
+          to={to}
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -325,7 +334,7 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
-    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+    let [shouldPrefetch, ref, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
@@ -333,10 +342,10 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
     return (
       <>
         <RouterLink
-          ref={forwardedRef}
-          to={to}
           {...props}
           {...prefetchHandlers}
+          ref={mergeRefs(forwardedRef, ref)}
+          to={to}
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -364,19 +373,19 @@ export function composeEventHandlers<
 
 let linksWarning =
   "⚠️ REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. " +
-  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`." +
+  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
 
 let useTransitionWarning =
   "⚠️ REMIX FUTURE CHANGE: `useTransition` will be removed in v2 in favor of `useNavigation`. " +
-  "You can prepare for this change at your convenience by updating to `useNavigation`." +
+  "You can prepare for this change at your convenience by updating to `useNavigation`. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#usetransition";
 
 let fetcherTypeWarning =
   "⚠️ REMIX FUTURE CHANGE: `fetcher.type` will be removed in v2. " +
-  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX." +
+  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#usefetcher";
 
@@ -960,6 +969,7 @@ export function Scripts(props: ScriptProps) {
                       deferredData={deferredData}
                       routeId={routeId}
                       dataKey={key}
+                      scriptProps={props}
                     />
                   );
 
@@ -1058,7 +1068,9 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   if (!isStatic && typeof __remixContext === "object" && __remixContext.a) {
     for (let i = 0; i < __remixContext.a; i++) {
-      deferredScripts.push(<DeferredHydrationScript key={i} />);
+      deferredScripts.push(
+        <DeferredHydrationScript key={i} scriptProps={props} />
+      );
     }
   }
 
@@ -1112,10 +1124,12 @@ function DeferredHydrationScript({
   dataKey,
   deferredData,
   routeId,
+  scriptProps,
 }: {
   dataKey?: string;
   deferredData?: DeferredData;
   routeId?: string;
+  scriptProps?: ScriptProps;
 }) {
   if (typeof document === "undefined" && deferredData && dataKey && routeId) {
     invariant(
@@ -1135,6 +1149,7 @@ function DeferredHydrationScript({
         dataKey &&
         routeId ? null : (
           <script
+            {...scriptProps}
             async
             suppressHydrationWarning
             dangerouslySetInnerHTML={{ __html: " " }}
@@ -1146,10 +1161,15 @@ function DeferredHydrationScript({
         <Await
           resolve={deferredData.data[dataKey]}
           errorElement={
-            <ErrorDeferredHydrationScript dataKey={dataKey} routeId={routeId} />
+            <ErrorDeferredHydrationScript
+              dataKey={dataKey}
+              routeId={routeId}
+              scriptProps={scriptProps}
+            />
           }
           children={(data) => (
             <script
+              {...scriptProps}
               async
               suppressHydrationWarning
               dangerouslySetInnerHTML={{
@@ -1164,6 +1184,7 @@ function DeferredHydrationScript({
         />
       ) : (
         <script
+          {...scriptProps}
           async
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: " " }}
@@ -1176,9 +1197,11 @@ function DeferredHydrationScript({
 function ErrorDeferredHydrationScript({
   dataKey,
   routeId,
+  scriptProps,
 }: {
   dataKey: string;
   routeId: string;
+  scriptProps?: ScriptProps;
 }) {
   let error = useAsyncError() as Error;
   let toSerialize: { message: string; stack?: string } =
@@ -1194,6 +1217,7 @@ function ErrorDeferredHydrationScript({
 
   return (
     <script
+      {...scriptProps}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{
         __html: `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(
@@ -1264,6 +1288,17 @@ export function useMatches(): RouteMatch[] {
  */
 export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useLoaderDataRR() as SerializeFrom<T>;
+}
+
+/**
+ * Returns the loaderData for the given routeId.
+ *
+ * @see https://remix.run/hooks/use-route-loader-data
+ */
+export function useRouteLoaderData<T = AppData>(
+  routeId: string
+): SerializeFrom<T> | undefined {
+  return useRouteLoaderDataRR(routeId) as SerializeFrom<T> | undefined;
 }
 
 /**
@@ -1466,8 +1501,10 @@ export function useFetchers(): Fetcher[] {
       data: f.data,
       formMethod: f.formMethod,
       formAction: f.formAction,
-      formData: f.formData,
       formEncType: f.formEncType,
+      formData: f.formData,
+      json: f.json,
+      text: f.text,
       " _hasFetcherDoneAnything ": f[" _hasFetcherDoneAnything "],
     });
     addFetcherDeprecationWarnings(fetcher);
@@ -1500,8 +1537,10 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
       data: fetcherRR.data,
       formMethod: fetcherRR.formMethod,
       formAction: fetcherRR.formAction,
-      formData: fetcherRR.formData,
       formEncType: fetcherRR.formEncType,
+      formData: fetcherRR.formData,
+      json: fetcherRR.json,
+      text: fetcherRR.text,
       " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
     });
     let fetcherWithComponents = {
@@ -1552,8 +1591,16 @@ function addFetcherDeprecationWarnings(fetcher: Fetcher) {
 function convertRouterFetcherToRemixFetcher(
   fetcherRR: Omit<ReturnType<typeof useFetcherRR>, "load" | "submit" | "Form">
 ): Fetcher {
-  let { state, formMethod, formAction, formEncType, formData, data } =
-    fetcherRR;
+  let {
+    state,
+    formMethod,
+    formAction,
+    formEncType,
+    formData,
+    json,
+    text,
+    data,
+  } = fetcherRR;
 
   let isActionSubmission =
     formMethod != null &&
@@ -1566,8 +1613,10 @@ function convertRouterFetcherToRemixFetcher(
         type: "done",
         formMethod: undefined,
         formAction: undefined,
-        formData: undefined,
         formEncType: undefined,
+        formData: undefined,
+        json: undefined,
+        text: undefined,
         submission: undefined,
         data,
       };
@@ -1583,7 +1632,7 @@ function convertRouterFetcherToRemixFetcher(
     formMethod &&
     formAction &&
     formEncType &&
-    formData
+    (formData || json !== undefined || text !== undefined)
   ) {
     if (isActionSubmission) {
       // Actively submitting to an action
@@ -1591,14 +1640,21 @@ function convertRouterFetcherToRemixFetcher(
         state,
         type: "actionSubmission",
         formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-        formAction: formAction,
-        formEncType: formEncType,
-        formData: formData,
+        formAction,
+        formEncType,
+        formData,
+        json,
+        text,
+        // @ts-expect-error formData/json/text are mutually exclusive in the type,
+        // so TS can't be sure these meet that criteria, but as a straight
+        // assignment from the RR fetcher we know they will
         submission: {
           method: formMethod.toUpperCase() as ActionSubmission["method"],
           action: formAction,
           encType: formEncType,
-          formData: formData,
+          formData,
+          json,
+          text,
           key: "",
         },
         data,
@@ -1614,7 +1670,7 @@ function convertRouterFetcherToRemixFetcher(
   }
 
   if (state === "loading") {
-    if (formMethod && formAction && formEncType && formData) {
+    if (formMethod && formAction && formEncType) {
       if (isActionSubmission) {
         if (data) {
           // In a loading state but we have data - must be an actionReload
@@ -1622,14 +1678,21 @@ function convertRouterFetcherToRemixFetcher(
             state,
             type: "actionReload",
             formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-            formAction: formAction,
-            formEncType: formEncType,
-            formData: formData,
+            formAction,
+            formEncType,
+            formData,
+            json,
+            text,
+            // @ts-expect-error formData/json/text are mutually exclusive in the type,
+            // so TS can't be sure these meet that criteria, but as a straight
+            // assignment from the RR fetcher we know they will
             submission: {
               method: formMethod.toUpperCase() as ActionSubmission["method"],
               action: formAction,
               encType: formEncType,
-              formData: formData,
+              formData,
+              json,
+              text,
               key: "",
             },
             data,
@@ -1640,14 +1703,21 @@ function convertRouterFetcherToRemixFetcher(
             state,
             type: "actionRedirect",
             formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-            formAction: formAction,
-            formEncType: formEncType,
-            formData: formData,
+            formAction,
+            formEncType,
+            formData,
+            json,
+            text,
+            // @ts-expect-error formData/json/text are mutually exclusive in the type,
+            // so TS can't be sure these meet that criteria, but as a straight
+            // assignment from the RR fetcher we know they will
             submission: {
               method: formMethod.toUpperCase() as ActionSubmission["method"],
               action: formAction,
               encType: formEncType,
-              formData: formData,
+              formData,
+              json,
+              text,
               key: "",
             },
             data: undefined,
@@ -1661,27 +1731,36 @@ function convertRouterFetcherToRemixFetcher(
         // will fix this bug.
         let url = new URL(formAction, window.location.origin);
 
-        // This typing override should be safe since this is only running for
-        // GET submissions and over in @remix-run/router we have an invariant
-        // if you have any non-string values in your FormData when we attempt
-        // to convert them to URLSearchParams
-        url.search = new URLSearchParams(
-          formData.entries() as unknown as [string, string][]
-        ).toString();
+        if (formData) {
+          // This typing override should be safe since this is only running for
+          // GET submissions and over in @remix-run/router we have an invariant
+          // if you have any non-string values in your FormData when we attempt
+          // to convert them to URLSearchParams
+          url.search = new URLSearchParams(
+            formData.entries() as unknown as [string, string][]
+          ).toString();
+        }
 
         // Actively "submitting" to a loader
         let fetcher: FetcherStates["SubmittingLoader"] = {
           state: "submitting",
           type: "loaderSubmission",
           formMethod: formMethod.toUpperCase() as LoaderSubmission["method"],
-          formAction: formAction,
-          formEncType: formEncType,
-          formData: formData,
+          formAction,
+          formEncType,
+          formData,
+          json,
+          text,
+          // @ts-expect-error formData/json/text are mutually exclusive in the type,
+          // so TS can't be sure these meet that criteria, but as a straight
+          // assignment from the RR fetcher we know they will
           submission: {
             method: formMethod.toUpperCase() as LoaderSubmission["method"],
             action: url.pathname + url.search,
             encType: formEncType,
-            formData: formData,
+            formData,
+            json,
+            text,
             key: "",
           },
           data,
@@ -1698,6 +1777,8 @@ function convertRouterFetcherToRemixFetcher(
     formMethod: undefined,
     formAction: undefined,
     formData: undefined,
+    json: undefined,
+    text: undefined,
     formEncType: undefined,
     submission: undefined,
     data,
@@ -1713,7 +1794,6 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
-        // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
         port,
         timeoutMs = 1000,
         nonce = undefined,
@@ -1730,13 +1810,25 @@ export const LiveReload =
             dangerouslySetInnerHTML={{
               __html: js`
                 function remixLiveReloadConnect(config) {
-                  let protocol = location.protocol === "https:" ? "wss:" : "ws:";
-                  let host = location.hostname;
-                  let port = ${port} || (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.port) || ${Number(
-                process.env.REMIX_DEV_SERVER_WS_PORT || 8002
-              )};
-                  let socketPath = protocol + "//" + host + ":" + port + "/socket";
-                  let ws = new WebSocket(socketPath);
+                  let REMIX_DEV_ORIGIN = ${JSON.stringify(
+                    process.env.REMIX_DEV_ORIGIN
+                  )};
+                  let protocol =
+                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).protocol.replace(/^http/, "ws") :
+                    location.protocol === "https:" ? "wss:" : "ws:"; // remove in v2?
+                  let hostname = location.hostname;
+                  let url = new URL(protocol + "//" + hostname + "/socket");
+
+                  url.port =
+                    ${port} ||
+                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port :
+                    Number(${
+                      // TODO: remove in v2
+                      process.env.REMIX_DEV_SERVER_WS_PORT
+                    }) ||
+                    8002;
+
+                  let ws = new WebSocket(url.href);
                   ws.onmessage = async (message) => {
                     let event = JSON.parse(message.data);
                     if (event.type === "LOG") {
@@ -1815,3 +1907,17 @@ export const LiveReload =
           />
         );
       };
+
+function mergeRefs<T = any>(
+  ...refs: Array<React.MutableRefObject<T> | React.LegacyRef<T>>
+): React.RefCallback<T> {
+  return (value) => {
+    refs.forEach((ref) => {
+      if (typeof ref === "function") {
+        ref(value);
+      } else if (ref != null) {
+        (ref as React.MutableRefObject<T | null>).current = value;
+      }
+    });
+  };
+}

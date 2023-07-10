@@ -5,7 +5,6 @@ import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { createFixtureProject } from "./helpers/create-fixture";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import { flatRoutesWarning } from "../packages/remix-dev/config";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -14,16 +13,13 @@ test.describe("flat routes", () => {
   let IGNORED_ROUTE = "/ignore-me-pls";
   test.beforeAll(async () => {
     fixture = await createFixture({
+      config: {
+        ignoredRouteFiles: [IGNORED_ROUTE],
+        future: {
+          v2_routeConvention: true,
+        },
+      },
       files: {
-        "remix.config.js": js`
-          /** @type {import('@remix-run/dev').AppConfig} */
-          module.exports = {
-            future: {
-              v2_routeConvention: true,
-            },
-            ignoredRouteFiles: ['${IGNORED_ROUTE}'],
-          };
-        `,
         "app/root.jsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
@@ -162,7 +158,7 @@ test.describe("flat routes", () => {
     });
   }
 
-  test("allows ignoredRouteFiles to be configured", async ({ page }) => {
+  test("allows ignoredRouteFiles to be configured", async () => {
     let routeIds = Object.keys(fixture.build.routes);
 
     expect(routeIds).not.toContain(IGNORED_ROUTE);
@@ -183,7 +179,9 @@ test.describe("warns when v1 routesConvention is used", () => {
     console.error = () => {};
     await createFixtureProject({
       buildStdio,
-      future: { v2_routeConvention: false },
+      config: {
+        future: { v2_routeConvention: false },
+      },
       files: {
         "routes/index.tsx": js`
           export default function () {
@@ -211,7 +209,9 @@ test.describe("warns when v1 routesConvention is used", () => {
 
   test("v2_routeConvention is not enabled", () => {
     console.log(buildOutput);
-    expect(buildOutput).toContain(flatRoutesWarning);
+    expect(buildOutput).toContain(
+      "The route file convention is changing in v2"
+    );
   });
 });
 
@@ -229,7 +229,9 @@ test.describe("emits warnings for route conflicts", async () => {
     console.error = () => {};
     await createFixtureProject({
       buildStdio,
-      future: { v2_routeConvention: true },
+      config: {
+        future: { v2_routeConvention: true },
+      },
       files: {
         "routes/_dashboard._index.tsx": js`
           export default function () {
@@ -285,7 +287,9 @@ test.describe("", () => {
     console.error = () => {};
     await createFixtureProject({
       buildStdio,
-      future: { v2_routeConvention: true },
+      config: {
+        future: { v2_routeConvention: true },
+      },
       files: {
         "app/routes/_index/route.jsx": js``,
         "app/routes/_index/utils.js": js``,
@@ -316,7 +320,9 @@ test.describe("", () => {
 test.describe("pathless routes and route collisions", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
+      config: {
+        future: { v2_routeConvention: true },
+      },
       files: {
         "app/root.tsx": js`
           import { Link, Outlet, Scripts, useMatches } from "@remix-run/react";

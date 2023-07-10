@@ -9,7 +9,9 @@ let appFixture: AppFixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    future: { v2_routeConvention: true },
+    config: {
+      future: { v2_routeConvention: true },
+    },
     files: {
       "app/routes/_index.jsx": js`
         import { redirect } from "@remix-run/node";
@@ -44,7 +46,7 @@ test.beforeAll(async () => {
     },
   });
 
-  // This creates an interactive app using puppeteer.
+  // This creates an interactive app using playwright.
   appFixture = await createAppFixture(fixture);
 });
 

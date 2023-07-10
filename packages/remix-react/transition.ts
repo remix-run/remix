@@ -75,6 +75,49 @@ export type TransitionStates = {
 
 export type Transition = TransitionStates[keyof TransitionStates];
 
+// Thanks https://github.com/sindresorhus/type-fest!
+type JsonObject = { [Key in string]: JsonValue } & {
+  [Key in string]?: JsonValue | undefined;
+};
+type JsonArray = JsonValue[] | readonly JsonValue[];
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+
+// Fetchers need a separate set of types to reflect the json/text submission
+// support in react-router.  We do not carry that into useTransition since
+// it's deprecated
+type FetcherSubmissionDataTypes =
+  | {
+      formData: FormData;
+      json: undefined;
+      text: undefined;
+    }
+  | {
+      formData: undefined;
+      json: JsonValue;
+      text: undefined;
+    }
+  | {
+      formData: undefined;
+      json: undefined;
+      text: string;
+    };
+
+export type FetcherSubmission = {
+  action: string;
+  method: string;
+  encType: string;
+  key: string;
+} & FetcherSubmissionDataTypes;
+
+export type FetcherActionSubmission = FetcherSubmission & {
+  method: "POST" | "PUT" | "PATCH" | "DELETE";
+};
+
+export type FetcherLoaderSubmission = FetcherSubmission & {
+  method: "GET";
+};
+
 // TODO: keep data around on resubmission?
 export type FetcherStates<TData = any> = {
   Idle: {
@@ -82,51 +125,49 @@ export type FetcherStates<TData = any> = {
     type: "init";
     formMethod: undefined;
     formAction: undefined;
-    formData: undefined;
     formEncType: undefined;
+    formData: undefined;
+    json: undefined;
+    text: undefined;
     submission: undefined;
     data: undefined;
   };
   SubmittingAction: {
     state: "submitting";
     type: "actionSubmission";
-    formMethod: ActionSubmission["method"];
+    formMethod: FetcherActionSubmission["method"];
     formAction: string;
-    formData: FormData;
     formEncType: string;
-    submission: ActionSubmission;
+    submission: FetcherActionSubmission;
     data: TData | undefined;
-  };
+  } & FetcherSubmissionDataTypes;
   SubmittingLoader: {
     state: "submitting";
     type: "loaderSubmission";
-    formMethod: LoaderSubmission["method"];
+    formMethod: FetcherLoaderSubmission["method"];
     formAction: string;
-    formData: FormData;
     formEncType: string;
-    submission: LoaderSubmission;
+    submission: FetcherLoaderSubmission;
     data: TData | undefined;
-  };
+  } & FetcherSubmissionDataTypes;
   ReloadingAction: {
     state: "loading";
     type: "actionReload";
-    formMethod: ActionSubmission["method"];
+    formMethod: FetcherActionSubmission["method"];
     formAction: string;
-    formData: FormData;
     formEncType: string;
-    submission: ActionSubmission;
+    submission: FetcherActionSubmission;
     data: TData;
-  };
+  } & FetcherSubmissionDataTypes;
   LoadingActionRedirect: {
     state: "loading";
     type: "actionRedirect";
-    formMethod: ActionSubmission["method"];
+    formMethod: FetcherActionSubmission["method"];
     formAction: string;
-    formData: FormData;
     formEncType: string;
-    submission: ActionSubmission;
+    submission: FetcherActionSubmission;
     data: undefined;
-  };
+  } & FetcherSubmissionDataTypes;
   Loading: {
     state: "loading";
     type: "normalLoad";
@@ -134,6 +175,8 @@ export type FetcherStates<TData = any> = {
     formAction: undefined;
     formData: undefined;
     formEncType: undefined;
+    json: undefined;
+    text: undefined;
     submission: undefined;
     data: TData | undefined;
   };
@@ -142,8 +185,10 @@ export type FetcherStates<TData = any> = {
     type: "done";
     formMethod: undefined;
     formAction: undefined;
-    formData: undefined;
     formEncType: undefined;
+    formData: undefined;
+    json: undefined;
+    text: undefined;
     submission: undefined;
     data: TData;
   };
@@ -165,7 +210,9 @@ export const IDLE_FETCHER: FetcherStates["Idle"] = {
   data: undefined,
   formMethod: undefined,
   formAction: undefined,
-  formData: undefined,
   formEncType: undefined,
+  formData: undefined,
+  json: undefined,
+  text: undefined,
   submission: undefined,
 };

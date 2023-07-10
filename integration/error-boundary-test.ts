@@ -37,12 +37,21 @@ test.describe("ErrorBoundary", () => {
   // packages/remix-react/errorBoundaries.tsx
   let INTERNAL_ERROR_BOUNDARY_HEADING = "Application Error";
 
+  test.beforeEach(async ({ context }) => {
+    await context.route(/_data/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      route.continue();
+    });
+  });
+
   test.beforeAll(async () => {
     _consoleError = console.error;
     console.error = () => {};
     fixture = await createFixture(
       {
-        future: { v2_routeConvention: true },
+        config: {
+          future: { v2_routeConvention: true },
+        },
         files: {
           "app/root.jsx": js`
             import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -494,8 +503,10 @@ test.describe("ErrorBoundary", () => {
 
     test.beforeAll(async () => {
       fixture = await createFixture({
-        future: {
-          v2_routeConvention: true,
+        config: {
+          future: {
+            v2_routeConvention: true,
+          },
         },
         files: {
           "app/root.jsx": js`
@@ -662,7 +673,9 @@ test.describe("loaderData in ErrorBoundary", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
+      config: {
+        future: { v2_routeConvention: true },
+      },
       files: {
         "app/root.jsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -1008,8 +1021,10 @@ test.describe("Default ErrorBoundary", () => {
       fixture = await createFixture(
         {
           files: getFiles({ includeRootErrorBoundary: false }),
-          future: {
-            v2_routeConvention: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+            },
           },
         },
         ServerMode.Development
@@ -1081,8 +1096,10 @@ test.describe("Default ErrorBoundary", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
-          future: {
-            v2_routeConvention: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+            },
           },
           files: getFiles({ includeRootErrorBoundary: true }),
         },
@@ -1150,8 +1167,10 @@ test.describe("Default ErrorBoundary", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
-          future: {
-            v2_routeConvention: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+            },
           },
           files: getFiles({
             includeRootErrorBoundary: true,
@@ -1274,9 +1293,11 @@ test.describe("v2_errorBoundary", () => {
       console.error = () => {};
       fixture = await createFixture(
         {
-          future: {
-            v2_routeConvention: true,
-            v2_errorBoundary: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+              v2_errorBoundary: true,
+            },
           },
           files: {
             "app/root.jsx": js`
@@ -1735,8 +1756,10 @@ test.describe("v2_errorBoundary", () => {
 
       test.beforeAll(async () => {
         fixture = await createFixture({
-          future: {
-            v2_routeConvention: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+            },
           },
           files: {
             "app/root.jsx": js`
@@ -1914,9 +1937,11 @@ test.describe("v2_errorBoundary", () => {
 
     test.beforeAll(async () => {
       fixture = await createFixture({
-        future: {
-          v2_routeConvention: true,
-          v2_errorBoundary: true,
+        config: {
+          future: {
+            v2_routeConvention: true,
+            v2_errorBoundary: true,
+          },
         },
         files: {
           "app/root.jsx": js`
@@ -2266,9 +2291,11 @@ test.describe("v2_errorBoundary", () => {
       test.beforeAll(async () => {
         fixture = await createFixture(
           {
-            future: {
-              v2_routeConvention: true,
-              v2_errorBoundary: true,
+            config: {
+              future: {
+                v2_routeConvention: true,
+                v2_errorBoundary: true,
+              },
             },
             files: getFiles({ includeRootErrorBoundary: false }),
           },
@@ -2341,8 +2368,10 @@ test.describe("v2_errorBoundary", () => {
       test.beforeAll(async () => {
         fixture = await createFixture(
           {
-            future: {
-              v2_routeConvention: true,
+            config: {
+              future: {
+                v2_routeConvention: true,
+              },
             },
             files: getFiles({ includeRootErrorBoundary: true }),
           },
@@ -2409,8 +2438,10 @@ test.describe("v2_errorBoundary", () => {
     test.describe("When the root route has a boundary but it also throws 😦", () => {
       test.beforeAll(async () => {
         fixture = await createFixture({
-          future: {
-            v2_routeConvention: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+            },
           },
           files: getFiles({
             includeRootErrorBoundary: true,
