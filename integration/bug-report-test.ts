@@ -58,48 +58,27 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/_index.jsx": js`
-        import { json, redirect } from "@remix-run/node";
-        import { useLoaderData, Link, Form } from "@remix-run/react";
+        import { json } from "@remix-run/node";
+        import { useLoaderData, Link } from "@remix-run/react";
 
-        export const action = async ({ request }) => {
-          let url = new URL(request.url);
-          const form = await request.formData();
-          const action = form.get("action");
-          switch (action) {
-            case "relative":
-              return redirect("/test");
-            case "absolute":
-              return redirect(url.origin + "/test");
-            default:
-              throw new Error("Invalid action");
-          }
-        };
+        export function loader() {
+          return json("pizza");
+        }
 
         export default function Index() {
+          let data = useLoaderData();
           return (
-            <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }}>
-              <h1>Welcome to Remix</h1>
-              <Link to="/test">Test link</Link>
-              <Form method="post">
-                <div>
-                  <button type="submit" name="action" value="relative">
-                    Redirect action with relative path
-                  </button>
-                </div>
-                <div>
-                  <button type="submit" name="action" value="absolute">
-                    Redirect action with absolute path
-                  </button>
-                </div>
-              </Form>
+            <div>
+              {data}
+              <Link to="/burgers">Other Route</Link>
             </div>
-          );
+          )
         }
       `,
 
-      "app/routes/test.jsx": js`
+      "app/routes/burgers.jsx": js`
         export default function Index() {
-          return <div id="success">Success!</div>;
+          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -118,38 +97,22 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("Link to relative path should work", async ({ page }) => {
+test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("Welcome to Remix");
+  expect(await response.text()).toMatch("pizza");
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/test");
-  expect(await app.getHtml()).toMatch("Success!");
-});
-test("Redirect in action to relative path should work", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("Welcome to Remix");
+  await app.clickLink("/burgers");
+  expect(await app.getHtml()).toMatch("cheeseburger");
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickElement("button[name=action][value=relative]");
-  expect(await app.getHtml()).toMatch("Success!");
-});
-test("Redirect in action to absolute path should work", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("Welcome to Remix");
+  // If you're not sure what's going on, you can "poke" the app, it'll
+  // automatically open up in your browser for 20 seconds, so be quick!
+  // await app.poke(20);
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickElement("button[name=action][value=absolute]");
-  expect(await app.getHtml()).toMatch("Success!");
+  // Go check out the other tests to see what else you can do.
 });
 
 ////////////////////////////////////////////////////////////////////////////////
