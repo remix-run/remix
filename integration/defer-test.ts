@@ -232,6 +232,7 @@ test.describe("non-aborted", () => {
             return defer({
               deferredId: "${DEFERRED_ID}",
               resolvedId: Promise.resolve("${RESOLVED_DEFERRED_ID}"),
+              deferredUndefined: Promise.resolve(undefined),
             });
           }
 
@@ -269,6 +270,11 @@ test.describe("non-aborted", () => {
               resolvedId: new Promise(
                 (resolve) => setTimeout(() => {
                   resolve("${RESOLVED_DEFERRED_ID}");
+                }, 10)
+              ),
+              deferredUndefined: new Promise(
+                (resolve) => setTimeout(() => {
+                  resolve(undefined);
                 }, 10)
               ),
             });

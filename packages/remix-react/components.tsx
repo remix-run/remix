@@ -904,14 +904,68 @@ export function Scripts(props: ScriptProps) {
     isHydrated = true;
   }, []);
 
-  let serializeErrorImp = (error: unknown) => {
+  let serializePreResolvedErrorImp = (key: string, error: unknown) => {
     let toSerialize: unknown;
     if (serializeError && error instanceof Error) {
       toSerialize = serializeError(error);
     } else {
       toSerialize = error;
     }
-    return toSerialize;
+    return `${JSON.stringify(key)}:__remixContext.p(!1, ${escapeHtml(
+      JSON.stringify(toSerialize)
+    )})`;
+  };
+
+  let serializePreresolvedDataImp = (
+    routeId: string,
+    key: string,
+    data: unknown
+  ) => {
+    if (typeof data === "undefined") {
+      console.error(
+        `Deferred data for ${routeId} ${key} resolved to undefined, defaulting to null.`
+      );
+      data = null;
+    }
+    let serializedData = "null";
+    try {
+      serializedData = JSON.stringify(data);
+    } catch (error) {
+      return serializePreResolvedErrorImp(key, error);
+    }
+    return `${JSON.stringify(key)}:__remixContext.p(${escapeHtml(
+      serializedData
+    )})`;
+  };
+
+  let serializeErrorImp = (routeId: string, key: string, error: unknown) => {
+    let toSerialize: unknown;
+    if (serializeError && error instanceof Error) {
+      toSerialize = serializeError(error);
+    } else {
+      toSerialize = error;
+    }
+    return `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(
+      key
+    )}, !1, ${escapeHtml(JSON.stringify(toSerialize))})`;
+  };
+
+  let serializeDataImp = (routeId: string, key: string, data: unknown) => {
+    if (typeof data === "undefined") {
+      console.error(
+        `Deferred data for ${routeId} ${key} resolved to undefined, defaulting to null.`
+      );
+      data = null;
+    }
+    let serializedData = "null";
+    try {
+      serializedData = JSON.stringify(data);
+    } catch (error) {
+      return serializeErrorImp(routeId, key, error);
+    }
+    return `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(
+      key
+    )}, ${escapeHtml(serializedData)})`;
   };
 
   let deferredScripts: any[] = [];
@@ -981,6 +1035,8 @@ export function Scripts(props: ScriptProps) {
                       routeId={routeId}
                       dataKey={key}
                       scriptProps={props}
+                      serializeData={serializeDataImp}
+                      serializeError={serializeErrorImp}
                     />
                   );
 
@@ -992,34 +1048,16 @@ export function Scripts(props: ScriptProps) {
                 } else {
                   let trackedPromise = deferredData.data[key] as TrackedPromise;
                   if (typeof trackedPromise._error !== "undefined") {
-                    let toSerialize = serializeErrorImp(trackedPromise._error);
-                    return `${JSON.stringify(
-                      key
-                    )}:__remixContext.p(!1, ${escapeHtml(
-                      JSON.stringify(toSerialize)
-                    )})`;
+                    return serializePreResolvedErrorImp(
+                      key,
+                      trackedPromise._error
+                    );
                   } else {
-                    let data = trackedPromise._data;
-                    if (typeof data === "undefined") {
-                      console.error(
-                        `Deferred data for ${routeId} ${key} resolved to undefined, defaulting to null.`
-                      );
-                      data = null;
-                    }
-                    let serializedData = "null";
-                    try {
-                      serializedData = JSON.stringify(data);
-                    } catch (error) {
-                      let toSerialize = serializeErrorImp(error);
-                      return `${JSON.stringify(
-                        key
-                      )}:__remixContext.p(!1, ${escapeHtml(
-                        JSON.stringify(toSerialize)
-                      )})`;
-                    }
-                    return `${JSON.stringify(
-                      key
-                    )}:__remixContext.p(${escapeHtml(serializedData)})`;
+                    return serializePreresolvedDataImp(
+                      routeId,
+                      key,
+                      trackedPromise._data
+                    );
                   }
                 }
               })
@@ -1082,7 +1120,12 @@ import(${JSON.stringify(manifest.entry.module)});`;
   if (!isStatic && typeof __remixContext === "object" && __remixContext.a) {
     for (let i = 0; i < __remixContext.a; i++) {
       deferredScripts.push(
-        <DeferredHydrationScript key={i} scriptProps={props} />
+        <DeferredHydrationScript
+          key={i}
+          scriptProps={props}
+          serializeData={serializeDataImp}
+          serializeError={serializeErrorImp}
+        />
       );
     }
   }
@@ -1138,11 +1181,15 @@ function DeferredHydrationScript({
   deferredData,
   routeId,
   scriptProps,
+  serializeData,
+  serializeError,
 }: {
   dataKey?: string;
   deferredData?: DeferredData;
   routeId?: string;
   scriptProps?: ScriptProps;
+  serializeData: (routeId: string, key: string, data: unknown) => string;
+  serializeError: (routeId: string, key: string, error: unknown) => string;
 }) {
   if (typeof document === "undefined" && deferredData && dataKey && routeId) {
     invariant(
@@ -1178,22 +1225,21 @@ function DeferredHydrationScript({
               dataKey={dataKey}
               routeId={routeId}
               scriptProps={scriptProps}
+              serializeError={serializeError}
             />
           }
-          children={(data) => (
-            <script
-              {...scriptProps}
-              async
-              suppressHydrationWarning
-              dangerouslySetInnerHTML={{
-                __html: `__remixContext.r(${JSON.stringify(
-                  routeId
-                )}, ${JSON.stringify(dataKey)}, ${escapeHtml(
-                  JSON.stringify(data)
-                )});`,
-              }}
-            />
-          )}
+          children={(data) => {
+            return (
+              <script
+                {...scriptProps}
+                async
+                suppressHydrationWarning
+                dangerouslySetInnerHTML={{
+                  __html: serializeData(routeId, dataKey, data),
+                }}
+              />
+            );
+          }}
         />
       ) : (
         <script
@@ -1211,31 +1257,21 @@ function ErrorDeferredHydrationScript({
   dataKey,
   routeId,
   scriptProps,
+  serializeError,
 }: {
   dataKey: string;
   routeId: string;
   scriptProps?: ScriptProps;
+  serializeError: (routeId: string, key: string, error: unknown) => string;
 }) {
   let error = useAsyncError() as Error;
-  let toSerialize: { message: string; stack?: string } =
-    process.env.NODE_ENV === "development"
-      ? {
-          message: error.message,
-          stack: error.stack,
-        }
-      : {
-          message: "Unexpected Server Error",
-          stack: undefined,
-        };
 
   return (
     <script
       {...scriptProps}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{
-        __html: `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(
-          dataKey
-        )}, !1, ${escapeHtml(JSON.stringify(toSerialize))});`,
+        __html: serializeError(routeId, dataKey, error),
       }}
     />
   );
