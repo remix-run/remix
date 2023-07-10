@@ -1010,9 +1010,7 @@ export function Scripts(props: ScriptProps) {
                     try {
                       serializedData = JSON.stringify(data);
                     } catch (error) {
-                      let toSerialize = serializeErrorImp(
-                        trackedPromise._error
-                      );
+                      let toSerialize = serializeErrorImp(error);
                       return `${JSON.stringify(
                         key
                       )}:__remixContext.p(!1, ${escapeHtml(
