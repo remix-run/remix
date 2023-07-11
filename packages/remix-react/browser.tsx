@@ -202,7 +202,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
           window.__remixContext.future.v2_normalizeFormMethod,
       },
     });
-    
+
     // Hard reload if the path we tried to load is not the current path.
     // This is usually the result of 2 rapid back/forward clicks from an
     // external site into a Remix app, where we initially start the load for
