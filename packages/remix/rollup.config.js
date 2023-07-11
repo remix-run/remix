@@ -13,7 +13,7 @@ let { name: packageName, version } = require("./package.json");
 module.exports = function rollup() {
   // Don't blow away remix magic exports on local builds, since they've
   // already been configured by postinstall
-  if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
+  if (process.env.LOCAL_BUILD_DIRECTORY) {
     return [];
   }
 
