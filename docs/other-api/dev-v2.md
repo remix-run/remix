@@ -144,24 +144,23 @@ but CloudFlare does not support async I/O like `fetch` outside of request handli
 
 Options priority order is: 1. flags, 2. config, 3. defaults.
 
-| Option          | flag               | config           | default                                           |
-| --------------- | ------------------ | ---------------- | ------------------------------------------------- |
-| Command         | `-c` / `--command` | `command`        | `remix-serve <server build path>`                 |
-| No restart      | `--no-restart`     | `restart: false` | `restart: true`                                   |
-| Scheme          | `--scheme`         | `scheme`         | `https` if TLS key/cert are set, otherwise `http` |
-| Host            | `--host`           | `host`           | `localhost`                                       |
-| Port            | `--port`           | `port`           | Dynamically chosen open port                      |
-| TLS key         | `--tls-key`        | `tlsKey`         | N/A                                               |
-| TLS certificate | `--tls-cert`       | `tlsCert`        | N/A                                               |
+| Option          | flag               | config           | default                           |
+| --------------- | ------------------ | ---------------- | --------------------------------- |
+| Command         | `-c` / `--command` | `command`        | `remix-serve <server build path>` |
+| No restart      | `--no-restart`     | `restart: false` | `restart: true`                   |
+| Port            | `--port`           | `port`           | Dynamically chosen open port      |
+| TLS key         | `--tls-key`        | `tlsKey`         | N/A                               |
+| TLS certificate | `--tls-cert`       | `tlsCert`        | N/A                               |
 
 <docs-info>
 
-The scheme/host/port options only affect the Remix dev server, and **do not affect your app server**.
+The port option only affects the Remix dev server, and **does not affect your app server**.
 Your app will run on your app server's normal URL.
 
-You most likely won't want to configure the scheme/host/port for the dev server,
-as those are implementation details used internally for hot updates.
-They exist in case you need fine-grain control, for example Docker networking or using specific open ports.
+You probably don't want to configure the port for the dev server,
+as it is an implementation detail used internally for hot updates.
+The port option exists in case you need fine-grain networking control,
+for example to setup Docker networking or use a specific open port for security purposes.
 
 </docs-info>
 
@@ -256,9 +255,11 @@ To use [Mock Service Worker][msw] in development, you'll need to:
 1. Run MSW as part of your app server
 2. Configure MSW to not mock internal "dev ready" messages to the dev server
 
+`remix dev` will provide the `REMIX_DEV_ORIGIN` environment variable for use in your app server.
+
 For example, if you are using [binode][binode] to integrate with MSW,
 make sure that the call to `binode` is within the `remix dev -c` subcommand.
-That way, the MSW server will have access to the `REMIX_DEV_HTTP_ORIGIN` environment variable:
+That way, the MSW server will have access to the `REMIX_DEV_ORIGIN` environment variable:
 
 ```json filename=package.json
 {
@@ -269,16 +270,18 @@ That way, the MSW server will have access to the `REMIX_DEV_HTTP_ORIGIN` environ
 }
 ```
 
-Next, you can use `REMIX_DEV_HTTP_ORIGIN` to let MSW forward internal "dev ready" messages on `/ping`:
+Next, you can use `REMIX_DEV_ORIGIN` to let MSW forward internal "dev ready" messages on `/ping`:
 
 ```ts
 import { rest } from "msw";
 
+const REMIX_DEV_PING = new URL(
+  process.env.REMIX_DEV_ORIGIN
+);
+REMIX_DEV_PING.pathname = "/ping";
+
 export const server = setupServer(
-  rest.post(
-    `${process.env.REMIX_DEV_HTTP_ORIGIN}/ping`,
-    (req) => req.passthrough()
-  )
+  rest.post(REMIX_DEV_PING.href, (req) => req.passthrough())
   // ... other request handlers go here ...
 );
 ```
@@ -350,6 +353,31 @@ remix dev --tls-key=key.pem --tls-cert=cert.pem -c 'node ./server.js'
 Alternatively, you can specify the TLS key and cert via the `v2_dev.tlsCert` and `v2_dev.tlsKey` config options.
 Now your app server and dev server are TLS ready!
 
+### How to integrate with a reverse proxy
+
+Let's say you have the app server and dev server both running on the same machine:
+
+- App server 👉 `http://localhost:1234`
+- Dev server 👉 `http://localhost:5678`
+
+Then, you setup a reverse proxy in front of the app server and dev server:
+
+- Reverse proxy 👉 `https://myhost`
+
+But the internal HTTP and WebSocket connections to support hot updates will still try to reach the dev server's unproxied origin:
+
+- Hot updates 👉 `http://localhost:5678` / `ws://localhost:5678` ❌
+
+To get the internal connections to point to the reverse proxy, you can use the `REMIX_DEV_ORIGIN` environment variable:
+
+```sh
+REMIX_DEV_ORIGIN=https://myhost remix dev
+```
+
+Now, hot updates will be sent correctly to the proxy:
+
+- Hot updates 👉 `https://myhost` / `wss://myhost` ✅
+
 ### Troubleshooting
 
 #### HMR: hot updates losing app state
@@ -358,8 +386,7 @@ Hot Module Replacement is supposed to keep your app's state around between hot u
 But in some cases React cannot distinguish between existing components being changed and new components being added.
 [React needs `key`s][react-keys] to disambiguate these cases and track changes when sibling elements are modified.
 
-Additionally, when adding or removing hooks, React Refresh treats that as a brand-new component.
-So if you add `useLoaderData` to your component, you may lose state local to that component.
+Additionally, when adding or removing hooks, React Refresh treats that as a brand new component. So if you add `useLoaderData` to your component, you may lose state local to that component.
 
 These are limitations of React and [React Refresh][react-refresh], not Remix.
 

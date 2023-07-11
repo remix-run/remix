@@ -2688,7 +2688,7 @@
     estree-walker "^2.0.1"
     picomatch "^2.2.2"
 
-"@rollup/pluginutils@^5.0.1", "@rollup/pluginutils@^5.0.2":
+"@rollup/pluginutils@^5.0.1":
   version "5.0.2"
   resolved "https://registry.npmjs.org/@rollup/pluginutils/-/pluginutils-5.0.2.tgz#012b8f53c71e4f6f9cb317e311df1404f56e7a33"
   integrity sha512-pTd9rIsP92h+B6wWwFbW8RkZv4hiR/xKsqre4SIuAOaOEQRxi0lqLke9k2/7WegC85GgUs9pjmOjCUi3In4vwA==
@@ -6132,12 +6132,14 @@ esbuild-openbsd-64@0.14.47:
   resolved "https://registry.npmjs.org/esbuild-openbsd-64/-/esbuild-openbsd-64-0.14.47.tgz#309af806db561aa886c445344d1aacab850dbdc5"
   integrity sha512-QpgN8ofL7B9z8g5zZqJE+eFvD1LehRlxr25PBkjyyasakm4599iroUpaj96rdqRlO2ShuyqwJdr+oNqWwTUmQw==
 
-esbuild-plugins-node-modules-polyfill@^1.0.16:
-  version "1.0.16"
-  resolved "https://registry.npmjs.org/esbuild-plugins-node-modules-polyfill/-/esbuild-plugins-node-modules-polyfill-1.0.16.tgz#c904592749efcd185df0245f9f9386ee0b371f4f"
-  integrity sha512-l2kfXhuqez0HnmzDjUh1y4fwDjAP8f2nW3u145AGp8kz7tQkgVKUb4yWeKbMJvbsHcpyMzguCOkOJD/+6SGvZw==
+esbuild-plugins-node-modules-polyfill@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.npmjs.org/esbuild-plugins-node-modules-polyfill/-/esbuild-plugins-node-modules-polyfill-1.1.0.tgz#9b701b0bff618ce24ac262fd49aa49dd3da58197"
+  integrity sha512-pfJAbt00Luc9uuYtXGlaUrcTzf4h95Cr9Lfw+7smTFmZWtbwbrN5Hsf+La4lfD6OygHvZeefZFILOGK1ZnuyjA==
   dependencies:
-    modern-node-polyfills "^1.0.0"
+    "@jspm/core" "^2.0.1"
+    local-pkg "^0.4.3"
+    resolve.exports "^2.0.2"
 
 esbuild-register@^3.3.2:
   version "3.3.2"
@@ -10212,15 +10214,6 @@ mlly@^1.0.0, mlly@^1.1.0:
     pkg-types "^1.0.1"
     ufo "^1.0.1"
 
-modern-node-polyfills@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.npmjs.org/modern-node-polyfills/-/modern-node-polyfills-1.0.0.tgz#f0ac8eddb49dd18f51a9f6e72d2934392bbc9720"
-  integrity sha512-w1yb6ae5qSUJJ2u41krkUAxs+L7i9143Qam8EuXwDMeZHxl1JN8RfTSXG4S2bt0RHIRMeoWm/HCeO0pNIHmIYQ==
-  dependencies:
-    "@jspm/core" "^2.0.1"
-    "@rollup/pluginutils" "^5.0.2"
-    local-pkg "^0.4.3"
-
 morgan@^1.10.0:
   version "1.10.0"
   resolved "https://registry.npmjs.org/morgan/-/morgan-1.10.0.tgz"
@@ -11826,6 +11819,11 @@ resolve.exports@^1.1.0:
   version "1.1.0"
   resolved "https://registry.npmjs.org/resolve.exports/-/resolve.exports-1.1.0.tgz"
   integrity sha512-J1l+Zxxp4XK3LUDZ9m60LRJF/mAe4z6a4xyabPHk7pvK5t35dACV32iIjJDFeWZFfZlO29w6SZ67knR0tHzJtQ==
+
+resolve.exports@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.npmjs.org/resolve.exports/-/resolve.exports-2.0.2.tgz#f8c934b8e6a13f539e38b7098e2e36134f01e800"
+  integrity sha512-X2UW6Nw3n/aMgDVy+0rSqgHlv39WZAlZrXCdnbyEiKm17DSqHX4MmQMaST3FbeWR5FTuRcUwYAziZajji0Y7mg==
 
 resolve@^1.1.6, resolve@^1.10.0, resolve@^1.10.1, resolve@^1.14.2, resolve@^1.19.0, resolve@^1.20.0:
   version "1.22.0"
