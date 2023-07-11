@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-warn and resolve null for invalid deferred data result to avoid unexpected hanging
+Deferred promises that return undefined/void now surface a serialization error.
