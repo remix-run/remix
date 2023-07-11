@@ -921,13 +921,7 @@ export function Scripts(props: ScriptProps) {
     key: string,
     data: unknown
   ) => {
-    if (typeof data === "undefined") {
-      console.error(
-        `Deferred data for ${routeId} ${key} resolved to undefined, defaulting to null.`
-      );
-      data = null;
-    }
-    let serializedData = "null";
+    let serializedData;
     try {
       serializedData = JSON.stringify(data);
     } catch (error) {
@@ -951,13 +945,7 @@ export function Scripts(props: ScriptProps) {
   };
 
   let serializeDataImp = (routeId: string, key: string, data: unknown) => {
-    if (typeof data === "undefined") {
-      console.error(
-        `Deferred data for ${routeId} ${key} resolved to undefined, defaulting to null.`
-      );
-      data = null;
-    }
-    let serializedData = "null";
+    let serializedData;
     try {
       serializedData = JSON.stringify(data);
     } catch (error) {
