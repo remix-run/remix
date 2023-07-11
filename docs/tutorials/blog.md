@@ -266,7 +266,7 @@ model Post {
 }
 ```
 
-💿 Let's generate a migration file for our schema changes, which will be required if you deploy your application rather than just running in dev mode locally.  This will also update our local database and TypeScript definitions to match the schema change.  We'll name the migration "create post model".
+💿 Let's generate a migration file for our schema changes, which will be required if you deploy your application rather than just running in dev mode locally. This will also update our local database and TypeScript definitions to match the schema change. We'll name the migration "create post model".
 
 ```sh
 npx prisma migrate dev --name "create post model"
