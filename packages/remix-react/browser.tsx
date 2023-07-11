@@ -48,6 +48,19 @@ declare global {
 
 let router: Router;
 let hmrAbortController: AbortController | undefined;
+let hmrRouterReadyResolve: ((router: Router) => void) | undefined;
+// There's a race condition with HMR where the remix:manifest is signaled before
+// the router is assigned in the RemixBrowser component. This promise gates the
+// HMR handler until the router is ready
+let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
+  // body of a promise is executed immediately, so this can be resolved outside
+  // of the promise body
+  hmrRouterReadyResolve = resolve;
+}).catch(() => {
+  // This is a noop catch handler to avoid unhandled promise rejection warnings
+  // in the console. The promise is never rejected.
+  return undefined;
+});
 
 if (import.meta && import.meta.hot) {
   import.meta.hot.accept(
@@ -59,6 +72,15 @@ if (import.meta && import.meta.hot) {
       assetsManifest: EntryContext["manifest"];
       needsRevalidation: Set<string>;
     }) => {
+      let router = await hmrRouterReadyPromise;
+      // This should never happen, but just in case...
+      if (!router) {
+        console.error(
+          "Failed to accept HMR update because the router was not ready."
+        );
+        return;
+      }
+
       let routeIds = [
         ...new Set(
           router.state.matches
@@ -196,6 +218,11 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         `(${hydratedPathname}), reloading page...`;
       console.error(errorMsg);
       window.location.reload();
+    }
+
+    // Notify that the router is ready for HMR
+    if (hmrRouterReadyResolve) {
+      hmrRouterReadyResolve(router);
     }
   }
 

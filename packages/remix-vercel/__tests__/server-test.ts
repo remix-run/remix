@@ -15,7 +15,7 @@ import {
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
-// Puppeteer tests do), we just want to test the Vercel adapter
+// playwright tests do), we just want to test the Vercel adapter
 jest.mock("@remix-run/node", () => {
   let original = jest.requireActual("@remix-run/node");
   return {

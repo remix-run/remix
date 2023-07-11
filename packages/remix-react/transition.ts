@@ -1,4 +1,4 @@
-import type { Location } from "react-router-dom";
+import type { Location, FormEncType } from "react-router-dom";
 
 export interface Submission {
   action: string;
@@ -137,7 +137,7 @@ export type FetcherStates<TData = any> = {
     type: "actionSubmission";
     formMethod: FetcherActionSubmission["method"];
     formAction: string;
-    formEncType: string;
+    formEncType: FormEncType;
     submission: FetcherActionSubmission;
     data: TData | undefined;
   } & FetcherSubmissionDataTypes;
@@ -146,7 +146,7 @@ export type FetcherStates<TData = any> = {
     type: "loaderSubmission";
     formMethod: FetcherLoaderSubmission["method"];
     formAction: string;
-    formEncType: string;
+    formEncType: FormEncType;
     submission: FetcherLoaderSubmission;
     data: TData | undefined;
   } & FetcherSubmissionDataTypes;
@@ -155,7 +155,7 @@ export type FetcherStates<TData = any> = {
     type: "actionReload";
     formMethod: FetcherActionSubmission["method"];
     formAction: string;
-    formEncType: string;
+    formEncType: FormEncType;
     submission: FetcherActionSubmission;
     data: TData;
   } & FetcherSubmissionDataTypes;
@@ -164,7 +164,7 @@ export type FetcherStates<TData = any> = {
     type: "actionRedirect";
     formMethod: FetcherActionSubmission["method"];
     formAction: string;
-    formEncType: string;
+    formEncType: FormEncType;
     submission: FetcherActionSubmission;
     data: undefined;
   } & FetcherSubmissionDataTypes;
