@@ -1,5 +1,41 @@
 # `@remix-run/vercel`
 
+## 1.18.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.18.1`
+
+## 1.18.0
+
+### Patch Changes
+
+- Show deprecation warning when using `@remix-run/vercel`, since Vercel now provides built-in support for Remix apps ([#5964](https://github.com/remix-run/remix/pull/5964)) ([`e222ded5c`](https://github.com/remix-run/remix/commit/e222ded5c46feca1ba47585ed8608dd2fb5a876b))
+- Updated dependencies:
+  - `@remix-run/node@1.18.0`
+
+## 1.17.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.17.1`
+
+## 1.17.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.17.0`
+
+## 1.16.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.16.1`
+
 ## 1.16.0
 
 ### Patch Changes

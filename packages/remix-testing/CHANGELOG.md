@@ -1,5 +1,54 @@
 # `@remix-run/testing`
 
+## 1.18.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@1.18.1`
+  - `@remix-run/node@1.18.1`
+  - [`react-router-dom@6.14.1`](https://github.com/remix-run/react-router/releases/tag/react-router%406.14.1)
+  - [`@remix-run/router@1.7.1`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#171)
+
+## 1.18.0
+
+### Minor Changes
+
+- stabilize v2 dev server ([#6615](https://github.com/remix-run/remix/pull/6615))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@1.18.0`
+  - `@remix-run/node@1.18.0`
+
+## 1.17.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - [`react-router-dom@6.13.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.13.0)
+  - `@remix-run/react@1.17.1`
+  - `@remix-run/node@1.17.1`
+
+## 1.17.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@1.17.0`
+  - `@remix-run/node@1.17.0`
+  - [`react-router-dom@6.12.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.12.0)
+  - [`@remix-run/router@1.6.3`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#163)
+
+## 1.16.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@1.16.1`
+  - `@remix-run/node@1.16.1`
+
 ## 1.16.0
 
 ### Minor Changes

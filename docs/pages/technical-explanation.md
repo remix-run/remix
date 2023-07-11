@@ -172,7 +172,7 @@ Taking our route module from before, here are a few small, but useful UX improve
 export default function Projects() {
   const projects = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const { state } = useTransition();
+  const { state } = useNavigation();
   const busy = state === "submitting";
   const inputRef = React.useRef();
 

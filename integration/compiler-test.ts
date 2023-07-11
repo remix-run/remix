@@ -22,6 +22,8 @@ test.describe("compiler", () => {
     fixture = await createFixture({
       setup: "node",
       files: {
+        // We need a custom config file here to test usage of `getDependenciesToBundle`
+        // since this can't be serialized from the fixture object.
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
@@ -386,7 +388,9 @@ test.describe("compiler", () => {
 
       await expect(() =>
         createFixtureProject({
-          future: { v2_routeConvention: true },
+          config: {
+            future: { v2_routeConvention: true },
+          },
           buildStdio,
           files: {
             "app/routes/_index.jsx": js`
@@ -424,10 +428,16 @@ test.describe("compiler", () => {
       let importer = path.join("app", "routes", "_index.jsx");
 
       expect(buildOutput).toContain(
-        `The path "some-not-installed-module" is imported in ${importer} but "some-not-installed-module" was not found in your node_modules. Did you forget to install it?`
+        `could not resolve "some-not-installed-module"`
       );
       expect(buildOutput).toContain(
-        `The path "some-not-installed-module/sub" is imported in ${importer} but "some-not-installed-module/sub" was not found in your node_modules. Did you forget to install it?`
+        `You imported "some-not-installed-module" in ${importer},`
+      );
+      expect(buildOutput).toContain(
+        `could not resolve "some-not-installed-module/sub"`
+      );
+      expect(buildOutput).toContain(
+        `You imported "some-not-installed-module/sub" in ${importer},`
       );
     });
   });

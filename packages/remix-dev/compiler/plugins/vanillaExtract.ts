@@ -7,6 +7,7 @@ import type { Options } from "../options";
 import { loaders } from "../utils/loaders";
 import { getPostcssProcessor } from "../utils/postcss";
 import type { Context } from "../context";
+import { getAppDependencies } from "../../dependencies";
 
 const pluginName = "vanilla-extract-plugin";
 const namespace = `${pluginName}-ns`;
@@ -60,13 +61,16 @@ export function vanillaExtractPlugin(
   return {
     name: pluginName,
     async setup(build) {
+      let appDependencies = getAppDependencies(config, true);
+      if (!appDependencies["@vanilla-extract/css"]) {
+        return;
+      }
+
       let root = config.appDirectory;
 
       let postcssProcessor = await getPostcssProcessor({
         config,
-        context: {
-          vanillaExtract: true,
-        },
+        postcssContext: { vanillaExtract: true },
       });
 
       // Resolve virtual CSS files first to avoid resolving the same

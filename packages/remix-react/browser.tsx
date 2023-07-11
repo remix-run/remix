@@ -19,17 +19,19 @@ import {
 /* eslint-disable prefer-let/prefer-let */
 declare global {
   var __remixContext: {
+    url: string;
     state: HydrationState;
     future: FutureConfig;
     // The number of active deferred keys rendered on the server
     a?: number;
     dev?: {
-      websocketPort?: number;
+      port?: number;
       hmrRuntime?: string;
     };
   };
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
+  var __remixRevalidation: number | undefined;
   var $RefreshRuntime$: {
     performReactRefresh: () => void;
   };
@@ -55,7 +57,7 @@ if (import.meta && import.meta.hot) {
       needsRevalidation,
     }: {
       assetsManifest: EntryContext["manifest"];
-      needsRevalidation: boolean;
+      needsRevalidation: Set<string>;
     }) => {
       let routeIds = [
         ...new Set(
@@ -139,6 +141,7 @@ if (import.meta && import.meta.hot) {
           }, 1);
         }
       });
+      window.__remixRevalidation = (window.__remixRevalidation || 0) + 1;
       router.revalidate();
     }
   );
@@ -177,6 +180,23 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
           window.__remixContext.future.v2_normalizeFormMethod,
       },
     });
+
+    // Hard reload if the path we tried to load is not the current path.
+    // This is usually the result of 2 rapid back/forward clicks from an
+    // external site into a Remix app, where we initially start the load for
+    // one URL and while the JS chunks are loading a second forward click moves
+    // us to a new URL.  Avoid comparing search params because of CDNs which
+    // can be configured to ignore certain params and only pathname is relevant
+    // towards determining the route matches.
+    let initialPathname = window.__remixContext.url;
+    let hydratedPathname = window.location.pathname;
+    if (initialPathname !== hydratedPathname) {
+      let errorMsg =
+        `Initial URL (${initialPathname}) does not match URL at time of hydration ` +
+        `(${hydratedPathname}), reloading page...`;
+      console.error(errorMsg);
+      window.location.reload();
+    }
   }
 
   let [location, setLocation] = React.useState(router.state.location);
@@ -205,7 +225,11 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         location={location}
         component={RemixRootDefaultErrorBoundary}
       >
-        <RouterProvider router={router} fallbackElement={null} />
+        <RouterProvider
+          router={router}
+          fallbackElement={null}
+          future={{ v7_startTransition: true }}
+        />
       </RemixErrorBoundary>
     </RemixContext.Provider>
   );

@@ -20,10 +20,8 @@ export type Manifest = {
       hasErrorBoundary: boolean;
     };
   };
-  cssBundleHref?: string;
   hmr?: {
     timestamp: number;
     runtime: string;
-    routes: Record<string, { loaderHash: string }>;
   };
 };
