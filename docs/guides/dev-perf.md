@@ -75,9 +75,9 @@ Re-importing code changes turns out to be tricky because JS imports are cached.
 ```js
 import fs from "node:fs";
 
-let original = await import("./build/index.js");
+const original = await import("./build/index.js");
 fs.writeFileSync("./build/index.js", someCode);
-let changed = await import("./build/index.js");
+const changed = await import("./build/index.js");
 //  ^^^^^^^ this will return the original module from the import cache without the code changes
 ```
 
@@ -109,7 +109,7 @@ let build = require(BUILD_PATH);
 /**
  * @type {() => ServerBuild}
  */
-let reimportServer = () => {
+const reimportServer = () => {
   // 1. manually remove the server build from the require cache
   Object.keys(require.cache).forEach((key) => {
     if (key.startsWith(BUILD_PATH)) {
@@ -139,7 +139,6 @@ To workaround this, you can use a timestamp query parameter to force ESM to trea
 ```js
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { type ServerBuild } from "@remix-run/node";
 
 /**
  * @typedef {import('@remix-run/node').ServerBuild} ServerBuild
@@ -156,7 +155,7 @@ let build = import(BUILD_PATH);
 /**
  * @type {() => Promise<ServerBuild>}
  */
-let reimportServer = async (): Promise<ServerBuild> => {
+const reimportServer = async () => {
   const stat = fs.statSync(BUILD_PATH);
 
   // use a timestamp query parameter to bust the import cache
@@ -185,8 +184,8 @@ To detect when the server code changes, you can use a file watcher like [chokida
 ```js
 import chokidar from "chokidar";
 
-function handleServerUpdate = async () => {
-    build = await reimportServer();
+async function handleServerUpdate() {
+  build = await reimportServer();
 }
 
 chokidar
@@ -213,11 +212,11 @@ app.listen(port, async () => {
 In manual mode, you also need to send "ready" messages whenever you re-import the server build:
 
 ```js lines=[4-5]
-function handleServerUpdate = async () => {
-    // 1. re-import the server build
-    build = await reimportServer();
-    // 2. tell dev server that this app server is now up-to-date and ready
-    broadcastDevReady(await build);
+async function handleServerUpdate() {
+  // 1. re-import the server build
+  build = await reimportServer();
+  // 2. tell dev server that this app server is now up-to-date and ready
+  broadcastDevReady(await build);
 }
 ```
 
@@ -228,7 +227,7 @@ Last step is to wrap all of this up in a development mode request handler:
 ```js
 function createDevRequestHandler() {
 
-  function handleServerUpdate = async () => {
+  async function handleServerUpdate() {
     // 1. re-import the server build
     build = await reimportServer();
     // 2. tell dev server that this app server is now up-to-date and ready
