@@ -6,6 +6,7 @@ import fs from "fs-extra";
 import prettyMs from "pretty-ms";
 import execa from "execa";
 import express from "express";
+import pc from "picocolors";
 
 import * as Channel from "../channel";
 import { type Manifest } from "../manifest";
@@ -15,20 +16,13 @@ import { type RemixConfig } from "../config";
 import { loadEnv } from "./env";
 import * as Socket from "./socket";
 import * as HMR from "./hmr";
-import { warnOnce } from "../warnOnce";
 import { detectPackageManager } from "../cli/detectPackageManager";
 import * as HDR from "./hdr";
 import type { Result } from "../result";
 import { err, ok } from "../result";
 import invariant from "../invariant";
-
-type Origin = {
-  scheme: string;
-  host: string;
-  port: number;
-};
-
-let stringifyOrigin = (o: Origin) => `${o.scheme}://${o.host}:${o.port}`;
+import { logger } from "../tux";
+import { kill, killtree } from "./proc";
 
 let detectBin = async (): Promise<string> => {
   let pkgManager = detectPackageManager() ?? "npm";
@@ -45,12 +39,11 @@ export let serve = async (
   initialConfig: RemixConfig,
   options: {
     command?: string;
-    scheme: string;
-    host: string;
     port: number;
-    restart: boolean;
     tlsKey?: string;
     tlsCert?: string;
+    REMIX_DEV_ORIGIN: URL;
+    restart: boolean;
   }
 ) => {
   await loadEnv(initialConfig.rootDirectory);
@@ -69,7 +62,7 @@ export let serve = async (
     .post("/ping", (req, res) => {
       let { buildHash } = req.body;
       if (typeof buildHash !== "string") {
-        console.warn(`Unrecognized payload: ${req.body}`);
+        logger.warn(`unrecognized payload: ${req.body}`);
         res.sendStatus(400);
       }
       if (buildHash === state.manifest?.version) {
@@ -90,12 +83,6 @@ export let serve = async (
       : http.createServer(app);
   let websocket = Socket.serve(server);
 
-  let origin: Origin = {
-    scheme: options.scheme,
-    host: options.host,
-    port: options.port,
-  };
-
   let bin = await detectBin();
   let startAppServer = (command?: string) => {
     let cmd =
@@ -104,7 +91,6 @@ export let serve = async (
         process.cwd(),
         initialConfig.serverBuildPath
       )}`;
-    console.log(`> ${cmd}`);
     let newAppServer = execa
       .command(cmd, {
         stdio: "pipe",
@@ -112,7 +98,8 @@ export let serve = async (
           NODE_ENV: "development",
           PATH:
             bin + (process.platform === "win32" ? ";" : ":") + process.env.PATH,
-          REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(origin),
+          REMIX_DEV_ORIGIN: options.REMIX_DEV_ORIGIN.href,
+          REMIX_DEV_HTTP_ORIGIN: options.REMIX_DEV_ORIGIN.href, // TODO: remove in v2
           FORCE_COLOR: process.env.NO_COLOR === undefined ? "1" : "0",
         },
         // https://github.com/sindresorhus/execa/issues/433
@@ -125,18 +112,16 @@ export let serve = async (
         invariant("path" in e && typeof e.path === "string", "path missing");
 
         if (command === undefined) {
-          console.error(
-            [
-              "",
-              `┏ [error] command not found: ${e.path}`,
-              `┃ \`remix dev\` did not receive \`--command\` nor \`-c\`, defaulting to \`${cmd}\`.`,
-              "┃ You probably meant to use `-c` for your app server command.",
-              "┗ For example: `remix dev -c 'node ./server.js'`",
-              "",
-            ].join("\n")
-          );
+          logger.error(`command not found: ${e.path}`, {
+            details: [
+              `\`remix dev\` did not receive \`--command\` nor \`-c\`, defaulting to \`${cmd}\`.`,
+              "You probably meant to use `-c` for your app server command.",
+              "For example: `remix dev -c 'node ./server.js'`",
+            ],
+          });
           process.exit(1);
         }
+        logger.error("app failed to start" + pc.gray(` (${command})`));
         throw e;
       });
 
@@ -179,10 +164,10 @@ export let serve = async (
       options: {
         mode: "development",
         sourcemap: true,
-        onWarning: warnOnce,
-        devOrigin: origin,
+        REMIX_DEV_ORIGIN: options.REMIX_DEV_ORIGIN,
       },
       fileWatchCache,
+      logger,
     },
     {
       onBuildStart: async (ctx) => {
@@ -190,7 +175,11 @@ export let serve = async (
         state.appReady?.err();
 
         clean(ctx.config);
-        websocket.log(state.prevManifest ? "Rebuilding..." : "Building...");
+        if (!state.prevManifest) {
+          let msg = "building...";
+          websocket.log(msg);
+          logger.info(msg);
+        }
 
         state.loaderChanges = HDR.detectLoaderChanges(ctx).then(ok, err);
       },
@@ -200,23 +189,30 @@ export let serve = async (
       },
       onBuildFinish: async (ctx, durationMs, succeeded) => {
         if (!succeeded) return;
-        websocket.log(
-          (state.prevManifest ? "Rebuilt" : "Built") +
-            ` in ${prettyMs(durationMs)}`
-        );
+
+        let msg =
+          (state.prevManifest ? "rebuilt" : "built") +
+          pc.gray(` (${prettyMs(durationMs)})`);
+        websocket.log(msg);
+        logger.info(msg);
 
         // accumulate new state, but only update state after updates are processed
         let newState: typeof state = { prevManifest: state.manifest };
         try {
-          console.log(`Waiting for app server (${state.manifest?.version})`);
           let start = Date.now();
           if (state.appServer === undefined || options.restart) {
-            await kill(state.appServer);
+            if (state.appServer?.pid) {
+              await killtree(state.appServer.pid);
+            }
             state.appServer = startAppServer(options.command);
           }
           let appReady = await state.appReady!.result;
           if (!appReady.ok) return;
-          console.log(`App server took ${prettyMs(Date.now() - start)}`);
+          if (state.prevManifest) {
+            logger.info(
+              `app server ready` + pc.gray(` (${prettyMs(Date.now() - start)})`)
+            );
+          }
 
           // HMR + HDR
           let loaderChanges = await state.loaderChanges!;
@@ -234,39 +230,42 @@ export let serve = async (
             websocket.hmr(state.manifest, updates);
 
             let hdr = updates.some((u) => u.revalidate);
-            console.log("> HMR" + (hdr ? " + HDR" : ""));
+            logger.info("hmr" + (hdr ? " + hdr" : ""));
             return;
           }
 
           // Live Reload
           if (state.prevManifest !== undefined) {
             websocket.reload();
-            console.log("> Live reload");
+            logger.info("live reload");
           }
         } finally {
           // commit accumulated state
           Object.assign(state, newState);
+          process.stdout.write("\n");
         }
       },
-      onFileCreated: (file) =>
-        websocket.log(`File created: ${relativePath(file)}`),
+      onFileCreated: (file) => {
+        logger.info(`rebuilding...` + pc.gray(` (+ ${relativePath(file)})`));
+        websocket.log(`file created: ${relativePath(file)}`);
+      },
       onFileChanged: (file) => {
-        websocket.log(`File changed: ${relativePath(file)}`);
+        logger.info(`rebuilding...` + pc.gray(` (~ ${relativePath(file)})`));
+        websocket.log(`file changed: ${relativePath(file)}`);
         fileWatchCache.invalidateFile(file);
       },
       onFileDeleted: (file) => {
-        websocket.log(`File deleted: ${relativePath(file)}`);
+        logger.info(`rebuilding` + pc.gray(` (- ${relativePath(file)})`));
+        websocket.log(`file deleted: ${relativePath(file)}`);
         fileWatchCache.invalidateFile(file);
       },
     }
   );
 
-  server.listen(origin.port, () => {
-    console.log("Remix dev server ready");
-  });
+  server.listen(options.port);
 
   return new Promise(() => {}).finally(async () => {
-    await kill(state.appServer);
+    state.appServer?.pid && (await kill(state.appServer.pid));
     websocket.close();
     server.close();
     await dispose();
@@ -280,18 +279,3 @@ let clean = (config: RemixConfig) => {
 };
 
 let relativePath = (file: string) => path.relative(process.cwd(), file);
-
-let kill = async (p?: execa.ExecaChildProcess) => {
-  if (p === undefined) return;
-  let channel = Channel.create<void>();
-  p.on("exit", channel.ok);
-
-  // https://github.com/nodejs/node/issues/12378
-  if (process.platform === "win32") {
-    await execa("taskkill", ["/pid", String(p.pid), "/f", "/t"]);
-  } else {
-    p.kill("SIGTERM", { forceKillAfterTimeout: 1_000 });
-  }
-
-  await channel.result;
-};

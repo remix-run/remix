@@ -1,5 +1,6 @@
 import type { StaticHandlerContext } from "@remix-run/router";
 
+import type { SerializedError } from "./errors";
 import type { RouteManifest, ServerRouteManifest, EntryRoute } from "./routes";
 import type { RouteModules, EntryRouteModule } from "./routeModules";
 
@@ -9,6 +10,7 @@ export interface EntryContext {
   serverHandoffString?: string;
   staticHandlerContext: StaticHandlerContext;
   future: FutureConfig;
+  serializeError(error: Error): SerializedError;
 }
 
 type Dev = {
@@ -19,7 +21,7 @@ type Dev = {
 };
 
 export interface FutureConfig {
-  unstable_dev: boolean | Dev;
+  v2_dev: boolean | Dev;
   /** @deprecated Use the `postcss` config option instead */
   unstable_postcss: boolean;
   /** @deprecated Use the `tailwind` config option instead */

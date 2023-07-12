@@ -4,6 +4,11 @@ import type { RouteManifest, EntryRoute } from "./routes";
 import type { RouteModules } from "./routeModules";
 
 // Object passed to RemixContext.Provider
+
+type SerializedError = {
+  message: string;
+  stack?: string;
+};
 export interface RemixContextObject {
   manifest: AssetsManifest;
   routeModules: RouteModules;
@@ -11,6 +16,7 @@ export interface RemixContextObject {
   future: FutureConfig;
   abortDelay?: number;
   dev?: { port: number };
+  serializeError?(error: Error): SerializedError;
 }
 
 // Additional React-Router information needed at runtime, but not hydrated
@@ -27,7 +33,7 @@ type Dev = {
 };
 
 export interface FutureConfig {
-  unstable_dev: boolean | Dev;
+  v2_dev: boolean | Dev;
   /** @deprecated Use the `postcss` config option instead */
   unstable_postcss: boolean;
   /** @deprecated Use the `tailwind` config option instead */

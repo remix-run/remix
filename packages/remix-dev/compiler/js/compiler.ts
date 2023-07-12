@@ -16,17 +16,13 @@ import { mdxPlugin } from "../plugins/mdx";
 import { externalPlugin } from "../plugins/external";
 import { cssBundlePlugin } from "../plugins/cssBundlePlugin";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
-import {
-  cssSideEffectImportsPlugin,
-  isCssSideEffectImportPath,
-} from "../plugins/cssSideEffectImports";
+import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
-import { createMatchPath } from "../utils/tsconfig";
-import { detectPackageManager } from "../../cli/detectPackageManager";
 import type { LazyValue } from "../lazyValue";
 import type { Context } from "../context";
+import { writeMetafile } from "../analysis";
 
 type Compiler = {
   // produce ./public/build/
@@ -37,21 +33,6 @@ type Compiler = {
   cancel: () => Promise<void>;
   dispose: () => Promise<void>;
 };
-
-function getNpmPackageName(id: string): string {
-  let split = id.split("/");
-  let packageName = split[0];
-  if (packageName.startsWith("@")) packageName += `/${split[1]}`;
-  return packageName;
-}
-
-function isBareModuleId(id: string): boolean {
-  return !id.startsWith("node:") && !id.startsWith(".") && !path.isAbsolute(id);
-}
-
-function isNodeBuiltIn(packageName: string) {
-  return nodeBuiltins.includes(packageName);
-}
 
 const getExternals = (remixConfig: RemixConfig): string[] => {
   // For the browser build, exclude node built-ins that don't have a
@@ -90,7 +71,7 @@ const createEsbuildConfig = (
 
   if (
     ctx.options.mode === "development" &&
-    ctx.config.future.unstable_dev !== false
+    ctx.config.future.v2_dev !== false
   ) {
     let defaultsDirectory = path.resolve(
       __dirname,
@@ -105,18 +86,6 @@ const createEsbuildConfig = (
     );
   }
 
-  let matchPath = ctx.config.tsconfigPath
-    ? createMatchPath(ctx.config.tsconfigPath)
-    : undefined;
-  function resolvePath(id: string) {
-    if (!matchPath) {
-      return id;
-    }
-    return (
-      matchPath(id, undefined, undefined, [".ts", ".tsx", ".js", ".jsx"]) || id
-    );
-  }
-
   let plugins: esbuild.Plugin[] = [
     browserRouteModulesPlugin(ctx, /\?browser$/),
     deprecatedRemixPackagePlugin(ctx),
@@ -126,61 +95,21 @@ const createEsbuildConfig = (
     cssSideEffectImportsPlugin(ctx, {
       hmr:
         ctx.options.mode === "development" &&
-        ctx.config.future.unstable_dev !== false,
+        ctx.config.future.v2_dev !== false,
     }),
     cssFilePlugin(ctx),
     absoluteCssUrlsPlugin(),
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
     mdxPlugin(ctx),
     emptyModulesPlugin(ctx, /\.server(\.[jt]sx?)?$/),
+    emptyModulesPlugin(ctx, /^@remix-run\/(deno|cloudflare|node)(\/.*)?$/, {
+      includeNodeModules: true,
+    }),
     nodeModulesPolyfillPlugin(),
     externalPlugin(/^node:.*/, { sideEffects: false }),
-    {
-      // TODO: should be removed when error handling for compiler is improved
-      name: "warn-on-unresolved-imports",
-      setup: (build) => {
-        build.onResolve({ filter: /.*/ }, (args) => {
-          if (!isBareModuleId(resolvePath(args.path))) {
-            return undefined;
-          }
-
-          if (args.path === "remix:hmr") {
-            return undefined;
-          }
-
-          let packageName = getNpmPackageName(args.path);
-          let pkgManager = detectPackageManager() ?? "npm";
-          if (
-            ctx.options.onWarning &&
-            !isNodeBuiltIn(packageName) &&
-            !/\bnode_modules\b/.test(args.importer) &&
-            !args.path.endsWith(".css") &&
-            !isCssSideEffectImportPath(args.path) &&
-            // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
-            // a `node_modules` folder to keep its dependencies, so the above check
-            // will always fail.
-            (pkgManager === "npm" ||
-              (pkgManager === "yarn" && process.versions.pnp == null))
-          ) {
-            try {
-              require.resolve(args.path);
-            } catch (error: unknown) {
-              ctx.options.onWarning(
-                `The path "${args.path}" is imported in ` +
-                  `${path.relative(process.cwd(), args.importer)} but ` +
-                  `"${args.path}" was not found in your node_modules. ` +
-                  `Did you forget to install it?`,
-                args.path
-              );
-            }
-          }
-          return undefined;
-        });
-      },
-    } as esbuild.Plugin,
   ];
 
-  if (ctx.options.mode === "development" && ctx.config.future.unstable_dev) {
+  if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {
     plugins.push(hmrPlugin(ctx));
   }
 
@@ -208,6 +137,10 @@ const createEsbuildConfig = (
     publicPath: ctx.config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
+      "process.env.REMIX_DEV_ORIGIN": JSON.stringify(
+        ctx.options.REMIX_DEV_ORIGIN ?? ""
+      ),
+      // TODO: remove in v2
       "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
         ctx.config.devServerPort
       ),
@@ -232,9 +165,10 @@ export const create = async (
 
   let compile = async () => {
     let { metafile } = await compiler.rebuild();
+    writeMetafile(ctx, "metafile.js.json", metafile);
 
     let hmr: Manifest["hmr"] | undefined = undefined;
-    if (ctx.options.mode === "development" && ctx.config.future.unstable_dev) {
+    if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {
       let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
         ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
       )?.[0];

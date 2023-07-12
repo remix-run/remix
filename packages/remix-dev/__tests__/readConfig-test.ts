@@ -1,23 +1,17 @@
 import path from "path";
 
 import type { RemixConfig } from "../config";
-import { serverBuildTargetWarning, readConfig } from "../config";
+import { readConfig } from "../config";
 
 const remixRoot = path.resolve(__dirname, "./fixtures/stack");
 
 describe("readConfig", () => {
   let config: RemixConfig;
-  let warnStub;
   beforeEach(async () => {
-    let consoleWarn = console.warn;
-    warnStub = jest.fn();
-    console.warn = warnStub;
     config = await readConfig(remixRoot);
-    console.warn = consoleWarn;
   });
 
   it("generates a config", async () => {
-    expect(warnStub).toHaveBeenCalledWith(serverBuildTargetWarning);
     expect(config).toMatchInlineSnapshot(
       {
         rootDirectory: expect.any(String),
@@ -52,9 +46,9 @@ describe("readConfig", () => {
         "entryServerFile": "entry.server.tsx",
         "entryServerFilePath": Any<String>,
         "future": Object {
-          "unstable_dev": false,
           "unstable_postcss": Any<Boolean>,
           "unstable_tailwind": Any<Boolean>,
+          "v2_dev": false,
           "v2_errorBoundary": Any<Boolean>,
           "v2_headers": Any<Boolean>,
           "v2_meta": Any<Boolean>,
