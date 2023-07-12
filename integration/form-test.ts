@@ -1101,18 +1101,13 @@ test.describe("Forms", () => {
     test("empty file inputs resolve to File objects on the server", async ({
       page,
     }) => {
-      test.fail(
-        true,
-        "Empty file inputs not properly handled by @remix-run/web-fetch yet"
-      );
-
       let app = new PlaywrightFixture(appFixture, page);
 
       await app.goto("/empty-file-upload");
       await app.clickSubmitButton("/empty-file-upload");
       await page.waitForSelector("#action-data");
       expect((await app.getElement("#action-data")).text()).toContain(
-        '{"file":"","a":{"name":"","size":0},"b":[{"name":"","size":0}]}'
+        '{"text":"","file":{"name":"","size":0},"fileMultiple":[{"name":"","size":0}]}'
       );
     });
 
