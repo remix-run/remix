@@ -79,7 +79,7 @@ const createEsbuildConfig = (
     // https://github.com/jspm/jspm-core/tree/main/nodelibs/browser
     const unimplemented = [
       "async_hooks", // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/async_hooks.js
-      "child_process", // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/async_hooks.js
+      "child_process", // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/child_process.js
       "cluster", // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/cluster.js
       "dgram", // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/dgram.js
       "dns", // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/dns.js
