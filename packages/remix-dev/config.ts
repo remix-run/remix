@@ -504,17 +504,13 @@ export async function readConfig(
   let serverNodeBuiltinsPolyfill: RemixConfig["serverNodeBuiltinsPolyfill"] =
     serverPlatform !== "node";
 
-  if (
-    typeof appConfig.serverNodeBuiltinsPolyfill === "boolean" ||
-    Array.isArray(appConfig.serverNodeBuiltinsPolyfill)
-  ) {
+  if (appConfig.serverNodeBuiltinsPolyfill !== undefined) {
     serverNodeBuiltinsPolyfill = appConfig.serverNodeBuiltinsPolyfill;
   }
 
   if (
     serverPlatform !== "node" &&
-    typeof appConfig.serverNodeBuiltinsPolyfill !== "boolean" &&
-    !Array.isArray(appConfig.serverNodeBuiltinsPolyfill)
+    appConfig.serverNodeBuiltinsPolyfill === undefined
   ) {
     serverNodeBuiltinsPolyfillWarning();
   }
