@@ -193,9 +193,10 @@ export interface AppConfig {
   serverModuleFormat?: ServerModuleFormat;
 
   /**
-   * Whether to polyfill Node.js built-in modules in the server build.
+   * Whether to polyfill Node.js built-in modules in the server build, or a
+   * list of polyfills. Defaults to `true` for non-Node.js server platforms.
    */
-  serverNodeBuiltinsPolyfill?: boolean;
+  serverNodeBuiltinsPolyfill?: boolean | string[];
 
   /**
    * The platform the server build is targeting. Defaults to "node".
@@ -369,9 +370,10 @@ export interface RemixConfig {
   serverModuleFormat: ServerModuleFormat;
 
   /**
-   * Whether to polyfill Node.js built-in modules in the server build.
+   * Whether to polyfill Node.js built-in modules in the server build, or a
+   * list of polyfills. Defaults to `true` for non-Node.js server platforms.
    */
-  serverNodeBuiltinsPolyfill: boolean;
+  serverNodeBuiltinsPolyfill: boolean | string[];
 
   /**
    * The platform the server build is targeting. Defaults to "node".
@@ -499,14 +501,20 @@ export async function readConfig(
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
 
-  let serverNodeBuiltinsPolyfill = serverPlatform !== "node";
-  if (typeof appConfig.serverNodeBuiltinsPolyfill === "boolean") {
+  let serverNodeBuiltinsPolyfill: RemixConfig["serverNodeBuiltinsPolyfill"] =
+    serverPlatform !== "node";
+
+  if (
+    typeof appConfig.serverNodeBuiltinsPolyfill === "boolean" ||
+    Array.isArray(appConfig.serverNodeBuiltinsPolyfill)
+  ) {
     serverNodeBuiltinsPolyfill = appConfig.serverNodeBuiltinsPolyfill;
   }
 
   if (
     serverPlatform !== "node" &&
-    typeof appConfig.serverNodeBuiltinsPolyfill !== "boolean"
+    typeof appConfig.serverNodeBuiltinsPolyfill !== "boolean" &&
+    !Array.isArray(appConfig.serverNodeBuiltinsPolyfill)
   ) {
     serverNodeBuiltinsPolyfillWarning();
   }
@@ -1008,7 +1016,7 @@ let serverNodeBuiltinsPolyfillWarning = () =>
         "The default value will change from `true` to `false` regardless of platform.",
         "You can prepare for this change by explicitly specifying `serverNodeBuiltinsPolyfill: false` or",
         "`serverNodeBuiltinsPolyfill: true` if you are currently relying on them.",
-        "-> https://remix.run/docs/en/v1.16.0/pages/v2#servernodebuiltinspolyfill",
+        "-> https://remix.run/docs/en/v1.19.0/pages/v2#servernodebuiltinspolyfill",
       ],
       key: "serverNodeBuiltinsPolyfillWarning",
     }

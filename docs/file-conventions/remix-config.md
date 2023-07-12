@@ -193,7 +193,15 @@ Defaults to `"cjs"`.
 
 ## serverNodeBuiltinsPolyfill
 
-Whether to polyfill Node.js built-in modules in the server build. Defaults to true for non-node server platforms.
+Whether to polyfill Node.js built-in modules in the server build, or a list of polyfills. Defaults to `true` for non-Node.js server platforms.
+
+```js filename=remix.config.js
+// disable all polyfills
+exports.serverNodeBuiltinsPolyfill = false;
+
+// enable specific polyfills
+exports.serverNodeBuiltinsPolyfill = ["crypto"];
+```
 
 ## serverPlatform
 
