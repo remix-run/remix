@@ -77,7 +77,7 @@ const createEsbuildConfig = (
     // of desired polyfills instead. This list was manually populated by looking
     // for unimplemented browser polyfills in the jspm-core repo:
     // https://github.com/jspm/jspm-core/tree/main/nodelibs/browser
-    const unimplemented = [
+    let unimplemented = [
       "async_hooks", // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/async_hooks.js
       "child_process", // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/child_process.js
       "cluster", // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/cluster.js
