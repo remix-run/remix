@@ -64,11 +64,11 @@ Check out our video ["Mental model for the new dev server 🧠"][mental-model] f
 
 ### Learning to drive stick
 
-When you switch on manual mode with `--manual`, you take on two new responsibilities:
+When you switch on manual mode with `--manual`, you take on some new responsibilities:
 
-- [ ] Detect when server code changes are available
-- [ ] Re-import code changes while keeping the app server running
-- [ ] Send "ready" message to dev server _after_ those changes are picked up
+1. Detect when server code changes are available
+2. Re-import code changes while keeping the app server running
+3. Send "ready" message to dev server _after_ those changes are picked up
 
 Re-importing code changes turns out to be tricky because JS imports are cached.
 
