@@ -4,6 +4,8 @@ order: 2
 new: true
 ---
 
+# Remix CLI (v2)
+
 The Remix CLI comes from the `@remix-run/dev` package. It also includes the compiler. Make sure it is in your `package.json` `devDependencies` so it doesn't get deployed to your server.
 
 To get a full list of available commands and flags, run:
@@ -136,13 +138,13 @@ but CloudFlare does not support async I/O like `fetch` outside of request handli
 
 Options priority order is: 1. flags, 2. config, 3. defaults.
 
-| Option          | flag               | config           | default                           |
-| --------------- | ------------------ | ---------------- | --------------------------------- |
-| Command         | `-c` / `--command` | `command`        | `remix-serve <server build path>` |
-| No restart      | `--no-restart`     | `restart: false` | `restart: true`                   |
-| Port            | `--port`           | `port`           | Dynamically chosen open port      |
-| TLS key         | `--tls-key`        | `tlsKey`         | N/A                               |
-| TLS certificate | `--tls-cert`       | `tlsCert`        | N/A                               |
+| Option          | flag               | config    | default                           | description                                                |
+| --------------- | ------------------ | --------- | --------------------------------- | ---------------------------------------------------------- |
+| Command         | `-c` / `--command` | `command` | `remix-serve <server build path>` | Command the dev server will run to spin up your app server |
+| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode](../guides/manual-mode)         |
+| Port            | `--port`           | `port`    | Dynamically chosen open port      | Internal port used for hot updates                         |
+| TLS key         | `--tls-key`        | `tlsKey`  | N/A                               | TLS key for configuring local HTTPS                        |
+| TLS certificate | `--tls-cert`       | `tlsCert` | N/A                               | TLS certificate for configuring local HTTPS                |
 
 <docs-info>
 
@@ -156,7 +158,7 @@ for example to setup Docker networking or use a specific open port for security 
 
 </docs-info>
 
-For example, to override the port used by the dev server via config:
+For example, to override the internal port used by the dev server via config:
 
 ```js filename=remix.config.js
 module.exports = {
@@ -168,73 +170,12 @@ module.exports = {
 };
 ```
 
-### Keep app server running across rebuilds
-
-By default, the Remix dev server restarts your app server when rebuilds occur.
-This is a simple way to ensure that your app server is up-to-date with the latest code changes.
-
-If you'd like to opt-out of this behavior use the `--no-restart` flag:
-
-```sh
-remix dev --no-restart -c 'node ./server.js'
-```
-
-🚨 BUT that means you are now on the hook for applying changes to your running app server _and_ telling the dev server when those changes have been applied.
-
-> With great power comes great responsibility.
-
-Check out our [templates][templates] for examples on how to use `import` cache busting to apply code changes to your app server while it keeps running.
-
-If you're using CJS but looking at an ESM template, you'll need to swap out `import` cache busting with `require` cache busting:
-
-```diff
-- const stat = fs.statSync(BUILD_DIR);
-- build = import(BUILD_DIR + "?t=" + stat.mtimeMs);
-+ for (const key in require.cache) {
-+   if (key.startsWith(BUILD_DIR)) {
-+     delete require.cache[key];
-+   }
-+ }
-+ build = require(BUILD_DIR)
-```
-
-#### Pick up changes from other packages
+### Pick up changes from other packages
 
 If you are using a monorepo, you might want Remix to perform hot updates not only when your app code changes, but whenever you change code in any of your apps dependencies.
 
 For example, you could have a UI library package (`packages/ui`) that is used within your Remix app (`packages/app`).
 To pick up changes in `packages/ui`, you can configure [watchPaths][watch-paths] to include your packages.
-
-#### Keep in-memory data and connections across rebuilds
-
-Every time you re-import code to apply changes to your app server, that code will be run.
-Rerunning each changed module works great in most cases, but sometimes you want to want to keep stuff around.
-
-For example, it'd be nice if your app only connected to your database once and kept that connection around across rebuilds.
-But since the connection is held in-memory, re-imports will wipe those out and cause your app to reconnect.
-
-Luckily, there's a trick to get around this: use `global` as a cache for keeping things in-memory across rebuilds!
-Here's a nifty utility adapted from [Jon Jensen's code][jenseng-code] for [his Remix Conf 2023 talk][jenseng-talk]:
-
-```ts filename=app/utils/remember.ts
-export function remember<T>(key: string, value: T) {
-  const g = global as any;
-  g.__singletons ??= {};
-  g.__singletons[key] ??= value;
-  return g.__singletons[key];
-}
-```
-
-And here's how to use it to keep stuff around across rebuilds:
-
-```ts filename=app/utils/db.server.ts
-import { PrismaClient } from "@prisma/client";
-
-import { remember } from "~/utils/remember";
-
-// hard-code a unique key so we can look up the client when this module gets re-imported
-export const db = remember("db", new PrismaClient());
-```
 
 ### How to set up MSW
 
@@ -366,6 +307,31 @@ Now, hot updates will be sent correctly to the proxy:
 
 - Hot updates 👉 `https://myhost` / `wss://myhost` ✅
 
+### Performance tuning and debugging
+
+#### Path imports
+
+Currently, when Remix rebuilds your app, the compiler has to process your app code along with any of its dependencies.
+The compiler treeshakes unused code from app so that you don't ship any unused code to browser and so that you keep your server as slim as possible.
+But the compiler still needs to _crawl_ all the code to know what to keep and what to treeshake away.
+
+In short, this means that the way you do imports and exports can have a big impact on how long it takes to rebuild your app.
+For example, if you are using a library like Material UI or AntD you can likely speed up your builds by using [path imports][path-imports]:
+
+```diff
+- import { Button, TextField } from '@mui/material';
++ import Button from '@mui/material/Button';
++ import TextField from '@mui/material/TextField';
+```
+
+In the future, Remix could pre-bundle dependencies in development to avoid this problem entirely.
+But today, you can help the compiler out by using path imports.
+
+#### Debugging bundles
+
+Dependending on your app and dependencies, you might be processing much more code than your app needs.
+Check out our [bundle analysis guide][bundle-analysis] for more details.
+
 ### Troubleshooting
 
 #### HMR: hot updates losing app state
@@ -411,12 +377,11 @@ That way the dev server can detect loader changes on rebuilds.
 While the initial build slowdown is inherently a cost for HDR, we plan to optimize rebuilds so that there is no perceivable slowdown for HDR rebuilds.
 
 [legendary-dx]: https://www.youtube.com/watch?v=79M4vYZi-po
-[templates]: https://github.com/remix-run/remix/tree/main/templates
 [watch-paths]: https://remix.run/docs/en/1.17.1/file-conventions/remix-config#watchpaths
-[jenseng-code]: https://github.com/jenseng/abuse-the-platform/blob/main/app/utils/singleton.ts
-[jenseng-talk]: https://www.youtube.com/watch?v=lbzNnN0F67Y
 [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
 [react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
 [binode]: https://github.com/kentcdodds/binode
 [msw]: https://mswjs.io/
 [mkcert]: https://github.com/FiloSottile/mkcert
+[path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
+[bundle-analysis]: ../guides/performance
