@@ -21,5 +21,25 @@
     "@remix-run/testing": "1.18.1",
     "@remix-run/vercel": "1.18.1"
   },
-  "changesets": []
+  "changesets": [
+    "chatty-pears-float",
+    "chilly-impalas-prove",
+    "deferred-data-hang",
+    "dry-items-deliver",
+    "exclude-unimplemented-server-polyfills",
+    "famous-games-film",
+    "handle-network-errors",
+    "hot-ducks-march",
+    "hydrate-error-type",
+    "kind-coins-attack",
+    "large-dodos-bathe",
+    "mean-months-lick",
+    "nine-islands-mate",
+    "red-bananas-design",
+    "server-node-builtins-polyfill",
+    "shaggy-boats-explain",
+    "stylesheet-re-prefetch",
+    "tasty-bats-turn",
+    "type-userouteloaderdata"
+  ]
 }
