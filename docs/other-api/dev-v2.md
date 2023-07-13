@@ -39,6 +39,12 @@ The dev server will:
 3. Restart your app server whenever rebuilds succeed
 4. Send code updates to the browser via Live Reload and HMR + Hot Data Revalidation
 
+🎥 For an introduction and deep dive into HMR and HDR in Remix, check out our videos:
+
+- [HMR and Hot Data Revalidation with v2_dev 🔥][hmr-and-hdr]
+- [Mental model for the new dev server 🧠][mental-model]
+- [Migrating your project to v2_dev 🚚][migrating]
+
 <docs-info>
 
 What is "Hot Data Revalidation"?
@@ -60,6 +66,7 @@ To learn more about how HMR and HDR work together, check out [Pedro's talk at Re
 Enable the v2 dev server:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_dev: true,
@@ -77,6 +84,7 @@ If not, you can follow these steps to integrate your project with `v2_dev`:
 1. Enable the v2 dev server:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_dev: true,
@@ -161,6 +169,7 @@ for example to setup Docker networking or use a specific open port for security 
 For example, to override the internal port used by the dev server via config:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_dev: {
@@ -340,16 +349,22 @@ Hot Module Replacement is supposed to keep your app's state around between hot u
 But in some cases React cannot distinguish between existing components being changed and new components being added.
 [React needs `key`s][react-keys] to disambiguate these cases and track changes when sibling elements are modified.
 
+<<<<<<< HEAD
 Additionally, when adding or removing hooks, React Refresh treats that as a brand new component. So if you add `useLoaderData` to your component, you may lose state local to that component.
+=======
+Additionally, when adding or removing hooks, React Refresh treats that as a brand-new component.
+So if you add `useLoaderData` to your component, you may lose state local to that component.
+
+> > > > > > > main
 
 These are limitations of React and [React Refresh][react-refresh], not Remix.
 
 #### HDR: every code change triggers HDR
 
 Hot Data Revalidation detects loader changes by trying to bundle each loader and then fingerprinting the content for each.
-It relies on treeshaking to determine whether your changes affect each loader or not.
+It relies on tree shaking to determine whether your changes affect each loader or not.
 
-To ensure that treeshaking can reliably detect changes to loaders, make sure you declare that your app's package is side-effect free:
+To ensure that tree shaking can reliably detect changes to loaders, make sure you declare that your app's package is side effect free:
 
 ```json filename=package.json
 {
@@ -376,13 +391,25 @@ That way the dev server can detect loader changes on rebuilds.
 
 While the initial build slowdown is inherently a cost for HDR, we plan to optimize rebuilds so that there is no perceivable slowdown for HDR rebuilds.
 
+[hmr-and-hdr]: https://www.youtube.com/watch?v=2c2OeqOX72s
+[mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
+[migrating]: https://www.youtube.com/watch?v=6jTL8GGbIuc
 [legendary-dx]: https://www.youtube.com/watch?v=79M4vYZi-po
+
+<<<<<<< HEAD
 [watch-paths]: https://remix.run/docs/en/1.17.1/file-conventions/remix-config#watchpaths
-[react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
-[react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
-[binode]: https://github.com/kentcdodds/binode
-[msw]: https://mswjs.io/
-[mkcert]: https://github.com/FiloSottile/mkcert
-[path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
-[bundle-analysis]: ../guides/performance
-[guide-for-manual-mode]: ../guides/manual-mode
+=======
+[templates]: https://github.com/remix-run/remix/tree/main/templates
+[watch-paths]: https://remix.run/file-conventions/remix-config#watchpaths
+[jenseng-code]: https://github.com/jenseng/abuse-the-platform/blob/main/app/utils/singleton.ts
+[jenseng-talk]: https://www.youtube.com/watch?v=lbzNnN0F67Y
+
+> > > > > > > main
+> > > > > > > [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
+> > > > > > > [react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
+> > > > > > > [binode]: https://github.com/kentcdodds/binode
+> > > > > > > [msw]: https://mswjs.io/
+> > > > > > > [mkcert]: https://github.com/FiloSottile/mkcert
+> > > > > > > [path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
+> > > > > > > [bundle-analysis]: ../guides/performance
+> > > > > > > [guide-for-manual-mode]: ../guides/manual-mode

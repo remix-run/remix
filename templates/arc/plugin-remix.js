@@ -35,4 +35,11 @@ export default {
       }, 300);
     },
   },
+  set: {
+    env() {
+      // `arc sandbox` does not automatically pass `NODE_ENV` from its
+      // environment to the application.
+      return { testing: { NODE_ENV: "development" } };
+    },
+  },
 };

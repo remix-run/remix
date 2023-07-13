@@ -266,10 +266,10 @@ model Post {
 }
 ```
 
-💿 Now let's tell Prisma to update our local database and TypeScript definitions to match this schema change:
+💿 Let's generate a migration file for our schema changes, which will be required if you deploy your application rather than just running in dev mode locally. This will also update our local database and TypeScript definitions to match the schema change. We'll name the migration "create post model".
 
 ```sh
-npx prisma db push
+npx prisma migrate dev --name "create post model"
 ```
 
 💿 Let's seed our database with a couple posts. Open `prisma/seed.ts` and add this to the end of the seed functionality (right before the `console.log`):
@@ -328,14 +328,6 @@ Great, let's get those posts into the database with the seed script:
 ```
 npx prisma db seed
 ```
-
-💿 Let's generate a migration file for our schema changes - which will be required if you deploy your application rather than just running in dev mode locally.
-
-```sh
-npx prisma migrate dev
-```
-
-<docs-warning>You'll get the ability to name the migration name, ideally you can refer back to what the changes you made are, so I'd suggest `create-post-model` for the name.</docs-warning>
 
 💿 Now update the `app/models/post.server.ts` file to read from the SQLite database:
 
@@ -468,7 +460,7 @@ import invariant from "tiny-invariant";
 import { getPost } from "~/models/post.server";
 
 export const loader = async ({ params }: LoaderArgs) => {
-  invariant(params.slug, `params.slug is required`);
+  invariant(params.slug, "params.slug is required");
 
   const post = await getPost(params.slug);
   invariant(post, `Post not found: ${params.slug}`);
@@ -514,7 +506,7 @@ import invariant from "tiny-invariant";
 import { getPost } from "~/models/post.server";
 
 export const loader = async ({ params }: LoaderArgs) => {
-  invariant(params.slug, `params.slug is required`);
+  invariant(params.slug, "params.slug is required");
 
   const post = await getPost(params.slug);
   invariant(post, `Post not found: ${params.slug}`);
@@ -558,7 +550,7 @@ Put that anywhere in the component. I stuck it right under the `<h1>`.
 
 <docs-info>Did you notice that the `to` prop is just "admin" and it linked to `/posts/admin`? With Remix, you get relative links.</docs-info>
 
-💿 Create an admin route within the `posts` directory:
+💿 Create an admin route at `app/routes/posts.admin.tsx`:
 
 ```sh
 touch app/routes/posts.admin.tsx
@@ -708,7 +700,8 @@ We're going to get serious now. Let's build a form to create a new post in our n
 ```tsx filename=app/routes/posts.admin.new.tsx
 import { Form } from "@remix-run/react";
 
-const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
+const inputClassName =
+  "w-full rounded border border-gray-500 px-2 py-1 text-lg";
 
 export default function NewPost() {
   return (
@@ -870,7 +863,8 @@ import { Form, useActionData } from "@remix-run/react";
 
 // ...
 
-const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
+const inputClassName =
+  "w-full rounded border border-gray-500 px-2 py-1 text-lg";
 
 export default function NewPost() {
   const errors = useActionData<typeof action>();
@@ -1020,7 +1014,7 @@ That's it for today! Here are some bits of homework to implement if you want to 
 
 **Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Optimistic UI guide][the-optimistic-ui-guide].
 
-**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip, if you want to make it, so you're the only one who can make posts, then simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
+**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip: if you want to make it so you're the only one who can make posts, simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
 
 **Customize the app:** If you're happy with Tailwind CSS, keep it around, otherwise, check [the styling guide][the-styling-guide] to learn of other options. Remove the `Notes` model and routes, etc. Whatever you want to make this thing yours.
 
