@@ -10,7 +10,7 @@ Remix outputs metafiles to the server build directory (`build/` by default) so y
 - `metafile.js.json` : Metafile for the browser JS bundle
 - `metafile.server.json` : Metafile for the serve JS bundle
 
-Remix uses esbuild's metafile format so you can directly upload those files to https://esbuild.github.io/analyze/ to visualize your bundle.
+Remix uses esbuild's metafile format so you can directly upload those files to [https://esbuild.github.io/analyze/][https-esbuild-github-io-analyze] to visualize your bundle.
 
 ## Path imports
 
@@ -308,3 +308,4 @@ export const db = remember("db", () => new PrismaClient());
 [chokidar]: https://github.com/paulmillr/chokidar
 [express-template]: https://github.com/remix-run/remix/blob/main/templates/express/server.js
 [community-examples]: https://github.com/xHomu/remix-v2-server
+[https-esbuild-github-io-analyze]: https://esbuild.github.io/analyze

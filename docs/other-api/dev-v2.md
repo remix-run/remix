@@ -141,7 +141,7 @@ Options priority order is: 1. flags, 2. config, 3. defaults.
 | Option          | flag               | config    | default                           | description                                                |
 | --------------- | ------------------ | --------- | --------------------------------- | ---------------------------------------------------------- |
 | Command         | `-c` / `--command` | `command` | `remix-serve <server build path>` | Command the dev server will run to spin up your app server |
-| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode](../guides/manual-mode)         |
+| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode][guide-for-manual-mode]         |
 | Port            | `--port`           | `port`    | Dynamically chosen open port      | Internal port used for hot updates                         |
 | TLS key         | `--tls-key`        | `tlsKey`  | N/A                               | TLS key for configuring local HTTPS                        |
 | TLS certificate | `--tls-cert`       | `tlsCert` | N/A                               | TLS certificate for configuring local HTTPS                |
@@ -385,3 +385,4 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [mkcert]: https://github.com/FiloSottile/mkcert
 [path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
 [bundle-analysis]: ../guides/performance
+[guide-for-manual-mode]: ../guides/manual-mode

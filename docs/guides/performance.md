@@ -18,7 +18,7 @@ Remix outputs metafiles to the server build directory (`build/` by default) so y
 - `metafile.js.json` : Metafile for the browser JS bundle
 - `metafile.server.json` : Metafile for the serve JS bundle
 
-Remix uses esbuild's metafile format so you can directly upload those files to https://esbuild.github.io/analyze/ to visualize your bundle.
+Remix uses esbuild's metafile format so you can directly upload those files to [https://esbuild.github.io/analyze/][https-esbuild-github-io-analyze] to visualize your bundle.
 
 ## The Edge
 
@@ -66,3 +66,4 @@ Here are some other technologies to help speed up your servers:
 [fauna-db]: https://fauna.com
 [lru-cache]: https://www.npmjs.com/package/lru-cache
 [redis]: https://www.npmjs.com/package/redis
+[https-esbuild-github-io-analyze]: https://esbuild.github.io/analyze
