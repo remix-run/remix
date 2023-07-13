@@ -116,7 +116,8 @@ export function serverBareModulesPlugin(ctx: Context): Plugin {
         if (
           !isNodeBuiltIn(packageName) &&
           kind !== "dynamic-import" &&
-          ctx.config.serverPlatform === "node"
+          ctx.config.serverPlatform === "node" &&
+          ctx.config.serverModuleFormat !== "esm"
         ) {
           warnOnceIfEsmOnlyPackage(ctx, packageName, path, importer);
         }
