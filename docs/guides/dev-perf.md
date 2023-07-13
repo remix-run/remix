@@ -148,9 +148,9 @@ const BUILD_PATH = "./build/index.js";
 
 /**
  * Initial build
- * @type {Promise<ServerBuild>}
+ * @type {ServerBuild}
  */
-let build = import(BUILD_PATH);
+let build = await import(BUILD_PATH);
 
 /**
  * @type {() => Promise<ServerBuild>}
@@ -163,7 +163,7 @@ const reimportServer = async () => {
 };
 
 // to update your app server with new code changes:
-build = reimportServer();
+build = await reimportServer();
 ```
 
 <docs-warning>
@@ -216,7 +216,7 @@ async function handleServerUpdate() {
   // 1. re-import the server build
   build = await reimportServer();
   // 2. tell dev server that this app server is now up-to-date and ready
-  broadcastDevReady(await build);
+  broadcastDevReady(build);
 }
 ```
 
@@ -226,19 +226,17 @@ Last step is to wrap all of this up in a development mode request handler:
 
 ```js
 function createDevRequestHandler() {
-
   async function handleServerUpdate() {
     // 1. re-import the server build
     build = await reimportServer();
     // 2. tell dev server that this app server is now up-to-date and ready
-    broadcastDevReady(await build);
+    broadcastDevReady(build);
   }
 
   chokidar
     .watch(BUILD_PATH, { ignoreInitial: true })
     .on("add", handleServerUpdate)
     .on("change", handleServerUpdate);
-
 
   // wrap request handler to make sure its recreated with the latest build for every request
   return async (req, res, next) => {
