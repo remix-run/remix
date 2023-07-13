@@ -4,6 +4,8 @@ order: 2
 new: true
 ---
 
+# Remix CLI (v2)
+
 The Remix CLI comes from the `@remix-run/dev` package. It also includes the compiler. Make sure it is in your `package.json` `devDependencies` so it doesn't get deployed to your server.
 
 To get a full list of available commands and flags, run:
@@ -136,13 +138,13 @@ but CloudFlare does not support async I/O like `fetch` outside of request handli
 
 Options priority order is: 1. flags, 2. config, 3. defaults.
 
-| Option          | flag               | config    | default                           | description                                                    |
-| --------------- | ------------------ | --------- | --------------------------------- | -------------------------------------------------------------- |
-| Command         | `-c` / `--command` | `command` | `remix-serve <server build path>` | Command the dev server will run to spin up your app server     |
-| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode](../guides/dev-perf.md#manual-mode) |
-| Port            | `--port`           | `port`    | Dynamically chosen open port      | Internal port used for hot updates                             |
-| TLS key         | `--tls-key`        | `tlsKey`  | N/A                               | TLS key for configuring local HTTPS                            |
-| TLS certificate | `--tls-cert`       | `tlsCert` | N/A                               | TLS certificate for configuring local HTTPS                    |
+| Option          | flag               | config    | default                           | description                                                |
+| --------------- | ------------------ | --------- | --------------------------------- | ---------------------------------------------------------- |
+| Command         | `-c` / `--command` | `command` | `remix-serve <server build path>` | Command the dev server will run to spin up your app server |
+| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode](../guides/manual-mode)         |
+| Port            | `--port`           | `port`    | Dynamically chosen open port      | Internal port used for hot updates                         |
+| TLS key         | `--tls-key`        | `tlsKey`  | N/A                               | TLS key for configuring local HTTPS                        |
+| TLS certificate | `--tls-cert`       | `tlsCert` | N/A                               | TLS certificate for configuring local HTTPS                |
 
 <docs-info>
 
@@ -305,6 +307,31 @@ Now, hot updates will be sent correctly to the proxy:
 
 - Hot updates 👉 `https://myhost` / `wss://myhost` ✅
 
+### Performance tuning and debugging
+
+#### Path imports
+
+Currently, when Remix rebuilds your app, the compiler has to process your app code along with any of its dependencies.
+The compiler treeshakes unused code from app so that you don't ship any unused code to browser and so that you keep your server as slim as possible.
+But the compiler still needs to _crawl_ all the code to know what to keep and what to treeshake away.
+
+In short, this means that the way you do imports and exports can have a big impact on how long it takes to rebuild your app.
+For example, if you are using a library like Material UI or AntD you can likely speed up your builds by using [path imports][path-imports]:
+
+```diff
+- import { Button, TextField } from '@mui/material';
++ import Button from '@mui/material/Button';
++ import TextField from '@mui/material/TextField';
+```
+
+In the future, Remix could pre-bundle dependencies in development to avoid this problem entirely.
+But today, you can help the compiler out by using path imports.
+
+#### Debugging bundles
+
+Dependending on your app and dependencies, you might be processing much more code than your app needs.
+Check out our [bundle analysis guide][bundle-analysis] for more details.
+
 ### Troubleshooting
 
 #### HMR: hot updates losing app state
@@ -356,3 +383,5 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [binode]: https://github.com/kentcdodds/binode
 [msw]: https://mswjs.io/
 [mkcert]: https://github.com/FiloSottile/mkcert
+[path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
+[bundle-analysis]: ../guides/performance
