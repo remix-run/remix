@@ -235,6 +235,12 @@ export async function dev(
   let config = await readConfig(remixRoot);
 
   if (config.future.v2_dev === false) {
+    logger.warn("The `remix dev` changing in v2", {
+      details: [
+        "You can use the `v2_dev` future flag to opt-in early.",
+        "-> https://remix.run/docs/en/main/pages/v2#dev-server",
+      ],
+    });
     await devServer.serve(config, flags.port);
     return await new Promise(() => {});
   }
