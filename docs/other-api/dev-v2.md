@@ -136,13 +136,13 @@ but CloudFlare does not support async I/O like `fetch` outside of request handli
 
 Options priority order is: 1. flags, 2. config, 3. defaults.
 
-| Option          | flag               | config         | default                           | description                                                    |
-| --------------- | ------------------ | -------------- | --------------------------------- | -------------------------------------------------------------- |
-| Command         | `-c` / `--command` | `command`      | `remix-serve <server build path>` | Command the dev server will run to spin up your app server     |
-| Manual          | `--manual`         | `manual: true` | `false`                           | See [guide for manual mode](../guides/dev-perf.md#manual-mode) |
-| Port            | `--port`           | `port`         | Dynamically chosen open port      | Internal port used for hot updates                             |
-| TLS key         | `--tls-key`        | `tlsKey`       | N/A                               | TLS key for configuring local HTTPS                            |
-| TLS certificate | `--tls-cert`       | `tlsCert`      | N/A                               | TLS certificate for configuring local HTTPS                    |
+| Option          | flag               | config    | default                           | description                                                    |
+| --------------- | ------------------ | --------- | --------------------------------- | -------------------------------------------------------------- |
+| Command         | `-c` / `--command` | `command` | `remix-serve <server build path>` | Command the dev server will run to spin up your app server     |
+| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode](../guides/dev-perf.md#manual-mode) |
+| Port            | `--port`           | `port`    | Dynamically chosen open port      | Internal port used for hot updates                             |
+| TLS key         | `--tls-key`        | `tlsKey`  | N/A                               | TLS key for configuring local HTTPS                            |
+| TLS certificate | `--tls-cert`       | `tlsCert` | N/A                               | TLS certificate for configuring local HTTPS                    |
 
 <docs-info>
 
