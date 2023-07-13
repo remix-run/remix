@@ -191,6 +191,18 @@ Whether to minify the server build in production or not. Defaults to `false`.
 The output format of the server build, which can either be `"cjs"` or `"esm"`.
 Defaults to `"cjs"`.
 
+## serverNodeBuiltinsPolyfill
+
+Whether to polyfill Node.js built-in modules in the server build, or a list of polyfills. Defaults to `true` for non-Node.js server platforms.
+
+```js filename=remix.config.js
+// disable all polyfills
+exports.serverNodeBuiltinsPolyfill = false;
+
+// enable specific polyfills
+exports.serverNodeBuiltinsPolyfill = ["crypto"];
+```
+
 ## serverPlatform
 
 The platform the server build is targeting, which can either be `"neutral"` or
