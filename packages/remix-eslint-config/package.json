@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/eslint-config",
-  "version": "1.18.1",
+  "version": "0.0.0-nightly-cdb1d32-20230713",
   "description": "ESLint configuration for Remix projects",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
