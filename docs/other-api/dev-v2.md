@@ -96,7 +96,7 @@ module.exports = {
 
 ```json
 {
-  "dev": "remix dev -c 'node ./server.js'"
+  "dev": "remix dev -c \"node ./server.js\""
 }
 ```
 
@@ -149,35 +149,49 @@ Options priority order is: 1. flags, 2. config, 3. defaults.
 | Option          | flag               | config    | default                           | description                                                |
 | --------------- | ------------------ | --------- | --------------------------------- | ---------------------------------------------------------- |
 | Command         | `-c` / `--command` | `command` | `remix-serve <server build path>` | Command the dev server will run to spin up your app server |
-| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode][guide-for-manual-mode]         |
+| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode][manual-mode]                   |
 | Port            | `--port`           | `port`    | Dynamically chosen open port      | Internal port used for hot updates                         |
 | TLS key         | `--tls-key`        | `tlsKey`  | N/A                               | TLS key for configuring local HTTPS                        |
 | TLS certificate | `--tls-cert`       | `tlsCert` | N/A                               | TLS certificate for configuring local HTTPS                |
 
-<docs-info>
-
-The port option only affects the Remix dev server, and **does not affect your app server**.
-Your app will run on your app server's normal URL.
-
-You probably don't want to configure the port for the dev server,
-as it is an implementation detail used internally for hot updates.
-The port option exists in case you need fine-grain networking control,
-for example to setup Docker networking or use a specific open port for security purposes.
-
-</docs-info>
-
-For example, to override the internal port used by the dev server via config:
+To set options in your config, replace `v2_dev: true` with an object.
+For example:
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_dev: {
-      port: 8001,
+      // ...any other options you want to set go here...
+      manual: true,
+      tlsKey: "./key.pem",
+      tlsCert: "./cert.pem",
     },
   },
 };
 ```
+
+### Setting the port
+
+The `remix dev --port` option sets the internal port used for hot updates.
+**It does not affect the port your app runs on.**
+
+To set your app server port, set it the way you normally would in production.
+For example, you may have it hardcoded in your `server.js` file.
+
+If you are using `remix-serve` as your app server, you can use its `--port` flag to set the app server port:
+
+```
+remix dev -c "remix-serve --port 8000 ./build"
+```
+
+In contrast, the `remix dev --port` option is an escape-hatch for users who need fine-grain control of network ports.
+Most users, should not need to use `remix dev --port`.
+
+### Manual mode
+
+By default, `remix dev` will restart your app server whenever a rebuild occurs.
+If you'd like to keep your app server running without restarts across rebuilds, check out our [guide for manual mode][manual-mode].
 
 ### Pick up changes from other packages
 
@@ -202,7 +216,7 @@ That way, the MSW server will have access to the `REMIX_DEV_ORIGIN` environment 
 ```json filename=package.json
 {
   "scripts": {
-    "dev": "remix dev -c 'npm run dev:app'",
+    "dev": "remix dev -c \"npm run dev:app\"",
     "dev:app": "binode --require ./mocks -- @remix-run/serve:remix-serve ./build"
   }
 }
@@ -285,7 +299,7 @@ Now that the app server is set up, you should be able to build and run your app 
 To get the dev server to interop with TLS, you'll need to specify the TLS cert and key you created:
 
 ```sh
-remix dev --tls-key=key.pem --tls-cert=cert.pem -c 'node ./server.js'
+remix dev --tls-key=key.pem --tls-cert=cert.pem -c "node ./server.js"
 ```
 
 Alternatively, you can specify the TLS key and cert via the `v2_dev.tlsCert` and `v2_dev.tlsKey` config options.
@@ -349,13 +363,8 @@ Hot Module Replacement is supposed to keep your app's state around between hot u
 But in some cases React cannot distinguish between existing components being changed and new components being added.
 [React needs `key`s][react-keys] to disambiguate these cases and track changes when sibling elements are modified.
 
-<<<<<<< HEAD
-Additionally, when adding or removing hooks, React Refresh treats that as a brand new component. So if you add `useLoaderData` to your component, you may lose state local to that component.
-=======
 Additionally, when adding or removing hooks, React Refresh treats that as a brand-new component.
 So if you add `useLoaderData` to your component, you may lose state local to that component.
-
-> > > > > > > main
 
 These are limitations of React and [React Refresh][react-refresh], not Remix.
 
@@ -395,21 +404,12 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
 [migrating]: https://www.youtube.com/watch?v=6jTL8GGbIuc
 [legendary-dx]: https://www.youtube.com/watch?v=79M4vYZi-po
-
-<<<<<<< HEAD
 [watch-paths]: https://remix.run/docs/en/1.17.1/file-conventions/remix-config#watchpaths
-=======
-[templates]: https://github.com/remix-run/remix/tree/main/templates
-[watch-paths]: https://remix.run/file-conventions/remix-config#watchpaths
-[jenseng-code]: https://github.com/jenseng/abuse-the-platform/blob/main/app/utils/singleton.ts
-[jenseng-talk]: https://www.youtube.com/watch?v=lbzNnN0F67Y
-
-> > > > > > > main
-> > > > > > > [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
-> > > > > > > [react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
-> > > > > > > [binode]: https://github.com/kentcdodds/binode
-> > > > > > > [msw]: https://mswjs.io/
-> > > > > > > [mkcert]: https://github.com/FiloSottile/mkcert
-> > > > > > > [path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
-> > > > > > > [bundle-analysis]: ../guides/performance
-> > > > > > > [guide-for-manual-mode]: ../guides/manual-mode
+[react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
+[react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
+[binode]: https://github.com/kentcdodds/binode
+[msw]: https://mswjs.io/
+[mkcert]: https://github.com/FiloSottile/mkcert
+[path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
+[bundle-analysis]: ../guides/performance
+[manual-mode]: ../guides/manual-mode
