@@ -349,13 +349,8 @@ Hot Module Replacement is supposed to keep your app's state around between hot u
 But in some cases React cannot distinguish between existing components being changed and new components being added.
 [React needs `key`s][react-keys] to disambiguate these cases and track changes when sibling elements are modified.
 
-<<<<<<< HEAD
-Additionally, when adding or removing hooks, React Refresh treats that as a brand new component. So if you add `useLoaderData` to your component, you may lose state local to that component.
-=======
 Additionally, when adding or removing hooks, React Refresh treats that as a brand-new component.
 So if you add `useLoaderData` to your component, you may lose state local to that component.
-
-> > > > > > > main
 
 These are limitations of React and [React Refresh][react-refresh], not Remix.
 
@@ -395,21 +390,12 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
 [migrating]: https://www.youtube.com/watch?v=6jTL8GGbIuc
 [legendary-dx]: https://www.youtube.com/watch?v=79M4vYZi-po
-
-<<<<<<< HEAD
 [watch-paths]: https://remix.run/docs/en/1.17.1/file-conventions/remix-config#watchpaths
-=======
-[templates]: https://github.com/remix-run/remix/tree/main/templates
-[watch-paths]: https://remix.run/file-conventions/remix-config#watchpaths
-[jenseng-code]: https://github.com/jenseng/abuse-the-platform/blob/main/app/utils/singleton.ts
-[jenseng-talk]: https://www.youtube.com/watch?v=lbzNnN0F67Y
-
-> > > > > > > main
-> > > > > > > [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
-> > > > > > > [react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
-> > > > > > > [binode]: https://github.com/kentcdodds/binode
-> > > > > > > [msw]: https://mswjs.io/
-> > > > > > > [mkcert]: https://github.com/FiloSottile/mkcert
-> > > > > > > [path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
-> > > > > > > [bundle-analysis]: ../guides/performance
-> > > > > > > [guide-for-manual-mode]: ../guides/manual-mode
+[react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
+[react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
+[binode]: https://github.com/kentcdodds/binode
+[msw]: https://mswjs.io/
+[mkcert]: https://github.com/FiloSottile/mkcert
+[path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
+[bundle-analysis]: ../guides/performance
+[manual-mode]: ../guides/manual-mode
