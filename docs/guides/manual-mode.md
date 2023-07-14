@@ -77,7 +77,7 @@ const BUILD_PATH = path.resolve("./build/index.js");
  * Initial build
  * @type {ServerBuild}
  */
-let build = require(BUILD_PATH);
+const build = require(BUILD_PATH);
 
 /**
  * @type {() => ServerBuild}
@@ -93,9 +93,6 @@ const reimportServer = () => {
   // 2. re-import the server build
   return require(BUILD_PATH);
 };
-
-// to update your app server with new code changes:
-build = reimportServer();
 ```
 
 <docs-info>
@@ -123,7 +120,7 @@ const BUILD_PATH = "./build/index.js";
  * Initial build
  * @type {ServerBuild}
  */
-let build = await import(BUILD_PATH);
+const build = await import(BUILD_PATH);
 
 /**
  * @type {() => Promise<ServerBuild>}
@@ -134,9 +131,6 @@ const reimportServer = async () => {
   // use a timestamp query parameter to bust the import cache
   return import(BUILD_PATH + "?t=" + stat.mtimeMs);
 };
-
-// to update your app server with new code changes:
-build = await reimportServer();
 ```
 
 <docs-warning>
@@ -198,7 +192,11 @@ async function handleServerUpdate() {
 Last step is to wrap all of this up in a development mode request handler:
 
 ```js
-function createDevRequestHandler() {
+/**
+ * @param {ServerBuild} initialBuild
+ */
+function createDevRequestHandler(initialBuild) {
+  let build = initialBuild;
   async function handleServerUpdate() {
     // 1. re-import the server build
     build = await reimportServer();
@@ -232,7 +230,7 @@ Now let's plug in our new manual transmission when running in development mode:
 app.all(
   "*",
   process.env.NODE_ENV === "development"
-    ? createDevRequestHandler()
+    ? createDevRequestHandler(build)
     : createRequestHandler({
         build,
         mode: process.env.NODE_ENV,
