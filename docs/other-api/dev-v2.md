@@ -263,7 +263,7 @@ doing the following will give MSW access to the `REMIX_DEV_HTTP_ORIGIN` environm
   "scripts": {
     "dev": "remix dev -c \"npm run dev:app\"",
     "dev:app": "cross-env NODE_OPTIONS=\"--require ./mocks\" remix-serve ./build"
-    }
+  }
 }
 ```
 
