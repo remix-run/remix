@@ -57,6 +57,15 @@ const changed = await import("./build/index.js");
 You need some way to bust the import cache when you want to re-import modules with code changes.
 Also importing modules is different between CommonJS (`require`) and ESM (`import`) which makes things even more complicated.
 
+<docs-warning>
+
+If you are using `tsx` or `ts-node` to run your `server.ts`, those tools may be transpiling your ESM Typescript code to CJS Javascript code.
+In this case, you'll need to use CJS cache busting in your `server.ts` even though the rest of your server code uses `import`s.
+
+What matters here is how your server code is _executed_ not how its _written_.
+
+</docs-warning>
+
 ### 1.a CJS: `require` cache busting
 
 CommonJS uses `require` for imports, giving you direct access to the `require` cache.
