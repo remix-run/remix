@@ -37,6 +37,12 @@ The dev server will:
 3. Restart your app server whenever rebuilds succeed
 4. Send code updates to the browser via Live Reload and HMR + Hot Data Revalidation
 
+🎥 For an introduction and deep dive into HMR and HDR in Remix, check out our videos:
+
+- [HMR and Hot Data Revalidation with v2_dev 🔥][hmr-and-hdr]
+- [Mental model for the new dev server 🧠][mental-model]
+- [Migrating your project to v2_dev 🚚][migrating]
+
 <docs-info>
 
 What is "Hot Data Revalidation"?
@@ -58,6 +64,7 @@ To learn more about how HMR and HDR work together, check out [Pedro's talk at Re
 Enable the v2 dev server:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_dev: true,
@@ -75,6 +82,7 @@ If not, you can follow these steps to integrate your project with `v2_dev`:
 1. Enable the v2 dev server:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_dev: true,
@@ -160,6 +168,7 @@ They exist in case you need fine-grain control, for example Docker networking or
 For example, to override the port used by the dev server via config:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_dev: {
@@ -209,7 +218,7 @@ To pick up changes in `packages/ui`, you can configure [watchPaths][watch-paths]
 #### Keep in-memory data and connections across rebuilds
 
 Every time you re-import code to apply changes to your app server, that code will be run.
-Rerunning each changed module works great in most cases, but sometimes you want to want to keep stuff around.
+Rerunning each changed module works great in most cases, but sometimes you want to keep stuff around.
 
 For example, it'd be nice if your app only connected to your database once and kept that connection around across rebuilds.
 But since the connection is held in-memory, re-imports will wipe those out and cause your app to reconnect.
@@ -218,10 +227,13 @@ Luckily, there's a trick to get around this: use `global` as a cache for keeping
 Here's a nifty utility adapted from [Jon Jensen's code][jenseng-code] for [his Remix Conf 2023 talk][jenseng-talk]:
 
 ```ts filename=app/utils/remember.ts
-export function remember<T>(key: string, value: T) {
+export function remember<T>(
+  key: string,
+  valueFactory: () => T
+) {
   const g = global as any;
   g.__singletons ??= {};
-  g.__singletons[key] ??= value;
+  g.__singletons[key] ??= valueFactory();
   return g.__singletons[key];
 }
 ```
@@ -234,7 +246,7 @@ import { PrismaClient } from "@prisma/client";
 import { remember } from "~/utils/remember";
 
 // hard-code a unique key so we can look up the client when this module gets re-imported
-export const db = remember("db", new PrismaClient());
+export const db = remember("db", () => new PrismaClient());
 ```
 
 ### How to set up MSW
@@ -346,7 +358,7 @@ Hot Module Replacement is supposed to keep your app's state around between hot u
 But in some cases React cannot distinguish between existing components being changed and new components being added.
 [React needs `key`s][react-keys] to disambiguate these cases and track changes when sibling elements are modified.
 
-Additionally, when adding or removing hooks, React Refresh treats that as a brand new component.
+Additionally, when adding or removing hooks, React Refresh treats that as a brand-new component.
 So if you add `useLoaderData` to your component, you may lose state local to that component.
 
 These are limitations of React and [React Refresh][react-refresh], not Remix.
@@ -354,9 +366,9 @@ These are limitations of React and [React Refresh][react-refresh], not Remix.
 #### HDR: every code change triggers HDR
 
 Hot Data Revalidation detects loader changes by trying to bundle each loader and then fingerprinting the content for each.
-It relies on treeshaking to determine whether your changes affect each loader or not.
+It relies on tree shaking to determine whether your changes affect each loader or not.
 
-To ensure that treeshaking can reliably detect changes to loaders, make sure you declare that your app's package is side-effect free:
+To ensure that tree shaking can reliably detect changes to loaders, make sure you declare that your app's package is side effect free:
 
 ```json filename=package.json
 {
@@ -383,9 +395,12 @@ That way the dev server can detect loader changes on rebuilds.
 
 While the initial build slowdown is inherently a cost for HDR, we plan to optimize rebuilds so that there is no perceivable slowdown for HDR rebuilds.
 
+[hmr-and-hdr]: https://www.youtube.com/watch?v=2c2OeqOX72s
+[mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
+[migrating]: https://www.youtube.com/watch?v=6jTL8GGbIuc
 [legendary-dx]: https://www.youtube.com/watch?v=79M4vYZi-po
 [templates]: https://github.com/remix-run/remix/tree/main/templates
-[watch-paths]: https://remix.run/docs/en/1.17.1/file-conventions/remix-config#watchpaths
+[watch-paths]: https://remix.run/file-conventions/remix-config#watchpaths
 [jenseng-code]: https://github.com/jenseng/abuse-the-platform/blob/main/app/utils/singleton.ts
 [jenseng-talk]: https://www.youtube.com/watch?v=lbzNnN0F67Y
 [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys

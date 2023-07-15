@@ -4,18 +4,6 @@
 
 ## Development
 
-Create a `preferences.arc` file in the root with the following contents:
-
-```
-@sandbox
-livereload false
-
-# NODE_ENV development is required when running the dev server
-@env
-testing
-  NODE_ENV development
-```
-
 The following command will run two processes during development when using Architect as your server.
 
 - Your Architect server sandbox
