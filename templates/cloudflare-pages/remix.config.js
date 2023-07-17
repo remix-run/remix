@@ -4,7 +4,7 @@ export default {
   ignoredRouteFiles: ["**/.*"],
   server: "./server.ts",
   serverBuildPath: "functions/[[path]].js",
-  serverConditions: ['workerd', 'worker', 'browser'],
+  serverConditions: ["workerd", "worker", "browser"],
   serverDependenciesToBundle: "all",
   serverMainFields: ["browser", "module", "main"],
   serverMinify: true,
