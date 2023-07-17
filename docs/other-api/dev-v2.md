@@ -256,15 +256,13 @@ To use [Mock Service Worker][msw] in development, you'll need to:
 1. Run MSW as part of your app server
 2. Configure MSW to not mock internal "dev ready" messages to the dev server
 
-For example, if you are using [binode][binode] to integrate with MSW,
-make sure that the call to `binode` is within the `remix dev -c` subcommand.
-That way, the MSW server will have access to the `REMIX_DEV_HTTP_ORIGIN` environment variable:
+Make sure that you are setting up your mocks for your _app server_ within the `-c` flag so that the `REMIX_DEV_HTTP_ORIGIN` environment variable is available to your mocks:
 
 ```json filename=package.json
 {
   "scripts": {
-    "dev": "remix dev -c 'npm run dev:app'",
-    "dev:app": "binode --require ./mocks -- @remix-run/serve:remix-serve ./build"
+    "dev": "remix dev -c \"npm run dev:app\"",
+    "dev:app": "cross-env NODE_OPTIONS=\"--require ./mocks\" remix-serve ./build"
   }
 }
 ```
@@ -405,6 +403,5 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [jenseng-talk]: https://www.youtube.com/watch?v=lbzNnN0F67Y
 [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
 [react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
-[binode]: https://github.com/kentcdodds/binode
 [msw]: https://mswjs.io/
 [mkcert]: https://github.com/FiloSottile/mkcert
