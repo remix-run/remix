@@ -2,7 +2,7 @@
 export default {
   ignoredRouteFiles: ["**/.*"],
   server: "./server.ts",
-  serverConditions: ["worker"],
+  serverConditions: ["workerd", "worker", "browser"],
   serverDependenciesToBundle: [
     // bundle verything except the virtual module for the static content manifest provided by wrangler
     /^(?!.*\b__STATIC_CONTENT_MANIFEST\b).*$/,
