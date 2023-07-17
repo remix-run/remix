@@ -15,6 +15,12 @@ export type {
   unstable_BlockerFunction,
 } from "react-router-dom";
 export {
+  createPath,
+  generatePath,
+  matchPath,
+  matchRoutes,
+  parsePath,
+  resolvePath,
   Form,
   Outlet,
   useAsyncError,
