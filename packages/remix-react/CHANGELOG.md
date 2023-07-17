@@ -1,5 +1,15 @@
 # `@remix-run/react`
 
+## 1.19.0-pre.3
+
+### Minor Changes
+
+- Added some missing react-router exports to @remix-run/react ([#6856](https://github.com/remix-run/remix/pull/6856))
+
+### Patch Changes
+
+- Bump RR 6.14.2 ([#6854](https://github.com/remix-run/remix/pull/6854))
+
 ## 1.19.0-pre.2
 
 ### Patch Changes
