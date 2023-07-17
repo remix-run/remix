@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-always rewrite css-derived assets
+Always rewrite css-derived assets during builds
