@@ -256,7 +256,7 @@ To use [Mock Service Worker][msw] in development, you'll need to:
 1. Run MSW as part of your app server
 2. Configure MSW to not mock internal "dev ready" messages to the dev server
 
-doing the following will give MSW access to the `REMIX_DEV_HTTP_ORIGIN` environment variable:
+Make sure that you are setting up your mocks for your _app server_ within the `-c` flag so that the `REMIX_DEV_HTTP_ORIGIN` environment variable is available to your mocks:
 
 ```json filename=package.json
 {
