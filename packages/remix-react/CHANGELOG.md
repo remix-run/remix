@@ -1,5 +1,7 @@
 # `@remix-run/react`
 
+## 1.19.0-pre.4
+
 ## 1.19.0-pre.3
 
 ### Minor Changes
