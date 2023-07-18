@@ -228,9 +228,7 @@ export class NodeOnDiskFile implements File {
     return readableStreamToString(this.stream());
   }
 
-  public get [Symbol.toStringTag]() {
-    return "File";
-  }
+  public readonly [Symbol.toStringTag] = "File";
 
   remove(): Promise<void> {
     return unlink(this.filepath);

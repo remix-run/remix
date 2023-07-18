@@ -65,6 +65,7 @@ const config = {
       extends: [
         "plugin:import/typescript",
         "plugin:@typescript-eslint/recommended",
+        "plugin:@typescript-eslint/stylistic",
       ],
       parser: "@typescript-eslint/parser",
       parserOptions: {
