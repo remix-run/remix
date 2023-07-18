@@ -193,14 +193,19 @@ Defaults to `"cjs"`.
 
 ## serverNodeBuiltinsPolyfill
 
-Whether to polyfill Node.js built-in modules in the server build, or a list of polyfills. Defaults to `true` for non-Node.js server platforms.
+Whether to polyfill Node.js built-in modules in the server build, or a configurable subset of polyfills. Polyfills are provided by [JSPM][jspm] and configured via [esbuild-plugins-node-modules-polyfill]. Defaults to `true` for non-Node.js server platforms.
 
 ```js filename=remix.config.js
-// disable all polyfills
+// Disable all polyfills
 exports.serverNodeBuiltinsPolyfill = false;
 
-// enable specific polyfills
-exports.serverNodeBuiltinsPolyfill = ["crypto"];
+// Enable specific polyfills
+exports.serverNodeBuiltinsPolyfill = {
+  modules: {
+    crypto: true, // Provide a JSPM polyfill
+    fs: 'empty', // Provide an empty polyfill
+  },
+};
 ```
 
 ## serverPlatform
@@ -254,3 +259,5 @@ There are a few conventions that Remix uses you should be aware of.
 [css-side-effect-imports]: ../guides/styling#css-side-effect-imports
 [postcss]: https://postcss.org
 [tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
+[jspm]: https://github.com/jspm/jspm-core
+[esbuild-plugins-node-modules-polyfill]: https://www.npmjs.com/package/esbuild-plugins-node-modules-polyfill
