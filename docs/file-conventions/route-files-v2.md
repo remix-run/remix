@@ -254,7 +254,7 @@ app/
 | `/categories`              | `($lang).categories.tsx` |
 | `/en/categories`           | `($lang).categories.tsx` |
 | `/fr/categories`           | `($lang).categories.tsx` |
-| `/american-flag-speedo`    | `($lang).$productId.tsx` |
+| `/american-flag-speedo`    | `($lang)._index.tsx`     |
 | `/en/american-flag-speedo` | `($lang).$productId.tsx` |
 | `/fr/american-flag-speedo` | `($lang).$productId.tsx` |
 
