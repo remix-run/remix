@@ -1,4 +1,4 @@
-import type { Location, FormEncType } from "react-router-dom";
+import type { FormEncType } from "react-router-dom";
 
 export interface Submission {
   action: string;
@@ -15,65 +15,6 @@ export interface ActionSubmission extends Submission {
 export interface LoaderSubmission extends Submission {
   method: "GET";
 }
-
-export type TransitionStates = {
-  Idle: {
-    state: "idle";
-    type: "idle";
-    submission: undefined;
-    location: undefined;
-  };
-  SubmittingAction: {
-    state: "submitting";
-    type: "actionSubmission";
-    submission: ActionSubmission;
-    location: Location;
-  };
-  SubmittingLoader: {
-    state: "submitting";
-    type: "loaderSubmission";
-    submission: LoaderSubmission;
-    location: Location;
-  };
-  LoadingLoaderSubmissionRedirect: {
-    state: "loading";
-    type: "loaderSubmissionRedirect";
-    submission: LoaderSubmission;
-    location: Location;
-  };
-  LoadingAction: {
-    state: "loading";
-    type: "actionReload";
-    submission: ActionSubmission;
-    location: Location;
-  };
-  LoadingActionRedirect: {
-    state: "loading";
-    type: "actionRedirect";
-    submission: ActionSubmission;
-    location: Location;
-  };
-  LoadingFetchActionRedirect: {
-    state: "loading";
-    type: "fetchActionRedirect";
-    submission: undefined;
-    location: Location;
-  };
-  LoadingRedirect: {
-    state: "loading";
-    type: "normalRedirect";
-    submission: undefined;
-    location: Location;
-  };
-  Loading: {
-    state: "loading";
-    type: "normalLoad";
-    location: Location;
-    submission: undefined;
-  };
-};
-
-export type Transition = TransitionStates[keyof TransitionStates];
 
 // Thanks https://github.com/sindresorhus/type-fest!
 type JsonObject = { [Key in string]: JsonValue } & {
@@ -196,13 +137,6 @@ export type FetcherStates<TData = any> = {
 
 export type Fetcher<TData = any> =
   FetcherStates<TData>[keyof FetcherStates<TData>];
-
-export const IDLE_TRANSITION: TransitionStates["Idle"] = {
-  state: "idle",
-  submission: undefined,
-  location: undefined,
-  type: "idle",
-};
 
 export const IDLE_FETCHER: FetcherStates["Idle"] = {
   state: "idle",

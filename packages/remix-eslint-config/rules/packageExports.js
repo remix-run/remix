@@ -134,7 +134,6 @@ const reactSpecificExports = {
     "useResolvedPath",
     "useSearchParams",
     "useSubmit",
-    "useTransition",
   ],
   type: [
     "FormEncType",

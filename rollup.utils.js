@@ -302,7 +302,6 @@ function getMagicExports(packageName) {
         "useLoaderData",
         "useMatches",
         "useSubmit",
-        "useTransition",
 
         // react-router-dom exports
         "Outlet",
