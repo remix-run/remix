@@ -6132,10 +6132,10 @@ esbuild-openbsd-64@0.14.47:
   resolved "https://registry.npmjs.org/esbuild-openbsd-64/-/esbuild-openbsd-64-0.14.47.tgz#309af806db561aa886c445344d1aacab850dbdc5"
   integrity sha512-QpgN8ofL7B9z8g5zZqJE+eFvD1LehRlxr25PBkjyyasakm4599iroUpaj96rdqRlO2ShuyqwJdr+oNqWwTUmQw==
 
-esbuild-plugins-node-modules-polyfill@^1.2.0:
-  version "1.2.0"
-  resolved "https://registry.npmjs.org/esbuild-plugins-node-modules-polyfill/-/esbuild-plugins-node-modules-polyfill-1.2.0.tgz#06de57620bc470e78999ba99664dca936cfbe7c4"
-  integrity sha512-jWyCoWQKRbxUUfWLO900IyBDHihavTMbQLCDRq8xqj6NhQ75eW7YRvdraSDzFqQ6/eLnhNZlvantQtYbZjqU0A==
+esbuild-plugins-node-modules-polyfill@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.npmjs.org/esbuild-plugins-node-modules-polyfill/-/esbuild-plugins-node-modules-polyfill-1.3.0.tgz#aa61ca6189d54b163acc503b9fcbbbc825f28226"
+  integrity sha512-r/aNOvAlIaIzqJwvFHWhDGrPF/Aj5qI1zKVeHbCFpKH+bnKW1BG2LGixMd3s6hyWcZHcfdl2QZRucVuOLzFRrA==
   dependencies:
     "@jspm/core" "^2.0.1"
     local-pkg "^0.4.3"
