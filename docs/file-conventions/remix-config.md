@@ -199,12 +199,12 @@ The Node.js polyfills to include in the server build when targeting non-Node.js 
 exports.serverNodeBuiltinsPolyfill = {
   modules: {
     path: true, // Provide a JSPM polyfill
-    fs: 'empty', // Provide an empty polyfill
+    fs: "empty", // Provide an empty polyfill
   },
 };
 ```
 
-Defaults to the following set of polyfills for non-Node.js server platforms:
+If left unset, this config defaults to the following set of polyfills for non-Node.js server platforms:
 
 ```js filename=remix.config.js
 exports.serverNodeBuiltinsPolyfill = {
@@ -254,6 +254,10 @@ exports.serverNodeBuiltinsPolyfill = {
   },
 };
 ```
+
+<docs-warning>
+This default behavior is changing in Remix v2 and will no longer polyfill any Node built-in modules on non-Node.js platforms by default.  If your app requires polyfills, you will need to manually specify them via this setting. It's recommend to start manually specifying required polyfills for your app in v1 to ease your eventual migration to v2.
+</docs-warning>
 
 ## serverPlatform
 
