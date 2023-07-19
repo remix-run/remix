@@ -1,5 +1,9 @@
 # `@remix-run/eslint-config`
 
+## 1.19.0
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.0) for an overview of all changes in v1.19.0.
+
 ## 1.18.1
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.18.1) for an overview of all changes in v1.18.1.

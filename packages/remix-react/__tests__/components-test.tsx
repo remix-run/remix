@@ -47,14 +47,14 @@ describe("<LiveReload />", () => {
       LiveReload = require("../components").LiveReload;
       let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        "let port = undefined || (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.port) || 8002;"
+        "url.port = undefined || REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : Number(undefined) || 8002;"
       );
     });
 
     it("can set the port explicitly", () => {
       let { container } = render(<LiveReload port={4321} />);
       expect(container.querySelector("script")).toHaveTextContent(
-        "let port = 4321 || (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.port) || 8002;"
+        "url.port = 4321 || REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : Number(undefined) || 8002;"
       );
     });
 
@@ -62,7 +62,7 @@ describe("<LiveReload />", () => {
       process.env.REMIX_DEV_SERVER_WS_PORT = "1234";
       let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        "let port = undefined || (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.port) || 1234;"
+        "url.port = undefined || REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : Number(1234) || 8002;"
       );
     });
 

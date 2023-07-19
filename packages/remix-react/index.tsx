@@ -15,6 +15,12 @@ export type {
   unstable_BlockerFunction,
 } from "react-router-dom";
 export {
+  createPath,
+  generatePath,
+  matchPath,
+  matchRoutes,
+  parsePath,
+  resolvePath,
   Form,
   Outlet,
   useAsyncError,
@@ -34,7 +40,6 @@ export {
   useResolvedPath,
   useRevalidator,
   useRouteError,
-  useRouteLoaderData,
   useSearchParams,
   useSubmit,
   unstable_useBlocker,
@@ -61,6 +66,7 @@ export {
   useFetcher,
   useFetchers,
   useLoaderData,
+  useRouteLoaderData,
   useMatches,
   useActionData,
   RemixContext as UNSAFE_RemixContext,

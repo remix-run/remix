@@ -22,6 +22,7 @@ import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
 import type { LazyValue } from "../lazyValue";
 import type { Context } from "../context";
+import { writeMetafile } from "../analysis";
 
 type Compiler = {
   // produce ./public/build/
@@ -136,6 +137,10 @@ const createEsbuildConfig = (
     publicPath: ctx.config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
+      "process.env.REMIX_DEV_ORIGIN": JSON.stringify(
+        ctx.options.REMIX_DEV_ORIGIN ?? ""
+      ),
+      // TODO: remove in v2
       "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
         ctx.config.devServerPort
       ),
@@ -160,6 +165,7 @@ export const create = async (
 
   let compile = async () => {
     let { metafile } = await compiler.rebuild();
+    writeMetafile(ctx, "metafile.js.json", metafile);
 
     let hmr: Manifest["hmr"] | undefined = undefined;
     if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {

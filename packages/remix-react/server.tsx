@@ -48,6 +48,7 @@ export function RemixServer({
         routeModules,
         serverHandoffString,
         future: context.future,
+        serializeError: context.serializeError,
         abortDelay,
       }}
     >

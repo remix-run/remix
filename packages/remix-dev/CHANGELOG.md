@@ -1,5 +1,64 @@
 # `@remix-run/dev`
 
+## 1.19.0
+
+### Minor Changes
+
+- improved networking options for `v2_dev` ([#6724](https://github.com/remix-run/remix/pull/6724))
+
+  deprecate the `--scheme` and `--host` options and replace them with the `REMIX_DEV_ORIGIN` environment variable
+
+- Output esbuild metafiles for bundle analysis ([#6772](https://github.com/remix-run/remix/pull/6772))
+
+  Written to server build directory (`build/` by default):
+
+  - `metafile.css.json`
+  - `metafile.js.json` (browser JS)
+  - `metafile.server.json` (server JS)
+
+  Metafiles can be uploaded to <https://esbuild.github.io/analyze/> for analysis.
+
+- Add `serverNodeBuiltinsPolyfill` config option. In `remix.config.js` you can now disable polyfills of Node.js built-in modules for non-Node.js server platforms, or opt into a subset of polyfills. ([#6814](https://github.com/remix-run/remix/pull/6814), [#6859](https://github.com/remix-run/remix/pull/6859), [#6877](https://github.com/remix-run/remix/pull/6877))
+
+  ```js
+  // Disable all polyfills
+  exports.serverNodeBuiltinsPolyfill = { modules: {} };
+
+  // Enable specific polyfills
+  exports.serverNodeBuiltinsPolyfill = {
+    modules: {
+      crypto: true, // Provide a JSPM polyfill
+      fs: "empty", // Provide an empty polyfill
+    },
+  };
+  ```
+
+### Patch Changes
+
+- ignore missing react-dom/client for react 17 ([#6725](https://github.com/remix-run/remix/pull/6725))
+
+- Warn if not using `v2_dev` ([#6818](https://github.com/remix-run/remix/pull/6818))
+
+  Also, rename `--no-restart` to `--manual` to match intention and documentation.
+  `--no-restart` remains an alias for `--manual` in v1 for backwards compatibility.
+
+- ignore errors when killing already dead processes ([#6773](https://github.com/remix-run/remix/pull/6773))
+
+- Always rewrite css-derived assets during builds ([#6837](https://github.com/remix-run/remix/pull/6837))
+
+- fix sourcemaps for `v2_dev` ([#6762](https://github.com/remix-run/remix/pull/6762))
+
+- Do not clear screen when dev server starts ([#6719](https://github.com/remix-run/remix/pull/6719))
+
+  On some terminal emulators, "clearing" only scrolls the next line to the
+  top. on others, it erases the scrollback.
+
+  Instead, let users call `clear` themselves (`clear && remix dev`) if
+  they want to clear.
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.19.0`
+
 ## 1.18.1
 
 ### Patch Changes

@@ -1,5 +1,29 @@
 # `@remix-run/react`
 
+## 1.19.0
+
+### Minor Changes
+
+- improved networking options for `v2_dev` ([#6724](https://github.com/remix-run/remix/pull/6724))
+
+  deprecate the `--scheme` and `--host` options and replace them with the `REMIX_DEV_ORIGIN` environment variable
+
+- Added some missing react-router exports to `@remix-run/react` ([#6856](https://github.com/remix-run/remix/pull/6856))
+
+### Patch Changes
+
+- Narrowed the type of `fetcher.formEncType` to use `FormEncType` from `react-router-dom` instead of `string` ([#6810](https://github.com/remix-run/remix/pull/6810))
+- Deferred promises that return undefined/void now surface a serialization error. ([#6793](https://github.com/remix-run/remix/pull/6793))
+- Properly handle `?_data` HTTP/Network errors that don't reach the Remix server and ensure they bubble to the `ErrorBoundary` ([#6783](https://github.com/remix-run/remix/pull/6783))
+- Support proper hydration of `Error` subclasses such as `ReferenceError`/`TypeError` in development mode ([#6675](https://github.com/remix-run/remix/pull/6675))
+- fix router race condition for hmr ([#6767](https://github.com/remix-run/remix/pull/6767))
+- Avoid re-prefetching stylesheets for active routes during a revalidation ([#6679](https://github.com/remix-run/remix/pull/6679))
+- Add generic type for `useRouteLoaderData()` ([#5157](https://github.com/remix-run/remix/pull/5157))
+- Bump RR 6.14.2 ([#6854](https://github.com/remix-run/remix/pull/6854))
+- Updated dependencies:
+  - [`react-router-dom@6.14.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.14.2)
+  - [`@remix-run/router@1.7.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#172)
+
 ## 1.18.1
 
 ### Patch Changes

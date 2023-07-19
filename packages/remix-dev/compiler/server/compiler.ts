@@ -20,6 +20,7 @@ import type * as Channel from "../../channel";
 import type { Context } from "../context";
 import type { LazyValue } from "../lazyValue";
 import { cssBundlePlugin } from "../plugins/cssBundlePlugin";
+import { writeMetafile } from "../analysis";
 
 type Compiler = {
   // produce ./build/index.js
@@ -66,8 +67,13 @@ const createEsbuildConfig = (
     externalPlugin(/^node:.*/, { sideEffects: false }),
   ];
 
-  if (ctx.config.serverPlatform !== "node") {
-    plugins.unshift(nodeModulesPolyfillPlugin());
+  if (ctx.config.serverNodeBuiltinsPolyfill) {
+    plugins.unshift(
+      nodeModulesPolyfillPlugin({
+        // Ensure only "modules" option is passed to the plugin
+        modules: ctx.config.serverNodeBuiltinsPolyfill.modules,
+      })
+    );
   }
 
   return {
@@ -104,12 +110,16 @@ const createEsbuildConfig = (
     publicPath: ctx.config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
-      // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
+      // TODO: remove in v2
       "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
         ctx.config.devServerPort
       ),
+      "process.env.REMIX_DEV_ORIGIN": JSON.stringify(
+        ctx.options.REMIX_DEV_ORIGIN ?? ""
+      ),
+      // TODO: remove in v2
       "process.env.REMIX_DEV_HTTP_ORIGIN": JSON.stringify(
-        ctx.options.devOrigin ?? "" // TODO: remove nullish check in v2
+        ctx.options.REMIX_DEV_ORIGIN ?? ""
       ),
     },
     jsx: "automatic",
@@ -128,9 +138,11 @@ export const create = async (
   let compiler = await esbuild.context({
     ...createEsbuildConfig(ctx, refs),
     write: false,
+    metafile: true,
   });
   let compile = async () => {
-    let { outputFiles } = await compiler.rebuild();
+    let { outputFiles, metafile } = await compiler.rebuild();
+    writeMetafile(ctx, "metafile.server.json", metafile);
     return outputFiles;
   };
   return {

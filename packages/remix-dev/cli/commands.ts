@@ -174,8 +174,8 @@ export async function build(
     sourcemap,
   };
   if (mode === "development" && config.future.v2_dev) {
-    let origin = await resolveDevOrigin(config);
-    options.devOrigin = origin;
+    let resolved = await resolveDev(config);
+    options.REMIX_DEV_ORIGIN = resolved.REMIX_DEV_ORIGIN;
   }
 
   let fileWatchCache = createFileWatchCache();
@@ -215,16 +215,15 @@ export async function dev(
 
     // v2_dev
     command?: string;
-    scheme?: string;
-    host?: string;
+    manual?: boolean;
     port?: number;
-    restart?: boolean;
     tlsKey?: string;
     tlsCert?: string;
+    scheme?: string; // TODO: remove in v2
+    host?: string; // TODO: remove in v2
+    restart?: boolean; // TODO: remove in v2
   } = {}
 ) {
-  // clear screen
-  process.stdout.write("\x1Bc");
   console.log(`\n 💿  remix dev\n`);
 
   if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
@@ -236,11 +235,18 @@ export async function dev(
   let config = await readConfig(remixRoot);
 
   if (config.future.v2_dev === false) {
+    logger.warn("The `remix dev` changing in v2", {
+      details: [
+        "You can use the `v2_dev` future flag to opt-in early.",
+        "-> https://remix.run/docs/en/main/pages/v2#dev-server",
+      ],
+    });
     await devServer.serve(config, flags.port);
     return await new Promise(() => {});
   }
 
-  await devServer_unstable.serve(config, await resolveDevServe(config, flags));
+  let resolved = await resolveDevServe(config, flags);
+  await devServer_unstable.serve(config, resolved);
 }
 
 export async function codemod(
@@ -469,77 +475,100 @@ let parseMode = (
 
 let findPort = async () => getPort({ port: makeRange(3001, 3100) });
 
-type DevOrigin = {
-  scheme: string;
-  host: string;
-  port: number;
-};
-let resolveDevOrigin = async (
+let resolveDev = async (
   config: RemixConfig,
-  flags: Partial<DevOrigin> & {
+  flags: {
+    port?: number;
     tlsKey?: string;
     tlsCert?: string;
+    /** @deprecated */
+    scheme?: string; // TODO: remove in v2
+    /** @deprecated */
+    host?: string; // TODO: remove in v2
   } = {}
-): Promise<DevOrigin> => {
+) => {
   let dev = config.future.v2_dev;
   if (dev === false) throw Error("This should never happen");
 
-  // prettier-ignore
-  let scheme =
-    flags.scheme ??
-    (dev === true ? undefined : dev.scheme) ??
-    (flags.tlsKey && flags.tlsCert) ? "https": "http";
-  // prettier-ignore
-  let host =
-    flags.host ??
-    (dev === true ? undefined : dev.host) ??
-    "localhost";
   // prettier-ignore
   let port =
     flags.port ??
     (dev === true ? undefined : dev.port) ??
     (await findPort());
 
+  let tlsKey = flags.tlsKey ?? (dev === true ? undefined : dev.tlsKey);
+  if (tlsKey) tlsKey = path.resolve(tlsKey);
+  let tlsCert = flags.tlsCert ?? (dev === true ? undefined : dev.tlsCert);
+  if (tlsCert) tlsCert = path.resolve(tlsCert);
+  let isTLS = tlsKey && tlsCert;
+
+  let REMIX_DEV_ORIGIN = process.env.REMIX_DEV_ORIGIN;
+  if (REMIX_DEV_ORIGIN === undefined) {
+    // prettier-ignore
+    let scheme =
+      flags.scheme ?? // TODO: remove in v2
+      (dev === true ? undefined : dev.scheme) ?? // TODO: remove in v2
+      isTLS ? "https" : "http";
+    // prettier-ignore
+    let hostname =
+      flags.host ?? // TODO: remove in v2
+      (dev === true ? undefined : dev.host) ?? // TODO: remove in v2
+      "localhost";
+    REMIX_DEV_ORIGIN = `${scheme}://${hostname}:${port}`;
+  }
+
   return {
-    scheme,
-    host,
     port,
+    tlsKey,
+    tlsCert,
+    REMIX_DEV_ORIGIN: new URL(REMIX_DEV_ORIGIN),
   };
 };
 
-type DevServeFlags = DevOrigin & {
-  command?: string;
-  restart: boolean;
-  tlsKey?: string;
-  tlsCert?: string;
-};
 let resolveDevServe = async (
   config: RemixConfig,
-  flags: Partial<DevServeFlags> = {}
-): Promise<DevServeFlags> => {
+  flags: {
+    command?: string;
+    manual?: boolean;
+    port?: number;
+    tlsKey?: string;
+    tlsCert?: string;
+    scheme?: string; // TODO: remove in v2
+    host?: string; // TODO: remove in v2
+    restart?: boolean; // TODO: remove in v2
+  } = {}
+) => {
   let dev = config.future.v2_dev;
   if (dev === false) throw Error("Cannot resolve dev options");
 
-  let origin = await resolveDevOrigin(config, flags);
+  let resolved = await resolveDev(config, flags);
 
   // prettier-ignore
   let command =
     flags.command ??
     (dev === true ? undefined : dev.command)
 
-  let restart =
-    flags.restart ?? (dev === true ? undefined : dev.restart) ?? true;
+  // TODO: remove in v2
+  let restart = dev === true ? undefined : dev.restart;
+  if (restart !== undefined) {
+    logger.warn("The `v2_dev.restart` option is deprecated", {
+      details: [
+        "Use `v2_dev.manual` instead.",
+        "-> https://remix.run/docs/en/main/guides/development-performance#manual-mode",
+      ],
+    });
+  }
 
-  let tlsKey = flags.tlsKey ?? (dev === true ? undefined : dev.tlsKey);
-  if (tlsKey) tlsKey = path.resolve(tlsKey);
-  let tlsCert = flags.tlsCert ?? (dev === true ? undefined : dev.tlsCert);
-  if (tlsCert) tlsCert = path.resolve(tlsCert);
+  // prettier-ignore
+  let manual =
+    flags.manual ??
+    (dev === true ? undefined : dev.manual) ??
+    restart !== undefined ? !restart : // TODO: remove in v2
+    false;
 
   return {
+    ...resolved,
     command,
-    ...origin,
-    restart,
-    tlsKey,
-    tlsCert,
+    manual,
   };
 };

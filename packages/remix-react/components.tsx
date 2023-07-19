@@ -31,6 +31,7 @@ import {
   useFetchers as useFetchersRR,
   useActionData as useActionDataRR,
   useLoaderData as useLoaderDataRR,
+  useRouteLoaderData as useRouteLoaderDataRR,
   useMatches as useMatchesRR,
   useLocation,
   useNavigation,
@@ -893,7 +894,8 @@ export type ScriptProps = Omit<
  * @see https://remix.run/components/scripts
  */
 export function Scripts(props: ScriptProps) {
-  let { manifest, serverHandoffString, abortDelay } = useRemixContext();
+  let { manifest, serverHandoffString, abortDelay, serializeError } =
+    useRemixContext();
   let { router, static: isStatic, staticContext } = useDataRouterContext();
   let { matches } = useDataRouterStateContext();
   let navigation = useNavigation();
@@ -901,6 +903,58 @@ export function Scripts(props: ScriptProps) {
   React.useEffect(() => {
     isHydrated = true;
   }, []);
+
+  let serializePreResolvedErrorImp = (key: string, error: unknown) => {
+    let toSerialize: unknown;
+    if (serializeError && error instanceof Error) {
+      toSerialize = serializeError(error);
+    } else {
+      toSerialize = error;
+    }
+    return `${JSON.stringify(key)}:__remixContext.p(!1, ${escapeHtml(
+      JSON.stringify(toSerialize)
+    )})`;
+  };
+
+  let serializePreresolvedDataImp = (
+    routeId: string,
+    key: string,
+    data: unknown
+  ) => {
+    let serializedData;
+    try {
+      serializedData = JSON.stringify(data);
+    } catch (error) {
+      return serializePreResolvedErrorImp(key, error);
+    }
+    return `${JSON.stringify(key)}:__remixContext.p(${escapeHtml(
+      serializedData
+    )})`;
+  };
+
+  let serializeErrorImp = (routeId: string, key: string, error: unknown) => {
+    let toSerialize: unknown;
+    if (serializeError && error instanceof Error) {
+      toSerialize = serializeError(error);
+    } else {
+      toSerialize = error;
+    }
+    return `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(
+      key
+    )}, !1, ${escapeHtml(JSON.stringify(toSerialize))})`;
+  };
+
+  let serializeDataImp = (routeId: string, key: string, data: unknown) => {
+    let serializedData;
+    try {
+      serializedData = JSON.stringify(data);
+    } catch (error) {
+      return serializeErrorImp(routeId, key, error);
+    }
+    return `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(
+      key
+    )}, ${escapeHtml(serializedData)})`;
+  };
 
   let deferredScripts: any[] = [];
   let initialScripts = React.useMemo(() => {
@@ -969,6 +1023,8 @@ export function Scripts(props: ScriptProps) {
                       routeId={routeId}
                       dataKey={key}
                       scriptProps={props}
+                      serializeData={serializeDataImp}
+                      serializeError={serializeErrorImp}
                     />
                   );
 
@@ -980,32 +1036,16 @@ export function Scripts(props: ScriptProps) {
                 } else {
                   let trackedPromise = deferredData.data[key] as TrackedPromise;
                   if (typeof trackedPromise._error !== "undefined") {
-                    let toSerialize: { message: string; stack?: string } =
-                      process.env.NODE_ENV === "development"
-                        ? {
-                            message: trackedPromise._error.message,
-                            stack: trackedPromise._error.stack,
-                          }
-                        : {
-                            message: "Unexpected Server Error",
-                            stack: undefined,
-                          };
-                    return `${JSON.stringify(
-                      key
-                    )}:__remixContext.p(!1, ${escapeHtml(
-                      JSON.stringify(toSerialize)
-                    )})`;
+                    return serializePreResolvedErrorImp(
+                      key,
+                      trackedPromise._error
+                    );
                   } else {
-                    if (typeof trackedPromise._data === "undefined") {
-                      throw new Error(
-                        `The deferred data for ${key} was not resolved, did you forget to return data from a deferred promise?`
-                      );
-                    }
-                    return `${JSON.stringify(
-                      key
-                    )}:__remixContext.p(${escapeHtml(
-                      JSON.stringify(trackedPromise._data)
-                    )})`;
+                    return serializePreresolvedDataImp(
+                      routeId,
+                      key,
+                      trackedPromise._data
+                    );
                   }
                 }
               })
@@ -1068,7 +1108,12 @@ import(${JSON.stringify(manifest.entry.module)});`;
   if (!isStatic && typeof __remixContext === "object" && __remixContext.a) {
     for (let i = 0; i < __remixContext.a; i++) {
       deferredScripts.push(
-        <DeferredHydrationScript key={i} scriptProps={props} />
+        <DeferredHydrationScript
+          key={i}
+          scriptProps={props}
+          serializeData={serializeDataImp}
+          serializeError={serializeErrorImp}
+        />
       );
     }
   }
@@ -1124,11 +1169,15 @@ function DeferredHydrationScript({
   deferredData,
   routeId,
   scriptProps,
+  serializeData,
+  serializeError,
 }: {
   dataKey?: string;
   deferredData?: DeferredData;
   routeId?: string;
   scriptProps?: ScriptProps;
+  serializeData: (routeId: string, key: string, data: unknown) => string;
+  serializeError: (routeId: string, key: string, error: unknown) => string;
 }) {
   if (typeof document === "undefined" && deferredData && dataKey && routeId) {
     invariant(
@@ -1164,22 +1213,21 @@ function DeferredHydrationScript({
               dataKey={dataKey}
               routeId={routeId}
               scriptProps={scriptProps}
+              serializeError={serializeError}
             />
           }
-          children={(data) => (
-            <script
-              {...scriptProps}
-              async
-              suppressHydrationWarning
-              dangerouslySetInnerHTML={{
-                __html: `__remixContext.r(${JSON.stringify(
-                  routeId
-                )}, ${JSON.stringify(dataKey)}, ${escapeHtml(
-                  JSON.stringify(data)
-                )});`,
-              }}
-            />
-          )}
+          children={(data) => {
+            return (
+              <script
+                {...scriptProps}
+                async
+                suppressHydrationWarning
+                dangerouslySetInnerHTML={{
+                  __html: serializeData(routeId, dataKey, data),
+                }}
+              />
+            );
+          }}
         />
       ) : (
         <script
@@ -1197,31 +1245,21 @@ function ErrorDeferredHydrationScript({
   dataKey,
   routeId,
   scriptProps,
+  serializeError,
 }: {
   dataKey: string;
   routeId: string;
   scriptProps?: ScriptProps;
+  serializeError: (routeId: string, key: string, error: unknown) => string;
 }) {
   let error = useAsyncError() as Error;
-  let toSerialize: { message: string; stack?: string } =
-    process.env.NODE_ENV === "development"
-      ? {
-          message: error.message,
-          stack: error.stack,
-        }
-      : {
-          message: "Unexpected Server Error",
-          stack: undefined,
-        };
 
   return (
     <script
       {...scriptProps}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{
-        __html: `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(
-          dataKey
-        )}, !1, ${escapeHtml(JSON.stringify(toSerialize))});`,
+        __html: serializeError(routeId, dataKey, error),
       }}
     />
   );
@@ -1287,6 +1325,17 @@ export function useMatches(): RouteMatch[] {
  */
 export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useLoaderDataRR() as SerializeFrom<T>;
+}
+
+/**
+ * Returns the loaderData for the given routeId.
+ *
+ * @see https://remix.run/hooks/use-route-loader-data
+ */
+export function useRouteLoaderData<T = AppData>(
+  routeId: string
+): SerializeFrom<T> | undefined {
+  return useRouteLoaderDataRR(routeId) as SerializeFrom<T> | undefined;
 }
 
 /**
@@ -1782,7 +1831,6 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
-        // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
         port,
         timeoutMs = 1000,
         nonce = undefined,
@@ -1799,13 +1847,25 @@ export const LiveReload =
             dangerouslySetInnerHTML={{
               __html: js`
                 function remixLiveReloadConnect(config) {
-                  let protocol = location.protocol === "https:" ? "wss:" : "ws:";
-                  let host = location.hostname;
-                  let port = ${port} || (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.port) || ${Number(
-                process.env.REMIX_DEV_SERVER_WS_PORT || 8002
-              )};
-                  let socketPath = protocol + "//" + host + ":" + port + "/socket";
-                  let ws = new WebSocket(socketPath);
+                  let REMIX_DEV_ORIGIN = ${JSON.stringify(
+                    process.env.REMIX_DEV_ORIGIN
+                  )};
+                  let protocol =
+                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).protocol.replace(/^http/, "ws") :
+                    location.protocol === "https:" ? "wss:" : "ws:"; // remove in v2?
+                  let hostname = location.hostname;
+                  let url = new URL(protocol + "//" + hostname + "/socket");
+
+                  url.port =
+                    ${port} ||
+                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port :
+                    Number(${
+                      // TODO: remove in v2
+                      process.env.REMIX_DEV_SERVER_WS_PORT
+                    }) ||
+                    8002;
+
+                  let ws = new WebSocket(url.href);
                   ws.onmessage = async (message) => {
                     let event = JSON.parse(message.data);
                     if (event.type === "LOG") {

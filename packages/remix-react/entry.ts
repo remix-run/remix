@@ -4,6 +4,11 @@ import type { RouteManifest, EntryRoute } from "./routes";
 import type { RouteModules } from "./routeModules";
 
 // Object passed to RemixContext.Provider
+
+type SerializedError = {
+  message: string;
+  stack?: string;
+};
 export interface RemixContextObject {
   manifest: AssetsManifest;
   routeModules: RouteModules;
@@ -11,6 +16,7 @@ export interface RemixContextObject {
   future: FutureConfig;
   abortDelay?: number;
   dev?: { port: number };
+  serializeError?(error: Error): SerializedError;
 }
 
 // Additional React-Router information needed at runtime, but not hydrated
