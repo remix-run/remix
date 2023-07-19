@@ -6,7 +6,7 @@ Add `serverNodeBuiltinsPolyfill` config option. In `remix.config.js` you can now
 
 ```js
 // Disable all polyfills
-exports.serverNodeBuiltinsPolyfill = false;
+exports.serverNodeBuiltinsPolyfill = { modules: {} };
 
 // Enable specific polyfills
 exports.serverNodeBuiltinsPolyfill = {
