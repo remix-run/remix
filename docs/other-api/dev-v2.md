@@ -209,7 +209,7 @@ To use [Mock Service Worker][msw] in development, you'll need to:
 
 `remix dev` will provide the `REMIX_DEV_ORIGIN` environment variable for use in your app server.
 
-For example, if you are using [binode][binode] to integrate with MSW,
+For example, if you are using \[binode]\[binode] to integrate with MSW,
 make sure that the call to `binode` is within the `remix dev -c` subcommand.
 That way, the MSW server will have access to the `REMIX_DEV_ORIGIN` environment variable:
 
