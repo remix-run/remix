@@ -193,17 +193,64 @@ Defaults to `"cjs"`.
 
 ## serverNodeBuiltinsPolyfill
 
-Whether to polyfill Node.js built-in modules in the server build, or a configurable subset of polyfills. Polyfills are provided by [JSPM][jspm] and configured via [esbuild-plugins-node-modules-polyfill]. Defaults to `true` for non-Node.js server platforms.
+The Node.js polyfills to include in the server build when targeting non-Node.js server platforms. Polyfills are provided by [JSPM][jspm] and configured via [esbuild-plugins-node-modules-polyfill].
 
 ```js filename=remix.config.js
-// Disable all polyfills
-exports.serverNodeBuiltinsPolyfill = false;
-
-// Enable specific polyfills
 exports.serverNodeBuiltinsPolyfill = {
   modules: {
-    crypto: true, // Provide a JSPM polyfill
+    path: true, // Provide a JSPM polyfill
     fs: 'empty', // Provide an empty polyfill
+  },
+};
+```
+
+Defaults to the following set of polyfills for non-Node.js server platforms:
+
+```js filename=remix.config.js
+exports.serverNodeBuiltinsPolyfill = {
+  modules: {
+    _stream_duplex: true,
+    _stream_passthrough: true,
+    _stream_readable: true,
+    _stream_transform: true,
+    _stream_writable: true,
+    assert: true,
+    "assert/strict": true,
+    buffer: true,
+    console: true,
+    constants: true,
+    crypto: "empty",
+    diagnostics_channel: true,
+    domain: true,
+    events: true,
+    fs: "empty",
+    "fs/promises": "empty",
+    http: true,
+    https: true,
+    module: true,
+    os: true,
+    path: true,
+    "path/posix": true,
+    "path/win32": true,
+    perf_hooks: true,
+    process: true,
+    punycode: true,
+    querystring: true,
+    stream: true,
+    "stream/promises": true,
+    "stream/web": true,
+    string_decoder: true,
+    sys: true,
+    timers: true,
+    "timers/promises": true,
+    tty: true,
+    url: true,
+    util: true,
+    "util/types": true,
+    vm: true,
+    wasi: true,
+    worker_threads: true,
+    zlib: true,
   },
 };
 ```
