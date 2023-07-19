@@ -1,5 +1,12 @@
 # `@remix-run/cloudflare-workers`
 
+## 1.19.0-pre.5
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.19.0-pre.5`
+
 ## 1.19.0-pre.4
 
 ### Patch Changes
