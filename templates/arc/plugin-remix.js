@@ -23,7 +23,8 @@ export default {
           path.resolve(process.cwd(), buildPath),
           "utf8"
         );
-        const manifestMatches = contents.matchAll(/manifest-([A-f0-9]+)\.js/g);
+        // FIXME: https://github.com/remix-run/remix/pull/6885
+        const manifestMatches = contents.matchAll(/manifest-([A-F0-9]+)\.js/g);
         const sent = new Set();
         for (const match of manifestMatches) {
           const buildHash = match[1];
