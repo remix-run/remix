@@ -1,55 +1,15 @@
 # `@remix-run/testing`
 
-## 1.19.0-pre.5
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.19.0-pre.5`
-  - `@remix-run/react@1.19.0-pre.5`
-
-## 1.19.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.19.0-pre.4`
-  - `@remix-run/react@1.19.0-pre.4`
-
-## 1.19.0-pre.3
-
-### Patch Changes
-
-- Bump RR 6.14.2 ([#6854](https://github.com/remix-run/remix/pull/6854))
-- Updated dependencies:
-  - `@remix-run/react@1.19.0-pre.3`
-  - `@remix-run/node@1.19.0-pre.3`
-
-## 1.19.0-pre.2
-
-### Patch Changes
-
-- Bump router 6.14.2-pre.1 ([#6852](https://github.com/remix-run/remix/pull/6852))
-- Updated dependencies:
-  - `@remix-run/react@1.19.0-pre.2`
-  - `@remix-run/node@1.19.0-pre.2`
-
-## 1.19.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.19.0-pre.1`
-  - `@remix-run/react@1.19.0-pre.1`
-
-## 1.19.0-pre.0
+## 1.19.0
 
 ### Patch Changes
 
 - Bump `react-router-dom@6.14.2-pre.0` ([#6812](https://github.com/remix-run/remix/pull/6812))
+- Bump router 6.14.2-pre.1 ([#6852](https://github.com/remix-run/remix/pull/6852))
+- Bump RR 6.14.2 ([#6854](https://github.com/remix-run/remix/pull/6854))
 - Updated dependencies:
-  - `@remix-run/react@1.19.0-pre.0`
-  - `@remix-run/node@1.19.0-pre.0`
+  - `@remix-run/react@1.19.0`
+  - `@remix-run/node@1.19.0`
 
 ## 1.18.1
 
