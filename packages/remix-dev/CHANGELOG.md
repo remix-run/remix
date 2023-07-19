@@ -4,11 +4,9 @@
 
 ### Minor Changes
 
-- improved networking options for v2\_dev ([#6724](https://github.com/remix-run/remix/pull/6724))
+- improved networking options for `v2_dev` ([#6724](https://github.com/remix-run/remix/pull/6724))
 
   deprecate the `--scheme` and `--host` options and replace them with the `REMIX_DEV_ORIGIN` environment variable
-
-- \[REMOVE] Change serverNodeBuiltinsPolyfill to suport object format ([#6859](https://github.com/remix-run/remix/pull/6859))
 
 - Output esbuild metafiles for bundle analysis ([#6772](https://github.com/remix-run/remix/pull/6772))
 
@@ -20,7 +18,7 @@
 
   Metafiles can be uploaded to <https://esbuild.github.io/analyze/> for analysis.
 
-- Add `serverNodeBuiltinsPolyfill` config option. In `remix.config.js` you can now disable polyfills of Node.js built-in modules for non-Node.js server platforms, or opt into a subset of polyfills. ([#6814](https://github.com/remix-run/remix/pull/6814))
+- Add `serverNodeBuiltinsPolyfill` config option. In `remix.config.js` you can now disable polyfills of Node.js built-in modules for non-Node.js server platforms, or opt into a subset of polyfills. ([#6814](https://github.com/remix-run/remix/pull/6814), [#6859](https://github.com/remix-run/remix/pull/6859), [#6877](https://github.com/remix-run/remix/pull/6877))
 
   ```js
   // Disable all polyfills
@@ -35,15 +33,11 @@
   };
   ```
 
-- \[REMOVE] Remove boolean option from serverNodeBuiltinsPolyfill, and revert to "empty" polyfill for `fs`/`fs/promises` and `crypto` modules ([#6877](https://github.com/remix-run/remix/pull/6877))
-
 ### Patch Changes
-
-- Exclude unimplemented polyfills from server build for non-Node.js server platforms ([#6814](https://github.com/remix-run/remix/pull/6814))
 
 - ignore missing react-dom/client for react 17 ([#6725](https://github.com/remix-run/remix/pull/6725))
 
-- Warn if not using v2\_dev ([#6818](https://github.com/remix-run/remix/pull/6818))
+- Warn if not using `v2_dev` ([#6818](https://github.com/remix-run/remix/pull/6818))
 
   Also, rename `--no-restart` to `--manual` to match intention and documentation.
   `--no-restart` remains an alias for `--manual` in v1 for backwards compatibility.
@@ -52,7 +46,7 @@
 
 - Always rewrite css-derived assets during builds ([#6837](https://github.com/remix-run/remix/pull/6837))
 
-- fix sourcemaps for v2\_dev ([#6762](https://github.com/remix-run/remix/pull/6762))
+- fix sourcemaps for `v2_dev` ([#6762](https://github.com/remix-run/remix/pull/6762))
 
 - Do not clear screen when dev server starts ([#6719](https://github.com/remix-run/remix/pull/6719))
 

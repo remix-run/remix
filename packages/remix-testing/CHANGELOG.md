@@ -4,12 +4,12 @@
 
 ### Patch Changes
 
-- Bump `react-router-dom@6.14.2-pre.0` ([#6812](https://github.com/remix-run/remix/pull/6812))
-- Bump router 6.14.2-pre.1 ([#6852](https://github.com/remix-run/remix/pull/6852))
 - Bump RR 6.14.2 ([#6854](https://github.com/remix-run/remix/pull/6854))
 - Updated dependencies:
   - `@remix-run/react@1.19.0`
   - `@remix-run/node@1.19.0`
+  - [`react-router-dom@6.14.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.14.2)
+  - [`@remix-run/router@1.7.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#172)
 
 ## 1.18.1
 
