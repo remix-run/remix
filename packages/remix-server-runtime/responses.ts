@@ -9,11 +9,14 @@ import {
 import { serializeError } from "./errors";
 import type { ServerMode } from "./mode";
 
+declare const typedDeferredDataBrand: unique symbol;
+
 export type TypedDeferredData<Data extends Record<string, unknown>> = Pick<
   DeferredData,
   "init"
 > & {
   data: Data;
+  readonly [typedDeferredDataBrand]: "TypedDeferredData";
 };
 
 export type DeferFunction = <Data extends Record<string, unknown>>(
@@ -21,17 +24,14 @@ export type DeferFunction = <Data extends Record<string, unknown>>(
   init?: number | ResponseInit
 ) => TypedDeferredData<Data>;
 
-export type JsonFunction = <Data extends unknown>(
+export type JsonFunction = <Data>(
   data: Data,
   init?: number | ResponseInit
 ) => TypedResponse<Data>;
 
 // must be a type since this is a subtype of response
 // interfaces must conform to the types they extend
-export type TypedResponse<T extends unknown = unknown> = Omit<
-  Response,
-  "json"
-> & {
+export type TypedResponse<T = unknown> = Omit<Response, "json"> & {
   json(): Promise<T>;
 };
 
@@ -48,10 +48,10 @@ export const json: JsonFunction = (data, init = {}) => {
 /**
  * This is a shortcut for creating Remix deferred responses
  *
- * @see https://remix.run/docs/utils/defer
+ * @see https://remix.run/utils/defer
  */
 export const defer: DeferFunction = (data, init = {}) => {
-  return routerDefer(data, init) as TypedDeferredData<typeof data>;
+  return routerDefer(data, init) as unknown as TypedDeferredData<typeof data>;
 };
 
 export type RedirectFunction = (

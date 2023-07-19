@@ -33,10 +33,10 @@ The Remix compiler will not do any type checking (it simply removes the types). 
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
     "eslint": "^8.23.1",
-    "typescript": "^4.7.4"
+    "typescript": "^5.0.4"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   }
 }
 ```
@@ -75,6 +75,6 @@ Remix has TypeScript type definitions built-in as well. The starter templates cr
 /// <reference types="@remix-run/node" />
 ```
 
-<docs-info>Note that the types referenced in `remix.env.d.ts` will depend on which environment you're running your app in. For example, there are different globals available in Cloudflare</docs-info>
+<docs-info>Note that the types referenced in `remix.env.d.ts` will depend on which environment you're running your app in. For example, there are different globals available in Cloudflare.</docs-info>
 
 [with-jsx]: https://www.typescriptlang.org/docs/handbook/jsx.html

@@ -31,6 +31,12 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "yarn"
 
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
+
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
@@ -60,6 +66,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -93,6 +105,12 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: "yarn"
 
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
+
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
@@ -124,6 +142,12 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: "yarn"
 
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
+
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
@@ -154,6 +178,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile

@@ -29,7 +29,7 @@ import { isBinaryType } from "./binaryTypes";
  */
 export type GetLoadContextFunction = (
   event: APIGatewayProxyEventV2
-) => AppLoadContext;
+) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler = APIGatewayProxyHandlerV2;
 
@@ -50,7 +50,7 @@ export function createRequestHandler({
 
   return async (event) => {
     let request = createRemixRequest(event);
-    let loadContext = getLoadContext?.(event);
+    let loadContext = await getLoadContext?.(event);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
 

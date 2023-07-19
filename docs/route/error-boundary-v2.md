@@ -8,6 +8,7 @@ new: true
 You can opt-in to the new ErrorBoundary API with a future flag in Remix config.
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_errorBoundary: true,
@@ -34,7 +35,7 @@ import {
 } from "@remix-run/react";
 
 export function ErrorBoundary() {
-  let error = useRouteError();
+  const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
     return (
@@ -63,4 +64,4 @@ export function ErrorBoundary() {
 [error-boundaries]: https://reactjs.org/docs/error-boundaries.html
 [rr-error-boundary]: https://reactrouter.com/en/main/route/error-element
 [use-route-error]: ../hooks/use-route-error
-[is-route-error-response]: ../utils/is-route-error-response.md
+[is-route-error-response]: ../utils/is-route-error-response

@@ -19,8 +19,9 @@ export function createServerHandoffString<T>(serverHandoff: {
   // Don't allow StaticHandlerContext to be passed in verbatim, since then
   // we'd end up including duplicate info
   state: ValidateShape<T, HydrationState>;
+  url: string;
   future: FutureConfig;
-  dev?: { liveReloadPort: number };
+  dev?: { port: number };
 }): string {
   // Uses faster alternative of jsesc to escape data returned from the loaders.
   // This string is inserted directly into the HTML in the `<Scripts>` element.

@@ -34,9 +34,9 @@ It's built on the [Web Fetch API][fetch] instead of Node.js. This enables Remix 
 
 This is what Remix looks like when running in an express app:
 
-```js lines=[2,6-9]
-const express = require("express");
+```ts lines=[1,6-9]
 const remix = require("@remix-run/express");
+const express = require("express");
 
 const app = express();
 
@@ -51,15 +51,15 @@ Express (or Node.js) is the actual server, Remix is just a handler on that serve
 ```ts
 export function createRequestHandler({ build }) {
   // creates a Fetch API request handler from the server build
-  let handleRequest = createRemixRequestHandler(build);
+  const handleRequest = createRemixRequestHandler(build);
 
   // returns an express.js specific handler for the express server
   return async (req, res) => {
     // adapts the express.req to a Fetch API request
-    let request = createRemixRequest(req);
+    const request = createRemixRequest(req);
 
     // calls the app handler and receives a Fetch API response
-    let response = await handleRequest(request);
+    const response = await handleRequest(request);
 
     // adapts the Fetch API response to the express.res
     sendRemixResponse(res, response);
@@ -172,7 +172,7 @@ Taking our route module from before, here are a few small, but useful UX improve
 export default function Projects() {
   const projects = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const { state } = useTransition();
+  const { state } = useNavigation();
   const busy = state === "submitting";
   const inputRef = React.useRef();
 

@@ -40,7 +40,7 @@ export async function requireUserSession(request) {
 
 And now in any loader or action that requires a user session, you can call the function.
 
-```tsx filename=app/routes/projects.jsx lines=[3]
+```tsx filename=app/routes/projects.tsx lines=[3]
 export async function loader({ request }: LoaderArgs) {
   // if the user isn't authenticated, this will redirect to login
   const session = await requireUserSession(request);
@@ -68,7 +68,7 @@ export async function loader({ request }: LoaderArgs) {
 
 In HTML, forms can post to any URL with the action prop and the app will navigate there:
 
-```jsx
+```tsx
 <Form action="/some/where" />
 ```
 
@@ -83,8 +83,8 @@ HTML buttons can send a value, so it's the easiest way to implement this:
 
 ```tsx filename=app/routes/projects/$id.tsx lines=[3-4,33,39]
 export async function action({ request }: ActionArgs) {
-  let formData = await request.formData();
-  let intent = formData.get("intent");
+  const formData = await request.formData();
+  const intent = formData.get("intent");
   switch (intent) {
     case "update": {
       // do your update
@@ -101,7 +101,7 @@ export async function action({ request }: ActionArgs) {
 }
 
 export default function Projects() {
-  let project = useLoaderData<typeof loader>();
+  const project = useLoaderData<typeof loader>();
   return (
     <>
       <h2>Update Project</h2>
@@ -138,7 +138,7 @@ If you're used to doing fetches with a content type of `application/json`, you m
 
 If you're wanting to send structured data simply to post arrays, you can use the same key on multiple inputs:
 
-```jsx
+```tsx
 <Form method="post">
   <p>Select the categories for this video:</p>
   <label>
@@ -161,7 +161,7 @@ Each checkbox has the name: "category". Since `FormData` can have multiple value
 ```tsx
 export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
-  let categories = formData.getAll("category");
+  const categories = formData.getAll("category");
   // ["comedy", "music"]
 }
 ```
@@ -189,10 +189,10 @@ import queryString from "query-string";
 export async function action({ request }: ActionArgs) {
   // use `request.text()`, not `request.formData` to get the form data as a url
   // encoded form query string
-  let formQueryString = await request.text();
+  const formQueryString = await request.text();
 
   // parse it into an object
-  let obj = queryString.parse(formQueryString);
+  const obj = queryString.parse(formQueryString);
 }
 ```
 
@@ -210,8 +210,8 @@ And then parse it in the action:
 
 ```tsx
 export async function action({ request }: ActionArgs) {
-  let formData = await request.formData();
-  let obj = JSON.parse(formData.get("json"));
+  const formData = await request.formData();
+  const obj = JSON.parse(formData.get("json"));
 }
 ```
 

@@ -24,13 +24,14 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "yarn"
 
-      - name: 📥 Install deps
-        run: yarn --frozen-lockfile
-
-      - name: Disable Eslint GitHub Actions Annotations
+      - name: Disable GitHub Actions Annotations
         run: |
+          echo "::remove-matcher owner=tsc::"
           echo "::remove-matcher owner=eslint-compact::"
           echo "::remove-matcher owner=eslint-stylish::"
+
+      - name: 📥 Install deps
+        run: yarn --frozen-lockfile
 
       - name: 🔬 Lint
         run: yarn lint

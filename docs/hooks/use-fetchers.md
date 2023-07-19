@@ -86,7 +86,7 @@ The strategy has three steps:
 
 Here's some sample code:
 
-```js
+```tsx
 function ProjectTaskCount({ project }) {
   const fetchers = useFetchers();
   let completedTasks = 0;

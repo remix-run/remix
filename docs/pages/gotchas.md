@@ -18,7 +18,7 @@ TypeError: Cannot read properties of undefined (reading 'root')
 
 For example, you can't import "fs-extra" directly into a route module:
 
-```jsx bad filename=app/routes/index.jsx lines=[2] nocopy
+```tsx bad filename=app/routes/index.tsx lines=[2] nocopy
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import fs from "fs-extra";
 
@@ -33,13 +33,13 @@ export default function SomeRoute() {
 
 To fix it, move the import into a different module named `*.server.js` or `*.server.ts` and import from there. In our example here, we create a new file at `utils/fs-extra.server.js`:
 
-```js filename=app/utils/fs-extra.server.js
+```ts filename=app/utils/fs-extra.server.ts
 export { default } from "fs-extra";
 ```
 
 And then change our import in the route to the new "wrapper" module:
 
-```jsx filename=app/routes/index.jsx lines=[3]
+```tsx filename=app/routes/index.tsx lines=[3]
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import fs from "~/utils/fs-extra.server";
@@ -61,7 +61,7 @@ For example, [Remix upload handlers like `unstable_createFileUploadHandler` and 
 
 So instead of doing:
 
-```jsx bad filename=app/routes/some-route.jsx lines=[3-6]
+```tsx bad filename=app/routes/some-route.tsx lines=[3-6]
 import { unstable_createFileUploadHandler } from "@remix-run/node"; // or cloudflare/deno
 
 const uploadHandler = unstable_createFileUploadHandler({
@@ -76,7 +76,7 @@ export async function action() {
 
 You should be doing:
 
-```jsx filename=app/routes/some-route.jsx good lines=[4-7]
+```tsx filename=app/routes/some-route.tsx good lines=[4-7]
 import { unstable_createFileUploadHandler } from "@remix-run/node"; // or cloudflare/deno
 
 export async function action() {

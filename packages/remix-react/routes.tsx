@@ -104,6 +104,22 @@ export function createServerRoutes(
   });
 }
 
+export function createClientRoutesWithHMRRevalidationOptOut(
+  needsRevalidation: Set<string>,
+  manifest: RouteManifest<EntryRoute>,
+  routeModulesCache: RouteModules,
+  future: FutureConfig
+) {
+  return createClientRoutes(
+    manifest,
+    routeModulesCache,
+    future,
+    "",
+    groupRoutesByParentId(manifest),
+    needsRevalidation
+  );
+}
+
 export function createClientRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
@@ -112,7 +128,8 @@ export function createClientRoutes(
   routesByParentId: Record<
     string,
     Omit<EntryRoute, "children">[]
-  > = groupRoutesByParentId(manifest)
+  > = groupRoutesByParentId(manifest),
+  needsRevalidation?: Set<string>
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
     let hasErrorBoundary =
@@ -136,13 +153,19 @@ export function createClientRoutes(
       handle: undefined,
       loader: createDataFunction(route, routeModulesCache, false),
       action: createDataFunction(route, routeModulesCache, true),
-      shouldRevalidate: createShouldRevalidate(route, routeModulesCache),
+      shouldRevalidate: createShouldRevalidate(
+        route,
+        routeModulesCache,
+        needsRevalidation
+      ),
     };
     let children = createClientRoutes(
       manifest,
       routeModulesCache,
       future,
-      route.id
+      route.id,
+      routesByParentId,
+      needsRevalidation
     );
     if (children.length > 0) dataRoute.children = children;
     return dataRoute;
@@ -151,14 +174,26 @@ export function createClientRoutes(
 
 function createShouldRevalidate(
   route: EntryRoute,
-  routeModules: RouteModules
+  routeModules: RouteModules,
+  needsRevalidation?: Set<string>
 ): ShouldRevalidateFunction {
+  let handledRevalidation = false;
   return function (arg) {
     let module = routeModules[route.id];
     invariant(module, `Expected route module to be loaded for ${route.id}`);
+
+    // When an HMR / HDR update happens we opt out of all user-defined
+    // revalidation logic and the do as the dev server tells us the first
+    // time router.revalidate() is called.
+    if (needsRevalidation !== undefined && !handledRevalidation) {
+      handledRevalidation = true;
+      return needsRevalidation.has(route.id);
+    }
+
     if (module.shouldRevalidate) {
       return module.shouldRevalidate(arg);
     }
+
     return arg.defaultShouldRevalidate;
   };
 }

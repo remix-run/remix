@@ -197,7 +197,7 @@ TODO:
 
 Returns `true` if an object is a Remix session.
 
-```js
+```ts
 import { isSession } from "@remix-run/node"; // or cloudflare/deno
 
 const sessionData = { foo: "bar" };
@@ -212,7 +212,7 @@ Remix makes it easy to store sessions in your own database if needed. The `creat
 
 The following example shows how you could do this using a generic database client:
 
-```js
+```ts
 import { createSessionStorage } from "@remix-run/node"; // or cloudflare/deno
 
 function createDatabaseSessionStorage({
@@ -247,7 +247,7 @@ function createDatabaseSessionStorage({
 
 And then you can use it like this:
 
-```js
+```ts
 const { getSession, commitSession, destroySession } =
   createDatabaseSessionStorage({
     host: "localhost",
@@ -269,7 +269,7 @@ The main advantage of cookie session storage is that you don't need any addition
 
 The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
-```js
+```ts
 import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
 
 const { getSession, commitSession, destroySession } =
@@ -289,7 +289,7 @@ This storage keeps all the cookie information in your server's memory.
 
 <docs-error>This should only be used in development. Use one of the other methods in production.</docs-error>
 
-```js filename=app/sessions.js
+```ts filename=app/sessions.ts
 import {
   createCookie,
   createMemorySessionStorage,
@@ -317,7 +317,7 @@ The advantage of file-backed sessions is that only the session ID is stored in t
 
 <docs-info>If you are deploying to a serverless function, ensure you have access to a persistent file system. They usually don't have one without extra configuration.</docs-info>
 
-```js filename=app/sessions.js
+```ts filename=app/sessions.ts
 import {
   createCookie,
   createFileSessionStorage,
@@ -346,7 +346,7 @@ For [Cloudflare Workers KV][cloudflare-kv] backed sessions, use `createWorkersKV
 
 The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally-replicated, low-latency data store with exceptionally high-read volumes with low-latency.
 
-```js filename=app/sessions.server.js
+```ts filename=app/sessions.server.ts
 import {
   createCookie,
   createWorkersKVSessionStorage,
@@ -381,7 +381,7 @@ sessions
   _ttl TTL
 ```
 
-```js filename=app/sessions.server.js
+```ts filename=app/sessions.server.ts
 import {
   createCookie,
   createArcTableSessionStorage,
@@ -427,7 +427,7 @@ export async function action({ request }: ActionArgs) {
 
 Returns `true` if the session has a variable with the given `name`.
 
-```js
+```ts
 session.has("userId");
 ```
 
@@ -435,7 +435,7 @@ session.has("userId");
 
 Sets a session value for use in subsequent requests:
 
-```js
+```ts
 session.set("userId", "1234");
 ```
 
@@ -527,7 +527,7 @@ export default function App() {
 
 Accesses a session value from a previous request:
 
-```js
+```ts
 session.get("name");
 ```
 
@@ -535,7 +535,7 @@ session.get("name");
 
 Removes a value from the session.
 
-```js
+```ts
 session.unset("name");
 ```
 
