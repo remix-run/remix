@@ -89,7 +89,7 @@ This is the type of state the fetcher is in. It's like `fetcher.state`, but more
 - `state === "loading"`
 
   - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded.
-  - **actionRedirect** - The action from an "actionSubmission" returned a redirect and the page is transitioning to the new location.
+  - **actionRedirect** - The action from an "actionSubmission" returned a redirect and the page is navigating to the new location.
   - **normalLoad** - A route's loader is being called without a submission (`fetcher.load()`).
 
 ## `fetcher.submission`
@@ -185,7 +185,7 @@ See also:
 
 **Newsletter Signup Form**
 
-Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so useFetcher is perfect for the job. First, you create a Resource Route:
+Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so `useFetcher` is perfect for the job. First, you create a Resource Route:
 
 ```tsx filename=routes/newsletter/subscribe.tsx
 export async function action({ request }: ActionArgs) {
@@ -276,7 +276,7 @@ export default function NewsletterSignupRoute() {
 ```
 
 - When JS is on the page, the user will subscribe to the newsletter and the page won't change, they'll just get a solid, dynamic experience.
-- When JS is not on the page, they'll be transitioned to the signup page by the browser.
+- When JS is not on the page, they'll be navigated to the signup page by the browser.
 
 You could even refactor the component to take props from the hooks and reuse it:
 

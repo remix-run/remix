@@ -7,7 +7,6 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
-  Navigation,
   TrackedPromise,
 } from "@remix-run/router";
 import type {
@@ -68,14 +67,12 @@ import type {
   V2_MetaMatches,
 } from "./routeModules";
 import type {
-  Transition,
   Fetcher,
   FetcherStates,
   LoaderSubmission,
   ActionSubmission,
-  TransitionStates,
 } from "./transition";
-import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
+import { IDLE_FETCHER } from "./transition";
 import { logDeprecationOnce } from "./warnings";
 
 function useDataRouterContext() {
@@ -376,12 +373,6 @@ let linksWarning =
   "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
-
-let useTransitionWarning =
-  "⚠️ REMIX FUTURE CHANGE: `useTransition` will be removed in v2 in favor of `useNavigation`. " +
-  "You can prepare for this change at your convenience by updating to `useNavigation`. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#usetransition";
 
 let fetcherTypeWarning =
   "⚠️ REMIX FUTURE CHANGE: `fetcher.type` will be removed in v2. " +
@@ -1345,183 +1336,6 @@ export function useRouteLoaderData<T = AppData>(
  */
 export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   return useActionDataRR() as SerializeFrom<T> | undefined;
-}
-
-/**
- * Returns everything you need to know about a page transition to build pending
- * navigation indicators and optimistic UI on data mutations.
- *
- * @deprecated in favor of useNavigation
- *
- * @see https://remix.run/hooks/use-transition
- */
-export function useTransition(): Transition {
-  let navigation = useNavigation();
-
-  React.useEffect(() => {
-    logDeprecationOnce(useTransitionWarning);
-  }, []);
-
-  return React.useMemo(
-    () => convertNavigationToTransition(navigation),
-    [navigation]
-  );
-}
-
-function convertNavigationToTransition(navigation: Navigation): Transition {
-  let { location, state, formMethod, formAction, formEncType, formData } =
-    navigation;
-
-  if (!location) {
-    return IDLE_TRANSITION;
-  }
-
-  let isActionSubmission =
-    formMethod != null &&
-    ["POST", "PUT", "PATCH", "DELETE"].includes(formMethod.toUpperCase());
-
-  if (
-    state === "submitting" &&
-    formMethod &&
-    formAction &&
-    formEncType &&
-    formData
-  ) {
-    if (isActionSubmission) {
-      // Actively submitting to an action
-      let transition: TransitionStates["SubmittingAction"] = {
-        location,
-        state,
-        submission: {
-          method: formMethod.toUpperCase() as ActionSubmission["method"],
-          action: formAction,
-          encType: formEncType,
-          formData: formData,
-          key: "",
-        },
-        type: "actionSubmission",
-      };
-      return transition;
-    } else {
-      // @remix-run/router doesn't mark loader submissions as state: "submitting"
-      invariant(
-        false,
-        "Encountered an unexpected navigation scenario in useTransition()"
-      );
-    }
-  }
-
-  if (state === "loading") {
-    let { _isRedirect, _isFetchActionRedirect } = location.state || {};
-    if (formMethod && formAction && formEncType && formData) {
-      if (!_isRedirect) {
-        if (isActionSubmission) {
-          // We're reloading the same location after an action submission
-          let transition: TransitionStates["LoadingAction"] = {
-            location,
-            state,
-            submission: {
-              method: formMethod.toUpperCase() as ActionSubmission["method"],
-              action: formAction,
-              encType: formEncType,
-              formData: formData,
-              key: "",
-            },
-            type: "actionReload",
-          };
-          return transition;
-        } else {
-          // The new router fixes a bug in useTransition where the submission
-          // "action" represents the request URL not the state of the <form> in
-          // the DOM.  Back-port it here to maintain behavior, but useNavigation
-          // will fix this bug.
-          let url = new URL(formAction, window.location.origin);
-
-          // This typing override should be safe since this is only running for
-          // GET submissions and over in @remix-run/router we have an invariant
-          // if you have any non-string values in your FormData when we attempt
-          // to convert them to URLSearchParams
-          url.search = new URLSearchParams(
-            formData.entries() as unknown as [string, string][]
-          ).toString();
-
-          // Actively "submitting" to a loader
-          let transition: TransitionStates["SubmittingLoader"] = {
-            location,
-            state: "submitting",
-            submission: {
-              method: formMethod.toUpperCase() as LoaderSubmission["method"],
-              action: url.pathname + url.search,
-              encType: formEncType,
-              formData: formData,
-              key: "",
-            },
-            type: "loaderSubmission",
-          };
-          return transition;
-        }
-      } else {
-        // Redirecting after a submission
-        if (isActionSubmission) {
-          let transition: TransitionStates["LoadingActionRedirect"] = {
-            location,
-            state,
-            submission: {
-              method: formMethod.toUpperCase() as ActionSubmission["method"],
-              action: formAction,
-              encType: formEncType,
-              formData: formData,
-              key: "",
-            },
-            type: "actionRedirect",
-          };
-          return transition;
-        } else {
-          let transition: TransitionStates["LoadingLoaderSubmissionRedirect"] =
-            {
-              location,
-              state,
-              submission: {
-                method: formMethod.toUpperCase() as LoaderSubmission["method"],
-                action: formAction,
-                encType: formEncType,
-                formData: formData,
-                key: "",
-              },
-              type: "loaderSubmissionRedirect",
-            };
-          return transition;
-        }
-      }
-    } else if (_isRedirect) {
-      if (_isFetchActionRedirect) {
-        let transition: TransitionStates["LoadingFetchActionRedirect"] = {
-          location,
-          state,
-          submission: undefined,
-          type: "fetchActionRedirect",
-        };
-        return transition;
-      } else {
-        let transition: TransitionStates["LoadingRedirect"] = {
-          location,
-          state,
-          submission: undefined,
-          type: "normalRedirect",
-        };
-        return transition;
-      }
-    }
-  }
-
-  // If no scenarios above match, then it's a normal load!
-  let transition: TransitionStates["Loading"] = {
-    location,
-    state: "loading",
-    submission: undefined,
-    type: "normalLoad",
-  };
-  return transition;
 }
 
 /**

@@ -389,7 +389,7 @@ export default function NewProject() {
 
 Pretty slick! Now when the user clicks "Create", the inputs go disabled, and the submit button's text changes. The whole operation should be faster now too since there's just one network request happening instead of a full page reload (which involves potentially more network requests, reading assets from the browser cache, parsing JavaScript, parsing CSS, etc.).
 
-We didn't do much with `navigation` on this page, but it's got all the information about the submission, including all of the values being processed on the server in `navigation.formData`.
+We didn't do much with `navigation` on this page, but it's got all the information about the submission (`navigation.formMethod`, `navigation.formAction`, `navigation.formEncType`), as well as all of the values being processed on the server on `navigation.formData`.
 
 ### Animating in the Validation Errors
 
