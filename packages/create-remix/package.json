@@ -23,7 +23,7 @@
     "gunzip-maybe": "^1.4.2",
     "log-update": "^5.0.1",
     "node-fetch": "^2.6.9",
-    "proxy-agent": "^5.0.0",
+    "proxy-agent": "^6.3.0",
     "rimraf": "^4.1.2",
     "semver": "^7.3.7",
     "sisteransi": "^1.0.5",
