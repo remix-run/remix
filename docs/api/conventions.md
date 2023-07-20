@@ -192,11 +192,11 @@ title: Conventions
 
 #### Never reloading the root
 
-[Moved →][moved-46]
+\[Moved →]\[moved-46]
 
 #### Ignoring search params
 
-[Moved →][moved-47]
+\[Moved →]\[moved-47]
 
 ## Asset URL Imports
 
