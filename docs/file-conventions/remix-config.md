@@ -118,27 +118,6 @@ The path to the server build file, relative to `remix.config.js`. This file
 should end in a `.js` extension and should be deployed to your server. Defaults
 to `"build/index.js"`.
 
-## serverBuildTarget
-
-<docs-warning>This option is deprecated and will be removed in the next major version release. Use a combination of [`publicPath`][public-path],
-[`serverBuildPath`][server-build-path], [`serverConditions`][server-conditions],
-[`serverDependenciesToBundle`][server-dependencies-to-bundle]
-[`serverMainFields`][server-main-fields], [`serverMinify`][server-minify],
-[`serverModuleFormat`][server-module-format] and/or
-[`serverPlatform`][server-platform] instead.</docs-warning>
-
-The target of the server build. Defaults to `"node-cjs"`.
-
-The `serverBuildTarget` can be one of the following:
-
-- [`"arc"`][arc]
-- [`"cloudflare-pages"`][cloudflare-pages]
-- [`"cloudflare-workers"`][cloudflare-workers]
-- [`"deno"`][deno]
-- [`"netlify"`][netlify]
-- [`"node-cjs"`][node-cjs]
-- [`"vercel"`][vercel]
-
 ## serverConditions
 
 The order of conditions to use when resolving server dependencies' `exports`
