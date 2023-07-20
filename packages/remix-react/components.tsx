@@ -17,7 +17,6 @@ import {
   Outlet,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
-  isRouteErrorResponse,
   matchRoutes,
   useAsyncError,
   useActionData as useActionDataRR,
@@ -33,12 +32,7 @@ import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { RemixContextObject } from "./entry";
-import {
-  RemixRootDefaultErrorBoundary,
-  RemixRootDefaultCatchBoundary,
-  RemixCatchBoundary,
-  V2_RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
+import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
@@ -96,7 +90,7 @@ function useRemixContext(): RemixContextObject {
 // RemixRoute
 
 export function RemixRoute({ id }: { id: string }) {
-  let { routeModules, future } = useRemixContext();
+  let { routeModules } = useRemixContext();
 
   invariant(
     routeModules,
@@ -104,13 +98,10 @@ export function RemixRoute({ id }: { id: string }) {
       "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
   );
 
-  let { default: Component, ErrorBoundary, CatchBoundary } = routeModules[id];
+  let { default: Component, ErrorBoundary } = routeModules[id];
 
   // Default Component to Outlet if we expose boundary UI components
-  if (
-    !Component &&
-    (ErrorBoundary || (!future.v2_errorBoundary && CatchBoundary))
-  ) {
+  if (!Component && ErrorBoundary) {
     Component = Outlet;
   }
 
@@ -124,7 +115,7 @@ export function RemixRoute({ id }: { id: string }) {
 }
 
 export function RemixRouteError({ id }: { id: string }) {
-  let { future, routeModules } = useRemixContext();
+  let { routeModules } = useRemixContext();
 
   // This checks prevent cryptic error messages such as: 'Cannot read properties of undefined (reading 'root')'
   invariant(
@@ -134,42 +125,12 @@ export function RemixRouteError({ id }: { id: string }) {
   );
 
   let error = useRouteError();
-  let { CatchBoundary, ErrorBoundary } = routeModules[id];
+  let { ErrorBoundary } = routeModules[id];
 
-  if (future.v2_errorBoundary) {
-    // Provide defaults for the root route if they are not present
-    if (id === "root") {
-      ErrorBoundary ||= V2_RemixRootDefaultErrorBoundary;
-    }
-    if (ErrorBoundary) {
-      // TODO: Unsure if we can satisfy the typings here
-      // @ts-expect-error
-      return <ErrorBoundary />;
-    }
-    throw error;
-  }
-
-  // Provide defaults for the root route if they are not present
-  if (id === "root") {
-    CatchBoundary ||= RemixRootDefaultCatchBoundary;
-    ErrorBoundary ||= RemixRootDefaultErrorBoundary;
-  }
-
-  if (isRouteErrorResponse(error)) {
-    let tError = error;
-    if (!!tError?.error && tError.status !== 404 && ErrorBoundary) {
-      // Internal framework-thrown ErrorResponses
-      return <ErrorBoundary error={tError.error} />;
-    }
-    if (CatchBoundary) {
-      // User-thrown ErrorResponses
-      return <RemixCatchBoundary catch={error} component={CatchBoundary} />;
-    }
-  }
-
-  if (error instanceof Error && ErrorBoundary) {
-    // User- or framework-thrown Errors
-    return <ErrorBoundary error={error} />;
+  if (ErrorBoundary) {
+    return <ErrorBoundary />;
+  } else if (id === "root") {
+    return <RemixRootDefaultErrorBoundary error={error} />;
   }
 
   throw error;
