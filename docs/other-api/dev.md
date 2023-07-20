@@ -21,45 +21,6 @@ To get a full list of available commands and flags, run:
 npx @remix-run/dev -h
 ```
 
-## `remix create`
-
-`remix create` will create a new Remix project. Without passing arguments, this command will launch an interactive CLI to configure the new project and set it up in a given directory. Optionally you can pass the desired directory path as an argument and a starter template with the `--template` flag.
-
-```sh
-remix create <projectDir>
-```
-
-### `remix create --template`
-
-A valid template can be:
-
-- a directory located in the [`templates` folder of the Remix repository][templates-folder-of-the-remix-repository]
-- a local file path to a directory of files
-- a local file path to a tarball
-- the name of a `:username/:repo` on GitHub
-- the URL of a remote tarball
-
-```sh
-remix create ./my-app --template fly
-remix create ./my-app --template /path/to/remix-template
-remix create ./my-app --template /path/to/remix-template.tar.gz
-remix create ./my-app --template remix-run/grunge-stack
-remix create ./my-app --template :username/:repo
-remix create ./my-app --template https://github.com/:username/:repo
-remix create ./my-app --template https://github.com/:username/:repo/tree/:branch
-remix create ./my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
-remix create ./my-app --template https://github.com/:username/:repo/releases/latest/download/:tag.tar.gz
-remix create ./my-app --template https://example.com/remix-template.tar.gz
-```
-
-<aside aria-label="Private GitHub repo templates">
-<docs-info>
-
-To create a new project from a template in a private GitHub repo, pass the `--token` flag a personal access token with access to that repo.
-
-</docs-info>
-</aside>
-
 ## `remix build`
 
 Builds your app for production. This command will set `process.env.NODE_ENV` to `production` and minify the output for deployment.
@@ -112,7 +73,7 @@ You could even use `remix.init/index.js` to ask further questions to the develop
 
 After the init script has been run, the `remix.init` folder gets deleted, so you don't need to worry about it cluttering up the finished codebase.
 
-<docs-info>You'll only ever interact with this command if you've opted out of installing dependencies when creating a new Remix app, or you're developing a custom template that includes a `remix.init/index.js` file.</docs-info>
+<docs-info>You'll only ever interact with this command if you've opted out of installing dependencies or running the `remix.init` script when creating a new Remix app, or you're developing a custom template that includes a `remix.init/index.js` file.</docs-info>
 
 ### `remix init --no-delete`
 
