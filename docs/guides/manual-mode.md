@@ -255,7 +255,7 @@ app.all(
 );
 ```
 
-For complete app server code examples, check out the [express template][express-template] or [community examples][community-examples].
+For complete app server code examples, check our [templates][templates] or [community examples][community-examples].
 
 ## Keeping in-memory server state across rebuilds
 
@@ -293,5 +293,5 @@ export const db = remember("db", () => new PrismaClient());
 [mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
 [express]: https://expressjs.com/
 [chokidar]: https://github.com/paulmillr/chokidar
-[express-template]: https://github.com/remix-run/remix/blob/main/templates/express/server.js
+[templates]: https://github.com/remix-run/remix/blob/main/templates/
 [community-examples]: https://github.com/xHomu/remix-v2-server
