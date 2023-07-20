@@ -45,14 +45,18 @@ The path to the browser build, relative to remix.config.js. Defaults to
 The path to a directory Remix can use for caching things in development,
 relative to `remix.config.js`. Defaults to `".cache"`.
 
-## devServerBroadcastDelay
+## devServerBroadcastDelay (deprecated)
 
 The delay, in milliseconds, before the dev server broadcasts a reload event.
 There is no delay by default.
 
-## devServerPort
+For `v2_dev`, the race conditions that necesitated this option have been eliminated.
+
+## devServerPort (deprecated)
 
 The port number to use for the dev websocket server. Defaults to 8002.
+
+For `v2_dev`, use [`--port` / `v2_dev.port` option][port].
 
 ## ignoredRouteFiles
 
@@ -312,3 +316,4 @@ There are a few conventions that Remix uses you should be aware of.
 [tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
 [jspm]: https://github.com/jspm/jspm-core
 [esbuild-plugins-node-modules-polyfill]: https://www.npmjs.com/package/esbuild-plugins-node-modules-polyfill
+[port]: ../other-api/dev-v2#option-1
