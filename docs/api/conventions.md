@@ -190,10 +190,6 @@ title: Conventions
 
 [Moved →][moved-44]
 
-### unstable_shouldReload
-
-[Moved →][moved-45]
-
 #### Never reloading the root
 
 [Moved →][moved-46]
@@ -250,7 +246,4 @@ title: Conventions
 [moved-42]: ../route/catch-boundary
 [moved-43]: ../route/error-boundary
 [moved-44]: ../route/handle
-[moved-45]: ../route/should-reload
-[moved-46]: ../route/should-reload#never-reloading-the-root
-[moved-47]: ../route/should-reload#ignoring-search-params
 [moved-48]: ../other-api/asset-imports
