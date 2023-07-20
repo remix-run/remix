@@ -223,6 +223,10 @@ test.describe("ErrorBoundary (thrown responses)", () => {
   });
 
   test("non-matching urls on document requests", async () => {
+    let oldConsoleError;
+    oldConsoleError = console.error;
+    console.error = () => {};
+
     let res = await fixture.requestDocument(NOT_FOUND_HREF);
     expect(res.status).toBe(404);
     let html = await res.text();
@@ -233,6 +237,8 @@ test.describe("ErrorBoundary (thrown responses)", () => {
       { id: "root", pathname: "", params: {} },
     ]).replace(/"/g, "&quot;");
     expect(html).toContain(`<pre id="matches">${expected}</pre>`);
+
+    console.error = oldConsoleError;
   });
 
   test("non-matching urls on client transitions", async ({ page }) => {

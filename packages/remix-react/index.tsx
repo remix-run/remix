@@ -72,8 +72,6 @@ export {
   RemixContext as UNSAFE_RemixContext,
 } from "./components";
 
-export type { ThrownResponse } from "./errors";
-
 export type { HtmlLinkDescriptor } from "./links";
 export type {
   HtmlMetaDescriptor,

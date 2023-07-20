@@ -1,11 +1,9 @@
 import * as React from "react";
 import type { Location } from "@remix-run/router";
-import type { ErrorBoundaryComponent } from "@remix-run/server-runtime";
 import { isRouteErrorResponse } from "react-router-dom";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;
-  component: ErrorBoundaryComponent;
   error?: Error;
 }>;
 
