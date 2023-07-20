@@ -25,15 +25,6 @@ export type RemixMdxConfigFunction = (
   filename: string
 ) => Promise<RemixMdxConfig | undefined> | RemixMdxConfig | undefined;
 
-export type ServerBuildTarget =
-  | "node-cjs"
-  | "arc"
-  | "netlify"
-  | "vercel"
-  | "cloudflare-pages"
-  | "cloudflare-workers"
-  | "deno";
-
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
@@ -157,13 +148,6 @@ export interface AppConfig {
    * should end in a `.js` extension and should be deployed to your server.
    */
   serverBuildPath?: string;
-
-  /**
-   * The target of the server build. Defaults to "node-cjs".
-   *
-   * @deprecated Use a combination of `{@link AppConfig.publicPath}`, `{@link AppConfig.serverBuildPath}`, `{@link AppConfig.serverConditions}`, `{@link AppConfig.serverDependenciesToBundle}`, `{@link AppConfig.serverMainFields}`, `{@link AppConfig.serverMinify}`, `{@link AppConfig.serverModuleFormat}` and/or `{@link AppConfig.serverPlatform}` instead.
-   */
-  serverBuildTarget?: ServerBuildTarget;
 
   /**
    * The order of conditions to use when resolving server dependencies'
@@ -320,12 +304,6 @@ export interface RemixConfig {
   serverBuildPath: string;
 
   /**
-   * The target of the server build. Defaults to "node-cjs".
-   *
-   * @deprecated Use a combination of `{@link AppConfig.publicPath}`, `{@link AppConfig.serverBuildPath}`, `{@link AppConfig.serverConditions}`, `{@link AppConfig.serverDependenciesToBundle}`, `{@link AppConfig.serverMainFields}`, `{@link AppConfig.serverMinify}`, `{@link AppConfig.serverModuleFormat}` and/or `{@link AppConfig.serverPlatform}` instead.   */
-  serverBuildTarget?: ServerBuildTarget;
-
-  /**
    * The default entry module for the server build if a {@see AppConfig.server}
    * is not provided.
    */
@@ -447,10 +425,6 @@ export async function readConfig(
     }
   }
 
-  if (appConfig.serverBuildTarget) {
-    serverBuildTargetWarning();
-  }
-
   if (!appConfig.future?.v2_errorBoundary) {
     errorBoundaryWarning();
   }
@@ -463,13 +437,7 @@ export async function readConfig(
     headersWarning();
   }
 
-  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
-    appConfig.serverBuildTarget ?? ""
-  );
-  let isDenoRuntime = appConfig.serverBuildTarget === "deno";
-
   let serverBuildPath = resolveServerBuildPath(rootDirectory, appConfig);
-  let serverBuildTarget = appConfig.serverBuildTarget;
   let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
     serverBuildVirtualModule.id
   )};`;
@@ -485,21 +453,6 @@ export async function readConfig(
 
   let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
   let serverPlatform = appConfig.serverPlatform || "node";
-  if (isCloudflareRuntime) {
-    serverConditions ??= ["worker"];
-    serverDependenciesToBundle = "all";
-    serverMainFields ??= ["browser", "module", "main"];
-    serverMinify ??= true;
-    serverModuleFormat = "esm";
-    serverPlatform = "neutral";
-  }
-  if (isDenoRuntime) {
-    serverConditions ??= ["deno", "worker"];
-    serverDependenciesToBundle = "all";
-    serverMainFields ??= ["module", "main"];
-    serverModuleFormat = "esm";
-    serverPlatform = "neutral";
-  }
   serverMainFields ??=
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
@@ -806,9 +759,7 @@ export async function readConfig(
   process.env.REMIX_DEV_SERVER_WS_PORT = String(devServerPort);
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
-  let defaultPublicPath =
-    appConfig.serverBuildTarget === "arc" ? "/_static/build/" : "/build/";
-  let publicPath = addTrailingSlash(appConfig.publicPath || defaultPublicPath);
+  let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
   let rootRouteFile = findEntry(appDirectory, "root");
   if (!rootRouteFile) {
@@ -895,7 +846,6 @@ export async function readConfig(
     rootDirectory,
     routes,
     serverBuildPath,
-    serverBuildTarget,
     serverBuildTargetEntryModule,
     serverConditions,
     serverDependenciesToBundle,
@@ -951,21 +901,6 @@ const resolveServerBuildPath = (
   appConfig: AppConfig
 ) => {
   let serverBuildPath = "build/index.js";
-
-  switch (appConfig.serverBuildTarget) {
-    case "arc":
-      serverBuildPath = "server/index.js";
-      break;
-    case "cloudflare-pages":
-      serverBuildPath = "functions/[[path]].js";
-      break;
-    case "netlify":
-      serverBuildPath = ".netlify/functions-internal/server.js";
-      break;
-    case "vercel":
-      serverBuildPath = "api/index.js";
-      break;
-  }
 
   // retain deprecated behavior for now
   if (appConfig.serverBuildDirectory) {
@@ -1041,15 +976,6 @@ let serverBuildDirectoryWarning = () =>
       key: "serverBuildDirectoryWarning",
     }
   );
-
-let serverBuildTargetWarning = () =>
-  logger.warn("The `serverBuildTarget` config option will be removed in v2", {
-    details: [
-      "You can specify multiple server module config options instead to achieve the same result.",
-      "-> https://remix.run/docs/en/v1.15.0/pages/v2#serverbuildtarget",
-    ],
-    key: "serverBuildTargetWarning",
-  });
 
 let serverModuleFormatWarning = () =>
   logger.warn("The default server module format is changing in v2", {
