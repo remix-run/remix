@@ -193,6 +193,11 @@ Most users, should not need to use `remix dev --port`.
 By default, `remix dev` will restart your app server whenever a rebuild occurs.
 If you'd like to keep your app server running without restarts across rebuilds, check out our [guide for manual mode][manual-mode].
 
+You can see if app server restarts are a bottleneck for your project by comparing the times reported by `remix dev`:
+
+- `rebuilt (Xms)` 👉 the Remix compiler took `X` milliseconds to rebuild your app
+- `app server ready (Yms)` 👉 Remix restarted your app server and it took `Y` milliseconds to start with the new code changes
+
 ### Pick up changes from other packages
 
 If you are using a monorepo, you might want Remix to perform hot updates not only when your app code changes, but whenever you change code in any of your apps dependencies.
