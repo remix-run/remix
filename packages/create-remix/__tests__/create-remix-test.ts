@@ -938,10 +938,9 @@ describe("create-remix CLI", () => {
     it("allows creating an app in the current dir if it's empty", async () => {
       let emptyDir = getProjectDir("current-dir-if-empty");
       fse.mkdirSync(emptyDir);
-      let cwd = process.cwd();
-      process.chdir(emptyDir);
 
       let { status, stderr } = await execCreateRemix({
+        cwd: emptyDir,
         args: [
           ".",
           "--template",
@@ -955,20 +954,16 @@ describe("create-remix CLI", () => {
       expect(status).toBe(0);
       expect(fse.existsSync(path.join(emptyDir, "package.json"))).toBeTruthy();
       expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
-
-      process.chdir(cwd);
     });
 
     it("doesn't allow creating an app in the current dir if it's not empty", async () => {
       let emptyDir = getProjectDir("prompt-for-dir-if-current-dir-not-empty");
-      let cwd = process.cwd();
-
       let notEmptyDir = getProjectDir("not-empty-dir");
       fse.mkdirSync(notEmptyDir);
       fse.createFileSync(path.join(notEmptyDir, "some-file.txt"));
-      process.chdir(notEmptyDir);
 
       let { status, stdout, stderr } = await execCreateRemix({
+        cwd: notEmptyDir,
         args: [
           ".",
           "--template",
@@ -989,8 +984,6 @@ describe("create-remix CLI", () => {
       expect(status).toBe(0);
       expect(fse.existsSync(path.join(emptyDir, "package.json"))).toBeTruthy();
       expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
-
-      process.chdir(cwd);
     });
   });
 
@@ -1028,12 +1021,14 @@ async function execCreateRemix({
   interactive = true,
   env = {},
   mockNetwork = true,
+  cwd,
 }: {
   args: string[];
   interactive?: boolean;
   interactions?: ShellInteractions;
   env?: Record<string, string>;
   mockNetwork?: boolean;
+  cwd?: string;
 }) {
   let proc = spawn(
     "node",
@@ -1047,6 +1042,7 @@ async function execCreateRemix({
       ...args,
     ],
     {
+      cwd,
       stdio: [null, null, null],
       env: {
         ...process.env,
