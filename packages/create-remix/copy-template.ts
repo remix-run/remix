@@ -8,7 +8,7 @@ import { promisify } from "node:util";
 import fetch from "node-fetch";
 import gunzip from "gunzip-maybe";
 import tar from "tar-fs";
-import ProxyAgent from "proxy-agent";
+import { ProxyAgent } from "proxy-agent";
 
 import { color, isUrl } from "./utils";
 
