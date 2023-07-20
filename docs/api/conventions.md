@@ -54,10 +54,6 @@ title: Conventions
 
 [Moved →][moved-12]
 
-### serverBuildTarget
-
-[Moved →][moved-13]
-
 ### serverDependenciesToBundle
 
 [Moved →][moved-14]
@@ -214,7 +210,6 @@ title: Conventions
 [moved-10]: ../file-conventions/remix-config#server
 [moved-11]: ../file-conventions/remix-config#serverbuilddirectory
 [moved-12]: ../file-conventions/remix-config#serverbuildpath
-[moved-13]: ../file-conventions/remix-config#serverbuildtarget
 [moved-14]: ../file-conventions/remix-config#serverdependenciestobundle
 [moved-15]: ../file-conventions/remix-config#watchpaths
 [moved-16]: ../file-conventions/routes-files
