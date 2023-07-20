@@ -40,15 +40,12 @@ afterAll(async () => {
 
 describe("create-remix CLI", () => {
   let tempDirs = new Set<string>();
-  let originalCwd = process.cwd();
 
   beforeEach(() => {
-    process.chdir(TEMP_DIR);
     jest.clearAllMocks();
   });
 
   afterEach(async () => {
-    process.chdir(originalCwd);
     for (let dir of tempDirs) {
       await fse.remove(dir);
     }
