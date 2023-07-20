@@ -11,13 +11,6 @@ Running `npx create-remix@latest` with the `--template` flag allows you to provi
 
 ```sh
 npx create-remix@latest --template remix-run/remix/templates/express
-? Where do you want to deploy? (Use arrow keys)
-❯ Remix App Server
-  Architect
-  Cloudflare Workers
-  Fly.io
-  Netlify
-  Vercel
 ```
 
 Each target has unique file structures, configuration files, cli commands that need to be run, server environment variables to be set etc. Because of this, it's important to read the README.md to deploy the app. It's got all of the steps you need to take to get your app live within minutes.
