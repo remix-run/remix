@@ -660,7 +660,7 @@ describe("create-remix CLI", () => {
     await createRemix([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init"),
+      path.join(__dirname, "fixtures", "blank"),
       "--no-git-init",
       "--yes",
     ]);
@@ -687,7 +687,7 @@ describe("create-remix CLI", () => {
     await createRemix([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init"),
+      path.join(__dirname, "fixtures", "blank"),
       "--no-git-init",
       "--yes",
     ]);
@@ -714,7 +714,7 @@ describe("create-remix CLI", () => {
     await createRemix([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init"),
+      path.join(__dirname, "fixtures", "blank"),
       "--no-git-init",
       "--yes",
     ]);
@@ -740,7 +740,7 @@ describe("create-remix CLI", () => {
     await createRemix([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init"),
+      path.join(__dirname, "fixtures", "blank"),
       "--no-git-init",
       "--yes",
     ]);
@@ -766,7 +766,7 @@ describe("create-remix CLI", () => {
     await createRemix([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init"),
+      path.join(__dirname, "fixtures", "blank"),
       "--no-git-init",
       "--yes",
     ]);
@@ -792,7 +792,7 @@ describe("create-remix CLI", () => {
     await createRemix([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init"),
+      path.join(__dirname, "fixtures", "blank"),
       "--no-git-init",
       "--yes",
       "--package-manager",

@@ -516,11 +516,6 @@ async function runInitScriptStep(ctx: Context) {
   log("");
   info("Running template's remix.init script...", "\n");
 
-  if (!fs.existsSync(ctx.initScriptPath)) {
-    error("Oh no!", "Template's remix.init script does not exist");
-    throw new Error("remix.init script does not exist");
-  }
-
   try {
     let initFn = require(ctx.initScriptPath);
     if (typeof initFn !== "function" && initFn.default) {
