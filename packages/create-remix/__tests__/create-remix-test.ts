@@ -1,5 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "child_process";
 import { spawn } from "child_process";
+import { tmpdir } from "os";
 import path from "path";
 import { pathToFileURL } from "url";
 import fse from "fs-extra";
@@ -20,8 +21,7 @@ const DOWN = "\x1B\x5B\x42";
 const ENTER = "\x0D";
 
 const TEMP_DIR = path.join(
-  fse.realpathSync(__dirname),
-  ".tmp",
+  fse.realpathSync(tmpdir()),
   `remix-tests-${Math.random().toString(32).slice(2)}`
 );
 function maskTempDir(string: string) {
