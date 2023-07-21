@@ -7,10 +7,7 @@ import {
 
 import { RemixContext } from "./components";
 import type { EntryContext } from "./entry";
-import {
-  RemixErrorBoundary,
-  RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
+import { RemixErrorBoundary } from "./errorBoundaries";
 import { createServerRoutes } from "./routes";
 
 export interface RemixServerProps {
@@ -52,10 +49,7 @@ export function RemixServer({
         abortDelay,
       }}
     >
-      <RemixErrorBoundary
-        location={router.state.location}
-        component={RemixRootDefaultErrorBoundary}
-      >
+      <RemixErrorBoundary location={router.state.location}>
         <StaticRouterProvider
           router={router}
           context={context.staticHandlerContext}

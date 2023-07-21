@@ -174,10 +174,6 @@ title: Conventions
 
 [Moved →][moved-41]
 
-### CatchBoundary
-
-[Moved →][moved-42]
-
 ### ErrorBoundary
 
 [Moved →][moved-43]
@@ -238,7 +234,6 @@ title: Conventions
 [moved-39]: ../route/links
 [moved-40]: ../route/links#htmllinkdescriptor
 [moved-41]: ../route/links#pagelinkdescriptor
-[moved-42]: ../route/catch-boundary
 [moved-43]: ../route/error-boundary
 [moved-44]: ../route/handle
 [moved-48]: ../other-api/asset-imports
