@@ -183,61 +183,6 @@ exports.serverNodeBuiltinsPolyfill = {
 };
 ```
 
-If left unset, this config defaults to the following set of polyfills for non-Node.js server platforms:
-
-```js filename=remix.config.js
-exports.serverNodeBuiltinsPolyfill = {
-  modules: {
-    _stream_duplex: true,
-    _stream_passthrough: true,
-    _stream_readable: true,
-    _stream_transform: true,
-    _stream_writable: true,
-    assert: true,
-    "assert/strict": true,
-    buffer: true,
-    console: true,
-    constants: true,
-    crypto: "empty",
-    diagnostics_channel: true,
-    domain: true,
-    events: true,
-    fs: "empty",
-    "fs/promises": "empty",
-    http: true,
-    https: true,
-    module: true,
-    os: true,
-    path: true,
-    "path/posix": true,
-    "path/win32": true,
-    perf_hooks: true,
-    process: true,
-    punycode: true,
-    querystring: true,
-    stream: true,
-    "stream/promises": true,
-    "stream/web": true,
-    string_decoder: true,
-    sys: true,
-    timers: true,
-    "timers/promises": true,
-    tty: true,
-    url: true,
-    util: true,
-    "util/types": true,
-    vm: true,
-    wasi: true,
-    worker_threads: true,
-    zlib: true,
-  },
-};
-```
-
-<docs-warning>
-This default behavior is changing in Remix v2 and will no longer polyfill any Node built-in modules on non-Node.js platforms by default.  If your app requires polyfills, you will need to manually specify them via this setting. It's recommend to start manually specifying required polyfills for your app in v1 to ease your eventual migration to v2.
-</docs-warning>
-
 ## serverPlatform
 
 The platform the server build is targeting, which can either be `"neutral"` or
