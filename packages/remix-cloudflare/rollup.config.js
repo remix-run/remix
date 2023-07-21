@@ -6,7 +6,6 @@ const copy = require("rollup-plugin-copy");
 const {
   getOutputDir,
   copyToPlaygrounds,
-  magicExportsPlugin,
   isBareModuleId,
   createBanner,
 } = require("../../rollup.utils");
@@ -45,7 +44,6 @@ module.exports = function rollup() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
-        magicExportsPlugin({ packageName, version }),
         copyToPlaygrounds(),
       ],
     },
