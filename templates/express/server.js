@@ -15,6 +15,9 @@ const BUILD_PATH = "./build/index.js";
  */
 let build = await import(BUILD_PATH);
 
+//Swap in this if using Remix in CJS mode
+// let build = require(BUILD_PATH);
+
 const app = express();
 
 app.use(compression());
@@ -48,27 +51,39 @@ const port = process.env.PORT || 3000;
 app.listen(port, async () => {
   console.log(`Express server listening on port ${port}`);
 
+  // send "ready" message to dev server
   if (process.env.NODE_ENV === "development") {
     broadcastDevReady(build);
   }
 });
 
+
+// Create a request handler that watches for changes to the server build during development.
 function createDevRequestHandler() {
-  const watcher = chokidar.watch(BUILD_PATH, { ignoreInitial: true });
+  async function handleServerUpdate() {
+    // 1. re-import the server build
+    build = await reimportServer();
 
-  watcher.on("all", async () => {
-    // 1. purge require cache && load updated server build
-    const stat = fs.statSync(BUILD_PATH);
-    build = import(BUILD_PATH + "?t=" + stat.mtimeMs);
-    // 2. tell dev server that this app server is now ready
-    broadcastDevReady(await build);
-  });
+    // Add debugger to assist in v2 dev debugging
+    if (build?.assets === undefined) {
+      console.log(build.assets);
+      debugger;
+    }
 
+    // 2. tell dev server that this app server is now up-to-date and ready
+    broadcastDevReady(build);
+  }
+
+  chokidar
+    .watch(BUILD_PATH, { ignoreInitial: true })
+    .on("add", handleServerUpdate)
+    .on("change", handleServerUpdate);
+
+  // wrap request handler to make sure its recreated with the latest build for every request
   return async (req, res, next) => {
     try {
-      //
       return createRequestHandler({
-        build: await build,
+        build,
         mode: "development",
       })(req, res, next);
     } catch (error) {
@@ -76,3 +91,33 @@ function createDevRequestHandler() {
     }
   };
 }
+
+// ESM import cache busting
+// Swap this out for the CJS require cache below if you switch to serverModuleFormat: "cjs" in remix.config
+/**
+ * @type {() => Promise<ServerBuild>}
+ */
+async function reimportServer() {
+  const stat = fs.statSync(BUILD_PATH);
+
+  // use a timestamp query parameter to bust the import cache
+  return import(BUILD_PATH + "?t=" + stat.mtimeMs);
+}
+
+
+// // CJS require cache busting
+// /**
+//  * @type {() => Promise<ServerBuild>}
+//  */
+// async function reimportServer() {
+//   // 1. manually remove the server build from the require cache
+//   Object.keys(require.cache).forEach((key) => {
+//     if (key.startsWith(BUILD_PATH)) {
+//       delete require.cache[key];
+//     }
+//   });
+
+//   // 2. re-import the server build
+//   return require(BUILD_PATH);
+// }
+
