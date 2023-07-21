@@ -84,7 +84,6 @@ npx create-remix@latest --template remix-run/examples/basic
 
 Additionally, if your template is in a private GitHub repo, you can pass a GitHub token via the `--token` option:
 
-
 ```sh
 npx create-remix@latest --template your-private/repo --token yourtoken
 ```
@@ -125,6 +124,7 @@ After the init script has been run, the `remix.init` folder gets deleted, so you
 <docs-warning>Do note that consumers can opt out of running the remix.init script. To do so manually, they'll need to run `remix init`.</docs-warning>
 
 [create-remix]: /other-api/create-remix
+
 [remix-app-server]: [/other-api/serve]
 [repo access token]: https://github.com/settings/tokens/new?description=Remix%20Private%20Stack%20Access&scopes=repo
 [inquirer]: https://npm.im/inquirer
