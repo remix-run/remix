@@ -657,6 +657,11 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
+    // Suppress terminal output
+    let stdoutMock = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
     await createRemix([
       projectDir,
       "--template",
@@ -664,6 +669,8 @@ describe("create-remix CLI", () => {
       "--no-git-init",
       "--yes",
     ]);
+
+    stdoutMock.mockReset();
 
     expect(execa).toHaveBeenCalledWith(
       "npm",
@@ -684,6 +691,11 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
+    // Suppress terminal output
+    let stdoutMock = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
     await createRemix([
       projectDir,
       "--template",
@@ -691,6 +703,8 @@ describe("create-remix CLI", () => {
       "--no-git-init",
       "--yes",
     ]);
+
+    stdoutMock.mockReset();
 
     expect(execa).toHaveBeenCalledWith(
       "npm",
@@ -711,6 +725,11 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
+    // Suppress terminal output
+    let stdoutMock = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
     await createRemix([
       projectDir,
       "--template",
@@ -718,6 +737,8 @@ describe("create-remix CLI", () => {
       "--no-git-init",
       "--yes",
     ]);
+
+    stdoutMock.mockReset();
 
     expect(execa).toHaveBeenCalledWith(
       "npm",
@@ -737,6 +758,11 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
+    // Suppress terminal output
+    let stdoutMock = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
     await createRemix([
       projectDir,
       "--template",
@@ -744,6 +770,8 @@ describe("create-remix CLI", () => {
       "--no-git-init",
       "--yes",
     ]);
+
+    stdoutMock.mockReset();
 
     expect(execa).toHaveBeenCalledWith(
       "yarn",
@@ -763,6 +791,11 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
+    // Suppress terminal output
+    let stdoutMock = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
     await createRemix([
       projectDir,
       "--template",
@@ -770,6 +803,8 @@ describe("create-remix CLI", () => {
       "--no-git-init",
       "--yes",
     ]);
+
+    stdoutMock.mockReset();
 
     expect(execa).toHaveBeenCalledWith(
       "pnpm",
@@ -789,6 +824,11 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
+    // Suppress terminal output
+    let stdoutMock = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
     await createRemix([
       projectDir,
       "--template",
@@ -798,6 +838,8 @@ describe("create-remix CLI", () => {
       "--package-manager",
       "pnpm",
     ]);
+
+    stdoutMock.mockReset();
 
     expect(execa).toHaveBeenCalledWith(
       "pnpm",
