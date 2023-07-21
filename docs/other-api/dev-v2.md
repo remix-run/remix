@@ -30,9 +30,9 @@ remix build
 
 ## `remix dev`
 
-Builds your app and spins up the Remix dev server alongside your app server.
+Runs the Remix compiler in watch mode and spins up your app server.
 
-The dev server will:
+The Remix compiler will:
 
 1. Set `NODE_ENV` to `development`
 2. Watch your app code for changes and trigger rebuilds
@@ -42,7 +42,7 @@ The dev server will:
 🎥 For an introduction and deep dive into HMR and HDR in Remix, check out our videos:
 
 - [HMR and Hot Data Revalidation with v2_dev 🔥][hmr-and-hdr]
-- [Mental model for the new dev server 🧠][mental-model]
+- [Mental model for the new dev flow 🧠][mental-model]
 - [Migrating your project to v2_dev 🚚][migrating]
 
 <docs-info>
@@ -63,7 +63,7 @@ To learn more about how HMR and HDR work together, check out [Pedro's talk at Re
 
 ### With `remix-serve`
 
-Enable the v2 dev server:
+Enable the `v2_dev`:
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
@@ -78,10 +78,10 @@ That's it!
 
 ### With custom app server
 
-If you used a template to get started, hopefully it has integration with the v2 dev server out-of-the-box.
+If you used a template to get started, hopefully it's integrated with `v2_dev` out-of-the-box.
 If not, you can follow these steps to integrate your project with `v2_dev`:
 
-1. Enable the v2 dev server:
+1. Enable the `v2_dev`:
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
@@ -137,7 +137,7 @@ app.listen(port, () => {
 
 For CloudFlare, use `logDevReady` instead of `broadcastDevReady`.
 
-Why? `broadcastDevReady` uses `fetch` to send a ready message to the dev server,
+Why? `broadcastDevReady` uses `fetch` to send a ready message to the Remix compiler,
 but CloudFlare does not support async I/O like `fetch` outside of request handling.
 
 </docs-info>
@@ -146,13 +146,13 @@ but CloudFlare does not support async I/O like `fetch` outside of request handli
 
 Options priority order is: 1. flags, 2. config, 3. defaults.
 
-| Option          | flag               | config    | default                           | description                                                |
-| --------------- | ------------------ | --------- | --------------------------------- | ---------------------------------------------------------- |
-| Command         | `-c` / `--command` | `command` | `remix-serve <server build path>` | Command the dev server will run to spin up your app server |
-| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode][manual-mode]                   |
-| Port            | `--port`           | `port`    | Dynamically chosen open port      | Internal port used for hot updates                         |
-| TLS key         | `--tls-key`        | `tlsKey`  | N/A                               | TLS key for configuring local HTTPS                        |
-| TLS certificate | `--tls-cert`       | `tlsCert` | N/A                               | TLS certificate for configuring local HTTPS                |
+| Option          | flag               | config    | default                           | description                                              |
+| --------------- | ------------------ | --------- | --------------------------------- | -------------------------------------------------------- |
+| Command         | `-c` / `--command` | `command` | `remix-serve <server build path>` | Command used to run your app server                      |
+| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode][manual-mode]                 |
+| Port            | `--port`           | `port`    | Dynamically chosen open port      | Internal port used by the Remix compiler for hot updates |
+| TLS key         | `--tls-key`        | `tlsKey`  | N/A                               | TLS key for configuring local HTTPS                      |
+| TLS certificate | `--tls-cert`       | `tlsCert` | N/A                               | TLS certificate for configuring local HTTPS              |
 
 To set options in your config, replace `v2_dev: true` with an object.
 For example:
@@ -171,7 +171,7 @@ module.exports = {
 };
 ```
 
-### Setting the port
+### Setting a custom port
 
 The `remix dev --port` option sets the internal port used for hot updates.
 **It does not affect the port your app runs on.**
@@ -193,6 +193,11 @@ Most users, should not need to use `remix dev --port`.
 By default, `remix dev` will restart your app server whenever a rebuild occurs.
 If you'd like to keep your app server running without restarts across rebuilds, check out our [guide for manual mode][manual-mode].
 
+You can see if app server restarts are a bottleneck for your project by comparing the times reported by `remix dev`:
+
+- `rebuilt (Xms)` 👉 the Remix compiler took `X` milliseconds to rebuild your app
+- `app server ready (Yms)` 👉 Remix restarted your app server and it took `Y` milliseconds to start with the new code changes
+
 ### Pick up changes from other packages
 
 If you are using a monorepo, you might want Remix to perform hot updates not only when your app code changes, but whenever you change code in any of your apps dependencies.
@@ -205,19 +210,16 @@ To pick up changes in `packages/ui`, you can configure [watchPaths][watch-paths]
 To use [Mock Service Worker][msw] in development, you'll need to:
 
 1. Run MSW as part of your app server
-2. Configure MSW to not mock internal "dev ready" messages to the dev server
+2. Configure MSW to not mock internal "dev ready" messages to the Remix compiler
 
-`remix dev` will provide the `REMIX_DEV_ORIGIN` environment variable for use in your app server.
-
-For example, if you are using [binode][binode] to integrate with MSW,
-make sure that the call to `binode` is within the `remix dev -c` subcommand.
-That way, the MSW server will have access to the `REMIX_DEV_ORIGIN` environment variable:
+Make sure that you are setting up your mocks for your _app server_ within the `-c` flag so that the `REMIX_DEV_HTTP_ORIGIN` environment variable is available to your mocks.
+For example, you can use `NODE_OPTIONS` to set Node's `--require` flag when running `remix-serve`:
 
 ```json filename=package.json
 {
   "scripts": {
     "dev": "remix dev -c \"npm run dev:app\"",
-    "dev:app": "binode --require ./mocks -- @remix-run/serve:remix-serve ./build"
+    "dev:app": "cross-env NODE_OPTIONS=\"--require ./mocks\" remix-serve ./build"
   }
 }
 ```
@@ -296,27 +298,27 @@ server.listen(port, () => {
 ```
 
 Now that the app server is set up, you should be able to build and run your app in production mode with TLS.
-To get the dev server to interop with TLS, you'll need to specify the TLS cert and key you created:
+To get the Remix compiler to interop with TLS, you'll need to specify the TLS cert and key you created:
 
 ```sh
 remix dev --tls-key=key.pem --tls-cert=cert.pem -c "node ./server.js"
 ```
 
 Alternatively, you can specify the TLS key and cert via the `v2_dev.tlsCert` and `v2_dev.tlsKey` config options.
-Now your app server and dev server are TLS ready!
+Now your app server and Remix compiler are TLS ready!
 
 ### How to integrate with a reverse proxy
 
-Let's say you have the app server and dev server both running on the same machine:
+Let's say you have the app server and Remix compiler both running on the same machine:
 
 - App server 👉 `http://localhost:1234`
-- Dev server 👉 `http://localhost:5678`
+- Remix compiler 👉 `http://localhost:5678`
 
-Then, you setup a reverse proxy in front of the app server and dev server:
+Then, you setup a reverse proxy in front of the app server:
 
 - Reverse proxy 👉 `https://myhost`
 
-But the internal HTTP and WebSocket connections to support hot updates will still try to reach the dev server's unproxied origin:
+But the internal HTTP and WebSocket connections to support hot updates will still try to reach the Remix compiler's unproxied origin:
 
 - Hot updates 👉 `http://localhost:5678` / `ws://localhost:5678` ❌
 
@@ -395,8 +397,8 @@ In the meantime, if those console errors bother you, you can refresh the page wh
 
 #### HDR: performance
 
-When the v2 dev server builds (and rebuilds) your app, you may notice a slight slowdown as the dev server needs to crawl the dependencies for each loader.
-That way the dev server can detect loader changes on rebuilds.
+When the Remix compiler builds (and rebuilds) your app, you may notice a slight slowdown as the compiler needs to crawl the dependencies for each loader.
+That way Remix can detect loader changes on rebuilds.
 
 While the initial build slowdown is inherently a cost for HDR, we plan to optimize rebuilds so that there is no perceivable slowdown for HDR rebuilds.
 
@@ -407,7 +409,6 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [watch-paths]: https://remix.run/docs/en/1.17.1/file-conventions/remix-config#watchpaths
 [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
 [react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
-[binode]: https://github.com/kentcdodds/binode
 [msw]: https://mswjs.io/
 [mkcert]: https://github.com/FiloSottile/mkcert
 [path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports

@@ -254,9 +254,11 @@ app/
 | `/categories`              | `($lang).categories.tsx` |
 | `/en/categories`           | `($lang).categories.tsx` |
 | `/fr/categories`           | `($lang).categories.tsx` |
-| `/american-flag-speedo`    | `($lang).$productId.tsx` |
+| `/american-flag-speedo`    | `($lang)._index.tsx`     |
 | `/en/american-flag-speedo` | `($lang).$productId.tsx` |
 | `/fr/american-flag-speedo` | `($lang).$productId.tsx` |
+
+You may wonder why `/american-flag-speedo` is matching the `($lang)._index.tsx` route instead of `($lang).$productId.tsx`. This is because when you have an optional dynamic param segment followed by another dynamic param, Remix cannot reliably determine if a single-segment URL such as `/american-flag-speedo` should match `/:lang` `/:productId`. Optional segments match eagerly and thus it will match `/:lang`. If you have this type of setup it's recommended to look at `params.lang` in the `($lang)._index.tsx` loader and redirect to `/:lang/american-flag-speedo` for the current/default language if `params.lang` is not a valid language code.
 
 ## Splat Routes
 
