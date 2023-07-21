@@ -33,7 +33,7 @@ jobs:
 
       - name: ⚒️ Create new ${{ matrix.stack.name }} app with ${{ inputs.version }}
         run: |
-          npx -y create-remix@${{ inputs.version }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --typescript --no-install
+          npx -y create-remix@${{ inputs.version }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --no-install --no-git-init
 
       - name: ⎔ Setup dependency caching
         uses: actions/setup-node@v3
