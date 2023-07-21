@@ -14,7 +14,7 @@ One of the primary features of Remix is simplifying interactions with the server
 - Ensure the data in the UI is in sync with the data on the server by revalidating after [actions][action]
 - Excellent scroll restoration on back/forward clicks (even across domains)
 - Handle server-side errors with [error boundaries][error-boundary]
-- Enable solid UX for "Not Found" and "Unauthorized" with [catch boundaries][catch-boundary]
+- Enable solid UX for "Not Found" and "Unauthorized" with [error boundaries][error-boundary]
 - Help you keep the happy path of your UI happy
 
 ## Basics
@@ -257,7 +257,7 @@ export default function Product() {
 
 ## Not Found
 
-While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
+While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [error boundary][error-boundary].
 
 ```tsx lines=[10-13]
 export const loader = async ({
@@ -684,7 +684,7 @@ That said, if you bring an external data library and sidestep Remix's own data c
 - Ensure the data in the UI is in sync with the data on the server by revalidating after actions
 - Excellent scroll restoration on back/forward clicks (even across domains)
 - Handle server-side errors with [error boundaries][error-boundary]
-- Enable solid UX for "Not Found" and "Unauthorized" with [catch boundaries][catch-boundary]
+- Enable solid UX for "Not Found" and "Unauthorized" with [error boundaries][error-boundary]
 - Help you keep the happy path of your UI happy.
 
 Instead you'll need to do extra work to provide a good user experience.
@@ -736,7 +736,6 @@ export default function RouteComp() {
 ```
 
 [action]: ../route/action
-[catch-boundary]: ../route/catch-boundary
 [cloudflare-kv-setup]: https://developers.cloudflare.com/workers/cli-wrangler/commands#kv
 [cloudflare-kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
 [error-boundary]: ../route/error-boundary

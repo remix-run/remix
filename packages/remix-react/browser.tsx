@@ -5,10 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
-import {
-  RemixErrorBoundary,
-  RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
+import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
 import {
@@ -120,10 +117,6 @@ if (import.meta && import.meta.hot) {
                       ? window.__remixRouteModules[id]?.default ??
                         imported.default
                       : imported.default,
-                    CatchBoundary: imported.CatchBoundary
-                      ? window.__remixRouteModules[id]?.CatchBoundary ??
-                        imported.CatchBoundary
-                      : imported.CatchBoundary,
                     ErrorBoundary: imported.ErrorBoundary
                       ? window.__remixRouteModules[id]?.ErrorBoundary ??
                         imported.ErrorBoundary
@@ -242,10 +235,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         future: window.__remixContext.future,
       }}
     >
-      <RemixErrorBoundary
-        location={location}
-        component={RemixRootDefaultErrorBoundary}
-      >
+      <RemixErrorBoundary location={location}>
         <RouterProvider
           router={router}
           fallbackElement={null}
