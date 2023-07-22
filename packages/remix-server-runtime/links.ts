@@ -163,25 +163,12 @@ interface HtmlLinkPreloadImage extends HtmlLinkProps {
  * WHATWG Specification: https://html.spec.whatwg.org/multipage/semantics.html#the-link-element
  */
 export type HtmlLinkDescriptor =
-  // Must have an href *unless* it's a `<link rel="preload" as="image">` with an
+  // Must have a href *unless* it's a `<link rel="preload" as="image">` with an
   // `imageSrcSet` and `imageSizes` props
-  (
-    | (HtmlLinkProps & Pick<Required<HtmlLinkProps>, "href">)
-    | (HtmlLinkPreloadImage &
-        Pick<Required<HtmlLinkPreloadImage>, "imageSizes">)
-    | (HtmlLinkPreloadImage &
-        Pick<Required<HtmlLinkPreloadImage>, "href"> & { imageSizes?: never })
-  ) & {
-    /**
-     * @deprecated Use `imageSrcSet` instead.
-     */
-    imagesrcset?: string;
-
-    /**
-     * @deprecated Use `imageSizes` instead.
-     */
-    imagesizes?: string;
-  };
+  | (HtmlLinkProps & Pick<Required<HtmlLinkProps>, "href">)
+  | (HtmlLinkPreloadImage & Pick<Required<HtmlLinkPreloadImage>, "imageSizes">)
+  | (HtmlLinkPreloadImage &
+      Pick<Required<HtmlLinkPreloadImage>, "href"> & { imageSizes?: never });
 
 export interface PageLinkDescriptor
   extends Omit<
@@ -192,8 +179,6 @@ export interface PageLinkDescriptor
     | "sizes"
     | "imageSrcSet"
     | "imageSizes"
-    | "imagesrcset"
-    | "imagesizes"
     | "as"
     | "color"
     | "title"
