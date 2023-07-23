@@ -1302,7 +1302,7 @@ export const LiveReload =
                   let protocol =
                     REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).protocol.replace(/^http/, "ws") :
                     location.protocol === "https:" ? "wss:" : "ws:"; // remove in v2?
-                  let hostname = location.hostname;
+                  let hostname = REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).hostname : location.hostname;
                   let url = new URL(protocol + "//" + hostname + "/socket");
 
                   url.port =
