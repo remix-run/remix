@@ -72,12 +72,8 @@ export {
   RemixContext as UNSAFE_RemixContext,
 } from "./components";
 
-export type { ThrownResponse } from "./errors";
-export { useCatch } from "./errorBoundaries";
-
 export type { HtmlLinkDescriptor } from "./links";
 export type {
-  CatchBoundaryComponent,
   HtmlMetaDescriptor,
   V2_MetaArgs,
   V2_MetaDescriptor,

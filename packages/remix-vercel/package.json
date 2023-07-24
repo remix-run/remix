@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/vercel",
-  "version": "1.19.0",
+  "version": "1.19.1",
   "description": "Vercel server request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -14,7 +14,7 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "dependencies": {
-    "@remix-run/node": "1.19.0"
+    "@remix-run/node": "1.19.1"
   },
   "devDependencies": {
     "@types/supertest": "^2.0.10",
@@ -23,7 +23,7 @@
     "supertest": "^6.1.5"
   },
   "peerDependencies": {
-    "@vercel/node": "^1.8.3 || ^2.4.0"
+    "@vercel/node": "^2.4.0"
   },
   "engines": {
     "node": ">=14.0.0"

@@ -10,7 +10,6 @@ import { loaders } from "../utils/loaders";
 import { browserRouteModulesPlugin } from "./plugins/routes";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
-import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
 import { mdxPlugin } from "../plugins/mdx";
 import { externalPlugin } from "../plugins/external";
@@ -88,7 +87,6 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     browserRouteModulesPlugin(ctx, /\?browser$/),
-    deprecatedRemixPackagePlugin(ctx),
     cssBundlePlugin(refs),
     cssModulesPlugin(ctx, { outputCss: false }),
     vanillaExtractPlugin(ctx, { outputCss: false }),
@@ -144,6 +142,11 @@ const createEsbuildConfig = (
       "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
         ctx.config.devServerPort
       ),
+      ...(ctx.options.mode === "production"
+        ? {
+            "import.meta.hot": "undefined",
+          }
+        : {}),
     },
     jsx: "automatic",
     jsxDev: ctx.options.mode !== "production",
