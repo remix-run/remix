@@ -8,7 +8,7 @@ import semver from "semver";
 import stripAnsi from "strip-ansi";
 
 import { jestTimeout } from "./setupAfterEnv";
-import { createRemix } from "../create-remix";
+import { createRemix } from "../index";
 import { server } from "./msw";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
