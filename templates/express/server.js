@@ -75,7 +75,11 @@ function createDevRequestHandler() {
   }
 
   chokidar
-    .watch(BUILD_PATH, { ignoreInitial: true })
+    .watch(BUILD_PATH, {
+      // Chokidar settings to avoid certain race condition issues #6831
+      ignoreInitial: true,
+      awaitWriteFinish: { stabilityThreshold: 200 },
+   })
     .on("add", handleServerUpdate)
     .on("change", handleServerUpdate);
 
