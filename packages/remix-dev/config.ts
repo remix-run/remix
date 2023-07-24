@@ -425,11 +425,7 @@ export async function readConfig(
   let serverMainFields = appConfig.serverMainFields;
   let serverMinify = appConfig.serverMinify;
 
-  if (!appConfig.serverModuleFormat) {
-    serverModuleFormatWarning();
-  }
-
-  let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
+  let serverModuleFormat = appConfig.serverModuleFormat || "esm";
   let serverPlatform = appConfig.serverPlatform || "node";
   serverMainFields ??=
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
@@ -766,17 +762,6 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "disjunction",
 });
-
-let serverModuleFormatWarning = () =>
-  logger.warn("The default server module format is changing in v2", {
-    details: [
-      "The default format will change from `cjs` to `esm`.",
-      "You can keep using `cjs` by explicitly specifying `serverModuleFormat: 'cjs'`.",
-      "You can opt-in early to this change by explicitly specifying `serverModuleFormat: 'esm'`",
-      "-> https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat",
-    ],
-    key: "serverModuleFormatWarning",
-  });
 
 let futureFlagWarning =
   (args: { message: string; flag: string; link: string }) => () => {
