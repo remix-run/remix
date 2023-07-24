@@ -615,18 +615,6 @@ You'll notice on line 32 that we've rendered a `<Links />` component that replac
 
 If you currently inject `<link />` tags into your page client-side in your existing route components, either directly or via an abstraction like [`react-helmet`][react-helmet], you can stop doing that and instead use the `links` export. You get to delete a lot of code and possibly a dependency or two!
 
-### PostCSS
-
-To enable [PostCSS] support, set the `postcss` option to `true` in `remix.config.js`. Remix will then automatically process your styles with PostCSS if a `postcss.config.js` file is present.
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  postcss: true,
-  // ...
-};
-```
-
 ### CSS bundling
 
 Remix has built-in support for [CSS Modules][css-modules], [Vanilla Extract][vanilla-extract] and [CSS side effect imports][css-side-effect-imports]. In order to make use of these features, you'll need to set up CSS bundling in your application.
@@ -757,7 +745,6 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [styling-in-remix]: ./styling
 [frequently-asked-questions]: ../pages/faq
 [common-gotchas]: ../pages/gotchas
-[postcss]: ./styling#postcss
 [css-modules]: ./styling#css-modules
 [vanilla-extract]: ./styling#vanilla-extract
 [css-side-effect-imports]: ./styling#css-side-effect-imports

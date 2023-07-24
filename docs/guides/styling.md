@@ -404,17 +404,7 @@ export const links: LinksFunction = () => {
 
 Perhaps the most popular way to style a Remix application in the community is to use [Tailwind CSS][tailwind]. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
 
-To use the built-in Tailwind support, first enable the `tailwind` option in `remix.config.js`:
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  tailwind: true,
-  // ...
-};
-```
-
-Install Tailwind as a dev dependency:
+To use Tailwind, first install it as a dev dependency:
 
 ```sh
 npm install -D tailwindcss
@@ -470,6 +460,8 @@ If you're using VS Code, it's recommended you install the [Tailwind IntelliSense
 
 <docs-warning>It's recommended that you avoid Tailwind's `@import` syntax (e.g. `@import 'tailwindcss/base'`) in favor of Tailwind directives (e.g. `@tailwind base`). Tailwind replaces its import statements with inlined CSS but this can result in the interleaving of styles and import statements. This clashes with the restriction that all import statements must be at the start of the file. Alternatively, you can use [PostCSS][built-in-post-css-support] with the [postcss-import] plugin to process imports before passing them to esbuild.</docs-warning>
 
+<docs-info>Built-in Tailwind support can be disabled by setting the `tailwind` option to `false` in `remix.config.js`.</docs-info>
+
 ## Remote Stylesheets
 
 You can load stylesheets from any server, here's an example of loading a modern css reset from unpkg.
@@ -491,17 +483,7 @@ export const links: LinksFunction = () => {
 
 [PostCSS][postcss] is a popular tool with a rich plugin ecosystem, commonly used to prefix CSS for older browsers, transpile future CSS syntax, inline images, lint your styles and more. When a PostCSS config is detected, Remix will automatically run PostCSS across all CSS in your project.
 
-For example, to use [Autoprefixer][autoprefixer], first enable the `postcss` option in `remix.config.js`:
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  postcss: true,
-  // ...
-};
-```
-
-Install the PostCSS plugin.
+For example, to use [Autoprefixer][autoprefixer], first install the PostCSS plugin.
 
 ```sh
 npm install -D autoprefixer
@@ -530,6 +512,8 @@ module.exports = (ctx) => {
       };
 };
 ```
+
+<docs-info>Built-in PostCSS support can be disabled by setting the `postcss` option to `false` in `remix.config.js`.</docs-info>
 
 ## CSS Preprocessors
 
