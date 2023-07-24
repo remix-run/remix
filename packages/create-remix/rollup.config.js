@@ -6,6 +6,7 @@ const copy = require("rollup-plugin-copy");
 
 const {
   createBanner,
+  getCliConfig,
   getOutputDir,
   isBareModuleId,
 } = require("../../rollup.utils");
@@ -22,7 +23,7 @@ module.exports = function rollup() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${sourceDir}/cli.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner(packageName, version),
         dir: outputDist,
@@ -58,5 +59,6 @@ module.exports = function rollup() {
         },
       ],
     },
+    getCliConfig({ packageName, version }),
   ];
 };
