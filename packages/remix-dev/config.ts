@@ -175,7 +175,7 @@ export interface AppConfig {
 
   /**
    * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
-   * Defaults to `false`.
+   * Defaults to `true`.
    */
   tailwind?: boolean;
 
@@ -346,7 +346,7 @@ export interface RemixConfig {
 
   /**
    * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
-   * Defaults to `false`.
+   * Defaults to `true`.
    */
   tailwind: boolean;
 
