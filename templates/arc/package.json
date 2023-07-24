@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev --no-restart -c \"arc sandbox -e testing\"",
+    "dev": "remix dev --manual -c \"arc sandbox -e testing\"",
     "start": "cross-env NODE_ENV=production arc sandbox",
     "typecheck": "tsc"
   },

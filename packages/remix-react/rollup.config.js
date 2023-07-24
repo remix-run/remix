@@ -9,7 +9,6 @@ const {
   createBanner,
   getOutputDir,
   isBareModuleId,
-  magicExportsPlugin,
 } = require("../../rollup.utils");
 const { name: packageName, version } = require("./package.json");
 
@@ -54,7 +53,6 @@ module.exports = function rollup() {
           { src: `${sourceDir}/README.md`, dest: outputDir },
         ],
       }),
-      magicExportsPlugin({ packageName, version }),
       copyToPlaygrounds(),
     ],
   };

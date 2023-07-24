@@ -22,7 +22,7 @@ app/
 The file in `app/root.tsx` is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes:
 
 - You can export a [`loader`][loader], [`action`][action], [`meta`][meta], [`headers`][headers], or [`links`][links] function
-- You can export an [`ErrorBoundary`][error-boundary] or [`CatchBoundary`][catch-boundary]
+- You can export an [`ErrorBoundary`][error-boundary]
 - Your default export is the layout component that renders the rest of your app in an [`<Outlet />`][outlet]
 
 ## Basic Routes
@@ -306,7 +306,6 @@ Because some characters have special meaning, you must use our escaping syntax i
 [headers]: ../route/headers
 [links]: ../route/links
 [error-boundary]: ../route/error-boundary
-[catch-boundary]: ../route/catch-boundary
 [outlet]: ../components/outlet
 [view-example-app]: https://github.com/remix-run/examples/tree/main/multiple-params
 [use-params]: https://reactrouter.com/hooks/use-params

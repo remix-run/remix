@@ -2,7 +2,7 @@
 export default {
   ignoredRouteFiles: ["**/.*"],
   server: "./server.ts",
-  serverConditions: ["worker"],
+  serverConditions: ["workerd", "worker", "browser"],
   serverDependenciesToBundle: [
     // bundle verything except the virtual module for the static content manifest provided by wrangler
     /^(?!.*\b__STATIC_CONTENT_MANIFEST\b).*$/,
@@ -17,7 +17,7 @@ export default {
   // publicPath: "/build/",
   future: {
     v2_dev: true,
-    v2_errorBoundary: true,
+
     v2_headers: true,
     v2_meta: true,
     v2_routeConvention: true,
