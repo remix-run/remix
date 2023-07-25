@@ -29,9 +29,9 @@ npx create-remix@latest --help
 ```sh
 npm create remix@latest <projectDir>
 # or
-yarn create remix@latest <projectDir>
+yarn create remix <projectDir>
 # or
-pnpm create remix@latest <projectDir>
+pnpm create remix <projectDir>
 ```
 
 ### `create-remix --template`
