@@ -1,14 +1,14 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import {
   createAppFixture,
   createFixture,
   css,
   js,
   json,
-} from "./helpers/create-fixture";
+} from "./helpers/create-fixture.js";
 
 const TEST_PADDING_VALUE = "20px";
 
@@ -19,7 +19,7 @@ test.describe("CSS side-effect imports", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       config: {
-        serverDependenciesToBundle: [/@test-package/],
+        serverDependenciesToBundle: ["react", /@test-package/],
         future: {
           v2_routeConvention: true,
         },
@@ -290,6 +290,9 @@ test.describe("CSS side-effect imports", () => {
         );
       };
     `,
+    "node_modules/@test-package/commonjs/package.json": json({
+      main: "./index.js",
+    }),
     "app/routes/commonjs-package-test.jsx": js`
       import { Test } from "@test-package/commonjs";
       export default function() {

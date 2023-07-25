@@ -1,6 +1,6 @@
 import path from "path";
 import { pathToFileURL } from "url";
-import * as fse from "fs-extra";
+import fse from "fs-extra";
 import loadConfig from "postcss-load-config";
 import type { AcceptedPlugin, Message, Processor } from "postcss";
 import postcss from "postcss";

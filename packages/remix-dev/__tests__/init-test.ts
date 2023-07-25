@@ -1,6 +1,6 @@
 import * as os from "os";
 import * as path from "path";
-import * as fse from "fs-extra";
+import fse from "fs-extra";
 import stripAnsi from "strip-ansi";
 
 import { run } from "../cli/run";

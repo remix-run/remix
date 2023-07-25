@@ -1,12 +1,14 @@
 import * as path from "path";
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import { createAppFixture, createFixture, js } from "./helpers/create-fixture.js";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
+
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 test.beforeAll(async () => {
   fixture = await createFixture({
