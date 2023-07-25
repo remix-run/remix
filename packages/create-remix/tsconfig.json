@@ -4,7 +4,7 @@
   "compilerOptions": {
     "lib": ["ES2019", "DOM", "DOM.Iterable"],
     "target": "ES2019",
-    "module": "CommonJS",
+    "module": "ES2020",
     "skipLibCheck": true,
     "composite": true,
 

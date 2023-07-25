@@ -7,7 +7,7 @@
     "isolatedModules": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
-    "module": "CommonJS",
+    "module": "ES2020",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "target": "ES2019",
