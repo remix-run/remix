@@ -756,11 +756,9 @@ function V2Meta() {
           return (
             json != null && (
               <script
-                key="script:ld+json"
+                key={`script:ld+json:${json}`}
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                  __html: JSON.stringify(metaProps["script:ld+json"]),
-                }}
+                dangerouslySetInnerHTML={{ __html: json }}
               />
             )
           );
