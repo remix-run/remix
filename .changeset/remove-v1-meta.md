@@ -1,5 +1,4 @@
 ---
-"remix": major
 "@remix-run/cloudflare": major
 "@remix-run/deno": major
 "@remix-run/dev": major
