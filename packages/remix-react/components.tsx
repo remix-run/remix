@@ -45,12 +45,10 @@ import {
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type {
-  V1_HtmlMetaDescriptor,
-  V1_MetaFunction,
-  V2_MetaDescriptor,
-  V2_MetaFunction,
-  V2_MetaMatch,
-  V2_MetaMatches,
+  MetaFunction,
+  MetaDescriptor,
+  MetaMatch,
+  MetaMatches,
 } from "./routeModules";
 import { logDeprecationOnce } from "./warnings";
 
@@ -513,120 +511,11 @@ function PrefetchPageLinksImpl({
 }
 
 /**
- * Renders the `<title>` and `<meta>` tags for the current routes.
+ * Renders HTML tags related to metadata for the current route.
  *
  * @see https://remix.run/components/meta
  */
-function V1Meta() {
-  let { routeModules } = useRemixContext();
-  let {
-    errors,
-    matches: routerMatches,
-    loaderData,
-  } = useDataRouterStateContext();
-  let location = useLocation();
-
-  let matches = errors
-    ? routerMatches.slice(
-        0,
-        routerMatches.findIndex((m) => errors![m.route.id]) + 1
-      )
-    : routerMatches;
-
-  let meta: V1_HtmlMetaDescriptor = {};
-  let parentsData: { [routeId: string]: AppData } = {};
-
-  for (let match of matches) {
-    let routeId = match.route.id;
-    let data = loaderData[routeId];
-    let params = match.params;
-
-    let routeModule = routeModules[routeId];
-
-    if (routeModule.meta) {
-      let routeMeta =
-        typeof routeModule.meta === "function"
-          ? (routeModule.meta as V1_MetaFunction)({
-              data,
-              parentsData,
-              params,
-              location,
-            })
-          : routeModule.meta;
-      if (routeMeta && Array.isArray(routeMeta)) {
-        throw new Error(
-          "The route at " +
-            match.route.path +
-            " returns an array. This is only supported with the `v2_meta` future flag " +
-            "in the Remix config. Either set the flag to `true` or update the route's " +
-            "meta function to return an object." +
-            "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
-          // TODO: Add link to the docs once they are written
-          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta."
-        );
-      }
-      Object.assign(meta, routeMeta);
-    }
-
-    parentsData[routeId] = data;
-  }
-
-  return (
-    <>
-      {Object.entries(meta).map(([name, value]) => {
-        if (!value) {
-          return null;
-        }
-
-        if (["charset", "charSet"].includes(name)) {
-          return <meta key="charSet" charSet={value as string} />;
-        }
-
-        if (name === "title") {
-          return <title key="title">{String(value)}</title>;
-        }
-
-        // Open Graph tags use the `property` attribute, while other meta tags
-        // use `name`. See https://ogp.me/
-        //
-        // Namespaced attributes:
-        //  - https://ogp.me/#type_music
-        //  - https://ogp.me/#type_video
-        //  - https://ogp.me/#type_article
-        //  - https://ogp.me/#type_book
-        //  - https://ogp.me/#type_profile
-        //
-        // Facebook specific tags begin with `fb:` and also use the `property`
-        // attribute.
-        //
-        // Twitter specific tags begin with `twitter:` but they use `name`, so
-        // they are excluded.
-        let isOpenGraphTag =
-          /^(og|music|video|article|book|profile|fb):.+$/.test(name);
-
-        return [value].flat().map((content) => {
-          if (isOpenGraphTag) {
-            return (
-              <meta
-                property={name}
-                content={content as string}
-                key={name + content}
-              />
-            );
-          }
-
-          if (typeof content === "string") {
-            return <meta name={name} content={content} key={name + content} />;
-          }
-
-          return <meta key={name + JSON.stringify(content)} {...content} />;
-        });
-      })}
-    </>
-  );
-}
-
-function V2Meta() {
+export function Meta() {
   let { routeModules } = useRemixContext();
   let {
     errors,
@@ -642,43 +531,31 @@ function V2Meta() {
       )
     : routerMatches;
 
-  let meta: V2_MetaDescriptor[] = [];
-  let leafMeta: V2_MetaDescriptor[] | null = null;
-  let matches: V2_MetaMatches = [];
+  let meta: MetaDescriptor[] = [];
+  let leafMeta: MetaDescriptor[] | null = null;
+  let matches: MetaMatches = [];
   for (let i = 0; i < _matches.length; i++) {
     let _match = _matches[i];
     let routeId = _match.route.id;
     let data = loaderData[routeId];
     let params = _match.params;
     let routeModule = routeModules[routeId];
-    let routeMeta: V2_MetaDescriptor[] | V1_HtmlMetaDescriptor | undefined = [];
+    let routeMeta: MetaDescriptor[] | undefined = [];
 
-    let match: V2_MetaMatch = {
+    let match: MetaMatch = {
       id: routeId,
       data,
       meta: [],
       params: _match.params,
       pathname: _match.pathname,
       handle: _match.route.handle,
-      // TODO: Remove in v2. Only leaving it for now because we used it in
-      // examples and there's no reason to crash someone's build for one line.
-      // They'll get a TS error from the type updates anyway.
-      // @ts-expect-error
-      get route() {
-        console.warn(
-          "The meta function in " +
-            _match.route.path +
-            " accesses the `route` property on `matches`. This is deprecated and will be removed in Remix version 2. See"
-        );
-        return _match.route;
-      },
     };
     matches[i] = match;
 
     if (routeModule?.meta) {
       routeMeta =
         typeof routeModule.meta === "function"
-          ? (routeModule.meta as V2_MetaFunction)({
+          ? (routeModule.meta as MetaFunction)({
               data,
               params,
               location,
@@ -697,13 +574,11 @@ function V2Meta() {
     routeMeta = routeMeta || [];
     if (!Array.isArray(routeMeta)) {
       throw new Error(
-        "The `v2_meta` API is enabled in the Remix config, but the route at " +
+        "The route at " +
           _match.route.path +
-          " returns an invalid value. In v2, all route meta functions must " +
+          " returns an invalid value. All route meta functions must " +
           "return an array of meta objects." +
-          // TODO: Add link to the docs once they are written
-          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta." +
-          "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
+          "\n\nTo reference the meta function API, see https://remix.run/route/meta"
       );
     }
 
@@ -773,11 +648,6 @@ function V2Meta() {
 
 function isValidMetaTag(tagName: unknown): tagName is "meta" | "link" {
   return typeof tagName === "string" && /^(meta|link)$/.test(tagName);
-}
-
-export function Meta() {
-  let { future } = useRemixContext();
-  return future?.v2_meta ? <V2Meta /> : <V1Meta />;
 }
 
 export interface AwaitProps<Resolve> {

@@ -46,7 +46,6 @@ type Dev = {
 interface FutureConfig {
   v2_dev: boolean | Dev;
   v2_headers: boolean;
-  v2_meta: boolean;
   v2_routeConvention: boolean;
 }
 
@@ -404,10 +403,6 @@ export async function readConfig(
     }
   }
 
-  if (!appConfig.future?.v2_meta) {
-    metaWarning();
-  }
-
   if (!appConfig.future?.v2_headers) {
     headersWarning();
   }
@@ -661,7 +656,6 @@ export async function readConfig(
   let future: FutureConfig = {
     v2_dev: appConfig.future?.v2_dev ?? false,
     v2_headers: appConfig.future?.v2_headers === true,
-    v2_meta: appConfig.future?.v2_meta === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
@@ -793,12 +787,6 @@ let flatRoutesWarning = futureFlagWarning({
   message: "The route file convention is changing in v2",
   flag: "v2_routeConvention",
   link: "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention",
-});
-
-let metaWarning = futureFlagWarning({
-  message: "The route `meta` API is changing in v2",
-  flag: "v2_meta",
-  link: "https://remix.run/docs/en/v1.15.0/pages/v2#meta",
 });
 
 let headersWarning = futureFlagWarning({
