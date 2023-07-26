@@ -212,7 +212,7 @@ To use [Mock Service Worker][msw] in development, you'll need to:
 1. Run MSW as part of your app server
 2. Configure MSW to not mock internal "dev ready" messages to the Remix compiler
 
-Make sure that you are setting up your mocks for your _app server_ within the `-c` flag so that the `REMIX_DEV_HTTP_ORIGIN` environment variable is available to your mocks.
+Make sure that you are setting up your mocks for your _app server_ within the `-c` flag so that the `REMIX_DEV_ORIGIN` environment variable is available to your mocks.
 For example, you can use `NODE_OPTIONS` to set Node's `--require` flag when running `remix-serve`:
 
 ```json filename=package.json
