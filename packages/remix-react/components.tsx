@@ -1178,10 +1178,6 @@ export const LiveReload =
                   url.port =
                     ${port} ||
                     REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port :
-                    Number(${
-                      // TODO: remove in v2
-                      process.env.REMIX_DEV_SERVER_WS_PORT
-                    }) ||
                     8002;
 
                   let ws = new WebSocket(url.href);
