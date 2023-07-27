@@ -601,7 +601,7 @@ test.describe("Error Sanitization", () => {
       expect(text).toBe('{"message":"Unexpected Server Error"}');
       expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
       expect(errorLogs[1][0]).toEqual(
-        "  Request: GET test://test/?loader=&_data=routes%2Findex"
+        "  Request: GET test://test/?loader=&_data=routes%2F_index"
       );
       expect(errorLogs[2][0]).toEqual("  Error: Loader Error");
       expect(errorLogs[3][0]).toMatch(" at ");
