@@ -2,7 +2,6 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
-import getPort from "get-port";
 import NPMCliPackageJson from "@npmcli/package-json";
 import { coerce } from "semver";
 import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
@@ -37,7 +36,6 @@ type Dev = {
 };
 
 interface FutureConfig {
-  v2_dev: boolean | Dev;
   v2_headers: boolean;
   v2_meta: boolean;
   v2_routeConvention: boolean;
@@ -85,16 +83,7 @@ export interface AppConfig {
    */
   publicPath?: string;
 
-  /**
-   * The port number to use for the dev server. Defaults to 8002.
-   */
-  devServerPort?: number;
-
-  /**
-   * The delay, in milliseconds, before the dev server broadcasts a reload
-   * event. There is no delay by default.
-   */
-  devServerBroadcastDelay?: number;
+  dev?: Dev;
 
   /**
    * Additional MDX remark / rehype plugins.
@@ -250,16 +239,6 @@ export interface RemixConfig {
   publicPath: string;
 
   /**
-   * The port number to use for the dev (asset) server.
-   */
-  devServerPort: number;
-
-  /**
-   * The delay before the dev (asset) server broadcasts a reload event.
-   */
-  devServerBroadcastDelay: number;
-
-  /**
    * Additional MDX remark / rehype plugins.
    */
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
@@ -354,6 +333,8 @@ export interface RemixConfig {
   tsconfigPath: string | undefined;
 
   future: FutureConfig;
+
+  dev: Dev;
 }
 
 /**
@@ -429,19 +410,6 @@ export async function readConfig(
   serverMinify ??= false;
 
   let serverNodeBuiltinsPolyfill = appConfig.serverNodeBuiltinsPolyfill;
-
-  if (appConfig.future) {
-    if ("unstable_dev" in appConfig.future) {
-      logger.warn("The `future.unstable_dev` config option has been removed", {
-        details: [
-          "The v2 dev server is now stable.",
-          "Use the `future.v2_dev` config option instead.",
-          "-> https://remix.run/docs/en/main/pages/v2#dev-server",
-        ],
-        key: "unstable_dev",
-      });
-    }
-  }
 
   let mdx = appConfig.mdx;
   let postcss = appConfig.postcss ?? true;
@@ -582,13 +550,6 @@ export async function readConfig(
     assetsBuildDirectory
   );
 
-  let devServerPort =
-    Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
-    (await getPort({ port: Number(appConfig.devServerPort) || 8002 }));
-  // set env variable so un-bundled servers can use it
-  process.env.REMIX_DEV_SERVER_WS_PORT = String(devServerPort);
-  let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
-
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
   let rootRouteFile = findEntry(appDirectory, "root");
@@ -652,7 +613,6 @@ export async function readConfig(
   }
 
   let future: FutureConfig = {
-    v2_dev: appConfig.future?.v2_dev ?? false,
     v2_headers: appConfig.future?.v2_headers === true,
     v2_meta: appConfig.future?.v2_meta === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
@@ -665,8 +625,6 @@ export async function readConfig(
     entryClientFilePath,
     entryServerFile,
     entryServerFilePath,
-    devServerPort,
-    devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
     relativeAssetsBuildDirectory: assetsBuildDirectory,
     publicPath,
@@ -689,6 +647,7 @@ export async function readConfig(
     watchPaths,
     tsconfigPath,
     future,
+    dev: appConfig.dev ?? {},
   };
 }
 

@@ -96,10 +96,6 @@ describe("remix CLI", () => {
           \`build\` Options:
             --sourcemap         Generate source maps for production
           \`dev\` Options:
-            --debug             Attach Node.js inspector
-            --port, -p          Choose the port from which to run your app
-
-            [v2_dev]
             --command, -c       Command used to run your app server
             --manual            Enable manual mode
             --port              Port for the dev server. Default: any open port
