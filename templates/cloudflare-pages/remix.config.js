@@ -18,6 +18,5 @@ export default {
 
     v2_headers: true,
     v2_meta: true,
-    v2_routeConvention: true,
   },
 };

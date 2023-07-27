@@ -172,7 +172,7 @@ export const meta: V2_MetaFunction = () => {
 };
 ```
 
-```tsx bad filename=app/routes/projects/$id.tsx
+```tsx bad filename=app/routes/projects.$id.tsx
 export const meta: V2_MetaFunction<typeof loader> = ({
   data,
 }) => {
