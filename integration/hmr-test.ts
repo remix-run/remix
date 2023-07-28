@@ -20,7 +20,6 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
       v2_routeConvention: true,
 
       v2_meta: true,
-      v2_headers: true,
     },
   },
   files: {
