@@ -523,6 +523,7 @@ function V1Meta() {
     errors,
     matches: routerMatches,
     loaderData,
+    actionData: actionRouteData,
   } = useDataRouterStateContext();
   let location = useLocation();
 
@@ -539,6 +540,7 @@ function V1Meta() {
   for (let match of matches) {
     let routeId = match.route.id;
     let data = loaderData[routeId];
+    let actionData = actionRouteData ? actionRouteData[routeId] : null;
     let params = match.params;
 
     let routeModule = routeModules[routeId];
@@ -548,6 +550,7 @@ function V1Meta() {
         typeof routeModule.meta === "function"
           ? (routeModule.meta as V1_MetaFunction)({
               data,
+              actionData,
               parentsData,
               params,
               location,

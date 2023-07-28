@@ -63,6 +63,24 @@ test.describe("meta", () => {
           }
         `,
 
+        "app/routes/action.jsx": js`
+          export const action = async () => {
+            return { error: true };
+          };
+
+          export const meta = ({ actionData }) => ({
+            title: (actionData && actionData.error ? 'Error: ' : '') + 'Action',
+          });
+
+          export default function Action() {
+            return (
+              <form method="POST">
+                <button type="submit">Submit</button>
+              </form>
+            );
+          }
+        `,
+
         "app/routes/music.jsx": js`
           export function meta({ data }) {
             return {
@@ -385,6 +403,16 @@ test.describe("meta", () => {
       await app.goto("/blog");
       expect(await app.getHtml("title")).toBe("<title>Blog Posts</title>");
     });
+  });
+
+  test("meta receives actionData when available", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/action");
+    expect((await app.getElement("title")).text()).toEqual("Action");
+
+    await page.click("button[type=submit]");
+    expect((await app.getElement("title")).text()).toEqual("Error: Action");
   });
 });
 
