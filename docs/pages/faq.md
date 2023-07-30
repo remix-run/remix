@@ -81,7 +81,7 @@ We find option (1) to be the simplest because you don't have to mess around with
 
 HTML buttons can send a value, so it's the easiest way to implement this:
 
-```tsx filename=app/routes/projects/$id.tsx lines=[3-4,33,39]
+```tsx filename=app/routes/projects.$id.tsx lines=[3-4,33,39]
 export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent");

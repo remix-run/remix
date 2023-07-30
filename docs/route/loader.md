@@ -74,7 +74,7 @@ export default function SomeRoute() {
 
 Route params are defined by route file names. If a segment begins with `$` like `$invoiceId`, the value from the URL for that segment will be passed to your loader.
 
-```tsx filename=app/routes/invoices/$invoiceId.tsx nocopy
+```tsx filename=app/routes/invoices.$invoiceId.tsx nocopy
 // if the user visits /invoices/123
 export async function loader({ params }: LoaderArgs) {
   params.invoiceId; // "123"
@@ -83,7 +83,7 @@ export async function loader({ params }: LoaderArgs) {
 
 Params are mostly useful for looking up records by ID:
 
-```tsx filename=app/routes/invoices/$invoiceId.tsx
+```tsx filename=app/routes/invoices.$invoiceId.tsx
 // if the user visits /invoices/123
 export async function loader({ params }: LoaderArgs) {
   const invoice = await fakeDb.getInvoice(params.invoiceId);
@@ -233,7 +233,7 @@ export async function requireUserSession(request) {
 }
 ```
 
-```tsx filename=app/routes/invoice/$invoiceId.tsx
+```tsx filename=app/routes/invoice.$invoiceId.tsx
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
