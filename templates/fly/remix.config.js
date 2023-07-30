@@ -10,6 +10,5 @@ module.exports = {
     v2_dev: true,
 
     v2_meta: true,
-    v2_routeConvention: true,
   },
 };

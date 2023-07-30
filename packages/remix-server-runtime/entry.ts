@@ -23,7 +23,6 @@ type Dev = {
 export interface FutureConfig {
   v2_dev: boolean | Dev;
   v2_meta: boolean;
-  v2_routeConvention: boolean;
 }
 
 export interface AssetsManifest {

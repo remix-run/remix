@@ -9,7 +9,6 @@ import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions }
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
-import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
@@ -39,7 +38,6 @@ type Dev = {
 interface FutureConfig {
   v2_dev: boolean | Dev;
   v2_meta: boolean;
-  v2_routeConvention: boolean;
 }
 
 type ServerNodeBuiltinsPolyfillOptions = Pick<
@@ -595,21 +593,9 @@ export async function readConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  let routesConvention: typeof flatRoutes;
-
-  if (appConfig.future?.v2_routeConvention) {
-    routesConvention = flatRoutes;
-  } else {
-    flatRoutesWarning();
-    routesConvention = defineConventionalRoutes;
-  }
-
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = routesConvention(
-      appDirectory,
-      appConfig.ignoredRouteFiles
-    );
-    for (let route of Object.values(conventionalRoutes)) {
+    let fileRoutes = flatRoutes(appDirectory, appConfig.ignoredRouteFiles);
+    for (let route of Object.values(fileRoutes)) {
       routes[route.id] = { ...route, parentId: route.parentId || "root" };
     }
   }
@@ -649,7 +635,6 @@ export async function readConfig(
   let future: FutureConfig = {
     v2_dev: appConfig.future?.v2_dev ?? false,
     v2_meta: appConfig.future?.v2_meta === true,
-    v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
   return {
@@ -775,12 +760,6 @@ let futureFlagWarning =
       ],
     });
   };
-
-let flatRoutesWarning = futureFlagWarning({
-  message: "The route file convention is changing in v2",
-  flag: "v2_routeConvention",
-  link: "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention",
-});
 
 let metaWarning = futureFlagWarning({
   message: "The route `meta` API is changing in v2",

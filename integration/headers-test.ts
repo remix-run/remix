@@ -15,11 +15,6 @@ test.describe("headers export", () => {
   test.beforeAll(async () => {
     appFixture = await createFixture(
       {
-        config: {
-          future: {
-            v2_routeConvention: true,
-          },
-        },
         files: {
           "app/root.jsx": js`
             import { json } from "@remix-run/node";
@@ -224,9 +219,6 @@ test.describe("headers export", () => {
 
     let fixture = await createFixture(
       {
-        config: {
-          future: { v2_routeConvention: true },
-        },
         files: {
           "app/root.jsx": js`
             import { Links, Meta, Outlet, Scripts } from "@remix-run/react";

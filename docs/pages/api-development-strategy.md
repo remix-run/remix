@@ -54,7 +54,6 @@ The lifecycle is thus either:
 | -------------------- | --------------------------------------------------------------- |
 | `v2_dev`             | Enable the new development server (including HMR/HDR support)   |
 | `v2_meta`            | Enable the new API for your `meta` functions                    |
-| `v2_routeConvention` | Enable the flat routes style of file-based routing              |
 
 [future-flags-blog-post]: https://remix.run/blog/future-flags
 [feature-flowchart]: /docs-images/feature-flowchart.png
