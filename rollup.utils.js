@@ -1,9 +1,9 @@
 const babel = require("@rollup/plugin-babel").default;
 const copy = require("rollup-plugin-copy");
-const fs = require("fs");
+const fs = require("node:fs");
 const fse = require("fs-extra");
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
-const path = require("path");
+const path = require("node:path");
 
 const REPO_ROOT_DIR = __dirname;
 

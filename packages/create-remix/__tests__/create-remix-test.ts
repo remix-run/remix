@@ -1,8 +1,8 @@
-import type { ChildProcessWithoutNullStreams } from "child_process";
-import { spawn } from "child_process";
-import { tmpdir } from "os";
-import path from "path";
-import { pathToFileURL } from "url";
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import { spawn } from "node:child_process";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
 import semver from "semver";
 import stripAnsi from "strip-ansi";

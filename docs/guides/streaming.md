@@ -81,7 +81,7 @@ Let's take a dive into how to accomplish this.
 First, to enable streaming with React 18, you'll update your `entry.server.tsx` file to use `renderToPipeableStream`. Here's a simple (and incomplete) version of that:
 
 ```tsx filename=app/entry.server.tsx lines=[1,10,20,27,32,37]
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 
 import { Response } from "@remix-run/node"; // or cloudflare/deno
 import type {
@@ -131,7 +131,7 @@ export default function handleRequest(
 This handles errors and properly disables streaming for bots which you typically want to force waiting, so you can display all the content for SEO purposes.
 
 ```tsx filename=app/entry.server.tsx
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 
 import { Response } from "@remix-run/node"; // or cloudflare/deno
 import type {
