@@ -184,3 +184,58 @@ Note that, even if this issue didn't exist, we'd still recommend using named re-
 [remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../utils/parse-multipart-form-data#uploadhandler
 [css-bundling]: ../guides/styling#css-bundling
 [esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370
+
+
+## Minimizing Bundle Size
+
+As you continue to develop you may start including larger packages and notice an impact on your build time. There are a few things you can do to minimize your build times that'll also end up being great for your end user (less javascript, faster load times!). Often times larger packages will centralize a location to easily import components or hooks into your app, this is great for convenience but can make it difficult for the compiler to tree shake out code that isn't used.
+
+Take for example MUI:
+
+```tsx bad
+import { Button, TextField } from '@mui/material';
+```
+
+Here Button and TextField are imported from the top-level index of the MUI package, this won't have a massive effect on users but can create more work for the compiler giving you longer build times. Instead you can do the following:
+
+```tsx good
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+```
+
+This lessens the work the compiler has to do and guarantees a smaller overall bundle size.
+
+Sometimes you may also import packages that you intend for server use only. Sometimes this will cause immediate errors, but other times the compiler may try adding polyfills that increase your overall bundle size. Take for example core node modules like node:crypto.
+
+```tsx bad
+import crypto from "node:crypto";
+
+import { json } from "@remix-run/node"; 
+
+export async function loader() {
+  const uuid = crypto.randomUUID();
+  return json({uuid});
+}
+```
+
+Importing crypto this way could lead to the bundler including polyfills for crypto into your client build even if it wasn't directly used on the client. An easy way to get around this is to centralize server imports inside a .server file. For example:
+
+```tsx filename=app/utils/Node.server.ts
+import crypto from "node:crypto";
+import fs from "node:fs";
+
+export { fs, crypto };
+```
+
+```tsx good filename=app/routes/some/route.tsx
+import { json } from "@remix-run/node";
+
+import { crypto } from "~/utils/Node.server";
+
+export async function loader(){
+  const uuid = crypto.randomUUID();
+  return json({uuid});
+}
+```
+
+This simple change can make a large change in your application build times and even help your end users load your application that much faster!
