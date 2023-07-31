@@ -74,33 +74,6 @@ app
     └── sales.tsx
 ```
 
-<details>
-
-<summary>Or if using the v1 routing convention:</summary>
-
-```
-app
-├── root.tsx
-└── routes
-    ├── accounts.tsx
-    ├── dashboard.tsx
-    ├── expenses.tsx
-    ├── index.tsx
-    ├── reports.tsx
-    ├── sales
-    │   ├── customers.tsx
-    │   ├── deposits.tsx
-    │   ├── index.tsx
-    │   ├── invoices
-    │   │   ├── $invoiceId.tsx
-    │   │   └── index.tsx
-    │   ├── invoices.tsx
-    │   └── subscriptions.tsx
-    └── sales.tsx
-```
-
-</details>
-
 - `root.tsx` is the "root route" that serves as the layout for the entire application. Every route will render inside its `<Outlet/>`.
 - Note that there are files with `.` delimiters. The `.` creates a `/` in the URL for that route, as well as layout nesting with another route that matches the segments before the `.`. For example, `sales.tsx` is the **parent route** for all the **child routes** that look like `sales.[the nested path].tsx`. The `<Outlet />` in `sales.tsx` will render the matching child route.
 - The `_index.tsx` routes will render inside the parent `<Outlet>` when the url is only as deep as the parent's path (like `example.com/sales` instead of `example.com/sales/customers`)

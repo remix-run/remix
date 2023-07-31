@@ -9,7 +9,6 @@ import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions }
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
-import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
@@ -38,8 +37,6 @@ type Dev = {
 
 interface FutureConfig {
   v2_dev: boolean | Dev;
-  v2_headers: boolean;
-  v2_routeConvention: boolean;
 }
 
 type ServerNodeBuiltinsPolyfillOptions = Pick<
@@ -396,10 +393,6 @@ export async function readConfig(
     }
   }
 
-  if (!appConfig.future?.v2_headers) {
-    headersWarning();
-  }
-
   let serverBuildPath = path.resolve(
     rootDirectory,
     appConfig.serverBuildPath ?? "build/index.js"
@@ -595,21 +588,9 @@ export async function readConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  let routesConvention: typeof flatRoutes;
-
-  if (appConfig.future?.v2_routeConvention) {
-    routesConvention = flatRoutes;
-  } else {
-    flatRoutesWarning();
-    routesConvention = defineConventionalRoutes;
-  }
-
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = routesConvention(
-      appDirectory,
-      appConfig.ignoredRouteFiles
-    );
-    for (let route of Object.values(conventionalRoutes)) {
+    let fileRoutes = flatRoutes(appDirectory, appConfig.ignoredRouteFiles);
+    for (let route of Object.values(fileRoutes)) {
       routes[route.id] = { ...route, parentId: route.parentId || "root" };
     }
   }
@@ -648,8 +629,6 @@ export async function readConfig(
 
   let future: FutureConfig = {
     v2_dev: appConfig.future?.v2_dev ?? false,
-    v2_headers: appConfig.future?.v2_headers === true,
-    v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
   return {
@@ -764,26 +743,3 @@ let serverModuleFormatWarning = () =>
     ],
     key: "serverModuleFormatWarning",
   });
-
-let futureFlagWarning =
-  (args: { message: string; flag: string; link: string }) => () => {
-    logger.warn(args.message, {
-      key: args.flag,
-      details: [
-        `You can use the \`${args.flag}\` future flag to opt-in early.`,
-        `-> ${args.link}`,
-      ],
-    });
-  };
-
-let flatRoutesWarning = futureFlagWarning({
-  message: "The route file convention is changing in v2",
-  flag: "v2_routeConvention",
-  link: "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention",
-});
-
-let headersWarning = futureFlagWarning({
-  message: "The route `headers` API is changing in v2",
-  flag: "v2_headers",
-  link: "https://remix.run/docs/en/v1.17.0/pages/v2#route-headers",
-});

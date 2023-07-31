@@ -6,7 +6,4 @@ module.exports = {
   // serverBuildPath: "build/index.js",
   // publicPath: "/build/",
   serverModuleFormat: "cjs",
-  future: {
-    v2_routeConvention: true,
-  },
 };

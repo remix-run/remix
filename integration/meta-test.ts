@@ -17,9 +17,6 @@ test.describe("meta", () => {
     fixture = await createFixture({
       config: {
         ignoredRouteFiles: ["**/.*"],
-        future: {
-          v2_routeConvention: true,
-        },
       },
       files: {
         "app/root.jsx": js`

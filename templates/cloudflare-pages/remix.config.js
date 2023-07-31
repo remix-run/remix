@@ -15,8 +15,5 @@ export default {
   // publicPath: "/build/",
   future: {
     v2_dev: true,
-
-    v2_headers: true,
-    v2_routeConvention: true,
   },
 };
