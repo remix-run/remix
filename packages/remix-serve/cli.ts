@@ -2,8 +2,11 @@ import "./env";
 import path from "path";
 import os from "os";
 import { broadcastDevReady } from "@remix-run/node";
+import sourceMapSupport from "source-map-support";
 
 import { createApp } from "./index";
+
+sourceMapSupport.install();
 
 let port = process.env.PORT ? Number(process.env.PORT) : 3000;
 if (Number.isNaN(port)) port = 3000;
