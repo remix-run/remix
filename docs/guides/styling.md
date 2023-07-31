@@ -580,7 +580,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
-   ```tsx filename=app/root.tsx lines=[22-24]
+   ```tsx filename=app/root.tsx lines=[21-23]
    import {
      Links,
      LiveReload,
