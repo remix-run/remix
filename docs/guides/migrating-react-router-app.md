@@ -658,7 +658,7 @@ Similar to `links`, each route can also export a `meta` function that returns va
 The behavior for `meta` is slightly different from `links`. Instead of merging values from other `meta` functions in the route hierarchy, **each leaf route is responsible for rendering its own tags**. This is because:
 
 - You often want more fine-grained control over metadata for optimal SEO
-- In the case of some tags that follow the [Open Graph protocol](https://ogp.me/), the ordering of some tags impacts how they are interpreted by crawlers and social media sites, and it's less predictable for Remix to assume how complex metadata should be merged
+- In the case of some tags that follow the [Open Graph protocol][open-graph-protocol], the ordering of some tags impacts how they are interpreted by crawlers and social media sites, and it's less predictable for Remix to assume how complex metadata should be merged
 - Some tags allow for multiple values while others do not, and Remix shouldn't assume how you want to handle all of those cases
 
 ### Updating imports
@@ -727,3 +727,4 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [vanilla-extract]: ./styling#vanilla-extract
 [css-side-effect-imports]: ./styling#css-side-effect-imports
 [css-bundling]: ./styling#css-bundling
+[open-graph-protocol]: https://ogp.me

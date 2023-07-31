@@ -59,6 +59,9 @@ export type {
   SerializeFrom,
   ServerBuild,
   ServerEntryModule,
+  ServerRuntimeMetaArgs as MetaArgs,
+  ServerRuntimeMetaDescriptor as MetaDescriptor,
+  ServerRuntimeMetaFunction as MetaFunction,
   Session,
   SessionData,
   SessionIdStorageStrategy,
@@ -69,7 +72,4 @@ export type {
   UnsignFunction,
   UploadHandler,
   UploadHandlerPart,
-  ServerRuntimeMetaArgs as MetaArgs,
-  ServerRuntimeMetaDescriptor as MetaDescriptor,
-  ServerRuntimeMetaFunction as MetaFunction,
 } from "@remix-run/server-runtime";
