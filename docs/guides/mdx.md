@@ -51,7 +51,7 @@ import SomeComponent from "~/components/some-component";
 
 ### Example
 
-By creating a `app/routes/posts/first-post.mdx` we can start writing a blog post:
+By creating a `app/routes/posts.first-post.mdx` we can start writing a blog post:
 
 ```mdx
 ---
@@ -126,7 +126,7 @@ import Component, {
 
 The following example demonstrates how you might build a simple blog with MDX, including individual pages for the posts themselves and an index page that shows all posts.
 
-```tsx filename=app/routes/index.tsx
+```tsx filename=app/routes/_index.tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { Link, useLoaderData } from "@remix-run/react";
 
