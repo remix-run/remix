@@ -163,7 +163,7 @@ interface HtmlLinkPreloadImage extends HtmlLinkProps {
  * WHATWG Specification: https://html.spec.whatwg.org/multipage/semantics.html#the-link-element
  */
 export type HtmlLinkDescriptor =
-  // Must have a href *unless* it's a `<link rel="preload" as="image">` with an
+  // Must have an href *unless* it's a `<link rel="preload" as="image">` with an
   // `imageSrcSet` and `imageSizes` props
   | (HtmlLinkProps & Pick<Required<HtmlLinkProps>, "href">)
   | (HtmlLinkPreloadImage & Pick<Required<HtmlLinkPreloadImage>, "imageSizes">)
