@@ -50,10 +50,10 @@ The lifecycle is thus either:
 
 ## Current Future Flags
 
-| Flag                 | Description                                                     |
-| -------------------- | --------------------------------------------------------------- |
-| `v2_dev`             | Enable the new development server (including HMR/HDR support)   |
-| `v2_meta`            | Enable the new API for your `meta` functions                    |
+| Flag      | Description                                                   |
+| --------- | ------------------------------------------------------------- |
+| `v2_dev`  | Enable the new development server (including HMR/HDR support) |
+| `v2_meta` | Enable the new API for your `meta` functions                  |
 
 [future-flags-blog-post]: https://remix.run/blog/future-flags
 [feature-flowchart]: /docs-images/feature-flowchart.png
