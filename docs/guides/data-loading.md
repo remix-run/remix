@@ -51,9 +51,9 @@ If your server-side modules end up in client bundles, move the imports for those
 
 ## Route Params
 
-When you name a file with `$` like `routes/users/$userId.tsx` and `routes/users/$userId/projects/$projectId.tsx` the dynamic segments (the ones starting with `$`) will be parsed from the URL and passed to your loader on a `params` object.
+When you name a file with `$` like `app/routes/users.$userId.tsx` and `app/routes/users.$userId.projects.$projectId.tsx` the dynamic segments (the ones starting with `$`) will be parsed from the URL and passed to your loader on a `params` object.
 
-```tsx filename=routes/users/$userId/projects/$projectId.tsx
+```tsx filename=app/routes/users.$userId.projects.$projectId.tsx
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader = async ({ params }: LoaderArgs) => {
@@ -71,7 +71,7 @@ Given the following URLs, the params would be parsed as follows:
 
 These params are most useful for looking up data:
 
-```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[8,9]
+```tsx filename=app/routes/users.$userId.projects.$projectId.tsx lines=[8,9]
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
@@ -91,7 +91,7 @@ export const loader = async ({ params }: LoaderArgs) => {
 
 Because these params come from the URL and not your source code, you can't know for sure if they will be defined. That's why the types on the param's keys are `string | undefined`. It's good practice to validate before using them, especially in TypeScript to get type safety. Using `invariant` makes it easy.
 
-```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[2,5-6]
+```tsx filename=app/routes/users.$userId.projects.$projectId.tsx lines=[2,5-6]
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import invariant from "tiny-invariant";
 
@@ -287,7 +287,7 @@ export const loader = async ({
 
 URL Search Params are the portion of the URL after a `?`. Other names for this are "query string", "search string", or "location search". You can access the values by creating a URL out of the `request.url`:
 
-```tsx filename=routes/products.tsx lines=[5-6]
+```tsx filename=app/routes/products.tsx lines=[5-6]
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 

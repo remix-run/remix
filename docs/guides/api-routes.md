@@ -12,7 +12,7 @@ In general, you don't need the concept of "API Routes" at all. But we knew you'd
 
 Consider this route:
 
-```tsx filename=routes/teams.tsx
+```tsx filename=app/routes/teams.tsx
 export async function loader() {
   return json(await getTeams());
 }
@@ -34,7 +34,7 @@ You can `useFetcher` for cases like this. And once again, since Remix in the bro
 
 For example, you could have a route to handle the search:
 
-```tsx filename=routes/city-search.tsx
+```tsx filename=app/routes/city-search.tsx
 export async function loader({ request }: LoaderArgs) {
   const url = new URL(request.url);
   return json(
