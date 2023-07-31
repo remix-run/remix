@@ -1323,7 +1323,7 @@ export const LiveReload =
                             imported
                           );
                           if (accepted) {
-                            console.log("[HMR] Updated accepted by", update.id);
+                            console.log("[HMR] Update accepted by", update.id);
                             updateAccepted = true;
                           }
                         }
@@ -1333,12 +1333,12 @@ export const LiveReload =
                           { needsRevalidation, assetsManifest: event.assetsManifest }
                         );
                         if (accepted) {
-                          console.log("[HMR] Updated accepted by", "remix:manifest");
+                          console.log("[HMR] Update accepted by", "remix:manifest");
                           updateAccepted = true;
                         }
                       }
                       if (!updateAccepted) {
-                        console.log("[HMR] Updated rejected, reloading...");
+                        console.log("[HMR] Update rejected, reloading...");
                         window.location.reload();
                       }
                     }
