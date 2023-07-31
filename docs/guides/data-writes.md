@@ -143,7 +143,7 @@ Whether you use `<form>` or `<Form>` though, you write the very same code. You c
 
 Let's start with our project form from earlier but make it usable:
 
-Let's say you've got the route `app/routes/projects/new.js` with this form in it:
+Let's say you've got the route `app/routes/projects.new.js` with this form in it:
 
 ```tsx
 export default function NewProject() {

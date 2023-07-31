@@ -50,12 +50,10 @@ The lifecycle is thus either:
 
 ## Current Future Flags
 
-| Flag                 | Description                                                     |
-| -------------------- | --------------------------------------------------------------- |
-| `v2_dev`             | Enable the new development server (including HMR/HDR support)   |
-| `v2_headers`         | Leverage ancestor `headers` if children do not export `headers` |
-| `v2_meta`            | Enable the new API for your `meta` functions                    |
-| `v2_routeConvention` | Enable the flat routes style of file-based routing              |
+| Flag      | Description                                                   |
+| --------- | ------------------------------------------------------------- |
+| `v2_dev`  | Enable the new development server (including HMR/HDR support) |
+| `v2_meta` | Enable the new API for your `meta` functions                  |
 
 [future-flags-blog-post]: https://remix.run/blog/future-flags
 [feature-flowchart]: /docs-images/feature-flowchart.png
