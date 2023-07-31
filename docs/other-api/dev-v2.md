@@ -41,9 +41,9 @@ The Remix compiler will:
 
 🎥 For an introduction and deep dive into HMR and HDR in Remix, check out our videos:
 
-- [HMR and Hot Data Revalidation with v2_dev 🔥][hmr-and-hdr]
+- [HMR and Hot Data Revalidation 🔥][hmr-and-hdr]
 - [Mental model for the new dev flow 🧠][mental-model]
-- [Migrating your project to v2_dev 🚚][migrating]
+- [Migrating your project to v2 dev flow 🚚][migrating]
 
 <docs-info>
 
@@ -61,38 +61,12 @@ To learn more about how HMR and HDR work together, check out [Pedro's talk at Re
 
 </docs-info>
 
-### With `remix-serve`
-
-Enable the `v2_dev`:
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  future: {
-    v2_dev: true,
-  },
-};
-```
-
-That's it!
-
 ### With custom app server
 
-If you used a template to get started, hopefully it's integrated with `v2_dev` out-of-the-box.
-If not, you can follow these steps to integrate your project with `v2_dev`:
+If you used a template to get started, hopefully it's already integrated with `remix dev` out-of-the-box.
+If not, you can follow these steps to integrate your project with `remix dev`:
 
-1. Enable the `v2_dev`:
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  future: {
-    v2_dev: true,
-  },
-};
-```
-
-2. Replace your dev scripts in `package.json` and use `-c` to specify your app server command:
+1. Replace your dev scripts in `package.json` and use `-c` to specify your app server command:
 
 ```json
 {
@@ -100,7 +74,7 @@ module.exports = {
 }
 ```
 
-3. Ensure `broadcastDevReady` is called when your app server is up and running:
+2. Ensure `broadcastDevReady` is called when your app server is up and running:
 
 ```js filename=server.js lines=[12,25-27]
 import path from "node:path";
@@ -154,19 +128,16 @@ Options priority order is: 1. flags, 2. config, 3. defaults.
 | TLS key         | `--tls-key`        | `tlsKey`  | N/A                               | TLS key for configuring local HTTPS                      |
 | TLS certificate | `--tls-cert`       | `tlsCert` | N/A                               | TLS certificate for configuring local HTTPS              |
 
-To set options in your config, replace `v2_dev: true` with an object.
 For example:
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
-  future: {
-    v2_dev: {
-      // ...any other options you want to set go here...
-      manual: true,
-      tlsKey: "./key.pem",
-      tlsCert: "./cert.pem",
-    },
+  dev: {
+    // ...any other options you want to set go here...
+    manual: true,
+    tlsKey: "./key.pem",
+    tlsCert: "./cert.pem",
   },
 };
 ```
@@ -304,7 +275,7 @@ To get the Remix compiler to interop with TLS, you'll need to specify the TLS ce
 remix dev --tls-key=key.pem --tls-cert=cert.pem -c "node ./server.js"
 ```
 
-Alternatively, you can specify the TLS key and cert via the `v2_dev.tlsCert` and `v2_dev.tlsKey` config options.
+Alternatively, you can specify the TLS key and cert via the `dev.tlsCert` and `dev.tlsKey` config options.
 Now your app server and Remix compiler are TLS ready!
 
 ### How to integrate with a reverse proxy
