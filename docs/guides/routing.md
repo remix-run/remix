@@ -169,7 +169,7 @@ This usually comes up when folks are just getting started with Remix and put the
 
 ### What is the `?index` query param?
 
-You may notice an `?index` query parameter showing up on your URLs from time to time, particularly when you are submitting a `<Form>` from an index route. This is required to differentiate index routes from their parent layout routes. Consider the following structure, where a URL such as `/sales/invoices` would be ambiguous. Is that referring to the `routes/sales.invoices.tsx` file? Or is it referring to the `routes/sales.invoices._index.tsx` file? In order to avoid this ambiguity, Remix uses the `?index` parameter to indicate when a URL refers to the index route instead of the layout route.
+You may notice an `?index` query parameter showing up on your URLs from time to time, particularly when you are submitting a `<Form>` from an index route. This is required to differentiate index routes from their parent layout routes. Consider the following structure, where a URL such as `/sales/invoices` would be ambiguous. Is that referring to the `app/routes/sales.invoices.tsx` file? Or is it referring to the `app/routes/sales.invoices._index.tsx` file? In order to avoid this ambiguity, Remix uses the `?index` parameter to indicate when a URL refers to the index route instead of the layout route.
 
 ```
 └── app
@@ -245,7 +245,7 @@ If we remove "edit" from the URL like this: "example.com/sales/invoices/2000", t
 - Layout Nesting + Nested URLs: happens automatically with `.` delimiters that match parent route names.
 - `trailing_` underscore on the segment matching the parent route opts-out of layout nesting.
 
-You can introduce nesting or non-nesting at any level of your routes, like `app/routes/invoices.$id_.edit.js`, which matches the URL `/invoices/123/edit` but does not create nesting inside of `$id.js`, it would nest with `routes/invoices.tsx` instead.
+You can introduce nesting or non-nesting at any level of your routes, like `app/routes/invoices.$id_.edit.tsx`, which matches the URL `/invoices/123/edit` but does not create nesting inside of `$id.tsx`, it would nest with `app/routes/invoices.tsx` instead.
 
 ## Pathless Layout Routes
 
@@ -363,7 +363,7 @@ export async function loader({ params }: LoaderArgs) {
 
 You can add splats at any level of your route hierarchy. Any sibling routes will match first (like `/files/mine`).
 
-It's common to add a `routes/$.tsx` file build custom 404 pages with data from a loader (without it, Remix renders your root `ErrorBoundary` with no ability to load data for the page when the URL doesn't match any routes).
+It's common to add a `app/routes/$.tsx` file build custom 404 pages with data from a loader (without it, Remix renders your root `ErrorBoundary` with no ability to load data for the page when the URL doesn't match any routes).
 
 ## Conclusion
 

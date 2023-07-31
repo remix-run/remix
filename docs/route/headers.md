@@ -42,10 +42,8 @@ Because Remix has nested routes, there's a battle of the headers to be won when 
 
 ```
 ├── users.tsx
-└── users
-    ├── $userId.tsx
-    └── $userId
-        └── profile.tsx
+├── users.$userId.tsx
+└── users.$userId.profile.tsx
 ```
 
 If we are looking at `/users/123/profile` then three routes are rendering:
@@ -58,11 +56,11 @@ If we are looking at `/users/123/profile` then three routes are rendering:
 </Users>
 ```
 
-If a user is looking at `/users/123/profile` and `profile.tsx` does not export a `headers` function, then Remix will use the return value of `$userId.tsx`'s `headers` function. If that file doesn't export one, then it will use the result of the one in `users.tsx`, and so on.
+If a user is looking at `/users/123/profile` and `users.$userId.profile.tsx` does not export a `headers` function, then Remix will use the return value of `users.$userId.tsx`'s `headers` function. If that file doesn't export one, then it will use the result of the one in `users.tsx`, and so on.
 
-If all three define `headers`, the deepest module wins, in this case `profile.tsx`. However, if your `profile.tsx` loader threw and bubbled to a boundary in `userId.tsx` - then `userId.tsx`'s `headers` function would be used as it is the leaf rendered route.
+If all three define `headers`, the deepest module wins, in this case `users.$userId.profile.tsx`. However, if your `users.$userId.profile.tsx`'s `loader` threw and bubbled to a boundary in `users.userId.tsx` - then `users.userId.tsx`'s `headers` function would be used as it is the leaf rendered route.
 
-We don't want surprise headers in your responses, so it's your job to merge them if you'd like. Remix passes in the `parentHeaders` to your `headers` function. So `users.tsx` headers get passed to `$userId.tsx`, and then `$userId.tsx` headers are passed to `profile.tsx` headers.
+We don't want surprise headers in your responses, so it's your job to merge them if you'd like. Remix passes in the `parentHeaders` to your `headers` function. So `users.$userId.users.tsx` headers get passed to `users.$userId.tsx`, and then `users.$userId.tsx`'s `headers` are passed to `users.$userId.profile.tsx`'s `headers`.
 
 That is all to say that Remix has given you a very large gun with which to shoot your foot. You need to be careful not to send a `Cache-Control` from a child route module that is more aggressive than a parent route. Here's some code that picks the least aggressive caching in these cases:
 
@@ -96,9 +94,9 @@ export const headers: HeadersFunction = ({
 
 All that said, you can avoid this entire problem by _not defining headers in parent routes_ and only in leaf routes. Every layout that can be visited directly will likely have an "index route". If you only define headers on your leaf routes, not your parent routes, you will never have to worry about merging headers.
 
-Note that you can also add headers in your `entry.server` file for things that should be global, for example:
+Note that you can also add headers in your `entry.server.tsx` file for things that should be global, for example:
 
-```tsx lines=[20]
+```tsx filename=app/entry.server.tsx lines=[20]
 import type {
   AppLoadContext,
   EntryContext,
