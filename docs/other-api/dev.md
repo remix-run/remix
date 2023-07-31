@@ -70,7 +70,9 @@ If not, you can follow these steps to integrate your project with `remix dev`:
 
 ```json filename=package.json
 {
-  "dev": "remix dev -c \"node ./server.js\""
+  "scripts": {
+    "dev": "remix dev -c \"node ./server.js\""
+  }
 }
 ```
 
