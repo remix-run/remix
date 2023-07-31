@@ -464,7 +464,6 @@ If you are using TypeScript, you likely already have a `tsconfig.json` in your p
   "compilerOptions": {
     "jsx": "react-jsx",
     "resolveJsonModule": true,
-    "baseUrl": ".",
     "paths": {
       "~/*": ["./app/*"]
     }
@@ -482,7 +481,6 @@ If you are using TypeScript, you likely already have a `tsconfig.json` in your p
     "jsx": "react-jsx",
     "resolveJsonModule": true,
     "moduleResolution": "Bundler",
-    "baseUrl": ".",
     "noEmit": true,
     "paths": {
       "~/*": ["./app/*"]
