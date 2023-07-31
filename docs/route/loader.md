@@ -135,7 +135,7 @@ app.all(
 
 And then your loader can access it.
 
-```tsx filename=routes/some-route.tsx
+```tsx filename=app/routes/some-route.tsx
 export async function loader({ context }: LoaderArgs) {
   const { expressUser } = context;
   // ...

@@ -18,9 +18,9 @@ export const links: LinksFunction = () => {
 };
 ```
 
-Each nested route's `links` are merged (parents first) and rendered as `<link>` tags by the `<Links/>` you rendered in `app/root.js` in the head of the document.
+Each nested route's `links` are merged (parents first) and rendered as `<link>` tags by the `<Links/>` you rendered in `app/root.tsx` in the head of the document.
 
-```tsx filename=app/root.js lines=[1,7]
+```tsx filename=app/root.tsx lines=[1,7]
 import { Links } from "@remix-run/react";
 // ...
 export default function Root() {
@@ -170,7 +170,7 @@ This also makes it easy for routes to adjust the styles of a component without n
 
 A second approach is to write individual css files per component and then "surface" the styles up to the routes that use them.
 
-Perhaps you have a `<Button>` in `app/components/button/index.js` with styles at `app/components/button/styles.css` as well as a `<PrimaryButton>` that extends it.
+Perhaps you have a `<Button>` in `app/components/button/index.tsx` with styles at `app/components/button/styles.css` as well as a `<PrimaryButton>` that extends it.
 
 Note that these are not routes, but they export `links` functions as if they were. We'll use this to surface their styles to the routes that use them.
 
@@ -182,7 +182,7 @@ Note that these are not routes, but they export `links` functions as if they wer
 }
 ```
 
-```tsx filename=app/components/button/index.js lines=[1,3-5]
+```tsx filename=app/components/button/index.tsx lines=[1,3-5]
 import styles from "./styles.css";
 
 export const links = () => [
@@ -206,7 +206,7 @@ And then a `<PrimaryButton>` that extends it:
 }
 ```
 
-```tsx filename=app/components/primary-button/index.js lines=[1,6,13]
+```tsx filename=app/components/primary-button/index.tsx lines=[1,6,13]
 import { Button, links as buttonLinks } from "../button";
 
 import styles from "./styles.css";
@@ -230,9 +230,9 @@ Note that the primary button's `links` include the base button's links. This way
 
 Because these buttons are not routes, and therefore not associated with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
 
-Consider that `routes/_index.js` uses the primary button component:
+Consider that `app/routes/_index.tsx` uses the primary button component:
 
-```tsx filename=app/routes/_index.js lines=[1-4,9]
+```tsx filename=app/routes/_index.tsx lines=[1-4,9]
 import {
   PrimaryButton,
   links as primaryButtonLinks,
@@ -251,7 +251,7 @@ Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-b
 
 An initial reaction to this is that routes have to know more than you want them to. Keep in mind that each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
-```tsx filename=app/routes/$category.js lines=[5-9,25-32]
+```tsx filename=app/routes/$category.tsx lines=[5-9,25-32]
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
@@ -519,7 +519,7 @@ module.exports = (ctx) => {
 
 You can use CSS preprocessors like LESS and SASS. Doing so requires running an additional build process to convert these files to CSS files. This can be done via the command line tools provided by the preprocessor or any equivalent tool.
 
-Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export][route-module-links] function, or included via [side-effect imports][css-side-effect-imports] when using [CSS bundling][css-bundling], just like any other CSS file in Remix.
+Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export][route-module-links] function, or included via [side effect imports][css-side-effect-imports] when using [CSS bundling][css-bundling], just like any other CSS file in Remix.
 
 To ease development with CSS preprocessors you can add npm scripts to your `package.json` that generate CSS files from your SASS or LESS files. These scripts can be run in parallel alongside any other npm scripts that you run for developing a Remix application.
 
@@ -531,7 +531,7 @@ An example using SASS.
 npm add -D sass
 ```
 
-2. Add an npm script to your `package.json`'s `script` section' that uses the installed tool to generate CSS files.
+2. Add an npm script to your `package.json`'s `scripts` section that uses the installed tool to generate CSS files.
 
 ```json filename=package.json
 {
@@ -767,9 +767,9 @@ export const Button = React.forwardRef(
 Button.displayName = "Button";
 ```
 
-### CSS Side-Effect Imports
+### CSS Side Effect Imports
 
-Some NPM packages use side-effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling][css-bundling] in your application.
+Some NPM packages use side effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling][css-bundling] in your application.
 
 Since JavaScript runtimes don't support importing CSS in this way, you'll need to add any relevant packages to the [`serverDependenciesToBundle`][server-dependencies-to-bundle] option in your `remix.config.js` file. This ensures that any CSS imports are compiled out of your code before running it on the server. For example, to use React Spectrum:
 
