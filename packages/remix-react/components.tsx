@@ -50,7 +50,6 @@ import type {
   MetaMatch,
   MetaMatches,
 } from "./routeModules";
-import { logDeprecationOnce } from "./warnings";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -312,12 +311,6 @@ export function composeEventHandlers<
   };
 }
 
-let linksWarning =
-  "⚠️ REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. " +
-  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
-
 /**
  * Renders the `<link>` tags for the current routes.
  *
@@ -339,12 +332,6 @@ export function Links() {
     [matches, routeModules, manifest]
   );
 
-  React.useEffect(() => {
-    if (links.some((link) => "imagesizes" in link || "imagesrcset" in link)) {
-      logDeprecationOnce(linksWarning);
-    }
-  }, [links]);
-
   return (
     <>
       {links.map((link) => {
@@ -353,37 +340,32 @@ export function Links() {
         }
 
         let imageSrcSet: string | null = null;
+        let imageSizes: string | null = null;
 
         // In React 17, <link imageSrcSet> and <link imageSizes> will warn
         // because the DOM attributes aren't recognized, so users need to pass
         // them in all lowercase to forward the attributes to the node without a
         // warning. Normalize so that either property can be used in Remix.
-        if ("useId" in React) {
-          if (link.imagesrcset) {
-            link.imageSrcSet = imageSrcSet = link.imagesrcset;
-            delete link.imagesrcset;
-          }
+        let imageSizesKey = "useId" in React ? "imageSizes" : "imagesizes";
+        let imageSrcSetKey = "useId" in React ? "imageSrcSet" : "imagesrcset";
+        if (link.imageSrcSet) {
+          imageSrcSet = link.imageSrcSet;
+          delete link.imageSrcSet;
+        }
 
-          if (link.imagesizes) {
-            link.imageSizes = link.imagesizes;
-            delete link.imagesizes;
-          }
-        } else {
-          if (link.imageSrcSet) {
-            link.imagesrcset = imageSrcSet = link.imageSrcSet;
-            delete link.imageSrcSet;
-          }
-
-          if (link.imageSizes) {
-            link.imagesizes = link.imageSizes;
-            delete link.imageSizes;
-          }
+        if (link.imageSizes) {
+          imageSizes = link.imageSizes;
+          delete link.imageSizes;
         }
 
         return (
           <link
             key={link.rel + (link.href || "") + (imageSrcSet || "")}
-            {...link}
+            {...{
+              ...link,
+              [imageSizesKey]: imageSizes,
+              [imageSrcSetKey]: imageSrcSet,
+            }}
           />
         );
       })}
