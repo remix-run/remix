@@ -48,12 +48,5 @@ The lifecycle is thus either:
 - Breaking + Stable API Feature -> `future.v2_` flag in current major -> Default behavior in next major
 - Breaking + Unstable API -> `future.unstable_` flag in current major -> `future.v2_` flag in current major -> Default behavior in next major
 
-## Current Future Flags
-
-| Flag      | Description                                                   |
-| --------- | ------------------------------------------------------------- |
-| `v2_dev`  | Enable the new development server (including HMR/HDR support) |
-| `v2_meta` | Enable the new API for your `meta` functions                  |
-
 [future-flags-blog-post]: https://remix.run/blog/future-flags
 [feature-flowchart]: /docs-images/feature-flowchart.png

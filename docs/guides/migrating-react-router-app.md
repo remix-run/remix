@@ -653,35 +653,13 @@ export const links: LinksFunction = () => {
 
 Just as a `<link>` is rendered inside your route component and ultimately rendered in your root `<Links />` component, your app may use some injection trickery to render additional components in the document `<head>`. Often this is done to change the document's `<title>` or `<meta>` tags.
 
-Similar to `links`, each route can also export a `meta` function that—you guessed it—returns a value responsible for rendering `<meta>` tags for that route. This is useful because each route often has its own.
+Similar to `links`, each route can also export a `meta` function that returns values responsible for rendering `<meta>` tags for that route (as well as a few other tags relevant for metadata, such as `<title>`, `<link rel="canonical">` and `<script type="application/ld+json">`).
 
-The API is slightly different for `meta`. Instead of an array, it returns an object where the keys represent the meta `name` attribute (or `property` in the case of OpenGraph tags) and the value is the `content` attribute. The object can also accept a `title` property that renders a `<title />` component specifically for that route.
+The behavior for `meta` is slightly different from `links`. Instead of merging values from other `meta` functions in the route hierarchy, **each leaf route is responsible for rendering its own tags**. This is because:
 
-```tsx filename=app/routes/about.tsx lines=[1,3-12]
-import type { MetaFunction } from "@remix-run/node"; // or cloudflare/deno
-
-export const meta: MetaFunction = () => {
-  return {
-    title: "About Us",
-    "og:title": "About Us",
-    description: "Doin hoodrat stuff with our friends",
-    "og:description": "Doin hoodrat stuff with our friends",
-    "og:image:url": "https://remix.run/og-image.png",
-    "og:image:alt": "Just doin a bunch of hoodrat stuff",
-  };
-};
-
-export default function About() {
-  return (
-    <main>
-      <h1>About us</h1>
-      <PageContent />
-    </main>
-  );
-}
-```
-
-Again—no more weird dances to get meta into your routes from deep in the component tree. Export them at the route level and let the server handle it. ✨
+- You often want more fine-grained control over metadata for optimal SEO
+- In the case of some tags that follow the [Open Graph protocol](https://ogp.me/), the ordering of some tags impacts how they are interpreted by crawlers and social media sites, and it's less predictable for Remix to assume how complex metadata should be merged
+- Some tags allow for multiple values while others do not, and Remix shouldn't assume how you want to handle all of those cases
 
 ### Updating imports
 
