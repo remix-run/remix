@@ -9,11 +9,11 @@ description: Frequently Asked Questions about Remix
 
 You can't 😅. During a client-side transition, to make your app as speedy as possible, Remix will call all of your loaders _in parallel_, in separate fetch requests. Each one of them needs to have its own authentication check.
 
-This is probably not different than what you were doing before Remix, it might just be more obvious now. Outside of Remix, when you make multiple fetches to your "API Routes", each of those endpoints needs to validate the user session. In other words, Remix route loaders are their own "API Route" and must be treated as such.
+This is probably not different from what you were doing before Remix, it might just be more obvious now. Outside of Remix, when you make multiple fetches to your "API Routes", each of those endpoints needs to validate the user session. In other words, Remix route loaders are their own "API Route" and must be treated as such.
 
 We recommend you create a function that validates the user session that can be added to any routes that require it.
 
-```tsx filename=app/session.js lines=[9-22]
+```ts filename=app/session.ts lines=[9-22]
 import {
   createCookieSessionStorage,
   redirect,
@@ -131,7 +131,7 @@ export default function Projects() {
 
 ## How can I have structured data in a form?
 
-If you're used to doing fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form-data] is a bit different than JSON.
+If you're used to doing fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form-data] is a bit different from JSON.
 
 - It can't have nested data, it's just "key value".
 - It _can_ have multiple entries on one key, unlike JSON.
