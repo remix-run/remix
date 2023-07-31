@@ -13,16 +13,7 @@ export interface EntryContext {
   serializeError(error: Error): SerializedError;
 }
 
-type Dev = {
-  port?: number;
-  appServerPort?: number;
-  remixRequestHandlerPath?: string;
-  rebuildPollIntervalMs?: number;
-};
-
-export interface FutureConfig {
-  v2_dev: boolean | Dev;
-}
+export interface FutureConfig {}
 
 export interface AssetsManifest {
   entry: {

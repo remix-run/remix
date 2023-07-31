@@ -124,7 +124,6 @@ export function createRemixStub(
     if (remixContextRef.current == null) {
       remixContextRef.current = {
         future: {
-          v2_dev: false,
           ...remixConfigFuture,
         },
         manifest: createManifest(routerRef.current.routes),
