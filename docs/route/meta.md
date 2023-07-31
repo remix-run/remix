@@ -114,8 +114,8 @@ The route's URL params. See [Dynamic Segments in the Routing Guide][url-params].
 
 In addition to the current route's data, often you'll want to access data from a route higher up in the route hierarchy. You can look it up by its route ID in `matches`.
 
-```tsx filename=routes/project/$pid/tasks/$tid.tsx
-import type { loader as projectDetailsLoader } from "../../../$pid";
+```tsx filename=app/routes/project.$pid.tasks.$tid.tsx
+import type { loader as projectDetailsLoader } from "./project.$pid";
 
 export async function loader({ params }: LoaderArgs) {
   return json({ task: await getTask(params.tid) });
@@ -123,10 +123,10 @@ export async function loader({ params }: LoaderArgs) {
 
 export const meta: MetaFunction<
   typeof loader,
-  { "routes/project/$pid": typeof projectDetailsLoader }
+  { "routes/project.$pid": typeof projectDetailsLoader }
 > = ({ data, matches }) => {
   const project = matches.find(
-    (match) => match.id === "routes/project/$pid"
+    (match) => match.id === "routes/project.$pid"
   ).project;
   const task = data.task;
   return [{ title: `${project.name}: ${task.name}` }];
@@ -161,7 +161,7 @@ export const meta: MetaFunction = () => {
 };
 ```
 
-```tsx bad filename=app/routes/projects/$id.tsx
+```tsx bad filename=app/routes/projects.$id.tsx
 export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
