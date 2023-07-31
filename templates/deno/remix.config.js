@@ -19,7 +19,6 @@ module.exports = {
   // serverBuildPath: "build/index.js",
   // publicPath: "/build/",
   future: {
-    v2_headers: true,
     v2_meta: true,
   },
 };

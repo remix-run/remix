@@ -34,7 +34,6 @@ type Dev = {
 
 export interface FutureConfig {
   v2_dev: boolean | Dev;
-  v2_headers: boolean;
   v2_meta: boolean;
 }
 
