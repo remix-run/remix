@@ -23,7 +23,7 @@
     "lambda-tester": "^4.0.1"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/",
