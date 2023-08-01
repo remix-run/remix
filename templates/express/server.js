@@ -5,6 +5,7 @@ import { broadcastDevReady, installGlobals } from "@remix-run/node";
 import compression from "compression";
 import express from "express";
 import morgan from "morgan";
+import sourceMapSupport from "source-map-support";
 
 // We'll make chokidar a dev dependency so it doesn't get bundled in production.
 const chokidar =
@@ -13,6 +14,7 @@ const chokidar =
 // const chokidar =
 //   process.env.NODE_ENV === "development" ? require("chokidar") : null;
 
+sourceMapSupport.install();
 installGlobals();
 
 
