@@ -38,21 +38,23 @@ declare global {
 }
 /* eslint-enable prefer-let/prefer-let */
 
-export interface RemixBrowserProps {}
+export interface RemixBrowserProps {
+  augmentRouteModules?: (routeModules: RouteModules) => RouteModules
+}
 
 declare global {
   interface ImportMeta {
     hot: any;
   }
 }
-
+type ResolvedHMRPromise = { router: Router, augmentRouteModules:  RemixBrowserProps["augmentRouteModules"]}
 let router: Router;
 let hmrAbortController: AbortController | undefined;
-let hmrRouterReadyResolve: ((router: Router) => void) | undefined;
+let hmrRouterReadyResolve: ((args:ResolvedHMRPromise) => void) | undefined;
 // There's a race condition with HMR where the remix:manifest is signaled before
 // the router is assigned in the RemixBrowser component. This promise gates the
 // HMR handler until the router is ready
-let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
+let hmrRouterReadyPromise = new Promise<ResolvedHMRPromise>((resolve) => {
   // body of a promise is executed immediately, so this can be resolved outside
   // of the promise body
   hmrRouterReadyResolve = resolve;
@@ -72,14 +74,17 @@ if (import.meta && import.meta.hot) {
       assetsManifest: EntryContext["manifest"];
       needsRevalidation: Set<string>;
     }) => {
-      let router = await hmrRouterReadyPromise;
+      let resolvedPromise = await hmrRouterReadyPromise;
+      
       // This should never happen, but just in case...
-      if (!router) {
+      if (!resolvedPromise) {
         console.error(
           "Failed to accept HMR update because the router was not ready."
         );
         return;
       }
+
+      let { router, augmentRouteModules } = resolvedPromise;
 
       let routeIds = [
         ...new Set(
@@ -136,7 +141,7 @@ if (import.meta && import.meta.hot) {
         )
       );
 
-      Object.assign(window.__remixRouteModules, newRouteModules);
+      Object.assign(window.__remixRouteModules, augmentRouteModules ? augmentRouteModules(newRouteModules) : newRouteModules);
       // Create new routes
       let routes = createClientRoutesWithHMRRevalidationOptOut(
         needsRevalidation,
@@ -174,7 +179,7 @@ if (import.meta && import.meta.hot) {
  * `app/entry.client.js`). This component is used by React to hydrate the HTML
  * that was received from the server.
  */
-export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
+export function RemixBrowser({ augmentRouteModules }: RemixBrowserProps): ReactElement {
   if (!router) {
     let routes = createClientRoutes(
       window.__remixManifest.routes,
@@ -222,7 +227,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
 
     // Notify that the router is ready for HMR
     if (hmrRouterReadyResolve) {
-      hmrRouterReadyResolve(router);
+      hmrRouterReadyResolve({ router, augmentRouteModules });
     }
   }
 
