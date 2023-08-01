@@ -1126,8 +1126,6 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
 
 // Dead Code Elimination magic for production builds.
 // This way devs don't have to worry about doing the NODE_ENV check themselves.
-// If running an un-bundled server outside of `remix dev` you will still need
-// to set the REMIX_DEV_SERVER_WS_PORT manually.
 export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
