@@ -1,5 +1,5 @@
-import * as path from "path";
-import { execSync } from "child_process";
+import * as path from "node:path";
+import { execSync } from "node:child_process";
 import * as fse from "fs-extra";
 import getPort, { makeRange } from "get-port";
 import prettyMs from "pretty-ms";
@@ -146,7 +146,8 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  devServer.liveReload(config);
+  let resolved = await resolveDev(config);
+  devServer.liveReload(config, resolved);
   return await new Promise(() => {});
 }
 

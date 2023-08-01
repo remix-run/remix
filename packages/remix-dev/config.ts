@@ -2,7 +2,6 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
-import getPort from "get-port";
 import NPMCliPackageJson from "@npmcli/package-json";
 import { coerce } from "semver";
 import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
@@ -35,9 +34,7 @@ type Dev = {
   tlsCert?: string;
 };
 
-interface FutureConfig {
-  v2_meta: boolean;
-}
+interface FutureConfig {}
 
 type ServerNodeBuiltinsPolyfillOptions = Pick<
   EsbuildPluginsNodeModulesPolyfillOptions,
@@ -85,13 +82,6 @@ export interface AppConfig {
    * Options for `remix dev`. See https://remix.run/docs/en/main/other-api/dev-v2#options-1
    */
   dev?: Dev;
-
-  /**
-   * @deprecated
-   *
-   * The port number to use for the dev server. Defaults to 8002.
-   */
-  devServerPort?: number;
 
   /**
    * @deprecated
@@ -260,11 +250,6 @@ export interface RemixConfig {
   dev: Dev;
 
   /**
-   * The port number to use for the dev (asset) server.
-   */
-  devServerPort: number;
-
-  /**
    * The delay before the dev (asset) server broadcasts a reload event.
    */
   devServerBroadcastDelay: number;
@@ -405,10 +390,6 @@ export async function readConfig(
         `Error loading Remix config at ${configFile}\n${String(error)}`
       );
     }
-  }
-
-  if (!appConfig.future?.v2_meta) {
-    metaWarning();
   }
 
   let serverBuildPath = path.resolve(
@@ -574,11 +555,7 @@ export async function readConfig(
     assetsBuildDirectory
   );
 
-  let devServerPort =
-    Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
-    (await getPort({ port: Number(appConfig.devServerPort) || 8002 }));
   // set env variable so un-bundled servers can use it
-  process.env.REMIX_DEV_SERVER_WS_PORT = String(devServerPort);
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
@@ -631,9 +608,7 @@ export async function readConfig(
     tsconfigPath = rootJsConfig;
   }
 
-  let future: FutureConfig = {
-    v2_meta: appConfig.future?.v2_meta === true,
-  };
+  let future: FutureConfig = {};
 
   return {
     appDirectory,
@@ -643,7 +618,6 @@ export async function readConfig(
     entryServerFile,
     entryServerFilePath,
     dev: appConfig.dev ?? {},
-    devServerPort,
     devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
     relativeAssetsBuildDirectory: assetsBuildDirectory,
@@ -748,20 +722,3 @@ let serverModuleFormatWarning = () =>
     ],
     key: "serverModuleFormatWarning",
   });
-
-let futureFlagWarning =
-  (args: { message: string; flag: string; link: string }) => () => {
-    logger.warn(args.message, {
-      key: args.flag,
-      details: [
-        `You can use the \`${args.flag}\` future flag to opt-in early.`,
-        `-> ${args.link}`,
-      ],
-    });
-  };
-
-let metaWarning = futureFlagWarning({
-  message: "The route `meta` API is changing in v2",
-  flag: "v2_meta",
-  link: "https://remix.run/docs/en/v1.15.0/pages/v2#meta",
-});

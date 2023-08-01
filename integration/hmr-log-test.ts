@@ -16,9 +16,6 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
     dev: {
       port: options.devPort,
     },
-    future: {
-      v2_meta: true,
-    },
   },
   files: {
     "package.json": json({
@@ -50,7 +47,7 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
     }),
 
     "server.js": js`
-      let path = require("path");
+      let path = require("node:path");
       let express = require("express");
       let { createRequestHandler } = require("@remix-run/express");
       let { logDevReady } = require("@remix-run/node");

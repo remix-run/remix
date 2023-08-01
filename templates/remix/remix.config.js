@@ -6,9 +6,4 @@ module.exports = {
   // serverBuildPath: "build/index.js",
   // publicPath: "/build/",
   serverModuleFormat: "cjs",
-  future: {
-    v2_dev: true,
-
-    v2_meta: true,
-  },
 };
