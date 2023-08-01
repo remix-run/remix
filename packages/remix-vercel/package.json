@@ -20,10 +20,17 @@
     "@types/supertest": "^2.0.10",
     "@vercel/node": "^2.12.0",
     "node-mocks-http": "^1.10.1",
-    "supertest": "^6.1.5"
+    "supertest": "^6.1.5",
+    "typescript": "^5.1.0"
   },
   "peerDependencies": {
-    "@vercel/node": "^2.4.0"
+    "@vercel/node": "^2.4.0",
+    "typescript": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=18.0.0"
