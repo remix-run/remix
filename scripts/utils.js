@@ -13,7 +13,6 @@ let remixPackages = {
     "cloudflare-pages",
     "cloudflare-workers",
     "express",
-    "netlify",
   ],
   runtimes: ["cloudflare", "deno", "node"],
   core: [

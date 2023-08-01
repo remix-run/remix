@@ -17,7 +17,6 @@ module.exports = {
     "packages/remix-dev",
     "packages/remix-eslint-config",
     "packages/remix-express",
-    "packages/remix-netlify",
     "packages/remix-node",
     "packages/remix-react",
     "packages/remix-serve",

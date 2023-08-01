@@ -11,7 +11,6 @@
     { "path": "packages/remix-css-bundle" },
     { "path": "packages/remix-dev" },
     { "path": "packages/remix-express" },
-    { "path": "packages/remix-netlify" },
     { "path": "packages/remix-node" },
     { "path": "packages/remix-react" },
     { "path": "packages/remix-serve" },
