@@ -2594,45 +2594,45 @@
   resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.7.2.tgz#cba1cf0a04bc04cb66027c51fa600e9cbc388bc8"
   integrity sha512-7Lcn7IqGMV+vizMPoEl5F0XDshcdDYtMI6uJLQdQz5CfZAwy3vvGKYSUk789qndt5dEC4HfSjviSYlSoHGL2+A==
 
-"@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
-  version "3.0.4"
-  resolved "https://registry.npmjs.org/@remix-run/web-blob/-/web-blob-3.0.4.tgz"
-  integrity sha512-AfegzZvSSDc+LwnXV+SwROTrDtoLiPxeFW+jxgvtDAnkuCX1rrzmVJ6CzqZ1Ai0bVfmJadkG5GxtAfYclpPmgw==
+"@remix-run/web-blob@^3.0.5":
+  version "3.0.5"
+  resolved "https://registry.npmjs.org/@remix-run/web-blob/-/web-blob-3.0.5.tgz#ead1d7334aafc8a8adcaea67cac8afca887e0f72"
+  integrity sha512-Mungj3erqCrq0+5zU/34NkeC2g+U7K6Uwa8uNiZgANvw0Wc64wKglk4MPQJZA0Y2tgPYXyrRn7uw4q75j6Hhww==
   dependencies:
-    "@remix-run/web-stream" "^1.0.0"
+    "@remix-run/web-stream" "^1.0.4"
     web-encoding "1.1.5"
 
-"@remix-run/web-fetch@^4.3.5":
-  version "4.3.5"
-  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.3.5.tgz#10e23082477e56ff496e4f02899a0389cdd249c9"
-  integrity sha512-cLLeNLvLRyFRhJLulzS98bb07kJ+ENkGaqUkBisdG4FNEoZF6tXtrTGLWJNJa1nAP/wFkMKEDxIP77LgAPyeow==
+"@remix-run/web-fetch@^4.3.6":
+  version "4.3.6"
+  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.3.6.tgz#7853f6496cfa2b9fb11298891b446062eab25738"
+  integrity sha512-ifadyJS+/7W6LhKyA8tIR9fBIPwLCFVpl1YCYg5i0ikykiXxE3IWtPVB1G51AJFghc1YgR7rq8BRJLsJeUbE5Q==
   dependencies:
-    "@remix-run/web-blob" "^3.0.4"
-    "@remix-run/web-form-data" "^3.0.3"
-    "@remix-run/web-stream" "^1.0.3"
+    "@remix-run/web-blob" "^3.0.5"
+    "@remix-run/web-form-data" "^3.0.5"
+    "@remix-run/web-stream" "^1.0.4"
     "@web3-storage/multipart-parser" "^1.0.0"
     abort-controller "^3.0.0"
     data-uri-to-buffer "^3.0.1"
     mrmime "^1.0.0"
 
-"@remix-run/web-file@^3.0.2":
-  version "3.0.2"
-  resolved "https://registry.npmjs.org/@remix-run/web-file/-/web-file-3.0.2.tgz"
-  integrity sha512-eFC93Onh/rZ5kUNpCQersmBtxedGpaXK2/gsUl49BYSGK/DvuPu3l06vmquEDdcPaEuXcsdGP0L7zrmUqrqo4A==
-  dependencies:
-    "@remix-run/web-blob" "^3.0.3"
-
-"@remix-run/web-form-data@^3.0.3":
+"@remix-run/web-file@^3.0.3":
   version "3.0.3"
-  resolved "https://registry.npmjs.org/@remix-run/web-form-data/-/web-form-data-3.0.3.tgz"
-  integrity sha512-wL4veBtVPazSpXfPMzrbmeV3IxuxCfcQYPerQ8BXRO5ahAEVw23tv7xS+yoX0XDO5j+vpRaSbhHJK1H5gF7eYQ==
+  resolved "https://registry.npmjs.org/@remix-run/web-file/-/web-file-3.0.3.tgz#bf8d26d5a10a8dfda8a94438df93f4ccdc786680"
+  integrity sha512-yPf6MSXNcaQ4H1vkT/TSgImnqqfvfVKZzjd0vz3wvR0MM1NmrYfLbSbwfFLXdESFnQpXItbyKsgYGeAUEawgBg==
+  dependencies:
+    "@remix-run/web-blob" "^3.0.5"
+
+"@remix-run/web-form-data@^3.0.5":
+  version "3.0.5"
+  resolved "https://registry.npmjs.org/@remix-run/web-form-data/-/web-form-data-3.0.5.tgz#72985933e53cd23ab3e48fd58de73fbbf9cd1731"
+  integrity sha512-txXJDzjDuTxF8MFvEp9AA2HF3oPcvmlE1I/6HIxeGpX3vpBtrCPw5KQ/nzgBZNuAxyxEm8ps6Ds/UZwoDyfGsQ==
   dependencies:
     web-encoding "1.1.5"
 
-"@remix-run/web-stream@^1.0.0", "@remix-run/web-stream@^1.0.3":
-  version "1.0.3"
-  resolved "https://registry.npmjs.org/@remix-run/web-stream/-/web-stream-1.0.3.tgz"
-  integrity sha512-wlezlJaA5NF6SsNMiwQnnAW6tnPzQ5I8qk0Y0pSohm0eHKa2FQ1QhEKLVVcDDu02TmkfHgnux0igNfeYhDOXiA==
+"@remix-run/web-stream@^1.0.4":
+  version "1.0.4"
+  resolved "https://registry.npmjs.org/@remix-run/web-stream/-/web-stream-1.0.4.tgz#de6194c22c0520603cde129a184e70429b4de57b"
+  integrity sha512-SVO42pH21I1sAhksGEM8ZBV/jc1mz6knZSg6Qo/2HPy9JTvtUykm3QMHtF2OMCTUXxdRW+4E/rphkPRyGc8WKw==
   dependencies:
     web-streams-polyfill "^3.1.1"
 
