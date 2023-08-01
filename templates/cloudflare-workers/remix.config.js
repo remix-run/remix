@@ -15,7 +15,4 @@ export default {
   // assetsBuildDirectory: "public/build",
   // serverBuildPath: "build/index.js",
   // publicPath: "/build/",
-  future: {
-    v2_dev: true,
-  },
 };

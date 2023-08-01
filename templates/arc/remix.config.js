@@ -7,7 +7,4 @@ export default {
   // appDirectory: "app",
   // assetsBuildDirectory: "public/build",
   serverModuleFormat: "esm",
-  future: {
-    v2_dev: true,
-  },
 };
