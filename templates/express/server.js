@@ -2,20 +2,26 @@ import * as fs from "node:fs";
 
 import { createRequestHandler } from "@remix-run/express";
 import { broadcastDevReady, installGlobals } from "@remix-run/node";
-import chokidar from "chokidar";
 import compression from "compression";
 import express from "express";
 import morgan from "morgan";
 
+// We'll make chokidar a dev dependency so it doesn't get bundled in production.
+const chokidar =
+  process.env.NODE_ENV === "development" ? await import("chokidar") : null;
+// Swap in this if using Remix in CJS mode
+// const chokidar =
+//   process.env.NODE_ENV === "development" ? require("chokidar") : null;
+
 installGlobals();
+
 
 const BUILD_PATH = "./build/index.js";
 /**
  * @type { import('@remix-run/node').ServerBuild | Promise<import('@remix-run/node').ServerBuild> }
  */
 let build = await import(BUILD_PATH);
-
-//Swap in this if using Remix in CJS mode
+// Swap in this if using Remix in CJS mode
 // let build = require(BUILD_PATH);
 
 const app = express();
@@ -97,7 +103,6 @@ function createDevRequestHandler() {
 }
 
 // ESM import cache busting
-// Swap this out for the CJS require cache below if you switch to serverModuleFormat: "cjs" in remix.config
 /**
  * @type {() => Promise<ServerBuild>}
  */
@@ -108,7 +113,7 @@ async function reimportServer() {
   return import(BUILD_PATH + "?t=" + stat.mtimeMs);
 }
 
-
+// Swap in this if using Remix in CJS mode
 // // CJS require cache busting
 // /**
 //  * @type {() => Promise<ServerBuild>}
