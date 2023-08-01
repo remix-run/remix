@@ -14,6 +14,7 @@ import { ServerMode } from "@remix-run/server-runtime/mode";
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
+import { installGlobals } from "../../build/node_modules/@remix-run/node";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 
@@ -37,6 +38,7 @@ export function json(value: JsonObject) {
 }
 
 export async function createFixture(init: FixtureInit, mode?: ServerMode) {
+  installGlobals();
   let projectDir = await createFixtureProject(init, mode);
   let buildPath = path.resolve(projectDir, "build");
   let app: ServerBuild = await import(buildPath);
