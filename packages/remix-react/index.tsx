@@ -74,10 +74,9 @@ export {
 
 export type { HtmlLinkDescriptor } from "./links";
 export type {
-  HtmlMetaDescriptor,
-  V2_MetaArgs,
-  V2_MetaDescriptor,
-  V2_MetaFunction,
+  MetaArgs,
+  MetaDescriptor,
+  MetaFunction,
   RouteModules as UNSAFE_RouteModules,
 } from "./routeModules";
 
