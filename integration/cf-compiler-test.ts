@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
-import fs from "fs/promises";
-import path from "path";
+import fs from "node:fs/promises";
+import path from "node:path";
 import shell from "shelljs";
 import glob from "glob";
 
@@ -28,9 +28,6 @@ test.describe("cloudflare compiler", () => {
 
   test.beforeAll(async () => {
     projectDir = await createFixtureProject({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       setup: "cloudflare",
       template: "cf-template",
       files: {

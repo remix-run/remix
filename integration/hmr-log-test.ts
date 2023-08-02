@@ -12,14 +12,8 @@ test.setTimeout(120_000);
 
 let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
   config: {
-    future: {
-      v2_dev: {
-        port: options.devPort,
-      },
-      v2_routeConvention: true,
-
-      v2_meta: true,
-      v2_headers: true,
+    dev: {
+      port: options.devPort,
     },
   },
   files: {
@@ -48,7 +42,7 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
         typescript: "0.0.0-local-version",
       },
       engines: {
-        node: ">=14.0.0",
+        node: ">=18.0.0",
       },
     }),
 
@@ -56,7 +50,9 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
       import path from "path";
       import express from "express";
       import { createRequestHandler } from "@remix-run/express";
-      import { logDevReady } from "@remix-run/node";
+      import { logDevReady, installGlobals } from "@remix-run/node";
+
+      installGlobals();
 
       const app = express();
       app.use(express.static("public", { immutable: true, maxAge: "1y" }));

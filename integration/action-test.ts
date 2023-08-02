@@ -17,11 +17,6 @@ test.describe("actions", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_routeConvention: true,
-        },
-      },
       files: {
         "app/routes/urlencoded.jsx": js`
           import { Form, useActionData } from "@remix-run/react";
@@ -110,10 +105,7 @@ test.describe("actions", () => {
 
   test.beforeEach(({ page }) => {
     page.on("console", (msg) => {
-      let text = msg.text();
-      if (!/DEPRECATED.*imagesizes.*imagesrcset/.test(text)) {
-        logs.push(text);
-      }
+      logs.push(msg.text());
     });
   });
 

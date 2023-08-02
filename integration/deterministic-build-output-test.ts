@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import globby from "globby";
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 import type { FixtureInit } from "./helpers/create-fixture.js";
 import { createFixtureProject, js, css } from "./helpers/create-fixture.js";
@@ -26,11 +26,6 @@ test("builds deterministically under different paths", async () => {
   //  * serverRouteModulesPlugin (implicitly tested by build)
   //  * vanillaExtractPlugin (via app/routes/foo.tsx' .css.ts file import)
   let init: FixtureInit = {
-    config: {
-      future: {
-        v2_routeConvention: true,
-      },
-    },
     files: {
       "postcss.config.js": js`
         export default {

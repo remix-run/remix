@@ -1,4 +1,4 @@
-import type { V2_MetaFunction, ActionArgs, LoaderArgs } from "@remix-run/node";
+import type { MetaFunction, ActionArgs, LoaderArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form, useCatch, useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
@@ -16,7 +16,7 @@ export async function loader({ request, params }: LoaderArgs) {
   return json({ note });
 }
 
-export const meta: V2_MetaFunction<typeof loader> = ({ data }) => {
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [{ title: "Note: " + data.note.title }];
 };
 
@@ -40,7 +40,7 @@ export default function NoteDetailsPage() {
       <Form method="post">
         <button
           type="submit"
-          className="rounded bg-blue-500  py-2 px-4 text-white hover:bg-blue-600 focus:bg-blue-400"
+          className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600 focus:bg-blue-400"
         >
           Delete
         </button>

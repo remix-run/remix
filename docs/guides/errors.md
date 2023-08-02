@@ -48,14 +48,12 @@ For example, consider these routes:
 
 ```sh
 routes
-├── sales
-│   ├── invoices
-│   │   └── $invoiceId.js
-│   └── invoices.js
-└── sales.js
+├── sales.tsx
+├── sales.invoices.tsx
+└── sales.invoices.$invoiceId.tsx
 ```
 
-If `$invoiceId.js` exports an `ErrorBoundary` and an error is thrown in its component, loader, or action, the rest of the app renders normally and only the invoice section of the page renders the error.
+If `sales.invoices.$invoiceId.tsx` exports an `ErrorBoundary` and an error is thrown in its component, loader, or action, the rest of the app renders normally and only the invoice section of the page renders the error.
 
 ![error in a nested route where the parent route's navigation renders normally][error-in-a-nested-route-where-the-parent-route-s-navigation-renders-normally]
 

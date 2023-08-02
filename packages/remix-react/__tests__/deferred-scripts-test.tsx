@@ -44,10 +44,6 @@ describe("<Scripts /> with activeDeferreds", () => {
         version: "",
       },
       // @ts-expect-error
-      // Enumerating all flags just to set them to false is overly brittle;
-      // we allow an empty object as a shortcut.
-      future: {},
-      // @ts-expect-error
       // Similarly, we have no interest in the rest of the static handler
       // context. We're not trying to write a test for React Router, we
       // just want to trick <Scripts /> into thinking there's a need for

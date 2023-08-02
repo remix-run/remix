@@ -16,9 +16,6 @@ test.describe("mdx", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
         "app/root.jsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -57,8 +54,9 @@ test.describe("mdx", () => {
 
         "app/routes/blog.post.mdx": mdx`---
 meta:
-  title: My First Post
-  description: Isn't this awesome?
+- title: My First Post
+- name: description
+  content: Isn't this awesome?
 handle:
   someData: abc
 headers:

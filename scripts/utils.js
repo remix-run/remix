@@ -1,7 +1,7 @@
-const fsp = require("fs").promises;
+const fsp = require("node:fs").promises;
 const chalk = require("chalk");
-const path = require("path");
-const { execSync } = require("child_process");
+const path = require("node:path");
+const { execSync } = require("node:child_process");
 const jsonfile = require("jsonfile");
 const Confirm = require("prompt-confirm");
 

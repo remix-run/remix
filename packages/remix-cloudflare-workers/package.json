@@ -19,13 +19,20 @@
     "@remix-run/cloudflare": "1.19.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20230518.0"
+    "@cloudflare/workers-types": "^4.20230518.0",
+    "typescript": "^5.1.0"
   },
   "peerDependencies": {
-    "@cloudflare/workers-types": "^4.0.0"
+    "@cloudflare/workers-types": "^4.0.0",
+    "typescript": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/",

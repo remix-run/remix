@@ -1,4 +1,4 @@
-import * as path from "path";
+import * as path from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
@@ -12,9 +12,6 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    config: {
-      future: { v2_routeConvention: true },
-    },
     files: {
       "app/routes/file-upload-handler.jsx": js`
         import {

@@ -1,7 +1,7 @@
-import path from "path";
+import path from "node:path";
 import fse from "fs-extra";
 import { test, expect } from "@playwright/test";
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 
 import {
   createFixture,
@@ -58,7 +58,7 @@ test.describe("compiler", () => {
         `,
         "app/routes/built-ins.jsx": js`
           import { useLoaderData } from "@remix-run/react";
-          import * as path from "path";
+          import * as path from "node:path";
 
           export let loader = () => {
             return path.join("test", "file.txt");
@@ -70,7 +70,7 @@ test.describe("compiler", () => {
         `,
         "app/routes/built-ins-polyfill.jsx": js`
           import { useLoaderData } from "@remix-run/react";
-          import * as path from "path";
+          import * as path from "node:path";
 
           export default function BuiltIns() {
             return <div id="built-ins-polyfill">{path.join("test", "file.txt")}</div>;
@@ -235,7 +235,7 @@ test.describe("compiler", () => {
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins"].module
     );
-    // does not include `import bla from "path"` in the output bundle
+    // does not include `import bla from "node:path"` in the output bundle
     expect(routeModule).not.toMatch(/from\s*"path/);
   });
 
@@ -254,7 +254,7 @@ test.describe("compiler", () => {
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins-polyfill"].module
     );
-    // does not include `import bla from "path"` in the output bundle
+    // does not include `import bla from "node:path"` in the output bundle
     expect(routeModule).not.toMatch(/from\s*"path/);
   });
 
@@ -335,9 +335,6 @@ test.describe("compiler", () => {
 
       await expect(() =>
         createFixtureProject({
-          config: {
-            future: { v2_routeConvention: true },
-          },
           buildStdio,
           files: {
             "app/routes/_index.jsx": js`

@@ -23,8 +23,9 @@ MDX routes allow you to define both meta and headers as if they were a code base
 ```md
 ---
 meta:
-  title: My First Post
-  description: Isn't this awesome?
+  - title: My First Post
+  - name: description
+    content: Isn't this awesome?
 headers:
   Cache-Control: no-cache
 ---
@@ -51,13 +52,14 @@ import SomeComponent from "~/components/some-component";
 
 ### Example
 
-By creating a `app/routes/posts/first-post.mdx` we can start writing a blog post:
+By creating a `app/routes/posts.first-post.mdx` we can start writing a blog post:
 
 ```mdx
 ---
 meta:
-  title: My First Post
-  description: Isn't this just awesome?
+  - title: My First Post
+  - name: description
+    content: Isn't this just awesome?
 ---
 
 # Example Markdown Post
@@ -72,8 +74,9 @@ You can even export all the other things in this module that you can in regular 
 ```mdx
 ---
 meta:
-  title: My First Post
-  description: Isn't this awesome?
+  - title: My First Post
+  - name: description
+    content: Isn't this awesome?
 
 headers:
   Cache-Control: no-cache
@@ -126,7 +129,7 @@ import Component, {
 
 The following example demonstrates how you might build a simple blog with MDX, including individual pages for the posts themselves and an index page that shows all posts.
 
-```tsx filename=app/routes/index.tsx
+```tsx filename=app/routes/_index.tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { Link, useLoaderData } from "@remix-run/react";
 
