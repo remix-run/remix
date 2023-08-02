@@ -7,7 +7,7 @@
     "module": "ES2020",
     "composite": true,
 
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,

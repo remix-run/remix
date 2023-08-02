@@ -7,7 +7,7 @@
     "module": "ES2020",
     "skipLibCheck": true,
 
-    "moduleResolution": "Node16",
+    "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "resolveJsonModule": true,

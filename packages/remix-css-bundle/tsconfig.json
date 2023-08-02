@@ -5,7 +5,7 @@
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
     "module": "ES2020",
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "declaration": true,

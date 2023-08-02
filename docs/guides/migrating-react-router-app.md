@@ -481,7 +481,7 @@ If you are using TypeScript, you likely already have a `tsconfig.json` in your p
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "baseUrl": ".",
     "noEmit": true,
     "paths": {

@@ -11,10 +11,10 @@ import type { JsonObject } from "type-fest";
 import type { AppConfig } from "@remix-run/dev";
 
 import { ServerMode } from "../../build/node_modules/@remix-run/server-runtime/dist/mode.js";
-
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime/dist/index.js";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime/dist/index.js";
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express/dist/index.js";
+// @ts-ignore
 import { installGlobals } from "../../build/node_modules/@remix-run/node/dist/index.js";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
