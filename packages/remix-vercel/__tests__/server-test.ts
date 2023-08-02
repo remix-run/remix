@@ -1,5 +1,5 @@
-import { createServer } from "http";
-import { Readable } from "stream";
+import { createServer } from "node:http";
+import { Readable } from "node:stream";
 import {
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,

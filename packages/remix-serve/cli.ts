@@ -1,6 +1,6 @@
 import "./env";
-import path from "path";
-import os from "os";
+import path from "node:path";
+import os from "node:os";
 import { broadcastDevReady } from "@remix-run/node";
 
 import { createApp } from "./index";
@@ -33,10 +33,7 @@ let onListen = () => {
       `Remix App Server started at http://localhost:${port} (http://${address}:${port})`
     );
   }
-  if (
-    build.future?.v2_dev !== false &&
-    process.env.NODE_ENV === "development"
-  ) {
+  if (process.env.NODE_ENV === "development") {
     broadcastDevReady(build);
   }
 };

@@ -18,7 +18,15 @@
     "@remix-run/server-runtime": "1.19.1",
     "mime": "^3.0.0"
   },
+  "peerDependencies": {
+    "typescript": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }

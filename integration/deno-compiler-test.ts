@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import * as fse from "fs-extra";
-import path from "path";
+import path from "node:path";
 import shell from "shelljs";
 import glob from "glob";
 
@@ -34,9 +34,6 @@ const searchFiles = async (pattern: string | RegExp, files: string[]) => {
 
 test.beforeAll(async () => {
   projectDir = await createFixtureProject({
-    config: {
-      future: { v2_routeConvention: true },
-    },
     template: "deno-template",
     files: {
       "package.json": json({

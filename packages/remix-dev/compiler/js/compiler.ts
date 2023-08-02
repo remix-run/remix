@@ -1,5 +1,5 @@
-import * as path from "path";
-import { builtinModules as nodeBuiltins } from "module";
+import * as path from "node:path";
+import { builtinModules as nodeBuiltins } from "node:module";
 import * as esbuild from "esbuild";
 import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 
@@ -68,10 +68,7 @@ const createEsbuildConfig = (
     entryPoints[id] += "?browser";
   }
 
-  if (
-    ctx.options.mode === "development" &&
-    ctx.config.future.v2_dev !== false
-  ) {
+  if (ctx.options.mode === "development") {
     let defaultsDirectory = path.resolve(
       __dirname,
       "..",
@@ -91,9 +88,7 @@ const createEsbuildConfig = (
     cssModulesPlugin(ctx, { outputCss: false }),
     vanillaExtractPlugin(ctx, { outputCss: false }),
     cssSideEffectImportsPlugin(ctx, {
-      hmr:
-        ctx.options.mode === "development" &&
-        ctx.config.future.v2_dev !== false,
+      hmr: ctx.options.mode === "development",
     }),
     cssFilePlugin(ctx),
     absoluteCssUrlsPlugin(),
@@ -107,7 +102,7 @@ const createEsbuildConfig = (
     externalPlugin(/^node:.*/, { sideEffects: false }),
   ];
 
-  if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {
+  if (ctx.options.mode === "development") {
     plugins.push(hmrPlugin(ctx));
   }
 
@@ -138,10 +133,6 @@ const createEsbuildConfig = (
       "process.env.REMIX_DEV_ORIGIN": JSON.stringify(
         ctx.options.REMIX_DEV_ORIGIN ?? ""
       ),
-      // TODO: remove in v2
-      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-        ctx.config.devServerPort
-      ),
       ...(ctx.options.mode === "production"
         ? {
             "import.meta.hot": "undefined",
@@ -171,7 +162,7 @@ export const create = async (
     writeMetafile(ctx, "metafile.js.json", metafile);
 
     let hmr: Manifest["hmr"] | undefined = undefined;
-    if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {
+    if (ctx.options.mode === "development") {
       let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
         ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
       )?.[0];

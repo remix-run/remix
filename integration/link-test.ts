@@ -32,11 +32,6 @@ test.describe("route module link export", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_routeConvention: true,
-        },
-      },
       files: {
         "app/favicon.ico": js``,
 
@@ -384,12 +379,14 @@ test.describe("route module link export", () => {
           }
           export function meta({ data, params }) {
             let { username } = params;
-            return {
-              title: data
-                ? data.length + " gists from " + username
-                : "User " + username + " not found",
-              description: "View all of the gists from " + username,
-            };
+            return [
+              {
+                title: data
+                  ? data.length + " gists from " + username
+                  : "User " + username + " not found",
+              },
+              { name: "description", content: "View all of the gists from " + username },
+            ];
           }
           export let handle = {
             breadcrumb: ({ params }) => (
@@ -431,10 +428,10 @@ test.describe("route module link export", () => {
             };
           }
           export function meta() {
-            return {
-              title: "Public Gists",
-              description: "View the latest gists from the public",
-            };
+            return [
+              { title: "Public Gists" },
+              { name: "description", content: "View the latest gists from the public" },
+            ];
           }
           export let handle = {
             breadcrumb: () => <span>Public</span>,

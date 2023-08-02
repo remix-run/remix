@@ -13,14 +13,8 @@ test.setTimeout(150_000);
 let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
   config: {
     serverModuleFormat: "cjs",
-    future: {
-      v2_dev: {
-        port: options.devPort,
-      },
-      v2_routeConvention: true,
-
-      v2_meta: true,
-      v2_headers: true,
+    dev: {
+      port: options.devPort,
     },
   },
   files: {
@@ -49,12 +43,12 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
         typescript: "0.0.0-local-version",
       },
       engines: {
-        node: ">=14.0.0",
+        node: ">=18.0.0",
       },
     }),
 
     "server.js": js`
-      let path = require("path");
+      let path = require("node:path");
       let express = require("express");
       let { createRequestHandler } = require("@remix-run/express");
       let { broadcastDevReady } = require("@remix-run/node");

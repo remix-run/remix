@@ -15,7 +15,6 @@ export interface RemixContextObject {
   serverHandoffString?: string;
   future: FutureConfig;
   abortDelay?: number;
-  dev?: { port: number };
   serializeError?(error: Error): SerializedError;
 }
 
@@ -25,19 +24,7 @@ export interface EntryContext extends RemixContextObject {
   staticHandlerContext: StaticHandlerContext;
 }
 
-type Dev = {
-  port?: number;
-  appServerPort?: number;
-  remixRequestHandlerPath?: string;
-  rebuildPollIntervalMs?: number;
-};
-
-export interface FutureConfig {
-  v2_dev: boolean | Dev;
-  v2_headers: boolean;
-  v2_meta: boolean;
-  v2_routeConvention: boolean;
-}
+export interface FutureConfig {}
 
 export interface AssetsManifest {
   entry: {

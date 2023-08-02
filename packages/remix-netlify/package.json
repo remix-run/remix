@@ -17,13 +17,20 @@
     "@remix-run/node": "1.19.1"
   },
   "devDependencies": {
-    "@netlify/functions": "^1.0.0"
+    "@netlify/functions": "^1.0.0",
+    "typescript": "^5.1.0"
   },
   "peerDependencies": {
-    "@netlify/functions": "^1.0.0"
+    "@netlify/functions": "^1.0.0",
+    "typescript": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/",

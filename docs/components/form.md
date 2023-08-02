@@ -24,7 +24,7 @@ function NewEvent() {
 ```
 
 - Whether JavaScript is on the page or not, your data interactions created with `<Form>` and `action` will work.
-- After a `<Form>` submission, all of the loaders on the page will be reloaded. This ensures that any updates to your data are reflected in the UI.
+- After a `<Form>` submission, all the loaders on the page will be reloaded. This ensures that any updates to your data are reflected in the UI.
 - `<Form>` automatically serializes your form's values (identically to the browser when not using JavaScript).
 - You can build "optimistic UI" and pending indicators with [`useNavigation`][usenavigation].
 
@@ -42,10 +42,10 @@ When a POST is made to a URL, multiple routes in your route hierarchy will match
 
 If you want to post to an index route use `?index` in the action: `<Form action="/accounts?index" method="post" />`
 
-| action url        | route action               |
-| ----------------- | -------------------------- |
-| `/accounts?index` | `routes/accounts/index.js` |
-| `/accounts`       | `routes/accounts.js`       |
+| action url        | route action                     |
+| ----------------- | -------------------------------- |
+| `/accounts?index` | `app/routes/accounts._index.tsx` |
+| `/accounts`       | `app/routes/accounts.tsx`        |
 
 See also:
 

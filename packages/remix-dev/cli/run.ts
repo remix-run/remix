@@ -23,10 +23,6 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
   \`build\` Options:
     --sourcemap         Generate source maps for production
   \`dev\` Options:
-    --debug             Attach Node.js inspector
-    --port, -p          Choose the port from which to run your app
-
-    [v2_dev]
     --command, -c       Command used to run your app server
     --manual            Enable manual mode
     --port              Port for the dev server. Default: any open port
@@ -59,8 +55,7 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
   ${colors.heading("Run your project locally in development")}:
 
     $ remix dev
-    $ remix dev my-app
-    $ remix dev --debug
+    $ remix dev -c "node ./server.js"
 
   ${colors.heading("Start your server separately and watch for changes")}:
 
@@ -91,15 +86,14 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
 export async function run(argv: string[] = process.argv.slice(2)) {
   // Check the node version
   let versions = process.versions;
-  if (versions && versions.node && semver.major(versions.node) < 14) {
+  if (versions && versions.node && semver.major(versions.node) < 18) {
     throw new Error(
-      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
+      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 18.`
     );
   }
 
   let args = arg(
     {
-      "--debug": Boolean,
       "--no-delete": Boolean,
       "--dry": Boolean,
       "--force": Boolean,
