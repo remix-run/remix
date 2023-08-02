@@ -86,8 +86,8 @@ npx create-remix@latest --template remix-run/examples/basic
 
 Some hosting providers maintain their own Remix templates. For more information, see their official integration guides listed below.
 
-- [Vercel][vercel-remix]
 - [Netlify][netlify-remix]
+- [Vercel][vercel-remix]
 
 ### Private Templates
 
