@@ -82,7 +82,16 @@ You can use these templates and examples by passing a GitHub shorthand to the `-
 npx create-remix@latest --template remix-run/examples/basic
 ```
 
-Additionally, if your template is in a private GitHub repo, you can pass a GitHub token via the `--token` option:
+### Third-Party Templates
+
+Some hosting providers maintain their own Remix templates. For more information, see their official integration guides listed below.
+
+- [Netlify][netlify-remix]
+- [Vercel][vercel-remix]
+
+### Private Templates
+
+If your template is in a private GitHub repo, you can pass a GitHub token via the `--token` option:
 
 ```sh
 npx create-remix@latest --template your-private/repo --token yourtoken
@@ -136,3 +145,5 @@ After the init script has been run, the `remix.init` folder gets deleted, so you
 [remix-stack-topic]: https://github.com/topics/remix-stack
 [official-templates]: https://github.com/remix-run/remix/tree/main/templates
 [examples]: https://github.com/remix-run/examples
+[vercel-remix]: https://vercel.com/docs/frameworks/remix
+[netlify-remix]: https://docs.netlify.com/integrations/frameworks/remix
