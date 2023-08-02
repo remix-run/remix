@@ -20,7 +20,16 @@
   },
   "devDependencies": {
     "@types/lambda-tester": "^3.6.1",
-    "lambda-tester": "^4.0.1"
+    "lambda-tester": "^4.0.1",
+    "typescript": "^5.1.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=18.0.0"
