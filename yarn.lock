@@ -3406,10 +3406,10 @@
   resolved "https://registry.npmjs.org/@types/sizzle/-/sizzle-2.3.3.tgz"
   integrity sha512-JYM8x9EGF163bEyhdJBpR2QX1R5naCJHC8ucJylJ3w9/CVBaskdQ8WqBf8MmQrd1kRvp/a4TS8HJ+bxzR7ZJYQ==
 
-"@types/source-map-support@^0.5.4":
-  version "0.5.4"
-  resolved "https://registry.npmjs.org/@types/source-map-support/-/source-map-support-0.5.4.tgz"
-  integrity sha512-9zGujX1sOPg32XLyfgEB/0G9ZnrjthL/Iv1ZfuAjj8LEilHZEpQSQs1scpRXPhHzGYgWiLz9ldF1cI8JhL+yMw==
+"@types/source-map-support@^0.5.4", "@types/source-map-support@^0.5.6":
+  version "0.5.6"
+  resolved "https://registry.npmjs.org/@types/source-map-support/-/source-map-support-0.5.6.tgz#aa4a8c98ec73a1f1f30a813573a9b2154a6eb39a"
+  integrity sha512-b2nJ9YyXmkhGaa2b8VLM0kJ04xxwNyijcq12/kDoomCt43qbHBeK2SLNJ9iJmETaAj+bKUT05PQUu3Q66GvLhQ==
   dependencies:
     source-map "^0.6.0"
 
