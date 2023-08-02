@@ -78,8 +78,8 @@ async function copyBuildToDist() {
   }
 
   // One-off deep import copies so folks don't need to import from inside of
-  // dist/.  TODO: Remove in v2 and either get rid of the deep import or manage
-  // with the package.json "exports" field
+  // dist/.  TODO: Remove in a future major release and either get rid of the
+  // deep import or manage with the package.json "exports" field
   let oneOffCopies = [
     // server-build.js built by rollup outside of dist/, need to copy to
     // packages/ dir outside of dist/
