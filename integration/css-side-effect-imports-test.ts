@@ -19,7 +19,7 @@ test.describe("CSS side-effect imports", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       config: {
-        serverDependenciesToBundle: [/@test-package/],
+        serverDependenciesToBundle: ["react", /@test-package/],
       },
       files: {
         "app/root.jsx": js`
