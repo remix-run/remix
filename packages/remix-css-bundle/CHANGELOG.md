@@ -1,5 +1,7 @@
 # @remix-run/css-bundle
 
+## 1.19.2-pre.1
+
 ## 1.19.2-pre.0
 
 ## 1.19.1
