@@ -1,6 +1,6 @@
 ---
 title: "@remix-run/{adapter}"
-order: 2
+order: 3
 ---
 
 # Server Adapters
@@ -97,7 +97,7 @@ module.exports = createRequestHandler({
 Here's an example with Netlify:
 
 ```ts
-const path = require("path");
+const path = require("node:path");
 
 const {
   createRequestHandler,

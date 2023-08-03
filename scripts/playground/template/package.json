@@ -36,7 +36,7 @@
     "@faker-js/faker": "^6.3.1",
     "@remix-run/dev": "*",
     "@types/bcryptjs": "^2.4.2",
-    "@types/node": "^17.0.45",
+    "@types/node": "^18.17.1",
     "@types/react": "^18.0.17",
     "@types/react-dom": "^18.0.6",
     "autoprefixer": "^10.4.8",
@@ -47,10 +47,10 @@
     "tailwindcss": "^3.1.8",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.1.0",
-    "typescript": "^5.0.4"
+    "typescript": "^5.1.0"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18.0.0"
   },
   "prisma": {
     "seed": "ts-node --require tsconfig-paths/register prisma/seed.ts"

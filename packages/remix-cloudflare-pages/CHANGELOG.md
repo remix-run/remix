@@ -1,5 +1,40 @@
 # `@remix-run/cloudflare-pages`
 
+## 1.19.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.19.1`
+
+## 1.19.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.19.0`
+
+## 1.18.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.18.1`
+
+## 1.18.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.18.0`
+
+## 1.17.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.17.1`
+
 ## 1.17.0
 
 ### Patch Changes

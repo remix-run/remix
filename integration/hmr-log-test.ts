@@ -13,16 +13,8 @@ test.setTimeout(120_000);
 let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
   config: {
     serverModuleFormat: "cjs",
-    tailwind: true,
-    future: {
-      unstable_dev: {
-        port: options.devPort,
-      },
-      v2_routeConvention: true,
-      v2_errorBoundary: true,
-      v2_normalizeFormMethod: true,
-      v2_meta: true,
-      v2_headers: true,
+    dev: {
+      port: options.devPort,
     },
   },
   files: {
@@ -50,15 +42,17 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
         typescript: "0.0.0-local-version",
       },
       engines: {
-        node: ">=14",
+        node: ">=18.0.0",
       },
     }),
 
     "server.js": js`
-      let path = require("path");
+      let path = require("node:path");
       let express = require("express");
       let { createRequestHandler } = require("@remix-run/express");
-      let { logDevReady } = require("@remix-run/node");
+      let { logDevReady, installGlobals } = require("@remix-run/node");
+
+      installGlobals();
 
       const app = express();
       app.use(express.static("public", { immutable: true, maxAge: "1y" }));
@@ -274,7 +268,7 @@ test("HMR", async ({ page, browserName }) => {
         if (dev.exitCode) throw Error("Dev server exited early");
         return /✅ app ready: /.test(devStdout());
       },
-      { timeoutMs: 10_000 }
+      { timeoutMs: HMR_TIMEOUT_MS }
     );
 
     await page.goto(`http://localhost:${appPort}`, {
@@ -369,7 +363,7 @@ test("HMR", async ({ page, browserName }) => {
       }
     `;
     fs.writeFileSync(indexPath, withLoader1);
-    await expect.poll(() => dataRequests).toBe(1);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(1);
     await page.waitForLoadState("networkidle");
 
     await page.getByText("Hello, world").waitFor({ timeout: HMR_TIMEOUT_MS });
@@ -399,7 +393,7 @@ test("HMR", async ({ page, browserName }) => {
       }
     `;
     fs.writeFileSync(indexPath, withLoader2);
-    await expect.poll(() => dataRequests).toBe(2);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(2);
     await page.waitForLoadState("networkidle");
 
     await page.getByText("Hello, planet").waitFor({ timeout: HMR_TIMEOUT_MS });
@@ -465,11 +459,11 @@ whatsup
 <Component/>
 `;
     fs.writeFileSync(mdxPath, mdx);
-    await expect.poll(() => dataRequests).toBe(4);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(4);
     await page.waitForSelector(`#hot`);
 
     fs.writeFileSync(mdxPath, originalMdx);
-    await expect.poll(() => dataRequests).toBe(5);
+    await expect.poll(() => dataRequests, { timeout: HMR_TIMEOUT_MS }).toBe(5);
     await page.waitForSelector(`#crazy`);
 
     // dev server doesn't crash when rebuild fails

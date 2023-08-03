@@ -1,7 +1,5 @@
-import path from "path";
-import fs from "fs";
-import { builtinModules } from "module";
-import { isAbsolute, relative } from "path";
+import { isAbsolute, relative } from "node:path";
+import { builtinModules } from "node:module";
 import type { Plugin } from "esbuild";
 
 import {
@@ -18,10 +16,10 @@ import type { Context } from "../../context";
  * This includes externalizing for node based platforms, and bundling for single file
  * environments such as cloudflare.
  */
-export function serverBareModulesPlugin({ config, options }: Context): Plugin {
+export function serverBareModulesPlugin(ctx: Context): Plugin {
   // Resolve paths according to tsconfig paths property
-  let matchPath = config.tsconfigPath
-    ? createMatchPath(config.tsconfigPath)
+  let matchPath = ctx.config.tsconfigPath
+    ? createMatchPath(ctx.config.tsconfigPath)
     : undefined;
   function resolvePath(id: string) {
     if (!matchPath) {
@@ -35,7 +33,7 @@ export function serverBareModulesPlugin({ config, options }: Context): Plugin {
   return {
     name: "server-bare-modules",
     setup(build) {
-      build.onResolve({ filter: /.*/ }, ({ importer, kind, path }) => {
+      build.onResolve({ filter: /.*/ }, ({ importer, path }) => {
         // If it's not a bare module ID, bundle it.
         if (!isBareModuleId(resolvePath(path))) {
           return undefined;
@@ -76,7 +74,6 @@ export function serverBareModulesPlugin({ config, options }: Context): Plugin {
 
         // Warn if we can't find an import for a package.
         if (
-          options.onWarning &&
           !isNodeBuiltIn(packageName) &&
           !/\bnode_modules\b/.test(importer) &&
           // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
@@ -88,41 +85,31 @@ export function serverBareModulesPlugin({ config, options }: Context): Plugin {
           try {
             require.resolve(path, { paths: [importer] });
           } catch (error: unknown) {
-            options.onWarning(
-              `The path "${path}" is imported in ` +
-                `${relative(process.cwd(), importer)} but ` +
-                `"${path}" was not found in your node_modules. ` +
-                `Did you forget to install it?`,
-              path
-            );
+            ctx.logger.warn(`could not resolve "${path}"`, {
+              details: [
+                `You imported "${path}" in ${relative(
+                  process.cwd(),
+                  importer
+                )},`,
+                "but that package is not in your `node_modules`.",
+                "Did you forget to install it?",
+              ],
+              key: path,
+            });
           }
         }
 
-        if (config.serverDependenciesToBundle === "all") {
+        if (ctx.config.serverDependenciesToBundle === "all") {
           return undefined;
         }
 
-        for (let pattern of config.serverDependenciesToBundle) {
+        for (let pattern of ctx.config.serverDependenciesToBundle) {
           // bundle it if the path matches the pattern
           if (
             typeof pattern === "string" ? path === pattern : pattern.test(path)
           ) {
             return undefined;
           }
-        }
-
-        if (
-          options.onWarning &&
-          !isNodeBuiltIn(packageName) &&
-          kind !== "dynamic-import" &&
-          config.serverPlatform === "node"
-        ) {
-          warnOnceIfEsmOnlyPackage(
-            packageName,
-            path,
-            importer,
-            options.onWarning
-          );
         }
 
         // Externalize everything else if we've gotten here.
@@ -148,89 +135,4 @@ function getNpmPackageName(id: string): string {
 
 function isBareModuleId(id: string): boolean {
   return !id.startsWith("node:") && !id.startsWith(".") && !isAbsolute(id);
-}
-
-function warnOnceIfEsmOnlyPackage(
-  packageName: string,
-  fullImportPath: string,
-  importer: string,
-  onWarning: (msg: string, key: string) => void
-) {
-  try {
-    let packageDir = resolveModuleBasePath(
-      packageName,
-      fullImportPath,
-      importer
-    );
-    let packageJsonFile = path.join(packageDir, "package.json");
-
-    if (!fs.existsSync(packageJsonFile)) {
-      console.log(packageJsonFile, `does not exist`);
-      return;
-    }
-    let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf-8"));
-
-    let subImport = fullImportPath.slice(packageName.length + 1);
-
-    if (pkg.type === "module") {
-      let isEsmOnly = true;
-      if (pkg.exports) {
-        if (!subImport) {
-          if (pkg.exports.require) {
-            isEsmOnly = false;
-          } else if (pkg.exports["."]?.require) {
-            isEsmOnly = false;
-          }
-        } else if (pkg.exports[`./${subImport}`]?.require) {
-          isEsmOnly = false;
-        }
-      }
-
-      if (isEsmOnly) {
-        onWarning(
-          `${packageName} is possibly an ESM only package and should be bundled with ` +
-            `"serverDependenciesToBundle" in remix.config.js.`,
-          packageName + ":esm-only"
-        );
-      }
-    }
-  } catch (error: unknown) {
-    // module not installed
-    // we warned earlier if a package is used without being in package.json
-    // if the build fails, the reason will be right there
-  }
-}
-
-// https://github.com/nodejs/node/issues/33460#issuecomment-919184789
-// adapted to use the fullImportPath to resolve sub packages like @heroicons/react/solid
-function resolveModuleBasePath(
-  packageName: string,
-  fullImportPath: string,
-  importer: string
-) {
-  let moduleMainFilePath = require.resolve(fullImportPath, {
-    paths: [importer],
-  });
-
-  let packageNameParts = packageName.split("/");
-
-  let searchForPathSection;
-
-  if (packageName.startsWith("@") && packageNameParts.length > 1) {
-    let [org, mod] = packageNameParts;
-    searchForPathSection = `node_modules${path.sep}${org}${path.sep}${mod}`;
-  } else {
-    let [mod] = packageNameParts;
-    searchForPathSection = `node_modules${path.sep}${mod}`;
-  }
-
-  let lastIndex = moduleMainFilePath.lastIndexOf(searchForPathSection);
-
-  if (lastIndex === -1) {
-    throw new Error(
-      `Couldn't resolve the base path of "${packageName}". Searched inside the resolved main file path "${moduleMainFilePath}" using "${searchForPathSection}"`
-    );
-  }
-
-  return moduleMainFilePath.slice(0, lastIndex + searchForPathSection.length);
 }

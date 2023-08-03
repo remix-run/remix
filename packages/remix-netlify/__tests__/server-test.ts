@@ -1,11 +1,7 @@
-import fsp from "fs/promises";
-import path from "path";
+import fsp from "node:fs/promises";
+import path from "node:path";
 import lambdaTester from "lambda-tester";
 import {
-  // This has been added as a global in node 15+, but we expose it here while we
-  // support Node 14
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  AbortController,
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
 } from "@remix-run/node";
@@ -19,7 +15,7 @@ import {
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
-// puppetteer tests do), we just want to test the netlify adapter
+// playwright tests do), we just want to test the netlify adapter
 jest.mock("@remix-run/node", () => {
   let original = jest.requireActual("@remix-run/node");
   return {

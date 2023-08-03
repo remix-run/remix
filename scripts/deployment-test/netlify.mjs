@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { sync as spawnSync } from "cross-spawn";
 import { NetlifyAPI } from "netlify";
 import fse from "fs-extra";

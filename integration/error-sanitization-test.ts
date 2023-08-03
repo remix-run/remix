@@ -1,11 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { ServerMode } from "@remix-run/server-runtime/mode";
 
-import { createFixture, js } from "./helpers/create-fixture";
 import type { Fixture } from "./helpers/create-fixture";
+import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 const routeFiles = {
-  "app/root.jsx": js`
+  "app/root.tsx": js`
     import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
     export default function Root() {
@@ -26,12 +27,16 @@ const routeFiles = {
     }
   `,
 
-  "app/routes/index.jsx": js`
+  "app/routes/_index.tsx": js`
     import { useLoaderData, useLocation, useRouteError } from "@remix-run/react";
 
     export function loader({ request }) {
       if (new URL(request.url).searchParams.has('loader')) {
         throw new Error("Loader Error");
+      }
+      if (new URL(request.url).searchParams.has('subclass')) {
+        // This will throw a ReferenceError
+        console.log(thisisnotathing);
       }
       return "LOADER"
     }
@@ -58,13 +63,14 @@ const routeFiles = {
         <>
           <h1>Index Error</h1>
           <p>{"MESSAGE:" + error.message}</p>
+          <p>{"NAME:" + error.name}</p>
           {error.stack ? <p>{"STACK:" + error.stack}</p> : null}
         </>
       );
     }
   `,
 
-  "app/routes/defer.jsx": js`
+  "app/routes/defer.tsx": js`
     import * as React from 'react';
     import { defer } from "@remix-run/server-runtime";
     import { Await, useAsyncError, useLoaderData, useRouteError  } from "@remix-run/react";
@@ -117,7 +123,7 @@ const routeFiles = {
     }
   `,
 
-  "app/routes/resource.jsx": js`
+  "app/routes/resource.tsx": js`
     export function loader({ request }) {
       if (new URL(request.url).searchParams.has('loader')) {
         throw new Error("Loader Error");
@@ -146,11 +152,6 @@ test.describe("Error Sanitization", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
-          config: {
-            future: {
-              v2_errorBoundary: true,
-            },
-          },
           files: routeFiles,
         },
         ServerMode.Production
@@ -173,7 +174,7 @@ test.describe("Error Sanitization", () => {
       expect(html).not.toMatch("LOADER");
       expect(html).toMatch("MESSAGE:Unexpected Server Error");
       expect(html).toMatch(
-        '{"routes/index":{"message":"Unexpected Server Error","__type":"Error"}}'
+        '{"routes/_index":{"message":"Unexpected Server Error","__type":"Error"}}'
       );
       expect(html).not.toMatch(/stack/i);
       expect(errorLogs.length).toBe(1);
@@ -187,7 +188,7 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("Index Error");
       expect(html).toMatch("MESSAGE:Unexpected Server Error");
       expect(html).toMatch(
-        '{"routes/index":{"message":"Unexpected Server Error","__type":"Error"}}'
+        '{"routes/_index":{"message":"Unexpected Server Error","__type":"Error"}}'
       );
       expect(html).not.toMatch(/stack/i);
       expect(errorLogs.length).toBe(1);
@@ -221,7 +222,7 @@ test.describe("Error Sanitization", () => {
     });
 
     test("returns data without errors", async () => {
-      let response = await fixture.requestData("/", "routes/index");
+      let response = await fixture.requestData("/", "routes/_index");
       let text = await response.text();
       expect(text).toMatch("LOADER");
       expect(text).not.toMatch("MESSAGE:");
@@ -229,7 +230,7 @@ test.describe("Error Sanitization", () => {
     });
 
     test("sanitizes loader errors in data requests", async () => {
-      let response = await fixture.requestData("/?loader", "routes/index");
+      let response = await fixture.requestData("/?loader", "routes/_index");
       let text = await response.text();
       expect(text).toBe('{"message":"Unexpected Server Error"}');
       expect(errorLogs.length).toBe(1);
@@ -279,17 +280,27 @@ test.describe("Error Sanitization", () => {
       );
       expect(errorLogs[0][0].stack).toMatch(" at ");
     });
+
+    test("does not support hydration of Error subclasses", async ({ page }) => {
+      let response = await fixture.requestDocument("/?subclass");
+      let html = await response.text();
+      expect(html).toMatch("<p>MESSAGE:Unexpected Server Error");
+      expect(html).toMatch("<p>NAME:Error");
+
+      // Hydration
+      let appFixture = await createAppFixture(fixture);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/?subclass", true);
+      html = await app.getHtml();
+      expect(html).toMatch("<p>MESSAGE:Unexpected Server Error");
+      expect(html).toMatch("<p>NAME:Error");
+    });
   });
 
   test.describe("serverMode=development", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
-          config: {
-            future: {
-              v2_errorBoundary: true,
-            },
-          },
           files: routeFiles,
         },
         ServerMode.Development
@@ -321,7 +332,7 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("<p>MESSAGE:Loader Error");
       expect(html).toMatch("<p>STACK:Error: Loader Error");
       expect(html).toMatch(
-        'errors":{"routes/index":{"message":"Loader Error","stack":"Error: Loader Error\\n'
+        'errors":{"routes/_index":{"message":"Loader Error","stack":"Error: Loader Error\\n'
       );
       expect(errorLogs.length).toBe(1);
       expect(errorLogs[0][0].message).toMatch("Loader Error");
@@ -335,7 +346,7 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("<p>MESSAGE:Render Error");
       expect(html).toMatch("<p>STACK:Error: Render Error");
       expect(html).toMatch(
-        'errors":{"routes/index":{"message":"Render Error","stack":"Error: Render Error\\n'
+        'errors":{"routes/_index":{"message":"Render Error","stack":"Error: Render Error\\n'
       );
       expect(errorLogs.length).toBe(1);
       expect(errorLogs[0][0].message).toMatch("Render Error");
@@ -365,7 +376,7 @@ test.describe("Error Sanitization", () => {
     });
 
     test("returns data without errors", async () => {
-      let response = await fixture.requestData("/", "routes/index");
+      let response = await fixture.requestData("/", "routes/_index");
       let text = await response.text();
       expect(text).toMatch("LOADER");
       expect(text).not.toMatch("MESSAGE:");
@@ -373,7 +384,7 @@ test.describe("Error Sanitization", () => {
     });
 
     test("does not sanitize loader errors in data requests", async () => {
-      let response = await fixture.requestData("/?loader", "routes/index");
+      let response = await fixture.requestData("/?loader", "routes/_index");
       let text = await response.text();
       expect(text).toMatch(
         '{"message":"Loader Error","stack":"Error: Loader Error'
@@ -428,17 +439,33 @@ test.describe("Error Sanitization", () => {
       );
       expect(errorLogs[0][0].stack).toMatch(" at ");
     });
+
+    test("supports hydration of Error subclasses", async ({ page }) => {
+      let response = await fixture.requestDocument("/?subclass");
+      let html = await response.text();
+      expect(html).toMatch("<p>MESSAGE:thisisnotathing is not defined");
+      expect(html).toMatch("<p>NAME:ReferenceError");
+      expect(html).toMatch(
+        "<p>STACK:ReferenceError: thisisnotathing is not defined"
+      );
+
+      // Hydration
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/?subclass", true);
+      html = await app.getHtml();
+      expect(html).toMatch("<p>MESSAGE:thisisnotathing is not defined");
+      expect(html).toMatch("<p>NAME:ReferenceError");
+      expect(html).toMatch(
+        "STACK:ReferenceError: thisisnotathing is not defined"
+      );
+    });
   });
 
   test.describe("serverMode=production (user-provided handleError)", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
-          config: {
-            future: {
-              v2_errorBoundary: true,
-            },
-          },
           files: {
             "app/entry.server.tsx": js`
               import type { EntryContext } from "@remix-run/node";
@@ -500,7 +527,7 @@ test.describe("Error Sanitization", () => {
       expect(html).not.toMatch("LOADER");
       expect(html).toMatch("MESSAGE:Unexpected Server Error");
       expect(html).toMatch(
-        '{"routes/index":{"message":"Unexpected Server Error","__type":"Error"}}'
+        '{"routes/_index":{"message":"Unexpected Server Error","__type":"Error"}}'
       );
       expect(html).not.toMatch(/stack/i);
       expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
@@ -516,7 +543,7 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("Index Error");
       expect(html).toMatch("MESSAGE:Unexpected Server Error");
       expect(html).toMatch(
-        '{"routes/index":{"message":"Unexpected Server Error","__type":"Error"}}'
+        '{"routes/_index":{"message":"Unexpected Server Error","__type":"Error"}}'
       );
       expect(html).not.toMatch(/stack/i);
       expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
@@ -552,7 +579,7 @@ test.describe("Error Sanitization", () => {
     });
 
     test("returns data without errors", async () => {
-      let response = await fixture.requestData("/", "routes/index");
+      let response = await fixture.requestData("/", "routes/_index");
       let text = await response.text();
       expect(text).toMatch("LOADER");
       expect(text).not.toMatch("MESSAGE:");
@@ -560,12 +587,12 @@ test.describe("Error Sanitization", () => {
     });
 
     test("sanitizes loader errors in data requests", async () => {
-      let response = await fixture.requestData("/?loader", "routes/index");
+      let response = await fixture.requestData("/?loader", "routes/_index");
       let text = await response.text();
       expect(text).toBe('{"message":"Unexpected Server Error"}');
       expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
       expect(errorLogs[1][0]).toEqual(
-        "  Request: GET test://test/?loader=&_data=routes%2Findex"
+        "  Request: GET test://test/?loader=&_data=routes%2F_index"
       );
       expect(errorLogs[2][0]).toEqual("  Error: Loader Error");
       expect(errorLogs[3][0]).toMatch(" at ");

@@ -10,11 +10,8 @@ test.describe("rendering", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
@@ -36,7 +33,7 @@ test.describe("rendering", () => {
           }
         `,
 
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           export default function() {
             return <h2>Index</h2>;
           }

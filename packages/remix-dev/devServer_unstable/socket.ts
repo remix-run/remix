@@ -1,5 +1,5 @@
 import WebSocket from "ws";
-import type { Server as HTTPServer } from "http";
+import type { Server as HTTPServer } from "node:http";
 
 import { type Manifest } from "../manifest";
 import type * as HMR from "./hmr";
@@ -27,8 +27,7 @@ export let serve = (server: HTTPServer) => {
   };
 
   let log = (messageText: string) => {
-    let _message = `💿 ${messageText}`;
-    console.log(_message);
+    let _message = `[remix] ${messageText}`;
     broadcast({ type: "LOG", message: _message });
   };
 
@@ -38,5 +37,12 @@ export let serve = (server: HTTPServer) => {
     broadcast({ type: "HMR", assetsManifest, updates });
   };
 
-  return { log, reload, hmr, close: wss.close };
+  let heartbeat = setInterval(broadcast, 60000, { type: "PING" });
+
+  let close = () => {
+    clearInterval(heartbeat);
+    return wss.close();
+  };
+
+  return { log, reload, hmr, close };
 };

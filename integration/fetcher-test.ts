@@ -17,9 +17,6 @@ test.describe("useFetcher", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
         "app/routes/resource-route-action-only.ts": js`
           import { json } from "@remix-run/node";
@@ -50,7 +47,7 @@ test.describe("useFetcher", () => {
           }
         `,
 
-        "app/routes/resource-route.jsx": js`
+        "app/routes/resource-route.tsx": js`
           export function loader() {
             return "${LUNCH}";
           }
@@ -59,7 +56,7 @@ test.describe("useFetcher", () => {
           }
         `,
 
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           import { useFetcher } from "@remix-run/react";
           export default function Index() {
             let fetcher = useFetcher();
@@ -88,7 +85,7 @@ test.describe("useFetcher", () => {
           }
         `,
 
-        "app/routes/parent.jsx": js`
+        "app/routes/parent.tsx": js`
           import { Outlet } from "@remix-run/react";
 
           export function action() {
@@ -104,7 +101,7 @@ test.describe("useFetcher", () => {
           }
         `,
 
-        "app/routes/parent._index.jsx": js`
+        "app/routes/parent._index.tsx": js`
           import { useFetcher } from "@remix-run/react";
 
           export function action() {
@@ -147,14 +144,23 @@ test.describe("useFetcher", () => {
           }
         `,
 
-        "app/routes/fetcher-echo.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useFetcher } from "@remix-run/react";
+        "app/routes/fetcher-echo.tsx": js`
+          import { json } from "@remix-run/node";
+          import { useFetcher } from "@remix-run/react";
 
           export async function action({ request }) {
             await new Promise(r => setTimeout(r, 1000));
-            let value = (await request.formData()).get('value');
-            return json({ data: "ACTION " + value })
+            let contentType = request.headers.get('Content-Type');
+            let value;
+            if (contentType.includes('application/json')) {
+              let json = await request.json();
+              value = json === null ? json : json.value;
+            } else if (contentType.includes('text/plain')) {
+              value = await request.text();
+            } else {
+              value = (await request.formData()).get('value');
+            }
+            return json({ data: "ACTION (" + contentType + ") " + value })
           }
 
           export async function loader({ request }) {
@@ -190,6 +196,20 @@ test.describe("useFetcher", () => {
                   let value = document.getElementById('fetcher-input').value;
                   fetcher.submit({ value }, { method: 'post', action: '/fetcher-echo' })
                 }}>Submit</button>
+                <button id="fetcher-submit-json" onClick={() => {
+                  let value = document.getElementById('fetcher-input').value;
+                  fetcher.submit({ value }, { method: 'post', action: '/fetcher-echo', encType: 'application/json' })
+                }}>Submit JSON</button>
+                <button id="fetcher-submit-json-null" onClick={() => {
+                  fetcher.submit(null, { method: 'post', action: '/fetcher-echo', encType: 'application/json' })
+                }}>Submit Null JSON</button>
+                <button id="fetcher-submit-text" onClick={() => {
+                  let value = document.getElementById('fetcher-input').value;
+                  fetcher.submit(value, { method: 'post', action: '/fetcher-echo', encType: 'text/plain' })
+                }}>Submit Text</button>
+                <button id="fetcher-submit-text-empty" onClick={() => {
+                  fetcher.submit("", { method: 'post', action: '/fetcher-echo', encType: 'text/plain' })
+                }}>Submit Empty Text</button>
 
                 {fetcher.state === 'idle' ? <p id="fetcher-idle">IDLE</p> : null}
                 <pre>{JSON.stringify(fetcherValues)}</pre>
@@ -251,6 +271,46 @@ test.describe("useFetcher", () => {
     await app.goto("/");
     await app.clickElement("#fetcher-submit");
     await page.waitForSelector(`pre:has-text("${CHEESESTEAK}")`);
+  });
+
+  test("submit can hit an action with json", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/fetcher-echo", true);
+    await page.fill("#fetcher-input", "input value");
+    await app.clickElement("#fetcher-submit-json");
+    await page.waitForSelector(`#fetcher-idle`);
+    expect(await app.getHtml()).toMatch(
+      'ACTION (application/json) input value"'
+    );
+  });
+
+  test("submit can hit an action with null json", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/fetcher-echo", true);
+    await app.clickElement("#fetcher-submit-json-null");
+    await new Promise((r) => setTimeout(r, 1000));
+    await page.waitForSelector(`#fetcher-idle`);
+    expect(await app.getHtml()).toMatch('ACTION (application/json) null"');
+  });
+
+  test("submit can hit an action with text", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/fetcher-echo", true);
+    await page.fill("#fetcher-input", "input value");
+    await app.clickElement("#fetcher-submit-text");
+    await page.waitForSelector(`#fetcher-idle`);
+    expect(await app.getHtml()).toMatch(
+      'ACTION (text/plain;charset=UTF-8) input value"'
+    );
+  });
+
+  test("submit can hit an action with empty text", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/fetcher-echo", true);
+    await app.clickElement("#fetcher-submit-text-empty");
+    await new Promise((r) => setTimeout(r, 1000));
+    await page.waitForSelector(`#fetcher-idle`);
+    expect(await app.getHtml()).toMatch('ACTION (text/plain;charset=UTF-8) "');
   });
 
   test("submit can hit an action only route", async ({ page }) => {
@@ -333,8 +393,8 @@ test.describe("useFetcher", () => {
       JSON.stringify([
         "idle/undefined",
         "submitting/undefined",
-        "loading/ACTION 1",
-        "idle/ACTION 1",
+        "loading/ACTION (application/x-www-form-urlencoded;charset=UTF-8) 1",
+        "idle/ACTION (application/x-www-form-urlencoded;charset=UTF-8) 1",
       ])
     );
 
@@ -345,11 +405,12 @@ test.describe("useFetcher", () => {
       JSON.stringify([
         "idle/undefined",
         "submitting/undefined",
-        "loading/ACTION 1",
-        "idle/ACTION 1",
-        "submitting/ACTION 1", // Preserves old data during resubmissions
-        "loading/ACTION 2",
-        "idle/ACTION 2",
+        "loading/ACTION (application/x-www-form-urlencoded;charset=UTF-8) 1",
+        "idle/ACTION (application/x-www-form-urlencoded;charset=UTF-8) 1",
+        // Preserves old data during resubmissions
+        "submitting/ACTION (application/x-www-form-urlencoded;charset=UTF-8) 1",
+        "loading/ACTION (application/x-www-form-urlencoded;charset=UTF-8) 2",
+        "idle/ACTION (application/x-www-form-urlencoded;charset=UTF-8) 2",
       ])
     );
   });
@@ -361,13 +422,8 @@ test.describe("fetcher aborts and adjacent forms", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_routeConvention: true,
-        },
-      },
       files: {
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           import * as React from "react";
           import {
             Form,
@@ -419,7 +475,7 @@ test.describe("fetcher aborts and adjacent forms", () => {
           }
         `,
 
-        "app/routes/api.jsx": js`
+        "app/routes/api.tsx": js`
           export async function loader() {
             await new Promise((resolve) => setTimeout(resolve, 500));
             return { message: 'Hello world!' }

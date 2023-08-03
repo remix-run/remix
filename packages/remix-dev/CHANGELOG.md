@@ -1,5 +1,116 @@
 # `@remix-run/dev`
 
+## 1.19.1
+
+### Patch Changes
+
+- Add a heartbeat ping to prevent the WebSocket connection from being closed due to inactivity when using a proxy like Cloudflare ([#6904](https://github.com/remix-run/remix/pull/6904), [#6927](https://github.com/remix-run/remix/pull/6927))
+- Treeshake out HMR code from production builds ([#6894](https://github.com/remix-run/remix/pull/6894))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.19.1`
+
+## 1.19.0
+
+### Minor Changes
+
+- improved networking options for `v2_dev` ([#6724](https://github.com/remix-run/remix/pull/6724))
+
+  deprecate the `--scheme` and `--host` options and replace them with the `REMIX_DEV_ORIGIN` environment variable
+
+- Output esbuild metafiles for bundle analysis ([#6772](https://github.com/remix-run/remix/pull/6772))
+
+  Written to server build directory (`build/` by default):
+
+  - `metafile.css.json`
+  - `metafile.js.json` (browser JS)
+  - `metafile.server.json` (server JS)
+
+  Metafiles can be uploaded to <https://esbuild.github.io/analyze/> for analysis.
+
+- Add `serverNodeBuiltinsPolyfill` config option. In `remix.config.js` you can now disable polyfills of Node.js built-in modules for non-Node.js server platforms, or opt into a subset of polyfills. ([#6814](https://github.com/remix-run/remix/pull/6814), [#6859](https://github.com/remix-run/remix/pull/6859), [#6877](https://github.com/remix-run/remix/pull/6877))
+
+  ```js
+  // Disable all polyfills
+  exports.serverNodeBuiltinsPolyfill = { modules: {} };
+
+  // Enable specific polyfills
+  exports.serverNodeBuiltinsPolyfill = {
+    modules: {
+      crypto: true, // Provide a JSPM polyfill
+      fs: "empty", // Provide an empty polyfill
+    },
+  };
+  ```
+
+### Patch Changes
+
+- ignore missing react-dom/client for react 17 ([#6725](https://github.com/remix-run/remix/pull/6725))
+
+- Warn if not using `v2_dev` ([#6818](https://github.com/remix-run/remix/pull/6818))
+
+  Also, rename `--no-restart` to `--manual` to match intention and documentation.
+  `--no-restart` remains an alias for `--manual` in v1 for backwards compatibility.
+
+- ignore errors when killing already dead processes ([#6773](https://github.com/remix-run/remix/pull/6773))
+
+- Always rewrite css-derived assets during builds ([#6837](https://github.com/remix-run/remix/pull/6837))
+
+- fix sourcemaps for `v2_dev` ([#6762](https://github.com/remix-run/remix/pull/6762))
+
+- Do not clear screen when dev server starts ([#6719](https://github.com/remix-run/remix/pull/6719))
+
+  On some terminal emulators, "clearing" only scrolls the next line to the
+  top. on others, it erases the scrollback.
+
+  Instead, let users call `clear` themselves (`clear && remix dev`) if
+  they want to clear.
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.19.0`
+
+## 1.18.1
+
+### Patch Changes
+
+- Ignore missing `react-dom/client` for React 17 ([#6725](https://github.com/remix-run/remix/pull/6725))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.18.1`
+
+## 1.18.0
+
+### Minor Changes
+
+- stabilize v2 dev server ([#6615](https://github.com/remix-run/remix/pull/6615))
+- improved logging for `remix build` and `remix dev` ([#6596](https://github.com/remix-run/remix/pull/6596))
+
+### Patch Changes
+
+- fix docs links for msw and mkcert ([#6672](https://github.com/remix-run/remix/pull/6672))
+- fix `remix dev -c`: kill all descendant processes of specified command when restarting ([#6663](https://github.com/remix-run/remix/pull/6663))
+- Add caching to regular stylesheet compilation ([#6638](https://github.com/remix-run/remix/pull/6638))
+- Rename `Architect (AWS Lambda)` -> `Architect` in the `create-remix` CLI to avoid confusion for other methods of deploying to AWS (i.e., SST) ([#6484](https://github.com/remix-run/remix/pull/6484))
+- Improve CSS bundle build performance by skipping unused Node polyfills ([#6639](https://github.com/remix-run/remix/pull/6639))
+- Improve performance of CSS bundle build by skipping compilation of Remix/React packages that are known not to contain CSS imports ([#6654](https://github.com/remix-run/remix/pull/6654))
+- Cache CSS side-effect imports transform when using HMR ([#6622](https://github.com/remix-run/remix/pull/6622))
+- Fix bug with pathless layout routes beneath nested path segments ([#6649](https://github.com/remix-run/remix/pull/6649))
+- Add caching to PostCSS for CSS Modules ([#6604](https://github.com/remix-run/remix/pull/6604))
+- Add caching to PostCSS for side-effect imports ([#6554](https://github.com/remix-run/remix/pull/6554))
+- cache getRouteModuleExports calls to significantly speed up build and HMR rebuild times ([#6629](https://github.com/remix-run/remix/pull/6629))
+- group rebuild logs with surrounding whitespace ([#6607](https://github.com/remix-run/remix/pull/6607))
+- instructions for integrating with msw ([#6669](https://github.com/remix-run/remix/pull/6669))
+- Update minimum version of `esbuild-plugins-node-modules-polyfill` to 1.0.16 to ensure that the plugin is cached ([#6652](https://github.com/remix-run/remix/pull/6652))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.18.0`
+
+## 1.17.1
+
+### Patch Changes
+
+- Replace `esbuild-plugin-polyfill-node` with `esbuild-plugins-node-modules-polyfill` ([#6562](https://github.com/remix-run/remix/pull/6562))
+- Lazily generate CSS bundle when import of `@remix-run/css-bundle` is detected ([#6535](https://github.com/remix-run/remix/pull/6535))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.17.1`
+
 ## 1.17.0
 
 ### Minor Changes

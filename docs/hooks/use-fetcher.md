@@ -23,7 +23,7 @@ It is common for Remix newcomers to see this hook and think it is the primary wa
 - [`useLoaderData`][useloaderdata]
 - [`Form`][form]
 - [`useActionData`][useactiondata]
-- [`useTransition`][usetransition]
+- [`useNavigation`][usenavigation]
 
 If you're building a highly interactive, "app-like" user interface, you will use `useFetcher` often.
 
@@ -89,7 +89,7 @@ This is the type of state the fetcher is in. It's like `fetcher.state`, but more
 - `state === "loading"`
 
   - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded.
-  - **actionRedirect** - The action from an "actionSubmission" returned a redirect and the page is transitioning to the new location.
+  - **actionRedirect** - The action from an "actionSubmission" returned a redirect and the page is navigating to the new location.
   - **normalLoad** - A route's loader is being called without a submission (`fetcher.load()`).
 
 ## `fetcher.submission`
@@ -185,9 +185,9 @@ See also:
 
 **Newsletter Signup Form**
 
-Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so useFetcher is perfect for the job. First, you create a Resource Route:
+Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so `useFetcher` is perfect for the job. First, you create a Resource Route:
 
-```tsx filename=routes/newsletter/subscribe.tsx
+```tsx filename=app/routes/newsletter.subscribe.tsx
 export async function action({ request }: ActionArgs) {
   const email = (await request.formData()).get("email");
   try {
@@ -201,7 +201,7 @@ export async function action({ request }: ActionArgs) {
 
 Then, somewhere else in your app (your root layout in this example), you render the following component:
 
-```tsx filename=routes/root.tsx
+```tsx filename=app/routes/root.tsx
 // ...
 
 function NewsletterSignup() {
@@ -251,7 +251,7 @@ Because `useFetcher` doesn't cause a navigation, it won't automatically work if 
 
 If you want to support a no JavaScript experience, just export a component from the route with the action.
 
-```tsx filename=routes/newsletter/subscribe.tsx
+```tsx filename=app/routes/newsletter.subscribe.tsx
 export async function action({ request }: ActionArgs) {
   // just like before
 }
@@ -276,11 +276,11 @@ export default function NewsletterSignupRoute() {
 ```
 
 - When JS is on the page, the user will subscribe to the newsletter and the page won't change, they'll just get a solid, dynamic experience.
-- When JS is not on the page, they'll be transitioned to the signup page by the browser.
+- When JS is not on the page, they'll be navigated to the signup page by the browser.
 
 You could even refactor the component to take props from the hooks and reuse it:
 
-```tsx filename=routes/newsletter/subscribe.tsx
+```tsx filename=app/routes/newsletter.subscribe.tsx
 import { Form, useFetcher } from "@remix-run/react";
 
 // used in the footer
@@ -303,7 +303,7 @@ export function NewsletterForm({ Form, data, state }) {
 
 And now you could reuse the same form, but it gets data from a different hook for the no-js experience:
 
-```tsx filename=routes/newsletter/subscribe.tsx
+```tsx filename=app/routes/newsletter.subscribe.tsx
 import { Form } from "@remix-run/react";
 
 import { NewsletterForm } from "~/NewsletterSignup";
@@ -340,7 +340,7 @@ function useMarkAsRead({ articleId, userId }) {
 
 Anytime you show the user avatar, you could put a hover effect that fetches data from a loader and displays it in a popup.
 
-```tsx filename=routes/user/$id/details.tsx
+```tsx filename=app/routes/user.$id.details.tsx
 export async function loader({ params }: LoaderArgs) {
   return json(
     await fakeDb.user.find({ where: { id: params.id } })
@@ -383,7 +383,7 @@ function UserAvatar({ partialUser }) {
 
 If the user needs to select a city, you could have a loader that returns a list of cities based on a query and plug it into a Reach UI combobox:
 
-```tsx filename=routes/city-search.tsx
+```tsx filename=app/routes/city-search.tsx
 export async function loader({ request }: LoaderArgs) {
   const url = new URL(request.url);
   return json(
@@ -435,7 +435,7 @@ function CitySearchCombobox() {
 
 [form]: ../components/form
 [index query param]: ../guides/routing#what-is-the-index-query-param
-[usetransition]: ./use-transition
+[usenavigation]: ./use-navigation
 [useactiondata]: ./use-action-data
 [useloaderdata]: ./use-loader-data
 [v2guide]: ../pages/v2#usefetcher

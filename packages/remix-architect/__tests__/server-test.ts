@@ -1,5 +1,5 @@
-import fsp from "fs/promises";
-import path from "path";
+import fsp from "node:fs/promises";
+import path from "node:path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import {
@@ -15,7 +15,7 @@ import {
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
-// puppetteer tests do), we just want to test the architect adapter
+// playwright tests do), we just want to test the architect adapter
 jest.mock("@remix-run/node", () => {
   let original = jest.requireActual("@remix-run/node");
   return {

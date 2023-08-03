@@ -1,10 +1,6 @@
 import type { AppData } from "./data";
 import type { TypedDeferredData, TypedResponse } from "./responses";
 
-// force Typescript to simplify the type
-type Pretty<T> = { [K in keyof T]: T[K] } & {};
-type PrettyTransform<T, U> = [T] extends [U] ? T : Pretty<U>;
-
 type JsonPrimitive =
   | string
   | number
@@ -31,14 +27,14 @@ type Serialize<T> =
   T extends [] ? [] :
   T extends [unknown, ...unknown[]] ? SerializeTuple<T> :
   T extends ReadonlyArray<infer U> ? (U extends NonJsonPrimitive ? null : Serialize<U>)[] :
-  T extends object ? PrettyTransform<T, SerializeObject<UndefinedToOptional<T>>> :
+  T extends object ? SerializeObject<UndefinedToOptional<T>> :
   never
 ;
 
 /** JSON serialize [tuples](https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types) */
-type SerializeTuple<T extends [unknown, ...unknown[]]> = {
-  [k in keyof T]: T[k] extends NonJsonPrimitive ? null : Serialize<T[k]>;
-};
+type SerializeTuple<T extends unknown[]> = T extends [infer F, ...infer R]
+  ? [Serialize<F>, ...SerializeTuple<R>]
+  : [];
 
 /** JSON serialize objects (not including arrays) and classes */
 type SerializeObject<T extends object> = {

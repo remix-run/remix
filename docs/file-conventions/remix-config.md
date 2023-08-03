@@ -45,14 +45,18 @@ The path to the browser build, relative to remix.config.js. Defaults to
 The path to a directory Remix can use for caching things in development,
 relative to `remix.config.js`. Defaults to `".cache"`.
 
-## devServerBroadcastDelay
+## devServerBroadcastDelay (deprecated)
 
 The delay, in milliseconds, before the dev server broadcasts a reload event.
 There is no delay by default.
 
-## devServerPort
+For `v2_dev`, the race conditions that necesitated this option have been eliminated.
+
+## devServerPort (deprecated)
 
 The port number to use for the dev websocket server. Defaults to 8002.
+
+For `v2_dev`, use [`--port` / `v2_dev.port` option][port].
 
 ## ignoredRouteFiles
 
@@ -68,7 +72,7 @@ The URL prefix of the browser build with a trailing slash. Defaults to
 
 ## postcss
 
-Whether to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `false`.
+Whether to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `true`.
 
 ## routes
 
@@ -117,27 +121,6 @@ The path to the server build, relative to `remix.config.js`. Defaults to
 The path to the server build file, relative to `remix.config.js`. This file
 should end in a `.js` extension and should be deployed to your server. Defaults
 to `"build/index.js"`.
-
-## serverBuildTarget
-
-<docs-warning>This option is deprecated and will be removed in the next major version release. Use a combination of [`publicPath`][public-path],
-[`serverBuildPath`][server-build-path], [`serverConditions`][server-conditions],
-[`serverDependenciesToBundle`][server-dependencies-to-bundle]
-[`serverMainFields`][server-main-fields], [`serverMinify`][server-minify],
-[`serverModuleFormat`][server-module-format] and/or
-[`serverPlatform`][server-platform] instead.</docs-warning>
-
-The target of the server build. Defaults to `"node-cjs"`.
-
-The `serverBuildTarget` can be one of the following:
-
-- [`"arc"`][arc]
-- [`"cloudflare-pages"`][cloudflare-pages]
-- [`"cloudflare-workers"`][cloudflare-workers]
-- [`"deno"`][deno]
-- [`"netlify"`][netlify]
-- [`"node-cjs"`][node-cjs]
-- [`"vercel"`][vercel]
 
 ## serverConditions
 
@@ -191,6 +174,19 @@ Whether to minify the server build in production or not. Defaults to `false`.
 The output format of the server build, which can either be `"cjs"` or `"esm"`.
 Defaults to `"cjs"`.
 
+## serverNodeBuiltinsPolyfill
+
+The Node.js polyfills to include in the server build when targeting non-Node.js server platforms. Polyfills are provided by [JSPM][jspm] and configured via [esbuild-plugins-node-modules-polyfill].
+
+```js filename=remix.config.js
+exports.serverNodeBuiltinsPolyfill = {
+  modules: {
+    path: true, // Provide a JSPM polyfill
+    fs: "empty", // Provide an empty polyfill
+  },
+};
+```
+
 ## serverPlatform
 
 The platform the server build is targeting, which can either be `"neutral"` or
@@ -198,7 +194,7 @@ The platform the server build is targeting, which can either be `"neutral"` or
 
 ## tailwind
 
-Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `false`.
+Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `true`.
 
 ## watchPaths
 
@@ -242,3 +238,6 @@ There are a few conventions that Remix uses you should be aware of.
 [css-side-effect-imports]: ../guides/styling#css-side-effect-imports
 [postcss]: https://postcss.org
 [tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
+[jspm]: https://github.com/jspm/jspm-core
+[esbuild-plugins-node-modules-polyfill]: https://www.npmjs.com/package/esbuild-plugins-node-modules-polyfill
+[port]: ../other-api/dev-v2#option-1

@@ -1,4 +1,4 @@
-import * as path from "path";
+import * as path from "node:path";
 
 import type { Context } from "./context";
 import * as CSS from "./css";
@@ -107,6 +107,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       config: ctx.config,
       metafile,
       hmr,
+      fileWatchCache: ctx.fileWatchCache,
     });
     refs.manifestChannel.ok(manifest);
     options.onManifest?.(manifest);

@@ -2,7 +2,6 @@ import type {
   UNSAFE_DeferredData as DeferredData,
   ErrorResponse,
   StaticHandler,
-  StaticHandlerContext,
 } from "@remix-run/router";
 import {
   UNSAFE_DEFERRED_SYMBOL as DEFERRED_SYMBOL,
@@ -21,7 +20,6 @@ import { getDocumentHeadersRR } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import { matchServerRoutes } from "./routeMatching";
-import type { ServerRouteManifest } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
@@ -82,10 +80,9 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       );
 
       if (build.entry.module.handleDataRequest) {
-        let match = matches!.find((match) => match.route.id == routeId)!;
         response = await build.entry.module.handleDataRequest(response, {
           context: loadContext,
-          params: match ? match.params : {},
+          params: matches?.find((m) => m.route.id == routeId)?.params || {},
           request,
         });
       }
@@ -166,10 +163,16 @@ async function handleDataRequestRR(
       let init = deferredData.init || {};
       let headers = new Headers(init.headers);
       headers.set("Content-Type", "text/remix-deferred");
+      // Mark successful responses with a header so we can identify in-flight
+      // network errors that are missing this header
+      headers.set("X-Remix-Response", "yes");
       init.headers = headers;
       return new Response(body, init);
     }
 
+    // Mark all successful responses with a header so we can identify in-flight
+    // network errors that are missing this header
+    response.headers.set("X-Remix-Response", "yes");
     return response;
   } catch (error: unknown) {
     if (isResponse(error)) {
@@ -194,55 +197,6 @@ async function handleDataRequestRR(
       },
     });
   }
-}
-
-function findParentBoundary(
-  routes: ServerRouteManifest,
-  routeId: string,
-  error: any
-): string {
-  // Fall back to the root route if we don't match any routes, since Remix
-  // has default error/catch boundary handling.  This handles the case where
-  // react-router doesn't have a matching "root" route to assign the error to
-  // so it returns context.errors = { __shim-error-route__: ErrorResponse }
-  let route = routes[routeId] || routes["root"];
-  // Router-thrown ErrorResponses will have the error instance.  User-thrown
-  // Responses will not have an error. The one exception here is internal 404s
-  // which we handle the same as user-thrown 404s
-  let isCatch =
-    isRouteErrorResponse(error) && (!error.error || error.status === 404);
-  if (
-    (isCatch && route.module.CatchBoundary) ||
-    (!isCatch && route.module.ErrorBoundary) ||
-    !route.parentId
-  ) {
-    return route.id;
-  }
-
-  return findParentBoundary(routes, route.parentId, error);
-}
-
-// Re-generate a remix-friendly context.errors structure.  The Router only
-// handles generic errors and does not distinguish error versus catch.  We
-// may have a thrown response tagged to a route that only exports an
-// ErrorBoundary or vice versa.  So we adjust here and ensure that
-// data-loading errors are properly associated with routes that have the right
-// type of boundaries.
-export function differentiateCatchVersusErrorBoundaries(
-  build: ServerBuild,
-  context: StaticHandlerContext
-) {
-  if (!context.errors) {
-    return;
-  }
-
-  let errors: Record<string, any> = {};
-  for (let routeId of Object.keys(context.errors)) {
-    let error = context.errors[routeId];
-    let handlingRouteId = findParentBoundary(build.routes, routeId, error);
-    errors[handlingRouteId] = error;
-  }
-  context.errors = errors;
 }
 
 async function handleDocumentRequestRR(
@@ -277,11 +231,6 @@ async function handleDocumentRequestRR(
     context.errors = sanitizeErrors(context.errors, serverMode);
   }
 
-  // Restructure context.errors to the right Catch/Error Boundary
-  if (build.future.v2_errorBoundary !== true) {
-    differentiateCatchVersusErrorBoundaries(build, context);
-  }
-
   let headers = getDocumentHeadersRR(build, context);
 
   let entryContext: EntryContext = {
@@ -289,15 +238,16 @@ async function handleDocumentRequestRR(
     routeModules: createEntryRouteModules(build.routes),
     staticHandlerContext: context,
     serverHandoffString: createServerHandoffString({
+      url: context.location.pathname,
       state: {
         loaderData: context.loaderData,
         actionData: context.actionData,
         errors: serializeErrors(context.errors, serverMode),
       },
       future: build.future,
-      dev: build.dev,
     }),
     future: build.future,
+    serializeError: (err) => serializeError(err, serverMode),
   };
 
   let handleDocumentRequestFunction = build.entry.module.default;
@@ -324,16 +274,12 @@ async function handleDocumentRequestRR(
       context.errors = sanitizeErrors(context.errors, serverMode);
     }
 
-    // Restructure context.errors to the right Catch/Error Boundary
-    if (build.future.v2_errorBoundary !== true) {
-      differentiateCatchVersusErrorBoundaries(build, context);
-    }
-
     // Update entryContext for the second render pass
     entryContext = {
       ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString({
+        url: context.location.pathname,
         state: {
           loaderData: context.loaderData,
           actionData: context.actionData,
