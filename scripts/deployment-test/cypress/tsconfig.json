@@ -18,7 +18,7 @@
     "esModuleInterop": true,
     "jsx": "react",
     "moduleResolution": "Bundler",
-    "target": "es2019",
+    "target": "ES2022",
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
