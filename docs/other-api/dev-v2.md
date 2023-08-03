@@ -94,9 +94,11 @@ module.exports = {
 
 2. Replace your dev scripts in `package.json` and use `-c` to specify your app server command:
 
-```json
+```json filename=package.json
 {
-  "dev": "remix dev -c \"node ./server.js\""
+  "scripts": {
+    "dev": "remix dev -c \"node ./server.js\""
+  }
 }
 ```
 
