@@ -29,6 +29,4 @@ installGlobals();
 
 Remix officially supports **Active** and **Maintenance** [Node LTS versions][node-releases] at any given point in time. Dropped support for End of Life Node versions is done in a Remix Minor release.
 
-In some cases, we may tactically drop support for a **Maintenance LTS** version early if it will reach End of Life shortly after a planned Remix Major release. For example, Remix v2 is near completion and we hope to release it sometime in August 2023. Node 16 reaches End of Life in September 2023, so we plan to drop support for Node 16 with the release of Remix v2.
-
 [node-releases]: https://nodejs.dev/en/about/releases/
