@@ -23,6 +23,7 @@
   },
   "changesets": [
     "dirty-beers-sing",
+    "lucky-kangaroos-develop",
     "many-cars-jump",
     "pink-dragons-travel"
   ]
