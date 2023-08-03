@@ -24,3 +24,12 @@ installGlobals();
 <docs-info>
   Keep in mind that we install these for you automatically in your actual app, so you should only need to do this in your test environment.
 </docs-info>
+
+## Version Support
+
+Remix officially supports **Active** and **Maintenance** [Node LTS versions][node-releases] at any given time. When possible, we will try to align dropping support for Node versions that reach End of Life along with a Remix Major [SemVer][semver] release, but this is not something we plan to strictly enforce. If a Node version reaches End of Life and Remix is not in a place to perform a Major SemVer release in the same timeframe, we _may_ drop support in a Minor SemVer release and note it clearly in the release notes. In some cases, to avoid this, we may tactically drop support for a **Maintenance LTS** version early if it will reach End of Life shortly after a planned Remix Major release.
+
+For example, Remix v2 is near completion and we hope to release it sometime in August 2023, however Node 16 reaches End of Life in September 2023, so we plan to drop support for Node 16 with the release of Remix v2.
+
+[node-releases]: https://nodejs.dev/en/about/releases/
+[semver]: https://semver.org/
