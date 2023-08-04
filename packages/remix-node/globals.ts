@@ -50,7 +50,7 @@ export function installGlobals() {
   global.File = NodeFile;
 
   global.Headers = NodeHeaders as typeof Headers;
-  global.Request = NodeRequest as unknown as typeof Request;
+  global.Request = NodeRequest as typeof Request;
   global.Response = NodeResponse as unknown as typeof Response;
   global.fetch = nodeFetch as typeof fetch;
   global.FormData = NodeFormData;

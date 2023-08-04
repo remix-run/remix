@@ -33,16 +33,12 @@ export type {
 };
 
 interface NodeRequest extends WebRequest {
-  constructor(info: NodeRequestInfo, init?: NodeRequestInit): NodeRequest;
-
   get headers(): WebHeaders;
 
   clone(): NodeRequest;
 }
 
 interface NodeResponse extends WebResponse {
-  constructor(info: NodeResponseInfo, init?: NodeResponseInit): NodeResponse;
-
   get headers(): WebHeaders;
 
   clone(): NodeResponse;
