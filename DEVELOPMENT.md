@@ -87,6 +87,10 @@ You may need to make changes to a pre-release prior to publishing a final stable
     - `git checkout dev; git merge --no-ff release-next`
   - Convert the `remix@1.x.y` tag to a Release on Github with the name `v1.x.y` using he release notes prepared above
 
+### Hotfix releases
+
+Hotfix releases follow the same process as standard releases above, but the `release-*` branch should be branched off latest `main` instead of `dev`. Once the stable hotfix is published, the `release-*` branch should be merged back into both `main` and `dev` just like a normal release.
+
 ### Experimental releases
 
 Experimental releases do not need to be branched off of `dev`. Experimental releases can be branched from anywhere as they are not intended for general use.

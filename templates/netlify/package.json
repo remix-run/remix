@@ -9,8 +9,8 @@
   },
   "dependencies": {
     "@netlify/functions": "^1.4.0",
+    "@netlify/remix-adapter": "^1.0.0",
     "@remix-run/css-bundle": "*",
-    "@remix-run/netlify": "*",
     "@remix-run/node": "*",
     "@remix-run/react": "*",
     "cross-env": "^7.0.3",
