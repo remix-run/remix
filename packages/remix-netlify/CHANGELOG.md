@@ -1,26 +1,12 @@
 # `@remix-run/netlify`
 
-## 1.19.2-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.19.2-pre.2`
-
-## 1.19.2-pre.1
+## 1.19.2
 
 ### Patch Changes
 
 - Show deprecation warning on `@remix-run/netlify` usage, which is deprecated in favor of `@netlify/remix-adapter` ([#6937](https://github.com/remix-run/remix/pull/6937))
 - Updated dependencies:
-  - `@remix-run/node@1.19.2-pre.1`
-
-## 1.19.2-pre.0
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.19.2-pre.0`
+  - `@remix-run/node@1.19.2`
 
 ## 1.19.1
 
