@@ -14,7 +14,7 @@ type NodeResponseInit = NonNullable<
 >;
 type NodeRequestInfo =
   | ConstructorParameters<typeof WebRequest>[0]
-  | WebRequest;
+  | NodeRequest;
 type NodeRequestInit = Omit<
   NonNullable<ConstructorParameters<typeof WebRequest>[1]>,
   "body"
@@ -31,10 +31,25 @@ export type {
   NodeResponseInit as ResponseInit,
 };
 
+interface NodeRequest extends WebRequest {
+  get headers(): WebHeaders
+
+  clone(): NodeRequest
+}
+
+interface NodeResponse extends WebResponse {
+  get headers(): WebHeaders
+
+  clone(): NodeResponse
+}
+
+const castedRequest = WebRequest as unknown as NodeRequest
+const castedResponse = WebResponse as unknown as NodeResponse
+
 export {
   WebHeaders as Headers,
-  WebRequest as Request,
-  WebResponse as Response,
+  castedRequest as Request,
+  castedResponse as Response,
 };
 
 export const fetch: typeof webFetch = (
