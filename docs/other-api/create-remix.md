@@ -70,4 +70,8 @@ To create a new project from a template in a private GitHub repo, pass the `--to
 </docs-info>
 </aside>
 
+### `create-remix --allow-non-empty`
+
+By default, `create-remix` requires that the directory you are creating your app into is empty. You can disable this requirement with `--allow-non-empty`, but beware that if you have files/folders that match files/folders in the template, the template versions will **overwrite** the version in your local directory when this flag is used.
+
 [templates]: ../pages/templates
