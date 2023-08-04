@@ -32,25 +32,29 @@ export type {
 };
 
 interface NodeRequest extends WebRequest {
-  get headers(): WebHeaders
+  constructor(info: NodeRequestInfo, init?: NodeRequestInit):NodeRequest
+
+  get headers(): WebHeader
 
   clone(): NodeRequest
 }
 
 interface NodeResponse extends WebResponse {
+  constructor(info: ConstructorParameters<typeof WebResponse>[0], init?: NodeResponseInit):NodeResponse
+
   get headers(): WebHeaders
 
   clone(): NodeResponse
 }
 
-const castedRequest = WebRequest as unknown as NodeRequest
-const castedResponse = WebResponse as unknown as NodeResponse
+const NodeRequest = WebRequest as new(info: NodeRequestInfo, init?: NodeRequestInit) => NodeRequest;
+const NodeResponse = WebResponse as unknown as new(info: ConstructorParameters<typeof WebResponse>[0], init?: NodeResponseInit) => NodeResponse;
 
 export {
   WebHeaders as Headers,
-  castedRequest as Request,
-  castedResponse as Response,
-};
+  NodeRequest as Request,
+  NodeResponse as Response,
+}
 
 export const fetch: typeof webFetch = (
   info: NodeRequestInfo,
