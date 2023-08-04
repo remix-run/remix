@@ -9,6 +9,7 @@ export { FormData } from "@remix-run/web-fetch";
 export { File, Blob } from "@remix-run/web-file";
 
 type NodeHeadersInit = ConstructorParameters<typeof WebHeaders>[0];
+type NodeResponseInfo = ConstructorParameters<typeof WebResponse>[0];
 type NodeResponseInit = NonNullable<
   ConstructorParameters<typeof WebResponse>[1]
 >;
@@ -32,29 +33,35 @@ export type {
 };
 
 interface NodeRequest extends WebRequest {
-  constructor(info: NodeRequestInfo, init?: NodeRequestInit):NodeRequest
+  constructor(info: NodeRequestInfo, init?: NodeRequestInit): NodeRequest;
 
-  get headers(): WebHeaders
+  get headers(): WebHeaders;
 
-  clone(): NodeRequest
+  clone(): NodeRequest;
 }
 
 interface NodeResponse extends WebResponse {
-  constructor(info: ConstructorParameters<typeof WebResponse>[0], init?: NodeResponseInit):NodeResponse
+  constructor(info: NodeResponseInfo, init?: NodeResponseInit): NodeResponse;
 
-  get headers(): WebHeaders
+  get headers(): WebHeaders;
 
-  clone(): NodeResponse
+  clone(): NodeResponse;
 }
 
-const NodeRequest = WebRequest as new(info: NodeRequestInfo, init?: NodeRequestInit) => NodeRequest;
-const NodeResponse = WebResponse as unknown as new(info: ConstructorParameters<typeof WebResponse>[0], init?: NodeResponseInit) => NodeResponse;
+const NodeRequest = WebRequest as new (
+  info: NodeRequestInfo,
+  init?: NodeRequestInit
+) => NodeRequest;
+const NodeResponse = WebResponse as unknown as new (
+  info: NodeResponseInfo,
+  init?: NodeResponseInit
+) => NodeResponse;
 
 export {
   WebHeaders as Headers,
   NodeRequest as Request,
   NodeResponse as Response,
-}
+};
 
 export const fetch: typeof webFetch = (
   info: NodeRequestInfo,

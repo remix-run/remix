@@ -1,7 +1,10 @@
 import { ReadableStream } from "@remix-run/web-stream";
+import {
+  Request as WebRequest,
+  Response as WebResponse,
+} from "@remix-run/web-fetch";
 
 import { Request, Response } from "../fetch";
-import { Request as WebRequest, Response as WebResponse } from "@remix-run/web-fetch"
 
 let test = {
   source: [
@@ -116,10 +119,10 @@ describe("Request", () => {
   });
 
   it("instanceOf", async () => {
-    const nodeReq = new Request("http://example.com");
-    const webReq = new WebRequest("http://example.com");
-    const nodeRes = new Response("http://example.com");
-    const webRes = new WebResponse("http://example.com");
+    let nodeReq = new Request("http://example.com");
+    let webReq = new WebRequest("http://example.com");
+    let nodeRes = new Response("http://example.com");
+    let webRes = new WebResponse("http://example.com");
     expect(nodeReq instanceof Request).toBeTruthy();
     expect(nodeReq instanceof WebRequest).toBeTruthy();
     expect(webReq instanceof Request).toBeTruthy();
@@ -128,7 +131,7 @@ describe("Request", () => {
     expect(nodeRes instanceof WebResponse).toBeTruthy();
     expect(webRes instanceof Response).toBeTruthy();
     expect(webRes instanceof WebResponse).toBeTruthy();
-  })
+  });
 });
 
 describe("fetch", () => {
