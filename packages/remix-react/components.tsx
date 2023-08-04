@@ -311,6 +311,10 @@ export function composeEventHandlers<
   };
 }
 
+function getHtmlLinkDescriptorKey(link: HtmlLinkDescriptor) {
+  return link.rel + (link.href || "") + (link.imageSrcSet || "");
+}
+
 /**
  * Renders the `<link>` tags for the current routes.
  *
@@ -360,7 +364,7 @@ export function Links() {
 
         return (
           <link
-            key={link.rel + (link.href || "") + (imageSrcSet || "")}
+            key={getHtmlLinkDescriptorKey(link)}
             {...{
               ...link,
               [imageSizesKey]: imageSizes,
@@ -486,7 +490,7 @@ function PrefetchPageLinksImpl({
       {styleLinks.map((link) => (
         // these don't spread `linkProps` because they are full link descriptors
         // already with their own props
-        <link key={link.href} {...link} />
+        <link key={getHtmlLinkDescriptorKey(link)} {...link} />
       ))}
     </>
   );

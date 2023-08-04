@@ -218,7 +218,7 @@ export function getLinksForMatches(
     .flat(1);
 
   let preloads = getCurrentPageModulePreloadHrefs(matches, manifest);
-  return dedupe(descriptors, preloads);
+  return dedupeLinkDescriptors(descriptors, preloads);
 }
 
 export async function prefetchStyleLinks(
@@ -321,15 +321,17 @@ export async function getStylesheetPrefetchLinks(
     })
   );
 
-  return links
-    .flat(1)
-    .filter(isHtmlLinkDescriptor)
-    .filter((link) => link.rel === "stylesheet" || link.rel === "preload")
-    .map((link) =>
-      link.rel === "preload"
-        ? ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
-        : ({ ...link, rel: "prefetch", as: "style" } as HtmlLinkDescriptor)
-    );
+  return dedupeLinkDescriptors(
+    links
+      .flat(1)
+      .filter(isHtmlLinkDescriptor)
+      .filter((link) => link.rel === "stylesheet" || link.rel === "preload")
+      .map((link) =>
+        link.rel === "preload"
+          ? ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
+          : ({ ...link, rel: "prefetch", as: "style" } as HtmlLinkDescriptor)
+      )
+  );
 }
 
 // This is ridiculously identical to transition.ts `filterMatchesToLoad`
@@ -466,12 +468,16 @@ function dedupeHrefs(hrefs: string[]): string[] {
   return [...new Set(hrefs)];
 }
 
-export function dedupe(descriptors: LinkDescriptor[], preloads: string[]) {
+export function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
+  descriptors: Descriptor[],
+  preloads?: string[]
+) {
   let set = new Set();
   let preloadsSet = new Set(preloads);
 
   return descriptors.reduce((deduped, descriptor) => {
     let alreadyModulePreload =
+      preloads &&
       !isPageLinkDescriptor(descriptor) &&
       descriptor.as === "script" &&
       descriptor.href &&
@@ -488,7 +494,7 @@ export function dedupe(descriptors: LinkDescriptor[], preloads: string[]) {
     }
 
     return deduped;
-  }, [] as LinkDescriptor[]);
+  }, [] as Descriptor[]);
 }
 
 // https://github.com/remix-run/history/issues/897
