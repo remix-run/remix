@@ -31,34 +31,10 @@ export type {
   NodeResponseInit as ResponseInit,
 };
 
-class NodeRequest extends WebRequest {
-  constructor(info: NodeRequestInfo, init?: NodeRequestInit) {
-    super(info, init as RequestInit);
-  }
-
-  public get headers(): WebHeaders {
-    return super.headers as WebHeaders;
-  }
-
-  public clone(): NodeRequest {
-    return new NodeRequest(this);
-  }
-}
-
-class NodeResponse extends WebResponse {
-  public get headers(): WebHeaders {
-    return super.headers as WebHeaders;
-  }
-
-  public clone(): NodeResponse {
-    return super.clone() as NodeResponse;
-  }
-}
-
 export {
   WebHeaders as Headers,
-  NodeRequest as Request,
-  NodeResponse as Response,
+  WebRequest as Request,
+  WebResponse as Response,
 };
 
 export const fetch: typeof webFetch = (
