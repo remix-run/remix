@@ -18,12 +18,41 @@ export function isErrorResponse(response: any): response is Response {
   return response.headers.get("X-Remix-Error") != null;
 }
 
+export function isNetworkErrorResponse(response: any): response is Response {
+  // If we reach the Remix server, we can safely identify response types via the
+  // X-Remix-Error/X-Remix-Catch headers.  However, if we never reach the Remix
+  // server, and instead receive a 4xx/5xx from somewhere in between (like
+  // Cloudflare), then we get a false negative n the isErrorResponse check and
+  // we incorrectly assume that the user returns the 4xx/5xx response and
+  // consider it successful.  To alleviate this, we add X-Remix-Response to any
+  // non-Error/non-Catch responses coming back from the server.  If we don't
+  // see this, we can conclude that a 4xx/5xx response never actually reached
+  // the Remix server and we can bubble it up as an error.
+  return (
+    isResponse(response) &&
+    response.status >= 400 &&
+    response.headers.get("X-Remix-Error") == null &&
+    response.headers.get("X-Remix-Catch") == null &&
+    response.headers.get("X-Remix-Response") == null
+  );
+}
+
 export function isRedirectResponse(response: Response): boolean {
   return response.headers.get("X-Remix-Redirect") != null;
 }
 
 export function isDeferredResponse(response: Response): boolean {
   return !!response.headers.get("Content-Type")?.match(/text\/remix-deferred/);
+}
+
+function isResponse(value: any): value is Response {
+  return (
+    value != null &&
+    typeof value.status === "number" &&
+    typeof value.statusText === "string" &&
+    typeof value.headers === "object" &&
+    typeof value.body !== "undefined"
+  );
 }
 
 export async function fetchData(
@@ -82,6 +111,13 @@ export async function fetchData(
     let data = await response.json();
     let error = new Error(data.message);
     error.stack = data.stack;
+    return error;
+  }
+
+  if (isNetworkErrorResponse(response)) {
+    let text = await response.text();
+    let error = new Error(text);
+    error.stack = undefined;
     return error;
   }
 

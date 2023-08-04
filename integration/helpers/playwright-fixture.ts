@@ -1,4 +1,4 @@
-import cp from "child_process";
+import cp from "node:child_process";
 import type { Page, Response, Request } from "@playwright/test";
 import { test } from "@playwright/test";
 import cheerio from "cheerio";
@@ -136,6 +136,17 @@ export class PlaywrightFixture {
       await doAndWait(this.page, () => this.page.goBack());
     } else {
       await this.page.goBack();
+    }
+  }
+
+  /**
+   * "Clicks" the refresh button.
+   */
+  async reload(options: { wait: boolean } = { wait: true }) {
+    if (options.wait) {
+      await doAndWait(this.page, () => this.page.reload());
+    } else {
+      await this.page.reload();
     }
   }
 

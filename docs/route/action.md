@@ -52,10 +52,10 @@ When a POST is made to a URL, multiple routes in your route hierarchy will match
 
 If you want to post to an index route use `?index` in the action: `<Form action="/accounts?index" method="post" />`
 
-| action url        | route action               |
-| ----------------- | -------------------------- |
-| `/accounts?index` | `routes/accounts/index.js` |
-| `/accounts`       | `routes/accounts.js`       |
+| action url        | route action                     |
+| ----------------- | -------------------------------- |
+| `/accounts?index` | `app/routes/accounts._index.tsx` |
+| `/accounts`       | `app/routes/accounts.tsx`        |
 
 Also note that forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered, so using the `?index` param to disambiguate between parent and index routes is only useful if you're posting to an index route from somewhere besides the index route itself. If you're posting from the index route to itself, or from the parent route to itself, you don't need to define a `<Form action>` at all, just omit it: `<Form method="post">`.
 

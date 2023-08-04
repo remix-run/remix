@@ -5,10 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
-import {
-  RemixErrorBoundary,
-  RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
+import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
 import {
@@ -48,6 +45,19 @@ declare global {
 
 let router: Router;
 let hmrAbortController: AbortController | undefined;
+let hmrRouterReadyResolve: ((router: Router) => void) | undefined;
+// There's a race condition with HMR where the remix:manifest is signaled before
+// the router is assigned in the RemixBrowser component. This promise gates the
+// HMR handler until the router is ready
+let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
+  // body of a promise is executed immediately, so this can be resolved outside
+  // of the promise body
+  hmrRouterReadyResolve = resolve;
+}).catch(() => {
+  // This is a noop catch handler to avoid unhandled promise rejection warnings
+  // in the console. The promise is never rejected.
+  return undefined;
+});
 
 if (import.meta && import.meta.hot) {
   import.meta.hot.accept(
@@ -59,6 +69,15 @@ if (import.meta && import.meta.hot) {
       assetsManifest: EntryContext["manifest"];
       needsRevalidation: Set<string>;
     }) => {
+      let router = await hmrRouterReadyPromise;
+      // This should never happen, but just in case...
+      if (!router) {
+        console.error(
+          "Failed to accept HMR update because the router was not ready."
+        );
+        return;
+      }
+
       let routeIds = [
         ...new Set(
           router.state.matches
@@ -98,10 +117,6 @@ if (import.meta && import.meta.hot) {
                       ? window.__remixRouteModules[id]?.default ??
                         imported.default
                       : imported.default,
-                    CatchBoundary: imported.CatchBoundary
-                      ? window.__remixRouteModules[id]?.CatchBoundary ??
-                        imported.CatchBoundary
-                      : imported.CatchBoundary,
                     ErrorBoundary: imported.ErrorBoundary
                       ? window.__remixRouteModules[id]?.ErrorBoundary ??
                         imported.ErrorBoundary
@@ -171,13 +186,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     router = createBrowserRouter(routes, {
       hydrationData,
       future: {
-        // Pass through the Remix future flag to avoid a v1 breaking change in
-        // useNavigation() - users can control the casing via the flag in v1.
-        // useFetcher still always uppercases in the back-compat layer in v1.
-        // In v2 we can just always pass true here and remove the back-compat
-        // layer
-        v7_normalizeFormMethod:
-          window.__remixContext.future.v2_normalizeFormMethod,
+        v7_normalizeFormMethod: true,
       },
     });
 
@@ -196,6 +205,11 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         `(${hydratedPathname}), reloading page...`;
       console.error(errorMsg);
       window.location.reload();
+    }
+
+    // Notify that the router is ready for HMR
+    if (hmrRouterReadyResolve) {
+      hmrRouterReadyResolve(router);
     }
   }
 
@@ -221,10 +235,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         future: window.__remixContext.future,
       }}
     >
-      <RemixErrorBoundary
-        location={location}
-        component={RemixRootDefaultErrorBoundary}
-      >
+      <RemixErrorBoundary location={location}>
         <RouterProvider
           router={router}
           fallbackElement={null}

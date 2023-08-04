@@ -39,11 +39,11 @@ export let serve = async (
   initialConfig: RemixConfig,
   options: {
     command?: string;
+    manual: boolean;
     port: number;
     tlsKey?: string;
     tlsCert?: string;
     REMIX_DEV_ORIGIN: URL;
-    restart: boolean;
   }
 ) => {
   await loadEnv(initialConfig.rootDirectory);
@@ -99,7 +99,6 @@ export let serve = async (
           PATH:
             bin + (process.platform === "win32" ? ";" : ":") + process.env.PATH,
           REMIX_DEV_ORIGIN: options.REMIX_DEV_ORIGIN.href,
-          REMIX_DEV_HTTP_ORIGIN: options.REMIX_DEV_ORIGIN.href, // TODO: remove in v2
           FORCE_COLOR: process.env.NO_COLOR === undefined ? "1" : "0",
         },
         // https://github.com/sindresorhus/execa/issues/433
@@ -200,7 +199,7 @@ export let serve = async (
         let newState: typeof state = { prevManifest: state.manifest };
         try {
           let start = Date.now();
-          if (state.appServer === undefined || options.restart) {
+          if (state.appServer === undefined || !options.manual) {
             if (state.appServer?.pid) {
               await killtree(state.appServer.pid);
             }

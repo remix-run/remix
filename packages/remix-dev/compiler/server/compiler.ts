@@ -8,7 +8,6 @@ import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
-import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
 import { mdxPlugin } from "../plugins/mdx";
 import { serverAssetsManifestPlugin } from "./plugins/manifest";
@@ -50,7 +49,6 @@ const createEsbuildConfig = (
   }
 
   let plugins: esbuild.Plugin[] = [
-    deprecatedRemixPackagePlugin(ctx),
     cssBundlePlugin(refs),
     cssModulesPlugin(ctx, { outputCss: false }),
     vanillaExtractPlugin(ctx, { outputCss: false }),
@@ -67,8 +65,13 @@ const createEsbuildConfig = (
     externalPlugin(/^node:.*/, { sideEffects: false }),
   ];
 
-  if (ctx.config.serverPlatform !== "node") {
-    plugins.unshift(nodeModulesPolyfillPlugin());
+  if (ctx.config.serverNodeBuiltinsPolyfill) {
+    plugins.unshift(
+      nodeModulesPolyfillPlugin({
+        // Ensure only "modules" option is passed to the plugin
+        modules: ctx.config.serverNodeBuiltinsPolyfill.modules,
+      })
+    );
   }
 
   return {
@@ -105,15 +108,7 @@ const createEsbuildConfig = (
     publicPath: ctx.config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
-      // TODO: remove in v2
-      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-        ctx.config.devServerPort
-      ),
       "process.env.REMIX_DEV_ORIGIN": JSON.stringify(
-        ctx.options.REMIX_DEV_ORIGIN ?? ""
-      ),
-      // TODO: remove in v2
-      "process.env.REMIX_DEV_HTTP_ORIGIN": JSON.stringify(
         ctx.options.REMIX_DEV_ORIGIN ?? ""
       ),
     },

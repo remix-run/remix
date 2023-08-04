@@ -12,11 +12,8 @@ import { PlaywrightFixture } from "./helpers/playwright-fixture";
 // Generate the test app using the given prefetch mode
 function fixtureFactory(mode: RemixLinkProps["prefetch"]): FixtureInit {
   return {
-    config: {
-      future: { v2_routeConvention: true },
-    },
     files: {
-      "app/root.jsx": js`
+      "app/root.tsx": js`
         import {
           Link,
           Links,
@@ -57,13 +54,13 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]): FixtureInit {
         }
       `,
 
-      "app/routes/_index.jsx": js`
+      "app/routes/_index.tsx": js`
         export default function() {
           return <h2 className="index">Index</h2>;
         }
       `,
 
-      "app/routes/with-loader.jsx": js`
+      "app/routes/with-loader.tsx": js`
         export function loader() {
           return { message: 'data from the loader' };
         }
@@ -72,7 +69,7 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]): FixtureInit {
         }
       `,
 
-      "app/routes/without-loader.jsx": js`
+      "app/routes/without-loader.tsx": js`
         export default function() {
           return <h2 className="without-loader">Without Loader</h2>;
         }
@@ -278,11 +275,8 @@ test.describe("prefetch=viewport", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           import { Link } from "@remix-run/react";
 
           export default function Component() {
@@ -297,7 +291,7 @@ test.describe("prefetch=viewport", () => {
           }
         `,
 
-        "app/routes/test.jsx": js`
+        "app/routes/test.tsx": js`
           export function loader() {
             return null;
           }
@@ -355,11 +349,8 @@ test.describe("other scenarios", () => {
     page,
   }) => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
-        "app/root.jsx": js`
+        "app/root.tsx": js`
             import { Links, Meta, Scripts, useFetcher } from "@remix-run/react";
             import globalCss from "./global.css";
 
@@ -405,7 +396,7 @@ test.describe("other scenarios", () => {
             }
           `,
 
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
             export default function() {
               return <h2 className="index">Index</h2>;
             }

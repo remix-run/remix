@@ -48,7 +48,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
 
 2. We can do the same for a child route
 
-   ```tsx filename=app/routes/parent/child.tsx
+   ```tsx filename=app/routes/parent.child.tsx
    export const handle = {
      breadcrumb: () => (
        <Link to="/parent/child">Child Route</Link>

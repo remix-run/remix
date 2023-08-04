@@ -1,5 +1,3 @@
-import "./globals";
-
 const alreadyWarned: Record<string, boolean> = {};
 const warnOnce = (message: string, key = message) => {
   if (!alreadyWarned[key]) {

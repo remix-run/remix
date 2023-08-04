@@ -35,4 +35,15 @@ export default {
       }, 300);
     },
   },
+  set: {
+    env() {
+      // Pass matching env variables through to the application in dev mode.
+      const passthruKeys = /^NODE_ENV$|^REMIX_DEV_/;
+      return {
+        testing: Object.fromEntries(
+          Object.entries(process.env).filter(([key]) => passthruKeys.test(key))
+        ),
+      };
+    },
+  },
 };

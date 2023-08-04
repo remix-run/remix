@@ -16,11 +16,8 @@ test.describe("loader in an app", async () => {
     _consoleError = console.error;
     console.error = () => {};
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           import { Form, Link } from "@remix-run/react";
 
           export default () => (
@@ -36,15 +33,15 @@ test.describe("loader in an app", async () => {
             </>
           )
         `,
-        "app/routes/redirected.jsx": js`
+        "app/routes/redirected.tsx": js`
           export default () => <div data-testid="redirected">You were redirected</div>;
         `,
-        "app/routes/redirect.jsx": js`
+        "app/routes/redirect.tsx": js`
           import { redirect } from "@remix-run/node";
 
           export let loader = () => redirect("/redirected");
         `,
-        "app/routes/redirect-to.jsx": js`
+        "app/routes/redirect-to.tsx": js`
           import { redirect } from "@remix-run/node";
 
           export let action = async ({ request }) => {
@@ -52,15 +49,15 @@ test.describe("loader in an app", async () => {
             return redirect(formData.get('destination'));
           }
         `,
-        "app/routes/redirect-destination.jsx": js`
+        "app/routes/redirect-destination.tsx": js`
           export default () => <div data-testid="redirect-destination">You made it!</div>
         `,
-        "app/routes/data[.]json.jsx": js`
+        "app/routes/data[.]json.tsx": js`
           import { json } from "@remix-run/node";
           export let loader = () => json({hello: "world"});
         `,
         "app/assets/icon.svg": SVG_CONTENTS,
-        "app/routes/[manifest.webmanifest].js": js`
+        "app/routes/[manifest.webmanifest].tsx": js`
           import { json } from "@remix-run/node";
           import iconUrl from "~/assets/icon.svg";
           export  function loader() {
@@ -77,32 +74,32 @@ test.describe("loader in an app", async () => {
             );
           }
         `,
-        "app/routes/throw-error.jsx": js`
+        "app/routes/throw-error.tsx": js`
           export let loader = () => {
             throw new Error('Oh noes!')
           }
         `,
-        "app/routes/return-response.jsx": js`
+        "app/routes/return-response.tsx": js`
           export let loader = () => {
             return new Response('Partial', { status: 207 });
           }
         `,
-        "app/routes/throw-response.jsx": js`
+        "app/routes/throw-response.tsx": js`
           export let loader = () => {
             throw new Response('Partial', { status: 207 });
           }
         `,
-        "app/routes/return-object.jsx": js`
+        "app/routes/return-object.tsx": js`
           export let loader = () => {
             return { hello: 'world' };
           }
         `,
-        "app/routes/throw-object.jsx": js`
+        "app/routes/throw-object.tsx": js`
           export let loader = () => {
             throw { but: 'why' };
           }
         `,
-        "app/routes/no-action.jsx": js`
+        "app/routes/no-action.tsx": js`
           import { json } from "@remix-run/node";
           export let loader = () => {
             return json({ ok: true });
@@ -240,24 +237,18 @@ test.describe("Development server", async () => {
 
     fixture = await createFixture(
       {
-        config: {
-          future: {
-            v2_routeConvention: true,
-            v2_errorBoundary: true,
-          },
-        },
         files: {
-          "app/routes/_index.jsx": js`
+          "app/routes/_index.tsx": js`
             import { Link } from "@remix-run/react";
             export default () => <Link to="/child">Child</Link>;
           `,
-          "app/routes/_main.jsx": js`
+          "app/routes/_main.tsx": js`
             import { useRouteError } from "@remix-run/react";
             export function ErrorBoundary() {
               return <pre>{useRouteError().message}</pre>;
             }
           `,
-          "app/routes/_main.child.jsx": js`
+          "app/routes/_main.child.tsx": js`
             export default function Component() {
               throw new Error('Error from render')
             }

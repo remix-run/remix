@@ -70,7 +70,7 @@ But it's still sub-optimal for two reasons:
 Remix takes advantage of React 18's streaming and server-side support for `<Suspense />` boundaries using the [`defer` Response][defer] utility and [`<Await />`][await] component / [`useAsyncValue`][useasyncvalue] hook. By using these APIs, you can solve both of these problems:
 
 1. Your data is no longer on a waterfall: document & data (in parallel) -> JavaScript
-2. Your can easily switch between streaming and waiting for the data
+2. You can easily switch between streaming and waiting for the data
 
 ![Graphs showing how document and slow data requests sent over the same response significantly speed up the largest contentful paint][graphs-showing-how-document-and-slow-data-requests-sent-over-the-same-response-significantly-speed-up-the-largest-contentful-paint]
 
@@ -81,7 +81,7 @@ Let's take a dive into how to accomplish this.
 First, to enable streaming with React 18, you'll update your `entry.server.tsx` file to use `renderToPipeableStream`. Here's a simple (and incomplete) version of that:
 
 ```tsx filename=app/entry.server.tsx lines=[1,10,20,27,32,37]
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 
 import { Response } from "@remix-run/node"; // or cloudflare/deno
 import type {
@@ -131,7 +131,7 @@ export default function handleRequest(
 This handles errors and properly disables streaming for bots which you typically want to force waiting, so you can display all the content for SEO purposes.
 
 ```tsx filename=app/entry.server.tsx
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 
 import { Response } from "@remix-run/node"; // or cloudflare/deno
 import type {
