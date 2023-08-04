@@ -1,6 +1,7 @@
 import { ReadableStream } from "@remix-run/web-stream";
 
-import { Request } from "../fetch";
+import { Request, Response } from "../fetch";
+import { Request as WebRequest, Response as WebResponse } from "@remix-run/web-fetch"
 
 let test = {
   source: [
@@ -111,7 +112,17 @@ describe("Request", () => {
     expect(file.size).toBe(1023);
 
     expect(cloned instanceof Request).toBeTruthy();
+    expect(cloned instanceof WebRequest).toBeTruthy();
   });
+
+  it("instanceOf", async () => {
+    const req = new Request("http://example.com");
+    expect(req instanceof Request).toBeTruthy();
+    expect(req instanceof WebRequest).toBeTruthy();
+    const res = new Response("http://example.com");
+    expect(res instanceof Response).toBeTruthy();
+    expect(res instanceof Response).toBeTruthy();
+  })
 });
 
 describe("fetch", () => {

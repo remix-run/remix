@@ -34,7 +34,7 @@ export type {
 interface NodeRequest extends WebRequest {
   constructor(info: NodeRequestInfo, init?: NodeRequestInit):NodeRequest
 
-  get headers(): WebHeader
+  get headers(): WebHeaders
 
   clone(): NodeRequest
 }
