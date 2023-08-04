@@ -179,10 +179,10 @@ The `remix dev --port` option sets the internal port used for hot updates.
 To set your app server port, set it the way you normally would in production.
 For example, you may have it hardcoded in your `server.js` file.
 
-If you are using `remix-serve` as your app server, you can use its `--port` flag to set the app server port:
+If you are using `remix-serve` as your app server, you can use the `PORT` environment variable to set the app server port:
 
 ```
-remix dev -c "remix-serve --port 8000 ./build"
+remix dev -c "PORT=8000 remix-serve ./build"
 ```
 
 In contrast, the `remix dev --port` option is an escape-hatch for users who need fine-grain control of network ports.
