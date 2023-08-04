@@ -14,7 +14,7 @@ type NodeResponseInit = NonNullable<
 >;
 type NodeRequestInfo =
   | ConstructorParameters<typeof WebRequest>[0]
-  | NodeRequest;
+  | WebRequest;
 type NodeRequestInit = Omit<
   NonNullable<ConstructorParameters<typeof WebRequest>[1]>,
   "body"
