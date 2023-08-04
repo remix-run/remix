@@ -10,6 +10,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@cloudflare/kv-asset-handler": "^0.1.3",
     "@remix-run/cloudflare": "*",
     "@remix-run/css-bundle": "*",
     "@remix-run/react": "*",

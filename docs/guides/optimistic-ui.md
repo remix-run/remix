@@ -41,7 +41,7 @@ export default function ProjectRoute() {
 
 One of the critical pieces here is that the project route renders a reusable component like `<ProjectView>`, because we'll be using it later for our optimistic version. Perhaps it looks like this:
 
-```tsx filename=app/component/project.js
+```tsx filename=app/component/project.tsx
 export function ProjectView({ project }) {
   return (
     <div>
@@ -229,7 +229,7 @@ export default function NewProject() {
 }
 ```
 
-Now in the rare case of an error on the server, the UI reverts back to the form, all the state is still there and they have an error message. Nearly every other time, however, the UI responds instantly to the user, even though it's doing work in the background.
+Now in the rare case of an error on the server, the UI reverts back to the form, all the state is still there, and they have an error message. Nearly every other time, however, the UI responds instantly to the user, even though it's doing work in the background.
 
 ## Client-side Validation
 

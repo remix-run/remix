@@ -20,7 +20,7 @@ If a route doesn't export a default component, it can be used as a Resource Rout
 
 For example, consider a UI Route that renders a report, note the link:
 
-```tsx filename=app/routes/reports.$id.js lines=[10-12]
+```tsx filename=app/routes/reports.$id.tsx lines=[10-12]
 export async function loader({ params }: LoaderArgs) {
   return json(await getReport(params.id));
 }
