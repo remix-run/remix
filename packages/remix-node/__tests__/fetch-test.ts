@@ -116,12 +116,18 @@ describe("Request", () => {
   });
 
   it("instanceOf", async () => {
-    const req = new Request("http://example.com");
-    expect(req instanceof Request).toBeTruthy();
-    expect(req instanceof WebRequest).toBeTruthy();
-    const res = new Response("http://example.com");
-    expect(res instanceof Response).toBeTruthy();
-    expect(res instanceof Response).toBeTruthy();
+    const nodeReq = new Request("http://example.com");
+    const webReq = new WebRequest("http://example.com");
+    const nodeRes = new Response("http://example.com");
+    const webRes = new WebResponse("http://example.com");
+    expect(nodeReq instanceof Request).toBeTruthy();
+    expect(nodeReq instanceof WebRequest).toBeTruthy();
+    expect(webReq instanceof Request).toBeTruthy();
+    expect(webReq instanceof WebRequest).toBeTruthy();
+    expect(nodeRes instanceof Response).toBeTruthy();
+    expect(nodeRes instanceof WebResponse).toBeTruthy();
+    expect(webRes instanceof Response).toBeTruthy();
+    expect(webRes instanceof WebResponse).toBeTruthy();
   })
 });
 
