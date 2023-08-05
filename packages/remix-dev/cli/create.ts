@@ -210,12 +210,16 @@ export async function createApp({
   if (installDeps) {
     let packageManager = detectPackageManager() ?? "npm";
 
+    // bun does not have an npm-compatible `config` command
     let npmConfig = execSync(
-      `${packageManager} config get @remix-run:registry`,
+      `${
+        packageManager === "bun" ? "npm" : packageManager
+      } config get @remix-run:registry`,
       {
         encoding: "utf8",
       }
     );
+
     if (npmConfig?.startsWith("https://npm.remix.run")) {
       throw Error(
         "🚨 Oops! You still have the private Remix registry configured. Please " +

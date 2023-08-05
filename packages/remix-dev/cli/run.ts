@@ -142,6 +142,7 @@ const npxInterop = {
   npm: "npx",
   yarn: "yarn",
   pnpm: "pnpm exec",
+  bun: "bunx",
 };
 
 /**
@@ -446,7 +447,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
                 "🚨 Your terminal doesn't support interactivity; using default " +
                   "configuration.\n\n" +
                   "If you'd like to use different settings, try passing them " +
-                  `as arguments. Run \`${packageManager} create remix@latest --help\` to see ` +
+                  `as arguments. Run \`${
+                    packageManager === "bun"
+                      ? "bunx create-remix"
+                      : `${packageManager} create remix`
+                  }@latest --help\` to see ` +
                   "available options."
               )
             );
