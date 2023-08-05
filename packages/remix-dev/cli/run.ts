@@ -79,6 +79,28 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix reveal entry.server --no-typescript
 `;
 
+<<<<<<< HEAD
+=======
+const templateChoices = [
+  { name: "Remix App Server", value: "remix" },
+  { name: "Express Server", value: "express" },
+  { name: "Architect", value: "arc" },
+  { name: "Fly.io", value: "fly" },
+  { name: "Netlify", value: "netlify" },
+  { name: "Vercel", value: "vercel" },
+  { name: "Cloudflare Pages", value: "cloudflare-pages" },
+  { name: "Cloudflare Workers", value: "cloudflare-workers" },
+  { name: "Deno", value: "deno" },
+];
+
+const npxInterop = {
+  npm: "npx",
+  yarn: "yarn",
+  pnpm: "pnpm exec",
+  bun: "bunx",
+};
+
+>>>>>>> 1aa02eba9 (Support bun package manager in create-remix)
 /**
  * Programmatic interface for running the Remix CLI with the given command line
  * arguments.
