@@ -814,6 +814,39 @@ describe("create-remix CLI", () => {
     process.env.npm_config_user_agent = originalUserAgent;
   });
 
+  it("recognizes when Bun was used to run the command", async () => {
+    let originalUserAgent = process.env.npm_config_user_agent;
+    process.env.npm_config_user_agent =
+      "bun/0.7.0 npm/? node/v14.17.0 linux x64";
+
+    let projectDir = getProjectDir("bun-create-from-user-agent");
+
+    let execa = require("execa");
+    execa.mockImplementation(async () => {});
+
+    // Suppress terminal output
+    let stdoutMock = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
+    await createRemix([
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "blank"),
+      "--no-git-init",
+      "--yes",
+    ]);
+
+    stdoutMock.mockReset();
+
+    expect(execa).toHaveBeenCalledWith(
+      "bun",
+      expect.arrayContaining(["install"]),
+      expect.anything()
+    );
+    process.env.npm_config_user_agent = originalUserAgent;
+  });
+
   it("supports specifying the package manager, regardless of user agent", async () => {
     let originalUserAgent = process.env.npm_config_user_agent;
     process.env.npm_config_user_agent =
