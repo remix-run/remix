@@ -5,7 +5,6 @@ import * as https from "node:https";
 import fs from "fs-extra";
 import prettyMs from "pretty-ms";
 import execa from "execa";
-import express from "express";
 import pc from "picocolors";
 
 import * as Channel from "../channel";
@@ -56,20 +55,33 @@ export let serve = async (
     prevLoaderHashes?: Record<string, string>;
   } = {};
 
-  let app = express()
-    // handle `broadcastDevReady` messages
-    .use(express.json())
-    .post("/ping", (req, res) => {
-      let { buildHash } = req.body;
+  // handle `broadcastDevReady` messages
+  async function handleRequest(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ) {
+    const [pathname] = (req.url ?? "").split("?");
+    if (req.method === "POST" && pathname === "/ping") {
+      const bodyBuffer = await new Promise<Buffer>((resolve, reject) => {
+        let buf: any[] = [];
+        req.on("data", (chunk) => buf.push(chunk));
+        req.on("end", () => resolve(Buffer.concat(buf)));
+        req.on("error", (err) => reject(err));
+      });
+      const body = JSON.parse(bodyBuffer.toString());
+      let { buildHash } = body;
       if (typeof buildHash !== "string") {
-        logger.warn(`unrecognized payload: ${req.body}`);
-        res.sendStatus(400);
+        logger.warn(`unrecognized payload: ${body}`);
+        res.writeHead(400);
+        res.end();
       }
       if (buildHash === state.manifest?.version) {
         state.appReady?.ok();
       }
-      res.sendStatus(200);
-    });
+      res.writeHead(200);
+      res.end();
+    }
+  }
 
   let server =
     options.tlsKey && options.tlsCert
@@ -78,9 +90,9 @@ export let serve = async (
             key: fs.readFileSync(options.tlsKey),
             cert: fs.readFileSync(options.tlsCert),
           },
-          app
+          handleRequest
         )
-      : http.createServer(app);
+      : http.createServer(handleRequest);
   let websocket = Socket.serve(server);
 
   let bin = await detectBin();
