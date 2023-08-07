@@ -17,7 +17,7 @@ test.beforeEach(async ({ context }) => {
 test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
-      "app/routes/_index.jsx": js`
+      "app/routes/_index.tsx": js`
         import imgSrc from "getos/imgs/logo.svg";
 
         export default function () {
