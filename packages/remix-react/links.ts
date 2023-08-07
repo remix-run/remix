@@ -306,7 +306,7 @@ function isHtmlLinkDescriptor(object: any): object is HtmlLinkDescriptor {
   return typeof object.rel === "string" && typeof object.href === "string";
 }
 
-export async function getStylesheetPrefetchLinks(
+export async function getPrefetchLinks(
   matches: AgnosticDataRouteMatch[],
   manifest: AssetsManifest,
   routeModules: RouteModules
@@ -327,9 +327,9 @@ export async function getStylesheetPrefetchLinks(
       .filter(isHtmlLinkDescriptor)
       .filter((link) => link.rel === "stylesheet" || link.rel === "preload")
       .map((link) =>
-        link.rel === "preload"
-          ? ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
-          : ({ ...link, rel: "prefetch", as: "style" } as HtmlLinkDescriptor)
+        link.rel === "stylesheet"
+          ? ({ ...link, rel: "prefetch", as: "style" } as HtmlLinkDescriptor)
+          : ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
       )
   );
 }
@@ -468,6 +468,22 @@ function dedupeHrefs(hrefs: string[]): string[] {
   return [...new Set(hrefs)];
 }
 
+function sortKeys<Obj extends { [Key in keyof Obj]: Obj[Key] }>(obj: Obj): Obj {
+  let sorted = {} as Obj;
+  let keys = Object.keys(obj).sort();
+
+  for (let key of keys) {
+    sorted[key as keyof Obj] = obj[key as keyof Obj];
+  }
+
+  return sorted;
+}
+
+function getLinkDescriptorId(descriptor: LinkDescriptor) {
+  let sortedDescriptor = sortKeys(descriptor);
+  return JSON.stringify(sortedDescriptor);
+}
+
 export function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
   descriptors: Descriptor[],
   preloads?: string[]
@@ -487,9 +503,9 @@ export function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
       return deduped;
     }
 
-    let str = JSON.stringify(descriptor);
-    if (!set.has(str)) {
-      set.add(str);
+    let id = getLinkDescriptorId(descriptor);
+    if (!set.has(id)) {
+      set.add(id);
       deduped.push(descriptor);
     }
 

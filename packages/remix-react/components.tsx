@@ -39,7 +39,7 @@ import {
   getLinksForMatches,
   getModuleLinkHrefs,
   getNewMatchesForLinks,
-  getStylesheetPrefetchLinks,
+  getPrefetchLinks,
   isPageLinkDescriptor,
 } from "./links";
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
@@ -406,26 +406,24 @@ export function PrefetchPageLinks({
   );
 }
 
-function usePrefetchedStylesheets(matches: AgnosticDataRouteMatch[]) {
+function usePrefetchLinks(matches: AgnosticDataRouteMatch[]) {
   let { manifest, routeModules } = useRemixContext();
 
-  let [styleLinks, setStyleLinks] = React.useState<HtmlLinkDescriptor[]>([]);
+  let [links, setLinks] = React.useState<HtmlLinkDescriptor[]>([]);
 
   React.useEffect(() => {
     let interrupted: boolean = false;
 
-    getStylesheetPrefetchLinks(matches, manifest, routeModules).then(
-      (links) => {
-        if (!interrupted) setStyleLinks(links);
-      }
-    );
+    getPrefetchLinks(matches, manifest, routeModules).then((links) => {
+      if (!interrupted) setLinks(links);
+    });
 
     return () => {
       interrupted = true;
     };
   }, [matches, manifest, routeModules]);
 
-  return styleLinks;
+  return links;
 }
 
 function PrefetchPageLinksImpl({
@@ -477,7 +475,7 @@ function PrefetchPageLinksImpl({
 
   // needs to be a hook with async behavior because we need the modules, not
   // just the manifest like the other links in here.
-  let styleLinks = usePrefetchedStylesheets(newMatchesForAssets);
+  let prefetchLinks = usePrefetchLinks(newMatchesForAssets);
 
   return (
     <>
@@ -487,7 +485,7 @@ function PrefetchPageLinksImpl({
       {moduleHrefs.map((href) => (
         <link key={href} rel="modulepreload" href={href} {...linkProps} />
       ))}
-      {styleLinks.map((link) => (
+      {prefetchLinks.map((link) => (
         // these don't spread `linkProps` because they are full link descriptors
         // already with their own props
         <link key={getHtmlLinkDescriptorKey(link)} {...link} />
