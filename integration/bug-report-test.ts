@@ -49,15 +49,12 @@ test.beforeEach(async ({ context }) => {
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    config: {
-      future: { v2_routeConvention: true },
-    },
     ////////////////////////////////////////////////////////////////////////////
     // 💿 Next, add files to this object, just like files in a real app,
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/_index.jsx": js`
+      "app/routes/_index.tsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
 
@@ -76,7 +73,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/burgers.jsx": js`
+      "app/routes/burgers.tsx": js`
         export default function Index() {
           return <div>cheeseburger</div>;
         }

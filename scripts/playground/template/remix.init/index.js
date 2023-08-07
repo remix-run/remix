@@ -1,4 +1,4 @@
-const { execSync } = require("child_process");
+const { execSync } = require("node:child_process");
 
 const main = async ({ rootDirectory }) => {
   execSync(`npm run build`, { stdio: "inherit", cwd: rootDirectory });

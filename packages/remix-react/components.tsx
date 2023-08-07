@@ -45,14 +45,11 @@ import {
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type {
-  V1_HtmlMetaDescriptor,
-  V1_MetaFunction,
-  V2_MetaDescriptor,
-  V2_MetaFunction,
-  V2_MetaMatch,
-  V2_MetaMatches,
+  MetaFunction,
+  MetaDescriptor,
+  MetaMatch,
+  MetaMatches,
 } from "./routeModules";
-import { logDeprecationOnce } from "./warnings";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -314,12 +311,6 @@ export function composeEventHandlers<
   };
 }
 
-let linksWarning =
-  "⚠️ REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. " +
-  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
-
 /**
  * Renders the `<link>` tags for the current routes.
  *
@@ -341,12 +332,6 @@ export function Links() {
     [matches, routeModules, manifest]
   );
 
-  React.useEffect(() => {
-    if (links.some((link) => "imagesizes" in link || "imagesrcset" in link)) {
-      logDeprecationOnce(linksWarning);
-    }
-  }, [links]);
-
   return (
     <>
       {links.map((link) => {
@@ -355,37 +340,32 @@ export function Links() {
         }
 
         let imageSrcSet: string | null = null;
+        let imageSizes: string | null = null;
 
         // In React 17, <link imageSrcSet> and <link imageSizes> will warn
         // because the DOM attributes aren't recognized, so users need to pass
         // them in all lowercase to forward the attributes to the node without a
         // warning. Normalize so that either property can be used in Remix.
-        if ("useId" in React) {
-          if (link.imagesrcset) {
-            link.imageSrcSet = imageSrcSet = link.imagesrcset;
-            delete link.imagesrcset;
-          }
+        let imageSizesKey = "useId" in React ? "imageSizes" : "imagesizes";
+        let imageSrcSetKey = "useId" in React ? "imageSrcSet" : "imagesrcset";
+        if (link.imageSrcSet) {
+          imageSrcSet = link.imageSrcSet;
+          delete link.imageSrcSet;
+        }
 
-          if (link.imagesizes) {
-            link.imageSizes = link.imagesizes;
-            delete link.imagesizes;
-          }
-        } else {
-          if (link.imageSrcSet) {
-            link.imagesrcset = imageSrcSet = link.imageSrcSet;
-            delete link.imageSrcSet;
-          }
-
-          if (link.imageSizes) {
-            link.imagesizes = link.imageSizes;
-            delete link.imageSizes;
-          }
+        if (link.imageSizes) {
+          imageSizes = link.imageSizes;
+          delete link.imageSizes;
         }
 
         return (
           <link
             key={link.rel + (link.href || "") + (imageSrcSet || "")}
-            {...link}
+            {...{
+              ...link,
+              [imageSizesKey]: imageSizes,
+              [imageSrcSetKey]: imageSrcSet,
+            }}
           />
         );
       })}
@@ -513,120 +493,11 @@ function PrefetchPageLinksImpl({
 }
 
 /**
- * Renders the `<title>` and `<meta>` tags for the current routes.
+ * Renders HTML tags related to metadata for the current route.
  *
  * @see https://remix.run/components/meta
  */
-function V1Meta() {
-  let { routeModules } = useRemixContext();
-  let {
-    errors,
-    matches: routerMatches,
-    loaderData,
-  } = useDataRouterStateContext();
-  let location = useLocation();
-
-  let matches = errors
-    ? routerMatches.slice(
-        0,
-        routerMatches.findIndex((m) => errors![m.route.id]) + 1
-      )
-    : routerMatches;
-
-  let meta: V1_HtmlMetaDescriptor = {};
-  let parentsData: { [routeId: string]: AppData } = {};
-
-  for (let match of matches) {
-    let routeId = match.route.id;
-    let data = loaderData[routeId];
-    let params = match.params;
-
-    let routeModule = routeModules[routeId];
-
-    if (routeModule.meta) {
-      let routeMeta =
-        typeof routeModule.meta === "function"
-          ? (routeModule.meta as V1_MetaFunction)({
-              data,
-              parentsData,
-              params,
-              location,
-            })
-          : routeModule.meta;
-      if (routeMeta && Array.isArray(routeMeta)) {
-        throw new Error(
-          "The route at " +
-            match.route.path +
-            " returns an array. This is only supported with the `v2_meta` future flag " +
-            "in the Remix config. Either set the flag to `true` or update the route's " +
-            "meta function to return an object." +
-            "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
-          // TODO: Add link to the docs once they are written
-          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta."
-        );
-      }
-      Object.assign(meta, routeMeta);
-    }
-
-    parentsData[routeId] = data;
-  }
-
-  return (
-    <>
-      {Object.entries(meta).map(([name, value]) => {
-        if (!value) {
-          return null;
-        }
-
-        if (["charset", "charSet"].includes(name)) {
-          return <meta key="charSet" charSet={value as string} />;
-        }
-
-        if (name === "title") {
-          return <title key="title">{String(value)}</title>;
-        }
-
-        // Open Graph tags use the `property` attribute, while other meta tags
-        // use `name`. See https://ogp.me/
-        //
-        // Namespaced attributes:
-        //  - https://ogp.me/#type_music
-        //  - https://ogp.me/#type_video
-        //  - https://ogp.me/#type_article
-        //  - https://ogp.me/#type_book
-        //  - https://ogp.me/#type_profile
-        //
-        // Facebook specific tags begin with `fb:` and also use the `property`
-        // attribute.
-        //
-        // Twitter specific tags begin with `twitter:` but they use `name`, so
-        // they are excluded.
-        let isOpenGraphTag =
-          /^(og|music|video|article|book|profile|fb):.+$/.test(name);
-
-        return [value].flat().map((content) => {
-          if (isOpenGraphTag) {
-            return (
-              <meta
-                property={name}
-                content={content as string}
-                key={name + content}
-              />
-            );
-          }
-
-          if (typeof content === "string") {
-            return <meta name={name} content={content} key={name + content} />;
-          }
-
-          return <meta key={name + JSON.stringify(content)} {...content} />;
-        });
-      })}
-    </>
-  );
-}
-
-function V2Meta() {
+export function Meta() {
   let { routeModules } = useRemixContext();
   let {
     errors,
@@ -642,43 +513,31 @@ function V2Meta() {
       )
     : routerMatches;
 
-  let meta: V2_MetaDescriptor[] = [];
-  let leafMeta: V2_MetaDescriptor[] | null = null;
-  let matches: V2_MetaMatches = [];
+  let meta: MetaDescriptor[] = [];
+  let leafMeta: MetaDescriptor[] | null = null;
+  let matches: MetaMatches = [];
   for (let i = 0; i < _matches.length; i++) {
     let _match = _matches[i];
     let routeId = _match.route.id;
     let data = loaderData[routeId];
     let params = _match.params;
     let routeModule = routeModules[routeId];
-    let routeMeta: V2_MetaDescriptor[] | V1_HtmlMetaDescriptor | undefined = [];
+    let routeMeta: MetaDescriptor[] | undefined = [];
 
-    let match: V2_MetaMatch = {
+    let match: MetaMatch = {
       id: routeId,
       data,
       meta: [],
       params: _match.params,
       pathname: _match.pathname,
       handle: _match.route.handle,
-      // TODO: Remove in v2. Only leaving it for now because we used it in
-      // examples and there's no reason to crash someone's build for one line.
-      // They'll get a TS error from the type updates anyway.
-      // @ts-expect-error
-      get route() {
-        console.warn(
-          "The meta function in " +
-            _match.route.path +
-            " accesses the `route` property on `matches`. This is deprecated and will be removed in Remix version 2. See"
-        );
-        return _match.route;
-      },
     };
     matches[i] = match;
 
     if (routeModule?.meta) {
       routeMeta =
         typeof routeModule.meta === "function"
-          ? (routeModule.meta as V2_MetaFunction)({
+          ? (routeModule.meta as MetaFunction)({
               data,
               params,
               location,
@@ -697,13 +556,11 @@ function V2Meta() {
     routeMeta = routeMeta || [];
     if (!Array.isArray(routeMeta)) {
       throw new Error(
-        "The `v2_meta` API is enabled in the Remix config, but the route at " +
+        "The route at " +
           _match.route.path +
-          " returns an invalid value. In v2, all route meta functions must " +
+          " returns an invalid value. All route meta functions must " +
           "return an array of meta objects." +
-          // TODO: Add link to the docs once they are written
-          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta." +
-          "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
+          "\n\nTo reference the meta function API, see https://remix.run/route/meta"
       );
     }
 
@@ -771,11 +628,6 @@ function V2Meta() {
 
 function isValidMetaTag(tagName: unknown): tagName is "meta" | "link" {
   return typeof tagName === "string" && /^(meta|link)$/.test(tagName);
-}
-
-export function Meta() {
-  let { future } = useRemixContext();
-  return future?.v2_meta ? <V2Meta /> : <V1Meta />;
 }
 
 export interface AwaitProps<Resolve> {
@@ -1272,8 +1124,6 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
 
 // Dead Code Elimination magic for production builds.
 // This way devs don't have to worry about doing the NODE_ENV check themselves.
-// If running an un-bundled server outside of `remix dev` you will still need
-// to set the REMIX_DEV_SERVER_WS_PORT manually.
 export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
@@ -1306,10 +1156,6 @@ export const LiveReload =
                   url.port =
                     ${port} ||
                     REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port :
-                    Number(${
-                      // TODO: remove in v2
-                      process.env.REMIX_DEV_SERVER_WS_PORT
-                    }) ||
                     8002;
 
                   let ws = new WebSocket(url.href);
@@ -1343,7 +1189,7 @@ export const LiveReload =
                             imported
                           );
                           if (accepted) {
-                            console.log("[HMR] Updated accepted by", update.id);
+                            console.log("[HMR] Update accepted by", update.id);
                             updateAccepted = true;
                           }
                         }
@@ -1353,12 +1199,12 @@ export const LiveReload =
                           { needsRevalidation, assetsManifest: event.assetsManifest }
                         );
                         if (accepted) {
-                          console.log("[HMR] Updated accepted by", "remix:manifest");
+                          console.log("[HMR] Update accepted by", "remix:manifest");
                           updateAccepted = true;
                         }
                       }
                       if (!updateAccepted) {
-                        console.log("[HMR] Updated rejected, reloading...");
+                        console.log("[HMR] Update rejected, reloading...");
                         window.location.reload();
                       }
                     }

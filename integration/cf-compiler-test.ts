@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
-import fs from "fs/promises";
-import path from "path";
+import fs from "node:fs/promises";
+import path from "node:path";
 import shell from "shelljs";
 import glob from "glob";
 
@@ -28,9 +28,6 @@ test.describe("cloudflare compiler", () => {
 
   test.beforeAll(async () => {
     projectDir = await createFixtureProject({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       setup: "cloudflare",
       template: "cf-template",
       files: {
@@ -56,7 +53,7 @@ test.describe("cloudflare compiler", () => {
             "@remix-run/eslint-config": "0.0.0-local-version",
           },
         }),
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           import fake from "worker-pkg";
           import { content as browserPackage } from "browser-pkg";
           import { content as esmOnlyPackage } from "esm-only-pkg";

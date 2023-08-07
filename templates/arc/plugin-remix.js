@@ -37,9 +37,13 @@ export default {
   },
   set: {
     env() {
-      // `arc sandbox` does not automatically pass `NODE_ENV` from its
-      // environment to the application.
-      return { testing: { NODE_ENV: "development" } };
+      // Pass matching env variables through to the application in dev mode.
+      const passthruKeys = /^NODE_ENV$|^REMIX_DEV_/;
+      return {
+        testing: Object.fromEntries(
+          Object.entries(process.env).filter(([key]) => passthruKeys.test(key))
+        ),
+      };
     },
   },
 };

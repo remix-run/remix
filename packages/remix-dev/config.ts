@@ -2,14 +2,12 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
-import getPort from "get-port";
 import NPMCliPackageJson from "@npmcli/package-json";
 import { coerce } from "semver";
 import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
-import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
@@ -34,21 +32,9 @@ type Dev = {
   port?: number;
   tlsKey?: string;
   tlsCert?: string;
-
-  /** @deprecated remove in v2 */
-  restart?: boolean;
-  /** @deprecated remove in v2 */
-  scheme?: string;
-  /** @deprecated remove in v2 */
-  host?: string;
 };
 
-interface FutureConfig {
-  v2_dev: boolean | Dev;
-  v2_headers: boolean;
-  v2_meta: boolean;
-  v2_routeConvention: boolean;
-}
+interface FutureConfig {}
 
 type ServerNodeBuiltinsPolyfillOptions = Pick<
   EsbuildPluginsNodeModulesPolyfillOptions,
@@ -93,11 +79,13 @@ export interface AppConfig {
   publicPath?: string;
 
   /**
-   * The port number to use for the dev server. Defaults to 8002.
+   * Options for `remix dev`. See https://remix.run/docs/en/main/other-api/dev-v2#options-1
    */
-  devServerPort?: number;
+  dev?: Dev;
 
   /**
+   * @deprecated
+   *
    * The delay, in milliseconds, before the dev server broadcasts a reload
    * event. There is no delay by default.
    */
@@ -118,7 +106,7 @@ export interface AppConfig {
    * A server entrypoint, relative to the root directory that becomes your
    * server's main module. If specified, Remix will compile this file along with
    * your application into a single file to be deployed to your server. This
-   * file can use either a `.js` or `.ts` file extension.
+   * file can use either a `.ts` or `.js` file extension.
    */
   server?: string;
 
@@ -257,9 +245,9 @@ export interface RemixConfig {
   publicPath: string;
 
   /**
-   * The port number to use for the dev (asset) server.
+   * Options for `remix dev`. See https://remix.run/docs/en/main/other-api/dev-v2#options-1
    */
-  devServerPort: number;
+  dev: Dev;
 
   /**
    * The delay before the dev (asset) server broadcasts a reload event.
@@ -404,14 +392,6 @@ export async function readConfig(
     }
   }
 
-  if (!appConfig.future?.v2_meta) {
-    metaWarning();
-  }
-
-  if (!appConfig.future?.v2_headers) {
-    headersWarning();
-  }
-
   let serverBuildPath = path.resolve(
     rootDirectory,
     appConfig.serverBuildPath ?? "build/index.js"
@@ -436,20 +416,6 @@ export async function readConfig(
   serverMinify ??= false;
 
   let serverNodeBuiltinsPolyfill = appConfig.serverNodeBuiltinsPolyfill;
-
-  if (appConfig.future) {
-    if ("unstable_dev" in appConfig.future) {
-      logger.warn("The `future.unstable_dev` config option has been removed", {
-        details: [
-          "The v2 dev server is now stable.",
-          "Use the `future.v2_dev` config option instead.",
-          "-> https://remix.run/docs/en/main/pages/v2#dev-server",
-        ],
-        key: "unstable_dev",
-      });
-    }
-  }
-
   let mdx = appConfig.mdx;
   let postcss = appConfig.postcss ?? true;
   let tailwind = appConfig.tailwind ?? true;
@@ -589,11 +555,7 @@ export async function readConfig(
     assetsBuildDirectory
   );
 
-  let devServerPort =
-    Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
-    (await getPort({ port: Number(appConfig.devServerPort) || 8002 }));
   // set env variable so un-bundled servers can use it
-  process.env.REMIX_DEV_SERVER_WS_PORT = String(devServerPort);
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
@@ -607,21 +569,9 @@ export async function readConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  let routesConvention: typeof flatRoutes;
-
-  if (appConfig.future?.v2_routeConvention) {
-    routesConvention = flatRoutes;
-  } else {
-    flatRoutesWarning();
-    routesConvention = defineConventionalRoutes;
-  }
-
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = routesConvention(
-      appDirectory,
-      appConfig.ignoredRouteFiles
-    );
-    for (let route of Object.values(conventionalRoutes)) {
+    let fileRoutes = flatRoutes(appDirectory, appConfig.ignoredRouteFiles);
+    for (let route of Object.values(fileRoutes)) {
       routes[route.id] = { ...route, parentId: route.parentId || "root" };
     }
   }
@@ -658,12 +608,38 @@ export async function readConfig(
     tsconfigPath = rootJsConfig;
   }
 
-  let future: FutureConfig = {
-    v2_dev: appConfig.future?.v2_dev ?? false,
-    v2_headers: appConfig.future?.v2_headers === true,
-    v2_meta: appConfig.future?.v2_meta === true,
-    v2_routeConvention: appConfig.future?.v2_routeConvention === true,
-  };
+  // Note: When a future flag is removed from here, it should be added to the
+  // list below so we can let folks know if they have obsolete flags in their
+  // config.  If we ever convert remix.config.js to a TS file so we get proper
+  // typings this won't be necessary anymore.
+  let future: FutureConfig = {};
+
+  if (appConfig.future) {
+    let userFlags = appConfig.future;
+    let deprecatedFlags = [
+      "unstable_cssModules",
+      "unstable_cssSideEffectImports",
+      "unstable_dev",
+      "unstable_postcss",
+      "unstable_tailwind",
+      "unstable_vanillaExtract",
+      "v2_dev",
+      "v2_errorBoundary",
+      "v2_headers",
+      "v2_meta",
+      "v2_normalizeFormMethod",
+      "v2_routeConvention",
+    ] as const;
+
+    let obsoleteFlags = deprecatedFlags.filter((f) => f in userFlags);
+    if (obsoleteFlags.length > 0) {
+      logger.warn(
+        `⚠️ REMIX FUTURE CHANGE: the following Remix future flags are now obsolete ` +
+          `and can be removed from your remix.config.js file:\n` +
+          obsoleteFlags.map((f) => `- ${f}\n`).join("")
+      );
+    }
+  }
 
   return {
     appDirectory,
@@ -672,7 +648,7 @@ export async function readConfig(
     entryClientFilePath,
     entryServerFile,
     entryServerFilePath,
-    devServerPort,
+    dev: appConfig.dev ?? {},
     devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
     relativeAssetsBuildDirectory: assetsBuildDirectory,
@@ -777,32 +753,3 @@ let serverModuleFormatWarning = () =>
     ],
     key: "serverModuleFormatWarning",
   });
-
-let futureFlagWarning =
-  (args: { message: string; flag: string; link: string }) => () => {
-    logger.warn(args.message, {
-      key: args.flag,
-      details: [
-        `You can use the \`${args.flag}\` future flag to opt-in early.`,
-        `-> ${args.link}`,
-      ],
-    });
-  };
-
-let flatRoutesWarning = futureFlagWarning({
-  message: "The route file convention is changing in v2",
-  flag: "v2_routeConvention",
-  link: "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention",
-});
-
-let metaWarning = futureFlagWarning({
-  message: "The route `meta` API is changing in v2",
-  flag: "v2_meta",
-  link: "https://remix.run/docs/en/v1.15.0/pages/v2#meta",
-});
-
-let headersWarning = futureFlagWarning({
-  message: "The route `headers` API is changing in v2",
-  flag: "v2_headers",
-  link: "https://remix.run/docs/en/v1.17.0/pages/v2#route-headers",
-});

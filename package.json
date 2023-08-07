@@ -132,13 +132,13 @@
     "strip-indent": "^3.0.0",
     "tailwindcss": "^3.3.0",
     "to-vfile": "7.2.3",
-    "type-fest": "^2.16.0",
-    "typescript": "^5.0.4",
+    "type-fest": "^4.0.0",
+    "typescript": "^5.1.0",
     "unified": "^10.1.2",
     "unist-util-remove": "^3.1.0",
     "unist-util-visit": "^4.1.1"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }

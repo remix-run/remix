@@ -34,13 +34,8 @@ test.beforeEach(async ({ context }) => {
 test.describe("ErrorBoundary (thrown responses)", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_routeConvention: true,
-        },
-      },
       files: {
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           import { json } from "@remix-run/node";
           import {
             Links,
@@ -88,7 +83,7 @@ test.describe("ErrorBoundary (thrown responses)", () => {
           }
         `,
 
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           import { Link } from "@remix-run/react";
           export default function Index() {
             return (

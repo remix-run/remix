@@ -3,7 +3,6 @@ import semver from "semver";
 
 import * as colors from "../colors";
 import * as commands from "./commands";
-import { logger } from "../tux";
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -24,10 +23,6 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
   \`build\` Options:
     --sourcemap         Generate source maps for production
   \`dev\` Options:
-    --debug             Attach Node.js inspector
-    --port, -p          Choose the port from which to run your app
-
-    [v2_dev]
     --command, -c       Command used to run your app server
     --manual            Enable manual mode
     --port              Port for the dev server. Default: any open port
@@ -60,8 +55,7 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
   ${colors.heading("Run your project locally in development")}:
 
     $ remix dev
-    $ remix dev my-app
-    $ remix dev --debug
+    $ remix dev -c "node ./server.js"
 
   ${colors.heading("Start your server separately and watch for changes")}:
 
@@ -92,15 +86,14 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
 export async function run(argv: string[] = process.argv.slice(2)) {
   // Check the node version
   let versions = process.versions;
-  if (versions && versions.node && semver.major(versions.node) < 14) {
+  if (versions && versions.node && semver.major(versions.node) < 18) {
     throw new Error(
-      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
+      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 18.`
     );
   }
 
   let args = arg(
     {
-      "--debug": Boolean,
       "--no-delete": Boolean,
       "--dry": Boolean,
       "--force": Boolean,
@@ -122,11 +115,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "-p": "--port",
       "--tls-key": String,
       "--tls-cert": String,
-
-      // deprecated, remove in v2
-      "--no-restart": Boolean,
-      "--scheme": String,
-      "--host": String,
     },
     {
       argv,
@@ -151,25 +139,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     return;
   }
 
-  // TODO: remove in v2
-  if (flags["scheme"]) {
-    logger.warn("`--scheme` flag is deprecated", {
-      details: [
-        "Use `REMIX_DEV_ORIGIN` instead",
-        "-> https://remix.run/docs/en/main/other-api/dev-v2#how-to-integrate-with-a-reverse-proxy",
-      ],
-    });
-  }
-  // TODO: remove in v2
-  if (flags["host"]) {
-    logger.warn("`--host` flag is deprecated", {
-      details: [
-        "Use `REMIX_DEV_ORIGIN` instead",
-        "-> https://remix.run/docs/en/main/other-api/dev-v2#how-to-integrate-with-a-reverse-proxy",
-      ],
-    });
-  }
-
   if (flags["tls-key"]) {
     flags.tlsKey = flags["tls-key"];
     delete flags["tls-key"];
@@ -183,16 +152,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     flags.delete = false;
   }
   flags.interactive = flags.interactive ?? require.main === module;
-  if (args["--no-restart"]) {
-    logger.warn("`--no-restart` flag is deprecated", {
-      details: [
-        "Use `--manual` instead.",
-        "-> https://remix.run/docs/en/main/guides/development-performance#manual-mode",
-      ],
-    });
-    flags.manual = true;
-    delete flags["no-restart"];
-  }
   if (args["--no-typescript"]) {
     flags.typescript = false;
   }

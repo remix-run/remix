@@ -1,9 +1,4 @@
-declare const __INJECT_CSS_BUNDLE_HREF__: string | undefined;
-
-// Injected by `cssBundlePlugin`
-let cssBundleHref: string | undefined =
-  typeof __INJECT_CSS_BUNDLE_HREF__ === "string"
-    ? __INJECT_CSS_BUNDLE_HREF__
-    : undefined;
-
-export { cssBundleHref };
+// This file's contents are replaced by `cssBundlePlugin`. This file only exists
+// to provide type definitions and a graceful fallback when importing this
+// package outside of the Remix compiler.
+export const cssBundleHref: string | undefined = undefined;

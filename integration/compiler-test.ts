@@ -1,7 +1,7 @@
-import path from "path";
+import path from "node:path";
 import fse from "fs-extra";
 import { test, expect } from "@playwright/test";
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 
 import {
   createFixture,
@@ -27,9 +27,6 @@ test.describe("compiler", () => {
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
-            future: {
-              v2_routeConvention: true,
-            },
             serverDependenciesToBundle: [
               "esm-only-pkg",
               "esm-only-single-export",
@@ -37,28 +34,28 @@ test.describe("compiler", () => {
             ],
           };
         `,
-        "app/fake.server.js": js`
+        "app/fake.server.ts": js`
           export const hello = "server";
         `,
-        "app/fake.client.js": js`
+        "app/fake.client.ts": js`
           export const hello = "client";
         `,
-        "app/fake.js": js`
+        "app/fake.ts": js`
           import { hello as clientHello } from "./fake.client.js";
           import { hello as serverHello } from "./fake.server.js";
           export default clientHello || serverHello;
         `,
-        "app/routes/_index.jsx": js`
-          import fake from "~/fake.js";
+        "app/routes/_index.tsx": js`
+          import fake from "~/fake";
 
           export default function Index() {
             let hasRightModule = fake === (typeof document === "undefined" ? "server" : "client");
             return <div id="index">{String(hasRightModule)}</div>
           }
         `,
-        "app/routes/built-ins.jsx": js`
+        "app/routes/built-ins.tsx": js`
           import { useLoaderData } from "@remix-run/react";
-          import * as path from "path";
+          import * as path from "node:path";
 
           export let loader = () => {
             return path.join("test", "file.txt");
@@ -68,43 +65,43 @@ test.describe("compiler", () => {
             return <div id="built-ins">{useLoaderData()}</div>
           }
         `,
-        "app/routes/built-ins-polyfill.jsx": js`
+        "app/routes/built-ins-polyfill.tsx": js`
           import { useLoaderData } from "@remix-run/react";
-          import * as path from "path";
+          import * as path from "node:path";
 
           export default function BuiltIns() {
             return <div id="built-ins-polyfill">{path.join("test", "file.txt")}</div>;
           }
         `,
-        "app/routes/esm-only-pkg.jsx": js`
+        "app/routes/esm-only-pkg.tsx": js`
           import esmOnlyPkg from "esm-only-pkg";
 
           export default function EsmOnlyPkg() {
             return <div id="esm-only-pkg">{esmOnlyPkg}</div>;
           }
         `,
-        "app/routes/esm-only-exports-pkg.jsx": js`
+        "app/routes/esm-only-exports-pkg.tsx": js`
           import esmOnlyPkg from "esm-only-exports-pkg";
 
           export default function EsmOnlyPkg() {
             return <div id="esm-only-exports-pkg">{esmOnlyPkg}</div>;
           }
         `,
-        "app/routes/esm-only-single-export.jsx": js`
+        "app/routes/esm-only-single-export.tsx": js`
           import esmOnlyPkg from "esm-only-single-export";
 
           export default function EsmOnlyPkg() {
             return <div id="esm-only-single-export">{esmOnlyPkg}</div>;
           }
         `,
-        "app/routes/package-with-submodule.jsx": js`
+        "app/routes/package-with-submodule.tsx": js`
           import { submodule } from "@org/package/sub-package";
 
           export default function PackageWithSubModule() {
             return <div id="package-with-submodule">{submodule()}</div>;
           }
         `,
-        "app/routes/css.jsx": js`
+        "app/routes/css.tsx": js`
           import stylesUrl from "@org/css/index.css";
 
           export function links() {
@@ -231,7 +228,7 @@ test.describe("compiler", () => {
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins"].module
     );
-    // does not include `import bla from "path"` in the output bundle
+    // does not include `import bla from "node:path"` in the output bundle
     expect(routeModule).not.toMatch(/from\s*"path/);
   });
 
@@ -250,7 +247,7 @@ test.describe("compiler", () => {
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins-polyfill"].module
     );
-    // does not include `import bla from "path"` in the output bundle
+    // does not include `import bla from "node:path"` in the output bundle
     expect(routeModule).not.toMatch(/from\s*"path/);
   });
 
@@ -331,12 +328,9 @@ test.describe("compiler", () => {
 
       await expect(() =>
         createFixtureProject({
-          config: {
-            future: { v2_routeConvention: true },
-          },
           buildStdio,
           files: {
-            "app/routes/_index.jsx": js`
+            "app/routes/_index.tsx": js`
             import { json } from "@remix-run/node";
             import { useLoaderData } from "@remix-run/react";
             import notInstalledMain from "some-not-installed-module";
@@ -368,7 +362,7 @@ test.describe("compiler", () => {
         });
       });
 
-      let importer = path.join("app", "routes", "_index.jsx");
+      let importer = path.join("app", "routes", "_index.tsx");
 
       expect(buildOutput).toContain(
         `could not resolve "some-not-installed-module"`
