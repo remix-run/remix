@@ -481,10 +481,6 @@ function sortKeys<Obj extends { [Key in keyof Obj]: Obj[Key] }>(obj: Obj): Obj {
   return sorted;
 }
 
-function getLinkDescriptorKey(descriptor: LinkDescriptor) {
-  return JSON.stringify(sortKeys(descriptor));
-}
-
 type KeyedLinkDescriptor<Descriptor extends LinkDescriptor = LinkDescriptor> = {
   key: string;
   link: Descriptor;
@@ -509,7 +505,7 @@ function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
       return deduped;
     }
 
-    let key = getLinkDescriptorKey(descriptor);
+    let key = JSON.stringify(sortKeys(descriptor));
     if (!set.has(key)) {
       set.add(key);
       deduped.push({ key, link: descriptor });
