@@ -1,11 +1,9 @@
 import type {
   AppLoadContext,
   ServerBuild,
-  RequestInit as NodeRequestInit,
   Response as NodeResponse,
 } from "@remix-run/node";
 import {
-  AbortController as NodeAbortController,
   Headers as NodeHeaders,
   Request as NodeRequest,
   createRequestHandler as createRemixRequestHandler,
@@ -67,15 +65,13 @@ export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
     "multipart/form-data"
   );
   // Note: No current way to abort these for Architect, but our router expects
-  // requests to contain a signal so it can detect aborted requests
-  let controller = new NodeAbortController();
+  // requests to contain a signal, so it can detect aborted requests
+  let controller = new AbortController();
 
   return new NodeRequest(url.href, {
     method: event.requestContext.http.method,
     headers: createRemixHeaders(event.headers, event.cookies),
-    // Cast until reason/throwIfAborted added
-    // https://github.com/mysticatea/abort-controller/issues/36
-    signal: controller.signal as NodeRequestInit["signal"],
+    signal: controller.signal,
     body:
       event.body && event.isBase64Encoded
         ? isFormData
