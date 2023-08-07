@@ -4,6 +4,7 @@ node_modules
 /.cache
 /server/index.mjs
 /server/index.mjs.map
+/server/metafile.*
 /public/build
 preferences.arc
 sam.json
