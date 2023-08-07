@@ -201,15 +201,17 @@ export type LinkDescriptor = HtmlLinkDescriptor | PrefetchPageDescriptor;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+type KeyedLinkDescriptor = { key: string; link: LinkDescriptor };
+
 /**
  * Gets all the links for a set of matches. The modules are assumed to have been
  * loaded already.
  */
-export function getLinksForMatches(
+export function getKeyedLinksForMatches(
   matches: AgnosticDataRouteMatch[],
   routeModules: RouteModules,
   manifest: AssetsManifest
-): LinkDescriptor[] {
+): KeyedLinkDescriptor[] {
   let descriptors = matches
     .map((match): LinkDescriptor[] => {
       let module = routeModules[match.route.id];
@@ -218,7 +220,10 @@ export function getLinksForMatches(
     .flat(1);
 
   let preloads = getCurrentPageModulePreloadHrefs(matches, manifest);
-  return dedupeLinkDescriptors(descriptors, preloads);
+  return dedupeLinkDescriptors(descriptors, preloads).map((link) => ({
+    key: getLinkDescriptorKey(link),
+    link,
+  }));
 }
 
 export async function prefetchStyleLinks(
@@ -306,11 +311,13 @@ function isHtmlLinkDescriptor(object: any): object is HtmlLinkDescriptor {
   return typeof object.rel === "string" && typeof object.href === "string";
 }
 
-export async function getPrefetchLinks(
+export type KeyedHtmlLinkDescriptor = { key: string; link: HtmlLinkDescriptor };
+
+export async function getKeyedPrefetchLinks(
   matches: AgnosticDataRouteMatch[],
   manifest: AssetsManifest,
   routeModules: RouteModules
-): Promise<HtmlLinkDescriptor[]> {
+): Promise<KeyedHtmlLinkDescriptor[]> {
   let links = await Promise.all(
     matches.map(async (match) => {
       let mod = await loadRouteModule(
@@ -331,7 +338,7 @@ export async function getPrefetchLinks(
           ? ({ ...link, rel: "prefetch", as: "style" } as HtmlLinkDescriptor)
           : ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
       )
-  );
+  ).map((link) => ({ key: getLinkDescriptorKey(link), link }));
 }
 
 // This is ridiculously identical to transition.ts `filterMatchesToLoad`
@@ -479,9 +486,8 @@ function sortKeys<Obj extends { [Key in keyof Obj]: Obj[Key] }>(obj: Obj): Obj {
   return sorted;
 }
 
-function getLinkDescriptorId(descriptor: LinkDescriptor) {
-  let sortedDescriptor = sortKeys(descriptor);
-  return JSON.stringify(sortedDescriptor);
+function getLinkDescriptorKey(descriptor: LinkDescriptor) {
+  return JSON.stringify(sortKeys(descriptor));
 }
 
 export function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
@@ -503,9 +509,9 @@ export function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
       return deduped;
     }
 
-    let id = getLinkDescriptorId(descriptor);
-    if (!set.has(id)) {
-      set.add(id);
+    let key = getLinkDescriptorKey(descriptor);
+    if (!set.has(key)) {
+      set.add(key);
       deduped.push(descriptor);
     }
 
