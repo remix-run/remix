@@ -26,7 +26,7 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "yarn"
 
-      - name: 👔 Dedupe yarn.lock
+      - name: ️️⚙️ Dedupe yarn.lock
         run: npx yarn-deduplicate && rm -rf ./node_modules && yarn
 
       - name: 💪 Commit
