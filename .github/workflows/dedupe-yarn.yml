@@ -36,7 +36,7 @@ jobs:
 
           git add .
           if [ -z "$(git status --porcelain)" ]; then
-            echo "💿 no formatting changed"
+            echo "💿 no deduplication needed"
             exit 0
           fi
           git commit -m "chore: dedupe yarn.lock"
