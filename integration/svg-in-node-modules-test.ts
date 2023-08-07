@@ -16,9 +16,6 @@ test.beforeEach(async ({ context }) => {
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    config: {
-      future: { v2_routeConvention: true },
-    },
     files: {
       "app/routes/_index.jsx": js`
         import imgSrc from "getos/imgs/logo.svg";
