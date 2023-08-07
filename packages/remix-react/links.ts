@@ -201,8 +201,6 @@ export type LinkDescriptor = HtmlLinkDescriptor | PrefetchPageDescriptor;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-type KeyedLinkDescriptor = { key: string; link: LinkDescriptor };
-
 /**
  * Gets all the links for a set of matches. The modules are assumed to have been
  * loaded already.
@@ -220,10 +218,7 @@ export function getKeyedLinksForMatches(
     .flat(1);
 
   let preloads = getCurrentPageModulePreloadHrefs(matches, manifest);
-  return dedupeLinkDescriptors(descriptors, preloads).map((link) => ({
-    key: getLinkDescriptorKey(link),
-    link,
-  }));
+  return dedupeLinkDescriptors(descriptors, preloads);
 }
 
 export async function prefetchStyleLinks(
@@ -338,7 +333,7 @@ export async function getKeyedPrefetchLinks(
           ? ({ ...link, rel: "prefetch", as: "style" } as HtmlLinkDescriptor)
           : ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
       )
-  ).map((link) => ({ key: getLinkDescriptorKey(link), link }));
+  );
 }
 
 // This is ridiculously identical to transition.ts `filterMatchesToLoad`
@@ -490,10 +485,15 @@ function getLinkDescriptorKey(descriptor: LinkDescriptor) {
   return JSON.stringify(sortKeys(descriptor));
 }
 
-export function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
+type KeyedLinkDescriptor<Descriptor extends LinkDescriptor = LinkDescriptor> = {
+  key: string;
+  link: Descriptor;
+};
+
+function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
   descriptors: Descriptor[],
   preloads?: string[]
-) {
+): KeyedLinkDescriptor<Descriptor>[] {
   let set = new Set();
   let preloadsSet = new Set(preloads);
 
@@ -512,11 +512,11 @@ export function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
     let key = getLinkDescriptorKey(descriptor);
     if (!set.has(key)) {
       set.add(key);
-      deduped.push(descriptor);
+      deduped.push({ key, link: descriptor });
     }
 
     return deduped;
-  }, [] as Descriptor[]);
+  }, [] as KeyedLinkDescriptor<Descriptor>[]);
 }
 
 // https://github.com/remix-run/history/issues/897
