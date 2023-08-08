@@ -9,7 +9,7 @@ let appFixture: AppFixture;
 test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
-      "app/routes/index.tsx": js`
+      "app/routes/_index.tsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData } from "@remix-run/react";
         export async function loader() {
