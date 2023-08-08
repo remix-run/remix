@@ -8,12 +8,7 @@ const Confirm = require("prompt-confirm");
 let rootDir = path.resolve(__dirname, "..");
 
 let remixPackages = {
-  adapters: [
-    "architect",
-    "cloudflare-pages",
-    "cloudflare-workers",
-    "express",
-  ],
+  adapters: ["architect", "cloudflare-pages", "cloudflare-workers", "express"],
   runtimes: ["cloudflare", "deno", "node"],
   core: [
     "dev",
