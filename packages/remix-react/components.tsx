@@ -492,6 +492,7 @@ export function Meta() {
   let meta: MetaDescriptor[] = [];
   let leafMeta: MetaDescriptor[] | null = null;
   let matches: MetaMatches = [];
+  let error = errors ? Object.values(errors)[0] : null;
   for (let i = 0; i < _matches.length; i++) {
     let _match = _matches[i];
     let routeId = _match.route.id;
@@ -507,6 +508,7 @@ export function Meta() {
       params: _match.params,
       pathname: _match.pathname,
       handle: _match.route.handle,
+      error,
     };
     matches[i] = match;
 
@@ -518,6 +520,7 @@ export function Meta() {
               params,
               location,
               matches,
+              error,
             })
           : Array.isArray(routeModule.meta)
           ? [...routeModule.meta]
