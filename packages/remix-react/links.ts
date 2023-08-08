@@ -230,10 +230,7 @@ export async function prefetchStyleLinks(
   if (!routeModule.links) return;
   let descriptors = routeModule.links();
   if (!descriptors) return;
-
-  if (isPreloadDisabled) {
-    return;
-  }
+  if (isPreloadDisabled) return;
 
   // If we've hit our timeout 3 times, we may be in firefox with the
   // `network.preload` config disabled and we'll _never_ get onload/onerror
