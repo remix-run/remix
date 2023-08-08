@@ -1,5 +1,4 @@
 ---
-"remix": patch
 "@remix-run/node": patch
 ---
 
