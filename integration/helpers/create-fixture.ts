@@ -151,7 +151,7 @@ export async function createFixtureProject(
   mode?: ServerMode
 ): Promise<string> {
   let template = init.template ?? "node-template";
-  let integrationTemplateDir = path.join(__dirname, template);
+  let integrationTemplateDir = path.resolve(__dirname, template);
   let projectName = `remix-${template}-${Math.random().toString(32).slice(2)}`;
   let projectDir = path.join(TMP_DIR, projectName);
 
