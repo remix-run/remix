@@ -136,7 +136,7 @@ export let serve = async (
             transform(chunk, _, callback) {
               let str: string = chunk.toString();
               let matches =
-                str && str.matchAll(/\[REMIX DEV\] ([A-F0-9]+) ready/g);
+                str && str.matchAll(/\[REMIX DEV\] ([A-Fa-f0-9]+) ready/g);
               if (matches) {
                 for (let match of matches) {
                   let buildHash = match[1];
