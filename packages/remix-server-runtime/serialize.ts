@@ -24,7 +24,8 @@ export type SerializeFrom<T extends AppData | Fn> =
           Promise<any> extends U[K] ? K :
           never
         ]:
-        U[K] extends Promise<any> ? Promise<Jsonify<Awaited<U[K]>>> : Jsonify<U[K]>
+        // use generic to distribute over union
+        DeferValue<U[K]>
       }
       // non-promises
       & Jsonify<{ [K in keyof U as Promise<any> extends U[K] ? never : K]: U[K] }>
@@ -32,3 +33,9 @@ export type SerializeFrom<T extends AppData | Fn> =
     Jsonify<Awaited<Output>> :
   Jsonify<Awaited<T>>
 ;
+
+// prettier-ignore
+type DeferValue<T> =
+  T extends undefined ? undefined :
+  T extends Promise<unknown> ? Promise<Jsonify<Awaited<T>>> :
+  Jsonify<T>;

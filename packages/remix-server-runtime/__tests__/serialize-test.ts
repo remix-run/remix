@@ -22,8 +22,8 @@ it("infers basic types", () => {
 });
 
 it("infers deferred types", () => {
-  let get = (): Promise<string> | undefined => {
-    if (Math.random() > 0.5) return Promise.resolve("hello");
+  let get = (): Promise<Date> | undefined => {
+    if (Math.random() > 0.5) return Promise.resolve(new Date());
     return undefined;
   };
   let loader = async () =>
