@@ -16,7 +16,7 @@ Remix has built-in support for using MDX at build-time in two ways:
 
 ## Routes
 
-The simplest way to get started with MDX in Remix is to create a route module. Just like `.js` and `.ts` files in your `app/routes` directory, `.mdx` (and `.md`) files will participate in automatic file system based routing.
+The simplest way to get started with MDX in Remix is to create a route module. Just like `.tsx`, `.js` and `.jsx` files in your `app/routes` directory, `.mdx` (and `.md`) files will participate in automatic file system based routing.
 
 MDX routes allow you to define both meta and headers as if they were a code based route:
 
@@ -114,7 +114,7 @@ Besides just route level MDX, you can also import these files anywhere yourself 
 
 When you `import` a `.mdx` file, the exports of the module are:
 
-- **default**: The react component for consumption
+- **default**: The React component for consumption
 - **attributes**: The frontmatter data as an object
 - **filename**: The basename of the source file (e.g. "first-post.mdx")
 

@@ -50,13 +50,13 @@ relative to `remix.config.js`. Defaults to `".cache"`.
 The delay, in milliseconds, before the dev server broadcasts a reload event.
 There is no delay by default.
 
-For `v2_dev`, the race conditions that necesitated this option have been eliminated.
+For v2, the race conditions that necessitated this option have been eliminated.
 
 ## devServerPort (deprecated)
 
 The port number to use for the dev websocket server. Defaults to 8002.
 
-For `v2_dev`, use [`--port` / `v2_dev.port` option][port].
+For v2, use [`--port` / `dev.port` option][port].
 
 ## ignoredRouteFiles
 
