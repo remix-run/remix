@@ -1,7 +1,6 @@
 ---
 "@remix-run/architect": major
 "@remix-run/express": major
-"@remix-run/netlify": major
 "@remix-run/node": major
 "@remix-run/serve": major
 ---

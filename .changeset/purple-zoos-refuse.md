@@ -9,7 +9,6 @@
 "@remix-run/deno": major
 "@remix-run/dev": major
 "@remix-run/express": major
-"@remix-run/netlify": major
 "@remix-run/node": major
 "@remix-run/react": major
 "@remix-run/serve": major

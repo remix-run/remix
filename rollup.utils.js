@@ -223,7 +223,7 @@ module.exports = {
 };
 
 /**
- * @typedef {"architect" | "cloudflare-pages" | "cloudflare-workers" | "express" | "netlify"} RemixAdapter
+ * @typedef {"architect" | "cloudflare-pages" | "cloudflare-workers" | "express"} RemixAdapter
  * @typedef {"cloudflare" | "node" | "deno"} RemixRuntime
  * @typedef {`@remix-run/${RemixAdapter | RemixRuntime | "dev" | "eslint-config" | "react" | "serve" | "server-runtime"}`} ScopedRemixPackage
  * @typedef {"create-remix" | "remix" | ScopedRemixPackage} RemixPackage

@@ -47,7 +47,6 @@ async function run() {
     "node", // publish node before node servers
     "architect",
     "express", // publish express before serve
-    "netlify",
     "react",
     "serve",
   ]) {

@@ -15,7 +15,6 @@
       "@remix-run/dev",
       "@remix-run/eslint-config",
       "@remix-run/express",
-      "@remix-run/netlify",
       "@remix-run/node",
       "@remix-run/react",
       "@remix-run/serve",
