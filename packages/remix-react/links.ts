@@ -288,6 +288,7 @@ async function prefetchStyleLink(
   return new Promise((resolve) => {
     let link = document.createElement("link");
     Object.assign(link, descriptor);
+
     function removeLink() {
       // if a navigation interrupts this prefetch React will update the <head>
       // and remove the link we put in there manually, so we check if it's still
@@ -314,6 +315,7 @@ async function prefetchStyleLink(
     document.head.appendChild(link);
   });
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 export function isPageLinkDescriptor(
   object: any
