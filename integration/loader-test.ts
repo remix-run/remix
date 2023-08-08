@@ -12,9 +12,8 @@ test.describe("loader", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
-        "app/root.jsx": js`
+        "app/root.tsx": js`
         import { json } from "@remix-run/node";
         import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
@@ -36,7 +35,7 @@ test.describe("loader", () => {
           }
         `,
 
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           import { json } from "@remix-run/node";
 
           export function loader() {
@@ -76,11 +75,8 @@ test.describe("loader in an app", () => {
   test.beforeAll(async () => {
     appFixture = await createAppFixture(
       await createFixture({
-        future: {
-          v2_routeConvention: true,
-        },
         files: {
-          "app/root.jsx": js`
+          "app/root.tsx": js`
             import { Outlet } from '@remix-run/react'
 
             export default function Root() {
@@ -94,21 +90,21 @@ test.describe("loader in an app", () => {
               );
             }
           `,
-          "app/routes/redirect.jsx": js`
+          "app/routes/redirect.tsx": js`
             import { redirect } from "@remix-run/node";
             export const loader = () => redirect("/redirect-target");
             export default () => <div>Yo</div>
           `,
-          "app/routes/redirect-target.jsx": js`
+          "app/routes/redirect-target.tsx": js`
             export default () => <div>${REDIRECT_TARGET_TEXT}</div>
           `,
-          "app/routes/fetch.jsx": js`
+          "app/routes/fetch.tsx": js`
             export function loader({ request }) {
               return fetch(new URL(request.url).origin + '/fetch-target');
             }
           `,
 
-          "app/routes/fetch-target.jsx": js`
+          "app/routes/fetch-target.tsx": js`
             import { json } from "@remix-run/node";
 
             export function loader() {

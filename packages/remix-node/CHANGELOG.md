@@ -1,5 +1,87 @@
 # `@remix-run/node`
 
+## 1.19.2
+
+### Patch Changes
+
+- Update to latest `@remix-run/web-*` packages ([#7026](https://github.com/remix-run/remix/pull/7026))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.19.2`
+
+## 1.19.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.19.1`
+
+## 1.19.0
+
+### Patch Changes
+
+- Upgrade to [`@remix-run/web-fetch@4.3.5`](https://github.com/remix-run/web-std-io/releases/tag/%40remix-run%2Fweb-fetch%404.3.5). Submitted empty file inputs are now correctly parsed out as empty `File` instances instead of being surfaced as an empty string via `request.formData()` ([#6816](https://github.com/remix-run/remix/pull/6816))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.19.0`
+
+## 1.18.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.18.1`
+
+## 1.18.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.18.0`
+
+## 1.17.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.17.1`
+
+## 1.17.0
+
+### Patch Changes
+
+- Add `HeadersArgs` type to be consistent with loaders/actions/meta and allows for using a `function` declaration in addition to an arrow function expression ([#6247](https://github.com/remix-run/remix/pull/6247))
+
+  ```tsx
+  import type { HeadersArgs } from "@remix-run/node"; // or cloudflare/deno
+
+  export function headers({ loaderHeaders }: HeadersArgs) {
+    return {
+      "x-my-custom-thing": loaderHeaders.get("x-my-custom-thing") || "fallback",
+    };
+  }
+  ```
+
+- Fix `request.clone() instanceof Request` returning false. ([#6512](https://github.com/remix-run/remix/pull/6512))
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.17.0`
+
+## 1.16.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.16.1`
+
+## 1.16.0
+
+### Patch Changes
+
+- add `@remix-run/node/install` side-effect to allow `node --require @remix-run/node/install` ([#6132](https://github.com/remix-run/remix/pull/6132))
+- add `logDevReady` as replacement for platforms that can't initialize async I/O outside of the request response lifecycle. ([#6204](https://github.com/remix-run/remix/pull/6204))
+- add missing files to published package ([#6179](https://github.com/remix-run/remix/pull/6179))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.16.0`
+
 ## 1.15.0
 
 ### Minor Changes

@@ -2,7 +2,7 @@
 module.exports = {
   devServerBroadcastDelay: 1000,
   ignoredRouteFiles: ["**/.*"],
-  server: "./server.js",
+  server: "./server.ts",
   serverConditions: ["worker"],
   serverDependenciesToBundle: "all",
   serverMainFields: ["browser", "module", "main"],
@@ -16,5 +16,5 @@ module.exports = {
 
   // !!! Don't adust this without changing the code that overwrites this
   // in createFixtureProject()
-  future: {},
+  ...global.INJECTED_FIXTURE_REMIX_CONFIG,
 };

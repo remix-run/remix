@@ -6,19 +6,15 @@ import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
-test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
+test.describe("ErrorBoundary", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
   let oldConsoleError: () => void;
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        v2_errorBoundary: true,
-        v2_routeConvention: true,
-      },
       files: {
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
@@ -39,7 +35,7 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
           }
         `,
 
-        "app/routes/parent.jsx": js`
+        "app/routes/parent.tsx": js`
           import {
             Link,
             Outlet,
@@ -80,7 +76,7 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
           }
         `,
 
-        "app/routes/parent.child-with-boundary.jsx": js`
+        "app/routes/parent.child-with-boundary.tsx": js`
           import {
             isRouteErrorResponse,
             useLoaderData,
@@ -114,7 +110,7 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
           }
         `,
 
-        "app/routes/parent.child-without-boundary.jsx": js`
+        "app/routes/parent.child-without-boundary.tsx": js`
           import { useLoaderData, useLocation } from "@remix-run/react";
 
           export function loader({ request }) {
@@ -162,20 +158,24 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
   test.describe("with JavaScript", () => {
     test.use({ javaScriptEnabled: true });
     runBoundaryTests();
+
+    test("Network errors that never reach the Remix server", async ({
+      page,
+    }) => {
+      // Cause a ?_data request to trigger an HTTP error that never reaches the
+      // Remix server, and ensure we properly handle it at the ErrorBoundary
+      await page.route(
+        "**/parent/child-with-boundary?_data=routes%2Fparent.child-with-boundary",
+        (route) => route.fulfill({ status: 500, body: "CDN Error!" })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/parent");
+      await app.clickLink("/parent/child-with-boundary");
+      await waitForAndAssert(page, app, "#child-error", "CDN Error!");
+    });
   });
 
   function runBoundaryTests() {
-    // Shorthand util to wait for an element to appear before asserting it
-    async function waitForAndAssert(
-      page: Page,
-      app: PlaywrightFixture,
-      selector: string,
-      match: string
-    ) {
-      await page.waitForSelector(selector);
-      expect(await app.getHtml(selector)).toMatch(match);
-    }
-
     test("No errors", async ({ page }) => {
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/parent");
@@ -236,3 +236,14 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
     });
   }
 });
+
+// Shorthand util to wait for an element to appear before asserting it
+async function waitForAndAssert(
+  page: Page,
+  app: PlaywrightFixture,
+  selector: string,
+  match: string
+) {
+  await page.waitForSelector(selector);
+  expect(await app.getHtml(selector)).toMatch(match);
+}

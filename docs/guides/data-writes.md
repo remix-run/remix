@@ -9,7 +9,7 @@ Data writes (some people call these mutations) in Remix are built on top of two 
 When the user submits a form, Remix will:
 
 1. Call the action for the form
-2. Reload all of the data for all of the routes on the page
+2. Reload all the data for all the routes on the page
 
 Many times people reach for global state management libraries in React like redux, data libs like apollo, and fetch wrappers like React Query in order to help manage getting server state into your components and keeping the UI in sync with it when the user changes it. Remix's HTML based API replaces the majority of use cases for these tools. Remix knows how to load the data as well as how to revalidate it after it changes when you use standard HTML APIs.
 
@@ -104,7 +104,7 @@ Let's consider a "new project" form.
 
 When the user submits this form, the browser will serialize the fields into a request "body" (instead of URL search params) and "POST" it to the server. This is still a normal navigation as if the user clicked a link. The difference is two-fold: the user provided the data for the server and the browser sent the request as a "POST" instead of a "GET".
 
-The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly-created project. A remix action would look something like this:
+The data is made available to the server's request handler, so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly-created project. A remix action would look something like this:
 
 ```tsx filename=app/routes/projects.tsx
 export async function action({ request }: ActionArgs) {
@@ -118,13 +118,9 @@ The browser started at `/projects/new`, then posted to `/projects` with the form
 
 If you're newer to web development, you may not have ever used a form this way. Lots of folks have always done:
 
-```js
-<form
-  onSubmit={(event) => {
-    event.preventDefault();
-    // good luck!
-  }}
-/>
+```html
+<form onSubmit={(event) => { event.preventDefault(); // good
+luck! }} />
 ```
 
 If this is you, you're going to be delighted when you see just how easy mutations can be when you just use what browsers (and Remix) have built in!
@@ -147,9 +143,9 @@ Whether you use `<form>` or `<Form>` though, you write the very same code. You c
 
 Let's start with our project form from earlier but make it usable:
 
-Let's say you've got the route `app/routes/projects/new.js` with this form in it:
+Let's say you've got the route `app/routes/projects.new.tsx` with this form in it:
 
-```tsx
+```tsx filename=app/routes/projects.new.tsx
 export default function NewProject() {
   return (
     <form method="post" action="/projects/new">
@@ -289,7 +285,7 @@ You can ship this code as-is. The browser will handle the pending UI and interru
 
 ### Graduate to `<Form>` and add pending UI
 
-Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch`. It will also give you access to the pending form data so you can build pending UI.
+Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch`. It will also give you access to the pending form data, so you can build pending UI.
 
 ```tsx lines=[2,11]
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
@@ -313,28 +309,28 @@ If you don't have the time or drive to do the rest of the job here, use `<Form r
 
 <docs-info>We recommend always using capital-F Form, and if you want to let the browser handle the pending UI, use the <code>\<Form reloadDocument></code> prop.</docs-info>
 
-Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `useTransition`. When there is a pending form submission, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method.
+Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `useNavigation`. When there is a pending form submission, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method.
 
 ```tsx lines=[5,13,19,65-67]
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
   useActionData,
   Form,
-  useTransition,
+  useNavigation,
 } from "@remix-run/react";
 
 // ...
 
 export default function NewProject() {
   // when the form is being processed on the server, this returns different
-  // transition states to help us build pending and optimistic UI.
-  const transition = useTransition();
+  // navigation states to help us build pending and optimistic UI.
+  const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
       <fieldset
-        disabled={transition.state === "submitting"}
+        disabled={navigation.state === "submitting"}
       >
         <p>
           <label>
@@ -380,7 +376,7 @@ export default function NewProject() {
 
         <p>
           <button type="submit">
-            {transition.state === "submitting"
+            {navigation.state === "submitting"
               ? "Creating..."
               : "Create"}
           </button>
@@ -393,7 +389,7 @@ export default function NewProject() {
 
 Pretty slick! Now when the user clicks "Create", the inputs go disabled, and the submit button's text changes. The whole operation should be faster now too since there's just one network request happening instead of a full page reload (which involves potentially more network requests, reading assets from the browser cache, parsing JavaScript, parsing CSS, etc.).
 
-We didn't do much with `transition` on this page, but it's got all the information about the submission on `transition.submission`, including all of the values being processed on the server on `submission.formData`.
+We didn't do much with `navigation` on this page, but it's got all the information about the submission (`navigation.formMethod`, `navigation.formAction`, `navigation.formEncType`), as well as all the values being processed on the server on `navigation.formData`.
 
 ### Animating in the Validation Errors
 
@@ -430,13 +426,13 @@ Now we can wrap our old error messages in this new fancy component, and even tur
 
 ```tsx lines=[21-24,31-34,44-48,53-56]
 export default function NewProject() {
-  const transition = useTransition();
+  const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
       <fieldset
-        disabled={transition.state === "submitting"}
+        disabled={navigation.state === "submitting"}
       >
         <p>
           <label>
@@ -460,7 +456,7 @@ export default function NewProject() {
 
         {actionData?.errors.name ? (
           <ValidationMessage
-            isSubmitting={transition.state === "submitting"}
+            isSubmitting={navigation.state === "submitting"}
             error={actionData?.errors?.name}
           />
         ) : null}
@@ -482,13 +478,13 @@ export default function NewProject() {
         </p>
 
         <ValidationMessage
-          isSubmitting={transition.state === "submitting"}
+          isSubmitting={navigation.state === "submitting"}
           error={actionData?.errors.description}
         />
 
         <p>
           <button type="submit">
-            {transition.state === "submitting"
+            {navigation.state === "submitting"
               ? "Creating..."
               : "Create"}
           </button>
@@ -507,14 +503,14 @@ Boom! Fancy UI without having to change anything about how we communicate with t
 
 - Once that worked, we used JavaScript to submit the form by changing `<form>` to `<Form>`, but we didn't have to do anything else!
 
-- Now that there was a stateful page with React, we added loading indicators and animation for the validation errors by simply asking Remix for the state of the transition.
+- Now that there was a stateful page with React, we added loading indicators and animation for the validation errors by simply asking Remix for the state of the navigation.
 
-From your components perspective, all that happened was the `useTransition` hook caused a state update when the form was submitted, and then another state update when the data came back. Of course, a lot more happened inside of Remix, but as far as your component is concerned, that's it. Just a couple of state updates. This makes it really easy to dress up any user flow.
+From your components perspective, all that happened was the `useNavigation` hook caused a state update when the form was submitted, and then another state update when the data came back. Of course, a lot more happened inside of Remix, but as far as your component is concerned, that's it. Just a couple of state updates. This makes it really easy to dress up any user flow.
 
 ## See also
 
 - [Form][form]
-- [useTransition][use-transition]
+- [useNavigation][use-navigation]
 - [Actions][actions]
 - [Loaders][loaders]
 - [`useSubmit()`][use-submit]
@@ -523,6 +519,6 @@ From your components perspective, all that happened was the `useTransition` hook
 [form]: ../components/form
 [use-submit]: ../hooks/use-submit
 [use-fetcher]: ../hooks/use-fetcher
-[use-transition]: ../hooks/use-transition
+[use-navigation]: ../hooks/use-navigation
 [actions]: ../route/action
 [loaders]: ../route/loader

@@ -1,5 +1,70 @@
 # `@remix-run/netlify`
 
+## 1.19.2
+
+### Patch Changes
+
+- Show deprecation warning on `@remix-run/netlify` usage, which is deprecated in favor of `@netlify/remix-adapter` ([#6937](https://github.com/remix-run/remix/pull/6937))
+- Updated dependencies:
+  - `@remix-run/node@1.19.2`
+
+## 1.19.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.19.1`
+
+## 1.19.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.19.0`
+
+## 1.18.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.18.1`
+
+## 1.18.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.18.0`
+
+## 1.17.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.17.1`
+
+## 1.17.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.17.0`
+
+## 1.16.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.16.1`
+
+## 1.16.0
+
+### Patch Changes
+
+- feat: support async `getLoadContext` in all adapters ([#6170](https://github.com/remix-run/remix/pull/6170))
+- Updated dependencies:
+  - `@remix-run/node@1.16.0`
+
 ## 1.15.0
 
 ### Patch Changes

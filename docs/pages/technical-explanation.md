@@ -34,9 +34,9 @@ It's built on the [Web Fetch API][fetch] instead of Node.js. This enables Remix 
 
 This is what Remix looks like when running in an express app:
 
-```js lines=[2,6-9]
-const express = require("express");
+```ts lines=[1,6-9]
 const remix = require("@remix-run/express");
+const express = require("express");
 
 const app = express();
 
@@ -172,7 +172,7 @@ Taking our route module from before, here are a few small, but useful UX improve
 export default function Projects() {
   const projects = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const { state } = useTransition();
+  const { state } = useNavigation();
   const busy = state === "submitting";
   const inputRef = React.useRef();
 

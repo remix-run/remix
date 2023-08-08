@@ -1,5 +1,5 @@
 const babel = require("@rollup/plugin-babel").default;
-const path = require("path");
+const path = require("node:path");
 
 const {
   copyPublishFiles,
@@ -11,12 +11,6 @@ let { name: packageName, version } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  // Don't blow away remix magic exports on local builds, since they've
-  // already been configured by postinstall
-  if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-    return [];
-  }
-
   let sourceDir = "packages/remix";
   let outputDir = getOutputDir(packageName);
   let outputDist = path.join(outputDir, "dist");

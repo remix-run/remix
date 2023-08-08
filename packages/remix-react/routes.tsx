@@ -38,7 +38,6 @@ interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
-  hasCatchBoundary: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
   module: string;
@@ -72,18 +71,13 @@ export function createServerRoutes(
   > = groupRoutesByParentId(manifest)
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
-    let hasErrorBoundary =
-      future.v2_errorBoundary === true
-        ? route.id === "root" || route.hasErrorBoundary
-        : route.id === "root" ||
-          route.hasCatchBoundary ||
-          route.hasErrorBoundary;
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       element: <RemixRoute id={route.id} />,
-      errorElement: hasErrorBoundary ? (
-        <RemixRouteError id={route.id} />
-      ) : undefined,
+      errorElement:
+        route.id === "root" || route.hasErrorBoundary ? (
+          <RemixRouteError id={route.id} />
+        ) : undefined,
       id: route.id,
       index: route.index,
       path: route.path,
@@ -105,7 +99,7 @@ export function createServerRoutes(
 }
 
 export function createClientRoutesWithHMRRevalidationOptOut(
-  needsRevalidation: boolean,
+  needsRevalidation: Set<string>,
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
   future: FutureConfig
@@ -129,22 +123,16 @@ export function createClientRoutes(
     string,
     Omit<EntryRoute, "children">[]
   > = groupRoutesByParentId(manifest),
-  needsRevalidation: boolean | undefined = undefined
+  needsRevalidation?: Set<string>
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
-    let hasErrorBoundary =
-      future.v2_errorBoundary === true
-        ? route.id === "root" || route.hasErrorBoundary
-        : route.id === "root" ||
-          route.hasCatchBoundary ||
-          route.hasErrorBoundary;
-
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       element: <RemixRoute id={route.id} />,
-      errorElement: hasErrorBoundary ? (
-        <RemixRouteError id={route.id} />
-      ) : undefined,
+      errorElement:
+        route.id === "root" || route.hasErrorBoundary ? (
+          <RemixRouteError id={route.id} />
+        ) : undefined,
       id: route.id,
       index: route.index,
       path: route.path,
@@ -163,7 +151,9 @@ export function createClientRoutes(
       manifest,
       routeModulesCache,
       future,
-      route.id
+      route.id,
+      routesByParentId,
+      needsRevalidation
     );
     if (children.length > 0) dataRoute.children = children;
     return dataRoute;
@@ -173,27 +163,23 @@ export function createClientRoutes(
 function createShouldRevalidate(
   route: EntryRoute,
   routeModules: RouteModules,
-  needsRevalidation: boolean | undefined
+  needsRevalidation?: Set<string>
 ): ShouldRevalidateFunction {
   let handledRevalidation = false;
   return function (arg) {
     let module = routeModules[route.id];
     invariant(module, `Expected route module to be loaded for ${route.id}`);
 
-    if (module.shouldRevalidate) {
-      if (typeof needsRevalidation === "boolean" && !handledRevalidation) {
-        handledRevalidation = true;
-        return module.shouldRevalidate({
-          ...arg,
-          defaultShouldRevalidate: needsRevalidation,
-        });
-      }
-      return module.shouldRevalidate(arg);
+    // When an HMR / HDR update happens we opt out of all user-defined
+    // revalidation logic and the do as the dev server tells us the first
+    // time router.revalidate() is called.
+    if (needsRevalidation !== undefined && !handledRevalidation) {
+      handledRevalidation = true;
+      return needsRevalidation.has(route.id);
     }
 
-    if (typeof needsRevalidation === "boolean" && !handledRevalidation) {
-      handledRevalidation = true;
-      return needsRevalidation;
+    if (module.shouldRevalidate) {
+      return module.shouldRevalidate(arg);
     }
 
     return arg.defaultShouldRevalidate;

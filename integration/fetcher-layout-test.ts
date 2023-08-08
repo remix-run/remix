@@ -9,9 +9,8 @@ let appFixture: AppFixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
-      "app/routes/layout-action.jsx": js`
+      "app/routes/layout-action.tsx": js`
         import { json } from "@remix-run/node";
         import { Outlet, useFetcher, useFormAction } from "@remix-run/react";
 
@@ -36,7 +35,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/layout-action._index.jsx": js`
+      "app/routes/layout-action._index.tsx": js`
         import { json } from "@remix-run/node";
         import {
           useFetcher,
@@ -67,7 +66,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/layout-action.$param.jsx": js`
+      "app/routes/layout-action.$param.tsx": js`
         import { json } from "@remix-run/node";
         import {
           useFetcher,
@@ -98,7 +97,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/layout-loader.jsx": js`
+      "app/routes/layout-loader.tsx": js`
         import { json } from "@remix-run/node";
         import { Outlet, useFetcher, useFormAction } from "@remix-run/react";
 
@@ -123,7 +122,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/layout-loader._index.jsx": js`
+      "app/routes/layout-loader._index.tsx": js`
         import { json } from "@remix-run/node";
         import {
           useFetcher,
@@ -150,7 +149,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/layout-loader.$param.jsx": js`
+      "app/routes/layout-loader.$param.tsx": js`
         import { json } from "@remix-run/node";
         import {
           useFetcher,

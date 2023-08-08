@@ -16,7 +16,7 @@ export const loader = async () => {
 };
 ```
 
-This function is only ever run on the server. On the initial server render it will provide data to the HTML document, On navigations in the browser, Remix will call the function via [`fetch`][fetch] from the browser.
+This function is only ever run on the server. On the initial server render, it will provide data to the HTML document. On navigations in the browser, Remix will call the function via [`fetch`][fetch] from the browser.
 
 This means you can talk directly to your database, use server-only API secrets, etc. Any code that isn't used to render the UI will be removed from the browser bundle.
 
@@ -58,7 +58,7 @@ import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export async function loader(args: LoaderArgs) {
+export async function loader() {
   return json({ name: "Ryan", date: new Date() });
 }
 
@@ -74,7 +74,7 @@ export default function SomeRoute() {
 
 Route params are defined by route file names. If a segment begins with `$` like `$invoiceId`, the value from the URL for that segment will be passed to your loader.
 
-```tsx filename=app/routes/invoices/$invoiceId.tsx nocopy
+```tsx filename=app/routes/invoices.$invoiceId.tsx nocopy
 // if the user visits /invoices/123
 export async function loader({ params }: LoaderArgs) {
   params.invoiceId; // "123"
@@ -83,7 +83,7 @@ export async function loader({ params }: LoaderArgs) {
 
 Params are mostly useful for looking up records by ID:
 
-```tsx filename=app/routes/invoices/$invoiceId.tsx
+```tsx filename=app/routes/invoices.$invoiceId.tsx
 // if the user visits /invoices/123
 export async function loader({ params }: LoaderArgs) {
   const invoice = await fakeDb.getInvoice(params.invoiceId);
@@ -117,7 +117,7 @@ This is the context passed in to your server adapter's `getLoadContext()` functi
 
 Using the express adapter as an example:
 
-```js filename=server.js
+```ts filename=server.ts
 const {
   createRequestHandler,
 } = require("@remix-run/express");
@@ -135,7 +135,7 @@ app.all(
 
 And then your loader can access it.
 
-```tsx filename=routes/some-route.tsx
+```tsx filename=app/routes/some-route.tsx
 export async function loader({ context }: LoaderArgs) {
   const { expressUser } = context;
   // ...
@@ -197,18 +197,12 @@ See also:
 Along with returning responses, you can also throw `Response` objects from your loaders. This allows you to break through the call stack and do one of two things:
 
 - Redirect to another URL
-- Show an alternate UI with contextual data through the `CatchBoundary`
+- Show an alternate UI with contextual data through the `ErrorBoundary`
 
 Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and show an alternative UI.
 
 ```ts filename=app/db.ts
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import type { ThrownResponse } from "@remix-run/react";
-
-export type InvoiceNotFoundResponse = ThrownResponse<
-  404,
-  string
->;
 
 export function getInvoice(id, user) {
   const invoice = db.invoice.find({ where: { id } });
@@ -232,30 +226,23 @@ export async function requireUserSession(request) {
     // You can throw our helpers like `redirect` and `json` because they
     // return `Response` objects. A `redirect` response will redirect to
     // another URL, while other  responses will trigger the UI rendered
-    // in the `CatchBoundary`.
+    // in the `ErrorBoundary`.
     throw redirect("/login", 302);
   }
   return session.get("user");
 }
 ```
 
-```tsx filename=app/routes/invoice/$invoiceId.tsx
+```tsx filename=app/routes/invoice.$invoiceId.tsx
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import type { ThrownResponse } from "@remix-run/react";
-import { useCatch, useLoaderData } from "@remix-run/react";
+import {
+  isRouteErrorResponse,
+  useLoaderData,
+} from "@remix-run/react";
 
-import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
-import type { InvoiceNotFoundResponse } from "~/db";
-
-type InvoiceCatchData = {
-  invoiceOwnerEmail: string;
-};
-
-type ThrownResponses =
-  | InvoiceNotFoundResponse
-  | ThrownResponse<401, InvoiceCatchData>;
+import { requireUserSession } from "~/http";
 
 export const loader = async ({
   params,
@@ -279,31 +266,37 @@ export default function InvoiceRoute() {
   return <InvoiceView invoice={invoice} />;
 }
 
-export function CatchBoundary() {
-  // this returns { data, status, statusText }
-  const caught = useCatch<ThrownResponses>();
+export function ErrorBoundary() {
+  const error = useRouteError();
 
-  switch (caught.status) {
-    case 401:
-      return (
-        <div>
-          <p>You don't have access to this invoice.</p>
-          <p>
-            Contact {caught.data.invoiceOwnerEmail} to get
-            access
-          </p>
-        </div>
-      );
-    case 404:
-      return <div>Invoice not found!</div>;
+  if (isRouteErrorResponse(error)) {
+    switch (error.status) {
+      case 401:
+        return (
+          <div>
+            <p>You don't have access to this invoice.</p>
+            <p>
+              Contact {error.data.invoiceOwnerEmail} to get
+              access
+            </p>
+          </div>
+        );
+      case 404:
+        return <div>Invoice not found!</div>;
+    }
+
+    return (
+      <div>
+        Something went wrong: {error.status}{" "}
+        {error.statusText}
+      </div>
+    );
   }
 
-  // You could also `throw new Error("Unknown status in catch boundary")`.
-  // This will be caught by the closest `ErrorBoundary`.
   return (
     <div>
-      Something went wrong: {caught.status}{" "}
-      {caught.statusText}
+      Something went wrong:{" "}
+      {error?.message || "Unknown Error"}
     </div>
   );
 }

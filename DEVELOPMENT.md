@@ -69,18 +69,27 @@ You may need to make changes to a pre-release prior to publishing a final stable
 ### Publishing the stable release
 
 - Exit Changesets pre-release mode: `yarn changeset pre exit`.
-- Commit the deleted pre-release file along with any unpublished changesets, and push the `release-*` branch to GitHub.
+- Commit the edited `pre.json` file along with any unpublished changesets, and push the `release-*` branch to GitHub.
 - Wait for the release workflow to finish. The Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs for the stable release.
 - Review the updated `CHANGELOG` files and make any adjustments necessary.
+  - `find packages -name 'CHANGELOG.md' -mindepth 2 -maxdepth 2 -exec code {} \;`
   - We should remove the changelogs for all pre-releases ahead of publishing the stable version.
   - [TODO: We should automate this]
+- Prepare the github release notes
+  - Copy the relevant changelog entries from all packages into the Release Notes and adjust accordingly, matching the format used by prior releases
 - Merge the PR into the `release-*` branch.
 - Once the PR is merged, the release workflow will publish the updated packages to npm.
 - Once the release is published:
-  - merge the `release-*` branch into `main` and push it up to GitHub
-  - merge the `release-*` branch into `dev` and push it up to GitHub
-  - Convert the `remix@1.x.y` tag to a Release on Github with the name `v1.x.y`
-  - Copy the relevant changelog entries from all packages into the Release Notes and adjust accordingly, matching the format used by prior releases
+  - Pull the latest `release-*` branch containing the PR you just merged
+  - Merge the `release-*` branch into `main` **using a non-fast-forward merge** and push it up to GitHub
+    - `git checkout main; git merge --no-ff release-next`
+  - Merge the `release-*` branch into `dev` **using a non-fast-forward merge** and push it up to GitHub
+    - `git checkout dev; git merge --no-ff release-next`
+  - Convert the `remix@1.x.y` tag to a Release on Github with the name `v1.x.y` using he release notes prepared above
+
+### Hotfix releases
+
+Hotfix releases follow the same process as standard releases above, but the `release-*` branch should be branched off latest `main` instead of `dev`. Once the stable hotfix is published, the `release-*` branch should be merged back into both `main` and `dev` just like a normal release.
 
 ### Experimental releases
 
@@ -106,7 +115,7 @@ By default, the Remix `rollup` build will strip any `console.debug` calls to avo
 REMIX_DEBUG=true yarn watch
 ```
 
-**`REMIX_LOCAL_BUILD_DIRECTORY`**
+**`LOCAL_BUILD_DIRECTORY`**
 
 When developing Remix locally, you often need to go beyond unit/integration tests and test your changes in a local Remix application. The easiest way to do this is to run your local Remix build and use this environment variable to direct `rollup` to write the output files directly into the local Remix application's `node_modules` folder. Then you just need to restart your local Remix application server to pick up the changes.
 
@@ -117,7 +126,7 @@ cd my-remix-app
 npm run dev
 
 # Tab 2 - remix repository
-REMIX_LOCAL_BUILD_DIRECTORY=../my-remix-app yarn watch
+LOCAL_BUILD_DIRECTORY=../my-remix-app yarn watch
 ```
 
 Now - any time you make changes in the Remix repository, they will be written out to the appropriate locations in `../my-remix-app/node_modules` and you can restart the `npm run dev` command to pick them up 🎉.

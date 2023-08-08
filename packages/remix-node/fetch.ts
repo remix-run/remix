@@ -1,4 +1,4 @@
-import type { Readable } from "stream";
+import type { Readable } from "node:stream";
 import {
   fetch as webFetch,
   Headers as WebHeaders,
@@ -41,7 +41,7 @@ class NodeRequest extends WebRequest {
   }
 
   public clone(): NodeRequest {
-    return super.clone() as NodeRequest;
+    return new NodeRequest(this);
   }
 }
 

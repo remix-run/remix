@@ -6,7 +6,7 @@ order: 3
 
 # Remix App Server
 
-While you can bring your own server, Remix ships with a built-in, production-ready application server.
+Remix is designed for you to own your server, but if you don't want to set one up you can use the Remix App Server instead. It's a production-ready, but basic Node.js server built with Express. If you find you want to customize it, use the `@remix-run/express` adapter instead.
 
 ```sh
 remix-serve <server-build-path>
@@ -38,29 +38,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
   }
   ```
 
-  If you need a workaround for preserving cache in development, you can store it in the global variable.
-
-  ```tsx lines=[1-9]
-  // since the cache is stored in global it will only
-  // be recreated when you restart your dev server.
-  const cache = () => {
-    if (!global.uniqueCacheName) {
-      global.uniqueCacheName = new Map();
-    }
-
-    return global.uniqueCacheName;
-  };
-
-  export async function loader({ params }: LoaderArgs) {
-    if (cache.has(params.foo)) {
-      return json(cache.get(params.foo));
-    }
-
-    const record = await fakeDb.stuff.find(params.foo);
-    cache.set(params.foo, record);
-    return json(record);
-  }
-  ```
+  If you need a workaround for preserving cache in development, you can use the [`remember` utility][remember]
 
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 
@@ -82,3 +60,4 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 In production this doesn't happen. The server boots up and that's the end of it.
 
 [remix-run-express]: adapter#createrequesthandler
+[remember]: ./dev-v2#keeping-in-memory-server-state-across-rebuilds

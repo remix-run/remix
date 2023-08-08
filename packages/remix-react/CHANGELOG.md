@@ -1,5 +1,243 @@
 # `@remix-run/react`
 
+## 1.19.2
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.2) for an overview of all changes in v1.19.2.
+
+## 1.19.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.1) for an overview of all changes in v1.19.1.
+
+## 1.19.0
+
+### Minor Changes
+
+- improved networking options for `v2_dev` ([#6724](https://github.com/remix-run/remix/pull/6724))
+
+  deprecate the `--scheme` and `--host` options and replace them with the `REMIX_DEV_ORIGIN` environment variable
+
+- Added some missing react-router exports to `@remix-run/react` ([#6856](https://github.com/remix-run/remix/pull/6856))
+
+### Patch Changes
+
+- Narrowed the type of `fetcher.formEncType` to use `FormEncType` from `react-router-dom` instead of `string` ([#6810](https://github.com/remix-run/remix/pull/6810))
+- Deferred promises that return undefined/void now surface a serialization error. ([#6793](https://github.com/remix-run/remix/pull/6793))
+- Properly handle `?_data` HTTP/Network errors that don't reach the Remix server and ensure they bubble to the `ErrorBoundary` ([#6783](https://github.com/remix-run/remix/pull/6783))
+- Support proper hydration of `Error` subclasses such as `ReferenceError`/`TypeError` in development mode ([#6675](https://github.com/remix-run/remix/pull/6675))
+- fix router race condition for hmr ([#6767](https://github.com/remix-run/remix/pull/6767))
+- Avoid re-prefetching stylesheets for active routes during a revalidation ([#6679](https://github.com/remix-run/remix/pull/6679))
+- Add generic type for `useRouteLoaderData()` ([#5157](https://github.com/remix-run/remix/pull/5157))
+- Bump RR 6.14.2 ([#6854](https://github.com/remix-run/remix/pull/6854))
+- Updated dependencies:
+  - [`react-router-dom@6.14.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.14.2)
+  - [`@remix-run/router@1.7.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#172)
+
+## 1.18.1
+
+### Patch Changes
+
+- Fix reload loops in scenarios where CDNs ignore search params ([#6707](https://github.com/remix-run/remix/pull/6707))
+- Updated dependencies:
+  - [`react-router-dom@6.14.1`](https://github.com/remix-run/react-router/releases/tag/react-router%406.14.1)
+  - [`@remix-run/router@1.7.1`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#171)
+
+## 1.18.0
+
+### Minor Changes
+
+- stabilize v2 dev server ([#6615](https://github.com/remix-run/remix/pull/6615))
+- Support `application/json` and `text/plain` submission encodings in `useSubmit`/`fetcher.submit` ([#6570](https://github.com/remix-run/remix/pull/6570))
+- Add support for `<Link prefetch="viewport">` to prefetch links when they enter the viewport via an [Intersection Observer](https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver) ([#6433](https://github.com/remix-run/remix/pull/6433))
+
+### Patch Changes
+
+- Bump router 6.14.0-pre.1 ([#6662](https://github.com/remix-run/remix/pull/6662))
+- Detect mismatches between the initially loaded URL and the URL at the time we hydrate and trigger a hard reload if they do not match. This is an edge-case that can happen when the network is slowish and the user clicks forward into a Remix app and then clicks forward again while the initial JS chunks are loading. ([#6409](https://github.com/remix-run/remix/pull/6409))
+- Lock in react router 6.14.0 ([#6677](https://github.com/remix-run/remix/pull/6677))
+- properly pass <Scripts /> props to inline script tags for deferred data ([#6389](https://github.com/remix-run/remix/pull/6389))
+
+## 1.17.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - [`react-router-dom@6.13.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.13.0)
+
+## 1.17.0
+
+### Minor Changes
+
+- Faster server export removal for routes when `unstable_dev` is enabled. ([#6455](https://github.com/remix-run/remix/pull/6455))
+
+  Also, only render modulepreloads on SSR.
+  Do not render modulepreloads when hydrated.
+
+- Force Typescript to simplify type produced by `Serialize`. ([#6449](https://github.com/remix-run/remix/pull/6449))
+
+  As a result, the following types and functions have simplified return types:
+
+  - SerializeFrom
+  - useLoaderData
+  - useActionData
+  - useFetcher
+
+  ```ts
+  type Data = { hello: string; when: Date };
+
+  // BEFORE
+  type Unsimplified = SerializeFrom<Data>;
+  //   ^? SerializeObject<UndefinedToOptional<{ hello: string; when: Date }>>
+
+  // AFTER
+  type Simplified = SerializeFrom<Data>;
+  //   ^? { hello: string; when: string }
+  ```
+
+- Reuse dev server port for WebSocket (Live Reload,HMR,HDR) ([#6476](https://github.com/remix-run/remix/pull/6476))
+
+  As a result the `webSocketPort`/`--websocket-port` option has been obsoleted.
+  Additionally, scheme/host/port options for the dev server have been renamed.
+
+  Available options are:
+
+  | Option     | flag               | config           | default                           |
+  | ---------- | ------------------ | ---------------- | --------------------------------- |
+  | Command    | `-c` / `--command` | `command`        | `remix-serve <server build path>` |
+  | Scheme     | `--scheme`         | `scheme`         | `http`                            |
+  | Host       | `--host`           | `host`           | `localhost`                       |
+  | Port       | `--port`           | `port`           | Dynamically chosen open port      |
+  | No restart | `--no-restart`     | `restart: false` | `restart: true`                   |
+
+  Note that scheme/host/port options are for the _dev server_, not your app server.
+  You probably don't need to use scheme/host/port option if you aren't configuring networking (e.g. for Docker or SSL).
+
+### Patch Changes
+
+- retry HDR revalidations in development mode to aid in 3rd party server race conditions ([#6287](https://github.com/remix-run/remix/pull/6287))
+- Updated dependencies:
+  - [`react-router-dom@6.12.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.12.0)
+  - [`@remix-run/router@1.6.3`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#163)
+
+## 1.16.1
+
+### Patch Changes
+
+- Cross-module `loader` change detection for HDR ([#6299](https://github.com/remix-run/remix/pull/6299))
+- Better opt-out of `loader` revalidation on UI only changes ([#6278](https://github.com/remix-run/remix/pull/6278))
+- Add `useMatch` re-export from `react-router-dom` ([#5257](https://github.com/remix-run/remix/pull/5257))
+- Fix `data` parameter typing on `V2_MetaFunction` to include `undefined` for scenarios in which the `loader` threw to it's own boundary. ([#6231](https://github.com/remix-run/remix/pull/6231))
+- Updated dependencies:
+  - [`react-router-dom@6.11.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.2)
+  - [`@remix-run/router@1.6.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#162)
+
+## 1.16.0
+
+### Minor Changes
+
+- Enable support for [CSS Modules](https://github.com/css-modules/css-modules), [Vanilla Extract](http://vanilla-extract.style) and CSS side-effect imports ([#6046](https://github.com/remix-run/remix/pull/6046))
+
+  These CSS bundling features were previously only available via `future.unstable_cssModules`, `future.unstable_vanillaExtract` and `future.unstable_cssSideEffectImports` options in `remix.config.js`, but they have now been stabilized.
+
+  In order to use these features, check out our guide to [CSS bundling](https://remix.run/docs/en/1.16.0/guides/styling#css-bundling) in your project.
+
+- Stabilize built-in PostCSS support via the new `postcss` option in `remix.config.js`. As a result, the `future.unstable_postcss` option has also been deprecated. ([#5960](https://github.com/remix-run/remix/pull/5960))
+
+  The `postcss` option is `false` by default, but when set to `true` will enable processing of all CSS files using PostCSS if `postcss.config.js` is present.
+
+  If you followed the original PostCSS setup guide for Remix, you may have a folder structure that looks like this, separating your source files from its processed output:
+
+      .
+      ├── app
+      │   └── styles (processed files)
+      │       ├── app.css
+      │       └── routes
+      │           └── index.css
+      └── styles (source files)
+          ├── app.css
+          └── routes
+              └── index.css
+
+  After you've enabled the new `postcss` option, you can delete the processed files from `app/styles` folder and move your source files from `styles` to `app/styles`:
+
+      .
+      ├── app
+      │   └── styles (source files)
+      │       ├── app.css
+      │       └── routes
+      │           └── index.css
+
+  You should then remove `app/styles` from your `.gitignore` file since it now contains source files rather than processed output.
+
+  You can then update your `package.json` scripts to remove any usage of `postcss` since Remix handles this automatically. For example, if you had followed the original setup guide:
+
+  ```diff
+  {
+    "scripts": {
+  -    "dev:css": "postcss styles --base styles --dir app/styles -w",
+  -    "build:css": "postcss styles --base styles --dir app/styles --env production",
+  -    "dev": "concurrently \"npm run dev:css\" \"remix dev\""
+  +    "dev": "remix dev"
+    }
+  }
+  ```
+
+- Stabilize built-in Tailwind support via the new `tailwind` option in `remix.config.js`. As a result, the `future.unstable_tailwind` option has also been deprecated. ([#5960](https://github.com/remix-run/remix/pull/5960))
+
+  The `tailwind` option is `false` by default, but when set to `true` will enable built-in support for Tailwind functions and directives in your CSS files if `tailwindcss` is installed.
+
+  If you followed the original Tailwind setup guide for Remix and want to make use of this feature, you should first delete the generated `app/tailwind.css`.
+
+  Then, if you have a `styles/tailwind.css` file, you should move it to `app/tailwind.css`.
+
+  ```sh
+  rm app/tailwind.css
+  mv styles/tailwind.css app/tailwind.css
+  ```
+
+  Otherwise, if you don't already have an `app/tailwind.css` file, you should create one with the following contents:
+
+  ```css
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+  ```
+
+  You should then remove `/app/tailwind.css` from your `.gitignore` file since it now contains source code rather than processed output.
+
+  You can then update your `package.json` scripts to remove any usage of `tailwindcss` since Remix handles this automatically. For example, if you had followed the original setup guide:
+
+  ```diff
+  {
+    // ...
+    "scripts": {
+  -    "build": "run-s \"build:*\"",
+  +    "build": "remix build",
+  -    "build:css": "npm run generate:css -- --minify",
+  -    "build:remix": "remix build",
+  -    "dev": "run-p \"dev:*\"",
+  +    "dev": "remix dev",
+  -    "dev:css": "npm run generate:css -- --watch",
+  -    "dev:remix": "remix dev",
+  -    "generate:css": "npx tailwindcss -o ./app/tailwind.css",
+      "start": "remix-serve build"
+    }
+    // ...
+  }
+  ```
+
+### Patch Changes
+
+- fix(react,dev): dev chunking and refresh race condition ([#6201](https://github.com/remix-run/remix/pull/6201))
+- Revalidate loaders only when a change to one is detected. ([#6135](https://github.com/remix-run/remix/pull/6135))
+- short circuit links and meta for routes that are not rendered due to errors ([#6107](https://github.com/remix-run/remix/pull/6107))
+- don't warn about runtime deprecation warnings in production ([#4421](https://github.com/remix-run/remix/pull/4421))
+- Update Remix for React Router no longer relying on `useSyncExternalStore` ([#6121](https://github.com/remix-run/remix/pull/6121))
+- Fix false-positive resource route identification if a route only exports a boundary ([#6125](https://github.com/remix-run/remix/pull/6125))
+- better type discrimination when unwrapping loader return types ([#5516](https://github.com/remix-run/remix/pull/5516))
+- Updated dependencies:
+  - [`react-router-dom@6.11.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.0)
+  - [`@remix-run/router@1.6.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#160)
+
 ## 1.15.0
 
 ### Minor Changes
@@ -147,7 +385,7 @@ No significant changes to this package were made in this release. [See the relea
 
 - Added the `v2_errorBoundary` future flag to opt into the next version of Remix's `ErrorBoundary` behavior. This removes the separate `CatchBoundary` and `ErrorBoundary` and consolidates them into a single `ErrorBoundary`, following the logic used by `errorElement` in React Router. You can then use `isRouteErrorResponse` to differentiate between thrown `Response`/`Error` instances. ([#4918](https://github.com/remix-run/remix/pull/4918))
 
-  ```jsx
+  ```tsx
   // Current (Remix v1 default)
   import { useCatch } from "@remix-run/react";
 
@@ -165,7 +403,7 @@ No significant changes to this package were made in this release. [See the relea
   }
   ```
 
-  ```jsx
+  ```tsx
   // Using future.v2_errorBoundary
   import { isRouteErrorResponse, useRouteError } from "@remix-run/react";
 

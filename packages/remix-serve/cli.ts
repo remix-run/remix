@@ -1,9 +1,13 @@
 import "./env";
-import path from "path";
-import os from "os";
-import { devReady } from "@remix-run/node";
+import path from "node:path";
+import os from "node:os";
+import { broadcastDevReady, installGlobals } from "@remix-run/node";
+import sourceMapSupport from "source-map-support";
 
 import { createApp } from "./index";
+
+sourceMapSupport.install();
+installGlobals();
 
 let port = process.env.PORT ? Number(process.env.PORT) : 3000;
 if (Number.isNaN(port)) port = 3000;
@@ -33,11 +37,8 @@ let onListen = () => {
       `Remix App Server started at http://localhost:${port} (http://${address}:${port})`
     );
   }
-  if (
-    build.future?.unstable_dev !== false &&
-    process.env.NODE_ENV === "development"
-  ) {
-    devReady(build);
+  if (process.env.NODE_ENV === "development") {
+    broadcastDevReady(build);
   }
 };
 

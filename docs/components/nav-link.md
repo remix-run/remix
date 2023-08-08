@@ -5,7 +5,7 @@ toc: false
 
 # `<NavLink>`
 
-A `<NavLink>` is a special kind of `<Link>` that knows whether or not it is "active" or "pending". This is useful when building a navigation menu, such as a breadcrumb or a set of tabs where you'd like to show which of them is currently selected. It also provides useful context for assistive technology like screen readers.
+A `<NavLink>` is a special kind of [`<Link>`][link] that knows whether or not it is "active" or "pending". This is useful when building a navigation menu, such as a breadcrumb or a set of tabs where you'd like to show which of them is currently selected. It also provides useful context for assistive technology like screen readers.
 
 ```tsx
 import { NavLink } from "@remix-run/react";
@@ -122,3 +122,4 @@ Adding the `caseSensitive` prop changes the matching logic to make it case sensi
 When a `NavLink` is active it will automatically apply `<a aria-current="page">` to the underlying anchor tag. See [aria-current][aria-current] on MDN.
 
 [aria-current]: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-current
+[link]: ./link.md

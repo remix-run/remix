@@ -54,7 +54,7 @@ export function createPagesFunctionHandler<Env = any>({
     context.request.headers.delete("if-none-match");
 
     try {
-      response = await (context.env as any).ASSETS.fetch(
+      response = await context.env.ASSETS.fetch(
         context.request.url,
         context.request.clone()
       );

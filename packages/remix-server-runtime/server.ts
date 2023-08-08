@@ -1,13 +1,14 @@
 import type {
   UNSAFE_DeferredData as DeferredData,
+  ErrorResponse,
   StaticHandler,
-  StaticHandlerContext,
 } from "@remix-run/router";
 import {
   UNSAFE_DEFERRED_SYMBOL as DEFERRED_SYMBOL,
   getStaticContextFromError,
   isRouteErrorResponse,
   createStaticHandler,
+  json as routerJson,
 } from "@remix-run/router";
 
 import type { AppLoadContext } from "./data";
@@ -19,11 +20,9 @@ import { getDocumentHeadersRR } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import { matchServerRoutes } from "./routeMatching";
-import type { ServerRouteManifest } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
-  json,
   isRedirectResponse,
   isResponse,
 } from "./responses";
@@ -48,10 +47,24 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
   let staticHandler = createStaticHandler(dataRoutes);
 
+  let errorHandler =
+    build.entry.module.handleError ||
+    ((error, { request }) => {
+      if (serverMode !== ServerMode.Test && !request.signal.aborted) {
+        console.error(error);
+      }
+    });
+
   return async function requestHandler(request, loadContext = {}) {
     let url = new URL(request.url);
 
     let matches = matchServerRoutes(routes, url.pathname);
+    let handleError = (error: unknown) =>
+      errorHandler(error, {
+        context: loadContext,
+        params: matches && matches.length > 0 ? matches[0].params : {},
+        request,
+      });
 
     let response: Response;
     if (url.searchParams.has("_data")) {
@@ -62,14 +75,14 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         staticHandler,
         routeId,
         request,
-        loadContext
+        loadContext,
+        handleError
       );
 
       if (build.entry.module.handleDataRequest) {
-        let match = matches!.find((match) => match.route.id == routeId)!;
         response = await build.entry.module.handleDataRequest(response, {
           context: loadContext,
-          params: match ? match.params : {},
+          params: matches?.find((m) => m.route.id == routeId)?.params || {},
           request,
         });
       }
@@ -82,7 +95,8 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         staticHandler,
         matches.slice(-1)[0].route.id,
         request,
-        loadContext
+        loadContext,
+        handleError
       );
     } else {
       response = await handleDocumentRequestRR(
@@ -90,7 +104,8 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         build,
         staticHandler,
         request,
-        loadContext
+        loadContext,
+        handleError
       );
     }
 
@@ -111,7 +126,8 @@ async function handleDataRequestRR(
   staticHandler: StaticHandler,
   routeId: string,
   request: Request,
-  loadContext: AppLoadContext
+  loadContext: AppLoadContext,
+  handleError: (err: unknown) => void
 ) {
   try {
     let response = await staticHandler.queryRoute(request, {
@@ -147,10 +163,16 @@ async function handleDataRequestRR(
       let init = deferredData.init || {};
       let headers = new Headers(init.headers);
       headers.set("Content-Type", "text/remix-deferred");
+      // Mark successful responses with a header so we can identify in-flight
+      // network errors that are missing this header
+      headers.set("X-Remix-Response", "yes");
       init.headers = headers;
       return new Response(body, init);
     }
 
+    // Mark all successful responses with a header so we can identify in-flight
+    // network errors that are missing this header
+    response.headers.set("X-Remix-Response", "yes");
     return response;
   } catch (error: unknown) {
     if (isResponse(error)) {
@@ -158,18 +180,18 @@ async function handleDataRequestRR(
       return error;
     }
 
-    let status = isRouteErrorResponse(error) ? error.status : 500;
+    if (isRouteErrorResponse(error)) {
+      if (error.error) {
+        handleError(error.error);
+      }
+      return errorResponseToJson(error, serverMode);
+    }
+
     let errorInstance =
-      isRouteErrorResponse(error) && error.error
-        ? error.error
-        : error instanceof Error
-        ? error
-        : new Error("Unexpected Server Error");
-
-    logServerErrorIfNotAborted(errorInstance, request, serverMode);
-
-    return json(serializeError(errorInstance, serverMode), {
-      status,
+      error instanceof Error ? error : new Error("Unexpected Server Error");
+    handleError(errorInstance);
+    return routerJson(serializeError(errorInstance, serverMode), {
+      status: 500,
       headers: {
         "X-Remix-Error": "yes",
       },
@@ -177,61 +199,13 @@ async function handleDataRequestRR(
   }
 }
 
-function findParentBoundary(
-  routes: ServerRouteManifest,
-  routeId: string,
-  error: any
-): string {
-  // Fall back to the root route if we don't match any routes, since Remix
-  // has default error/catch boundary handling.  This handles the case where
-  // react-router doesn't have a matching "root" route to assign the error to
-  // so it returns context.errors = { __shim-error-route__: ErrorResponse }
-  let route = routes[routeId] || routes["root"];
-  // Router-thrown ErrorResponses will have the error instance.  User-thrown
-  // Responses will not have an error. The one exception here is internal 404s
-  // which we handle the same as user-thrown 404s
-  let isCatch =
-    isRouteErrorResponse(error) && (!error.error || error.status === 404);
-  if (
-    (isCatch && route.module.CatchBoundary) ||
-    (!isCatch && route.module.ErrorBoundary) ||
-    !route.parentId
-  ) {
-    return route.id;
-  }
-
-  return findParentBoundary(routes, route.parentId, error);
-}
-
-// Re-generate a remix-friendly context.errors structure.  The Router only
-// handles generic errors and does not distinguish error versus catch.  We
-// may have a thrown response tagged to a route that only exports an
-// ErrorBoundary or vice versa.  So we adjust here and ensure that
-// data-loading errors are properly associated with routes that have the right
-// type of boundaries.
-export function differentiateCatchVersusErrorBoundaries(
-  build: ServerBuild,
-  context: StaticHandlerContext
-) {
-  if (!context.errors) {
-    return;
-  }
-
-  let errors: Record<string, any> = {};
-  for (let routeId of Object.keys(context.errors)) {
-    let error = context.errors[routeId];
-    let handlingRouteId = findParentBoundary(build.routes, routeId, error);
-    errors[handlingRouteId] = error;
-  }
-  context.errors = errors;
-}
-
 async function handleDocumentRequestRR(
   serverMode: ServerMode,
   build: ServerBuild,
   staticHandler: StaticHandler,
   request: Request,
-  loadContext: AppLoadContext
+  loadContext: AppLoadContext,
+  handleError: (err: unknown) => void
 ) {
   let context;
   try {
@@ -239,7 +213,7 @@ async function handleDocumentRequestRR(
       requestContext: loadContext,
     });
   } catch (error: unknown) {
-    logServerErrorIfNotAborted(error, request, serverMode);
+    handleError(error);
     return new Response(null, { status: 500 });
   }
 
@@ -249,12 +223,12 @@ async function handleDocumentRequestRR(
 
   // Sanitize errors outside of development environments
   if (context.errors) {
+    Object.values(context.errors).forEach((err) => {
+      if (!isRouteErrorResponse(err) || err.error) {
+        handleError(err);
+      }
+    });
     context.errors = sanitizeErrors(context.errors, serverMode);
-  }
-
-  // Restructure context.errors to the right Catch/Error Boundary
-  if (build.future.v2_errorBoundary !== true) {
-    differentiateCatchVersusErrorBoundaries(build, context);
   }
 
   let headers = getDocumentHeadersRR(build, context);
@@ -264,15 +238,16 @@ async function handleDocumentRequestRR(
     routeModules: createEntryRouteModules(build.routes),
     staticHandlerContext: context,
     serverHandoffString: createServerHandoffString({
+      url: context.location.pathname,
       state: {
         loaderData: context.loaderData,
         actionData: context.actionData,
         errors: serializeErrors(context.errors, serverMode),
       },
       future: build.future,
-      dev: build.dev,
     }),
     future: build.future,
+    serializeError: (err) => serializeError(err, serverMode),
   };
 
   let handleDocumentRequestFunction = build.entry.module.default;
@@ -285,6 +260,8 @@ async function handleDocumentRequestRR(
       loadContext
     );
   } catch (error: unknown) {
+    handleError(error);
+
     // Get a new StaticHandlerContext that contains the error at the right boundary
     context = getStaticContextFromError(
       staticHandler.dataRoutes,
@@ -297,16 +274,12 @@ async function handleDocumentRequestRR(
       context.errors = sanitizeErrors(context.errors, serverMode);
     }
 
-    // Restructure context.errors to the right Catch/Error Boundary
-    if (build.future.v2_errorBoundary !== true) {
-      differentiateCatchVersusErrorBoundaries(build, context);
-    }
-
     // Update entryContext for the second render pass
     entryContext = {
       ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString({
+        url: context.location.pathname,
         state: {
           loaderData: context.loaderData,
           actionData: context.actionData,
@@ -325,7 +298,7 @@ async function handleDocumentRequestRR(
         loadContext
       );
     } catch (error: any) {
-      logServerErrorIfNotAborted(error, request, serverMode);
+      handleError(error);
       return returnLastResortErrorResponse(error, serverMode);
     }
   }
@@ -336,7 +309,8 @@ async function handleResourceRequestRR(
   staticHandler: StaticHandler,
   routeId: string,
   request: Request,
-  loadContext: AppLoadContext
+  loadContext: AppLoadContext,
+  handleError: (err: unknown) => void
 ) {
   try {
     // Note we keep the routeId here to align with the Remix handling of
@@ -359,19 +333,36 @@ async function handleResourceRequestRR(
       error.headers.set("X-Remix-Catch", "yes");
       return error;
     }
-    logServerErrorIfNotAborted(error, request, serverMode);
+
+    if (isRouteErrorResponse(error)) {
+      if (error.error) {
+        handleError(error.error);
+      }
+      return errorResponseToJson(error, serverMode);
+    }
+
+    handleError(error);
     return returnLastResortErrorResponse(error, serverMode);
   }
 }
 
-function logServerErrorIfNotAborted(
-  error: unknown,
-  request: Request,
+function errorResponseToJson(
+  errorResponse: ErrorResponse,
   serverMode: ServerMode
-) {
-  if (serverMode !== ServerMode.Test && !request.signal.aborted) {
-    console.error(error);
-  }
+): Response {
+  return routerJson(
+    serializeError(
+      errorResponse.error || new Error("Unexpected Server Error"),
+      serverMode
+    ),
+    {
+      status: errorResponse.status,
+      statusText: errorResponse.statusText,
+      headers: {
+        "X-Remix-Error": "yes",
+      },
+    }
+  );
 }
 
 function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
