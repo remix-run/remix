@@ -53,11 +53,8 @@ Then, you can pass those through via `getLoadContext` in your server file:
 ```ts
 export const onRequest = createPagesFunctionHandler({
   build,
-  getLoadContext(context) {
-    // Hand-off Cloudflare ENV vars to the Remix `context` object
-    return { env: context.env };
-  },
-  mode: process.env.NODE_ENV,
+  getLoadContext: (context) => ({ env: context.env }), // Hand-off Cloudflare ENV vars to the Remix `context` object
+  mode: build.mode,
 });
 ```
 
