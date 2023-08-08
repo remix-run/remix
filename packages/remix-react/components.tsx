@@ -608,21 +608,18 @@ export function Meta() {
         }
 
         if ("script:ld+json" in metaProps) {
-          let json: string | null = null;
           try {
-            json = JSON.stringify(metaProps["script:ld+json"]);
-          } catch (err) {}
-          return (
-            json != null && (
+            let json = JSON.stringify(metaProps["script:ld+json"]);
+            return (
               <script
-                key="script:ld+json"
+                key={`script:ld+json:${json}`}
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                  __html: JSON.stringify(metaProps["script:ld+json"]),
-                }}
+                dangerouslySetInnerHTML={{ __html: json }}
               />
-            )
-          );
+            );
+          } catch (err) {
+            return null;
+          }
         }
         return <meta key={JSON.stringify(metaProps)} {...metaProps} />;
       })}

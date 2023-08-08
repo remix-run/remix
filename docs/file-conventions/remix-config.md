@@ -228,9 +228,7 @@ There are a few conventions that Remix uses you should be aware of.
 [cloudflare-pages]: https://pages.cloudflare.com
 [cloudflare-workers]: https://workers.cloudflare.com
 [deno]: https://deno.land
-[netlify]: https://www.netlify.com
 [node-cjs]: https://nodejs.org/en
-[vercel]: https://vercel.com
 [dilum-sanjaya]: https://twitter.com/DilumSanjaya
 [an-awesome-visualization]: https://remix-routing-demo.netlify.app
 [remix-dev]: ../other-api/dev#remix-dev
