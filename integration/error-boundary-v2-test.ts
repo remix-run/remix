@@ -6,21 +6,15 @@ import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
-test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
+test.describe("ErrorBoundary", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
   let oldConsoleError: () => void;
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_errorBoundary: true,
-          v2_routeConvention: true,
-        },
-      },
       files: {
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
@@ -41,7 +35,7 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
           }
         `,
 
-        "app/routes/parent.jsx": js`
+        "app/routes/parent.tsx": js`
           import {
             Link,
             Outlet,
@@ -82,7 +76,7 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
           }
         `,
 
-        "app/routes/parent.child-with-boundary.jsx": js`
+        "app/routes/parent.child-with-boundary.tsx": js`
           import {
             isRouteErrorResponse,
             useLoaderData,
@@ -116,7 +110,7 @@ test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
           }
         `,
 
-        "app/routes/parent.child-without-boundary.jsx": js`
+        "app/routes/parent.child-without-boundary.tsx": js`
           import { useLoaderData, useLocation } from "@remix-run/react";
 
           export function loader({ request }) {

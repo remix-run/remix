@@ -42,13 +42,6 @@ test.describe("non-aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_routeConvention: true,
-          v2_errorBoundary: true,
-          v2_normalizeFormMethod: true,
-        },
-      },
       files: {
         "app/components/counter.tsx": js`
           import { useState } from "react";
@@ -84,11 +77,9 @@ test.describe("non-aborted", () => {
           import Counter from "~/components/counter";
           import Interactive from "~/components/interactive";
 
-          export const meta: MetaFunction = () => ({
-            charset: "utf-8",
-            title: "New Remix App",
-            viewport: "width=device-width, initial-scale=1",
-          });
+          export const meta: MetaFunction = () => {
+            return [{ title: "New Remix App" }];
+          };
 
           export const loader = () => defer({
             id: "${ROOT_ID}",
@@ -99,6 +90,8 @@ test.describe("non-aborted", () => {
             return (
               <html lang="en">
                 <head>
+                  <meta charSet="utf-8" />
+                  <meta name="viewport" content="width=device-width,initial-scale=1" />
                   <Meta />
                   <Links />
                 </head>
@@ -571,7 +564,7 @@ test.describe("non-aborted", () => {
           }
         `,
 
-        "app/routes/headers.jsx": js`
+        "app/routes/headers.tsx": js`
           import { defer } from "@remix-run/node";
           export function loader() {
             return defer({}, { headers: { "x-custom-header": "value from loader" } });
@@ -982,16 +975,13 @@ test.describe("aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       ////////////////////////////////////////////////////////////////////////////
       // 💿 Next, add files to this object, just like files in a real app,
       // `createFixture` will make an app and run your tests against it.
       ////////////////////////////////////////////////////////////////////////////
       files: {
         "app/entry.server.tsx": js`
-          import { PassThrough } from "stream";
+          import { PassThrough } from "node:stream";
           import type { AppLoadContext, EntryContext } from "@remix-run/node";
           import { Response } from "@remix-run/node";
           import { RemixServer } from "@remix-run/react";
@@ -1146,11 +1136,9 @@ test.describe("aborted", () => {
           import Counter from "~/components/counter";
           import Interactive from "~/components/interactive";
 
-          export const meta: MetaFunction = () => ({
-            charset: "utf-8",
-            title: "New Remix App",
-            viewport: "width=device-width, initial-scale=1",
-          });
+          export const meta: MetaFunction = () => {
+            return [{ title: "New Remix App" }];
+          };
 
           export const loader = () => defer({
             id: "${ROOT_ID}",
@@ -1161,6 +1149,8 @@ test.describe("aborted", () => {
             return (
               <html lang="en">
                 <head>
+                  <meta charSet="utf-8" />
+                  <meta name="viewport" content="width=device-width,initial-scale=1" />
                   <Meta />
                   <Links />
                 </head>
@@ -1332,8 +1322,7 @@ function monitorConsole(page: Page) {
         let arg0 = await args[0].jsonValue();
         if (
           typeof arg0 === "string" &&
-          (arg0.includes("Download the React DevTools") ||
-            /DEPRECATED.*imagesizes.*imagesrcset/.test(arg0))
+          arg0.includes("Download the React DevTools")
         ) {
           continue;
         }

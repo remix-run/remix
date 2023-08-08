@@ -6,7 +6,9 @@ import chokidar from "chokidar";
 import compression from "compression";
 import express from "express";
 import morgan from "morgan";
+import sourceMapSupport from "source-map-support";
 
+sourceMapSupport.install();
 installGlobals();
 
 const BUILD_PATH = "./build/index.js";
@@ -40,7 +42,7 @@ app.all(
     ? createDevRequestHandler()
     : createRequestHandler({
         build,
-        mode: process.env.NODE_ENV,
+        mode: build.mode,
       })
 );
 

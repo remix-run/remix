@@ -21,13 +21,13 @@ Click this button to create a [Gitpod][gitpod] workspace with the project set up
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
-- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
+- [Node.js][node-js] version (>=18.0.0)
 - [npm][npm] 7 or greater
 - A code editor ([VSCode][vs-code] is a nice one)
 
 ## Creating the project
 
-<docs-warning>Make sure you are running at least Node v14 or greater</docs-warning>
+<docs-warning>Make sure you are running at least Node v18 or greater</docs-warning>
 
 💿 Initialize a new Remix project. We'll call ours "blog-tutorial" but you can call it something else if you'd like.
 
@@ -36,7 +36,8 @@ npx create-remix@latest --template remix-run/indie-stack blog-tutorial
 ```
 
 ```
-? Do you want me to run `npm install`? Yes
+Install dependencies with npm?
+Yes
 ```
 
 You can read more about the stacks available in [the stacks docs][the-stacks-docs].

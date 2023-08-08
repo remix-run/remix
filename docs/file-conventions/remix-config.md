@@ -45,14 +45,18 @@ The path to the browser build, relative to remix.config.js. Defaults to
 The path to a directory Remix can use for caching things in development,
 relative to `remix.config.js`. Defaults to `".cache"`.
 
-## devServerBroadcastDelay
+## devServerBroadcastDelay (deprecated)
 
 The delay, in milliseconds, before the dev server broadcasts a reload event.
 There is no delay by default.
 
-## devServerPort
+For v2, the race conditions that necessitated this option have been eliminated.
+
+## devServerPort (deprecated)
 
 The port number to use for the dev websocket server. Defaults to 8002.
+
+For v2, use [`--port` / `dev.port` option][port].
 
 ## ignoredRouteFiles
 
@@ -68,7 +72,7 @@ The URL prefix of the browser build with a trailing slash. Defaults to
 
 ## postcss
 
-Whether to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `false`.
+Whether to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `true`.
 
 ## routes
 
@@ -117,27 +121,6 @@ The path to the server build, relative to `remix.config.js`. Defaults to
 The path to the server build file, relative to `remix.config.js`. This file
 should end in a `.js` extension and should be deployed to your server. Defaults
 to `"build/index.js"`.
-
-## serverBuildTarget
-
-<docs-warning>This option is deprecated and will be removed in the next major version release. Use a combination of [`publicPath`][public-path],
-[`serverBuildPath`][server-build-path], [`serverConditions`][server-conditions],
-[`serverDependenciesToBundle`][server-dependencies-to-bundle]
-[`serverMainFields`][server-main-fields], [`serverMinify`][server-minify],
-[`serverModuleFormat`][server-module-format] and/or
-[`serverPlatform`][server-platform] instead.</docs-warning>
-
-The target of the server build. Defaults to `"node-cjs"`.
-
-The `serverBuildTarget` can be one of the following:
-
-- [`"arc"`][arc]
-- [`"cloudflare-pages"`][cloudflare-pages]
-- [`"cloudflare-workers"`][cloudflare-workers]
-- [`"deno"`][deno]
-- [`"netlify"`][netlify]
-- [`"node-cjs"`][node-cjs]
-- [`"vercel"`][vercel]
 
 ## serverConditions
 
@@ -204,61 +187,6 @@ exports.serverNodeBuiltinsPolyfill = {
 };
 ```
 
-If left unset, this config defaults to the following set of polyfills for non-Node.js server platforms:
-
-```js filename=remix.config.js
-exports.serverNodeBuiltinsPolyfill = {
-  modules: {
-    _stream_duplex: true,
-    _stream_passthrough: true,
-    _stream_readable: true,
-    _stream_transform: true,
-    _stream_writable: true,
-    assert: true,
-    "assert/strict": true,
-    buffer: true,
-    console: true,
-    constants: true,
-    crypto: "empty",
-    diagnostics_channel: true,
-    domain: true,
-    events: true,
-    fs: "empty",
-    "fs/promises": "empty",
-    http: true,
-    https: true,
-    module: true,
-    os: true,
-    path: true,
-    "path/posix": true,
-    "path/win32": true,
-    perf_hooks: true,
-    process: true,
-    punycode: true,
-    querystring: true,
-    stream: true,
-    "stream/promises": true,
-    "stream/web": true,
-    string_decoder: true,
-    sys: true,
-    timers: true,
-    "timers/promises": true,
-    tty: true,
-    url: true,
-    util: true,
-    "util/types": true,
-    vm: true,
-    wasi: true,
-    worker_threads: true,
-    zlib: true,
-  },
-};
-```
-
-<docs-warning>
-This default behavior is changing in Remix v2 and will no longer polyfill any Node built-in modules on non-Node.js platforms by default.  If your app requires polyfills, you will need to manually specify them via this setting. It's recommend to start manually specifying required polyfills for your app in v1 to ease your eventual migration to v2.
-</docs-warning>
-
 ## serverPlatform
 
 The platform the server build is targeting, which can either be `"neutral"` or
@@ -266,7 +194,7 @@ The platform the server build is targeting, which can either be `"neutral"` or
 
 ## tailwind
 
-Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `false`.
+Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `true`.
 
 ## watchPaths
 
@@ -312,3 +240,4 @@ There are a few conventions that Remix uses you should be aware of.
 [tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
 [jspm]: https://github.com/jspm/jspm-core
 [esbuild-plugins-node-modules-polyfill]: https://www.npmjs.com/package/esbuild-plugins-node-modules-polyfill
+[port]: ../other-api/dev-v2#option-1

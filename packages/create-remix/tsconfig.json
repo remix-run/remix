@@ -1,6 +1,6 @@
 {
-  "include": ["**/*.ts"],
-  "exclude": ["dist", "**/node_modules/**"],
+  "include": ["**/*.ts", "./package.json"],
+  "exclude": ["dist", "**/node_modules/**", "__tests__"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM", "DOM.Iterable"],
     "target": "ES2019",

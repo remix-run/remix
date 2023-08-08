@@ -79,15 +79,17 @@ function patchRoutesWithContext(
 }
 
 interface StubIndexRouteObject
-  extends Omit<IndexRouteObject, "loader" | "action"> {
+  extends Omit<IndexRouteObject, "loader" | "action" | "children"> {
   loader?: LoaderFunction;
   action?: ActionFunction;
+  children?: StubRouteObject[];
 }
 
 interface StubNonIndexRouteObject
-  extends Omit<NonIndexRouteObject, "loader" | "action"> {
+  extends Omit<NonIndexRouteObject, "loader" | "action" | "children"> {
   loader?: LoaderFunction;
   action?: ActionFunction;
+  children?: StubRouteObject[];
 }
 
 type StubRouteObject = StubIndexRouteObject | StubNonIndexRouteObject;
@@ -124,14 +126,6 @@ export function createRemixStub(
     if (remixContextRef.current == null) {
       remixContextRef.current = {
         future: {
-          v2_dev: false,
-          unstable_postcss: false,
-          unstable_tailwind: false,
-          v2_errorBoundary: false,
-          v2_headers: false,
-          v2_meta: false,
-          v2_normalizeFormMethod: false,
-          v2_routeConvention: false,
           ...remixConfigFuture,
         },
         manifest: createManifest(routerRef.current.routes),
@@ -180,7 +174,6 @@ function createRouteModules(
     }
 
     modules[route.id!] = {
-      CatchBoundary: undefined,
       ErrorBoundary: undefined,
       // @ts-expect-error - types are still `agnostic` here
       default: () => route.element,
@@ -207,7 +200,6 @@ function convertToEntryRoute(
     hasAction: !!route.action,
     hasLoader: !!route.loader,
     module: "",
-    hasCatchBoundary: false,
     hasErrorBoundary: false,
   };
 }

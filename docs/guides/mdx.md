@@ -16,15 +16,16 @@ Remix has built-in support for using MDX at build-time in two ways:
 
 ## Routes
 
-The simplest way to get started with MDX in Remix is to create a route module. Just like `.js` and `.ts` files in your `app/routes` directory, `.mdx` (and `.md`) files will participate in automatic file system based routing.
+The simplest way to get started with MDX in Remix is to create a route module. Just like `.tsx`, `.js` and `.jsx` files in your `app/routes` directory, `.mdx` (and `.md`) files will participate in automatic file system based routing.
 
 MDX routes allow you to define both meta and headers as if they were a code based route:
 
 ```md
 ---
 meta:
-  title: My First Post
-  description: Isn't this awesome?
+  - title: My First Post
+  - name: description
+    content: Isn't this awesome?
 headers:
   Cache-Control: no-cache
 ---
@@ -51,13 +52,14 @@ import SomeComponent from "~/components/some-component";
 
 ### Example
 
-By creating a `app/routes/posts/first-post.mdx` we can start writing a blog post:
+By creating a `app/routes/posts.first-post.mdx` we can start writing a blog post:
 
 ```mdx
 ---
 meta:
-  title: My First Post
-  description: Isn't this just awesome?
+  - title: My First Post
+  - name: description
+    content: Isn't this just awesome?
 ---
 
 # Example Markdown Post
@@ -72,8 +74,9 @@ You can even export all the other things in this module that you can in regular 
 ```mdx
 ---
 meta:
-  title: My First Post
-  description: Isn't this awesome?
+  - title: My First Post
+  - name: description
+    content: Isn't this awesome?
 
 headers:
   Cache-Control: no-cache
@@ -111,7 +114,7 @@ Besides just route level MDX, you can also import these files anywhere yourself 
 
 When you `import` a `.mdx` file, the exports of the module are:
 
-- **default**: The react component for consumption
+- **default**: The React component for consumption
 - **attributes**: The frontmatter data as an object
 - **filename**: The basename of the source file (e.g. "first-post.mdx")
 
@@ -126,7 +129,7 @@ import Component, {
 
 The following example demonstrates how you might build a simple blog with MDX, including individual pages for the posts themselves and an index page that shows all posts.
 
-```tsx filename=app/routes/index.tsx
+```tsx filename=app/routes/_index.tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { Link, useLoaderData } from "@remix-run/react";
 

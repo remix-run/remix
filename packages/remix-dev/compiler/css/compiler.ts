@@ -1,4 +1,4 @@
-import { builtinModules as nodeBuiltins } from "module";
+import { builtinModules as nodeBuiltins } from "node:module";
 import * as esbuild from "esbuild";
 
 import type { RemixConfig } from "../../config";
@@ -65,9 +65,6 @@ const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
     publicPath: ctx.config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
-      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-        ctx.config.devServerPort
-      ),
     },
     jsx: "automatic",
     jsxDev: ctx.options.mode !== "production",
