@@ -1,11 +1,11 @@
 # `@remix-run/cloudflare-pages`
 
-## 1.19.3-pre.0
+## 1.19.3
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/cloudflare@1.19.3-pre.0`
+  - `@remix-run/cloudflare@1.19.3`
 
 ## 1.19.2
 
