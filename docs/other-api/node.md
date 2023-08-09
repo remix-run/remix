@@ -24,3 +24,9 @@ installGlobals();
 <docs-info>
   Keep in mind that we install these for you automatically in your actual app, so you should only need to do this in your test environment.
 </docs-info>
+
+## Version Support
+
+Remix officially supports **Active** and **Maintenance** [Node LTS versions][node-releases] at any given point in time. Dropped support for End of Life Node versions is done in a Remix Minor release.
+
+[node-releases]: https://nodejs.dev/en/about/releases/
