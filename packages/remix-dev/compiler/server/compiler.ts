@@ -17,6 +17,7 @@ import { serverRouteModulesPlugin } from "./plugins/routes";
 import { externalPlugin } from "../plugins/external";
 import type * as Channel from "../../channel";
 import type { Context } from "../context";
+import type { RouteManifest } from "../../config/routes";
 import type { LazyValue } from "../lazyValue";
 import { cssBundlePlugin } from "../plugins/cssBundlePlugin";
 import { writeMetafile } from "../analysis";
@@ -30,6 +31,8 @@ type Compiler = {
 
 const createEsbuildConfig = (
   ctx: Context,
+  routes: RouteManifest,
+  outfile: string,
   refs: {
     manifestChannel: Channel.Type<Manifest>;
     lazyCssBundleHref: LazyValue<string | undefined>;
@@ -58,9 +61,9 @@ const createEsbuildConfig = (
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
     mdxPlugin(ctx),
     emptyModulesPlugin(ctx, /\.client(\.[jt]sx?)?$/),
-    serverRouteModulesPlugin(ctx),
-    serverEntryModulePlugin(ctx),
-    serverAssetsManifestPlugin(refs),
+    serverRouteModulesPlugin(ctx, routes),
+    serverEntryModulePlugin(ctx, routes),
+    serverAssetsManifestPlugin(refs, routes),
     serverBareModulesPlugin(ctx),
     externalPlugin(/^node:.*/, { sideEffects: false }),
   ];
@@ -78,7 +81,7 @@ const createEsbuildConfig = (
     absWorkingDir: ctx.config.rootDirectory,
     stdin,
     entryPoints,
-    outfile: ctx.config.serverBuildPath,
+    outfile,
     conditions: ctx.config.serverConditions,
     platform: ctx.config.serverPlatform,
     format: ctx.config.serverModuleFormat,
@@ -120,13 +123,15 @@ const createEsbuildConfig = (
 
 export const create = async (
   ctx: Context,
+  routes: RouteManifest,
+  outfile: string,
   refs: {
     manifestChannel: Channel.Type<Manifest>;
     lazyCssBundleHref: LazyValue<string | undefined>;
   }
 ): Promise<Compiler> => {
   let compiler = await esbuild.context({
-    ...createEsbuildConfig(ctx, refs),
+    ...createEsbuildConfig(ctx, routes, outfile, refs),
     write: false,
     metafile: true,
   });

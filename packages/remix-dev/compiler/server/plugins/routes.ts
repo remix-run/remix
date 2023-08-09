@@ -4,18 +4,22 @@ import type esbuild from "esbuild";
 
 import { getLoaderForFile } from "../../utils/loaders";
 import type { Context } from "../../context";
+import type { RouteManifest } from "../../../config/routes";
 
 /**
  * This plugin loads route modules for the server build and prevents errors
  * while adding new files in development mode.
  */
-export function serverRouteModulesPlugin({ config }: Context): esbuild.Plugin {
+export function serverRouteModulesPlugin(
+  { config }: Context,
+  routes: RouteManifest
+): esbuild.Plugin {
   return {
     name: "server-route-modules",
     setup(build) {
       let routeFiles = new Set(
-        Object.keys(config.routes).map((key) =>
-          path.resolve(config.appDirectory, config.routes[key].file)
+        Object.keys(routes).map((key) =>
+          path.resolve(config.appDirectory, routes[key].file)
         )
       );
 

@@ -1,6 +1,7 @@
 import type { Plugin } from "esbuild";
 
 import type { Context } from "../../context";
+import type { RouteManifest } from "../../../config/routes";
 import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
@@ -12,7 +13,10 @@ import {
  * for you to consume the build in a custom server entry that is also fed through
  * the compiler.
  */
-export function serverEntryModulePlugin({ config, options }: Context): Plugin {
+export function serverEntryModulePlugin(
+  { config, options }: Context,
+  routes: RouteManifest
+): Plugin {
   let filter = serverBuildVirtualModule.filter;
 
   return {
@@ -31,11 +35,11 @@ export function serverEntryModulePlugin({ config, options }: Context): Plugin {
           loader: "js",
           contents: `
 import * as entryServer from ${JSON.stringify(config.entryServerFilePath)};
-${Object.keys(config.routes)
+${Object.keys(routes)
   .map((key, index) => {
     // IMPORTANT: Any values exported from this generated module must also be
     // typed in `packages/remix-dev/server-build.ts` to avoid tsc errors.
-    let route = config.routes[key];
+    let route = routes[key];
     return `import * as route${index} from ${JSON.stringify(
       `./${route.file}`
     )};`;
@@ -52,9 +56,9 @@ ${Object.keys(config.routes)
   export const publicPath = ${JSON.stringify(config.publicPath)};
   export const entry = { module: entryServer };
   export const routes = {
-    ${Object.keys(config.routes)
+    ${Object.keys(routes)
       .map((key, index) => {
-        let route = config.routes[key];
+        let route = routes[key];
         return `${JSON.stringify(key)}: {
       id: ${JSON.stringify(route.id)},
       parentId: ${JSON.stringify(route.parentId)},

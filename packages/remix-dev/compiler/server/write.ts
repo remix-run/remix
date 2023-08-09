@@ -6,9 +6,10 @@ import type { RemixConfig } from "../../config";
 
 export async function write(
   config: RemixConfig,
+  serverBuildPath: string,
   outputFiles: esbuild.OutputFile[]
 ) {
-  await fse.ensureDir(path.dirname(config.serverBuildPath));
+  await fse.ensureDir(path.dirname(serverBuildPath));
 
   for (let file of outputFiles) {
     if (file.path.endsWith(".js") || file.path.endsWith(".mjs")) {
@@ -32,7 +33,7 @@ export async function write(
     } else {
       let assetPath = path.join(
         config.assetsBuildDirectory,
-        file.path.replace(path.dirname(config.serverBuildPath), "")
+        file.path.replace(path.dirname(serverBuildPath), "")
       );
 
       // Don't write CSS bundle from server build to browser assets directory,

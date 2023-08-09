@@ -162,6 +162,15 @@ export interface AppConfig {
   serverPlatform?: ServerPlatform;
 
   /**
+   * Configuration of server bundles to produce. If this is defined then the
+   * top-level `serverBuildPath` value is ignored.
+   */
+  serverBundles?: {
+    serverBuildPath: string;
+    routes: string[];
+  }[];
+
+  /*
    * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
    * Defaults to `true`.
    */
@@ -333,6 +342,15 @@ export interface RemixConfig {
   serverPlatform: ServerPlatform;
 
   /**
+   * Configuration of server bundles to produce. If this is defined then the
+   * top-level `serverBuildPath` value is ignored.
+   */
+  serverBundles?: {
+    serverBuildPath: string;
+    routes: RouteManifest;
+  }[];
+
+  /*
    * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
    * Defaults to `true`.
    */
@@ -582,6 +600,24 @@ export async function readConfig(
     }
   }
 
+  let serverBundles = appConfig.serverBundles?.map((bundle) => {
+    // Build up the resolved `routes` including any parent routes
+    let bundleRoutes: RouteManifest = {};
+    for (let id of bundle.routes) {
+      let currentRoute: RouteManifest[string] | undefined = routes[id];
+      do {
+        bundleRoutes[currentRoute.id] = currentRoute;
+        if (currentRoute.parentId) {
+          currentRoute = routes[currentRoute.parentId];
+        } else {
+          currentRoute = undefined;
+        }
+      } while (currentRoute);
+    }
+
+    return { serverBuildPath: bundle.serverBuildPath, routes: bundleRoutes };
+  });
+
   let watchPaths: string[] = [];
   if (typeof appConfig.watchPaths === "function") {
     let directories = await appConfig.watchPaths();
@@ -666,6 +702,7 @@ export async function readConfig(
     serverModuleFormat,
     serverNodeBuiltinsPolyfill,
     serverPlatform,
+    serverBundles,
     mdx,
     postcss,
     tailwind,
