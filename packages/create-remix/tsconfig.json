@@ -2,9 +2,9 @@
   "include": ["**/*.ts", "./package.json"],
   "exclude": ["dist", "**/node_modules/**", "__tests__"],
   "compilerOptions": {
-    "lib": ["ES2019", "DOM", "DOM.Iterable"],
-    "target": "ES2019",
-    "module": "ES2020",
+    "lib": ["ES2022"],
+    "target": "ES2022",
+    "module": "ES2022",
     "skipLibCheck": true,
     "composite": true,
 

@@ -8,9 +8,9 @@
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "Bundler",
-    "module": "ESNext",
+    "module": "ES2022",
     "noEmit": true,
     "strict": true,
-    "target": "ES2018"
+    "target": "ES2022"
   }
 }
