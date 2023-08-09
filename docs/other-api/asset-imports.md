@@ -16,8 +16,8 @@ It's most common for stylesheets, but can used for anything.
 ```tsx filename=app/routes/root.tsx
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-import styles from "./styles/app.css";
 import banner from "./images/banner.jpg";
+import styles from "./styles/app.css";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: styles }];

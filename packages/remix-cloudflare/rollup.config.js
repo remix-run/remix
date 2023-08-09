@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require("node:path");
 const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
@@ -6,7 +6,6 @@ const copy = require("rollup-plugin-copy");
 const {
   getOutputDir,
   copyToPlaygrounds,
-  magicExportsPlugin,
   isBareModuleId,
   createBanner,
 } = require("../../rollup.utils");
@@ -45,7 +44,6 @@ module.exports = function rollup() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
-        magicExportsPlugin({ packageName, version }),
         copyToPlaygrounds(),
       ],
     },

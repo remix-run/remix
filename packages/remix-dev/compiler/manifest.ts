@@ -1,5 +1,5 @@
-import * as path from "path";
-import { promises as fsp } from "fs";
+import * as path from "node:path";
+import { promises as fsp } from "node:fs";
 import type * as esbuild from "esbuild";
 
 import type { RemixConfig } from "../config";
@@ -7,19 +7,20 @@ import invariant from "../invariant";
 import { type Manifest } from "../manifest";
 import { getRouteModuleExports } from "./utils/routeExports";
 import { getHash } from "./utils/crypto";
+import { type FileWatchCache } from "./fileWatchCache";
 
 type Route = RemixConfig["routes"][string];
 
 export async function create({
   config,
   metafile,
-  cssBundleHref,
   hmr,
+  fileWatchCache,
 }: {
   config: RemixConfig;
   metafile: esbuild.Metafile;
-  cssBundleHref?: string;
   hmr?: Manifest["hmr"];
+  fileWatchCache: FileWatchCache;
 }): Promise<Manifest> {
   function resolveUrl(outputPath: string): string {
     return createUrl(
@@ -72,7 +73,21 @@ export async function create({
         `Cannot get route(s) for entry point ${output.entryPoint}`
       );
       for (let route of groupedRoute) {
-        let sourceExports = await getRouteModuleExports(config, route.id);
+        let cacheKey = `module-exports:${route.id}`;
+        let { cacheValue: sourceExports } = await fileWatchCache.getOrSet(
+          cacheKey,
+          async () => {
+            let file = path.resolve(
+              config.appDirectory,
+              config.routes[route.id].file
+            );
+            return {
+              cacheValue: await getRouteModuleExports(config, route.id),
+              fileDependencies: new Set([file]),
+            };
+          }
+        );
+
         routes[route.id] = {
           id: route.id,
           parentId: route.parentId,
@@ -83,7 +98,6 @@ export async function create({
           imports: resolveImports(output.imports),
           hasAction: sourceExports.includes("action"),
           hasLoader: sourceExports.includes("loader"),
-          hasCatchBoundary: sourceExports.includes("CatchBoundary"),
           hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
         };
       }
@@ -93,9 +107,23 @@ export async function create({
   invariant(entry, `Missing output for entry point`);
 
   optimizeRoutes(routes, entry.imports);
-  let version = getHash(JSON.stringify({ entry, routes })).slice(0, 8);
 
-  return { version, entry, routes, cssBundleHref, hmr };
+  let fingerprintedValues = {
+    entry,
+    routes,
+  };
+
+  let version = getHash(JSON.stringify(fingerprintedValues)).slice(0, 8);
+
+  let nonFingerprintedValues = {
+    version,
+    hmr,
+  };
+
+  return {
+    ...fingerprintedValues,
+    ...nonFingerprintedValues,
+  };
 }
 
 export const write = async (config: RemixConfig, assetsManifest: Manifest) => {

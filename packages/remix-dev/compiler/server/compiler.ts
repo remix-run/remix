@@ -1,5 +1,5 @@
 import * as esbuild from "esbuild";
-import { polyfillNode as NodeModulesPolyfillPlugin } from "esbuild-plugin-polyfill-node";
+import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 
 import { type Manifest } from "../../manifest";
 import { loaders } from "../utils/loaders";
@@ -8,7 +8,6 @@ import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
-import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
 import { mdxPlugin } from "../plugins/mdx";
 import { serverAssetsManifestPlugin } from "./plugins/manifest";
@@ -18,6 +17,9 @@ import { serverRouteModulesPlugin } from "./plugins/routes";
 import { externalPlugin } from "../plugins/external";
 import type * as Channel from "../../channel";
 import type { Context } from "../context";
+import type { LazyValue } from "../lazyValue";
+import { cssBundlePlugin } from "../plugins/cssBundlePlugin";
+import { writeMetafile } from "../analysis";
 
 type Compiler = {
   // produce ./build/index.js
@@ -28,7 +30,10 @@ type Compiler = {
 
 const createEsbuildConfig = (
   ctx: Context,
-  channels: { manifest: Channel.Type<Manifest> }
+  refs: {
+    manifestChannel: Channel.Type<Manifest>;
+    lazyCssBundleHref: LazyValue<string | undefined>;
+  }
 ): esbuild.BuildOptions => {
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
@@ -44,7 +49,7 @@ const createEsbuildConfig = (
   }
 
   let plugins: esbuild.Plugin[] = [
-    deprecatedRemixPackagePlugin(ctx),
+    cssBundlePlugin(refs),
     cssModulesPlugin(ctx, { outputCss: false }),
     vanillaExtractPlugin(ctx, { outputCss: false }),
     cssSideEffectImportsPlugin(ctx),
@@ -55,13 +60,18 @@ const createEsbuildConfig = (
     emptyModulesPlugin(ctx, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(ctx),
     serverEntryModulePlugin(ctx),
-    serverAssetsManifestPlugin(channels),
+    serverAssetsManifestPlugin(refs),
     serverBareModulesPlugin(ctx),
     externalPlugin(/^node:.*/, { sideEffects: false }),
   ];
 
-  if (ctx.config.serverPlatform !== "node") {
-    plugins.unshift(NodeModulesPolyfillPlugin());
+  if (ctx.config.serverNodeBuiltinsPolyfill) {
+    plugins.unshift(
+      nodeModulesPolyfillPlugin({
+        // Ensure only "modules" option is passed to the plugin
+        modules: ctx.config.serverNodeBuiltinsPolyfill.modules,
+      })
+    );
   }
 
   return {
@@ -98,12 +108,8 @@ const createEsbuildConfig = (
     publicPath: ctx.config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
-      // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
-      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-        ctx.config.devServerPort
-      ),
-      "process.env.REMIX_DEV_HTTP_ORIGIN": JSON.stringify(
-        ctx.options.devHttpOrigin ?? "" // TODO: remove nullish check in v2
+      "process.env.REMIX_DEV_ORIGIN": JSON.stringify(
+        ctx.options.REMIX_DEV_ORIGIN ?? ""
       ),
     },
     jsx: "automatic",
@@ -114,14 +120,19 @@ const createEsbuildConfig = (
 
 export const create = async (
   ctx: Context,
-  channels: { manifest: Channel.Type<Manifest> }
+  refs: {
+    manifestChannel: Channel.Type<Manifest>;
+    lazyCssBundleHref: LazyValue<string | undefined>;
+  }
 ): Promise<Compiler> => {
   let compiler = await esbuild.context({
-    ...createEsbuildConfig(ctx, channels),
+    ...createEsbuildConfig(ctx, refs),
     write: false,
+    metafile: true,
   });
   let compile = async () => {
-    let { outputFiles } = await compiler.rebuild();
+    let { outputFiles, metafile } = await compiler.rebuild();
+    writeMetafile(ctx, "metafile.server.json", metafile);
     return outputFiles;
   };
   return {

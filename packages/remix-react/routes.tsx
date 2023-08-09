@@ -38,7 +38,6 @@ interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
-  hasCatchBoundary: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
   module: string;
@@ -72,18 +71,13 @@ export function createServerRoutes(
   > = groupRoutesByParentId(manifest)
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
-    let hasErrorBoundary =
-      future.v2_errorBoundary === true
-        ? route.id === "root" || route.hasErrorBoundary
-        : route.id === "root" ||
-          route.hasCatchBoundary ||
-          route.hasErrorBoundary;
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       element: <RemixRoute id={route.id} />,
-      errorElement: hasErrorBoundary ? (
-        <RemixRouteError id={route.id} />
-      ) : undefined,
+      errorElement:
+        route.id === "root" || route.hasErrorBoundary ? (
+          <RemixRouteError id={route.id} />
+        ) : undefined,
       id: route.id,
       index: route.index,
       path: route.path,
@@ -132,19 +126,13 @@ export function createClientRoutes(
   needsRevalidation?: Set<string>
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
-    let hasErrorBoundary =
-      future.v2_errorBoundary === true
-        ? route.id === "root" || route.hasErrorBoundary
-        : route.id === "root" ||
-          route.hasCatchBoundary ||
-          route.hasErrorBoundary;
-
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       element: <RemixRoute id={route.id} />,
-      errorElement: hasErrorBoundary ? (
-        <RemixRouteError id={route.id} />
-      ) : undefined,
+      errorElement:
+        route.id === "root" || route.hasErrorBoundary ? (
+          <RemixRouteError id={route.id} />
+        ) : undefined,
       id: route.id,
       index: route.index,
       path: route.path,

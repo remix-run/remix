@@ -8,6 +8,7 @@ import { getRouteModuleExports } from "../compiler/utils/routeExports";
 import { createMatchPath } from "../compiler/utils/tsconfig";
 import invariant from "../invariant";
 import { mdxPlugin } from "../compiler/plugins/mdx";
+import { loaders } from "../compiler/utils/loaders";
 
 function isBareModuleId(id: string): boolean {
   return !id.startsWith("node:") && !id.startsWith(".") && !path.isAbsolute(id);
@@ -15,7 +16,9 @@ function isBareModuleId(id: string): boolean {
 
 type Route = Context["config"]["routes"][string];
 
-export let detectLoaderChanges = async (ctx: Context) => {
+export let detectLoaderChanges = async (
+  ctx: Context
+): Promise<Record<string, string>> => {
   let entryPoints: Record<string, string> = {};
   for (let id of Object.keys(ctx.config.routes)) {
     entryPoints[id] = ctx.config.routes[id].file + "?loader";
@@ -28,6 +31,8 @@ export let detectLoaderChanges = async (ctx: Context) => {
     outdir: ".",
     write: false,
     entryNames: "[hash]",
+    loader: loaders,
+    logLevel: "silent",
     plugins: [
       {
         name: "hmr-loader",
@@ -47,7 +52,24 @@ export let detectLoaderChanges = async (ctx: Context) => {
             let file = args.path.replace(filter, "");
             let route = routesByFile.get(file);
             invariant(route, `Cannot get route by path: ${args.path}`);
-            let theExports = await getRouteModuleExports(ctx.config, route.id);
+            let cacheKey = `module-exports:${route.id}`;
+            let { cacheValue: theExports } = await ctx.fileWatchCache.getOrSet(
+              cacheKey,
+              async () => {
+                let file = path.resolve(
+                  ctx.config.appDirectory,
+                  ctx.config.routes[route!.id].file
+                );
+                return {
+                  cacheValue: await getRouteModuleExports(
+                    ctx.config,
+                    route!.id
+                  ),
+                  fileDependencies: new Set([file]),
+                };
+              }
+            );
+
             let contents = "module.exports = {};";
             if (theExports.includes("loader")) {
               contents = `export { loader } from ${JSON.stringify(
@@ -96,13 +118,13 @@ export let detectLoaderChanges = async (ctx: Context) => {
   };
 
   let { metafile } = await esbuild.build(options);
-  let entries = Object.entries(metafile!.outputs).map(
-    ([hashjs, { entryPoint }]) => {
-      let file = entryPoint
-        ?.replace(/^hmr-loader:/, "")
-        ?.replace(/\?loader$/, "");
-      return [file, hashjs.replace(/\.js$/, "")];
-    }
-  );
-  return Object.fromEntries(entries);
+
+  let entries: Record<string, string> = {};
+  for (let [hashjs, { entryPoint }] of Object.entries(metafile!.outputs)) {
+    if (entryPoint === undefined) continue;
+    let file = entryPoint.replace(/^hmr-loader:/, "").replace(/\?loader$/, "");
+    entries[file] = hashjs.replace(/\.js$/, "");
+  }
+
+  return entries;
 };

@@ -16,11 +16,9 @@ export type Manifest = {
       imports?: string[];
       hasAction: boolean;
       hasLoader: boolean;
-      hasCatchBoundary: boolean;
       hasErrorBoundary: boolean;
     };
   };
-  cssBundleHref?: string;
   hmr?: {
     timestamp: number;
     runtime: string;

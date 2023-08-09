@@ -1,6 +1,5 @@
-import { builtinModules as nodeBuiltins } from "module";
+import { builtinModules as nodeBuiltins } from "node:module";
 import * as esbuild from "esbuild";
-import { polyfillNode as NodeModulesPolyfillPlugin } from "esbuild-plugin-polyfill-node";
 
 import type { RemixConfig } from "../../config";
 import { getAppDependencies } from "../../dependencies";
@@ -19,6 +18,7 @@ import {
 } from "./plugins/bundleEntry";
 import type { Context } from "../context";
 import { isBundle } from "./bundle";
+import { writeMetafile } from "../analysis";
 
 const getExternals = (config: RemixConfig): string[] => {
   // For the browser build, exclude node built-ins that don't have a
@@ -65,9 +65,6 @@ const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
     publicPath: ctx.config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
-      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-        ctx.config.devServerPort
-      ),
     },
     jsx: "automatic",
     jsxDev: ctx.options.mode !== "production",
@@ -80,8 +77,11 @@ const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
       absoluteCssUrlsPlugin(),
       externalPlugin(/^https?:\/\//, { sideEffects: false }),
       mdxPlugin(ctx),
+      // Skip compilation of common packages/scopes known not to include CSS imports
+      emptyModulesPlugin(ctx, /^(@remix-run|react|react-dom)(\/.*)?$/, {
+        includeNodeModules: true,
+      }),
       emptyModulesPlugin(ctx, /\.server(\.[jt]sx?)?$/),
-      NodeModulesPolyfillPlugin(),
       externalPlugin(/^node:.*/, { sideEffects: false }),
     ],
     supported: {
@@ -94,13 +94,15 @@ export let create = async (ctx: Context) => {
   let compiler = await esbuild.context({
     ...createEsbuildConfig(ctx),
     write: false,
+    metafile: true,
   });
   let compile = async () => {
-    let { outputFiles } = await compiler.rebuild();
-    let bundle = outputFiles.find((outputFile) =>
+    let { outputFiles, metafile } = await compiler.rebuild();
+    writeMetafile(ctx, "metafile.css.json", metafile);
+    let bundleOutputFile = outputFiles.find((outputFile) =>
       isBundle(ctx, outputFile, ".css")
     );
-    return { bundle, outputFiles };
+    return { bundleOutputFile, outputFiles };
   };
   return {
     compile,

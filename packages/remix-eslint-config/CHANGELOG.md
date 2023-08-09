@@ -1,5 +1,52 @@
 # `@remix-run/eslint-config`
 
+## 1.19.2
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.2) for an overview of all changes in v1.19.2.
+
+## 1.19.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.1) for an overview of all changes in v1.19.1.
+
+## 1.19.0
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.0) for an overview of all changes in v1.19.0.
+
+## 1.18.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.18.1) for an overview of all changes in v1.18.1.
+
+## 1.18.0
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.18.0) for an overview of all changes in v1.18.0.
+
+## 1.17.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.17.1) for an overview of all changes in v1.17.1.
+
+## 1.17.0
+
+### Patch Changes
+
+- Add `HeadersArgs` type to be consistent with loaders/actions/meta and allows for using a `function` declaration in addition to an arrow function expression ([#6247](https://github.com/remix-run/remix/pull/6247))
+
+  ```tsx
+  import type { HeadersArgs } from "@remix-run/node"; // or cloudflare/deno
+
+  export function headers({ loaderHeaders }: HeadersArgs) {
+    return {
+      "x-my-custom-thing": loaderHeaders.get("x-my-custom-thing") || "fallback",
+    };
+  }
+  ```
+
+## 1.16.1
+
+### Patch Changes
+
+- Don't require display name in root module ([#5450](https://github.com/remix-run/remix/pull/5450))
+- Update minimum version of Babel dependencies to avoid errors parsing decorators ([#6390](https://github.com/remix-run/remix/pull/6390))
+
 ## 1.16.0
 
 ### Minor Changes

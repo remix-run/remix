@@ -1,5 +1,157 @@
 # `@remix-run/server-runtime`
 
+## 1.19.2
+
+### Patch Changes
+
+- Update to latest `@remix-run/web-*` packages ([#7026](https://github.com/remix-run/remix/pull/7026))
+
+## 1.19.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.1) for an overview of all changes in v1.19.1.
+
+## 1.19.0
+
+### Minor Changes
+
+- improved networking options for `v2_dev` ([#6724](https://github.com/remix-run/remix/pull/6724))
+
+  deprecate the `--scheme` and `--host` options and replace them with the `REMIX_DEV_ORIGIN` environment variable
+
+### Patch Changes
+
+- Properly handle `?_data` HTTP/Network errors that don't reach the Remix server and ensure they bubble to the `ErrorBoundary` ([#6783](https://github.com/remix-run/remix/pull/6783))
+- Support proper hydration of `Error` subclasses such as `ReferenceError`/`TypeError` in development mode ([#6675](https://github.com/remix-run/remix/pull/6675))
+- Properly return a 404 for a `?_data` request that doesn't match routes ([#6820](https://github.com/remix-run/remix/pull/6820))
+- Bump RR 6.14.2 ([#6854](https://github.com/remix-run/remix/pull/6854))
+- Updated dependencies:
+  - [`@remix-run/router@1.7.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#172)
+
+## 1.18.1
+
+### Patch Changes
+
+- Fix reload loops in scenarios where CDNs ignore search params ([#6707](https://github.com/remix-run/remix/pull/6707))
+- Avoid circular references and infinite recursion in types ([#6736](https://github.com/remix-run/remix/pull/6736))
+  - "Pretty" or simplified Typescript types are evaluated by eagerly resolving types. For complex types with circular references, this can cause TS to recurse infinitely.
+  - To fix this, pretty types are reverted as a built-in DX feature of `useLoaderData`, `useActionData`, etc...
+- Updated dependencies:
+  - [`@remix-run/router@1.7.1`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#171)
+
+## 1.18.0
+
+### Minor Changes
+
+- stabilize v2 dev server ([#6615](https://github.com/remix-run/remix/pull/6615))
+
+### Patch Changes
+
+- Fix typing issues when using React 17 stemming from `@remix/server-runtime` including `@types/react` as a `devDependency` when it doesn't actually do anything React-specific and was just re-exporting `ComponentType` in values such as `CatchBoundaryComponent`/`ErrorBoundaryComponent`/`V2_ErrorBoundaryComponent`. These types are more correctly exported from `@remix-run/react` which is React-aware so that is the correct place to be importing those types from. In order to avoid breaking existing builds, the types in `@remix/server-runtime` have been loosened to `any` and `@deprecated` warnings have been added informing users to switch to the corresponding types in `@remix-run/react`. ([#5713](https://github.com/remix-run/remix/pull/5713))
+- fix(types): better tuple serialization types ([#6616](https://github.com/remix-run/remix/pull/6616))
+- Move `@types/cookie` to `dependencies` since we re-export types from there ([#5713](https://github.com/remix-run/remix/pull/5713))
+
+## 1.17.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.17.1) for an overview of all changes in v1.17.1.
+
+## 1.17.0
+
+### Minor Changes
+
+- Add `errorHeaders` parameter to the leaf `headers()` function to expose headers from thrown responses that bubble up to ancestor route boundaries. If the throwing route contains the boundary, then `errorHeaders` will be the same object as `loaderHeaders`/`actionHeaders` for that route. ([#6425](https://github.com/remix-run/remix/pull/6425), [#6475](https://github.com/remix-run/remix/pull/6475))
+
+- Add optional `handleError` export for custom server-side error processing. This is a new optional export from your `entry.server.tsx` that will be called with any encountered error on the Remix server (loader, action, or render error) ([#6495](https://github.com/remix-run/remix/pull/6495), [#6524](https://github.com/remix-run/remix/pull/6524)):
+
+  ```ts
+  // entry.server.tsx
+  export function handleError(
+    error: unknown,
+    { request, params, context }: DataFunctionArgs
+  ): void {
+    if (error instanceof Error) {
+      sendErrorToBugReportingService(error);
+      console.error(formatError(error));
+    } else {
+      const unknownError = new Error("Unknown Server Error");
+      sendErrorToBugReportingService(unknownError);
+      console.error(unknownError);
+    }
+  }
+  ```
+
+- Force Typescript to simplify type produced by `Serialize`. ([#6449](https://github.com/remix-run/remix/pull/6449))
+
+  As a result, the following types and functions have simplified return types:
+
+  - SerializeFrom
+  - useLoaderData
+  - useActionData
+  - useFetcher
+
+  ```ts
+  type Data = { hello: string; when: Date };
+
+  // BEFORE
+  type Unsimplified = SerializeFrom<Data>;
+  //   ^? SerializeObject<UndefinedToOptional<{ hello: string; when: Date }>>
+
+  // AFTER
+  type Simplified = SerializeFrom<Data>;
+  //   ^? { hello: string; when: string }
+  ```
+
+- Added a new `future.v2_headers` future flag to opt into automatic inheriting of ancestor route `headers` functions so you do not need to export a `headers` function from every possible leaf route if you don't wish to. ([#6431](https://github.com/remix-run/remix/pull/6431))
+
+- Reuse dev server port for WebSocket (Live Reload,HMR,HDR) ([#6476](https://github.com/remix-run/remix/pull/6476))
+
+  As a result the `webSocketPort`/`--websocket-port` option has been obsoleted.
+  Additionally, scheme/host/port options for the dev server have been renamed.
+
+  Available options are:
+
+  | Option     | flag               | config           | default                           |
+  | ---------- | ------------------ | ---------------- | --------------------------------- |
+  | Command    | `-c` / `--command` | `command`        | `remix-serve <server build path>` |
+  | Scheme     | `--scheme`         | `scheme`         | `http`                            |
+  | Host       | `--host`           | `host`           | `localhost`                       |
+  | Port       | `--port`           | `port`           | Dynamically chosen open port      |
+  | No restart | `--no-restart`     | `restart: false` | `restart: true`                   |
+
+  Note that scheme/host/port options are for the _dev server_, not your app server.
+  You probably don't need to use scheme/host/port option if you aren't configuring networking (e.g. for Docker or SSL).
+
+### Patch Changes
+
+- Properly handle thrown `ErrorResponse` instances inside resource routes ([#6320](https://github.com/remix-run/remix/pull/6320))
+
+- Add `HeadersArgs` type to be consistent with loaders/actions/meta and allows for using a `function` declaration in addition to an arrow function expression ([#6247](https://github.com/remix-run/remix/pull/6247))
+
+  ```tsx
+  import type { HeadersArgs } from "@remix-run/node"; // or cloudflare/deno
+
+  export function headers({ loaderHeaders }: HeadersArgs) {
+    return {
+      "x-my-custom-thing": loaderHeaders.get("x-my-custom-thing") || "fallback",
+    };
+  }
+  ```
+
+- Ensure un-sanitized server errors are logged on the server during document requests ([#6495](https://github.com/remix-run/remix/pull/6495))
+
+- Updated dependencies:
+  - [`react-router-dom@6.12.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.12.0)
+  - [`@remix-run/router@1.6.3`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#163)
+
+## 1.16.1
+
+### Patch Changes
+
+- Expose methods in the `SessionStorage` interface as arrow functions so destructuring is correctly part of the contract. ([#6330](https://github.com/remix-run/remix/pull/6330))
+- Fix `data` parameter typing on `V2_MetaFunction` to include `undefined` for scenarios in which the `loader` threw to it's own boundary. ([#6231](https://github.com/remix-run/remix/pull/6231))
+- Updated dependencies:
+  - [`react-router-dom@6.11.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.2)
+  - [`@remix-run/router@1.6.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#162)
+
 ## 1.16.0
 
 ### Minor Changes

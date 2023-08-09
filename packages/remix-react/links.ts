@@ -173,23 +173,10 @@ interface HtmlLinkPreloadImage extends HtmlLinkProps {
 export type HtmlLinkDescriptor =
   // Must have an href *unless* it's a `<link rel="preload" as="image">` with an
   // `imageSrcSet` and `imageSizes` props
-  (
-    | (HtmlLinkProps & Pick<Required<HtmlLinkProps>, "href">)
-    | (HtmlLinkPreloadImage &
-        Pick<Required<HtmlLinkPreloadImage>, "imageSizes">)
-    | (HtmlLinkPreloadImage &
-        Pick<Required<HtmlLinkPreloadImage>, "href"> & { imageSizes?: never })
-  ) & {
-    /**
-     * @deprecated Use `imageSrcSet` instead.
-     */
-    imagesrcset?: string;
-
-    /**
-     * @deprecated Use `imageSizes` instead.
-     */
-    imagesizes?: string;
-  };
+  | (HtmlLinkProps & Pick<Required<HtmlLinkProps>, "href">)
+  | (HtmlLinkPreloadImage & Pick<Required<HtmlLinkPreloadImage>, "imageSizes">)
+  | (HtmlLinkPreloadImage &
+      Pick<Required<HtmlLinkPreloadImage>, "href"> & { imageSizes?: never });
 
 export interface PrefetchPageDescriptor
   extends Omit<
@@ -200,8 +187,6 @@ export interface PrefetchPageDescriptor
     | "sizes"
     | "imageSrcSet"
     | "imageSizes"
-    | "imagesrcset"
-    | "imagesizes"
     | "as"
     | "color"
     | "title"
@@ -220,11 +205,11 @@ export type LinkDescriptor = HtmlLinkDescriptor | PrefetchPageDescriptor;
  * Gets all the links for a set of matches. The modules are assumed to have been
  * loaded already.
  */
-export function getLinksForMatches(
+export function getKeyedLinksForMatches(
   matches: AgnosticDataRouteMatch[],
   routeModules: RouteModules,
   manifest: AssetsManifest
-): LinkDescriptor[] {
+): KeyedLinkDescriptor[] {
   let descriptors = matches
     .map((match): LinkDescriptor[] => {
       let module = routeModules[match.route.id];
@@ -233,8 +218,11 @@ export function getLinksForMatches(
     .flat(1);
 
   let preloads = getCurrentPageModulePreloadHrefs(matches, manifest);
-  return dedupe(descriptors, preloads);
+  return dedupeLinkDescriptors(descriptors, preloads);
 }
+
+let stylesheetPreloadTimeouts = 0;
+let isPreloadDisabled = false;
 
 export async function prefetchStyleLinks(
   routeModule: RouteModule
@@ -242,6 +230,33 @@ export async function prefetchStyleLinks(
   if (!routeModule.links) return;
   let descriptors = routeModule.links();
   if (!descriptors) return;
+  if (isPreloadDisabled) return;
+
+  // If we've hit our timeout 3 times, we may be in firefox with the
+  // `network.preload` config disabled and we'll _never_ get onload/onerror
+  // callbacks.  Let's try to confirm this with a totally invalid link preload
+  // which should immediately throw the onerror
+  if (stylesheetPreloadTimeouts >= 3) {
+    let linkLoadedOrErrored = await prefetchStyleLink({
+      rel: "preload",
+      as: "style",
+      href: "__remix-preload-detection-404.css",
+    });
+    if (linkLoadedOrErrored) {
+      // If this processed correctly, then our previous timeouts were probably
+      // legit, reset the counter.
+      stylesheetPreloadTimeouts = 0;
+    } else {
+      // If this bogus preload also times out without an onerror then it's safe
+      // to assume preloading is disabled and let's just stop trying.  This
+      // _will_ cause FOUC on destination pages but there's nothing we can
+      // really do there if preloading is disabled since client-side injected
+      // scripts aren't render blocking.  Maybe eventually React's client side
+      // async component stuff will provide an easier solution here
+      console.warn("Disabling preload due to lack of browser support");
+      isPreloadDisabled = true;
+    }
+  }
 
   let styleLinks: HtmlLinkDescriptor[] = [];
   for (let descriptor of descriptors) {
@@ -254,17 +269,19 @@ export async function prefetchStyleLinks(
     }
   }
 
-  // don't block for non-matching media queries
+  // don't block for non-matching media queries, or for stylesheets that are
+  // already in the DOM (active route revalidations)
   let matchingLinks = styleLinks.filter(
-    (link) => !link.media || window.matchMedia(link.media).matches
+    (link) =>
+      (!link.media || window.matchMedia(link.media).matches) &&
+      !document.querySelector(`link[rel="stylesheet"][href="${link.href}"]`)
   );
-
   await Promise.all(matchingLinks.map(prefetchStyleLink));
 }
 
 async function prefetchStyleLink(
   descriptor: HtmlLinkDescriptor
-): Promise<void> {
+): Promise<boolean> {
   return new Promise((resolve) => {
     let link = document.createElement("link");
     Object.assign(link, descriptor);
@@ -278,16 +295,20 @@ async function prefetchStyleLink(
       }
     }
 
-    link.onload = () => {
+    // Allow 3s for the link preload to timeout
+    let timeoutId = setTimeout(() => {
+      stylesheetPreloadTimeouts++;
       removeLink();
-      resolve();
-    };
+      resolve(false);
+    }, 3_000);
 
-    link.onerror = () => {
+    let done = () => {
+      clearTimeout(timeoutId);
       removeLink();
-      resolve();
+      resolve(true);
     };
-
+    link.onload = done;
+    link.onerror = done;
     document.head.appendChild(link);
   });
 }
@@ -299,31 +320,32 @@ export function isPageLinkDescriptor(
   return object != null && typeof object.page === "string";
 }
 
-export function isHtmlLinkDescriptor(
-  object: any
-): object is HtmlLinkDescriptor {
-  if (object == null) return false;
+function isHtmlLinkDescriptor(object: any): object is HtmlLinkDescriptor {
+  if (object == null) {
+    return false;
+  }
 
-  // <link> may not have an href if <link rel="preload"> is used with imagesrcset + imagesizes
+  // <link> may not have an href if <link rel="preload"> is used with imageSrcSet + imageSizes
   // https://github.com/remix-run/remix/issues/184
   // https://html.spec.whatwg.org/commit-snapshots/cb4f5ff75de5f4cbd7013c4abad02f21c77d4d1c/#attr-link-imagesrcset
   if (object.href == null) {
     return (
       object.rel === "preload" &&
-      (typeof object.imageSrcSet === "string" ||
-        typeof object.imagesrcset === "string") &&
-      (typeof object.imageSizes === "string" ||
-        typeof object.imagesizes === "string")
+      typeof object.imageSrcSet === "string" &&
+      typeof object.imageSizes === "string"
     );
   }
+
   return typeof object.rel === "string" && typeof object.href === "string";
 }
 
-export async function getStylesheetPrefetchLinks(
+export type KeyedHtmlLinkDescriptor = { key: string; link: HtmlLinkDescriptor };
+
+export async function getKeyedPrefetchLinks(
   matches: AgnosticDataRouteMatch[],
   manifest: AssetsManifest,
   routeModules: RouteModules
-): Promise<HtmlLinkDescriptor[]> {
+): Promise<KeyedHtmlLinkDescriptor[]> {
   let links = await Promise.all(
     matches.map(async (match) => {
       let mod = await loadRouteModule(
@@ -334,15 +356,17 @@ export async function getStylesheetPrefetchLinks(
     })
   );
 
-  return links
-    .flat(1)
-    .filter(isHtmlLinkDescriptor)
-    .filter((link) => link.rel === "stylesheet" || link.rel === "preload")
-    .map((link) =>
-      link.rel === "preload"
-        ? ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
-        : ({ ...link, rel: "prefetch", as: "style" } as HtmlLinkDescriptor)
-    );
+  return dedupeLinkDescriptors(
+    links
+      .flat(1)
+      .filter(isHtmlLinkDescriptor)
+      .filter((link) => link.rel === "stylesheet" || link.rel === "preload")
+      .map((link) =>
+        link.rel === "stylesheet"
+          ? ({ ...link, rel: "prefetch", as: "style" } as HtmlLinkDescriptor)
+          : ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
+      )
+  );
 }
 
 // This is ridiculously identical to transition.ts `filterMatchesToLoad`
@@ -479,12 +503,32 @@ function dedupeHrefs(hrefs: string[]): string[] {
   return [...new Set(hrefs)];
 }
 
-export function dedupe(descriptors: LinkDescriptor[], preloads: string[]) {
+function sortKeys<Obj extends { [Key in keyof Obj]: Obj[Key] }>(obj: Obj): Obj {
+  let sorted = {} as Obj;
+  let keys = Object.keys(obj).sort();
+
+  for (let key of keys) {
+    sorted[key as keyof Obj] = obj[key as keyof Obj];
+  }
+
+  return sorted;
+}
+
+type KeyedLinkDescriptor<Descriptor extends LinkDescriptor = LinkDescriptor> = {
+  key: string;
+  link: Descriptor;
+};
+
+function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
+  descriptors: Descriptor[],
+  preloads?: string[]
+): KeyedLinkDescriptor<Descriptor>[] {
   let set = new Set();
   let preloadsSet = new Set(preloads);
 
   return descriptors.reduce((deduped, descriptor) => {
     let alreadyModulePreload =
+      preloads &&
       !isPageLinkDescriptor(descriptor) &&
       descriptor.as === "script" &&
       descriptor.href &&
@@ -494,14 +538,14 @@ export function dedupe(descriptors: LinkDescriptor[], preloads: string[]) {
       return deduped;
     }
 
-    let str = JSON.stringify(descriptor);
-    if (!set.has(str)) {
-      set.add(str);
-      deduped.push(descriptor);
+    let key = JSON.stringify(sortKeys(descriptor));
+    if (!set.has(key)) {
+      set.add(key);
+      deduped.push({ key, link: descriptor });
     }
 
     return deduped;
-  }, [] as LinkDescriptor[]);
+  }, [] as KeyedLinkDescriptor<Descriptor>[]);
 }
 
 // https://github.com/remix-run/history/issues/897

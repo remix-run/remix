@@ -7,9 +7,8 @@ let fixture: Fixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
-      "app/routes/_index.jsx": js`
+      "app/routes/_index.tsx": js`
         import { json } from "@remix-run/node";
 
         export async function action({ request }) {

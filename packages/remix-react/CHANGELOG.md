@@ -1,5 +1,135 @@
 # `@remix-run/react`
 
+## 1.19.2
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.2) for an overview of all changes in v1.19.2.
+
+## 1.19.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.1) for an overview of all changes in v1.19.1.
+
+## 1.19.0
+
+### Minor Changes
+
+- improved networking options for `v2_dev` ([#6724](https://github.com/remix-run/remix/pull/6724))
+
+  deprecate the `--scheme` and `--host` options and replace them with the `REMIX_DEV_ORIGIN` environment variable
+
+- Added some missing react-router exports to `@remix-run/react` ([#6856](https://github.com/remix-run/remix/pull/6856))
+
+### Patch Changes
+
+- Narrowed the type of `fetcher.formEncType` to use `FormEncType` from `react-router-dom` instead of `string` ([#6810](https://github.com/remix-run/remix/pull/6810))
+- Deferred promises that return undefined/void now surface a serialization error. ([#6793](https://github.com/remix-run/remix/pull/6793))
+- Properly handle `?_data` HTTP/Network errors that don't reach the Remix server and ensure they bubble to the `ErrorBoundary` ([#6783](https://github.com/remix-run/remix/pull/6783))
+- Support proper hydration of `Error` subclasses such as `ReferenceError`/`TypeError` in development mode ([#6675](https://github.com/remix-run/remix/pull/6675))
+- fix router race condition for hmr ([#6767](https://github.com/remix-run/remix/pull/6767))
+- Avoid re-prefetching stylesheets for active routes during a revalidation ([#6679](https://github.com/remix-run/remix/pull/6679))
+- Add generic type for `useRouteLoaderData()` ([#5157](https://github.com/remix-run/remix/pull/5157))
+- Bump RR 6.14.2 ([#6854](https://github.com/remix-run/remix/pull/6854))
+- Updated dependencies:
+  - [`react-router-dom@6.14.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.14.2)
+  - [`@remix-run/router@1.7.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#172)
+
+## 1.18.1
+
+### Patch Changes
+
+- Fix reload loops in scenarios where CDNs ignore search params ([#6707](https://github.com/remix-run/remix/pull/6707))
+- Updated dependencies:
+  - [`react-router-dom@6.14.1`](https://github.com/remix-run/react-router/releases/tag/react-router%406.14.1)
+  - [`@remix-run/router@1.7.1`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#171)
+
+## 1.18.0
+
+### Minor Changes
+
+- stabilize v2 dev server ([#6615](https://github.com/remix-run/remix/pull/6615))
+- Support `application/json` and `text/plain` submission encodings in `useSubmit`/`fetcher.submit` ([#6570](https://github.com/remix-run/remix/pull/6570))
+- Add support for `<Link prefetch="viewport">` to prefetch links when they enter the viewport via an [Intersection Observer](https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver) ([#6433](https://github.com/remix-run/remix/pull/6433))
+
+### Patch Changes
+
+- Bump router 6.14.0-pre.1 ([#6662](https://github.com/remix-run/remix/pull/6662))
+- Detect mismatches between the initially loaded URL and the URL at the time we hydrate and trigger a hard reload if they do not match. This is an edge-case that can happen when the network is slowish and the user clicks forward into a Remix app and then clicks forward again while the initial JS chunks are loading. ([#6409](https://github.com/remix-run/remix/pull/6409))
+- Lock in react router 6.14.0 ([#6677](https://github.com/remix-run/remix/pull/6677))
+- properly pass <Scripts /> props to inline script tags for deferred data ([#6389](https://github.com/remix-run/remix/pull/6389))
+
+## 1.17.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - [`react-router-dom@6.13.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.13.0)
+
+## 1.17.0
+
+### Minor Changes
+
+- Faster server export removal for routes when `unstable_dev` is enabled. ([#6455](https://github.com/remix-run/remix/pull/6455))
+
+  Also, only render modulepreloads on SSR.
+  Do not render modulepreloads when hydrated.
+
+- Force Typescript to simplify type produced by `Serialize`. ([#6449](https://github.com/remix-run/remix/pull/6449))
+
+  As a result, the following types and functions have simplified return types:
+
+  - SerializeFrom
+  - useLoaderData
+  - useActionData
+  - useFetcher
+
+  ```ts
+  type Data = { hello: string; when: Date };
+
+  // BEFORE
+  type Unsimplified = SerializeFrom<Data>;
+  //   ^? SerializeObject<UndefinedToOptional<{ hello: string; when: Date }>>
+
+  // AFTER
+  type Simplified = SerializeFrom<Data>;
+  //   ^? { hello: string; when: string }
+  ```
+
+- Reuse dev server port for WebSocket (Live Reload,HMR,HDR) ([#6476](https://github.com/remix-run/remix/pull/6476))
+
+  As a result the `webSocketPort`/`--websocket-port` option has been obsoleted.
+  Additionally, scheme/host/port options for the dev server have been renamed.
+
+  Available options are:
+
+  | Option     | flag               | config           | default                           |
+  | ---------- | ------------------ | ---------------- | --------------------------------- |
+  | Command    | `-c` / `--command` | `command`        | `remix-serve <server build path>` |
+  | Scheme     | `--scheme`         | `scheme`         | `http`                            |
+  | Host       | `--host`           | `host`           | `localhost`                       |
+  | Port       | `--port`           | `port`           | Dynamically chosen open port      |
+  | No restart | `--no-restart`     | `restart: false` | `restart: true`                   |
+
+  Note that scheme/host/port options are for the _dev server_, not your app server.
+  You probably don't need to use scheme/host/port option if you aren't configuring networking (e.g. for Docker or SSL).
+
+### Patch Changes
+
+- retry HDR revalidations in development mode to aid in 3rd party server race conditions ([#6287](https://github.com/remix-run/remix/pull/6287))
+- Updated dependencies:
+  - [`react-router-dom@6.12.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.12.0)
+  - [`@remix-run/router@1.6.3`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#163)
+
+## 1.16.1
+
+### Patch Changes
+
+- Cross-module `loader` change detection for HDR ([#6299](https://github.com/remix-run/remix/pull/6299))
+- Better opt-out of `loader` revalidation on UI only changes ([#6278](https://github.com/remix-run/remix/pull/6278))
+- Add `useMatch` re-export from `react-router-dom` ([#5257](https://github.com/remix-run/remix/pull/5257))
+- Fix `data` parameter typing on `V2_MetaFunction` to include `undefined` for scenarios in which the `loader` threw to it's own boundary. ([#6231](https://github.com/remix-run/remix/pull/6231))
+- Updated dependencies:
+  - [`react-router-dom@6.11.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.2)
+  - [`@remix-run/router@1.6.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#162)
+
 ## 1.16.0
 
 ### Minor Changes

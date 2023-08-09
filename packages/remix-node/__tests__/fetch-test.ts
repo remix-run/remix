@@ -1,6 +1,10 @@
-import { PassThrough } from "stream";
+import { ReadableStream } from "@remix-run/web-stream";
+import {
+  Request as WebRequest,
+  Response as WebResponse,
+} from "@remix-run/web-fetch";
 
-import { Request } from "../fetch";
+import { Request, Response } from "../fetch";
 
 let test = {
   source: [
@@ -70,9 +74,15 @@ let test = {
 
 describe("Request", () => {
   it("clones", async () => {
-    let body = new PassThrough();
-    test.source.forEach((chunk) => body.write(chunk));
-    body.end();
+    let encoder = new TextEncoder();
+    let body = new ReadableStream({
+      start(controller) {
+        test.source.forEach((chunk) => {
+          controller.enqueue(encoder.encode(chunk));
+        });
+        controller.close();
+      },
+    });
 
     let req = new Request("http://test.com", {
       method: "post",
@@ -103,6 +113,24 @@ describe("Request", () => {
     file = clonedFormData.get("upload_file_1") as File;
     expect(file.name).toBe("1k_b.dat");
     expect(file.size).toBe(1023);
+
+    expect(cloned instanceof Request).toBeTruthy();
+    expect(cloned instanceof WebRequest).toBeTruthy();
+  });
+
+  it("instanceOf", async () => {
+    let nodeReq = new Request("http://example.com");
+    let webReq = new WebRequest("http://example.com");
+    let nodeRes = new Response("http://example.com");
+    let webRes = new WebResponse("http://example.com");
+    expect(nodeReq instanceof Request).toBeTruthy();
+    expect(nodeReq instanceof WebRequest).toBeTruthy();
+    expect(webReq instanceof Request).toBeTruthy();
+    expect(webReq instanceof WebRequest).toBeTruthy();
+    expect(nodeRes instanceof Response).toBeTruthy();
+    expect(nodeRes instanceof WebResponse).toBeTruthy();
+    expect(webRes instanceof Response).toBeTruthy();
+    expect(webRes instanceof WebResponse).toBeTruthy();
   });
 });
 

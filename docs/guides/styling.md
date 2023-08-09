@@ -18,9 +18,9 @@ export const links: LinksFunction = () => {
 };
 ```
 
-Each nested route's `links` are merged (parents first) and rendered as `<link>` tags by the `<Links/>` you rendered in `app/root.js` in the head of the document.
+Each nested route's `links` are merged (parents first) and rendered as `<link>` tags by the `<Links/>` you rendered in `app/root.tsx` in the head of the document.
 
-```tsx filename=app/root.js lines=[1,7]
+```tsx filename=app/root.tsx lines=[1,7]
 import { Links } from "@remix-run/react";
 // ...
 export default function Root() {
@@ -97,7 +97,7 @@ export function links() {
 }
 ```
 
-```tsx filename=app/routes/dashboard/accounts.tsx
+```tsx filename=app/routes/dashboard.accounts.tsx
 import styles from "~/styles/accounts.css";
 
 export function links() {
@@ -105,7 +105,7 @@ export function links() {
 }
 ```
 
-```tsx filename=app/routes/dashboard/sales.tsx
+```tsx filename=app/routes/dashboard.sales.tsx
 import styles from "~/styles/sales.css";
 
 export function links() {
@@ -170,7 +170,7 @@ This also makes it easy for routes to adjust the styles of a component without n
 
 A second approach is to write individual css files per component and then "surface" the styles up to the routes that use them.
 
-Perhaps you have a `<Button>` in `app/components/button/index.js` with styles at `app/components/button/styles.css` as well as a `<PrimaryButton>` that extends it.
+Perhaps you have a `<Button>` in `app/components/button/index.tsx` with styles at `app/components/button/styles.css` as well as a `<PrimaryButton>` that extends it.
 
 Note that these are not routes, but they export `links` functions as if they were. We'll use this to surface their styles to the routes that use them.
 
@@ -182,7 +182,7 @@ Note that these are not routes, but they export `links` functions as if they wer
 }
 ```
 
-```tsx filename=app/components/button/index.js lines=[1,3-5]
+```tsx filename=app/components/button/index.tsx lines=[1,3-5]
 import styles from "./styles.css";
 
 export const links = () => [
@@ -206,8 +206,9 @@ And then a `<PrimaryButton>` that extends it:
 }
 ```
 
-```tsx filename=app/components/primary-button/index.js lines=[1,5,12]
+```tsx filename=app/components/primary-button/index.tsx lines=[1,6,13]
 import { Button, links as buttonLinks } from "../button";
+
 import styles from "./styles.css";
 
 export const links = () => [
@@ -229,14 +230,14 @@ Note that the primary button's `links` include the base button's links. This way
 
 Because these buttons are not routes, and therefore not associated with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
 
-Consider that `routes/index.js` uses the primary button component:
+Consider that `app/routes/_index.tsx` uses the primary button component:
 
-```tsx filename=app/routes/index.js lines=[2-5,9]
-import styles from "~/styles/index.css";
+```tsx filename=app/routes/_index.tsx lines=[1-4,9]
 import {
   PrimaryButton,
   links as primaryButtonLinks,
 } from "~/components/primary-button";
+import styles from "~/styles/index.css";
 
 export function links() {
   return [
@@ -250,15 +251,15 @@ Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-b
 
 An initial reaction to this is that routes have to know more than you want them to. Keep in mind that each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
-```tsx filename=app/routes/$category.js lines=[5-9,25-32]
+```tsx filename=app/routes/$category.tsx lines=[5-9,25-32]
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import { TileGrid } from "~/components/tile-grid";
-import { ProductTile } from "~/components/product-tile";
-import { ProductDetails } from "~/components/product-details";
 import { AddFavoriteButton } from "~/components/add-favorite-button";
+import { ProductDetails } from "~/components/product-details";
+import { ProductTile } from "~/components/product-tile";
+import { TileGrid } from "~/components/tile-grid";
 import styles from "~/styles/$category.css";
 
 export function links() {
@@ -292,21 +293,21 @@ The component imports are already there, we just need to surface the assets:
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 import {
-  TileGrid,
-  links as tileGridLinks,
-} from "~/components/tile-grid";
-import {
-  ProductTile,
-  links as productTileLinks,
-} from "~/components/product-tile";
+  AddFavoriteButton,
+  links as addFavoriteLinks,
+} from "~/components/add-favorite-button";
 import {
   ProductDetails,
   links as productDetailsLinks,
 } from "~/components/product-details";
 import {
-  AddFavoriteButton,
-  links as addFavoriteLinks,
-} from "~/components/add-favorite-button";
+  ProductTile,
+  links as productTileLinks,
+} from "~/components/product-tile";
+import {
+  TileGrid,
+  links as tileGridLinks,
+} from "~/components/tile-grid";
 import styles from "~/styles/$category.css";
 
 export const links: LinksFunction = () => {
@@ -403,17 +404,7 @@ export const links: LinksFunction = () => {
 
 Perhaps the most popular way to style a Remix application in the community is to use [Tailwind CSS][tailwind]. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
 
-To use the built-in Tailwind support, first enable the `tailwind` option in `remix.config.js`:
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  tailwind: true,
-  // ...
-};
-```
-
-Install Tailwind as a dev dependency:
+To use Tailwind, first install it as a dev dependency:
 
 ```sh
 npm install -D tailwindcss
@@ -431,11 +422,11 @@ Now we can tell it which files to generate classes from:
 import type { Config } from "tailwindcss";
 
 export default {
-   content: ["./app/**/*.{js,jsx,ts,tsx}"],
-   theme: {
-      extend: {},
-   },
-   plugins: [],
+  content: ["./app/**/*.{js,jsx,ts,tsx}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
 } satisfies Config;
 ```
 
@@ -461,11 +452,15 @@ export const links: LinksFunction = () => [
 ];
 ```
 
-With this setup in place, you can also use [Tailwind's functions and directives][tailwind-functions-and-directives] anywhere in your CSS.
+With this setup in place, you can also use [Tailwind's functions and directives][tailwind-functions-and-directives] anywhere in your CSS. Note that Tailwind will warn that no utility classes were detected in your source files if you never used it before.
 
-Note that if you're also using Remix's [built-in PostCSS support][built-in-post-css-support], the Tailwind PostCSS plugin will be automatically included if it's missing, but you can also choose to manually include the Tailwind plugin in your PostCSS config instead if you'd prefer.
+Tailwind doesn't compile CSS for older browsers by default, so if you'd like to achieve this using a PostCSS-based tool like [Autoprefixer][autoprefixer], you'll need to leverage Remix's [built-in PostCSS support][built-in-post-css-support]. When using both PostCSS and Tailwind, the Tailwind plugin will be automatically included if it's missing, but you can also choose to manually include the Tailwind plugin in your PostCSS config instead if you prefer.
 
 If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension][tailwind-intelli-sense-extension] for the best developer experience.
+
+<docs-warning>It's recommended that you avoid Tailwind's `@import` syntax (e.g. `@import 'tailwindcss/base'`) in favor of Tailwind directives (e.g. `@tailwind base`). Tailwind replaces its import statements with inlined CSS but this can result in the interleaving of styles and import statements. This clashes with the restriction that all import statements must be at the start of the file. Alternatively, you can use [PostCSS][built-in-post-css-support] with the [postcss-import] plugin to process imports before passing them to esbuild.</docs-warning>
+
+<docs-info>Built-in Tailwind support can be disabled by setting the `tailwind` option to `false` in `remix.config.js`.</docs-info>
 
 ## Remote Stylesheets
 
@@ -488,17 +483,7 @@ export const links: LinksFunction = () => {
 
 [PostCSS][postcss] is a popular tool with a rich plugin ecosystem, commonly used to prefix CSS for older browsers, transpile future CSS syntax, inline images, lint your styles and more. When a PostCSS config is detected, Remix will automatically run PostCSS across all CSS in your project.
 
-For example, to use [Autoprefixer][autoprefixer], first enable the `postcss` option in `remix.config.js`:
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  postcss: true,
-  // ...
-};
-```
-
-Install the PostCSS plugin.
+For example, to use [Autoprefixer][autoprefixer], first install the PostCSS plugin.
 
 ```sh
 npm install -D autoprefixer
@@ -528,11 +513,13 @@ module.exports = (ctx) => {
 };
 ```
 
+<docs-info>Built-in PostCSS support can be disabled by setting the `postcss` option to `false` in `remix.config.js`.</docs-info>
+
 ## CSS Preprocessors
 
 You can use CSS preprocessors like LESS and SASS. Doing so requires running an additional build process to convert these files to CSS files. This can be done via the command line tools provided by the preprocessor or any equivalent tool.
 
-Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export][route-module-links] function, or included via [side-effect imports][css-side-effect-imports] when using [CSS bundling][css-bundling], just like any other CSS file in Remix.
+Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export][route-module-links] function, or included via [side effect imports][css-side-effect-imports] when using [CSS bundling][css-bundling], just like any other CSS file in Remix.
 
 To ease development with CSS preprocessors you can add npm scripts to your `package.json` that generate CSS files from your SASS or LESS files. These scripts can be run in parallel alongside any other npm scripts that you run for developing a Remix application.
 
@@ -544,7 +531,7 @@ An example using SASS.
 npm add -D sass
 ```
 
-2. Add an npm script to your `package.json`'s `script` section' that uses the installed tool to generate CSS files.
+2. Add an npm script to your `package.json`'s `scripts` section that uses the installed tool to generate CSS files.
 
 ```json filename=package.json
 {
@@ -593,8 +580,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
-   ```tsx filename=app/root.tsx lines=[22-24]
-   import type { MetaFunction } from "@remix-run/node"; // or cloudflare/deno
+   ```tsx filename=app/root.tsx lines=[21-23]
    import {
      Links,
      LiveReload,
@@ -604,15 +590,15 @@ Here's some sample code to show how you might use Styled Components with Remix (
      ScrollRestoration,
    } from "@remix-run/react";
 
-   export const meta: MetaFunction = () => ({
-     charset: "utf-8",
-     viewport: "width=device-width,initial-scale=1",
-   });
-
    export default function App() {
      return (
        <html lang="en">
          <head>
+           <meta charSet="utf-8" />
+           <meta
+             name="viewport"
+             content="width=device-width, initial-scale=1"
+           />
            <Meta />
            <Links />
            {typeof document === "undefined"
@@ -632,17 +618,21 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
 2. Your `entry.server.tsx` will look something like this:
 
-   ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
-   import { renderToString } from "react-dom/server";
+   ```tsx filename=entry.server.tsx lines=[7,16,19-24,26-27]
+   import type {
+     AppLoadContext,
+     EntryContext,
+   } from "@remix-run/node"; // or cloudflare/deno
    import { RemixServer } from "@remix-run/react";
-   import type { EntryContext } from "@remix-run/node"; // or cloudflare/deno
+   import { renderToString } from "react-dom/server";
    import { ServerStyleSheet } from "styled-components";
 
    export default function handleRequest(
      request: Request,
      responseStatusCode: number,
      responseHeaders: Headers,
-     remixContext: EntryContext
+     remixContext: EntryContext,
+     loadContext: AppLoadContext
    ) {
      const sheet = new ServerStyleSheet();
 
@@ -688,9 +678,9 @@ npm install @remix-run/css-bundle
 
 Then, import `cssBundleHref` and add it to a link descriptor—most likely in `root.tsx` so that it applies to your entire application.
 
-```tsx filename=root.tsx lines=[2,6-8]
-import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=root.tsx lines=[1,6-8]
 import { cssBundleHref } from "@remix-run/css-bundle";
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const links: LinksFunction = () => {
   return [
@@ -776,9 +766,9 @@ export const Button = React.forwardRef(
 Button.displayName = "Button";
 ```
 
-### CSS Side-Effect Imports
+### CSS Side Effect Imports
 
-Some NPM packages use side-effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling][css-bundling] in your application.
+Some NPM packages use side effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling][css-bundling] in your application.
 
 Since JavaScript runtimes don't support importing CSS in this way, you'll need to add any relevant packages to the [`serverDependenciesToBundle`][server-dependencies-to-bundle] option in your `remix.config.js` file. This ensures that any CSS imports are compiled out of your code before running it on the server. For example, to use React Spectrum:
 
@@ -816,8 +806,9 @@ module.exports = {
 [built-in-post-css-support]: #postcss
 [vanilla-extract-2]: #vanilla-extract
 [css-side-effect-imports]: #css-side-effect-imports
-[tailwind-2]: #tailwind
+[tailwind-2]: #tailwind-css
 [post-css]: #postcss
 [css-modules]: #css-modules
 [vanilla-extract-3]: #vanilla-extract
 [css-side-effect-imports-2]: #css-side-effect-imports
+[postcss-import]: https://github.com/postcss/postcss-import
