@@ -1,11 +1,11 @@
 # `create-remix`
 
-## 1.19.3-pre.0
+## 1.19.3
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/dev@1.19.3-pre.0`
+  - `@remix-run/dev@1.19.3`
 
 ## 1.19.2
 
