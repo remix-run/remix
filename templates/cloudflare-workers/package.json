@@ -25,7 +25,7 @@
     "@types/react": "^18.0.35",
     "@types/react-dom": "^18.0.11",
     "eslint": "^8.38.0",
-    "typescript": "^5.1.0",
+    "typescript": "^5.1.6",
     "wrangler": "^3.1.1"
   },
   "engines": {
