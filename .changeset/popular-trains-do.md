@@ -1,6 +1,6 @@
 ---
-"create-remix": patch
-"@remix-run/dev": patch
+"create-remix": minor
+"@remix-run/dev": minor
 ---
 
 Support bun package manager
