@@ -1,5 +1,6 @@
 import type { Writable } from "node:stream";
 import path from "node:path";
+import url from "node:url";
 import fse from "fs-extra";
 import express from "express";
 import getPort from "get-port";
@@ -18,7 +19,7 @@ import { createRequestHandler as createExpressHandler } from "../../build/node_m
 import { installGlobals } from "../../build/node_modules/@remix-run/node/dist/index.js";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 export interface FixtureInit {
   buildStdio?: Writable;
