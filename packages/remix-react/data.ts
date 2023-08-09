@@ -175,7 +175,7 @@ export async function parseDeferredReadableStream(
     }
 
     // Read the rest of the stream and resolve deferred promises
-    (async () => {
+    void (async () => {
       try {
         for await (let section of sectionReader) {
           // Determine event type and data
