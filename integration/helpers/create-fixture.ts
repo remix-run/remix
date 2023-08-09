@@ -19,7 +19,7 @@ import { createRequestHandler as createExpressHandler } from "../../build/node_m
 import { installGlobals } from "../../build/node_modules/@remix-run/node/dist/index.js";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
+const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
 export interface FixtureInit {
   buildStdio?: Writable;
@@ -43,7 +43,7 @@ export function json(value: JsonObject) {
 export async function createFixture(init: FixtureInit, mode?: ServerMode) {
   installGlobals();
   let projectDir = await createFixtureProject(init, mode);
-  let buildPath = path.resolve(projectDir, "build/index.js");
+  let buildPath = url.pathToFileURL(path.join(projectDir, "build/index.js")).href;
   let app: ServerBuild = await import(buildPath);
   let handler = createRequestHandler(app, mode || ServerMode.Production);
 

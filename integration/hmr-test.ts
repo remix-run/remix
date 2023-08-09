@@ -54,6 +54,7 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
 
     "server.js": js`
       import path from "path";
+      import url from "url";
       import express from "express";
       import { createRequestHandler } from "@remix-run/express";
       import { broadcastDevReady, installGlobals } from "@remix-run/node";
@@ -63,7 +64,7 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
       const app = express();
       app.use(express.static("public", { immutable: true, maxAge: "1y" }));
 
-      const BUILD_PATH = path.join(process.cwd(), "build", "index.js");
+      const BUILD_PATH = url.pathToFileURL(path.join(process.cwd(), "build", "index.js"));
 
       app.all(
         "*",
