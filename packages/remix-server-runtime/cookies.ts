@@ -22,7 +22,7 @@ export interface CookieSignatureOptions {
    */
   secrets?: string[];
 
-  encryptionKey?: string;
+  encryptionKeys?: string[];
 }
 
 export type CookieOptions = CookieParseOptions &
@@ -99,7 +99,7 @@ export const createCookieFactory =
   (name, cookieOptions = {}) => {
     let {
       secrets = [],
-      encryptionKey,
+      encryptionKeys = [],
       ...options
     } = {
       path: "/",
@@ -133,7 +133,7 @@ export const createCookieFactory =
                 cookies[name],
                 secrets,
                 decrypt,
-                encryptionKey
+                encryptionKeys
               )
           : null;
       },
@@ -147,7 +147,7 @@ export const createCookieFactory =
                 value,
                 secrets,
                 encrypt,
-                encryptionKey
+                encryptionKeys[0]
               ),
           {
             ...options,
@@ -200,14 +200,17 @@ async function decodeCookieValue(
   value: string,
   secrets: string[],
   decrypt?: DecryptFunction,
-  decryptionKey?: string
+  decryptionKeys?: string[]
 ): Promise<any> {
   let tryDecrypt = async (cipher: string) => {
     let decrypted = cipher;
-    if (decryptionKey && decrypt) {
+    if (decryptionKeys && decryptionKeys.length > 0 && decrypt) {
+      for (let decryptionKey of decryptionKeys) {
       let payload = await decrypt(cipher, decryptionKey);
-      if (payload) {
-        decrypted = payload;
+        if (payload) {
+          decrypted = payload;
+          break;
+        }
       }
     }
 

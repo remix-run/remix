@@ -97,7 +97,7 @@ describe("File session storage", () => {
   it("persists encrypted session data across requests", async () => {
     let { getSession, commitSession } = createFileSessionStorage({
       dir,
-      cookie: { encryptionKey: "secret_key" },
+      cookie: { encryptionKeys: ["secret_key"] },
     });
     let session = await getSession();
     session.set("user", "mjackson");
@@ -110,7 +110,7 @@ describe("File session storage", () => {
   it("returns an empty session for cookies that are not encrypted properly", async () => {
     let { getSession, commitSession } = createFileSessionStorage({
       dir,
-      cookie: { encryptionKey: "secret_key" },
+      cookie: { encryptionKeys: ["secret_key"] },
     });
     let session = await getSession();
     session.set("user", "mjackson");
