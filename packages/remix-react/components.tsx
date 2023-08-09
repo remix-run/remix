@@ -412,11 +412,13 @@ function useKeyedPrefetchLinks(matches: AgnosticDataRouteMatch[]) {
   React.useEffect(() => {
     let interrupted: boolean = false;
 
-    getKeyedPrefetchLinks(matches, manifest, routeModules).then((links) => {
-      if (!interrupted) {
-        setKeyedPrefetchLinks(links);
+    void getKeyedPrefetchLinks(matches, manifest, routeModules).then(
+      (links) => {
+        if (!interrupted) {
+          setKeyedPrefetchLinks(links);
+        }
       }
-    });
+    );
 
     return () => {
       interrupted = true;
