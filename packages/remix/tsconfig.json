@@ -9,7 +9,7 @@
     "composite": true,
 
     "jsx": "react",
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "declaration": true,

@@ -53,7 +53,7 @@ Remix has TypeScript type definitions built-in as well. The starter templates cr
     "isolatedModules": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "target": "ES2019",
     "strict": true,

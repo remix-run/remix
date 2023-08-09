@@ -7,7 +7,7 @@
     "checkJs": true,
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "module": "ESNext",
     "noEmit": true,
     "strict": true,

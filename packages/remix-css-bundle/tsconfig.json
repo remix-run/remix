@@ -4,8 +4,8 @@
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "module": "ES2020",
+    "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "declaration": true,
