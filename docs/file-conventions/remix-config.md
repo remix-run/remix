@@ -72,7 +72,7 @@ The URL prefix of the browser build with a trailing slash. Defaults to
 
 ## postcss
 
-Whether to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `true`.
+Whether to process CSS using [PostCSS][postcss] if a PostCSS config file is present. Defaults to `true`.
 
 ## routes
 

@@ -97,7 +97,7 @@ export interface AppConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Whether to process CSS using PostCSS if a PostCSS config file is present.
    * Defaults to `true`.
    */
   postcss?: boolean;
@@ -260,7 +260,7 @@ export interface RemixConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Whether to process CSS using PostCSS if a PostCSS config file is present.
    * Defaults to `true`.
    */
   postcss: boolean;
