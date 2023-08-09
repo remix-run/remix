@@ -35,7 +35,7 @@
     "@types/gunzip-maybe": "^1.4.0",
     "@types/node-fetch": "^2.5.7",
     "@types/tar-fs": "^2.0.1",
-    "esbuild": "0.17.6",
+    "esbuild": "^0.17.19",
     "esbuild-register": "^3.3.2",
     "fs-extra": "^10.0.0",
     "msw": "^1.2.3",
