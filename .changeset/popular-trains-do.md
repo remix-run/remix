@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-Support bun package manager in create-remix
+Support bun package manager
