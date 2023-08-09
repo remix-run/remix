@@ -1,8 +1,13 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import * as url from "node:url";
 import { test, expect } from "@playwright/test";
 
-import { createFixture, createAppFixture, js } from "./helpers/create-fixture.js";
+import {
+  createFixture,
+  createAppFixture,
+  js,
+} from "./helpers/create-fixture.js";
 import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
@@ -15,13 +20,14 @@ test.describe("file-uploads", () => {
       files: {
         "app/fileUploadHandler.ts": js`
           import * as path from "node:path";
+          import * as url from "node:url";
           import {
             unstable_composeUploadHandlers as composeUploadHandlers,
             unstable_createFileUploadHandler as createFileUploadHandler,
             unstable_createMemoryUploadHandler as createMemoryUploadHandler,
           } from "@remix-run/node";
 
-          const __dirname = path.dirname(new URL(import.meta.url).pathname);
+          const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
           export let uploadHandler = composeUploadHandlers(
             createFileUploadHandler({
               directory: path.resolve(__dirname, "..", "uploads"),
@@ -111,7 +117,9 @@ test.describe("file-uploads", () => {
 >`);
 
     let written = await fs.readFile(
-      path.join(fixture.projectDir, "uploads/underLimit.txt"),
+      url.pathToFileURL(
+        path.join(fixture.projectDir, "uploads/underLimit.txt")
+      ),
       "utf8"
     );
     expect(written).toBe(uploadData);
