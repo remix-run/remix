@@ -1,4 +1,4 @@
-import { dirname, resolve } from "path";
+import { dirname, resolve } from "node:path";
 import type { Compiler } from "@vanilla-extract/integration";
 import { cssFileFilter, createCompiler } from "@vanilla-extract/integration";
 import type { Plugin } from "esbuild";
@@ -70,9 +70,7 @@ export function vanillaExtractPlugin(
 
       let postcssProcessor = await getPostcssProcessor({
         config,
-        context: {
-          vanillaExtract: true,
-        },
+        postcssContext: { vanillaExtract: true },
       });
 
       // Resolve virtual CSS files first to avoid resolving the same

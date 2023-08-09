@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require("node:path");
 const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
@@ -22,7 +22,7 @@ module.exports = function rollup() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: [`${sourceDir}/browser.ts`, `${sourceDir}/server.ts`],
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner(packageName, version),
         dir: outputDist,
@@ -50,7 +50,7 @@ module.exports = function rollup() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: [`${sourceDir}/browser.ts`, `${sourceDir}/server.ts`],
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner(packageName, version),
         dir: `${outputDist}/esm`,

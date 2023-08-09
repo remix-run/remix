@@ -9,11 +9,11 @@ description: Frequently Asked Questions about Remix
 
 You can't 😅. During a client-side transition, to make your app as speedy as possible, Remix will call all of your loaders _in parallel_, in separate fetch requests. Each one of them needs to have its own authentication check.
 
-This is probably not different than what you were doing before Remix, it might just be more obvious now. Outside of Remix, when you make multiple fetches to your "API Routes", each of those endpoints needs to validate the user session. In other words, Remix route loaders are their own "API Route" and must be treated as such.
+This is probably not different from what you were doing before Remix, it might just be more obvious now. Outside of Remix, when you make multiple fetches to your "API Routes", each of those endpoints needs to validate the user session. In other words, Remix route loaders are their own "API Route" and must be treated as such.
 
 We recommend you create a function that validates the user session that can be added to any routes that require it.
 
-```tsx filename=app/session.js lines=[9-22]
+```ts filename=app/session.ts lines=[9-22]
 import {
   createCookieSessionStorage,
   redirect,
@@ -40,7 +40,7 @@ export async function requireUserSession(request) {
 
 And now in any loader or action that requires a user session, you can call the function.
 
-```tsx filename=app/routes/projects.jsx lines=[3]
+```tsx filename=app/routes/projects.tsx lines=[3]
 export async function loader({ request }: LoaderArgs) {
   // if the user isn't authenticated, this will redirect to login
   const session = await requireUserSession(request);
@@ -81,7 +81,7 @@ We find option (1) to be the simplest because you don't have to mess around with
 
 HTML buttons can send a value, so it's the easiest way to implement this:
 
-```tsx filename=app/routes/projects/$id.tsx lines=[3-4,33,39]
+```tsx filename=app/routes/projects.$id.tsx lines=[3-4,33,39]
 export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent");
@@ -131,7 +131,7 @@ export default function Projects() {
 
 ## How can I have structured data in a form?
 
-If you're used to doing fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form-data] is a bit different than JSON.
+If you're used to doing fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form-data] is a bit different from JSON.
 
 - It can't have nested data, it's just "key value".
 - It _can_ have multiple entries on one key, unlike JSON.
@@ -220,11 +220,4 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [query-string]: https://www.npmjs.com/package/query-string
 [ramda]: https://www.npmjs.com/package/ramda
-
-## What's the difference between `CatchBoundary` & `ErrorBoundary`?
-
-Error boundaries render when your application throws an error and you had no clue it was going to happen. Most apps just go blank or have spinners spin forever. In remix the error boundary renders and you have granular control over it.
-
-Catch boundaries render when you decide in a loader that you can't proceed down the happy path to render the UI you want (auth required, record not found, etc.), so you throw a response and let some catch boundary up the tree handle it.
-
 [watch-on-you-tube]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix

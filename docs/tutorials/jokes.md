@@ -57,7 +57,7 @@ You'll find links to the sections of the tutorial in the navbar (top of the page
 
 You can follow along with this tutorial on [CodeSandbox][code-sandbox] (a fantastic in-browser editor) or locally on your own computer. If you use the CodeSandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
 
-- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
+- [Node.js][node-js] version (>=18.0.0)
 - [npm][npm] 7 or greater
 - A code editor ([VSCode][vs-code] is a nice one)
 
@@ -94,14 +94,17 @@ This may ask you whether you want to install `create-remix@latest`. Enter `y`. I
 
 </docs-info>
 
-Once the setup script has run, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
+Once the setup script has run, it'll ask you a few questions. We'll call our app "remix-jokes", select to initialize a Git repository and have it run the installation for us:
 
 ```
-? Where would you like to create your app? remix-jokes
-? What type of app do you want to create? Just the basics
-? Where do you want to deploy? Choose Remix App Server if you're unsure; it's easy to change deployment targets. Remix App Server
-? TypeScript or JavaScript? TypeScript
-? Do you want me to run `npm install`? Yes
+Where should we create your new project?
+remix-jokes
+
+Initialize a new git repository?
+Yes
+
+Install dependencies with npm?
+Yes
 ```
 
 Remix can be deployed in a large and growing list of JavaScript environments. The "Remix App Server" is a full-featured [Node.js][node-js] server based on [Express][express]. It's the simplest option, and it satisfies most people's needs, so that's what we're going with for this tutorial. Feel free to experiment in the future!
@@ -1980,7 +1983,7 @@ But if there's an error, you can return an object with the error messages and th
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,63,66-73,76-84,90,92-99,102-110,115-122]
+```tsx filename=app/routes/jokes.new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,63,66-73,76-84,90,92-99,102-110,113-120]
 import type { ActionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
@@ -3305,7 +3308,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[84-99,101-108]
+```ts filename=app/utils/session.server.ts lines=[84-100,102-109]
 import {
   createCookieSessionStorage,
   redirect,
@@ -3395,15 +3398,16 @@ export async function getUser(request: Request) {
     return null;
   }
 
-  try {
-    const user = await db.user.findUnique({
-      select: { id: true, username: true },
-      where: { id: userId },
-    });
-    return user;
-  } catch {
-    throw logout(request);
+  const user = await db.user.findUnique({
+    select: { id: true, username: true },
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw await logout(request);
   }
+
+  return user;
 }
 
 export async function logout(request: Request) {
@@ -3676,15 +3680,16 @@ export async function getUser(request: Request) {
     return null;
   }
 
-  try {
-    const user = await db.user.findUnique({
-      select: { id: true, username: true },
-      where: { id: userId },
-    });
-    return user;
-  } catch {
-    throw logout(request);
+  const user = await db.user.findUnique({
+    select: { id: true, username: true },
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw await logout(request);
   }
+
+  return user;
 }
 
 export async function logout(request: Request) {
@@ -4890,7 +4895,7 @@ But before you get started, remember that we're in charge of rendering everythin
 ```tsx filename=app/root.tsx lines=[3,9,33-42,46,56-69]
 import type {
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -4920,7 +4925,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Learn Remix and laugh at the same time!";
 
@@ -5017,7 +5022,7 @@ export function ErrorBoundary() {
 import type {
   ActionArgs,
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   Link,
@@ -5038,7 +5043,7 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Login to submit your own jokes to Remix Jokes!";
 
@@ -5284,7 +5289,7 @@ export default function Login() {
 import type {
   ActionArgs,
   LoaderArgs,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -5301,7 +5306,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -5709,7 +5714,7 @@ Ok, so let's load JavaScript on this page now 😆
 ```tsx filename=app/root.tsx lines=[11,75]
 import type {
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -5740,7 +5745,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Learn Remix and laugh at the same time!";
 
@@ -5841,7 +5846,7 @@ export function ErrorBoundary() {
 ```tsx filename=app/root.tsx lines=[92]
 import type {
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -5872,7 +5877,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Learn Remix and laugh at the same time!";
 
@@ -5971,7 +5976,7 @@ export function ErrorBoundary() {
 import type {
   ActionArgs,
   LoaderArgs,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -5988,7 +5993,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -6381,7 +6386,7 @@ Remix has its own [`<Form />`][form] component. When JavaScript is not yet loade
 import type {
   ActionArgs,
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   Form,
@@ -6403,7 +6408,7 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Login to submit your own jokes to Remix Jokes!";
 
@@ -6751,7 +6756,7 @@ export default function JokesRoute() {
 import type {
   ActionArgs,
   LoaderArgs,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -6769,7 +6774,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -7256,7 +7261,7 @@ export function JokeDisplay({
 import type {
   ActionArgs,
   LoaderArgs,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -7273,7 +7278,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -7656,7 +7661,7 @@ Fly generated a few files for us:
 fly secrets set SESSION_SECRET=your-secret-here
 ```
 
-`your-secret-here` can be whatever you want. It's just a string that's used to encrypt the session cookie. Use a password generator if you like.
+`your-secret-here` can be whatever you want. It's just a string that's used to sign the session cookie. Use a password generator if you like.
 
 One other thing we need to do is get Prisma ready to set up our database for the first time. Now that we're happy with our schema, we can create our first migration.
 
@@ -7738,7 +7743,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [the-http-api]: https://developer.mozilla.org/en-US/docs/Web/HTTP
 [the-basic-example]: https://codesandbox.io/s/github/remix-run/examples/tree/main/basic
 [express]: https://expressjs.com
-[hydrate]: https://reactjs.org/docs/react-dom.html#hydrate
+[hydrate]: https://react.dev/reference/react-dom/client/hydrateRoot
 [http-localhost-3000]: http://localhost:3000
 [bare-bones-hello-world-app]: /jokes-tutorial/img/bare-bones.png
 [remix-config-js]: ../file-conventions/remix-config

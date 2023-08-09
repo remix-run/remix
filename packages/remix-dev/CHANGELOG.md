@@ -1,5 +1,275 @@
 # `@remix-run/dev`
 
+## 1.19.2
+
+### Patch Changes
+
+- Update `proxy-agent` to resolve npm audit security vulnerability ([#7027](https://github.com/remix-run/remix/pull/7027))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.19.2`
+
+## 1.19.1
+
+### Patch Changes
+
+- Add a heartbeat ping to prevent the WebSocket connection from being closed due to inactivity when using a proxy like Cloudflare ([#6904](https://github.com/remix-run/remix/pull/6904), [#6927](https://github.com/remix-run/remix/pull/6927))
+- Treeshake out HMR code from production builds ([#6894](https://github.com/remix-run/remix/pull/6894))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.19.1`
+
+## 1.19.0
+
+### Minor Changes
+
+- improved networking options for `v2_dev` ([#6724](https://github.com/remix-run/remix/pull/6724))
+
+  deprecate the `--scheme` and `--host` options and replace them with the `REMIX_DEV_ORIGIN` environment variable
+
+- Output esbuild metafiles for bundle analysis ([#6772](https://github.com/remix-run/remix/pull/6772))
+
+  Written to server build directory (`build/` by default):
+
+  - `metafile.css.json`
+  - `metafile.js.json` (browser JS)
+  - `metafile.server.json` (server JS)
+
+  Metafiles can be uploaded to <https://esbuild.github.io/analyze/> for analysis.
+
+- Add `serverNodeBuiltinsPolyfill` config option. In `remix.config.js` you can now disable polyfills of Node.js built-in modules for non-Node.js server platforms, or opt into a subset of polyfills. ([#6814](https://github.com/remix-run/remix/pull/6814), [#6859](https://github.com/remix-run/remix/pull/6859), [#6877](https://github.com/remix-run/remix/pull/6877))
+
+  ```js
+  // Disable all polyfills
+  exports.serverNodeBuiltinsPolyfill = { modules: {} };
+
+  // Enable specific polyfills
+  exports.serverNodeBuiltinsPolyfill = {
+    modules: {
+      crypto: true, // Provide a JSPM polyfill
+      fs: "empty", // Provide an empty polyfill
+    },
+  };
+  ```
+
+### Patch Changes
+
+- ignore missing react-dom/client for react 17 ([#6725](https://github.com/remix-run/remix/pull/6725))
+
+- Warn if not using `v2_dev` ([#6818](https://github.com/remix-run/remix/pull/6818))
+
+  Also, rename `--no-restart` to `--manual` to match intention and documentation.
+  `--no-restart` remains an alias for `--manual` in v1 for backwards compatibility.
+
+- ignore errors when killing already dead processes ([#6773](https://github.com/remix-run/remix/pull/6773))
+
+- Always rewrite css-derived assets during builds ([#6837](https://github.com/remix-run/remix/pull/6837))
+
+- fix sourcemaps for `v2_dev` ([#6762](https://github.com/remix-run/remix/pull/6762))
+
+- Do not clear screen when dev server starts ([#6719](https://github.com/remix-run/remix/pull/6719))
+
+  On some terminal emulators, "clearing" only scrolls the next line to the
+  top. on others, it erases the scrollback.
+
+  Instead, let users call `clear` themselves (`clear && remix dev`) if
+  they want to clear.
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.19.0`
+
+## 1.18.1
+
+### Patch Changes
+
+- Ignore missing `react-dom/client` for React 17 ([#6725](https://github.com/remix-run/remix/pull/6725))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.18.1`
+
+## 1.18.0
+
+### Minor Changes
+
+- stabilize v2 dev server ([#6615](https://github.com/remix-run/remix/pull/6615))
+- improved logging for `remix build` and `remix dev` ([#6596](https://github.com/remix-run/remix/pull/6596))
+
+### Patch Changes
+
+- fix docs links for msw and mkcert ([#6672](https://github.com/remix-run/remix/pull/6672))
+- fix `remix dev -c`: kill all descendant processes of specified command when restarting ([#6663](https://github.com/remix-run/remix/pull/6663))
+- Add caching to regular stylesheet compilation ([#6638](https://github.com/remix-run/remix/pull/6638))
+- Rename `Architect (AWS Lambda)` -> `Architect` in the `create-remix` CLI to avoid confusion for other methods of deploying to AWS (i.e., SST) ([#6484](https://github.com/remix-run/remix/pull/6484))
+- Improve CSS bundle build performance by skipping unused Node polyfills ([#6639](https://github.com/remix-run/remix/pull/6639))
+- Improve performance of CSS bundle build by skipping compilation of Remix/React packages that are known not to contain CSS imports ([#6654](https://github.com/remix-run/remix/pull/6654))
+- Cache CSS side-effect imports transform when using HMR ([#6622](https://github.com/remix-run/remix/pull/6622))
+- Fix bug with pathless layout routes beneath nested path segments ([#6649](https://github.com/remix-run/remix/pull/6649))
+- Add caching to PostCSS for CSS Modules ([#6604](https://github.com/remix-run/remix/pull/6604))
+- Add caching to PostCSS for side-effect imports ([#6554](https://github.com/remix-run/remix/pull/6554))
+- cache getRouteModuleExports calls to significantly speed up build and HMR rebuild times ([#6629](https://github.com/remix-run/remix/pull/6629))
+- group rebuild logs with surrounding whitespace ([#6607](https://github.com/remix-run/remix/pull/6607))
+- instructions for integrating with msw ([#6669](https://github.com/remix-run/remix/pull/6669))
+- Update minimum version of `esbuild-plugins-node-modules-polyfill` to 1.0.16 to ensure that the plugin is cached ([#6652](https://github.com/remix-run/remix/pull/6652))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.18.0`
+
+## 1.17.1
+
+### Patch Changes
+
+- Replace `esbuild-plugin-polyfill-node` with `esbuild-plugins-node-modules-polyfill` ([#6562](https://github.com/remix-run/remix/pull/6562))
+- Lazily generate CSS bundle when import of `@remix-run/css-bundle` is detected ([#6535](https://github.com/remix-run/remix/pull/6535))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.17.1`
+
+## 1.17.0
+
+### Minor Changes
+
+- built-in tls support ([#6483](https://github.com/remix-run/remix/pull/6483))
+
+  New options:
+
+  - `--tls-key` / `tlsKey`: TLS key
+  - `--tls-cert` / `tlsCert`: TLS Certificate
+
+  If both TLS options are set, `scheme` defaults to `https`
+
+  ## Example
+
+  Install [mkcert](https://github.com/FiloSottile/mkcert) and create a local CA:
+
+  ```sh
+  brew install mkcert
+  mkcert -install
+  ```
+
+  Then make sure you inform `node` about your CA certs:
+
+  ```sh
+  export NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem"
+  ```
+
+  👆 You'll probably want to put that env var in your scripts or `.bashrc`/`.zshrc`
+
+  Now create `key.pem` and `cert.pem`:
+
+  ```sh
+  mkcert -key-file key.pem -cert-file cert.pem localhost
+  ```
+
+  See `mkcert` docs for more details.
+
+  Finally, pass in the paths to the key and cert via flags:
+
+  ```sh
+  remix dev --tls-key=key.pem --tls-cert=cert.pem
+  ```
+
+  or via config:
+
+  ```js
+  module.exports = {
+    future: {
+      unstable_dev: {
+        tlsKey: "key.pem",
+        tlsCert: "cert.pem",
+      },
+    },
+  };
+  ```
+
+  That's all that's needed to set up the Remix Dev Server with TLS.
+
+  🚨 Make sure to update your app server for TLS as well.
+
+  For example, with `express`:
+
+  ```ts
+  import fs from "node:fs";
+  import https from "node:https";
+
+  import express from "express";
+
+  const app = express();
+
+  // ...code setting up your express app...
+
+  const appServer = https.createServer(
+    {
+      key: fs.readFileSync("key.pem"),
+      cert: fs.readFileSync("cert.pem"),
+    },
+    app
+  );
+
+  appServer.listen(3000, () => {
+    console.log("Ready on https://localhost:3000");
+  });
+  ```
+
+  ## Known limitations
+
+  `remix-serve` does not yet support TLS.
+  That means this only works for custom app server using the `-c` flag for now.
+
+- Reuse dev server port for WebSocket (Live Reload,HMR,HDR) ([#6476](https://github.com/remix-run/remix/pull/6476))
+
+  As a result the `webSocketPort`/`--websocket-port` option has been obsoleted.
+  Additionally, scheme/host/port options for the dev server have been renamed.
+
+  Available options are:
+
+  | Option     | flag               | config           | default                           |
+  | ---------- | ------------------ | ---------------- | --------------------------------- |
+  | Command    | `-c` / `--command` | `command`        | `remix-serve <server build path>` |
+  | Scheme     | `--scheme`         | `scheme`         | `http`                            |
+  | Host       | `--host`           | `host`           | `localhost`                       |
+  | Port       | `--port`           | `port`           | Dynamically chosen open port      |
+  | No restart | `--no-restart`     | `restart: false` | `restart: true`                   |
+
+  Note that scheme/host/port options are for the _dev server_, not your app server.
+  You probably don't need to use scheme/host/port option if you aren't configuring networking (e.g. for Docker or SSL).
+
+### Patch Changes
+
+- Add caching to PostCSS for regular stylesheets ([#6505](https://github.com/remix-run/remix/pull/6505))
+
+- Fix warnings when importing CSS files with `future.unstable_dev` enabled ([#6506](https://github.com/remix-run/remix/pull/6506))
+
+- Fix Tailwind performance issue when `postcss.config.js` contains `plugins: { tailwindcss: {} }` and `remix.config.js` contains both `tailwind: true` and `postcss: true`. ([#6468](https://github.com/remix-run/remix/pull/6468))
+
+  Note that this was _not_ an issue when the plugin function had been explicitly called, i.e. `plugins: [tailwindcss()]`. Remix avoids adding the Tailwind plugin to PostCSS if it's already present but we were failing to detect when the plugin function hadn't been called — either because the plugin function itself had been passed, i.e. `plugins: [require('tailwindcss')]`, or the plugin config object syntax had been used, i.e. `plugins: { tailwindcss: {} }`.
+
+- Faster server export removal for routes when `unstable_dev` is enabled. ([#6455](https://github.com/remix-run/remix/pull/6455))
+
+  Also, only render modulepreloads on SSR.
+  Do not render modulepreloads when hydrated.
+
+- Add `HeadersArgs` type to be consistent with loaders/actions/meta and allows for using a `function` declaration in addition to an arrow function expression ([#6247](https://github.com/remix-run/remix/pull/6247))
+
+  ```tsx
+  import type { HeadersArgs } from "@remix-run/node"; // or cloudflare/deno
+
+  export function headers({ loaderHeaders }: HeadersArgs) {
+    return {
+      "x-my-custom-thing": loaderHeaders.get("x-my-custom-thing") || "fallback",
+    };
+  }
+  ```
+
+- better error message when `remix-serve` is not found ([#6477](https://github.com/remix-run/remix/pull/6477))
+
+- restore color for app server output ([#6485](https://github.com/remix-run/remix/pull/6485))
+
+- Fix route ranking bug with pathless layout route next to a sibling index route ([#4421](https://github.com/remix-run/remix/pull/4421))
+
+  - Under the hood this is done by removing the trailing slash from all generated `path` values since the number of slash-delimited segments counts towards route ranking so the trailing slash incorrectly increases the score for routes
+
+- Support sibling pathless layout routes by removing pathless layout routes from the unique route path checks in conventional route generation since they inherently trigger duplicate paths ([#4421](https://github.com/remix-run/remix/pull/4421))
+
+- fix dev server crashes caused by ungraceful hdr error handling ([#6467](https://github.com/remix-run/remix/pull/6467))
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.17.0`
+
 ## 1.16.1
 
 ### Patch Changes

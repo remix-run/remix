@@ -3,8 +3,8 @@
 // this generates a new playground project in the .gitignored playground directory
 // yarn playground:new <?name>
 
-let path = require("path");
-let { execSync } = require("child_process");
+let path = require("node:path");
+let { execSync } = require("node:child_process");
 let fse = require("fs-extra");
 
 createNewProject(process.argv[2]);

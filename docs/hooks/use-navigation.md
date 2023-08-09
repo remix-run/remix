@@ -20,8 +20,6 @@ function SomeComponent() {
 }
 ```
 
-<docs-warning>The `useNavigation().formMethod` field is lowercase without the `future.v2_normalizeFormMethod` [Future Flag][api-development-strategy]. This is being normalized to uppercase to align with the `fetch()` behavior in v2, so please upgrade your Remix v1 applications to adopt the uppercase HTTP methods.</docs-warning>
-
 <docs-info>For more information and usage, please refer to the [React Router `useNavigation` docs][rr-usenavigation].</docs-info>
 
 [rr-usenavigation]: https://reactrouter.com/hooks/use-navigation

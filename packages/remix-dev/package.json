@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/dev",
-  "version": "1.16.1",
+  "version": "1.19.2",
   "description": "Dev tools and CLI for Remix",
   "homepage": "https://remix.run",
   "bugs": {
@@ -29,16 +29,16 @@
     "@babel/types": "^7.21.5",
     "@mdx-js/mdx": "^2.3.0",
     "@npmcli/package-json": "^2.0.0",
-    "@remix-run/server-runtime": "1.16.1",
+    "@remix-run/server-runtime": "1.19.2",
     "@types/mdx": "^2.0.5",
     "@vanilla-extract/integration": "^6.2.0",
     "arg": "^5.0.1",
-    "cacache": "^15.0.5",
+    "cacache": "^17.1.3",
     "chalk": "^4.1.2",
     "chokidar": "^3.5.1",
     "dotenv": "^16.0.0",
     "esbuild": "0.17.6",
-    "esbuild-plugin-polyfill-node": "^0.2.0",
+    "esbuild-plugins-node-modules-polyfill": "^1.3.0",
     "execa": "5.1.1",
     "exit-hook": "2.2.1",
     "express": "^4.17.1",
@@ -46,22 +46,22 @@
     "fs-extra": "^10.0.0",
     "get-port": "^5.1.1",
     "gunzip-maybe": "^1.4.2",
-    "inquirer": "^8.2.1",
     "jsesc": "3.0.2",
     "json5": "^2.2.2",
     "lodash": "^4.17.21",
     "lodash.debounce": "^4.0.8",
-    "lru-cache": "^7.14.1",
     "minimatch": "^9.0.0",
     "node-fetch": "^2.6.9",
     "ora": "^5.4.1",
+    "picocolors": "^1.0.0",
+    "picomatch": "^2.3.1",
+    "pidtree": "^0.6.0",
     "postcss": "^8.4.19",
     "postcss-discard-duplicates": "^5.1.0",
     "postcss-load-config": "^4.0.1",
     "postcss-modules": "^6.0.0",
-    "prettier": "2.7.1",
+    "prettier": "^2.7.1",
     "pretty-ms": "^7.0.1",
-    "proxy-agent": "^5.0.0",
     "react-refresh": "^0.14.0",
     "recast": "^0.21.5",
     "remark-frontmatter": "4.0.1",
@@ -73,35 +73,38 @@
     "ws": "^7.4.5"
   },
   "devDependencies": {
-    "@remix-run/serve": "1.16.1",
+    "@remix-run/serve": "1.19.2",
     "@types/cacache": "^15.0.0",
     "@types/gunzip-maybe": "^1.4.0",
-    "@types/inquirer": "^8.2.0",
     "@types/jsesc": "^3.0.1",
     "@types/lodash.debounce": "^4.0.6",
+    "@types/node": "^18.17.1",
     "@types/node-fetch": "^2.5.7",
     "@types/npmcli__package-json": "^2.0.0",
+    "@types/picomatch": "^2.3.0",
     "@types/shelljs": "^0.8.11",
     "@types/tar-fs": "^2.0.1",
     "@types/ws": "^7.4.1",
-    "dedent": "^0.7.0",
     "esbuild-register": "^3.3.2",
-    "msw": "^0.39.2",
+    "msw": "^1.2.3",
     "shelljs": "^0.8.5",
     "strip-ansi": "^6.0.1",
-    "tiny-invariant": "^1.2.0",
-    "type-fest": "^2.16.0"
+    "tiny-invariant": "^1.2.0"
   },
   "peerDependencies": {
-    "@remix-run/serve": "^1.16.1"
+    "@remix-run/serve": "^1.19.2",
+    "typescript": "^5.1.0"
   },
   "peerDependenciesMeta": {
     "@remix-run/serve": {
       "optional": true
+    },
+    "typescript": {
+      "optional": true
     }
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/",

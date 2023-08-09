@@ -1,6 +1,6 @@
-const { execSync } = require("child_process");
-const { readdir, stat } = require("fs/promises");
-const { join } = require("path");
+const { execSync } = require("node:child_process");
+const { readdir, stat } = require("node:fs/promises");
+const { join } = require("node:path");
 
 /**
  * @param {string} codemod

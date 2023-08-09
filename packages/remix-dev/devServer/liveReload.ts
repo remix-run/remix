@@ -1,12 +1,13 @@
 import exitHook from "exit-hook";
 import fse from "fs-extra";
-import path from "path";
+import path from "node:path";
 import prettyMs from "pretty-ms";
 import WebSocket from "ws";
 
 import { watch } from "../compiler";
 import type { RemixConfig } from "../config";
-import { warnOnce } from "../warnOnce";
+import { createFileWatchCache } from "../compiler/fileWatchCache";
+import { logger } from "../tux";
 
 const relativePath = (file: string) => path.relative(process.cwd(), file);
 
@@ -18,9 +19,12 @@ let clean = (config: RemixConfig) => {
   }
 };
 
-export async function liveReload(config: RemixConfig) {
+export async function liveReload(
+  config: RemixConfig,
+  options: { port: number }
+) {
   clean(config);
-  let wss = new WebSocket.Server({ port: config.devServerPort });
+  let wss = new WebSocket.Server({ port: options.port });
   function broadcast(event: { type: string } & Record<string, unknown>) {
     setTimeout(() => {
       wss.clients.forEach((client) => {
@@ -37,6 +41,8 @@ export async function liveReload(config: RemixConfig) {
     broadcast({ type: "LOG", message: _message });
   }
 
+  let fileWatchCache = createFileWatchCache();
+
   let hasBuilt = false;
   let dispose = await watch(
     {
@@ -44,8 +50,9 @@ export async function liveReload(config: RemixConfig) {
       options: {
         mode: "development",
         sourcemap: true,
-        onWarning: warnOnce,
       },
+      fileWatchCache,
+      logger,
     },
     {
       onBuildStart() {
@@ -63,16 +70,21 @@ export async function liveReload(config: RemixConfig) {
       },
       onFileChanged(file) {
         log(`File changed: ${relativePath(file)}`);
+        fileWatchCache.invalidateFile(file);
       },
       onFileDeleted(file) {
         log(`File deleted: ${relativePath(file)}`);
+        fileWatchCache.invalidateFile(file);
       },
     }
   );
 
+  let heartbeat = setInterval(broadcast, 60000, { type: "PING" });
+
   exitHook(() => clean(config));
   return async () => {
     wss.close();
+    clearInterval(heartbeat);
     await dispose();
   };
 }

@@ -4,13 +4,18 @@ import type { RouteManifest, EntryRoute } from "./routes";
 import type { RouteModules } from "./routeModules";
 
 // Object passed to RemixContext.Provider
+
+type SerializedError = {
+  message: string;
+  stack?: string;
+};
 export interface RemixContextObject {
   manifest: AssetsManifest;
   routeModules: RouteModules;
   serverHandoffString?: string;
   future: FutureConfig;
   abortDelay?: number;
-  dev?: { websocketPort: number };
+  serializeError?(error: Error): SerializedError;
 }
 
 // Additional React-Router information needed at runtime, but not hydrated
@@ -19,25 +24,7 @@ export interface EntryContext extends RemixContextObject {
   staticHandlerContext: StaticHandlerContext;
 }
 
-type Dev = {
-  port?: number;
-  appServerPort?: number;
-  remixRequestHandlerPath?: string;
-  rebuildPollIntervalMs?: number;
-};
-
-export interface FutureConfig {
-  unstable_dev: boolean | Dev;
-  /** @deprecated Use the `postcss` config option instead */
-  unstable_postcss: boolean;
-  /** @deprecated Use the `tailwind` config option instead */
-  unstable_tailwind: boolean;
-  v2_errorBoundary: boolean;
-  v2_headers: boolean;
-  v2_meta: boolean;
-  v2_normalizeFormMethod: boolean;
-  v2_routeConvention: boolean;
-}
+export interface FutureConfig {}
 
 export interface AssetsManifest {
   entry: {

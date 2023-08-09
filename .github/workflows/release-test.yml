@@ -16,4 +16,4 @@ jobs:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/reusable-test.yml
     with:
-      node_version: "[14, 16, 18]"
+      node_version: "[18, 20]"

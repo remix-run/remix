@@ -7,7 +7,6 @@ let fixture: Fixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
       "app/components/my-lib/index.ts": js`
         export const pizza = "this is a pizza";
@@ -51,7 +50,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/components/component.jsx": js`
+      "app/components/component.tsx": js`
         export function PizzaComponent() {
           return <span>this is a pizza</span>
         }
@@ -90,7 +89,7 @@ test.beforeAll(async () => {
           paths: {
             "~/*": ["./app/*"],
             "@mylib": ["./app/components/my-lib/index"],
-            "@component": ["./app/components/component.jsx"],
+            "@component": ["./app/components/component.tsx"],
           },
 
           // Remix takes care of building everything in \`remix build\`.

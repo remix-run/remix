@@ -5,7 +5,6 @@ import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { createFixtureProject } from "./helpers/create-fixture";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import { flatRoutesWarning } from "../packages/remix-dev/config";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -14,17 +13,11 @@ test.describe("flat routes", () => {
   let IGNORED_ROUTE = "/ignore-me-pls";
   test.beforeAll(async () => {
     fixture = await createFixture({
+      config: {
+        ignoredRouteFiles: [IGNORED_ROUTE],
+      },
       files: {
-        "remix.config.js": js`
-          /** @type {import('@remix-run/dev').AppConfig} */
-          module.exports = {
-            future: {
-              v2_routeConvention: true,
-            },
-            ignoredRouteFiles: ['${IGNORED_ROUTE}'],
-          };
-        `,
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
@@ -46,31 +39,31 @@ test.describe("flat routes", () => {
           }
         `,
 
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           export default function () {
             return <h2>Index</h2>;
           }
         `,
 
-        "app/routes/folder/route.jsx": js`
+        "app/routes/folder/route.tsx": js`
           export default function () {
             return <h2>Folder (Route.jsx)</h2>;
           }
         `,
 
-        "app/routes/folder2/index.jsx": js`
+        "app/routes/folder2/index.tsx": js`
           export default function () {
             return <h2>Folder (Index.jsx)</h2>;
           }
         `,
 
-        "app/routes/flat.file.jsx": js`
+        "app/routes/flat.file.tsx": js`
           export default function () {
             return <h2>Flat File</h2>;
           }
         `,
 
-        "app/routes/dashboard/route.jsx": js`
+        "app/routes/dashboard/route.tsx": js`
           import { Outlet } from "@remix-run/react";
 
           export default function () {
@@ -83,7 +76,7 @@ test.describe("flat routes", () => {
           }
         `,
 
-        "app/routes/dashboard._index/route.jsx": js`
+        "app/routes/dashboard._index/route.tsx": js`
           export default function () {
             return <h3>Dashboard Index</h3>;
           }
@@ -162,56 +155,10 @@ test.describe("flat routes", () => {
     });
   }
 
-  test("allows ignoredRouteFiles to be configured", async ({ page }) => {
+  test("allows ignoredRouteFiles to be configured", async () => {
     let routeIds = Object.keys(fixture.build.routes);
 
     expect(routeIds).not.toContain(IGNORED_ROUTE);
-  });
-});
-
-test.describe("warns when v1 routesConvention is used", () => {
-  let buildStdio = new PassThrough();
-  let buildOutput: string;
-
-  let originalConsoleLog = console.log;
-  let originalConsoleWarn = console.warn;
-  let originalConsoleError = console.error;
-
-  test.beforeAll(async () => {
-    console.log = () => {};
-    console.warn = () => {};
-    console.error = () => {};
-    await createFixtureProject({
-      buildStdio,
-      future: { v2_routeConvention: false },
-      files: {
-        "routes/index.tsx": js`
-          export default function () {
-            return <p>routes/index</p>;
-          }
-        `,
-      },
-    });
-
-    let chunks: Buffer[] = [];
-    buildOutput = await new Promise<string>((resolve, reject) => {
-      buildStdio.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-      buildStdio.on("error", (err) => reject(err));
-      buildStdio.on("end", () =>
-        resolve(Buffer.concat(chunks).toString("utf8"))
-      );
-    });
-  });
-
-  test.afterAll(() => {
-    console.log = originalConsoleLog;
-    console.warn = originalConsoleWarn;
-    console.error = originalConsoleError;
-  });
-
-  test("v2_routeConvention is not enabled", () => {
-    console.log(buildOutput);
-    expect(buildOutput).toContain(flatRoutesWarning);
   });
 });
 
@@ -229,19 +176,18 @@ test.describe("emits warnings for route conflicts", async () => {
     console.error = () => {};
     await createFixtureProject({
       buildStdio,
-      future: { v2_routeConvention: true },
       files: {
         "routes/_dashboard._index.tsx": js`
           export default function () {
             return <p>routes/_dashboard._index</p>;
           }
         `,
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           export default function () {
             return <p>routes._index</p>;
           }
         `,
-        "app/routes/_landing._index.jsx": js`
+        "app/routes/_landing._index.tsx": js`
           export default function () {
             return <p>routes/_landing._index</p>;
           }
@@ -285,10 +231,9 @@ test.describe("", () => {
     console.error = () => {};
     await createFixtureProject({
       buildStdio,
-      future: { v2_routeConvention: true },
       files: {
-        "app/routes/_index/route.jsx": js``,
-        "app/routes/_index/utils.js": js``,
+        "app/routes/_index/route.tsx": js``,
+        "app/routes/_index/utils.ts": js``,
       },
     });
 
@@ -316,7 +261,6 @@ test.describe("", () => {
 test.describe("pathless routes and route collisions", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
         "app/root.tsx": js`
           import { Link, Outlet, Scripts, useMatches } from "@remix-run/react";
@@ -340,12 +284,12 @@ test.describe("pathless routes and route collisions", () => {
             );
           }
         `,
-        "app/routes/nested._index.jsx": js`
+        "app/routes/nested._index.tsx": js`
           export default function Index() {
             return <h1>Index</h1>;
           }
         `,
-        "app/routes/nested._pathless.jsx": js`
+        "app/routes/nested._pathless.tsx": js`
           import { Outlet } from "@remix-run/react";
 
           export default function Layout() {
@@ -357,12 +301,12 @@ test.describe("pathless routes and route collisions", () => {
             );
           }
         `,
-        "app/routes/nested._pathless.foo.jsx": js`
+        "app/routes/nested._pathless.foo.tsx": js`
           export default function Foo() {
             return <h1>Foo</h1>;
           }
         `,
-        "app/routes/nested._pathless2.jsx": js`
+        "app/routes/nested._pathless2.tsx": js`
           import { Outlet } from "@remix-run/react";
 
           export default function Layout() {
@@ -374,7 +318,7 @@ test.describe("pathless routes and route collisions", () => {
             );
           }
         `,
-        "app/routes/nested._pathless2.bar.jsx": js`
+        "app/routes/nested._pathless2.bar.tsx": js`
           export default function Bar() {
             return <h1>Bar</h1>;
           }
@@ -401,11 +345,11 @@ test.describe("pathless routes and route collisions", () => {
    *
    * <Routes>
    *   <Route file="root.jsx">
-   *     <Route path="nested" file="routes/nested/__pathless.jsx">
-   *       <Route path="foo" file="routes/nested/__pathless/foo.jsx" />
+   *     <Route path="nested" file="routes/nested._pathless.jsx">
+   *       <Route path="foo" file="routes/nested._pathless/foo.jsx" />
    *     </Route>
-   *     <Route path="nested" index file="routes/nested/index.jsx" />
-   *     <Route index file="routes/index.jsx" />
+   *     <Route path="nested" index file="routes/nested._index.jsx" />
+   *     <Route index file="routes/_index.jsx" />
    *   </Route>
    * </Routes>
    */
