@@ -83,8 +83,8 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
       });
     `,
 
-    "postcss.config.js": js`
-      export default {
+    "postcss.config.cjs": js`
+      module.exports = {
         plugins: {
           "postcss-import": {}, // Testing PostCSS cache invalidation
           tailwindcss: {},
