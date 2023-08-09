@@ -23,7 +23,9 @@ export default {
           path.resolve(process.cwd(), buildPath),
           "utf8"
         );
-        const manifestMatches = contents.matchAll(/manifest-([A-f0-9]+)\.js/g);
+        const manifestMatches = contents.matchAll(
+          /manifest-([A-Fa-f0-9]+)\.js/g
+        );
         const sent = new Set();
         for (const match of manifestMatches) {
           const buildHash = match[1];

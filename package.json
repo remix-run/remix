@@ -14,13 +14,11 @@
     "packages/remix-dev",
     "packages/remix-eslint-config",
     "packages/remix-express",
-    "packages/remix-netlify",
     "packages/remix-node",
     "packages/remix-react",
     "packages/remix-serve",
     "packages/remix-server-runtime",
-    "packages/remix-testing",
-    "packages/remix-vercel"
+    "packages/remix-testing"
   ],
   "scripts": {
     "bug-report-test": "yarn test:integration bug-report --project chromium",
@@ -70,7 +68,7 @@
     "@rollup/plugin-node-resolve": "^11.0.1",
     "@rollup/plugin-replace": "^5.0.2",
     "@testing-library/cypress": "^8.0.2",
-    "@testing-library/jest-dom": "^5.16.2",
+    "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.3.0",
     "@types/cheerio": "^0.22.22",
     "@types/cross-spawn": "^6.0.2",
