@@ -22,7 +22,6 @@ import {
   useActionData as useActionDataRR,
   useLoaderData as useLoaderDataRR,
   useRouteLoaderData as useRouteLoaderDataRR,
-  useMatches as useMatchesRR,
   useLocation,
   useNavigation,
   useHref,
@@ -1048,27 +1047,6 @@ export interface RouteMatch {
    * @see https://remix.run/route/handle
    */
   handle: undefined | { [key: string]: any };
-}
-
-export function useMatches(): RouteMatch[] {
-  let { routeModules } = useRemixContext();
-  let matches = useMatchesRR();
-  return React.useMemo(
-    () =>
-      matches.map((match) => {
-        let remixMatch: RouteMatch = {
-          id: match.id,
-          pathname: match.pathname,
-          params: match.params,
-          data: match.data,
-          // Need to grab handle here since we don't have it at client-side route
-          // creation time
-          handle: routeModules[match.id].handle,
-        };
-        return remixMatch;
-      }),
-    [matches, routeModules]
-  );
 }
 
 /**
