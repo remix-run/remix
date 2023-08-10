@@ -492,7 +492,8 @@ export function Meta() {
   let meta: MetaDescriptor[] = [];
   let leafMeta: MetaDescriptor[] | null = null;
   let matches: MetaMatches = [];
-  let error = errors ? Object.values(errors)[0] : null;
+  let errorMatch = matches.find((m) => errors && errors[m.id] != null);
+  let error = errors && errorMatch ? errors[errorMatch.id] : null;
   for (let i = 0; i < _matches.length; i++) {
     let _match = _matches[i];
     let routeId = _match.route.id;
