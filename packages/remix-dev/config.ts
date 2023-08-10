@@ -88,6 +88,9 @@ export interface AppConfig {
    *
    * The delay, in milliseconds, before the dev server broadcasts a reload
    * event. There is no delay by default.
+   *
+   * @deprecated Enable {@link AppConfig.future.v2_dev} to eliminate the race
+   * conditions that necessitated this option.
    */
   devServerBroadcastDelay?: number;
 
@@ -97,7 +100,7 @@ export interface AppConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Whether to process CSS using PostCSS if a PostCSS config file is present.
    * Defaults to `true`.
    */
   postcss?: boolean;
@@ -251,6 +254,9 @@ export interface RemixConfig {
 
   /**
    * The delay before the dev (asset) server broadcasts a reload event.
+   *
+   * @deprecated Enable {@link RemixConfig.future.v2_dev} to eliminate the race
+   * conditions that necessitated this option.
    */
   devServerBroadcastDelay: number;
 
@@ -260,7 +266,7 @@ export interface RemixConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Whether to process CSS using PostCSS if a PostCSS config file is present.
    * Defaults to `true`.
    */
   postcss: boolean;
@@ -376,7 +382,7 @@ export async function readConfig(
     try {
       // shout out to next
       // https://github.com/vercel/next.js/blob/b15a976e11bf1dc867c241a4c1734757427d609c/packages/next/server/config.ts#L748-L765
-      if (process.env.NODE_ENV === "test") {
+      if (process.env.JEST_WORKER_ID) {
         // dynamic import does not currently work inside of vm which
         // jest relies on so we fall back to require for this case
         // https://github.com/nodejs/node/issues/35889
@@ -405,11 +411,7 @@ export async function readConfig(
   let serverMainFields = appConfig.serverMainFields;
   let serverMinify = appConfig.serverMinify;
 
-  if (!appConfig.serverModuleFormat) {
-    serverModuleFormatWarning();
-  }
-
-  let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
+  let serverModuleFormat = appConfig.serverModuleFormat || "esm";
   let serverPlatform = appConfig.serverPlatform || "node";
   serverMainFields ??=
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
@@ -554,6 +556,10 @@ export async function readConfig(
     rootDirectory,
     assetsBuildDirectory
   );
+
+  if (appConfig.devServerBroadcastDelay) {
+    devServerBroadcastDelayWarning();
+  }
 
   // set env variable so un-bundled servers can use it
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
@@ -743,13 +749,14 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
   type: "disjunction",
 });
 
-let serverModuleFormatWarning = () =>
-  logger.warn("The default server module format is changing in v2", {
-    details: [
-      "The default format will change from `cjs` to `esm`.",
-      "You can keep using `cjs` by explicitly specifying `serverModuleFormat: 'cjs'`.",
-      "You can opt-in early to this change by explicitly specifying `serverModuleFormat: 'esm'`",
-      "-> https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat",
-    ],
-    key: "serverModuleFormatWarning",
-  });
+let devServerBroadcastDelayWarning = () =>
+  logger.warn(
+    "The `devServerBroadcastDelay` config option will be removed in v2",
+    {
+      details: [
+        "Enable `v2_dev` to eliminate the race conditions that necessitated this option.",
+        "-> https://remix.run/docs/en/v1.19.3/pages/v2#devserverbroadcastdelay",
+      ],
+      key: "devServerBroadcastDelayWarning",
+    }
+  );

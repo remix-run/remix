@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import { execSync } from "node:child_process";
-import * as fse from "fs-extra";
+import fse from "fs-extra";
 import getPort, { makeRange } from "get-port";
 import prettyMs from "pretty-ms";
 import NPMCliPackageJson from "@npmcli/package-json";
@@ -36,7 +36,6 @@ export async function init(
   }
 
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-  let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
   let packageManager = detectPackageManager() ?? "npm";
 
   if (await fse.pathExists(initPackageJson)) {
@@ -51,7 +50,7 @@ export async function init(
     initFn = initFn.default;
   }
   try {
-    await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
+    await initFn({ packageManager, rootDirectory: projectDir });
 
     if (deleteScript) {
       await fse.remove(initScriptDir);
@@ -91,14 +90,14 @@ export async function routes(
 
 export async function build(
   remixRoot: string,
-  modeArg?: string,
+  mode?: string,
   sourcemap: boolean = false
 ): Promise<void> {
-  let mode = parseMode(modeArg) ?? "production";
+  mode = mode ?? "production";
 
   logger.info(`building...` + pc.gray(` (NODE_ENV=${mode})`));
 
-  if (modeArg === "production" && sourcemap) {
+  if (mode === "production" && sourcemap) {
     logger.warn("🚨  source maps enabled in production", {
       details: [
         "You are using `--sourcemap` to enable source maps in production,",
@@ -136,9 +135,9 @@ export async function build(
 
 export async function watch(
   remixRootOrConfig: string | RemixConfig,
-  modeArg?: string
+  mode?: string
 ): Promise<void> {
-  let mode = parseMode(modeArg) ?? "development";
+  mode = mode ?? "development";
   console.log(`Watching Remix app in ${mode} mode...`);
 
   let config =
@@ -147,7 +146,7 @@ export async function watch(
       : await readConfig(remixRootOrConfig);
 
   let resolved = await resolveDev(config);
-  devServer.liveReload(config, resolved);
+  void devServer.liveReload(config, { ...resolved, mode });
   return await new Promise(() => {});
 }
 
@@ -178,15 +177,11 @@ let clientEntries = ["entry.client.tsx", "entry.client.js", "entry.client.jsx"];
 let serverEntries = ["entry.server.tsx", "entry.server.js", "entry.server.jsx"];
 let entries = ["entry.client", "entry.server"];
 
-// @ts-expect-error available in node 12+
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
 let conjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
 });
 
-// @ts-expect-error available in node 12+
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
 let disjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "disjunction",
@@ -351,17 +346,6 @@ async function createClientEntry(
   let contents = await fse.readFile(inputFile, "utf-8");
   return contents;
 }
-
-let parseMode = (
-  mode?: string
-): compiler.CompileOptions["mode"] | undefined => {
-  if (mode === undefined) return undefined;
-  if (mode === "development") return mode;
-  if (mode === "production") return mode;
-  if (mode === "test") return mode;
-  console.error(`Unrecognized mode: ${mode}`);
-  process.exit(1);
-};
 
 let findPort = async () => getPort({ port: makeRange(3001, 3100) });
 

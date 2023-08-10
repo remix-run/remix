@@ -491,7 +491,6 @@ async function runInitScriptStep(ctx: Context) {
 
   let initScriptDir = path.dirname(ctx.initScriptPath);
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-  let isTypeScript = fs.existsSync(path.join(ctx.cwd, "tsconfig.json"));
   let packageManager = ctx.pkgManager;
 
   try {
@@ -525,7 +524,7 @@ async function runInitScriptStep(ctx: Context) {
       throw new Error("remix.init script doesn't export a function.");
     }
     let rootDirectory = path.resolve(ctx.cwd);
-    await initFn({ isTypeScript, packageManager, rootDirectory });
+    await initFn({ packageManager, rootDirectory });
   } catch (err) {
     error("Oh no!", "Template's remix.init script failed");
     throw err;

@@ -45,14 +45,22 @@ The path to the browser build, relative to remix.config.js. Defaults to
 The path to a directory Remix can use for caching things in development,
 relative to `remix.config.js`. Defaults to `".cache"`.
 
-## devServerBroadcastDelay (deprecated)
+## devServerBroadcastDelay
+
+<docs-warning>This option is deprecated and will likely be removed in a future
+stable release. Enable `v2_dev` to eliminate the race conditions that necessitated
+this option.</docs-warning>
 
 The delay, in milliseconds, before the dev server broadcasts a reload event.
 There is no delay by default.
 
 For v2, the race conditions that necessitated this option have been eliminated.
 
-## devServerPort (deprecated)
+## devServerPort
+
+<docs-warning>This option is deprecated and will likely be removed in a future
+stable release. Enable `v2_dev` and use [`--port` / `v2_dev.port` option][port]
+instead.</docs-warning>
 
 The port number to use for the dev websocket server. Defaults to 8002.
 
@@ -72,7 +80,7 @@ The URL prefix of the browser build with a trailing slash. Defaults to
 
 ## postcss
 
-Whether to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `true`.
+Whether to process CSS using [PostCSS][postcss] if a PostCSS config file is present. Defaults to `true`.
 
 ## routes
 
@@ -228,9 +236,7 @@ There are a few conventions that Remix uses you should be aware of.
 [cloudflare-pages]: https://pages.cloudflare.com
 [cloudflare-workers]: https://workers.cloudflare.com
 [deno]: https://deno.land
-[netlify]: https://www.netlify.com
 [node-cjs]: https://nodejs.org/en
-[vercel]: https://vercel.com
 [dilum-sanjaya]: https://twitter.com/DilumSanjaya
 [an-awesome-visualization]: https://remix-routing-demo.netlify.app
 [remix-dev]: ../other-api/dev#remix-dev
@@ -240,4 +246,4 @@ There are a few conventions that Remix uses you should be aware of.
 [tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
 [jspm]: https://github.com/jspm/jspm-core
 [esbuild-plugins-node-modules-polyfill]: https://www.npmjs.com/package/esbuild-plugins-node-modules-polyfill
-[port]: ../other-api/dev-v2#option-1
+[port]: ../other-api/dev-v2#options-1

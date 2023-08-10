@@ -59,5 +59,14 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 
 In production this doesn't happen. The server boots up and that's the end of it.
 
+## `HOST` environment variable
+
+You can configure the hostname for your Express app via `process.env.HOST` and that value will be passed to the internal [`app.listen`][express-listen] method when starting the server.
+
+```sh
+HOST=127.0.0.1 npx remix-serve build/
+```
+
 [remix-run-express]: adapter#createrequesthandler
 [remember]: ./dev-v2#keeping-in-memory-server-state-across-rebuilds
+[express-listen]: https://expressjs.com/en/api.html#app.listen

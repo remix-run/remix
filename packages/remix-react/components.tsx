@@ -36,13 +36,13 @@ import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
-  getLinksForMatches,
+  getKeyedLinksForMatches,
+  getKeyedPrefetchLinks,
   getModuleLinkHrefs,
   getNewMatchesForLinks,
-  getStylesheetPrefetchLinks,
   isPageLinkDescriptor,
 } from "./links";
-import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
+import type { KeyedHtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type {
   MetaFunction,
@@ -327,16 +327,16 @@ export function Links() {
       )
     : routerMatches;
 
-  let links = React.useMemo(
-    () => getLinksForMatches(matches, routeModules, manifest),
+  let keyedLinks = React.useMemo(
+    () => getKeyedLinksForMatches(matches, routeModules, manifest),
     [matches, routeModules, manifest]
   );
 
   return (
     <>
-      {links.map((link) => {
+      {keyedLinks.map(({ key, link }) => {
         if (isPageLinkDescriptor(link)) {
-          return <PrefetchPageLinks key={link.page} {...link} />;
+          return <PrefetchPageLinks key={key} {...link} />;
         }
 
         let imageSrcSet: string | null = null;
@@ -360,7 +360,7 @@ export function Links() {
 
         return (
           <link
-            key={link.rel + (link.href || "") + (imageSrcSet || "")}
+            key={key}
             {...{
               ...link,
               [imageSizesKey]: imageSizes,
@@ -402,17 +402,21 @@ export function PrefetchPageLinks({
   );
 }
 
-function usePrefetchedStylesheets(matches: AgnosticDataRouteMatch[]) {
+function useKeyedPrefetchLinks(matches: AgnosticDataRouteMatch[]) {
   let { manifest, routeModules } = useRemixContext();
 
-  let [styleLinks, setStyleLinks] = React.useState<HtmlLinkDescriptor[]>([]);
+  let [keyedPrefetchLinks, setKeyedPrefetchLinks] = React.useState<
+    KeyedHtmlLinkDescriptor[]
+  >([]);
 
   React.useEffect(() => {
     let interrupted: boolean = false;
 
-    getStylesheetPrefetchLinks(matches, manifest, routeModules).then(
+    void getKeyedPrefetchLinks(matches, manifest, routeModules).then(
       (links) => {
-        if (!interrupted) setStyleLinks(links);
+        if (!interrupted) {
+          setKeyedPrefetchLinks(links);
+        }
       }
     );
 
@@ -421,7 +425,7 @@ function usePrefetchedStylesheets(matches: AgnosticDataRouteMatch[]) {
     };
   }, [matches, manifest, routeModules]);
 
-  return styleLinks;
+  return keyedPrefetchLinks;
 }
 
 function PrefetchPageLinksImpl({
@@ -473,7 +477,7 @@ function PrefetchPageLinksImpl({
 
   // needs to be a hook with async behavior because we need the modules, not
   // just the manifest like the other links in here.
-  let styleLinks = usePrefetchedStylesheets(newMatchesForAssets);
+  let keyedPrefetchLinks = useKeyedPrefetchLinks(newMatchesForAssets);
 
   return (
     <>
@@ -483,10 +487,10 @@ function PrefetchPageLinksImpl({
       {moduleHrefs.map((href) => (
         <link key={href} rel="modulepreload" href={href} {...linkProps} />
       ))}
-      {styleLinks.map((link) => (
+      {keyedPrefetchLinks.map(({ key, link }) => (
         // these don't spread `linkProps` because they are full link descriptors
         // already with their own props
-        <link key={link.href} {...link} />
+        <link key={key} {...link} />
       ))}
     </>
   );
@@ -606,21 +610,18 @@ export function Meta() {
         }
 
         if ("script:ld+json" in metaProps) {
-          let json: string | null = null;
           try {
-            json = JSON.stringify(metaProps["script:ld+json"]);
-          } catch (err) {}
-          return (
-            json != null && (
+            let json = JSON.stringify(metaProps["script:ld+json"]);
+            return (
               <script
-                key="script:ld+json"
+                key={`script:ld+json:${json}`}
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                  __html: JSON.stringify(metaProps["script:ld+json"]),
-                }}
+                dangerouslySetInnerHTML={{ __html: json }}
               />
-            )
-          );
+            );
+          } catch (err) {
+            return null;
+          }
         }
         return <meta key={JSON.stringify(metaProps)} {...metaProps} />;
       })}
