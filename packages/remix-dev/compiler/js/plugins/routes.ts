@@ -27,7 +27,7 @@ export function browserRouteModulesPlugin(
 ): esbuild.Plugin {
   return {
     name: "browser-route-modules",
-    async setup(build) {
+    setup(build) {
       let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
         (map, key) => {
           let route = config.routes[key];

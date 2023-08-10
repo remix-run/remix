@@ -159,14 +159,14 @@ test.describe("flat routes", () => {
     });
   }
 
-  test("allows ignoredRouteFiles to be configured", async () => {
+  test("allows ignoredRouteFiles to be configured", () => {
     let routeIds = Object.keys(fixture.build.routes);
 
     expect(routeIds).not.toContain(IGNORED_ROUTE);
   });
 });
 
-test.describe("emits warnings for route conflicts", async () => {
+test.describe("emits warnings for route conflicts", () => {
   let buildStdio = new PassThrough();
   let buildOutput: string;
 

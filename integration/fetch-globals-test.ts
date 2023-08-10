@@ -35,7 +35,7 @@ test.beforeAll(async () => {
   appFixture = await createAppFixture(fixture);
 });
 
-test.afterAll(async () => appFixture.close());
+test.afterAll(() => appFixture.close());
 
 test("returned variable from fetch() should be instance of global Response", async () => {
   let response = await fixture.requestDocument("/");

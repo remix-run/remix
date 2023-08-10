@@ -8,7 +8,7 @@ import type { Plugin, PluginBuild } from "esbuild";
 export const absoluteCssUrlsPlugin = (): Plugin => {
   return {
     name: "absolute-css-urls-plugin",
-    setup: async (build: PluginBuild) => {
+    setup: (build: PluginBuild) => {
       build.onResolve({ filter: /.*/ }, async (args) => {
         let { kind, path: resolvePath } = args;
         if (kind === "url-token" && path.isAbsolute(resolvePath)) {

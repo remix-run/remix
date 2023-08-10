@@ -72,7 +72,7 @@ test.beforeAll(async () => {
   appFixture = await createAppFixture(fixture);
 });
 
-test.afterAll(async () => appFixture.close());
+test.afterAll(() => appFixture.close());
 
 test("deferred response can redirect on document request", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);

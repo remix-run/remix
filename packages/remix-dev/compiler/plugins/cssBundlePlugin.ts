@@ -15,7 +15,7 @@ export function cssBundlePlugin(refs: {
 }): Plugin {
   return {
     name: pluginName,
-    async setup(build) {
+    setup(build) {
       let preventInfiniteLoop = {};
       build.onResolve({ filter: /^@remix-run\/css-bundle$/ }, async (args) => {
         // Prevent plugin from infinitely trying to resolve itself

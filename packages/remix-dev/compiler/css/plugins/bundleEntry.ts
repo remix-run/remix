@@ -21,7 +21,7 @@ export function cssBundleEntryModulePlugin({ config }: Context): Plugin {
         };
       });
 
-      build.onLoad({ filter }, async () => {
+      build.onLoad({ filter }, () => {
         return {
           resolveDir: config.appDirectory,
           loader: "js",

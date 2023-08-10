@@ -37,7 +37,7 @@ test.describe("build failures", () => {
   let originalConsoleWarn = console.warn;
   let originalConsoleError = console.error;
 
-  test.beforeAll(async () => {
+  test.beforeAll(() => {
     console.log = () => {};
     console.warn = () => {};
     console.error = () => {};

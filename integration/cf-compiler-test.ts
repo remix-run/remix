@@ -6,7 +6,7 @@ import glob from "glob";
 
 import { createFixtureProject, js, json } from "./helpers/create-fixture.js";
 
-const searchFiles = async (pattern: string | RegExp, files: string[]) => {
+const searchFiles = (pattern: string | RegExp, files: string[]) => {
   let result = shell.grep("-l", pattern, files);
   return result.stdout
     .trim()
@@ -14,7 +14,7 @@ const searchFiles = async (pattern: string | RegExp, files: string[]) => {
     .filter((line) => line.length > 0);
 };
 
-const findCodeFiles = async (directory: string) =>
+const findCodeFiles = (directory: string) =>
   glob.sync("**/*.@(js|jsx|ts|tsx)", {
     cwd: directory,
     absolute: true,

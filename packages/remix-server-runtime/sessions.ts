@@ -3,6 +3,7 @@ import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 import type { Cookie, CookieOptions, CreateCookieFunction } from "./cookies";
 import { isCookie } from "./cookies";
 import { warnOnce } from "./warnings";
+import type { PromiseOrSync } from "./utils";
 
 /**
  * An object of name/value pairs to be used in the session.
@@ -223,12 +224,14 @@ export interface SessionIdStorageStrategy<
   createData: (
     data: FlashSessionData<Data, FlashData>,
     expires?: Date
-  ) => Promise<string>;
+  ) => PromiseOrSync<string>;
 
   /**
    * Returns data for a given session id, or `null` if there isn't any.
    */
-  readData: (id: string) => Promise<FlashSessionData<Data, FlashData> | null>;
+  readData: (
+    id: string
+  ) => PromiseOrSync<FlashSessionData<Data, FlashData> | null>;
 
   /**
    * Updates data for the given session id.
@@ -237,12 +240,12 @@ export interface SessionIdStorageStrategy<
     id: string,
     data: FlashSessionData<Data, FlashData>,
     expires?: Date
-  ) => Promise<void>;
+  ) => PromiseOrSync<void>;
 
   /**
    * Deletes data for a given session id from the data store.
    */
-  deleteData: (id: string) => Promise<void>;
+  deleteData: (id: string) => PromiseOrSync<void>;
 }
 
 export type CreateSessionStorageFunction = <

@@ -19,12 +19,12 @@ const importPattern = (importSpecifier: string) =>
     String.raw`import\s*{.*}\s*from\s*"` + importSpecifier + String.raw`"`
   );
 
-const findCodeFiles = async (directory: string) =>
+const findCodeFiles = (directory: string) =>
   glob.sync("**/*.@(js|jsx|ts|tsx)", {
     cwd: directory,
     absolute: true,
   });
-const searchFiles = async (pattern: string | RegExp, files: string[]) => {
+const searchFiles = (pattern: string | RegExp, files: string[]) => {
   let result = shell.grep("-l", pattern, files);
   return result.stdout
     .trim()

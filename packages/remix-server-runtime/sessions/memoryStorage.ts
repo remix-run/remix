@@ -45,12 +45,12 @@ export const createMemorySessionStorageFactory =
 
     return createSessionStorage({
       cookie,
-      async createData(data, expires) {
+      createData(data, expires) {
         let id = (++uniqueId).toString();
         map.set(id, { data, expires });
         return id;
       },
-      async readData(id) {
+      readData(id) {
         if (map.has(id)) {
           let { data, expires } = map.get(id)!;
 
@@ -64,10 +64,10 @@ export const createMemorySessionStorageFactory =
 
         return null;
       },
-      async updateData(id, data, expires) {
+      updateData(id, data, expires) {
         map.set(id, { data, expires });
       },
-      async deleteData(id) {
+      deleteData(id) {
         map.delete(id);
       },
     });

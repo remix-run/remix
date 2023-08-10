@@ -97,7 +97,7 @@ export function cssFilePlugin(ctx: Context): esbuild.Plugin {
                   ? [
                       {
                         name: "postcss-plugin",
-                        async setup(build) {
+                        setup(build) {
                           build.onLoad(
                             { filter: /\.css$/, namespace: "file" },
                             async (args) => {

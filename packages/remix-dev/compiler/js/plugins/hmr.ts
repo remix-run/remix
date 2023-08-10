@@ -8,7 +8,7 @@ import type { Context } from "../../context";
 export let hmrPlugin = ({ config }: Context): esbuild.Plugin => {
   return {
     name: "remix-hmr",
-    setup: async (build) => {
+    setup: (build) => {
       let cache = new Map();
 
       build.onResolve({ filter: /^remix:hmr$/ }, (args) => {
