@@ -1,6 +1,5 @@
 ---
 title: ErrorBoundary
-new: true
 ---
 
 # `ErrorBoundary`

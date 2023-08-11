@@ -1,6 +1,5 @@
 ---
 title: meta
-new: true
 ---
 
 # `meta`

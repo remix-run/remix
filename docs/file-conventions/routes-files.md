@@ -1,6 +1,5 @@
 ---
 title: Route File Naming
-new: true
 ---
 
 # Route File Naming
