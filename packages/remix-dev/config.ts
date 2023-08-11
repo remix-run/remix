@@ -5,16 +5,16 @@ import fse from "fs-extra";
 import getPort from "get-port";
 import NPMCliPackageJson from "@npmcli/package-json";
 import { coerce } from "semver";
+import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
-import { writeConfigDefaults } from "./config/write-tsconfig-defaults";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
 import { detectPackageManager } from "./cli/detectPackageManager";
-import { warnOnce } from "./warnOnce";
+import { logger } from "./tux";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -38,27 +38,37 @@ export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
 type Dev = {
-  port?: number; // TODO: remove in v2
-
   command?: string;
-  httpScheme?: string;
-  httpHost?: string;
-  httpPort?: number;
-  websocketPort?: number;
+  manual?: boolean;
+  port?: number;
+  tlsKey?: string;
+  tlsCert?: string;
+
+  /** @deprecated remove in v2 */
   restart?: boolean;
+  /** @deprecated remove in v2 */
+  scheme?: string;
+  /** @deprecated remove in v2 */
+  host?: string;
 };
 
 interface FutureConfig {
-  unstable_dev: boolean | Dev;
+  v2_dev: boolean | Dev;
   /** @deprecated Use the `postcss` config option instead */
   unstable_postcss: boolean;
   /** @deprecated Use the `tailwind` config option instead */
   unstable_tailwind: boolean;
   v2_errorBoundary: boolean;
+  v2_headers: boolean;
   v2_meta: boolean;
   v2_normalizeFormMethod: boolean;
   v2_routeConvention: boolean;
 }
+
+type ServerNodeBuiltinsPolyfillOptions = Pick<
+  EsbuildPluginsNodeModulesPolyfillOptions,
+  "modules"
+>;
 
 /**
  * The user-provided config in `remix.config.js`.
@@ -107,12 +117,17 @@ export interface AppConfig {
 
   /**
    * The port number to use for the dev server. Defaults to 8002.
+   *
+   * @deprecated Use {@link AppConfig.future.v2_dev.port} instead.
    */
   devServerPort?: number;
 
   /**
    * The delay, in milliseconds, before the dev server broadcasts a reload
    * event. There is no delay by default.
+   *
+   * @deprecated Enable {@link AppConfig.future.v2_dev} to eliminate the race
+   * conditions that necessitated this option.
    */
   devServerBroadcastDelay?: number;
 
@@ -189,6 +204,12 @@ export interface AppConfig {
    * The output format of the server build. Defaults to "cjs".
    */
   serverModuleFormat?: ServerModuleFormat;
+
+  /**
+   * The Node.js polyfills to include in the server build when targeting
+   * non-Node.js server platforms.
+   */
+  serverNodeBuiltinsPolyfill?: ServerNodeBuiltinsPolyfillOptions;
 
   /**
    * The platform the server build is targeting. Defaults to "node".
@@ -280,11 +301,16 @@ export interface RemixConfig {
 
   /**
    * The port number to use for the dev (asset) server.
+   *
+   * @deprecated Use {@link RemixConfig.future.v2_dev.port} instead.
    */
   devServerPort: number;
 
   /**
    * The delay before the dev (asset) server broadcasts a reload event.
+   *
+   * @deprecated Enable {@link RemixConfig.future.v2_dev} to eliminate the race
+   * conditions that necessitated this option.
    */
   devServerBroadcastDelay: number;
 
@@ -362,6 +388,12 @@ export interface RemixConfig {
   serverModuleFormat: ServerModuleFormat;
 
   /**
+   * The Node.js polyfills to include in the server build when targeting
+   * non-Node.js server platforms.
+   */
+  serverNodeBuiltinsPolyfill?: ServerNodeBuiltinsPolyfillOptions;
+
+  /**
    * The platform the server build is targeting. Defaults to "node".
    */
   serverPlatform: ServerPlatform;
@@ -410,7 +442,7 @@ export async function readConfig(
     try {
       // shout out to next
       // https://github.com/vercel/next.js/blob/b15a976e11bf1dc867c241a4c1734757427d609c/packages/next/server/config.ts#L748-L765
-      if (process.env.NODE_ENV === "test") {
+      if (process.env.JEST_WORKER_ID) {
         // dynamic import does not currently work inside of vm which
         // jest relies on so we fall back to require for this case
         // https://github.com/nodejs/node/issues/35889
@@ -427,19 +459,23 @@ export async function readConfig(
   }
 
   if (appConfig.serverBuildTarget) {
-    warnOnce(serverBuildTargetWarning, "v2_serverBuildTarget");
+    serverBuildTargetWarning();
   }
 
   if (!appConfig.future?.v2_errorBoundary) {
-    warnOnce(errorBoundaryWarning, "v2_errorBoundary");
+    errorBoundaryWarning();
   }
 
   if (!appConfig.future?.v2_normalizeFormMethod) {
-    warnOnce(formMethodWarning, "v2_normalizeFormMethod");
+    formMethodWarning();
   }
 
   if (!appConfig.future?.v2_meta) {
-    warnOnce(metaWarning, "v2_meta");
+    metaWarning();
+  }
+
+  if (!appConfig.future?.v2_headers) {
+    headersWarning();
   }
 
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
@@ -459,7 +495,7 @@ export async function readConfig(
   let serverMinify = appConfig.serverMinify;
 
   if (!appConfig.serverModuleFormat) {
-    warnOnce(serverModuleFormatWarning, "serverModuleFormatWarning");
+    serverModuleFormatWarning();
   }
 
   let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
@@ -483,35 +519,151 @@ export async function readConfig(
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
 
+  let serverNodeBuiltinsPolyfill: RemixConfig["serverNodeBuiltinsPolyfill"];
+
+  if (appConfig.serverNodeBuiltinsPolyfill != null) {
+    serverNodeBuiltinsPolyfill = appConfig.serverNodeBuiltinsPolyfill;
+  } else if (serverPlatform !== "node") {
+    serverNodeBuiltinsPolyfillWarning();
+    serverNodeBuiltinsPolyfill = {
+      modules: {
+        // Note: Remove this in Remix v2
+        // All polyfills are ultimately sourced from JSPM: https://github.com/jspm/jspm-core/tree/main/nodelibs/browser
+        // Polyfills we choose to disable are explicitly configured here so we can note the reason for disabling them.
+        // Links are provided here to make it easier to review the source code for each polyfill.
+        _stream_duplex: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/_stream_duplex.js
+        _stream_passthrough: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/_stream_passthrough.js
+        _stream_readable: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/_stream_readable.js
+        _stream_transform: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/_stream_transform.js
+        _stream_writable: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/_stream_writable.js
+        assert: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/assert.js
+        "assert/strict": true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/assert/strict.js
+        async_hooks: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/async_hooks.js. Also Cloudflare Workers provides an implementation: https://developers.cloudflare.com/workers/runtime-apis/nodejs/asynclocalstorage/
+        buffer: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/buffer.js
+        child_process: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/child_process.js
+        cluster: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/cluster.js
+        console: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/console.js
+        constants: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/constants.js
+        crypto: "empty", // Polyfill exists (https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/crypto.js) but source code is over 2MB! Also, it was "empty" in esbuild-plugin-polyfill-node which we used previously as of Remix v1.17.0: https://github.com/cyco130/esbuild-plugin-polyfill-node/blob/9afcb6abaf9062a15daaffce9a14e478b365139c/src/index.ts#L144
+        dgram: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/dgram.js
+        diagnostics_channel: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/diagnostics_channel.js
+        dns: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/dns.js
+        "dns/promises": false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/dns/promises.js
+        domain: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/domain.js
+        events: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/events.js
+        fs: "empty", // Polyfill was "empty" in esbuild-plugin-polyfill-node which we used previously as of Remix v1.17.0 (https://github.com/cyco130/esbuild-plugin-polyfill-node/blob/9afcb6abaf9062a15daaffce9a14e478b365139c/src/index.ts#L143C6-L143C6). Also, the polyfill immediately throws when importing in Cloudflare Workers due to top-level setTimeout usage which is not allowed outside of the request lifecycle: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/fs.js
+        "fs/promises": "empty", // See above
+        http: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/http.js
+        http2: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/http2.js
+        https: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/https.js
+        module: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/module.js
+        net: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/net.js
+        os: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/os.js
+        path: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/path.js
+        "path/posix": true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/path/posix.js
+        "path/win32": true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/path/win32.js
+        perf_hooks: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/perf_hooks.js
+        process: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/process.js
+        punycode: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/punycode.js
+        querystring: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/querystring.js
+        readline: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/readline.js
+        repl: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/repl.js
+        stream: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/stream.js
+        "stream/promises": true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/stream/promises.js
+        "stream/web": true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/stream/web.js
+        string_decoder: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/string_decoder.js
+        sys: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/sys.js
+        timers: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/timers.js
+        "timers/promises": true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/timers/promises.js
+        tls: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/tls.js
+        tty: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/tty.js - Effectively not implemented, but provides `isatty` as `false` so consumers can check to avoid it
+        url: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/url.js
+        util: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/util.js
+        "util/types": true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/util/types.js
+        v8: false, // Unimplemented, throws on usage: https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/v8.js
+        vm: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/vm.js
+        wasi: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/wasi.js
+        worker_threads: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/worker_threads.js
+        zlib: true, // https://github.com/jspm/jspm-core/blob/main/nodelibs/browser/zlib.js
+      },
+    };
+  }
+
   if (appConfig.future) {
     if ("unstable_cssModules" in appConfig.future) {
-      warnOnce(
-        'The "future.unstable_cssModules" config option has been removed as this feature is now enabled automatically.'
+      logger.warn(
+        "The `future.unstable_cssModules` config option has been removed",
+        {
+          details: [
+            "CSS Modules are now enabled automatically.",
+            "You should remove the `unstable_cssModules` option from your Remix config.",
+          ],
+          key: "unstable_cssModules",
+        }
       );
     }
 
     if ("unstable_cssSideEffectImports" in appConfig.future) {
-      warnOnce(
-        'The "future.unstable_cssSideEffectImports" config option has been removed as this feature is now enabled automatically.'
+      logger.warn(
+        "The `future.unstable_cssSideEffectImports` config option has been removed",
+        {
+          details: [
+            "CSS side-effect imports are now enabled automatically.",
+            "You should remove the `unstable_cssSideEffectImports` option from your Remix config",
+          ],
+          key: "unstable_cssSideEffectImports",
+        }
       );
     }
 
     if ("unstable_vanillaExtract" in appConfig.future) {
-      warnOnce(
-        'The "future.unstable_vanillaExtract" config option has been removed as this feature is now enabled automatically.'
+      logger.warn(
+        "The `future.unstable_vanillaExtract` config option has been removed.",
+        {
+          details: [
+            "Vanilla Extract is now enabled automatically.",
+            "You should remove the `unstable_vanillaExtract` option from your Remix config",
+          ],
+          key: "unstable_vanillaExtract",
+        }
       );
     }
 
     if (appConfig.future.unstable_postcss !== undefined) {
-      warnOnce(
-        'The "future.unstable_postcss" config option has been deprecated as this feature is now considered stable. Use the "postcss" config option instead.'
+      logger.warn(
+        "The `future.unstable_postcss` config option has been deprecated.",
+        {
+          details: [
+            "PostCSS support is now stable.",
+            "Use the `postcss` config option instead.",
+          ],
+          key: "unstable_postcss",
+        }
       );
     }
 
     if (appConfig.future.unstable_tailwind !== undefined) {
-      warnOnce(
-        'The "future.unstable_tailwind" config option has been deprecated as this feature is now considered stable. Use the "tailwind" config option instead.'
+      logger.warn(
+        "The `future.unstable_tailwind` config option has been deprecated.",
+        {
+          details: [
+            "Tailwind support is now stable.",
+            "Use the `tailwind` config option instead.",
+          ],
+          key: "unstable_tailwind",
+        }
       );
+    }
+
+    if ("unstable_dev" in appConfig.future) {
+      logger.warn("The `future.unstable_dev` config option has been removed", {
+        details: [
+          "The v2 dev server is now stable.",
+          "Use the `future.v2_dev` config option instead.",
+          "-> https://remix.run/docs/en/main/pages/v2#dev-server",
+        ],
+        key: "unstable_dev",
+      });
     }
   }
 
@@ -649,7 +801,7 @@ export async function readConfig(
     : path.resolve(defaultsDirectory, entryServerFile);
 
   if (appConfig.browserBuildDirectory) {
-    warnOnce(browserBuildDirectoryWarning, "browserBuildDirectory");
+    browserBuildDirectoryWarning();
   }
 
   let assetsBuildDirectory =
@@ -661,6 +813,13 @@ export async function readConfig(
     rootDirectory,
     assetsBuildDirectory
   );
+
+  if (appConfig.devServerPort) {
+    devServerPortWarning();
+  }
+  if (appConfig.devServerBroadcastDelay) {
+    devServerBroadcastDelayWarning();
+  }
 
   let devServerPort =
     Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
@@ -687,7 +846,7 @@ export async function readConfig(
   if (appConfig.future?.v2_routeConvention) {
     routesConvention = flatRoutes;
   } else {
-    warnOnce(flatRoutesWarning, "v2_routeConvention");
+    flatRoutesWarning();
     routesConvention = defineConventionalRoutes;
   }
 
@@ -733,15 +892,12 @@ export async function readConfig(
     tsconfigPath = rootJsConfig;
   }
 
-  if (tsconfigPath) {
-    writeConfigDefaults(tsconfigPath);
-  }
-
   let future: FutureConfig = {
-    unstable_dev: appConfig.future?.unstable_dev ?? false,
+    v2_dev: appConfig.future?.v2_dev ?? false,
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
+    v2_headers: appConfig.future?.v2_headers === true,
     v2_meta: appConfig.future?.v2_meta === true,
     v2_normalizeFormMethod: appConfig.future?.v2_normalizeFormMethod === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
@@ -771,6 +927,7 @@ export async function readConfig(
     serverMinify,
     serverMode,
     serverModuleFormat,
+    serverNodeBuiltinsPolyfill,
     serverPlatform,
     mdx,
     postcss,
@@ -835,7 +992,7 @@ const resolveServerBuildPath = (
 
   // retain deprecated behavior for now
   if (appConfig.serverBuildDirectory) {
-    warnOnce(serverBuildDirectoryWarning, "serverBuildDirectory");
+    serverBuildDirectoryWarning();
 
     serverBuildPath = path.join(appConfig.serverBuildDirectory, "index.js");
   }
@@ -884,51 +1041,121 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
   type: "disjunction",
 });
 
-export let browserBuildDirectoryWarning =
-  "⚠️ REMIX FUTURE CHANGE: The `browserBuildDirectory` config option will be removed in v2. " +
-  "Use `assetsBuildDirectory` instead. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#browserbuilddirectory";
+let browserBuildDirectoryWarning = () =>
+  logger.warn(
+    "The `browserBuildDirectory` config option will be removed in v2",
+    {
+      details: [
+        "You can use the `assetsBuildDirectory` config option instead.",
+        "-> https://remix.run/docs/en/v1.15.0/pages/v2#browserbuilddirectory",
+      ],
+      key: "browserBuildDirectoryWarning",
+    }
+  );
 
-export let serverBuildDirectoryWarning =
-  "⚠️ REMIX FUTURE CHANGE: The `serverBuildDirectory` config option will be removed in v2. " +
-  "Use `serverBuildPath` instead. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#serverbuilddirectory";
+let devServerBroadcastDelayWarning = () =>
+  logger.warn(
+    "The `devServerBroadcastDelay` config option will be removed in v2",
+    {
+      details: [
+        "Enable `v2_dev` to eliminate the race conditions that necessitated this option.",
+        "-> https://remix.run/docs/en/v1.19.3/pages/v2#devserverbroadcastdelay",
+      ],
+      key: "devServerBroadcastDelayWarning",
+    }
+  );
 
-export let serverBuildTargetWarning =
-  "⚠️ REMIX FUTURE CHANGE: The `serverBuildTarget` config option will be removed in v2. " +
-  "Use a combination of server module config values to achieve the same build output. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#serverbuildtarget";
+let devServerPortWarning = () =>
+  logger.warn("The `devServerPort` config option will be removed in v2", {
+    details: [
+      "Enable `v2_dev` and use `--port` / `v2_dev.port` option instead.",
+      "-> https://remix.run/docs/en/v1.19.3/pages/v2#devserverport",
+    ],
+    key: "devServerPortWarning",
+  });
 
-export const serverModuleFormatWarning =
-  "⚠️ REMIX FUTURE CHANGE: The `serverModuleFormat` config default option will be changing in v2 " +
-  "from `cjs` to `esm`. You can prepare for this change by explicitly specifying `serverModuleFormat: 'cjs'`. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat";
+let serverBuildDirectoryWarning = () =>
+  logger.warn(
+    "The `serverBuildDirectory` config option will be removed in v2",
+    {
+      details: [
+        "You can use the `serverBuildPath` config option instead.",
+        "-> https://remix.run/docs/en/v1.15.0/pages/v2#serverbuilddirectory",
+      ],
+      key: "serverBuildDirectoryWarning",
+    }
+  );
 
-export let flatRoutesWarning =
-  "⚠️ REMIX FUTURE CHANGE: The route file convention is changing in v2. " +
-  "You can prepare for this change at your convenience with the `v2_routeConvention` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention";
+let serverBuildTargetWarning = () =>
+  logger.warn("The `serverBuildTarget` config option will be removed in v2", {
+    details: [
+      "You can specify multiple server module config options instead to achieve the same result.",
+      "-> https://remix.run/docs/en/v1.15.0/pages/v2#serverbuildtarget",
+    ],
+    key: "serverBuildTargetWarning",
+  });
 
-export const errorBoundaryWarning =
-  "⚠️ REMIX FUTURE CHANGE: The behaviors of `CatchBoundary` and `ErrorBoundary` are changing in v2. " +
-  "You can prepare for this change at your convenience with the `v2_errorBoundary` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#catchboundary-and-errorboundary";
+let serverModuleFormatWarning = () =>
+  logger.warn("The default server module format is changing in v2", {
+    details: [
+      "The default format will change from `cjs` to `esm`.",
+      "You can keep using `cjs` by explicitly specifying `serverModuleFormat: 'cjs'`.",
+      "You can opt-in early to this change by explicitly specifying `serverModuleFormat: 'esm'`",
+      "-> https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat",
+    ],
+    key: "serverModuleFormatWarning",
+  });
 
-export const formMethodWarning =
-  "⚠️ REMIX FUTURE CHANGE: APIs that provide `formMethod` will be changing in v2. " +
-  "All values will be uppercase (GET, POST, etc.) instead of lowercase (get, post, etc.) " +
-  "You can prepare for this change at your convenience with the `v2_normalizeFormMethod` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#formMethod";
+let serverNodeBuiltinsPolyfillWarning = () =>
+  logger.warn(
+    "The `serverNodeBuiltinsPolyfill` config default option will be changing in v2",
+    {
+      details: [
+        "Server polyfills will no longer be provided by default for non-Node.js platforms.",
+        "You can prepare for this change by specifying server polyfills, or opting out entirely.",
+        "-> https://remix.run/docs/en/v1.19.0/pages/v2#servernodebuiltinspolyfill",
+      ],
+      key: "serverNodeBuiltinsPolyfillWarning",
+    }
+  );
 
-export const metaWarning =
-  "⚠️ REMIX FUTURE CHANGE: The route `meta` export signature is changing in v2. " +
-  "You can prepare for this change at your convenience with the `v2_meta` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#meta";
+let futureFlagWarning =
+  (args: { message: string; flag: string; link: string }) => () => {
+    logger.warn(args.message, {
+      key: args.flag,
+      details: [
+        `You can use the \`${args.flag}\` future flag to opt-in early.`,
+        `-> ${args.link}`,
+      ],
+    });
+  };
+
+let flatRoutesWarning = futureFlagWarning({
+  message: "The route file convention is changing in v2",
+  flag: "v2_routeConvention",
+  link: "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention",
+});
+
+let errorBoundaryWarning = futureFlagWarning({
+  message: "The `CatchBoundary` and `ErrorBoundary` API is changing in v2",
+  flag: "v2_errorBoundary",
+  link: "https://remix.run/docs/en/v1.15.0/pages/v2#catchboundary-and-errorboundary",
+});
+
+let formMethodWarning = futureFlagWarning({
+  message: "The `formMethod` API is changing in v2",
+  flag: "v2_normalizeFormMethod",
+  link: "https://remix.run/docs/en/v1.15.0/pages/v2#formMethod",
+});
+
+let metaWarning = futureFlagWarning({
+  message: "The route `meta` API is changing in v2",
+  flag: "v2_meta",
+  link: "https://remix.run/docs/en/v1.15.0/pages/v2#meta",
+});
+
+let headersWarning = futureFlagWarning({
+  message: "The route `headers` API is changing in v2",
+  flag: "v2_headers",
+  link: "https://remix.run/docs/en/v1.17.0/pages/v2#route-headers",
+});

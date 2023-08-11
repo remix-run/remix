@@ -47,9 +47,18 @@ test.describe("Forms", () => {
   let SPLAT_ROUTE_PARENT_ACTION = "splat-route-parent";
   let SPLAT_ROUTE_TOO_MANY_DOTS_ACTION = "splat-route-too-many-dots";
 
+  test.beforeEach(async ({ context }) => {
+    await context.route(/_data/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      route.continue();
+    });
+  });
+
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
+      config: {
+        future: { v2_routeConvention: true },
+      },
       files: {
         "app/routes/get-submission.jsx": js`
           import { useLoaderData, Form } from "@remix-run/react";
@@ -378,6 +387,39 @@ test.describe("Forms", () => {
                 <input type="file" name="filey2" multiple />
                 <input type="file" name="filey3" />
                 <button />
+              </Form>
+            )
+          }
+        `,
+
+        "app/routes/empty-file-upload.jsx": js`
+          import { json } from "@remix-run/server-runtime";
+          import { Form, useActionData } from "@remix-run/react";
+
+          export async function action({ request }) {
+            let formData = await request.formData();
+            return json({
+              text: formData.get('text'),
+              file: {
+                name: formData.get('file').name,
+                size: formData.get('file').size,
+              },
+              fileMultiple: formData.getAll('fileMultiple').map(f => ({
+                name: f.name,
+                size: f.size,
+              })),
+            })
+          }
+
+          export default function() {
+            const actionData = useActionData();
+            return (
+              <Form method="post" encType="multipart/form-data">
+                <input name="text" />
+                <input type="file" name="file" />
+                <input type="file" name="fileMultiple" multiple />
+                <button type="submit">Submit</button>
+                {actionData ? <p id="action-data">{JSON.stringify(actionData)}</p> : null}
               </Form>
             )
           }
@@ -997,12 +1039,7 @@ test.describe("Forms", () => {
 
     test("submits the submitter's value(s) in tree order in the form data", async ({
       page,
-      javaScriptEnabled,
     }) => {
-      test.fail(
-        Boolean(javaScriptEnabled),
-        "<Form> doesn't serialize submit buttons correctly #4342"
-      );
       let app = new PlaywrightFixture(appFixture, page);
 
       await app.goto("/submitter");
@@ -1046,6 +1083,7 @@ test.describe("Forms", () => {
       await app.uploadFile(`[name=filey]`, myFile);
       await app.uploadFile(`[name=filey2]`, myFile, myFile);
       await app.clickElement("button");
+      await page.waitForSelector("#formData");
 
       expect((await app.getElement("#formData")).val()).toBe(
         "filey=myfile.txt&filey2=myfile.txt&filey2=myfile.txt&filey3="
@@ -1055,9 +1093,23 @@ test.describe("Forms", () => {
       await app.uploadFile(`[name=filey]`, myFile);
       await app.uploadFile(`[name=filey2]`, myFile, myFile);
       await app.clickElement("button");
+      await page.waitForSelector("#formData");
 
       expect((await app.getElement("#formData")).val()).toBe(
         "filey=myfile.txt&filey2=myfile.txt&filey2=myfile.txt&filey3="
+      );
+    });
+
+    test("empty file inputs resolve to File objects on the server", async ({
+      page,
+    }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+
+      await app.goto("/empty-file-upload");
+      await app.clickSubmitButton("/empty-file-upload");
+      await page.waitForSelector("#action-data");
+      expect((await app.getElement("#action-data")).text()).toContain(
+        '{"text":"","file":{"name":"","size":0},"fileMultiple":[{"name":"","size":0}]}'
       );
     });
 

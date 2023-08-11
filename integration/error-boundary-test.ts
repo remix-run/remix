@@ -37,12 +37,21 @@ test.describe("ErrorBoundary", () => {
   // packages/remix-react/errorBoundaries.tsx
   let INTERNAL_ERROR_BOUNDARY_HEADING = "Application Error";
 
+  test.beforeEach(async ({ context }) => {
+    await context.route(/_data/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      route.continue();
+    });
+  });
+
   test.beforeAll(async () => {
     _consoleError = console.error;
     console.error = () => {};
     fixture = await createFixture(
       {
-        future: { v2_routeConvention: true },
+        config: {
+          future: { v2_routeConvention: true },
+        },
         files: {
           "app/root.jsx": js`
             import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -494,8 +503,10 @@ test.describe("ErrorBoundary", () => {
 
     test.beforeAll(async () => {
       fixture = await createFixture({
-        future: {
-          v2_routeConvention: true,
+        config: {
+          future: {
+            v2_routeConvention: true,
+          },
         },
         files: {
           "app/root.jsx": js`
@@ -662,7 +673,9 @@ test.describe("loaderData in ErrorBoundary", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
+      config: {
+        future: { v2_routeConvention: true },
+      },
       files: {
         "app/root.jsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -1008,8 +1021,10 @@ test.describe("Default ErrorBoundary", () => {
       fixture = await createFixture(
         {
           files: getFiles({ includeRootErrorBoundary: false }),
-          future: {
-            v2_routeConvention: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+            },
           },
         },
         ServerMode.Development
@@ -1081,8 +1096,10 @@ test.describe("Default ErrorBoundary", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
-          future: {
-            v2_routeConvention: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+            },
           },
           files: getFiles({ includeRootErrorBoundary: true }),
         },
@@ -1150,8 +1167,10 @@ test.describe("Default ErrorBoundary", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
-          future: {
-            v2_routeConvention: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+            },
           },
           files: getFiles({
             includeRootErrorBoundary: true,
@@ -1231,6 +1250,118 @@ test.describe("Default ErrorBoundary", () => {
   });
 });
 
+test("Allows back-button out of an error boundary after a hard reload", async ({
+  page,
+  browserName,
+}) => {
+  let _consoleError = console.error;
+  console.error = () => {};
+
+  let fixture = await createFixture({
+    config: {
+      future: {
+        v2_routeConvention: true,
+        v2_errorBoundary: false,
+      },
+    },
+    files: {
+      "app/root.jsx": js`
+        import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+        export default function App() {
+          return (
+            <html lang="en">
+              <head>
+                <Meta />
+                <Links />
+              </head>
+              <body>
+                <Outlet />
+                <Scripts />
+              </body>
+            </html>
+          );
+        }
+
+        export function ErrorBoundary({ error }) {
+          return (
+            <html>
+              <head>
+                <title>Oh no!</title>
+                <Meta />
+                <Links />
+              </head>
+              <body>
+                <h1 id="error">ERROR BOUNDARY</h1>
+                <Scripts />
+              </body>
+            </html>
+          );
+        }
+      `,
+      "app/routes/_index.jsx": js`
+        import { Link } from "@remix-run/react";
+
+        export default function Index() {
+          return (
+            <div>
+              <h1 id="index">INDEX</h1>
+              <Link to="/boom">This will error</Link>
+            </div>
+          );
+        }
+      `,
+
+      "app/routes/boom.jsx": js`
+        import { json } from "@remix-run/node";
+        export function loader() { return boom(); }
+        export default function() { return <b>my page</b>; }
+      `,
+    },
+  });
+
+  let appFixture = await createAppFixture(fixture);
+  let app = new PlaywrightFixture(appFixture, page);
+
+  await app.goto("/");
+  await page.waitForSelector("#index");
+  expect(app.page.url()).not.toMatch("/boom");
+
+  await app.clickLink("/boom");
+  await page.waitForSelector("#error");
+  expect(app.page.url()).toMatch("/boom");
+
+  await app.reload();
+  await page.waitForSelector("#error");
+  expect(app.page.url()).toMatch("boom");
+
+  await app.goBack();
+
+  // Here be dragons
+  // - Playwright sets the Firefox `fission.webContentIsolationStrategy=0` preference
+  //   for reasons having to do with out-of-process iframes:
+  //   https://github.com/microsoft/playwright/issues/22640#issuecomment-1543287282
+  // - That preference exposes a bug in firefox where a hard reload adds to the
+  //   history stack: https://bugzilla.mozilla.org/show_bug.cgi?id=1832341
+  // - Your can disable this preference via the Playwright `firefoxUserPrefs` config,
+  //   but that is broken until 1.34:
+  //   https://github.com/microsoft/playwright/issues/22640#issuecomment-1546230104
+  //   https://github.com/microsoft/playwright/issues/15405
+  // - We can't yet upgrade to 1.34 because it drops support for Node 14:
+  //   https://github.com/microsoft/playwright/releases/tag/v1.34.0
+  //
+  // So for now when in firefox we just navigate back twice to work around the issue
+  if (browserName === "firefox") {
+    await app.goBack();
+  }
+
+  await page.waitForSelector("#index");
+  expect(app.page.url()).not.toContain("boom");
+
+  appFixture.close();
+  console.error = _consoleError;
+});
+
 // Copy/Paste of the above tests altered to use v2_errorBoundary.  In v2 we can:
 // - delete the above tests
 // - remove this describe block
@@ -1274,9 +1405,11 @@ test.describe("v2_errorBoundary", () => {
       console.error = () => {};
       fixture = await createFixture(
         {
-          future: {
-            v2_routeConvention: true,
-            v2_errorBoundary: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+              v2_errorBoundary: true,
+            },
           },
           files: {
             "app/root.jsx": js`
@@ -1735,8 +1868,10 @@ test.describe("v2_errorBoundary", () => {
 
       test.beforeAll(async () => {
         fixture = await createFixture({
-          future: {
-            v2_routeConvention: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+            },
           },
           files: {
             "app/root.jsx": js`
@@ -1914,9 +2049,11 @@ test.describe("v2_errorBoundary", () => {
 
     test.beforeAll(async () => {
       fixture = await createFixture({
-        future: {
-          v2_routeConvention: true,
-          v2_errorBoundary: true,
+        config: {
+          future: {
+            v2_routeConvention: true,
+            v2_errorBoundary: true,
+          },
         },
         files: {
           "app/root.jsx": js`
@@ -2266,9 +2403,11 @@ test.describe("v2_errorBoundary", () => {
       test.beforeAll(async () => {
         fixture = await createFixture(
           {
-            future: {
-              v2_routeConvention: true,
-              v2_errorBoundary: true,
+            config: {
+              future: {
+                v2_routeConvention: true,
+                v2_errorBoundary: true,
+              },
             },
             files: getFiles({ includeRootErrorBoundary: false }),
           },
@@ -2341,8 +2480,10 @@ test.describe("v2_errorBoundary", () => {
       test.beforeAll(async () => {
         fixture = await createFixture(
           {
-            future: {
-              v2_routeConvention: true,
+            config: {
+              future: {
+                v2_routeConvention: true,
+              },
             },
             files: getFiles({ includeRootErrorBoundary: true }),
           },
@@ -2409,8 +2550,10 @@ test.describe("v2_errorBoundary", () => {
     test.describe("When the root route has a boundary but it also throws 😦", () => {
       test.beforeAll(async () => {
         fixture = await createFixture({
-          future: {
-            v2_routeConvention: true,
+          config: {
+            future: {
+              v2_routeConvention: true,
+            },
           },
           files: getFiles({
             includeRootErrorBoundary: true,
@@ -2486,5 +2629,118 @@ test.describe("v2_errorBoundary", () => {
         });
       });
     });
+  });
+
+  test("Allows back-button out of an error boundary after a hard reload", async ({
+    page,
+    browserName,
+  }) => {
+    let _consoleError = console.error;
+    console.error = () => {};
+
+    let fixture = await createFixture({
+      config: {
+        future: {
+          v2_routeConvention: true,
+          v2_errorBoundary: true,
+        },
+      },
+      files: {
+        "app/root.jsx": js`
+          import { Links, Meta, Outlet, Scripts, useRouteError } from "@remix-run/react";
+
+          export default function App() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <Scripts />
+                </body>
+              </html>
+            );
+          }
+
+          export function ErrorBoundary() {
+            let error = useRouteError();
+            return (
+              <html>
+                <head>
+                  <title>Oh no!</title>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <h1 id="error">ERROR BOUNDARY</h1>
+                  <Scripts />
+                </body>
+              </html>
+            );
+          }
+        `,
+        "app/routes/_index.jsx": js`
+          import { Link } from "@remix-run/react";
+
+          export default function Index() {
+            return (
+              <div>
+                <h1 id="index">INDEX</h1>
+                <Link to="/boom">This will error</Link>
+              </div>
+            );
+          }
+        `,
+
+        "app/routes/boom.jsx": js`
+          import { json } from "@remix-run/node";
+          export function loader() { return boom(); }
+          export default function() { return <b>my page</b>; }
+        `,
+      },
+    });
+
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/");
+    await page.waitForSelector("#index");
+    expect(app.page.url()).not.toMatch("/boom");
+
+    await app.clickLink("/boom");
+    await page.waitForSelector("#error");
+    expect(app.page.url()).toMatch("/boom");
+
+    await app.reload();
+    await page.waitForSelector("#error");
+    expect(app.page.url()).toMatch("boom");
+
+    await app.goBack();
+
+    // Here be dragons
+    // - Playwright sets the Firefox `fission.webContentIsolationStrategy=0` preference
+    //   for reasons having to do with out-of-process iframes:
+    //   https://github.com/microsoft/playwright/issues/22640#issuecomment-1543287282
+    // - That preference exposes a bug in firefox where a hard reload adds to the
+    //   history stack: https://bugzilla.mozilla.org/show_bug.cgi?id=1832341
+    // - Your can disable this preference via the Playwright `firefoxUserPrefs` config,
+    //   but that is broken until 1.34:
+    //   https://github.com/microsoft/playwright/issues/22640#issuecomment-1546230104
+    //   https://github.com/microsoft/playwright/issues/15405
+    // - We can't yet upgrade to 1.34 because it drops support for Node 14:
+    //   https://github.com/microsoft/playwright/releases/tag/v1.34.0
+    //
+    // So for now when in firefox we just navigate back twice to work around the issue
+    if (browserName === "firefox") {
+      await app.goBack();
+    }
+
+    await page.waitForSelector("#index");
+    expect(app.page.url()).not.toContain("boom");
+
+    appFixture.close();
+    console.error = _consoleError;
   });
 });

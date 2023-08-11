@@ -40,9 +40,18 @@ let appFixture: AppFixture;
 //    ```
 ////////////////////////////////////////////////////////////////////////////////
 
+test.beforeEach(async ({ context }) => {
+  await context.route(/_data/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    route.continue();
+  });
+});
+
 test.beforeAll(async () => {
   fixture = await createFixture({
-    future: { v2_routeConvention: true },
+    config: {
+      future: { v2_routeConvention: true },
+    },
     ////////////////////////////////////////////////////////////////////////////
     // 💿 Next, add files to this object, just like files in a real app,
     // `createFixture` will make an app and run your tests against it.
@@ -75,7 +84,7 @@ test.beforeAll(async () => {
     },
   });
 
-  // This creates an interactive app using puppeteer.
+  // This creates an interactive app using playwright.
   appFixture = await createAppFixture(fixture);
 });
 

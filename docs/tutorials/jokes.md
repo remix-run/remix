@@ -1980,7 +1980,7 @@ But if there's an error, you can return an object with the error messages and th
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,63,66-73,76-84,90,92-99,102-110,115-122]
+```tsx filename=app/routes/jokes.new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,63,66-73,76-84,90,92-99,102-110,113-120]
 import type { ActionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
@@ -3305,7 +3305,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[84-99,101-108]
+```ts filename=app/utils/session.server.ts lines=[84-100,102-109]
 import {
   createCookieSessionStorage,
   redirect,
@@ -3395,15 +3395,16 @@ export async function getUser(request: Request) {
     return null;
   }
 
-  try {
-    const user = await db.user.findUnique({
-      select: { id: true, username: true },
-      where: { id: userId },
-    });
-    return user;
-  } catch {
-    throw logout(request);
+  const user = await db.user.findUnique({
+    select: { id: true, username: true },
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw await logout(request);
   }
+
+  return user;
 }
 
 export async function logout(request: Request) {
@@ -3676,15 +3677,16 @@ export async function getUser(request: Request) {
     return null;
   }
 
-  try {
-    const user = await db.user.findUnique({
-      select: { id: true, username: true },
-      where: { id: userId },
-    });
-    return user;
-  } catch {
-    throw logout(request);
+  const user = await db.user.findUnique({
+    select: { id: true, username: true },
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw await logout(request);
   }
+
+  return user;
 }
 
 export async function logout(request: Request) {
@@ -3851,8 +3853,7 @@ export default function Login() {
             type="hidden"
             name="redirectTo"
             value={
-              (searchParams.get("redirectTo") as string) ??
-              undefined
+              searchParams.get("redirectTo") ?? undefined
             }
           />
           <fieldset>
@@ -7657,7 +7658,7 @@ Fly generated a few files for us:
 fly secrets set SESSION_SECRET=your-secret-here
 ```
 
-`your-secret-here` can be whatever you want. It's just a string that's used to encrypt the session cookie. Use a password generator if you like.
+`your-secret-here` can be whatever you want. It's just a string that's used to sign the session cookie. Use a password generator if you like.
 
 One other thing we need to do is get Prisma ready to set up our database for the first time. Now that we're happy with our schema, we can create our first migration.
 
@@ -7739,7 +7740,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [the-http-api]: https://developer.mozilla.org/en-US/docs/Web/HTTP
 [the-basic-example]: https://codesandbox.io/s/github/remix-run/examples/tree/main/basic
 [express]: https://expressjs.com
-[hydrate]: https://reactjs.org/docs/react-dom.html#hydrate
+[hydrate]: https://react.dev/reference/react-dom/client/hydrateRoot
 [http-localhost-3000]: http://localhost:3000
 [bare-bones-hello-world-app]: /jokes-tutorial/img/bare-bones.png
 [remix-config-js]: ../file-conventions/remix-config

@@ -11,6 +11,8 @@ const DEFERRED_ID = "DEFERRED_ID";
 const RESOLVED_DEFERRED_ID = "RESOLVED_DEFERRED_ID";
 const FALLBACK_ID = "FALLBACK_ID";
 const ERROR_ID = "ERROR_ID";
+const UNDEFINED_ERROR_ID = "UNDEFINED_ERROR_ID";
+const NEVER_SHOW_ID = "NEVER_SHOW_ID";
 const ERROR_BOUNDARY_ID = "ERROR_BOUNDARY_ID";
 const MANUAL_RESOLVED_ID = "MANUAL_RESOLVED_ID";
 const MANUAL_FALLBACK_ID = "MANUAL_FALLBACK_ID";
@@ -27,16 +29,25 @@ declare global {
   };
 }
 
+test.beforeEach(async ({ context }) => {
+  await context.route(/_data/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    route.continue();
+  });
+});
+
 test.describe("non-aborted", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        v2_routeConvention: true,
-        v2_errorBoundary: true,
-        v2_normalizeFormMethod: true,
+      config: {
+        future: {
+          v2_routeConvention: true,
+          v2_errorBoundary: true,
+          v2_normalizeFormMethod: true,
+        },
       },
       files: {
         "app/components/counter.tsx": js`
@@ -223,6 +234,7 @@ test.describe("non-aborted", () => {
             return defer({
               deferredId: "${DEFERRED_ID}",
               resolvedId: Promise.resolve("${RESOLVED_DEFERRED_ID}"),
+              deferredUndefined: Promise.resolve(undefined),
             });
           }
 
@@ -260,6 +272,11 @@ test.describe("non-aborted", () => {
               resolvedId: new Promise(
                 (resolve) => setTimeout(() => {
                   resolve("${RESOLVED_DEFERRED_ID}");
+                }, 10)
+              ),
+              deferredUndefined: new Promise(
+                (resolve) => setTimeout(() => {
+                  resolve(undefined);
                 }, 10)
               ),
             });
@@ -342,11 +359,16 @@ test.describe("non-aborted", () => {
                   reject(new Error("${RESOLVED_DEFERRED_ID}"));
                 }, 10)
               ),
+              resolvedUndefined: new Promise(
+                (resolve) => setTimeout(() => {
+                  resolve(undefined);
+                }, 10)
+              ),
             });
           }
 
           export default function Deferred() {
-            let { deferredId, resolvedId } = useLoaderData();
+            let { deferredId, resolvedId, resolvedUndefined } = useLoaderData();
             return (
               <div id={deferredId}>
                 <p>{deferredId}</p>
@@ -364,6 +386,22 @@ test.describe("non-aborted", () => {
                       <div id={resolvedDeferredId}>
                         <p>{resolvedDeferredId}</p>
                         <Counter id={resolvedDeferredId} />
+                      </div>
+                    )}
+                  />
+                </Suspense>
+                <Suspense>
+                  <Await
+                    resolve={resolvedUndefined}
+                    errorElement={
+                      <div id="${UNDEFINED_ERROR_ID}">
+                        error
+                        <Counter id="${UNDEFINED_ERROR_ID}" />
+                      </div>
+                    }
+                    children={(resolvedDeferredId) => (
+                      <div id="${NEVER_SHOW_ID}">
+                        {"${NEVER_SHOW_ID}"}
                       </div>
                     )}
                   />
@@ -552,7 +590,7 @@ test.describe("non-aborted", () => {
       },
     });
 
-    // This creates an interactive app using puppeteer.
+    // This creates an interactive app using playwright.
     appFixture = await createAppFixture(fixture);
   });
 
@@ -719,10 +757,12 @@ test.describe("non-aborted", () => {
     await page.waitForSelector(`#${ROOT_ID}`);
     await page.waitForSelector(`#${DEFERRED_ID}`);
     await page.waitForSelector(`#${ERROR_ID}`);
+    await page.waitForSelector(`#${UNDEFINED_ERROR_ID}`);
 
     await ensureInteractivity(page, ROOT_ID);
     await ensureInteractivity(page, DEFERRED_ID);
     await ensureInteractivity(page, ERROR_ID);
+    await ensureInteractivity(page, UNDEFINED_ERROR_ID);
 
     await assertConsole();
   });
@@ -882,6 +922,7 @@ test.describe("non-aborted", () => {
 
     await ensureInteractivity(page, DEFERRED_ID);
     await ensureInteractivity(page, ERROR_ID);
+    await ensureInteractivity(page, UNDEFINED_ERROR_ID);
     await ensureInteractivity(page, DEFERRED_ID, 2);
     await ensureInteractivity(page, ROOT_ID, 2);
 
@@ -941,7 +982,9 @@ test.describe("aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
+      config: {
+        future: { v2_routeConvention: true },
+      },
       ////////////////////////////////////////////////////////////////////////////
       // 💿 Next, add files to this object, just like files in a real app,
       // `createFixture` will make an app and run your tests against it.
@@ -949,7 +992,7 @@ test.describe("aborted", () => {
       files: {
         "app/entry.server.tsx": js`
           import { PassThrough } from "stream";
-          import type { EntryContext } from "@remix-run/node";
+          import type { AppLoadContext, EntryContext } from "@remix-run/node";
           import { Response } from "@remix-run/node";
           import { RemixServer } from "@remix-run/react";
           import isbot from "isbot";
@@ -961,7 +1004,8 @@ test.describe("aborted", () => {
             request: Request,
             responseStatusCode: number,
             responseHeaders: Headers,
-            remixContext: EntryContext
+            remixContext: EntryContext,
+            loadContext: AppLoadContext
           ) {
             return isbot(request.headers.get("user-agent"))
               ? handleBotRequest(
@@ -1232,7 +1276,7 @@ test.describe("aborted", () => {
       },
     });
 
-    // This creates an interactive app using puppeteer.
+    // This creates an interactive app using playwright.
     appFixture = await createAppFixture(fixture);
   });
 

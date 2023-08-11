@@ -5,7 +5,7 @@ new: true
 
 # Route File Naming (v2)
 
-You can opt-in to the new route file naming convention with a future flag in Remix config.
+You can opt in to the new route file naming convention with a future flag in Remix config.
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
@@ -18,7 +18,7 @@ module.exports = {
 
 While you can configure routes in [remix.config.js][remix-config], most routes are created with this file system convention. Add a file, get a route.
 
-Please note that you can use either `.jsx` or `.tsx` file extensions. We'll stick with `.tsx` in the examples to avoid duplication.
+Please note that you can use either `.js`, `.jsx`, `.ts` or `.tsx` file extensions. We'll stick with `.tsx` in the examples to avoid duplication.
 
 ## Root Route
 
@@ -29,7 +29,7 @@ app/
 └── root.tsx
 ```
 
-The file in `app/root.tsx` is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes so you can export a [`loader`][loader], [`action`][action], etc.
+The file in `app/root.tsx` is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes, so you can export a [`loader`][loader], [`action`][action], etc.
 
 The root route typically looks something like this. It serves as the root layout of the entire app, all other routes will render inside the `<Outlet />`.
 
@@ -84,7 +84,7 @@ Note that these routes will be rendered in the outlet of `app/root.tsx` because 
 Adding a `.` to a route filename will create a `/` in the URL.
 
 <!-- prettier-ignore -->
-```markdown lines=[4-6]
+```markdown lines=[5-7]
 app/
 ├── routes/
 │   ├── _index.tsx
@@ -166,7 +166,7 @@ app/
 └── root.tsx
 ```
 
-All of the routes that start with `concerts.` will be child routes of `concerts.tsx` and render inside the parent route's [outlet][outlet].
+All the routes that start with `concerts.` will be child routes of `concerts.tsx` and render inside the parent route's [outlet][outlet].
 
 | URL                        | Matched Route           | Layout         |
 | -------------------------- | ----------------------- | -------------- |
@@ -180,7 +180,7 @@ Note you typically want to add an index route when you add nested routes so that
 
 ## Nested URLs without Layout Nesting
 
-Sometimes you want the URL to be nested but you don't want the automatic layout nesting. You can opt-out of nesting with a trailing underscore on the parent segment:
+Sometimes you want the URL to be nested, but you don't want the automatic layout nesting. You can opt out of nesting with a trailing underscore on the parent segment:
 
 <!-- prettier-ignore -->
 ```markdown lines=[8]
@@ -254,13 +254,15 @@ app/
 | `/categories`              | `($lang).categories.tsx` |
 | `/en/categories`           | `($lang).categories.tsx` |
 | `/fr/categories`           | `($lang).categories.tsx` |
-| `/american-flag-speedo`    | `($lang).$productId.tsx` |
+| `/american-flag-speedo`    | `($lang)._index.tsx`     |
 | `/en/american-flag-speedo` | `($lang).$productId.tsx` |
 | `/fr/american-flag-speedo` | `($lang).$productId.tsx` |
 
+You may wonder why `/american-flag-speedo` is matching the `($lang)._index.tsx` route instead of `($lang).$productId.tsx`. This is because when you have an optional dynamic param segment followed by another dynamic param, Remix cannot reliably determine if a single-segment URL such as `/american-flag-speedo` should match `/:lang` `/:productId`. Optional segments match eagerly and thus it will match `/:lang`. If you have this type of setup it's recommended to look at `params.lang` in the `($lang)._index.tsx` loader and redirect to `/:lang/american-flag-speedo` for the current/default language if `params.lang` is not a valid language code.
+
 ## Splat Routes
 
-While [dynamic segments][dynamic-segments] match a single path segment (the stuff between two `/` in a url), a splat route will match the rest of a URL, including the slashes.
+While [dynamic segments][dynamic-segments] match a single path segment (the stuff between two `/` in a URL), a splat route will match the rest of a URL, including the slashes.
 
 <!-- prettier-ignore -->
 ```markdown lines=[4,6]

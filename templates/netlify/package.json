@@ -4,19 +4,20 @@
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
-    "start": "cross-env NODE_ENV=production netlify dev",
+    "start": "netlify serve",
     "typecheck": "tsc"
   },
   "dependencies": {
     "@netlify/functions": "^1.4.0",
+    "@netlify/remix-adapter": "^1.0.0",
     "@remix-run/css-bundle": "*",
-    "@remix-run/netlify": "*",
     "@remix-run/node": "*",
     "@remix-run/react": "*",
     "cross-env": "^7.0.3",
     "isbot": "^3.6.8",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "source-map-support": "^0.5.21"
   },
   "devDependencies": {
     "@remix-run/dev": "*",
@@ -24,10 +25,11 @@
     "@remix-run/serve": "*",
     "@types/react": "^18.0.35",
     "@types/react-dom": "^18.0.11",
+    "@types/source-map-support": "^0.5.6",
     "eslint": "^8.38.0",
     "typescript": "^5.0.4"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=14.0.0"
   }
 }

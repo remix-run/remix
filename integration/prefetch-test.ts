@@ -1,14 +1,20 @@
 import { test, expect } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import type {
+  Fixture,
+  FixtureInit,
+  AppFixture,
+} from "./helpers/create-fixture";
 import type { RemixLinkProps } from "../build/node_modules/@remix-run/react/dist/components";
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 // Generate the test app using the given prefetch mode
-function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
+function fixtureFactory(mode: RemixLinkProps["prefetch"]): FixtureInit {
   return {
-    future: { v2_routeConvention: true },
+    config: {
+      future: { v2_routeConvention: true },
+    },
     files: {
       "app/root.jsx": js`
         import {
@@ -263,5 +269,168 @@ test.describe("prefetch=intent (focus)", () => {
       { state: "attached" }
     );
     expect(await page.locator("#nav link").count()).toBe(1);
+  });
+});
+
+test.describe("prefetch=viewport", () => {
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+
+  test.beforeAll(async () => {
+    fixture = await createFixture({
+      config: {
+        future: { v2_routeConvention: true },
+      },
+      files: {
+        "app/routes/_index.jsx": js`
+          import { Link } from "@remix-run/react";
+
+          export default function Component() {
+            return (
+              <>
+                <h1>Index Page - Scroll Down</h1>
+                <div style={{ marginTop: "150vh" }}>
+                  <Link to="/test" prefetch="viewport">Click me!</Link>
+                </div>
+              </>
+            );
+          }
+        `,
+
+        "app/routes/test.jsx": js`
+          export function loader() {
+            return null;
+          }
+          export default function Component() {
+            return <h1>Test Page</h1>;
+          }
+        `,
+      },
+    });
+
+    // This creates an interactive app using puppeteer.
+    appFixture = await createAppFixture(fixture);
+  });
+
+  test.afterAll(() => {
+    appFixture.close();
+  });
+
+  test("should prefetch when the link enters the viewport", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+
+    // No preloads to start
+    await expect(page.locator("div link")).toHaveCount(0);
+
+    // Preloads render on scroll down
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+
+    await page.waitForSelector(
+      "div link[rel='prefetch'][as='fetch'][href='/test?_data=routes%2Ftest']",
+      { state: "attached" }
+    );
+    await page.waitForSelector(
+      "div link[rel='modulepreload'][href^='/build/routes/test-']",
+      { state: "attached" }
+    );
+
+    // Preloads removed on scroll up
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.locator("div link")).toHaveCount(0);
+  });
+});
+
+test.describe("other scenarios", () => {
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+
+  test.afterAll(() => {
+    appFixture?.close();
+  });
+
+  test("does not add prefetch links for stylesheets already in the DOM (active routes)", async ({
+    page,
+  }) => {
+    fixture = await createFixture({
+      config: {
+        future: { v2_routeConvention: true },
+      },
+      files: {
+        "app/root.jsx": js`
+            import { Links, Meta, Scripts, useFetcher } from "@remix-run/react";
+            import globalCss from "./global.css";
+
+            export function links() {
+              return [{ rel: "stylesheet", href: globalCss }];
+            }
+
+            export async function action() {
+              return null;
+            }
+
+            export async function loader() {
+              return null;
+            }
+
+            export default function Root() {
+              let fetcher = useFetcher();
+
+              return (
+                <html lang="en">
+                  <head>
+                    <Meta />
+                    <Links />
+                  </head>
+                  <body>
+                    <button
+                      id="submit-fetcher"
+                      onClick={() => fetcher.submit({}, { method: 'post' })}>
+                        Submit Fetcher
+                    </button>
+                    <p id={"fetcher-state--" + fetcher.state}>{fetcher.state}</p>
+                    <Scripts />
+                  </body>
+                </html>
+              );
+            }
+          `,
+
+        "app/global.css": `
+            body {
+              background-color: black;
+              color: white;
+            }
+          `,
+
+        "app/routes/_index.jsx": js`
+            export default function() {
+              return <h2 className="index">Index</h2>;
+            }
+          `,
+      },
+    });
+    appFixture = await createAppFixture(fixture);
+    let requests: { type: string; url: string }[] = [];
+
+    page.on("request", (req) => {
+      requests.push({
+        type: req.resourceType(),
+        url: req.url(),
+      });
+    });
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await page.click("#submit-fetcher");
+    await page.waitForSelector("#fetcher-state--idle");
+    // We should not send a second request for this root stylesheet that's
+    // already been rendered in the DOM
+    let stylesheets = requests.filter(
+      (r) => r.type === "stylesheet" && /\/global-[a-z0-9]+\.css/i.test(r.url)
+    );
+    expect(stylesheets.length).toBe(1);
   });
 });

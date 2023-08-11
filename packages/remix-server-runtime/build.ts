@@ -15,7 +15,6 @@ export interface ServerBuild {
   publicPath: string;
   assetsBuildDirectory: string;
   future: FutureConfig;
-  dev?: { websocketPort: number };
 }
 
 export interface HandleDocumentRequestFunction {
@@ -32,6 +31,10 @@ export interface HandleDataRequestFunction {
   (response: Response, args: DataFunctionArgs): Promise<Response> | Response;
 }
 
+export interface HandleErrorFunction {
+  (error: unknown, args: DataFunctionArgs): void;
+}
+
 /**
  * A module that serves as the entry point for a Remix app during server
  * rendering.
@@ -39,4 +42,5 @@ export interface HandleDataRequestFunction {
 export interface ServerEntryModule {
   default: HandleDocumentRequestFunction;
   handleDataRequest?: HandleDataRequestFunction;
+  handleError?: HandleErrorFunction;
 }

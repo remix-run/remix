@@ -7,13 +7,13 @@ const PACKAGES_PATH = path.join(ROOT_DIR, "packages");
 const DEFAULT_BUILD_PATH = path.join(ROOT_DIR, "build");
 
 let activeOutputDir = DEFAULT_BUILD_PATH;
-if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-  let appDir = path.join(ROOT_DIR, process.env.REMIX_LOCAL_BUILD_DIRECTORY);
+if (process.env.LOCAL_BUILD_DIRECTORY) {
+  let appDir = path.resolve(process.env.LOCAL_BUILD_DIRECTORY);
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
   } catch {
     console.error(
-      "Oops! You pointed `REMIX_LOCAL_BUILD_DIRECTORY` to a directory that " +
+      "Oops! You pointed `LOCAL_BUILD_DIRECTORY` to a directory that " +
         "does not have a `node_modules` folder. Please `npm install` in that " +
         "directory and try again."
     );
@@ -141,9 +141,9 @@ async function getPackageBuildPaths(moduleRootDir) {
       if (path.basename(moduleDir) === "@remix-run") {
         packageBuilds.push(...(await getPackageBuildPaths(moduleDir)));
       } else if (
-        /node_modules\/@remix-run\//.test(moduleDir) ||
-        /node_modules\/create-remix/.test(moduleDir) ||
-        /node_modules\/remix/.test(moduleDir)
+        /node_modules[/\\]@remix-run[/\\]/.test(moduleDir) ||
+        /node_modules[/\\]create-remix/.test(moduleDir) ||
+        /node_modules[/\\]remix/.test(moduleDir)
       ) {
         packageBuilds.push(moduleDir);
       }

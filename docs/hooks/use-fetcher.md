@@ -23,7 +23,7 @@ It is common for Remix newcomers to see this hook and think it is the primary wa
 - [`useLoaderData`][useloaderdata]
 - [`Form`][form]
 - [`useActionData`][useactiondata]
-- [`useTransition`][usetransition]
+- [`useNavigation`][usenavigation]
 
 If you're building a highly interactive, "app-like" user interface, you will use `useFetcher` often.
 
@@ -138,7 +138,7 @@ Although a URL matches multiple Routes in a remix router hierarchy, a `fetcher.s
 
 If you want to submit to an index route use `?index` in the URL:
 
-```ts
+```tsx
 fetcher.submit(
   { some: "values" },
   { method: "post", action: "/accounts?index" }
@@ -435,7 +435,7 @@ function CitySearchCombobox() {
 
 [form]: ../components/form
 [index query param]: ../guides/routing#what-is-the-index-query-param
-[usetransition]: ./use-transition
+[usenavigation]: ./use-navigation
 [useactiondata]: ./use-action-data
 [useloaderdata]: ./use-loader-data
 [v2guide]: ../pages/v2#usefetcher

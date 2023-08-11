@@ -22,7 +22,7 @@ module.exports = function rollup() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: [`${sourceDir}/browser.ts`, `${sourceDir}/server.ts`],
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner(packageName, version),
         dir: outputDist,
@@ -50,7 +50,7 @@ module.exports = function rollup() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: [`${sourceDir}/browser.ts`, `${sourceDir}/server.ts`],
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner(packageName, version),
         dir: `${outputDist}/esm`,

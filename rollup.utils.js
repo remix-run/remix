@@ -9,16 +9,13 @@ const path = require("path");
 const REPO_ROOT_DIR = __dirname;
 
 let activeOutputDir = "build";
-if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-  let appDir = path.join(
-    process.cwd(),
-    process.env.REMIX_LOCAL_BUILD_DIRECTORY
-  );
+if (process.env.LOCAL_BUILD_DIRECTORY) {
+  let appDir = path.resolve(process.env.LOCAL_BUILD_DIRECTORY);
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
   } catch {
     console.error(
-      "Oops! You pointed REMIX_LOCAL_BUILD_DIRECTORY to a directory that " +
+      "Oops! You pointed LOCAL_BUILD_DIRECTORY to a directory that " +
         "does not have a node_modules/ folder. Please `npm install` in that " +
         "directory and try again."
     );
@@ -124,7 +121,7 @@ function copyToPlaygrounds() {
           await triggerLiveReload(playgroundDir);
         }
       } else {
-        // Otherwise, trigger live reload on our REMIX_LOCAL_BUILD_DIRECTORY folder
+        // Otherwise, trigger live reload on our LOCAL_BUILD_DIRECTORY folder
         await triggerLiveReload(activeOutputDir);
       }
     },
@@ -348,6 +345,7 @@ function getMagicExports(packageName) {
         "ErrorBoundaryComponent",
         "HandleDataRequestFunction",
         "HandleDocumentRequestFunction",
+        "HeadersArgs",
         "HeadersFunction",
         "HtmlLinkDescriptor",
         "HtmlMetaDescriptor",
@@ -357,6 +355,7 @@ function getMagicExports(packageName) {
         "LoaderFunction",
         "MetaDescriptor",
         "MetaFunction",
+        "HandleErrorFunction",
         "PageLinkDescriptor",
         "RequestHandler",
         "RouteComponent",

@@ -181,6 +181,18 @@ This is due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaki
 
 Note that, even if this issue didn't exist, we'd still recommend using named re-exports! While it may introduce a bit more boilerplate, you get explicit control over the module's public interface rather than inadvertently exposing everything.
 
+## Writing to Sessions in Loaders
+
+Typically you should only write to sessions in actions, but there are occasions where it makes sense in loaders (anonymous users, navigation tracking, etc.)
+
+While multiple loaders can _read_ from the same session, _writing_ to a session in loaders can cause problems.
+
+Remix loaders run in parallel, and sometimes in separate requests (client transitions call `fetch` for each loader). If one loader is writing to a session while another is attempting to read from it, you will hit bugs and/or non-deterministic behavior.
+
+Additionally, sessions are built on cookies which come from the browser's request. After committing a session, it goes to the browser in a `Set-Cookie` header which is then sent back to the server on the next request in the `Cookie` header. Regardless of parallel loaders, you can't write to a cookie with `Set-Cookie` and then attempt to read it from the original request `Cookie` and expect updated values. It needs to make a round trip to the browser first and come from the next request.
+
+If you need to write to a session in a loader, ensure the loader doesn't share that session with any other loaders.
+
 [remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../utils/parse-multipart-form-data#uploadhandler
 [css-bundling]: ../guides/styling#css-bundling
 [esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370

@@ -26,7 +26,7 @@ function NewEvent() {
 - Whether JavaScript is on the page or not, your data interactions created with `<Form>` and `action` will work.
 - After a `<Form>` submission, all of the loaders on the page will be reloaded. This ensures that any updates to your data are reflected in the UI.
 - `<Form>` automatically serializes your form's values (identically to the browser when not using JavaScript).
-- You can build "optimistic UI" and pending indicators with [`useTransition`][usetransition].
+- You can build "optimistic UI" and pending indicators with [`useNavigation`][usenavigation].
 
 ## `action`
 
@@ -98,12 +98,12 @@ When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call dif
 
 See also:
 
-- [`useTransition`][usetransition]
+- [`useNavigation`][usenavigation]
 - [`useActionData`][useactiondata]
 - [`useSubmit`][usesubmit]
 
 [index query param]: ../guides/routing#what-is-the-index-query-param
-[usetransition]: ../hooks/use-transition
+[usenavigation]: ../hooks/use-navigation
 [useactiondata]: ../hooks/use-action-data
 [usesubmit]: ../hooks/use-submit
 [http-verb]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods

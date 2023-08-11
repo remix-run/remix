@@ -48,11 +48,24 @@ export async function loader() {
 
 If you're using the `@remix-run/cloudflare-pages` adapter, env variables work a little differently. Since Cloudflare Pages are powered by Functions, you'll need to define your local environment variables in the [`.dev.vars`][dev-vars] file. It has the same syntax as `.env` example file mentioned above.
 
-Then, in your `loader` functions, you can access environment variables directly on `context`:
+Then, you can pass those through via `getLoadContext` in your server file:
+
+```ts
+export const onRequest = createPagesFunctionHandler({
+  build,
+  getLoadContext(context) {
+    // Hand-off Cloudflare ENV vars to the Remix `context` object
+    return { env: context.env };
+  },
+  mode: process.env.NODE_ENV,
+});
+```
+
+And they'll be available via Remix's `context` in your `loader`/`action` functions:
 
 ```tsx
 export const loader = async ({ context }: LoaderArgs) => {
-  console.log(context.SOME_SECRET);
+  console.log(context.env.SOME_SECRET);
 };
 ```
 
