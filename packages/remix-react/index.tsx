@@ -53,6 +53,7 @@ export {
 
 export type {
   AwaitProps,
+  PrefetchBehavior,
   RouteMatch,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,

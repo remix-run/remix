@@ -141,8 +141,9 @@ export function RemixRouteError({ id }: { id: string }) {
  * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
+ * - "viewport": Fetches while the link is in the viewport
  */
-type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
+export type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
 export interface RemixLinkProps extends LinkProps {
   prefetch?: PrefetchBehavior;
