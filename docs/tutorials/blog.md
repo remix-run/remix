@@ -856,7 +856,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/posts.admin.new.tsx lines=[3,10,17-19,26-28,35-39]
+```tsx filename=app/routes/posts.admin.new.tsx lines=[3,11,18-20,27-29,36-40]
 import type { ActionArgs } from "@remix-run/node";
 import { redirect, json } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
