@@ -77,5 +77,3 @@ export type {
   UploadHandler,
   UploadHandlerPart,
 } from "./reexport";
-
-export type { PromiseOrSync } from "./utils";
