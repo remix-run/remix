@@ -221,42 +221,12 @@ export function getKeyedLinksForMatches(
   return dedupeLinkDescriptors(descriptors, preloads);
 }
 
-let stylesheetPreloadTimeouts = 0;
-let isPreloadDisabled = false;
-
 export async function prefetchStyleLinks(
   routeModule: RouteModule
 ): Promise<void> {
   if (!routeModule.links) return;
   let descriptors = routeModule.links();
   if (!descriptors) return;
-  if (isPreloadDisabled) return;
-
-  // If we've hit our timeout 3 times, we may be in firefox with the
-  // `network.preload` config disabled and we'll _never_ get onload/onerror
-  // callbacks.  Let's try to confirm this with a totally invalid link preload
-  // which should immediately throw the onerror
-  if (stylesheetPreloadTimeouts >= 3) {
-    let linkLoadedOrErrored = await prefetchStyleLink({
-      rel: "preload",
-      as: "style",
-      href: "__remix-preload-detection-404.css",
-    });
-    if (linkLoadedOrErrored) {
-      // If this processed correctly, then our previous timeouts were probably
-      // legit, reset the counter.
-      stylesheetPreloadTimeouts = 0;
-    } else {
-      // If this bogus preload also times out without an onerror then it's safe
-      // to assume preloading is disabled and let's just stop trying.  This
-      // _will_ cause FOUC on destination pages but there's nothing we can
-      // really do there if preloading is disabled since client-side injected
-      // scripts aren't render blocking.  Maybe eventually React's client side
-      // async component stuff will provide an easier solution here
-      console.warn("Disabling preload due to lack of browser support");
-      isPreloadDisabled = true;
-    }
-  }
 
   let styleLinks: HtmlLinkDescriptor[] = [];
   for (let descriptor of descriptors) {
@@ -276,12 +246,13 @@ export async function prefetchStyleLinks(
       (!link.media || window.matchMedia(link.media).matches) &&
       !document.querySelector(`link[rel="stylesheet"][href="${link.href}"]`)
   );
+
   await Promise.all(matchingLinks.map(prefetchStyleLink));
 }
 
 async function prefetchStyleLink(
   descriptor: HtmlLinkDescriptor
-): Promise<boolean> {
+): Promise<void> {
   return new Promise((resolve) => {
     let link = document.createElement("link");
     Object.assign(link, descriptor);
@@ -295,20 +266,16 @@ async function prefetchStyleLink(
       }
     }
 
-    // Allow 3s for the link preload to timeout
-    let timeoutId = setTimeout(() => {
-      stylesheetPreloadTimeouts++;
+    link.onload = () => {
       removeLink();
-      resolve(false);
-    }, 3_000);
-
-    let done = () => {
-      clearTimeout(timeoutId);
-      removeLink();
-      resolve(true);
+      resolve();
     };
-    link.onload = done;
-    link.onerror = done;
+
+    link.onerror = () => {
+      removeLink();
+      resolve();
+    };
+
     document.head.appendChild(link);
   });
 }
