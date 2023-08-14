@@ -224,7 +224,7 @@ export function getKeyedLinksForMatches(
 export async function prefetchStyleLinks(
   routeModule: RouteModule
 ): Promise<void> {
-  if (!routeModule.links) return;
+  if (!routeModule.links || !isPreloadSupported()) return;
   let descriptors = routeModule.links();
   if (!descriptors) return;
 
@@ -520,4 +520,18 @@ function parsePathPatch(href: string) {
   let path = parsePath(href);
   if (path.search === undefined) path.search = "";
   return path;
+}
+
+// Detect if this browser supports <link rel="preload"> (or has it enabled).
+// Originally added to handle the firefox `network.preload` config:
+//   https://bugzilla.mozilla.org/show_bug.cgi?id=1847811
+let _isPreloadSupported: boolean | undefined;
+function isPreloadSupported(): boolean {
+  if (_isPreloadSupported !== undefined) {
+    return _isPreloadSupported;
+  }
+  let el: HTMLLinkElement | null = document.createElement("link");
+  _isPreloadSupported = el.relList.supports("preload");
+  el = null;
+  return _isPreloadSupported;
 }
