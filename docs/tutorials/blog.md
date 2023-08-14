@@ -343,11 +343,7 @@ export async function getPosts() {
 
 <docs-info>The `~/db.server` import is importing the file at `app/db.server.ts`. The `~` is a fancy alias to the `app` directory, so you don't have to worry about how many `../../`s to include in your import as you move files around.</docs-info>
 
-💿 Now that the Prisma client has been updated, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
-
-<docs-warning>You only need to ever do this when you change the Prisma schema and update the Prisma client. Normally you don't need to restart the dev server during development. Nice that it's so fast though right?</docs-warning>
-
-With the server up and running again, you should be able to go to `http://localhost:3000/posts` and the posts should still be there, but now they're coming from SQLite!
+You should be able to go to `http://localhost:3000/posts` and the posts should still be there, but now they're coming from SQLite!
 
 ## Dynamic Route Params
 
@@ -489,9 +485,9 @@ Now let's get that markdown parsed and rendered to HTML to the page. There are a
 💿 Parse the markdown into HTML
 
 ```sh
-npm add marked
+npm add marked@^4.3.0
 # additionally, if using typescript
-npm add @types/marked -D
+npm add @types/marked@^4.3.1 -D
 ```
 
 Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
