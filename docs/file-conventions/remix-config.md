@@ -45,27 +45,6 @@ The path to the browser build, relative to remix.config.js. Defaults to
 The path to a directory Remix can use for caching things in development,
 relative to `remix.config.js`. Defaults to `".cache"`.
 
-## devServerBroadcastDelay
-
-<docs-warning>This option is deprecated and will likely be removed in a future
-stable release. Enable `v2_dev` to eliminate the race conditions that necessitated
-this option.</docs-warning>
-
-The delay, in milliseconds, before the dev server broadcasts a reload event.
-There is no delay by default.
-
-For v2, the race conditions that necessitated this option have been eliminated.
-
-## devServerPort
-
-<docs-warning>This option is deprecated and will likely be removed in a future
-stable release. Enable `v2_dev` and use [`--port` / `v2_dev.port` option][port]
-instead.</docs-warning>
-
-The port number to use for the dev websocket server. Defaults to 8002.
-
-For v2, use [`--port` / `dev.port` option][port].
-
 ## ignoredRouteFiles
 
 This is an array of globs (via [minimatch][minimatch]) that Remix will match to
