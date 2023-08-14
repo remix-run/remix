@@ -388,7 +388,9 @@ import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
 export const loader = async ({ params }: LoaderArgs) => {
-  return json({ slug: params.slug });
+  if(params?.slug) {
+    return json({post: await getPost(params.slug)});
+  }
 };
 
 export default function PostSlug() {
