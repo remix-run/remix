@@ -1,9 +1,9 @@
 import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
+import type { Promisable } from "type-fest";
 
 import type { Cookie, CookieOptions, CreateCookieFunction } from "./cookies";
 import { isCookie } from "./cookies";
 import { warnOnce } from "./warnings";
-import type { PromiseOrSync } from "./utils";
 
 /**
  * An object of name/value pairs to be used in the session.
@@ -224,14 +224,14 @@ export interface SessionIdStorageStrategy<
   createData: (
     data: FlashSessionData<Data, FlashData>,
     expires?: Date
-  ) => PromiseOrSync<string>;
+  ) => Promisable<string>;
 
   /**
    * Returns data for a given session id, or `null` if there isn't any.
    */
   readData: (
     id: string
-  ) => PromiseOrSync<FlashSessionData<Data, FlashData> | null>;
+  ) => Promisable<FlashSessionData<Data, FlashData> | null>;
 
   /**
    * Updates data for the given session id.
@@ -240,12 +240,12 @@ export interface SessionIdStorageStrategy<
     id: string,
     data: FlashSessionData<Data, FlashData>,
     expires?: Date
-  ) => PromiseOrSync<void>;
+  ) => Promisable<void>;
 
   /**
    * Deletes data for a given session id from the data store.
    */
-  deleteData: (id: string) => PromiseOrSync<void>;
+  deleteData: (id: string) => Promisable<void>;
 }
 
 export type CreateSessionStorageFunction = <

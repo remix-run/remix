@@ -1,14 +1,14 @@
-import type { PromiseOrSync } from "./utils";
+import type { Promisable } from "type-fest";
 
 export type SignFunction = (
   value: string,
   secret: string
-) => PromiseOrSync<string>;
+) => Promisable<string>;
 
 export type UnsignFunction = (
   cookie: string,
   secret: string
-) => PromiseOrSync<string | false>;
+) => Promisable<string | false>;
 
 // TODO: Once node v16 is available on AWS we should use the globally provided
 // webcrypto "crypto" variable and re-enable this code-path in "./cookies.ts"
