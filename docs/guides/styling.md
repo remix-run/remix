@@ -590,92 +590,9 @@ Running `npm run dev` will run the specified commands in parallel in a single te
 
 ## CSS-in-JS libraries
 
-You can use CSS-in-JS libraries like Styled Components. Some of them require a "double render" in order to extract the styles from the component tree during the server render. It's unlikely this will affect performance in a significant way; React is pretty fast.
+You can use CSS-in-JS libraries like Styled Components and Emotion. Some of them require a "double render" in order to extract the styles from the component tree during the server render. It's unlikely this will affect performance in a significant way; React is pretty fast.
 
-Here's some sample code to show how you might use Styled Components with Remix (you can also [find a runnable example in the Remix examples repository][styled-components-example]):
-
-1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
-
-   ```tsx filename=app/root.tsx lines=[22-24]
-   import type { MetaFunction } from "@remix-run/node"; // or cloudflare/deno
-   import {
-     Links,
-     LiveReload,
-     Meta,
-     Outlet,
-     Scripts,
-     ScrollRestoration,
-   } from "@remix-run/react";
-
-   export const meta: MetaFunction = () => ({
-     charset: "utf-8",
-     viewport: "width=device-width, initial-scale=1",
-   });
-
-   export default function App() {
-     return (
-       <html lang="en">
-         <head>
-           <Meta />
-           <Links />
-           {typeof document === "undefined"
-             ? "__STYLES__"
-             : null}
-         </head>
-         <body>
-           <Outlet />
-           <ScrollRestoration />
-           <Scripts />
-           <LiveReload />
-         </body>
-       </html>
-     );
-   }
-   ```
-
-2. Your `entry.server.tsx` will look something like this:
-
-   ```tsx filename=entry.server.tsx lines=[7,16,19-24,26-27]
-   import type {
-     AppLoadContext,
-     EntryContext,
-   } from "@remix-run/node"; // or cloudflare/deno
-   import { RemixServer } from "@remix-run/react";
-   import { renderToString } from "react-dom/server";
-   import { ServerStyleSheet } from "styled-components";
-
-   export default function handleRequest(
-     request: Request,
-     responseStatusCode: number,
-     responseHeaders: Headers,
-     remixContext: EntryContext,
-     loadContext: AppLoadContext
-   ) {
-     const sheet = new ServerStyleSheet();
-
-     let markup = renderToString(
-       sheet.collectStyles(
-         <RemixServer
-           context={remixContext}
-           url={request.url}
-         />
-       )
-     );
-     const styles = sheet.getStyleTags();
-     markup = markup.replace("__STYLES__", styles);
-
-     responseHeaders.set("Content-Type", "text/html");
-
-     return new Response("<!DOCTYPE html>" + markup, {
-       status: responseStatusCode,
-       headers: responseHeaders,
-     });
-   }
-   ```
-
-Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framework working well with Remix, please [contribute an example][examples]!
-
-NOTE: You may run into hydration warnings when using Styled Components. Hopefully [this issue][styled-components-issue] will be fixed soon.
+Since each library is integrated differently, check out our [examples repo][examples] to see how to use some of the most popular CSS-in-JS libraries. If you've got a library working well that hasn't been covered, please [contribute an example][examples]!
 
 ## CSS Bundling
 
@@ -804,9 +721,7 @@ module.exports = {
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../components/link
 [route-module-links]: ../route/links
-[styled-components-example]: https://github.com/remix-run/examples/tree/main/styled-components
 [examples]: https://github.com/remix-run/examples
-[styled-components-issue]: https://github.com/styled-components/styled-components/issues/3660
 [tailwind]: https://tailwindcss.com
 [tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
