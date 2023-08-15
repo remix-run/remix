@@ -231,7 +231,7 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
 /**
- * A special kind of `<Link>` that knows whether or not it is "active".
+ * A special kind of `<Link>` that knows whether it is "active".
  *
  * @see https://remix.run/components/nav-link
  */
@@ -334,47 +334,19 @@ export function Links() {
 
   return (
     <>
-      {keyedLinks.map(({ key, link }) => {
-        if (isPageLinkDescriptor(link)) {
-          return <PrefetchPageLinks key={key} {...link} />;
-        }
-
-        let imageSrcSet: string | null = null;
-        let imageSizes: string | null = null;
-
-        // In React 17, <link imageSrcSet> and <link imageSizes> will warn
-        // because the DOM attributes aren't recognized, so users need to pass
-        // them in all lowercase to forward the attributes to the node without a
-        // warning. Normalize so that either property can be used in Remix.
-        let imageSizesKey = "useId" in React ? "imageSizes" : "imagesizes";
-        let imageSrcSetKey = "useId" in React ? "imageSrcSet" : "imagesrcset";
-        if (link.imageSrcSet) {
-          imageSrcSet = link.imageSrcSet;
-          delete link.imageSrcSet;
-        }
-
-        if (link.imageSizes) {
-          imageSizes = link.imageSizes;
-          delete link.imageSizes;
-        }
-
-        return (
-          <link
-            key={key}
-            {...{
-              ...link,
-              [imageSizesKey]: imageSizes,
-              [imageSrcSetKey]: imageSrcSet,
-            }}
-          />
-        );
-      })}
+      {keyedLinks.map(({ key, link }) =>
+        isPageLinkDescriptor(link) ? (
+          <PrefetchPageLinks key={key} {...link} />
+        ) : (
+          <link key={key} {...link} />
+        )
+      )}
     </>
   );
 }
 
 /**
- * This component renders all of the `<link rel="prefetch">` and
+ * This component renders all the `<link rel="prefetch">` and
  * `<link rel="modulepreload"/>` tags for all the assets (data, modules, css) of
  * a given page.
  *
@@ -552,7 +524,7 @@ export function Meta() {
           : routeModule.meta;
     } else if (leafMeta) {
       // We only assign the route's meta to the nearest leaf if there is no meta
-      // export in the route. The meta function may return a falsey value which
+      // export in the route. The meta function may return a falsy value which
       // is effectively the same as an empty array.
       routeMeta = [...leafMeta];
     }
@@ -749,7 +721,7 @@ export function Scripts(props: ScriptProps) {
     //   resolution by the subsequently streamed chunks.
     // - __remixContext.r is a function that takes a routeID, key and value or error and resolves
     //   the promise created by __remixContext.n.
-    // - __remixContext.t is a a map or routeId to keys to an object containing `e` and `r` methods
+    // - __remixContext.t is a map or routeId to keys to an object containing `e` and `r` methods
     //   to resolve or reject the promise created by __remixContext.n.
     // - __remixContext.a is the active number of deferred scripts that should be rendered to match
     //   the SSR tree for hydration on the client.
