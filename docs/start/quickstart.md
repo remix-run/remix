@@ -84,7 +84,7 @@ You should now see a `build/` folder (the server version of your app) and `publi
 
 ```shellscript nonumber
 # note the dash!
-$ remix-serve build
+$ remix-serve build/index.js
 ```
 
 You should be able to open up [http://localhost:3000][http-localhost-3000] and see the "hello world" page.
