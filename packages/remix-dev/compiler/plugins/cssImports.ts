@@ -42,7 +42,6 @@ export function cssFilePlugin(ctx: Context): esbuild.Plugin {
         nodePaths,
         platform,
         publicPath,
-        target,
       } = build.initialOptions;
 
       // eslint-disable-next-line prefer-let/prefer-let -- Avoid needing to repeatedly check for null since const can't be reassigned
