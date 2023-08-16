@@ -196,17 +196,15 @@ export default function Contact() {
           <Favorite contact={contact} />
         </h1>
 
-        {contact.twitter && (
-          <p>
+        {contact.twitter ? <p>
             <a
               href={`https://twitter.com/${contact.twitter}`}
             >
               {contact.twitter}
             </a>
-          </p>
-        )}
+          </p> : null}
 
-        {contact.notes && <p>{contact.notes}</p>}
+        {contact.notes ? <p>{contact.notes}</p> : null}
 
         <div>
           <Form action="edit">
@@ -216,7 +214,7 @@ export default function Contact() {
             method="post"
             action="destroy"
             onSubmit={(event) => {
-              let response = confirm(
+              const response = confirm(
                 "Please confirm you want to delete this record."
               );
               if (response === false) {
@@ -234,7 +232,7 @@ export default function Contact() {
 
 function Favorite({ contact }: { contact: ContactRecord }) {
   // yes, this is a `let` for later
-  let favorite = contact.favorite;
+  const favorite = contact.favorite;
   return (
     <Form method="post">
       <button
@@ -374,7 +372,7 @@ export default function Root() {
                     ) : (
                       <i>No Name</i>
                     )}{" "}
-                    {contact.favorite && <span>★</span>}
+                    {contact.favorite ? <span>★</span> : null}
                   </Link>
                 </li>
               ))}
@@ -403,7 +401,7 @@ You may have noticed TypeScript complaining about the `contact` type inside the 
 
 ```tsx filename=app/root.tsx
 export default function Root() {
-  let { contacts } = useLoaderData<typeof loader>();
+  const { contacts } = useLoaderData<typeof loader>();
   // ...
 }
 ```
@@ -430,7 +428,7 @@ import { Form, useLoaderData } from "@remix-run/react";
 import { getContact } from "../data";
 
 export async function loader({ params }) {
-  let contact = await getContact(params.contactId);
+  const contact = await getContact(params.contactId);
   return contact;
 }
 
@@ -447,15 +445,15 @@ export default function Contact() {
 TypeScript is very upset with us, let's make it happy and see what that forces us to consider:
 
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[2,3,7-8,14]
+import type { LoaderArgs } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
-import type { LoaderArgs } from "@remix-run/node";
 
 import { getContact } from "../data";
 
 export async function loader({ params }: LoaderArgs) {
   invariant(params.contactId, "Missing contactId param");
-  let contact = await getContact(params.contactId);
+  const contact = await getContact(params.contactId);
   return contact;
 }
 
@@ -474,7 +472,7 @@ We could account for the possibility of the contact being not found in component
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[4-6]
 export async function loader({ params }: LoaderArgs) {
   invariant(params.contactId, "Missing contactId param");
-  let contact = await getContact(params.contactId);
+  const contact = await getContact(params.contactId);
   if (!contact) {
     throw new Response("Not Found", { status: 404 });
   }
@@ -553,15 +551,15 @@ Note the weird `_` in `$contactId_`. By default, routes will automatically nest 
 Nothing we haven't seen before, feel free to copy/paste:
 
 ```tsx filename=app/routes/contacts.$contactId.edit.tsx
+import type { LoaderArgs } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
-import type { LoaderArgs } from "@remix-run/node";
 
 import { getContact } from "../data";
 
 export async function loader({ params }: LoaderArgs) {
   invariant(params.contactId, "Missing contactId param");
-  let contact = await getContact(params.contactId);
+  const contact = await getContact(params.contactId);
   if (!contact) {
     throw new Response("Not found", { status: 404 });
   }
@@ -1312,7 +1310,7 @@ import {
 
 function Favorite({ contact }: { contact: ContactRecord }) {
   const fetcher = useFetcher();
-  let favorite = contact.favorite;
+  const favorite = contact.favorite;
 
   return (
     <fetcher.Form method="post">
@@ -1350,7 +1348,7 @@ export async function action({
   params,
 }: ActionArgs) {
   invariant(params.contactId, "Missing contactId param");
-  let formData = await request.formData();
+  const formData = await request.formData();
   return updateContact(params.contactId, {
     favorite: formData.get("favorite") === "true",
   });
