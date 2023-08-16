@@ -51,6 +51,7 @@ export interface MetaMatch<
   handle?: unknown;
   params: DataRouteMatch["params"];
   meta: MetaDescriptor[];
+  error?: unknown;
 }
 
 export type MetaMatches<
@@ -74,6 +75,7 @@ export interface MetaArgs<
   params: Params;
   location: Location;
   matches: MetaMatches<MatchLoaders>;
+  error?: unknown;
 }
 
 export interface MetaFunction<

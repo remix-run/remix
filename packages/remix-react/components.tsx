@@ -482,12 +482,13 @@ export function Meta() {
   } = useDataRouterStateContext();
   let location = useLocation();
 
-  let _matches = errors
-    ? routerMatches.slice(
-        0,
-        routerMatches.findIndex((m) => errors![m.route.id]) + 1
-      )
-    : routerMatches;
+  let _matches: AgnosticDataRouteMatch[] = routerMatches;
+  let error: any = null;
+  if (errors) {
+    let errorIdx = routerMatches.findIndex((m) => errors![m.route.id]);
+    _matches = routerMatches.slice(0, errorIdx + 1);
+    error = errors[routerMatches[errorIdx].route.id];
+  }
 
   let meta: MetaDescriptor[] = [];
   let leafMeta: MetaDescriptor[] | null = null;
@@ -507,6 +508,7 @@ export function Meta() {
       params: _match.params,
       pathname: _match.pathname,
       handle: _match.route.handle,
+      error,
     };
     matches[i] = match;
 
@@ -518,6 +520,7 @@ export function Meta() {
               params,
               location,
               matches,
+              error,
             })
           : Array.isArray(routeModule.meta)
           ? [...routeModule.meta]
