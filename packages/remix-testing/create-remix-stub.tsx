@@ -141,7 +141,9 @@ function processRoutes(
 ): (RouteObject | DataRouteObject)[] {
   return routes.map((route) => {
     if (!route.id) {
-      throw new Error("Expected a routeId in patchRoutesWithContext");
+      throw new Error(
+        "Expected a route.id in @remix-run/testing processRoutes() function"
+      );
     }
 
     let { loader, action } = route;
@@ -151,6 +153,9 @@ function processRoutes(
       index: route.index,
       Component: route.Component,
       ErrorBoundary: route.ErrorBoundary,
+      element: route.element,
+      errorElement: route.errorElement,
+      // Patch in the Remix context to loaders/actions
       action: action
         ? (args: ActionFunctionArgs) => action!({ ...args, context })
         : undefined,
@@ -162,21 +167,20 @@ function processRoutes(
     };
 
     let entryRoute: EntryRoute = {
-      id: route.id!,
-      index: route.index,
-      caseSensitive: route.caseSensitive,
+      id: route.id,
       path: route.path,
+      index: route.index,
       parentId,
-      hasAction: !!route.action,
-      hasLoader: !!route.loader,
-      module: "",
-      hasErrorBoundary: false,
+      hasAction: route.action != null,
+      hasLoader: route.loader != null,
+      hasErrorBoundary: route.ErrorBoundary != null,
+      module: "", // any need for this?
     };
     manifest.routes[newRoute.id] = entryRoute;
 
     routeModules[route.id!] = {
       ErrorBoundary: route.ErrorBoundary || undefined,
-      default: () => route.element,
+      default: route.Component || (() => route.element),
       handle: route.handle,
       links: route.links,
       meta: route.meta,
