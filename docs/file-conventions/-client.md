@@ -8,7 +8,8 @@ While uncommon, you may have a file or dependency that needs uses module side-ef
 
 ```ts filename=feature-check.client.ts
 // this would break the server
-export const supportsVibrationAPI = "vibrate" in window.navigator;
+export const supportsVibrationAPI =
+  "vibrate" in window.navigator;
 ```
 
 Note that values exported from this module will all be `undefined` on the server, so the only places to use them are in `useEffect` and user events like click handlers.
