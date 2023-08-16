@@ -1,6 +1,7 @@
 import "./env";
 import path from "node:path";
 import os from "node:os";
+import url from "node:url";
 import { broadcastDevReady, installGlobals } from "@remix-run/node";
 import sourceMapSupport from "source-map-support";
 
@@ -23,7 +24,10 @@ async function run() {
     process.exit(1);
   }
 
-  let buildPath = path.resolve(process.cwd(), buildPathArg);
+  let buildPath = url.pathToFileURL(
+    path.resolve(process.cwd(), buildPathArg)
+  ).href;
+
   let build = await import(buildPath);
 
   let onListen = () => {

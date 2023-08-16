@@ -131,6 +131,7 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
         let rejectTimeout = setTimeout(() => {
           reject(new Error("Timed out waiting for remix-serve to start"));
         }, 20000);
+        serveProcess.stderr.pipe(process.stderr);
         serveProcess.stdout.on("data", (chunk) => {
           if (started) return;
           let newChunk = chunk.toString();
