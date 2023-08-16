@@ -41,6 +41,6 @@ jobs:
             echo "💿 no deduplication needed"
             exit 0
           fi
-          git commit -m "chore: deduplicate `yarn.lock`"
+          git commit -m "chore: deduplicate yarn.lock"
           git push
           echo "💿 https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
