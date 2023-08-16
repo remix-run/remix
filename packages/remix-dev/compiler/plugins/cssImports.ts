@@ -8,6 +8,7 @@ import {
   getPostcssProcessor,
   populateDependenciesFromMessages,
 } from "../utils/postcss";
+import { cssTarget } from "../utils/cssTarget";
 import { absoluteCssUrlsPlugin } from "./absoluteCssUrlsPlugin";
 
 const isExtendedLengthPath = /^\\\\\?\\/;
@@ -74,7 +75,7 @@ export function cssFilePlugin(ctx: Context): esbuild.Plugin {
               platform,
               publicPath,
               sourceRoot,
-              target,
+              target: cssTarget,
               treeShaking,
               tsconfig,
               minify: ctx.options.mode === "production",
