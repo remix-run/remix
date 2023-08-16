@@ -455,7 +455,7 @@ describe("create-remix CLI", () => {
       args: [
         projectDir,
         "--template",
-        path.join(__dirname, "fixtures/stack"),
+        path.join(__dirname, "fixtures", "stack"),
         "--no-git-init",
         "--no-install",
       ],
@@ -474,7 +474,7 @@ describe("create-remix CLI", () => {
       args: [
         projectDir,
         "--template",
-        pathToFileURL(path.join(__dirname, "fixtures/stack")).toString(),
+        pathToFileURL(path.join(__dirname, "fixtures", "stack")).toString(),
         "--no-git-init",
         "--no-install",
       ],
@@ -989,7 +989,7 @@ describe("create-remix CLI", () => {
         args: [
           notEmptyDir,
           "--template",
-          path.join(__dirname, "fixtures/stack"),
+          path.join(__dirname, "fixtures", "stack"),
           "--no-git-init",
           "--no-install",
         ],
@@ -1019,7 +1019,7 @@ describe("create-remix CLI", () => {
         args: [
           ".",
           "--template",
-          path.join(__dirname, "fixtures/stack"),
+          path.join(__dirname, "fixtures", "stack"),
           "--no-git-init",
           "--no-install",
         ],
@@ -1042,7 +1042,7 @@ describe("create-remix CLI", () => {
         args: [
           ".",
           "--template",
-          path.join(__dirname, "fixtures/stack"),
+          path.join(__dirname, "fixtures", "stack"),
           "--no-git-init",
           "--no-install",
         ],
