@@ -1,9 +1,9 @@
 ---
-title: Simple App (30m)
-order: 1
+title: Tutorial (30m)
+order: 3
 ---
 
-# Simple App Tutorial
+# Remix Tutorial
 
 We'll be building a small, but feature-rich app that lets you keep track of your contacts. There's no database or other "production ready" things so we can stay focused on Remix. We expect it to take about 30m if you're following along, otherwise it's a quick read. Check the other tutorials for more in-depth examples.
 
