@@ -11,9 +11,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: write
-
 jobs:
   deduplicate:
     if: github.repository == 'remix-run/remix'
@@ -22,6 +19,8 @@ jobs:
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.FORMAT_PAT }}
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
