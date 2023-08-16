@@ -161,12 +161,12 @@ test.describe("meta", () => {
             return [{ title: args.error ? "Oops!" : "Home"}]
           }
 
-          export default function Index() {
-            return <h1>Home</h1>
+          export default function Error() {
+            return <h1>Error</h1>
           }
 
           export function ErrorBoundary() {
-            return <h1>Home boundary</h1>
+            return <h1>Error boundary</h1>
           }
         `,
       },
