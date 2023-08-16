@@ -20,7 +20,6 @@ import type {
   DataRouteObject,
   IndexRouteObject,
   NonIndexRouteObject,
-  RouteObject,
 } from "react-router-dom";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import type {
@@ -138,7 +137,7 @@ function processRoutes(
   manifest: AssetsManifest,
   routeModules: RouteModules,
   parentId?: string
-): (RouteObject | DataRouteObject)[] {
+): DataRouteObject[] {
   return routes.map((route) => {
     if (!route.id) {
       throw new Error(
@@ -146,6 +145,7 @@ function processRoutes(
       );
     }
 
+    // Patch in the Remix context to loaders/actions
     let { loader, action } = route;
     let newRoute: DataRouteObject = {
       id: route.id,
@@ -155,7 +155,6 @@ function processRoutes(
       ErrorBoundary: route.ErrorBoundary,
       element: route.element,
       errorElement: route.errorElement,
-      // Patch in the Remix context to loaders/actions
       action: action
         ? (args: ActionFunctionArgs) => action!({ ...args, context })
         : undefined,
@@ -166,6 +165,7 @@ function processRoutes(
       shouldRevalidate: route.shouldRevalidate,
     };
 
+    // Add the EntryRoute to the manifest
     let entryRoute: EntryRoute = {
       id: route.id,
       path: route.path,
@@ -178,6 +178,7 @@ function processRoutes(
     };
     manifest.routes[newRoute.id] = entryRoute;
 
+    // Add the route to routeModules
     routeModules[route.id!] = {
       ErrorBoundary: route.ErrorBoundary || undefined,
       default: route.Component || (() => route.element),
@@ -188,18 +189,15 @@ function processRoutes(
     };
 
     if (route.children) {
-      return {
-        ...route,
-        children: processRoutes(
-          route.children,
-          context,
-          manifest,
-          routeModules,
-          newRoute.id
-        ),
-      };
+      newRoute.children = processRoutes(
+        route.children,
+        context,
+        manifest,
+        routeModules,
+        newRoute.id
+      );
     }
 
-    return route as RouteObject | DataRouteObject;
-  }) as (RouteObject | DataRouteObject)[];
+    return newRoute;
+  });
 }
