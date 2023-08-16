@@ -149,7 +149,7 @@ async function getContext(argv: string[]): Promise<Context> {
     noMotion,
     pkgManager: validatePackageManager(
       pkgManager ??
-        // npm, pnpm and Yarn set the user agent environment variable that can be used
+        // npm, pnpm, Yarn, and Bun set the user agent environment variable that can be used
         // to determine which package manager ran the command.
         (process.env.npm_config_user_agent ?? "npm").split("/")[0]
     ),
@@ -606,12 +606,13 @@ function isEmpty(dirPath: string) {
   return conflicts.length === 0;
 }
 
-type PackageManager = "npm" | "yarn" | "pnpm";
+type PackageManager = "npm" | "yarn" | "pnpm" | "bun";
 
 const packageManagerExecScript: Record<PackageManager, string> = {
   npm: "npx",
   yarn: "yarn",
   pnpm: "pnpm exec",
+  bun: "bunx",
 };
 
 function validatePackageManager(pkgManager: string): PackageManager {
