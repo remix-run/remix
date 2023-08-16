@@ -196,13 +196,15 @@ export default function Contact() {
           <Favorite contact={contact} />
         </h1>
 
-        {contact.twitter ? <p>
+        {contact.twitter ? (
+          <p>
             <a
               href={`https://twitter.com/${contact.twitter}`}
             >
               {contact.twitter}
             </a>
-          </p> : null}
+          </p>
+        ) : null}
 
         {contact.notes ? <p>{contact.notes}</p> : null}
 
@@ -372,7 +374,9 @@ export default function Root() {
                     ) : (
                       <i>No Name</i>
                     )}{" "}
-                    {contact.favorite ? <span>★</span> : null}
+                    {contact.favorite ? (
+                      <span>★</span>
+                    ) : null}
                   </Link>
                 </li>
               ))}
