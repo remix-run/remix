@@ -87,7 +87,7 @@ You should now see a `build/` folder (the server version of your app) and `publi
 $ remix-serve build
 ```
 
-You should be able to open up [http://localhost:3000](http://localhost:3000) and see the "hello world" page.
+You should be able to open up [http://localhost:3000][http-localhost-3000] and see the "hello world" page.
 
 Aside from the unholy amount of code in node_modules, our Remix app is just one file:
 
@@ -270,3 +270,4 @@ What's next?
 [book]: ../book/00-introduction
 [remixconfig]: ../file-conventions/remix-config
 [templates]: https://remix.guide/templates
+[http-localhost-3000]: http://localhost:3000
