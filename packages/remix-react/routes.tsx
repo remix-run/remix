@@ -1,5 +1,8 @@
 import * as React from "react";
-import type { DataRouteObject } from "react-router-dom";
+import type {
+  DataRouteObject,
+  ShouldRevalidateFunction,
+} from "react-router-dom";
 import { redirect, useRouteError } from "react-router-dom";
 
 import type { RouteModules } from "./routeModules";
@@ -143,7 +146,7 @@ export function createClientRoutes(
         return fetchServerHandler(request, route);
       },
       ...(routeModule
-        ? // Critical path modules are already available in in routeModulesCache
+        ? // Use critical path modules directly
           {
             Component: routeModule.default,
             ErrorBoundary: routeModule.ErrorBoundary
@@ -152,16 +155,32 @@ export function createClientRoutes(
               ? RootDefaultErrorBoundary
               : undefined,
             handle: routeModule.handle,
-            shouldRevalidate: routeModule.shouldRevalidate,
+            shouldRevalidate: needsRevalidation
+              ? wrapShouldRevalidateForHdr(
+                  route.id,
+                  routeModule.shouldRevalidate,
+                  needsRevalidation
+                )
+              : routeModule.shouldRevalidate,
           }
-        : // All other modules populate via route.lazy()
+        : // Load all other modules via route.lazy()
           {
-            lazy: () =>
-              loadRouteModuleWithBlockingLinks(route, routeModulesCache),
+            lazy: async () => {
+              let mod = await loadRouteModuleWithBlockingLinks(
+                route,
+                routeModulesCache
+              );
+              if (needsRevalidation) {
+                mod.shouldRevalidate = wrapShouldRevalidateForHdr(
+                  route.id,
+                  mod.shouldRevalidate,
+                  needsRevalidation
+                );
+              }
+              return mod;
+            },
           }),
     };
-
-    // FIXME: figure out how to handle the needsRevalidation HMR stuff
 
     let children = createClientRoutes(
       manifest,
@@ -174,6 +193,26 @@ export function createClientRoutes(
     if (children.length > 0) dataRoute.children = children;
     return dataRoute;
   });
+}
+
+// When an HMR / HDR update happens we opt out of all user-defined
+// revalidation logic and force a revalidation on the first call
+function wrapShouldRevalidateForHdr(
+  routeId: string,
+  routeShouldRevalidate: ShouldRevalidateFunction | undefined,
+  needsRevalidation: Set<string>
+): ShouldRevalidateFunction {
+  let handledRevalidation = false;
+  return (arg) => {
+    if (!handledRevalidation) {
+      handledRevalidation = true;
+      return needsRevalidation.has(routeId);
+    }
+
+    return routeShouldRevalidate
+      ? routeShouldRevalidate(arg)
+      : arg.defaultShouldRevalidate;
+  };
 }
 
 function RootDefaultErrorBoundary() {
