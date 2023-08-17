@@ -4,16 +4,16 @@ title: Form
 
 # `<Form>`
 
-A progressively enhanced HTML `<form>` wrapper, useful for submissions that should also change the URL or otherwise add an entry to the browser history stack. For forms that shouldn't manipulate the browser history stack, use [`<fetcher.Form>`][fetcher-form].
+A progressively enhanced HTML [`<form>`][form_element] wrapper, useful for submissions that should also change the URL or otherwise add an entry to the browser history stack. For forms that shouldn't manipulate the browser history stack, use [`<fetcher.Form>`][fetcher_form].
 
 ```tsx
 import { Form } from "@remix-run/react";
 
 function NewEvent() {
   return (
-    <Form method="post" action="/events">
-      <input type="text" name="title" />
-      <input type="text" name="description" />
+    <Form action="/events" method="post">
+      <input name="title" type="text" />
+      <input name="description" type="text" />
     </Form>
   );
 }
@@ -25,17 +25,17 @@ function NewEvent() {
 
 The URL to submit the form data to.
 
-If `undefined`, the action defaults to the closest route in context. If a parent route renders a `<Form>` but the URL matches deeper child routes, the form will post to the parent route. Likewise, a form inside the child route will post to the child route. This differs from a native `<form>` that will always point to the full URL.
+If `undefined`, this defaults to the closest route in context. If a parent route renders a `<Form>` but the URL matches deeper child routes, the form will post to the parent route. Likewise, a form inside the child route will post to the child route. This differs from a native [`<form>`][form_element] that will always point to the full URL.
 
 ### `method`
 
-This determines the [HTTP verb][http-verb] to be used: get, post, put, patch, delete. The default is "get".
+This determines the [HTTP verb][http_verb] to be used: `DELETE`, `GET`, `PATCH`, `POST`, and `PUT`. The default is `GET`.
 
 ```tsx
 <Form method="post" />
 ```
 
-Native `<form>` only supports GET and POST, so you should avoid the other verbs if you'd like to support [progressive enhancement][progressive-enhancement]
+Native [`<form>`][form_element] only supports `GET` and `POST`, so you should avoid the other verbs if you'd like to support [progressive enhancement][progressive_enhancement]
 
 ### `encType`
 
@@ -46,6 +46,14 @@ The encoding type to use for the form submission.
 ```
 
 Defaults to `application/x-www-form-urlencoded`, use `multipart/form-data` for file uploads.
+
+### `preventScrollReset`
+
+If you are using [`<ScrollRestoration>`][scroll_restoration_component], this lets you prevent the scroll position from being reset to the top of the window when the form is submitted.
+
+```tsx
+<Form preventScrollReset />
+```
 
 ### `replace`
 
@@ -63,7 +71,7 @@ If true, it will submit the form with the browser instead of client side routing
 <Form reloadDocument />
 ```
 
-This is recommended over `<form />`. When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is since `<form>` uses the current URL as the default, but `<Form>` uses the URL for the route the form is rendered in.
+This is recommended over [`<form>`][form_element]. When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is since `<form>` uses the current URL as the default, but `<Form>` uses the URL for the route the form is rendered in.
 
 ## Notes
 
@@ -82,39 +90,40 @@ Because index routes and their parent route share the same URL, the `?index` par
 
 See also:
 
-- [`?index` query param][index query param]
+- [`?index` query param][index_query_param]
 
 ## Additional Resources
 
 **Videos:**
 
-- [Data Mutations with Form + action][data-mutations-with-form-action]
-- [Multiple Forms and Single Button Mutations][multiple-forms-and-single-button-mutations]
-- [Clearing Inputs After Form Submissions][clearing-inputs-after-form-submissions]
+- [Data Mutations with Form + action][data_mutations_with_form_action]
+- [Multiple Forms and Single Button Mutations][multiple_forms_and_single_button_mutations]
+- [Clearing Inputs After Form Submissions][clearing_inputs_after_form_submissions]
 
 **Related Discussions:**
 
-- [Fullstack Data Flow][fullstack-data-flow]
-- [Pending UI][pending-ui]
-- [Form vs. Fetcher][form-vs-fetcher]
+- [Fullstack Data Flow][fullstack_data_flow]
+- [Pending UI][pending_ui]
+- [Form vs. Fetcher][form_vs_fetcher]
 
 **Related APIs:**
 
-- [`useNavigation`][usenavigation]
-- [`useActionData`][useactiondata]
-- [`useSubmit`][usesubmit]
+- [`useActionData`][use_action_data]
+- [`useNavigation`][use_navigation]
+- [`useSubmit`][use_submit]
 
-[index query param]: ../guides/routing#what-is-the-index-query-param
-[usenavigation]: ../hooks/use-navigation
-[useactiondata]: ../hooks/use-action-data
-[usesubmit]: ../hooks/use-submit
-[http-verb]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
-[rr-form]: https://reactrouter.com/components/form
-[data-mutations-with-form-action]: https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
-[multiple-forms-and-single-button-mutations]: https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
-[clearing-inputs-after-form-submissions]: https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
-[fullstack-data-flow]: ../discussion/data-flow
-[pending-ui]: ../discussion/pending-ui
-[form-vs-fetcher]: ../discussion/form-vs-fetcher
-[fetcher-form]: ../hooks/use-fetcher
-[progressive-enhancement]: ../discussion/progressive-enhancement
+[use_navigation]: ../hooks/use-navigation
+[scroll_restoration_component]: ./scroll-restoration
+[index_query_param]: ../guides/index-query-param
+[http_verb]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+[form_element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form
+[use_action_data]: ../hooks/use-action-data
+[use_submit]: ../hooks/use-submit
+[data_mutations_with_form_action]: https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
+[multiple_forms_and_single_button_mutations]: https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
+[clearing_inputs_after_form_submissions]: https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
+[fullstack_data_flow]: ../discussion/data-flow
+[pending_ui]: ../discussion/pending-ui
+[form_vs_fetcher]: ../discussion/form-vs-fetcher
+[fetcher_form]: ../hooks/use-fetcher#fetcherform
+[progressive_enhancement]: ../discussion/progressive-enhancement

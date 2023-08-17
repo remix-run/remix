@@ -28,7 +28,7 @@ To that end, please keep in mind [our code of conduct][our-code-of-conduct].
 
 - [Moulton][moulton] - Community Remix newsletter
 
-- [Releases on GitHub][releases-on-git-hub] - Not a bad idea to subscribe to Remix releases so you know what's coming.
+- [Releases on GitHub][releases-on-git-hub] - Not a bad idea to subscribe to Remix releases, so you know what's coming.
 
 [our-code-of-conduct]: https://github.com/remix-run/remix/blob/main/CODE_OF_CONDUCT.md
 [remix-discord-server]: https://rmx.as/discord

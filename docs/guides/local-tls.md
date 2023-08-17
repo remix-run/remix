@@ -18,25 +18,25 @@ If you are running `remix dev` without the `-c` flag, you are implicitly using `
 ## Running your app server with local TLS
 
 The first step is to get your app server running with local TLS _without_ running `remix dev`.
-That will set you up for success when you setup `remix dev` with local TLS in the next section.
+That will set you up for success when you set up `remix dev` with local TLS in the next section.
 
-👉 Install [mkcert][mkcert]
+👉 Install [`mkcert`][mkcert]
 
 👉 Create a local Certificate Authority:
 
-```sh
+```shellscript nonumber
 mkcert -install
 ```
 
 👉 Tell Node to use our local CA:
 
-```sh
+```shellscript nonumber
 export NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem"
 ```
 
 👉 Create a TLS key and certificate:
 
-```
+```shellscript nonumber
 mkcert -key-file key.pem -cert-file cert.pem localhost
 ```
 
@@ -51,7 +51,7 @@ You can change `localhost` to something else when generating TLS keys and certif
 How you do this will depend on what app server you are using.
 For example, here's how you could use HTTPS with an Express server:
 
-```ts filename=server.js
+```ts filename=server.ts
 import fs from "node:fs";
 import https from "node:https";
 import path from "node:path";
@@ -83,7 +83,7 @@ server.listen(port, () => {
 
 For example, with the Express server above, you would run it like this:
 
-```sh
+```shellscript nonumber
 remix build
 node ./server.js
 ```
@@ -98,6 +98,7 @@ Check out the previous section if you haven't done that yet.
 Via config:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   dev: {
     tlsKey: "key.pem", // relative to cwd
@@ -108,7 +109,7 @@ module.exports = {
 
 or via flags:
 
-```sh
+```shellscript nonumber
 remix dev --tls-key=key.pem --tls-cert=cert.pem -c "node ./server.js"
 ```
 

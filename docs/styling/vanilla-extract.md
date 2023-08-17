@@ -10,7 +10,7 @@ To use the built-in Vanilla Extract support, first ensure you've set up [CSS bun
 
 Then, install Vanilla Extract's core styling package as a dev dependency.
 
-```sh
+```shellscript nonumber
 npm install -D @vanilla-extract/css
 ```
 

@@ -8,10 +8,10 @@ Developing in Remix offers a rich set of tools that can sometimes overlap in fun
 
 ## APIs in Focus
 
-- `<Form>`
-- `useNavigation`
-- `useActionData`
-- `useFetcher`
+- [`<Form>`][form_component]
+- [`useActionData`][use_action_data]
+- [`useFetcher`][use_fetcher]
+- [`useNavigation`][use_navigation]
 
 Understanding the distinctions and intersections of these APIs is vital for efficient and effective Remix development.
 
@@ -23,7 +23,7 @@ The primary criterion when choosing among these tools is whether you want the UR
 
   - **Expected Behavior**: In many cases, when users hit the back button, they should be taken to the previous page. Other times the history entry may be replaced but the URL change is important nonetheless.
 
-- **No URL Change Desired**: For actions that don't significantly change the context or primary content of the current view. This might include updating individual fields or minor data manipulations that don't warrant a new URL or page reload. This also applies to loading data with fetchers for things like popovers, comboboxes, etc.
+- **No URL Change Desired**: For actions that don't significantly change the context or primary content of the current view. This might include updating individual fields or minor data manipulations that don't warrant a new URL or page reload. This also applies to loading data with fetchers for things like popovers, combo boxes, etc.
 
 ### Specific Use Cases
 
@@ -35,7 +35,7 @@ These actions typically reflect significant changes to the user's context or sta
 
 - **Deleting a Record**: If a user is on a page dedicated to a specific record and decides to delete it, the logical next step is to redirect them to a general page, such as a list of all records.
 
-For these cases, developers should consider using a combination of `<Form>`, `useSubmit`, `useActionData`, and `useNavigation`. Each of these tools can be coordinated to handle form submission, invoke specific actions, retrieve action-related data, and manage navigation respectively.
+For these cases, developers should consider using a combination of [`<Form>`][form_component], [`useActionData`][use_action_data], and [`useNavigation`][use_navigation]. Each of these tools can be coordinated to handle form submission, invoke specific actions, retrieve action-related data, and manage navigation respectively.
 
 #### When the URL Shouldn't Change
 
@@ -49,7 +49,7 @@ These actions are generally more subtle and don't require a context switch for t
 
 - **Loading Data for a Popover or Combobox**: When loading data for a popover or combobox, the user's context remains unchanged. The data is loaded in the background and displayed in a small, self-contained UI element.
 
-For such actions, `useFetcher` is the go-to API. It's versatile, combining functionalities of the other four APIs, and is perfectly suited for tasks where the URL should remain unchanged.
+For such actions, [`useFetcher`][use_fetcher] is the go-to API. It's versatile, combining functionalities of the other four APIs, and is perfectly suited for tasks where the URL should remain unchanged.
 
 ## API Comparison
 
@@ -67,26 +67,27 @@ As you can see, the two sets of APIs have a lot of similarities:
 
 ### Creating a New Record
 
-```tsx filename=app/routes/recipes/new.tsx lines=[15,19,20,25]
-import { redirect } from "@remix-run/node";
+```tsx filename=app/routes/recipes/new.tsx lines=[16,20-21,26]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
   Form,
-  useNavigation,
   useActionData,
+  useNavigation,
 } from "@remix-run/react";
 
-export function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   const errors = await validateRecipeFormData(formData);
   if (errors) {
-    return errors;
+    return json({ errors });
   }
   const recipe = await db.recipes.create(formData);
   return redirect(`/recipes/${recipe.id}`);
 }
 
 export function NewRecipe() {
-  const errors = useActionData();
+  const { errors } = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting =
     navigation.formAction === "/recipes/new";
@@ -95,19 +96,19 @@ export function NewRecipe() {
     <Form method="post">
       <label>
         Title: <input name="title" />
-        {errors?.title && <span>{errors.title}</span>}
+        {errors?.title ? <span>{errors.title}</span> : null}
       </label>
       <label>
         Ingredients: <textarea name="ingredients" />
-        {errors?.ingredients && (
+        {errors?.ingredients ? (
           <span>{errors.ingredients}</span>
-        )}
+        ) : null}
       </label>
       <label>
         Directions: <textarea name="directions" />
-        {errors?.directions && (
+        {errors?.directions ? (
           <span>{errors.directions}</span>
-        )}
+        ) : null}
       </label>
       <button type="submit">
         {isSubmitting ? "Saving..." : "Create Recipe"}
@@ -117,7 +118,7 @@ export function NewRecipe() {
 }
 ```
 
-The example leverages `<Form>`, ` useActionData``, and  `useNavigation\` to facilitate an intuitive record creation process.
+The example leverages [`<Form>`][form_component], [`useActionData`][use_action_data], and [`useNavigation`][use_navigation] to facilitate an intuitive record creation process.
 
 Using `<Form>` ensures direct and logical navigation. After creating a record, the user is naturally guided to the new recipe's unique URL, reinforcing the outcome of their action.
 
@@ -133,17 +134,23 @@ Now consider we're looking at a list of recipes that have delete buttons on each
 
 First consider the basic route setup to get a list of recipes on the page:
 
-```tsx filename=app/routes/recipes/index.tsx
-export async function loader({ request }) {
-  return db.recipes.findAll({ limit: 30 });
+```tsx filename=app/routes/recipes/_index.tsx
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
+import { useLoaderData } from "@remix-run/react";
+
+export async function loader({ request }: LoaderArgs) {
+  return json({
+    recipes: await db.recipes.findAll({ limit: 30 }),
+  });
 }
 
 export function Recipes() {
-  const recipes = useLoaderData();
+  const { recipes } = useLoaderData<typeof loader>();
   return (
     <ul>
       {recipes.map((recipe) => (
-        <RecipeListItem recipe={recipe} key={recipe.id} />
+        <RecipeListItem key={recipe.id} recipe={recipe} />
       ))}
     </ul>
   );
@@ -152,15 +159,17 @@ export function Recipes() {
 
 Now we'll look at the action that deletes a recipe and the component that renders each recipe in the list.
 
-```tsx filename=app/routes/recipes/index.tsx lines=[5,9,15]
-export function action({ request }) {
+```tsx filename=app/routes/recipes/_index.tsx lines=[5,11,17]
+export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   const id = formData.get("id");
   await db.recipes.delete(id);
-  return { ok: true };
+  return json({ ok: true });
 }
 
-function RecipeListItem({ recipe }) {
+const RecipeListItem: FunctionComponent<{
+  recipe: Recipe;
+}> = ({ recipe }) => {
   const fetcher = useFetcher();
   const isDeleting = fetcher.state !== "idle";
 
@@ -169,25 +178,25 @@ function RecipeListItem({ recipe }) {
       <h2>{recipe.title}</h2>
       <fetcher.Form method="post">
         <button
-          type="submit"
           disabled={isDeleting}
           onClick={handleDelete}
+          type="submit"
         >
           {isDeleting ? "Deleting..." : "Delete"}
         </button>
       </fetcher.Form>
     </li>
   );
-}
+};
 ```
 
-Using useFetcher in this scenario works perfectly. Instead of navigating away or refreshing the entire page, we want in-place updates. When a user deletes a recipe, the action called and the fetcher manages the corresponding state transitions.
+Using [`useFetcher`][use_fetcher] in this scenario works perfectly. Instead of navigating away or refreshing the entire page, we want in-place updates. When a user deletes a recipe, the action called and the fetcher manages the corresponding state transitions.
 
-The key advantage here is the maintenance of context. The user stays on the list when the deletion completes. The fetcher's state management capabilities are leveraged to give real-time feedback: it toggles between "Deleting..." and "Delete", providing a clear indication of the ongoing process.
+The key advantage here is the maintenance of context. The user stays on the list when the deletion completes. The fetcher's state management capabilities are leveraged to give real-time feedback: it toggles between `"Deleting..."` and `"Delete"`, providing a clear indication of the ongoing process.
 
-Furthermore, with each fetcher having the autonomy to manage its own state, operations on individual list items become independent, ensuring that actions on one item don't affect the others (though revalidation of the page data is a shared concern that is covered in [Network Concurrency Management][network-concurrency-management]).
+Furthermore, with each fetcher having the autonomy to manage its own state, operations on individual list items become independent, ensuring that actions on one item don't affect the others (though revalidation of the page data is a shared concern that is covered in [Network Concurrency Management][network_concurrency_management]).
 
-In essence, useFetcher offers a seamless mechanism for actions that don't necessitate a change in the URL or navigation, enhancing the user experience by providing real-time feedback and context preservation.
+In essence, `useFetcher` offers a seamless mechanism for actions that don't necessitate a change in the URL or navigation, enhancing the user experience by providing real-time feedback and context preservation.
 
 ### Mark Article as Read
 
@@ -201,8 +210,8 @@ function useMarkAsRead({ articleId, userId }) {
     marker.submit(
       { userId },
       {
+        action: `/article/${articleId}/mark-as-read`,
         method: "post",
-        action: `/article/${articleID}/mark-as-read`,
       }
     );
   });
@@ -256,6 +265,10 @@ function UserAvatar({ partialUser }) {
 
 ## Conclusion
 
-Remix offers a range of tools to cater to varied developmental needs. While some functionalities might seem to overlap, each tool has been crafted with specific scenarios in mind. By understanding the intricacies and ideal applications of `<Form>`, `useSubmit`, `useNavigation`, `useActionData`, and `useFetcher`, developers can create more intuitive, responsive, and user-friendly web applications.
+Remix offers a range of tools to cater to varied developmental needs. While some functionalities might seem to overlap, each tool has been crafted with specific scenarios in mind. By understanding the intricacies and ideal applications of `<Form>`, `useActionData`, `useFetcher`, and `useNavigation`, developers can create more intuitive, responsive, and user-friendly web applications.
 
-[network-concurrency-management]: ./concurrency
+[form_component]: ../components/form
+[use_action_data]: ../hooks/use-action-data
+[use_fetcher]: ../hooks/use-fetcher
+[use_navigation]: ../hooks/use-navigation
+[network_concurrency_management]: ./concurrency

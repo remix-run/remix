@@ -68,7 +68,7 @@ export async function loader({
 
 ## How do I handle multiple forms in one route?
 
-[Watch on YouTube][watch-on-you-tube]
+[Watch on YouTube][watch_on_youtube]
 
 In HTML, forms can post to any URL with the action prop and the app will navigate there:
 
@@ -137,7 +137,7 @@ export default function Projects() {
 
 ## How can I have structured data in a form?
 
-If you're used to doing fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form-data] is a bit different from JSON.
+If you're used to doing fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form_data] is a bit different from JSON.
 
 - It can't have nested data, it's just "key value".
 - It _can_ have multiple entries on one key, unlike JSON.
@@ -176,7 +176,7 @@ export async function action({
 
 Using the same input name and `formData.getAll()` covers most cases for wanting to submit structured data in your forms.
 
-If you still want to submit nested structures as well, you can use non-standard form-field naming conventions and the [`query-string`][query-string] package from npm:
+If you still want to submit nested structures as well, you can use non-standard form-field naming conventions and the [`query-string`][query_string] package from npm:
 
 ```tsx
 <>
@@ -229,7 +229,7 @@ export async function action({
 
 Again, `formData.getAll()` is often all you need, we encourage you to give it a shot!
 
-[form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
-[query-string]: https://www.npmjs.com/package/query-string
-[ramda]: https://www.npmjs.com/package/ramda
-[watch-on-you-tube]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix
+[form_data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
+[query_string]: https://npm.im/query-string
+[ramda]: https://npm.im/ramda
+[watch_on_youtube]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix

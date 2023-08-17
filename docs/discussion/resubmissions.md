@@ -28,7 +28,7 @@ GET /buy - *POST /checkout < GET /order/123
 
 In this situation, the browser resubmits the form data, which could lead to issues such as charging a credit card twice.
 
-## Redirecting from Actions
+## Redirecting from `action`s
 
 A common practice to avoid this issue is to issue a redirect after the POST request. This removes the POST action from the browser's history. The history stack would then look like this:
 
@@ -58,15 +58,15 @@ It's advisable to implement a redirect from the action to avoid unintended resub
 
 **Guides**
 
-- [Form Validation][form-validation]
+- [Form Validation][form_validation]
 
 **API**
 
 - [`<Form>`][form]
-- [`useActionData`][use-action-data]
+- [`useActionData`][use_action_data]
 - [`redirect`][redirect]
 
-[form-validation]: ../guides/form-validation
+[form_validation]: ../guides/form-validation
 [form]: ../components/form
-[use-action-data]: ../hooks/use-action-data
+[use_action_data]: ../hooks/use-action-data
 [redirect]: ../utils/redirect

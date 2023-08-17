@@ -1,17 +1,17 @@
 ---
 title: useLoaderData
-toc: false
 ---
 
 # `useLoaderData`
 
-Returns the serialized data from the closest route loader.
+Returns the serialized data from the closest route [`loader`][loader].
 
-```tsx lines=[1,8]
+```tsx lines=[2,9]
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 export async function loader() {
-  return fakeDb.invoices.findAll();
+  return json(await fakeDb.invoices.findAll());
 }
 
 export default function Invoices() {
@@ -24,15 +24,15 @@ export default function Invoices() {
 
 **Discussions**
 
-- [Fullstack Data Flow][fullstack-data-flow]
-- [State Management][state-management]
+- [Fullstack Data Flow][fullstack_data_flow]
+- [State Management][state_management]
 
 **API**
 
 - [`loader`][loader]
-- [`useFetcher`][use-fetcher]
+- [`useFetcher`][use_fetcher]
 
-[fullstack-data-flow]: ../discussion/data-flow
-[state-management]: ../discussion/state-management
 [loader]: ../route/loader
-[use-fetcher]: ./use-fetcher
+[fullstack_data_flow]: ../discussion/data-flow
+[state_management]: ../discussion/state-management
+[use_fetcher]: ./use-fetcher

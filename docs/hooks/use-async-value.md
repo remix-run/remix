@@ -5,7 +5,7 @@ new: true
 
 # `useAsyncValue`
 
-Returns the resolved data from the closest `<Await>` ancestor component.
+Returns the resolved data from the closest [`<Await>`][await_component] ancestor component.
 
 ```tsx
 function SomeDescendant() {
@@ -24,13 +24,13 @@ function SomeDescendant() {
 
 **Guides**
 
-- [Streaming][streaming]
+- [Streaming][streaming_guide]
 
 **API**
 
-- [`<Await/>`][await]
+- [`<Await/>`][await_component]
 - [`useAsyncError`][use_async_error]
 
-[await]: ../components/await
+[await_component]: ../components/await
+[streaming_guide]: ../guides/streaming
 [use_async_error]: ../hooks/use-async-error
-[streaming]: ../guides/streaming
