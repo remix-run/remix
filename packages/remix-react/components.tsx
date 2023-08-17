@@ -14,7 +14,6 @@ import {
   Await as AwaitRR,
   Link as RouterLink,
   NavLink as RouterNavLink,
-  Outlet,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
   matchRoutes,
@@ -25,13 +24,11 @@ import {
   useLocation,
   useNavigation,
   useHref,
-  useRouteError,
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { RemixContextObject } from "./entry";
-import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
