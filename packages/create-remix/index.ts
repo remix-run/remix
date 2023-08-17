@@ -89,7 +89,6 @@ async function getContext(argv: string[]): Promise<Context> {
       "--V": "--version",
       "--no-color": Boolean,
       "--no-motion": Boolean,
-      "--allow-non-empty": Boolean,
     },
     { argv, permissive: true }
   );
@@ -111,7 +110,6 @@ async function getContext(argv: string[]): Promise<Context> {
     "--no-motion": noMotion,
     "--yes": yes,
     "--version": versionRequested,
-    "--allow-non-empty": allowNonEmpty = false,
   } = flags;
 
   let cwd = flags["_"][0] as string;
@@ -161,7 +159,6 @@ async function getContext(argv: string[]): Promise<Context> {
     template,
     token,
     versionRequested,
-    allowNonEmpty,
   };
 
   return context;
@@ -187,7 +184,6 @@ interface Context {
   template?: string;
   token?: string;
   versionRequested?: boolean;
-  allowNonEmpty: boolean;
 }
 
 async function introStep(ctx: Context) {
@@ -217,12 +213,10 @@ async function projectNameStep(ctx: Context) {
       throw new Error("No project directory provided");
     }
 
-    if (!cwdIsEmpty && !ctx.allowNonEmpty) {
+    if (!cwdIsEmpty) {
       error(
         "Oh no!",
-        `Project directory "${color.reset(ctx.cwd)}" is not empty. ` +
-          "Please use the `--allow-non-empty` flag if you wish to write " +
-          "your app into this directory."
+        `Project directory "${color.reset(ctx.cwd)}" is not empty`
       );
       throw new Error("Project directory is not empty");
     }
@@ -237,21 +231,12 @@ async function projectNameStep(ctx: Context) {
         color.reset(ctx.cwd),
         " as project directory",
       ]);
-    } else if (ctx.allowNonEmpty) {
-      info("Directory:", [
-        "Using non-empty directory ",
-        color.reset(`"${ctx.cwd}"`),
-        " as a project directory due to --allow-non-empty",
-      ]);
     } else {
-      info("Hmm...", [
-        color.reset(`"${ctx.cwd}"`),
-        " is not empty!  Did you mean to use the `--allow-non-empty` flag?",
-      ]);
+      info("Hmm...", [color.reset(`"${ctx.cwd}"`), " is not empty!"]);
     }
   }
 
-  if (!ctx.cwd || (!cwdIsEmpty && !ctx.allowNonEmpty)) {
+  if (!ctx.cwd || !cwdIsEmpty) {
     let { name } = await ctx.prompt({
       name: "name",
       type: "text",
