@@ -1,9 +1,11 @@
+import path from "node:path";
 import process from "node:process";
 import os from "node:os";
 import fs from "node:fs";
 import { type Key as ActionKey } from "node:readline";
 import { erase, cursor } from "sisteransi";
 import chalk from "chalk";
+import recursiveReaddir from "recursive-readdir";
 
 // https://no-color.org/
 const SUPPORTS_COLOR = chalk.supportsColor && !process.env.NO_COLOR;
@@ -265,4 +267,27 @@ export function action(key: ActionKey, isSelect: boolean) {
   if (key.name === "left") return "left";
 
   return false;
+}
+
+export async function getDirectoryFilesRecursive(d: string) {
+  // Ignore comparing within these directories - but detect a collision
+  // at the directory level and count it.  These get prepended to strippedFiles
+  // in reverse order below
+  let ignoreDirs = ["node_modules", ".git"];
+  let dirPrefix = new RegExp(`^${d}${path.sep}+`);
+  let files = await recursiveReaddir(d, [
+    (file) => {
+      let strippedFile = file.replace(dirPrefix, "");
+      let parts = strippedFile.split(path.sep);
+      return parts.length > 1 && ignoreDirs.includes(parts[0]);
+    },
+  ]);
+  let strippedFiles = files.map((f) => f.replace(dirPrefix, ""));
+  ignoreDirs.forEach((dir) => {
+    let dirPath = path.join(d, dir);
+    if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
+      strippedFiles.unshift(dirPath.replace(dirPrefix, ""));
+    }
+  });
+  return strippedFiles;
 }

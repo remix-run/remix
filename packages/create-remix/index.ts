@@ -1,6 +1,8 @@
 import process from "node:process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import fse from "fs-extra";
 import stripAnsi from "strip-ansi";
 import rm from "rimraf";
 import execa from "execa";
@@ -15,11 +17,11 @@ import {
   ensureDirectory,
   error,
   fileExists,
+  getDirectoryFilesRecursive,
   info,
   isInteractive,
   isValidJsonObject,
   log,
-  pathContains,
   sleep,
   strip,
   success,
@@ -43,7 +45,8 @@ async function createRemix(argv: string[]) {
   let steps = [
     introStep,
     projectNameStep,
-    templateStep,
+    copyTemplateToTempDirStep,
+    copyTempDirToAppDirStep,
     gitInitQuestionStep,
     installDependenciesQuestionStep,
     runInitScriptQuestionStep,
@@ -89,6 +92,7 @@ async function getContext(argv: string[]): Promise<Context> {
       "--V": "--version",
       "--no-color": Boolean,
       "--no-motion": Boolean,
+      "--overwrite": Boolean,
     },
     { argv, permissive: true }
   );
@@ -110,6 +114,7 @@ async function getContext(argv: string[]): Promise<Context> {
     "--no-motion": noMotion,
     "--yes": yes,
     "--version": versionRequested,
+    "--overwrite": overwrite,
   } = flags;
 
   let cwd = flags["_"][0] as string;
@@ -137,7 +142,12 @@ async function getContext(argv: string[]): Promise<Context> {
   }
 
   let context: Context = {
+    tempDir: path.join(
+      await fs.promises.realpath(os.tmpdir()),
+      `create-remix--${Math.random().toString(36).substr(2, 8)}`
+    ),
     cwd,
+    overwrite,
     interactive,
     debug,
     git: git ?? (noGit ? false : yes),
@@ -165,6 +175,7 @@ async function getContext(argv: string[]): Promise<Context> {
 }
 
 interface Context {
+  tempDir: string;
   cwd: string;
   interactive: boolean;
   debug: boolean;
@@ -184,6 +195,7 @@ interface Context {
   template?: string;
   token?: string;
   versionRequested?: boolean;
+  overwrite?: boolean;
 }
 
 async function introStep(ctx: Context) {
@@ -204,51 +216,28 @@ async function introStep(ctx: Context) {
 }
 
 async function projectNameStep(ctx: Context) {
-  let cwdIsEmpty = ctx.cwd && isEmpty(ctx.cwd);
-
   // valid cwd is required if shell isn't interactive
-  if (!ctx.interactive) {
-    if (!ctx.cwd) {
-      error("Oh no!", "No project directory provided");
-      throw new Error("No project directory provided");
-    }
-
-    if (!cwdIsEmpty) {
-      error(
-        "Oh no!",
-        `Project directory "${color.reset(ctx.cwd)}" is not empty`
-      );
-      throw new Error("Project directory is not empty");
-    }
+  if (!ctx.interactive && !ctx.cwd) {
+    error("Oh no!", "No project directory provided");
+    throw new Error("No project directory provided");
   }
 
   if (ctx.cwd) {
     await sleep(100);
-
-    if (cwdIsEmpty) {
-      info("Directory:", [
-        "Using ",
-        color.reset(ctx.cwd),
-        " as project directory",
-      ]);
-    } else {
-      info("Hmm...", [color.reset(`"${ctx.cwd}"`), " is not empty!"]);
-    }
+    info("Directory:", [
+      "Using ",
+      color.reset(ctx.cwd),
+      " as project directory",
+    ]);
   }
 
-  if (!ctx.cwd || !cwdIsEmpty) {
+  if (!ctx.cwd) {
     let { name } = await ctx.prompt({
       name: "name",
       type: "text",
       label: title("dir"),
       message: "Where should we create your new project?",
       initial: "./my-remix-app",
-      validate(value: string) {
-        if (!isEmpty(value)) {
-          return `Directory is not empty!`;
-        }
-        return true;
-      },
     });
     ctx.cwd = name!;
     ctx.projectName = toValidProjectName(name!);
@@ -266,7 +255,7 @@ async function projectNameStep(ctx: Context) {
   ctx.projectName = toValidProjectName(name);
 }
 
-async function templateStep(ctx: Context) {
+async function copyTemplateToTempDirStep(ctx: Context) {
   if (ctx.template) {
     log("");
     info("Template", ["Using ", color.reset(ctx.template), "..."]);
@@ -285,41 +274,27 @@ async function templateStep(ctx: Context) {
     start: "Template copying...",
     end: "Template copied",
     while: async () => {
-      let destPath = path.resolve(process.cwd(), ctx.cwd);
-      await ensureDirectory(destPath);
-      await copyTemplate(template, destPath, {
+      await ensureDirectory(ctx.tempDir);
+      if (ctx.debug) {
+        info(`Extracting template to temp directory: ${ctx.tempDir}`);
+      }
+
+      // TODO: Optimization - if template is just a local directory (not a
+      // local tarball etc.), just use that as ctx.tempDir for the rest of
+      // the pipeline and avoid copying it to a temp directory
+
+      await copyTemplate(template, ctx.tempDir, {
         debug: ctx.debug,
         token: ctx.token,
         async onError(err) {
-          let cwd = process.cwd();
-          let removing = (async () => {
-            if (cwd !== destPath && !pathContains(cwd, destPath)) {
-              try {
-                await rm(destPath);
-              } catch (_) {
-                error("Oh no!", ["Failed to remove ", destPath]);
-              }
-            }
-          })();
-          if (ctx.debug) {
-            try {
-              await removing;
-            } catch (_) {}
-            throw err;
-          }
-
-          await Promise.all([
-            error(
-              "Oh no!",
-              err instanceof CopyTemplateError
-                ? err.message
-                : "Something went wrong. Run `create-remix --debug` to see more info.\n\n" +
-                    "Open an issue to report the problem at " +
-                    "https://github.com/remix-run/remix/issues/new"
-            ),
-            removing,
-          ]);
-
+          error(
+            "Oh no!",
+            err instanceof CopyTemplateError
+              ? err.message
+              : "Something went wrong. Run `create-remix --debug` to see more info.\n\n" +
+                  "Open an issue to report the problem at " +
+                  "https://github.com/remix-run/remix/issues/new"
+          );
           throw err;
         },
         async log(message) {
@@ -329,12 +304,44 @@ async function templateStep(ctx: Context) {
           }
         },
       });
-
-      await updatePackageJSON(ctx);
     },
     ctx,
   });
+}
 
+async function copyTempDirToAppDirStep(ctx: Context) {
+  await ensureDirectory(ctx.cwd);
+
+  let files1 = await getDirectoryFilesRecursive(ctx.tempDir);
+  let files2 = await getDirectoryFilesRecursive(ctx.cwd);
+  let collisions = files1.filter((f) => files2.includes(f));
+
+  if (collisions.length > 0 && !ctx.overwrite) {
+    if (ctx.debug) {
+      info(`Colliding files:${["", ...collisions].join("\n           ")}`);
+    }
+
+    let files = `${collisions.slice(0, 3).join(", ")}${
+      collisions.length > 3 ? ` and ${collisions.length - 3} more...` : ""
+    }`;
+    let { overwrite } = await ctx.prompt({
+      name: "overwrite",
+      type: "confirm",
+      label: title("overwrite"),
+      message:
+        `Your app directory already contains files that will be overwritten\n` +
+        `             by this template. Do you wish to continue?\n` +
+        `             Colliding files: ${files}\n` +
+        `             (You can skip this message with the --overwrite CLI flag)`,
+      initial: false,
+    });
+    if (!overwrite) {
+      throw new Error("Exiting to avoid overwriting files");
+    }
+  }
+
+  await fse.copy(ctx.tempDir, ctx.cwd);
+  await updatePackageJSON(ctx);
   ctx.initScriptPath = await getInitScriptPath(ctx.cwd);
 }
 
@@ -588,23 +595,6 @@ async function doneStep(ctx: Context) {
     `\n${prefix}Join the community at ${color.cyan(`https://rmx.as/discord`)}\n`
   );
   await sleep(200);
-}
-
-function isEmpty(dirPath: string) {
-  if (!fs.existsSync(dirPath)) {
-    return true;
-  }
-
-  // Some existing files can be safely ignored when checking if
-  // a directory is a valid project directory.
-  let VALID_PROJECT_DIRECTORY_SAFE_LIST = [".DS_Store", "Thumbs.db"];
-
-  let conflicts = fs.readdirSync(dirPath).filter((content) => {
-    return !VALID_PROJECT_DIRECTORY_SAFE_LIST.some((safeContent) => {
-      return content === safeContent;
-    });
-  });
-  return conflicts.length === 0;
 }
 
 type PackageManager = "npm" | "yarn" | "pnpm";
