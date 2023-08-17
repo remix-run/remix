@@ -85,6 +85,10 @@ function useRemixContext(): RemixContextObject {
 ////////////////////////////////////////////////////////////////////////////////
 // RemixRoute
 
+// TODO: Can this go away entirely in hopes of dropping routeModules?  If we
+// just leverage Component - React Router will fallback on the Outlet.  We'll
+// just lose some of this error messaging.
+
 export function RemixRoute({ id }: { id: string }) {
   let { routeModules } = useRemixContext();
 
@@ -109,6 +113,14 @@ export function RemixRoute({ id }: { id: string }) {
 
   return <Component />;
 }
+
+// TODO: Can this go away entirely in hopes of dropping routeModules?  Critical
+// path routes may just be able to be defined as follows on initial hydration?
+// ErrorBoundary:
+//   route.ErrorBoundary ||
+//   route.id === "root" ?
+//     () => <RemixRootDefaultErrorBoundary error={useRouteError()} /> :
+//     null
 
 export function RemixRouteError({ id }: { id: string }) {
   let { routeModules } = useRemixContext();
