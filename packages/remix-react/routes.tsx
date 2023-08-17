@@ -16,7 +16,6 @@ import {
 } from "./data";
 import type { FutureConfig } from "./entry";
 import { prefetchStyleLinks } from "./links";
-import { RemixRoute, RemixRouteError } from "./components";
 import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 
 export interface RouteManifest<Route> {
@@ -69,13 +68,15 @@ export function createServerRoutes(
   > = groupRoutesByParentId(manifest)
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
+    let routeModule = routeModules[route.id];
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
-      element: <RemixRoute id={route.id} />,
-      errorElement:
-        route.id === "root" || route.hasErrorBoundary ? (
-          <RemixRouteError id={route.id} />
-        ) : undefined,
+      Component: routeModule.default,
+      ErrorBoundary: routeModule.ErrorBoundary
+        ? routeModule.ErrorBoundary
+        : route.id === "root"
+        ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
+        : undefined,
       id: route.id,
       index: route.index,
       path: route.path,
@@ -126,7 +127,6 @@ export function createClientRoutes(
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModulesCache?.[route.id];
     let dataRoute: DataRouteObject = {
-      caseSensitive: route.caseSensitive,
       id: route.id,
       index: route.index,
       path: route.path,
@@ -152,7 +152,7 @@ export function createClientRoutes(
             ErrorBoundary: routeModule.ErrorBoundary
               ? routeModule.ErrorBoundary
               : route.id === "root"
-              ? RootDefaultErrorBoundary
+              ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
               : undefined,
             handle: routeModule.handle,
             shouldRevalidate: needsRevalidation
@@ -213,11 +213,6 @@ function wrapShouldRevalidateForHdr(
       ? routeShouldRevalidate(arg)
       : arg.defaultShouldRevalidate;
   };
-}
-
-function RootDefaultErrorBoundary() {
-  let error = useRouteError();
-  return <RemixRootDefaultErrorBoundary error={error} />;
 }
 
 async function loadRouteModuleWithBlockingLinks(

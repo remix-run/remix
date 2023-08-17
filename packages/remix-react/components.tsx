@@ -83,67 +83,6 @@ function useRemixContext(): RemixContextObject {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// RemixRoute
-
-// TODO: Can this go away entirely in hopes of dropping routeModules?  If we
-// just leverage Component - React Router will fallback on the Outlet.  We'll
-// just lose some of this error messaging.
-
-export function RemixRoute({ id }: { id: string }) {
-  let { routeModules } = useRemixContext();
-
-  invariant(
-    routeModules,
-    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
-      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
-  );
-
-  let { default: Component, ErrorBoundary } = routeModules[id];
-
-  // Default Component to Outlet if we expose boundary UI components
-  if (!Component && ErrorBoundary) {
-    Component = Outlet;
-  }
-
-  invariant(
-    Component,
-    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.\n` +
-      "If you were trying to navigate or submit to a resource route, use `<a>` instead of `<Link>` or `<Form reloadDocument>`."
-  );
-
-  return <Component />;
-}
-
-// TODO: Can this go away entirely in hopes of dropping routeModules?  Critical
-// path routes may just be able to be defined as follows on initial hydration?
-// ErrorBoundary:
-//   route.ErrorBoundary ||
-//   route.id === "root" ?
-//     () => <RemixRootDefaultErrorBoundary error={useRouteError()} /> :
-//     null
-
-export function RemixRouteError({ id }: { id: string }) {
-  let { routeModules } = useRemixContext();
-
-  // This checks prevent cryptic error messages such as: 'Cannot read properties of undefined (reading 'root')'
-  invariant(
-    routeModules,
-    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
-      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
-  );
-
-  let error = useRouteError();
-  let { ErrorBoundary } = routeModules[id];
-
-  if (ErrorBoundary) {
-    return <ErrorBoundary />;
-  } else if (id === "root") {
-    return <RemixRootDefaultErrorBoundary error={error} />;
-  }
-
-  throw error;
-}
-////////////////////////////////////////////////////////////////////////////////
 // Public API
 
 /**
