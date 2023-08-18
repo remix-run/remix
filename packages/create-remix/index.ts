@@ -377,6 +377,7 @@ async function copyTempDirToAppDirStep(ctx: Context) {
       // have node_modules/
       let file = stripDirectoryFromPath(ctx.tempDir, src);
       let isIgnored = IGNORED_TEMPLATE_DIRECTORIES.includes(file);
+      console.log("isIgnored", ctx.tempDir, src, file, isIgnored);
       if (isIgnored) {
         if (ctx.debug) {
           debug(`Skipping copy of ${file} directory from template`);
@@ -625,7 +626,7 @@ async function doneStep(ctx: Context) {
   if (projectDir !== "") {
     let enter = [
       `\n${prefix}Enter your project directory using`,
-      color.cyan(`cd ./${projectDir}`),
+      color.cyan(`cd .${path.sep}${projectDir}`),
     ];
     let len = enter[0].length + stripAnsi(enter[1]).length;
     log(enter.join(len > max ? "\n" + prefix : " "));

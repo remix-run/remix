@@ -274,7 +274,21 @@ export function action(key: ActionKey, isSelect: boolean) {
 }
 
 export function stripDirectoryFromPath(dir: string, filePath: string) {
-  return filePath.replace(new RegExp(`^${dir}${path.sep}+`), "");
+  // let stripped = filePath.replace(new RegExp(`^${dir}${path.sep}+`), "");
+  let stripped = filePath;
+  if (
+    (dir.endsWith(path.sep) && filePath.startsWith(dir)) ||
+    (!dir.endsWith(path.sep) && filePath.startsWith(dir + path.sep))
+  ) {
+    stripped = filePath.slice(dir.length);
+    if (stripped.startsWith(path.sep)) {
+      stripped = stripped.slice(1);
+    }
+  }
+  console.log(
+    `stripDirectoryFromPath: dir=${dir}, filePath=${filePath}, path.sep=${path.sep}, stripped=${stripped}`
+  );
+  return stripped;
 }
 
 // We do not copy these folders from templates so we can ignore them for comparisons
