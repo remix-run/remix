@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -103,7 +107,7 @@ test("[description of what you expect it to do]", async ({ page }) => {
   // If you need to test interactivity use the `app`
   await app.goto("/");
   await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await page.waitForSelector("text=cheeseburger");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!

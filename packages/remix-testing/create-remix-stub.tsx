@@ -79,15 +79,17 @@ function patchRoutesWithContext(
 }
 
 interface StubIndexRouteObject
-  extends Omit<IndexRouteObject, "loader" | "action"> {
+  extends Omit<IndexRouteObject, "loader" | "action" | "children"> {
   loader?: LoaderFunction;
   action?: ActionFunction;
+  children?: StubRouteObject[];
 }
 
 interface StubNonIndexRouteObject
-  extends Omit<NonIndexRouteObject, "loader" | "action"> {
+  extends Omit<NonIndexRouteObject, "loader" | "action" | "children"> {
   loader?: LoaderFunction;
   action?: ActionFunction;
+  children?: StubRouteObject[];
 }
 
 type StubRouteObject = StubIndexRouteObject | StubNonIndexRouteObject;
@@ -173,7 +175,6 @@ function createRouteModules(
 
     modules[route.id!] = {
       ErrorBoundary: undefined,
-      // @ts-expect-error - types are still `agnostic` here
       default: () => route.element,
       handle: route.handle,
       links: undefined,

@@ -205,11 +205,11 @@ export type LinkDescriptor = HtmlLinkDescriptor | PrefetchPageDescriptor;
  * Gets all the links for a set of matches. The modules are assumed to have been
  * loaded already.
  */
-export function getLinksForMatches(
+export function getKeyedLinksForMatches(
   matches: AgnosticDataRouteMatch[],
   routeModules: RouteModules,
   manifest: AssetsManifest
-): LinkDescriptor[] {
+): KeyedLinkDescriptor[] {
   let descriptors = matches
     .map((match): LinkDescriptor[] => {
       let module = routeModules[match.route.id];
@@ -218,13 +218,13 @@ export function getLinksForMatches(
     .flat(1);
 
   let preloads = getCurrentPageModulePreloadHrefs(matches, manifest);
-  return dedupe(descriptors, preloads);
+  return dedupeLinkDescriptors(descriptors, preloads);
 }
 
 export async function prefetchStyleLinks(
   routeModule: RouteModule
 ): Promise<void> {
-  if (!routeModule.links) return;
+  if (!routeModule.links || !isPreloadSupported()) return;
   let descriptors = routeModule.links();
   if (!descriptors) return;
 
@@ -306,11 +306,13 @@ function isHtmlLinkDescriptor(object: any): object is HtmlLinkDescriptor {
   return typeof object.rel === "string" && typeof object.href === "string";
 }
 
-export async function getStylesheetPrefetchLinks(
+export type KeyedHtmlLinkDescriptor = { key: string; link: HtmlLinkDescriptor };
+
+export async function getKeyedPrefetchLinks(
   matches: AgnosticDataRouteMatch[],
   manifest: AssetsManifest,
   routeModules: RouteModules
-): Promise<HtmlLinkDescriptor[]> {
+): Promise<KeyedHtmlLinkDescriptor[]> {
   let links = await Promise.all(
     matches.map(async (match) => {
       let mod = await loadRouteModule(
@@ -321,15 +323,17 @@ export async function getStylesheetPrefetchLinks(
     })
   );
 
-  return links
-    .flat(1)
-    .filter(isHtmlLinkDescriptor)
-    .filter((link) => link.rel === "stylesheet" || link.rel === "preload")
-    .map((link) =>
-      link.rel === "preload"
-        ? ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
-        : ({ ...link, rel: "prefetch", as: "style" } as HtmlLinkDescriptor)
-    );
+  return dedupeLinkDescriptors(
+    links
+      .flat(1)
+      .filter(isHtmlLinkDescriptor)
+      .filter((link) => link.rel === "stylesheet" || link.rel === "preload")
+      .map((link) =>
+        link.rel === "stylesheet"
+          ? ({ ...link, rel: "prefetch", as: "style" } as HtmlLinkDescriptor)
+          : ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
+      )
+  );
 }
 
 // This is ridiculously identical to transition.ts `filterMatchesToLoad`
@@ -466,12 +470,32 @@ function dedupeHrefs(hrefs: string[]): string[] {
   return [...new Set(hrefs)];
 }
 
-export function dedupe(descriptors: LinkDescriptor[], preloads: string[]) {
+function sortKeys<Obj extends { [Key in keyof Obj]: Obj[Key] }>(obj: Obj): Obj {
+  let sorted = {} as Obj;
+  let keys = Object.keys(obj).sort();
+
+  for (let key of keys) {
+    sorted[key as keyof Obj] = obj[key as keyof Obj];
+  }
+
+  return sorted;
+}
+
+type KeyedLinkDescriptor<Descriptor extends LinkDescriptor = LinkDescriptor> = {
+  key: string;
+  link: Descriptor;
+};
+
+function dedupeLinkDescriptors<Descriptor extends LinkDescriptor>(
+  descriptors: Descriptor[],
+  preloads?: string[]
+): KeyedLinkDescriptor<Descriptor>[] {
   let set = new Set();
   let preloadsSet = new Set(preloads);
 
   return descriptors.reduce((deduped, descriptor) => {
     let alreadyModulePreload =
+      preloads &&
       !isPageLinkDescriptor(descriptor) &&
       descriptor.as === "script" &&
       descriptor.href &&
@@ -481,14 +505,14 @@ export function dedupe(descriptors: LinkDescriptor[], preloads: string[]) {
       return deduped;
     }
 
-    let str = JSON.stringify(descriptor);
-    if (!set.has(str)) {
-      set.add(str);
-      deduped.push(descriptor);
+    let key = JSON.stringify(sortKeys(descriptor));
+    if (!set.has(key)) {
+      set.add(key);
+      deduped.push({ key, link: descriptor });
     }
 
     return deduped;
-  }, [] as LinkDescriptor[]);
+  }, [] as KeyedLinkDescriptor<Descriptor>[]);
 }
 
 // https://github.com/remix-run/history/issues/897
@@ -496,4 +520,18 @@ function parsePathPatch(href: string) {
   let path = parsePath(href);
   if (path.search === undefined) path.search = "";
   return path;
+}
+
+// Detect if this browser supports <link rel="preload"> (or has it enabled).
+// Originally added to handle the firefox `network.preload` config:
+//   https://bugzilla.mozilla.org/show_bug.cgi?id=1847811
+let _isPreloadSupported: boolean | undefined;
+function isPreloadSupported(): boolean {
+  if (_isPreloadSupported !== undefined) {
+    return _isPreloadSupported;
+  }
+  let el: HTMLLinkElement | null = document.createElement("link");
+  _isPreloadSupported = el.relList.supports("preload");
+  el = null;
+  return _isPreloadSupported;
 }

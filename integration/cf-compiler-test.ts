@@ -4,7 +4,7 @@ import path from "node:path";
 import shell from "shelljs";
 import glob from "glob";
 
-import { createFixtureProject, js, json } from "./helpers/create-fixture";
+import { createFixtureProject, js, json } from "./helpers/create-fixture.js";
 
 const searchFiles = async (pattern: string | RegExp, files: string[]) => {
   let result = shell.grep("-l", pattern, files);
@@ -28,7 +28,6 @@ test.describe("cloudflare compiler", () => {
 
   test.beforeAll(async () => {
     projectDir = await createFixtureProject({
-      setup: "cloudflare",
       template: "cf-template",
       files: {
         "package.json": json({
@@ -36,6 +35,7 @@ test.describe("cloudflare compiler", () => {
           private: true,
           sideEffects: false,
           main: "build/index.js",
+          type: "module",
           dependencies: {
             "@remix-run/cloudflare": "0.0.0-local-version",
             "@remix-run/cloudflare-workers": "0.0.0-local-version",

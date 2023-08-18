@@ -166,16 +166,7 @@ function handleBrowserRequest(
 }
 ```
 
-If you are using React 17, your client entrypoint will look like this:
-
-```tsx filename=app/entry.client.tsx lines=[2,4]
-import { RemixBrowser } from "@remix-run/react";
-import { hydrate } from "react-dom";
-
-hydrate(<RemixBrowser />, document);
-```
-
-In React 18, you'll use `hydrateRoot` instead of `hydrate`.
+Your client entrypoint will look like this:
 
 ```tsx filename=app/entry.client.tsx
 import { RemixBrowser } from "@remix-run/react";
@@ -476,12 +467,12 @@ If you are using TypeScript, you likely already have a `tsconfig.json` in your p
 {
   "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
   "compilerOptions": {
-    "lib": ["DOM", "DOM.Iterable", "ES2019"],
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "isolatedModules": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "baseUrl": ".",
     "noEmit": true,
     "paths": {

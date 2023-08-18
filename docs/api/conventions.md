@@ -22,14 +22,6 @@ title: Conventions
 
 [Moved →][moved-4]
 
-### devServerBroadcastDelay
-
-[Moved →][moved-5]
-
-### devServerPort
-
-[Moved →][moved-6]
-
 ### ignoredRouteFiles
 
 [Moved →][moved-7]

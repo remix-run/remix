@@ -3,7 +3,7 @@ import path from "node:path";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 
-const remixRoot = path.resolve(__dirname, "./fixtures/stack");
+const remixRoot = path.join(__dirname, "fixtures", "stack");
 
 describe("readConfig", () => {
   let config: RemixConfig;
@@ -30,7 +30,6 @@ describe("readConfig", () => {
         "assetsBuildDirectory": Any<String>,
         "cacheDirectory": Any<String>,
         "dev": Object {},
-        "devServerBroadcastDelay": 0,
         "entryClientFile": "entry.client.tsx",
         "entryClientFilePath": Any<String>,
         "entryServerFile": "entry.server.tsx",
@@ -54,12 +53,12 @@ describe("readConfig", () => {
         "serverDependenciesToBundle": Array [],
         "serverEntryPoint": undefined,
         "serverMainFields": Array [
-          "main",
           "module",
+          "main",
         ],
         "serverMinify": false,
         "serverMode": "production",
-        "serverModuleFormat": "cjs",
+        "serverModuleFormat": "esm",
         "serverNodeBuiltinsPolyfill": undefined,
         "serverPlatform": "node",
         "tailwind": true,

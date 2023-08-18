@@ -189,6 +189,15 @@ function getCliConfig({ packageName, version }) {
         extensions: [".ts"],
       }),
       nodeResolve({ extensions: [".ts"] }),
+      {
+        name: "dynamic-import-polyfill",
+        renderDynamicImport() {
+          return {
+            left: "import(",
+            right: ")",
+          };
+        },
+      },
       copyPublishFiles(packageName),
       copyToPlaygrounds(),
     ],
@@ -223,7 +232,7 @@ module.exports = {
 };
 
 /**
- * @typedef {"architect" | "cloudflare-pages" | "cloudflare-workers" | "express" | "netlify" | "vercel"} RemixAdapter
+ * @typedef {"architect" | "cloudflare-pages" | "cloudflare-workers" | "express"} RemixAdapter
  * @typedef {"cloudflare" | "node" | "deno"} RemixRuntime
  * @typedef {`@remix-run/${RemixAdapter | RemixRuntime | "dev" | "eslint-config" | "react" | "serve" | "server-runtime"}`} ScopedRemixPackage
  * @typedef {"create-remix" | "remix" | ScopedRemixPackage} RemixPackage

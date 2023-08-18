@@ -161,7 +161,7 @@ async function getContext(argv: string[]): Promise<Context> {
     noMotion,
     pkgManager: validatePackageManager(
       pkgManager ??
-        // npm, pnpm and Yarn set the user agent environment variable that can be used
+        // npm, pnpm, Yarn, and Bun set the user agent environment variable that can be used
         // to determine which package manager ran the command.
         (process.env.npm_config_user_agent ?? "npm").split("/")[0]
     ),
@@ -519,7 +519,6 @@ async function runInitScriptStep(ctx: Context) {
 
   let initScriptDir = path.dirname(ctx.initScriptPath);
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-  let isTypeScript = fs.existsSync(path.join(ctx.cwd, "tsconfig.json"));
   let packageManager = ctx.pkgManager;
 
   try {
@@ -553,7 +552,7 @@ async function runInitScriptStep(ctx: Context) {
       throw new Error("remix.init script doesn't export a function.");
     }
     let rootDirectory = path.resolve(ctx.cwd);
-    await initFn({ isTypeScript, packageManager, rootDirectory });
+    await initFn({ packageManager, rootDirectory });
   } catch (err) {
     error("Oh no!", "Template's remix.init script failed");
     throw err;
@@ -618,12 +617,13 @@ async function doneStep(ctx: Context) {
   await sleep(200);
 }
 
-type PackageManager = "npm" | "yarn" | "pnpm";
+type PackageManager = "npm" | "yarn" | "pnpm" | "bun";
 
 const packageManagerExecScript: Record<PackageManager, string> = {
   npm: "npx",
   yarn: "yarn",
   pnpm: "pnpm exec",
+  bun: "bunx",
 };
 
 function validatePackageManager(pkgManager: string): PackageManager {

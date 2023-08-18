@@ -1,6 +1,7 @@
 ---
 title: App Tutorial (long)
 order: 4
+hidden: true
 ---
 
 # Jokes App Tutorial

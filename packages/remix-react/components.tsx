@@ -36,13 +36,13 @@ import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
-  getLinksForMatches,
+  getKeyedLinksForMatches,
+  getKeyedPrefetchLinks,
   getModuleLinkHrefs,
   getNewMatchesForLinks,
-  getStylesheetPrefetchLinks,
   isPageLinkDescriptor,
 } from "./links";
-import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
+import type { KeyedHtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type {
   MetaFunction,
@@ -231,7 +231,7 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
 /**
- * A special kind of `<Link>` that knows whether or not it is "active".
+ * A special kind of `<Link>` that knows whether it is "active".
  *
  * @see https://remix.run/components/nav-link
  */
@@ -327,54 +327,26 @@ export function Links() {
       )
     : routerMatches;
 
-  let links = React.useMemo(
-    () => getLinksForMatches(matches, routeModules, manifest),
+  let keyedLinks = React.useMemo(
+    () => getKeyedLinksForMatches(matches, routeModules, manifest),
     [matches, routeModules, manifest]
   );
 
   return (
     <>
-      {links.map((link) => {
-        if (isPageLinkDescriptor(link)) {
-          return <PrefetchPageLinks key={link.page} {...link} />;
-        }
-
-        let imageSrcSet: string | null = null;
-        let imageSizes: string | null = null;
-
-        // In React 17, <link imageSrcSet> and <link imageSizes> will warn
-        // because the DOM attributes aren't recognized, so users need to pass
-        // them in all lowercase to forward the attributes to the node without a
-        // warning. Normalize so that either property can be used in Remix.
-        let imageSizesKey = "useId" in React ? "imageSizes" : "imagesizes";
-        let imageSrcSetKey = "useId" in React ? "imageSrcSet" : "imagesrcset";
-        if (link.imageSrcSet) {
-          imageSrcSet = link.imageSrcSet;
-          delete link.imageSrcSet;
-        }
-
-        if (link.imageSizes) {
-          imageSizes = link.imageSizes;
-          delete link.imageSizes;
-        }
-
-        return (
-          <link
-            key={link.rel + (link.href || "") + (imageSrcSet || "")}
-            {...{
-              ...link,
-              [imageSizesKey]: imageSizes,
-              [imageSrcSetKey]: imageSrcSet,
-            }}
-          />
-        );
-      })}
+      {keyedLinks.map(({ key, link }) =>
+        isPageLinkDescriptor(link) ? (
+          <PrefetchPageLinks key={key} {...link} />
+        ) : (
+          <link key={key} {...link} />
+        )
+      )}
     </>
   );
 }
 
 /**
- * This component renders all of the `<link rel="prefetch">` and
+ * This component renders all the `<link rel="prefetch">` and
  * `<link rel="modulepreload"/>` tags for all the assets (data, modules, css) of
  * a given page.
  *
@@ -402,17 +374,21 @@ export function PrefetchPageLinks({
   );
 }
 
-function usePrefetchedStylesheets(matches: AgnosticDataRouteMatch[]) {
+function useKeyedPrefetchLinks(matches: AgnosticDataRouteMatch[]) {
   let { manifest, routeModules } = useRemixContext();
 
-  let [styleLinks, setStyleLinks] = React.useState<HtmlLinkDescriptor[]>([]);
+  let [keyedPrefetchLinks, setKeyedPrefetchLinks] = React.useState<
+    KeyedHtmlLinkDescriptor[]
+  >([]);
 
   React.useEffect(() => {
     let interrupted: boolean = false;
 
-    getStylesheetPrefetchLinks(matches, manifest, routeModules).then(
+    void getKeyedPrefetchLinks(matches, manifest, routeModules).then(
       (links) => {
-        if (!interrupted) setStyleLinks(links);
+        if (!interrupted) {
+          setKeyedPrefetchLinks(links);
+        }
       }
     );
 
@@ -421,7 +397,7 @@ function usePrefetchedStylesheets(matches: AgnosticDataRouteMatch[]) {
     };
   }, [matches, manifest, routeModules]);
 
-  return styleLinks;
+  return keyedPrefetchLinks;
 }
 
 function PrefetchPageLinksImpl({
@@ -473,7 +449,7 @@ function PrefetchPageLinksImpl({
 
   // needs to be a hook with async behavior because we need the modules, not
   // just the manifest like the other links in here.
-  let styleLinks = usePrefetchedStylesheets(newMatchesForAssets);
+  let keyedPrefetchLinks = useKeyedPrefetchLinks(newMatchesForAssets);
 
   return (
     <>
@@ -483,10 +459,10 @@ function PrefetchPageLinksImpl({
       {moduleHrefs.map((href) => (
         <link key={href} rel="modulepreload" href={href} {...linkProps} />
       ))}
-      {styleLinks.map((link) => (
+      {keyedPrefetchLinks.map(({ key, link }) => (
         // these don't spread `linkProps` because they are full link descriptors
         // already with their own props
-        <link key={link.href} {...link} />
+        <link key={key} {...link} />
       ))}
     </>
   );
@@ -506,12 +482,13 @@ export function Meta() {
   } = useDataRouterStateContext();
   let location = useLocation();
 
-  let _matches = errors
-    ? routerMatches.slice(
-        0,
-        routerMatches.findIndex((m) => errors![m.route.id]) + 1
-      )
-    : routerMatches;
+  let _matches: AgnosticDataRouteMatch[] = routerMatches;
+  let error: any = null;
+  if (errors) {
+    let errorIdx = routerMatches.findIndex((m) => errors![m.route.id]);
+    _matches = routerMatches.slice(0, errorIdx + 1);
+    error = errors[routerMatches[errorIdx].route.id];
+  }
 
   let meta: MetaDescriptor[] = [];
   let leafMeta: MetaDescriptor[] | null = null;
@@ -531,6 +508,7 @@ export function Meta() {
       params: _match.params,
       pathname: _match.pathname,
       handle: _match.route.handle,
+      error,
     };
     matches[i] = match;
 
@@ -542,13 +520,14 @@ export function Meta() {
               params,
               location,
               matches,
+              error,
             })
           : Array.isArray(routeModule.meta)
           ? [...routeModule.meta]
           : routeModule.meta;
     } else if (leafMeta) {
       // We only assign the route's meta to the nearest leaf if there is no meta
-      // export in the route. The meta function may return a falsey value which
+      // export in the route. The meta function may return a falsy value which
       // is effectively the same as an empty array.
       routeMeta = [...leafMeta];
     }
@@ -606,21 +585,18 @@ export function Meta() {
         }
 
         if ("script:ld+json" in metaProps) {
-          let json: string | null = null;
           try {
-            json = JSON.stringify(metaProps["script:ld+json"]);
-          } catch (err) {}
-          return (
-            json != null && (
+            let json = JSON.stringify(metaProps["script:ld+json"]);
+            return (
               <script
-                key="script:ld+json"
+                key={`script:ld+json:${json}`}
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                  __html: JSON.stringify(metaProps["script:ld+json"]),
-                }}
+                dangerouslySetInnerHTML={{ __html: json }}
               />
-            )
-          );
+            );
+          } catch (err) {
+            return null;
+          }
         }
         return <meta key={JSON.stringify(metaProps)} {...metaProps} />;
       })}
@@ -748,7 +724,7 @@ export function Scripts(props: ScriptProps) {
     //   resolution by the subsequently streamed chunks.
     // - __remixContext.r is a function that takes a routeID, key and value or error and resolves
     //   the promise created by __remixContext.n.
-    // - __remixContext.t is a a map or routeId to keys to an object containing `e` and `r` methods
+    // - __remixContext.t is a map or routeId to keys to an object containing `e` and `r` methods
     //   to resolve or reject the promise created by __remixContext.n.
     // - __remixContext.a is the active number of deferred scripts that should be rendered to match
     //   the SSR tree for hydration on the client.

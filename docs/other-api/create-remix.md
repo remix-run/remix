@@ -24,7 +24,7 @@ npx create-remix@latest --help
 
 ### Package managers
 
-`create-remix` can also be invoked using the `create` command of various package managers, allowing you to choose between npm, Yarn and pnpm for managing the install process.
+`create-remix` can also be invoked using various package managers, allowing you to choose between npm, Yarn, pnpm, and Bun for managing the install process.
 
 ```sh
 npm create remix@latest <projectDir>
@@ -32,6 +32,8 @@ npm create remix@latest <projectDir>
 yarn create remix <projectDir>
 # or
 pnpm create remix <projectDir>
+# or
+bunx create-remix <projectDir>
 ```
 
 ### `create-remix --template`

@@ -8,6 +8,7 @@ export type {
   FormProps,
   Location,
   NavigateFunction,
+  Navigation,
   Params,
   Path,
   ShouldRevalidateFunction,

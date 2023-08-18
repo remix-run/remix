@@ -1,6 +1,5 @@
 ---
 title: meta
-new: true
 ---
 
 # `meta`
@@ -109,6 +108,16 @@ export const meta: MetaFunction<typeof loader> = ({
 ### `params`
 
 The route's URL params. See [Dynamic Segments in the Routing Guide][url-params].
+
+### `error`
+
+Thrown errors that trigger error boundaries will be passed to the `meta` function. This is useful for generating metadata for error pages.
+
+```tsx
+export const meta: MetaFunction = ({ error }) => {
+  return [{ title: error ? "oops!" : "Actual title" }];
+};
+```
 
 ## Accessing Data from Parent Route Loaders
 

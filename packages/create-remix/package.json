@@ -1,6 +1,6 @@
 {
   "name": "create-remix",
-  "version": "1.19.2",
+  "version": "1.19.3",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
   "bugs": {
@@ -40,7 +40,7 @@
     "esbuild": "0.17.6",
     "esbuild-register": "^3.3.2",
     "fs-extra": "^10.0.0",
-    "msw": "^0.39.2",
+    "msw": "^1.2.3",
     "tiny-invariant": "^1.2.0"
   },
   "engines": {

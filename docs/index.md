@@ -21,10 +21,10 @@ npx create-remix@latest
       <p>If you're wondering what Remix is, this is the page for you. Learn how Remix is four primary things: a compiler, an HTTP handler, a server framework, and a browser framework.</p>
     </docs-card>
   </a>
-  <a href="/pages/v2" aria-label="Preparing for v2">
+  <a href="/pages/v2" aria-label="Upgrading to v2">
     <docs-card>
-      <h4>Preparing for v2</h4> 
-      <p>Remix v2 is coming soon! All of the new APIs and behaviors are available already in v1 behind Future Flags. This doc will help you incrementally adopt each one so that when it's time to update to v2, you don't have to change a thing.</p>
+      <h4>Upgrading to v2</h4>
+      <p>Remix v2 is here! All of the new APIs and behaviors are available already in v1 behind Future Flags. This doc will help you incrementally adopt each one so that when it's time to update to v2, you don't have to change a thing.</p>
     </docs-card>
   </a>
   <a href="/tutorials/blog" aria-label="Developer Blog Tutorial">

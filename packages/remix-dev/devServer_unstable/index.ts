@@ -31,6 +31,10 @@ let detectBin = async (): Promise<string> => {
     let { stdout } = await execa(pkgManager, ["prefix"]);
     return path.join(stdout.trim(), "node_modules", ".bin");
   }
+  if (pkgManager === "bun") {
+    let { stdout } = await execa(pkgManager, ["pm", "bin"]);
+    return stdout.trim();
+  }
   let { stdout } = await execa(pkgManager, ["bin"]);
   return stdout.trim();
 };
@@ -135,7 +139,7 @@ export let serve = async (
             transform(chunk, _, callback) {
               let str: string = chunk.toString();
               let matches =
-                str && str.matchAll(/\[REMIX DEV\] ([A-f0-9]+) ready/g);
+                str && str.matchAll(/\[REMIX DEV\] ([A-Fa-f0-9]+) ready/g);
               if (matches) {
                 for (let match of matches) {
                   let buildHash = match[1];

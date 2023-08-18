@@ -1,6 +1,5 @@
 ---
 title: "@remix-run/serve"
-toc: false
 order: 3
 ---
 
@@ -11,6 +10,24 @@ Remix is designed for you to own your server, but if you don't want to set one u
 ```sh
 remix-serve <server-build-path>
 ```
+
+## `PORT` environment variable
+
+You can change the port of the server with an environment variable.
+
+```sh
+PORT=4000 npx remix-serve <server-build-path>
+```
+
+## `HOST` environment variable
+
+You can configure the hostname for your Express app via `process.env.HOST` and that value will be passed to the internal [`app.listen`][express-listen] method when starting the server.
+
+```sh
+HOST=127.0.0.1 npx remix-serve build/
+```
+
+## Development Environment
 
 Depending on `process.env.NODE_ENV`, the server will boot in development or production mode.
 
@@ -61,3 +78,4 @@ In production this doesn't happen. The server boots up and that's the end of it.
 
 [remix-run-express]: adapter#createrequesthandler
 [remember]: ./dev-v2#keeping-in-memory-server-state-across-rebuilds
+[express-listen]: https://expressjs.com/en/api.html#app.listen
