@@ -190,26 +190,6 @@ describe("create-remix CLI", () => {
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
   });
 
-  it("errors when project directory isn't empty when shell isn't interactive", async () => {
-    let notEmptyDir = getProjectDir("non-interactive-not-empty-dir");
-    fse.mkdirSync(notEmptyDir);
-    fse.createFileSync(path.join(notEmptyDir, "some-file.txt"));
-
-    let { status, stderr } = await execCreateRemix({
-      args: [notEmptyDir, "--no-install"],
-      interactive: false,
-    });
-
-    expect(
-      stderr.trim().replace("<TEMP_DIR>\\", "<TEMP_DIR>/") // Normalize Windows path
-    ).toMatchInlineSnapshot(
-      `"▲  Oh no! Project directory \\"<TEMP_DIR>/non-interactive-not-empty-dir\\" is not empty"`
-    );
-    expect(status).toBe(1);
-    expect(fse.existsSync(path.join(notEmptyDir, "package.json"))).toBeFalsy();
-    expect(fse.existsSync(path.join(notEmptyDir, "app/root.tsx"))).toBeFalsy();
-  });
-
   it("works for GitHub username/repo combo", async () => {
     let projectDir = getProjectDir("github-username-repo");
 
@@ -882,6 +862,253 @@ describe("create-remix CLI", () => {
     process.env.npm_config_user_agent = originalUserAgent;
   });
 
+  it("works when creating an app in the current dir", async () => {
+    let emptyDir = getProjectDir("current-dir-if-empty");
+    fse.mkdirSync(emptyDir);
+
+    let { status, stderr } = await execCreateRemix({
+      cwd: emptyDir,
+      args: [
+        ".",
+        "--template",
+        path.join(__dirname, "fixtures", "stack"),
+        "--no-git-init",
+        "--no-install",
+      ],
+    });
+
+    expect(stderr.trim()).toBeFalsy();
+    expect(status).toBe(0);
+    expect(fse.existsSync(path.join(emptyDir, "package.json"))).toBeTruthy();
+    expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
+  });
+
+  it("does not copy .git/ directory if it exists in the template", async () => {
+    // Can't really commit this file into a git repo, so just create it as
+    // part of the test and then remove it when we're done
+    let withGitDir = path.join(__dirname, "fixtures", "with-git-dir");
+    fse.mkdirSync(path.join(withGitDir, ".git"));
+    fse.createFileSync(path.join(withGitDir, ".git", "some-git-file.txt"));
+
+    let projectDir = getProjectDir("with-git-dir");
+
+    try {
+      let { status, stderr } = await execCreateRemix({
+        args: [
+          projectDir,
+          "--template",
+          path.join(__dirname, "fixtures", "with-git-dir"),
+          "--no-git-init",
+          "--no-install",
+        ],
+      });
+
+      expect(stderr.trim()).toBeFalsy();
+      expect(status).toBe(0);
+      expect(fse.existsSync(path.join(projectDir, ".git"))).toBeFalsy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+    } finally {
+      fse.removeSync(path.join(withGitDir, ".git"));
+    }
+  });
+
+  describe("when project directory contains files", () => {
+    describe("interactive shell", () => {
+      let interactive = true;
+
+      it("works without prompt when there are no collisions", async () => {
+        let projectDir = getProjectDir("not-empty-dir-interactive");
+        fse.mkdirSync(projectDir);
+        fse.createFileSync(path.join(projectDir, "some-file.txt"));
+
+        let { status, stderr } = await execCreateRemix({
+          args: [
+            projectDir,
+            "--template",
+            path.join(__dirname, "fixtures", "stack"),
+            "--no-git-init",
+            "--no-install",
+          ],
+          interactive,
+        });
+
+        expect(stderr.trim()).toBeFalsy();
+        expect(status).toBe(0);
+        expect(
+          fse.existsSync(path.join(projectDir, "package.json"))
+        ).toBeTruthy();
+        expect(
+          fse.existsSync(path.join(projectDir, "app/root.tsx"))
+        ).toBeTruthy();
+      });
+
+      it("prompts for overwrite when there are collisions", async () => {
+        let notEmptyDir = getProjectDir("not-empty-dir-interactive-collisions");
+        fse.mkdirSync(notEmptyDir);
+        fse.createFileSync(path.join(notEmptyDir, "package.json"));
+        fse.createFileSync(path.join(notEmptyDir, "tsconfig.json"));
+
+        let { status, stdout, stderr } = await execCreateRemix({
+          args: [
+            notEmptyDir,
+            "--template",
+            path.join(__dirname, "fixtures", "stack"),
+            "--no-git-init",
+            "--no-install",
+          ],
+          interactive,
+          interactions: [
+            {
+              question: /contains files that will be overwritten/i,
+              type: ["y"],
+            },
+          ],
+        });
+
+        expect(stdout).toContain("Files that would be overwritten:");
+        expect(stdout).toContain("package.json");
+        expect(stdout).toContain("tsconfig.json");
+        expect(status).toBe(0);
+        expect(stderr.trim()).toBeFalsy();
+        expect(
+          fse.existsSync(path.join(notEmptyDir, "package.json"))
+        ).toBeTruthy();
+        expect(
+          fse.existsSync(path.join(notEmptyDir, "tsconfig.json"))
+        ).toBeTruthy();
+        expect(
+          fse.existsSync(path.join(notEmptyDir, "app/root.tsx"))
+        ).toBeTruthy();
+      });
+
+      it("works without prompt when --overwrite is specified", async () => {
+        let notEmptyDir = getProjectDir(
+          "not-empty-dir-interactive-collisions-overwrite"
+        );
+        fse.mkdirSync(notEmptyDir);
+        fse.createFileSync(path.join(notEmptyDir, "package.json"));
+        fse.createFileSync(path.join(notEmptyDir, "tsconfig.json"));
+
+        let { status, stdout, stderr } = await execCreateRemix({
+          args: [
+            notEmptyDir,
+            "--template",
+            path.join(__dirname, "fixtures", "stack"),
+            "--overwrite",
+            "--no-git-init",
+            "--no-install",
+          ],
+        });
+
+        expect(stdout).toContain(
+          "Overwrite: overwriting files due to `--overwrite`"
+        );
+        expect(stdout).toContain("package.json");
+        expect(stdout).toContain("tsconfig.json");
+        expect(status).toBe(0);
+        expect(stderr.trim()).toBeFalsy();
+        expect(
+          fse.existsSync(path.join(notEmptyDir, "package.json"))
+        ).toBeTruthy();
+        expect(
+          fse.existsSync(path.join(notEmptyDir, "tsconfig.json"))
+        ).toBeTruthy();
+        expect(
+          fse.existsSync(path.join(notEmptyDir, "app/root.tsx"))
+        ).toBeTruthy();
+      });
+    });
+
+    describe("non-interactive shell", () => {
+      let interactive = false;
+
+      it("works when there are no collisions", async () => {
+        let projectDir = getProjectDir("not-empty-dir-non-interactive");
+        fse.mkdirSync(projectDir);
+        fse.createFileSync(path.join(projectDir, "some-file.txt"));
+
+        let { status, stderr } = await execCreateRemix({
+          args: [projectDir, "--no-install"],
+          interactive,
+        });
+
+        expect(stderr.trim()).toBeFalsy();
+        expect(status).toBe(0);
+        expect(
+          fse.existsSync(path.join(projectDir, "package.json"))
+        ).toBeTruthy();
+        expect(
+          fse.existsSync(path.join(projectDir, "app/root.tsx"))
+        ).toBeTruthy();
+      });
+
+      it("errors when there are collisions", async () => {
+        let projectDir = getProjectDir(
+          "not-empty-dir-non-interactive-collisions"
+        );
+        fse.mkdirSync(projectDir);
+        fse.createFileSync(path.join(projectDir, "package.json"));
+        fse.createFileSync(path.join(projectDir, "tsconfig.json"));
+
+        let { status, stderr } = await execCreateRemix({
+          args: [
+            projectDir,
+            "--template",
+            path.join(__dirname, "fixtures", "stack"),
+            "--no-git-init",
+            "--no-install",
+          ],
+          interactive,
+        });
+
+        expect(stderr.trim()).toMatchInlineSnapshot(`
+        "▲  Oh no! Destination directory contains files that would be overwritten
+                 and no \`--overwrite\` flag was included in a non-interactive
+                 environment. The following files would be overwritten:
+                   package.json
+                   tsconfig.json"
+      `);
+        expect(status).toBe(1);
+        expect(
+          fse.existsSync(path.join(projectDir, "app/root.tsx"))
+        ).toBeFalsy();
+      });
+
+      it("works when there are collisions and --overwrite is specified", async () => {
+        let projectDir = getProjectDir(
+          "not-empty-dir-non-interactive-collisions-overwrite"
+        );
+        fse.mkdirSync(projectDir);
+        fse.createFileSync(path.join(projectDir, "package.json"));
+        fse.createFileSync(path.join(projectDir, "tsconfig.json"));
+
+        let { status, stdout, stderr } = await execCreateRemix({
+          args: [projectDir, "--no-install", "--overwrite"],
+          interactive,
+        });
+
+        expect(stdout).toContain(
+          "Overwrite: overwriting files due to `--overwrite`"
+        );
+        expect(stdout).toContain("package.json");
+        expect(stdout).toContain("tsconfig.json");
+        expect(status).toBe(0);
+        expect(stderr.trim()).toBeFalsy();
+        expect(
+          fse.existsSync(path.join(projectDir, "package.json"))
+        ).toBeTruthy();
+        expect(
+          fse.existsSync(path.join(projectDir, "tsconfig.json"))
+        ).toBeTruthy();
+        expect(
+          fse.existsSync(path.join(projectDir, "app/root.tsx"))
+        ).toBeTruthy();
+      });
+    });
+  });
+
   describe("errors", () => {
     it("identifies when a github repo is not accessible (403)", async () => {
       let projectDir = getProjectDir("repo-403");
@@ -976,89 +1203,6 @@ describe("create-remix CLI", () => {
         `"▲  Oh no! There was a problem fetching the file. The request responded with a 400 status. Please try again later."`
       );
       expect(status).toBe(1);
-    });
-
-    it("doesn't allow creating an app in a dir if it's not empty and then prompts for an empty dir", async () => {
-      let emptyDir = getProjectDir("prompt-for-dir-on-non-empty-dir");
-
-      let notEmptyDir = getProjectDir("not-empty-dir");
-      fse.mkdirSync(notEmptyDir);
-      fse.createFileSync(path.join(notEmptyDir, "some-file.txt"));
-
-      let { status, stdout, stderr } = await execCreateRemix({
-        args: [
-          notEmptyDir,
-          "--template",
-          path.join(__dirname, "fixtures", "stack"),
-          "--no-git-init",
-          "--no-install",
-        ],
-        interactions: [
-          {
-            question: /where.*create.*project/i,
-            type: [emptyDir, ENTER],
-          },
-        ],
-      });
-
-      expect(stderr.trim()).toBeFalsy();
-      expect(stdout).toContain(
-        `Hmm... "${maskTempDir(notEmptyDir)}" is not empty!`
-      );
-      expect(status).toBe(0);
-      expect(fse.existsSync(path.join(emptyDir, "package.json"))).toBeTruthy();
-      expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
-    });
-
-    it("allows creating an app in the current dir if it's empty", async () => {
-      let emptyDir = getProjectDir("current-dir-if-empty");
-      fse.mkdirSync(emptyDir);
-
-      let { status, stderr } = await execCreateRemix({
-        cwd: emptyDir,
-        args: [
-          ".",
-          "--template",
-          path.join(__dirname, "fixtures", "stack"),
-          "--no-git-init",
-          "--no-install",
-        ],
-      });
-
-      expect(stderr.trim()).toBeFalsy();
-      expect(status).toBe(0);
-      expect(fse.existsSync(path.join(emptyDir, "package.json"))).toBeTruthy();
-      expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
-    });
-
-    it("doesn't allow creating an app in the current dir if it's not empty", async () => {
-      let emptyDir = getProjectDir("prompt-for-dir-if-current-dir-not-empty");
-      let notEmptyDir = getProjectDir("not-empty-dir");
-      fse.mkdirSync(notEmptyDir);
-      fse.createFileSync(path.join(notEmptyDir, "some-file.txt"));
-
-      let { status, stdout, stderr } = await execCreateRemix({
-        cwd: notEmptyDir,
-        args: [
-          ".",
-          "--template",
-          path.join(__dirname, "fixtures", "stack"),
-          "--no-git-init",
-          "--no-install",
-        ],
-        interactions: [
-          {
-            question: /where.*create.*project/i,
-            type: [emptyDir, ENTER],
-          },
-        ],
-      });
-
-      expect(stderr.trim()).toBeFalsy();
-      expect(stdout).toContain(`Hmm... "." is not empty!`);
-      expect(status).toBe(0);
-      expect(fse.existsSync(path.join(emptyDir, "package.json"))).toBeTruthy();
-      expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
     });
   });
 

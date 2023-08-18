@@ -303,8 +303,8 @@ async function copyTemplateToTempDirStep(ctx: Context) {
         },
       });
 
-      if (result?.isLocalTemplateDirectory) {
-        ctx.tempDir = path.resolve(template);
+      if (result?.localTemplateDirectory) {
+        ctx.tempDir = path.resolve(result.localTemplateDirectory);
       }
     },
     ctx,
@@ -318,31 +318,53 @@ async function copyTempDirToAppDirStep(ctx: Context) {
   let files2 = await getDirectoryFilesRecursive(ctx.cwd);
   let collisions = files1.filter((f) => files2.includes(f));
 
-  if (collisions.length > 0 && !ctx.overwrite) {
-    if (ctx.debug) {
-      debug(`Colliding files:`, `${["", ...collisions].join("\n           ")}`);
-    }
+  if (collisions.length > 0) {
+    let getFileList = (prefix: string) => {
+      let moreFiles = collisions.length - 5;
+      let lines = ["", ...collisions.slice(0, 5)];
+      if (moreFiles > 0) {
+        lines.push(`and ${moreFiles} more...`);
+      }
+      return lines.join(`\n${prefix}`);
+    };
 
-    let files = `${collisions.slice(0, 5).join("\n               ")}${
-      collisions.length > 5
-        ? `\n               and ${collisions.length - 3} more...`
-        : ""
-    }`;
-    let { overwrite } = await ctx.prompt({
-      name: "overwrite",
-      type: "confirm",
-      label: title("overwrite"),
-      message:
-        `Your project directory contains files that will be overwritten by\n` +
-        `             this template (you can force with \`--overwrite\`)\n\n` +
-        `             Files that would be overwritten:\n` +
-        `               ${files}\n\n` +
-        `             Do you wish to continue?\n` +
-        `             `,
-      initial: false,
-    });
-    if (!overwrite) {
-      throw new Error("Exiting to avoid overwriting files");
+    if (ctx.overwrite) {
+      info(
+        "Overwrite:",
+        `overwriting files due to \`--overwrite\`:${getFileList("           ")}`
+      );
+    } else if (!ctx.interactive) {
+      error(
+        "Oh no!",
+        `Destination directory contains files that would be overwritten\n` +
+          `         and no \`--overwrite\` flag was included in a non-interactive\n` +
+          `         environment. The following files would be overwritten:` +
+          getFileList("           ")
+      );
+      throw new Error(
+        "File collisions detected in a non-interactive environment"
+      );
+    } else {
+      if (ctx.debug) {
+        debug(`Colliding files:${getFileList("          ")}`);
+      }
+
+      let { overwrite } = await ctx.prompt({
+        name: "overwrite",
+        type: "confirm",
+        label: title("overwrite"),
+        message:
+          `Your project directory contains files that will be overwritten by\n` +
+          `             this template (you can force with \`--overwrite\`)\n\n` +
+          `             Files that would be overwritten:` +
+          `${getFileList("               ")}\n\n` +
+          `             Do you wish to continue?\n` +
+          `             `,
+        initial: false,
+      });
+      if (!overwrite) {
+        throw new Error("Exiting to avoid overwriting files");
+      }
     }
   }
 

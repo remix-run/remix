@@ -92,6 +92,7 @@ export function logError(message: string) {
 }
 
 function logBullet(
+  logger: typeof log | typeof logError,
   colorizePrefix: <V>(v: V) => V,
   colorizeText: <V>(v: V) => V,
   symbol: string,
@@ -104,12 +105,12 @@ function logBullet(
     .join("");
 
   if (process.stdout.columns < 80) {
-    log(
+    logger(
       `${" ".repeat(5)} ${colorizePrefix(symbol)}  ${colorizePrefix(prefix)}`
     );
-    log(`${" ".repeat(9)}${formattedText}`);
+    logger(`${" ".repeat(9)}${formattedText}`);
   } else {
-    log(
+    logger(
       `${" ".repeat(5)} ${colorizePrefix(symbol)}  ${colorizePrefix(
         prefix
       )} ${formattedText}`
@@ -118,20 +119,20 @@ function logBullet(
 }
 
 export function debug(prefix: string, text?: string | string[]) {
-  logBullet(color.yellow, color.dim, "●", prefix, text);
+  logBullet(log, color.yellow, color.dim, "●", prefix, text);
 }
 
 export function info(prefix: string, text?: string | string[]) {
-  logBullet(color.cyan, color.dim, "◼", prefix, text);
+  logBullet(log, color.cyan, color.dim, "◼", prefix, text);
 }
 
 export function success(text: string) {
-  logBullet(color.green, color.dim, "✔", text);
+  logBullet(log, color.green, color.dim, "✔", text);
 }
 
 export function error(prefix: string, text?: string | string[]) {
   log("");
-  logBullet(color.red, color.error, "▲", prefix, text);
+  logBullet(logError, color.red, color.error, "▲", prefix, text);
 }
 
 export function sleep(ms: number) {

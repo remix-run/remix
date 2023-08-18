@@ -23,7 +23,7 @@ export async function copyTemplate(
   template: string,
   destPath: string,
   options: CopyTemplateOptions
-): Promise<{ isLocalTemplateDirectory: boolean } | undefined> {
+): Promise<{ localTemplateDirectory: string } | undefined> {
   let { log = () => {} } = options;
 
   /**
@@ -41,11 +41,8 @@ export async function copyTemplate(
       let filepath = template.startsWith("file://")
         ? url.fileURLToPath(template)
         : template;
-      let isLocalTemplateDirectory = await copyTemplateFromLocalFilePath(
-        filepath,
-        destPath
-      );
-      return { isLocalTemplateDirectory };
+      let isLocalDir = await copyTemplateFromLocalFilePath(filepath, destPath);
+      return isLocalDir ? { localTemplateDirectory: filepath } : undefined;
     }
 
     if (isGithubRepoShorthand(template)) {
@@ -144,7 +141,9 @@ async function copyTemplateFromLocalFilePath(
     return false;
   }
   if (fs.statSync(filePath).isDirectory()) {
-    await fse.copy(filePath, destPath);
+    // If our template is just a directory on disk, return true here and we'll
+    // just copy directly from there instead of "extracting" to a temp
+    // directory first
     return true;
   }
   throw new CopyTemplateError(
