@@ -274,7 +274,18 @@ export function action(key: ActionKey, isSelect: boolean) {
 }
 
 export function stripDirectoryFromPath(dir: string, filePath: string) {
-  return filePath.replace(new RegExp(`^${dir}${path.sep}+`), "");
+  // Can't just do a regexp replace here since the windows paths mess it up :/
+  let stripped = filePath;
+  if (
+    (dir.endsWith(path.sep) && filePath.startsWith(dir)) ||
+    (!dir.endsWith(path.sep) && filePath.startsWith(dir + path.sep))
+  ) {
+    stripped = filePath.slice(dir.length);
+    if (stripped.startsWith(path.sep)) {
+      stripped = stripped.slice(1);
+    }
+  }
+  return stripped;
 }
 
 // We do not copy these folders from templates so we can ignore them for comparisons

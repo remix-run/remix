@@ -625,7 +625,7 @@ async function doneStep(ctx: Context) {
   if (projectDir !== "") {
     let enter = [
       `\n${prefix}Enter your project directory using`,
-      color.cyan(`cd ./${projectDir}`),
+      color.cyan(`cd .${path.sep}${projectDir}`),
     ];
     let len = enter[0].length + stripAnsi(enter[1]).length;
     log(enter.join(len > max ? "\n" + prefix : " "));
