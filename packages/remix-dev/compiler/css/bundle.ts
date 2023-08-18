@@ -59,7 +59,7 @@ function isCssBundleFile(
   );
 }
 
-interface GroupedCssBundleFiles {
+type GroupedCssBundleFiles = {
   css?: esbuild.OutputFile;
   sourceMap?: esbuild.OutputFile;
   assets: esbuild.OutputFile[];
