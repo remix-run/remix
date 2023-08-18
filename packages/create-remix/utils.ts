@@ -91,44 +91,47 @@ export function logError(message: string) {
   return stderr.write(message + "\n");
 }
 
-export function info(prefix: string, text?: string | string[]) {
+function logBullet(
+  colorizePrefix: <V>(v: V) => V,
+  colorizeText: <V>(v: V) => V,
+  symbol: string,
+  prefix: string,
+  text?: string | string[]
+) {
   let textParts = Array.isArray(text) ? text : [text || ""].filter(Boolean);
-  let formattedText = textParts.map((textPart) => color.dim(textPart)).join("");
+  let formattedText = textParts
+    .map((textPart) => colorizeText(textPart))
+    .join("");
 
   if (process.stdout.columns < 80) {
-    log(`${" ".repeat(5)} ${color.cyan("◼")}  ${color.cyan(prefix)}`);
+    log(
+      `${" ".repeat(5)} ${colorizePrefix(symbol)}  ${colorizePrefix(prefix)}`
+    );
     log(`${" ".repeat(9)}${formattedText}`);
   } else {
     log(
-      `${" ".repeat(5)} ${color.cyan("◼")}  ${color.cyan(
+      `${" ".repeat(5)} ${colorizePrefix(symbol)}  ${colorizePrefix(
         prefix
       )} ${formattedText}`
     );
   }
+}
+
+export function debug(prefix: string, text?: string | string[]) {
+  logBullet(color.yellow, color.dim, "●", prefix, text);
+}
+
+export function info(prefix: string, text?: string | string[]) {
+  logBullet(color.cyan, color.dim, "◼", prefix, text);
 }
 
 export function success(text: string) {
-  log(`${" ".repeat(5)} ${color.green("✔")}  ${color.green(text)}`);
+  logBullet(color.green, color.dim, "✔", text);
 }
 
 export function error(prefix: string, text?: string | string[]) {
-  let textParts = Array.isArray(text) ? text : [text || ""].filter(Boolean);
-  let formattedText = textParts
-    .map((textPart) => color.error(textPart))
-    .join("");
-
   log("");
-
-  if (process.stdout.columns < 80) {
-    logError(`${" ".repeat(5)} ${color.red("▲")}  ${color.red(prefix)}`);
-    logError(`${" ".repeat(9)}${formattedText}`);
-  } else {
-    logError(
-      `${" ".repeat(5)} ${color.red("▲")}  ${color.red(
-        prefix
-      )} ${formattedText}`
-    );
-  }
+  logBullet(color.red, color.error, "▲", prefix, text);
 }
 
 export function sleep(ms: number) {
@@ -269,24 +272,27 @@ export function action(key: ActionKey, isSelect: boolean) {
   return false;
 }
 
-export async function getDirectoryFilesRecursive(d: string) {
+export function stripDirectoryFromPath(dir: string, filePath: string) {
+  return filePath.replace(new RegExp(`^${dir}${path.sep}+`), "");
+}
+
+export async function getDirectoryFilesRecursive(dir: string) {
   // Ignore comparing within these directories - but detect a collision
   // at the directory level and count it.  These get prepended to strippedFiles
   // in reverse order below
   let ignoreDirs = ["node_modules", ".git"];
-  let dirPrefix = new RegExp(`^${d}${path.sep}+`);
-  let files = await recursiveReaddir(d, [
+  let files = await recursiveReaddir(dir, [
     (file) => {
-      let strippedFile = file.replace(dirPrefix, "");
+      let strippedFile = stripDirectoryFromPath(dir, file);
       let parts = strippedFile.split(path.sep);
       return parts.length > 1 && ignoreDirs.includes(parts[0]);
     },
   ]);
-  let strippedFiles = files.map((f) => f.replace(dirPrefix, ""));
+  let strippedFiles = files.map((f) => stripDirectoryFromPath(dir, f));
   ignoreDirs.forEach((dir) => {
-    let dirPath = path.join(d, dir);
+    let dirPath = path.join(dir, dir);
     if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
-      strippedFiles.unshift(dirPath.replace(dirPrefix, ""));
+      strippedFiles.unshift(stripDirectoryFromPath(dir, dirPath));
     }
   });
   return strippedFiles;

@@ -14,6 +14,7 @@ import { version as thisRemixVersion } from "./package.json";
 import { prompt } from "./prompt";
 import {
   color,
+  debug,
   ensureDirectory,
   error,
   fileExists,
@@ -258,7 +259,7 @@ async function projectNameStep(ctx: Context) {
 async function copyTemplateToTempDirStep(ctx: Context) {
   if (ctx.template) {
     log("");
-    info("Template", ["Using ", color.reset(ctx.template), "..."]);
+    info("Template:", ["Using ", color.reset(ctx.template), "..."]);
   } else {
     log("");
     info("Using basic template", [
@@ -276,7 +277,7 @@ async function copyTemplateToTempDirStep(ctx: Context) {
     while: async () => {
       await ensureDirectory(ctx.tempDir);
       if (ctx.debug) {
-        info(`Extracting template to temp directory: ${ctx.tempDir}`);
+        debug(`Extracting to: ${ctx.tempDir}`);
       }
 
       // TODO: Optimization - if template is just a local directory (not a
@@ -299,7 +300,7 @@ async function copyTemplateToTempDirStep(ctx: Context) {
         },
         async log(message) {
           if (ctx.debug) {
-            info(message);
+            debug(message);
             await sleep(500);
           }
         },
@@ -318,21 +319,25 @@ async function copyTempDirToAppDirStep(ctx: Context) {
 
   if (collisions.length > 0 && !ctx.overwrite) {
     if (ctx.debug) {
-      info(`Colliding files:${["", ...collisions].join("\n           ")}`);
+      debug(`Colliding files:`, `${["", ...collisions].join("\n           ")}`);
     }
 
-    let files = `${collisions.slice(0, 3).join(", ")}${
-      collisions.length > 3 ? ` and ${collisions.length - 3} more...` : ""
+    let files = `${collisions.slice(0, 5).join("\n               ")}${
+      collisions.length > 5
+        ? `\n               and ${collisions.length - 3} more...`
+        : ""
     }`;
     let { overwrite } = await ctx.prompt({
       name: "overwrite",
       type: "confirm",
       label: title("overwrite"),
       message:
-        `Your app directory already contains files that will be overwritten\n` +
-        `             by this template. Do you wish to continue?\n` +
-        `             Colliding files: ${files}\n` +
-        `             (You can skip this message with the --overwrite CLI flag)`,
+        `Your project directory contains files that will be overwritten by\n` +
+        `             this template (you can force with \`--overwrite\`)\n\n` +
+        `             Files that would be overwritten:\n` +
+        `               ${files}\n\n` +
+        `             Do you wish to continue?\n` +
+        `             `,
       initial: false,
     });
     if (!overwrite) {
