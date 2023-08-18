@@ -63,7 +63,7 @@ describe("create-remix CLI", () => {
       args: ["--help"],
     });
     expect(stdout.trim()).toMatchInlineSnapshot(`
-      "create-remix
+      "create-remix  
 
       Usage:
 
@@ -883,7 +883,7 @@ describe("create-remix CLI", () => {
     expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
   });
 
-  it.only("does not copy .git nor node_modules directories if they exist in the template", async () => {
+  it("does not copy .git nor node_modules directories if they exist in the template", async () => {
     // Can't really commit this file into a git repo, so just create it as
     // part of the test and then remove it when we're done
     let templateWithIgnoredDirs = path.join(
@@ -907,7 +907,7 @@ describe("create-remix CLI", () => {
     let projectDir = getProjectDir("with-git-dir");
 
     try {
-      let { status, stderr, stdout } = await execCreateRemix({
+      let { status, stderr } = await execCreateRemix({
         args: [
           projectDir,
           "--template",
@@ -917,10 +917,6 @@ describe("create-remix CLI", () => {
         ],
       });
 
-      console.log("stderr");
-      console.log(stderr);
-      console.log("stdout");
-      console.log(stdout);
       expect(stderr.trim()).toBeFalsy();
       expect(status).toBe(0);
       expect(fse.existsSync(path.join(projectDir, ".git"))).toBeFalsy();
