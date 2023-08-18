@@ -281,11 +281,7 @@ async function copyTemplateToTempDirStep(ctx: Context) {
         debug(`Extracting to: ${ctx.tempDir}`);
       }
 
-      // TODO: Optimization - if template is just a local directory (not a
-      // local tarball etc.), just use that as ctx.tempDir for the rest of
-      // the pipeline and avoid copying it to a temp directory
-
-      await copyTemplate(template, ctx.tempDir, {
+      let result = await copyTemplate(template, ctx.tempDir, {
         debug: ctx.debug,
         token: ctx.token,
         async onError(err) {
@@ -306,6 +302,10 @@ async function copyTemplateToTempDirStep(ctx: Context) {
           }
         },
       });
+
+      if (result?.isLocalTemplateDirectory) {
+        ctx.tempDir = path.resolve(template);
+      }
     },
     ctx,
   });
