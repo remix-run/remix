@@ -312,7 +312,15 @@ async function downloadAndExtractTarball(
           header.name = header.name.replace(`${originalDirName}/`, "");
 
           if (filePath) {
-            if (header.name.startsWith(filePath)) {
+            // Include trailing slash on startsWith when filePath doesn't include
+            // it so something like `templates/remix` doesn't inadvertently
+            // include `templates/remix-javascript/*` files
+            if (
+              (filePath.endsWith(path.posix.sep) &&
+                header.name.startsWith(filePath)) ||
+              (!filePath.endsWith(path.posix.sep) &&
+                header.name.startsWith(filePath + path.posix.sep))
+            ) {
               filePathHasFiles = true;
               header.name = header.name.replace(filePath, "");
             } else {
