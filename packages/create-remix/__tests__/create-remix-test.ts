@@ -883,12 +883,26 @@ describe("create-remix CLI", () => {
     expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
   });
 
-  it("does not copy .git/ directory if it exists in the template", async () => {
+  it("does not copy .git nor node_modules directories if they exist in the template", async () => {
     // Can't really commit this file into a git repo, so just create it as
     // part of the test and then remove it when we're done
-    let withGitDir = path.join(__dirname, "fixtures", "with-git-dir");
-    fse.mkdirSync(path.join(withGitDir, ".git"));
-    fse.createFileSync(path.join(withGitDir, ".git", "some-git-file.txt"));
+    let templateWithIgnoredDirs = path.join(
+      __dirname,
+      "fixtures",
+      "with-ignored-dir"
+    );
+    fse.mkdirSync(path.join(templateWithIgnoredDirs, ".git"));
+    fse.createFileSync(
+      path.join(templateWithIgnoredDirs, ".git", "some-git-file.txt")
+    );
+    fse.mkdirSync(path.join(templateWithIgnoredDirs, "node_modules"));
+    fse.createFileSync(
+      path.join(
+        templateWithIgnoredDirs,
+        "node_modules",
+        "some-node-module-file.txt"
+      )
+    );
 
     let projectDir = getProjectDir("with-git-dir");
 
@@ -897,7 +911,7 @@ describe("create-remix CLI", () => {
         args: [
           projectDir,
           "--template",
-          path.join(__dirname, "fixtures", "with-git-dir"),
+          templateWithIgnoredDirs,
           "--no-git-init",
           "--no-install",
         ],
@@ -906,11 +920,13 @@ describe("create-remix CLI", () => {
       expect(stderr.trim()).toBeFalsy();
       expect(status).toBe(0);
       expect(fse.existsSync(path.join(projectDir, ".git"))).toBeFalsy();
+      expect(fse.existsSync(path.join(projectDir, "node_modules"))).toBeFalsy();
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
       ).toBeTruthy();
     } finally {
-      fse.removeSync(path.join(withGitDir, ".git"));
+      fse.removeSync(path.join(templateWithIgnoredDirs, ".git"));
+      fse.removeSync(path.join(templateWithIgnoredDirs, "node_modules"));
     }
   });
 

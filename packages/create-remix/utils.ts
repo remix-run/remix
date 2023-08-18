@@ -277,24 +277,18 @@ export function stripDirectoryFromPath(dir: string, filePath: string) {
   return filePath.replace(new RegExp(`^${dir}${path.sep}+`), "");
 }
 
+// We do not copy these folders from templates so we can ignore them for comparisons
+export const IGNORED_TEMPLATE_DIRECTORIES = [".git", "node_modules"];
+
 export async function getDirectoryFilesRecursive(dir: string) {
-  // Ignore comparing within these directories - but detect a collision
-  // at the directory level and count it.  These get prepended to strippedFiles
-  // in reverse order below
-  let ignoreDirs = ["node_modules", ".git"];
   let files = await recursiveReaddir(dir, [
     (file) => {
       let strippedFile = stripDirectoryFromPath(dir, file);
       let parts = strippedFile.split(path.sep);
-      return parts.length > 1 && ignoreDirs.includes(parts[0]);
+      return (
+        parts.length > 1 && IGNORED_TEMPLATE_DIRECTORIES.includes(parts[0])
+      );
     },
   ]);
-  let strippedFiles = files.map((f) => stripDirectoryFromPath(dir, f));
-  ignoreDirs.forEach((dir) => {
-    let dirPath = path.join(dir, dir);
-    if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
-      strippedFiles.unshift(stripDirectoryFromPath(dir, dirPath));
-    }
-  });
-  return strippedFiles;
+  return files.map((f) => stripDirectoryFromPath(dir, f));
 }

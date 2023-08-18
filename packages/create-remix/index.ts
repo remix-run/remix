@@ -13,6 +13,7 @@ import sortPackageJSON from "sort-package-json";
 import { version as thisRemixVersion } from "./package.json";
 import { prompt } from "./prompt";
 import {
+  IGNORED_TEMPLATE_DIRECTORIES,
   color,
   debug,
   ensureDirectory,
@@ -370,13 +371,15 @@ async function copyTempDirToAppDirStep(ctx: Context) {
 
   await fse.copy(ctx.tempDir, ctx.cwd, {
     filter(src, dest) {
-      // We never copy .git/ directories since it's highly unlikely we want
-      // them copied - and because templates are primarily being pulled from
-      // a git tarball and would not contain .git/ anyway
-      let isGitDir = stripDirectoryFromPath(ctx.tempDir, src) === ".git";
-      if (isGitDir) {
+      // We never copy .git/ or node_modules/ directories since it's highly
+      // unlikely we want them copied - and because templates are primarily
+      // being pulled from git tarballs which won't have .git/ and shouldn't
+      // have node_modules/
+      let file = stripDirectoryFromPath(ctx.tempDir, src);
+      let isIgnored = IGNORED_TEMPLATE_DIRECTORIES.includes(file);
+      if (isIgnored) {
         if (ctx.debug) {
-          debug("Skipping copy of .git/ directory from template");
+          debug(`Skipping copy of ${file} directory from template`);
         }
         return false;
       }
