@@ -1,7 +1,6 @@
 import process from "node:process";
 import url from "node:url";
 import fs from "node:fs";
-import fse from "fs-extra";
 import path from "node:path";
 import stream from "node:stream";
 import { promisify } from "node:util";
