@@ -25,6 +25,7 @@ import {
   log,
   sleep,
   strip,
+  stripDirectoryFromPath,
   success,
   toValidProjectName,
 } from "./utils";
@@ -345,7 +346,22 @@ async function copyTempDirToAppDirStep(ctx: Context) {
     }
   }
 
-  await fse.copy(ctx.tempDir, ctx.cwd);
+  await fse.copy(ctx.tempDir, ctx.cwd, {
+    filter(src, dest) {
+      // We never copy .git/ directories since it's highly unlikely we want
+      // them copied - and because templates are primarily being pulled from
+      // a git tarball and would not contain .git/ anyway
+      let isGitDir = stripDirectoryFromPath(ctx.tempDir, src) === ".git";
+      if (isGitDir) {
+        if (ctx.debug) {
+          debug("Skipping copy of .git/ directory from template");
+        }
+        return false;
+      }
+      return true;
+    },
+  });
+
   await updatePackageJSON(ctx);
   ctx.initScriptPath = await getInitScriptPath(ctx.cwd);
 }
