@@ -984,16 +984,16 @@ describe("create-remix CLI", () => {
       });
 
       it("works without prompt when --overwrite is specified", async () => {
-        let notEmptyDir = getProjectDir(
+        let projectDir = getProjectDir(
           "not-empty-dir-interactive-collisions-overwrite"
         );
-        fse.mkdirSync(notEmptyDir);
-        fse.createFileSync(path.join(notEmptyDir, "package.json"));
-        fse.createFileSync(path.join(notEmptyDir, "tsconfig.json"));
+        fse.mkdirSync(projectDir);
+        fse.createFileSync(path.join(projectDir, "package.json"));
+        fse.createFileSync(path.join(projectDir, "tsconfig.json"));
 
         let { status, stdout, stderr } = await execCreateRemix({
           args: [
-            notEmptyDir,
+            projectDir,
             "--template",
             path.join(__dirname, "fixtures", "stack"),
             "--overwrite",
@@ -1010,13 +1010,13 @@ describe("create-remix CLI", () => {
         expect(status).toBe(0);
         expect(stderr.trim()).toBeFalsy();
         expect(
-          fse.existsSync(path.join(notEmptyDir, "package.json"))
+          fse.existsSync(path.join(projectDir, "package.json"))
         ).toBeTruthy();
         expect(
-          fse.existsSync(path.join(notEmptyDir, "tsconfig.json"))
+          fse.existsSync(path.join(projectDir, "tsconfig.json"))
         ).toBeTruthy();
         expect(
-          fse.existsSync(path.join(notEmptyDir, "app/root.tsx"))
+          fse.existsSync(path.join(projectDir, "app/root.tsx"))
         ).toBeTruthy();
       });
     });
@@ -1030,7 +1030,13 @@ describe("create-remix CLI", () => {
         fse.createFileSync(path.join(projectDir, "some-file.txt"));
 
         let { status, stderr } = await execCreateRemix({
-          args: [projectDir, "--no-install"],
+          args: [
+            projectDir,
+            "--template",
+            path.join(__dirname, "fixtures", "stack"),
+            "--no-git-init",
+            "--no-install",
+          ],
           interactive,
         });
 
@@ -1085,7 +1091,14 @@ describe("create-remix CLI", () => {
         fse.createFileSync(path.join(projectDir, "tsconfig.json"));
 
         let { status, stdout, stderr } = await execCreateRemix({
-          args: [projectDir, "--no-install", "--overwrite"],
+          args: [
+            projectDir,
+            "--template",
+            path.join(__dirname, "fixtures", "stack"),
+            "--no-git-init",
+            "--no-install",
+            "--overwrite",
+          ],
           interactive,
         });
 
