@@ -237,17 +237,13 @@ This repo maintains separate branches for different purposes. They will look som
 
 There may be other branches for various features and experimentation, but all of the magic happens from these branches.
 
-## How the heck do nightly releases work?
+## How do nightly releases work?
 
 Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly-action-comment] and the explicit branch appended to the reusable workflows in the [postrelease action][postrelease-action], however they checkout the `dev` branch during their set up as that's where we want our nightly releases to be cut from. From there, we check if the git SHA is the same and only cut a new nightly if something has changed.
 
 ## End to end testing
 
 For every release of Remix (stable, experimental, nightly, and pre-releases), we will do a complete end-to-end test of Remix apps on each of our official adapters from `create-remix`, all the way to deploying them to production. We do this by utilizing the default [templates][templates] and the CLIs for Fly, and Arc. We'll then run some simple Cypress assertions to make sure everything is running properly for both development and the deployed app.
-
-## Conclusion
-
-Thanks
 
 [proposals]: https://github.com/remix-run/remix/discussions/categories/proposals
 [roadmap]: https://github.com/orgs/remix-run/projects/5

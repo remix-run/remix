@@ -183,6 +183,12 @@ The platform the server build is targeting, which can either be `"neutral"` or
 
 Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `true`.
 
+```tsx
+module.exports = {
+  tailwind: false,
+};
+```
+
 ## watchPaths
 
 An array, string, or async function that defines custom directories, relative to the project root, to watch while running [remix dev][remix-dev]. These directories are in addition to [`appDirectory`][app-directory].

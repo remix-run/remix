@@ -4,7 +4,7 @@ title: Gotchas
 
 # Gotchas
 
-As we've built Remix, we've been laser focused on production results and scalability for your users and team working in it. Because of this, some developer-experience and ecosystem-compatibility issues exist that we haven't smoothed over yet.
+Rendering your app on the server and in the browser with React has some inherent gotchas. Additionally, as we've built Remix, we've been laser focused on production results and scalability. Some developer-experience and ecosystem-compatibility issues exist that we haven't smoothed over yet.
 
 This document should help you get over these bumps.
 
