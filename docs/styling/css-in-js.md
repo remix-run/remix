@@ -4,9 +4,9 @@ title: CSS in JS
 
 # CSS in JS libraries
 
-Most CSS-in-JS approaches aren't recommended to be use in Remix because they require your app to render completely before you know what the styles are. This is a performance issue and prevents streaming features like [`defer`](../utils/defer).
+Most CSS-in-JS approaches aren't recommended to be use in Remix because they require your app to render completely before you know what the styles are. This is a performance issue and prevents streaming features like [`defer`][defer].
 
-Here's some sample code to show how you might use Styled Components with Remix (you can also [find a runnable example in the Remix examples repository][styled-components-example]):
+Here's some sample code to show how you might use Styled Components with Remix (you can also \[find a runnable example in the Remix examples repository]\[styled-components-example]):
 
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
@@ -86,6 +86,8 @@ Here's some sample code to show how you might use Styled Components with Remix (
    }
    ```
 
-Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framework working well with Remix, please [contribute an example][examples]!
+Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framework working well with Remix, please \[contribute an example]\[examples]!
 
-NOTE: You may run into hydration warnings when using Styled Components. Hopefully [this issue][styled-components-issue] will be fixed soon.
+NOTE: You may run into hydration warnings when using Styled Components. Hopefully \[this issue]\[styled-components-issue] will be fixed soon.
+
+[defer]: ../utils/defer

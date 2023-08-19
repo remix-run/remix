@@ -58,7 +58,7 @@ Websites large and small usually have a set of shared components used throughout
 
 #### Shared stylesheet
 
-The first approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like [custom properties][custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
+The first approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like \[custom properties]\[custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
 
 ```css filename=app/styles/shared.css
 /* scope with class names */
@@ -244,7 +244,7 @@ While that's a bit of boilerplate it enables a lot:
 - Co-located styles with your components
 - The only CSS ever loaded is the CSS that's used on the current page
 - When your components aren't used by a route, their CSS is unloaded from the page
-- Remix will prefetch the CSS for the next page with [`<Link prefetch>`][link]
+- Remix will prefetch the CSS for the next page with \[`<Link prefetch>`]\[link]
 - When one component's styles change, browser and CDN caches for the other components won't break because they are all have their own URLs.
 - When a component's JavaScript changes but its styles don't, the cache is not broken for the styles
 
@@ -283,7 +283,7 @@ export const CopyToClipboard = React.forwardRef(
 CopyToClipboard.displayName = "CopyToClipboard";
 ```
 
-Not only will this make the asset high priority in the network tab, but Remix will turn that `preload` into a `prefetch` when you link to the page with [`<Link prefetch>`][link], so the SVG background is prefetched, in parallel, with the next route's data, modules, stylesheets, and any other preloads.
+Not only will this make the asset high priority in the network tab, but Remix will turn that `preload` into a `prefetch` when you link to the page with \[`<Link prefetch>`]\[link], so the SVG background is prefetched, in parallel, with the next route's data, modules, stylesheets, and any other preloads.
 
 ### Link Media Queries
 
