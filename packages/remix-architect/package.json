@@ -17,7 +17,7 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "@architect/functions": "^5.2.0",
+    "@architect/functions": "^7.0.0",
     "@remix-run/node": "workspace:*",
     "@types/aws-lambda": "^8.10.82"
   },
