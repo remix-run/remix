@@ -182,8 +182,8 @@ async function handleDataRequestRR(
     }
 
     if (isRouteErrorResponse(error)) {
-      if (error.error) {
-        handleError(error.error);
+      if (error) {
+        handleError(error);
       }
       return errorResponseToJson(error, serverMode);
     }
@@ -336,8 +336,8 @@ async function handleResourceRequestRR(
     }
 
     if (isRouteErrorResponse(error)) {
-      if (error.error) {
-        handleError(error.error);
+      if (error) {
+        handleError(error);
       }
       return errorResponseToJson(error, serverMode);
     }
