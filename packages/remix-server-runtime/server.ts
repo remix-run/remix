@@ -51,7 +51,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     build.entry.module.handleError ||
     ((error, { request }) => {
       if (serverMode !== ServerMode.Test && !request.signal.aborted) {
-        console.error(error);
+        console.error(isRouteErrorResponse(error) ? error.error : error);
       }
     });
 
