@@ -1,4 +1,4 @@
 ---
-title: Hooks
+title: Hooks Reference
 order: 6
 ---

@@ -1,7 +1,7 @@
 ---
 title: Community
 description: Community resources for learning Remix and related technologies
-order: 5
+order: 3
 ---
 
 # Community

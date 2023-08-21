@@ -1,4 +1,4 @@
 ---
-title: Route Module API
+title: Route Module Reference
 order: 4
 ---

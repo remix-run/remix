@@ -1,6 +1,6 @@
 ---
 title: Tutorial (30m)
-order: 3
+order: 2
 ---
 
 # Remix Tutorial

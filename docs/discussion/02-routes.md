@@ -1,41 +1,10 @@
 ---
 title: Routing
-description: Routing is at the center of everything Remix does. Dive deeper into the APIs and conventions.
 ---
 
 # Routing
 
-Routing is possibly the most important concept to understand in Remix. Everything starts with your routes: the compiler, the initial request, and almost every user interaction afterward.
-
-Here's some vocabulary this document will be using regularly. They may not all make sense to you at first, but as you read the document they are here for your reference.
-
-<docs-info>
-
-**Nested Routes** - The general idea of routes mapping to segments of the URL allowing the full URL to map to a hierarchy of route components and data dependencies that can be known before rendering.
-
-**URL** - The full path in the address bar of the user's web browser. A single URL can match multiple routes. It's common in other frameworks to use the words "route" and "url" interchangeably, but they are different things in Remix.
-
-**Route** or Route Module - A JavaScript module with conventional exports (`loader`, `action`, `default` component, etc.) that is coupled to one or many URL segments. Because a Route module maps to only a segment of the URL, multiple routes can be rendered at a single URL. The component hierarchy will map to the URL segment hierarchy.
-
-**Path** or Route Path - The segment of the URL an individual route maps to, defined by the conventional file name in the `app/routes` directory.
-
-**Parent Layout Route** or Parent Route - A route that renders its component as the layout above a set of child routes through `<Outlet>`.
-
-**Pathless Layout Route** or Pathless Route - A route that does not add segments to the URL but does add component layout hierarchy when its child routes match.
-
-**Child Route** - A route that renders inside a parent route's `<Outlet>` when its path matches the URL.
-
-**Index Route** - A route that shares the same URL as the parent route but renders as the default child route inside of `<Outlet>`.
-
-**Dynamic Segment** - A segment of the route path that is parsed from the URL and its value provided to the app, like the ID of a record or slug for a post.
-
-**Splat** - A trailing wildcard on a route path that will match anything (including subsequent `/`) and provided to the app.
-
-**Outlet** - A component rendered inside a parent route that shows where to render the matching child route
-
-</docs-info>
-
-## What is Nested Routing?
+Remix uses nested routes, popularized by [Ember.js](https://emberjs.com) many years ago. Everything starts with your routes: the compiler, the initial request, and almost every user interaction afterward.
 
 Nested Routing is the general idea of coupling segments of the URL to component hierarchy in the UI. We've found that in almost every case, segments of the URL determine:
 
@@ -45,7 +14,7 @@ Nested Routing is the general idea of coupling segments of the URL to component 
 
 Let's consider a UI to help us out. Hover or tap each button to see how each segment of the URL maps to three things: a component layout, a JavaScript bundle, and a piece of data.
 
-<iframe src="/_docs/routing" class="w-full aspect-[1/1] rounded-lg overflow-hidden"></iframe>
+<iframe src="/_docs/routing" class="w-full aspect-[1/1] rounded-lg overflow-hidden pb-4"></iframe>
 
 As the user clicks between links in the sidebar, the sidebar persists while the main content changes. Likewise, as they click between the Sales page top nav (Overview, Subscriptions, Invoices, etc.) both the sidebar and the top nav persist while the secondary content changes, and so on down the layout hierarchy.
 
@@ -368,5 +337,3 @@ It's common to add a `app/routes/$.tsx` file build custom 404 pages with data fr
 ## Conclusion
 
 Nested routes are an incredibly powerful abstraction. Layouts are shared automatically and each route is only concerned with its slice of the data on the page. Additionally, because of this convention, Remix is able to make a ton of optimizations, automatically turning what feels like a server side app from the developer's perspective into a turbocharged SPA for the user.
-
-Happy routing!

@@ -1,5 +1,6 @@
 ---
 title: API Development Strategy
+order: 4
 ---
 
 # API Development Strategy
@@ -14,7 +15,7 @@ Our goals for major releases are:
 New features are introduced with `unstable_feature` flags and API prefixes.
 
 - When an unstable feature is ready, the prefix is removed and the feature is shipped in the next minor release. The API will no longer change between minor releases.
-- This allows us to iterate on the API with early adopters with breaking changes between minor releases while the API is marked unstable.
+- This allows Remix to iterate on the API with early adopters with breaking changes between minor releases while the API is marked unstable.
 - It avoids churning the API for all users and arriving at better APIs in the stable releases.
 
 If you are using `unstable_*` future flags or APIs, it's important to check the release notes of every minor release because the behavior or API could change. It's also important to gives us feedback so we can make it better before the final release!

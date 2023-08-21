@@ -1,6 +1,6 @@
 ---
 title: Quick Start (5m)
-order: 2
+order: 1
 ---
 
 # Quick Start
