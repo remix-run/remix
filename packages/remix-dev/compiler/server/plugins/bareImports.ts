@@ -92,6 +92,9 @@ export function serverBareModulesPlugin(ctx: Context): Plugin {
         if (
           !isNodeBuiltIn(packageName) &&
           !/\bnode_modules\b/.test(importer) &&
+          // Silence spurious warnings when importing Cloudflare's built-in
+          // static content manifest module
+          packageName !== "__STATIC_CONTENT_MANIFEST" &&
           // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
           // a `node_modules` folder to keep its dependencies, so the above check
           // will always fail.
