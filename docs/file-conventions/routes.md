@@ -8,6 +8,8 @@ While you can configure routes in [remix.config.js][remix-config], most routes a
 
 Please note that you can use either `.js`, `.jsx`, `.ts` or `.tsx` file extensions. We'll stick with `.tsx` in the examples to avoid duplication.
 
+<docs-info>Dilum Sanjaya made [an awesome visualization][an-awesome-visualization] of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
+
 ## Root Route
 
 <!-- prettier-ignore -->
@@ -389,3 +391,4 @@ There's also the [Flat Routes][flat-routes] third-party package with configurabl
 [dynamic-segments]: #dynamic-segments
 [remix-config]: ./remix-config#routes
 [flat-routes]: https://github.com/kiliman/remix-flat-routes
+[an-awesome-visualization]: https://interactive-remix-routing-v2.netlify.app/

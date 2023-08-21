@@ -1,4 +1,4 @@
 ---
-title: Hooks
+title: Styling
 order: 6
 ---
