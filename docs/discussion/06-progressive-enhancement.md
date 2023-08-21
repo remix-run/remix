@@ -8,11 +8,11 @@ title: Progressive Enhancement
 
 <cite>- [Wikipedia](https://en.wikipedia.org/wiki/Progressive_enhancement)</cite>
 
-Coined in 2003, the phrase emerged during a time of varied CSS and JavaScript support across different browsers, with many users actually browsing the web with JavaScript disabled.
+Coined in 2003 by Steven Champeon & Nick Finck, the phrase emerged during a time of varied CSS and JavaScript support across different browsers, with many users actually browsing the web with JavaScript disabled.
 
-Today, we are fortunate to develop for a much more consistent web, where the majority of users have JavaScript enabled.
+Today, we are fortunate to develop for a much more consistent web and where the majority of users have JavaScript enabled.
 
-However, we still believe in the core principles of progressive enhancement in Remix because it makes our apps faster and more accessible through resilience.
+However, we still believe in the core principles of progressive enhancement in Remix. It leads to fast and resilient apps with simple development workflows.
 
 **Performance**: While it's easy to think that only 5% of your users have slow connections, the reality is that 100% of your users have slow connections 5% of the time.
 
