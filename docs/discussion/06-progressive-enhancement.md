@@ -51,7 +51,7 @@ Remix embraces progressive enhancement by building its abstraction on top of HTM
 
 The simplest case is a `<Link to="/account">`. These render an `<a href="/account">` tag that works without JavaScript. When JavaScript loads, Remix will intercept clicks and handle the navigation with client side routing. This gives you more control over the UX instead of just spinning favicons in the browser tab--but it works either way.
 
-Now consider a simple like button on a post.
+Now consider a simple add to cart button.
 
 ```tsx
 export function AddToCart({ id }) {

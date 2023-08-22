@@ -20,7 +20,7 @@ In certain scenarios, using these libraries may be warranted. However, with Remi
 
 ## How Remix Simplifies State
 
-As you discussed in [Fullstack Data Flow][fullstack-data-flow] Remix seamlessly bridges the gap between the backend and frontend via mechanisms like loaders, actions, and forms with automatic synchronization through revalidation. This offers developers the ability to directly use server state within components without managing a cache, the network communication, or data revalidation, making most client-side caching redundant.
+As discussed in [Fullstack Data Flow](./03-data-flow) Remix seamlessly bridges the gap between the backend and frontend via mechanisms like loaders, actions, and forms with automatic synchronization through revalidation. This offers developers the ability to directly use server state within components without managing a cache, the network communication, or data revalidation, making most client-side caching redundant.
 
 Here's why using typical React state patterns might be an anti-pattern in Remix:
 
@@ -143,7 +143,7 @@ While client side validation is a great way to enhance the user experience, you 
 
 This example is a doozy, it's certainly got bugs, and there are libraries that can help, but it illustrates the complexity and touch points of managing your own network state, synchronizing state from the server, and doubling up on form validation between the client and server.
 
-```tsx bad lines=[2,14,30,66]
+```tsx bad lines=[2,14,30,41,66]
 export function Signup() {
   // managing a lot of React State
   const [isSubmitting, setIsSubmitting] =
@@ -198,7 +198,7 @@ export function Signup() {
 
   return (
     <form
-      onSubmit={async (event) => {
+      onSubmit={(event) => {
         event.preventDefault();
         handleSubmit();
       }}
@@ -243,15 +243,17 @@ And the backend API at `/api/signup` that also validates and returns errors. It 
 ```tsx
 export function signupHandler(request) {
   const errors = await validateSignupRequest(request);
-  if (errors) return { ok: false, errors: errors };
+  if (errors) {
+    return { ok: false, errors: errors };
+  }
   await signupUser(request);
   return { ok: true, errors: null };
 }
 ```
 
-Now consider the same example with Remix. The action is identical, but component is much simpler since you can use the server state directly from `useActionData` and read the network state Remix is already managing.
+Now consider the same example with Remix. The action is identical, but the component is much simpler since you can use the server state directly from `useActionData` and read the network state Remix is already managing.
 
-```tsx filename=app/routes/signup.tsx lines=[17-19]
+```tsx filename=app/routes/signup.tsx lines=[19-21]
 import {
   useNavigation,
   useActionData,
@@ -259,7 +261,9 @@ import {
 
 export function action({ request }) {
   const errors = await validateSignupRequest(request);
-  if (errors) return { ok: false, errors: errors };
+  if (errors) {
+    return { ok: false, errors: errors };
+  }
   await signupUser(request);
   return { ok: true, errors: null };
 }
@@ -294,9 +298,8 @@ export function Signup() {
 }
 ```
 
-Note there is no need for React state, change event listeners, submit handlers, or state management libraries for a network interaction like this. The server state is available directly from `useActionData` and the network state is available from `useNavigation`.
+All of the previous state management gets collapsed into three lines of code. There is no need for React state, change event listeners, submit handlers, or state management libraries for a network interaction like this.
 
-As bonus a party trick, the form will still work if JavaScript fails to load. Instead of Remix managing the network, the browser will and `useActionData` will still be the values returned from the failed action.
+The server state is available directly from `useActionData` and the network state is available from `useNavigation`. If you find yourself managing and synchronizing state for network interactions, there's probably a simpler way to do it in Remix.
 
-[fullstack-data-flow]: ./03-data-flow
-[pending-ui]: ./07-pending-ui
+As bonus a party trick, the form will still work if JavaScript fails to load. Instead of Remix managing the network, the browser will manage it.
