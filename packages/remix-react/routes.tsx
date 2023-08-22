@@ -258,5 +258,9 @@ function getRedirect(response: Response): Response {
   if (revalidate) {
     headers["X-Remix-Revalidate"] = revalidate;
   }
+  let reloadDocument = response.headers.get("X-Remix-Reload-Document");
+  if (reloadDocument) {
+    headers["X-Remix-Reload-Document"] = reloadDocument;
+  }
   return redirect(url, { status, headers });
 }
