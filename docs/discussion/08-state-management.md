@@ -1,6 +1,5 @@
 ---
 title: State Management
-hidden: true
 ---
 
 # State Management
