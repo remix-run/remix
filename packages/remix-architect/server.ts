@@ -1,11 +1,5 @@
-import type {
-  AppLoadContext,
-  ServerBuild,
-  Response as NodeResponse,
-} from "@remix-run/node";
+import type { AppLoadContext, ServerBuild } from "@remix-run/node";
 import {
-  Headers as NodeHeaders,
-  Request as NodeRequest,
   createRequestHandler as createRemixRequestHandler,
   readableStreamToString,
 } from "@remix-run/node";
@@ -50,13 +44,13 @@ export function createRequestHandler({
     let request = createRemixRequest(event);
     let loadContext = await getLoadContext?.(event);
 
-    let response = (await handleRequest(request, loadContext)) as NodeResponse;
+    let response = await handleRequest(request, loadContext);
 
     return sendRemixResponse(response);
   };
 }
 
-export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
+export function createRemixRequest(event: APIGatewayProxyEventV2): Request {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let scheme = process.env.ARC_SANDBOX ? "http" : "https";
@@ -68,7 +62,7 @@ export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
   // requests to contain a signal, so it can detect aborted requests
   let controller = new AbortController();
 
-  return new NodeRequest(url.href, {
+  return new Request(url.href, {
     method: event.requestContext.http.method,
     headers: createRemixHeaders(event.headers, event.cookies),
     signal: controller.signal,
@@ -84,8 +78,8 @@ export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
 export function createRemixHeaders(
   requestHeaders: APIGatewayProxyEventHeaders,
   requestCookies?: string[]
-): NodeHeaders {
-  let headers = new NodeHeaders();
+): Headers {
+  let headers = new Headers();
 
   for (let [header, value] of Object.entries(requestHeaders)) {
     if (value) {
@@ -101,7 +95,7 @@ export function createRemixHeaders(
 }
 
 export async function sendRemixResponse(
-  nodeResponse: NodeResponse
+  nodeResponse: Response
 ): Promise<APIGatewayProxyStructuredResultV2> {
   let cookies: string[] = [];
 
