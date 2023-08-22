@@ -21,7 +21,7 @@ import type {
   IndexRouteObject,
   NonIndexRouteObject,
 } from "react-router-dom";
-import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { createMemoryRouter, Outlet, RouterProvider } from "react-router-dom";
 import type {
   ActionFunction,
   AppLoadContext,
@@ -153,8 +153,6 @@ function processRoutes(
       index: route.index,
       Component: route.Component,
       ErrorBoundary: route.ErrorBoundary,
-      element: route.element,
-      errorElement: route.errorElement,
       action: action
         ? (args: ActionFunctionArgs) => action!({ ...args, context })
         : undefined,
@@ -174,14 +172,14 @@ function processRoutes(
       hasAction: route.action != null,
       hasLoader: route.loader != null,
       hasErrorBoundary: route.ErrorBoundary != null,
-      module: "", // any need for this?
+      module: "build/stub-path-to-module.js", // any need for this?
     };
     manifest.routes[newRoute.id] = entryRoute;
 
     // Add the route to routeModules
-    routeModules[route.id!] = {
+    routeModules[route.id] = {
+      default: route.Component || Outlet,
       ErrorBoundary: route.ErrorBoundary || undefined,
-      default: route.Component || (() => route.element),
       handle: route.handle,
       links: route.links,
       meta: route.meta,

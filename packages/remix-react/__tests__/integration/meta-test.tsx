@@ -237,7 +237,8 @@ describe("meta", () => {
     // For some reason, prettyDOM strips the script tag (maybe because of
     // dangerouslySetInnerHTML), so we just parse the HTML out into JSON and assert that way
     let scriptTagContents =
-      container.querySelector("script")?.innerHTML || "{}";
+      container.querySelector('script[type="application/ld+json"]')
+        ?.innerHTML || "{}";
     expect(JSON.parse(scriptTagContents)).toEqual(jsonLd);
   });
 
