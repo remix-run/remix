@@ -1,11 +1,9 @@
 import * as React from "react";
 import type {
-  ActionFunction,
   DataRouteObject,
-  LoaderFunction,
   ShouldRevalidateFunction,
 } from "react-router-dom";
-import { redirect } from "react-router-dom";
+import { redirect, useRouteError } from "react-router-dom";
 
 import type { RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
@@ -18,8 +16,7 @@ import {
 } from "./data";
 import type { FutureConfig } from "./entry";
 import { prefetchStyleLinks } from "./links";
-import invariant from "./invariant";
-import { RemixRoute, RemixRouteError } from "./components";
+import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;
@@ -71,13 +68,15 @@ export function createServerRoutes(
   > = groupRoutesByParentId(manifest)
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
+    let routeModule = routeModules[route.id];
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
-      element: <RemixRoute id={route.id} />,
-      errorElement:
-        route.id === "root" || route.hasErrorBoundary ? (
-          <RemixRouteError id={route.id} />
-        ) : undefined,
+      Component: routeModule.default,
+      ErrorBoundary: routeModule.ErrorBoundary
+        ? routeModule.ErrorBoundary
+        : route.id === "root"
+        ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
+        : undefined,
       id: route.id,
       index: route.index,
       path: route.path,
@@ -126,27 +125,63 @@ export function createClientRoutes(
   needsRevalidation?: Set<string>
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
+    let routeModule = routeModulesCache?.[route.id];
     let dataRoute: DataRouteObject = {
-      caseSensitive: route.caseSensitive,
-      element: <RemixRoute id={route.id} />,
-      errorElement:
-        route.id === "root" || route.hasErrorBoundary ? (
-          <RemixRouteError id={route.id} />
-        ) : undefined,
       id: route.id,
       index: route.index,
       path: route.path,
-      // handle gets added in via useMatches since we aren't guaranteed to
-      // have the route module available here
-      handle: undefined,
-      loader: createDataFunction(route, routeModulesCache, false),
-      action: createDataFunction(route, routeModulesCache, true),
-      shouldRevalidate: createShouldRevalidate(
-        route,
-        routeModulesCache,
-        needsRevalidation
-      ),
+      loader({ request }) {
+        if (!route.hasLoader) return null;
+        return fetchServerHandler(request, route);
+      },
+      action({ request }) {
+        if (!route.hasAction) {
+          let msg =
+            `Route "${route.id}" does not have an action, but you are trying ` +
+            `to submit to it. To fix this, please add an \`action\` function to the route`;
+          console.error(msg);
+          return Promise.reject(new Error(msg));
+        }
+
+        return fetchServerHandler(request, route);
+      },
+      ...(routeModule
+        ? // Use critical path modules directly
+          {
+            Component: routeModule.default,
+            ErrorBoundary: routeModule.ErrorBoundary
+              ? routeModule.ErrorBoundary
+              : route.id === "root"
+              ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
+              : undefined,
+            handle: routeModule.handle,
+            shouldRevalidate: needsRevalidation
+              ? wrapShouldRevalidateForHdr(
+                  route.id,
+                  routeModule.shouldRevalidate,
+                  needsRevalidation
+                )
+              : routeModule.shouldRevalidate,
+          }
+        : // Load all other modules via route.lazy()
+          {
+            lazy: async () => {
+              let mod = await loadRouteModuleWithBlockingLinks(
+                route,
+                routeModulesCache
+              );
+              if (needsRevalidation) {
+                mod.shouldRevalidate = wrapShouldRevalidateForHdr(
+                  route.id,
+                  mod.shouldRevalidate,
+                  needsRevalidation
+                );
+              }
+              return mod;
+            },
+          }),
     };
+
     let children = createClientRoutes(
       manifest,
       routeModulesCache,
@@ -160,29 +195,23 @@ export function createClientRoutes(
   });
 }
 
-function createShouldRevalidate(
-  route: EntryRoute,
-  routeModules: RouteModules,
-  needsRevalidation?: Set<string>
+// When an HMR / HDR update happens we opt out of all user-defined
+// revalidation logic and force a revalidation on the first call
+function wrapShouldRevalidateForHdr(
+  routeId: string,
+  routeShouldRevalidate: ShouldRevalidateFunction | undefined,
+  needsRevalidation: Set<string>
 ): ShouldRevalidateFunction {
   let handledRevalidation = false;
-  return function (arg) {
-    let module = routeModules[route.id];
-    invariant(module, `Expected route module to be loaded for ${route.id}`);
-
-    // When an HMR / HDR update happens we opt out of all user-defined
-    // revalidation logic and the do as the dev server tells us the first
-    // time router.revalidate() is called.
-    if (needsRevalidation !== undefined && !handledRevalidation) {
+  return (arg) => {
+    if (!handledRevalidation) {
       handledRevalidation = true;
-      return needsRevalidation.has(route.id);
+      return needsRevalidation.has(routeId);
     }
 
-    if (module.shouldRevalidate) {
-      return module.shouldRevalidate(arg);
-    }
-
-    return arg.defaultShouldRevalidate;
+    return routeShouldRevalidate
+      ? routeShouldRevalidate(arg)
+      : arg.defaultShouldRevalidate;
   };
 }
 
@@ -192,53 +221,33 @@ async function loadRouteModuleWithBlockingLinks(
 ) {
   let routeModule = await loadRouteModule(route, routeModules);
   await prefetchStyleLinks(routeModule);
-  return routeModule;
+  return {
+    ...routeModule,
+    default: undefined,
+    Component: routeModule.default,
+  };
 }
 
-function createDataFunction(
-  route: EntryRoute,
-  routeModules: RouteModules,
-  isAction: boolean
-): LoaderFunction | ActionFunction {
-  return async ({ request }) => {
-    let routeModulePromise = loadRouteModuleWithBlockingLinks(
-      route,
-      routeModules
-    );
-    try {
-      if (isAction && !route.hasAction) {
-        let msg =
-          `Route "${route.id}" does not have an action, but you are trying ` +
-          `to submit to it. To fix this, please add an \`action\` function to the route`;
-        console.error(msg);
-        throw new Error(msg);
-      } else if (!isAction && !route.hasLoader) {
-        return null;
-      }
+async function fetchServerHandler(request: Request, route: EntryRoute) {
+  let result = await fetchData(request, route.id);
 
-      let result = await fetchData(request, route.id);
+  if (result instanceof Error) {
+    throw result;
+  }
 
-      if (result instanceof Error) {
-        throw result;
-      }
+  if (isRedirectResponse(result)) {
+    throw getRedirect(result);
+  }
 
-      if (isRedirectResponse(result)) {
-        throw getRedirect(result);
-      }
+  if (isCatchResponse(result)) {
+    throw result;
+  }
 
-      if (isCatchResponse(result)) {
-        throw result;
-      }
+  if (isDeferredResponse(result) && result.body) {
+    return await parseDeferredReadableStream(result.body);
+  }
 
-      if (isDeferredResponse(result) && result.body) {
-        return await parseDeferredReadableStream(result.body);
-      }
-
-      return result;
-    } finally {
-      await routeModulePromise;
-    }
-  };
+  return result;
 }
 
 function getRedirect(response: Response): Response {

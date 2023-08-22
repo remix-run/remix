@@ -14,7 +14,6 @@ import {
   Await as AwaitRR,
   Link as RouterLink,
   NavLink as RouterNavLink,
-  Outlet,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
   matchRoutes,
@@ -22,17 +21,14 @@ import {
   useActionData as useActionDataRR,
   useLoaderData as useLoaderDataRR,
   useRouteLoaderData as useRouteLoaderDataRR,
-  useMatches as useMatchesRR,
   useLocation,
   useNavigation,
   useHref,
-  useRouteError,
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { RemixContextObject } from "./entry";
-import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
@@ -83,55 +79,6 @@ function useRemixContext(): RemixContextObject {
   return context;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// RemixRoute
-
-export function RemixRoute({ id }: { id: string }) {
-  let { routeModules } = useRemixContext();
-
-  invariant(
-    routeModules,
-    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
-      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
-  );
-
-  let { default: Component, ErrorBoundary } = routeModules[id];
-
-  // Default Component to Outlet if we expose boundary UI components
-  if (!Component && ErrorBoundary) {
-    Component = Outlet;
-  }
-
-  invariant(
-    Component,
-    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.\n` +
-      "If you were trying to navigate or submit to a resource route, use `<a>` instead of `<Link>` or `<Form reloadDocument>`."
-  );
-
-  return <Component />;
-}
-
-export function RemixRouteError({ id }: { id: string }) {
-  let { routeModules } = useRemixContext();
-
-  // This checks prevent cryptic error messages such as: 'Cannot read properties of undefined (reading 'root')'
-  invariant(
-    routeModules,
-    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
-      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
-  );
-
-  let error = useRouteError();
-  let { ErrorBoundary } = routeModules[id];
-
-  if (ErrorBoundary) {
-    return <ErrorBoundary />;
-  } else if (id === "root") {
-    return <RemixRootDefaultErrorBoundary error={error} />;
-  }
-
-  throw error;
-}
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
 
@@ -1048,27 +995,6 @@ export interface RouteMatch {
    * @see https://remix.run/route/handle
    */
   handle: undefined | { [key: string]: any };
-}
-
-export function useMatches(): RouteMatch[] {
-  let { routeModules } = useRemixContext();
-  let matches = useMatchesRR();
-  return React.useMemo(
-    () =>
-      matches.map((match) => {
-        let remixMatch: RouteMatch = {
-          id: match.id,
-          pathname: match.pathname,
-          params: match.params,
-          data: match.data,
-          // Need to grab handle here since we don't have it at client-side route
-          // creation time
-          handle: routeModules[match.id].handle,
-        };
-        return remixMatch;
-      }),
-    [matches, routeModules]
-  );
 }
 
 /**
