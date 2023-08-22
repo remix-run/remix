@@ -102,7 +102,9 @@ You can use a template with the `--template` flag in the Remix CLI that points t
 npx create-remix@latest --template <org>/<repo>
 ```
 
-You can find a list of [community templates in the Remix Guide][templates]. Once you've picked a template or [set up an app from scratch][quickstart], you're ready for to start building your app!
+You can read more about templates in the [Templates Guide](../guides/templates).
+
+Once you've picked a template or [set up an app from scratch][quickstart], you're ready for to start building your app!
 
 [templates]: https://remix.guide/templates
 [serve]: ../other-api/serve
