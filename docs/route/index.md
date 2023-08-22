@@ -1,4 +1,4 @@
 ---
-title: Route Module Reference
+title: Route Module
 order: 4
 ---

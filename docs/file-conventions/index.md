@@ -1,4 +1,4 @@
 ---
-title: File Conventions Reference
+title: File Conventions
 order: 3
 ---

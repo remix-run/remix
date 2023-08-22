@@ -1,4 +1,4 @@
 ---
-title: Components Reference
+title: Components
 order: 5
 ---

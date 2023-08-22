@@ -1,5 +1,5 @@
 ---
-title: Manual mode
+title: Manual Dev Server
 toc: false
 ---
 
