@@ -1,3 +1,7 @@
+// IDK why this is needed when it's in the tsconfig..........
+// YAY PROJECT REFERENCES!
+/// <reference lib="DOM.Iterable" />
+
 import type * as express from "express";
 import type { AppLoadContext, ServerBuild } from "@remix-run/node";
 import {
