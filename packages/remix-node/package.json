@@ -20,7 +20,6 @@
     "@remix-run/server-runtime": "1.19.3",
     "@remix-run/web-fetch": "^4.3.7",
     "@remix-run/web-file": "^3.0.3",
-    "@remix-run/web-stream": "^1.0.4",
     "@web3-storage/multipart-parser": "^1.0.0",
     "cookie-signature": "^1.1.0",
     "source-map-support": "^0.5.21",
@@ -28,6 +27,7 @@
   },
   "devDependencies": {
     "@types/cookie-signature": "^1.0.3",
+    "@types/node": "^18.17.1",
     "@types/source-map-support": "^0.5.4",
     "typescript": "^5.1.6"
   },
