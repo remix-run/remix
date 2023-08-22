@@ -1,7 +1,6 @@
 import process from "node:process";
 import url from "node:url";
 import fs from "node:fs";
-import fse from "fs-extra";
 import path from "node:path";
 import stream from "node:stream";
 import { promisify } from "node:util";
@@ -23,7 +22,7 @@ export async function copyTemplate(
   template: string,
   destPath: string,
   options: CopyTemplateOptions
-) {
+): Promise<{ localTemplateDirectory: string } | undefined> {
   let { log = () => {} } = options;
 
   /**
@@ -41,8 +40,8 @@ export async function copyTemplate(
       let filepath = template.startsWith("file://")
         ? url.fileURLToPath(template)
         : template;
-      await copyTemplateFromLocalFilePath(filepath, destPath);
-      return;
+      let isLocalDir = await copyTemplateFromLocalFilePath(filepath, destPath);
+      return isLocalDir ? { localTemplateDirectory: filepath } : undefined;
     }
 
     if (isGithubRepoShorthand(template)) {
@@ -135,14 +134,16 @@ async function copyTemplateFromGenericUrl(
 async function copyTemplateFromLocalFilePath(
   filePath: string,
   destPath: string
-) {
+): Promise<boolean> {
   if (filePath.endsWith(".tar.gz")) {
     await extractLocalTarball(filePath, destPath);
-    return;
+    return false;
   }
   if (fs.statSync(filePath).isDirectory()) {
-    await fse.copy(filePath, destPath);
-    return;
+    // If our template is just a directory on disk, return true here and we'll
+    // just copy directly from there instead of "extracting" to a temp
+    // directory first
+    return true;
   }
   throw new CopyTemplateError(
     "The provided template is not a valid local directory or tarball."

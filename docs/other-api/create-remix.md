@@ -72,4 +72,8 @@ To create a new project from a template in a private GitHub repo, pass the `--to
 </docs-info>
 </aside>
 
+### `create-remix --overwrite`
+
+If `create-remix` detects any file collisions between the template and the directory you are creating your app in, it will prompt you for confirmation that it's OK to overwrite those files with the template versions. You may skip this prompt with the `--overwrite` CLI flag.
+
 [templates]: ../pages/templates
