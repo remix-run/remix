@@ -20,7 +20,7 @@ In certain scenarios, using these libraries may be warranted. However, with Remi
 
 ## How Remix Simplifies State
 
-As discussed in [Fullstack Data Flow](./03-data-flow) Remix seamlessly bridges the gap between the backend and frontend via mechanisms like loaders, actions, and forms with automatic synchronization through revalidation. This offers developers the ability to directly use server state within components without managing a cache, the network communication, or data revalidation, making most client-side caching redundant.
+As discussed in [Fullstack Data Flow][fullstack-data-flow] Remix seamlessly bridges the gap between the backend and frontend via mechanisms like loaders, actions, and forms with automatic synchronization through revalidation. This offers developers the ability to directly use server state within components without managing a cache, the network communication, or data revalidation, making most client-side caching redundant.
 
 Here's why using typical React state patterns might be an anti-pattern in Remix:
 
@@ -46,7 +46,7 @@ As a developer transitioning to Remix, it's essential to recognize and embrace i
 
 ### Network Related State
 
-For examples on using Remix's internal state to manage network related state, refer to [Pending UI][pending-ui].
+For examples on using Remix's internal state to manage network related state, refer to \[Pending UI]\[pending-ui].
 
 ### URL Search Params
 
@@ -303,3 +303,5 @@ All of the previous state management gets collapsed into three lines of code. Th
 The server state is available directly from `useActionData` and the network state is available from `useNavigation`. If you find yourself managing and synchronizing state for network interactions, there's probably a simpler way to do it in Remix.
 
 As bonus a party trick, the form will still work if JavaScript fails to load. Instead of Remix managing the network, the browser will manage it.
+
+[fullstack-data-flow]: ./03-data-flow
