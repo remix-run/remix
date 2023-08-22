@@ -5088,10 +5088,10 @@ es-to-primitive@^1.2.1:
     is-date-object "^1.0.1"
     is-symbol "^1.0.2"
 
-esbuild-plugins-node-modules-polyfill@^1.3.0:
-  version "1.3.0"
-  resolved "https://registry.npmjs.org/esbuild-plugins-node-modules-polyfill/-/esbuild-plugins-node-modules-polyfill-1.3.0.tgz#aa61ca6189d54b163acc503b9fcbbbc825f28226"
-  integrity sha512-r/aNOvAlIaIzqJwvFHWhDGrPF/Aj5qI1zKVeHbCFpKH+bnKW1BG2LGixMd3s6hyWcZHcfdl2QZRucVuOLzFRrA==
+esbuild-plugins-node-modules-polyfill@^1.4.0:
+  version "1.4.0"
+  resolved "https://registry.npmjs.org/esbuild-plugins-node-modules-polyfill/-/esbuild-plugins-node-modules-polyfill-1.4.0.tgz#2382a164fc07afc94ea4aef1d7ed46bfb4b02f1b"
+  integrity sha512-B+VD+hXhxbMCbIBsK9SEOrVIannCUefCNE1m4Fu0lrqK0NZKg+sMkmPZZJIg4cOXWt/RUv7AIB+VeVUlgVO8nw==
   dependencies:
     "@jspm/core" "^2.0.1"
     local-pkg "^0.4.3"
