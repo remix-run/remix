@@ -57,7 +57,7 @@ Now consider a simple add to cart button.
 export function AddToCart({ id }) {
   return (
     <Form method="post" action="/add-to-cart">
-      <input name="id" value={id} />
+      <input type="hidden" name="id" value={id} />
       <button type="submit">Add To Cart</button>
     </Form>
   );
