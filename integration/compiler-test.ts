@@ -1,14 +1,12 @@
 import path from "node:path";
 import fse from "fs-extra";
 import { test, expect } from "@playwright/test";
-import { PassThrough } from "node:stream";
 
 import {
   createFixture,
   createAppFixture,
   js,
   json,
-  createFixtureProject,
   css,
 } from "./helpers/create-fixture.js";
 import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
