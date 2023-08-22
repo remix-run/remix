@@ -30,7 +30,10 @@ import type {
 } from "@remix-run/server-runtime";
 
 interface StubIndexRouteObject
-  extends Omit<IndexRouteObject, "loader" | "action" | "children"> {
+  extends Omit<
+    IndexRouteObject,
+    "loader" | "action" | "element" | "errorElement" | "children"
+  > {
   loader?: LoaderFunction;
   action?: ActionFunction;
   children?: StubRouteObject[];
@@ -39,7 +42,10 @@ interface StubIndexRouteObject
 }
 
 interface StubNonIndexRouteObject
-  extends Omit<NonIndexRouteObject, "loader" | "action" | "children"> {
+  extends Omit<
+    NonIndexRouteObject,
+    "loader" | "action" | "element" | "errorElement" | "children"
+  > {
   loader?: LoaderFunction;
   action?: ActionFunction;
   children?: StubRouteObject[];
