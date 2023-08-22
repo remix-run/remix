@@ -4,7 +4,7 @@ title: Routing
 
 # Routing
 
-Remix uses nested routes, popularized by [Ember.js](https://emberjs.com) many years ago. Everything starts with your routes: the compiler, the initial request, and almost every user interaction afterward.
+Remix uses nested routes, popularized by [Ember.js][ember-js] many years ago. Everything starts with your routes: the compiler, the initial request, and almost every user interaction afterward.
 
 Nested Routing is the general idea of coupling segments of the URL to component hierarchy in the UI. We've found that in almost every case, segments of the URL determine:
 
@@ -337,3 +337,5 @@ It's common to add a `app/routes/$.tsx` file build custom 404 pages with data fr
 ## Conclusion
 
 Nested routes are an incredibly powerful abstraction. Layouts are shared automatically and each route is only concerned with its slice of the data on the page. Additionally, because of this convention, Remix is able to make a ton of optimizations, automatically turning what feels like a server side app from the developer's perspective into a turbocharged SPA for the user.
+
+[ember-js]: https://emberjs.com

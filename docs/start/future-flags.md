@@ -23,6 +23,7 @@ export default {
 ```
 
 - Once an unstable feature reaches a stable state, we remove the special prefix and include the feature in the next minor release. At this point, the API's structure remains consistent throughout subsequent minor releases.
+
 - This approach allows us to refine the API collaboratively with early adopters, incorporating necessary changes in the unstable phase without affecting all users. The stable releases then benefit from these improvements without disruptions.
 
 - If you're utilizing features labeled with `unstable_*` flags, it's crucial to review the release notes for each minor release. This is because the behavior or structure of these features might evolve. Your feedback during this phase is invaluable in enhancing the feature before the final release!

@@ -35,7 +35,10 @@ export default function Component() {
     <Form action="/account">
       <h1>Settings for {user.displayName}</h1>
 
-      <input name="displayName" defaultValue={user.displayName} />
+      <input
+        name="displayName"
+        defaultValue={user.displayName}
+      />
       <input name="email" defaultValue={user.email} />
 
       <button type="submit">Save</button>
@@ -66,7 +69,10 @@ export default function Component() {
     <Form action="/account">
       <h1>Settings for {user.displayName}</h1>
 
-      <input name="displayName" defaultValue={user.displayName} />
+      <input
+        name="displayName"
+        defaultValue={user.displayName}
+      />
       <input name="email" defaultValue={user.email} />
 
       <button type="submit">Save</button>

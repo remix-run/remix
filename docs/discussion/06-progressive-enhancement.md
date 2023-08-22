@@ -6,7 +6,7 @@ title: Progressive Enhancement
 
 > Progressive enhancement is a strategy in web design that puts emphasis on web content first, allowing everyone to access the basic content and functionality of a web page, whilst users with additional browser features or faster Internet access receive the enhanced version instead.
 
-<cite>- [Wikipedia](https://en.wikipedia.org/wiki/Progressive_enhancement)</cite>
+<cite>- [Wikipedia][wikipedia]</cite>
 
 Coined in 2003 by Steven Champeon & Nick Finck, the phrase emerged during a time of varied CSS and JavaScript support across different browsers, with many users actually browsing the web with JavaScript disabled.
 
@@ -136,4 +136,7 @@ export function SearchBox() {
 
 No fundamental change in architecture, simply a progressive enhancement for both the user and the code.
 
-See also: [State Management](./08-state-management)
+See also: [State Management][state-management]
+
+[wikipedia]: https://en.wikipedia.org/wiki/Progressive_enhancement
+[state-management]: ./08-state-management

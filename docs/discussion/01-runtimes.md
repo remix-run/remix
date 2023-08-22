@@ -36,9 +36,9 @@ For example, you might want to store cookies on the file system, or in Cloudflar
 
 ```tsx
 // store sessions on the file system in node
+import { createKVSessionStorage } from "@remix-run/cloudflare-workers";
 import { createFileSessionStorage } from "@remix-run/node";
 // store sessions in cloudflare KV storage
-import { createKVSessionStorage } from "@remix-run/cloudflare-workers";
 ```
 
 But if you're storing a session in the cookie itself, this is supported in all runtimes:
@@ -102,10 +102,11 @@ You can use a template with the `--template` flag in the Remix CLI that points t
 npx create-remix@latest --template <org>/<repo>
 ```
 
-You can read more about templates in the [Templates Guide](../guides/templates).
+You can read more about templates in the [Templates Guide][templates-guide].
 
 Once you've picked a template or [set up an app from scratch][quickstart], you're ready for to start building your app!
 
 [templates]: https://remix.guide/templates
 [serve]: ../other-api/serve
 [quickstart]: ../start/quickstart
+[templates-guide]: ../guides/templates
