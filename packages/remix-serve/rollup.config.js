@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require("node:path");
 const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
@@ -38,6 +38,17 @@ module.exports = function rollup() {
           extensions: [".ts", ".tsx"],
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
+        // Allow dynamic imports in CJS code to allow us to utilize
+        // ESM modules as part of the compiler.
+        {
+          name: "dynamic-import-polyfill",
+          renderDynamicImport() {
+            return {
+              left: "import(",
+              right: ")",
+            };
+          },
+        },
         copy({
           targets: [
             { src: "LICENSE.md", dest: [outputDir, sourceDir] },

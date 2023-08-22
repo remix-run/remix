@@ -27,13 +27,21 @@ But if you are, Remix has got you covered.
 ## Mental model for `remix dev`
 
 Before you start drag racing, it helps to understand how Remix works under the hood.
-It's especially important to understand that `remix dev` spins up _not one, but two servers_: the dev server and the app server.
+It's especially important to understand that `remix dev` spins up _not one, but two processes_: the Remix compiler and your app server.
 
-The dev server is a glorified compiler running in watch mode.
-**The browser _never_ sends requests to the dev server.**
-You probably shouldn't care what port it runs on.
+Check out our video ["Mental model for the new dev flow 🧠"][mental-model] for more details.
 
-Check out our video ["Mental model for the new dev server 🧠"][mental-model] for more details.
+<docs-info>
+
+Previously, we referred to the Remix compiler as the "new dev server" or the "v2 dev server".
+Technically, `remix dev` is a thin layer around the Remix compiler that _does_ include a tiny server with a single endpoint (`/ping`) for coordinating hot updates.
+But thinking of `remix dev` as a "dev server" is unhelpful and wrongly implies that it is replacing your app server in dev.
+Rather than replacing your app server, `remix dev` runs your app server _alongside_ the Remix compiler so you get the best of both worlds:
+
+- Hot updates managed by the Remix compiler
+- Real production code paths running in dev within your app server
+
+</docs-info>
 
 ## Learning to drive stick
 
@@ -41,7 +49,7 @@ When you switch on manual mode with `--manual`, you take on some new responsibil
 
 1. Detect when server code changes are available
 2. Re-import code changes while keeping the app server running
-3. Send "ready" message to dev server _after_ those changes are picked up
+3. Send "ready" message to the Remix compiler _after_ those changes are picked up
 
 Re-importing code changes turns out to be tricky because JS imports are cached.
 
@@ -56,6 +64,15 @@ const changed = await import("./build/index.js");
 
 You need some way to bust the import cache when you want to re-import modules with code changes.
 Also importing modules is different between CommonJS (`require`) and ESM (`import`) which makes things even more complicated.
+
+<docs-warning>
+
+If you are using `tsx` or `ts-node` to run your `server.ts`, those tools may be transpiling your ESM Typescript code to CJS Javascript code.
+In this case, you'll need to use CJS cache busting in your `server.ts` even though the rest of your server code uses `import`s.
+
+What matters here is how your server code is _executed_ not how its _written_.
+
+</docs-warning>
 
 ### 1.a CJS: `require` cache busting
 
@@ -77,7 +94,7 @@ const BUILD_PATH = path.resolve("./build/index.js");
  * Initial build
  * @type {ServerBuild}
  */
-let build = require(BUILD_PATH);
+const build = require(BUILD_PATH);
 
 /**
  * @type {() => ServerBuild}
@@ -93,9 +110,6 @@ const reimportServer = () => {
   // 2. re-import the server build
   return require(BUILD_PATH);
 };
-
-// to update your app server with new code changes:
-build = reimportServer();
 ```
 
 <docs-info>
@@ -123,7 +137,7 @@ const BUILD_PATH = "./build/index.js";
  * Initial build
  * @type {ServerBuild}
  */
-let build = await import(BUILD_PATH);
+const build = await import(BUILD_PATH);
 
 /**
  * @type {() => Promise<ServerBuild>}
@@ -134,9 +148,6 @@ const reimportServer = async () => {
   // use a timestamp query parameter to bust the import cache
   return import(BUILD_PATH + "?t=" + stat.mtimeMs);
 };
-
-// to update your app server with new code changes:
-build = await reimportServer();
 ```
 
 <docs-warning>
@@ -144,7 +155,7 @@ build = await reimportServer();
 In ESM, there's no way to remove entries from the `import` cache.
 While our timestamp workaround works, it means that the `import` cache will grow over time which can eventually cause Out of Memory errors.
 
-If this happens, you can restart the dev server to restart with a fresh import cache.
+If this happens, you can restart `remix dev` to start again with a fresh import cache.
 In the future, Remix may pre-bundle your dependencies to keep the import cache small.
 
 </docs-warning>
@@ -167,9 +178,9 @@ chokidar
   .on("change", handleServerUpdate);
 ```
 
-### 3. Sending "ready" message to dev server
+### 3. Sending the "ready" message
 
-Now's a good time to double-check that your app server is sending "ready" messages to the dev server when it initially spins up:
+Now's a good time to double-check that your app server is sending "ready" messages to the Remix compiler when it initially spins up:
 
 ```js filename=server.js lines=[5-7]
 const port = 3000;
@@ -188,7 +199,7 @@ In manual mode, you also need to send "ready" messages whenever you re-import th
 async function handleServerUpdate() {
   // 1. re-import the server build
   build = await reimportServer();
-  // 2. tell dev server that this app server is now up-to-date and ready
+  // 2. tell Remix that this app server is now up-to-date and ready
   broadcastDevReady(build);
 }
 ```
@@ -198,11 +209,15 @@ async function handleServerUpdate() {
 Last step is to wrap all of this up in a development mode request handler:
 
 ```js
-function createDevRequestHandler() {
+/**
+ * @param {ServerBuild} initialBuild
+ */
+function createDevRequestHandler(initialBuild) {
+  let build = initialBuild;
   async function handleServerUpdate() {
     // 1. re-import the server build
     build = await reimportServer();
-    // 2. tell dev server that this app server is now up-to-date and ready
+    // 2. tell Remix that this app server is now up-to-date and ready
     broadcastDevReady(build);
   }
 
@@ -232,15 +247,15 @@ Now let's plug in our new manual transmission when running in development mode:
 app.all(
   "*",
   process.env.NODE_ENV === "development"
-    ? createDevRequestHandler()
+    ? createDevRequestHandler(build)
     : createRequestHandler({
         build,
-        mode: process.env.NODE_ENV,
+        mode: build.mode,
       })
 );
 ```
 
-For complete app server code examples, check out the [express template][express-template] or [community examples][community-examples].
+For complete app server code examples, check our [templates][templates] or [community examples][community-examples].
 
 ## Keeping in-memory server state across rebuilds
 
@@ -278,5 +293,5 @@ export const db = remember("db", () => new PrismaClient());
 [mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
 [express]: https://expressjs.com/
 [chokidar]: https://github.com/paulmillr/chokidar
-[express-template]: https://github.com/remix-run/remix/blob/main/templates/express/server.js
+[templates]: https://github.com/remix-run/remix/blob/main/templates/
 [community-examples]: https://github.com/xHomu/remix-v2-server

@@ -72,6 +72,7 @@ You may need to make changes to a pre-release prior to publishing a final stable
 - Commit the edited `pre.json` file along with any unpublished changesets, and push the `release-*` branch to GitHub.
 - Wait for the release workflow to finish. The Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs for the stable release.
 - Review the updated `CHANGELOG` files and make any adjustments necessary.
+  - `find packages -name 'CHANGELOG.md' -mindepth 2 -maxdepth 2 -exec code {} \;`
   - We should remove the changelogs for all pre-releases ahead of publishing the stable version.
   - [TODO: We should automate this]
 - Prepare the github release notes
@@ -79,9 +80,16 @@ You may need to make changes to a pre-release prior to publishing a final stable
 - Merge the PR into the `release-*` branch.
 - Once the PR is merged, the release workflow will publish the updated packages to npm.
 - Once the release is published:
-  - merge the `release-*` branch into `main` and push it up to GitHub
-  - merge the `release-*` branch into `dev` and push it up to GitHub
-  - Convert the `remix@1.x.y` tag to a Release on Github with the name `v1.x.y`
+  - Pull the latest `release-*` branch containing the PR you just merged
+  - Merge the `release-*` branch into `main` **using a non-fast-forward merge** and push it up to GitHub
+    - `git checkout main; git merge --no-ff release-next`
+  - Merge the `release-*` branch into `dev` **using a non-fast-forward merge** and push it up to GitHub
+    - `git checkout dev; git merge --no-ff release-next`
+  - Convert the `remix@1.x.y` tag to a Release on Github with the name `v1.x.y` using he release notes prepared above
+
+### Hotfix releases
+
+Hotfix releases follow the same process as standard releases above, but the `release-*` branch should be branched off latest `main` instead of `dev`. Once the stable hotfix is published, the `release-*` branch should be merged back into both `main` and `dev` just like a normal release.
 
 ### Experimental releases
 

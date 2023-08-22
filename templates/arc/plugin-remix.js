@@ -23,7 +23,9 @@ export default {
           path.resolve(process.cwd(), buildPath),
           "utf8"
         );
-        const manifestMatches = contents.matchAll(/manifest-([A-f0-9]+)\.js/g);
+        const manifestMatches = contents.matchAll(
+          /manifest-([A-Fa-f0-9]+)\.js/g
+        );
         const sent = new Set();
         for (const match of manifestMatches) {
           const buildHash = match[1];
@@ -33,6 +35,17 @@ export default {
           }
         }
       }, 300);
+    },
+  },
+  set: {
+    env() {
+      // Pass matching env variables through to the application in dev mode.
+      const passthruKeys = /^NODE_ENV$|^REMIX_DEV_/;
+      return {
+        testing: Object.fromEntries(
+          Object.entries(process.env).filter(([key]) => passthruKeys.test(key))
+        ),
+      };
     },
   },
 };

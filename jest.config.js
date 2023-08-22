@@ -17,13 +17,11 @@ module.exports = {
     "packages/remix-dev",
     "packages/remix-eslint-config",
     "packages/remix-express",
-    "packages/remix-netlify",
     "packages/remix-node",
     "packages/remix-react",
     "packages/remix-serve",
     "packages/remix-server-runtime",
     "packages/remix-testing",
-    "packages/remix-vercel",
   ],
   watchPlugins: [
     require.resolve("jest-watch-select-projects"),

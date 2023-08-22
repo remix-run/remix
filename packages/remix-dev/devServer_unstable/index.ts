@@ -31,6 +31,10 @@ let detectBin = async (): Promise<string> => {
     let { stdout } = await execa(pkgManager, ["prefix"]);
     return path.join(stdout.trim(), "node_modules", ".bin");
   }
+  if (pkgManager === "bun") {
+    let { stdout } = await execa(pkgManager, ["pm", "bin"]);
+    return stdout.trim();
+  }
   let { stdout } = await execa(pkgManager, ["bin"]);
   return stdout.trim();
 };
@@ -99,7 +103,6 @@ export let serve = async (
           PATH:
             bin + (process.platform === "win32" ? ";" : ":") + process.env.PATH,
           REMIX_DEV_ORIGIN: options.REMIX_DEV_ORIGIN.href,
-          REMIX_DEV_HTTP_ORIGIN: options.REMIX_DEV_ORIGIN.href, // TODO: remove in v2
           FORCE_COLOR: process.env.NO_COLOR === undefined ? "1" : "0",
         },
         // https://github.com/sindresorhus/execa/issues/433
@@ -136,7 +139,7 @@ export let serve = async (
             transform(chunk, _, callback) {
               let str: string = chunk.toString();
               let matches =
-                str && str.matchAll(/\[REMIX DEV\] ([A-f0-9]+) ready/g);
+                str && str.matchAll(/\[REMIX DEV\] ([A-Fa-f0-9]+) ready/g);
               if (matches) {
                 for (let match of matches) {
                   let buildHash = match[1];

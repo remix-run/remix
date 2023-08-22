@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 test.describe("root route", () => {
   let fixture: Fixture;
@@ -11,7 +15,7 @@ test.describe("root route", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           export default function Root() {
             return (
               <html>

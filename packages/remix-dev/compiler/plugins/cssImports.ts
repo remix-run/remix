@@ -1,5 +1,5 @@
-import * as path from "path";
-import * as fse from "fs-extra";
+import * as path from "node:path";
+import fse from "fs-extra";
 import esbuild from "esbuild";
 
 import invariant from "../../invariant";
@@ -8,6 +8,7 @@ import {
   getPostcssProcessor,
   populateDependenciesFromMessages,
 } from "../utils/postcss";
+import { cssTarget } from "../utils/cssTarget";
 import { absoluteCssUrlsPlugin } from "./absoluteCssUrlsPlugin";
 
 const isExtendedLengthPath = /^\\\\\?\\/;
@@ -41,7 +42,6 @@ export function cssFilePlugin(ctx: Context): esbuild.Plugin {
         nodePaths,
         platform,
         publicPath,
-        target,
       } = build.initialOptions;
 
       // eslint-disable-next-line prefer-let/prefer-let -- Avoid needing to repeatedly check for null since const can't be reassigned
@@ -50,7 +50,12 @@ export function cssFilePlugin(ctx: Context): esbuild.Plugin {
       build.onLoad({ filter: /\.css$/ }, async (args) => {
         let cacheKey = `css-file:${args.path}`;
         let {
-          cacheValue: { contents, watchFiles, warnings },
+          cacheValue: {
+            contents,
+            watchFiles,
+            warnings,
+            outputFilesWithoutEntry,
+          },
         } = await ctx.fileWatchCache.getOrSet(cacheKey, async () => {
           let fileDependencies = new Set([args.path]);
           let globDependencies = new Set<string>();
@@ -69,7 +74,7 @@ export function cssFilePlugin(ctx: Context): esbuild.Plugin {
               platform,
               publicPath,
               sourceRoot,
-              target,
+              target: cssTarget,
               treeShaking,
               tsconfig,
               minify: ctx.options.mode === "production",
@@ -166,24 +171,25 @@ export function cssFilePlugin(ctx: Context): esbuild.Plugin {
             }
           }
 
-          // write all assets
-          await Promise.all(
-            outputFilesWithoutEntry.map(({ path: filepath, contents }) =>
-              fse.outputFile(filepath, contents)
-            )
-          );
-
           return {
             cacheValue: {
               contents: entryFile.contents,
               // add all dependencies to watchFiles
               watchFiles: Array.from(fileDependencies),
               warnings,
+              outputFilesWithoutEntry,
             },
             fileDependencies,
             globDependencies,
           };
         });
+
+        // write all assets
+        await Promise.all(
+          outputFilesWithoutEntry.map(({ path: filepath, contents }) =>
+            fse.outputFile(filepath, contents)
+          )
+        );
 
         return {
           contents,

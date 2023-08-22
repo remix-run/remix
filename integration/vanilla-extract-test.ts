@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
 
 const TEST_PADDING_VALUE = "20px";
 
@@ -12,13 +16,8 @@ test.describe("Vanilla Extract", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_routeConvention: true,
-        },
-      },
       files: {
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           import { Links, Outlet } from "@remix-run/react";
           import { cssBundleHref } from "@remix-run/css-bundle";
           export function links() {
@@ -67,7 +66,7 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/typescript-test.jsx": js`
+    "app/routes/typescript-test.tsx": js`
       import * as styles from "../fixtures/typescript/styles.css";
 
       export default function() {
@@ -98,7 +97,7 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/javascript-test.jsx": js`
+    "app/routes/javascript-test.tsx": js`
       import * as styles from "../fixtures/javascript/styles.css";
 
       export default function() {
@@ -137,7 +136,7 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/class-composition-test.jsx": js`
+    "app/routes/class-composition-test.tsx": js`
       import * as styles from "../fixtures/class-composition/styles.css";
 
       export default function() {
@@ -176,7 +175,7 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/root-relative-class-composition-test.jsx": js`
+    "app/routes/root-relative-class-composition-test.tsx": js`
       import * as styles from "../fixtures/root-relative-class-composition/styles.css";
 
       export default function() {
@@ -208,7 +207,7 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/side-effect-imports-test.jsx": js`
+    "app/routes/side-effect-imports-test.tsx": js`
       import "../fixtures/side-effect-imports/styles.css";
 
       export default function() {
@@ -241,7 +240,7 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/side-effect-imports-within-child-compilation-test.jsx": js`
+    "app/routes/side-effect-imports-within-child-compilation-test.tsx": js`
       import "../fixtures/side-effect-imports-within-child-compilation/styles.css";
 
       export default function() {
@@ -286,7 +285,7 @@ test.describe("Vanilla Extract", () => {
         background: 'peachpuff',
       });
     `,
-    "app/routes/stable-identifiers-test.jsx": js`
+    "app/routes/stable-identifiers-test.tsx": js`
       import * as styles_a from "../fixtures/stable-identifiers/styles_a.css";
       import * as styles_b from "../fixtures/stable-identifiers/styles_b.css";
 
@@ -332,7 +331,7 @@ test.describe("Vanilla Extract", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-css-url-test.jsx": js`
+    "app/routes/image-urls-via-css-url-test.tsx": js`
       import * as styles from "../fixtures/imageUrlsViaCssUrl/styles.css";
 
       export default function() {
@@ -374,7 +373,7 @@ test.describe("Vanilla Extract", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-root-relative-css-url-test.jsx": js`
+    "app/routes/image-urls-via-root-relative-css-url-test.tsx": js`
       import * as styles from "../fixtures/imageUrlsViaRootRelativeCssUrl/styles.css";
 
       export default function() {
@@ -418,7 +417,7 @@ test.describe("Vanilla Extract", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-absolute-css-url-test.jsx": js`
+    "app/routes/image-urls-via-absolute-css-url-test.tsx": js`
       import * as styles from "../fixtures/imageUrlsViaAbsoluteCssUrl/styles.css";
 
       export default function() {
@@ -463,7 +462,7 @@ test.describe("Vanilla Extract", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-js-import-test.jsx": js`
+    "app/routes/image-urls-via-js-import-test.tsx": js`
       import * as styles from "../fixtures/imageUrlsViaJsImport/styles.css";
 
       export default function() {
@@ -508,7 +507,7 @@ test.describe("Vanilla Extract", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-root-relative-js-import-test.jsx": js`
+    "app/routes/image-urls-via-root-relative-js-import-test.tsx": js`
       import * as styles from "../fixtures/imageUrlsViaRootRelativeJsImport/styles.css";
 
       export default function() {
@@ -562,7 +561,7 @@ test.describe("Vanilla Extract", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-class-composition-test.jsx": js`
+    "app/routes/image-urls-via-class-composition-test.tsx": js`
       import * as styles from "../fixtures/imageUrlsViaClassComposition/styles.css";
 
       export default function() {
@@ -617,7 +616,7 @@ test.describe("Vanilla Extract", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-js-import-class-composition-test.jsx": js`
+    "app/routes/image-urls-via-js-import-class-composition-test.tsx": js`
       import * as styles from "../fixtures/imageUrlsViaJsImportClassComposition/styles.css";
 
       export default function() {

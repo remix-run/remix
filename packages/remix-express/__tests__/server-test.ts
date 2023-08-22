@@ -5,7 +5,7 @@ import {
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
 } from "@remix-run/node";
-import { Readable } from "stream";
+import { Readable } from "node:stream";
 
 import {
   createRemixHeaders,
@@ -158,7 +158,9 @@ describe("express createRemixHeaders", () => {
   describe("creates fetch headers from express headers", () => {
     it("handles empty headers", () => {
       let headers = createRemixHeaders({});
-      expect(headers.raw()).toMatchInlineSnapshot(`Object {}`);
+      expect(Object.fromEntries(headers.entries())).toMatchInlineSnapshot(
+        `Object {}`
+      );
     });
 
     it("handles simple headers", () => {

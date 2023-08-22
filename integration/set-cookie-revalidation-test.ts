@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -11,11 +15,8 @@ let BANNER_MESSAGE = "you do not have permission to view /protected";
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    config: {
-      future: { v2_routeConvention: true },
-    },
     files: {
-      "app/session.server.js": js`
+      "app/session.server.ts": js`
         import { createCookieSessionStorage } from "@remix-run/node";
 
         export let MESSAGE_KEY = "message";
@@ -30,7 +31,7 @@ test.beforeAll(async () => {
         })
       `,
 
-      "app/root.jsx": js`
+      "app/root.tsx": js`
         import { json } from "@remix-run/node";
         import {
           Links,
@@ -72,7 +73,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/_index.jsx": js`
+      "app/routes/_index.tsx": js`
         import { Link } from "@remix-run/react";
 
         export default function Index() {
@@ -84,13 +85,13 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/login.jsx": js`
+      "app/routes/login.tsx": js`
         export default function Login() {
           return <p>login</p>;
         }
       `,
 
-      "app/routes/protected.jsx": js`
+      "app/routes/protected.tsx": js`
         import { redirect } from "@remix-run/node";
 
         import { sessionStorage, MESSAGE_KEY } from "~/session.server";

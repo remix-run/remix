@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { getElement, PlaywrightFixture } from "./helpers/playwright-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import { getElement, PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 test.describe("Forms", () => {
   let fixture: Fixture;
@@ -56,11 +60,8 @@ test.describe("Forms", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
-        "app/routes/get-submission.jsx": js`
+        "app/routes/get-submission.tsx": js`
           import { useLoaderData, Form } from "@remix-run/react";
 
           export function loader({ request }) {
@@ -133,7 +134,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/about.jsx": js`
+        "app/routes/about.tsx": js`
           export async function action({ request }) {
             return json({ submitted: true });
           }
@@ -142,7 +143,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/inbox.jsx": js`
+        "app/routes/inbox.tsx": js`
           import { Form } from "@remix-run/react";
           export default function() {
             return (
@@ -167,7 +168,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/blog.jsx": js`
+        "app/routes/blog.tsx": js`
           import { Form, Outlet } from "@remix-run/react";
           export default function() {
             return (
@@ -194,7 +195,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/blog._index.jsx": js`
+        "app/routes/blog._index.tsx": js`
           import { Form } from "@remix-run/react";
           export function action() {
             return { ok: true };
@@ -228,7 +229,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/blog.$postId.jsx": js`
+        "app/routes/blog.$postId.tsx": js`
           import { Form } from "@remix-run/react";
           export default function() {
             return (
@@ -253,7 +254,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/projects.jsx": js`
+        "app/routes/projects.tsx": js`
           import { Form, Outlet } from "@remix-run/react";
           export default function() {
             return (
@@ -265,13 +266,13 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/projects._index.jsx": js`
+        "app/routes/projects._index.tsx": js`
           export default function() {
             return <h2>All projects</h2>
           }
         `,
 
-        "app/routes/projects.$.jsx": js`
+        "app/routes/projects.$.tsx": js`
           import { Form } from "@remix-run/react";
           export default function() {
             return (
@@ -296,7 +297,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/stop-propagation.jsx": js`
+        "app/routes/stop-propagation.tsx": js`
           import { json } from "@remix-run/node";
           import { Form, useActionData } from "@remix-run/react";
 
@@ -318,7 +319,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/form-method.jsx": js`
+        "app/routes/form-method.tsx": js`
           import { Form, useActionData, useLoaderData, useSearchParams } from "@remix-run/react";
           import { json } from "@remix-run/node";
 
@@ -349,7 +350,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/submitter.jsx": js`
+        "app/routes/submitter.tsx": js`
           import { Form } from "@remix-run/react";
 
           export default function() {
@@ -372,7 +373,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/file-upload.jsx": js`
+        "app/routes/file-upload.tsx": js`
           import { Form, useSearchParams } from "@remix-run/react";
 
           export default function() {
@@ -392,7 +393,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/empty-file-upload.jsx": js`
+        "app/routes/empty-file-upload.tsx": js`
           import { json } from "@remix-run/server-runtime";
           import { Form, useActionData } from "@remix-run/react";
 
@@ -428,7 +429,7 @@ test.describe("Forms", () => {
         // Generic route for outputting url-encoded form data (either from the request body or search params)
         //
         // TODO: refactor other tests to use this
-        "app/routes/outputFormData.jsx": js`
+        "app/routes/outputFormData.tsx": js`
           import { useActionData, useSearchParams } from "@remix-run/react";
 
           export async function action({ request }) {
@@ -452,7 +453,7 @@ test.describe("Forms", () => {
 
         "myfile.txt": "stuff",
 
-        "app/routes/pathless-layout-parent.jsx": js`
+        "app/routes/pathless-layout-parent.tsx": js`
           import { json } from '@remix-run/server-runtime'
           import { Form, Outlet, useActionData } from '@remix-run/react'
 
@@ -474,7 +475,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/pathless-layout-parent._pathless.nested.jsx": js`
+        "app/routes/pathless-layout-parent._pathless.nested.tsx": js`
           import { Outlet } from '@remix-run/react';
 
           export default function () {
@@ -487,7 +488,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/pathless-layout-parent._pathless.nested._index.jsx": js`
+        "app/routes/pathless-layout-parent._pathless.nested._index.tsx": js`
           export default function () {
             return <h3>Pathless Layout Index</h3>
           }

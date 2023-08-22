@@ -1,17 +1,14 @@
 import { test, expect } from "@playwright/test";
 
-import { createFixture, js } from "./helpers/create-fixture";
-import type { Fixture } from "./helpers/create-fixture";
+import { createFixture, js } from "./helpers/create-fixture.js";
+import type { Fixture } from "./helpers/create-fixture.js";
 
 let fixture: Fixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    config: {
-      future: { v2_routeConvention: true },
-    },
     files: {
-      "app/routes/_index.jsx": js`
+      "app/routes/_index.tsx": js`
         import { json } from "@remix-run/node";
 
         export async function action({ request }) {

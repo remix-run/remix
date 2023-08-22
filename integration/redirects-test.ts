@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { createFixture, createAppFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
+import {
+  createFixture,
+  createAppFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 test.describe("redirects", () => {
   let fixture: Fixture;
@@ -10,11 +14,8 @@ test.describe("redirects", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
-        "app/routes/action.jsx": js`
+        "app/routes/action.tsx": js`
           import { Outlet, useLoaderData } from "@remix-run/react";
 
           if (typeof global.actionCount === "undefined") {
@@ -42,7 +43,7 @@ test.describe("redirects", () => {
           }
         `,
 
-        "app/routes/action.form.jsx": js`
+        "app/routes/action.form.tsx": js`
           import { redirect } from "@remix-run/node";
           import { Form } from "@remix-run/react";
 
@@ -59,7 +60,7 @@ test.describe("redirects", () => {
           }
         `,
 
-        "app/routes/action.1.jsx": js`
+        "app/routes/action.1.tsx": js`
           import { redirect } from "@remix-run/node";
 
           export async function loader({ request }) {
@@ -67,13 +68,13 @@ test.describe("redirects", () => {
           };
         `,
 
-        "app/routes/action.2.jsx": js`
+        "app/routes/action.2.tsx": js`
           export default function () {
             return <h1>Page 2</h1>
           }
         `,
 
-        "app/routes/action.absolute.jsx": js`
+        "app/routes/action.absolute.tsx": js`
           import { redirect } from "@remix-run/node";
           import { Form } from "@remix-run/react";
 
@@ -89,12 +90,12 @@ test.describe("redirects", () => {
             );
           }
         `,
-        "app/session.server.js": js`
+        "app/session.server.ts": js`
           import { createCookie } from "@remix-run/node";
           export const session = createCookie("session");
         `,
 
-        "app/routes/loader.jsx": js`
+        "app/routes/loader.tsx": js`
           import { Outlet, useLoaderData } from "@remix-run/react";
           import { session } from "~/session.server";
 
@@ -126,14 +127,14 @@ test.describe("redirects", () => {
           }
         `,
 
-        "app/routes/loader.link.jsx": js`
+        "app/routes/loader.link.tsx": js`
           import { Link } from "@remix-run/react";
           export default function Parent() {
             return <Link to="/loader/redirect">Redirect</Link>;
           }
         `,
 
-        "app/routes/loader.redirect.jsx": js`
+        "app/routes/loader.redirect.tsx": js`
             import { redirect } from "@remix-run/node";
             import { Form } from "@remix-run/react";
             import { session } from "~/session.server";
@@ -150,7 +151,7 @@ test.describe("redirects", () => {
             };
         `,
 
-        "app/routes/loader.1.jsx": js`
+        "app/routes/loader.1.tsx": js`
           import { redirect } from "@remix-run/node";
 
           export async function loader({ request }) {
@@ -158,12 +159,12 @@ test.describe("redirects", () => {
           };
         `,
 
-        "app/routes/loader.2.jsx": js`
+        "app/routes/loader.2.tsx": js`
           export default function () {
             return <h1>Page 2</h1>
           }
         `,
-        "app/routes/loader.external.js": js`
+        "app/routes/loader.external.ts": js`
           import { redirect } from "@remix-run/node";
           export const loader = () => {
             return redirect("https://remix.run/");

@@ -67,7 +67,7 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```tsx filename=app/routes/login.js lines=[8,11-13,15,20,24,30-32,43,48,53,58]
+```tsx filename=app/routes/login.tsx lines=[8,11-13,15,20,24,30-32,43,48,53,58]
 import type {
   ActionArgs,
   LoaderArgs,

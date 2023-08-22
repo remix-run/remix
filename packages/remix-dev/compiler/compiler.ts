@@ -1,4 +1,4 @@
-import * as path from "path";
+import * as path from "node:path";
 
 import type { Context } from "./context";
 import * as CSS from "./css";
@@ -56,7 +56,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       if (error === undefined) {
         error = thrown;
       }
-      cancel();
+      void cancel();
       return err(thrown);
     };
 

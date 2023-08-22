@@ -1,5 +1,5 @@
-import * as path from "path";
-import { promises as fsp } from "fs";
+import * as path from "node:path";
+import { promises as fsp } from "node:fs";
 import type * as esbuild from "esbuild";
 
 import type { RemixConfig } from "../config";
@@ -98,7 +98,6 @@ export async function create({
           imports: resolveImports(output.imports),
           hasAction: sourceExports.includes("action"),
           hasLoader: sourceExports.includes("loader"),
-          hasCatchBoundary: sourceExports.includes("CatchBoundary"),
           hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
         };
       }
