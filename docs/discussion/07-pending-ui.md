@@ -98,6 +98,8 @@ export function ProjectList({ projects }) {
 }
 ```
 
+While localized indicators on links are nice, they are incomplete. There are many other ways a navigation can be triggered: form submissions, back and forward button clicks in the browser chrome, action redirects, and imperative `navigate(path)` calls, so you'll typically want a global indicator to capture everything.
+
 ### Record Creation
 
 **Busy Indicator**: It's typically best to wait for a record to be created instead of using optimistic UI since things like IDs and other fields are unknown until it completes. Also note this action redirects to the new record from the action.
