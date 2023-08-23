@@ -472,7 +472,7 @@ export async function action({
 
 Now we can read the message in a loader.
 
-<docs-info>When using `cookieSessionStorage`, you must commit the session after you `session.get()` a flash value. This is different than what you might be used to, where some type of middleware automatically sets the cookie header for you.</docs-info>
+<docs-info>You must commit the session whenever you read a `flash`. This is different than what you might be used to, where some type of middleware automatically sets the cookie header for you.</docs-info>
 
 ```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
@@ -539,7 +539,7 @@ Removes a value from the session.
 session.unset("name");
 ```
 
-<docs-info>When using `cookieSessionStorage`, you must commit the session after you `session.unset()` a value. This is different than what you might be used to, where some type of middleware automatically sets the cookie header for you.</docs-info>
+<docs-info>When using cookieSessionStorage, you must commit the session whenever you `unset`</docs-info>
 
 ```tsx
 export async function loader({ request }: LoaderArgs) {
