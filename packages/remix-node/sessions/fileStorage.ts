@@ -41,7 +41,7 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
 
       while (true) {
         // TODO: Once Node v19 is supported we should use the globally provided
-        // // Web Crypto API's crypto.getRandomValues() function here instead.
+        // Web Crypto API's crypto.getRandomValues() function here instead.
         let randomBytes = crypto.randomBytes(8);
         // This storage manages an id space of 2^64 ids, which is far greater
         // than the maximum number of files allowed on an NTFS or ext4 volume
