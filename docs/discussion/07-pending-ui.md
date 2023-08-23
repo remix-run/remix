@@ -32,6 +32,8 @@ Use Busy Indicators:
 Use Skeleton Fallbacks:
 
 - **Initial Loading**: The UI is in the process of loading, providing users with a visual indication of upcoming content structure.
+- **Critical Data**: The data is not critical for the initial rendering of the page, allowing the skeleton fallback to be displayed while the data is loading.
+- **App-Like Feel**: The application is designed to resemble the behavior of a standalone app, allowing for immediate transitions to the fallbacks.
 
 ## Examples
 
@@ -197,7 +199,7 @@ function ProjectListItem({ project }) {
 
 ## Deferred Data Loading
 
-**Skeleton Fallback**: When data is deferred, you can add fallbacks with `<Suspense>`.
+**Skeleton Fallback**: When data is deferred, you can add fallbacks with `<Suspense>`. This allows the UI to render without waiting for the data to load, speeding up the perceived and actual performance of the application.
 
 ```tsx lines=[8-11,20-24]
 import { defer } from "@remix-run/node";
@@ -228,6 +230,13 @@ export default function ProductRoute() {
   );
 }
 ```
+
+When creating skeleton fallbacks, consider the following principles:
+
+- **Consistent Size:** Ensure that the skeleton fallbacks match the dimensions of the actual content. This prevents sudden layout shifts, providing a smoother and more visually cohesive loading experience. In terms of web performance, this trade-off minimizes [Cumulative Layout Shift](https://web.dev/cls) (CLS) in favor of improving [First Contentful Paint](https://web.dev/fcp) (FCP). You can minimize the trade with accurate dimensions in the fallback.
+- **Critical Data:** Avoid using fallbacks for essential information—the main content of the page. This is especially important for SEO and meta tags. If you delay showing critical data, accurate meta tags can't be provided, and search engines won't correctly index your page.
+- **App-Like Feel**: For web application UI that doesn't have SEO concerns, it can be beneficial to use skeleton fallbacks more extensively. This creates an interface that resembles the behavior of a standalone app. When users click on links, they get an instantaneous transition to the skeleton fallbacks.
+- **Link Prefetching:** Using `<Link prefetch="intent">` can often skip the fallbacks completely. When users hover or focus on the link, this method preloads the needed data, allowing the network a quick moment to fetch content before the user clicks. This often results in an immediate navigation to the next page.
 
 ## Conclusion
 
