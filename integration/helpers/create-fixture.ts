@@ -137,7 +137,7 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
           let newChunk = chunk.toString();
           stdout += newChunk;
           let match: RegExpMatchArray | null = stdout.match(
-            /started at http:\/\/localhost:(\d+)\s/
+            /\[remix-serve\] http:\/\/localhost:(\d+)\s/
           );
           if (match) {
             clearTimeout(rejectTimeout);
