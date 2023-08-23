@@ -1,18 +1,21 @@
 @app
 remix-architect-app
 
+@aws
+runtime nodejs16.x
+# concurrency 1
+# memory 1152
+# profile default
+# region us-west-1
+# timeout 30
+
 @http
 /*
   method any
   src server
 
-@static
-
 @plugins
 plugin-remix
   src plugin-remix.js
 
-# @aws
-# profile default
-# region us-west-1
-  
+@static
