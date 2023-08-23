@@ -238,7 +238,7 @@ export function Signup() {
 }
 ```
 
-And the backend API at `/api/signup` that also validates and returns errors. It needs to run server side to check things like duplicate user names, etc. Stuff the client can't know.
+The backend API at `/api/signup` also validates and returns errors. It needs to run server side to check things like duplicate user names, etc. Stuff the client can't know.
 
 ```tsx
 export function signupHandler(request) {
