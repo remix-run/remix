@@ -150,7 +150,7 @@ import { useFetcher } from "@remix-run/react";
 
 function CreateProject() {
   const fetcher = useFetcher();
-  const isSubmitting = navigation.state === "submitting";
+  const isSubmitting = fetcher.state === "submitting";
 
   return (
     <fetcher.Form method="post" action="/create-project">
@@ -183,7 +183,7 @@ function ProjectListItem({ project }) {
       <div>{project.name}</div>
       <fetcher.Form method="post">
         <button
-          onClick={(event) => event.stopPropagation()}
+          type="submit"
           name="starred"
           // use optimistic value to allow interruptions
           value={starred ? "0" : "1"}
