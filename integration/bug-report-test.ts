@@ -57,28 +57,18 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/_index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+      "app/routes/upload.jsx": js`
+        import { json, ActionArgs, unstable_parseMultipartFormData } from '@remix-run/node';
 
-        export function loader() {
-          return json("pizza");
-        }
-
-        export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+        export async function action({ request }) {
+          try {
+            const rsp = await unstable_parseMultipartFormData(request, async ({ data, filename, contentType }) => {
+              return filename;
+            });
+            return json(Object.fromEntries(rsp.entries()));
+          } catch (e) {
+            return json({ error: e.message });
+          }
         }
       `,
     },
@@ -97,22 +87,42 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+test("fail upload if boundary is set with hyphens", async ({ page }) => {
+  let res = await fetch(appFixture.serverUrl + "/upload", {
+    method: "POST",
+    headers: {
+      "Content-Type":
+        'multipart/form-data; boundary="--------------------------890934293568639326555573"',
+    },
+    body:
+      "----------------------------890934293568639326555573\r\n" +
+      'Content-Disposition: form-data; name="file"; filename="test.txt"\r\n' +
+      "Content-Type: text/plain\r\n" +
+      "\r\n" +
+      "test\r\n" +
+      "----------------------------890934293568639326555573--\r\n",
+  }).then((res) => res.json());
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  expect(res).toEqual({ file: "test.txt" });
+});
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+test("success upload if boundary is set without hyphens", async ({ page }) => {
+  let res = await fetch(appFixture.serverUrl + "/upload", {
+    method: "POST",
+    headers: {
+      "Content-Type":
+        "multipart/form-data; boundary=--------------------------890934293568639326555573",
+    },
+    body:
+      "----------------------------890934293568639326555573\r\n" +
+      'Content-Disposition: form-data; name="file"; filename="test.txt"\r\n' +
+      "Content-Type: text/plain\r\n" +
+      "\r\n" +
+      "test\r\n" +
+      "----------------------------890934293568639326555573--\r\n",
+  }).then((res) => res.json());
 
-  // Go check out the other tests to see what else you can do.
+  expect(res).toEqual({ file: "test.txt" });
 });
 
 ////////////////////////////////////////////////////////////////////////////////
