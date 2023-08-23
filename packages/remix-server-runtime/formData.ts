@@ -43,6 +43,10 @@ export async function parseMultipartFormData(
     throw new TypeError("Could not parse content as FormData.");
   }
 
+  if (boundary.startsWith('"') && boundary.endsWith('"')) {
+    boundary = boundary.slice(1, -1);
+  }
+
   let formData = new FormData();
   let parts: AsyncIterable<UploadHandlerPart & { done?: true }> =
     streamMultipart(request.body, boundary);
