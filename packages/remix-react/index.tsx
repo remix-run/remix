@@ -1,6 +1,7 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
+  ErrorResponse,
   Fetcher,
   FetcherWithComponents,
   FormEncType,
