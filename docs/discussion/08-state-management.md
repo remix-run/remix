@@ -46,7 +46,7 @@ As a developer transitioning to Remix, it's essential to recognize and embrace i
 
 ### Network Related State
 
-For examples on using Remix's internal state to manage network related state, refer to [Pending UI](./07-pending-ui).
+For examples on using Remix's internal state to manage network related state, refer to [Pending UI][pending-ui].
 
 ### URL Search Params
 
@@ -305,3 +305,4 @@ The server state is available directly from `useActionData` and the network stat
 As bonus a party trick, the form will still work if JavaScript fails to load. Instead of Remix managing the network, the browser will manage it.
 
 [fullstack-data-flow]: ./03-data-flow
+[pending-ui]: ./07-pending-ui
