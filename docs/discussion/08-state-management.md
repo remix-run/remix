@@ -46,7 +46,7 @@ As a developer transitioning to Remix, it's essential to recognize and embrace i
 
 ### Network Related State
 
-For examples on using Remix's internal state to manage network related state, refer to \[Pending UI]\[pending-ui].
+For examples on using Remix's internal state to manage network related state, refer to [Pending UI](./07-pending-ui).
 
 ### URL Search Params
 
