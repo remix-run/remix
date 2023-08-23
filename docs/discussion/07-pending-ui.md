@@ -233,7 +233,7 @@ export default function ProductRoute() {
 
 When creating skeleton fallbacks, consider the following principles:
 
-- **Consistent Size:** Ensure that the skeleton fallbacks match the dimensions of the actual content. This prevents sudden layout shifts, providing a smoother and more visually cohesive loading experience. In terms of web performance, this trade-off minimizes [Cumulative Layout Shift](https://web.dev/cls) (CLS) in favor of improving [First Contentful Paint](https://web.dev/fcp) (FCP). You can minimize the trade with accurate dimensions in the fallback.
+- **Consistent Size:** Ensure that the skeleton fallbacks match the dimensions of the actual content. This prevents sudden layout shifts, providing a smoother and more visually cohesive loading experience. In terms of web performance, this trade-off minimizes [Cumulative Layout Shift][cumulative-layout-shift] (CLS) in favor of improving [First Contentful Paint][first-contentful-paint] (FCP). You can minimize the trade with accurate dimensions in the fallback.
 - **Critical Data:** Avoid using fallbacks for essential information—the main content of the page. This is especially important for SEO and meta tags. If you delay showing critical data, accurate meta tags can't be provided, and search engines won't correctly index your page.
 - **App-Like Feel**: For web application UI that doesn't have SEO concerns, it can be beneficial to use skeleton fallbacks more extensively. This creates an interface that resembles the behavior of a standalone app. When users click on links, they get an instantaneous transition to the skeleton fallbacks.
 - **Link Prefetching:** Using `<Link prefetch="intent">` can often skip the fallbacks completely. When users hover or focus on the link, this method preloads the needed data, allowing the network a quick moment to fetch content before the user clicks. This often results in an immediate navigation to the next page.
@@ -241,3 +241,6 @@ When creating skeleton fallbacks, consider the following principles:
 ## Conclusion
 
 Creating network-aware UI via busy indicators, optimistic UI, and skeleton fallbacks significantly improves the user experience by showing visual cues during actions that require network interaction. Getting good at this is the best way to build applications your users trust.
+
+[cumulative-layout-shift]: https://web.dev/cls
+[first-contentful-paint]: https://web.dev/fcp
