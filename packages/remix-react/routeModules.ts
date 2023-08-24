@@ -55,7 +55,10 @@ export interface MetaMatch<
 }
 
 export type MetaMatches<
-  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+  MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+    string,
+    unknown
+  >
 > = Array<
   {
     [K in keyof MatchLoaders]: MetaMatch<
@@ -67,7 +70,10 @@ export type MetaMatches<
 
 export interface MetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
-  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+  MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+    string,
+    unknown
+  >
 > {
   data:
     | (Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData)
@@ -80,7 +86,10 @@ export interface MetaArgs<
 
 export interface MetaFunction<
   Loader extends LoaderFunction | unknown = unknown,
-  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+  MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+    string,
+    unknown
+  >
 > {
   (args: MetaArgs<Loader, MatchLoaders>): MetaDescriptor[] | undefined;
 }
