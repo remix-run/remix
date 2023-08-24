@@ -246,6 +246,19 @@ let customServer = (options: { appPort: number; devReady: string }) => {
 
 let HMR_TIMEOUT_MS = 10_000;
 
+test("HMR for remix-serve", async ({ page }) => {
+  await dev(page, {
+    files: (appPort) => ({
+      ...files,
+      "package.json": packageJson({
+        devScript: `cross-env PORT=${appPort} remix dev`,
+        deps: ["@remix-run/serve"],
+      }),
+    }),
+    appReadyPattern: /\[remix-serve\] /,
+  });
+});
+
 test("HMR for custom server with broadcast", async ({ page }) => {
   await dev(page, {
     files: (appPort) => ({
@@ -284,7 +297,7 @@ async function dev(
   page: Page,
   options: {
     files: (appPort: number) => Record<string, string>;
-    appReadyPattern?: RegExp;
+    appReadyPattern: RegExp;
   }
 ) {
   // uncomment for debugging
@@ -320,9 +333,7 @@ async function dev(
     await wait(
       () => {
         if (devProc.exitCode) throw Error("Dev server exited early");
-        return (options.appReadyPattern ?? /\[remix-serve\] /).test(
-          devStdout()
-        );
+        return options.appReadyPattern.test(devStdout());
       },
       { timeoutMs: HMR_TIMEOUT_MS }
     );
