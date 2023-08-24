@@ -251,7 +251,7 @@ test("HMR for custom server with broadcast", async ({ page }) => {
     files: (appPort) => ({
       ...files,
       "package.json": packageJson({
-        devScript: `node ./node_modules/@remix-run/dev/dist/cli.js dev -c "node ./server.js"`,
+        devScript: `remix dev -c "node ./server.js"`,
         deps: ["@remix-run/express"],
       }),
       "server.js": customServer({
@@ -268,7 +268,7 @@ test("HMR for custom server with log", async ({ page }) => {
     files: (appPort) => ({
       ...files,
       "package.json": packageJson({
-        devScript: `node ./node_modules/@remix-run/dev/dist/cli.js dev -c "node ./server.js"`,
+        devScript: `remix dev -c "node ./server.js"`,
         deps: ["@remix-run/express"],
       }),
       "server.js": customServer({
