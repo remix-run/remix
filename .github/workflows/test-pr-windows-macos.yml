@@ -4,25 +4,10 @@ name: 🧪 Test (PR) (Windows, MacOS)
 
 on:
   pull_request:
-    paths-ignore:
-      - "packages/remix/**"
-      - "packages/remix-architect/**"
-      - "packages/remix-cloudflare/**"
-      - "packages/remix-cloudflare-pages/**"
-      - "packages/remix-cloudflare-workers/**"
-      - "packages/remix-css-bundle/**"
-      - "packages/remix-deno/**"
-      - "packages/remix-eslint-config/**"
-      - "packages/remix-express/**"
-      - "packages/remix-node/**"
-      - "packages/remix-react/**"
-      - "packages/remix-serve/**"
-      - "packages/remix-server-runtime/**"
-      - "packages/remix-testing/**"
-      - "docs/**"
-      - "scripts/**"
-      - "contributors.yml"
-      - "**/*.md"
+    paths:
+      - "packages/create-remix/**"
+      - "packages/remix-dev/**"
+      - "!**/*.md"
 
 jobs:
   test-unit-windows:
