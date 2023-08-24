@@ -81,7 +81,7 @@ import {
 
 export function List() {
   const navigate = useNavigate();
-  const params = useSearchParams();
+  const [params] = useSearchParams();
   const [view, setView] = React.useState(
     params.get("view") || "list"
   );
@@ -118,7 +118,7 @@ Instead of synchronizing state, you can simply read and set the state in the URL
 import { Form } from "@remix-run/react";
 
 export function List() {
-  const params = useSearchParams();
+  const [params] = useSearchParams();
   const view = params.get("view") || "list";
 
   return (
