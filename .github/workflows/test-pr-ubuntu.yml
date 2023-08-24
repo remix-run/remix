@@ -13,18 +13,18 @@ on:
 jobs:
   build:
     if: github.repository == 'remix-run/remix'
-    uses: ./.github/workflows/shared/build.yml
+    uses: ./.github/workflows/shared-build.yml
 
   test-unit-ubuntu:
     if: github.repository == 'remix-run/remix'
-    uses: ./.github/workflows/shared/test-unit.yml
+    uses: ./.github/workflows/shared-test-unit.yml
     with:
       os: '["ubuntu-latest"]'
       node_version: '["latest"]'
 
   test-integration-ubuntu-chromium:
     if: github.repository == 'remix-run/remix'
-    uses: ./.github/workflows/shared/test-integration.yml
+    uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: '["ubuntu-latest"]'
       node_version: '["latest"]'

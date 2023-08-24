@@ -16,14 +16,14 @@ on:
 jobs:
   test-unit-windows:
     if: github.repository == 'remix-run/remix'
-    uses: ./.github/workflows/shared/test-unit.yml
+    uses: ./.github/workflows/shared-test-unit.yml
     with:
       os: '["windows-latest"]'
       node_version: '["latest"]'
 
   test-integration-ubuntu-firefox:
     if: github.repository == 'remix-run/remix'
-    uses: ./.github/workflows/shared/test-integration.yml
+    uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: '["ubuntu-latest"]'
       node_version: '["latest"]'
@@ -31,7 +31,7 @@ jobs:
 
   test-integration-windows:
     if: github.repository == 'remix-run/remix'
-    uses: ./.github/workflows/shared/test-integration.yml
+    uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: '["windows-latest"]'
       node_version: '["latest"]'
@@ -39,7 +39,7 @@ jobs:
 
   test-integration-macos:
     if: github.repository == 'remix-run/remix'
-    uses: ./.github/workflows/shared/test-integration.yml
+    uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: '["macos-latest"]'
       node_version: '["latest"]'
