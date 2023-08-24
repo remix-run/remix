@@ -1,4 +1,4 @@
-name: 🧪 Test
+name: Branch
 
 # main/dev branches will get the full run across all OS/browsers
 
@@ -18,14 +18,14 @@ jobs:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-build.yml
 
-  test-unit:
+  unit:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-unit.yml
     with:
       os: '["ubuntu-latest", "windows-latest"]'
       node_version: '["latest"]'
 
-  test-integration-ubuntu:
+  ubuntu:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-integration.yml
     with:
@@ -33,7 +33,7 @@ jobs:
       node_version: '["latest"]'
       browser: '["chromium", "firefox"]'
 
-  test-integration-windows:
+  windows:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-integration.yml
     with:
@@ -41,7 +41,7 @@ jobs:
       node_version: '["latest"]'
       browser: '["edge"]'
 
-  test-integration-macos:
+  macos:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-integration.yml
     with:

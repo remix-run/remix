@@ -1,4 +1,4 @@
-name: 🧪 Test (PR) (Ubuntu)
+name: PR (Base)
 
 # All PRs touching code will run tests on ubuntu/node/chromium
 
@@ -15,14 +15,14 @@ jobs:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-build.yml
 
-  test-unit-ubuntu:
+  unit:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-unit.yml
     with:
       os: "ubuntu-latest"
       node_version: '["latest"]'
 
-  test-integration-ubuntu-chromium:
+  integration:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-integration.yml
     with:

@@ -19,7 +19,7 @@ env:
 
 jobs:
   test:
-    name: "🧪 Test: (OS: ${{ inputs.os }} Node: ${{ matrix.node }})"
+    name: '🧪 Test (${{ inputs.os }}/node@${{ matrix.node }})'
     strategy:
       fail-fast: false
       matrix:
