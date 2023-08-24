@@ -263,6 +263,23 @@ test("HMR for custom server with broadcast", async ({ page }) => {
   });
 });
 
+test("HMR for custom server with log", async ({ page }) => {
+  await dev(page, {
+    files: (appPort) => ({
+      ...files,
+      "package.json": packageJson({
+        devScript: `node ./node_modules/@remix-run/dev/dist/cli.js dev -c "node ./server.js"`,
+        deps: ["@remix-run/express"],
+      }),
+      "server.js": customServer({
+        appPort,
+        devReady: "logDevReady",
+      }),
+    }),
+    appReadyPattern: /✅ app ready: /,
+  });
+});
+
 async function dev(
   page: Page,
   options: {
