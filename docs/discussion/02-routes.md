@@ -1,341 +1,142 @@
 ---
-title: Routing
+title: Route Configuration
 ---
 
-# Routing
+# Route Configuration
 
-Remix uses nested routes, popularized by [Ember.js][ember-js] many years ago. Everything starts with your routes: the compiler, the initial request, and almost every user interaction afterward.
+One of the foundational concepts in Remix's routing system is the use of nested routes, an approach that traces its roots back to Ember.js. With nested routes, segments of the URL are coupled to both data dependencies and the UI's component hierarchy. A URL like `/sales/invoices/102000` not only reveals a clear path in the application but also delineates the relationships and dependencies for different components.
 
-Nested Routing is the general idea of coupling segments of the URL to component hierarchy in the UI. We've found that in almost every case, segments of the URL determine:
+## Modular Design
 
-- The layouts to render on the page
-- The code-split JavaScript bundles to load
-- The data dependencies of those layouts
+Nested routes provide clarity by segmenting URLs into multiple parts. Each segment directly correlates with a particular data requirement and component. For instance, in the URL `/sales/invoices/102000`, each segment - `sales`, `invoices`, and `102000` - can be associated with specific data points and UI sections, making it intuitive to manage in the codebase.
 
-Let's consider a UI to help us out. Hover or tap each button to see how each segment of the URL maps to three things: a component layout, a JavaScript bundle, and a piece of data.
+A feature of nested routing is the ability for several routes in the nested route tree to match a single URL. This granularity ensures that each route is primarily focused on its specific URL segment and related slice of UI. This approach champions the principles of modularity and separation of concerns, ensuring each route remains focused on its core responsibilities.
 
 <iframe src="/_docs/routing" class="w-full aspect-[1/1] rounded-lg overflow-hidden pb-4"></iframe>
 
-As the user clicks between links in the sidebar, the sidebar persists while the main content changes. Likewise, as they click between the Sales page top nav (Overview, Subscriptions, Invoices, etc.) both the sidebar and the top nav persist while the secondary content changes, and so on down the layout hierarchy.
+## Parallel Loading
 
-In Remix, all of these "boxes" are a **Route**, defined by a **Route Module** in your app.
+In some web applications, the sequential loading of data and assets can sometimes lead to an artificially slow user experience. Even when data dependencies aren't interdependent, they may be loaded sequentially because they are coupled to rendering hierarchy, creating an undesirable chain of requests.
 
-## Defining Routes
+Remix leveraging its nested routing system to optimize load times. When a URL matches multiple routes, Remix will load the required data and assets for all matching routes in parallel. By doing this, Remix effectively sidesteps the conventional pitfall of chained request sequences.
 
-The primary way to define a route is to create a new file in `app/routes/*`. The routes for the UI example above would look something like this:
+This strategy, combined with modern browsers' capability to handle multiple concurrent requests efficiently, positions Remix as a front-runner in delivering highly responsive and swift web applications. It's not just about making your data fetching fast; it's about fetching it in an organized way to provide the best possible experience for the end user.
 
-```
-app
-├── root.tsx
-└── routes
-    ├── _index.tsx
-    ├── accounts.tsx
-    ├── dashboard.tsx
-    ├── expenses.tsx
-    ├── reports.tsx
-    ├── sales._index.tsx
-    ├── sales.customers.tsx
-    ├── sales.deposits.tsx
-    ├── sales.invoices.$invoiceId._index.tsx
-    ├── sales.invoices.$invoiceId.tsx
-    ├── sales.invoices.tsx
-    ├── sales.subscriptions.tsx
-    └── sales.tsx
-```
+## Conventional Route Configuration
 
-- `root.tsx` is the "root route" that serves as the layout for the entire application. Every route will render inside its `<Outlet/>`.
-- Note that there are files with `.` delimiters. The `.` creates a `/` in the URL for that route, as well as layout nesting with another route that matches the segments before the `.`. For example, `sales.tsx` is the **parent route** for all the **child routes** that look like `sales.[the nested path].tsx`. The `<Outlet />` in `sales.tsx` will render the matching child route.
-- The `_index.tsx` routes will render inside the parent `<Outlet>` when the url is only as deep as the parent's path (like `example.com/sales` instead of `example.com/sales/customers`)
+Remix introduces a key convention to help streamline the routing process: the `routes` folder. When a developer introduces a file within this folder, Remix inherently understands it as a route. This convention simplifies the process of defining routes, associating them with URLs, and rendering the associated components.
 
-## Rendering Route Layout Hierarchies
+Here's a sample directory that uses the routes folder convention:
 
-Let's consider the URL is `/sales/invoices/102000`. The following routes all match that URL:
-
-- `root.tsx`
-- `routes/sales.tsx`
-- `routes/sales.invoices.tsx`
-- `routes/sales.invoices.$invoiceId.tsx`
-
-When the user visits this page, Remix will render the components in this hierarchy:
-
-```tsx
-<Root>
-  <Sales>
-    <Invoices>
-      <InvoiceId />
-    </Invoices>
-  </Sales>
-</Root>
+<!-- prettier-ignore -->
+```markdown
+app/
+├── routes/
+│   ├── _index.tsx
+│   ├── about.tsx
+│   ├── concerts._index.tsx
+│   ├── concerts.$city.tsx
+│   ├── concerts.trending.tsx
+│   └── concerts.tsx
+└── root.tsx
 ```
 
-You'll note that the component hierarchy is perfectly mapped to the file system hierarchy in `routes`. By looking at the files, you can anticipate how they will render.
+All the routes that start with `concerts.` will be child routes of `concerts.tsx`.
 
+| URL                        | Matched Route           | Layout         |
+| -------------------------- | ----------------------- | -------------- |
+| `/`                        | `_index.tsx`            | `root.tsx`     |
+| `/about`                   | `about.tsx`             | `root.tsx`     |
+| `/concerts`                | `concerts._index.tsx`   | `concerts.tsx` |
+| `/concerts/trending`       | `concerts.trending.tsx` | `concerts.tsx` |
+| `/concerts/salt-lake-city` | `concerts.$city.tsx`    | `concerts.tsx` |
+
+## Conventional Route Folders
+
+For routes that require additional modules or assets, a folder inside of `routes/` with a `route.tsx` file can be used. This method:
+
+- **Co-locates Modules**: It gathers all elements connected to a particular route, ensuring logic, styles, and components are closely knit.
+- **Simplifies Imports**: With related modules in one place, managing imports becomes straightforward, enhancing code maintainability.
+- **Facilitates Automatic Code Organization**: Using the `route.tsx` setup inherently promotes a well-organized codebase, beneficial as the application scales.
+
+The same routes from above could instead be organized like this:
+
+<!-- prettier-ignore -->
 ```
-app
-├── root.tsx
-└── routes
-    ├── sales.invoices.$invoiceId.tsx
-    ├── sales.invoices.tsx
-    └── sales.tsx
-```
-
-If the URL is `/accounts`, the UI hierarchy changes to this:
-
-```tsx
-<Root>
-  <Accounts />
-</Root>
-```
-
-It's partly your job to make this work. You need to render an `<Outlet/>` to continue the rendering of the route hierarchy from the parent routes. `root.tsx` renders the main layout, sidebar, and then an outlet for the child routes to continue rendering through:
-
-```tsx filename=app/root.tsx lines=[1,7]
-import { Outlet } from "@remix-run/react";
-
-export default function Root() {
-  return (
-    <Document>
-      <Sidebar />
-      <Outlet />
-    </Document>
-  );
-}
-```
-
-Next up is the sales route, which also renders an outlet for its child routes (all the routes matching `app/routes/sales.*.tsx`).
-
-```tsx filename=app/routes/sales.tsx lines=[8]
-import { Outlet } from "@remix-run/react";
-
-export default function Sales() {
-  return (
-    <div>
-      <h1>Sales</h1>
-      <SalesNav />
-      <Outlet />
-    </div>
-  );
-}
+app/
+└── routes/
+    ├── _index/
+    │   ├── signup-form.tsx
+    │   └── route.tsx
+    ├── about/
+    │   ├── header.tsx
+    │   └── route.tsx
+    ├── concerts/
+    │   ├── favorites-cookie.ts
+    │   └── route.tsx
+    ├── concerts.$city/
+    │   └── route.tsx
+    ├── concerts._index/
+    │   ├── featured.tsx
+    │   └── route.tsx
+    └── concerts.trending/
+        ├── card.tsx
+        ├── route.tsx
+        └── sponsored.tsx
 ```
 
-And so on down the route tree. This is a powerful abstraction that makes something previously complex very simple.
+You can read more about the specific patterns in the file names and other features in the [Route File Conventions](../file-conventions/routes) reference.
 
-## Index Routes
+Only the folders directly beneath `routes/` will be registered as a route. Deeply nested folders are ignored. The file at `routes/about/header/route.tsx` will not create a route.
 
-Index routes are often difficult to understand at first. It's easiest to think of them as _the default child route_ for a parent route. When there is no child route to render, we render the index route.
-
-Consider the URL `example.com/sales`. If our app didn't have an index route at `app/routes/sales._index.tsx` the UI would look like this!
-
-<iframe src="/_docs/routing-index" class="w-full aspect-[4/3] rounded-lg overflow-hidden mb-4"></iframe>
-
-And index is the thing you render to fill in that empty space when none of the child routes match.
-
-<docs-error>Index Routes cannot have child routes</docs-error>
-
-Index routes are "leaf routes". They're the end of the line. If you think you need to add child routes to an index route, that usually means your layout code (like a shared nav) needs to move out of the index route and into the parent route.
-
-This usually comes up when folks are just getting started with Remix and put their global nav in `app/routes/_index.tsx`. Move that global nav up into `app/root.tsx`. Everything inside of `app/routes/*` is already a child of `root.tsx`.
-
-### What is the `?index` query param?
-
-You may notice an `?index` query parameter showing up on your URLs from time to time, particularly when you are submitting a `<Form>` from an index route. This is required to differentiate index routes from their parent layout routes. Consider the following structure, where a URL such as `/sales/invoices` would be ambiguous. Is that referring to the `app/routes/sales.invoices.tsx` file? Or is it referring to the `app/routes/sales.invoices._index.tsx` file? In order to avoid this ambiguity, Remix uses the `?index` parameter to indicate when a URL refers to the index route instead of the layout route.
-
-```
-└── app
-    ├── root.tsx
-    └── routes
-        ├── sales.invoices._index.tsx   <-- /sales/invoices?index
-        └── sales.invoices.tsx <-- /sales/invoices
+<!-- prettier-ignore -->
+```markdown bad lines=[4]
+routes
+└── about
+    ├── header
+    │   └── route.tsx
+    └── route.tsx
 ```
 
-This is handled automatically for you when you submit from a `<Form>` contained within either the layout route or the index route. But if you are submitting forms to different routes, or using `fetcher.submit`/`fetcher.load` you may need to be aware of this URL pattern, so you can target the correct route.
+## Manual Route Configuration
 
-## Nested URLs without nesting layouts
+While the `routes/` folder offers a convenient convention for developers, Remix appreciates that one size doesn't fit all. There are times when the provided convention might not align with specific project requirements or a developer's preferences. In such cases, Remix allows for manual route configuration via the `remix.config`. This flexibility ensures developers can structure their application in a way that makes sense for their project.
 
-Sometimes you want to add nesting to the URL (slashes) but you don't want to create UI hierarchy. Consider an edit page for an invoice:
+A common way to structure an app is by top-level features folders. Consider that routes related to a particular theme, like concerts, likely share several modules. Organizing them under a single folder makes sense:
 
-- We want the URL to be `/sales/invoices/:invoiceId/edit`
-- We **don't** want it nested inside the components except the root so the user (and our designer) has plenty of room to edit the invoice
-
-In other words, we don't want this:
-
-```tsx bad
-<Root>
-  <Sales>
-    <Invoices>
-      <InvoiceId>
-        <EditInvoice />
-      </InvoiceId>
-    </Invoices>
-  </Sales>
-</Root>
+```text
+app/
+├── about
+│   └── route.tsx
+├── concerts
+│   ├── card.tsx
+│   ├── city.tsx
+│   ├── favorites-cookie.ts
+│   ├── home.tsx
+│   ├── layout.tsx
+│   ├── sponsored.tsx
+│   └── trending.tsx
+└── home
+    ├── header.tsx
+    └── route.tsx
 ```
 
-We want this:
+To configure this structure into the same URLs as the previous examples, you can use the `routes` function in `remix.config.js`:
 
-```tsx
-<Root>
-  <EditInvoice />
-</Root>
+```js filename=remix.config.js
+export default {
+  routes(defineRoutes) {
+    return defineRoutes((route) => {
+      route("/", "home/route.tsx", { index: true });
+      route("about", "about/route.tsx");
+      route("concerts", "concerts/layout.tsx", () => {
+        route("/", "concerts/home.tsx", { index: true });
+        route("trending", "concerts/trending.tsx");
+        route(":city", "concerts/city.tsx");
+      });
+    });
+  },
+};
 ```
 
-So, if we want a flat UI hierarchy, we use a `trailing_` underscore to opt-out of layout nesting. This defines URL nesting _without creating component nesting_.
-
-```
-└── app
-    ├── root.tsx
-    └── routes
-        ├── sales.invoices.$invoiceId.tsx
-        ├── sales.invoices.tsx
-        ├── sales_.invoices.$invoiceId.edit.tsx 👈 not nested
-        └── sales.tsx
-```
-
-So if the url is "example.com/sales/invoices/2000/edit", we'll get this UI hierarchy that matches the file system hierarchy:
-
-```tsx
-<Root>
-  <EditInvoice />
-</Root>
-```
-
-If we remove "edit" from the URL like this: "example.com/sales/invoices/2000", then we get all the hierarchy again:
-
-```tsx
-<Root>
-  <Sales>
-    <Invoices>
-      <InvoiceId />
-    </Invoices>
-  </Sales>
-</Root>
-```
-
-- Layout Nesting + Nested URLs: happens automatically with `.` delimiters that match parent route names.
-- `trailing_` underscore on the segment matching the parent route opts-out of layout nesting.
-
-You can introduce nesting or non-nesting at any level of your routes, like `app/routes/invoices.$id_.edit.tsx`, which matches the URL `/invoices/123/edit` but does not create nesting inside of `$id.tsx`, it would nest with `app/routes/invoices.tsx` instead.
-
-## Pathless Layout Routes
-
-Now for the inverse use case, sometimes you want to share a layout for a set of routes, _but you don't want to add any segments to the URL_. You can do this with a **pathless layout route**.
-
-Consider we want to add some authentication routes, with a UI hierarchy like this:
-
-```tsx
-<Root>
-  <Auth>
-    <Login />
-  </Auth>
-</Root>
-```
-
-At first, you might think to just create an `auth` parent route and put the child routes inside to get the layout nesting:
-
-```
-app
-├── root.tsx
-└── routes
-    ├── auth.login.tsx
-    ├── auth.logout.tsx
-    ├── auth.signup.tsx
-    └── auth.tsx
-```
-
-We have the right UI hierarchy, but we probably don't actually want each of the URLs to be prefixed with `/auth` like `/auth/login`. We just want `/login`.
-
-You can remove the URL nesting, but keep the UI nesting, by adding an underscore to the auth route segment:
-
-```
-app
-├── root.tsx
-└── routes
-    ├── _auth.login.tsx
-    ├── _auth.logout.tsx
-    ├── _auth.signup.tsx
-    └── _auth.tsx
-```
-
-Now when the URL matches `/login` the UI hierarchy will be same as before.
-
-<docs-info>
-
-- `_leading` underscore opts-out of URL nesting
-- `trailing_` underscore opts-out of layout nesting
-
-</docs-info>
-
-## Dynamic Segments
-
-Prefixing a file name with `$` will make that route path a **dynamic segment**. This means Remix will match any value in the URL for that segment and provide it to your app.
-
-For example, the `$invoiceId.tsx` route. When the url is `/sales/invoices/102000`, Remix will provide the string value `102000` to your loaders, actions, and components by the same name as the filename segment:
-
-```tsx
-import { useParams } from "@remix-run/react";
-
-export async function loader({ params }: LoaderArgs) {
-  const id = params.invoiceId;
-}
-
-export async function action({ params }: ActionArgs) {
-  const id = params.invoiceId;
-}
-
-export default function Invoice() {
-  const params = useParams();
-  const id = params.invoiceId;
-}
-```
-
-Route can have multiple params, and params can be folders as well.
-
-```
-app
-├── root.tsx
-└── routes
-    ├── projects.$projectId.tsx
-    ├── projects.$projectId.$taskId.tsx
-    └── projects.tsx
-```
-
-If the URL is `/projects/123/abc` then the params will be as follows:
-
-```tsx
-params.projectId; // "123"
-params.taskId; // "abc"
-```
-
-## Splats
-
-Naming a file `$.tsx` will make that route path a **splat route**. This means Remix will match any value in the URL for rest of the URL to the end. Unlike **dynamic segments**, a splat won't stop matching at the next `/`, it will capture everything.
-
-Consider the following routes:
-
-```
-app
-├── root.tsx
-└── routes
-    ├── files.$.tsx
-    ├── files.mine.tsx
-    ├── files.recent.tsx
-    └── files.tsx
-```
-
-When the URL is `example.com/files/images/work/flyer.jpg`. The splat param will capture the trailing segments of the URL and be available to your app on `params["*"]`
-
-```tsx
-export async function loader({ params }: LoaderArgs) {
-  params["*"]; // "images/work/flyer.jpg"
-}
-```
-
-You can add splats at any level of your route hierarchy. Any sibling routes will match first (like `/files/mine`).
-
-It's common to add a `app/routes/$.tsx` file build custom 404 pages with data from a loader (without it, Remix renders your root `ErrorBoundary` with no ability to load data for the page when the URL doesn't match any routes).
-
-## Conclusion
-
-Nested routes are an incredibly powerful abstraction. Layouts are shared automatically and each route is only concerned with its slice of the data on the page. Additionally, because of this convention, Remix is able to make a ton of optimizations, automatically turning what feels like a server side app from the developer's perspective into a turbocharged SPA for the user.
-
-[ember-js]: https://emberjs.com
+Remix's route configuration approach blends convention with flexibility. You can use the `routes` folder for an easy, organized way to set up your routes. If you want more control, dislike the file names, or have unique needs, there's `remix.config`. It is expected that many apps forgo the routes folder convention in favor of `remix.config`.
