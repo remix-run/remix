@@ -1,0 +1,50 @@
+name: 🧪 Test
+
+# main/dev branches will get the full run across all OS/browsers
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths-ignore:
+      - "docs/**"
+      - "scripts/**"
+      - "contributors.yml"
+      - "**/*.md"
+
+jobs:
+  build:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared/build.yml
+
+  test-unit:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared/test-unit.yml
+    with:
+      os: '["ubuntu-latest", "windows-latest"]'
+      node_version: '["latest"]'
+
+  test-integration-ubuntu:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared/test-integration.yml
+    with:
+      os: '["ubuntu-latest"]'
+      node_version: '["latest"]'
+      browser: '["chromium", "firefox"]'
+
+  test-integration-windows:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared/test-integration.yml
+    with:
+      os: '["windows-latest"]'
+      node_version: '["latest"]'
+      browser: '["edge"]'
+
+  test-integration-macos:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared/test-integration.yml
+    with:
+      os: '["macos-latest"]'
+      node_version: '["latest"]'
+      browser: '["webkit"]'

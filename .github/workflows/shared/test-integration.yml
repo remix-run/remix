@@ -1,0 +1,62 @@
+name: 🧪 Test (Integration)
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+      node_version:
+        required: true
+        # this is limited to string | boolean | number (https://github.community/t/can-action-inputs-be-arrays/16457)
+        # but we want to pass an array (node_version: "[18, 20]"),
+        # so we'll need to manually stringify it for now
+        type: string
+      browser:
+        required: true
+        # this is limited to string | boolean | number (https://github.community/t/can-action-inputs-be-arrays/16457)
+        # but we want to pass an array (browser: "['chromium', 'firefox']"),
+        # so we'll need to manually stringify it for now
+        type: string
+
+env:
+  CI: true
+  CYPRESS_INSTALL_BINARY: 0
+
+jobs:
+  integration:
+    name: '👀 Integration Test: (OS: "${{ inputs.os }}" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ${{ fromJSON(inputs.node_version) }}
+        browser: ${{ fromJSON(inputs.browser) }}
+
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.11.0
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node ${{ matrix.node }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "yarn"
+
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
+
+      - name: 📥 Install deps
+        run: yarn --frozen-lockfile
+
+      - name: 📥 Install Playwright
+        run: npx playwright install --with-deps
+
+      - name: 👀 Run Integration Tests ${{ matrix.browser }}
+        run: "yarn test:integration --project=${{ matrix.browser }}"

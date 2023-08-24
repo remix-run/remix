@@ -1,0 +1,46 @@
+name: 🧪 Test (PR) (Windows, MacOS)
+
+# PRs touching create-remix/remix-dev will also run on Windows and OSX
+
+on:
+  pull_request:
+    paths:
+      - packages/create-remix/**
+      - packages/remix-dev/**
+    paths-ignore:
+      - "docs/**"
+      - "scripts/**"
+      - "contributors.yml"
+      - "**/*.md"
+
+jobs:
+  test-unit-windows:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared/test-unit.yml
+    with:
+      os: '["windows-latest"]'
+      node_version: '["latest"]'
+
+  test-integration-ubuntu-firefox:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared/test-integration.yml
+    with:
+      os: '["ubuntu-latest"]'
+      node_version: '["latest"]'
+      browser: '["firefox"]'
+
+  test-integration-windows:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared/test-integration.yml
+    with:
+      os: '["windows-latest"]'
+      node_version: '["latest"]'
+      browser: '["edge"]'
+
+  test-integration-macos:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared/test-integration.yml
+    with:
+      os: '["macos-latest"]'
+      node_version: '["latest"]'
+      browser: '["webkit"]'
