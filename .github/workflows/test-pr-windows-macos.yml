@@ -25,13 +25,13 @@ jobs:
       node_version: '["latest"]'
       browser: '["firefox"]'
 
-  integration-edge:
+  integration-msedge:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: "windows-latest"
       node_version: '["latest"]'
-      browser: '["edge"]'
+      browser: '["msedge"]'
 
   integration-webkit:
     if: github.repository == 'remix-run/remix'

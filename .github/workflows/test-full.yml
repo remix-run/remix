@@ -39,7 +39,7 @@ jobs:
     with:
       os: '["windows-latest"]'
       node_version: '["latest"]'
-      browser: '["edge"]'
+      browser: '["msedge"]'
 
   macos:
     if: github.repository == 'remix-run/remix'
