@@ -56,7 +56,7 @@ jobs:
         run: yarn --frozen-lockfile
 
       - name: 📥 Install Playwright
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: "yarn test:integration --project=${{ matrix.browser }}"
