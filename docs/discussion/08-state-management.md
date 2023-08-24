@@ -137,6 +137,162 @@ export function List() {
 }
 ```
 
+### Persistent UI State
+
+Consider a UI that opens and closes a side bar. There are three places we could store state with their own tradeoffs:
+
+- React state
+- Browser local storage
+- Cookies
+
+**React state**: React state is a straightforward approach:
+
+```tsx
+function Sidebar({ children }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <div>
+      <button
+        onClick={() => {
+          setIsOpen(!isOpen);
+        }}
+      >
+        {isOpen ? "Close" : "Open"}
+      </button>
+      <aside hidden={!isOpen}>{children}</aside>
+    </div>
+  );
+}
+```
+
+However, the limitation here is that the sidebar state will be lost upon page refresh, returning to the page later, or unmounting and remounting the sidebar component. This is because the state is bound to the lifecycle of the component.
+
+**Local Storage**: To address this, browser local storage can be used to persist the state across page visits and component unmounts:
+
+```tsx
+function Sidebar({ children }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  // synchronize initially
+  useLayoutEffect(() => {
+    const isOpen = window.localStorage.getItem("sidebar");
+    setIsOpen(isOpen);
+  }, []);
+
+  // synchronize on change
+  useEffect(() => {
+    window.localStorage.setItem("sidebar", isOpen);
+  }, [isOpen]);
+
+  return (
+    <div>
+      <button
+        onClick={() => {
+          setIsOpen(!isOpen);
+        }}
+      >
+        {isOpen ? "Close" : "Open"}
+      </button>
+      <aside hidden={!isOpen}>{children}</aside>
+    </div>
+  );
+}
+```
+
+You may wonder why we initialize with `false` and then `useEffect` to read form local storage:
+
+```tsx bad lines=[3]
+function Sidebar() {
+  const [isOpen, setIsOpen] = React.useState(
+    window.localStorage.getItem("sidebar")
+  );
+}
+```
+
+We can't do this because `window` and `localStorage` are not available during the server render.
+
+It's also important to note that even though `useLayoutEffect` avoids flickering the UI when you navigate to this page with client side routing, the UI will flicker after hydration from the an initially server rendered page: the HTML will render with the sidebar closed, then the JavaScript will load and open the sidebar.
+
+**Cookies**: While you will need to write more code, cookies can avoid these problems with additional benefits.
+
+- Cookies are sent from the browser to the server so you can use their state to render on the server and the client
+- It will persist across page refreshes and return visits (and if you switch to a database-backed session, it could persist across devices)
+- There is no state synchronization, only one source of truth
+- It works before JavaScript loads
+
+You'll first need to create a cookie object:
+
+```tsx
+import { createCookie } from "@remix-run/node";
+export const prefs = createCookie("prefs");
+```
+
+Then you can use it in server actions and loaders
+
+```tsx
+import { prefs } from "./prefs-cookie";
+
+export function loader({ request }) {
+  const cookie = await prefs.parse(
+    request.headers.get("Cookie")
+  );
+  return { sidebarIsOpen: cookie.sidebarIsOpen };
+}
+
+export function action({ request }) {
+  const cookie = await prefs.parse(
+    request.headers.get("Cookie")
+  );
+  const formData = await request.formData();
+
+  const isOpen = formData.get("sidebar") === "open";
+  cookie.sidebarIsOpen = isOpen;
+
+  return json(isOpen, {
+    headers: {
+      "Set-Cookie": await prefs.serialize(cookie),
+    },
+  });
+}
+```
+
+And finally you can use it in your UI:
+
+```tsx
+function Sidebar({ children }) {
+  const fetcher = useFetcher();
+  let { sidebarIsOpen } = useLoaderData();
+
+  // use optimistic UI to immediately change the UI state
+  // instead of waiting for the network
+  if (fetcher.formData?.has("sidebar")) {
+    sidebarIsOpen =
+      fetcher.formData.get("sidebar") === "open";
+  }
+
+  return (
+    <div>
+      <fetcher.Form method="post">
+        <button
+          name="sidebar"
+          value={sidebarIsOpen ? "closed" : "open"}
+        >
+          {sidebarIsOpen ? "Close" : "Open"}
+        </button>
+      </fetcher.Form>
+      <aside hidden={!sidebarIsOpen}>{children}</aside>
+    </div>
+  );
+}
+```
+
+Using React state, local storage, or cookies are all valid options. The important thing is to pick the tradeoffs you prefer.
+
+- React state won't persist across page refreshes, return visits, or even unmounting of the UI withe sidebar
+- Local storage will persist across pages but requires state synchronization, will cause UI flickers on initial load, and won't work before JavaScript loads.
+- Cookies require more code, but are a single source of truth, persists across pages, avoids UI flickers, and works before JavaScript loads.
+
 ### Form Validation and Action Data
 
 While client side validation is a great way to enhance the user experience, you can get similar UX by skipping the client side states and letting the server handle it.
