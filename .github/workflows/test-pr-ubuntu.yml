@@ -15,14 +15,14 @@ jobs:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-build.yml
 
-  unit:
+  unit-ubuntu:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-unit.yml
     with:
       os: "ubuntu-latest"
       node_version: '["latest"]'
 
-  integration:
+  integration-chromium:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-integration.yml
     with:
