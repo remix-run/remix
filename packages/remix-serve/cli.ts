@@ -2,6 +2,7 @@ import "@remix-run/node/install";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import url from "node:url";
 import {
   type ServerBuild,
   broadcastDevReady,
@@ -39,7 +40,7 @@ async function run() {
     let stat = fs.statSync(buildPath);
 
     // use a timestamp query parameter to bust the import cache
-    return import(buildPath + "?t=" + stat.mtimeMs);
+    return import(url.pathToFileURL(buildPath).href + "?t=" + stat.mtimeMs);
   }
 
   function createDevRequestHandler(initialBuild: ServerBuild): RequestHandler {
@@ -69,7 +70,7 @@ async function run() {
     };
   }
 
-  let build: ServerBuild = await import(buildPath);
+  let build: ServerBuild = await reimportServer();
 
   let onListen = () => {
     let address =

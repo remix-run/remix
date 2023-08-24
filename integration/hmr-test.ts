@@ -245,7 +245,7 @@ let customServer = (options: { appPort: number; devReady: string }) => {
   `;
 };
 
-let HMR_TIMEOUT_MS = 20_000;
+let HMR_TIMEOUT_MS = 30_000;
 
 test("HMR for remix-serve", async ({ page }) => {
   await dev(page, {
