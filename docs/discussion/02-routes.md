@@ -85,7 +85,7 @@ app/
         └── sponsored.tsx
 ```
 
-You can read more about the specific patterns in the file names and other features in the [Route File Conventions](../file-conventions/routes) reference.
+You can read more about the specific patterns in the file names and other features in the [Route File Conventions][route-file-conventions] reference.
 
 Only the folders directly beneath `routes/` will be registered as a route. Deeply nested folders are ignored. The file at `routes/about/header/route.tsx` will not create a route.
 
@@ -140,3 +140,5 @@ export default {
 ```
 
 Remix's route configuration approach blends convention with flexibility. You can use the `routes` folder for an easy, organized way to set up your routes. If you want more control, dislike the file names, or have unique needs, there's `remix.config`. It is expected that many apps forgo the routes folder convention in favor of `remix.config`.
+
+[route-file-conventions]: ../file-conventions/routes
