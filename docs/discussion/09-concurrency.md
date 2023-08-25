@@ -6,6 +6,8 @@ title: Network Concurrency Management
 
 When building web applications, managing network requests can be a daunting task. The challenges of ensuring up-to-date data and handling simultaneous requests often lead to complex logic in the application to deal with interruptions and race conditions. Remix simplifies this process by automating network management, mirroring and expanding the intuitive behavior of web browsers.
 
+To help understand how Remix works, remember from [Fullstack Data Flow][fullstack-data-flow] that after form submissions, Remix will fetch fresh data from the loaders. This is called revalidation.
+
 ## Natural Alignment with Browser Behavior
 
 Remix's handling of network concurrency is heavily inspired by the default behavior of web browsers when processing documents:
@@ -16,13 +18,11 @@ Remix's handling of network concurrency is heavily inspired by the default behav
 
 - **Browser Form Submission**: If you initiate a form submission in a browser and then quickly submit another form again, the browser disregards the first submission, processing only the latest one.
 
-  - **Remix's Approach**: Remix mimics this behavior when working with forms. If a form is submitted and another submission occurs before the first completes, Remix cancels the original fetch request or revalidation requests. It then waits for the latest submission to complete before triggering page revalidation.
+  - **Remix's Approach**: Remix mimics this behavior when working with forms. If a form is submitted and another submission occurs before the first completes, Remix cancels the original fetch requests. It then waits for the latest submission to complete before triggering page revalidation again.
 
 ## Enhanced Concurrency Management
 
 While standard browsers are limited to one request at a time for navigations and form submissions, Remix elevates this behavior. Unlike navigation, with `useFetcher`, multiple requests can be in flight simultaneously.
-
-To help understand how Remix works, remember from [Fullstack Data Flow][fullstack-data-flow] that after a form submissions, Remix will fetches fresh data from the loaders that make up the current UI. This is called revalidation.
 
 ## Concurrent Submissions and Revalidation
 
