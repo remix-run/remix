@@ -144,7 +144,7 @@ Nested Routing is the general idea of coupling segments of the URL to component 
 You create nested routes with [dot delimiters][dot-delimiters]. If the filename before the `.` matches another route filename, it automatically becomes a child route to the matching parent. Consider these routes:
 
 <!-- prettier-ignore -->
-```markdown lines=[5-8]
+```markdown
 app/
 ├── routes/
 │   ├── _index.tsx
@@ -167,6 +167,16 @@ All the routes that start with `concerts.` will be child routes of `concerts.tsx
 | `/concerts/salt-lake-city` | `concerts.$city.tsx`    | `concerts.tsx` |
 
 Note you typically want to add an index route when you add nested routes so that something renders inside the parent's outlet when users visit the parent URL directly.
+
+For example, if the URL is `/concerts/salt-lake-city` then the UI hierarchy will look like this:
+
+```tsx
+<Root>
+  <Concerts>
+    <City />
+  </Concerts>
+</Root>
+```
 
 ## Nested URLs without Layout Nesting
 

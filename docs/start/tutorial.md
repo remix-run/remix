@@ -723,7 +723,7 @@ export async function action({
 
 Loaders and actions can both [return a `Response`][returningresponses] (makes sense, since they received a [`Request`][request]!). The [`redirect`][redirect] helper just makes it easier to return a [response][response] that tells the app to change locations.
 
-Without client side routing, if a server redirected after a POST request, the new page would fetch the latest data and render. As we learned before, REmix emulates this model and automatically revalidates the data on the page after the action. That's why the sidebar automatically updates when we save the form. The extra revalidation code doesn't exist without client side routing, so it doesn't need to exist with client side routing in Remix either!
+Without client side routing, if a server redirected after a POST request, the new page would fetch the latest data and render. As we learned before, Remix emulates this model and automatically revalidates the data on the page after the action. That's why the sidebar automatically updates when we save the form. The extra revalidation code doesn't exist without client side routing, so it doesn't need to exist with client side routing in Remix either!
 
 One last thing. Without JavaScript, the `redirect` would be a normal redirect. However, with JavaScript it's a clientside redirect, so the user doesn't lose client state like scroll positions or component state.
 
@@ -820,7 +820,7 @@ In our case, we add a `"loading"` class to the main part of the app if we're not
 
 If we review code in the contact route, we can find the delete button looks like this:
 
-```jsx filename=src/routes/contact.jsx lines=[3]
+```jsx filename=src/routes/contacts.$contactId.tsx lines=[3]
 <Form
   method="post"
   action="destroy"
@@ -838,7 +838,7 @@ If we review code in the contact route, we can find the delete button looks like
 </Form>
 ```
 
-Note the `action` points to `"destroy"`. Like `<Link to>`, `<Form action>` can take a _relative_ value. Since the form is rendered in `contact.$contactId.tsx`, then a relative action with `destroy` will submit the form to `contact.$contactId.destroy` when clicked.
+Note the `action` points to `"destroy"`. Like `<Link to>`, `<Form action>` can take a _relative_ value. Since the form is rendered in `contacts.$contactId.tsx`, then a relative action with `destroy` will submit the form to `contacts.$contactId.destroy` when clicked.
 
 At this point you should know everything you need to know to make the delete button work. Maybe give it a shot before moving on? You'll need:
 
@@ -1224,7 +1224,7 @@ When nothing is happening, `navigation.location` will be `undefined`, but when t
 
 👉 **Add classes to search form elements using the state**
 
-```tsx filename=app/routes/root.tsx lines=[3,14]
+```tsx filename=app/routes/root.tsx lines=[3,17]
 <Form id="search-form" role="search">
   <input
     className={searching ? "loading" : ""}
