@@ -115,7 +115,7 @@ export function NewRecipe() {
 }
 ```
 
-The example leverages `<Form>`, ` useActionData``, and  `useNavigation` to facilitate an intuitive record creation process.
+The example leverages `<Form>`, ` useActionData``, and  `useNavigation\` to facilitate an intuitive record creation process.
 
 Using `<Form>` ensures direct and logical navigation. After creating a record, the user is naturally guided to the new recipe's unique URL, reinforcing the outcome of their action.
 
@@ -183,10 +183,12 @@ Using useFetcher in this scenario works perfectly. Instead of navigating away or
 
 The key advantage here is the maintenance of context. The user stays on the list when the deletion completes. The fetcher's state management capabilities are leveraged to give real-time feedback: it toggles between "Deleting..." and "Delete", providing a clear indication of the ongoing process.
 
-Furthermore, with each fetcher having the autonomy to manage its own state, operations on individual list items become independent, ensuring that actions on one item don't affect the others (though revalidation of the page data is a shared concern that is covered in [Network Concurrency Management](./09-concurrency)).
+Furthermore, with each fetcher having the autonomy to manage its own state, operations on individual list items become independent, ensuring that actions on one item don't affect the others (though revalidation of the page data is a shared concern that is covered in [Network Concurrency Management][network-concurrency-management]).
 
 In essence, useFetcher offers a seamless mechanism for actions that don't necessitate a change in the URL or navigation, enhancing the user experience by providing real-time feedback and context preservation.
 
 ## Conclusion
 
 Remix offers a range of tools to cater to varied developmental needs. While some functionalities might seem to overlap, each tool has been crafted with specific scenarios in mind. By understanding the intricacies and ideal applications of `<Form>`, `useSubmit`, `useNavigation`, `useActionData`, and `useFetcher`, developers can create more intuitive, responsive, and user-friendly web applications.
+
+[network-concurrency-management]: ./09-concurrency
