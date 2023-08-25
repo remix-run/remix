@@ -35,9 +35,9 @@ type Dev = {
 
 interface FutureConfig {}
 
-type ServerNodeBuiltinsPolyfillOptions = Pick<
+type NodeBuiltinsPolyfillOptions = Pick<
   EsbuildPluginsNodeModulesPolyfillOptions,
-  "modules"
+  "modules" | "globals"
 >;
 
 /**
@@ -145,7 +145,12 @@ export interface AppConfig {
    * The Node.js polyfills to include in the server build when targeting
    * non-Node.js server platforms.
    */
-  serverNodeBuiltinsPolyfill?: ServerNodeBuiltinsPolyfillOptions;
+  serverNodeBuiltinsPolyfill?: NodeBuiltinsPolyfillOptions;
+
+  /**
+   * The Node.js polyfills to include in the browser build.
+   */
+  browserNodeBuiltinsPolyfill?: NodeBuiltinsPolyfillOptions;
 
   /**
    * The platform the server build is targeting. Defaults to "node".
@@ -311,7 +316,12 @@ export interface RemixConfig {
    * The Node.js polyfills to include in the server build when targeting
    * non-Node.js server platforms.
    */
-  serverNodeBuiltinsPolyfill?: ServerNodeBuiltinsPolyfillOptions;
+  serverNodeBuiltinsPolyfill?: NodeBuiltinsPolyfillOptions;
+
+  /**
+   * The Node.js polyfills to include in the browser build.
+   */
+  browserNodeBuiltinsPolyfill?: NodeBuiltinsPolyfillOptions;
 
   /**
    * The platform the server build is targeting. Defaults to "node".
@@ -398,6 +408,7 @@ export async function readConfig(
   serverMinify ??= false;
 
   let serverNodeBuiltinsPolyfill = appConfig.serverNodeBuiltinsPolyfill;
+  let browserNodeBuiltinsPolyfill = appConfig.browserNodeBuiltinsPolyfill;
   let mdx = appConfig.mdx;
   let postcss = appConfig.postcss ?? true;
   let tailwind = appConfig.tailwind ?? true;
@@ -593,6 +604,7 @@ export async function readConfig(
     serverMode,
     serverModuleFormat,
     serverNodeBuiltinsPolyfill,
+    browserNodeBuiltinsPolyfill,
     serverPlatform,
     mdx,
     postcss,
