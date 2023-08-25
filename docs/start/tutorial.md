@@ -778,7 +778,6 @@ export const action = async ({
 
 `action` and `loader` functions can both [return a `Response`][returning-response-instances] (makes sense, since they received a [`Request`][request]!). The [`redirect`][redirect] helper just makes it easier to return a [`Response`][response] that tells the app to change locations.
 
-
 Without client side routing, if a server redirected after a `POST` request, the new page would fetch the latest data and render. As we learned before, Remix emulates this model and automatically revalidates the data on the page after the `action` call. That's why the sidebar automatically updates when we save the form. The extra revalidation code doesn't exist without client side routing, so it doesn't need to exist with client side routing in Remix either!
 
 One last thing. Without JavaScript, the [`redirect`][redirect] would be a normal redirect. However, with JavaScript it's a clientside redirect, so the user doesn't lose client state like scroll positions or component state.
@@ -926,7 +925,6 @@ In our case, we add a `"loading"` class to the main part of the app if we're not
 ## Deleting Records
 
 If we review code in the contact route, we can find the delete button looks like this:
-
 
 ```tsx filename=src/routes/contact.$contactId.tsx lines=[2]
 <Form
@@ -1373,7 +1371,7 @@ When nothing is happening, `navigation.location` will be `undefined`, but when t
   />
 </Form>
 ```
-                     
+
 Bonus points, avoid fading out the main screen when searching:
 
 ```tsx filename=app/root.tsx lines=[13]
