@@ -838,7 +838,7 @@ If we review code in the contact route, we can find the delete button looks like
 </Form>
 ```
 
-Note the `action` points to `"destroy"`. Like `<Link to>`, `<Form action>` can take a _relative_ value. Since the form is rendered in `contact.$contactId.tsx`, then a relative action with `destroy` will submit the form to `contact.$contactId.destroy` when clicked.
+Note the `action` points to `"destroy"`. Like `<Link to>`, `<Form action>` can take a _relative_ value. Since the form is rendered in `contacts.$contactId.tsx`, then a relative action with `destroy` will submit the form to `contacts.$contactId.destroy` when clicked.
 
 At this point you should know everything you need to know to make the delete button work. Maybe give it a shot before moving on? You'll need:
 
