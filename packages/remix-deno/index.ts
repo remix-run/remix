@@ -41,6 +41,7 @@ export type {
   CookieSignatureOptions,
   DataFunctionArgs,
   EntryContext,
+  ErrorResponse,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HandleErrorFunction,
