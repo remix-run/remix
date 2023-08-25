@@ -36,7 +36,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-integration.yml
     with:
-      os: '["ubuntu-latest"]'
+      os: "ubuntu-latest"
       node_version: '["latest"]'
       browser: '["chromium", "firefox"]'
 
@@ -44,7 +44,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-integration.yml
     with:
-      os: '["windows-latest"]'
+      os: "windows-latest"
       node_version: '["latest"]'
       browser: '["msedge"]'
 
@@ -52,6 +52,6 @@ jobs:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/shared-test-integration.yml
     with:
-      os: '["macos-latest"]'
+      os: "macos-latest"
       node_version: '["latest"]'
       browser: '["webkit"]'
