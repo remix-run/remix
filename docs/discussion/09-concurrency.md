@@ -55,7 +55,7 @@ Because the revalidation from submission (2) started later and landed earlier th
 
 ## Potential for Stale Data
 
-There are still chances for the user to see stale data in very rare conditions with inconsistent infrastructure. Cancelled requests from the browser still end up going to the server and may change data after the revalidation lands. For example, if a form is interrupted by a new submission of the same form:
+It's unlikely your users will ever experience this, but there are still chances for the user to see stale data in very rare conditions with inconsistent infrastructure. Even though Remix cancels requests for stale data, they will still end up making it to the server. Cancelling a request in the browser simply releases browser resources for that request, it can't "catch up" and stop it from getting to the server. In extremely rare conditions, a cancelled request may change data after the interrupting actions's revalidation lands. Consider this diagram:
 
 ```text
      👇 interruption with new submission
@@ -63,13 +63,11 @@ There are still chances for the user to see stale data in very rare conditions w
        |-------✓-----✅
                              👆
                   initial request reaches the server
+                  after the interrupting submission
+                  has completed revalidation
 ```
 
-The user is now looking at different data than what is on the server. Note that this problem is both extremely rare and exists with default browser behavior, too. The chance of the initial request reaching the server later than both the submission and revalidation of the second is unexpected on any network and server infrastructure. If this is a concern in your app because of inconsistent infrastructure, you can send time stamps with your form submissions and write server logic to ignore stale submissions.
-
-## Conclusion
-
-Remix offers developers an intuitive, automated approach to managing network requests. By mirroring browser behaviors and enhancing them where needed, it simplifies the complexities of concurrency, revalidation, and potential race conditions. Whether you're building a simple webpage or a sophisticated web application, Remix ensures that your user interactions are smooth, reliable, and always up-to-date.
+The user is now looking at different data than what is on the server. Note that this problem is both extremely rare and exists with default browser behavior, too. The chance of the initial request reaching the server later than both the submission and revalidation of the second is unexpected on any network and server infrastructure. If this is a concern in with your infrastructure, you can send time stamps with your form submissions and write server logic to ignore stale submissions.
 
 ## Example
 
@@ -121,6 +119,10 @@ export function CitySearchCombobox() {
 }
 ```
 
-Even though we don't see any code to manage race conditions or committing the latest data to state, Remix handles it automatically. All the application needs to know is how to query the data and how to render it.
+All the application needs to know is how to query the data and how to render it, Remix handles the network.
+
+## Conclusion
+
+Remix offers developers an intuitive, browser-based approach to managing network requests. By mirroring browser behaviors and enhancing them where needed, it simplifies the complexities of concurrency, revalidation, and potential race conditions. Whether you're building a simple webpage or a sophisticated web application, Remix ensures that your user interactions are smooth, reliable, and always up-to-date.
 
 [fullstack-data-flow]: ./03-data-flow
