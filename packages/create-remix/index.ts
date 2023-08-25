@@ -34,8 +34,6 @@ import { renderLoadingIndicator } from "./loading-indicator";
 import { copyTemplate, CopyTemplateError } from "./copy-template";
 import { getLatestRemixVersion } from "./remix-version";
 
-// TEST CHANGE TO TRIGGER WORKFLOWS
-
 async function createRemix(argv: string[]) {
   let ctx = await getContext(argv);
   if (ctx.help) {
