@@ -778,6 +778,7 @@ export const action = async ({
 
 `action` and `loader` functions can both [return a `Response`][returning-response-instances] (makes sense, since they received a [`Request`][request]!). The [`redirect`][redirect] helper just makes it easier to return a [`Response`][response] that tells the app to change locations.
 
+
 Without client side routing, if a server redirected after a `POST` request, the new page would fetch the latest data and render. As we learned before, Remix emulates this model and automatically revalidates the data on the page after the `action` call. That's why the sidebar automatically updates when we save the form. The extra revalidation code doesn't exist without client side routing, so it doesn't need to exist with client side routing in Remix either!
 
 One last thing. Without JavaScript, the [`redirect`][redirect] would be a normal redirect. However, with JavaScript it's a clientside redirect, so the user doesn't lose client state like scroll positions or component state.
@@ -926,6 +927,7 @@ In our case, we add a `"loading"` class to the main part of the app if we're not
 
 If we review code in the contact route, we can find the delete button looks like this:
 
+
 ```tsx filename=src/routes/contact.$contactId.tsx lines=[2]
 <Form
   action="destroy"
@@ -943,7 +945,7 @@ If we review code in the contact route, we can find the delete button looks like
 </Form>
 ```
 
-Note the `action` points to `"destroy"`. Like `<Link to>`, `<Form action>` can take a _relative_ value. Since the form is rendered in `contact.$contactId.tsx`, then a relative action with `destroy` will submit the form to `contact.$contactId.destroy` when clicked.
+Note the `action` points to `"destroy"`. Like `<Link to>`, `<Form action>` can take a _relative_ value. Since the form is rendered in `contacts.$contactId.tsx`, then a relative action with `destroy` will submit the form to `contacts.$contactId.destroy` when clicked.
 
 At this point you should know everything you need to know to make the delete button work. Maybe give it a shot before moving on? You'll need:
 
@@ -1327,15 +1329,15 @@ Without any loading indicator, the search feels kinda sluggish. Even if we could
 For a better user experience, let's add some immediate UI feedback for the search. We'll use [`useNavigation`][use-navigation] again.
 
 💿 **Add a variable to know if we're searching**
-💿 **Add classes to search form elements using the state**
 
-```tsx filename=app/root.tsx lines=[7-11,31,40]
-// existing imports & exports
+```tsx filename=app/routes/root.tsx lines=[8-10,27]
+// existing code
 
-export default function App() {
-  const { contacts, q } = useLoaderData<typeof loader>();
+export default function Root() {
   const navigation = useNavigation();
+  const { contacts, q } = useLoaderData();
   const submit = useSubmit();
+
   const searching =
     navigation.location &&
     new URLSearchParams(navigation.location.search).has(
@@ -1343,49 +1345,35 @@ export default function App() {
     );
 
   // existing code
-
-  return (
-    <html lang="en">
-      {/* existing elements */}
-      <body>
-        <div id="sidebar">
-          {/* existing elements */}
-          <div>
-            <Form
-              id="search-form"
-              onChange={(event) =>
-                submit(event.currentTarget)
-              }
-              role="search"
-            >
-              <input
-                aria-label="Search contacts"
-                className={searching ? "loading" : ""}
-                defaultValue={q || ""}
-                id="q"
-                name="q"
-                placeholder="Search"
-                type="search"
-              />
-              <div
-                aria-hidden
-                hidden={!searching}
-                id="search-spinner"
-              />
-            </Form>
-            {/* existing elements */}
-          </div>
-          {/* existing elements */}
-        </div>
-        {/* existing elements */}
-      </body>
-    </html>
-  );
 }
 ```
 
 When nothing is happening, `navigation.location` will be `undefined`, but when the user navigates it will be populated with the next location while data loads. Then we check if they're searching with `location.search`.
 
+💿 **Add classes to search form elements using the new `searching` state**
+
+```tsx filename=app/routes/root.tsx lines=[3,14]
+<Form id="search-form" role="search">
+  <input
+    className={searching ? "loading" : ""}
+    id="q"
+    aria-label="Search contacts"
+    placeholder="Search"
+    type="search"
+    name="q"
+    defaultValue={q || ""}
+    onChange={(event) => {
+      submit(event.currentTarget.form);
+    }}
+  />
+  <div
+    id="search-spinner"
+    aria-hidden
+    hidden={!searching}
+  />
+</Form>
+```
+                     
 Bonus points, avoid fading out the main screen when searching:
 
 ```tsx filename=app/root.tsx lines=[13]
