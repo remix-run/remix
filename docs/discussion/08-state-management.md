@@ -81,7 +81,7 @@ import {
 
 export function List() {
   const navigate = useNavigate();
-  const params = useSearchParams();
+  const [params] = useSearchParams();
   const [view, setView] = React.useState(
     params.get("view") || "list"
   );
@@ -118,7 +118,7 @@ Instead of synchronizing state, you can simply read and set the state in the URL
 import { Form } from "@remix-run/react";
 
 export function List() {
-  const params = useSearchParams();
+  const [params] = useSearchParams();
   const view = params.get("view") || "list";
 
   return (
@@ -137,15 +137,209 @@ export function List() {
 }
 ```
 
+### Persistent UI State
+
+Consider a UI that toggles a sidebar's visibility. We have three ways to handle the state:
+
+1. React state
+2. Browser local storage
+3. Cookies
+
+In this discussion, we'll break down the trade-offs associated with each method.
+
+#### React State
+
+React state provides a simple solution for temporary state storage.
+
+**Pros**:
+
+- **Simple**: Easy to implement and understand.
+- **Encapsulated**: State is scoped to the component.
+
+**Cons**:
+
+- **Transient**: Doesn't survive page refreshes, returning to the page later, or unmounting and remounting the component.
+
+**Implementation**:
+
+```tsx
+function Sidebar({ children }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  return (
+    <div>
+      <button onClick={() => setIsOpen(!isOpen)}>
+        {isOpen ? "Close" : "Open"}
+      </button>
+      <aside hidden={!isOpen}>{children}</aside>
+    </div>
+  );
+}
+```
+
+#### Local Storage
+
+To persist state beyond the component lifecycle, browser local storage is a step up.
+
+**Pros**:
+
+- **Persistent**: Maintains state across page refreshes and component mounts/unmounts.
+- **Encapsulated**: State is scoped to the component.
+
+**Cons**:
+
+- **Requires Synchronization**: React components must sync up with local storage to initialize and save the current state.
+- **Server Rendering Limitation**: The `window` and `localStorage` objects are not accessible during server-side rendering, so state must be initialized in the browser with an effect.
+- **UI Flickering**: On initial page loads, the state in local storage may not match what was rendered by the server and the UI will flicker when JavaScript loads.
+
+**Implementation**:
+
+```tsx
+function Sidebar({ children }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  // synchronize initially
+  useLayoutEffect(() => {
+    const isOpen = window.localStorage.getItem("sidebar");
+    setIsOpen(isOpen);
+  }, []);
+
+  // synchronize on change
+  useEffect(() => {
+    window.localStorage.setItem("sidebar", isOpen);
+  }, [isOpen]);
+
+  return (
+    <div>
+      <button
+        onClick={() => {
+          setIsOpen(!isOpen);
+        }}
+      >
+        {isOpen ? "Close" : "Open"}
+      </button>
+      <aside hidden={!isOpen}>{children}</aside>
+    </div>
+  );
+}
+```
+
+In this approach, state must be initialized within an effect. This is crucial to avoid complications during server-side rendering. Directly initializing the React state from `localStorage` will cause errors since `window.localStorage` is unavailable during server rendering. Furthermore, even if it were accessible, it wouldn't mirror the user's browser local storage.
+
+```tsx bad lines=[4]
+function Sidebar() {
+  const [isOpen, setIsOpen] = React.useState(
+    // error: window is not defined
+    window.localStorage.getItem("sidebar")
+  );
+
+  // ...
+}
+```
+
+By initializing the state within an effect, there's potential for a mismatch between the server-rendered state and the state stored in local storage. This discrepancy wll lead to brief UI flickering shortly after the page renders and should be avoided.
+
+#### Cookies
+
+Cookies offer a comprehensive solution for this use case. However, this method introduces added preliminary setup before making the state accessible within the component.
+
+**Pros**:
+
+- **Server Rendering**: State is available on the server for rendering and even for server actions.
+- **Single Source of Truth**: Eliminates state synchronization hassles.
+- **Persistence**: Maintains state across page loads and component mounts/unmounts. State can even persist across devices if you switch to a database-backed session.
+- **Progressive Enhancement**: Functions even before JavaScript loads.
+
+**Cons**:
+
+- **Boilerplate**: Requires more code because of the network.
+- **Exposed**: The state is not encapsulated to a single component, other parts of the app must be aware of the cookie.
+
+**Implementation**:
+
+First we'll need to create a cookie object:
+
+```tsx
+import { createCookie } from "@remix-run/node";
+export const prefs = createCookie("prefs");
+```
+
+Next we set up the server action and loader to read and write the cookie:
+
+```tsx
+import { prefs } from "./prefs-cookie";
+
+// read the state from the cookie
+export function loader({ request }) {
+  const cookieHeader = request.headers.get("Cookie");
+  const cookie = await prefs.parse(cookieHeader);
+  return { sidebarIsOpen: cookie.sidebarIsOpen };
+}
+
+// write the state to the cookie
+export function action({ request }) {
+  const cookieHeader = request.headers.get("Cookie");
+  const cookie = await prefs.parse(cookieHeader);
+  const formData = await request.formData();
+
+  const isOpen = formData.get("sidebar") === "open";
+  cookie.sidebarIsOpen = isOpen;
+
+  return json(isOpen, {
+    headers: {
+      "Set-Cookie": await prefs.serialize(cookie),
+    },
+  });
+}
+```
+
+After the server code is set up, we can use the cookie state in our UI:
+
+```tsx
+function Sidebar({ children }) {
+  const fetcher = useFetcher();
+  let { sidebarIsOpen } = useLoaderData();
+
+  // use optimistic UI to immediately change the UI state
+  if (fetcher.formData?.has("sidebar")) {
+    sidebarIsOpen =
+      fetcher.formData.get("sidebar") === "open";
+  }
+
+  return (
+    <div>
+      <fetcher.Form method="post">
+        <button
+          name="sidebar"
+          value={sidebarIsOpen ? "closed" : "open"}
+        >
+          {sidebarIsOpen ? "Close" : "Open"}
+        </button>
+      </fetcher.Form>
+      <aside hidden={!sidebarIsOpen}>{children}</aside>
+    </div>
+  );
+}
+```
+
+While this is certainly more code that touches more of the application to account for the network requests and responses, the UX is greatly improved. Additionally, state comes from a single source of truth without any state synchronization required.
+
+In summary, each of the discussed methods offers a unique set of benefits and challenges:
+
+- **React state**: Offers simple but transient state management.
+- **Local Storage**: Provides persistence but with synchronization requirements and UI flickering.
+- **Cookies**: Delivers robust, persistent state management at the cost of added boilerplate.
+
+None of these are wrong, but if you want to persist the state across visits, cookies offer the best user experience.
+
 ### Form Validation and Action Data
 
-While client side validation is a great way to enhance the user experience, you can get similar UX by skipping the client side states and letting the server handle it.
+Client-side validation can augment the user experience, but similar enhancements can be achieved by leaning more towards server-side processing and letting it handle the complexities.
 
-This example is a doozy, it's certainly got bugs, and there are libraries that can help, but it illustrates the complexity and touch points of managing your own network state, synchronizing state from the server, and doubling up on form validation between the client and server.
+The following example illustrates the inherent complexities of managing network state, coordinating state from the server, and implementing validation redundantly on both the client and server sides. It's just for illustration, so forgive any obvious bugs or problems you find.
 
 ```tsx bad lines=[2,14,30,41,66]
 export function Signup() {
-  // managing a lot of React State
+  // A multitude of React State declarations
   const [isSubmitting, setIsSubmitting] =
     React.useState(false);
 
@@ -157,7 +351,7 @@ export function Signup() {
   const [passwordError, setPasswordError] =
     React.useState("");
 
-  // Duplicating some server logic in the browser
+  // Replicating server-side logic in the client
   function validateForm() {
     setUserNameError(null);
     setPasswordError(null);
@@ -173,7 +367,7 @@ export function Signup() {
     return Boolean(errors);
   }
 
-  // managing the network yourself
+  // Manual network interaction handling
   async function handleSubmit() {
     if (validateForm()) {
       setSubmitting(true);
@@ -184,7 +378,7 @@ export function Signup() {
       const json = await res.json();
       setIsSubmitting(false);
 
-      // synchronizing server state to the client
+      // Server state synchronization to the client
       if (json.errors) {
         if (json.errors.userName) {
           setUserNameError(json.errors.userName);
@@ -209,7 +403,7 @@ export function Signup() {
           name="username"
           value={userName}
           onChange={() => {
-            // synchronizing form state for the fetch
+            // Synchronizing form state for the fetch
             setUserName(event.target.value);
           }}
         />
@@ -221,7 +415,7 @@ export function Signup() {
           type="password"
           name="password"
           onChange={(event) => {
-            // synchronizing form state for the fetch
+            // Synchronizing form state for the fetch
             setPassword(event.target.value);
           }}
         />
@@ -238,7 +432,7 @@ export function Signup() {
 }
 ```
 
-The backend API at `/api/signup` also validates and returns errors. It needs to run server side to check things like duplicate user names, etc. Stuff the client can't know.
+The backend endpoint, `/api/signup`, also performs validation and sends error feedback. Note that some essential validation, like detecting duplicate usernames, can only be done server-side using information the client doesn't have access to.
 
 ```tsx
 export function signupHandler(request) {
@@ -251,7 +445,7 @@ export function signupHandler(request) {
 }
 ```
 
-Now consider the same example with Remix. The action is identical, but the component is much simpler since you can use the server state directly from `useActionData` and read the network state Remix is already managing.
+Now, let's contrast this with a Remix-based implementation. The action remains consistent, but the component is vastly simplified due to the direct utilization of server state via `useActionData`, and leveraging the network state that Remix inherently manages.
 
 ```tsx filename=app/routes/signup.tsx lines=[19-21]
 import {
@@ -298,11 +492,13 @@ export function Signup() {
 }
 ```
 
-All of the previous state management gets collapsed into three lines of code. There is no need for React state, change event listeners, submit handlers, or state management libraries for a network interaction like this.
+The extensive state management from our previous example is distilled into just three code lines. We eliminate the necessity for React state, change event listeners, submit handlers, and state management libraries for such network interactions.
 
-The server state is available directly from `useActionData` and the network state is available from `useNavigation`. If you find yourself managing and synchronizing state for network interactions, there's probably a simpler way to do it in Remix.
+Direct access to the server state is made possible through `useActionData`, and network state through `useNavigation` (or `useFetcher`).
 
-As bonus a party trick, the form will still work if JavaScript fails to load. Instead of Remix managing the network, the browser will manage it.
+As bonus party trick, the form is functional even before JavaScript loads. Instead of Remix managing the network operations, the default browser behaviors step in.
+
+If you ever find yourself entangled in managing and synchronizing state for network operations, Remix likely offers a more elegant solution.
 
 [fullstack-data-flow]: ./03-data-flow
 [pending-ui]: ./07-pending-ui
