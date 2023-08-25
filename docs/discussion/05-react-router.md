@@ -12,7 +12,7 @@ This also means that the 90% of Remix is really just React Router: a very old, v
 
 ## Importing Components and Hooks
 
-Remix Re-exports all of the components and hooks from React Router DOM, so you don't need to install React Router yourself.
+Remix re-exports all of the components and hooks from React Router DOM, so you don't need to install React Router yourself.
 
 🚫 Don't do this:
 
