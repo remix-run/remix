@@ -247,12 +247,15 @@ let customServer = (options: { appPort: number; devReady: string }) => {
 
 let HMR_TIMEOUT_MS = 30_000;
 
+let remix = "node ./node_modules/@remix-run/dev/dist/cli.js";
+let serve = "node ./node_modules/@remix-run/serve/dist/cli.js";
+
 test("HMR for remix-serve", async ({ page }) => {
   await dev(page, {
     files: (appPort) => ({
       ...files,
       "package.json": packageJson({
-        devScript: `cross-env PORT=${appPort} remix dev`,
+        devScript: `cross-env PORT=${appPort} ${remix} dev -c "${serve} ./build/index.js"`,
         deps: ["@remix-run/serve"],
       }),
     }),
@@ -265,7 +268,7 @@ test("HMR for custom server with broadcast", async ({ page }) => {
     files: (appPort) => ({
       ...files,
       "package.json": packageJson({
-        devScript: `remix dev -c "node ./server.js"`,
+        devScript: `${remix} dev -c "node ./server.js"`,
         deps: ["@remix-run/express"],
       }),
       "server.js": customServer({
@@ -282,7 +285,7 @@ test("HMR for custom server with log", async ({ page }) => {
     files: (appPort) => ({
       ...files,
       "package.json": packageJson({
-        devScript: `remix dev -c "node ./server.js"`,
+        devScript: `${remix} dev -c "node ./server.js"`,
         deps: ["@remix-run/express"],
       }),
       "server.js": customServer({
