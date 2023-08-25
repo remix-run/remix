@@ -22,7 +22,7 @@ Remix's handling of network concurrency is heavily inspired by the default behav
 
 While standard browsers are limited to one request at a time for navigations and form submissions, Remix elevates this behavior. Unlike navigation, with `useFetcher`, multiple requests can be in flight simultaneously.
 
-To help understand how Remix works, remember from [Fullstack Data Flow](./03-data-flow) that after a form submissions, Remix will fetches fresh data from the loaders that make up the current UI. This is called revalidation.
+To help understand how Remix works, remember from [Fullstack Data Flow][fullstack-data-flow] that after a form submissions, Remix will fetches fresh data from the loaders that make up the current UI. This is called revalidation.
 
 ## Concurrent Submissions and Revalidation
 
@@ -122,3 +122,5 @@ export function CitySearchCombobox() {
 ```
 
 Even though we don't see any code to manage race conditions or committing the latest data to state, Remix handles it automatically. All the application needs to know is how to query the data and how to render it.
+
+[fullstack-data-flow]: ./03-data-flow
