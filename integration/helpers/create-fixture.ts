@@ -343,6 +343,11 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
       let file = init.files![filename];
+      // if we have a app/root/route.tsx then we don't want app/root.tsx to exist
+      if (filename.endsWith("root/route.tsx")) {
+        let rootTsx = path.join(dir, "app", "root.tsx");
+        await fse.remove(rootTsx);
+      }
 
       await fse.writeFile(filePath, stripIndent(file));
     })

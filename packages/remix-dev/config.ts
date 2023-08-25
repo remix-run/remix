@@ -9,7 +9,10 @@ import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
-import { flatRoutes } from "./config/flat-routes";
+import {
+  findRootRoute,
+  flatRoutes,
+} from "./config/flat-routes";
 import { detectPackageManager } from "./cli/detectPackageManager";
 import { logger } from "./tux";
 
@@ -523,10 +526,11 @@ export async function resolveConfig(
 
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
-  let rootRouteFile = findEntry(appDirectory, "root");
+  let rootRouteFile = findRootRoute(appDirectory);
   if (!rootRouteFile) {
     throw new Error(`Missing "root" route file in ${appDirectory}`);
   }
+  rootRouteFile = path.relative(appDirectory, rootRouteFile);
 
   let routes: RouteManifest = {
     root: { path: "", id: "root", file: rootRouteFile },

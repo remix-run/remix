@@ -370,6 +370,18 @@ app/routes/app._index.tsx
 app/routes/app._index/route.tsx
 ```
 
+Even your root route can be a folder. For example:
+
+```
+root/
+  route.tsx
+  menu.tsx
+  footer.tsx
+routes/
+  _index.tsx
+  about.tsx
+```
+
 ## Scaling
 
 Our general recommendation for scale is to make every route a folder and put the modules used exclusively by that route in the folder, then put the shared modules outside of routes folder elsewhere. This has a couple benefits:
