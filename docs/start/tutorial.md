@@ -9,13 +9,13 @@ We'll be building a small, but feature-rich app that lets you keep track of your
 
 <img class="tutorial" src="/docs-images/contacts/01.webp" />
 
-💿 **Every time you see this it means you need to do something in the app!**
+👉 **Every time you see this it means you need to do something in the app!**
 
 The rest is just there for your information and deeper understanding. Let's get to it.
 
 ## Setup
 
-💿 **Generate a basic template**
+👉 **Generate a basic template**
 
 ```shellscript nonumber
 npx create-remix@latest --template ryanflorence/remix-tutorial-template
@@ -23,7 +23,7 @@ npx create-remix@latest --template ryanflorence/remix-tutorial-template
 
 This uses a pretty bare-bones template but includes our css and data model, so we can focus on Remix. The [Quick Start][quickstart] can familiarize you with the basic setup of a Remix project if you'd like to learn more.
 
-💿 **Start the app**
+👉 **Start the app**
 
 ```shellscript nonumber
 # cd into the app directory
@@ -58,7 +58,7 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 
-export default function App() {
+export default function Root() {
   return (
     <html lang="en">
       <head>
@@ -121,7 +121,7 @@ While there are multiple ways to style your Remix app, we're going to use a plai
 
 You can import CSS files directly into JavaScript modules. The compiler will fingerprint the asset, save it to your [`assetsBuildDirectory`][assets-build-directory], and provide your module with the publicly accessible href.
 
-💿 **Import the app styles**
+👉 **Import the app styles**
 
 ```tsx filename=app/root.tsx lines=[1,4,6-8]
 import type { LinksFunction } from "@remix-run/node";
@@ -144,7 +144,7 @@ The app should look something like this now. It sure is nice having a designer w
 
 If you click on one of the sidebar items you'll get the default 404 page. Let's create a route that matches the url `/contacts/1`.
 
-💿 **Create the `app/routes` directory and contact route module**
+👉 **Create the `app/routes` directory and contact route module**
 
 ```shellscript nonumber
 mkdir app/routes
@@ -156,7 +156,7 @@ In the Remix [route file convention][routes-file-conventions], `.` will create a
 - `/contacts/123`
 - `/contacts/abc`
 
-💿 **Add the contact component UI**
+👉 **Add the contact component UI**
 
 It's just a bunch of elements, feel free to copy/paste.
 
@@ -266,7 +266,7 @@ Now if we click one of the links or visit `/contacts/1` we get ... nothing new?
 
 Since Remix is built on top of React Router, it supports nested routing. In order for child routes to render inside of parent layouts, we need to render an [outlet][outlet] in the parent. Let's fix it, open up `app/root.tsx` and render an outlet inside.
 
-💿 **Render an [`<Outlet>`][outlet]**
+👉 **Render an [`<Outlet>`][outlet]**
 
 ```tsx filename=app/root.tsx lines=[7,20-22]
 // existing imports
@@ -282,7 +282,7 @@ import {
 
 // existing imports & code
 
-export default function App() {
+export default function Root() {
   return (
     <html lang="en">
       {/* other elements */}
@@ -308,7 +308,7 @@ You may or may not have noticed, but when we click the links in the sidebar, the
 
 Client side routing allows our app to update the URL without requesting another document from the server. Instead, the app can immediately render new UI. Let's make it happen with [`<Link>`][link].
 
-💿 **Change the sidebar `<a href>` to `<Link to>`**
+👉 **Change the sidebar `<a href>` to `<Link to>`**
 
 ```tsx filename=app/root.tsx lines=[4,25,28]
 // existing imports
@@ -325,7 +325,7 @@ import {
 
 // existing imports & exports
 
-export default function App() {
+export default function Root() {
   return (
     <html lang="en">
       {/* other elements */}
@@ -365,7 +365,7 @@ Because of this natural coupling, Remix has data conventions to get data into yo
 
 There are two APIs we'll be using to load data, [`loader`][loader] and [`useLoaderData`][use-loader-data]. First we'll create and export a `loader` function in the root route and then render the data.
 
-💿 **Export a `loader` function from `app/root.tsx` and render the data**
+👉 **Export a `loader` function from `app/root.tsx` and render the data**
 
 ```tsx filename=app/root.tsx lines=[2,12,16,20-23,26,35-58]
 // existing imports
@@ -392,7 +392,7 @@ export const loader = async () => {
   return json({ contacts });
 };
 
-export default function App() {
+export default function Root() {
   const { contacts } = useLoaderData();
 
   return (
@@ -446,7 +446,7 @@ You may have noticed TypeScript complaining about the `contact` type inside the 
 ```tsx filename=app/root.tsx lines=[4]
 // existing imports & exports
 
-export default function App() {
+export default function Root() {
   const { contacts } = useLoaderData<typeof loader>();
 
   // existing code
@@ -455,7 +455,7 @@ export default function App() {
 
 ## URL Params in Loaders
 
-💿 **Click on one of the sidebar links**
+👉 **Click on one of the sidebar links**
 
 We should be seeing our old static contact page again, with one difference: the URL now has a real ID for the record.
 
@@ -467,7 +467,7 @@ These [`params`][params] are passed to the loader with keys that match the dynam
 
 These params are most often used to find a record by ID. Let's try it out.
 
-💿 **Add a `loader` function to the contact page and access data with `useLoaderData`**
+👉 **Add a `loader` function to the contact page and access data with `useLoaderData`**
 
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[1-2,5,7-10,13]
 import { json } from "@remix-run/node";
@@ -555,7 +555,7 @@ Remix sends a 405 because there is no code on the server to handle this form nav
 
 We'll create new contacts by exporting an `action` function in our root route. When the user clicks the "new" button, the form will POST to the root route action.
 
-💿 **Export an `action` function from `app/root.tsx`**
+👉 **Export an `action` function from `app/root.tsx`**
 
 ```tsx filename=app/root.tsx lines=[3,5-8]
 // existing imports
@@ -592,7 +592,7 @@ Let's add a way to fill the information for our new record.
 
 Just like creating data, you update data with [`<Form>`][form]. Let's make a new route at `app/routes/contacts.$contactId_.edit.tsx`.
 
-💿 **Create the edit component**
+👉 **Create the edit component**
 
 ```shellscript nonumber
 touch app/routes/contacts.\$contactId_.edit.tsx
@@ -600,7 +600,7 @@ touch app/routes/contacts.\$contactId_.edit.tsx
 
 Note the weird `_` in `$contactId_`. By default, routes will automatically nest inside routes with the same prefixed name. Adding a trialing `_` tells the route to **not** nest inside `app/routes/contacts.$contactId.tsx`. Read more in the [Route File Naming][routes-file-conventions] guide.
 
-💿 **Add the edit page UI**
+👉 **Add the edit page UI**
 
 Nothing we haven't seen before, feel free to copy/paste:
 
@@ -687,7 +687,7 @@ Now click on your new record, then click the "Edit" button. We should see the ne
 
 The edit route we just created already renders a `form`. All we need to do is add the `action` function. Remix will serialize the `form`, `POST` it with [`fetch`][fetch], and automatically revalidate all the data.
 
-💿 **Add an `action` function to the edit route**
+👉 **Add an `action` function to the edit route**
 
 ```tsx filename=app/routes/contacts.$contactId_.edit.tsx lines=[2,5,8,10-19]
 import type {
@@ -786,7 +786,7 @@ One last thing. Without JavaScript, the [`redirect`][redirect] would be a normal
 
 Now that we know how to redirect, let's update the action that creates new contacts to redirect to the edit page:
 
-💿 **Redirect to the new record's edit page**
+👉 **Redirect to the new record's edit page**
 
 ```tsx filename=app/root.tsx lines=[2,7]
 // existing imports
@@ -809,7 +809,7 @@ Now when we click "New", we should end up on the edit page:
 
 Now that we have a bunch of records, it's not clear which one we're looking at in the sidebar. We can use [`NavLink`][nav-link] to fix this.
 
-💿 **Replace `<Link>` with `<NavLink>` in the sidebar**
+👉 **Replace `<Link>` with `<NavLink>` in the sidebar**
 
 ```tsx filename=app/root.tsx lines=[7,28-38,42]
 // existing imports
@@ -827,7 +827,7 @@ import {
 
 // existing imports and exports
 
-export default function App() {
+export default function Root() {
   const { contacts } = useLoaderData<typeof loader>();
 
   return (
@@ -873,7 +873,7 @@ As the user navigates the app, Remix will _leave the old page up_ as data is loa
 
 Remix is managing all the state behind the scenes and reveals the pieces you need to build dynamic web apps. In this case, we'll use the [`useNavigation`][use-navigation] hook.
 
-💿 **Use `useNavigation` to add global pending UI**
+👉 **Use `useNavigation` to add global pending UI**
 
 ```tsx filename=app/root.tsx lines=[12,19,27-29]
 // existing imports
@@ -892,7 +892,7 @@ import {
 
 // existing imports & exports
 
-export default function App() {
+export default function Root() {
   const { contacts } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
 
@@ -952,13 +952,13 @@ At this point you should know everything you need to know to make the delete but
 3. `deleteContact` from `app/data.ts`
 4. `redirect` to somewhere after
 
-💿 **Create the "destroy" route module**
+👉 **Create the "destroy" route module**
 
 ```shellscript nonumber
 touch app/routes/contacts.\$contactId.destroy.tsx
 ```
 
-💿 **Add the destroy action**
+👉 **Add the destroy action**
 
 ```tsx filename=app/routes/contacts.$contactId.destroy.tsx
 import type { ActionArgs } from "@remix-run/node";
@@ -994,13 +994,13 @@ When we load up the app, you'll notice a big blank page on the right side of our
 
 When a route has children, and you're at the parent route's path, the `<Outlet>` has nothing to render because no children match. You can think of index routes as the default child route to fill in that space.
 
-💿 **Create an index route for the root route**
+👉 **Create an index route for the root route**
 
 ```
 touch app/routes/_index.tsx
 ```
 
-💿 **Fill in the index component's elements**
+👉 **Fill in the index component's elements**
 
 Feel free to copy/paste, nothing special here.
 
@@ -1029,7 +1029,7 @@ On the edit page we've got a cancel button that doesn't do anything yet. We'd li
 
 We'll need a click handler on the button as well as [`useNavigate`][use-navigate].
 
-💿 **Add the cancel button click handler with `useNavigate`**
+👉 **Add the cancel button click handler with `useNavigate`**
 
 ```tsx filename=app/routes/contacts.$contactId_.edit.tsx lines=[5,11,18]
 // existing imports
@@ -1072,7 +1072,7 @@ All of our interactive UI so far have been either links that change the URL or `
 
 Let's see what happens when we submit the search form:
 
-💿 **Type a name into the search field and hit the enter key**
+👉 **Type a name into the search field and hit the enter key**
 
 Note the browser's URL now contains your query in the URL as [`URLSearchParams`][url-search-params]:
 
@@ -1084,7 +1084,7 @@ Since it's not `<Form method="post">`, Remix emulates the browser by serializing
 
 `loader` functions have access to the search params from the `request`. Let's use it to filter the list:
 
-💿 **Filter the list if there are `URLSearchParams`**
+👉 **Filter the list if there are `URLSearchParams`**
 
 ```tsx filename=app/root.tsx lines=[3,9-11]
 import type {
@@ -1121,7 +1121,7 @@ In other words, the URL and our input's state are out of sync.
 
 Let's solve (2) first and start the input with the value from the URL.
 
-💿 **Return `q` from your `loader`, set it as the input's default value**
+👉 **Return `q` from your `loader`, set it as the input's default value**
 
 ```tsx filename=app/root.tsx lines=[7,11,23]
 // existing imports & exports
@@ -1133,7 +1133,7 @@ export const loader = async ({ request }: LoaderArgs) => {
   return json({ contacts, q });
 };
 
-export default function App() {
+export default function Root() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
 
@@ -1170,7 +1170,7 @@ The input field will show the query if you refresh the page after a search now.
 
 Now for problem (1), clicking the back button and updating the input. We can bring in `useEffect` from React to manipulate the input's value in the DOM directly.
 
-💿 **Synchronize input value with the `URLSearchParams`**
+👉 **Synchronize input value with the `URLSearchParams`**
 
 ```tsx filename=app/root.tsx lines=[2,10-15]
 // existing imports
@@ -1178,7 +1178,7 @@ import { useEffect } from "react";
 
 // existing imports & exports
 
-export default function App() {
+export default function Root() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
 
@@ -1207,7 +1207,7 @@ import { useEffect, useState } from "react";
 
 // existing imports & exports
 
-export default function App() {
+export default function Root() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   // the query now needs to be kept in state
@@ -1280,7 +1280,7 @@ import {
 } from "@remix-run/react";
 // existing imports & exports
 
-export default function App() {
+export default function Root() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const submit = useSubmit();
@@ -1326,7 +1326,7 @@ Without any loading indicator, the search feels kinda sluggish. Even if we could
 
 For a better user experience, let's add some immediate UI feedback for the search. We'll use [`useNavigation`][use-navigation] again.
 
-💿 **Add a variable to know if we're searching**
+👉 **Add a variable to know if we're searching**
 
 ```tsx filename=app/routes/root.tsx lines=[8-10,27]
 // existing code
@@ -1348,7 +1348,7 @@ export default function Root() {
 
 When nothing is happening, `navigation.location` will be `undefined`, but when the user navigates it will be populated with the next location while data loads. Then we check if they're searching with `location.search`.
 
-💿 **Add classes to search form elements using the new `searching` state**
+👉 **Add classes to search form elements using the new `searching` state**
 
 ```tsx filename=app/routes/root.tsx lines=[3,14]
 <Form id="search-form" role="search">
@@ -1377,7 +1377,7 @@ Bonus points, avoid fading out the main screen when searching:
 ```tsx filename=app/root.tsx lines=[13]
 // existing imports & exports
 
-export default function App() {
+export default function Root() {
   // existing code
 
   return (
@@ -1414,12 +1414,12 @@ Since the form is submitted for every keystroke, typing the characters "alex" an
 
 We can avoid this by _replacing_ the current entry in the history stack with the next page, instead of pushing into it.
 
-💿 **Use `replace` in `submit`**
+👉 **Use `replace` in `submit`**
 
 ```tsx filename=app/root.tsx lines=[16-19]
 // existing imports & exports
 
-export default function App() {
+export default function Root() {
   // existing code
 
   return (
@@ -1462,7 +1462,7 @@ For these cases, we have [`useFetcher`][use-fetcher]. It allows us to communicat
 
 The ★ button on the contact page makes sense for this. We aren't creating or deleting a new record, and we don't want to change pages. We simply want to change the data on the page we're looking at.
 
-💿 **Change the `<Favorite>` form to a fetcher form**
+👉 **Change the `<Favorite>` form to a fetcher form**
 
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[4,14,18,30]
 // existing imports
@@ -1501,7 +1501,7 @@ const Favorite: FunctionComponent<{
 
 This form will no longer cause a navigation, but simply fetch to the `action`. Speaking of which ... this won't work until we create the `action`.
 
-💿 **Create the `action`**
+👉 **Create the `action`**
 
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[2,7,10-19]
 import type {
@@ -1543,7 +1543,7 @@ To give the user some feedback, we could put the star into a loading state with 
 
 The fetcher knows the [`FormData`][form-data] being submitted to the `action`, so it's available to you on `fetcher.formData`. We'll use that to immediately update the star's state, even though the network hasn't finished. If the update eventually fails, the UI will revert to the real data.
 
-💿 **Read the optimistic value from `fetcher.formData`**
+👉 **Read the optimistic value from `fetcher.formData`**
 
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[7-9]
 // existing code
