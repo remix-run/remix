@@ -12,9 +12,9 @@ Remix comes with several pre-built session storage options for common scenarios,
 
 - `createCookieSessionStorage`
 - `createMemorySessionStorage`
-- `createFileSessionStorage` (node)
-- `createWorkersKVSessionStorage` (Cloudflare Workers)
-- `createArcTableSessionStorage` (architect, Amazon DynamoDB)
+- `createFileSessionStorage` (Node.js, Deno)
+- `createWorkersKVSessionStorage` (Cloudflare)
+- `createArcTableSessionStorage` (Architect, Amazon DynamoDB)
 - custom storage with `createSessionStorage`
 
 ## Using Sessions
@@ -22,7 +22,6 @@ Remix comes with several pre-built session storage options for common scenarios,
 This is an example of a cookie session storage:
 
 ```ts filename=app/sessions.server.ts
-// app/sessions.server.ts
 import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
 
 type SessionData = {
