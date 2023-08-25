@@ -1,0 +1,34 @@
+name: PR (Base)
+
+# All PRs touching code will run tests on ubuntu/node/chromium
+
+on:
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "scripts/**"
+      - "contributors.yml"
+      - "**/*.md"
+
+jobs:
+  build:
+    name: "⚙️ Build"
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared-build.yml
+
+  unit-ubuntu:
+    name: "🧪 Unit Test"
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared-test-unit.yml
+    with:
+      os: "ubuntu-latest"
+      node_version: '["latest"]'
+
+  integration-chromium:
+    name: "👀 Integration Test"
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/shared-test-integration.yml
+    with:
+      os: "ubuntu-latest"
+      node_version: '["latest"]'
+      browser: '["chromium"]'
