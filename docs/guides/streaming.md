@@ -13,9 +13,9 @@ Ensure your hosting provider supports streaming, not all of them do. If your res
 
 There are three steps to streaming data:
 
-1. Project Setup: we need to make sure our server and client entry points are set up to support streaming
-2. Component Setup: we need to make sure our components can render streamed data
-3. Deferring Loader Data: finally we can defer data in our loaders
+1. **Project Setup:** we need to make sure our server and client entry points are set up to support streaming
+2. **Component Setup:** we need to make sure our components can render streamed data
+3. **Deferring Loader Data:** finally we can defer data in our loaders
 
 ## 1. Project Setup
 
