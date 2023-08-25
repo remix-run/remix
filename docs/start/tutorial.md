@@ -820,7 +820,7 @@ In our case, we add a `"loading"` class to the main part of the app if we're not
 
 If we review code in the contact route, we can find the delete button looks like this:
 
-```jsx filename=src/routes/contact.jsx lines=[3]
+```jsx filename=src/routes/contacts.$contactId.tsx lines=[3]
 <Form
   method="post"
   action="destroy"
