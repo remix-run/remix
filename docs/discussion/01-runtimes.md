@@ -25,10 +25,10 @@ Each runtime has varying support for the standard Web APIs that Remix is built o
 
 The following runtimes packages are available:
 
-- `@remix-run/node`
-- `@remix-run/cloudflare-pages`
-- etc.
-- TODO: add links to each one
+- [`@remix-run/cloudflare-pages`][remix-run-cloudflare-pages]
+- [`@remix-run/cloudflare-workers`][remix-run-cloudflare-workers]
+- [`@remix-run/deno`][remix-run-deno]
+- [`@remix-run/node`][remix-run-node]
 
 The majority of the APIs you interact with in your app are not imported directly from these packages, so your code is fairly portable between runtimes. However, occasionally you'll import something from these packages for a specific feature that isn't a standard Web API.
 
@@ -110,3 +110,7 @@ Once you've picked a template or [set up an app from scratch][quickstart], you'r
 [serve]: ../other-api/serve
 [quickstart]: ../start/quickstart
 [templates-guide]: ../guides/templates
+[remix-run-cloudflare-pages]: https://www.npmjs.com/package/@remix-run/cloudflare-pages
+[remix-run-cloudflare-workers]: https://www.npmjs.com/package/@remix-run/cloudflare-workers
+[remix-run-deno]: https://www.npmjs.com/package/@remix-run/deno
+[remix-run-node]: https://www.npmjs.com/package/@remix-run/node
