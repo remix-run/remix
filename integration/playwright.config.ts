@@ -27,7 +27,12 @@ const config: PlaywrightTestConfig = {
     },
     {
       name: "msedge",
-      use: devices["Desktop Edge"],
+      use: {
+        ...devices["Desktop Edge"],
+        // Desktop Edge uses chromium by default
+        // https://github.com/microsoft/playwright/blob/main/packages/playwright-core/src/server/deviceDescriptorsSource.json#L1502
+        channel: "msedge",
+      },
     },
     {
       name: "firefox",
