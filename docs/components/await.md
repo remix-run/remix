@@ -5,7 +5,7 @@ toc: false
 
 # `<Await>`
 
-To get started with streaming data, check out the [Streaming Guide](../guides/streaming).
+To get started with streaming data, check out the [Streaming Guide][streaming-guide-2].
 
 The `<Await>` component is responsible for resolving deferred loader promises accessed from [`useLoaderData`][useloaderdata].
 
@@ -74,7 +74,7 @@ The `errorElement` prop can be used to render an error boundary when the promise
 <Await errorElement={<div>Oops!</div>} />
 ```
 
-The error can be accessed in the sub tree with [`useAsyncError`](../hooks/use-async-error)
+The error can be accessed in the sub tree with [`useAsyncError`][use-async-error]
 
 ```tsx
 <Await errorElement={<SomeChild />} />
@@ -92,3 +92,5 @@ function SomeChild() {
 [defer]: ../utils/defer
 [streaming-guide]: ../guides/streaming
 [useloaderdata]: ../hooks/use-loader-data
+[streaming-guide-2]: ../guides/streaming
+[use-async-error]: ../hooks/use-async-error
