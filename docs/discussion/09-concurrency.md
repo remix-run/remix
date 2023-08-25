@@ -20,11 +20,9 @@ Remix's handling of network concurrency is heavily inspired by the default behav
 
   - **Remix's Approach**: Remix mimics this behavior when working with forms. If a form is submitted and another submission occurs before the first completes, Remix cancels the original fetch requests. It then waits for the latest submission to complete before triggering page revalidation again.
 
-## Enhanced Concurrency Management
-
-While standard browsers are limited to one request at a time for navigations and form submissions, Remix elevates this behavior. Unlike navigation, with `useFetcher`, multiple requests can be in flight simultaneously.
-
 ## Concurrent Submissions and Revalidation
+
+While standard browsers are limited to one request at a time for navigations and form submissions, Remix elevates this behavior. Unlike navigation, with `useFetcher` multiple requests can be in flight simultaneously.
 
 Remix is designed to handle multiple form submissions to server actions and concurrent revalidation requests efficiently. It ensures that as soon as new data is available, the state is updated promptly. However, Remix also safeguards against potential pitfalls by refraining from committing stale data when other actions introduce race conditions.
 
