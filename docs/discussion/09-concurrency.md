@@ -12,7 +12,7 @@ Remix's handling of network concurrency is heavily inspired by the default behav
 
 - **Browser Link Navigation**: When you click on a link in a browser and then click on another before the page transition completes, the browser prioritizes the most recent action. It cancels the initial request, focusing solely on the latest link clicked.
 
-  - **Remix's Approach**: In a similar fashion, Remix manages client-side navigation seamlessly. When a link is clicked within a Remix application, it initiates fetch requests for each loader tied to the target URL. If another navigation interrupts the initial navigation, Remix cancels the previous fetch requests, ensuring that only the latest requests proceed.
+  - **Remix's Approach**: Remix manages client-side navigation the same way. When a link is clicked within a Remix application, it initiates fetch requests for each loader tied to the target URL. If another navigation interrupts the initial navigation, Remix cancels the previous fetch requests, ensuring that only the latest requests proceed.
 
 - **Browser Form Submission**: If you initiate a form submission in a browser and then quickly submit another form again, the browser disregards the first submission, processing only the latest one.
 
