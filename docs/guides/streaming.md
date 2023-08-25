@@ -112,11 +112,11 @@ export default function SomeRoute() {
 
 Instead of awaiting the reviews promise, we pass it to `defer`. This tells Remix to stream that promise over the network to the browser.
 
+That's it! You should now be streaming data to the browser.
+
 ## Avoid Inefficient Streaming
 
 It's important to initiate promises for deferred data _before_ you await any other promises, otherwise you won't get the full benefit of streaming. Note the difference with this less efficient code example:
-
-That's it! You should now be streaming data to the browser.
 
 ```tsx bad
 export async function loader({ params }) {
