@@ -93,15 +93,15 @@ This is recommended over `<form />`. When the `action` prop is omitted, `<Form>`
 
 **Videos:**
 
-- [Data Mutations with Form + action](https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6)
-- [Multiple Forms and Single Button Mutations](https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6)
-- [Clearing Inputs After Form Submissions](https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6)
+- [Data Mutations with Form + action][data-mutations-with-form-action]
+- [Multiple Forms and Single Button Mutations][multiple-forms-and-single-button-mutations]
+- [Clearing Inputs After Form Submissions][clearing-inputs-after-form-submissions]
 
 **Related Discussions:**
 
-- [Fullstack Data Flow](../discussion/03-data-flow)
-- [Pending UI](../discussion/07-pending-ui)
-- [Form vs. Fetcher](../discussion/10-form-vs-fetcher)
+- [Fullstack Data Flow][fullstack-data-flow]
+- [Pending UI][pending-ui]
+- [Form vs. Fetcher][form-vs-fetcher]
 
 **Related APIs:**
 
@@ -115,3 +115,9 @@ This is recommended over `<form />`. When the `action` prop is omitted, `<Form>`
 [usesubmit]: ../hooks/use-submit
 [http-verb]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
 [rr-form]: https://reactrouter.com/components/form
+[data-mutations-with-form-action]: https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
+[multiple-forms-and-single-button-mutations]: https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
+[clearing-inputs-after-form-submissions]: https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
+[fullstack-data-flow]: ../discussion/03-data-flow
+[pending-ui]: ../discussion/07-pending-ui
+[form-vs-fetcher]: ../discussion/10-form-vs-fetcher
