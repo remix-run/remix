@@ -1224,7 +1224,7 @@ When nothing is happening, `navigation.location` will be `undefined`, but when t
 
 👉 **Add classes to search form elements using the state**
 
-```tsx filename=app/routes/root.tsx lines=[3,14]
+```tsx filename=app/routes/root.tsx lines=[3,17]
 <Form id="search-form" role="search">
   <input
     className={searching ? "loading" : ""}
