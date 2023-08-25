@@ -9,7 +9,6 @@ env:
 
 jobs:
   build:
-    name: ⚙️ Build
     runs-on: ubuntu-latest
     steps:
       - name: 🛑 Cancel Previous Runs

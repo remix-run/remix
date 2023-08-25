@@ -25,7 +25,7 @@ env:
 
 jobs:
   integration:
-    name: '👀 Test (${{ inputs.os }}/node@${{ matrix.node }}/${{ matrix.browser }})'
+    name: "${{ inputs.os }} / node@${{ matrix.node }} / ${{ matrix.browser }}"
     strategy:
       fail-fast: false
       matrix:
