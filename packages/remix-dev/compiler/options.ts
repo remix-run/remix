@@ -1,13 +1,8 @@
 type Mode = "development" | "production" | "test";
 
 export type Options = {
-  mode: Mode;
+  mode: Mode | Omit<string, Mode>;
   sourcemap: boolean;
 
-  // TODO: required in v2
-  devOrigin?: {
-    scheme: string;
-    host: string;
-    port: number;
-  };
+  REMIX_DEV_ORIGIN?: URL; // TODO: required in v2
 };

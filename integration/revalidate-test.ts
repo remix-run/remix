@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { AppFixture } from "./helpers/create-fixture";
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { AppFixture } from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 test.describe("Revalidation", () => {
   let appFixture: AppFixture;
@@ -10,13 +14,8 @@ test.describe("Revalidation", () => {
   test.beforeAll(async () => {
     appFixture = await createAppFixture(
       await createFixture({
-        config: {
-          future: {
-            v2_routeConvention: true,
-          },
-        },
         files: {
-          "app/root.jsx": js`
+          "app/root.tsx": js`
             import { Link, Outlet, Scripts, useNavigation } from "@remix-run/react";
 
             export default function Component() {
@@ -46,7 +45,7 @@ test.describe("Revalidation", () => {
             }
           `,
 
-          "app/routes/parent.jsx": js`
+          "app/routes/parent.tsx": js`
             import { json } from "@remix-run/node";
             import { Outlet, useLoaderData } from "@remix-run/react";
 
@@ -86,7 +85,7 @@ test.describe("Revalidation", () => {
             }
           `,
 
-          "app/routes/parent.child.jsx": js`
+          "app/routes/parent.child.tsx": js`
             import { json } from "@remix-run/node";
             import { Form, useLoaderData, useRevalidator } from "@remix-run/react";
 

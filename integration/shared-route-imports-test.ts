@@ -1,8 +1,12 @@
 import { test } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -10,11 +14,8 @@ let appFixture: AppFixture;
 test.describe("v1 compiler", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
-        "app/routes/parent.jsx": js`
+        "app/routes/parent.tsx": js`
           import { createContext, useContext } from "react";
           import { Outlet } from "@remix-run/react";
   
@@ -33,7 +34,7 @@ test.describe("v1 compiler", () => {
           }
         `,
 
-        "app/routes/parent.child.jsx": js`
+        "app/routes/parent.child.tsx": js`
           import { useParentContext } from "./parent";
   
           export default function Index() {
@@ -100,11 +101,8 @@ export function UseParentContext() {
 test.describe("v2 compiler", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true, v2_dev: true },
-      },
       files: {
-        "app/routes/parent.jsx": js`
+        "app/routes/parent.tsx": js`
           import { createContext, useContext } from "react";
           import { Outlet } from "@remix-run/react";
   
@@ -123,7 +121,7 @@ test.describe("v2 compiler", () => {
           }
         `,
 
-        "app/routes/parent.child.jsx": js`
+        "app/routes/parent.child.tsx": js`
           import { useParentContext } from "./parent";
   
           export default function Index() {

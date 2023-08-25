@@ -5,30 +5,27 @@ import path from "node:path";
 import type { Readable } from "node:stream";
 import getPort, { makeRange } from "get-port";
 
-import type { FixtureInit } from "./helpers/create-fixture";
-import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
+import type { FixtureInit } from "./helpers/create-fixture.js";
+import {
+  createFixtureProject,
+  css,
+  js,
+  json,
+} from "./helpers/create-fixture.js";
 
 test.setTimeout(120_000);
 
 let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
   config: {
-    serverModuleFormat: "cjs",
-    tailwind: true,
-    future: {
-      v2_dev: {
-        port: options.devPort,
-      },
-      v2_routeConvention: true,
-      v2_errorBoundary: true,
-      v2_normalizeFormMethod: true,
-      v2_meta: true,
-      v2_headers: true,
+    dev: {
+      port: options.devPort,
     },
   },
   files: {
     "package.json": json({
       private: true,
       sideEffects: false,
+      type: "module",
       scripts: {
         dev: `node ./node_modules/@remix-run/dev/dist/cli.js dev -c "node ./server.js"`,
       },
@@ -50,33 +47,36 @@ let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
         typescript: "0.0.0-local-version",
       },
       engines: {
-        node: ">=14.0.0",
+        node: ">=18.0.0",
       },
     }),
 
     "server.js": js`
-      let path = require("path");
-      let express = require("express");
-      let { createRequestHandler } = require("@remix-run/express");
-      let { logDevReady } = require("@remix-run/node");
+      import path from "path";
+      import url from "url";
+      import express from "express";
+      import { createRequestHandler } from "@remix-run/express";
+      import { logDevReady, installGlobals } from "@remix-run/node";
+
+      installGlobals();
 
       const app = express();
       app.use(express.static("public", { immutable: true, maxAge: "1y" }));
 
       const MODE = process.env.NODE_ENV;
-      const BUILD_DIR = path.join(process.cwd(), "build");
+      const BUILD_PATH = url.pathToFileURL(path.join(process.cwd(), "build", "index.js"));
 
       app.all(
         "*",
         createRequestHandler({
-          build: require(BUILD_DIR),
+          build: await import(BUILD_PATH),
           mode: MODE,
         })
       );
 
       let port = ${options.appPort};
-      app.listen(port, () => {
-        let build = require(BUILD_DIR);
+      app.listen(port, async () => {
+        let build = await import(BUILD_PATH);
         console.log('✅ app ready: http://localhost:' + port);
         if (process.env.NODE_ENV === 'development') {
           logDevReady(build);

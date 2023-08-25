@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { createFixtureProject, js } from "./helpers/create-fixture";
+import { createFixtureProject, js } from "./helpers/create-fixture.js";
 
 let projectDir: string;
 
@@ -14,7 +14,6 @@ test.beforeAll(async () => {
         export default {
           serverModuleFormat: "esm",
           serverBuildPath: "build/index.mjs",
-          future: { v2_routeConvention: true },
         };
       `,
       "package.json": js`
@@ -43,11 +42,11 @@ test.beforeAll(async () => {
             "typescript": "0.0.0-local-version"
           },
           "engines": {
-            "node": ">=14.0.0"
+            "node": ">=18.0.0"
           }
         }      
       `,
-      "app/routes/_index.jsx": js`
+      "app/routes/_index.tsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
 

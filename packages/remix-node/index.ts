@@ -1,9 +1,3 @@
-import sourceMapSupport from "source-map-support";
-
-sourceMapSupport.install();
-
-export { AbortController } from "abort-controller";
-
 export type {
   HeadersInit,
   RequestInfo,
@@ -46,6 +40,7 @@ export {
   json,
   MaxPartSizeExceededError,
   redirect,
+  redirectDocument,
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
@@ -63,13 +58,11 @@ export type {
   CookieSignatureOptions,
   DataFunctionArgs,
   EntryContext,
-  ErrorBoundaryComponent,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HeadersArgs,
   HeadersFunction,
   HtmlLinkDescriptor,
-  HtmlMetaDescriptor,
   JsonFunction,
   LinkDescriptor,
   LinksFunction,
@@ -77,21 +70,16 @@ export type {
   LoaderFunction,
   MemoryUploadHandlerFilterArgs,
   MemoryUploadHandlerOptions,
-  MetaDescriptor,
-  MetaFunction,
   HandleErrorFunction,
   PageLinkDescriptor,
   RequestHandler,
-  RouteComponent,
   RouteHandle,
   SerializeFrom,
   ServerBuild,
   ServerEntryModule,
-  V2_ServerRuntimeMetaArgs as V2_MetaArgs,
-  V2_ServerRuntimeMetaDescriptor as V2_MetaDescriptor,
-  // TODO: Remove in v2
-  V2_ServerRuntimeMetaDescriptor as V2_HtmlMetaDescriptor,
-  V2_ServerRuntimeMetaFunction as V2_MetaFunction,
+  ServerRuntimeMetaArgs as MetaArgs,
+  ServerRuntimeMetaDescriptor as MetaDescriptor,
+  ServerRuntimeMetaFunction as MetaFunction,
   Session,
   SessionData,
   SessionIdStorageStrategy,

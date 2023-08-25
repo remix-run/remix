@@ -7,6 +7,7 @@ import type { AppLoadContext } from "./data";
  * The output of the compiler for the server build.
  */
 export interface ServerBuild {
+  mode: string;
   entry: {
     module: ServerEntryModule;
   };
@@ -15,7 +16,6 @@ export interface ServerBuild {
   publicPath: string;
   assetsBuildDirectory: string;
   future: FutureConfig;
-  dev?: { port: number };
 }
 
 export interface HandleDocumentRequestFunction {

@@ -1,15 +1,12 @@
+// IDK why this is needed when it's in the tsconfig..........
+// YAY PROJECT REFERENCES!
+/// <reference lib="DOM.Iterable" />
+
 import type * as express from "express";
-import type {
-  AppLoadContext,
-  ServerBuild,
-  RequestInit as NodeRequestInit,
-  Response as NodeResponse,
-} from "@remix-run/node";
+import type { AppLoadContext, ServerBuild } from "@remix-run/node";
 import {
-  AbortController as NodeAbortController,
   createRequestHandler as createRemixRequestHandler,
-  Headers as NodeHeaders,
-  Request as NodeRequest,
+  createReadableStreamFromReadable,
   writeReadableStreamToWritable,
 } from "@remix-run/node";
 
@@ -55,10 +52,7 @@ export function createRequestHandler({
       let request = createRemixRequest(req, res);
       let loadContext = await getLoadContext?.(req, res);
 
-      let response = (await handleRequest(
-        request,
-        loadContext
-      )) as NodeResponse;
+      let response = await handleRequest(request, loadContext);
 
       await sendRemixResponse(res, response);
     } catch (error: unknown) {
@@ -71,8 +65,8 @@ export function createRequestHandler({
 
 export function createRemixHeaders(
   requestHeaders: express.Request["headers"]
-): NodeHeaders {
-  let headers = new NodeHeaders();
+): Headers {
+  let headers = new Headers();
 
   for (let [key, values] of Object.entries(requestHeaders)) {
     if (values) {
@@ -92,39 +86,36 @@ export function createRemixHeaders(
 export function createRemixRequest(
   req: express.Request,
   res: express.Response
-): NodeRequest {
+): Request {
   let url = new URL(`${req.protocol}://${req.get("host")}${req.url}`);
 
   // Abort action/loaders once we can no longer write a response
-  let controller = new NodeAbortController();
+  let controller = new AbortController();
   res.on("close", () => controller.abort());
 
-  let init: NodeRequestInit = {
+  let init: RequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    // Cast until reason/throwIfAborted added
-    // https://github.com/mysticatea/abort-controller/issues/36
-    signal: controller.signal as NodeRequestInit["signal"],
+    signal: controller.signal,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req;
+    init.body = createReadableStreamFromReadable(req);
+    (init as { duplex: "half" }).duplex = "half";
   }
 
-  return new NodeRequest(url.href, init);
+  return new Request(url.href, init);
 }
 
 export async function sendRemixResponse(
   res: express.Response,
-  nodeResponse: NodeResponse
+  nodeResponse: Response
 ): Promise<void> {
   res.statusMessage = nodeResponse.statusText;
   res.status(nodeResponse.status);
 
-  for (let [key, values] of Object.entries(nodeResponse.headers.raw())) {
-    for (let value of values) {
-      res.append(key, value);
-    }
+  for (let [key, value] of nodeResponse.headers.entries()) {
+    res.append(key, value);
   }
 
   if (nodeResponse.body) {

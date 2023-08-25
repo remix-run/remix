@@ -2,11 +2,11 @@ import * as React from "react";
 import type { ScrollRestorationProps as ScrollRestorationPropsRR } from "react-router-dom";
 import {
   useLocation,
+  useMatches,
   UNSAFE_useScrollRestoration as useScrollRestoration,
 } from "react-router-dom";
 
 import type { ScriptProps } from "./components";
-import { useMatches } from "./components";
 
 let STORAGE_KEY = "positions";
 

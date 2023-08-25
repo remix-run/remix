@@ -24,9 +24,9 @@ function NewEvent() {
 ```
 
 - Whether JavaScript is on the page or not, your data interactions created with `<Form>` and `action` will work.
-- After a `<Form>` submission, all of the loaders on the page will be reloaded. This ensures that any updates to your data are reflected in the UI.
+- After a `<Form>` submission, all the loaders on the page will be reloaded. This ensures that any updates to your data are reflected in the UI.
 - `<Form>` automatically serializes your form's values (identically to the browser when not using JavaScript).
-- You can build "optimistic UI" and pending indicators with [`useTransition`][usetransition].
+- You can build "optimistic UI" and pending indicators with [`useNavigation`][usenavigation].
 
 ## `action`
 
@@ -42,10 +42,10 @@ When a POST is made to a URL, multiple routes in your route hierarchy will match
 
 If you want to post to an index route use `?index` in the action: `<Form action="/accounts?index" method="post" />`
 
-| action url        | route action               |
-| ----------------- | -------------------------- |
-| `/accounts?index` | `routes/accounts/index.js` |
-| `/accounts`       | `routes/accounts.js`       |
+| action url        | route action                     |
+| ----------------- | -------------------------------- |
+| `/accounts?index` | `app/routes/accounts._index.tsx` |
+| `/accounts`       | `app/routes/accounts.tsx`        |
 
 See also:
 
@@ -98,12 +98,12 @@ When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call dif
 
 See also:
 
-- [`useTransition`][usetransition]
+- [`useNavigation`][usenavigation]
 - [`useActionData`][useactiondata]
 - [`useSubmit`][usesubmit]
 
 [index query param]: ../guides/routing#what-is-the-index-query-param
-[usetransition]: ../hooks/use-transition
+[usenavigation]: ../hooks/use-navigation
 [useactiondata]: ../hooks/use-action-data
 [usesubmit]: ../hooks/use-submit
 [http-verb]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods

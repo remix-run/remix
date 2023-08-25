@@ -1,10 +1,10 @@
-import cp from "child_process";
+import cp from "node:child_process";
 import type { Page, Response, Request } from "@playwright/test";
 import { test } from "@playwright/test";
 import cheerio from "cheerio";
 import prettier from "prettier";
 
-import type { AppFixture } from "./create-fixture";
+import type { AppFixture } from "./create-fixture.js";
 
 export class PlaywrightFixture {
   readonly page: Page;
@@ -136,6 +136,17 @@ export class PlaywrightFixture {
       await doAndWait(this.page, () => this.page.goBack());
     } else {
       await this.page.goBack();
+    }
+  }
+
+  /**
+   * "Clicks" the refresh button.
+   */
+  async reload(options: { wait: boolean } = { wait: true }) {
+    if (options.wait) {
+      await doAndWait(this.page, () => this.page.reload());
+    } else {
+      await this.page.reload();
     }
   }
 
@@ -281,6 +292,27 @@ async function doAndWait(
     console.log(`action done, ${requestCounter} requests pending`);
   }
   await networkSettledPromise;
+
+  // I wish I knew why but Safari seems to get all screwed up without this.
+  // When you run doAndWait (via clicking a blink or submitting a form) and
+  // then waitForSelector().  It finds the selector element but thinks it's
+  // hidden for some unknown reason.  It's intermittent, but waiting for the
+  // next animation frame delaying slightly before the waitForSelector() calls
+  // seems to fix it 🤷‍♂️
+  //
+  //   Test timeout of 30000ms exceeded.
+  //
+  //   Error: page.waitForSelector: Target closed
+  //   =========================== logs ===========================
+  //   waiting for locator('text=ROOT_BOUNDARY_TEXT') to be visible
+  //     locator resolved to hidden <div id="root-boundary">ROOT_BOUNDARY_TEXT</div>
+  //     locator resolved to hidden <div id="root-boundary">ROOT_BOUNDARY_TEXT</div>
+  //     ... and so on until the test times out
+  let userAgent = await page.evaluate(() => navigator.userAgent);
+  if (/Safari\//i.test(userAgent) && !/Chrome\//i.test(userAgent)) {
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(r)));
+  }
+
   if (DEBUG) {
     console.log(`action done, network settled`);
   }

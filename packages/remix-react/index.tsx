@@ -1,11 +1,14 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
+  Fetcher,
+  FetcherWithComponents,
   FormEncType,
   FormMethod,
   FormProps,
   Location,
   NavigateFunction,
+  Navigation,
   Params,
   Path,
   ShouldRevalidateFunction,
@@ -15,16 +18,25 @@ export type {
   unstable_BlockerFunction,
 } from "react-router-dom";
 export {
+  createPath,
+  generatePath,
+  matchPath,
+  matchRoutes,
+  parsePath,
+  resolvePath,
   Form,
   Outlet,
   useAsyncError,
   useAsyncValue,
   isRouteErrorResponse,
   useBeforeUnload,
+  useFetcher,
+  useFetchers,
   useFormAction,
   useHref,
   useLocation,
   useMatch,
+  useMatches,
   useNavigate,
   useNavigation,
   useNavigationType,
@@ -34,7 +46,6 @@ export {
   useResolvedPath,
   useRevalidator,
   useRouteError,
-  useRouteLoaderData,
   useSearchParams,
   useSubmit,
   unstable_useBlocker,
@@ -43,7 +54,6 @@ export {
 
 export type {
   AwaitProps,
-  FetcherWithComponents,
   RouteMatch,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
@@ -57,35 +67,24 @@ export {
   NavLink,
   PrefetchPageLinks,
   LiveReload,
-  useTransition,
-  useFetcher,
-  useFetchers,
   useLoaderData,
-  useMatches,
+  useRouteLoaderData,
   useActionData,
   RemixContext as UNSAFE_RemixContext,
 } from "./components";
 
-export type { ThrownResponse } from "./errors";
-export { useCatch } from "./errorBoundaries";
-
 export type { HtmlLinkDescriptor } from "./links";
 export type {
-  CatchBoundaryComponent,
-  HtmlMetaDescriptor,
-  V2_MetaArgs,
-  V2_MetaDescriptor,
-  V2_MetaFunction,
+  MetaArgs,
+  MetaDescriptor,
+  MetaFunction,
   RouteModules as UNSAFE_RouteModules,
-  ShouldReloadFunction,
 } from "./routeModules";
 
 export { ScrollRestoration } from "./scroll-restoration";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";
-
-export type { Fetcher } from "./transition";
 
 export type {
   FutureConfig as UNSAFE_FutureConfig,

@@ -1,5 +1,5 @@
-import * as path from "path";
-import { builtinModules as nodeBuiltins } from "module";
+import * as path from "node:path";
+import { builtinModules as nodeBuiltins } from "node:module";
 import * as esbuild from "esbuild";
 import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 
@@ -10,7 +10,6 @@ import { loaders } from "../utils/loaders";
 import { browserRouteModulesPlugin } from "./plugins/routes";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
-import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
 import { mdxPlugin } from "../plugins/mdx";
 import { externalPlugin } from "../plugins/external";
@@ -22,6 +21,7 @@ import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
 import type { LazyValue } from "../lazyValue";
 import type { Context } from "../context";
+import { writeMetafile } from "../analysis";
 
 type Compiler = {
   // produce ./public/build/
@@ -33,23 +33,10 @@ type Compiler = {
   dispose: () => Promise<void>;
 };
 
-const getExternals = (remixConfig: RemixConfig): string[] => {
-  // For the browser build, exclude node built-ins that don't have a
-  // browser-safe alternative installed in node_modules. Nothing should
-  // *actually* be external in the browser build (we want to bundle all deps) so
-  // this is really just making sure we don't accidentally have any dependencies
-  // on node built-ins in browser bundles.
+const getFakeBuiltins = (remixConfig: RemixConfig): string[] => {
   let dependencies = Object.keys(getAppDependencies(remixConfig));
   let fakeBuiltins = nodeBuiltins.filter((mod) => dependencies.includes(mod));
-
-  if (fakeBuiltins.length > 0) {
-    throw new Error(
-      `It appears you're using a module that is built in to node, but you installed it as a dependency which could cause problems. Please remove ${fakeBuiltins.join(
-        ", "
-      )} before continuing.`
-    );
-  }
-  return nodeBuiltins.filter((mod) => !dependencies.includes(mod));
+  return fakeBuiltins;
 };
 
 const createEsbuildConfig = (
@@ -68,10 +55,7 @@ const createEsbuildConfig = (
     entryPoints[id] += "?browser";
   }
 
-  if (
-    ctx.options.mode === "development" &&
-    ctx.config.future.v2_dev !== false
-  ) {
+  if (ctx.options.mode === "development") {
     let defaultsDirectory = path.resolve(
       __dirname,
       "..",
@@ -85,16 +69,22 @@ const createEsbuildConfig = (
     );
   }
 
+  let fakeBuiltins = getFakeBuiltins(ctx.config);
+  if (fakeBuiltins.length > 0) {
+    throw new Error(
+      `It appears you're using a module that is built in to Node, but you installed it as a dependency which could cause problems. Please remove ${fakeBuiltins.join(
+        ", "
+      )} before continuing.`
+    );
+  }
+
   let plugins: esbuild.Plugin[] = [
     browserRouteModulesPlugin(ctx, /\?browser$/),
-    deprecatedRemixPackagePlugin(ctx),
     cssBundlePlugin(refs),
     cssModulesPlugin(ctx, { outputCss: false }),
     vanillaExtractPlugin(ctx, { outputCss: false }),
     cssSideEffectImportsPlugin(ctx, {
-      hmr:
-        ctx.options.mode === "development" &&
-        ctx.config.future.v2_dev !== false,
+      hmr: ctx.options.mode === "development",
     }),
     cssFilePlugin(ctx),
     absoluteCssUrlsPlugin(),
@@ -104,11 +94,18 @@ const createEsbuildConfig = (
     emptyModulesPlugin(ctx, /^@remix-run\/(deno|cloudflare|node)(\/.*)?$/, {
       includeNodeModules: true,
     }),
-    nodeModulesPolyfillPlugin(),
+    nodeModulesPolyfillPlugin({
+      // For the browser build, we replace any Node built-ins that don't have a
+      // polyfill with an empty module. This ensures the build can pass without
+      // having to mark all Node built-ins as external which can result in other
+      // issues, e.g. https://github.com/remix-run/remix/issues/5521. We then
+      // rely on tree-shaking to remove all unused polyfills and fallbacks.
+      fallback: "empty",
+    }),
     externalPlugin(/^node:.*/, { sideEffects: false }),
   ];
 
-  if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {
+  if (ctx.options.mode === "development") {
     plugins.push(hmrPlugin(ctx));
   }
 
@@ -117,7 +114,6 @@ const createEsbuildConfig = (
     outdir: ctx.config.assetsBuildDirectory,
     platform: "browser",
     format: "esm",
-    external: getExternals(ctx.config),
     loader: loaders,
     bundle: true,
     logLevel: "silent",
@@ -136,9 +132,14 @@ const createEsbuildConfig = (
     publicPath: ctx.config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
-      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-        ctx.config.devServerPort
+      "process.env.REMIX_DEV_ORIGIN": JSON.stringify(
+        ctx.options.REMIX_DEV_ORIGIN ?? ""
       ),
+      ...(ctx.options.mode === "production"
+        ? {
+            "import.meta.hot": "undefined",
+          }
+        : {}),
     },
     jsx: "automatic",
     jsxDev: ctx.options.mode !== "production",
@@ -160,9 +161,10 @@ export const create = async (
 
   let compile = async () => {
     let { metafile } = await compiler.rebuild();
+    writeMetafile(ctx, "metafile.js.json", metafile);
 
     let hmr: Manifest["hmr"] | undefined = undefined;
-    if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {
+    if (ctx.options.mode === "development") {
       let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
         ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
       )?.[0];

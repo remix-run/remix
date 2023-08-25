@@ -1,38 +1,34 @@
 {
   "private": true,
   "sideEffects": false,
+  "type": "module",
   "scripts": {
     "build": "remix build",
-    "deploy": "wrangler publish",
-    "dev:remix": "remix watch",
-    "dev:miniflare": "cross-env NODE_ENV=development miniflare ./build/index.js --watch",
-    "dev": "npm-run-all build --parallel \"dev:*\"",
-    "start": "cross-env NODE_ENV=production miniflare ./build/index.js",
+    "deploy": "remix build && wrangler publish",
+    "dev": "remix dev --manual -c \"npm start\"",
+    "start": "wrangler dev ./build/index.js",
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@cloudflare/kv-asset-handler": "^0.1.3",
     "@remix-run/cloudflare": "*",
-    "@remix-run/cloudflare-workers": "*",
     "@remix-run/css-bundle": "*",
     "@remix-run/react": "*",
-    "cross-env": "^7.0.3",
     "isbot": "^3.6.8",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.19.0",
+    "@cloudflare/workers-types": "^4.20230518.0",
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
-    "@types/react": "^18.0.35",
-    "@types/react-dom": "^18.0.11",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
     "eslint": "^8.38.0",
-    "miniflare": "^2.13.0",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.0.4",
-    "wrangler": "^2.15.1"
+    "typescript": "^5.1.6",
+    "wrangler": "^3.1.1"
   },
   "engines": {
-    "node": ">=16.13.0"
+    "node": ">=18.0.0"
   }
 }

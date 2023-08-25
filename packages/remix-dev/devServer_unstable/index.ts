@@ -22,14 +22,7 @@ import type { Result } from "../result";
 import { err, ok } from "../result";
 import invariant from "../invariant";
 import { logger } from "../tux";
-
-type Origin = {
-  scheme: string;
-  host: string;
-  port: number;
-};
-
-let stringifyOrigin = (o: Origin) => `${o.scheme}://${o.host}:${o.port}`;
+import { kill, killtree } from "./proc";
 
 let detectBin = async (): Promise<string> => {
   let pkgManager = detectPackageManager() ?? "npm";
@@ -37,6 +30,10 @@ let detectBin = async (): Promise<string> => {
     // npm v9 removed the `bin` command, so have to use `prefix`
     let { stdout } = await execa(pkgManager, ["prefix"]);
     return path.join(stdout.trim(), "node_modules", ".bin");
+  }
+  if (pkgManager === "bun") {
+    let { stdout } = await execa(pkgManager, ["pm", "bin"]);
+    return stdout.trim();
   }
   let { stdout } = await execa(pkgManager, ["bin"]);
   return stdout.trim();
@@ -46,12 +43,11 @@ export let serve = async (
   initialConfig: RemixConfig,
   options: {
     command?: string;
-    scheme: string;
-    host: string;
+    manual: boolean;
     port: number;
-    restart: boolean;
     tlsKey?: string;
     tlsCert?: string;
+    REMIX_DEV_ORIGIN: URL;
   }
 ) => {
   await loadEnv(initialConfig.rootDirectory);
@@ -91,12 +87,6 @@ export let serve = async (
       : http.createServer(app);
   let websocket = Socket.serve(server);
 
-  let origin: Origin = {
-    scheme: options.scheme,
-    host: options.host,
-    port: options.port,
-  };
-
   let bin = await detectBin();
   let startAppServer = (command?: string) => {
     let cmd =
@@ -112,7 +102,7 @@ export let serve = async (
           NODE_ENV: "development",
           PATH:
             bin + (process.platform === "win32" ? ";" : ":") + process.env.PATH,
-          REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(origin),
+          REMIX_DEV_ORIGIN: options.REMIX_DEV_ORIGIN.href,
           FORCE_COLOR: process.env.NO_COLOR === undefined ? "1" : "0",
         },
         // https://github.com/sindresorhus/execa/issues/433
@@ -149,7 +139,7 @@ export let serve = async (
             transform(chunk, _, callback) {
               let str: string = chunk.toString();
               let matches =
-                str && str.matchAll(/\[REMIX DEV\] ([A-f0-9]+) ready/g);
+                str && str.matchAll(/\[REMIX DEV\] ([A-Fa-f0-9]+) ready/g);
               if (matches) {
                 for (let match of matches) {
                   let buildHash = match[1];
@@ -177,7 +167,7 @@ export let serve = async (
       options: {
         mode: "development",
         sourcemap: true,
-        devOrigin: origin,
+        REMIX_DEV_ORIGIN: options.REMIX_DEV_ORIGIN,
       },
       fileWatchCache,
       logger,
@@ -213,8 +203,10 @@ export let serve = async (
         let newState: typeof state = { prevManifest: state.manifest };
         try {
           let start = Date.now();
-          if (state.appServer === undefined || options.restart) {
-            await kill(state.appServer);
+          if (state.appServer === undefined || !options.manual) {
+            if (state.appServer?.pid) {
+              await killtree(state.appServer.pid);
+            }
             state.appServer = startAppServer(options.command);
           }
           let appReady = await state.appReady!.result;
@@ -273,10 +265,10 @@ export let serve = async (
     }
   );
 
-  server.listen(origin.port);
+  server.listen(options.port);
 
   return new Promise(() => {}).finally(async () => {
-    await kill(state.appServer);
+    state.appServer?.pid && (await kill(state.appServer.pid));
     websocket.close();
     server.close();
     await dispose();
@@ -290,25 +282,3 @@ let clean = (config: RemixConfig) => {
 };
 
 let relativePath = (file: string) => path.relative(process.cwd(), file);
-
-let kill = async (p?: execa.ExecaChildProcess) => {
-  if (p === undefined) return;
-  let channel = Channel.create<void>();
-  p.on("exit", channel.ok);
-
-  // https://github.com/nodejs/node/issues/12378
-  if (process.platform === "win32") {
-    try {
-      await execa("taskkill", ["/pid", String(p.pid), "/f", "/t"]);
-    } catch (error) {
-      // if exit code is 128, app server process is already dead
-      if (!(error instanceof Error)) throw error;
-      if (!("exitCode" in error)) throw error;
-      if (error.exitCode !== 128) throw error;
-    }
-  } else {
-    p.kill("SIGTERM", { forceKillAfterTimeout: 1_000 });
-  }
-
-  await channel.result;
-};

@@ -1,9 +1,13 @@
 import { test, expect } from "@playwright/test";
 import type { ConsoleMessage, Page } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
 
 const ROOT_ID = "ROOT_ID";
 const INDEX_ID = "INDEX_ID";
@@ -11,6 +15,8 @@ const DEFERRED_ID = "DEFERRED_ID";
 const RESOLVED_DEFERRED_ID = "RESOLVED_DEFERRED_ID";
 const FALLBACK_ID = "FALLBACK_ID";
 const ERROR_ID = "ERROR_ID";
+const UNDEFINED_ERROR_ID = "UNDEFINED_ERROR_ID";
+const NEVER_SHOW_ID = "NEVER_SHOW_ID";
 const ERROR_BOUNDARY_ID = "ERROR_BOUNDARY_ID";
 const MANUAL_RESOLVED_ID = "MANUAL_RESOLVED_ID";
 const MANUAL_FALLBACK_ID = "MANUAL_FALLBACK_ID";
@@ -40,13 +46,6 @@ test.describe("non-aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_routeConvention: true,
-          v2_errorBoundary: true,
-          v2_normalizeFormMethod: true,
-        },
-      },
       files: {
         "app/components/counter.tsx": js`
           import { useState } from "react";
@@ -82,11 +81,9 @@ test.describe("non-aborted", () => {
           import Counter from "~/components/counter";
           import Interactive from "~/components/interactive";
 
-          export const meta: MetaFunction = () => ({
-            charset: "utf-8",
-            title: "New Remix App",
-            viewport: "width=device-width, initial-scale=1",
-          });
+          export const meta: MetaFunction = () => {
+            return [{ title: "New Remix App" }];
+          };
 
           export const loader = () => defer({
             id: "${ROOT_ID}",
@@ -97,6 +94,8 @@ test.describe("non-aborted", () => {
             return (
               <html lang="en">
                 <head>
+                  <meta charSet="utf-8" />
+                  <meta name="viewport" content="width=device-width,initial-scale=1" />
                   <Meta />
                   <Links />
                 </head>
@@ -232,6 +231,7 @@ test.describe("non-aborted", () => {
             return defer({
               deferredId: "${DEFERRED_ID}",
               resolvedId: Promise.resolve("${RESOLVED_DEFERRED_ID}"),
+              deferredUndefined: Promise.resolve(undefined),
             });
           }
 
@@ -269,6 +269,11 @@ test.describe("non-aborted", () => {
               resolvedId: new Promise(
                 (resolve) => setTimeout(() => {
                   resolve("${RESOLVED_DEFERRED_ID}");
+                }, 10)
+              ),
+              deferredUndefined: new Promise(
+                (resolve) => setTimeout(() => {
+                  resolve(undefined);
                 }, 10)
               ),
             });
@@ -351,11 +356,16 @@ test.describe("non-aborted", () => {
                   reject(new Error("${RESOLVED_DEFERRED_ID}"));
                 }, 10)
               ),
+              resolvedUndefined: new Promise(
+                (resolve) => setTimeout(() => {
+                  resolve(undefined);
+                }, 10)
+              ),
             });
           }
 
           export default function Deferred() {
-            let { deferredId, resolvedId } = useLoaderData();
+            let { deferredId, resolvedId, resolvedUndefined } = useLoaderData();
             return (
               <div id={deferredId}>
                 <p>{deferredId}</p>
@@ -373,6 +383,22 @@ test.describe("non-aborted", () => {
                       <div id={resolvedDeferredId}>
                         <p>{resolvedDeferredId}</p>
                         <Counter id={resolvedDeferredId} />
+                      </div>
+                    )}
+                  />
+                </Suspense>
+                <Suspense>
+                  <Await
+                    resolve={resolvedUndefined}
+                    errorElement={
+                      <div id="${UNDEFINED_ERROR_ID}">
+                        error
+                        <Counter id="${UNDEFINED_ERROR_ID}" />
+                      </div>
+                    }
+                    children={(resolvedDeferredId) => (
+                      <div id="${NEVER_SHOW_ID}">
+                        {"${NEVER_SHOW_ID}"}
                       </div>
                     )}
                   />
@@ -542,7 +568,7 @@ test.describe("non-aborted", () => {
           }
         `,
 
-        "app/routes/headers.jsx": js`
+        "app/routes/headers.tsx": js`
           import { defer } from "@remix-run/node";
           export function loader() {
             return defer({}, { headers: { "x-custom-header": "value from loader" } });
@@ -561,7 +587,7 @@ test.describe("non-aborted", () => {
       },
     });
 
-    // This creates an interactive app using puppeteer.
+    // This creates an interactive app using playwright.
     appFixture = await createAppFixture(fixture);
   });
 
@@ -728,10 +754,12 @@ test.describe("non-aborted", () => {
     await page.waitForSelector(`#${ROOT_ID}`);
     await page.waitForSelector(`#${DEFERRED_ID}`);
     await page.waitForSelector(`#${ERROR_ID}`);
+    await page.waitForSelector(`#${UNDEFINED_ERROR_ID}`);
 
     await ensureInteractivity(page, ROOT_ID);
     await ensureInteractivity(page, DEFERRED_ID);
     await ensureInteractivity(page, ERROR_ID);
+    await ensureInteractivity(page, UNDEFINED_ERROR_ID);
 
     await assertConsole();
   });
@@ -891,6 +919,7 @@ test.describe("non-aborted", () => {
 
     await ensureInteractivity(page, DEFERRED_ID);
     await ensureInteractivity(page, ERROR_ID);
+    await ensureInteractivity(page, UNDEFINED_ERROR_ID);
     await ensureInteractivity(page, DEFERRED_ID, 2);
     await ensureInteractivity(page, ROOT_ID, 2);
 
@@ -950,16 +979,13 @@ test.describe("aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       ////////////////////////////////////////////////////////////////////////////
       // 💿 Next, add files to this object, just like files in a real app,
       // `createFixture` will make an app and run your tests against it.
       ////////////////////////////////////////////////////////////////////////////
       files: {
         "app/entry.server.tsx": js`
-          import { PassThrough } from "stream";
+          import { PassThrough } from "node:stream";
           import type { AppLoadContext, EntryContext } from "@remix-run/node";
           import { Response } from "@remix-run/node";
           import { RemixServer } from "@remix-run/react";
@@ -1114,11 +1140,9 @@ test.describe("aborted", () => {
           import Counter from "~/components/counter";
           import Interactive from "~/components/interactive";
 
-          export const meta: MetaFunction = () => ({
-            charset: "utf-8",
-            title: "New Remix App",
-            viewport: "width=device-width, initial-scale=1",
-          });
+          export const meta: MetaFunction = () => {
+            return [{ title: "New Remix App" }];
+          };
 
           export const loader = () => defer({
             id: "${ROOT_ID}",
@@ -1129,6 +1153,8 @@ test.describe("aborted", () => {
             return (
               <html lang="en">
                 <head>
+                  <meta charSet="utf-8" />
+                  <meta name="viewport" content="width=device-width,initial-scale=1" />
                   <Meta />
                   <Links />
                 </head>
@@ -1244,7 +1270,7 @@ test.describe("aborted", () => {
       },
     });
 
-    // This creates an interactive app using puppeteer.
+    // This creates an interactive app using playwright.
     appFixture = await createAppFixture(fixture);
   });
 
@@ -1300,8 +1326,7 @@ function monitorConsole(page: Page) {
         let arg0 = await args[0].jsonValue();
         if (
           typeof arg0 === "string" &&
-          (arg0.includes("Download the React DevTools") ||
-            /DEPRECATED.*imagesizes.*imagesrcset/.test(arg0))
+          arg0.includes("Download the React DevTools")
         ) {
           continue;
         }

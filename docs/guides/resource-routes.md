@@ -20,7 +20,7 @@ If a route doesn't export a default component, it can be used as a Resource Rout
 
 For example, consider a UI Route that renders a report, note the link:
 
-```tsx filename=app/routes/reports/$id.js lines=[10-12]
+```tsx filename=app/routes/reports.$id.tsx lines=[10-12]
 export async function loader({ params }: LoaderArgs) {
   return json(await getReport(params.id));
 }
@@ -41,7 +41,7 @@ export default function Report() {
 
 It's linking to a PDF version of the page. To make this work we can create a Resource Route below it. Notice that it has no component: that makes it a Resource Route.
 
-```tsx filename=app/routes/reports/$id/pdf.tsx
+```tsx filename=app/routes/reports.$id.pdf.tsx
 export async function loader({ params }: LoaderArgs) {
   const report = await getReport(params.id);
   const pdf = await generateReportPDF(report);
@@ -71,14 +71,14 @@ To add a `.` to a route's path, use the `[]` escape characters. Our PDF route fi
 ```sh
 # original
 # /reports/123/pdf
-app/routes/reports/$id/pdf.ts
+app/routes/reports.$id.pdf.ts
 
 # with a file extension
 # /reports/123.pdf
-app/routes/reports/$id[.pdf].ts
+app/routes/reports.$id[.pdf].ts
 
 # or like this, the resulting URL is the same
-app/routes/reports/$id[.]pdf.ts
+app/routes/reports.$id[.]pdf.ts
 ```
 
 ## Handling different request methods
@@ -124,7 +124,7 @@ export const action = async ({ request }: ActionArgs) => {
 Resource routes can be used to handle webhooks. For example, you can create a webhook that receives notifications from GitHub when a new commit is pushed to a repository:
 
 ```tsx
-import crypto from "crypto";
+import crypto from "node:crypto";
 
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno

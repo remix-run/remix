@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { createFixture, createAppFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { PlaywrightFixture, selectHtml } from "./helpers/playwright-fixture";
+import {
+  createFixture,
+  createAppFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import { PlaywrightFixture, selectHtml } from "./helpers/playwright-fixture.js";
 
 test.describe("actions", () => {
   let fixture: Fixture;
@@ -17,15 +21,8 @@ test.describe("actions", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_routeConvention: true,
-          v2_errorBoundary: true,
-          v2_normalizeFormMethod: true,
-        },
-      },
       files: {
-        "app/routes/urlencoded.jsx": js`
+        "app/routes/urlencoded.tsx": js`
           import { Form, useActionData } from "@remix-run/react";
 
           export let action = async ({ request }) => {
@@ -50,7 +47,7 @@ test.describe("actions", () => {
           }
         `,
 
-        "app/routes/request-text.jsx": js`
+        "app/routes/request-text.tsx": js`
           import { Form, useActionData } from "@remix-run/react";
 
           export let action = async ({ request }) => {
@@ -112,10 +109,7 @@ test.describe("actions", () => {
 
   test.beforeEach(({ page }) => {
     page.on("console", (msg) => {
-      let text = msg.text();
-      if (!/DEPRECATED.*imagesizes.*imagesrcset/.test(text)) {
-        logs.push(text);
-      }
+      logs.push(msg.text());
     });
   });
 

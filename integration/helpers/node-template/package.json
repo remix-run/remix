@@ -2,6 +2,7 @@
   "name": "remix-template-remix",
   "private": true,
   "sideEffects": false,
+  "type": "module",
   "scripts": {
     "build": "node ../../../build/node_modules/@remix-run/dev/dist/cli.js build",
     "dev": "node ../../../build/node_modules/@remix-run/dev/dist/cli.js dev",
@@ -23,6 +24,6 @@
     "typescript": "0.0.0-local-version"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }

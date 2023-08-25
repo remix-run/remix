@@ -41,6 +41,7 @@ ${Object.keys(config.routes)
     )};`;
   })
   .join("\n")}
+  export const mode = ${JSON.stringify(options.mode)};
   export { default as assets } from ${JSON.stringify(
     assetsManifestVirtualModule.id
   )};
@@ -50,13 +51,6 @@ ${Object.keys(config.routes)
   export const future = ${JSON.stringify(config.future)};
   export const publicPath = ${JSON.stringify(config.publicPath)};
   export const entry = { module: entryServer };
-  ${
-    options.devOrigin
-      ? `export const dev = ${JSON.stringify({
-          port: options.devOrigin.port,
-        })}`
-      : ""
-  }
   export const routes = {
     ${Object.keys(config.routes)
       .map((key, index) => {

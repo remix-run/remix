@@ -1,26 +1,25 @@
 import { test, expect } from "@playwright/test";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 
 test.describe("ErrorBoundary", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
   let _consoleError: any;
-  let errorLogs: string[];
+  let errorLogs: any[];
 
   test.beforeAll(async () => {
     _consoleError = console.error;
-    console.error = (whatever) => {
-      errorLogs.push(String(whatever));
-    };
+    console.error = (v) => errorLogs.push(v);
 
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
         export default function Root() {
@@ -39,7 +38,7 @@ test.describe("ErrorBoundary", () => {
         }
         `,
 
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           import { Link, Form } from "@remix-run/react";
 
           export default function () {
@@ -104,8 +103,10 @@ test.describe("ErrorBoundary", () => {
     appFixture.close();
   });
 
-  function assertConsoleError(str: string) {
-    expect(errorLogs[0]).toEqual(str);
+  function assertLoggedErrorInstance(message: string) {
+    let error = errorLogs[0] as Error;
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toEqual(message);
   }
 
   test("returns a 400 x-remix-error on a data fetch to a path with no loader", async () => {
@@ -113,8 +114,9 @@ test.describe("ErrorBoundary", () => {
     expect(response.status).toBe(400);
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
-    assertConsoleError(
-      'Error: You made a GET request to "/" but did not provide a `loader` for route "routes/_index", so there is no way to handle the request.'
+    expect(errorLogs[0]).toBeInstanceOf(Error);
+    assertLoggedErrorInstance(
+      'You made a GET request to "/" but did not provide a `loader` for route "routes/_index", so there is no way to handle the request.'
     );
   });
 
@@ -125,8 +127,8 @@ test.describe("ErrorBoundary", () => {
     expect(response.status).toBe(405);
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
-    assertConsoleError(
-      'Error: You made a POST request to "/" but did not provide an `action` for route "routes/_index", so there is no way to handle the request.'
+    assertLoggedErrorInstance(
+      'You made a POST request to "/" but did not provide an `action` for route "routes/_index", so there is no way to handle the request.'
     );
   });
 
@@ -146,8 +148,8 @@ test.describe("ErrorBoundary", () => {
     expect(response.status).toBe(403);
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
-    assertConsoleError(
-      'Error: Route "routes/loader-return-json" does not match URL "/"'
+    assertLoggedErrorInstance(
+      'Route "routes/loader-return-json" does not match URL "/"'
     );
   });
 
@@ -158,8 +160,8 @@ test.describe("ErrorBoundary", () => {
     expect(response.status).toBe(403);
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
-    assertConsoleError(
-      'Error: Route "routes/loader-return-json" does not match URL "/"'
+    assertLoggedErrorInstance(
+      'Route "routes/loader-return-json" does not match URL "/"'
     );
   });
 
@@ -168,6 +170,6 @@ test.describe("ErrorBoundary", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
-    assertConsoleError('Error: No route matches URL "/i/match/nothing"');
+    assertLoggedErrorInstance('No route matches URL "/i/match/nothing"');
   });
 });
