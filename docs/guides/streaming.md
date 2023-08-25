@@ -23,8 +23,8 @@ There are three steps to streaming data:
 
 **Manual Setup Needed?:** If your project began from scratch or used an older template, verify `entry.server.tsx` and `entry.client.tsx` have streaming support. If you don't see these files then you are using the defaults and streaming is supported. If you have created your own entries, the following are the template defaults for your reference:
 
-- [entry.client.tsx](https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/entry.client.react-stream.tsx)
-- [entry.server.tsx](https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/node/entry.server.react-stream.tsx)
+- [entry.client.tsx][entry-client-tsx]
+- [entry.server.tsx][entry-server-tsx]
 
 ## 2. Component Setup
 
@@ -139,3 +139,5 @@ export async function loader({ params }) {
 [react-lazy]: https://reactjs.org/docs/code-splitting.html#reactlazy
 [web-streaming-api]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
 [graphs-showing-how-document-and-slow-data-requests-sent-over-the-same-response-significantly-speed-up-the-largest-contentful-paint]: https://user-images.githubusercontent.com/12063586/179609347-36bd7d32-c8af-4e24-9e89-06d9abc0a19f.svg
+[entry-client-tsx]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/entry.client.react-stream.tsx
+[entry-server-tsx]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/node/entry.server.react-stream.tsx
