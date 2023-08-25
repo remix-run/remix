@@ -9,7 +9,12 @@ import type {
   UNSAFE_DeferredData as DeferredData,
   TrackedPromise,
 } from "@remix-run/router";
-import type { LinkProps, NavLinkProps, Params } from "react-router-dom";
+import type {
+  FetcherWithComponents,
+  LinkProps,
+  NavLinkProps,
+  Params,
+} from "react-router-dom";
 import {
   Await as AwaitRR,
   Link as RouterLink,
@@ -19,6 +24,7 @@ import {
   matchRoutes,
   useAsyncError,
   useActionData as useActionDataRR,
+  useFetcher as useFetcherRR,
   useLoaderData as useLoaderDataRR,
   useRouteLoaderData as useRouteLoaderDataRR,
   useLocation,
@@ -1024,6 +1030,18 @@ export function useRouteLoaderData<T = AppData>(
  */
 export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   return useActionDataRR() as SerializeFrom<T> | undefined;
+}
+
+/**
+ * Interacts with route loaders and actions without causing a navigation. Great
+ * for any interaction that stays on the same page.
+ *
+ * @see https://remix.run/hooks/use-fetcher
+ */
+export function useFetcher<TData = any>(): FetcherWithComponents<
+  SerializeFrom<TData>
+> {
+  return useFetcherRR();
 }
 
 // Dead Code Elimination magic for production builds.
