@@ -24,19 +24,22 @@ If you're interested in contributing code and/or documentation, please see [our 
 ## Code of Conduct
 
 Please see our [code of conduct](CODE_OF_CONDUCT.md) for any questions about the kind of community we are trying to build here and what to do if you need help with someone who is not acting professionally.
+
 # Below is an Example Project of Developers Release of Remix-ESBUILD formatted in JavaScript 
-`JavaScript
-Loader: js
-
-This loader is enabled by default for .js, .cjs, and .mjs files. The .cjs extension is used by node for CommonJS modules and the .mjs extension is used by node for ECMAScript modules.
-
-Note that by default, esbuild's output will take advantage of all modern JS features. For example, a !== void 0 && a !== null ? a : b will become a ?? b when minifying is enabled which makes use of syntax from the ES2020 version of JavaScript. If this is undesired, you must specify esbuild's target setting to say in which browsers you need the output to work correctly. Then esbuild will avoid using JavaScript features that are too modern for those browsers.
-
-All modern JavaScript syntax is supported by esbuild. Newer syntax may not be supported by older browsers, however, so you may want to configure the target option to tell esbuild to convert newer syntax to older syntax as appropriate.
-
-These syntax features are always transformed for older browsers:
-
-Syntax transform	Language version	Example
+`
+ # JavaScript
+  > ".$_remix.run-react_export.handler_Loader: js"
+".$_/This loader is enabled by default for .js, .cjs, and .mjs files. The .cjs extension is used by node for CommonJS modules and the .mjs extension is used by node for ECMAScript modules.
+ ** Note that by default, esbuild's output will take advantage of all modern JS features.
+> For example,
+> a !== void 0 && a !== null ?
+> a : b will become a ??
+> b when minifying is enabled which makes use of syntax from the ES2020 version of JavaScript.
+> If this is undesired, you must specify esbuild's target setting to say in which browsers you need the output to work correctly. Then esbuild will avoid using JavaScript features that are too modern for those browsers.
+> All modern JavaScript syntax is supported by esbuild. Newer syntax may not be supported by older browsers.
+> so you may want to configure the target option to tell esbuild to convert newer syntax to older syntax as appropriate.
+ ** These syntax features are always transformed for older browsers:
+"Syntax transform	Language version	Example
 Trailing commas in function parameter lists and calls	es2017	foo(a, b, )
 Numeric separators	esnext	1_000_000
 These syntax features are conditionally transformed for older browsers depending on the configured language target:
@@ -63,7 +66,7 @@ Ergonomic brand checks	es2022	#x in y
 Class static blocks	es2022	class { static {} }
 Import assertions	esnext	import "x" assert {}
 Auto-accessors	esnext	class { accessor x }
-using declarations	esnext	using x = y
+using declarations	esnext	using x = y"
 These syntax features are currently always passed through un-transformed:
 
 Syntax transform	Unsupported when --target is below	Example
@@ -684,4 +687,5 @@ Loader: empty
 This loader tells tells esbuild to pretend that a file is empty. It can be a helpful way to remove content from your bundle in certain situations. For example, you can configure .css files to load with empty to prevent esbuild from bundling CSS files that are imported into JavaScript files:
 
 esbuild app.js --bundle --loader:.css=empty
-This loader also lets you remove imported assets from CSS files. For example, you can configure .png files to load with empty so that references to .png files in CSS code such as url(image.png) are replaced with url().`
+This loader also lets you remove imported assets from CSS files. For example, you can configure .png files to load with empty so that references to .png files in CSS code such as url(image.png) are replaced with url()."
+`
