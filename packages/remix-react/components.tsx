@@ -1173,5 +1173,3 @@ function mergeRefs<T = any>(
     });
   };
 }
-
-// temp comment to trigger GH workflows
