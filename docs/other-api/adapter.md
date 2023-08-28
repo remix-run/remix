@@ -30,7 +30,7 @@ Each adapter has the same API. In the future we may have helpers specific to the
 - [`@mcansh/remix-fastify`][remix-fastify] - For [Fastify][fastify].
 - [`@mcansh/remix-raw-http`][remix-raw-http] - For a good ol barebones Node server.
 - [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
-- [`PartyMix`][partymix] - For [PartyKit][partykit].
+- [`partymix`][partymix] - For [PartyKit][partykit].
 
 ## Creating an Adapter
 
