@@ -378,7 +378,10 @@ export async function readConfig(
         // https://github.com/nodejs/node/issues/35889
         appConfigModule = require(configFile);
       } else {
-        appConfigModule = await import(pathToFileURL(configFile).href);
+        let stat = fse.statSync(configFile);
+        appConfigModule = await import(
+          pathToFileURL(configFile).href + "?t=" + stat.mtimeMs
+        );
       }
       appConfig = appConfigModule?.default || appConfigModule;
     } catch (error: unknown) {
