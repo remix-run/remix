@@ -317,7 +317,9 @@ async function copyTempDirToAppDirStep(ctx: Context) {
 
   let files1 = await getDirectoryFilesRecursive(ctx.tempDir);
   let files2 = await getDirectoryFilesRecursive(ctx.cwd);
-  let collisions = files1.filter((f) => files2.includes(f));
+  let collisions = files1
+    .filter((f) => files2.includes(f))
+    .sort((a, b) => a.localeCompare(b));
 
   if (collisions.length > 0) {
     let getFileList = (prefix: string) => {
