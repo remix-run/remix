@@ -4,7 +4,7 @@ title: Form
 
 # `<Form>`
 
-The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mind-shift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
+A progressively enhanced HTML `<form>` wrapper, useful for submissions that should also change the URL or otherwise add an entry to the browser history stack. For forms that shouldn't manipulate the browser history stack, use [`<fetcher.Form>`](../hooks/use-fetcher).
 
 ```tsx
 import { Form } from "@remix-run/react";
@@ -19,22 +19,55 @@ function NewEvent() {
 }
 ```
 
-- Whether JavaScript is on the page or not, your data interactions created with `<Form>` and `action` will work.
-- After a `<Form>` submission, all the loaders on the page will be reloaded. This ensures that any updates to your data are reflected in the UI.
-- `<Form>` automatically serializes your form's values (identically to the browser when not using JavaScript).
-- You can build "optimistic UI" and pending indicators with [`useNavigation`][usenavigation].
-
 ## Props
 
 ### `action`
 
-Most of the time you can omit this prop. Forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered. This makes collocating your component, your data reads, and your data writes a snap.
+The URL to submit the form data to.
 
-If you need to post to a different route, then add an action prop:
+If `undefined`, the action defaults to the closest route in context. If a parent route renders a `<Form>` but the URL matches deeper child routes, the form will post to the parent route. Likewise, a form inside the child route will post to the child route. This differs from a native `<form>` that will always point to the full URL.
+
+### `method`
+
+This determines the [HTTP verb][http-verb] to be used: get, post, put, patch, delete. The default is "get".
 
 ```tsx
-<Form action="/projects/new" method="post" />
+<Form method="post" />
 ```
+
+Native `<form>` only supports GET and POST, so you should avoid the other verbs if you'd like to support [progressive enhancement](../discussion/06-progressive-enhancement)
+
+### `encType`
+
+The encoding type to use for the form submission.
+
+```tsx
+<Form encType="multipart/form-data" />
+```
+
+Defaults to `application/x-www-form-urlencoded`, use `multipart/form-data` for file uploads.
+
+### `replace`
+
+Replaces the current entry in the history stack, instead of pushing the new entry.
+
+```tsx
+<Form replace />
+```
+
+### `reloadDocument`
+
+If true, it will submit the form with the browser instead of client side routing. The same as a native `<form>`.
+
+```tsx
+<Form reloadDocument />
+```
+
+This is recommended over `<form />`. When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is since `<form>` uses the current URL as the default, but `<Form>` uses the URL for the route the form is rendered in.
+
+## Notes
+
+### `?index`
 
 Because index routes and their parent route share the same URL, the `?index` param is used to differentiate between them.
 
@@ -50,44 +83,6 @@ Because index routes and their parent route share the same URL, the `?index` par
 See also:
 
 - [`?index` query param][index query param]
-
-### `method`
-
-This determines the [HTTP verb][http-verb] to be used: get, post, put, patch, delete. The default is "get".
-
-```tsx
-<Form method="post" />
-```
-
-Native `<form>` only supports get and post, so if you want your form to work with JavaScript on or off the page you'll need to stick with those two.
-
-Without JavaScript, Remix will turn non-get requests into "post", but you'll still need to instruct your server with a hidden input like `<input type="hidden" name="_method" value="delete" />`. If you always include JavaScript, you don't need to worry about this.
-
-We generally recommend sticking with "get" and "post" because the other verbs are not supported by HTML.
-
-### `encType`
-
-Defaults to `application/x-www-form-urlencoded`, use `multipart/form-data` for file uploads.
-
-### `replace`
-
-```tsx
-<Form replace />
-```
-
-Instructs the form to replace the current entry in the history stack, instead of pushing the new entry. If you expect a form to be submitted multiple times you may not want the user to have to click "back" for every submission to get to the previous page.
-
-This has no effect without JavaScript on the page.
-
-### `reloadDocument`
-
-If true, it will submit the form with the browser instead of JavaScript, even if JavaScript is on the page, the same as a native `<form>`.
-
-```tsx
-<Form reloadDocument />
-```
-
-This is recommended over `<form />`. When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is since `<form>` uses the current URL as the default, but `<Form>` uses the URL for the route the form is rendered in.
 
 ## Additional Resources
 
