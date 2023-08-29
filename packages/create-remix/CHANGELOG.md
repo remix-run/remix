@@ -1,5 +1,11 @@
 # `create-remix`
 
+## 2.0.0-pre.2
+
+### Patch Changes
+
+- Allow dots in github repo shorthand notation folder names (i.e., `npx create-remix --template remix-run/examples/socket.io`) ([#7277](https://github.com/remix-run/remix/pull/7277))
+
 ## 2.0.0-pre.1
 
 ## 2.0.0-pre.0
