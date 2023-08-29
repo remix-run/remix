@@ -51,8 +51,8 @@ describe("meta", () => {
     expect(getHtml(container)).toMatchInlineSnapshot(`
       "<div>
         <meta
-          content=\\"This is a meta page\\"
-          name=\\"description\\"
+          content="This is a meta page"
+          name="description"
         />
         <title>
           Meta Page
@@ -127,7 +127,7 @@ describe("meta", () => {
     expect(getHtml(container)).toMatchInlineSnapshot(`
       "<div>
         <meta
-          charset=\\"utf-8\\"
+          charset="utf-8"
         />
         <title>
           Child title
@@ -153,7 +153,7 @@ describe("meta", () => {
     expect(getHtml(container)).toMatchInlineSnapshot(`
       "<div>
         <meta
-          charset=\\"utf-8\\"
+          charset="utf-8"
         />
       </div>"
     `);
@@ -195,11 +195,11 @@ describe("meta", () => {
     expect(getHtml(container)).toMatchInlineSnapshot(`
       "<div>
         <meta
-          content=\\"https://picsum.photos/200/200\\"
-          property=\\"og:image\\"
+          content="https://picsum.photos/200/200"
+          property="og:image"
         />
         <meta
-          property=\\"og:type\\"
+          property="og:type"
         />
       </div>"
     `);
@@ -261,8 +261,8 @@ describe("meta", () => {
     expect(getHtml(container)).toMatchInlineSnapshot(`
       "<div>
         <link
-          href=\\"https://website.com/authors/1\\"
-          rel=\\"canonical\\"
+          href="https://website.com/authors/1"
+          rel="canonical"
         />
       </div>"
     `);
