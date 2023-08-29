@@ -99,7 +99,6 @@ Cookies have [several attributes][cookie-attrs] that control when they expire, h
 ```ts
 const cookie = createCookie("user-prefs", {
   // These are defaults for this cookie.
-  domain: "remix.run",
   path: "/",
   sameSite: "lax",
   httpOnly: true,
@@ -165,7 +164,6 @@ import { createCookie } from "@remix-run/node"; // or cloudflare/deno
 
 const cookie = createCookie("cookie-name", {
   // all of these are optional defaults that can be overridden at runtime
-  domain: "remix.run",
   expires: new Date(Date.now() + 60_000),
   httpOnly: true,
   maxAge: 60,

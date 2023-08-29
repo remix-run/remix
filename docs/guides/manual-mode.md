@@ -264,19 +264,19 @@ That includes things like database connections, caches, in-memory data structure
 
 Here's a utility that remembers any in-memory values you want to keep around across rebuilds:
 
-```ts filename=app/utils/remember.ts
-// adapted from https://github.com/jenseng/abuse-the-platform/blob/main/app/utils/singleton.ts
-// thanks @jenseng!
+```ts filename=app/utils/singleton.server.ts
+// Borrowed & modified from https://github.com/jenseng/abuse-the-platform/blob/main/app/utils/singleton.ts
+// Thanks @jenseng!
 
-export function remember<T>(
-  key: string,
-  getValue: () => T
-) {
+export const singleton = <Value>(
+  name: string,
+  valueFactory: () => Value
+): Value => {
   const g = global as any;
-  g.__remember ??= {};
-  g.__remember[key] ??= getValue();
-  return g.__remember[key];
-}
+  g.__singletons ??= {};
+  g.__singletons[name] ??= valueFactory();
+  return g.__singletons[name];
+};
 ```
 
 For example, to reuse a Prisma client across rebuilds:
@@ -284,10 +284,13 @@ For example, to reuse a Prisma client across rebuilds:
 ```ts filename=app/db.server.ts
 import { PrismaClient } from "@prisma/client";
 
-import { remember } from "~/utils/remember";
+import { singleton } from "~/utils/singleton.server";
 
 // hard-code a unique key so we can look up the client when this module gets re-imported
-export const db = remember("db", () => new PrismaClient());
+export const db = singleton(
+  "prisma",
+  () => new PrismaClient()
+);
 ```
 
 [mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
