@@ -1,5 +1,7 @@
 # `create-remix`
 
+## 2.0.0-pre.1
+
 ## 2.0.0-pre.0
 
 ### Major Changes
