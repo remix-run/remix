@@ -66,3 +66,4 @@ npx create-remix@latest
 </docs-cards>
 
 [git-hub]: https://github.com/remix-run/remix
+npx create-remix@latest 🥇<openworkspacesource@gmail>
