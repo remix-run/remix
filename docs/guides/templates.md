@@ -72,11 +72,14 @@ npx create-remix@latest --template :username/:repo
 
 For a less opinionated starting point, you can also just use a regular template.
 
-The Remix repo provides a set of [templates for different environments.][official-templates]
+The Remix repo provides a set of [templates for different environments.][official-templates]. You can use these templates by passing a GitHub shorthand to the `--template` option:
 
-We also provide a [community-driven examples repository,][examples] with each example showcasing different Remix features, patterns, tools, hosting providers, etc.
+```sh
+npx create-remix@latest --template remix-run/remix/templates/remix-javascript
+npx create-remix@latest --template remix-run/remix/templates/express
+```
 
-You can use these templates and examples by passing a GitHub shorthand to the `--template` option when running `create-remix`, for example:
+We also provide a [community-driven examples repository,][examples] with each example showcasing different Remix features, patterns, tools, hosting providers, etc. You can use these in a similar manner:
 
 ```sh
 npx create-remix@latest --template remix-run/examples/basic
