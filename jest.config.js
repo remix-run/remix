@@ -24,7 +24,7 @@ module.exports = {
     "packages/remix-testing",
   ],
   reporters:
-    process.env.GITHUB_ACTIONS === null
+    process.env.GITHUB_ACTIONS == null
       ? ["default"]
       : [["github-actions", { silent: false }], "summary"],
   watchPlugins: [
