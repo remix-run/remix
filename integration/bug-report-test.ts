@@ -62,14 +62,18 @@ test.beforeAll(async () => {
         import { useLoaderData, Link } from "@remix-run/react";
 
         export function loader() {
-          return json("pizza");
+          return json(Date.now());
         }
+
+        export const shouldRevalidate = () => {
+          return false;
+        };
 
         export default function Index() {
           let data = useLoaderData();
           return (
             <div>
-              {data}
+              <pre id="last-call">{data}</pre>
               <Link to="/burgers">Other Route</Link>
             </div>
           )
@@ -77,8 +81,12 @@ test.beforeAll(async () => {
       `,
 
       "app/routes/burgers.jsx": js`
+        import { Link } from "@remix-run/react";
+
         export default function Index() {
-          return <div>cheeseburger</div>;
+          return <div>
+            <Link to="..">Back</Link>
+          </div>;
         }
       `,
     },
@@ -97,16 +105,24 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("should skip loader and call shouldRevalidate", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await app.goto("/", true);
+
+  await page.waitForSelector("#loading", { state: "hidden" });
+  let lastCallCheer = await app.getElement("#last-call");
+  let lastCall = lastCallCheer.text();
+
+  await app.clickLink("/burgers", { wait: true });
+
+  await app.clickLink("/", { wait: true });
+  await page.waitForSelector("#loading", { state: "hidden" });
+
+  let latestCallCheer = await app.getElement("#last-call");
+  let latestCall = latestCallCheer.text();
+
+  expect(lastCall).toMatch(latestCall);
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
