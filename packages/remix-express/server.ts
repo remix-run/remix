@@ -87,7 +87,11 @@ export function createRemixRequest(
   req: express.Request,
   res: express.Response
 ): Request {
-  let url = new URL(`${req.protocol}://${req.hostname}${req.url}`);
+  let [, port] = req.get("host")?.split(":") ?? [];
+  // Use req.hostname here as it respects the "trust proxy" setting
+  // but unfortunately doesn't include any port information
+  let resolvedHost = `${req.hostname}${port ? `:${port}` : ""}`;
+  let url = new URL(`${req.protocol}://${resolvedHost}${req.url}`);
 
   // Abort action/loaders once we can no longer write a response
   let controller = new AbortController();
