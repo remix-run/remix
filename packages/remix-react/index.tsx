@@ -13,6 +13,7 @@ export type {
   Params,
   Path,
   ShouldRevalidateFunction,
+  ShouldRevalidateFunctionArgs,
   SubmitFunction,
   SubmitOptions,
   unstable_Blocker,
