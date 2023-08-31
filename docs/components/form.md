@@ -4,7 +4,7 @@ title: Form
 
 # `<Form>`
 
-A progressively enhanced HTML `<form>` wrapper, useful for submissions that should also change the URL or otherwise add an entry to the browser history stack. For forms that shouldn't manipulate the browser history stack, use [`<fetcher.Form>`](../hooks/use-fetcher).
+A progressively enhanced HTML `<form>` wrapper, useful for submissions that should also change the URL or otherwise add an entry to the browser history stack. For forms that shouldn't manipulate the browser history stack, use [`<fetcher.Form>`][fetcher-form].
 
 ```tsx
 import { Form } from "@remix-run/react";
@@ -35,7 +35,7 @@ This determines the [HTTP verb][http-verb] to be used: get, post, put, patch, de
 <Form method="post" />
 ```
 
-Native `<form>` only supports GET and POST, so you should avoid the other verbs if you'd like to support [progressive enhancement](../discussion/06-progressive-enhancement)
+Native `<form>` only supports GET and POST, so you should avoid the other verbs if you'd like to support [progressive enhancement][progressive-enhancement]
 
 ### `encType`
 
@@ -116,3 +116,5 @@ See also:
 [fullstack-data-flow]: ../discussion/03-data-flow
 [pending-ui]: ../discussion/07-pending-ui
 [form-vs-fetcher]: ../discussion/10-form-vs-fetcher
+[fetcher-form]: ../hooks/use-fetcher
+[progressive-enhancement]: ../discussion/06-progressive-enhancement
