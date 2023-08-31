@@ -1,9 +1,4 @@
-import type {
-  ActionFunction,
-  ActionFunctionArgs,
-  LoaderFunction,
-  LoaderFunctionArgs,
-} from "@remix-run/router";
+import type { ActionFunction, LoaderFunction } from "@remix-run/router";
 
 import {
   redirect,
@@ -12,6 +7,7 @@ import {
   isResponse,
   isRedirectStatusCode,
 } from "./responses";
+import type { DataFunctionArgs } from "./routeModules";
 
 /**
  * An unknown type for route loaders and actions provided by the server's
