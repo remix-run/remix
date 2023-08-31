@@ -5,6 +5,18 @@ toc: false
 
 # `<Outlet>`
 
-<docs-info>This component is simply a re-export of [React Router's `Outlet`][rr-outlet].</docs-info>
+Renders the matching child route of a parent route.
 
-[rr-outlet]: https://reactrouter.com/components/outlet
+```tsx
+import { Outlet } from "@remix-run/react";
+
+export function SomeParent() {
+  return (
+    <div>
+      <h1>Parent Content</h1>
+
+      <Outlet />
+    </div>
+  );
+}
+```
