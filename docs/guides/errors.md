@@ -74,7 +74,7 @@ export function loader() {
 }
 
 export function ErrorBoundary() {
-  let error = useRouteError();
+  const error = useRouteError();
   // When NODE_ENV=production:
   // error.message = "Unexpected Server Error"
   // error.stack = undefined
@@ -95,7 +95,7 @@ export function loader() {
 }
 
 export function ErrorBoundary() {
-  let error = useRouteError();
+  const error = useRouteError();
   if (isRouteErrorResponse(error)) {
     // error.status = 500
     // error.data = "Oh no! Something went wrong!"
