@@ -61,3 +61,48 @@ If a route doesn't have an error boundary, the error "bubbles up" to the closest
 
 [error-boundary]: ../route/error-boundary
 [error-in-a-nested-route-where-the-parent-route-s-navigation-renders-normally]: /docs-images/error-boundary.png
+
+## Error Sanitization
+
+In production mode, any errors that happen on the server are automatically sanitized to prevent leaking any sensitive server information (such as stack traces) to the client. This means that the `Error` instance you receive from `useRouteError` will have a generic message and no stack trace:
+
+```jsx
+export function loader() {
+  if (badConditionIsTrue()) {
+    throw new Error("Oh no! Something went wrong!");
+  }
+}
+
+export function ErrorBoundary() {
+  let error = useRouteError();
+  // When NODE_ENV=production:
+  // error.message = "Unexpected Server Error"
+  // error.stack = undefined
+}
+```
+
+If you need to log these errors or report then to a third-party service such as [Sentry][sentry] or [BugSnag][bugsnag], then you can do this through a [`handleError`][handleerror] export in your `entry.server.js`. This method receives the un-sanitized versions of the error since it it also running on the server.
+
+If you want to trigger an error boundary and display a specific message or data in the browser, then you can throw a `Response` from a `loader`/`action` with that data instead:
+
+```jsx
+export function loader() {
+  if (badConditionIsTrue()) {
+    throw new Response("Oh no! Something went wrong!", {
+      status: 500,
+    });
+  }
+}
+
+export function ErrorBoundary() {
+  let error = useRouteError();
+  if (isRouteErrorResponse(error)) {
+    // error.status = 500
+    // error.data = "Oh no! Something went wrong!"
+  }
+}
+```
+
+[handleerror]: ../file-conventions/entry.server#handleerror
+[sentry]: https://sentry.io/
+[bugsnag]: https://www.bugsnag.com/
