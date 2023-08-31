@@ -12,7 +12,9 @@ import { Link } from "@remix-run/react";
 <Link to="/dashboard">Dashboard</Link>;
 ```
 
-## `prefetch`
+## Props
+
+### `prefetch`
 
 Defines the data and module prefetching behavior for the link.
 
@@ -43,7 +45,7 @@ Prefetching is done with HTML `<link rel="prefetch">` tags. They are inserted af
 
 Because of this, if you are using `nav :last-child` you will need to use `nav :last-of-type` so the styles don't conditionally fall off your last link (and any other similar selectors).
 
-## `preventScrollReset`
+### `preventScrollReset`
 
 If you are using [`<ScrollRestoration>`][scroll-restoration], this lets you prevent the scroll position from being reset to the top of the window when the link is clicked.
 
@@ -85,7 +87,7 @@ An example when you might want this behavior is a list of tabs that manipulate t
 
 </details>
 
-## `relative`
+### `relative`
 
 Defines the relative path behavior for the link.
 
@@ -98,7 +100,7 @@ Defines the relative path behavior for the link.
 - **route** - default, relative to the route hierarchy so `..` will remove all URL segments of the current route pattern
 - **path** - relative to the path so `..` will remove one URL segment
 
-## `reloadDocument`
+### `reloadDocument`
 
 Will use document navigation instead of client side routing when the link is clicked, the browser will handle the transition normally (as if it were an `<a href>`).
 
@@ -106,7 +108,7 @@ Will use document navigation instead of client side routing when the link is cli
 <Link to="/logout" reloadDocument />
 ```
 
-## `replace`
+### `replace`
 
 The `replace` prop will replace the current entry in the history stack instead of pushing a new one onto it.
 
@@ -125,7 +127,7 @@ A -> B -> C
 A -> C
 ```
 
-## `state`
+### `state`
 
 Adds persistent client side routing state to the next location.
 
