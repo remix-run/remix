@@ -45,7 +45,7 @@ Because of this, if you are using `nav :last-child` you will need to use `nav :l
 
 ## `preventScrollReset`
 
-If you are using [`<ScrollRestoration>`](./scroll-restoration), this lets you prevent the scroll position from being reset to the top of the window when the link is clicked.
+If you are using [`<ScrollRestoration>`][scroll-restoration], this lets you prevent the scroll position from being reset to the top of the window when the link is clicked.
 
 ```tsx
 <Link to="?tab=one" preventScrollReset />
@@ -142,6 +142,8 @@ function SomeComp() {
 }
 ```
 
-This state is inaccessible on the server as it is implemented on top of [`history.state`](https://developer.mozilla.org/en-US/docs/Web/API/History/state).
+This state is inaccessible on the server as it is implemented on top of [`history.state`][history-state].
 
 [rr-link]: https://reactrouter.com/en/main/components/link
+[scroll-restoration]: ./scroll-restoration
+[history-state]: https://developer.mozilla.org/en-US/docs/Web/API/History/state
