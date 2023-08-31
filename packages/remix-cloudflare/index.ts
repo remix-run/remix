@@ -27,8 +27,8 @@ export {
 } from "@remix-run/server-runtime";
 
 export type {
-  ActionArgs,
   ActionFunction,
+  ActionFunctionArgs,
   AppData,
   AppLoadContext,
   Cookie,
@@ -47,8 +47,8 @@ export type {
   JsonFunction,
   LinkDescriptor,
   LinksFunction,
-  LoaderArgs,
   LoaderFunction,
+  LoaderFunctionArgs,
   MemoryUploadHandlerFilterArgs,
   MemoryUploadHandlerOptions,
   HandleErrorFunction,

@@ -1,6 +1,14 @@
-import type { AgnosticRouteMatch, Location, Params } from "@remix-run/router";
+import type {
+  ActionFunction,
+  ActionFunctionArgs,
+  AgnosticRouteMatch,
+  LoaderFunction,
+  LoaderFunctionArgs,
+  Location,
+  Params,
+} from "@remix-run/router";
 
-import type { AppLoadContext, AppData } from "./data";
+import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { SerializeFrom } from "./serialize";
 
@@ -8,34 +16,7 @@ export interface RouteModules<RouteModule> {
   [routeId: string]: RouteModule;
 }
 
-/**
- * The arguments passed to ActionFunction and LoaderFunction.
- *
- * Note this is almost identical to React Router's version but over there the
- * context is optional since it's only there during static handler invocations.
- * Keeping Remix's own definition for now so it can differentiate between
- * client/server
- */
-export interface DataFunctionArgs {
-  request: Request;
-  context: AppLoadContext;
-  params: Params;
-}
-
-export type LoaderArgs = DataFunctionArgs;
-
-export type ActionArgs = DataFunctionArgs;
-
-/**
- * A function that handles data mutations for a route.
- */
-export interface ActionFunction {
-  (args: DataFunctionArgs):
-    | Promise<Response>
-    | Response
-    | Promise<AppData>
-    | AppData;
-}
+export type DataFunctionArgs = LoaderFunctionArgs | ActionFunctionArgs;
 
 export type HeadersArgs = {
   loaderHeaders: Headers;
@@ -58,17 +39,6 @@ export interface HeadersFunction {
  */
 export interface LinksFunction {
   (): LinkDescriptor[];
-}
-
-/**
- * A function that loads data for a route.
- */
-export interface LoaderFunction {
-  (args: DataFunctionArgs):
-    | Promise<Response>
-    | Response
-    | Promise<AppData>
-    | AppData;
 }
 
 /**
