@@ -5,7 +5,7 @@ toc: false
 
 # `<NavLink>`
 
-Wraps [`<Link>`](./link) with additional props for styling active and pending states.
+Wraps [`<Link>`][link-2] with additional props for styling active and pending states.
 
 ```tsx
 import { NavLink } from "@remix-run/react";
@@ -115,3 +115,4 @@ All other props of [`<Link>`][link] are supported.
 
 [aria-current]: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-current
 [link]: ./link
+[link-2]: ./link
