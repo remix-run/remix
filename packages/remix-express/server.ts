@@ -87,7 +87,7 @@ export function createRemixRequest(
   req: express.Request,
   res: express.Response
 ): Request {
-  let url = new URL(`${req.protocol}://${req.get("host")}${req.url}`);
+  let url = new URL(`${req.protocol}://${req.hostname}${req.url}`);
 
   // Abort action/loaders once we can no longer write a response
   let controller = new AbortController();
