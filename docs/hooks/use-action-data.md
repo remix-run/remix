@@ -32,7 +32,7 @@ export default function Invoices() {
 
 **Guides**
 
-- [Form Validation](../guides/form-validation)
+- [Form Validation][form-validation]
 
 **Related API**
 
@@ -41,8 +41,10 @@ export default function Invoices() {
 
 **Discussions**
 
-- [Fullstack Data Flow](../discussion/03-data-flow)
+- [Fullstack Data Flow][fullstack-data-flow]
 
 [action]: ../route/action
 [usenavigation]: ../hooks/use-navigation
 [rr-useactiondata]: https://reactrouter.com/hooks/use-action-data
+[form-validation]: ../guides/form-validation
+[fullstack-data-flow]: ../discussion/03-data-flow
