@@ -58,10 +58,15 @@ It's advisable to implement a redirect from the action to avoid unintended resub
 
 **Guides**
 
-- [Form Validation](../guides/form-validation)
+- [Form Validation][form-validation]
 
 **API**
 
-- [`<Form>`](../components/form)
-- [`useActionData`](../hooks/use-action-data)
-- [`redirect`](../utils/redirect)
+- [`<Form>`][form]
+- [`useActionData`][use-action-data]
+- [`redirect`][redirect]
+
+[form-validation]: ../guides/form-validation
+[form]: ../components/form
+[use-action-data]: ../hooks/use-action-data
+[redirect]: ../utils/redirect
