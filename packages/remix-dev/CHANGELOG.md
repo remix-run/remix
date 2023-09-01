@@ -264,10 +264,6 @@
 
 - allow non-development modes for remix watch ([#7117](https://github.com/remix-run/remix/pull/7117))
 - stop remix dev when esbuild is not running ([#7158](https://github.com/remix-run/remix/pull/7158))
-- Improve browser compatibility of minified CSS ([#7187](https://github.com/remix-run/remix/pull/7187))
-
-  We now minify CSS targeting the Remix browser support baseline (i.e. anything that supports [ES module scripts](https://caniuse.com/es6-module)), whereas previously CSS was minified using esbuild's default "esnext" target. This meant that CSS in the production build could be using properties that are unsupported in some browsers. This change also means you now have more control over CSS transformations using the built-in PostCSS support since they won't be reversed by esbuild's minification.
-
 - allow decorators in app code ([#7176](https://github.com/remix-run/remix/pull/7176))
 - allow jsx in js files during hmr ([#7112](https://github.com/remix-run/remix/pull/7112))
 - Support dependencies that import polyfill packages for Node built-ins via a trailing slash (e.g. importing the `buffer` package with `var Buffer = require('buffer/').Buffer` as recommended in their readme). These imports were previously marked as external. This meant that they were left as dynamic imports in the client bundle and would throw a runtime error in the browser (e.g. `Dynamic require of "buffer/" is not supported`). ([#7198](https://github.com/remix-run/remix/pull/7198))
