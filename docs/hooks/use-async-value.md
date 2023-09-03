@@ -24,7 +24,7 @@ function SomeDescendant() {
 
 **Guides**
 
-- [Streaming](../guides/streaming)
+- [Streaming][streaming]
 
 **API**
 
@@ -33,3 +33,4 @@ function SomeDescendant() {
 
 [await]: ../components/await
 [use_async_error]: ../hooks/use-async-error
+[streaming]: ../guides/streaming
