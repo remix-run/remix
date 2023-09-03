@@ -27,7 +27,7 @@ function ErrorElement() {
 
 **Guides**
 
-- [Streaming](../guides/streaming)
+- [Streaming][streaming]
 
 **API**
 
@@ -36,3 +36,4 @@ function ErrorElement() {
 
 [await]: ../components/await
 [use_async_value]: ../hooks/use-async-value
+[streaming]: ../guides/streaming
