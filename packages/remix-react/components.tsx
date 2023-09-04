@@ -976,7 +976,7 @@ function dedupe(array: any[]) {
 }
 
 // TODO: Can this be re-exported from RR?
-export interface RouteMatch {
+export interface RouteMatch<T = AppData> {
   /**
    * The id of the matched route
    */
@@ -994,7 +994,7 @@ export interface RouteMatch {
   /**
    * Any route data associated with the matched route
    */
-  data: any;
+  data: SerializeFrom<T>;
   /**
    * The exported `handle` object of the matched route.
    *
