@@ -1,10 +1,4 @@
-export type {
-  ActionFunction,
-  ActionFunctionArgs,
-  ErrorResponse,
-  LoaderFunction,
-  LoaderFunctionArgs,
-} from "@remix-run/router";
+export type { ErrorResponse } from "@remix-run/router";
 
 export type {
   HandleDataRequestFunction,
@@ -43,10 +37,14 @@ export type {
 export type { TypedDeferredData, TypedResponse } from "./responses";
 
 export type {
+  ActionFunction,
+  ActionFunctionArgs,
   DataFunctionArgs,
   HeadersArgs,
   HeadersFunction,
   LinksFunction,
+  LoaderFunction,
+  LoaderFunctionArgs,
   RouteHandle,
   ServerRuntimeMetaArgs,
   ServerRuntimeMetaDescriptor,
