@@ -54,9 +54,9 @@ export {
 
 export type {
   AwaitProps,
-  RouteMatch,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
+  UIMatch,
 } from "./components";
 export {
   Await,

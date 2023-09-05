@@ -6,7 +6,7 @@ import {
 /**
  * Data for a route that was returned from a `loader()`.
  */
-export type AppData = any;
+export type AppData = unknown;
 
 export function isCatchResponse(response: Response): boolean {
   return response.headers.get("X-Remix-Catch") != null;

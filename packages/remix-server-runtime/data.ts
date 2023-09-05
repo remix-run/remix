@@ -13,12 +13,12 @@ import type { DataFunctionArgs } from "./routeModules";
  * An unknown type for route loaders and actions provided by the server's
  * `getLoadContext()` function.
  */
-export type AppLoadContext = any;
+export type AppLoadContext = unknown;
 
 /**
  * Data for a route that was returned from a `loader()`.
  */
-export type AppData = any;
+export type AppData = unknown;
 
 export async function callRouteActionRR({
   loadContext,

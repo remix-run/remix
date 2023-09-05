@@ -1,9 +1,9 @@
 import type {
-  ActionFunction,
-  ActionFunctionArgs,
+  ActionFunction as RRActionFunction,
+  ActionFunctionArgs as RRActionFunctionArgs,
   AgnosticRouteMatch,
-  LoaderFunction,
-  LoaderFunctionArgs,
+  LoaderFunction as RRLoaderFunction,
+  LoaderFunctionArgs as RRLoaderFunctionArgs,
   Location,
   Params,
 } from "@remix-run/router";
@@ -16,6 +16,10 @@ export interface RouteModules<RouteModule> {
   [routeId: string]: RouteModule;
 }
 
+export type ActionFunctionArgs = RRActionFunctionArgs<unknown>;
+export type ActionFunction = RRActionFunction<unknown>;
+export type LoaderFunctionArgs = RRLoaderFunctionArgs<unknown>;
+export type LoaderFunction = RRLoaderFunction<unknown>;
 export type DataFunctionArgs = LoaderFunctionArgs | ActionFunctionArgs;
 
 export type HeadersArgs = {
@@ -118,7 +122,7 @@ interface ServerRuntimeMetaMatch<
   id: RouteId;
   pathname: AgnosticRouteMatch["pathname"];
   data: Loader extends LoaderFunction ? SerializeFrom<Loader> : unknown;
-  handle?: unknown;
+  handle?: RouteHandle;
   params: AgnosticRouteMatch["params"];
   meta: ServerRuntimeMetaDescriptor[];
   error?: unknown;
@@ -173,7 +177,7 @@ type LdJsonValue = LdJsonPrimitive | LdJsonObject | LdJsonArray;
 /**
  * An arbitrary object that is associated with a route.
  */
-export type RouteHandle = any;
+export type RouteHandle = unknown;
 
 export interface EntryRouteModule {
   ErrorBoundary?: any; // Weakly typed because server-runtime is not React-aware
