@@ -40,51 +40,55 @@ let appFixture: AppFixture;
 //    ```
 ////////////////////////////////////////////////////////////////////////////////
 
-test.beforeEach(async ({ context }) => {
-  await context.route(/_data/, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    route.continue();
-  });
-});
-
 test.beforeAll(async () => {
   fixture = await createFixture({
     config: {
-      future: { v2_routeConvention: true },
+      future: { v2_routeConvention: true, v2_errorBoundary: true },
     },
     ////////////////////////////////////////////////////////////////////////////
     // 💿 Next, add files to this object, just like files in a real app,
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
+      "app/customError.js": js`
+      export class CustomError extends Error {
+        // Implementation here doesn't matter for the test, however if looking
+        // for a use case, imagine a class that only shows the error message
+        // if in dev mode, or a class that links a tag to an error message
+        // which allows for a glossary of errors.
+        constructor(message) {
+          super(message);
+        }
+      }`,
+
       "app/routes/_index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import { useRouteError } from "@remix-run/react";
+        import { CustomError } from "../customError.js"
 
         export function loader() {
-          return json("pizza");
+          throw new CustomError("this should be a custom error");
         }
 
         export default function Index() {
-          let data = useLoaderData();
+          return null
+        }
+
+        export function ErrorBoundary() {
+          let error = useRouteError();
           return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+            <>
+              <h1>Index Error</h1>
+              <p>{"IS_SERVER:" + (typeof document === "undefined" ? "true" : "false")}</p>
+              <p>{"IS_INSTANCE_OF_ERROR:" + (error instanceof Error ? "true" : "false")}</p>
+              <p>{"IS_INSTANCE_OF_CUSTOM_ERROR:" + (error instanceof CustomError ? "true" : "false")}</p>
+            </>
+          );
         }
       `,
     },
   });
 
-  // This creates an interactive app using playwright.
+  // This creates an interactive app using puppeteer.
   appFixture = await createAppFixture(fixture);
 });
 
@@ -97,22 +101,21 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("keeps custom error instances", async ({ page }) => {
+  // NOTE: test methodology highly inspired by error-sanitization-test.ts
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  let html = await response.text();
+  expect(html).toMatch("<p>IS_SERVER:true");
+  expect(html).toMatch("<p>IS_INSTANCE_OF_ERROR:true");
+  expect(html).toMatch("<p>IS_INSTANCE_OF_CUSTOM_ERROR:true");
 
-  // If you need to test interactivity use the `app`
+  // hydrate
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  html = await app.getHtml();
+  expect(html).toMatch("<p>IS_SERVER:false");
+  expect(html).toMatch("<p>IS_INSTANCE_OF_ERROR:true");
+  expect(html).toMatch("<p>IS_INSTANCE_OF_CUSTOM_ERROR:true");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
