@@ -24,9 +24,13 @@ The fetchers don't contain `fetcher.Form`, `fetcher.submit`, or `fetcher.load`, 
 
 **Discussions**
 
-- [Form vs. Fetcher](../discussion/10-form-vs-fetcher)
-- [Pending, Optimistic UI](../discussion/07-pending-ui)
+- [Form vs. Fetcher][form-vs-fetcher]
+- [Pending, Optimistic UI][pending-optimistic-ui]
 
 **API**
 
-- [`useFetcher`](./use-fetcher)
+- [`useFetcher`][use-fetcher]
+
+[form-vs-fetcher]: ../discussion/10-form-vs-fetcher
+[pending-optimistic-ui]: ../discussion/07-pending-ui
+[use-fetcher]: ./use-fetcher
