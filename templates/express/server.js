@@ -13,13 +13,12 @@ import sourceMapSupport from "source-map-support";
 sourceMapSupport.install();
 installGlobals();
 
-const BUILD_PATH = url.pathToFileURL(
-  path.join(process.cwd(), "build", "index.js")
-);
+const BUILD_PATH = path.join(process.cwd(), "build", "index.js");
+const BUILD_PATH_URL = url.pathToFileURL(BUILD_PATH);
 /**
  * @type { import('@remix-run/node').ServerBuild | Promise<import('@remix-run/node').ServerBuild> }
  */
-let build = await import(BUILD_PATH);
+let build = await import(BUILD_PATH_URL);
 
 const app = express();
 
@@ -65,7 +64,7 @@ function createDevRequestHandler() {
   watcher.on("all", async () => {
     // 1. purge require cache && load updated server build
     const stat = fs.statSync(BUILD_PATH);
-    build = import(BUILD_PATH + "?t=" + stat.mtimeMs);
+    build = import(BUILD_PATH_URL + "?t=" + stat.mtimeMs);
     // 2. tell dev server that this app server is now ready
     broadcastDevReady(await build);
   });
