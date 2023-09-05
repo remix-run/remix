@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
 import { promisify } from "node:util";
-import fetch from "node-fetch";
+import { fetch } from "@remix-run/web-fetch";
 import gunzip from "gunzip-maybe";
 import tar from "tar-fs";
 import { ProxyAgent } from "proxy-agent";
@@ -28,9 +28,9 @@ export async function copyTemplate(
   /**
    * Valid templates are:
    * - local file or directory on disk
-   * - github owner/repo shorthand
-   * - github owner/repo/directory shorthand
-   * - full github repo URL
+   * - GitHub owner/repo shorthand
+   * - GitHub owner/repo/directory shorthand
+   * - full GitHub repo URL
    * - any tarball URL
    */
 
@@ -140,7 +140,7 @@ async function copyTemplateFromLocalFilePath(
     return false;
   }
   if (fs.statSync(filePath).isDirectory()) {
-    // If our template is just a directory on disk, return true here and we'll
+    // If our template is just a directory on disk, return true here, and we'll
     // just copy directly from there instead of "extracting" to a temp
     // directory first
     return true;
@@ -224,7 +224,7 @@ async function downloadAndExtractTarball(
     headers.Authorization = `token ${token}`;
   }
   if (isGithubReleaseAssetUrl(tarballUrl)) {
-    // We can download the asset via the github api, but first we need to look
+    // We can download the asset via the GitHub api, but first we need to look
     // up the asset id
     let info = getGithubReleaseAssetInfo(tarballUrl);
     headers.Accept = "application/vnd.github.v3+json";
@@ -297,7 +297,7 @@ async function downloadAndExtractTarball(
     );
   }
 
-  // file paths returned from github are always unix style
+  // file paths returned from GitHub are always unix style
   if (filePath) {
     filePath = filePath.split(path.sep).join(path.posix.sep);
   }
@@ -415,7 +415,7 @@ function getGithubReleaseAssetInfo(browserUrl: string): ReleaseAssetInfo {
   let [, owner, name, , downloadOrLatest, tag, asset] = url.pathname.split("/");
 
   if (downloadOrLatest === "latest" && tag === "download") {
-    // handle the Github URL quirk for latest releases
+    // handle the GitHub URL quirk for latest releases
     tag = "latest";
   }
 
