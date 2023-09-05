@@ -18,7 +18,7 @@ A feature of nested routing is the ability for several routes in the nested rout
 
 In some web applications, the sequential loading of data and assets can sometimes lead to an artificially slow user experience. Even when data dependencies aren't interdependent, they may be loaded sequentially because they are coupled to rendering hierarchy, creating an undesirable chain of requests.
 
-Remix leveraging its nested routing system to optimize load times. When a URL matches multiple routes, Remix will load the required data and assets for all matching routes in parallel. By doing this, Remix effectively sidesteps the conventional pitfall of chained request sequences.
+Remix leverages its nested routing system to optimize load times. When a URL matches multiple routes, Remix will load the required data and assets for all matching routes in parallel. By doing this, Remix effectively sidesteps the conventional pitfall of chained request sequences.
 
 This strategy, combined with modern browsers' capability to handle multiple concurrent requests efficiently, positions Remix as a front-runner in delivering highly responsive and swift web applications. It's not just about making your data fetching fast; it's about fetching it in an organized way to provide the best possible experience for the end user.
 
