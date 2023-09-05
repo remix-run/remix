@@ -2,6 +2,7 @@
 "@remix-run/cloudflare": major
 "@remix-run/deno": major
 "@remix-run/node": major
+"@remix-run/react": major
 "@remix-run/server-runtime": major
 ---
 
@@ -16,5 +17,5 @@ Remove/align Remix types with those used in React Router
 * `useMatches()[i].handle` type changed from `{ [k: string]: any }` to `unknown`
 * `AppLoadContext` type changed from `{ [k: string]: unknown }` to `unknown`
 * Make `LoaderFunctionArgs`/`ActionFunctionArgs` generic to accept a `context` type
-* Rename `LoaderFunction`/`ActionFunction` to `LoaderFunctionArgs`/`ActionFunctionArgs`
+* Rename `LoaderArgs`/`ActionArgs` to `LoaderFunctionArgs`/`ActionFunctionArgs`
 * Rename the `useMatches()` return type from `RouteMatch` to `UIMatch`

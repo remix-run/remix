@@ -982,7 +982,7 @@ export interface UIMatch<D = AppData> extends UIMatchRR<SerializeFrom<D>> {}
  * Returns the active route matches, useful for accessing loaderData for
  * parent/child routes or the route "handle" property
  *
- * @see https://remix.run/docs/hooks/use-matches
+ * @see https://remix.run/hooks/use-matches
  */
 export function useMatches(): UIMatch[] {
   return useMatchesRR() as UIMatch[];
