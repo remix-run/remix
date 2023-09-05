@@ -24,10 +24,15 @@ export default function Invoices() {
 
 **Discussions**
 
-- [Fullstack Data Flow](../discussion/03-data-flow)
-- [State Management](../discussion/08-state-management)
+- [Fullstack Data Flow][fullstack-data-flow]
+- [State Management][state-management]
 
 **API**
 
-- [`loader`](../route/loader)
-- [`useFetcher`](./use-fetcher)
+- [`loader`][loader]
+- [`useFetcher`][use-fetcher]
+
+[fullstack-data-flow]: ../discussion/03-data-flow
+[state-management]: ../discussion/08-state-management
+[loader]: ../route/loader
+[use-fetcher]: ./use-fetcher
