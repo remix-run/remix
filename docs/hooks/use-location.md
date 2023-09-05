@@ -36,4 +36,7 @@ The query string of the current URL.
 
 ### `location.state`
 
-The state value of the location created by [`<Link state>`](../components/link) or [`navigate`](./use-navigate).
+The state value of the location created by [`<Link state>`][link-state] or [`navigate`][navigate].
+
+[link-state]: ../components/link
+[navigate]: ./use-navigate
