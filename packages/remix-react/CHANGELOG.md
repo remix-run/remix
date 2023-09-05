@@ -1,5 +1,27 @@
 # `@remix-run/react`
 
+## 2.0.0-pre.7
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0-pre.7`
+
+## 2.0.0-pre.6
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0-pre.6`
+
+## 2.0.0-pre.5
+
+### Patch Changes
+
+- Re-Export `ShouldRevalidateFunctionArgs` type from React Router ([#7316](https://github.com/remix-run/remix/pull/7316))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0-pre.5`
+
 ## 2.0.0-pre.4
 
 ### Patch Changes

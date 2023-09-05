@@ -1,5 +1,26 @@
 # `@remix-run/cloudflare`
 
+## 2.0.0-pre.7
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0-pre.7`
+
+## 2.0.0-pre.6
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0-pre.6`
+
+## 2.0.0-pre.5
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0-pre.5`
+
 ## 2.0.0-pre.4
 
 ### Patch Changes

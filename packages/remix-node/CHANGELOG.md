@@ -1,5 +1,29 @@
 # `@remix-run/node`
 
+## 2.0.0-pre.7
+
+### Patch Changes
+
+- Update to latest web-std-io prereleases ([#7328](https://github.com/remix-run/remix/pull/7328))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0-pre.7`
+
+## 2.0.0-pre.6
+
+### Patch Changes
+
+- Remove `atob`/`btoa` polyfills in favor of built-in versions ([#7206](https://github.com/remix-run/remix/pull/7206))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0-pre.6`
+
+## 2.0.0-pre.5
+
+### Patch Changes
+
+- Add the rest of the Web Streams API to `installGlobals` ([#7321](https://github.com/remix-run/remix/pull/7321))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0-pre.5`
+
 ## 2.0.0-pre.4
 
 ### Patch Changes
