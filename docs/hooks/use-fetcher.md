@@ -82,6 +82,18 @@ You can know the state of the fetcher with `fetcher.state`. It will be one of:
 
 The returned response data from your loader or action is stored here. Once the data is set, it persists on the fetcher even through reloads and resubmissions (like calling `fetcher.load()` again after having already read the data).
 
+### `fetcher.formData`
+
+The `FormData` instance that was submitted to the server is stored here. This is useful for optimistic UIs.
+
+### `fetcher.formAction`
+
+The URL of the submission.
+
+### `fetcher.formMethod`
+
+The form method of the submission.
+
 ## Additional Resources
 
 **Discussions**
