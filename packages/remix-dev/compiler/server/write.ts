@@ -4,6 +4,8 @@ import fse from "fs-extra";
 
 import type { RemixConfig } from "../../config";
 
+let outputExtensions = [".js", ".mjs", ".cjs"];
+
 export async function write(
   config: RemixConfig,
   outputFiles: esbuild.OutputFile[]
@@ -11,7 +13,8 @@ export async function write(
   await fse.ensureDir(path.dirname(config.serverBuildPath));
 
   for (let file of outputFiles) {
-    if (file.path.endsWith(".js") || file.path.endsWith(".mjs")) {
+    let extension = path.extname(file.path);
+    if (outputExtensions.includes(extension)) {
       // fix sourceMappingURL to be relative to current path instead of /build
       let filename = file.path.substring(file.path.lastIndexOf(path.sep) + 1);
       let escapedFilename = filename.replace(/\./g, "\\.");
