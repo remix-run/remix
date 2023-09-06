@@ -976,7 +976,10 @@ function dedupe(array: any[]) {
   return [...new Set(array)];
 }
 
-export type UIMatch<D = AppData> = UIMatchRR<SerializeFrom<D>>;
+export type UIMatch<Data = AppData, Handle = unknown> = UIMatchRR<
+  SerializeFrom<Data>,
+  Handle
+>;
 
 /**
  * Returns the active route matches, useful for accessing loaderData for
@@ -984,8 +987,11 @@ export type UIMatch<D = AppData> = UIMatchRR<SerializeFrom<D>>;
  *
  * @see https://remix.run/hooks/use-matches
  */
-export function useMatches(): UIMatch[] {
-  return useMatchesRR() as UIMatch[];
+export function useMatches<Data = AppData, Handle = unknown>(): UIMatch<
+  Data,
+  Handle
+>[] {
+  return useMatchesRR() as UIMatch<Data, Handle>[];
 }
 
 /**
