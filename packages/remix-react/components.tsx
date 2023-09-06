@@ -976,7 +976,7 @@ function dedupe(array: any[]) {
   return [...new Set(array)];
 }
 
-export interface UIMatch<D = AppData> extends UIMatchRR<SerializeFrom<D>> {}
+export type UIMatch<D = AppData> = UIMatchRR<SerializeFrom<D>>;
 
 /**
  * Returns the active route matches, useful for accessing loaderData for
