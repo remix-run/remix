@@ -4,18 +4,18 @@ import type { SerializedError } from "./errors";
 import type { RouteManifest, ServerRouteManifest, EntryRoute } from "./routes";
 import type { RouteModules, EntryRouteModule } from "./routeModules";
 
-export interface EntryContext {
+export type EntryContext = {
   manifest: AssetsManifest;
   routeModules: RouteModules<EntryRouteModule>;
   serverHandoffString?: string;
   staticHandlerContext: StaticHandlerContext;
   future: FutureConfig;
   serializeError(error: Error): SerializedError;
-}
+};
 
-export interface FutureConfig {}
+export type FutureConfig = {};
 
-export interface AssetsManifest {
+export type AssetsManifest = {
   entry: {
     imports: string[];
     module: string;
@@ -24,7 +24,7 @@ export interface AssetsManifest {
   url: string;
   version: string;
   hmrRuntime?: string;
-}
+};
 
 export function createEntryRouteModules(
   manifest: ServerRouteManifest

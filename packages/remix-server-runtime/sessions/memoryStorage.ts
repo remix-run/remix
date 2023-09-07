@@ -6,13 +6,13 @@ import type {
   FlashSessionData,
 } from "../sessions";
 
-interface MemorySessionStorageOptions {
+type MemorySessionStorageOptions = {
   /**
    * The Cookie used to store the session id on the client, or options used
    * to automatically create one.
    */
   cookie?: SessionIdStorageStrategy["cookie"];
-}
+};
 
 export type CreateMemorySessionStorageFunction = <
   Data = SessionData,

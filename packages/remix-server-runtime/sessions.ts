@@ -7,16 +7,16 @@ import { warnOnce } from "./warnings";
 /**
  * An object of name/value pairs to be used in the session.
  */
-export interface SessionData {
+export type SessionData = {
   [name: string]: any;
-}
+};
 
 /**
  * Session persists data across HTTP requests.
  *
  * @see https://remix.run/utils/sessions#session-api
  */
-export interface Session<Data = SessionData, FlashData = Data> {
+export type Session<Data = SessionData, FlashData = Data> = {
   /**
    * A unique identifier for this session.
    *
@@ -67,7 +67,7 @@ export interface Session<Data = SessionData, FlashData = Data> {
    * Removes a value from the session.
    */
   unset(name: keyof Data & string): void;
-}
+};
 
 export type FlashSessionData<Data, FlashData> = Partial<
   Data & {
@@ -168,7 +168,7 @@ export const isSession: IsSessionFunction = (object): object is Session => {
  * A SessionStorage creates Session objects using a `Cookie` header as input.
  * Then, later it generates the `Set-Cookie` header to be used in the response.
  */
-export interface SessionStorage<Data = SessionData, FlashData = Data> {
+export type SessionStorage<Data = SessionData, FlashData = Data> = {
   /**
    * Parses a Cookie header from a HTTP request and returns the associated
    * Session. If there is no session associated with the cookie, this will
@@ -196,7 +196,7 @@ export interface SessionStorage<Data = SessionData, FlashData = Data> {
     session: Session<Data, FlashData>,
     options?: CookieSerializeOptions
   ) => Promise<string>;
-}
+};
 
 /**
  * SessionIdStorageStrategy is designed to allow anyone to easily build their
@@ -207,10 +207,7 @@ export interface SessionStorage<Data = SessionData, FlashData = Data> {
  * database or on disk. A set of create, read, update, and delete operations
  * are provided for managing the session data.
  */
-export interface SessionIdStorageStrategy<
-  Data = SessionData,
-  FlashData = Data
-> {
+export type SessionIdStorageStrategy<Data = SessionData, FlashData = Data> = {
   /**
    * The Cookie used to store the session id, or options used to automatically
    * create one.
@@ -243,7 +240,7 @@ export interface SessionIdStorageStrategy<
    * Deletes data for a given session id from the data store.
    */
   deleteData: (id: string) => Promise<void>;
-}
+};
 
 export type CreateSessionStorageFunction = <
   Data = SessionData,

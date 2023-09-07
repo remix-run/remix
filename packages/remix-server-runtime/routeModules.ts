@@ -12,18 +12,15 @@ import type { AppData, AppLoadContext } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { SerializeFrom } from "./serialize";
 
-export interface RouteModules<RouteModule> {
+export type RouteModules<RouteModule> = {
   [routeId: string]: RouteModule;
-}
+};
 
 // Context is always provided in Remix, and typed for module augmentation support.
-// RR also doesn't export DataFunctionArgs so we extend the two interfaces here
+// RR also doesn't export DataFunctionArgs, so we extend the two interfaces here
 // even tough they're identical under the hood
-export interface DataFunctionArgs
-  extends RRActionFunctionArgs,
-    RRLoaderFunctionArgs {
-  context: AppLoadContext;
-}
+export type DataFunctionArgs = RRActionFunctionArgs<AppLoadContext> &
+  RRLoaderFunctionArgs<AppLoadContext>;
 
 /**
  * A function that handles data mutations for a route.
@@ -54,17 +51,13 @@ export type HeadersArgs = {
  * A function that returns HTTP headers to be used for a route. These headers
  * will be merged with (and take precedence over) headers from parent routes.
  */
-export interface HeadersFunction {
-  (args: HeadersArgs): Headers | HeadersInit;
-}
+export type HeadersFunction = (args: HeadersArgs) => Headers | HeadersInit;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of
  * the document on route transitions.
  */
-export interface LinksFunction {
-  (): LinkDescriptor[];
-}
+export type LinksFunction = () => LinkDescriptor[];
 
 /**
  * A function that returns an array of data objects to use for rendering
@@ -124,22 +117,20 @@ export interface LinksFunction {
  * }
  * ```
  */
-export interface ServerRuntimeMetaFunction<
+export type ServerRuntimeMetaFunction<
   Loader extends LoaderFunction | unknown = unknown,
   ParentsLoaders extends Record<string, LoaderFunction | unknown> = Record<
     string,
     unknown
   >
-> {
-  (
-    args: ServerRuntimeMetaArgs<Loader, ParentsLoaders>
-  ): ServerRuntimeMetaDescriptor[];
-}
+> = (
+  args: ServerRuntimeMetaArgs<Loader, ParentsLoaders>
+) => ServerRuntimeMetaDescriptor[];
 
-interface ServerRuntimeMetaMatch<
+type ServerRuntimeMetaMatch<
   RouteId extends string = string,
   Loader extends LoaderFunction | unknown = unknown
-> {
+> = {
   id: RouteId;
   pathname: AgnosticRouteMatch["pathname"];
   data: Loader extends LoaderFunction ? SerializeFrom<Loader> : unknown;
@@ -147,7 +138,7 @@ interface ServerRuntimeMetaMatch<
   params: AgnosticRouteMatch["params"];
   meta: ServerRuntimeMetaDescriptor[];
   error?: unknown;
-}
+};
 
 type ServerRuntimeMetaMatches<
   MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
@@ -163,20 +154,20 @@ type ServerRuntimeMetaMatches<
   }[keyof MatchLoaders]
 >;
 
-export interface ServerRuntimeMetaArgs<
+export type ServerRuntimeMetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
   MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
     string,
     unknown
   >
-> {
+> = {
   data:
     | (Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData)
     | undefined;
   params: Params;
   location: Location;
   matches: ServerRuntimeMetaMatches<MatchLoaders>;
-}
+};
 
 export type ServerRuntimeMetaDescriptor =
   | { charSet: "utf-8" }
@@ -200,16 +191,16 @@ type LdJsonValue = LdJsonPrimitive | LdJsonObject | LdJsonArray;
  */
 export type RouteHandle = unknown;
 
-export interface EntryRouteModule {
+export type EntryRouteModule = {
   ErrorBoundary?: any; // Weakly typed because server-runtime is not React-aware
   default: any; // Weakly typed because server-runtime is not React-aware
   handle?: RouteHandle;
   links?: LinksFunction;
   meta?: ServerRuntimeMetaFunction;
-}
+};
 
-export interface ServerRouteModule extends EntryRouteModule {
+export type ServerRouteModule = EntryRouteModule & {
   action?: ActionFunction;
   headers?: HeadersFunction | { [name: string]: string };
   loader?: LoaderFunction;
-}
+};

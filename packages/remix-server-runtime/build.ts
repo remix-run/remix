@@ -6,7 +6,7 @@ import type { AppLoadContext } from "./data";
 /**
  * The output of the compiler for the server build.
  */
-export interface ServerBuild {
+export type ServerBuild = {
   mode: string;
   entry: {
     module: ServerEntryModule;
@@ -16,32 +16,32 @@ export interface ServerBuild {
   publicPath: string;
   assetsBuildDirectory: string;
   future: FutureConfig;
-}
+};
 
-export interface HandleDocumentRequestFunction {
-  (
-    request: Request,
-    responseStatusCode: number,
-    responseHeaders: Headers,
-    context: EntryContext,
-    loadContext: AppLoadContext
-  ): Promise<Response> | Response;
-}
+export type HandleDocumentRequestFunction = (
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  context: EntryContext,
+  loadContext: AppLoadContext
+) => Promise<Response> | Response;
 
-export interface HandleDataRequestFunction {
-  (response: Response, args: DataFunctionArgs): Promise<Response> | Response;
-}
+export type HandleDataRequestFunction = (
+  response: Response,
+  args: DataFunctionArgs
+) => Promise<Response> | Response;
 
-export interface HandleErrorFunction {
-  (error: unknown, args: DataFunctionArgs): void;
-}
+export type HandleErrorFunction = (
+  error: unknown,
+  args: DataFunctionArgs
+) => void;
 
 /**
  * A module that serves as the entry point for a Remix app during server
  * rendering.
  */
-export interface ServerEntryModule {
+export type ServerEntryModule = {
   default: HandleDocumentRequestFunction;
   handleDataRequest?: HandleDataRequestFunction;
   handleError?: HandleErrorFunction;
-}
+};

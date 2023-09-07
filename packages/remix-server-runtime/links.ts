@@ -4,7 +4,7 @@ type LiteralUnion<LiteralType, BaseType extends Primitive> =
   | LiteralType
   | (BaseType & Record<never, never>);
 
-interface HtmlLinkProps {
+type HtmlLinkProps = {
   /**
    * Address of the hyperlink
    */
@@ -127,9 +127,9 @@ interface HtmlLinkProps {
    * Image sizes for different page layouts (for rel="preload")
    */
   imageSizes?: string;
-}
+};
 
-interface HtmlLinkPreloadImage extends HtmlLinkProps {
+type HtmlLinkPreloadImage = HtmlLinkProps & {
   /**
    * Relationship between the document containing the hyperlink and the destination resource
    */
@@ -155,7 +155,7 @@ interface HtmlLinkPreloadImage extends HtmlLinkProps {
    * Image sizes for different page layouts (for rel="preload")
    */
   imageSizes?: string;
-}
+};
 
 /**
  * Represents a `<link>` element.
@@ -170,23 +170,22 @@ export type HtmlLinkDescriptor =
   | (HtmlLinkPreloadImage &
       Pick<Required<HtmlLinkPreloadImage>, "href"> & { imageSizes?: never });
 
-export interface PageLinkDescriptor
-  extends Omit<
-    HtmlLinkDescriptor,
-    | "href"
-    | "rel"
-    | "type"
-    | "sizes"
-    | "imageSrcSet"
-    | "imageSizes"
-    | "as"
-    | "color"
-    | "title"
-  > {
+export type PageLinkDescriptor = Omit<
+  HtmlLinkDescriptor,
+  | "href"
+  | "rel"
+  | "type"
+  | "sizes"
+  | "imageSrcSet"
+  | "imageSizes"
+  | "as"
+  | "color"
+  | "title"
+> & {
   /**
    * The absolute path of the page to prefetch.
    */
   page: string;
-}
+};
 
 export type LinkDescriptor = HtmlLinkDescriptor | PageLinkDescriptor;

@@ -7,13 +7,13 @@ import type {
 } from "../sessions";
 import { warnOnceAboutSigningSessionCookie, createSession } from "../sessions";
 
-interface CookieSessionStorageOptions {
+type CookieSessionStorageOptions = {
   /**
    * The Cookie used to store the session data on the client, or options used
    * to automatically create one.
    */
   cookie?: SessionIdStorageStrategy["cookie"];
-}
+};
 
 export type CreateCookieSessionStorageFunction = <
   Data = SessionData,

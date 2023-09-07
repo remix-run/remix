@@ -804,7 +804,7 @@ No significant changes to this package were made in this release. [See the relea
 
 ### Patch Changes
 
-- We've added type safety for load context. `AppLoadContext` is now an an interface mapping `string` to `unknown`, allowing users to extend it via module augmentation: ([#1876](https://github.com/remix-run/remix/pull/1876))
+- We've added type safety for load context. `AppLoadContext` is now an interface mapping `string` to `unknown`, allowing users to extend it via module augmentation: ([#1876](https://github.com/remix-run/remix/pull/1876))
 
   ```ts
   declare module "@remix-run/server-runtime" {

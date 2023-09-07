@@ -3,11 +3,11 @@ import { matchRoutes } from "@remix-run/router";
 
 import type { ServerRoute } from "./routes";
 
-export interface RouteMatch<Route> {
+export type RouteMatch<Route> = {
   params: Params;
   pathname: string;
   route: Route;
-}
+};
 
 export function matchServerRoutes(
   routes: ServerRoute[],
