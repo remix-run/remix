@@ -4,7 +4,7 @@
  * For more information, see https://remix.run/docs/en/main/file-conventions/entry.server
  */
 
-import { PassThrough } from "node:stream";
+import { Readable, PassThrough } from "node:stream";
 
 import { RemixServer } from "@remix-run/react";
 import isbot from "isbot";
@@ -49,11 +49,12 @@ function handleBotRequest(
       {
         onAllReady() {
           const body = new PassThrough();
+          const webBody = Readable.toWeb(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
+            new Response(webBody, {
               headers: responseHeaders,
               status: responseStatusCode,
             })
@@ -91,11 +92,12 @@ function handleBrowserRequest(
       {
         onShellReady() {
           const body = new PassThrough();
+          const webBody = Readable.toWeb(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
+            new Response(webBody, {
               headers: responseHeaders,
               status: responseStatusCode,
             })

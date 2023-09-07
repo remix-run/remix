@@ -1,4 +1,4 @@
-import { PassThrough } from "node:stream";
+import { Readable, PassThrough } from "node:stream";
 import type { AppLoadContext, EntryContext } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
 import isbot from "isbot";
@@ -29,11 +29,12 @@ export default function handleRequest(
       {
         [callbackName]: () => {
           let body = new PassThrough();
+          let webBody = Readable.toWeb(body) as ReadableStream;
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
+            new Response(webBody, {
               headers: responseHeaders,
               status: didError ? 500 : responseStatusCode,
             })

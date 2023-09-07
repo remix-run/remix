@@ -1,4 +1,4 @@
-import { PassThrough } from "node:stream";
+import { Readable, PassThrough } from "node:stream";
 
 import type { AppLoadContext, EntryContext } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
@@ -47,11 +47,12 @@ function handleBotRequest(
         onAllReady() {
           shellRendered = true;
           const body = new PassThrough();
+          const webBody = Readable.toWeb(body) as ReadableStream;
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
+            new Response(webBody, {
               headers: responseHeaders,
               status: responseStatusCode,
             })
@@ -96,11 +97,12 @@ function handleBrowserRequest(
         onShellReady() {
           shellRendered = true;
           const body = new PassThrough();
+          const webBody = Readable.toWeb(body) as ReadableStream;
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
+            new Response(webBody, {
               headers: responseHeaders,
               status: responseStatusCode,
             })

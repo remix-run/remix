@@ -46,7 +46,7 @@ Let's start by creating two new files:
 <docs-info>All of your app code in Remix will live in an `app` directory by convention. If your existing app uses a directory with the same name, rename it to something like `src` or `old-app` to differentiate as we migrate to Remix.</docs-info>
 
 ```tsx filename=app/entry.server.tsx
-import { PassThrough } from "node:stream";
+import { Readable, PassThrough } from "node:stream";
 
 import type {
   AppLoadContext,
@@ -96,11 +96,14 @@ function handleBotRequest(
       {
         onAllReady() {
           const body = new PassThrough();
+          const webBody = Readable.toWeb(
+            body
+          ) as ReadableStream;
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
+            new Response(webBody, {
               headers: responseHeaders,
               status: responseStatusCode,
             })
@@ -138,11 +141,14 @@ function handleBrowserRequest(
       {
         onShellReady() {
           const body = new PassThrough();
+          const webBody = Readable.toWeb(
+            body
+          ) as ReadableStream;
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
+            new Response(webBody, {
               headers: responseHeaders,
               status: responseStatusCode,
             })
