@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.0.0-pre.9
+
+### Patch Changes
+
+- Fix live reload port when set explicitly as a prop ([#7358](https://github.com/remix-run/remix/pull/7358))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0-pre.9`
+
 ## 2.0.0-pre.8
 
 ### Major Changes
