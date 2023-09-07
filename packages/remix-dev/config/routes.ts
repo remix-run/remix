@@ -4,7 +4,7 @@ import * as path from "node:path";
  * A route that was created using `defineRoutes` or created conventionally from
  * looking at the files on the filesystem.
  */
-export interface ConfigRoute {
+export type ConfigRoute = {
   /**
    * The path this route uses to match on the URL pathname.
    */
@@ -37,13 +37,13 @@ export interface ConfigRoute {
    * `config.appDirectory`.
    */
   file: string;
-}
+};
 
-export interface RouteManifest {
+export type RouteManifest = {
   [routeId: string]: ConfigRoute;
-}
+};
 
-export interface DefineRouteOptions {
+export type DefineRouteOptions = {
   /**
    * Should be `true` if the route `path` is case-sensitive. Defaults to
    * `false`.
@@ -60,11 +60,9 @@ export interface DefineRouteOptions {
    * two or more routes with the same route file.
    */
   id?: string;
-}
+};
 
-interface DefineRouteChildren {
-  (): void;
-}
+type DefineRouteChildren = () => void;
 
 /**
  * A function for defining a route that is passed as the argument to the
@@ -80,30 +78,28 @@ interface DefineRouteChildren {
  *     });
  *   });
  */
-export interface DefineRouteFunction {
-  (
-    /**
-     * The path this route uses to match the URL pathname.
-     */
-    path: string | undefined,
+export type DefineRouteFunction = (
+  /**
+   * The path this route uses to match the URL pathname.
+   */
+  path: string | undefined,
 
-    /**
-     * The path to the file that exports the React component rendered by this
-     * route as its default export, relative to the `app` directory.
-     */
-    file: string,
+  /**
+   * The path to the file that exports the React component rendered by this
+   * route as its default export, relative to the `app` directory.
+   */
+  file: string,
 
-    /**
-     * Options for defining routes, or a function for defining child routes.
-     */
-    optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
+  /**
+   * Options for defining routes, or a function for defining child routes.
+   */
+  optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
 
-    /**
-     * A function for defining child routes.
-     */
-    children?: DefineRouteChildren
-  ): void;
-}
+  /**
+   * A function for defining child routes.
+   */
+  children?: DefineRouteChildren
+) => void;
 
 export type DefineRoutesFunction = typeof defineRoutes;
 

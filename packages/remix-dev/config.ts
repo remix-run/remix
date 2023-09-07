@@ -13,10 +13,10 @@ import { flatRoutes } from "./config/flat-routes";
 import { detectPackageManager } from "./cli/detectPackageManager";
 import { logger } from "./tux";
 
-export interface RemixMdxConfig {
+export type RemixMdxConfig = {
   rehypePlugins?: any[];
   remarkPlugins?: any[];
-}
+};
 
 export type RemixMdxConfigFunction = (
   filename: string
@@ -33,7 +33,7 @@ type Dev = {
   tlsCert?: string;
 };
 
-interface FutureConfig {}
+type FutureConfig = {};
 
 type ServerNodeBuiltinsPolyfillOptions = Pick<
   EsbuildPluginsNodeModulesPolyfillOptions,
@@ -43,7 +43,7 @@ type ServerNodeBuiltinsPolyfillOptions = Pick<
 /**
  * The user-provided config in `remix.config.js`.
  */
-export interface AppConfig {
+export type AppConfig = {
   /**
    * The path to the `app` directory, relative to `remix.config.js`. Defaults
    * to `"app"`.
@@ -176,12 +176,12 @@ export interface AppConfig {
   future?: Partial<FutureConfig> & {
     [propName: string]: never;
   };
-}
+};
 
 /**
  * Fully resolved configuration object we use throughout Remix.
  */
-export interface RemixConfig {
+export type RemixConfig = {
   /**
    * The absolute path to the root of the Remix project.
    */
@@ -337,7 +337,7 @@ export interface RemixConfig {
   tsconfigPath: string | undefined;
 
   future: FutureConfig;
-}
+};
 
 /**
  * Returns a fully resolved config object from the remix.config.js in the given
@@ -634,33 +634,6 @@ export function findConfig(
   }
 
   return undefined;
-}
-
-// adds types for `Intl.ListFormat` to the global namespace
-// we could also update our `tsconfig.json` to include `lib: ["es2021"]`
-declare namespace Intl {
-  type ListType = "conjunction" | "disjunction";
-
-  interface ListFormatOptions {
-    localeMatcher?: "lookup" | "best fit";
-    type?: ListType;
-    style?: "long" | "short" | "narrow";
-  }
-
-  interface ListFormatPart {
-    type: "element" | "literal";
-    value: string;
-  }
-
-  class ListFormat {
-    constructor(locales?: string | string[], options?: ListFormatOptions);
-    format(values: any[]): string;
-    formatToParts(values: any[]): ListFormatPart[];
-    supportedLocalesOf(
-      locales: string | string[],
-      options?: ListFormatOptions
-    ): string[];
-  }
 }
 
 let disjunctionListFormat = new Intl.ListFormat("en", {

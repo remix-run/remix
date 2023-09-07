@@ -8,20 +8,23 @@ type CacheValue<T> = {
   | { fileDependencies: Set<string>; globDependencies?: Set<string> }
 );
 
-export interface FileWatchCache {
-  get(key: string): Promise<CacheValue<unknown>> | undefined;
-  set<T>(key: string, promise: Promise<CacheValue<T>>): Promise<CacheValue<T>>;
+export type FileWatchCache = {
+  get: (key: string) => Promise<CacheValue<unknown>> | undefined;
+  set: <T>(
+    key: string,
+    promise: Promise<CacheValue<T>>
+  ) => Promise<CacheValue<T>>;
   /**
    * #description Get a cache value, or lazily set the value if it doesn't exist
    * and then return the new cache value. This lets you interact with the cache
    * in a single expression.
    */
-  getOrSet<T>(
+  getOrSet: <T>(
     key: string,
     lazySetter: () => Promise<CacheValue<T>>
-  ): Promise<CacheValue<T>>;
-  invalidateFile(path: string): void;
-}
+  ) => Promise<CacheValue<T>>;
+  invalidateFile: (path: string) => void;
+};
 
 const globMatchers = new Map<string, ReturnType<typeof picomatch>>();
 function getGlobMatcher(glob: string) {

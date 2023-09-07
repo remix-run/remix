@@ -16,10 +16,10 @@ const cssModulesFilter = /\.module\.css$/;
 const compiledCssQuery = "?css-modules-plugin-compiled-css";
 const compiledCssFilter = /\?css-modules-plugin-compiled-css$/;
 
-interface PluginData {
+type PluginData = {
   resolveDir: string;
   compiledCss: string;
-}
+};
 
 export const cssModulesPlugin = (
   { config, options, fileWatchCache }: Context,

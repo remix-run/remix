@@ -10,9 +10,9 @@ import type { Options } from "../options";
 import type { FileWatchCache } from "../fileWatchCache";
 import { findConfig } from "../../config";
 
-interface PostcssContext {
+type PostcssContext = {
   vanillaExtract: boolean;
-}
+};
 
 const defaultPostcssContext: PostcssContext = {
   vanillaExtract: false,

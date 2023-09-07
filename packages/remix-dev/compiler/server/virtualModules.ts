@@ -1,7 +1,7 @@
-interface VirtualModule {
+type VirtualModule = {
   id: string;
   filter: RegExp;
-}
+};
 
 export const serverBuildVirtualModule: VirtualModule = {
   id: "@remix-run/dev/server-build",
