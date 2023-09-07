@@ -14,8 +14,6 @@ let appFixture: AppFixture;
 test.describe("root route as a folder", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-      },
       files: {
         "app/root/route.tsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
