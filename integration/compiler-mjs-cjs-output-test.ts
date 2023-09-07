@@ -19,24 +19,6 @@ test.describe("", () => {
               serverBuildPath: "build/index.${serverModuleExt}",
             };
           `,
-          "app/routes/_index.tsx": js`
-            import { json } from "@remix-run/node";
-            import { useLoaderData, Link } from "@remix-run/react";
-
-            export function loader() {
-              return json("pizza");
-            }
-
-            export default function Index() {
-              let data = useLoaderData();
-              return (
-                <div>
-                  {data}
-                  <Link to="/burgers">Other Route</Link>
-                </div>
-              )
-            }
-          `,
         },
       });
 
