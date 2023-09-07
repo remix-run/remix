@@ -15,6 +15,5 @@ Remove/align Remix types with those used in React Router
   * `useFetcher().data`
   * `MetaMatch.handle`
 * `useMatches()[i].handle` type changed from `{ [k: string]: any }` to `unknown`
-* `AppLoadContext` type changed from `{ [k: string]: unknown }` to `unknown`
 * Rename the `useMatches()` return type from `RouteMatch` to `UIMatch`
-* Rename `LoaderArgs`/`ActionArgs` to `LoaderFunctionArgs`/`ActionFunctionArgs` and add a generic to accept a `context` type
+* Rename `LoaderArgs`/`ActionArgs` to `LoaderFunctionArgs`/`ActionFunctionArgs`
