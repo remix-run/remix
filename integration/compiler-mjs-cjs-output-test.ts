@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { createFixtureProject, js, json } from "./helpers/create-fixture.js";
+import { createFixtureProject, js } from "./helpers/create-fixture.js";
 
 test.describe("", () => {
   for (let [serverModuleExt, serverModuleFormat, exportStatement] of [
