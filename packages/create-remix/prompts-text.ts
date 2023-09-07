@@ -14,7 +14,7 @@ import {
   type ActionKey,
 } from "./utils";
 
-export interface TextPromptOptions extends PromptOptions {
+export type TextPromptOptions = PromptOptions & {
   label: string;
   message: string;
   initial?: string;
@@ -22,7 +22,7 @@ export interface TextPromptOptions extends PromptOptions {
   validate?: (v: any) => v is string;
   error?: string;
   hint?: string;
-}
+};
 
 export class TextPrompt extends Prompt {
   transform: { render: (v: string) => any; scale: number };

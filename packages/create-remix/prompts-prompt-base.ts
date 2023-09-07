@@ -93,7 +93,7 @@ export class Prompt extends EventEmitter {
   }
 }
 
-export interface PromptOptions {
+export type PromptOptions = {
   stdin?: typeof process.stdin;
   stdout?: typeof process.stdout;
   onRender?(render: (...text: unknown[]) => string): void;
@@ -112,4 +112,4 @@ export interface PromptOptions {
   onState?(
     v: any
   ): void | undefined | boolean | Promise<void | undefined | boolean>;
-}
+};

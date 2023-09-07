@@ -8,9 +8,9 @@ import { Prompt, type PromptOptions } from "./prompts-prompt-base";
 import { type SelectChoice } from "./prompts-select";
 import { color, strip, clear, type ActionKey } from "./utils";
 
-export interface MultiSelectPromptOptions<
+export type MultiSelectPromptOptions<
   Choices extends Readonly<Readonly<SelectChoice>[]>
-> extends PromptOptions {
+> = PromptOptions & {
   hint?: string;
   message: string;
   label: string;
@@ -18,7 +18,7 @@ export interface MultiSelectPromptOptions<
   validate?: (v: any) => boolean;
   error?: string;
   choices: Choices;
-}
+};
 
 export class MultiSelectPrompt<
   Choices extends Readonly<Readonly<SelectChoice>[]>

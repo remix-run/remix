@@ -177,7 +177,7 @@ async function getContext(argv: string[]): Promise<Context> {
   return context;
 }
 
-interface Context {
+type Context = {
   tempDir: string;
   cwd: string;
   interactive: boolean;
@@ -199,7 +199,7 @@ interface Context {
   token?: string;
   versionRequested?: boolean;
   overwrite?: boolean;
-}
+};
 
 async function introStep(ctx: Context) {
   log(

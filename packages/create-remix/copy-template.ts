@@ -72,12 +72,12 @@ export async function copyTemplate(
   }
 }
 
-interface CopyTemplateOptions {
+type CopyTemplateOptions = {
   debug?: boolean;
   token?: string;
   onError(error: unknown): any;
   log?(message: string): any;
-}
+};
 
 function isLocalFilePath(input: string): boolean {
   try {
@@ -172,11 +172,11 @@ async function extractLocalTarball(
   }
 }
 
-interface TarballDownloadOptions {
+type TarballDownloadOptions = {
   debug?: boolean;
   filePath?: string | null;
   token?: string;
-}
+};
 
 async function downloadAndExtractRepoTarball(
   repo: RepoInfo,
@@ -207,10 +207,10 @@ async function downloadAndExtractRepoTarball(
   });
 }
 
-interface DownloadAndExtractTarballOptions {
+type DownloadAndExtractTarballOptions = {
   token?: string;
   filePath?: string | null;
-}
+};
 
 async function downloadAndExtractTarball(
   downloadPath: string,
@@ -466,15 +466,15 @@ export class CopyTemplateError extends Error {
   }
 }
 
-interface RepoInfo {
+type RepoInfo = {
   owner: string;
   name: string;
   branch?: string | null;
   filePath?: string | null;
-}
+};
 
 // https://docs.github.com/en/rest/releases/assets?apiVersion=2022-11-28#get-a-release-asset
-interface GitHubApiReleaseAsset {
+type GitHubApiReleaseAsset = {
   url: string;
   browser_download_url: string;
   id: number;
@@ -488,9 +488,9 @@ interface GitHubApiReleaseAsset {
   created_at: string;
   updated_at: string;
   uploader: null | GitHubApiUploader;
-}
+};
 
-interface GitHubApiUploader {
+type GitHubApiUploader = {
   name: string | null;
   email: string | null;
   login: string;
@@ -512,15 +512,15 @@ interface GitHubApiUploader {
   type: string;
   site_admin: boolean;
   starred_at: string;
-}
+};
 
-interface ReleaseAssetInfo {
+type ReleaseAssetInfo = {
   browserUrl: string;
   owner: string;
   name: string;
   asset: string;
   tag: string;
-}
+};
 
 type GithubUrlString =
   | `https://github.com/${string}/${string}`

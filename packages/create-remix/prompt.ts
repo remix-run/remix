@@ -109,37 +109,36 @@ type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
   ? I
   : never;
 
-interface BasePromptType {
+type BasePromptType = {
   name: string;
-}
+};
 
-interface TextPromptType extends BasePromptType {
+type TextPromptType = BasePromptType & {
   type: "text";
-}
+};
 
-interface ConfirmPromptType extends BasePromptType {
+type ConfirmPromptType = BasePromptType & {
   type: "confirm";
-}
+};
 
-interface SelectPromptType<
-  Choices extends Readonly<Readonly<SelectChoiceType>[]>
-> extends BasePromptType {
-  type: "select";
-  choices: Choices;
-}
+type SelectPromptType<Choices extends Readonly<Readonly<SelectChoiceType>[]>> =
+  BasePromptType & {
+    type: "select";
+    choices: Choices;
+  };
 
-interface MultiSelectPromptType<
+type MultiSelectPromptType<
   Choices extends Readonly<Readonly<SelectChoiceType>[]>
-> extends BasePromptType {
+> = BasePromptType & {
   type: "multiselect";
   choices: Choices;
-}
+};
 
-interface SelectChoiceType {
+type SelectChoiceType = {
   value: unknown;
   label: string;
   hint?: string;
-}
+};
 
 type PromptType<
   Choices extends Readonly<SelectChoiceType[]> = Readonly<SelectChoiceType[]>
@@ -178,10 +177,10 @@ type Answers<
   ? UnionToIntersection<Answers<T[number]>>
   : never;
 
-interface PromptTypeOptions<
+type PromptTypeOptions<
   T extends PromptType<any>,
   Choices extends Readonly<SelectChoiceType[]> = PromptChoices<T>
-> {
+> = {
   onSubmit?(
     question: T | Readonly<T>,
     answer: Answer<T, Choices>,
@@ -190,4 +189,4 @@ interface PromptTypeOptions<
   onCancel?(question: T | Readonly<T>, answers: Answers<T>): any;
   stdin?: NodeJS.ReadStream;
   stdout?: NodeJS.WriteStream;
-}
+};

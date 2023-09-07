@@ -7,14 +7,14 @@ import { cursor, erase } from "sisteransi";
 import { Prompt, type PromptOptions } from "./prompts-prompt-base";
 import { color, strip, clear, type ActionKey } from "./utils";
 
-export interface ConfirmPromptOptions extends PromptOptions {
+export type ConfirmPromptOptions = PromptOptions & {
   label: string;
   message: string;
   initial?: boolean;
   hint?: string;
   validate?: (v: any) => boolean;
   error?: string;
-}
+};
 
 export type ConfirmPromptChoices = [
   { value: true; label: string },

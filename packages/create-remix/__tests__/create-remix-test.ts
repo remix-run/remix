@@ -1303,11 +1303,11 @@ async function execCreateRemix({
   return await interactWithShell(proc, interactions);
 }
 
-interface ShellResult {
+type ShellResult = {
   status: number | "timeout" | null;
   stdout: string;
   stderr: string;
-}
+};
 
 type ShellInteractions = Array<
   | { question: RegExp; type: Array<String>; answer?: never }

@@ -7,15 +7,15 @@ import { cursor, erase } from "sisteransi";
 import { Prompt, type PromptOptions } from "./prompts-prompt-base";
 import { color, strip, clear, shouldUseAscii, type ActionKey } from "./utils";
 
-export interface SelectChoice {
+export type SelectChoice = {
   value: unknown;
   label: string;
   hint?: string;
-}
+};
 
-export interface SelectPromptOptions<
+export type SelectPromptOptions<
   Choices extends Readonly<Readonly<SelectChoice>[]>
-> extends PromptOptions {
+> = PromptOptions & {
   hint?: string;
   message: string;
   label: string;
@@ -23,7 +23,7 @@ export interface SelectPromptOptions<
   validate?: (v: any) => boolean;
   error?: string;
   choices: Choices;
-}
+};
 
 export class SelectPrompt<
   Choices extends Readonly<Readonly<SelectChoice>[]>
