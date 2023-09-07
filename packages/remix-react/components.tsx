@@ -1062,8 +1062,7 @@ export const LiveReload =
 
                   url.port =
                     ${port} ||
-                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port :
-                    8002;
+                    (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);
 
                   let ws = new WebSocket(url.href);
                   ws.onmessage = async (message) => {
