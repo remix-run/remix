@@ -14,17 +14,17 @@ export type GetLoadContextFunction<Env = unknown> = (
 
 export type RequestHandler<Env = any> = PagesFunction<Env>;
 
-export interface createPagesFunctionHandlerParams<Env = any> {
+export type CreatePagesFunctionHandlerParams<Env = any> = {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction<Env>;
   mode?: string;
-}
+};
 
 export function createRequestHandler<Env = any>({
   build,
   getLoadContext,
   mode,
-}: createPagesFunctionHandlerParams<Env>): RequestHandler<Env> {
+}: CreatePagesFunctionHandlerParams<Env>): RequestHandler<Env> {
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (context) => {
@@ -40,7 +40,7 @@ export function createPagesFunctionHandler<Env = any>({
   build,
   getLoadContext,
   mode,
-}: createPagesFunctionHandlerParams<Env>) {
+}: CreatePagesFunctionHandlerParams<Env>) {
   let handleRequest = createRequestHandler<Env>({
     build,
     getLoadContext,

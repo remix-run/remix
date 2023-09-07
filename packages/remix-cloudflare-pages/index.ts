@@ -1,5 +1,5 @@
 export type {
-  createPagesFunctionHandlerParams,
+  CreatePagesFunctionHandlerParams,
   GetLoadContextFunction,
   RequestHandler,
 } from "./worker";
