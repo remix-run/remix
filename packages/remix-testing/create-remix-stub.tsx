@@ -29,33 +29,31 @@ import type {
   LoaderFunction,
 } from "@remix-run/server-runtime";
 
-interface StubIndexRouteObject
-  extends Omit<
-    IndexRouteObject,
-    "loader" | "action" | "element" | "errorElement" | "children"
-  > {
+type StubIndexRouteObject = Omit<
+  IndexRouteObject,
+  "loader" | "action" | "element" | "errorElement" | "children"
+> & {
   loader?: LoaderFunction;
   action?: ActionFunction;
   children?: StubRouteObject[];
   meta?: MetaFunction;
   links?: LinksFunction;
-}
+};
 
-interface StubNonIndexRouteObject
-  extends Omit<
-    NonIndexRouteObject,
-    "loader" | "action" | "element" | "errorElement" | "children"
-  > {
+type StubNonIndexRouteObject = Omit<
+  NonIndexRouteObject,
+  "loader" | "action" | "element" | "errorElement" | "children"
+> & {
   loader?: LoaderFunction;
   action?: ActionFunction;
   children?: StubRouteObject[];
   meta?: MetaFunction;
   links?: LinksFunction;
-}
+};
 
 type StubRouteObject = StubIndexRouteObject | StubNonIndexRouteObject;
 
-export interface RemixStubProps {
+export type RemixStubProps = {
   /**
    *  The initial entries in the history stack. This allows you to start a test with
    *  multiple locations already in the history stack (for testing a back navigation, etc.)
@@ -86,7 +84,7 @@ export interface RemixStubProps {
    * Future flags mimicking the settings in remix.config.js
    */
   remixConfigFuture?: Partial<FutureConfig>;
-}
+};
 
 export function createRemixStub(
   routes: StubRouteObject[],
