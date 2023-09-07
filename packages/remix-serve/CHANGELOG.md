@@ -132,7 +132,7 @@
 ### Patch Changes
 
 - Allow configurable `NODE_ENV` with `remix-serve` ([#5540](https://github.com/remix-run/remix/pull/5540))
-- Sync `FutureConfig` interface between packages ([#5398](https://github.com/remix-run/remix/pull/5398))
+- Sync `FutureConfig` type between packages ([#5398](https://github.com/remix-run/remix/pull/5398))
 - Updated dependencies:
   - `@remix-run/express@1.14.0`
 

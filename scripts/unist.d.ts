@@ -2,10 +2,10 @@ import type { Parent, Literal } from "unist";
 
 export type Node = FlowNode | PhrasingNode | RootNode;
 
-export interface RootNode extends Parent {
+export type RootNode = Parent & {
   type: "root";
   children: FlowNode[];
-}
+};
 
 export type PhrasingNode = TextNode | EmphasisNode;
 
@@ -17,46 +17,46 @@ export type FlowNode =
   | PreNode
   | CodeNode;
 
-export interface BlockquoteNode extends Parent {
+export type BlockquoteNode = Parent & {
   type: "blockquote";
   children: FlowNode[];
-}
+};
 
-export interface HeadingNode extends Parent {
+export type HeadingNode = Parent & {
   type: "heading";
   depth: number;
   children: PhrasingNode[];
-}
+};
 
-export interface ParagraphNode extends Parent {
+export type ParagraphNode = Parent & {
   type: "paragraph";
   children: PhrasingNode[];
-}
+};
 
-export interface PreNode extends Parent {
+export type PreNode = Parent & {
   type: "pre";
   children: PhrasingNode[];
-}
+};
 
-export interface CodeNode extends Parent {
+export type CodeNode = Parent & {
   type: "code";
   children: PhrasingNode[];
   value?: string;
   meta?: string | string[];
-}
+};
 
-export interface EmphasisNode extends Parent {
+export type EmphasisNode = Parent & {
   type: "emphasis";
   children: PhrasingNode[];
-}
+};
 
-export interface LinkNode extends Parent {
+export type LinkNode = Parent & {
   type: "link";
   children: FlowNode[];
   url?: string;
-}
+};
 
-export interface TextNode extends Literal {
+export type TextNode = Literal & {
   type: "text";
   value: string;
-}
+};

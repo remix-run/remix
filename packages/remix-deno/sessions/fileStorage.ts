@@ -7,7 +7,7 @@ import type {
 } from "@remix-run/server-runtime";
 import { createSessionStorage } from "../implementations.ts";
 
-interface FileSessionStorageOptions {
+type FileSessionStorageOptions = {
   /**
    * The Cookie used to store the session id on the client, or options used
    * to automatically create one.
@@ -18,7 +18,7 @@ interface FileSessionStorageOptions {
    * The directory to use to store session files.
    */
   dir: string;
-}
+};
 
 /**
  * Creates a SessionStorage that stores session data on a filesystem.
@@ -55,7 +55,7 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
           if (exists) continue;
 
           await Deno.mkdir(path.dirname(file), { recursive: true }).catch(
-            () => {},
+            () => {}
           );
           await Deno.writeFile(file, new TextEncoder().encode(content));
 
@@ -70,9 +70,10 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
         const file = getFile(dir, id);
         const content = JSON.parse(await Deno.readTextFile(file));
         const data = content.data;
-        const expires = typeof content.expires === "string"
-          ? new Date(content.expires)
-          : null;
+        const expires =
+          typeof content.expires === "string"
+            ? new Date(content.expires)
+            : null;
 
         if (!expires || expires > new Date()) {
           return data;

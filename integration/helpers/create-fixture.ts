@@ -21,14 +21,14 @@ import { installGlobals } from "../../build/node_modules/@remix-run/node/dist/in
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
-export interface FixtureInit {
+export type FixtureInit = {
   buildStdio?: Writable;
   sourcemap?: boolean;
   files?: { [filename: string]: string };
   template?: "cf-template" | "deno-template" | "node-template";
   config?: Partial<AppConfig>;
   useRemixServe?: boolean;
-}
+};
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
 export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;

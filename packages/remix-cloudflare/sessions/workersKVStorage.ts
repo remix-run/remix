@@ -6,7 +6,7 @@ import type {
 
 import { createSessionStorage } from "../implementations";
 
-interface WorkersKVSessionStorageOptions {
+type WorkersKVSessionStorageOptions = {
   /**
    * The Cookie used to store the session id on the client, or options used
    * to automatically create one.
@@ -17,7 +17,7 @@ interface WorkersKVSessionStorageOptions {
    * The KVNamespace used to store the sessions.
    */
   kv: KVNamespace;
-}
+};
 
 /**
  * Creates a SessionStorage that stores session data in the Clouldflare KV Store.

@@ -8,7 +8,7 @@ import { createSessionStorage } from "@remix-run/node";
 import arc from "@architect/functions";
 import type { ArcTable } from "@architect/functions/types/tables";
 
-interface ArcTableSessionStorageOptions {
+type ArcTableSessionStorageOptions = {
   /**
    * The Cookie used to store the session id on the client, or options used
    * to automatically create one.
@@ -32,7 +32,7 @@ interface ArcTableSessionStorageOptions {
    * If absent, then no TTL will be stored and session records will not expire.
    */
   ttl?: string;
-}
+};
 
 /**
  * Session storage using a DynamoDB table managed by Architect.
