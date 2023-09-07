@@ -1,3 +1,13 @@
+import type {
+  FormProps as RRFormProps,
+  Location as RRLocation,
+  NavigateFunction as RRNavigateFunction,
+  Path as RRPath,
+  ShouldRevalidateFunction as RRShouldRevalidateFunction,
+  SubmitFunction as RRSubmitFunction,
+  SubmitOptions as RRSubmitOptions,
+} from "react-router-dom";
+
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
@@ -6,18 +16,18 @@ export type {
   FetcherWithComponents,
   FormEncType,
   FormMethod,
-  FormProps,
-  Location,
-  NavigateFunction,
   Navigation,
   Params,
-  Path,
-  ShouldRevalidateFunction,
-  SubmitFunction,
-  SubmitOptions,
   unstable_Blocker,
   unstable_BlockerFunction,
 } from "react-router-dom";
+export type FormProps = RRFormProps;
+export type Location = RRLocation;
+export type NavigateFunction = RRNavigateFunction;
+export type Path = RRPath;
+export type ShouldRevalidateFunction = RRShouldRevalidateFunction;
+export type SubmitFunction = RRSubmitFunction;
+export type SubmitOptions = RRSubmitOptions;
 export {
   createPath,
   generatePath,

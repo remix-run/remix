@@ -338,7 +338,7 @@ No significant changes to this package were made in this release. [See the relea
 
 - Remove duplicate manifest imports ([#5534](https://github.com/remix-run/remix/pull/5534))
 - Ensure types for fetchers always include `form*` submission fields ([#5476](https://github.com/remix-run/remix/pull/5476))
-- Sync `FutureConfig` interface between packages ([#5398](https://github.com/remix-run/remix/pull/5398))
+- Sync `FutureConfig` type between packages ([#5398](https://github.com/remix-run/remix/pull/5398))
 - Updated dependencies:
   - `@remix-run/router@1.3.3`
   - `react-router-dom@8.6.2`

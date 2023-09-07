@@ -10,11 +10,11 @@ import type { EntryContext } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
 import { createServerRoutes } from "./routes";
 
-export interface RemixServerProps {
+export type RemixServerProps = {
   context: EntryContext;
   url: string | URL;
   abortDelay?: number;
-}
+};
 
 /**
  * The entry point for a Remix app when it is rendered on the server (in

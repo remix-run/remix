@@ -18,9 +18,9 @@ export function escapeHtml(html: string) {
   return html.replace(ESCAPE_REGEX, (match) => ESCAPE_LOOKUP[match]);
 }
 
-export interface SafeHtml {
+export type SafeHtml = {
   __html: string;
-}
+};
 
 export function createHtml(html: string): SafeHtml {
   return { __html: html };

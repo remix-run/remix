@@ -9,24 +9,24 @@ type SerializedError = {
   message: string;
   stack?: string;
 };
-export interface RemixContextObject {
+export type RemixContextObject = {
   manifest: AssetsManifest;
   routeModules: RouteModules;
   serverHandoffString?: string;
   future: FutureConfig;
   abortDelay?: number;
   serializeError?(error: Error): SerializedError;
-}
+};
 
 // Additional React-Router information needed at runtime, but not hydrated
 // through RemixContext
-export interface EntryContext extends RemixContextObject {
+export type EntryContext = RemixContextObject & {
   staticHandlerContext: StaticHandlerContext;
-}
+};
 
-export interface FutureConfig {}
+export type FutureConfig = {};
 
-export interface AssetsManifest {
+export type AssetsManifest = {
   entry: {
     imports: string[];
     module: string;
@@ -38,4 +38,4 @@ export interface AssetsManifest {
     timestamp: number;
     runtime: string;
   };
-}
+};

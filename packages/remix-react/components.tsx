@@ -97,21 +97,21 @@ function useRemixContext(): RemixContextObject {
  */
 type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
-export interface RemixLinkProps extends LinkProps {
+export type RemixLinkProps = LinkProps & {
   prefetch?: PrefetchBehavior;
-}
+};
 
-export interface RemixNavLinkProps extends NavLinkProps {
+export type RemixNavLinkProps = NavLinkProps & {
   prefetch?: PrefetchBehavior;
-}
+};
 
-interface PrefetchHandlers {
+type PrefetchHandlers = {
   onFocus?: FocusEventHandler;
   onBlur?: FocusEventHandler;
   onMouseEnter?: MouseEventHandler;
   onMouseLeave?: MouseEventHandler;
   onTouchStart?: TouchEventHandler;
-}
+};
 
 function usePrefetchBehavior<T extends HTMLAnchorElement>(
   prefetch: PrefetchBehavior,
@@ -561,11 +561,11 @@ function isValidMetaTag(tagName: unknown): tagName is "meta" | "link" {
   return typeof tagName === "string" && /^(meta|link)$/.test(tagName);
 }
 
-export interface AwaitProps<Resolve> {
+export type AwaitProps<Resolve> = {
   children: React.ReactNode | ((value: Awaited<Resolve>) => React.ReactNode);
   errorElement?: React.ReactNode;
   resolve: Resolve;
-}
+};
 
 export function Await<Resolve>(props: AwaitProps<Resolve>) {
   return <AwaitRR {...props} />;
@@ -976,7 +976,7 @@ function dedupe(array: any[]) {
 }
 
 // TODO: Can this be re-exported from RR?
-export interface RouteMatch {
+export type RouteMatch = {
   /**
    * The id of the matched route
    */
@@ -1001,7 +1001,7 @@ export interface RouteMatch {
    * @see https://remix.run/route/handle
    */
   handle: undefined | { [key: string]: any };
-}
+};
 
 /**
  * Returns the JSON parsed data from the current route's `loader`.

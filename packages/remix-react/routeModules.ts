@@ -11,18 +11,18 @@ import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { EntryRoute } from "./routes";
 
-export interface RouteModules {
+export type RouteModules = {
   [routeId: string]: RouteModule;
-}
+};
 
-export interface RouteModule {
+export type RouteModule = {
   ErrorBoundary?: ErrorBoundaryComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
   meta?: MetaFunction;
   shouldRevalidate?: ShouldRevalidateFunction;
-}
+};
 
 /**
  * V2 version of the ErrorBoundary that eliminates the distinction between
@@ -37,14 +37,12 @@ export type ErrorBoundaryComponent = ComponentType;
  *
  * @see https://remix.run/route/meta
  */
-export interface LinksFunction {
-  (): LinkDescriptor[];
-}
+export type LinksFunction = () => LinkDescriptor[];
 
-export interface MetaMatch<
+export type MetaMatch<
   RouteId extends string = string,
   Loader extends LoaderFunction | unknown = unknown
-> {
+> = {
   id: RouteId;
   pathname: DataRouteMatch["pathname"];
   data: Loader extends LoaderFunction ? SerializeFrom<Loader> : unknown;
@@ -52,7 +50,7 @@ export interface MetaMatch<
   params: DataRouteMatch["params"];
   meta: MetaDescriptor[];
   error?: unknown;
-}
+};
 
 export type MetaMatches<
   MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
@@ -68,13 +66,13 @@ export type MetaMatches<
   }[keyof MatchLoaders]
 >;
 
-export interface MetaArgs<
+export type MetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
   MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
     string,
     unknown
   >
-> {
+> = {
   data:
     | (Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData)
     | undefined;
@@ -82,17 +80,15 @@ export interface MetaArgs<
   location: Location;
   matches: MetaMatches<MatchLoaders>;
   error?: unknown;
-}
+};
 
-export interface MetaFunction<
+export type MetaFunction<
   Loader extends LoaderFunction | unknown = unknown,
   MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
     string,
     unknown
   >
-> {
-  (args: MetaArgs<Loader, MatchLoaders>): MetaDescriptor[] | undefined;
-}
+> = (args: MetaArgs<Loader, MatchLoaders>) => MetaDescriptor[] | undefined;
 
 export type MetaDescriptor =
   | { charSet: "utf-8" }

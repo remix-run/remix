@@ -18,28 +18,28 @@ import type { FutureConfig } from "./entry";
 import { prefetchStyleLinks } from "./links";
 import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 
-export interface RouteManifest<Route> {
+export type RouteManifest<Route> = {
   [routeId: string]: Route;
-}
+};
 
 // NOTE: make sure to change the Route in server-runtime if you change this
-interface Route {
+type Route = {
   index?: boolean;
   caseSensitive?: boolean;
   id: string;
   parentId?: string;
   path?: string;
-}
+};
 
 // NOTE: make sure to change the EntryRoute in server-runtime if you change this
-export interface EntryRoute extends Route {
+export type EntryRoute = Route & {
   hasAction: boolean;
   hasLoader: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
   module: string;
   parentId?: string;
-}
+};
 
 // Create a map of routes by parentId to use recursively instead of
 // repeatedly filtering the manifest.

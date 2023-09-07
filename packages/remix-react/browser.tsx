@@ -35,7 +35,7 @@ declare global {
 }
 /* eslint-enable prefer-let/prefer-let */
 
-export interface RemixBrowserProps {}
+export type RemixBrowserProps = {};
 
 declare global {
   interface ImportMeta {
