@@ -29,7 +29,7 @@ jobs:
     uses: ./.github/workflows/shared-test-unit.yml
     with:
       os: "ubuntu-latest"
-      node_version: "['18', '20.5']"
+      node_version: "[18, 20]"
 
   unit-windows:
     name: "🧪 Unit Test"
@@ -37,7 +37,7 @@ jobs:
     uses: ./.github/workflows/shared-test-unit.yml
     with:
       os: "windows-latest"
-      node_version: "['18', '20.5']"
+      node_version: "[18, 20]"
 
   integration-ubuntu:
     name: "👀 Integration Test"
@@ -45,7 +45,7 @@ jobs:
     uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: "ubuntu-latest"
-      node_version: "['18', '20.5']"
+      node_version: "[18, 20]"
       browser: '["chromium", "firefox"]'
 
   integration-windows:
@@ -54,7 +54,7 @@ jobs:
     uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: "windows-latest"
-      node_version: "['18', '20.5']"
+      node_version: "[18, 20]"
       browser: '["msedge"]'
 
   integration-macos:
@@ -63,5 +63,5 @@ jobs:
     uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: "macos-latest"
-      node_version: "['18', '20.5']"
+      node_version: "[18, 20]"
       browser: '["webkit"]'
