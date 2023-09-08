@@ -16,7 +16,7 @@ jobs:
     uses: ./.github/workflows/shared-test-unit.yml
     with:
       os: "windows-latest"
-      node_version: '["20.5.1"]'
+      node_version: '["latest"]'
 
   integration-firefox:
     name: "👀 Integration Test"
@@ -24,7 +24,7 @@ jobs:
     uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: "ubuntu-latest"
-      node_version: '["20.5.1"]'
+      node_version: '["latest"]'
       browser: '["firefox"]'
 
   integration-msedge:
@@ -33,7 +33,7 @@ jobs:
     uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: "windows-latest"
-      node_version: '["20.5.1"]'
+      node_version: '["latest"]'
       browser: '["msedge"]'
 
   integration-webkit:
@@ -42,5 +42,5 @@ jobs:
     uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: "macos-latest"
-      node_version: '["20.5.1"]'
+      node_version: '["latest"]'
       browser: '["webkit"]'
