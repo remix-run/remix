@@ -23,7 +23,18 @@ interface PluginData {
 
 export const cssModulesPlugin = (
   { config, options, fileWatchCache }: Context,
-  { outputCss }: { outputCss: boolean }
+  {
+    outputCss,
+    collectCss,
+  }: {
+    outputCss: boolean;
+    collectCss?: (args: {
+      namespace: string;
+      path: string;
+      resolveDir: string;
+      contents: string;
+    }) => void;
+  }
 ): Plugin => {
   return {
     name: pluginName,
@@ -160,11 +171,18 @@ export const cssModulesPlugin = (
 
       build.onLoad({ filter: compiledCssFilter, namespace }, async (args) => {
         let pluginData: PluginData = args.pluginData;
-        let { resolveDir, compiledCss } = pluginData;
+        let { resolveDir, compiledCss: contents } = pluginData;
+
+        collectCss?.({
+          namespace,
+          path: args.path,
+          resolveDir,
+          contents,
+        });
 
         return {
           resolveDir,
-          contents: compiledCss,
+          contents,
           loader: "css" as const,
         };
       });

@@ -56,7 +56,18 @@ function getCompiler(root: string, mode: Options["mode"]) {
 
 export function vanillaExtractPlugin(
   { config, options }: Context,
-  { outputCss }: { outputCss: boolean }
+  {
+    outputCss,
+    collectCss,
+  }: {
+    outputCss: boolean;
+    collectCss?: (args: {
+      namespace: string;
+      path: string;
+      resolveDir: string;
+      contents: string;
+    }) => void;
+  }
 ): Plugin {
   return {
     name: pluginName,
@@ -118,20 +129,28 @@ export function vanillaExtractPlugin(
         async ({ path }) => {
           let [relativeFilePath] = path.split(".vanilla.css");
           let compiler = getCompiler(root, options.mode);
-          let { css, filePath } = compiler.getCssForFile(relativeFilePath);
+          let { css: contents, filePath } =
+            compiler.getCssForFile(relativeFilePath);
           let resolveDir = dirname(resolve(root, filePath));
 
           if (postcssProcessor) {
-            css = (
-              await postcssProcessor.process(css, {
+            contents = (
+              await postcssProcessor.process(contents, {
                 from: path,
                 to: path,
               })
             ).css;
           }
 
+          collectCss?.({
+            namespace,
+            path,
+            resolveDir,
+            contents,
+          });
+
           return {
-            contents: css,
+            contents,
             loader: "css",
             resolveDir,
           };

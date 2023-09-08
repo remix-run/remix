@@ -45,7 +45,18 @@ const loaderForExtension: Record<Extension, Loader> = {
  */
 export const cssSideEffectImportsPlugin = (
   ctx: Context,
-  { hmr = false } = {}
+  {
+    hmr = false,
+    collectCss,
+  }: {
+    hmr?: boolean;
+    collectCss?: (args: {
+      namespace: string;
+      path: string;
+      resolveDir: string;
+      contents: string;
+    }) => void;
+  } = {}
 ): Plugin => {
   return {
     name: pluginName,
@@ -125,17 +136,28 @@ export const cssSideEffectImportsPlugin = (
           return {
             path: path.relative(ctx.config.rootDirectory, resolvedPath),
             namespace,
+            pluginData: { importer: args.importer },
           };
         }
       );
 
       build.onLoad({ filter: /\.css$/, namespace }, async (args) => {
         let absolutePath = path.resolve(ctx.config.rootDirectory, args.path);
+        let contents = postcssProcessor
+          ? await postcssProcessor({ path: absolutePath })
+          : await fse.readFile(absolutePath, "utf8");
+        let resolveDir = path.dirname(absolutePath);
+
+        collectCss?.({
+          namespace,
+          path: args.path,
+          resolveDir,
+          contents,
+        });
+
         return {
-          contents: postcssProcessor
-            ? await postcssProcessor({ path: absolutePath })
-            : await fse.readFile(absolutePath, "utf8"),
-          resolveDir: path.dirname(absolutePath),
+          contents,
+          resolveDir,
           loader: "css",
         };
       });
