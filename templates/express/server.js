@@ -47,9 +47,9 @@ app.all(
   process.env.NODE_ENV === "development"
     ? createDevRequestHandler()
     : createRequestHandler({
-      build,
-      mode: build.mode,
-    })
+        build,
+        mode: build.mode,
+      })
 );
 
 const port = process.env.PORT || 3000;
