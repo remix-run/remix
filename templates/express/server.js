@@ -4,7 +4,9 @@ import * as url from "node:url";
 
 import { createRequestHandler } from "@remix-run/express";
 import { broadcastDevReady, installGlobals } from "@remix-run/node";
-import chokidar from "chokidar";
+// Avoid bundling chokidar in produciton builds since it is a devDependency
+const chokidar =
+  process.env.NODE_ENV === "development" ? await import("chokidar") : null;
 import compression from "compression";
 import express from "express";
 import morgan from "morgan";
@@ -45,9 +47,9 @@ app.all(
   process.env.NODE_ENV === "development"
     ? createDevRequestHandler()
     : createRequestHandler({
-        build,
-        mode: build.mode,
-      })
+      build,
+      mode: build.mode,
+    })
 );
 
 const port = process.env.PORT || 3000;
