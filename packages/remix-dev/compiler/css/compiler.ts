@@ -1,5 +1,5 @@
-import { relative } from "node:path";
 import { builtinModules as nodeBuiltins } from "node:module";
+import { relative, sep, posix } from "node:path";
 import * as esbuild from "esbuild";
 import cloneDeep from "lodash/cloneDeep";
 
@@ -39,6 +39,10 @@ function collectCss({
 }) {
   let key = `${namespace}:${path}`;
   collectedCss[key] = { contents, resolveDir };
+}
+
+function getMetafilePath(ctx: Context, path: string): string {
+  return relative(ctx.config.rootDirectory, path).split(sep).join(posix.sep);
 }
 
 const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
@@ -201,14 +205,14 @@ export let create = async (ctx: Context) => {
     // Get the names of the files that were inputs to the JS file from the CSS
     // bundle build. This allows us to check whether a CSS file was referenced
     // by a JS file after tree-shaking has occurred.
-    let jsPath = relative(ctx.config.rootDirectory, sourceBuildFiles.js.path);
+    let jsPath = getMetafilePath(ctx, sourceBuildFiles.js.path);
     let jsInputs = sourceBuild.metafile.outputs[jsPath].inputs;
 
     // Get the names of the CSS files that were inputs to the CSS bundle. This
     // allows us to get a sorted list of all bundled CSS files which we can then
     // use to generate the virtual entry point for a 2nd CSS bundle build that
     // only includes the CSS files that weren't tree-shaken.
-    let cssPath = relative(ctx.config.rootDirectory, sourceBuildFiles.css.path);
+    let cssPath = getMetafilePath(ctx, sourceBuildFiles.css.path);
     let cssInputs = sourceBuild.metafile.outputs[cssPath].inputs;
 
     // Only include CSS files that are referenced in the final JS build. If a
