@@ -50,11 +50,12 @@ function handleBotRequest(
       {
         onAllReady() {
           const body = new PassThrough();
+          const stream = createReadableStreamFromReadable(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(createReadableStreamFromReadable(body), {
+            new Response(stream, {
               headers: responseHeaders,
               status: responseStatusCode,
             })
@@ -92,12 +93,12 @@ function handleBrowserRequest(
       {
         onShellReady() {
           const body = new PassThrough();
+          const stream = createReadableStreamFromReadable(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            // eslint-disable-next-line no-undef
-            new Response(createReadableStreamFromReadable(body), {
+            new Response(stream, {
               headers: responseHeaders,
               status: responseStatusCode,
             })

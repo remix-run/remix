@@ -30,11 +30,12 @@ export default function handleRequest(
       {
         [callbackName]: () => {
           let body = new PassThrough();
+          let stream = createReadableStreamFromReadable(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(createReadableStreamFromReadable(body), {
+            new Response(stream, {
               headers: responseHeaders,
               status: didError ? 500 : responseStatusCode,
             })

@@ -97,17 +97,16 @@ function handleBotRequest(
       {
         onAllReady() {
           const body = new PassThrough();
+          const stream =
+            createReadableStreamFromReadable(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(
-              createReadableStreamFromReadable(body),
-              {
-                headers: responseHeaders,
-                status: responseStatusCode,
-              }
-            )
+            new Response(stream, {
+              headers: responseHeaders,
+              status: responseStatusCode,
+            })
           );
 
           pipe(body);
@@ -142,17 +141,16 @@ function handleBrowserRequest(
       {
         onShellReady() {
           const body = new PassThrough();
+          const stream =
+            createReadableStreamFromReadable(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(
-              createReadableStreamFromReadable(body),
-              {
-                headers: responseHeaders,
-                status: responseStatusCode,
-              }
-            )
+            new Response(stream, {
+              headers: responseHeaders,
+              status: responseStatusCode,
+            })
           );
 
           pipe(body);
