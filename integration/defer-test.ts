@@ -981,8 +981,9 @@ test.describe("aborted", () => {
     fixture = await createFixture({
       files: {
         "app/entry.server.tsx": js`
-          import { PassThrough, Readable } from "node:stream";
+          import { PassThrough } from "node:stream";
           import type { AppLoadContext, EntryContext } from "@remix-run/node";
+          import { createReadableStreamFromReadable } from "@remix-run/node";
           import { RemixServer } from "@remix-run/react";
           import isbot from "isbot";
           import { renderToPipeableStream } from "react-dom/server";
@@ -1029,12 +1030,12 @@ test.describe("aborted", () => {
                 {
                   onAllReady() {
                     let body = new PassThrough();
-                    let webBody = Readable.toWeb(body);
+                    let stream = createReadableStreamFromReadable(body);
 
                     responseHeaders.set("Content-Type", "text/html");
 
                     resolve(
-                      new Response(webBody, {
+                      new Response(stream, {
                         headers: responseHeaders,
                         status: didError ? 500 : responseStatusCode,
                       })
@@ -1075,12 +1076,12 @@ test.describe("aborted", () => {
                 {
                   onShellReady() {
                     let body = new PassThrough();
-                    let webBody = Readable.toWeb(body);
+                    let stream = createReadableStreamFromReadable(body);
 
                     responseHeaders.set("Content-Type", "text/html");
 
                     resolve(
-                      new Response(webBody, {
+                      new Response(stream, {
                         headers: responseHeaders,
                         status: didError ? 500 : responseStatusCode,
                       })
