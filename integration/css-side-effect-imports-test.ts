@@ -49,6 +49,7 @@ test.describe("CSS side-effect imports", () => {
         ...jsxInJsFileFixture(),
         ...commonJsPackageFixture(),
         ...esmPackageFixture(),
+        ...treeShakingFixture(),
       },
     });
     appFixture = await createAppFixture(fixture);
@@ -343,6 +344,62 @@ test.describe("CSS side-effect imports", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/esm-package-test");
     let locator = await page.locator("[data-testid='esm-package']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  let treeShakingFixture = () => ({
+    "app/routes/tree-shaking-test.tsx": js`
+      import { UsedTest } from "~/tree-shaking";
+      export default function() {
+        return <UsedTest />;
+      }
+    `,
+    "app/tree-shaking/index.ts": js`
+      export { UsedTest } from "./used";
+      export { UnusedTest } from "./unused";
+    `,
+    "app/tree-shaking/used/index.tsx": js`
+      import "./styles.css";
+      export function UsedTest() {
+        return (
+          <div data-testid="tree-shaking" className={['Used_root', 'global-class-from-unused-component'].join(' ')}>
+            Tree shaking test
+          </div>
+        );
+      }
+    `,
+    "app/tree-shaking/used/styles.css": css`
+      .Used_root {
+        background: peachpuff;
+        padding: ${TEST_PADDING_VALUE};
+      }
+    `,
+    "app/tree-shaking/unused/index.tsx": js`
+      import "./styles.css";
+      export function UnusedTest() {
+        return (
+          <div data-testid="tree-shaking" className={['Unused_root', 'global-class-from-unused-component'].join(' ')}>
+            Unused component
+          </div>
+        );
+      }
+    `,
+    "app/tree-shaking/unused/styles.css": css`
+      .global-class-from-unused-component {
+        padding: 999px !important;
+      }
+      .Unused_root {
+        background: peachpuff;
+      }
+    `,
+  });
+  test("tree shaking of unused component styles", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/tree-shaking-test");
+    let locator = await page.locator("[data-testid='tree-shaking']");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );

@@ -78,6 +78,7 @@ test.describe("Vanilla Extract", () => {
         ...imageUrlsViaRootRelativeJsImportFixture(),
         ...imageUrlsViaClassCompositionFixture(),
         ...imageUrlsViaJsImportClassCompositionFixture(),
+        ...treeShakingFixture(),
       },
     });
     appFixture = await createAppFixture(fixture);
@@ -671,5 +672,67 @@ test.describe("Vanilla Extract", () => {
     );
     expect(backgroundImage).toContain(".svg");
     expect(imgStatus).toBe(200);
+  });
+
+  let treeShakingFixture = () => ({
+    "app/routes/tree-shaking-test.tsx": js`
+      import { UsedTest } from "~/fixtures/tree-shaking";
+      export default function() {
+        return <UsedTest />;
+      }
+    `,
+    "app/fixtures/tree-shaking/index.ts": js`
+      export { UsedTest } from "./used";
+      export { UnusedTest } from "./unused";
+    `,
+    "app/fixtures/tree-shaking/used/index.tsx": js`
+      import * as styles from "./styles.css";
+      export function UsedTest() {
+        return (
+          <div data-testid="tree-shaking" className={[styles.root, 'global-class-from-unused-component'].join(' ')}>
+            Tree shaking test
+          </div>
+        );
+      }
+    `,
+    "app/fixtures/tree-shaking/used/styles.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+      import href from "../image.svg";
+
+      export const root = style({
+        background: 'peachpuff',
+        padding: ${JSON.stringify(TEST_PADDING_VALUE)}
+      });
+    `,
+    "app/fixtures/tree-shaking/unused/index.tsx": js`
+      import * as styles from "./styles.css";
+      export function UnusedTest() {
+        return (
+          <div data-testid="treeShaking" className={[styles.root, 'global-class-from-unused-component'].join(' ')}>
+            Unused component
+          </div>
+        );
+      }
+    `,
+    "app/fixtures/tree-shaking/unused/styles.css.ts": js`
+      import { globalStyle, style } from "@vanilla-extract/css";
+
+      globalStyle('.global-class-from-unused-component', {
+        padding: '999px !important',
+      });
+      
+      export const root = style({
+        background: 'peachpuff',
+      });
+    `,
+  });
+  test("tree shaking of unused component styles", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/tree-shaking-test");
+    let locator = await page.locator("[data-testid='tree-shaking']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
   });
 });
