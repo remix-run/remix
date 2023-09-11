@@ -136,7 +136,6 @@ export const cssSideEffectImportsPlugin = (
           return {
             path: path.relative(ctx.config.rootDirectory, resolvedPath),
             namespace,
-            pluginData: { importer: args.importer },
           };
         }
       );

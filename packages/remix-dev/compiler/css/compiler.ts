@@ -17,7 +17,7 @@ import {
   cssBundleEntryModuleId,
 } from "./plugins/bundleEntry";
 import type { Context } from "../context";
-import { groupCssBundleFiles } from "./bundle";
+import { getCssBundleFiles } from "./bundle";
 import { writeMetafile } from "../analysis";
 
 // This allows us to collect all input CSS files in the 1st CSS bundle build. We
@@ -192,10 +192,10 @@ export let create = async (ctx: Context) => {
     // Take a snapshot of the collected CSS so it's stable for the 2nd build
     let collectedCssSnapshot = cloneDeep(collectedCss);
 
-    let sourceBuildFiles = groupCssBundleFiles(ctx, sourceBuild.outputFiles);
+    let cssBundleFiles = getCssBundleFiles(ctx, sourceBuild.outputFiles);
 
     // If this build didn't generate any CSS, we can skip the 2nd build.
-    if (!sourceBuildFiles.js || !sourceBuildFiles.css) {
+    if (!cssBundleFiles.css) {
       return {
         bundleOutputFile: undefined,
         outputFiles: [],
@@ -205,14 +205,14 @@ export let create = async (ctx: Context) => {
     // Get the names of the files that were inputs to the JS file from the CSS
     // bundle build. This allows us to check whether a CSS file was referenced
     // by a JS file after tree-shaking has occurred.
-    let jsPath = getMetafilePath(ctx, sourceBuildFiles.js.path);
+    let jsPath = getMetafilePath(ctx, cssBundleFiles.js.path);
     let jsInputs = sourceBuild.metafile.outputs[jsPath].inputs;
 
     // Get the names of the CSS files that were inputs to the CSS bundle. This
     // allows us to get a sorted list of all bundled CSS files which we can then
     // use to generate the virtual entry point for a 2nd CSS bundle build that
     // only includes the CSS files that weren't tree-shaken.
-    let cssPath = getMetafilePath(ctx, sourceBuildFiles.css.path);
+    let cssPath = getMetafilePath(ctx, cssBundleFiles.css.path);
     let cssInputs = sourceBuild.metafile.outputs[cssPath].inputs;
 
     // Only include CSS files that are referenced in the final JS build. If a
@@ -229,10 +229,9 @@ export let create = async (ctx: Context) => {
     });
 
     writeMetafile(ctx, "metafile.css.json", metafile);
-    let bundleOutputFile = groupCssBundleFiles(ctx, outputFiles).css;
 
     return {
-      bundleOutputFile,
+      bundleOutputFile: getCssBundleFiles(ctx, outputFiles).css,
       outputFiles,
     };
   };

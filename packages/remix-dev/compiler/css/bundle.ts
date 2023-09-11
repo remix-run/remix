@@ -59,35 +59,22 @@ function isCssBundleFile(
   );
 }
 
-type GroupedCssBundleFiles = {
-  js?: esbuild.OutputFile;
+type CssBundleFiles = {
+  js: esbuild.OutputFile;
   css?: esbuild.OutputFile;
-  sourceMap?: esbuild.OutputFile;
-  assets: esbuild.OutputFile[];
 };
 
-export function groupCssBundleFiles(
+export function getCssBundleFiles(
   ctx: Context,
   files: esbuild.OutputFile[]
-): GroupedCssBundleFiles {
-  let groupedFiles: GroupedCssBundleFiles = {
-    js: undefined,
-    css: undefined,
-    sourceMap: undefined,
-    assets: [],
-  };
+): CssBundleFiles {
+  let js = files.find((file) => isCssBundleFile(ctx, file, ".js"));
 
-  for (let file of files) {
-    if (isCssBundleFile(ctx, file, ".css")) {
-      groupedFiles.css = file;
-    } else if (isCssBundleFile(ctx, file, ".css.map")) {
-      groupedFiles.sourceMap = file;
-    } else if (isCssBundleFile(ctx, file, ".js")) {
-      groupedFiles.js = file;
-    } else {
-      groupedFiles.assets.push(file);
-    }
+  if (!js) {
+    throw new Error("Could not find JavaScript output from CSS bundle build");
   }
 
-  return groupedFiles;
+  let css = files.find((file) => isCssBundleFile(ctx, file, ".css"));
+
+  return { js, css };
 }
