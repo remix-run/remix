@@ -46,12 +46,13 @@ Let's start by creating two new files:
 <docs-info>All of your app code in Remix will live in an `app` directory by convention. If your existing app uses a directory with the same name, rename it to something like `src` or `old-app` to differentiate as we migrate to Remix.</docs-info>
 
 ```tsx filename=app/entry.server.tsx
-import { Readable, PassThrough } from "node:stream";
+import { PassThrough } from "node:stream";
 
 import type {
   AppLoadContext,
   EntryContext,
 } from "@remix-run/node";
+import { createReadableStreamFromReadable } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
 import isbot from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
@@ -96,17 +97,17 @@ function handleBotRequest(
       {
         onAllReady() {
           const body = new PassThrough();
-          const webBody = Readable.toWeb(
-            body
-          ) as ReadableStream;
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(webBody, {
-              headers: responseHeaders,
-              status: responseStatusCode,
-            })
+            new Response(
+              createReadableStreamFromReadable(body),
+              {
+                headers: responseHeaders,
+                status: responseStatusCode,
+              }
+            )
           );
 
           pipe(body);
@@ -141,17 +142,17 @@ function handleBrowserRequest(
       {
         onShellReady() {
           const body = new PassThrough();
-          const webBody = Readable.toWeb(
-            body
-          ) as ReadableStream;
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(webBody, {
-              headers: responseHeaders,
-              status: responseStatusCode,
-            })
+            new Response(
+              createReadableStreamFromReadable(body),
+              {
+                headers: responseHeaders,
+                status: responseStatusCode,
+              }
+            )
           );
 
           pipe(body);

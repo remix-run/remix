@@ -4,8 +4,9 @@
  * For more information, see https://remix.run/docs/en/main/file-conventions/entry.server
  */
 
-import { Readable, PassThrough } from "node:stream";
+import { PassThrough } from "node:stream";
 
+import { createReadableStreamFromReadable } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
 import isbot from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
@@ -49,12 +50,11 @@ function handleBotRequest(
       {
         onAllReady() {
           const body = new PassThrough();
-          const webBody = Readable.toWeb(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(webBody, {
+            new Response(createReadableStreamFromReadable(body), {
               headers: responseHeaders,
               status: responseStatusCode,
             })
@@ -92,12 +92,12 @@ function handleBrowserRequest(
       {
         onShellReady() {
           const body = new PassThrough();
-          const webBody = Readable.toWeb(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(webBody, {
+            // eslint-disable-next-line no-undef
+            new Response(createReadableStreamFromReadable(body), {
               headers: responseHeaders,
               status: responseStatusCode,
             })
