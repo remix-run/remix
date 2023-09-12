@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
 import PackageJson from "@npmcli/package-json";
 import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
+import type { PluggableList } from "unified";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -14,8 +15,8 @@ import { detectPackageManager } from "./cli/detectPackageManager";
 import { logger } from "./tux";
 
 export interface RemixMdxConfig {
-  rehypePlugins?: any[];
-  remarkPlugins?: any[];
+  rehypePlugins?: PluggableList;
+  remarkPlugins?: PluggableList;
 }
 
 export type RemixMdxConfigFunction = (
