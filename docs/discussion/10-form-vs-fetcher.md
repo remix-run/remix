@@ -117,7 +117,7 @@ export function NewRecipe() {
 }
 ```
 
-The example leverages `<Form>`, ` useActionData``, and  `useNavigation\` to facilitate an intuitive record creation process.
+The example leverages `<Form>`, ` useActionData`, and `useNavigation` to facilitate an intuitive record creation process.
 
 Using `<Form>` ensures direct and logical navigation. After creating a record, the user is naturally guided to the new recipe's unique URL, reinforcing the outcome of their action.
 
