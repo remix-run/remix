@@ -257,7 +257,7 @@ What's next?
 
 - [Tutorial][tutorial]
 
-[runtimes]: ../discussion/01-runtimes
+[runtimes]: ../discussion/runtimes
 [inspect]: https://nodejs.org/en/docs/guides/debugging-getting-started/
 [tutorial]: ./tutorial
 [remix-config]: ../file-conventions/remix-config
