@@ -18,7 +18,7 @@
   "dependencies": {
     "@remix-run/router": "1.9.0",
     "@remix-run/server-runtime": "2.0.0-pre.11",
-    "react-router-dom": "6.15.0"
+    "react-router-dom": "6.16.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.17.0",
