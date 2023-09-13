@@ -5,29 +5,34 @@
 ### Major Changes
 
 - Require Node >=18.0.0 ([#6939](https://github.com/remix-run/remix/pull/6939))
-- For preparation of using Node's built in fetch implementation, installing the fetch globals is now a responsibility of the app server. If you are using `remix-serve`, nothing is required. If you are using your own app server, you will need to install the globals yourself. ([#7009](https://github.com/remix-run/remix/pull/7009))
+- For preparation of using Node's built in fetch implementation, installing the fetch globals is now a responsibility of the app server ([#7009](https://github.com/remix-run/remix/pull/7009))
 
-  ```js filename=server.js
-  import { installGlobals } from "@remix-run/node";
+  - If you are using `remix-serve`, nothing is required
+  - If you are using your own app server, you will need to install the globals yourself
 
-  installGlobals();
-  ```
+    ```js filename=server.js
+    import { installGlobals } from "@remix-run/node";
 
-  source-map-support is now a responsibility of the app server. If you are using `remix-serve`, nothing is required. If you are using your own app server, you will need to install [`source-map-support`](https://www.npmjs.com/package/source-map-support) yourself.
+    installGlobals();
+    ```
 
-  ```sh
-  npm i source-map-support
-  ```
+- `source-map-support` is now a responsibility of the app server ([#7009](https://github.com/remix-run/remix/pull/7009))
 
-  ```js filename=server.js
-  import sourceMapSupport from "source-map-support";
-  sourceMapSupport.install();
-  ```
+  - If you are using `remix-serve`, nothing is required
+  - If you are using your own app server, you will need to install [`source-map-support`](https://www.npmjs.com/package/source-map-support) yourself.
+
+    ```sh
+    npm i source-map-support
+    ```
+
+    ```js filename=server.js
+    import sourceMapSupport from "source-map-support";
+    sourceMapSupport.install();
+    ```
 
 ### Patch Changes
 
-- - Switch to `headers.entries()` instead of non-spec-compliant `headers.raw()` in `sendRemixResponse` ([#7150](https://github.com/remix-run/remix/pull/7150))
-  - Update to `@remix-run/web-fetch@4.3.7`
+- Switch to `headers.entries()` instead of non-spec-compliant `headers.raw()` in `sendRemixResponse` ([#7150](https://github.com/remix-run/remix/pull/7150))
 - remove references to fetch polyfills in node and arc adapters ([#7230](https://github.com/remix-run/remix/pull/7230))
 - Updated dependencies:
   - `@remix-run/node@2.0.0`
