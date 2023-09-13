@@ -302,7 +302,7 @@ In your `package.json` file, update your scripts to use `remix` commands instead
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
-    "start": "remix-serve build",
+    "start": "remix-serve build/index.js",
     "typecheck": "tsc"
   }
 }
