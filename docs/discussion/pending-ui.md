@@ -1,5 +1,6 @@
 ---
 title: Pending UI
+order: 8
 ---
 
 # Pending and Optimistic UI

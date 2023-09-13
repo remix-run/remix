@@ -23,7 +23,7 @@ The primary criterion when choosing among these tools is whether you want the UR
 
   - **Expected Behavior**: In many cases, when users hit the back button, they should be taken to the previous page. Other times the history entry may be replaced but the URL change is important nonetheless.
 
-- **No URL Change Desired**: For actions that don't significantly change the context or primary content of the current view. This might include updating individual fields or minor data manipulations that don't warrant a new URL or page reload.
+- **No URL Change Desired**: For actions that don't significantly change the context or primary content of the current view. This might include updating individual fields or minor data manipulations that don't warrant a new URL or page reload. This also applies to loading data with fetchers for things like popovers, comboboxes, etc.
 
 ### Specific Use Cases
 
@@ -46,6 +46,8 @@ These actions are generally more subtle and don't require a context switch for t
 - **Deleting a Record from a List**: In a list view, if a user deletes an item, they likely expect to remain on the list view, with that item simply disappearing.
 
 - **Creating a Record in a List View**: When adding a new item to a list, it often makes sense for the user to remain in that context, seeing their new item added to the list without a full page transition.
+
+- **Loading Data for a Popover or Combobox**: When loading data for a popover or combobox, the user's context remains unchanged. The data is loaded in the background and displayed in a small, self-contained UI element.
 
 For such actions, `useFetcher` is the go-to API. It's versatile, combining functionalities of the other four APIs, and is perfectly suited for tasks where the URL should remain unchanged.
 
@@ -187,8 +189,71 @@ Furthermore, with each fetcher having the autonomy to manage its own state, oper
 
 In essence, useFetcher offers a seamless mechanism for actions that don't necessitate a change in the URL or navigation, enhancing the user experience by providing real-time feedback and context preservation.
 
+### Mark Article as Read
+
+Imagine you want to mark that an article has been read by the current user, after they've been on the page for a while and scrolled to the bottom. You could make a hook that looks something like this:
+
+```tsx
+function useMarkAsRead({ articleId, userId }) {
+  const marker = useFetcher();
+
+  useSpentSomeTimeHereAndScrolledToTheBottom(() => {
+    marker.submit(
+      { userId },
+      {
+        method: "post",
+        action: `/article/${articleID}/mark-as-read`,
+      }
+    );
+  });
+}
+```
+
+### User Avatar Details Popup
+
+Anytime you show the user avatar, you could put a hover effect that fetches data from a loader and displays it in a popup.
+
+```tsx filename=app/routes/user.$id.details.tsx
+export async function loader({ params }: LoaderArgs) {
+  return json(
+    await fakeDb.user.find({ where: { id: params.id } })
+  );
+}
+
+function UserAvatar({ partialUser }) {
+  const userDetails = useFetcher<typeof loader>();
+  const [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    if (
+      showDetails &&
+      userDetails.state === "idle" &&
+      !userDetails.data
+    ) {
+      userDetails.load(`/users/${user.id}/details`);
+    }
+  }, [showDetails, userDetails]);
+
+  return (
+    <div
+      onMouseEnter={() => setShowDetails(true)}
+      onMouseLeave={() => setShowDetails(false)}
+    >
+      <img src={partialUser.profileImageUrl} />
+      {showDetails ? (
+        userDetails.state === "idle" && userDetails.data ? (
+          <UserPopup user={userDetails.data} />
+        ) : (
+          <UserPopupLoading />
+        )
+      ) : null}
+    </div>
+  );
+}
+```
+
 ## Conclusion
 
 Remix offers a range of tools to cater to varied developmental needs. While some functionalities might seem to overlap, each tool has been crafted with specific scenarios in mind. By understanding the intricacies and ideal applications of `<Form>`, `useSubmit`, `useNavigation`, `useActionData`, and `useFetcher`, developers can create more intuitive, responsive, and user-friendly web applications.
 
-[network-concurrency-management]: ./09-concurrency
+[network-concurrency-management]: ./concurrency

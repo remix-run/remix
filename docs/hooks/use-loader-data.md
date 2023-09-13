@@ -5,18 +5,13 @@ toc: false
 
 # `useLoaderData`
 
-<docs-info>This hook is simply a re-export of [React Router's `useLoaderData`][rr-useloaderdata].</docs-info>
+Returns the serialized data from the closest route loader.
 
-<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
-
-This hook returns the JSON parsed data from your route loader function.
-
-```tsx lines=[2,9]
-import { json } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[1,8]
 import { useLoaderData } from "@remix-run/react";
 
 export async function loader() {
-  return json(await fakeDb.invoices.findAll());
+  return fakeDb.invoices.findAll();
 }
 
 export default function Invoices() {
@@ -25,6 +20,19 @@ export default function Invoices() {
 }
 ```
 
-<docs-info>For more information and usage, please refer to the [React Router `useLoaderData` docs][rr-useloaderdata].</docs-info>
+## Additional Resources
 
-[rr-useloaderdata]: https://reactrouter.com/hooks/use-loader-data
+**Discussions**
+
+- [Fullstack Data Flow][fullstack-data-flow]
+- [State Management][state-management]
+
+**API**
+
+- [`loader`][loader]
+- [`useFetcher`][use-fetcher]
+
+[fullstack-data-flow]: ../discussion/data-flow
+[state-management]: ../discussion/state-management
+[loader]: ../route/loader
+[use-fetcher]: ./use-fetcher
