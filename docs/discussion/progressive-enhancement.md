@@ -1,5 +1,6 @@
 ---
 title: Progressive Enhancement
+order: 7
 ---
 
 # Progressive Enhancement

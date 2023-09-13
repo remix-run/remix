@@ -1,6 +1,6 @@
 ---
 title: Introduction, Technical Explanation
-order: 0
+order: 1
 ---
 
 # Introduction, Technical Explanation
