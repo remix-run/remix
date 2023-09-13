@@ -47,4 +47,4 @@ export default function Invoices() {
 [usenavigation]: ../hooks/use-navigation
 [rr-useactiondata]: https://reactrouter.com/hooks/use-action-data
 [form-validation]: ../guides/form-validation
-[fullstack-data-flow]: ../discussion/03-data-flow
+[fullstack-data-flow]: ../discussion/data-flow

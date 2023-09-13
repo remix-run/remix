@@ -140,4 +140,4 @@ No fundamental change in architecture, simply a progressive enhancement for both
 See also: [State Management][state-management]
 
 [wikipedia]: https://en.wikipedia.org/wiki/Progressive_enhancement
-[state-management]: ./08-state-management
+[state-management]: ./state-management

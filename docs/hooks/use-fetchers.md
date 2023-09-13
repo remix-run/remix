@@ -31,6 +31,6 @@ The fetchers don't contain `fetcher.Form`, `fetcher.submit`, or `fetcher.load`, 
 
 - [`useFetcher`][use-fetcher]
 
-[form-vs-fetcher]: ../discussion/10-form-vs-fetcher
-[pending-optimistic-ui]: ../discussion/07-pending-ui
+[form-vs-fetcher]: ../discussion/form-vs-fetcher
+[pending-optimistic-ui]: ../discussion/pending-ui
 [use-fetcher]: ./use-fetcher

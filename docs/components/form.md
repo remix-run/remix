@@ -113,8 +113,8 @@ See also:
 [data-mutations-with-form-action]: https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
 [multiple-forms-and-single-button-mutations]: https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
 [clearing-inputs-after-form-submissions]: https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
-[fullstack-data-flow]: ../discussion/03-data-flow
-[pending-ui]: ../discussion/07-pending-ui
-[form-vs-fetcher]: ../discussion/10-form-vs-fetcher
+[fullstack-data-flow]: ../discussion/data-flow
+[pending-ui]: ../discussion/pending-ui
+[form-vs-fetcher]: ../discussion/form-vs-fetcher
 [fetcher-form]: ../hooks/use-fetcher
-[progressive-enhancement]: ../discussion/06-progressive-enhancement
+[progressive-enhancement]: ../discussion/progressive-enhancement

@@ -256,4 +256,4 @@ function UserAvatar({ partialUser }) {
 
 Remix offers a range of tools to cater to varied developmental needs. While some functionalities might seem to overlap, each tool has been crafted with specific scenarios in mind. By understanding the intricacies and ideal applications of `<Form>`, `useSubmit`, `useNavigation`, `useActionData`, and `useFetcher`, developers can create more intuitive, responsive, and user-friendly web applications.
 
-[network-concurrency-management]: ./09-concurrency
+[network-concurrency-management]: ./concurrency

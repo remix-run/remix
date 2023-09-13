@@ -106,7 +106,7 @@ The form method of the submission.
 - [Concurrent Mutations w/ useFetcher][concurrent-mutations-w-use-fetcher]
 - [Optimistic UI][optimistic-ui]
 
-[form-vs-fetcher]: ../discussion/10-form-vs-fetcher
-[network-concurrency-management]: ../discussion/09-concurrency
+[form-vs-fetcher]: ../discussion/form-vs-fetcher
+[network-concurrency-management]: ../discussion/concurrency
 [concurrent-mutations-w-use-fetcher]: https://www.youtube.com/watch?v=vTzNpiOk668&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
 [optimistic-ui]: https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
