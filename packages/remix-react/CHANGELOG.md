@@ -22,16 +22,16 @@
   - `<Form method="get">` is now more accurately categorized as `state:"loading"` instead of `state:"submitting"` to better align with the underlying GET navigation
 - Remove `v2_routeConvention` flag - the flat route file convention is now standard. ([#6969](https://github.com/remix-run/remix/pull/6969))
 - Remove `v2_headers` flag - it is now the default behavior to use the deepest `headers` function in the route tree. ([#6979](https://github.com/remix-run/remix/pull/6979))
-- Remove/align Remix types with those used in React Router ([#7319](https://github.com/remix-run/remix/pull/7319))
-  - Change exposed `any` types to `unknown`
-    - `AppData`
-    - `useLocation.state`
-    - `useMatches()[i].data`
-    - `useFetcher().data`
-    - `MetaMatch.handle`
-  - `useMatches()[i].handle` type changed from `{ [k: string]: any }` to `unknown`
-  - Rename the `useMatches()` return type from `RouteMatch` to `UIMatch`
-  - Rename `LoaderArgs`/`ActionArgs` to `LoaderFunctionArgs`/`ActionFunctionArgs`
+- Removed/adjusted types to prefer `unknown` over `any` and to align with underlying React Router types ([#7319](https://github.com/remix-run/remix/pull/7319), [#7354](https://github.com/remix-run/remix/pull/7354)):
+  - Renamed the `useMatches()` return type from `RouteMatch` to `UIMatch`
+  - Renamed `LoaderArgs`/`ActionArgs` to `LoaderFunctionArgs`/`ActionFunctionArgs`
+  - `AppData` changed from `any` to `unknown`
+  - `Location["state"]` (`useLocation.state`) changed from `any` to `unknown`
+  - `UIMatch["data"]` (`useMatches()[i].data`) changed from `any` to `unknown`
+  - `UIMatch["handle"]` (`useMatches()[i].handle`) changed from `{ [k: string]: any }` to `unknown`
+  - `Fetcher["data"]` (`useFetcher().data`) changed from `any` to `unknown`
+  - `MetaMatch.handle` (used in `meta()`) changed from `any` to `unknown`
+  - `AppData`/`RouteHandle` are no longer exported as they are just aliases for `unknown`
 - Remove `imagesizes` & `imagesrcset` properties from `HtmlLinkDescriptor`, `LinkDescriptor` & `PrefetchPageDescriptor` types ([#6936](https://github.com/remix-run/remix/pull/6936))
 - Remove deprecated `REMIX_DEV_SERVER_WS_PORT` env var ([#6965](https://github.com/remix-run/remix/pull/6965))
   - use `remix dev`'s '`--port`/`port` option instead
