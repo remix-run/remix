@@ -5,8 +5,6 @@ order: 1
 
 # Introduction, Technical Explanation
 
-These discussion topics are intended to be read in order. It gives you a linear path to Remix mastery instead of bouncing around from one doc to another. While useful independently, topics may refer to code and concepts from previous chapters.
-
 Built on top of [React Router][reactrouter], Remix is four things:
 
 1. A compiler
