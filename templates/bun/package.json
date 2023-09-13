@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev --no-restart -c \"bun run --hot server.js\"",
-    "start": "cross-env NODE_ENV=production bun run ./server.js",
+    "dev": "remix dev --no-restart -c \"bun run --hot server.ts\"",
+    "start": "cross-env NODE_ENV=production bun run ./server.ts",
     "typecheck": "tsc"
   },
   "dependencies": {

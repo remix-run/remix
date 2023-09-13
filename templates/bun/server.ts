@@ -1,21 +1,22 @@
-import * as Bun from "bun";
 import * as fs from "node:fs";
 
+import type { ServerBuild } from "@remix-run/node";
 import {
   broadcastDevReady,
   createRequestHandler,
 } from "@remix-run/server-runtime";
-
+import * as Bun from "bun";
 const BUILD_PATH = "./build/index.js";
 const STATIC_PATH = "./public";
 
-let build = await import(BUILD_PATH);
+let build: ServerBuild = await import(BUILD_PATH);
+
 if (build.dev) {
   broadcastDevReady(build);
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request: Request) {
     const url = new URL(request.url);
 
     try {
@@ -24,7 +25,7 @@ export default {
         const file = Bun.file(filePath);
         return new Response(file);
       }
-    } catch { }
+    } catch {}
 
     build = await import(BUILD_PATH);
     const handler = createRequestHandler(build, process.env.NODE_ENV);
