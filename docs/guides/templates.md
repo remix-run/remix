@@ -26,7 +26,7 @@ This is a great place to start if you're just looking to try out Remix for the f
 
 ### Official Templates
 
-If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Deno][deno], or [Cloudflare][cloudflare]—then you can try one of our [official templates][official-templates] from the Remix repository:
+If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Cloudflare][cloudflare], or [Deno][deno]—then you can try one of our [official templates][official-templates] from the Remix repository:
 
 ```sh
 npx create-remix --template remix-run/remix/templates/arc
