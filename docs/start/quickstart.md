@@ -19,19 +19,19 @@ cd my-remix-app
 npm i @remix-run/node @remix-run/react @remix-run/serve isbot react react-dom
 
 # install dev dependencies
-npm i -D @remix-run/dev typescript @types/react
+npm i -D @remix-run/dev
 ```
 
 ## The Root Route
 
 ```shellscript nonumber
 mkdir app
-touch app/root.tsx
+touch app/root.jsx
 ```
 
 `app/root.jsx` is what we call the "Root Route". It's the root layout of your entire app. Here's the basic set of elements you'll need for any project:
 
-```tsx filename=app/root.tsx
+```jsx filename=app/root.jsx
 import {
   Links,
   Meta,
@@ -199,7 +199,7 @@ app.listen(3000, () => {
 
 And finally, let's connect your UI in the browser to receive those broadcasts:
 
-```tsx filename=app/root.tsx lines=[3,25]
+```jsx filename=app/root.jsx lines=[3,25]
 import {
   Links,
   LiveReload,
@@ -237,7 +237,7 @@ export default function App() {
 npm run dev
 ```
 
-Now you can work on your app with immediate feedback. Give it a shot, change the text in `root.tsx` and watch!
+Now you can work on your app with immediate feedback. Give it a shot, change the text in `root.jsx` and watch!
 
 ## Controlling Server and Browser Entries
 
