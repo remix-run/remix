@@ -19,7 +19,7 @@ cd my-remix-app
 npm i @remix-run/node @remix-run/react @remix-run/serve isbot react react-dom
 
 # install dev dependencies
-npm i -D @remix-run/dev typescript
+npm i -D @remix-run/dev typescript @types/react
 ```
 
 ## The Root Route
@@ -66,7 +66,7 @@ export default function App() {
 First build the app for production:
 
 ```shellscript nonumber
-remix build
+npx remix build
 ```
 
 You should now see a `build/` folder (the server version of your app) and `public/build` folder (the browser version) with some build artifacts in them. (This is all [configurable][remix-config].)
@@ -75,7 +75,7 @@ You should now see a `build/` folder (the server version of your app) and `publi
 
 ```shellscript nonumber
 # note the dash!
-remix-serve build/index.js
+npx remix-serve build/index.js
 ```
 
 You should be able to open up [http://localhost:3000][http-localhost-3000] and see the "hello world" page.
@@ -233,7 +233,7 @@ Now you can work on your app with immediate feedback. Give it a shot, change the
 There are default magic files Remix is using that most apps don't need to mess with, but if you want to customize Remix's entry points to the server and browser you can run `remix reveal` and they'll get dumped into your project.
 
 ```shellscript nonumber
-remix reveal
+npx remix reveal
 ```
 
 ```
@@ -248,7 +248,7 @@ Congrats, you can add Remix to your resume! Summing things up, we've learned:
 - `remix build` and `remix dev` compile your app into two things:
   - A request handler that you add to your own JavaScript server
   - A pile of static assets in your public directory for the browser
-- You can bring your own server with adapters to deploy anywhere.
+- You can bring your own server with adapters to deploy anywhere
 - You can set up a development workflow with HMR built-in
 
 In general, Remix is a bit "guts out". A few minutes of boilerplate but now you own your stack.
