@@ -73,6 +73,17 @@ You should now see a `build/` folder (the server version of your app) and `publi
 
 💿 **Run the app with `remix-serve`**
 
+First you will need to specify the type in `package.json` as module so that `remix-serve` can run your app.
+
+```jsonc filename=package.json lines=[2] nocopy
+{
+  "type": "module"
+  // ...
+}
+```
+
+Now you can run your app with `remix-serve`:
+
 ```shellscript nonumber
 # note the dash!
 npx remix-serve build/index.js
