@@ -123,4 +123,4 @@ All the application needs to know is how to query the data and how to render it,
 
 Remix offers developers an intuitive, browser-based approach to managing network requests. By mirroring browser behaviors and enhancing them where needed, it simplifies the complexities of concurrency, revalidation, and potential race conditions. Whether you're building a simple webpage or a sophisticated web application, Remix ensures that your user interactions are smooth, reliable, and always up-to-date.
 
-[fullstack-data-flow]: ./03-data-flow
+[fullstack-data-flow]: ./data-flow

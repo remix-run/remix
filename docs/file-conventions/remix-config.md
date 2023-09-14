@@ -112,15 +112,6 @@ main module. If specified, Remix will compile this file along with your
 application into a single file to be deployed to your server. This file can use
 either a `.js` or `.ts` file extension.
 
-## serverBuildDirectory
-
-<docs-warning>This option is deprecated and will likely be removed in a future
-stable release. Use [`serverBuildPath`][server-build-path]
-instead.</docs-warning>
-
-The path to the server build, relative to `remix.config.js`. Defaults to
-"build". This needs to be deployed to your server.
-
 ## serverBuildPath
 
 The path to the server build file, relative to `remix.config.js`. This file
@@ -150,7 +141,7 @@ module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
-  serverBuildDirectory: "build",
+  serverBuildPath: "build/index.js",
   ignoredRouteFiles: ["**/.*"],
   serverDependenciesToBundle: [
     /^rehype.*/,

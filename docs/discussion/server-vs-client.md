@@ -1,5 +1,6 @@
 ---
 title: Server vs. Client Code Execution
+order: 5
 ---
 
 # Server vs. Client Code Execution

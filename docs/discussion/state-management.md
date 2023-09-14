@@ -1,5 +1,6 @@
 ---
 title: State Management
+order: 9
 ---
 
 # State Management
@@ -500,5 +501,5 @@ As bonus party trick, the form is functional even before JavaScript loads. Inste
 
 If you ever find yourself entangled in managing and synchronizing state for network operations, Remix likely offers a more elegant solution.
 
-[fullstack-data-flow]: ./03-data-flow
-[pending-ui]: ./07-pending-ui
+[fullstack-data-flow]: ./data-flow
+[pending-ui]: ./pending-ui
