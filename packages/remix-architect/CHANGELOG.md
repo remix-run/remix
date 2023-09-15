@@ -1,90 +1,6 @@
 # `@remix-run/architect`
 
-## 2.0.0-pre.12
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.12`
-
-## 2.0.0-pre.11
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.11`
-
-## 2.0.0-pre.10
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.10`
-
-## 2.0.0-pre.9
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.9`
-
-## 2.0.0-pre.8
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.8`
-
-## 2.0.0-pre.7
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.7`
-
-## 2.0.0-pre.6
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.6`
-
-## 2.0.0-pre.5
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.5`
-
-## 2.0.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.4`
-
-## 2.0.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.3`
-
-## 2.0.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.2`
-
-## 2.0.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.1`
-
-## 2.0.0-pre.0
+## 2.0.0
 
 ### Major Changes
 
@@ -114,7 +30,7 @@
   - Update to `@remix-run/web-fetch@4.3.7`
 - remove references to fetch polyfills in node and arc adapters ([#7230](https://github.com/remix-run/remix/pull/7230))
 - Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.0`
+  - `@remix-run/node@2.0.0`
 
 ## 1.19.3
 

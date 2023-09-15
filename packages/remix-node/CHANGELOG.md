@@ -1,35 +1,6 @@
 # `@remix-run/node`
 
-## 2.0.0-pre.12
-
-### Patch Changes
-
-- [Remove] Update to stable `web-std-io` and `react-router` releases ([#7406](https://github.com/remix-run/remix/pull/7406))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.12`
-
-## 2.0.0-pre.11
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.11`
-
-## 2.0.0-pre.10
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.10`
-
-## 2.0.0-pre.9
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.9`
-
-## 2.0.0-pre.8
+## 2.0.0
 
 ### Major Changes
 
@@ -42,75 +13,15 @@
     - `useFetcher().data`
     - `MetaMatch.handle`
   - `useMatches()[i].handle` type changed from `{ [k: string]: any }` to `unknown`
-  - `AppLoadContext` type changed from `{ [k: string]: unknown }` to `unknown`
   - Rename the `useMatches()` return type from `RouteMatch` to `UIMatch`
-  - Rename `LoaderArgs`/`ActionArgs` to `LoaderFunctionArgs`/`ActionFunctionArgs` and add a generic to accept a `context` type
+  - Rename `LoaderArgs`/`ActionArgs` to `LoaderFunctionArgs`/`ActionFunctionArgs`
 
 - Remove `AppData`/`RouteHandle` types which are just aliases for `unknown` ([#7354](https://github.com/remix-run/remix/pull/7354))
+
 - Stop exporting the `fetch` API in favor of using the version in the global scope - which is polyfilled via `installGlobals` ([#7293](https://github.com/remix-run/remix/pull/7293))
 
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.8`
-
-## 2.0.0-pre.7
-
-### Patch Changes
-
-- Update to latest web-std-io prereleases ([#7328](https://github.com/remix-run/remix/pull/7328))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.7`
-
-## 2.0.0-pre.6
-
-### Patch Changes
-
-- Remove `atob`/`btoa` polyfills in favor of built-in versions ([#7206](https://github.com/remix-run/remix/pull/7206))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.6`
-
-## 2.0.0-pre.5
-
-### Patch Changes
-
-- Add the rest of the Web Streams API to `installGlobals` ([#7321](https://github.com/remix-run/remix/pull/7321))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.5`
-
-## 2.0.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.4`
-
-## 2.0.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.3`
-
-## 2.0.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.2`
-
-## 2.0.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.1`
-
-## 2.0.0-pre.0
-
-### Major Changes
-
 - Require Node >=18.0.0 ([#6939](https://github.com/remix-run/remix/pull/6939))
+
 - We have made a few important changes to the route `meta` API as reflected in the v1 implementation when using the `future.v2_meta` config option. ([#6958](https://github.com/remix-run/remix/pull/6958))
 
   - The `meta` function should no longer return an object, but an array of objects that map to the HTML tag's respective attributes. This provides more flexibility and control over how certain tags are rendered, and the order in which they appear.
@@ -186,11 +97,15 @@
 
 ### Patch Changes
 
+- Update to latest web-std-io prereleases ([#7328](https://github.com/remix-run/remix/pull/7328))
+- Remove `atob`/`btoa` polyfills in favor of built-in versions ([#7206](https://github.com/remix-run/remix/pull/7206))
 - Export proper `ErrorResponse` type for usage alongside `isRouteErrorResponse` ([#7244](https://github.com/remix-run/remix/pull/7244))
+- Add the rest of the Web Streams API to `installGlobals` ([#7321](https://github.com/remix-run/remix/pull/7321))
 - ensures fetch() return is instanceof global Response by removing extended classes for NodeRequest and NodeResponse in favor of custom interface type cast. ([#7109](https://github.com/remix-run/remix/pull/7109))
+- \[Remove] Update to stable `web-std-io` and `react-router` releases ([#7406](https://github.com/remix-run/remix/pull/7406))
 - remove recursion from stream utilities ([#7245](https://github.com/remix-run/remix/pull/7245))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.0`
+  - `@remix-run/server-runtime@2.0.0`
 
 ## 1.19.3
 
