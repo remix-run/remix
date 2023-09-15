@@ -92,7 +92,9 @@ The interface for `matches` is similar to the return value of [`useMatches`][use
 This is the data from your route's loader.
 
 ```tsx
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   return json({
     task: await getTask(params.projectId, params.taskId),
   });
@@ -126,7 +128,9 @@ In addition to the current route's data, often you'll want to access data from a
 ```tsx filename=app/routes/project.$pid.tasks.$tid.tsx
 import type { loader as projectDetailsLoader } from "./project.$pid";
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   return json({ task: await getTask(params.tid) });
 }
 

@@ -93,7 +93,9 @@ For instance, consider an event slug with the id and a human-friendly title:
 - `/events/blink-182-little-caesars-arena-detroit--e87ad`
 
 ```tsx filename=app/routes/events.$slug.tsx
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const id = params.slug.split("--")[1];
   return loadEvent(id);
 }
@@ -192,7 +194,7 @@ The `$projectId.activity.tsx` loader can use the search params to filter the lis
 export async function loader({
   params,
   request,
-}: LoaderArgs) {
+}: LoaderFunctionArgs) {
   const url = new URL(request.url);
   return json(
     await exampleDb.activity.findAll({
@@ -212,7 +214,9 @@ This is great for the activity route, but Remix doesn't know if the parent loade
 In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.tsx` doesn't use the search params. Consider that our loader for `$projectId.tsx` looks something like this:
 
 ```tsx filename=app/routes/$projectId.tsx
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const data = await fakedb.findProject(params.projectId);
   return json(data);
 }

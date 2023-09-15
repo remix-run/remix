@@ -51,10 +51,10 @@ Note that whatever you return from your loader will be exposed to the client, ev
 
 ## Type Safety
 
-You can get type safety over the network for your loader and component with `LoaderArgs` and `useLoaderData<typeof loader>`.
+You can get type safety over the network for your loader and component with `LoaderFunctionArgs` and `useLoaderData<typeof loader>`.
 
 ```tsx lines=[1,5,10]
-import type { LoaderArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
@@ -76,7 +76,9 @@ Route params are defined by route file names. If a segment begins with `$` like 
 
 ```tsx filename=app/routes/invoices.$invoiceId.tsx nocopy
 // if the user visits /invoices/123
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   params.invoiceId; // "123"
 }
 ```
@@ -85,7 +87,9 @@ Params are mostly useful for looking up records by ID:
 
 ```tsx filename=app/routes/invoices.$invoiceId.tsx
 // if the user visits /invoices/123
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const invoice = await fakeDb.getInvoice(params.invoiceId);
   if (!invoice) throw new Response("", { status: 404 });
   return json(invoice);
@@ -99,7 +103,9 @@ This is a [Fetch Request][request] instance. You can read the MDN docs to see al
 The most common use cases in loaders are reading headers (like cookies) and URL [URLSearchParams][urlsearchparams] from the request:
 
 ```tsx
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -136,7 +142,9 @@ app.all(
 And then your loader can access it.
 
 ```tsx filename=app/routes/some-route.tsx
-export async function loader({ context }: LoaderArgs) {
+export async function loader({
+  context,
+}: LoaderFunctionArgs) {
   const { expressUser } = context;
   // ...
 }
@@ -174,7 +182,9 @@ You can see how `json` just does a little of the work to make your loader a lot 
 ```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   const user = await fakeDb.project.findOne({
     where: { id: params.id },
   });
@@ -234,7 +244,7 @@ export async function requireUserSession(request) {
 ```
 
 ```tsx filename=app/routes/invoice.$invoiceId.tsx
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
   isRouteErrorResponse,
@@ -247,7 +257,7 @@ import { requireUserSession } from "~/http";
 export const loader = async ({
   params,
   request,
-}: LoaderArgs) => {
+}: LoaderFunctionArgs) => {
   const user = await requireUserSession(request);
   const invoice = getInvoice(params.invoiceId);
 

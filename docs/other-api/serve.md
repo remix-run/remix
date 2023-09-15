@@ -46,7 +46,9 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
   // cleared and this will be required brand new
   const cache = new Map();
 
-  export async function loader({ params }: LoaderArgs) {
+  export async function loader({
+    params,
+  }: LoaderFunctionArgs) {
     if (cache.has(params.foo)) {
       return json(cache.get(params.foo));
     }

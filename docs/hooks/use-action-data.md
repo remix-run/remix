@@ -7,11 +7,13 @@ toc: false
 
 Returns the serialized data from the most recent route action or undefined if there isn't one.
 
-```tsx lines=[7,11]
-import type { ActionArgs } from "@remix-run/node";
+```tsx lines=[9,13]
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const body = await request.formData();
   const name = body.get("visitorsName");
   return { message: `Hello, ${name}` };
