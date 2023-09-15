@@ -74,7 +74,9 @@ In UI components like comboboxes, each keystroke can trigger a network request. 
 ```tsx filename=app/routes/city-search.tsx
 import { json } from "@remix-run/react";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const { searchParams } = new URL(request.url);
   const cities = await searchCities(searchParams.get("q"));
   return json(cities);

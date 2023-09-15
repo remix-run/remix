@@ -214,7 +214,9 @@ function useMarkAsRead({ articleId, userId }) {
 Anytime you show the user avatar, you could put a hover effect that fetches data from a loader and displays it in a popup.
 
 ```tsx filename=app/routes/user.$id.details.tsx
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   return json(
     await fakeDb.user.find({ where: { id: params.id } })
   );

@@ -11,14 +11,16 @@ A route `action` is a server only function to handle data mutations and other ac
 Actions have the same API as loaders, the only difference is when they are called. This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
-import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form } from "@remix-run/react";
 
 import { TodoList } from "~/components/TodoList";
 import { fakeCreateTodo, fakeGetTodos } from "~/utils/db";
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const body = await request.formData();
   const todo = await fakeCreateTodo({
     title: body.get("title"),

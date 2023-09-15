@@ -61,7 +61,9 @@ export const onRequest = createPagesFunctionHandler({
 And they'll be available via Remix's `context` in your `loader`/`action` functions:
 
 ```tsx
-export const loader = async ({ context }: LoaderArgs) => {
+export const loader = async ({
+  context,
+}: LoaderFunctionArgs) => {
   console.log(context.env.SOME_SECRET);
 };
 ```
