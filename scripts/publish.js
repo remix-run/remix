@@ -1,5 +1,5 @@
-const path = require("path");
-const { execSync } = require("child_process");
+const path = require("node:path");
+const { execSync } = require("node:child_process");
 const semver = require("semver");
 
 const buildDir = path.resolve(__dirname, "../build/node_modules");
@@ -52,8 +52,6 @@ async function run() {
     "node", // publish node before node servers
     "architect",
     "express", // publish express before serve
-    "vercel",
-    "netlify",
     "react",
     "serve",
     "css-bundle",

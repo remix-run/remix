@@ -51,10 +51,10 @@ Note that whatever you return from your loader will be exposed to the client, ev
 
 ## Type Safety
 
-You can get type safety over the network for your loader and component with `LoaderArgs` and `useLoaderData<typeof loader>`.
+You can get type safety over the network for your loader and component with `LoaderFunctionArgs` and `useLoaderData<typeof loader>`.
 
 ```tsx lines=[1,5,10]
-import type { LoaderArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
@@ -74,18 +74,22 @@ export default function SomeRoute() {
 
 Route params are defined by route file names. If a segment begins with `$` like `$invoiceId`, the value from the URL for that segment will be passed to your loader.
 
-```tsx filename=app/routes/invoices/$invoiceId.tsx nocopy
+```tsx filename=app/routes/invoices.$invoiceId.tsx nocopy
 // if the user visits /invoices/123
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   params.invoiceId; // "123"
 }
 ```
 
 Params are mostly useful for looking up records by ID:
 
-```tsx filename=app/routes/invoices/$invoiceId.tsx
+```tsx filename=app/routes/invoices.$invoiceId.tsx
 // if the user visits /invoices/123
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const invoice = await fakeDb.getInvoice(params.invoiceId);
   if (!invoice) throw new Response("", { status: 404 });
   return json(invoice);
@@ -99,7 +103,9 @@ This is a [Fetch Request][request] instance. You can read the MDN docs to see al
 The most common use cases in loaders are reading headers (like cookies) and URL [URLSearchParams][urlsearchparams] from the request:
 
 ```tsx
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -135,8 +141,10 @@ app.all(
 
 And then your loader can access it.
 
-```tsx filename=routes/some-route.tsx
-export async function loader({ context }: LoaderArgs) {
+```tsx filename=app/routes/some-route.tsx
+export async function loader({
+  context,
+}: LoaderFunctionArgs) {
   const { expressUser } = context;
   // ...
 }
@@ -174,7 +182,9 @@ You can see how `json` just does a little of the work to make your loader a lot 
 ```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   const user = await fakeDb.project.findOne({
     where: { id: params.id },
   });
@@ -197,18 +207,12 @@ See also:
 Along with returning responses, you can also throw `Response` objects from your loaders. This allows you to break through the call stack and do one of two things:
 
 - Redirect to another URL
-- Show an alternate UI with contextual data through the `CatchBoundary`
+- Show an alternate UI with contextual data through the `ErrorBoundary`
 
 Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and show an alternative UI.
 
 ```ts filename=app/db.ts
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import type { ThrownResponse } from "@remix-run/react";
-
-export type InvoiceNotFoundResponse = ThrownResponse<
-  404,
-  string
->;
 
 export function getInvoice(id, user) {
   const invoice = db.invoice.find({ where: { id } });
@@ -232,35 +236,28 @@ export async function requireUserSession(request) {
     // You can throw our helpers like `redirect` and `json` because they
     // return `Response` objects. A `redirect` response will redirect to
     // another URL, while other  responses will trigger the UI rendered
-    // in the `CatchBoundary`.
+    // in the `ErrorBoundary`.
     throw redirect("/login", 302);
   }
   return session.get("user");
 }
 ```
 
-```tsx filename=app/routes/invoice/$invoiceId.tsx
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/invoice.$invoiceId.tsx
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import type { ThrownResponse } from "@remix-run/react";
-import { useCatch, useLoaderData } from "@remix-run/react";
+import {
+  isRouteErrorResponse,
+  useLoaderData,
+} from "@remix-run/react";
 
 import { getInvoice } from "~/db";
-import type { InvoiceNotFoundResponse } from "~/db";
 import { requireUserSession } from "~/http";
-
-type InvoiceCatchData = {
-  invoiceOwnerEmail: string;
-};
-
-type ThrownResponses =
-  | InvoiceNotFoundResponse
-  | ThrownResponse<401, InvoiceCatchData>;
 
 export const loader = async ({
   params,
   request,
-}: LoaderArgs) => {
+}: LoaderFunctionArgs) => {
   const user = await requireUserSession(request);
   const invoice = getInvoice(params.invoiceId);
 
@@ -279,31 +276,37 @@ export default function InvoiceRoute() {
   return <InvoiceView invoice={invoice} />;
 }
 
-export function CatchBoundary() {
-  // this returns { data, status, statusText }
-  const caught = useCatch<ThrownResponses>();
+export function ErrorBoundary() {
+  const error = useRouteError();
 
-  switch (caught.status) {
-    case 401:
-      return (
-        <div>
-          <p>You don't have access to this invoice.</p>
-          <p>
-            Contact {caught.data.invoiceOwnerEmail} to get
-            access
-          </p>
-        </div>
-      );
-    case 404:
-      return <div>Invoice not found!</div>;
+  if (isRouteErrorResponse(error)) {
+    switch (error.status) {
+      case 401:
+        return (
+          <div>
+            <p>You don't have access to this invoice.</p>
+            <p>
+              Contact {error.data.invoiceOwnerEmail} to get
+              access
+            </p>
+          </div>
+        );
+      case 404:
+        return <div>Invoice not found!</div>;
+    }
+
+    return (
+      <div>
+        Something went wrong: {error.status}{" "}
+        {error.statusText}
+      </div>
+    );
   }
 
-  // You could also `throw new Error("Unknown status in catch boundary")`.
-  // This will be caught by the closest `ErrorBoundary`.
   return (
     <div>
-      Something went wrong: {caught.status}{" "}
-      {caught.statusText}
+      Something went wrong:{" "}
+      {error?.message || "Unknown Error"}
     </div>
   );
 }

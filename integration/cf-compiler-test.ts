@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import fs from "fs/promises";
-import path from "path";
+import fs from "node:fs/promises";
+import path from "node:path";
 import shell from "shelljs";
 import glob from "glob";
 
-import { createFixtureProject, js, json } from "./helpers/create-fixture";
+import { createFixtureProject, js, json } from "./helpers/create-fixture.js";
 
 const searchFiles = async (pattern: string | RegExp, files: string[]) => {
   let result = shell.grep("-l", pattern, files);
@@ -28,35 +28,33 @@ test.describe("cloudflare compiler", () => {
 
   test.beforeAll(async () => {
     projectDir = await createFixtureProject({
-      config: {
-        future: { v2_routeConvention: true },
-      },
-      setup: "cloudflare",
       template: "cf-template",
       files: {
         "package.json": json({
           name: "remix-template-cloudflare-workers",
           private: true,
           sideEffects: false,
-          main: "build/index.js",
+          type: "module",
           dependencies: {
+            "@cloudflare/kv-asset-handler": "0.0.0-local-version",
             "@remix-run/cloudflare": "0.0.0-local-version",
-            "@remix-run/cloudflare-workers": "0.0.0-local-version",
             "@remix-run/react": "0.0.0-local-version",
             isbot: "0.0.0-local-version",
             react: "0.0.0-local-version",
             "react-dom": "0.0.0-local-version",
+
             "worker-pkg": "0.0.0-local-version",
             "browser-pkg": "0.0.0-local-version",
             "esm-only-pkg": "0.0.0-local-version",
             "cjs-only-pkg": "0.0.0-local-version",
           },
           devDependencies: {
+            "@cloudflare/workers-types": "0.0.0-local-version",
             "@remix-run/dev": "0.0.0-local-version",
-            "@remix-run/eslint-config": "0.0.0-local-version",
           },
         }),
-        "app/routes/_index.jsx": js`
+
+        "app/routes/_index.tsx": js`
           import fake from "worker-pkg";
           import { content as browserPackage } from "browser-pkg";
           import { content as esmOnlyPackage } from "esm-only-pkg";
@@ -175,61 +173,6 @@ test.describe("cloudflare compiler", () => {
     expect(serverBundle).not.toMatch(
       "__DEFAULT_EXPORTS_SHOULD_NOT_BE_IN_BUNDLE__"
     );
-  });
-
-  // TODO: remove this when we get rid of that feature.
-  test("magic imports still works", async () => {
-    let magicExportsForNode = [
-      "createCloudflareKVSessionStorage",
-      "createCookie",
-      "createCookieSessionStorage",
-      "createMemorySessionStorage",
-      "createSessionStorage",
-      "createSession",
-      "createWorkersKVSessionStorage",
-      "isCookie",
-      "isSession",
-      "json",
-      "redirect",
-      "Form",
-      "Link",
-      "Links",
-      "LiveReload",
-      "Meta",
-      "NavLink",
-      "Outlet",
-      "PrefetchPageLinks",
-      "RemixBrowser",
-      "RemixServer",
-      "Scripts",
-      "ScrollRestoration",
-      "useActionData",
-      "useBeforeUnload",
-      "useCatch",
-      "useFetcher",
-      "useFetchers",
-      "useFormAction",
-      "useHref",
-      "useLoaderData",
-      "useLocation",
-      "useMatches",
-      "useNavigate",
-      "useNavigationType",
-      "useOutlet",
-      "useOutletContext",
-      "useParams",
-      "useResolvedPath",
-      "useSearchParams",
-      "useSubmit",
-      "useTransition",
-    ];
-    let magicRemix = await fs.readFile(
-      path.resolve(projectDir, "node_modules/remix/dist/index.js"),
-      "utf8"
-    );
-    for (let name of magicExportsForNode) {
-      expect(magicRemix).toContain(name);
-    }
   });
 
   test("node externals are not bundled in the browser bundle", async () => {

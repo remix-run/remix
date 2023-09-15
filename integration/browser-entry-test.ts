@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import type { AppFixture, Fixture } from "./helpers/create-fixture";
-import { createFixture, js, createAppFixture } from "./helpers/create-fixture";
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
+import type { AppFixture, Fixture } from "./helpers/create-fixture.js";
+import {
+  createFixture,
+  js,
+  createAppFixture,
+} from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -10,7 +14,7 @@ let appFixture: AppFixture;
 test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
-      "app/routes/index.jsx": js`
+      "app/routes/_index.tsx": js`
         import { Link } from "@remix-run/react";
 
         export default function Index() {
@@ -23,7 +27,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/burgers.jsx": js`
+      "app/routes/burgers.tsx": js`
         export default function Index() {
           return <div id="cheeseburger">cheeseburger</div>;
         }

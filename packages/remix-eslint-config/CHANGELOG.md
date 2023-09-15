@@ -1,5 +1,14 @@
 # `@remix-run/eslint-config`
 
+## 2.0.0
+
+### Major Changes
+
+- Remove `@remix-run/eslint-config/jest` ESLint config ([#6903](https://github.com/remix-run/remix/pull/6903))
+- Drop React 17 support ([#7121](https://github.com/remix-run/remix/pull/7121))
+- Remove magic imports ESLint warnings ([#6902](https://github.com/remix-run/remix/pull/6902))
+- Remove `v2_normalizeFormMethod` future flag - all `formMethod` values will be normalized in v2 ([#6875](https://github.com/remix-run/remix/pull/6875))
+
 ## 1.19.3
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.3) for an overview of all changes in v1.19.3.

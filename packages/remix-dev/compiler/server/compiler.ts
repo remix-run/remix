@@ -1,5 +1,4 @@
 import * as esbuild from "esbuild";
-import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 
 import { type Manifest } from "../../manifest";
 import { loaders } from "../utils/loaders";
@@ -8,8 +7,8 @@ import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
-import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
+import { serverNodeBuiltinsPolyfillPlugin } from "./plugins/serverNodeBuiltinsPolyfill";
 import { mdxPlugin } from "../plugins/mdx";
 import { serverAssetsManifestPlugin } from "./plugins/manifest";
 import { serverBareModulesPlugin } from "./plugins/bareImports";
@@ -50,7 +49,6 @@ const createEsbuildConfig = (
   }
 
   let plugins: esbuild.Plugin[] = [
-    deprecatedRemixPackagePlugin(ctx),
     cssBundlePlugin(refs),
     cssModulesPlugin(ctx, { outputCss: false }),
     vanillaExtractPlugin(ctx, { outputCss: false }),
@@ -68,12 +66,7 @@ const createEsbuildConfig = (
   ];
 
   if (ctx.config.serverNodeBuiltinsPolyfill) {
-    plugins.unshift(
-      nodeModulesPolyfillPlugin({
-        // Ensure only "modules" option is passed to the plugin
-        modules: ctx.config.serverNodeBuiltinsPolyfill.modules,
-      })
-    );
+    plugins.unshift(serverNodeBuiltinsPolyfillPlugin(ctx));
   }
 
   return {
@@ -95,7 +88,7 @@ const createEsbuildConfig = (
     minifySyntax: true,
     minify: ctx.options.mode === "production" && ctx.config.serverMinify,
     mainFields: ctx.config.serverMainFields,
-    target: "node14",
+    target: "node18",
     loader: loaders,
     bundle: true,
     logLevel: "silent",
@@ -110,15 +103,7 @@ const createEsbuildConfig = (
     publicPath: ctx.config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
-      // TODO: remove in v2
-      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-        ctx.config.devServerPort
-      ),
       "process.env.REMIX_DEV_ORIGIN": JSON.stringify(
-        ctx.options.REMIX_DEV_ORIGIN ?? ""
-      ),
-      // TODO: remove in v2
-      "process.env.REMIX_DEV_HTTP_ORIGIN": JSON.stringify(
         ctx.options.REMIX_DEV_ORIGIN ?? ""
       ),
     },

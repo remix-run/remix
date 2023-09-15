@@ -17,8 +17,10 @@ It's to be used in place of `request.formData()`.
 
 For example:
 
-```tsx lines=[2-5,7,23]
-export const action = async ({ request }: ActionArgs) => {
+```tsx lines=[4-7,12,25]
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler // <-- we'll look at this deeper next

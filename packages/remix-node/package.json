@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/node",
-  "version": "1.19.3",
+  "version": "2.0.0",
   "description": "Node.js platform abstractions for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -17,22 +17,30 @@
     "./install.js"
   ],
   "dependencies": {
-    "@remix-run/server-runtime": "1.19.3",
-    "@remix-run/web-fetch": "^4.3.6",
-    "@remix-run/web-file": "^3.0.3",
-    "@remix-run/web-stream": "^1.0.4",
+    "@remix-run/server-runtime": "2.0.0",
+    "@remix-run/web-fetch": "^4.4.0",
+    "@remix-run/web-file": "^3.1.0",
+    "@remix-run/web-stream": "^1.1.0",
     "@web3-storage/multipart-parser": "^1.0.0",
-    "abort-controller": "^3.0.0",
     "cookie-signature": "^1.1.0",
     "source-map-support": "^0.5.21",
     "stream-slice": "^0.1.2"
   },
   "devDependencies": {
     "@types/cookie-signature": "^1.0.3",
-    "@types/source-map-support": "^0.5.4"
+    "@types/source-map-support": "^0.5.4",
+    "typescript": "^5.1.6"
+  },
+  "peerDependencies": {
+    "typescript": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/",

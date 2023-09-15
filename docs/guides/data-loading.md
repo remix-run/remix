@@ -14,7 +14,7 @@ One of the primary features of Remix is simplifying interactions with the server
 - Ensure the data in the UI is in sync with the data on the server by revalidating after [actions][action]
 - Excellent scroll restoration on back/forward clicks (even across domains)
 - Handle server-side errors with [error boundaries][error-boundary]
-- Enable solid UX for "Not Found" and "Unauthorized" with [catch boundaries][catch-boundary]
+- Enable solid UX for "Not Found" and "Unauthorized" with [error boundaries][error-boundary]
 - Help you keep the happy path of your UI happy
 
 ## Basics
@@ -51,12 +51,14 @@ If your server-side modules end up in client bundles, move the imports for those
 
 ## Route Params
 
-When you name a file with `$` like `routes/users/$userId.tsx` and `routes/users/$userId/projects/$projectId.tsx` the dynamic segments (the ones starting with `$`) will be parsed from the URL and passed to your loader on a `params` object.
+When you name a file with `$` like `app/routes/users.$userId.tsx` and `app/routes/users.$userId.projects.$projectId.tsx` the dynamic segments (the ones starting with `$`) will be parsed from the URL and passed to your loader on a `params` object.
 
-```tsx filename=routes/users/$userId/projects/$projectId.tsx
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/users.$userId.projects.$projectId.tsx
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   console.log(params.userId);
   console.log(params.projectId);
 };
@@ -71,11 +73,13 @@ Given the following URLs, the params would be parsed as follows:
 
 These params are most useful for looking up data:
 
-```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[8,9]
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/users.$userId.projects.$projectId.tsx lines=[10-11]
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   return json(
     await fakeDb.project.findMany({
       where: {
@@ -91,11 +95,13 @@ export const loader = async ({ params }: LoaderArgs) => {
 
 Because these params come from the URL and not your source code, you can't know for sure if they will be defined. That's why the types on the param's keys are `string | undefined`. It's good practice to validate before using them, especially in TypeScript to get type safety. Using `invariant` makes it easy.
 
-```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[2,5-6]
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/users.$userId.projects.$projectId.tsx lines=[2,7-8]
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import invariant from "tiny-invariant";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   invariant(params.userId, "Expected params.userId");
   invariant(params.projectId, "Expected params.projectId");
 
@@ -146,14 +152,16 @@ export { db };
 
 And then your routes can import it and make queries against it:
 
-```tsx filename=app/routes/products/$categoryId.tsx
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/products.$categoryId.tsx
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { db } from "~/db.server";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   return json(
     await db.product.findMany({
       where: {
@@ -176,8 +184,8 @@ export default function ProductCategory() {
 
 If you are using TypeScript, you can use type inference to use Prisma Client generated types when calling `useLoaderData`. This allows better type safety and intellisense when writing code that uses the loaded data.
 
-```tsx filename=app/routes/products/$productId.tsx
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/products.$productId.tsx
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
@@ -198,7 +206,9 @@ async function getLoaderData(productId: string) {
   return product;
 }
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   return json(await getLoaderData(params.productId));
 };
 
@@ -228,14 +238,14 @@ For the Cloudflare Workers environment you'll need to [do some other configurati
 This enables you to use the `PRODUCTS_KV` in a loader context (KV stores are added to loader context automatically by the Cloudflare Pages adapter):
 
 ```tsx
-import type { LoaderArgs } from "@remix-run/cloudflare";
+import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { json } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
 
 export const loader = async ({
   context,
   params,
-}: LoaderArgs) => {
+}: LoaderFunctionArgs) => {
   return json(
     await context.PRODUCTS_KV.get(
       `product-${params.productId}`,
@@ -257,13 +267,13 @@ export default function Product() {
 
 ## Not Found
 
-While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
+While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [error boundary][error-boundary].
 
 ```tsx lines=[10-13]
 export const loader = async ({
   params,
   request,
-}: LoaderArgs) => {
+}: LoaderFunctionArgs) => {
   const product = await db.product.findOne({
     where: { id: params.productId },
   });
@@ -287,11 +297,13 @@ export const loader = async ({
 
 URL Search Params are the portion of the URL after a `?`. Other names for this are "query string", "search string", or "location search". You can access the values by creating a URL out of the `request.url`:
 
-```tsx filename=routes/products.tsx lines=[5-6]
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/products.tsx lines=[7-8]
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const term = url.searchParams.get("term");
   return json(await fakeProductSearch(term));
@@ -324,7 +336,7 @@ Sometimes you need to read and change the search params from your component inst
 
 Perhaps the most common way to set search params is letting the user control them with a form:
 
-```tsx filename=app/routes/products/shoes.tsx lines=[8,9,16,17]
+```tsx filename=app/routes/products.shoes.tsx lines=[8,9,16,17]
 export default function ProductFilters() {
   return (
     <Form method="get">
@@ -366,11 +378,13 @@ Then the url will be: `/products/shoes?brand=nike&brand=adidas`
 
 Note that `brand` is repeated in the URL search string since both checkboxes were named `"brand"`. In your loader you can get access to all of those values with [`searchParams.getAll`][search-params-getall]
 
-```tsx lines=[6]
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[8]
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const brands = url.searchParams.getAll("brand");
   return json(await getProducts({ brands }));
@@ -684,7 +698,7 @@ That said, if you bring an external data library and sidestep Remix's own data c
 - Ensure the data in the UI is in sync with the data on the server by revalidating after actions
 - Excellent scroll restoration on back/forward clicks (even across domains)
 - Handle server-side errors with [error boundaries][error-boundary]
-- Enable solid UX for "Not Found" and "Unauthorized" with [catch boundaries][catch-boundary]
+- Enable solid UX for "Not Found" and "Unauthorized" with [error boundaries][error-boundary]
 - Help you keep the happy path of your UI happy.
 
 Instead you'll need to do extra work to provide a good user experience.
@@ -736,7 +750,6 @@ export default function RouteComp() {
 ```
 
 [action]: ../route/action
-[catch-boundary]: ../route/catch-boundary
 [cloudflare-kv-setup]: https://developers.cloudflare.com/workers/cli-wrangler/commands#kv
 [cloudflare-kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
 [error-boundary]: ../route/error-boundary

@@ -7,76 +7,52 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
-  Navigation,
   TrackedPromise,
+  UIMatch as UIMatchRR,
 } from "@remix-run/router";
 import type {
+  FetcherWithComponents,
   LinkProps,
   NavLinkProps,
-  FormProps,
-  Params,
-  SubmitFunction,
 } from "react-router-dom";
 import {
   Await as AwaitRR,
   Link as RouterLink,
   NavLink as RouterNavLink,
-  Outlet,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
-  isRouteErrorResponse,
   matchRoutes,
   useAsyncError,
-  useFetcher as useFetcherRR,
-  useFetchers as useFetchersRR,
   useActionData as useActionDataRR,
+  useFetcher as useFetcherRR,
   useLoaderData as useLoaderDataRR,
-  useRouteLoaderData as useRouteLoaderDataRR,
   useMatches as useMatchesRR,
+  useRouteLoaderData as useRouteLoaderDataRR,
   useLocation,
   useNavigation,
   useHref,
-  useRouteError,
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { RemixContextObject } from "./entry";
-import {
-  RemixRootDefaultErrorBoundary,
-  RemixRootDefaultCatchBoundary,
-  RemixCatchBoundary,
-  V2_RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
-  getLinksForMatches,
+  getKeyedLinksForMatches,
+  getKeyedPrefetchLinks,
   getModuleLinkHrefs,
   getNewMatchesForLinks,
-  getStylesheetPrefetchLinks,
   isPageLinkDescriptor,
 } from "./links";
-import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
+import type { KeyedHtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type {
-  V1_HtmlMetaDescriptor,
-  V1_MetaFunction,
-  V2_MetaDescriptor,
-  V2_MetaFunction,
-  V2_MetaMatch,
-  V2_MetaMatches,
+  MetaFunction,
+  MetaDescriptor,
+  MetaMatch,
+  MetaMatches,
 } from "./routeModules";
-import type {
-  Transition,
-  Fetcher,
-  FetcherStates,
-  LoaderSubmission,
-  ActionSubmission,
-  TransitionStates,
-} from "./transition";
-import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
-import { logDeprecationOnce } from "./warnings";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -110,88 +86,6 @@ function useRemixContext(): RemixContextObject {
   return context;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// RemixRoute
-
-export function RemixRoute({ id }: { id: string }) {
-  let { routeModules, future } = useRemixContext();
-
-  invariant(
-    routeModules,
-    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
-      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
-  );
-
-  let { default: Component, ErrorBoundary, CatchBoundary } = routeModules[id];
-
-  // Default Component to Outlet if we expose boundary UI components
-  if (
-    !Component &&
-    (ErrorBoundary || (!future.v2_errorBoundary && CatchBoundary))
-  ) {
-    Component = Outlet;
-  }
-
-  invariant(
-    Component,
-    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.\n` +
-      "If you were trying to navigate or submit to a resource route, use `<a>` instead of `<Link>` or `<Form reloadDocument>`."
-  );
-
-  return <Component />;
-}
-
-export function RemixRouteError({ id }: { id: string }) {
-  let { future, routeModules } = useRemixContext();
-
-  // This checks prevent cryptic error messages such as: 'Cannot read properties of undefined (reading 'root')'
-  invariant(
-    routeModules,
-    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
-      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
-  );
-
-  let error = useRouteError();
-  let { CatchBoundary, ErrorBoundary } = routeModules[id];
-
-  if (future.v2_errorBoundary) {
-    // Provide defaults for the root route if they are not present
-    if (id === "root") {
-      ErrorBoundary ||= V2_RemixRootDefaultErrorBoundary;
-    }
-    if (ErrorBoundary) {
-      // TODO: Unsure if we can satisfy the typings here
-      // @ts-expect-error
-      return <ErrorBoundary />;
-    }
-    throw error;
-  }
-
-  // Provide defaults for the root route if they are not present
-  if (id === "root") {
-    CatchBoundary ||= RemixRootDefaultCatchBoundary;
-    ErrorBoundary ||= RemixRootDefaultErrorBoundary;
-  }
-
-  if (isRouteErrorResponse(error)) {
-    let tError = error;
-    if (!!tError?.error && tError.status !== 404 && ErrorBoundary) {
-      // Internal framework-thrown ErrorResponses
-      return <ErrorBoundary error={tError.error} />;
-    }
-    if (CatchBoundary) {
-      // User-thrown ErrorResponses
-      return <RemixCatchBoundary catch={error} component={CatchBoundary} />;
-    }
-  }
-
-  if (error instanceof Error && ErrorBoundary) {
-    // User- or framework-thrown Errors
-    return <ErrorBoundary error={error} />;
-  }
-
-  throw error;
-}
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
 
@@ -291,7 +185,7 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
 /**
- * A special kind of `<Link>` that knows whether or not it is "active".
+ * A special kind of `<Link>` that knows whether it is "active".
  *
  * @see https://remix.run/components/nav-link
  */
@@ -371,30 +265,6 @@ export function composeEventHandlers<
   };
 }
 
-let linksWarning =
-  "⚠️ REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. " +
-  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
-
-let useTransitionWarning =
-  "⚠️ REMIX FUTURE CHANGE: `useTransition` will be removed in v2 in favor of `useNavigation`. " +
-  "You can prepare for this change at your convenience by updating to `useNavigation`. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#usetransition";
-
-let fetcherTypeWarning =
-  "⚠️ REMIX FUTURE CHANGE: `fetcher.type` will be removed in v2. " +
-  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#usefetcher";
-
-let fetcherSubmissionWarning =
-  "⚠️ REMIX FUTURE CHANGE : `fetcher.submission` will be removed in v2. " +
-  "The submission fields are now part of the fetcher object itself (`fetcher.formData`). " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#usefetcher";
-
 /**
  * Renders the `<link>` tags for the current routes.
  *
@@ -411,65 +281,26 @@ export function Links() {
       )
     : routerMatches;
 
-  let links = React.useMemo(
-    () => getLinksForMatches(matches, routeModules, manifest),
+  let keyedLinks = React.useMemo(
+    () => getKeyedLinksForMatches(matches, routeModules, manifest),
     [matches, routeModules, manifest]
   );
 
-  React.useEffect(() => {
-    if (links.some((link) => "imagesizes" in link || "imagesrcset" in link)) {
-      logDeprecationOnce(linksWarning);
-    }
-  }, [links]);
-
   return (
     <>
-      {links.map((link) => {
-        if (isPageLinkDescriptor(link)) {
-          return <PrefetchPageLinks key={link.page} {...link} />;
-        }
-
-        let imageSrcSet: string | null = null;
-
-        // In React 17, <link imageSrcSet> and <link imageSizes> will warn
-        // because the DOM attributes aren't recognized, so users need to pass
-        // them in all lowercase to forward the attributes to the node without a
-        // warning. Normalize so that either property can be used in Remix.
-        if ("useId" in React) {
-          if (link.imagesrcset) {
-            link.imageSrcSet = imageSrcSet = link.imagesrcset;
-            delete link.imagesrcset;
-          }
-
-          if (link.imagesizes) {
-            link.imageSizes = link.imagesizes;
-            delete link.imagesizes;
-          }
-        } else {
-          if (link.imageSrcSet) {
-            link.imagesrcset = imageSrcSet = link.imageSrcSet;
-            delete link.imageSrcSet;
-          }
-
-          if (link.imageSizes) {
-            link.imagesizes = link.imageSizes;
-            delete link.imageSizes;
-          }
-        }
-
-        return (
-          <link
-            key={link.rel + (link.href || "") + (imageSrcSet || "")}
-            {...link}
-          />
-        );
-      })}
+      {keyedLinks.map(({ key, link }) =>
+        isPageLinkDescriptor(link) ? (
+          <PrefetchPageLinks key={key} {...link} />
+        ) : (
+          <link key={key} {...link} />
+        )
+      )}
     </>
   );
 }
 
 /**
- * This component renders all of the `<link rel="prefetch">` and
+ * This component renders all the `<link rel="prefetch">` and
  * `<link rel="modulepreload"/>` tags for all the assets (data, modules, css) of
  * a given page.
  *
@@ -497,17 +328,21 @@ export function PrefetchPageLinks({
   );
 }
 
-function usePrefetchedStylesheets(matches: AgnosticDataRouteMatch[]) {
+function useKeyedPrefetchLinks(matches: AgnosticDataRouteMatch[]) {
   let { manifest, routeModules } = useRemixContext();
 
-  let [styleLinks, setStyleLinks] = React.useState<HtmlLinkDescriptor[]>([]);
+  let [keyedPrefetchLinks, setKeyedPrefetchLinks] = React.useState<
+    KeyedHtmlLinkDescriptor[]
+  >([]);
 
   React.useEffect(() => {
     let interrupted: boolean = false;
 
-    getStylesheetPrefetchLinks(matches, manifest, routeModules).then(
+    void getKeyedPrefetchLinks(matches, manifest, routeModules).then(
       (links) => {
-        if (!interrupted) setStyleLinks(links);
+        if (!interrupted) {
+          setKeyedPrefetchLinks(links);
+        }
       }
     );
 
@@ -516,7 +351,7 @@ function usePrefetchedStylesheets(matches: AgnosticDataRouteMatch[]) {
     };
   }, [matches, manifest, routeModules]);
 
-  return styleLinks;
+  return keyedPrefetchLinks;
 }
 
 function PrefetchPageLinksImpl({
@@ -568,7 +403,7 @@ function PrefetchPageLinksImpl({
 
   // needs to be a hook with async behavior because we need the modules, not
   // just the manifest like the other links in here.
-  let styleLinks = usePrefetchedStylesheets(newMatchesForAssets);
+  let keyedPrefetchLinks = useKeyedPrefetchLinks(newMatchesForAssets);
 
   return (
     <>
@@ -578,21 +413,21 @@ function PrefetchPageLinksImpl({
       {moduleHrefs.map((href) => (
         <link key={href} rel="modulepreload" href={href} {...linkProps} />
       ))}
-      {styleLinks.map((link) => (
+      {keyedPrefetchLinks.map(({ key, link }) => (
         // these don't spread `linkProps` because they are full link descriptors
         // already with their own props
-        <link key={link.href} {...link} />
+        <link key={key} {...link} />
       ))}
     </>
   );
 }
 
 /**
- * Renders the `<title>` and `<meta>` tags for the current routes.
+ * Renders HTML tags related to metadata for the current route.
  *
  * @see https://remix.run/components/meta
  */
-function V1Meta() {
+export function Meta() {
   let { routeModules } = useRemixContext();
   let {
     errors,
@@ -601,170 +436,52 @@ function V1Meta() {
   } = useDataRouterStateContext();
   let location = useLocation();
 
-  let matches = errors
-    ? routerMatches.slice(
-        0,
-        routerMatches.findIndex((m) => errors![m.route.id]) + 1
-      )
-    : routerMatches;
-
-  let meta: V1_HtmlMetaDescriptor = {};
-  let parentsData: { [routeId: string]: AppData } = {};
-
-  for (let match of matches) {
-    let routeId = match.route.id;
-    let data = loaderData[routeId];
-    let params = match.params;
-
-    let routeModule = routeModules[routeId];
-
-    if (routeModule.meta) {
-      let routeMeta =
-        typeof routeModule.meta === "function"
-          ? (routeModule.meta as V1_MetaFunction)({
-              data,
-              parentsData,
-              params,
-              location,
-            })
-          : routeModule.meta;
-      if (routeMeta && Array.isArray(routeMeta)) {
-        throw new Error(
-          "The route at " +
-            match.route.path +
-            " returns an array. This is only supported with the `v2_meta` future flag " +
-            "in the Remix config. Either set the flag to `true` or update the route's " +
-            "meta function to return an object." +
-            "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
-          // TODO: Add link to the docs once they are written
-          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta."
-        );
-      }
-      Object.assign(meta, routeMeta);
-    }
-
-    parentsData[routeId] = data;
+  let _matches: AgnosticDataRouteMatch[] = routerMatches;
+  let error: any = null;
+  if (errors) {
+    let errorIdx = routerMatches.findIndex((m) => errors![m.route.id]);
+    _matches = routerMatches.slice(0, errorIdx + 1);
+    error = errors[routerMatches[errorIdx].route.id];
   }
 
-  return (
-    <>
-      {Object.entries(meta).map(([name, value]) => {
-        if (!value) {
-          return null;
-        }
-
-        if (["charset", "charSet"].includes(name)) {
-          return <meta key="charSet" charSet={value as string} />;
-        }
-
-        if (name === "title") {
-          return <title key="title">{String(value)}</title>;
-        }
-
-        // Open Graph tags use the `property` attribute, while other meta tags
-        // use `name`. See https://ogp.me/
-        //
-        // Namespaced attributes:
-        //  - https://ogp.me/#type_music
-        //  - https://ogp.me/#type_video
-        //  - https://ogp.me/#type_article
-        //  - https://ogp.me/#type_book
-        //  - https://ogp.me/#type_profile
-        //
-        // Facebook specific tags begin with `fb:` and also use the `property`
-        // attribute.
-        //
-        // Twitter specific tags begin with `twitter:` but they use `name`, so
-        // they are excluded.
-        let isOpenGraphTag =
-          /^(og|music|video|article|book|profile|fb):.+$/.test(name);
-
-        return [value].flat().map((content) => {
-          if (isOpenGraphTag) {
-            return (
-              <meta
-                property={name}
-                content={content as string}
-                key={name + content}
-              />
-            );
-          }
-
-          if (typeof content === "string") {
-            return <meta name={name} content={content} key={name + content} />;
-          }
-
-          return <meta key={name + JSON.stringify(content)} {...content} />;
-        });
-      })}
-    </>
-  );
-}
-
-function V2Meta() {
-  let { routeModules } = useRemixContext();
-  let {
-    errors,
-    matches: routerMatches,
-    loaderData,
-  } = useDataRouterStateContext();
-  let location = useLocation();
-
-  let _matches = errors
-    ? routerMatches.slice(
-        0,
-        routerMatches.findIndex((m) => errors![m.route.id]) + 1
-      )
-    : routerMatches;
-
-  let meta: V2_MetaDescriptor[] = [];
-  let leafMeta: V2_MetaDescriptor[] | null = null;
-  let matches: V2_MetaMatches = [];
+  let meta: MetaDescriptor[] = [];
+  let leafMeta: MetaDescriptor[] | null = null;
+  let matches: MetaMatches = [];
   for (let i = 0; i < _matches.length; i++) {
     let _match = _matches[i];
     let routeId = _match.route.id;
     let data = loaderData[routeId];
     let params = _match.params;
     let routeModule = routeModules[routeId];
-    let routeMeta: V2_MetaDescriptor[] | V1_HtmlMetaDescriptor | undefined = [];
+    let routeMeta: MetaDescriptor[] | undefined = [];
 
-    let match: V2_MetaMatch = {
+    let match: MetaMatch = {
       id: routeId,
       data,
       meta: [],
       params: _match.params,
       pathname: _match.pathname,
       handle: _match.route.handle,
-      // TODO: Remove in v2. Only leaving it for now because we used it in
-      // examples and there's no reason to crash someone's build for one line.
-      // They'll get a TS error from the type updates anyway.
-      // @ts-expect-error
-      get route() {
-        console.warn(
-          "The meta function in " +
-            _match.route.path +
-            " accesses the `route` property on `matches`. This is deprecated and will be removed in Remix version 2. See"
-        );
-        return _match.route;
-      },
+      error,
     };
     matches[i] = match;
 
     if (routeModule?.meta) {
       routeMeta =
         typeof routeModule.meta === "function"
-          ? (routeModule.meta as V2_MetaFunction)({
+          ? (routeModule.meta as MetaFunction)({
               data,
               params,
               location,
               matches,
+              error,
             })
           : Array.isArray(routeModule.meta)
           ? [...routeModule.meta]
           : routeModule.meta;
     } else if (leafMeta) {
       // We only assign the route's meta to the nearest leaf if there is no meta
-      // export in the route. The meta function may return a falsey value which
+      // export in the route. The meta function may return a falsy value which
       // is effectively the same as an empty array.
       routeMeta = [...leafMeta];
     }
@@ -772,13 +489,11 @@ function V2Meta() {
     routeMeta = routeMeta || [];
     if (!Array.isArray(routeMeta)) {
       throw new Error(
-        "The `v2_meta` API is enabled in the Remix config, but the route at " +
+        "The route at " +
           _match.route.path +
-          " returns an invalid value. In v2, all route meta functions must " +
+          " returns an invalid value. All route meta functions must " +
           "return an array of meta objects." +
-          // TODO: Add link to the docs once they are written
-          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta." +
-          "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
+          "\n\nTo reference the meta function API, see https://remix.run/route/meta"
       );
     }
 
@@ -824,21 +539,18 @@ function V2Meta() {
         }
 
         if ("script:ld+json" in metaProps) {
-          let json: string | null = null;
           try {
-            json = JSON.stringify(metaProps["script:ld+json"]);
-          } catch (err) {}
-          return (
-            json != null && (
+            let json = JSON.stringify(metaProps["script:ld+json"]);
+            return (
               <script
-                key="script:ld+json"
+                key={`script:ld+json:${json}`}
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                  __html: JSON.stringify(metaProps["script:ld+json"]),
-                }}
+                dangerouslySetInnerHTML={{ __html: json }}
               />
-            )
-          );
+            );
+          } catch (err) {
+            return null;
+          }
         }
         return <meta key={JSON.stringify(metaProps)} {...metaProps} />;
       })}
@@ -848,11 +560,6 @@ function V2Meta() {
 
 function isValidMetaTag(tagName: unknown): tagName is "meta" | "link" {
   return typeof tagName === "string" && /^(meta|link)$/.test(tagName);
-}
-
-export function Meta() {
-  let { future } = useRemixContext();
-  return future?.v2_meta ? <V2Meta /> : <V1Meta />;
 }
 
 export interface AwaitProps<Resolve> {
@@ -971,7 +678,7 @@ export function Scripts(props: ScriptProps) {
     //   resolution by the subsequently streamed chunks.
     // - __remixContext.r is a function that takes a routeID, key and value or error and resolves
     //   the promise created by __remixContext.n.
-    // - __remixContext.t is a a map or routeId to keys to an object containing `e` and `r` methods
+    // - __remixContext.t is a map or routeId to keys to an object containing `e` and `r` methods
     //   to resolve or reject the promise created by __remixContext.n.
     // - __remixContext.a is the active number of deferred scripts that should be rendered to match
     //   the SSR tree for hydration on the client.
@@ -1269,53 +976,16 @@ function dedupe(array: any[]) {
   return [...new Set(array)];
 }
 
-// TODO: Can this be re-exported from RR?
-export interface RouteMatch {
-  /**
-   * The id of the matched route
-   */
-  id: string;
-  /**
-   * The pathname of the matched route
-   */
-  pathname: string;
-  /**
-   * The dynamic parameters of the matched route
-   *
-   * @see https://remix.run/file-conventions/routes-files#dynamic-route-parameters
-   */
-  params: Params<string>;
-  /**
-   * Any route data associated with the matched route
-   */
-  data: any;
-  /**
-   * The exported `handle` object of the matched route.
-   *
-   * @see https://remix.run/route/handle
-   */
-  handle: undefined | { [key: string]: any };
-}
+export type UIMatch<D = AppData> = UIMatchRR<SerializeFrom<D>>;
 
-export function useMatches(): RouteMatch[] {
-  let { routeModules } = useRemixContext();
-  let matches = useMatchesRR();
-  return React.useMemo(
-    () =>
-      matches.map((match) => {
-        let remixMatch: RouteMatch = {
-          id: match.id,
-          pathname: match.pathname,
-          params: match.params,
-          data: match.data,
-          // Need to grab handle here since we don't have it at client-side route
-          // creation time
-          handle: routeModules[match.id].handle,
-        };
-        return remixMatch;
-      }),
-    [matches, routeModules]
-  );
+/**
+ * Returns the active route matches, useful for accessing loaderData for
+ * parent/child routes or the route "handle" property
+ *
+ * @see https://remix.run/hooks/use-matches
+ */
+export function useMatches(): UIMatch[] {
+  return useMatchesRR() as UIMatch[];
 }
 
 /**
@@ -1348,485 +1018,19 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
 }
 
 /**
- * Returns everything you need to know about a page transition to build pending
- * navigation indicators and optimistic UI on data mutations.
- *
- * @deprecated in favor of useNavigation
- *
- * @see https://remix.run/hooks/use-transition
- */
-export function useTransition(): Transition {
-  let navigation = useNavigation();
-
-  React.useEffect(() => {
-    logDeprecationOnce(useTransitionWarning);
-  }, []);
-
-  return React.useMemo(
-    () => convertNavigationToTransition(navigation),
-    [navigation]
-  );
-}
-
-function convertNavigationToTransition(navigation: Navigation): Transition {
-  let { location, state, formMethod, formAction, formEncType, formData } =
-    navigation;
-
-  if (!location) {
-    return IDLE_TRANSITION;
-  }
-
-  let isActionSubmission =
-    formMethod != null &&
-    ["POST", "PUT", "PATCH", "DELETE"].includes(formMethod.toUpperCase());
-
-  if (
-    state === "submitting" &&
-    formMethod &&
-    formAction &&
-    formEncType &&
-    formData
-  ) {
-    if (isActionSubmission) {
-      // Actively submitting to an action
-      let transition: TransitionStates["SubmittingAction"] = {
-        location,
-        state,
-        submission: {
-          method: formMethod.toUpperCase() as ActionSubmission["method"],
-          action: formAction,
-          encType: formEncType,
-          formData: formData,
-          key: "",
-        },
-        type: "actionSubmission",
-      };
-      return transition;
-    } else {
-      // @remix-run/router doesn't mark loader submissions as state: "submitting"
-      invariant(
-        false,
-        "Encountered an unexpected navigation scenario in useTransition()"
-      );
-    }
-  }
-
-  if (state === "loading") {
-    let { _isRedirect, _isFetchActionRedirect } = location.state || {};
-    if (formMethod && formAction && formEncType && formData) {
-      if (!_isRedirect) {
-        if (isActionSubmission) {
-          // We're reloading the same location after an action submission
-          let transition: TransitionStates["LoadingAction"] = {
-            location,
-            state,
-            submission: {
-              method: formMethod.toUpperCase() as ActionSubmission["method"],
-              action: formAction,
-              encType: formEncType,
-              formData: formData,
-              key: "",
-            },
-            type: "actionReload",
-          };
-          return transition;
-        } else {
-          // The new router fixes a bug in useTransition where the submission
-          // "action" represents the request URL not the state of the <form> in
-          // the DOM.  Back-port it here to maintain behavior, but useNavigation
-          // will fix this bug.
-          let url = new URL(formAction, window.location.origin);
-
-          // This typing override should be safe since this is only running for
-          // GET submissions and over in @remix-run/router we have an invariant
-          // if you have any non-string values in your FormData when we attempt
-          // to convert them to URLSearchParams
-          url.search = new URLSearchParams(
-            formData.entries() as unknown as [string, string][]
-          ).toString();
-
-          // Actively "submitting" to a loader
-          let transition: TransitionStates["SubmittingLoader"] = {
-            location,
-            state: "submitting",
-            submission: {
-              method: formMethod.toUpperCase() as LoaderSubmission["method"],
-              action: url.pathname + url.search,
-              encType: formEncType,
-              formData: formData,
-              key: "",
-            },
-            type: "loaderSubmission",
-          };
-          return transition;
-        }
-      } else {
-        // Redirecting after a submission
-        if (isActionSubmission) {
-          let transition: TransitionStates["LoadingActionRedirect"] = {
-            location,
-            state,
-            submission: {
-              method: formMethod.toUpperCase() as ActionSubmission["method"],
-              action: formAction,
-              encType: formEncType,
-              formData: formData,
-              key: "",
-            },
-            type: "actionRedirect",
-          };
-          return transition;
-        } else {
-          let transition: TransitionStates["LoadingLoaderSubmissionRedirect"] =
-            {
-              location,
-              state,
-              submission: {
-                method: formMethod.toUpperCase() as LoaderSubmission["method"],
-                action: formAction,
-                encType: formEncType,
-                formData: formData,
-                key: "",
-              },
-              type: "loaderSubmissionRedirect",
-            };
-          return transition;
-        }
-      }
-    } else if (_isRedirect) {
-      if (_isFetchActionRedirect) {
-        let transition: TransitionStates["LoadingFetchActionRedirect"] = {
-          location,
-          state,
-          submission: undefined,
-          type: "fetchActionRedirect",
-        };
-        return transition;
-      } else {
-        let transition: TransitionStates["LoadingRedirect"] = {
-          location,
-          state,
-          submission: undefined,
-          type: "normalRedirect",
-        };
-        return transition;
-      }
-    }
-  }
-
-  // If no scenarios above match, then it's a normal load!
-  let transition: TransitionStates["Loading"] = {
-    location,
-    state: "loading",
-    submission: undefined,
-    type: "normalLoad",
-  };
-  return transition;
-}
-
-/**
- * Provides all fetchers currently on the page. Useful for layouts and parent
- * routes that need to provide pending/optimistic UI regarding the fetch.
- *
- * @see https://remix.run/api/remix#usefetchers
- */
-export function useFetchers(): Fetcher[] {
-  let fetchers = useFetchersRR();
-  return fetchers.map((f) => {
-    let fetcher = convertRouterFetcherToRemixFetcher({
-      state: f.state,
-      data: f.data,
-      formMethod: f.formMethod,
-      formAction: f.formAction,
-      formEncType: f.formEncType,
-      formData: f.formData,
-      json: f.json,
-      text: f.text,
-      " _hasFetcherDoneAnything ": f[" _hasFetcherDoneAnything "],
-    });
-    addFetcherDeprecationWarnings(fetcher);
-    return fetcher;
-  });
-}
-
-export type FetcherWithComponents<TData> = Fetcher<TData> & {
-  Form: React.ForwardRefExoticComponent<
-    FormProps & React.RefAttributes<HTMLFormElement>
-  >;
-  submit: SubmitFunction;
-  load: (href: string) => void;
-};
-
-/**
  * Interacts with route loaders and actions without causing a navigation. Great
  * for any interaction that stays on the same page.
  *
  * @see https://remix.run/hooks/use-fetcher
  */
-export function useFetcher<TData = any>(): FetcherWithComponents<
+export function useFetcher<TData = AppData>(): FetcherWithComponents<
   SerializeFrom<TData>
 > {
-  let fetcherRR = useFetcherRR();
-
-  return React.useMemo(() => {
-    let remixFetcher = convertRouterFetcherToRemixFetcher({
-      state: fetcherRR.state,
-      data: fetcherRR.data,
-      formMethod: fetcherRR.formMethod,
-      formAction: fetcherRR.formAction,
-      formEncType: fetcherRR.formEncType,
-      formData: fetcherRR.formData,
-      json: fetcherRR.json,
-      text: fetcherRR.text,
-      " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
-    });
-    let fetcherWithComponents = {
-      ...remixFetcher,
-      load: fetcherRR.load,
-      submit: fetcherRR.submit,
-      Form: fetcherRR.Form,
-    };
-    addFetcherDeprecationWarnings(fetcherWithComponents);
-    return fetcherWithComponents;
-  }, [fetcherRR]);
-}
-
-function addFetcherDeprecationWarnings(fetcher: Fetcher) {
-  let type: Fetcher["type"] = fetcher.type;
-  Object.defineProperty(fetcher, "type", {
-    get() {
-      logDeprecationOnce(fetcherTypeWarning);
-      return type;
-    },
-    set(value: Fetcher["type"]) {
-      // Devs should *not* be doing this but we don't want to break their
-      // current app if they are
-      type = value;
-    },
-    // These settings should make this behave like a normal object `type` field
-    configurable: true,
-    enumerable: true,
-  });
-
-  let submission: Fetcher["submission"] = fetcher.submission;
-  Object.defineProperty(fetcher, "submission", {
-    get() {
-      logDeprecationOnce(fetcherSubmissionWarning);
-      return submission;
-    },
-    set(value: Fetcher["submission"]) {
-      // Devs should *not* be doing this but we don't want to break their
-      // current app if they are
-      submission = value;
-    },
-    // These settings should make this behave like a normal object `type` field
-    configurable: true,
-    enumerable: true,
-  });
-}
-
-function convertRouterFetcherToRemixFetcher(
-  fetcherRR: Omit<ReturnType<typeof useFetcherRR>, "load" | "submit" | "Form">
-): Fetcher {
-  let {
-    state,
-    formMethod,
-    formAction,
-    formEncType,
-    formData,
-    json,
-    text,
-    data,
-  } = fetcherRR;
-
-  let isActionSubmission =
-    formMethod != null &&
-    ["POST", "PUT", "PATCH", "DELETE"].includes(formMethod.toUpperCase());
-
-  if (state === "idle") {
-    if (fetcherRR[" _hasFetcherDoneAnything "] === true) {
-      let fetcher: FetcherStates["Done"] = {
-        state: "idle",
-        type: "done",
-        formMethod: undefined,
-        formAction: undefined,
-        formEncType: undefined,
-        formData: undefined,
-        json: undefined,
-        text: undefined,
-        submission: undefined,
-        data,
-      };
-      return fetcher;
-    } else {
-      let fetcher: FetcherStates["Idle"] = IDLE_FETCHER;
-      return fetcher;
-    }
-  }
-
-  if (
-    state === "submitting" &&
-    formMethod &&
-    formAction &&
-    formEncType &&
-    (formData || json !== undefined || text !== undefined)
-  ) {
-    if (isActionSubmission) {
-      // Actively submitting to an action
-      let fetcher: FetcherStates["SubmittingAction"] = {
-        state,
-        type: "actionSubmission",
-        formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-        formAction,
-        formEncType,
-        formData,
-        json,
-        text,
-        // @ts-expect-error formData/json/text are mutually exclusive in the type,
-        // so TS can't be sure these meet that criteria, but as a straight
-        // assignment from the RR fetcher we know they will
-        submission: {
-          method: formMethod.toUpperCase() as ActionSubmission["method"],
-          action: formAction,
-          encType: formEncType,
-          formData,
-          json,
-          text,
-          key: "",
-        },
-        data,
-      };
-      return fetcher;
-    } else {
-      // @remix-run/router doesn't mark loader submissions as state: "submitting"
-      invariant(
-        false,
-        "Encountered an unexpected fetcher scenario in useFetcher()"
-      );
-    }
-  }
-
-  if (state === "loading") {
-    if (formMethod && formAction && formEncType) {
-      if (isActionSubmission) {
-        if (data) {
-          // In a loading state but we have data - must be an actionReload
-          let fetcher: FetcherStates["ReloadingAction"] = {
-            state,
-            type: "actionReload",
-            formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-            formAction,
-            formEncType,
-            formData,
-            json,
-            text,
-            // @ts-expect-error formData/json/text are mutually exclusive in the type,
-            // so TS can't be sure these meet that criteria, but as a straight
-            // assignment from the RR fetcher we know they will
-            submission: {
-              method: formMethod.toUpperCase() as ActionSubmission["method"],
-              action: formAction,
-              encType: formEncType,
-              formData,
-              json,
-              text,
-              key: "",
-            },
-            data,
-          };
-          return fetcher;
-        } else {
-          let fetcher: FetcherStates["LoadingActionRedirect"] = {
-            state,
-            type: "actionRedirect",
-            formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-            formAction,
-            formEncType,
-            formData,
-            json,
-            text,
-            // @ts-expect-error formData/json/text are mutually exclusive in the type,
-            // so TS can't be sure these meet that criteria, but as a straight
-            // assignment from the RR fetcher we know they will
-            submission: {
-              method: formMethod.toUpperCase() as ActionSubmission["method"],
-              action: formAction,
-              encType: formEncType,
-              formData,
-              json,
-              text,
-              key: "",
-            },
-            data: undefined,
-          };
-          return fetcher;
-        }
-      } else {
-        // The new router fixes a bug in useTransition where the submission
-        // "action" represents the request URL not the state of the <form> in
-        // the DOM.  Back-port it here to maintain behavior, but useNavigation
-        // will fix this bug.
-        let url = new URL(formAction, window.location.origin);
-
-        if (formData) {
-          // This typing override should be safe since this is only running for
-          // GET submissions and over in @remix-run/router we have an invariant
-          // if you have any non-string values in your FormData when we attempt
-          // to convert them to URLSearchParams
-          url.search = new URLSearchParams(
-            formData.entries() as unknown as [string, string][]
-          ).toString();
-        }
-
-        // Actively "submitting" to a loader
-        let fetcher: FetcherStates["SubmittingLoader"] = {
-          state: "submitting",
-          type: "loaderSubmission",
-          formMethod: formMethod.toUpperCase() as LoaderSubmission["method"],
-          formAction,
-          formEncType,
-          formData,
-          json,
-          text,
-          // @ts-expect-error formData/json/text are mutually exclusive in the type,
-          // so TS can't be sure these meet that criteria, but as a straight
-          // assignment from the RR fetcher we know they will
-          submission: {
-            method: formMethod.toUpperCase() as LoaderSubmission["method"],
-            action: url.pathname + url.search,
-            encType: formEncType,
-            formData,
-            json,
-            text,
-            key: "",
-          },
-          data,
-        };
-        return fetcher;
-      }
-    }
-  }
-
-  // If all else fails, it's a normal load!
-  let fetcher: FetcherStates["Loading"] = {
-    state: "loading",
-    type: "normalLoad",
-    formMethod: undefined,
-    formAction: undefined,
-    formData: undefined,
-    json: undefined,
-    text: undefined,
-    formEncType: undefined,
-    submission: undefined,
-    data,
-  };
-  return fetcher;
+  return useFetcherRR();
 }
 
 // Dead Code Elimination magic for production builds.
 // This way devs don't have to worry about doing the NODE_ENV check themselves.
-// If running an un-bundled server outside of `remix dev` you will still need
-// to set the REMIX_DEV_SERVER_WS_PORT manually.
 export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
@@ -1853,17 +1057,12 @@ export const LiveReload =
                   let protocol =
                     REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).protocol.replace(/^http/, "ws") :
                     location.protocol === "https:" ? "wss:" : "ws:"; // remove in v2?
-                  let hostname = location.hostname;
+                  let hostname = REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).hostname : location.hostname;
                   let url = new URL(protocol + "//" + hostname + "/socket");
 
                   url.port =
                     ${port} ||
-                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port :
-                    Number(${
-                      // TODO: remove in v2
-                      process.env.REMIX_DEV_SERVER_WS_PORT
-                    }) ||
-                    8002;
+                    (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);
 
                   let ws = new WebSocket(url.href);
                   ws.onmessage = async (message) => {
@@ -1896,7 +1095,7 @@ export const LiveReload =
                             imported
                           );
                           if (accepted) {
-                            console.log("[HMR] Updated accepted by", update.id);
+                            console.log("[HMR] Update accepted by", update.id);
                             updateAccepted = true;
                           }
                         }
@@ -1906,12 +1105,12 @@ export const LiveReload =
                           { needsRevalidation, assetsManifest: event.assetsManifest }
                         );
                         if (accepted) {
-                          console.log("[HMR] Updated accepted by", "remix:manifest");
+                          console.log("[HMR] Update accepted by", "remix:manifest");
                           updateAccepted = true;
                         }
                       }
                       if (!updateAccepted) {
-                        console.log("[HMR] Updated rejected, reloading...");
+                        console.log("[HMR] Update rejected, reloading...");
                         window.location.reload();
                       }
                     }

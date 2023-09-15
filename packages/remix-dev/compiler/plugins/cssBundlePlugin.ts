@@ -1,9 +1,8 @@
 import type { Plugin } from "esbuild";
-import { readFile } from "fs-extra";
 
 import type { LazyValue } from "../lazyValue";
 
-const pluginName = "css-bundle-update-plugin";
+const pluginName = "css-bundle-plugin";
 const namespace = `${pluginName}-ns`;
 
 /**
@@ -17,40 +16,21 @@ export function cssBundlePlugin(refs: {
   return {
     name: pluginName,
     async setup(build) {
-      let preventInfiniteLoop = {};
       build.onResolve({ filter: /^@remix-run\/css-bundle$/ }, async (args) => {
-        // Prevent plugin from infinitely trying to resolve itself
-        if (args.pluginData === preventInfiniteLoop) {
-          return null;
-        }
-
-        let resolvedPath = (
-          await build.resolve(args.path, {
-            resolveDir: args.resolveDir,
-            kind: args.kind,
-            pluginData: preventInfiniteLoop,
-          })
-        ).path;
-
         return {
-          path: resolvedPath,
+          path: args.path,
           namespace,
         };
       });
 
-      build.onLoad({ filter: /.*/, namespace }, async (args) => {
+      build.onLoad({ filter: /.*/, namespace }, async () => {
         let cssBundleHref = await refs.lazyCssBundleHref.get();
-
-        let contents = await readFile(args.path, "utf8");
-
-        contents = contents.replace(
-          /__INJECT_CSS_BUNDLE_HREF__/g,
-          cssBundleHref ? JSON.stringify(cssBundleHref) : "undefined"
-        );
 
         return {
           loader: "js",
-          contents,
+          contents: `export const cssBundleHref = ${
+            cssBundleHref ? JSON.stringify(cssBundleHref) : "undefined"
+          };`,
         };
       });
     },

@@ -1,12 +1,16 @@
 name: Branch
 
-# main/dev branches will get the full run across all OS/browsers
+# main/dev/release-* branches and nightly tags will get the full run across
+# all OS/browsers for multiple node versions
 
 on:
   push:
     branches:
       - main
       - dev
+      - release-*
+    tags:
+      - "v0.0.0-nightly-*"
     paths-ignore:
       - "docs/**"
       - "scripts/**"

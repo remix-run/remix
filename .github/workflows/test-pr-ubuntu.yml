@@ -10,6 +10,10 @@ on:
       - "contributors.yml"
       - "**/*.md"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: "⚙️ Build"
@@ -22,7 +26,7 @@ jobs:
     uses: ./.github/workflows/shared-test-unit.yml
     with:
       os: "ubuntu-latest"
-      node_version: '["latest"]'
+      node_version: '["20.5.1"]'
 
   integration-chromium:
     name: "👀 Integration Test"
@@ -30,5 +34,5 @@ jobs:
     uses: ./.github/workflows/shared-test-integration.yml
     with:
       os: "ubuntu-latest"
-      node_version: '["latest"]'
+      node_version: '["20.5.1"]'
       browser: '["chromium"]'

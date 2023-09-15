@@ -15,13 +15,11 @@
       "@remix-run/dev",
       "@remix-run/eslint-config",
       "@remix-run/express",
-      "@remix-run/netlify",
       "@remix-run/node",
       "@remix-run/react",
       "@remix-run/serve",
       "@remix-run/server-runtime",
-      "@remix-run/testing",
-      "@remix-run/vercel"
+      "@remix-run/testing"
     ]
   ],
   "linked": [],

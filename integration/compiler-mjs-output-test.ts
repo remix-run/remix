@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { createFixtureProject, js } from "./helpers/create-fixture";
+import { createFixtureProject, js, json } from "./helpers/create-fixture.js";
 
 let projectDir: string;
 
@@ -14,40 +14,32 @@ test.beforeAll(async () => {
         export default {
           serverModuleFormat: "esm",
           serverBuildPath: "build/index.mjs",
-          future: { v2_routeConvention: true },
         };
       `,
-      "package.json": js`
-        {
-          "name": "remix-template-remix",
-          "private": true,
-          "sideEffects": false,
-          "type": "module",
-          "scripts": {
-            "build": "node ../../../build/node_modules/@remix-run/dev/dist/cli.js build",
-            "dev": "node ../../../build/node_modules/@remix-run/dev/dist/cli.js dev",
-            "start": "node ../../../build/node_modules/@remix-run/serve/dist/cli.js build"
-          },
-          "dependencies": {
-            "@remix-run/node": "0.0.0-local-version",
-            "@remix-run/react": "0.0.0-local-version",
-            "@remix-run/serve": "0.0.0-local-version",
-            "isbot": "0.0.0-local-version",
-            "react": "0.0.0-local-version",
-            "react-dom": "0.0.0-local-version"
-          },
-          "devDependencies": {
-            "@remix-run/dev": "0.0.0-local-version",
-            "@types/react": "0.0.0-local-version",
-            "@types/react-dom": "0.0.0-local-version",
-            "typescript": "0.0.0-local-version"
-          },
-          "engines": {
-            "node": ">=14.0.0"
-          }
-        }      
-      `,
-      "app/routes/_index.jsx": js`
+      "package.json": json({
+        name: "remix-template-remix",
+        private: true,
+        sideEffects: false,
+        type: "module",
+        dependencies: {
+          "@remix-run/node": "0.0.0-local-version",
+          "@remix-run/react": "0.0.0-local-version",
+          "@remix-run/serve": "0.0.0-local-version",
+          isbot: "0.0.0-local-version",
+          react: "0.0.0-local-version",
+          "react-dom": "0.0.0-local-version",
+        },
+        devDependencies: {
+          "@remix-run/dev": "0.0.0-local-version",
+          "@types/react": "0.0.0-local-version",
+          "@types/react-dom": "0.0.0-local-version",
+          typescript: "0.0.0-local-version",
+        },
+        engines: {
+          node: ">=18.0.0",
+        },
+      }),
+      "app/routes/_index.tsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
 

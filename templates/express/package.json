@@ -28,14 +28,14 @@
     "@types/compression": "^1.7.2",
     "@types/express": "^4.17.17",
     "@types/morgan": "^1.9.4",
-    "@types/react": "^18.0.35",
-    "@types/react-dom": "^18.0.11",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
     "@types/source-map-support": "^0.5.6",
     "chokidar": "^3.5.3",
     "eslint": "^8.38.0",
-    "typescript": "^5.0.4"
+    "typescript": "^5.1.6"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }

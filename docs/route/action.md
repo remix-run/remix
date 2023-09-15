@@ -6,30 +6,30 @@ title: action
 
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Data Mutations with Form + action</a> and <a href="https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Multiple Forms and Single Button Mutations</a></docs-success>
 
-Like `loader`, action is a server-only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the action is called before the loaders.
+A route `action` is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the action is called before the loaders.
 
-Actions have the same API as loaders, the only difference is when they are called.
-
-This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
+Actions have the same API as loaders, the only difference is when they are called. This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
-import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form } from "@remix-run/react";
 
 import { TodoList } from "~/components/TodoList";
 import { fakeCreateTodo, fakeGetTodos } from "~/utils/db";
 
-export async function loader() {
-  return json(await fakeGetTodos());
-}
-
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const body = await request.formData();
   const todo = await fakeCreateTodo({
     title: body.get("title"),
   });
   return redirect(`/todos/${todo.id}`);
+}
+
+export async function loader() {
+  return json(await fakeGetTodos());
 }
 
 export default function Todos() {
@@ -52,10 +52,10 @@ When a POST is made to a URL, multiple routes in your route hierarchy will match
 
 If you want to post to an index route use `?index` in the action: `<Form action="/accounts?index" method="post" />`
 
-| action url        | route action               |
-| ----------------- | -------------------------- |
-| `/accounts?index` | `routes/accounts/index.js` |
-| `/accounts`       | `routes/accounts.js`       |
+| action url        | route action                     |
+| ----------------- | -------------------------------- |
+| `/accounts?index` | `app/routes/accounts._index.tsx` |
+| `/accounts`       | `app/routes/accounts.tsx`        |
 
 Also note that forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered, so using the `?index` param to disambiguate between parent and index routes is only useful if you're posting to an index route from somewhere besides the index route itself. If you're posting from the index route to itself, or from the parent route to itself, you don't need to define a `<Form action>` at all, just omit it: `<Form method="post">`.
 

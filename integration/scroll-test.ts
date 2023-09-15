@@ -1,19 +1,20 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    config: {
-      future: { v2_routeConvention: true },
-    },
     files: {
-      "app/routes/_index.jsx": js`
+      "app/routes/_index.tsx": js`
         import { redirect } from "@remix-run/node";
         import { Form } from "@remix-run/react";
 
@@ -33,7 +34,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/test.jsx": js`
+      "app/routes/test.tsx": js`
         export default function Component() {
           return (
             <>
@@ -44,7 +45,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/hash.jsx": js`
+      "app/routes/hash.tsx": js`
         import { Link } from "@remix-run/react";
 
         export default function Component() {

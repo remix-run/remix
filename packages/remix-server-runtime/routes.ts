@@ -1,7 +1,7 @@
 import type {
   AgnosticDataRouteObject,
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
+  LoaderFunctionArgs as RRLoaderFunctionArgs,
+  ActionFunctionArgs as RRActionFunctionArgs,
 } from "@remix-run/router";
 
 import { callRouteActionRR, callRouteLoaderRR } from "./data";
@@ -27,7 +27,6 @@ export interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
-  hasCatchBoundary: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
   module: string;
@@ -81,19 +80,16 @@ export function createStaticHandlerDataRoutes(
   > = groupRoutesByParentId(manifest)
 ): AgnosticDataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
-    let hasErrorBoundary =
-      future.v2_errorBoundary === true
-        ? route.id === "root" || route.module.ErrorBoundary != null
-        : route.id === "root" ||
-          route.module.CatchBoundary != null ||
-          route.module.ErrorBoundary != null;
     let commonRoute = {
       // Always include root due to default boundaries
-      hasErrorBoundary,
+      hasErrorBoundary:
+        route.id === "root" || route.module.ErrorBoundary != null,
       id: route.id,
       path: route.path,
       loader: route.module.loader
-        ? (args: LoaderFunctionArgs) =>
+        ? // Need to use RR's version here to permit the optional context even
+          // though we know it'll always be provided in remix
+          (args: RRLoaderFunctionArgs) =>
             callRouteLoaderRR({
               request: args.request,
               params: args.params,
@@ -103,7 +99,7 @@ export function createStaticHandlerDataRoutes(
             })
         : undefined,
       action: route.module.action
-        ? (args: ActionFunctionArgs) =>
+        ? (args: RRActionFunctionArgs) =>
             callRouteActionRR({
               request: args.request,
               params: args.params,

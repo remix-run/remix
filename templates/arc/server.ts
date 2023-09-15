@@ -8,5 +8,5 @@ installGlobals();
 
 export const handler = createRequestHandler({
   build,
-  mode: process.env.NODE_ENV,
+  mode: build.mode,
 });

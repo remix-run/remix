@@ -1,11 +1,8 @@
-import fsp from "fs/promises";
-import path from "path";
+import fsp from "node:fs/promises";
+import path from "node:path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
-import {
-  createRequestHandler as createRemixRequestHandler,
-  Response as NodeResponse,
-} from "@remix-run/node";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node";
 
 import {
   createRequestHandler,
@@ -201,7 +198,9 @@ describe("architect createRemixHeaders", () => {
   describe("creates fetch headers from architect headers", () => {
     it("handles empty headers", () => {
       let headers = createRemixHeaders({});
-      expect(headers.raw()).toMatchInlineSnapshot(`Object {}`);
+      expect(Object.fromEntries(headers.entries())).toMatchInlineSnapshot(
+        `Object {}`
+      );
     });
 
     it("handles simple headers", () => {
@@ -249,14 +248,14 @@ describe("architect createRemixRequest", () => {
 
 describe("sendRemixResponse", () => {
   it("handles regular responses", async () => {
-    let response = new NodeResponse("anything");
+    let response = new Response("anything");
     let result = await sendRemixResponse(response);
     expect(result.body).toBe("anything");
   });
 
   it("handles resource routes with regular data", async () => {
     let json = JSON.stringify({ foo: "bar" });
-    let response = new NodeResponse(json, {
+    let response = new Response(json, {
       headers: {
         "Content-Type": "application/json",
         "content-length": json.length.toString(),
@@ -271,7 +270,7 @@ describe("sendRemixResponse", () => {
   it("handles resource routes with binary data", async () => {
     let image = await fsp.readFile(path.join(__dirname, "554828.jpeg"));
 
-    let response = new NodeResponse(image, {
+    let response = new Response(image, {
       headers: {
         "content-type": "image/jpeg",
         "content-length": image.length.toString(),

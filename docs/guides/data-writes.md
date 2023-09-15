@@ -9,7 +9,7 @@ Data writes (some people call these mutations) in Remix are built on top of two 
 When the user submits a form, Remix will:
 
 1. Call the action for the form
-2. Reload all of the data for all of the routes on the page
+2. Reload all the data for all the routes on the page
 
 Many times people reach for global state management libraries in React like redux, data libs like apollo, and fetch wrappers like React Query in order to help manage getting server state into your components and keeping the UI in sync with it when the user changes it. Remix's HTML based API replaces the majority of use cases for these tools. Remix knows how to load the data as well as how to revalidate it after it changes when you use standard HTML APIs.
 
@@ -104,10 +104,12 @@ Let's consider a "new project" form.
 
 When the user submits this form, the browser will serialize the fields into a request "body" (instead of URL search params) and "POST" it to the server. This is still a normal navigation as if the user clicked a link. The difference is two-fold: the user provided the data for the server and the browser sent the request as a "POST" instead of a "GET".
 
-The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly-created project. A remix action would look something like this:
+The data is made available to the server's request handler, so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly-created project. A remix action would look something like this:
 
 ```tsx filename=app/routes/projects.tsx
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const body = await request.formData();
   const project = await createProject(body);
   return redirect(`/projects/${project.id}`);
@@ -143,9 +145,9 @@ Whether you use `<form>` or `<Form>` though, you write the very same code. You c
 
 Let's start with our project form from earlier but make it usable:
 
-Let's say you've got the route `app/routes/projects/new.js` with this form in it:
+Let's say you've got the route `app/routes/projects.new.tsx` with this form in it:
 
-```tsx
+```tsx filename=app/routes/projects.new.tsx
 export default function NewProject() {
   return (
     <form method="post" action="/projects/new">
@@ -171,12 +173,14 @@ export default function NewProject() {
 
 Now add the route action. Any form submissions that are "post" will call your data "action". Any "get" submissions (`<Form method="get">`) will be handled by your "loader".
 
-```tsx lines=[1,5-9]
-import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[1,5-11]
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 // Note the "action" export name, this will handle our form POST
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const formData = await request.formData();
   const project = await createProject(formData);
   return redirect(`/projects/${project.id}`);
@@ -205,10 +209,12 @@ const [errors, project] = await createProject(formData);
 
 If there are validation errors, we want to go back to the form and display them.
 
-```tsx lines=[1,5,7-10]
+```tsx lines=[1,7,9-12]
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
 
@@ -223,12 +229,14 @@ export const action = async ({ request }: ActionArgs) => {
 
 Just like `useLoaderData` returns the values from the `loader`, `useActionData` will return the data from the action. It will only be there if the navigation was a form submission, so you always have to check if you've got it or not.
 
-```tsx lines=[3,10,20,25-29,37,42-46]
-import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[3,12,22,27-31,39,44-48]
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData } from "@remix-run/react";
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   // ...
 };
 
@@ -285,7 +293,7 @@ You can ship this code as-is. The browser will handle the pending UI and interru
 
 ### Graduate to `<Form>` and add pending UI
 
-Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch`. It will also give you access to the pending form data so you can build pending UI.
+Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch`. It will also give you access to the pending form data, so you can build pending UI.
 
 ```tsx lines=[2,11]
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
@@ -389,7 +397,7 @@ export default function NewProject() {
 
 Pretty slick! Now when the user clicks "Create", the inputs go disabled, and the submit button's text changes. The whole operation should be faster now too since there's just one network request happening instead of a full page reload (which involves potentially more network requests, reading assets from the browser cache, parsing JavaScript, parsing CSS, etc.).
 
-We didn't do much with `navigation` on this page, but it's got all the information about the submission, including all of the values being processed on the server in `navigation.formData`.
+We didn't do much with `navigation` on this page, but it's got all the information about the submission (`navigation.formMethod`, `navigation.formAction`, `navigation.formEncType`), as well as all the values being processed on the server on `navigation.formData`.
 
 ### Animating in the Validation Errors
 

@@ -1,14 +1,14 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import {
   createAppFixture,
   createFixture,
   css,
   js,
   json,
-} from "./helpers/create-fixture";
+} from "./helpers/create-fixture.js";
 
 const TEST_PADDING_VALUE = "20px";
 
@@ -19,13 +19,10 @@ test.describe("CSS side-effect imports", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       config: {
-        serverDependenciesToBundle: [/@test-package/],
-        future: {
-          v2_routeConvention: true,
-        },
+        serverDependenciesToBundle: ["react", /@test-package/],
       },
       files: {
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           import { Links, Outlet } from "@remix-run/react";
           import { cssBundleHref } from "@remix-run/css-bundle";
           export function links() {
@@ -66,7 +63,7 @@ test.describe("CSS side-effect imports", () => {
         padding: ${TEST_PADDING_VALUE};
       }
     `,
-    "app/routes/basic-side-effect-test.jsx": js`
+    "app/routes/basic-side-effect-test.tsx": js`
       import "../basicSideEffect/styles.css";
 
       export default function() {
@@ -95,7 +92,7 @@ test.describe("CSS side-effect imports", () => {
         padding: ${TEST_PADDING_VALUE};
       }
     `,
-    "app/routes/root-relative-test.jsx": js`
+    "app/routes/root-relative-test.tsx": js`
       import "~/rootRelative/styles.css";
 
       export default function() {
@@ -130,7 +127,7 @@ test.describe("CSS side-effect imports", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-test.jsx": js`
+    "app/routes/image-urls-test.tsx": js`
       import "../imageUrls/styles.css";
 
       export default function() {
@@ -170,7 +167,7 @@ test.describe("CSS side-effect imports", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/root-relative-image-urls-test.jsx": js`
+    "app/routes/root-relative-image-urls-test.tsx": js`
       import "../rootRelativeImageUrls/styles.css";
 
       export default function() {
@@ -212,7 +209,7 @@ test.describe("CSS side-effect imports", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/absolute-image-urls-test.jsx": js`
+    "app/routes/absolute-image-urls-test.tsx": js`
       import "../absoluteImageUrls/styles.css";
 
       export default function() {
@@ -290,6 +287,9 @@ test.describe("CSS side-effect imports", () => {
         );
       };
     `,
+    "node_modules/@test-package/commonjs/package.json": json({
+      main: "./index.js",
+    }),
     "app/routes/commonjs-package-test.jsx": js`
       import { Test } from "@test-package/commonjs";
       export default function() {
@@ -332,7 +332,7 @@ test.describe("CSS side-effect imports", () => {
     "node_modules/@test-package/esm/package.json": json({
       exports: "./index.mjs",
     }),
-    "app/routes/esm-package-test.jsx": js`
+    "app/routes/esm-package-test.tsx": js`
       import { Test } from "@test-package/esm";
       export default function() {
         return <Test />;

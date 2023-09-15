@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/serve",
-  "version": "1.19.3",
+  "version": "2.0.0",
   "description": "Production application server for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -11,16 +11,16 @@
     "directory": "packages/remix-serve"
   },
   "license": "MIT",
-  "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
   "bin": {
     "remix-serve": "dist/cli.js"
   },
   "dependencies": {
-    "@remix-run/express": "1.19.3",
-    "@remix-run/node": "1.19.3",
+    "@remix-run/express": "2.0.0",
+    "@remix-run/node": "2.0.0",
+    "chokidar": "^3.5.3",
     "compression": "^1.7.4",
     "express": "^4.17.1",
+    "get-port": "5.1.1",
     "morgan": "^1.10.0",
     "source-map-support": "^0.5.21"
   },
@@ -31,7 +31,7 @@
     "@types/source-map-support": "^0.5.6"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/",

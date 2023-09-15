@@ -1,10 +1,39 @@
 ---
 title: useAsyncError
-toc: false
+new: true
 ---
 
 # `useAsyncError`
 
-<docs-info>This hook is simply a re-export of [React Router's `useAsyncError`][rr-useassyncerror].</docs-info>
+Returns the rejection value from the closest [`<Await>`][await] component.
 
-[rr-useassyncerror]: https://reactrouter.com/hooks/use-async-error
+```tsx [4,12]
+import { useAsyncError, Await } from "react-router-dom";
+
+function ErrorElement() {
+  const error = useAsyncError();
+  return (
+    <p>Uh Oh, something went wrong! {error.message}</p>
+  );
+}
+
+<Await
+  resolve={promiseThatRejects}
+  errorElement={<ErrorElement />}
+/>;
+```
+
+## Additional Resources
+
+**Guides**
+
+- [Streaming][streaming]
+
+**API**
+
+- [`<Await/>`][await]
+- [`useAsyncValue()`][use_async_value]
+
+[await]: ../components/await
+[use_async_value]: ../hooks/use-async-value
+[streaming]: ../guides/streaming

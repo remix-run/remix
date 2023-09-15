@@ -1,6 +1,7 @@
 ---
 title: App Tutorial (long)
 order: 4
+hidden: true
 ---
 
 # Jokes App Tutorial
@@ -57,7 +58,7 @@ You'll find links to the sections of the tutorial in the navbar (top of the page
 
 You can follow along with this tutorial on [CodeSandbox][code-sandbox] (a fantastic in-browser editor) or locally on your own computer. If you use the CodeSandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
 
-- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
+- [Node.js][node-js] version (>=18.0.0)
 - [npm][npm] 7 or greater
 - A code editor ([VSCode][vs-code] is a nice one)
 
@@ -94,14 +95,17 @@ This may ask you whether you want to install `create-remix@latest`. Enter `y`. I
 
 </docs-info>
 
-Once the setup script has run, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
+Once the setup script has run, it'll ask you a few questions. We'll call our app "remix-jokes", select to initialize a Git repository and have it run the installation for us:
 
 ```
-? Where would you like to create your app? remix-jokes
-? What type of app do you want to create? Just the basics
-? Where do you want to deploy? Choose Remix App Server if you're unsure; it's easy to change deployment targets. Remix App Server
-? TypeScript or JavaScript? TypeScript
-? Do you want me to run `npm install`? Yes
+Where should we create your new project?
+remix-jokes
+
+Initialize a new git repository?
+Yes
+
+Install dependencies with npm?
+Yes
 ```
 
 Remix can be deployed in a large and growing list of JavaScript environments. The "Remix App Server" is a full-featured [Node.js][node-js] server based on [Express][express]. It's the simplest option, and it satisfies most people's needs, so that's what we're going with for this tutorial. Feel free to experiment in the future!
@@ -1733,7 +1737,9 @@ So the only way to really be 100% positive that your data is correct, you should
 Before we get to the `/jokes/:jokeId` route, here's a quick example of how you can access params (like `:jokeId`) in your loader.
 
 ```tsx nocopy
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   console.log(params); // <-- {jokeId: "123"}
 };
 ```
@@ -1754,14 +1760,16 @@ const joke = await db.joke.findUnique({
 
 <summary>app/routes/jokes.$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes.$jokeId.tsx lines=[1-3,5,7-15,18,23-24]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/jokes.$jokeId.tsx lines=[1-3,5,7-17,20,25-26]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId },
   });
@@ -1895,13 +1903,15 @@ const joke = await db.joke.create({
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[1-2,4,6-23]
-import type { ActionArgs } from "@remix-run/node";
+```tsx filename=app/routes/jokes.new.tsx lines=[1-2,4,6-25]
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 
 import { db } from "~/utils/db.server";
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   const content = form.get("content");
   const name = form.get("name");
@@ -1978,8 +1988,8 @@ But if there's an error, you can return an object with the error messages and th
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,63,66-73,76-84,90,92-99,102-110,113-120]
-import type { ActionArgs } from "@remix-run/node";
+```tsx filename=app/routes/jokes.new.tsx lines=[3,6,8-12,14-18,30-34,37-40,42-48,55,65,68-75,78-86,92,94-101,104-112,115-122]
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
 
@@ -1998,7 +2008,9 @@ function validateJokeName(name: string) {
   }
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   const content = form.get("content");
   const name = form.get("name");
@@ -2526,9 +2538,9 @@ Great, now that we've got the UI looking nice, let's add some logic. This will b
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[2,7,12-13,19-23,25-29,31-37,39-110,113,136-139,148-151,162-170,172-180,188-196,198-206,208-217]
+```tsx filename=app/routes/login.tsx lines=[2,7,12-13,19-23,25-29,31-37,39-112,115,138-141,150-153,164-172,174-182,190-198,200-208,210-219]
 import type {
-  ActionArgs,
+  ActionFunctionArgs,
   LinksFunction,
 } from "@remix-run/node";
 import {
@@ -2565,7 +2577,9 @@ function validateUrl(url: string) {
   return "/jokes";
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const password = form.get("password");
@@ -2828,7 +2842,7 @@ Great, with that in place, we can now update `app/routes/login.tsx` to use it:
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[6,14-23] nocopy
+```tsx filename=app/routes/login.tsx lines=[6,16-25] nocopy
 // ...
 
 import stylesUrl from "~/styles/login.css";
@@ -2838,7 +2852,9 @@ import { login } from "~/utils/session.server";
 
 // ...
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   // ...
   switch (loginType) {
     case "login": {
@@ -2976,7 +2992,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[7,27] nocopy
+```tsx filename=app/routes/login.tsx lines=[7,29] nocopy
 // ...
 
 import stylesUrl from "~/styles/login.css";
@@ -2989,7 +3005,9 @@ import {
 
 // ...
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   // ...
 
   switch (loginType) {
@@ -3154,8 +3172,8 @@ You may also notice that our solution makes use of the `login` route's `redirect
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[7,22,51]
-import type { ActionArgs } from "@remix-run/node";
+```tsx filename=app/routes/jokes.new.tsx lines=[7,24,53]
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
 
@@ -3175,7 +3193,9 @@ function validateJokeName(name: string) {
   }
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const content = form.get("content");
@@ -3436,10 +3456,10 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[3,14,20,26,28,48-59]
+```tsx filename=app/routes/jokes.tsx lines=[3,14,20-22,28,30,50-61]
 import type {
   LinksFunction,
-  LoaderArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
@@ -3456,7 +3476,9 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const jokeListItems = await db.joke.findMany({
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true },
@@ -3531,13 +3553,14 @@ export default function JokesRoute() {
 <summary>app/routes/logout.tsx</summary>
 
 ```tsx filename=app/routes/logout.tsx
-import type { ActionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 
 import { logout } from "~/utils/session.server";
 
-export const action = async ({ request }: ActionArgs) =>
-  logout(request);
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => logout(request);
 
 export const loader = async () => redirect("/");
 ```
@@ -3716,9 +3739,9 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[17,102-110]
+```tsx filename=app/routes/login.tsx lines=[17,104-112]
 import type {
-  ActionArgs,
+  ActionFunctionArgs,
   LinksFunction,
 } from "@remix-run/node";
 import {
@@ -3760,7 +3783,9 @@ function validateUrl(url: string) {
   return "/jokes";
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const password = form.get("password");
@@ -4273,8 +4298,8 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes.$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes.$jokeId.tsx lines=[4,8,18-20,39,41-47]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/jokes.$jokeId.tsx lines=[4,8,20-22,41,43-49]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -4286,7 +4311,9 @@ import {
 
 import { db } from "~/utils/db.server";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId },
   });
@@ -4403,10 +4430,10 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[3,5,7,10,16,20-26,154,156-163]
+```tsx filename=app/routes/jokes.new.tsx lines=[3,5,7,10,16,20-30,162,164-171]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -4423,7 +4450,9 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const userId = await getUserId(request);
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
@@ -4443,7 +4472,9 @@ function validateJokeName(name: string) {
   }
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const content = form.get("content");
@@ -4612,10 +4643,10 @@ And then the `action` can determine whether the intention is to delete based on 
 
 <summary>app/routes/jokes.$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes.$jokeId.tsx lines=[2,5,7,11,15,29-57,67-76,86-99]
+```tsx filename=app/routes/jokes.$jokeId.tsx lines=[2,5,7,11,15,31-59,69-78,88-101]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -4629,7 +4660,9 @@ import {
 import { db } from "~/utils/db.server";
 import { requireUserId } from "~/utils/session.server";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId },
   });
@@ -4644,7 +4677,7 @@ export const loader = async ({ params }: LoaderArgs) => {
 export const action = async ({
   params,
   request,
-}: ActionArgs) => {
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   if (form.get("intent") !== "delete") {
     throw new Response(
@@ -4740,8 +4773,8 @@ Now that people will get a proper error message if they try to delete a joke tha
 
 ```tsx filename=app/routes/jokes.$jokeId.tsx lines=[16,22,24,34,77,88]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -4761,7 +4794,7 @@ import {
 export const loader = async ({
   params,
   request,
-}: LoaderArgs) => {
+}: LoaderFunctionArgs) => {
   const userId = await getUserId(request);
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId },
@@ -4780,7 +4813,7 @@ export const loader = async ({
 export const action = async ({
   params,
   request,
-}: ActionArgs) => {
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   if (form.get("intent") !== "delete") {
     throw new Response(
@@ -4890,7 +4923,7 @@ But before you get started, remember that we're in charge of rendering everythin
 ```tsx filename=app/root.tsx lines=[3,9,33-42,46,56-69]
 import type {
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -4920,7 +4953,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Learn Remix and laugh at the same time!";
 
@@ -5015,9 +5048,9 @@ export function ErrorBoundary() {
 
 ```tsx filename=app/routes/login.tsx lines=[4,25-34]
 import type {
-  ActionArgs,
+  ActionFunctionArgs,
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   Link,
@@ -5038,7 +5071,7 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Login to submit your own jokes to Remix Jokes!";
 
@@ -5069,7 +5102,9 @@ function validateUrl(url: string) {
   return "/jokes";
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const password = form.get("password");
@@ -5282,9 +5317,9 @@ export default function Login() {
 
 ```tsx filename=app/routes/jokes.$jokeId.tsx lines=[4,21-36]
 import type {
-  ActionArgs,
-  LoaderArgs,
-  V2_MetaFunction,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -5301,7 +5336,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -5321,7 +5356,7 @@ export const meta: V2_MetaFunction<typeof loader> = ({
 export const loader = async ({
   params,
   request,
-}: LoaderArgs) => {
+}: LoaderFunctionArgs) => {
   const userId = await getUserId(request);
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId },
@@ -5340,7 +5375,7 @@ export const loader = async ({
 export const action = async ({
   params,
   request,
-}: ActionArgs) => {
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   if (form.get("intent") !== "delete") {
     throw new Response(
@@ -5449,7 +5484,7 @@ For this one, you'll probably want to at least peek at the example unless you wa
 <summary>app/routes/jokes[.]rss.tsx</summary>
 
 ```tsx filename=app/routes/jokes[.]rss.tsx
-import type { LoaderArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 
 import { db } from "~/utils/db.server";
 
@@ -5466,7 +5501,9 @@ function escapeHtml(s: string) {
     .replace(/'/g, "&#039;");
 }
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const jokes = await db.joke.findMany({
     include: { jokester: { select: { username: true } } },
     orderBy: { createdAt: "desc" },
@@ -5585,10 +5622,10 @@ export default function IndexRoute() {
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[83-89]
+```tsx filename=app/routes/jokes.tsx lines=[85-91]
 import type {
   LinksFunction,
-  LoaderArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
@@ -5605,7 +5642,9 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const jokeListItems = await db.joke.findMany({
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true },
@@ -5709,7 +5748,7 @@ Ok, so let's load JavaScript on this page now 😆
 ```tsx filename=app/root.tsx lines=[11,75]
 import type {
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -5740,7 +5779,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Learn Remix and laugh at the same time!";
 
@@ -5841,7 +5880,7 @@ export function ErrorBoundary() {
 ```tsx filename=app/root.tsx lines=[92]
 import type {
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -5872,7 +5911,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Learn Remix and laugh at the same time!";
 
@@ -5969,9 +6008,9 @@ export function ErrorBoundary() {
 
 ```tsx filename=app/routes/jokes.$jokeId.tsx lines=[114]
 import type {
-  ActionArgs,
-  LoaderArgs,
-  V2_MetaFunction,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -5988,7 +6027,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -6008,7 +6047,7 @@ export const meta: V2_MetaFunction<typeof loader> = ({
 export const loader = async ({
   params,
   request,
-}: LoaderArgs) => {
+}: LoaderFunctionArgs) => {
   const userId = await getUserId(request);
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId },
@@ -6027,7 +6066,7 @@ export const loader = async ({
 export const action = async ({
   params,
   request,
-}: ActionArgs) => {
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   if (form.get("intent") !== "delete") {
     throw new Response(
@@ -6189,10 +6228,10 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[155]
+```tsx filename=app/routes/jokes.new.tsx lines=[159]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -6209,7 +6248,9 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const userId = await getUserId(request);
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
@@ -6229,7 +6270,9 @@ function validateJokeName(name: string) {
   }
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const content = form.get("content");
@@ -6377,11 +6420,11 @@ Remix has its own [`<Form />`][form] component. When JavaScript is not yet loade
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[7,143,245]
+```tsx filename=app/routes/login.tsx lines=[7,145,247]
 import type {
-  ActionArgs,
+  ActionFunctionArgs,
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   Form,
@@ -6403,7 +6446,7 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Login to submit your own jokes to Remix Jokes!";
 
@@ -6434,7 +6477,9 @@ function validateUrl(url: string) {
   return "/jokes";
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const password = form.get("password");
@@ -6645,10 +6690,10 @@ export default function Login() {
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[7,52,56]
+```tsx filename=app/routes/jokes.tsx lines=[7,54,58]
 import type {
   LinksFunction,
-  LoaderArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
@@ -6666,7 +6711,9 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const jokeListItems = await db.joke.findMany({
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true },
@@ -6749,9 +6796,9 @@ export default function JokesRoute() {
 
 ```tsx filename=app/routes/jokes.$jokeId.tsx lines=[8,97,106]
 import type {
-  ActionArgs,
-  LoaderArgs,
-  V2_MetaFunction,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -6769,7 +6816,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -6789,7 +6836,7 @@ export const meta: V2_MetaFunction<typeof loader> = ({
 export const loader = async ({
   params,
   request,
-}: LoaderArgs) => {
+}: LoaderFunctionArgs) => {
   const userId = await getUserId(request);
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId },
@@ -6808,7 +6855,7 @@ export const loader = async ({
 export const action = async ({
   params,
   request,
-}: ActionArgs) => {
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   if (form.get("intent") !== "delete") {
     throw new Response(
@@ -6903,10 +6950,10 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[7,82,149]
+```tsx filename=app/routes/jokes.new.tsx lines=[7,86,153]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -6924,7 +6971,9 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const userId = await getUserId(request);
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
@@ -6944,7 +6993,9 @@ function validateJokeName(name: string) {
   }
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const content = form.get("content");
@@ -7094,10 +7145,10 @@ If a user focuses or mouses-over a link, it's likely they want to go there. So w
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[71]
+```tsx filename=app/routes/jokes.tsx lines=[73]
 import type {
   LinksFunction,
-  LoaderArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
@@ -7115,7 +7166,9 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const jokeListItems = await db.joke.findMany({
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true },
@@ -7254,9 +7307,9 @@ export function JokeDisplay({
 
 ```tsx filename=app/routes/jokes.$jokeId.tsx lines=[14,91]
 import type {
-  ActionArgs,
-  LoaderArgs,
-  V2_MetaFunction,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -7273,7 +7326,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -7293,7 +7346,7 @@ export const meta: V2_MetaFunction<typeof loader> = ({
 export const loader = async ({
   params,
   request,
-}: LoaderArgs) => {
+}: LoaderFunctionArgs) => {
   const userId = await getUserId(request);
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId },
@@ -7312,7 +7365,7 @@ export const loader = async ({
 export const action = async ({
   params,
   request,
-}: ActionArgs) => {
+}: ActionFunctionArgs) => {
   const form = await request.formData();
   if (form.get("intent") !== "delete") {
     throw new Response(
@@ -7391,10 +7444,10 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[11,15,80,82-99]
+```tsx filename=app/routes/jokes.new.tsx lines=[11,15,84,86-103]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -7414,7 +7467,9 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const userId = await getUserId(request);
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
@@ -7434,7 +7489,9 @@ function validateJokeName(name: string) {
   }
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const content = form.get("content");
