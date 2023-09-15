@@ -1,116 +1,13 @@
 # `@remix-run/testing`
 
-## 2.0.0-pre.13
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.13`
-  - `@remix-run/react@2.0.0-pre.13`
-
-## 2.0.0-pre.12
-
-### Patch Changes
-
-- [Remove] Update to stable `web-std-io` and `react-router` releases ([#7406](https://github.com/remix-run/remix/pull/7406))
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.12`
-  - `@remix-run/react@2.0.0-pre.12`
-
-## 2.0.0-pre.11
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.11`
-  - `@remix-run/react@2.0.0-pre.11`
-
-## 2.0.0-pre.10
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.10`
-  - `@remix-run/react@2.0.0-pre.10`
-
-## 2.0.0-pre.9
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/react@2.0.0-pre.9`
-  - `@remix-run/node@2.0.0-pre.9`
-
-## 2.0.0-pre.8
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.8`
-  - `@remix-run/react@2.0.0-pre.8`
-
-## 2.0.0-pre.7
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.7`
-  - `@remix-run/react@2.0.0-pre.7`
-
-## 2.0.0-pre.6
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.6`
-  - `@remix-run/react@2.0.0-pre.6`
-
-## 2.0.0-pre.5
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/react@2.0.0-pre.5`
-  - `@remix-run/node@2.0.0-pre.5`
-
-## 2.0.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.4`
-  - `@remix-run/react@2.0.0-pre.4`
-
-## 2.0.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.3`
-  - `@remix-run/react@2.0.0-pre.3`
-
-## 2.0.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.2`
-  - `@remix-run/react@2.0.0-pre.2`
-
-## 2.0.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.0.0-pre.1`
-  - `@remix-run/react@2.0.0-pre.1`
-
-## 2.0.0-pre.0
+## 2.0.0
 
 ### Major Changes
 
 - Drop React 17 support ([#7121](https://github.com/remix-run/remix/pull/7121))
+
 - Require Node >=18.0.0 ([#6939](https://github.com/remix-run/remix/pull/6939))
+
 - We have made a few important changes to the route `meta` API as reflected in the v1 implementation when using the `future.v2_meta` config option. ([#6958](https://github.com/remix-run/remix/pull/6958))
 
   - The `meta` function should no longer return an object, but an array of objects that map to the HTML tag's respective attributes. This provides more flexibility and control over how certain tags are rendered, and the order in which they appear.
@@ -151,8 +48,10 @@
     }
     ```
 
-- promote config.future.v2_dev to config.dev ([#7002](https://github.com/remix-run/remix/pull/7002))
+- promote config.future.v2\_dev to config.dev ([#7002](https://github.com/remix-run/remix/pull/7002))
+
 - Remove `v2_errorBoundary` flag and `CatchBoundary` implementation ([#6906](https://github.com/remix-run/remix/pull/6906))
+
 - Removed support for "magic exports" from the `remix` package. This package can be removed from your `package.json` and you should update all imports to use the source `@remix-run/*` packages: ([#6895](https://github.com/remix-run/remix/pull/6895))
 
   ```diff
@@ -164,7 +63,9 @@
   ```
 
 - Remove `v2_normalizeFormMethod` future flag - all `formMethod` values will be normalized in v2 ([#6875](https://github.com/remix-run/remix/pull/6875))
+
 - Remove `v2_routeConvention` flag. The flat route file convention is now standard. ([#6969](https://github.com/remix-run/remix/pull/6969))
+
 - Remove `v2_headers` flag. It is now the default behavior to use the deepest `headers` function in the route tree. ([#6979](https://github.com/remix-run/remix/pull/6979))
 
 ### Minor Changes
@@ -177,9 +78,10 @@
 
 - Fix types for `StubRouteObject` `children` property ([#7098](https://github.com/remix-run/remix/pull/7098))
 - Bump router to 1.9.0/6.16.0 prereleases ([#7283](https://github.com/remix-run/remix/pull/7283))
+- \[Remove] Update to stable `web-std-io` and `react-router` releases ([#7406](https://github.com/remix-run/remix/pull/7406))
 - Updated dependencies:
-  - `@remix-run/react@2.0.0-pre.0`
-  - `@remix-run/node@2.0.0-pre.0`
+  - `@remix-run/react@2.0.0`
+  - `@remix-run/node@2.0.0`
 
 ## 1.19.3
 
