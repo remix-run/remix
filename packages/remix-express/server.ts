@@ -87,9 +87,12 @@ export function createRemixRequest(
   req: express.Request,
   res: express.Response
 ): Request {
-  let [, port] = req.get("host")?.split(":") ?? [];
+  // req.hostname doesn't include port information so grab that from 
+  // `X-Forwarded-Host` or `Host`
+  let [,hostnamePort] = req.get('X-Forwarded-Host')?.split(':') ?? [];
+  let [,hostPort] = req.get('host')?.split(':') ?? [];
+  let port = hostnamePort || hostPort;
   // Use req.hostname here as it respects the "trust proxy" setting
-  // but unfortunately doesn't include any port information
   let resolvedHost = `${req.hostname}${port ? `:${port}` : ""}`;
   let url = new URL(`${req.protocol}://${resolvedHost}${req.url}`);
 
