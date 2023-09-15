@@ -123,7 +123,9 @@ export default function Projects() {
 // Actions only run on the server and handle POST
 // PUT, PATCH, and DELETE. They can also provide data
 // to the component
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const form = await request.formData();
   const errors = validate(form);
   if (errors) {

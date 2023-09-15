@@ -1,5 +1,24 @@
 # `create-remix`
 
+## 2.0.0
+
+### Major Changes
+
+- The `create-remix` CLI has been rewritten to feature a cleaner interface, Git repo initialization and optional `remix.init` script execution. The interactive template prompt and official Remix stack/template shorthands have also been removed so that community/third-party templates are now on a more equal footing. ([#6887](https://github.com/remix-run/remix/pull/6887))
+  - The code for `create-remix` has been moved out of the Remix CLI since it's not intended for use within an existing Remix application. This means that the `remix create` command is no longer available.
+- Stop passing `isTypeScript` to `remix.init` script ([#7099](https://github.com/remix-run/remix/pull/7099))
+- Require Node >=18.0.0 ([#6939](https://github.com/remix-run/remix/pull/6939))
+
+### Minor Changes
+
+- Remove empty directory checking in favor of `overwrite` prompt/flag ([#7062](https://github.com/remix-run/remix/pull/7062))
+  - `create-remix` now allows you to write into an existing non-empty directory. It will perform a file-level comparison and if the template will overwrite any existing files in the destination directory, it will prompt you if it's OK to overwrite those files. If you answer no (the default) then it will exit without copying any files. You may skip this prompt with the `--overwrite` CLI flag.
+- Support `bun` package manager ([#7074](https://github.com/remix-run/remix/pull/7074))
+
+### Patch Changes
+
+- Allow dots in github repo shorthand notation folder names (i.e., `npx create-remix --template remix-run/examples/socket.io`) ([#7277](https://github.com/remix-run/remix/pull/7277))
+
 ## 1.19.3
 
 ### Patch Changes

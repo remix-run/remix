@@ -9,6 +9,8 @@ Remix is designed for you to own your server, but if you don't want to set one u
 
 ```sh
 remix-serve <server-build-path>
+# e.g.
+remix-serve build/index.js
 ```
 
 ## `PORT` environment variable
@@ -16,7 +18,7 @@ remix-serve <server-build-path>
 You can change the port of the server with an environment variable.
 
 ```sh
-PORT=4000 npx remix-serve <server-build-path>
+PORT=4000 npx remix-serve build/index.js
 ```
 
 ## `HOST` environment variable
@@ -24,14 +26,14 @@ PORT=4000 npx remix-serve <server-build-path>
 You can configure the hostname for your Express app via `process.env.HOST` and that value will be passed to the internal [`app.listen`][express-listen] method when starting the server.
 
 ```sh
-HOST=127.0.0.1 npx remix-serve build/
+HOST=127.0.0.1 npx remix-serve build/index.js
 ```
 
 ## Development Environment
 
 Depending on `process.env.NODE_ENV`, the server will boot in development or production mode.
 
-The `server-build-path` needs to point to the `serverBuildDirectory` defined in `remix.config.js`.
+The `server-build-path` needs to point to the `serverBuildPath` defined in `remix.config.js`.
 
 Because only the build artifacts (`build/`, `public/build/`) need to be deployed to production, the `remix.config.js` is not guaranteed to be available in production, so you need to tell Remix where your server build is with this option.
 
@@ -44,7 +46,9 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
   // cleared and this will be required brand new
   const cache = new Map();
 
-  export async function loader({ params }: LoaderArgs) {
+  export async function loader({
+    params,
+  }: LoaderFunctionArgs) {
     if (cache.has(params.foo)) {
       return json(cache.get(params.foo));
     }

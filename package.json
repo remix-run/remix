@@ -118,7 +118,6 @@
     "rollup-plugin-copy": "^3.3.0",
     "semver": "^7.3.7",
     "simple-git": "^3.16.0",
-    "sort-package-json": "^1.55.0",
     "to-vfile": "7.2.3",
     "typescript": "^5.1.0",
     "unified": "^10.1.2",

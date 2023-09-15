@@ -4,11 +4,11 @@ description: The quickest way to get rocking and rolling with Remix
 order: 3
 ---
 
-# Templates
+# Templates and Stacks
 
-When using [`create-remix`][create-remix] to generate a new project, you can choose a template to quickly get up and running.
+When using [`create-remix`][create-remix] to generate a new project, you can choose a Template or a Stack to quickly get up and running. Templates are minimal starting points to get you up and running. "Stacks" are templates that are more-complete and closer to production ready architectures (potentially including aspects such as testing, database, CI, and deployment configurations).
 
-## Basic Template
+## Templates
 
 If you run `create-remix` without providing the `--template` option, you'll get a basic template using the [Remix App Server][remix-app-server].
 
@@ -23,6 +23,34 @@ npx create-remix --template remix-run/remix/templates/remix-javascript
 ```
 
 This is a great place to start if you're just looking to try out Remix for the first time. You can always extend this starting point yourself or migrate to a more advanced template later.
+
+### Official Templates
+
+If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Cloudflare][cloudflare], or [Deno][deno]—then you can try one of our [official templates][official-templates] from the Remix repository:
+
+```sh
+npx create-remix --template remix-run/remix/templates/arc
+npx create-remix --template remix-run/remix/templates/cloudflare-pages
+npx create-remix --template remix-run/remix/templates/cloudflare-workers
+npx create-remix --template remix-run/remix/templates/deno
+npx create-remix --template remix-run/remix/templates/express
+npx create-remix --template remix-run/remix/templates/fly
+```
+
+### Third-Party Templates
+
+Some hosting providers maintain their own Remix templates. For more information, see their official integration guides listed below.
+
+- [Netlify][netlify-remix]
+- [Vercel][vercel-remix]
+
+### Examples
+
+We also provide a [community-driven examples repository][examples], with each example showcasing different Remix features, patterns, tools, hosting providers, etc. You can use these in a similar manner to install the working example:
+
+```sh
+npx create-remix@latest --template remix-run/examples/basic
+```
 
 ## Stacks
 
@@ -68,26 +96,7 @@ npx create-remix@latest --template :username/:repo
 
 <docs-success>If you want to share your stack with the community, don't forget to tag it with the [remix-stack][remix-stack-topic] topic so others can find it — and yes, we do recommend that you name your own stack after a music sub-genre (not "rock" but "indie"!).</docs-success>
 
-## Regular Templates and Examples
-
-For a less opinionated starting point, you can also just use a regular template.
-
-The Remix repo provides a set of [templates for different environments.][official-templates]
-
-We also provide a [community-driven examples repository,][examples] with each example showcasing different Remix features, patterns, tools, hosting providers, etc.
-
-You can use these templates and examples by passing a GitHub shorthand to the `--template` option when running `create-remix`, for example:
-
-```sh
-npx create-remix@latest --template remix-run/examples/basic
-```
-
-### Third-Party Templates
-
-Some hosting providers maintain their own Remix templates. For more information, see their official integration guides listed below.
-
-- [Netlify][netlify-remix]
-- [Vercel][vercel-remix]
+## Other Information
 
 ### Private Templates
 
@@ -97,7 +106,7 @@ If your template is in a private GitHub repo, you can pass a GitHub token via th
 npx create-remix@latest --template your-private/repo --token yourtoken
 ```
 
-The [token just needs `repo` access][repo access token].
+The [token just needs `repo` access][repo-access-token].
 
 ### Local Templates
 
@@ -133,9 +142,8 @@ After the init script has been run, the `remix.init` folder gets deleted, so you
 <docs-warning>Do note that consumers can opt out of running the remix.init script. To do so manually, they'll need to run `remix init`.</docs-warning>
 
 [create-remix]: /other-api/create-remix
-
-[remix-app-server]: [/other-api/serve]
-[repo access token]: https://github.com/settings/tokens/new?description=Remix%20Private%20Stack%20Access&scopes=repo
+[remix-app-server]: /other-api/serve
+[repo-access-token]: https://github.com/settings/tokens/new?description=Remix%20Private%20Stack%20Access&scopes=repo
 [inquirer]: https://npm.im/inquirer
 [read-the-feature-announcement-blog-post]: /blog/remix-stacks
 [watch-remix-stacks-videos-on-you-tube]: https://www.youtube.com/playlist?list=PLXoynULbYuEC8-gJCqyXo94RufAvSA6R3
@@ -147,3 +155,6 @@ After the init script has been run, the `remix.init` folder gets deleted, so you
 [examples]: https://github.com/remix-run/examples
 [vercel-remix]: https://vercel.com/docs/frameworks/remix
 [netlify-remix]: https://docs.netlify.com/integrations/frameworks/remix
+[arc]: https://arc.codes/docs/en/get-started/quickstart
+[deno]: https://deno.com/
+[cloudflare]: https://www.cloudflare.com/

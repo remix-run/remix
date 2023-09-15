@@ -1,5 +1,17 @@
 # `@remix-run/cloudflare-workers`
 
+## 2.0.0
+
+### Major Changes
+
+- Require Node >=18.0.0 ([#6939](https://github.com/remix-run/remix/pull/6939))
+- Drop `@cloudflare/workers-types` v2 & v3 support ([#6925](https://github.com/remix-run/remix/pull/6925))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@2.0.0`
+
 ## 1.19.3
 
 ### Patch Changes
