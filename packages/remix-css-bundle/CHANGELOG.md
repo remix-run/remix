@@ -1,32 +1,6 @@
 # @remix-run/css-bundle
 
-## 2.0.0-pre.13
-
-## 2.0.0-pre.12
-
-## 2.0.0-pre.11
-
-## 2.0.0-pre.10
-
-## 2.0.0-pre.9
-
-## 2.0.0-pre.8
-
-## 2.0.0-pre.7
-
-## 2.0.0-pre.6
-
-## 2.0.0-pre.5
-
-## 2.0.0-pre.4
-
-## 2.0.0-pre.3
-
-## 2.0.0-pre.2
-
-## 2.0.0-pre.1
-
-## 2.0.0-pre.0
+## 2.0.0
 
 ### Major Changes
 
@@ -34,9 +8,8 @@
 
 ### Patch Changes
 
-- Decouple the `@remix-run/dev` package from the contents of the `@remix-run/css-bundle` package. ([#6982](https://github.com/remix-run/remix/pull/6982))
-
-  The contents of the `@remix-run/css-bundle` package are now entirely managed by the Remix compiler. Even though it's still recommended that your Remix dependencies all share the same version, this change ensures that there are no runtime errors when upgrading `@remix-run/dev` without upgrading `@remix-run/css-bundle`.
+- Decouple the `@remix-run/dev` package from the contents of the `@remix-run/css-bundle` package ([#6982](https://github.com/remix-run/remix/pull/6982))
+  - The contents of the `@remix-run/css-bundle` package are now entirely managed by the Remix compiler. Even though it's still recommended that your Remix dependencies all share the same version, this change ensures that there are no runtime errors when upgrading `@remix-run/dev` without upgrading `@remix-run/css-bundle`.
 
 ## 1.19.3
 

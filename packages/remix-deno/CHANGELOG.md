@@ -1,167 +1,32 @@
 # `@remix-run/deno`
 
-## 2.0.0-pre.13
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.13`
-
-## 2.0.0-pre.12
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.12`
-
-## 2.0.0-pre.11
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.11`
-
-## 2.0.0-pre.10
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.10`
-
-## 2.0.0-pre.9
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.9`
-
-## 2.0.0-pre.8
+## 2.0.0
 
 ### Major Changes
 
-- Remove/align Remix types with those used in React Router ([#7319](https://github.com/remix-run/remix/pull/7319))
-
-  - Change exposed `any` types to `unknown`
-    - `AppData`
-    - `useLocation.state`
-    - `useMatches()[i].data`
-    - `useFetcher().data`
-    - `MetaMatch.handle`
-  - `useMatches()[i].handle` type changed from `{ [k: string]: any }` to `unknown`
-  - `AppLoadContext` type changed from `{ [k: string]: unknown }` to `unknown`
-  - Rename the `useMatches()` return type from `RouteMatch` to `UIMatch`
-  - Rename `LoaderArgs`/`ActionArgs` to `LoaderFunctionArgs`/`ActionFunctionArgs` and add a generic to accept a `context` type
-
-- Remove `AppData`/`RouteHandle` types which are just aliases for `unknown` ([#7354](https://github.com/remix-run/remix/pull/7354))
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.8`
-
-## 2.0.0-pre.7
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.7`
-
-## 2.0.0-pre.6
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.6`
-
-## 2.0.0-pre.5
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.5`
-
-## 2.0.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.4`
-
-## 2.0.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.3`
-
-## 2.0.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.2`
-
-## 2.0.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.1`
-
-## 2.0.0-pre.0
-
-### Major Changes
-
+- Removed/adjusted types to prefer `unknown` over `any` and to align with underlying React Router types ([#7319](https://github.com/remix-run/remix/pull/7319), [#7354](https://github.com/remix-run/remix/pull/7354)):
+  - Renamed the `useMatches()` return type from `RouteMatch` to `UIMatch`
+  - Renamed `LoaderArgs`/`ActionArgs` to `LoaderFunctionArgs`/`ActionFunctionArgs`
+  - `AppData` changed from `any` to `unknown`
+  - `Location["state"]` (`useLocation.state`) changed from `any` to `unknown`
+  - `UIMatch["data"]` (`useMatches()[i].data`) changed from `any` to `unknown`
+  - `UIMatch["handle"]` (`useMatches()[i].handle`) changed from `{ [k: string]: any }` to `unknown`
+  - `Fetcher["data"]` (`useFetcher().data`) changed from `any` to `unknown`
+  - `MetaMatch.handle` (used in `meta()`) changed from `any` to `unknown`
+  - `AppData`/`RouteHandle` are no longer exported as they are just aliases for `unknown`
 - Require Node >=18.0.0 ([#6939](https://github.com/remix-run/remix/pull/6939))
-- We have made a few important changes to the route `meta` API as reflected in the v1 implementation when using the `future.v2_meta` config option. ([#6958](https://github.com/remix-run/remix/pull/6958))
-
-  - The `meta` function should no longer return an object, but an array of objects that map to the HTML tag's respective attributes. This provides more flexibility and control over how certain tags are rendered, and the order in which they appear.
-  - In most cases, `meta` descriptor objects render a `<meta>` tag. There are a few notable exceptions:
-    - `{ title: "My app" }` will render `<title>My app</title>`.
-    - `{ 'script:ld+json': { /* ... */ } }` will render `<script type="application/ld+json">/* ... */</script>`, where the value is serialized to JSON and rendered inside the `<script>` tag.
-    - `{ tagName: 'link', ...attributes }` will render `<link {...attributes} />`
-      - This is useful for things like setting canonical URLs. For loading assets, we encourage you to use the `links` export instead.
-      - It's important to note that `tagName` may only accept `meta` or `link`, so other arbitrary elements will be ignored.
-  - `<Meta />` will no longer render the `meta` output from the entire route hierarchy. Only the output from the leaf (current) route will be rendered unless that route does not export a `meta` function, in which case the output from the nearest ancestor route with `meta` will be rendered.
-    - This change comes from user feedback that auto-merging meta made effective SEO difficult to implement. Our goal is to give you as much control as you need over meta tags for each individual route.
-    - Our suggested approach is to **only export a `meta` function from leaf route modules**. However, if you do want to render a tag from another matched route, `meta` now accepts a `matches` argument for you to merge or override parent route meta as you'd like.
-    ```tsx
-    export function meta({ matches }) {
-      return [
-        // render all ancestor route meta except for title tags
-        ...matches
-          .flatMap((match) => match.meta)
-          .filter((match) => !("title" in match)),
-        { title: "Override the title!" },
-      ];
-    }
-    ```
-  - The `parentsData` argument has been removed. If you need to access data from a parent route, you can use `matches` instead.
-    ```tsx
-    // before
-    export function meta({ parentsData }) {
-      return [{ title: parentsData["routes/some-route"].title }];
-    }
-    // after
-    export function meta({ matches }) {
-      return [
-        {
-          title: matches.find((match) => match.id === "routes/some-route").data
-            .title,
-        },
-      ];
-    }
-    ```
+- The route `meta` API now defaults to the new "V2 Meta" API ([#6958](https://github.com/remix-run/remix/pull/6958))
+  - Please refer to the ([docs](https://remix.run/docs/en/2.0.0/route/meta) and [Preparing for V2](https://remix.run/docs/en/2.0.0/start/v2#route-meta) guide for more information.
 
 ### Minor Changes
 
-- Re-export new `redirectDocument` method from React Router ([#7040](https://github.com/remix-run/remix/pull/7040), [#6842](https://github.com/remix-run/remix/pull/6842)) ([#7040](https://github.com/remix-run/remix/pull/7040))
+- Re-export the new `redirectDocument` method from React Router ([#7040](https://github.com/remix-run/remix/pull/7040), [#6842](https://github.com/remix-run/remix/pull/6842)) ([#7040](https://github.com/remix-run/remix/pull/7040))
 
 ### Patch Changes
 
 - Export proper `ErrorResponse` type for usage alongside `isRouteErrorResponse` ([#7244](https://github.com/remix-run/remix/pull/7244))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.0.0-pre.0`
+  - `@remix-run/server-runtime@2.0.0`
 
 ## 1.19.3
 
