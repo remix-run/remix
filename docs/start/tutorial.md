@@ -36,7 +36,7 @@ npm install
 npm run dev
 ```
 
-You should be able to open up [http://localhost:3000][http-localhost-3000] and see an unstyled screen that looks like this:
+You should be able to open up \[http\://localhost:3000]\[http-localhost-3000] and see an unstyled screen that looks like this:
 
 <img class="tutorial" src="/docs-images/contacts/03.webp" />
 
