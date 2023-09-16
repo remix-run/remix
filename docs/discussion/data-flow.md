@@ -60,7 +60,7 @@ The default export of the route file is the component that renders. It reads the
 ```tsx lines=[1,11-22]
 import { useLoaderData } from "@remix-run/react";
 
-export function loader({ request }) {
+export async function loader({ request }) {
   const user = await getUser(request);
   return {
     displayName: user.displayName,
@@ -85,7 +85,7 @@ export default function Component() {
   );
 }
 
-export function action({ request }) {
+export async function action({ request }) {
   // ...
 }
 ```
@@ -97,7 +97,7 @@ Finally, the action on the route matching the form's action attribute is called 
 ```tsx lines=[25-34]
 import { useLoaderData } from "@remix-run/react";
 
-export function loader({ request }) {
+export async function loader({ request }) {
   const user = await getUser(request);
   return {
     displayName: user.displayName,
@@ -122,7 +122,7 @@ export default function Component() {
   );
 }
 
-export function action({ request }) {
+export async function action({ request }) {
   const user = await getUser(request);
   const formData = await request.formData();
   await updateUser(user.id, {
