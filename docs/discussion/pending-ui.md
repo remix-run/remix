@@ -110,7 +110,7 @@ While localized indicators on links are nice, they are incomplete. There are man
 ```tsx filename=app/routes/create-project.tsx lines=[9,17-18,31]
 import { redirect } from "@remix-run/node";
 
-export function action({ request }) {
+export async function action({ request }) {
   const formData = await request.formData();
   const project = await createRecord({
     name: formData.get("name"),
@@ -207,7 +207,7 @@ import { defer } from "@remix-run/node";
 import { Await } from "@remix-run/react";
 import { Suspense } from "react";
 
-export function loader({ params }) {
+export async function loader({ params }) {
   const reviewsPromise = getReviews(params.productId);
   const product = await getProduct(params.productId);
   return defer({
