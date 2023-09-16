@@ -75,7 +75,7 @@ import {
   useActionData,
 } from "@remix-run/react";
 
-export function action({ request }) {
+export async function action({ request }) {
   const formData = await request.formData();
   const errors = await validateRecipeFormData(formData);
   if (errors) {
@@ -153,7 +153,7 @@ export function Recipes() {
 Now we'll look at the action that deletes a recipe and the component that renders each recipe in the list.
 
 ```tsx filename=app/routes/recipes/index.tsx lines=[5,9,15]
-export function action({ request }) {
+export async function action({ request }) {
   const formData = await request.formData();
   const id = formData.get("id");
   await db.recipes.delete(id);
