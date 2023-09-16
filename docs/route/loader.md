@@ -185,15 +185,15 @@ import { json } from "@remix-run/node"; // or cloudflare/deno
 export const loader = async ({
   params,
 }: LoaderFunctionArgs) => {
-  const user = await fakeDb.project.findOne({
+  const project = await fakeDb.project.findOne({
     where: { id: params.id },
   });
 
-  if (!user) {
+  if (!project) {
     return json("Project not found", { status: 404 });
   }
 
-  return json(user);
+  return json(project);
 };
 ```
 
