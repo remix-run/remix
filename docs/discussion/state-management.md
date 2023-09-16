@@ -454,7 +454,7 @@ import {
   useActionData,
 } from "@remix-run/react";
 
-export asnc function action({ request }) {
+export async function action({ request }) {
   const errors = await validateSignupRequest(request);
   if (errors) {
     return { ok: false, errors: errors };
