@@ -223,28 +223,14 @@ There are a few conventions that Remix uses you should be aware of.
 <docs-info>[Dilum Sanjaya][dilum-sanjaya] made [an awesome visualization][an-awesome-visualization] of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
 
 [minimatch]: https://www.npmjs.com/package/minimatch
-[public-path]: #publicpath
-[server-build-path]: #serverbuildpath
-[server-conditions]: #serverconditions
-[server-dependencies-to-bundle]: #serverdependenciestobundle
-[server-main-fields]: #servermainfields
-[server-minify]: #serverminify
-[server-module-format]: #servermoduleformat
-[server-platform]: #serverplatform
-[arc]: https://arc.codes
-[cloudflare-pages]: https://pages.cloudflare.com
-[cloudflare-workers]: https://workers.cloudflare.com
-[deno]: https://deno.land
-[node-cjs]: https://nodejs.org/en
 [dilum-sanjaya]: https://twitter.com/DilumSanjaya
 [an-awesome-visualization]: https://remix-routing-demo.netlify.app
 [remix-dev]: ../other-api/dev#remix-dev
-[app-directory]: #appDirectory
+[app-directory]: #appdirectory
 [css-side-effect-imports]: ../guides/styling#css-side-effect-imports
 [postcss]: https://postcss.org
 [tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
 [jspm]: https://github.com/jspm/jspm-core
 [esbuild-plugins-node-modules-polyfill]: https://www.npmjs.com/package/esbuild-plugins-node-modules-polyfill
-[port]: ../other-api/dev-v2#options-1
 [browser-node-builtins-polyfill]: #browsernodebuiltinspolyfill
 [server-node-builtins-polyfill]: #servernodebuiltinspolyfill

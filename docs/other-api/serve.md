@@ -59,7 +59,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
   }
   ```
 
-  If you need a workaround for preserving cache in development, you can use the [`remember` utility][remember]
+  If you need a workaround for preserving cache in development, you can setup a [singleton] in your server.
 
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 
@@ -81,5 +81,5 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 In production this doesn't happen. The server boots up and that's the end of it.
 
 [remix-run-express]: adapter#createrequesthandler
-[remember]: ./dev-v2#keeping-in-memory-server-state-across-rebuilds
 [express-listen]: https://expressjs.com/en/api.html#app.listen
+[singleton]: ../guides/manual-mode#keeping-in-memory-server-state-across-rebuilds

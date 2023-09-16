@@ -389,16 +389,11 @@ There's also the [Flat Routes][flat-routes] third-party package with configurabl
 [outlet]: ../components/outlet
 [routing-guide]: ../guides/routing
 [root-route]: #root-route
-[resource-route]: ../guides/resource-routes
-[routeconvention-v2]: ./route-files-v2
-[flatroutes-rfc]: https://github.com/remix-run/remix/discussions/4482
-[root-route]: #root-route
 [index-route]: ../guides/routing#index-routes
 [nested-routing]: ../guides/routing#what-is-nested-routing
 [nested-routes]: #nested-routes
 [remix-config]: ./remix-config#routes
 [dot-delimiters]: #dot-delimiters
 [dynamic-segments]: #dynamic-segments
-[remix-config]: ./remix-config#routes
 [flat-routes]: https://github.com/kiliman/remix-flat-routes
 [an-awesome-visualization]: https://interactive-remix-routing-v2.netlify.app/

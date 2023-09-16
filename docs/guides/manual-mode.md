@@ -287,8 +287,10 @@ export const db = singleton(
 );
 ```
 
+There is also a handy [`remember` utility][remember] that can help out here if you prefer to use that.
+
 [mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
-[express]: https://expressjs.com/
 [chokidar]: https://github.com/paulmillr/chokidar
 [templates]: https://github.com/remix-run/remix/blob/main/templates/
 [community-examples]: https://github.com/xHomu/remix-v2-server
+[remember]: https://www.npmjs.com/package/@epic-web/remember
