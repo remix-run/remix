@@ -270,14 +270,14 @@ Next we set up the server action and loader to read and write the cookie:
 import { prefs } from "./prefs-cookie";
 
 // read the state from the cookie
-export function loader({ request }) {
+export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie = await prefs.parse(cookieHeader);
   return { sidebarIsOpen: cookie.sidebarIsOpen };
 }
 
 // write the state to the cookie
-export function action({ request }) {
+export async function action({ request }) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie = await prefs.parse(cookieHeader);
   const formData = await request.formData();
@@ -436,7 +436,7 @@ export function Signup() {
 The backend endpoint, `/api/signup`, also performs validation and sends error feedback. Note that some essential validation, like detecting duplicate usernames, can only be done server-side using information the client doesn't have access to.
 
 ```tsx
-export function signupHandler(request) {
+export async function signupHandler(request) {
   const errors = await validateSignupRequest(request);
   if (errors) {
     return { ok: false, errors: errors };
@@ -454,7 +454,7 @@ import {
   useActionData,
 } from "@remix-run/react";
 
-export function action({ request }) {
+export asnc function action({ request }) {
   const errors = await validateSignupRequest(request);
   if (errors) {
     return { ok: false, errors: errors };
