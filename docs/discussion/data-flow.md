@@ -124,7 +124,7 @@ export default function Component() {
 
 export function action({ request }) {
   const user = await getUser(request);
-
+  const formData = await request.formData();
   await updateUser(user.id, {
     email: formData.get("email"),
     displayName: formData.get("displayName"),
