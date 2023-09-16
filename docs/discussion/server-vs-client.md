@@ -22,7 +22,7 @@ import { useLoaderData } from "@remix-run/react";
 
 import { getUser, updateUser } from "../user";
 
-export function loader({ request }) {
+export async function loader({ request }) {
   const user = await getUser(request);
   return {
     displayName: user.displayName,
@@ -47,7 +47,7 @@ export default function Component() {
   );
 }
 
-export function action({ request }) {
+export async function action({ request }) {
   const user = await getUser(request);
 
   await updateUser(user.id, {
