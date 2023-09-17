@@ -239,7 +239,7 @@ There may be other branches for various features and experimentation, but all of
 
 ## How do nightly releases work?
 
-Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly-action-comment] and the explicit branch appended to the reusable workflows in the [postrelease action][postrelease-action], however they checkout the `dev` branch during their set up as that's where we want our nightly releases to be cut from. From there, we check if the git SHA is the same and only cut a new nightly if something has changed.
+Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly-action-comment] and the explicit branch appended to the reusable workflows in the postrelease action, however they checkout the `dev` branch during their set up as that's where we want our nightly releases to be cut from. From there, we check if the git SHA is the same and only cut a new nightly if something has changed.
 
 ## End to end testing
 
@@ -259,6 +259,5 @@ For every release of Remix (stable, experimental, nightly, and pre-releases), we
 [yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces
 [vscode-playwright]: https://playwright.dev/docs/intro#using-the-vs-code-extension
 [nightly-action-comment]: https://github.com/remix-run/remix/blob/main/.github/workflows/nightly.yml#L8-L12
-[postrelease-action]: https://github.com/remix-run/remix/blob/main/.github/workflows/postrelease.yml
-[templates]: /templates
+[templates]: https://github.com/remix-run/remix/tree/main/templates
 [https-remix-new]: https://remix.new
