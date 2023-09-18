@@ -52,6 +52,7 @@ import type {
   MetaDescriptor,
   MetaMatch,
   MetaMatches,
+  RouteHandle,
 } from "./routeModules";
 
 function useDataRouterContext() {
@@ -976,7 +977,10 @@ function dedupe(array: any[]) {
   return [...new Set(array)];
 }
 
-export type UIMatch<D = AppData> = UIMatchRR<SerializeFrom<D>>;
+export type UIMatch<D = AppData, H = RouteHandle> = UIMatchRR<
+  SerializeFrom<D>,
+  H
+>;
 
 /**
  * Returns the active route matches, useful for accessing loaderData for
