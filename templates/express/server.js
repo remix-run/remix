@@ -13,11 +13,10 @@ import sourceMapSupport from "source-map-support";
 sourceMapSupport.install();
 installGlobals();
 
-/**
- * @typedef {import('@remix-run/node').ServerBuild} ServerBuild
- */
+/** @typedef {import('@remix-run/node').ServerBuild} ServerBuild */
 
 const BUILD_PATH = path.resolve("build/index.js");
+const VERSION_PATH = path.resolve("build/version.txt");
 const initialBuild = await reimportServer();
 
 const app = express();
@@ -84,7 +83,7 @@ function createDevRequestHandler(initialBuild) {
     broadcastDevReady(build);
   }
   chokidar
-    .watch(BUILD_PATH, { ignoreInitial: true })
+    .watch(VERSION_PATH, { ignoreInitial: true })
     .on("add", handleServerUpdate)
     .on("change", handleServerUpdate);
 
