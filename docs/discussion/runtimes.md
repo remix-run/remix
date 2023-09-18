@@ -45,7 +45,7 @@ import { createFileSessionStorage } from "@remix-run/node";
 But if you're storing a session in the cookie itself, this is supported in all runtimes:
 
 ```tsx
-import { createCookieSessionStorage } from "remix";
+import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno/etc
 ```
 
 ## Adapters
