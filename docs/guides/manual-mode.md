@@ -84,11 +84,10 @@ For example, here's how to bust the `require` cache for the Remix server build:
 ```js
 const path = require("node:path");
 
-/**
- * @typedef {import('@remix-run/node').ServerBuild} ServerBuild
- */
+/** @typedef {import('@remix-run/node').ServerBuild} ServerBuild */
 
 const BUILD_PATH = path.resolve("./build/index.js");
+const VERSION_PATH = path.resolve("./build/version.txt");
 const initialBuild = reimportServer();
 
 /**
@@ -123,11 +122,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as url from "node:url";
 
-/**
- * @typedef {import('@remix-run/node').ServerBuild} ServerBuild
- */
+/** @typedef {import('@remix-run/node').ServerBuild} ServerBuild */
 
 const BUILD_PATH = path.resolve("./build/index.js");
+const VERSION_PATH = path.resolve("./build/version.txt");
 const initialBuild = await reimportServer();
 
 /**
@@ -167,7 +165,7 @@ async function handleServerUpdate() {
 }
 
 chokidar
-  .watch(BUILD_PATH, { ignoreInitial: true })
+  .watch(VERSION_PATH, { ignoreInitial: true })
   .on("add", handleServerUpdate)
   .on("change", handleServerUpdate);
 ```
@@ -216,7 +214,7 @@ function createDevRequestHandler(initialBuild) {
   }
 
   chokidar
-    .watch(BUILD_PATH, { ignoreInitial: true })
+    .watch(VERSION_PATH, { ignoreInitial: true })
     .on("add", handleServerUpdate)
     .on("change", handleServerUpdate);
 
