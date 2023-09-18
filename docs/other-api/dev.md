@@ -213,73 +213,6 @@ export const server = setupServer(
 );
 ```
 
-### How to set up local HTTPS
-
-For this example, let's use [mkcert][mkcert].
-After you have it installed, make sure to:
-
-- Create a local Certificate Authority if you haven't already done so
-- Use `NODE_EXTRA_CA_CERTS` for Node compatibility
-
-```sh
-mkcert -install # create a local CA
-export NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" # tell Node to use our local CA
-```
-
-Now, create the TLS key and certificate:
-
-```sh
-mkcert -key-file key.pem -cert-file cert.pem localhost
-```
-
-👆 You can change `localhost` to something else if you are using custom hostnames.
-
-Next, use the `key.pem` and `cert.pem` to get HTTPS working locally with your app server.
-This depends on what you are using for your app server.
-For example, here's how you could use HTTPS with an Express server:
-
-```ts filename=server.js
-import fs from "node:fs";
-import https from "node:https";
-import path from "node:path";
-
-import express from "express";
-
-const BUILD_DIR = path.resolve(__dirname, "build");
-const build = require(BUILD_DIR);
-
-const app = express();
-
-// ... code setting up your express app goes here ...
-
-const server = https.createServer(
-  {
-    key: fs.readFileSync("path/to/key.pem"),
-    cert: fs.readFileSync("path/to/cert.pem"),
-  },
-  app
-);
-
-const port = 3000;
-server.listen(port, () => {
-  console.log(`👉 https://localhost:${port}`);
-
-  if (process.env.NODE_ENV === "development") {
-    broadcastDevReady(build);
-  }
-});
-```
-
-Now that the app server is set up, you should be able to build and run your app in production mode with TLS.
-To get the Remix compiler to interop with TLS, you'll need to specify the TLS cert and key you created:
-
-```sh
-remix dev --tls-key=key.pem --tls-cert=cert.pem -c "node ./server.js"
-```
-
-Alternatively, you can specify the TLS key and cert via the `dev.tlsCert` and `dev.tlsKey` config options.
-Now your app server and Remix compiler are TLS ready!
-
 ### How to integrate with a reverse proxy
 
 Let's say you have the app server and Remix compiler both running on the same machine:
@@ -383,7 +316,6 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
 [react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
 [msw]: https://mswjs.io/
-[mkcert]: https://github.com/FiloSottile/mkcert
 [path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
 [bundle-analysis]: ../guides/performance
 [manual-mode]: ../guides/manual-mode
