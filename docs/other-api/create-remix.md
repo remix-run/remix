@@ -10,10 +10,16 @@ The `create-remix` CLI will create a new Remix project. Without passing argument
 npx create-remix@latest
 ```
 
-Optionally you can pass the desired directory path as an argument and a starter template with the `--template` flag.
+Optionally you can pass the desired directory path as an argument:
 
 ```sh
 npx create-remix@latest <projectDir>
+```
+
+The default application is a TypeScript app using the built in [Remix App Server][remix-app-server]. If you wish to create your application based on a different setup, you can use the [`--template`][template-flag-hash-link] flag:
+
+```sh
+npx create-remix@latest --template <templateUrl>
 ```
 
 To get a full list of available commands and flags, run:
@@ -24,7 +30,7 @@ npx create-remix@latest --help
 
 ### Package managers
 
-`create-remix` can also be invoked using the `create` command of various package managers, allowing you to choose between npm, Yarn and pnpm for managing the install process.
+`create-remix` can also be invoked using various package managers, allowing you to choose between npm, Yarn, pnpm, and Bun for managing the install process.
 
 ```sh
 npm create remix@latest <projectDir>
@@ -32,6 +38,8 @@ npm create remix@latest <projectDir>
 yarn create remix <projectDir>
 # or
 pnpm create remix <projectDir>
+# or
+bunx create-remix <projectDir>
 ```
 
 ### `create-remix --template`
@@ -70,4 +78,10 @@ To create a new project from a template in a private GitHub repo, pass the `--to
 </docs-info>
 </aside>
 
-[templates]: ../pages/templates
+### `create-remix --overwrite`
+
+If `create-remix` detects any file collisions between the template and the directory you are creating your app in, it will prompt you for confirmation that it's OK to overwrite those files with the template versions. You may skip this prompt with the `--overwrite` CLI flag.
+
+[templates]: ../guides/templates
+[remix-app-server]: ./serve
+[template-flag-hash-link]: #create-remix---template

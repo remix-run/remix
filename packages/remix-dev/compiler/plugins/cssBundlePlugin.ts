@@ -15,24 +15,10 @@ export function cssBundlePlugin(refs: {
 }): Plugin {
   return {
     name: pluginName,
-    setup(build) {
-      let preventInfiniteLoop = {};
+    async setup(build) {
       build.onResolve({ filter: /^@remix-run\/css-bundle$/ }, async (args) => {
-        // Prevent plugin from infinitely trying to resolve itself
-        if (args.pluginData === preventInfiniteLoop) {
-          return null;
-        }
-
-        let resolvedPath = (
-          await build.resolve(args.path, {
-            resolveDir: args.resolveDir,
-            kind: args.kind,
-            pluginData: preventInfiniteLoop,
-          })
-        ).path;
-
         return {
-          path: resolvedPath,
+          path: args.path,
           namespace,
         };
       });

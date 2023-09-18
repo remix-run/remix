@@ -1,6 +1,8 @@
 import process from "node:process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import fse from "fs-extra";
 import stripAnsi from "strip-ansi";
 import rm from "rimraf";
 import execa from "execa";
@@ -11,17 +13,20 @@ import sortPackageJSON from "sort-package-json";
 import { version as thisRemixVersion } from "./package.json";
 import { prompt } from "./prompt";
 import {
+  IGNORED_TEMPLATE_DIRECTORIES,
   color,
+  debug,
   ensureDirectory,
   error,
   fileExists,
+  getDirectoryFilesRecursive,
   info,
   isInteractive,
   isValidJsonObject,
   log,
-  pathContains,
   sleep,
   strip,
+  stripDirectoryFromPath,
   success,
   toValidProjectName,
 } from "./utils";
@@ -43,7 +48,8 @@ async function createRemix(argv: string[]) {
   let steps = [
     introStep,
     projectNameStep,
-    templateStep,
+    copyTemplateToTempDirStep,
+    copyTempDirToAppDirStep,
     gitInitQuestionStep,
     installDependenciesQuestionStep,
     runInitScriptQuestionStep,
@@ -89,6 +95,7 @@ async function getContext(argv: string[]): Promise<Context> {
       "--V": "--version",
       "--no-color": Boolean,
       "--no-motion": Boolean,
+      "--overwrite": Boolean,
     },
     { argv, permissive: true }
   );
@@ -110,6 +117,7 @@ async function getContext(argv: string[]): Promise<Context> {
     "--no-motion": noMotion,
     "--yes": yes,
     "--version": versionRequested,
+    "--overwrite": overwrite,
   } = flags;
 
   let cwd = flags["_"][0] as string;
@@ -137,7 +145,12 @@ async function getContext(argv: string[]): Promise<Context> {
   }
 
   let context: Context = {
+    tempDir: path.join(
+      await fs.promises.realpath(os.tmpdir()),
+      `create-remix--${Math.random().toString(36).substr(2, 8)}`
+    ),
     cwd,
+    overwrite,
     interactive,
     debug,
     git: git ?? (noGit ? false : yes),
@@ -149,7 +162,7 @@ async function getContext(argv: string[]): Promise<Context> {
     noMotion,
     pkgManager: validatePackageManager(
       pkgManager ??
-        // npm, pnpm and Yarn set the user agent environment variable that can be used
+        // npm, pnpm, Yarn, and Bun set the user agent environment variable that can be used
         // to determine which package manager ran the command.
         (process.env.npm_config_user_agent ?? "npm").split("/")[0]
     ),
@@ -165,6 +178,7 @@ async function getContext(argv: string[]): Promise<Context> {
 }
 
 interface Context {
+  tempDir: string;
   cwd: string;
   interactive: boolean;
   debug: boolean;
@@ -184,6 +198,7 @@ interface Context {
   template?: string;
   token?: string;
   versionRequested?: boolean;
+  overwrite?: boolean;
 }
 
 async function introStep(ctx: Context) {
@@ -204,51 +219,28 @@ async function introStep(ctx: Context) {
 }
 
 async function projectNameStep(ctx: Context) {
-  let cwdIsEmpty = ctx.cwd && isEmpty(ctx.cwd);
-
   // valid cwd is required if shell isn't interactive
-  if (!ctx.interactive) {
-    if (!ctx.cwd) {
-      error("Oh no!", "No project directory provided");
-      throw new Error("No project directory provided");
-    }
-
-    if (!cwdIsEmpty) {
-      error(
-        "Oh no!",
-        `Project directory "${color.reset(ctx.cwd)}" is not empty`
-      );
-      throw new Error("Project directory is not empty");
-    }
+  if (!ctx.interactive && !ctx.cwd) {
+    error("Oh no!", "No project directory provided");
+    throw new Error("No project directory provided");
   }
 
   if (ctx.cwd) {
     await sleep(100);
-
-    if (cwdIsEmpty) {
-      info("Directory:", [
-        "Using ",
-        color.reset(ctx.cwd),
-        " as project directory",
-      ]);
-    } else {
-      info("Hmm...", [color.reset(`"${ctx.cwd}"`), " is not empty!"]);
-    }
+    info("Directory:", [
+      "Using ",
+      color.reset(ctx.cwd),
+      " as project directory",
+    ]);
   }
 
-  if (!ctx.cwd || !cwdIsEmpty) {
+  if (!ctx.cwd) {
     let { name } = await ctx.prompt({
       name: "name",
       type: "text",
       label: title("dir"),
       message: "Where should we create your new project?",
       initial: "./my-remix-app",
-      validate(value: string) {
-        if (!isEmpty(value)) {
-          return `Directory is not empty!`;
-        }
-        return true;
-      },
     });
     ctx.cwd = name!;
     ctx.projectName = toValidProjectName(name!);
@@ -266,14 +258,14 @@ async function projectNameStep(ctx: Context) {
   ctx.projectName = toValidProjectName(name);
 }
 
-async function templateStep(ctx: Context) {
+async function copyTemplateToTempDirStep(ctx: Context) {
   if (ctx.template) {
     log("");
-    info("Template", ["Using ", color.reset(ctx.template), "..."]);
+    info("Template:", ["Using ", color.reset(ctx.template), "..."]);
   } else {
     log("");
     info("Using basic template", [
-      "See https://remix.run/docs/pages/templates for more",
+      "See https://remix.run/docs/guides/templates for more",
     ]);
   }
 
@@ -285,56 +277,119 @@ async function templateStep(ctx: Context) {
     start: "Template copying...",
     end: "Template copied",
     while: async () => {
-      let destPath = path.resolve(process.cwd(), ctx.cwd);
-      await ensureDirectory(destPath);
-      await copyTemplate(template, destPath, {
+      await ensureDirectory(ctx.tempDir);
+      if (ctx.debug) {
+        debug(`Extracting to: ${ctx.tempDir}`);
+      }
+
+      let result = await copyTemplate(template, ctx.tempDir, {
         debug: ctx.debug,
         token: ctx.token,
         async onError(err) {
-          let cwd = process.cwd();
-          let removing = (async () => {
-            if (cwd !== destPath && !pathContains(cwd, destPath)) {
-              try {
-                await rm(destPath);
-              } catch (_) {
-                error("Oh no!", ["Failed to remove ", destPath]);
-              }
-            }
-          })();
-          if (ctx.debug) {
-            try {
-              await removing;
-            } catch (_) {}
-            throw err;
-          }
-
-          await Promise.all([
-            error(
-              "Oh no!",
-              err instanceof CopyTemplateError
-                ? err.message
-                : "Something went wrong. Run `create-remix --debug` to see more info.\n\n" +
-                    "Open an issue to report the problem at " +
-                    "https://github.com/remix-run/remix/issues/new"
-            ),
-            removing,
-          ]);
-
+          error(
+            "Oh no!",
+            err instanceof CopyTemplateError
+              ? err.message
+              : "Something went wrong. Run `create-remix --debug` to see more info.\n\n" +
+                  "Open an issue to report the problem at " +
+                  "https://github.com/remix-run/remix/issues/new"
+          );
           throw err;
         },
         async log(message) {
           if (ctx.debug) {
-            info(message);
+            debug(message);
             await sleep(500);
           }
         },
       });
 
-      await updatePackageJSON(ctx);
+      if (result?.localTemplateDirectory) {
+        ctx.tempDir = path.resolve(result.localTemplateDirectory);
+      }
     },
     ctx,
   });
+}
 
+async function copyTempDirToAppDirStep(ctx: Context) {
+  await ensureDirectory(ctx.cwd);
+
+  let files1 = await getDirectoryFilesRecursive(ctx.tempDir);
+  let files2 = await getDirectoryFilesRecursive(ctx.cwd);
+  let collisions = files1
+    .filter((f) => files2.includes(f))
+    .sort((a, b) => a.localeCompare(b));
+
+  if (collisions.length > 0) {
+    let getFileList = (prefix: string) => {
+      let moreFiles = collisions.length - 5;
+      let lines = ["", ...collisions.slice(0, 5)];
+      if (moreFiles > 0) {
+        lines.push(`and ${moreFiles} more...`);
+      }
+      return lines.join(`\n${prefix}`);
+    };
+
+    if (ctx.overwrite) {
+      info(
+        "Overwrite:",
+        `overwriting files due to \`--overwrite\`:${getFileList("           ")}`
+      );
+    } else if (!ctx.interactive) {
+      error(
+        "Oh no!",
+        `Destination directory contains files that would be overwritten\n` +
+          `         and no \`--overwrite\` flag was included in a non-interactive\n` +
+          `         environment. The following files would be overwritten:` +
+          getFileList("           ")
+      );
+      throw new Error(
+        "File collisions detected in a non-interactive environment"
+      );
+    } else {
+      if (ctx.debug) {
+        debug(`Colliding files:${getFileList("          ")}`);
+      }
+
+      let { overwrite } = await ctx.prompt({
+        name: "overwrite",
+        type: "confirm",
+        label: title("overwrite"),
+        message:
+          `Your project directory contains files that will be overwritten by\n` +
+          `             this template (you can force with \`--overwrite\`)\n\n` +
+          `             Files that would be overwritten:` +
+          `${getFileList("               ")}\n\n` +
+          `             Do you wish to continue?\n` +
+          `             `,
+        initial: false,
+      });
+      if (!overwrite) {
+        throw new Error("Exiting to avoid overwriting files");
+      }
+    }
+  }
+
+  await fse.copy(ctx.tempDir, ctx.cwd, {
+    filter(src, dest) {
+      // We never copy .git/ or node_modules/ directories since it's highly
+      // unlikely we want them copied - and because templates are primarily
+      // being pulled from git tarballs which won't have .git/ and shouldn't
+      // have node_modules/
+      let file = stripDirectoryFromPath(ctx.tempDir, src);
+      let isIgnored = IGNORED_TEMPLATE_DIRECTORIES.includes(file);
+      if (isIgnored) {
+        if (ctx.debug) {
+          debug(`Skipping copy of ${file} directory from template`);
+        }
+        return false;
+      }
+      return true;
+    },
+  });
+
+  await updatePackageJSON(ctx);
   ctx.initScriptPath = await getInitScriptPath(ctx.cwd);
 }
 
@@ -572,7 +627,7 @@ async function doneStep(ctx: Context) {
   if (projectDir !== "") {
     let enter = [
       `\n${prefix}Enter your project directory using`,
-      color.cyan(`cd ./${projectDir}`),
+      color.cyan(`cd .${path.sep}${projectDir}`),
     ];
     let len = enter[0].length + stripAnsi(enter[1]).length;
     log(enter.join(len > max ? "\n" + prefix : " "));
@@ -589,29 +644,13 @@ async function doneStep(ctx: Context) {
   await sleep(200);
 }
 
-function isEmpty(dirPath: string) {
-  if (!fs.existsSync(dirPath)) {
-    return true;
-  }
-
-  // Some existing files can be safely ignored when checking if
-  // a directory is a valid project directory.
-  let VALID_PROJECT_DIRECTORY_SAFE_LIST = [".DS_Store", "Thumbs.db"];
-
-  let conflicts = fs.readdirSync(dirPath).filter((content) => {
-    return !VALID_PROJECT_DIRECTORY_SAFE_LIST.some((safeContent) => {
-      return content === safeContent;
-    });
-  });
-  return conflicts.length === 0;
-}
-
-type PackageManager = "npm" | "yarn" | "pnpm";
+type PackageManager = "npm" | "yarn" | "pnpm" | "bun";
 
 const packageManagerExecScript: Record<PackageManager, string> = {
   npm: "npx",
   yarn: "yarn",
   pnpm: "pnpm exec",
+  bun: "bunx",
 };
 
 function validatePackageManager(pkgManager: string): PackageManager {

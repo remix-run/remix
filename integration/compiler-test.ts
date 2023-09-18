@@ -1,14 +1,12 @@
 import path from "node:path";
 import fse from "fs-extra";
 import { test, expect } from "@playwright/test";
-import { PassThrough } from "node:stream";
 
 import {
   createFixture,
   createAppFixture,
   js,
   json,
-  createFixtureProject,
   css,
 } from "./helpers/create-fixture.js";
 import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
@@ -20,7 +18,6 @@ test.describe("compiler", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      setup: "node",
       files: {
         // We need a custom config file here to test usage of `getDependenciesToBundle`
         // since this can't be serialized from the fixture object.
@@ -31,7 +28,13 @@ test.describe("compiler", () => {
               "esm-only-pkg",
               "esm-only-single-export",
               ...getDependenciesToBundle("esm-only-exports-pkg"),
+              ...getDependenciesToBundle("esm-only-nested-exports-pkg"),
             ],
+            browserNodeBuiltinsPolyfill: {
+              modules: {
+                path: true,
+              },
+            },
           };
         `,
         "app/fake.server.ts": js`
@@ -87,6 +90,13 @@ test.describe("compiler", () => {
             return <div id="esm-only-exports-pkg">{esmOnlyPkg}</div>;
           }
         `,
+        "app/routes/esm-only-nested-exports-pkg.tsx": js`
+          import esmOnlyPkg from "esm-only-nested-exports-pkg/nested";
+
+          export default function EsmOnlyPkg() {
+            return <div id="esm-only-nested-exports-pkg">{esmOnlyPkg}</div>;
+          }
+        `,
         "app/routes/esm-only-single-export.tsx": js`
           import esmOnlyPkg from "esm-only-single-export";
 
@@ -131,6 +141,18 @@ test.describe("compiler", () => {
         }),
         "node_modules/esm-only-exports-pkg/esm-only-exports-pkg.js": js`
           export default "esm-only-exports-pkg";
+        `,
+        "node_modules/esm-only-nested-exports-pkg/package.json": json({
+          name: "esm-only-nested-exports-pkg",
+          version: "1.0.0",
+          type: "module",
+          exports: {
+            "./package.json": "./package.json",
+            "./nested": "./esm-only-nested-exports-pkg.js",
+          },
+        }),
+        "node_modules/esm-only-nested-exports-pkg/esm-only-nested-exports-pkg.js": js`
+          export default "esm-only-nested-exports-pkg";
         `,
         "node_modules/esm-only-single-export/package.json": json({
           name: "esm-only-exports-pkg",
@@ -291,6 +313,18 @@ test.describe("compiler", () => {
     );
   });
 
+  test("allows consumption of ESM modules with only nested exports in CJS builds with `serverDependenciesToBundle` and `getDependenciesToBundle`", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/esm-only-nested-exports-pkg", true);
+    expect(res.status()).toBe(200); // server rendered fine
+    // rendered the page instead of the error boundary
+    expect(await app.getHtml("#esm-only-nested-exports-pkg")).toBe(
+      '<div id="esm-only-nested-exports-pkg">esm-only-nested-exports-pkg</div>'
+    );
+  });
+
   test("allows consumption of packages with sub modules", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     let res = await app.goto("/package-with-submodule", true);
@@ -310,76 +344,5 @@ test.describe("compiler", () => {
     let fontFile = files.find((file) => file.match(/font-[a-z0-9]{8}\.woff2/i));
     expect(cssFile).toBeTruthy();
     expect(fontFile).toBeTruthy();
-  });
-
-  test.describe("serverBareModulesPlugin", () => {
-    let ogConsole: typeof global.console;
-    test.beforeEach(() => {
-      ogConsole = global.console;
-      // @ts-ignore
-      global.console = {
-        log() {},
-        warn() {},
-        error() {},
-      };
-    });
-    test.afterEach(() => {
-      global.console = ogConsole;
-    });
-    test("warns when a module isn't installed", async () => {
-      let buildOutput: string;
-      let buildStdio = new PassThrough();
-
-      await expect(() =>
-        createFixtureProject({
-          buildStdio,
-          files: {
-            "app/routes/_index.tsx": js`
-            import { json } from "@remix-run/node";
-            import { useLoaderData } from "@remix-run/react";
-            import notInstalledMain from "some-not-installed-module";
-            import { notInstalledSub } from "some-not-installed-module/sub";
-
-            export function loader() {
-              return json({ main: notInstalledMain(), sub: notInstalledSub() });
-            }
-
-            export default function Index() {
-                let data = useLoaderData();
-                return null;
-              }
-              `,
-          },
-        })
-      ).rejects.toThrowError("Build failed, check the output above");
-
-      let chunks: Buffer[] = [];
-      buildOutput = await new Promise<string>((resolve, reject) => {
-        buildStdio.on("error", (error) => {
-          reject(error);
-        });
-        buildStdio.on("data", (chunk) => {
-          chunks.push(Buffer.from(chunk));
-        });
-        buildStdio.on("end", () => {
-          resolve(Buffer.concat(chunks).toString("utf8"));
-        });
-      });
-
-      let importer = path.join("app", "routes", "_index.tsx");
-
-      expect(buildOutput).toContain(
-        `could not resolve "some-not-installed-module"`
-      );
-      expect(buildOutput).toContain(
-        `You imported "some-not-installed-module" in ${importer},`
-      );
-      expect(buildOutput).toContain(
-        `could not resolve "some-not-installed-module/sub"`
-      );
-      expect(buildOutput).toContain(
-        `You imported "some-not-installed-module/sub" in ${importer},`
-      );
-    });
   });
 });

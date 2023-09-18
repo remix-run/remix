@@ -1,7 +1,6 @@
 import process from "node:process";
 import url from "node:url";
 import fs from "node:fs";
-import fse from "fs-extra";
 import path from "node:path";
 import stream from "node:stream";
 import { promisify } from "node:util";
@@ -23,7 +22,7 @@ export async function copyTemplate(
   template: string,
   destPath: string,
   options: CopyTemplateOptions
-) {
+): Promise<{ localTemplateDirectory: string } | undefined> {
   let { log = () => {} } = options;
 
   /**
@@ -41,8 +40,8 @@ export async function copyTemplate(
       let filepath = template.startsWith("file://")
         ? url.fileURLToPath(template)
         : template;
-      await copyTemplateFromLocalFilePath(filepath, destPath);
-      return;
+      let isLocalDir = await copyTemplateFromLocalFilePath(filepath, destPath);
+      return isLocalDir ? { localTemplateDirectory: filepath } : undefined;
     }
 
     if (isGithubRepoShorthand(template)) {
@@ -135,14 +134,16 @@ async function copyTemplateFromGenericUrl(
 async function copyTemplateFromLocalFilePath(
   filePath: string,
   destPath: string
-) {
+): Promise<boolean> {
   if (filePath.endsWith(".tar.gz")) {
     await extractLocalTarball(filePath, destPath);
-    return;
+    return false;
   }
   if (fs.statSync(filePath).isDirectory()) {
-    await fse.copy(filePath, destPath);
-    return;
+    // If our template is just a directory on disk, return true here and we'll
+    // just copy directly from there instead of "extracting" to a temp
+    // directory first
+    return true;
   }
   throw new CopyTemplateError(
     "The provided template is not a valid local directory or tarball."
@@ -312,7 +313,15 @@ async function downloadAndExtractTarball(
           header.name = header.name.replace(`${originalDirName}/`, "");
 
           if (filePath) {
-            if (header.name.startsWith(filePath)) {
+            // Include trailing slash on startsWith when filePath doesn't include
+            // it so something like `templates/remix` doesn't inadvertently
+            // include `templates/remix-javascript/*` files
+            if (
+              (filePath.endsWith(path.posix.sep) &&
+                header.name.startsWith(filePath)) ||
+              (!filePath.endsWith(path.posix.sep) &&
+                header.name.startsWith(filePath + path.posix.sep))
+            ) {
               filePathHasFiles = true;
               header.name = header.name.replace(filePath, "");
             } else {
@@ -375,10 +384,14 @@ function isValidGithubRepoUrl(
 }
 
 function isGithubRepoShorthand(value: string) {
+  if (isUrl(value)) {
+    return false;
+  }
   // This supports :owner/:repo and :owner/:repo/nested/path, e.g.
   // remix-run/remix
   // remix-run/remix/templates/express
-  return /^[\w-]+\/[\w-]+(\/[\w-]+)*$/.test(value);
+  // remix-run/examples/socket.io
+  return /^[\w-]+\/[\w-]+(\/[\w-.]+)*$/.test(value);
 }
 
 function isGithubReleaseAssetUrl(url: string) {

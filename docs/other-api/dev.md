@@ -155,7 +155,7 @@ For example, you may have it hardcoded in your `server.js` file.
 If you are using `remix-serve` as your app server, you can use its `--port` flag to set the app server port:
 
 ```sh
-remix dev -c "remix-serve --port 8000 ./build"
+remix dev -c "remix-serve --port 8000 ./build/index.js"
 ```
 
 In contrast, the `remix dev --port` option is an escape-hatch for users who need fine-grain control of network ports.

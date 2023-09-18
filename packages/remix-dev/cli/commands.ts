@@ -3,8 +3,7 @@ import { execSync } from "node:child_process";
 import fse from "fs-extra";
 import getPort, { makeRange } from "get-port";
 import prettyMs from "pretty-ms";
-import NPMCliPackageJson from "@npmcli/package-json";
-import { coerce } from "semver";
+import PackageJson from "@npmcli/package-json";
 import pc from "picocolors";
 
 import * as colors from "../colors";
@@ -170,7 +169,10 @@ export async function dev(
   let config = await readConfig(remixRoot);
 
   let resolved = await resolveDevServe(config, flags);
-  await devServer_unstable.serve(config, resolved);
+  devServer_unstable.serve(config, resolved);
+
+  // keep `remix dev` alive by waiting indefinitely
+  await new Promise(() => {});
 }
 
 let clientEntries = ["entry.client.tsx", "entry.client.js", "entry.client.jsx"];
@@ -211,22 +213,8 @@ export async function generateEntry(
     return;
   }
 
-  let pkgJson = await NPMCliPackageJson.load(config.rootDirectory);
+  let pkgJson = await PackageJson.load(config.rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
-
-  let maybeReactVersion = coerce(deps.react);
-  if (!maybeReactVersion) {
-    let react = ["react", "react-dom"];
-    let list = conjunctionListFormat.format(react);
-    throw new Error(
-      `Could not determine React version. Please install the following packages: ${list}`
-    );
-  }
-
-  let type =
-    maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
-      ? ("stream" as const)
-      : ("string" as const);
 
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
@@ -251,26 +239,11 @@ export async function generateEntry(
     return;
   }
 
-  let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
-
-  if (!clientRenderer) {
-    console.error(
-      colors.error(
-        `Could not determine runtime. Please install the following: @remix-run/react`
-      )
-    );
-    return;
-  }
-
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
-  let defaultEntryClient = path.resolve(
-    defaultsDirectory,
-    `entry.client.${clientRenderer}-${type}.tsx`
-  );
+  let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
   let defaultEntryServer = path.resolve(
     defaultsDirectory,
-    serverRuntime,
-    `entry.server.${clientRenderer}-${type}.tsx`
+    `entry.server.${serverRuntime}.tsx`
   );
 
   let isServerEntry = entry === "entry.server";

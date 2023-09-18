@@ -1,7 +1,6 @@
 import * as path from "node:path";
 import { builtinModules as nodeBuiltins } from "node:module";
 import * as esbuild from "esbuild";
-import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 
 import type { RemixConfig } from "../../config";
 import { type Manifest } from "../../manifest";
@@ -13,6 +12,7 @@ import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
 import { mdxPlugin } from "../plugins/mdx";
 import { externalPlugin } from "../plugins/external";
+import { browserNodeBuiltinsPolyfillPlugin } from "./plugins/browserNodeBuiltinsPolyfill";
 import { cssBundlePlugin } from "../plugins/cssBundlePlugin";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
@@ -27,29 +27,17 @@ type Compiler = {
   // produce ./public/build/
   compile: () => Promise<{
     metafile: esbuild.Metafile;
+    outputFiles: esbuild.OutputFile[];
     hmr?: Manifest["hmr"];
   }>;
   cancel: () => Promise<void>;
   dispose: () => Promise<void>;
 };
 
-const getExternals = (remixConfig: RemixConfig): string[] => {
-  // For the browser build, exclude node built-ins that don't have a
-  // browser-safe alternative installed in node_modules. Nothing should
-  // *actually* be external in the browser build (we want to bundle all deps) so
-  // this is really just making sure we don't accidentally have any dependencies
-  // on node built-ins in browser bundles.
+const getFakeBuiltins = (remixConfig: RemixConfig): string[] => {
   let dependencies = Object.keys(getAppDependencies(remixConfig));
   let fakeBuiltins = nodeBuiltins.filter((mod) => dependencies.includes(mod));
-
-  if (fakeBuiltins.length > 0) {
-    throw new Error(
-      `It appears you're using a module that is built in to node, but you installed it as a dependency which could cause problems. Please remove ${fakeBuiltins.join(
-        ", "
-      )} before continuing.`
-    );
-  }
-  return nodeBuiltins.filter((mod) => !dependencies.includes(mod));
+  return fakeBuiltins;
 };
 
 const createEsbuildConfig = (
@@ -82,6 +70,15 @@ const createEsbuildConfig = (
     );
   }
 
+  let fakeBuiltins = getFakeBuiltins(ctx.config);
+  if (fakeBuiltins.length > 0) {
+    throw new Error(
+      `It appears you're using a module that is built in to Node, but you installed it as a dependency which could cause problems. Please remove ${fakeBuiltins.join(
+        ", "
+      )} before continuing.`
+    );
+  }
+
   let plugins: esbuild.Plugin[] = [
     browserRouteModulesPlugin(ctx, /\?browser$/),
     cssBundlePlugin(refs),
@@ -98,8 +95,7 @@ const createEsbuildConfig = (
     emptyModulesPlugin(ctx, /^@remix-run\/(deno|cloudflare|node)(\/.*)?$/, {
       includeNodeModules: true,
     }),
-    nodeModulesPolyfillPlugin(),
-    externalPlugin(/^node:.*/, { sideEffects: false }),
+    browserNodeBuiltinsPolyfillPlugin(ctx),
   ];
 
   if (ctx.options.mode === "development") {
@@ -111,7 +107,6 @@ const createEsbuildConfig = (
     outdir: ctx.config.assetsBuildDirectory,
     platform: "browser",
     format: "esm",
-    external: getExternals(ctx.config),
     loader: loaders,
     bundle: true,
     logLevel: "silent",
@@ -154,11 +149,12 @@ export const create = async (
 ): Promise<Compiler> => {
   let compiler = await esbuild.context({
     ...createEsbuildConfig(ctx, refs),
+    write: false,
     metafile: true,
   });
 
   let compile = async () => {
-    let { metafile } = await compiler.rebuild();
+    let { metafile, outputFiles } = await compiler.rebuild();
     writeMetafile(ctx, "metafile.js.json", metafile);
 
     let hmr: Manifest["hmr"] | undefined = undefined;
@@ -179,7 +175,7 @@ export const create = async (
       };
     }
 
-    return { metafile, hmr };
+    return { metafile, hmr, outputFiles };
   };
 
   return {

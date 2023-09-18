@@ -7,6 +7,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   setup:
     name: Remix Stacks Test
@@ -23,9 +27,6 @@ jobs:
           - repo: "remix-run/grunge-stack"
             name: "grunge"
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
@@ -80,9 +81,6 @@ jobs:
           - repo: "remix-run/grunge-stack"
             name: "grunge"
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
@@ -123,9 +121,6 @@ jobs:
           - repo: "remix-run/grunge-stack"
             name: "grunge"
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
@@ -166,9 +161,6 @@ jobs:
           - repo: "remix-run/grunge-stack"
             name: "grunge"
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
@@ -212,9 +204,6 @@ jobs:
             name: "grunge"
             cypress: "npm run dev"
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
@@ -255,7 +244,7 @@ jobs:
           npm run build
 
       - name: 🌳 Cypress run
-        uses: cypress-io/github-action@v5
+        uses: cypress-io/github-action@v6
         with:
           start: ${{ matrix.stack.cypress }}
           wait-on: "http://localhost:8811"

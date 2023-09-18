@@ -51,7 +51,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     build.entry.module.handleError ||
     ((error, { request }) => {
       if (serverMode !== ServerMode.Test && !request.signal.aborted) {
-        console.error(error);
+        console.error(
+          // @ts-expect-error This is "private" from users but intended for internal use
+          isRouteErrorResponse(error) && error.error ? error.error : error
+        );
       }
     });
 
@@ -182,8 +185,8 @@ async function handleDataRequestRR(
     }
 
     if (isRouteErrorResponse(error)) {
-      if (error.error) {
-        handleError(error.error);
+      if (error) {
+        handleError(error);
       }
       return errorResponseToJson(error, serverMode);
     }
@@ -225,6 +228,7 @@ async function handleDocumentRequestRR(
   // Sanitize errors outside of development environments
   if (context.errors) {
     Object.values(context.errors).forEach((err) => {
+      // @ts-expect-error This is "private" from users but intended for internal use
       if (!isRouteErrorResponse(err) || err.error) {
         handleError(err);
       }
@@ -336,8 +340,8 @@ async function handleResourceRequestRR(
     }
 
     if (isRouteErrorResponse(error)) {
-      if (error.error) {
-        handleError(error.error);
+      if (error) {
+        handleError(error);
       }
       return errorResponseToJson(error, serverMode);
     }
@@ -353,6 +357,7 @@ function errorResponseToJson(
 ): Response {
   return routerJson(
     serializeError(
+      // @ts-expect-error This is "private" from users but intended for internal use
       errorResponse.error || new Error("Unexpected Server Error"),
       serverMode
     ),

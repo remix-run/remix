@@ -8,31 +8,34 @@ import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
   TrackedPromise,
+  UIMatch as UIMatchRR,
 } from "@remix-run/router";
-import type { LinkProps, NavLinkProps, Params } from "react-router-dom";
+import type {
+  FetcherWithComponents,
+  LinkProps,
+  NavLinkProps,
+} from "react-router-dom";
 import {
   Await as AwaitRR,
   Link as RouterLink,
   NavLink as RouterNavLink,
-  Outlet,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
   matchRoutes,
   useAsyncError,
   useActionData as useActionDataRR,
+  useFetcher as useFetcherRR,
   useLoaderData as useLoaderDataRR,
-  useRouteLoaderData as useRouteLoaderDataRR,
   useMatches as useMatchesRR,
+  useRouteLoaderData as useRouteLoaderDataRR,
   useLocation,
   useNavigation,
   useHref,
-  useRouteError,
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { RemixContextObject } from "./entry";
-import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
@@ -49,6 +52,7 @@ import type {
   MetaDescriptor,
   MetaMatch,
   MetaMatches,
+  RouteHandle,
 } from "./routeModules";
 
 function useDataRouterContext() {
@@ -83,55 +87,6 @@ function useRemixContext(): RemixContextObject {
   return context;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// RemixRoute
-
-export function RemixRoute({ id }: { id: string }) {
-  let { routeModules } = useRemixContext();
-
-  invariant(
-    routeModules,
-    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
-      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
-  );
-
-  let { default: Component, ErrorBoundary } = routeModules[id];
-
-  // Default Component to Outlet if we expose boundary UI components
-  if (!Component && ErrorBoundary) {
-    Component = Outlet;
-  }
-
-  invariant(
-    Component,
-    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.\n` +
-      "If you were trying to navigate or submit to a resource route, use `<a>` instead of `<Link>` or `<Form reloadDocument>`."
-  );
-
-  return <Component />;
-}
-
-export function RemixRouteError({ id }: { id: string }) {
-  let { routeModules } = useRemixContext();
-
-  // This checks prevent cryptic error messages such as: 'Cannot read properties of undefined (reading 'root')'
-  invariant(
-    routeModules,
-    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
-      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
-  );
-
-  let error = useRouteError();
-  let { ErrorBoundary } = routeModules[id];
-
-  if (ErrorBoundary) {
-    return <ErrorBoundary />;
-  } else if (id === "root") {
-    return <RemixRootDefaultErrorBoundary error={error} />;
-  }
-
-  throw error;
-}
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
 
@@ -231,7 +186,7 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
 /**
- * A special kind of `<Link>` that knows whether or not it is "active".
+ * A special kind of `<Link>` that knows whether it is "active".
  *
  * @see https://remix.run/components/nav-link
  */
@@ -334,47 +289,19 @@ export function Links() {
 
   return (
     <>
-      {keyedLinks.map(({ key, link }) => {
-        if (isPageLinkDescriptor(link)) {
-          return <PrefetchPageLinks key={key} {...link} />;
-        }
-
-        let imageSrcSet: string | null = null;
-        let imageSizes: string | null = null;
-
-        // In React 17, <link imageSrcSet> and <link imageSizes> will warn
-        // because the DOM attributes aren't recognized, so users need to pass
-        // them in all lowercase to forward the attributes to the node without a
-        // warning. Normalize so that either property can be used in Remix.
-        let imageSizesKey = "useId" in React ? "imageSizes" : "imagesizes";
-        let imageSrcSetKey = "useId" in React ? "imageSrcSet" : "imagesrcset";
-        if (link.imageSrcSet) {
-          imageSrcSet = link.imageSrcSet;
-          delete link.imageSrcSet;
-        }
-
-        if (link.imageSizes) {
-          imageSizes = link.imageSizes;
-          delete link.imageSizes;
-        }
-
-        return (
-          <link
-            key={key}
-            {...{
-              ...link,
-              [imageSizesKey]: imageSizes,
-              [imageSrcSetKey]: imageSrcSet,
-            }}
-          />
-        );
-      })}
+      {keyedLinks.map(({ key, link }) =>
+        isPageLinkDescriptor(link) ? (
+          <PrefetchPageLinks key={key} {...link} />
+        ) : (
+          <link key={key} {...link} />
+        )
+      )}
     </>
   );
 }
 
 /**
- * This component renders all of the `<link rel="prefetch">` and
+ * This component renders all the `<link rel="prefetch">` and
  * `<link rel="modulepreload"/>` tags for all the assets (data, modules, css) of
  * a given page.
  *
@@ -510,12 +437,13 @@ export function Meta() {
   } = useDataRouterStateContext();
   let location = useLocation();
 
-  let _matches = errors
-    ? routerMatches.slice(
-        0,
-        routerMatches.findIndex((m) => errors![m.route.id]) + 1
-      )
-    : routerMatches;
+  let _matches: AgnosticDataRouteMatch[] = routerMatches;
+  let error: any = null;
+  if (errors) {
+    let errorIdx = routerMatches.findIndex((m) => errors![m.route.id]);
+    _matches = routerMatches.slice(0, errorIdx + 1);
+    error = errors[routerMatches[errorIdx].route.id];
+  }
 
   let meta: MetaDescriptor[] = [];
   let leafMeta: MetaDescriptor[] | null = null;
@@ -535,6 +463,7 @@ export function Meta() {
       params: _match.params,
       pathname: _match.pathname,
       handle: _match.route.handle,
+      error,
     };
     matches[i] = match;
 
@@ -546,13 +475,14 @@ export function Meta() {
               params,
               location,
               matches,
+              error,
             })
           : Array.isArray(routeModule.meta)
           ? [...routeModule.meta]
           : routeModule.meta;
     } else if (leafMeta) {
       // We only assign the route's meta to the nearest leaf if there is no meta
-      // export in the route. The meta function may return a falsey value which
+      // export in the route. The meta function may return a falsy value which
       // is effectively the same as an empty array.
       routeMeta = [...leafMeta];
     }
@@ -749,7 +679,7 @@ export function Scripts(props: ScriptProps) {
     //   resolution by the subsequently streamed chunks.
     // - __remixContext.r is a function that takes a routeID, key and value or error and resolves
     //   the promise created by __remixContext.n.
-    // - __remixContext.t is a a map or routeId to keys to an object containing `e` and `r` methods
+    // - __remixContext.t is a map or routeId to keys to an object containing `e` and `r` methods
     //   to resolve or reject the promise created by __remixContext.n.
     // - __remixContext.a is the active number of deferred scripts that should be rendered to match
     //   the SSR tree for hydration on the client.
@@ -1047,53 +977,19 @@ function dedupe(array: any[]) {
   return [...new Set(array)];
 }
 
-// TODO: Can this be re-exported from RR?
-export interface RouteMatch {
-  /**
-   * The id of the matched route
-   */
-  id: string;
-  /**
-   * The pathname of the matched route
-   */
-  pathname: string;
-  /**
-   * The dynamic parameters of the matched route
-   *
-   * @see https://remix.run/file-conventions/routes-files#dynamic-route-parameters
-   */
-  params: Params<string>;
-  /**
-   * Any route data associated with the matched route
-   */
-  data: any;
-  /**
-   * The exported `handle` object of the matched route.
-   *
-   * @see https://remix.run/route/handle
-   */
-  handle: undefined | { [key: string]: any };
-}
+export type UIMatch<D = AppData, H = RouteHandle> = UIMatchRR<
+  SerializeFrom<D>,
+  H
+>;
 
-export function useMatches(): RouteMatch[] {
-  let { routeModules } = useRemixContext();
-  let matches = useMatchesRR();
-  return React.useMemo(
-    () =>
-      matches.map((match) => {
-        let remixMatch: RouteMatch = {
-          id: match.id,
-          pathname: match.pathname,
-          params: match.params,
-          data: match.data,
-          // Need to grab handle here since we don't have it at client-side route
-          // creation time
-          handle: routeModules[match.id].handle,
-        };
-        return remixMatch;
-      }),
-    [matches, routeModules]
-  );
+/**
+ * Returns the active route matches, useful for accessing loaderData for
+ * parent/child routes or the route "handle" property
+ *
+ * @see https://remix.run/hooks/use-matches
+ */
+export function useMatches(): UIMatch[] {
+  return useMatchesRR() as UIMatch[];
 }
 
 /**
@@ -1123,6 +1019,18 @@ export function useRouteLoaderData<T = AppData>(
  */
 export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   return useActionDataRR() as SerializeFrom<T> | undefined;
+}
+
+/**
+ * Interacts with route loaders and actions without causing a navigation. Great
+ * for any interaction that stays on the same page.
+ *
+ * @see https://remix.run/hooks/use-fetcher
+ */
+export function useFetcher<TData = AppData>(): FetcherWithComponents<
+  SerializeFrom<TData>
+> {
+  return useFetcherRR();
 }
 
 // Dead Code Elimination magic for production builds.
@@ -1158,8 +1066,7 @@ export const LiveReload =
 
                   url.port =
                     ${port} ||
-                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port :
-                    8002;
+                    (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);
 
                   let ws = new WebSocket(url.href);
                   ws.onmessage = async (message) => {

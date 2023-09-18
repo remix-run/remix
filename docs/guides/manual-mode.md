@@ -1,5 +1,5 @@
 ---
-title: Manual mode
+title: Manual Dev Server
 toc: false
 ---
 
@@ -89,17 +89,12 @@ const path = require("node:path");
  */
 
 const BUILD_PATH = path.resolve("./build/index.js");
+const initialBuild = reimportServer();
 
 /**
- * Initial build
- * @type {ServerBuild}
+ * @returns {ServerBuild}
  */
-const build = require(BUILD_PATH);
-
-/**
- * @type {() => ServerBuild}
- */
-const reimportServer = () => {
+function reimportServer() {
   // 1. manually remove the server build from the require cache
   Object.keys(require.cache).forEach((key) => {
     if (key.startsWith(BUILD_PATH)) {
@@ -109,7 +104,7 @@ const reimportServer = () => {
 
   // 2. re-import the server build
   return require(BUILD_PATH);
-};
+}
 ```
 
 <docs-info>
@@ -126,28 +121,27 @@ To workaround this, you can use a timestamp query parameter to force ESM to trea
 ```js
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as url from "node:url";
 
 /**
  * @typedef {import('@remix-run/node').ServerBuild} ServerBuild
  */
 
-const BUILD_PATH = "./build/index.js";
+const BUILD_PATH = path.resolve("./build/index.js");
+const initialBuild = await reimportServer();
 
 /**
- * Initial build
- * @type {ServerBuild}
+ * @returns {Promise<ServerBuild>}
  */
-const build = await import(BUILD_PATH);
-
-/**
- * @type {() => Promise<ServerBuild>}
- */
-const reimportServer = async () => {
+async function reimportServer() {
   const stat = fs.statSync(BUILD_PATH);
 
+  // convert build path to URL for Windows compatibility with dynamic `import`
+  const BUILD_URL = url.pathToFileURL(BUILD_PATH).href;
+
   // use a timestamp query parameter to bust the import cache
-  return import(BUILD_PATH + "?t=" + stat.mtimeMs);
-};
+  return import(BUILD_URL + "?t=" + stat.mtimeMs);
+}
 ```
 
 <docs-warning>
@@ -188,7 +182,7 @@ app.listen(port, async () => {
   console.log(`Express server listening on port ${port}`);
 
   if (process.env.NODE_ENV === "development") {
-    broadcastDevReady(build);
+    broadcastDevReady(initialBuild);
   }
 });
 ```
@@ -247,10 +241,10 @@ Now let's plug in our new manual transmission when running in development mode:
 app.all(
   "*",
   process.env.NODE_ENV === "development"
-    ? createDevRequestHandler(build)
+    ? createDevRequestHandler(initialBuild)
     : createRequestHandler({
-        build,
-        mode: build.mode,
+        build: initialBuild,
+        mode: initialBuild.mode,
       })
 );
 ```
@@ -264,19 +258,19 @@ That includes things like database connections, caches, in-memory data structure
 
 Here's a utility that remembers any in-memory values you want to keep around across rebuilds:
 
-```ts filename=app/utils/remember.ts
-// adapted from https://github.com/jenseng/abuse-the-platform/blob/main/app/utils/singleton.ts
-// thanks @jenseng!
+```ts filename=app/utils/singleton.server.ts
+// Borrowed & modified from https://github.com/jenseng/abuse-the-platform/blob/main/app/utils/singleton.ts
+// Thanks @jenseng!
 
-export function remember<T>(
-  key: string,
-  getValue: () => T
-) {
+export const singleton = <Value>(
+  name: string,
+  valueFactory: () => Value
+): Value => {
   const g = global as any;
-  g.__remember ??= {};
-  g.__remember[key] ??= getValue();
-  return g.__remember[key];
-}
+  g.__singletons ??= {};
+  g.__singletons[name] ??= valueFactory();
+  return g.__singletons[name];
+};
 ```
 
 For example, to reuse a Prisma client across rebuilds:
@@ -284,10 +278,13 @@ For example, to reuse a Prisma client across rebuilds:
 ```ts filename=app/db.server.ts
 import { PrismaClient } from "@prisma/client";
 
-import { remember } from "~/utils/remember";
+import { singleton } from "~/utils/singleton.server";
 
 // hard-code a unique key so we can look up the client when this module gets re-imported
-export const db = remember("db", () => new PrismaClient());
+export const db = singleton(
+  "prisma",
+  () => new PrismaClient()
+);
 ```
 
 [mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo

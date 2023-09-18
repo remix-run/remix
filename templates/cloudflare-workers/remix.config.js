@@ -4,7 +4,7 @@ export default {
   server: "./server.ts",
   serverConditions: ["workerd", "worker", "browser"],
   serverDependenciesToBundle: [
-    // bundle verything except the virtual module for the static content manifest provided by wrangler
+    // bundle everything except the virtual module for the static content manifest provided by wrangler
     /^(?!.*\b__STATIC_CONTENT_MANIFEST\b).*$/,
   ],
   serverMainFields: ["browser", "module", "main"],
@@ -13,6 +13,6 @@ export default {
   serverPlatform: "neutral",
   // appDirectory: "app",
   // assetsBuildDirectory: "public/build",
-  // serverBuildPath: "build/index.js",
   // publicPath: "/build/",
+  // serverBuildPath: "build/index.js",
 };

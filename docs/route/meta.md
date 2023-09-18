@@ -1,6 +1,5 @@
 ---
 title: meta
-new: true
 ---
 
 # `meta`
@@ -93,7 +92,9 @@ The interface for `matches` is similar to the return value of [`useMatches`][use
 This is the data from your route's loader.
 
 ```tsx
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   return json({
     task: await getTask(params.projectId, params.taskId),
   });
@@ -110,6 +111,16 @@ export const meta: MetaFunction<typeof loader> = ({
 
 The route's URL params. See [Dynamic Segments in the Routing Guide][url-params].
 
+### `error`
+
+Thrown errors that trigger error boundaries will be passed to the `meta` function. This is useful for generating metadata for error pages.
+
+```tsx
+export const meta: MetaFunction = ({ error }) => {
+  return [{ title: error ? "oops!" : "Actual title" }];
+};
+```
+
 ## Accessing Data from Parent Route Loaders
 
 In addition to the current route's data, often you'll want to access data from a route higher up in the route hierarchy. You can look it up by its route ID in `matches`.
@@ -117,7 +128,9 @@ In addition to the current route's data, often you'll want to access data from a
 ```tsx filename=app/routes/project.$pid.tasks.$tid.tsx
 import type { loader as projectDetailsLoader } from "./project.$pid";
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   return json({ task: await getTask(params.tid) });
 }
 

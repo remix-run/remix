@@ -48,13 +48,17 @@ export interface MetaMatch<
   id: RouteId;
   pathname: DataRouteMatch["pathname"];
   data: Loader extends LoaderFunction ? SerializeFrom<Loader> : unknown;
-  handle?: unknown;
+  handle?: RouteHandle;
   params: DataRouteMatch["params"];
   meta: MetaDescriptor[];
+  error?: unknown;
 }
 
 export type MetaMatches<
-  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+  MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+    string,
+    unknown
+  >
 > = Array<
   {
     [K in keyof MatchLoaders]: MetaMatch<
@@ -66,7 +70,10 @@ export type MetaMatches<
 
 export interface MetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
-  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+  MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+    string,
+    unknown
+  >
 > {
   data:
     | (Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData)
@@ -74,11 +81,15 @@ export interface MetaArgs<
   params: Params;
   location: Location;
   matches: MetaMatches<MatchLoaders>;
+  error?: unknown;
 }
 
 export interface MetaFunction<
   Loader extends LoaderFunction | unknown = unknown,
-  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+  MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+    string,
+    unknown
+  >
 > {
   (args: MetaArgs<Loader, MatchLoaders>): MetaDescriptor[] | undefined;
 }
@@ -110,7 +121,7 @@ export type RouteComponent = ComponentType<{}>;
  *
  * @see https://remix.run/route/handle
  */
-export type RouteHandle = any;
+export type RouteHandle = unknown;
 
 export async function loadRouteModule(
   route: EntryRoute,

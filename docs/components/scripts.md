@@ -22,6 +22,6 @@ export default function Root() {
 }
 ```
 
-If you don't render the `<Scripts/>` component, your app will still work like a traditional web app without JavaScript, relying solely on HTML and browser behaviors. That's cool, but we personally have bigger goals than spinning favicons, so we recommend adding JavaScript to your app 😎
+If you don't render the `<Scripts/>` component, your app will still work like a traditional web app without JavaScript, relying solely on HTML and browser behaviors.
 
 [meta]: ../route/meta

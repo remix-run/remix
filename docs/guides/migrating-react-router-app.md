@@ -52,7 +52,7 @@ import type {
   AppLoadContext,
   EntryContext,
 } from "@remix-run/node";
-import { Response } from "@remix-run/node";
+import { createReadableStreamFromReadable } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
 import isbot from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
@@ -97,11 +97,13 @@ function handleBotRequest(
       {
         onAllReady() {
           const body = new PassThrough();
+          const stream =
+            createReadableStreamFromReadable(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
+            new Response(stream, {
               headers: responseHeaders,
               status: responseStatusCode,
             })
@@ -139,11 +141,13 @@ function handleBrowserRequest(
       {
         onShellReady() {
           const body = new PassThrough();
+          const stream =
+            createReadableStreamFromReadable(body);
 
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
+            new Response(stream, {
               headers: responseHeaders,
               status: responseStatusCode,
             })
@@ -166,16 +170,7 @@ function handleBrowserRequest(
 }
 ```
 
-If you are using React 17, your client entrypoint will look like this:
-
-```tsx filename=app/entry.client.tsx lines=[2,4]
-import { RemixBrowser } from "@remix-run/react";
-import { hydrate } from "react-dom";
-
-hydrate(<RemixBrowser />, document);
-```
-
-In React 18, you'll use `hydrateRoot` instead of `hydrate`.
+Your client entrypoint will look like this:
 
 ```tsx filename=app/entry.client.tsx
 import { RemixBrowser } from "@remix-run/react";
@@ -307,7 +302,7 @@ In your `package.json` file, update your scripts to use `remix` commands instead
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
-    "start": "remix-serve build",
+    "start": "remix-serve build/index.js",
     "typecheck": "tsc"
   }
 }

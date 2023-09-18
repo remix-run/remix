@@ -1,4 +1,4 @@
-import type { ActionArgs, MetaFunction } from "@remix-run/node";
+import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 import * as React from "react";
@@ -6,7 +6,7 @@ import * as React from "react";
 import { createNote } from "~/models/note.server";
 import { requireUserId } from "~/session.server";
 
-export async function action({ request }: ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   let userId = await requireUserId(request);
 
   let formData = await request.formData();

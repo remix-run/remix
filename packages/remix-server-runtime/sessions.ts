@@ -280,11 +280,17 @@ export const createSessionStorageFactory =
       },
       async commitSession(session, options) {
         let { id, data } = session;
+        let expires =
+          options?.maxAge != null
+            ? new Date(Date.now() + options.maxAge * 1000)
+            : options?.expires != null
+            ? options.expires
+            : cookie.expires;
 
         if (id) {
-          await updateData(id, data, cookie.expires);
+          await updateData(id, data, expires);
         } else {
-          id = await createData(data, cookie.expires);
+          id = await createData(data, expires);
         }
 
         return cookie.serialize(id, options);
@@ -293,6 +299,7 @@ export const createSessionStorageFactory =
         await deleteData(session.id);
         return cookie.serialize("", {
           ...options,
+          maxAge: undefined,
           expires: new Date(0),
         });
       },

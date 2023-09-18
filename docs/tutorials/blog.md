@@ -1,9 +1,10 @@
 ---
 title: Blog Tutorial (short)
 order: 3
+hidden: true
 ---
 
-# Quickstart
+# Blog Tutorial
 
 We're going to be short on words and quick on code in this quickstart. If you're looking to see what Remix is all about in 15 minutes, this is it.
 
@@ -344,11 +345,7 @@ export async function getPosts() {
 
 <docs-info>The `~/db.server` import is importing the file at `app/db.server.ts`. The `~` is a fancy alias to the `app` directory, so you don't have to worry about how many `../../`s to include in your import as you move files around.</docs-info>
 
-💿 Now that the Prisma client has been updated, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
-
-<docs-warning>You only need to ever do this when you change the Prisma schema and update the Prisma client. Normally you don't need to restart the dev server during development. Nice that it's so fast though right?</docs-warning>
-
-With the server up and running again, you should be able to go to `http://localhost:3000/posts` and the posts should still be there, but now they're coming from SQLite!
+You should be able to go to `http://localhost:3000/posts` and the posts should still be there, but now they're coming from SQLite!
 
 ## Dynamic Route Params
 
@@ -383,12 +380,14 @@ You can click one of your posts and should see the new page.
 
 💿 Add a loader to access the params
 
-```tsx filename=app/routes/posts.$slug.tsx lines=[1-3,5-7,10,14]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.$slug.tsx lines=[1-3,5-9,12,16]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   return json({ slug: params.slug });
 };
 
@@ -424,14 +423,16 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts.$slug.tsx lines=[5,8-9,13,17]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.$slug.tsx lines=[5,10-11,15,19]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
 import { getPost } from "~/models/post.server";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   const post = await getPost(params.slug);
   return json({ post });
 };
@@ -452,15 +453,17 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Let's make TypeScript happy with our code:
 
-```tsx filename=app/routes/posts.$slug.tsx lines=[4,9,12]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.$slug.tsx lines=[4,11,14]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
 import { getPost } from "~/models/post.server";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   invariant(params.slug, "params.slug is required");
 
   const post = await getPost(params.slug);
@@ -490,15 +493,15 @@ Now let's get that markdown parsed and rendered to HTML to the page. There are a
 💿 Parse the markdown into HTML
 
 ```sh
-npm add marked
+npm add marked@^4.3.0
 # additionally, if using typescript
-npm add @types/marked -D
+npm add @types/marked@^4.3.1 -D
 ```
 
 Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
 
-```tsx filename=app/routes/posts.$slug.tsx lines=[4,15-16,20,26]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.$slug.tsx lines=[4,17-18,22,28]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { marked } from "marked";
@@ -506,7 +509,9 @@ import invariant from "tiny-invariant";
 
 import { getPost } from "~/models/post.server";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   invariant(params.slug, "params.slug is required");
 
   const post = await getPost(params.slug);
@@ -767,14 +772,16 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/posts.admin.new.tsx lines=[1-2,5,7-17] nocopy
-import type { ActionArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.admin.new.tsx lines=[1-2,5,7-19] nocopy
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   const title = formData.get("title");
@@ -819,14 +826,16 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/posts.admin.new.tsx lines=[2,14-24]
-import type { ActionArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.admin.new.tsx lines=[2,16-26]
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   const title = formData.get("title");
@@ -857,8 +866,8 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/posts.admin.new.tsx lines=[3,10,17-19,26-28,35-39]
-import type { ActionArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.admin.new.tsx lines=[3,11,18-20,27-29,36-40]
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect, json } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 
@@ -927,7 +936,9 @@ TypeScript is still mad, because someone could call our API with non-string valu
 import invariant from "tiny-invariant";
 // ..
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   // ...
   invariant(
     typeof title === "string",
@@ -956,9 +967,11 @@ Let's slow this down and add some "pending UI" to our form.
 
 💿 Slow down our action with a fake delay
 
-```tsx filename=app/routes/posts.admin.new.tsx lines=[3-4]
+```tsx filename=app/routes/posts.admin.new.tsx lines=[5-6]
 // ...
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   // TODO: remove me
   await new Promise((res) => setTimeout(res, 1000));
 
@@ -970,7 +983,7 @@ export const action = async ({ request }: ActionArgs) => {
 💿 Add some pending UI with `useNavigation`
 
 ```tsx filename=app/routes/posts.admin.new.tsx lines=[6,14-17,26,28]
-import type { ActionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
   Form,
