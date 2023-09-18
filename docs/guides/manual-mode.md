@@ -43,6 +43,26 @@ Rather than replacing your app server, `remix dev` runs your app server _alongsi
 
 </docs-info>
 
+## `remix-serve`
+
+The Remix App Server (`remix-serve`) comes with support for manual mode out of the box:
+
+```sh
+remix dev --manual
+```
+
+<docs-info>
+
+If you are running `remix dev` without the `-c` flag, then you are implicitly using `remix-serve` as your app server.
+
+</docs-info>
+
+No need to learn to drive stick, since `remix-serve` has a built-in sports mode that automatically shifts gears for you more aggressively at higher RPMs.
+Ok, I think we're stretching this car metaphor. 😅
+
+In other words, `remix-serve` knows how to reimport server code changes _without_ needing to restart itself.
+But if you are using `-c` to run your own app server, read on.
+
 ## Learning to drive stick
 
 When you switch on manual mode with `--manual`, you take on some new responsibilities:
