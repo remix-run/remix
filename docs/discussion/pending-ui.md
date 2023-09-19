@@ -11,7 +11,7 @@ The difference between a great user experience on the web and mediocre one is ho
 
 **Busy Indicators**: Busy indicators display visual cues to users while an action is being processed by the server. This feedback mechanism is used when the application cannot predict the outcome of the action and must wait for the server's response before updating the UI.
 
-**Optimistic UI**: Optimistic UI enhances perceived speed and responsiveness by immediately updating the UI with an expected state before the server's response is received. This approach is used when the application can predict the outcome of an action based on context and user input, allowing for immediately response to actions.
+**Optimistic UI**: Optimistic UI enhances perceived speed and responsiveness by immediately updating the UI with an expected state before the server's response is received. This approach is used when the application can predict the outcome of an action based on context and user input, allowing for an immediate response to actions.
 
 **Skeleton Fallbacks**: Skeleton fallbacks are used when the UI is initially loading, providing users with a visual placeholder that outlines the structure of the upcoming content. This feedback mechanism is particularly useful to render something useful as soon as possible.
 

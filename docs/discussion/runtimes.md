@@ -105,7 +105,7 @@ npx create-remix@latest --template <org>/<repo>
 
 You can read more about templates in the [Templates Guide][templates_guide].
 
-Once you've picked a template or [set up an app from scratch][quickstart], you're ready for to start building your app!
+Once you've picked a template or [set up an app from scratch][quickstart], you're ready to start building your app!
 
 [templates]: https://remix.guide/templates
 [serve]: ../other-api/serve
