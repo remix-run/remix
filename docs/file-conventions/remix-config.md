@@ -168,7 +168,7 @@ Whether to minify the server build in production or not. Defaults to `false`.
 ## serverModuleFormat
 
 The output format of the server build, which can either be `"cjs"` or `"esm"`.
-Defaults to `"cjs"`.
+Defaults to `"esm"`.
 
 ## serverNodeBuiltinsPolyfill
 
