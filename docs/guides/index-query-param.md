@@ -33,16 +33,22 @@ If you moved the code to the `ProjectsLayout` route, it would instead post to `/
 This applies to `<Form>` and all of its cousins:
 
 ```tsx
-const submit = useSubmit();
-submit({}, { action: "/projects" });
-submit({}, { action: "/projects?index" });
+function Component() {
+  const submit = useSubmit();
+  submit({}, { action: "/projects" });
+  submit({}, { action: "/projects?index" });
+}
+```
 
-const fetcher = useFetcher();
-fetcher.submit({}, { action: "/projects" });
-fetcher.submit({}, { action: "/projects?index" });
-<fetcher.Form action="/projects" />;
-<fetcher.Form action="/projects?index" />;
-<fetcher.Form />; // defaults to the route in context
+```tsx
+function Component() {
+  const fetcher = useFetcher();
+  fetcher.submit({}, { action: "/projects" });
+  fetcher.submit({}, { action: "/projects?index" });
+  <fetcher.Form action="/projects" />;
+  <fetcher.Form action="/projects?index" />;
+  <fetcher.Form />; // defaults to the route in context
+}
 ```
 
 [loader]: ../route/loader

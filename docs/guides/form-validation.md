@@ -90,12 +90,14 @@ export default function Signup() {
     <Form method="post">
       <p>
         <input type="email" name="email" />
-        {errors?.email && <em>{errors.email}</em>}
+        {errors?.email ? <em>{errors.email}</em> : null}
       </p>
 
       <p>
         <input type="password" name="password" />
-        {errors?.password && <em>{errors.password}</em>}
+        {errors?.password ? (
+          <em>{errors.password}</em>
+        ) : null}
       </p>
 
       <button type="submit">Sign Up</button>
