@@ -1,11 +1,10 @@
 ---
 title: NavLink
-toc: false
 ---
 
 # `<NavLink>`
 
-Wraps [`<Link>`][link-2] with additional props for styling active and pending states.
+Wraps [`<Link>`][link_component] with additional props for styling active and pending states.
 
 ```tsx
 import { NavLink } from "@remix-run/react";
@@ -24,7 +23,7 @@ import { NavLink } from "@remix-run/react";
 
 ### `.active`
 
-An `active` class is added to a `<NavLink>` component when it is active so you can use CSS to style it.
+An `active` class is added to a `<NavLink>` component when it is active, so you can use CSS to style it.
 
 ```tsx
 <NavLink to="/messages" />
@@ -38,7 +37,7 @@ a.active {
 
 ### `aria-current`
 
-When a `NavLink` is active it will automatically apply `<a aria-current="page">` to the underlying anchor tag. See [aria-current][aria-current] on MDN.
+When a `NavLink` is active it will automatically apply `<a aria-current="page">` to the underlying anchor tag. See [aria_current][aria_current] on MDN.
 
 ## Props
 
@@ -89,7 +88,7 @@ Calls back with the active and pending states to allow customizing the content o
 
 ### `end`
 
-The `end` prop changes the matching logic for the `active` and `pending` states to only match to the "end" of the NavLinks's `to` path. If the URL is longer than `to`, it will no longer be considered active.
+The `end` prop changes the matching logic for the `active` and `pending` states to only match to the "end" of the `NavLinks`'s `to` path. If the URL is longer than `to`, it will no longer be considered active.
 
 | Link                          | URL          | isActive |
 | ----------------------------- | ------------ | -------- |
@@ -102,7 +101,7 @@ The `end` prop changes the matching logic for the `active` and `pending` states 
 
 ### `caseSensitive`
 
-Adding the `caseSensitive` prop changes the matching logic to make it case sensitive.
+Adding the `caseSensitive` prop changes the matching logic to make it case-sensitive.
 
 | Link                                         | URL           | isActive |
 | -------------------------------------------- | ------------- | -------- |
@@ -111,8 +110,7 @@ Adding the `caseSensitive` prop changes the matching logic to make it case sensi
 
 ### `<Link>` props
 
-All other props of [`<Link>`][link] are supported.
+All other props of [`<Link>`][link_component] are supported.
 
-[aria-current]: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-current
-[link]: ./link
-[link-2]: ./link
+[link_component]: ./link
+[aria_current]: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-current

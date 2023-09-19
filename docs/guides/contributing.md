@@ -16,7 +16,7 @@ This document will familiarize you with our development process as well as how t
 
 All contributors sending a Pull Request need to sign the Contributor License Agreement (CLA) that explicitly assigns ownership of the contribution to us.
 
-When you start a pull request, the remix-cla-bot will prompt you to review the CLA and sign it by adding your name to [contributors.yml][contributorsyaml]
+When you start a pull request, the remix-cla-bot will prompt you to review the CLA and sign it by adding your name to [contributors.yml][contributors_yaml]
 
 [Read the CLA][cla]
 
@@ -42,7 +42,7 @@ If you have an idea for a new feature, please don't send a Pull Request, but fol
 3. The Admins assign an **Owner** to the issue.
    - Owners are responsible for shipping the feature including all decisions for APIs, behavior, and implementation.
    - Owners organize the work with other contributors for larger issues.
-   - Owners may be contributors from inside or outside of the Remix team.
+   - Owners may be contributors from inside or outside the Remix team.
 4. Owners create an **RFC** from the Proposal and development can begin.
 5. Pairing is highly encouraged, particularly at the start.
 
@@ -63,9 +63,9 @@ Bug fix PRs without a test case might be closed immediately (some things are har
 
 If you think you've found a bug but don't have the time to send a PR, please follow these guidelines:
 
-1. Create a minimal reproduction of the issue somewhere like Stackblitz, Replit, Codesandbox, etc. that we can visit and observe the bug:
+1. Create a minimal reproduction of the issue somewhere like Stackblitz, Replit, CodeSandbox, etc. that we can visit and observe the bug:
 
-   - [https://remix.new][https-remix-new] makes this really easy
+   - [https://remix.new][https_remix_new] makes this really easy
 
 2. If this is not possible (related to some hosting setup, etc.) please create a GitHub repo that we can run with clear instructions in the README to observe the bug.
 
@@ -82,8 +82,8 @@ You can always check in on Remix development in our live-streamed planning meeti
   - Proposals are not “rejected”, only “accepted” onto the Roadmap.
   - Contributors can continue to up-vote and comment on Proposals, they will bubble up for a future review if it’s getting new activity.
   - The Remix Admin team may lock Proposals for any reason.
-- The meeting will be live streamed on the [Remix YouTube channel][youtube].
-  - Everyone is invited to the [Discord][discord] #roadmap-livestream-chat while the meeting is in progress.
+- The meeting will be livestreamed on the [Remix YouTube channel][youtube].
+  - Everyone is invited to the [Discord][discord] `#roadmap-livestream-chat` while the meeting is in progress.
   - Remix Collaborators are invited to attend.
 
 ### Issue Tracking
@@ -93,7 +93,7 @@ If a Roadmap Issue is expected to be large (involving multiple tasks, authors, P
 - The original issue will remain on the Roadmap project to see general progress.
 - The subtasks will be tracked on the temporary project.
 - When the work is complete, the temporary project will be archived.
-- The Owner is responsible for populating the sub-project with issues and splitting the work up into shippable chunks of work.
+- The Owner is responsible for populating the subproject with issues and splitting the work up into shippable chunks of work.
 - Build / feature flags are encouraged over long-running branches.
 
 ### RFCs
@@ -104,7 +104,7 @@ If a Roadmap Issue is expected to be large (involving multiple tasks, authors, P
 
 ### Support for Owners
 
-- Owners will be added to the `#collaborators` private channel on [discord][discord] to get help with architecture and implementation. This channel is private to help keep noise to a minimum so Admins don't miss messages and owners can get unblocked. Owners can also discuss these questions in any channel or anywhere!
+- Owners will be added to the `#collaborators` private channel on [Discord][discord] to get help with architecture and implementation. This channel is private to help keep noise to a minimum so Admins don't miss messages and owners can get unblocked. Owners can also discuss these questions in any channel or anywhere!
 - Admins will actively work with owners to ensure their issues and projects are organized (correct status, links to related issues, etc.), documented, and moving forward.
 - An issue's Owner may be reassigned if progress is stagnating.
 
@@ -137,13 +137,13 @@ To help keep the repositories clean and organized, Collaborators will take the f
 
 Before you can contribute to the codebase, you will need to fork the repo. This will look a bit different depending on what type of contribution you are making:
 
-The following steps will get you setup to contribute changes to this repo:
+The following steps will get you set up to contribute changes to this repo:
 
-1. Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page][this-page]).
+1. Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page][fork]).
 
 2. Clone your fork locally.
 
-   ```bash
+   ```shellscript nonumber
    # in a terminal, cd to parent directory where you want your clone to be, then
    git clone https://github.com/<your_github_username>/remix.git
    cd remix
@@ -152,9 +152,9 @@ The following steps will get you setup to contribute changes to this repo:
    git checkout dev
    ```
 
-3. Install dependencies by running `yarn`. Remix uses [Yarn (version 1)][yarn-version-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+3. Install dependencies by running `yarn`. Remix uses [Yarn (version 1)][yarn_v1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
 
-4. Install Playwright to be able to run tests properly by running `npx playwright install`, or [use the Visual Studio Code plugin][vscode-playwright].
+4. Install Playwright to be able to run tests properly by running `npx playwright install`, or [use the Visual Studio Code plugin][vscode_playwright].
 
 5. Verify you've got everything set up for local development by running `yarn test`.
 
@@ -180,7 +180,7 @@ The integration tests and the primary tests can be run in parallel using `npm-ru
 
 We also support watch plugins for project, file, and test filtering. To filter things down, you can use a combination of `--testNamePattern`, `--testPathPattern`, and `--selectProjects`. For example:
 
-```
+```shellscript nonumber
 yarn test:primary --selectProjects react --testPathPattern transition --testNamePattern "initial values"
 ```
 
@@ -194,7 +194,7 @@ Alternatively, you can run a project completely independently by `cd`-ing into t
 
 Remix uses a monorepo to host code for multiple packages. These packages live in the `packages` directory.
 
-We use [Yarn workspaces][yarn-workspaces] to manage installation of dependencies and running various scripts. To get everything installed, make sure you have [Yarn (version 1) installed][yarn-version-1], and then run `yarn` or `yarn install` from the repo root.
+We use [Yarn workspaces][yarn_workspaces] to manage installation of dependencies and running various scripts. To get everything installed, make sure you have [Yarn (version 1) installed][yarn_v1], and then run `yarn` or `yarn install` from the repo root.
 
 ### Building
 
@@ -206,11 +206,11 @@ It's often really useful to be able to interact with a real app while developing
 
 To generate a new playground, simply run:
 
-```sh
+```shellscript nonumber
 yarn playground:new <?name>
 ```
 
-Where the name of the playground is optional and defaults to `playground-${Date.now()}`. Then you can `cd` into the directory that's generated for you and run `npm run dev`. In another terminal window have `yarn watch` running and you're ready to work on whatever Remix features you like with live reload magic 🧙‍♂️
+Where the name of the playground is optional and defaults to `playground-${Date.now()}`. Then you can `cd` into the directory that's generated for you and run `npm run dev`. In another terminal window have `yarn watch` running, and you're ready to work on whatever Remix features you like with live reload magic 🧙‍♂️
 
 The playground generated from `yarn playground:new` is based on a template in `scripts/playground/template`. If you'd like to change anything about the template, you can create a custom one in `scripts/playground/template.local` which is `.gitignored` so you can customize it to your heart's content.
 
@@ -218,7 +218,7 @@ The playground generated from `yarn playground:new` is based on a template in `s
 
 Before running the tests, you need to run a build. After you build, running `yarn test` from the root directory will run **every** package's tests. If you want to run tests for a specific package, use `yarn test --selectProjects <display-name>`:
 
-```bash
+```shellscript nonumber
 # Test all packages
 yarn test
 
@@ -235,27 +235,26 @@ This repo maintains separate branches for different purposes. They will look som
 - dev    > code under active development between stable releases
 ```
 
-There may be other branches for various features and experimentation, but all of the magic happens from these branches.
+There may be other branches for various features and experimentation, but all the magic happens from these branches.
 
 ## How do nightly releases work?
 
-Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly-action-comment] and the explicit branch appended to the reusable workflows in the [postrelease action][postrelease-action], however they checkout the `dev` branch during their set up as that's where we want our nightly releases to be cut from. From there, we check if the git SHA is the same and only cut a new nightly if something has changed.
+Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly_action_comment], however they check out the `dev` branch during their setup as that's where we want our nightly releases to be cut from. From there, we check if the git SHA is the same and only cut a new nightly if something has changed.
 
-## End to end testing
+## End-to-end testing
 
 For every release of Remix (stable, experimental, nightly, and pre-releases), we will do a complete end-to-end test of Remix apps on each of our official adapters from `create-remix`, all the way to deploying them to production. We do this by utilizing the default [templates][templates] and the CLIs for Fly, and Arc. We'll then run some simple Cypress assertions to make sure everything is running properly for both development and the deployed app.
 
 [proposals]: https://github.com/remix-run/remix/discussions/categories/proposals
 [roadmap]: https://github.com/orgs/remix-run/projects/5
-[youtube]: https://www.youtube.com/c/Remix-Run/streams
+[youtube]: https://www.youtube.com/@Remix-Run/streams
 [discord]: https://rmx.as/discord
-[contributorsyaml]: https://github.com/remix-run/remix/blob/main/contributors.yml
+[contributors_yaml]: https://github.com/remix-run/remix/blob/main/contributors.yml
 [cla]: https://github.com/remix-run/remix/blob/main/CLA.md
-[this-page]: https://github.com/remix-run/remix
-[yarn-version-1]: https://classic.yarnpkg.com/lang/en/docs/install
-[yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces
-[vscode-playwright]: https://playwright.dev/docs/intro#using-the-vs-code-extension
-[nightly-action-comment]: https://github.com/remix-run/remix/blob/main/.github/workflows/nightly.yml#L8-L12
-[postrelease-action]: https://github.com/remix-run/remix/blob/main/.github/workflows/postrelease.yml
-[templates]: https://github.com/remix-run/remix/tree/main/templates
-[https-remix-new]: https://remix.new
+[fork]: https://github.com/remix-run/remix
+[yarn_v1]: https://classic.yarnpkg.com/lang/en/docs/install
+[yarn_workspaces]: https://classic.yarnpkg.com/en/docs/workspaces
+[vscode_playwright]: https://playwright.dev/docs/intro#using-the-vs-code-extension
+[nightly_action_comment]: https://github.com/remix-run/remix/blob/main/.github/workflows/nightly.yml#L8-L12
+[templates]: ./templates
+[https_remix_new]: https://remix.new

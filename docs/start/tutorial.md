@@ -36,7 +36,7 @@ npm install
 npm run dev
 ```
 
-You should be able to open up \[http\://localhost:3000]\[http-localhost-3000] and see an unstyled screen that looks like this:
+You should be able to open up [http://localhost:3000][http-localhost-3000] and see an unstyled screen that looks like this:
 
 <img class="tutorial" src="/docs-images/contacts/03.webp" />
 
@@ -264,9 +264,9 @@ Now if we click one of the links or visit `/contacts/1` we get ... nothing new?
 
 ## Nested Routes and Outlets
 
-Since Remix is built on top of React Router, it supports nested routing. In order for child routes to render inside of parent layouts, we need to render an [outlet][outlet] in the parent. Let's fix it, open up `app/root.tsx` and render an outlet inside.
+Since Remix is built on top of React Router, it supports nested routing. In order for child routes to render inside of parent layouts, we need to render an [`Outlet`][outlet-component] in the parent. Let's fix it, open up `app/root.tsx` and render an outlet inside.
 
-👉 **Render an [`<Outlet>`][outlet]**
+👉 **Render an [`<Outlet />`][outlet-component]**
 
 ```tsx filename=app/root.tsx lines=[7,20-22]
 // existing imports
@@ -306,7 +306,7 @@ Now the child route should be rendering through the outlet.
 
 You may or may not have noticed, but when we click the links in the sidebar, the browser is doing a full document request for the next URL instead of client side routing.
 
-Client side routing allows our app to update the URL without requesting another document from the server. Instead, the app can immediately render new UI. Let's make it happen with [`<Link>`][link].
+Client side routing allows our app to update the URL without requesting another document from the server. Instead, the app can immediately render new UI. Let's make it happen with [`<Link>`][link-component].
 
 👉 **Change the sidebar `<a href>` to `<Link to>`**
 
@@ -557,7 +557,7 @@ Remix sends a 405 because there is no code on the server to handle this form nav
 
 ## Creating Contacts
 
-We'll create new contacts by exporting an `action` function in our root route. When the user clicks the "new" button, the form will POST to the root route action.
+We'll create new contacts by exporting an `action` function in our root route. When the user clicks the "new" button, the form will `POST` to the root route action.
 
 👉 **Export an `action` function from `app/root.tsx`**
 
@@ -582,7 +582,7 @@ The `createEmptyContact` method just creates an empty contact with no name or da
 
 > 🧐 Wait a sec ... How did the sidebar update? Where did we call the `action` function? Where's the code to re-fetch the data? Where are `useState`, `onSubmit` and `useEffect`?!
 
-This is where the "old school web" programming model shows up. [`<Form>`][form] prevents the browser from sending the request to the server and sends it to your route's `action` function instead with [`fetch`][fetch].
+This is where the "old school web" programming model shows up. [`<Form>`][form-component] prevents the browser from sending the request to the server and sends it to your route's `action` function instead with [`fetch`][fetch].
 
 In web semantics, a `POST` usually means some data is changing. By convention, Remix uses this as a hint to automatically revalidate the data on the page after the `action` finishes.
 
@@ -594,7 +594,7 @@ We'll keep JavaScript around though because we're going to make a better user ex
 
 Let's add a way to fill the information for our new record.
 
-Just like creating data, you update data with [`<Form>`][form]. Let's make a new route at `app/routes/contacts.$contactId_.edit.tsx`.
+Just like creating data, you update data with [`<Form>`][form-component]. Let's make a new route at `app/routes/contacts.$contactId_.edit.tsx`.
 
 👉 **Create the edit component**
 
@@ -1340,14 +1340,13 @@ For a better user experience, let's add some immediate UI feedback for the searc
 
 👉 **Add a variable to know if we're searching**
 
-```tsx filename=app/routes/root.tsx lines=[8-12]
-// existing code
+```tsx filename=app/routes/root.tsx lines=[7-11]
+// existing imports & exports
 
 export default function Root() {
+  const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
-  const { contacts, q } = useLoaderData();
   const submit = useSubmit();
-
   const searching =
     navigation.location &&
     new URLSearchParams(navigation.location.search).has(
@@ -1362,26 +1361,50 @@ When nothing is happening, `navigation.location` will be `undefined`, but when t
 
 👉 **Add classes to search form elements using the new `searching` state**
 
-```tsx filename=app/routes/root.tsx lines=[3,17]
-<Form id="search-form" role="search">
-  <input
-    className={searching ? "loading" : ""}
-    id="q"
-    aria-label="Search contacts"
-    placeholder="Search"
-    type="search"
-    name="q"
-    defaultValue={q || ""}
-    onChange={(event) => {
-      submit(event.currentTarget.form);
-    }}
-  />
-  <div
-    id="search-spinner"
-    aria-hidden
-    hidden={!searching}
-  />
-</Form>
+```tsx filename=app/routes/root.tsx lines=[22,31]
+// existing imports & exports
+
+export default function Root() {
+  // existing code
+
+  return (
+    <html lang="en">
+      {/* existing elements */}
+      <body>
+        <div id="sidebar">
+          {/* existing elements */}
+          <div>
+            <Form
+              id="search-form"
+              onChange={(event) =>
+                submit(event.currentTarget)
+              }
+              role="search"
+            >
+              <input
+                aria-label="Search contacts"
+                className={searching ? "loading" : ""}
+                defaultValue={q || ""}
+                id="q"
+                name="q"
+                placeholder="Search"
+                type="search"
+              />
+              <div
+                aria-hidden
+                hidden={!searching}
+                id="search-spinner"
+              />
+            </Form>
+            {/* existing elements */}
+          </div>
+          {/* existing elements */}
+        </div>
+        {/* existing elements */}
+      </body>
+    </html>
+  );
+}
 ```
 
 Bonus points, avoid fading out the main screen when searching:
@@ -1593,13 +1616,13 @@ Now the star _immediately_ changes to the new state when you click it.
 That's it! Thanks for giving Remix a shot. We hope this tutorial gives you a solid start to build great user experiences. There's a lot more you can do, so make sure to check out all the APIs 😀
 
 [jim]: https://blog.jim-nielsen.com
-[outlet]: ../components/outlet
-[link]: ../components/link
+[outlet-component]: ../components/outlet
+[link-component]: ../components/link
 [loader]: ../route/loader
 [use-loader-data]: ../hooks/use-loader-data
 [action]: ../route/action
 [params]: ../route/loader#params
-[form]: ../components/form
+[form-component]: ../components/form
 [request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [object-from-entries]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/fromEntries
@@ -1618,4 +1641,5 @@ That's it! Thanks for giving Remix a shot. We hope this tutorial gives you a sol
 [links]: ../route/links
 [routes-file-conventions]: ../file-conventions/routes
 [quickstart]: ./quickstart
+[http-localhost-3000]: http://localhost:3000
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/fetch

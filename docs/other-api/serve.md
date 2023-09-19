@@ -7,7 +7,15 @@ order: 3
 
 Remix is designed for you to own your server, but if you don't want to set one up you can use the Remix App Server instead. It's a production-ready, but basic Node.js server built with Express. If you find you want to customize it, use the `@remix-run/express` adapter instead.
 
-```sh
+## `HOST` environment variable
+
+You can configure the hostname for your Express app via `process.env.HOST` and that value will be passed to the internal [`app.listen`][express-listen] method when starting the server.
+
+```shellscript nonumber
+HOST=127.0.0.1 npx remix-serve build/index.js
+```
+
+```shellscript nonumber
 remix-serve <server-build-path>
 # e.g.
 remix-serve build/index.js
@@ -17,16 +25,8 @@ remix-serve build/index.js
 
 You can change the port of the server with an environment variable.
 
-```sh
+```shellscript nonumber
 PORT=4000 npx remix-serve build/index.js
-```
-
-## `HOST` environment variable
-
-You can configure the hostname for your Express app via `process.env.HOST` and that value will be passed to the internal [`app.listen`][express-listen] method when starting the server.
-
-```sh
-HOST=127.0.0.1 npx remix-serve build/index.js
 ```
 
 ## Development Environment
@@ -37,7 +37,7 @@ The `server-build-path` needs to point to the `serverBuildPath` defined in `remi
 
 Because only the build artifacts (`build/`, `public/build/`) need to be deployed to production, the `remix.config.js` is not guaranteed to be available in production, so you need to tell Remix where your server build is with this option.
 
-In development, `remix-serve` will ensure the latest code is run by purging the require cache for every request. This has some effects on your code you might need to be aware of:
+In development, `remix-serve` will ensure the latest code is run by purging the `require` cache for every request. This has some effects on your code you might need to be aware of:
 
 - Any values in the module scope will be "reset"
 
@@ -59,7 +59,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
   }
   ```
 
-  If you need a workaround for preserving cache in development, you can setup a [singleton] in your server.
+  If you need a workaround for preserving cache in development, you can set up a [singleton][singleton] in your server.
 
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 
@@ -76,10 +76,10 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
   }
   ```
 
-  If you need to write your code in a way that has these types of module side-effects, you should set up your own [@remix-run/express][remix-run-express] server and a tool in development like pm2-dev or nodemon to restart the server on file changes instead.
+  If you need to write your code in a way that has these types of module side effects, you should set up your own [@remix-run/express][remix-run-express] server and a tool in development like pm2-dev or nodemon to restart the server on file changes instead.
 
 In production this doesn't happen. The server boots up and that's the end of it.
 
-[remix-run-express]: adapter#createrequesthandler
-[express-listen]: https://expressjs.com/en/api.html#app.listen
+[remix-run-express]: ./adapter#createrequesthandler
 [singleton]: ../guides/manual-mode#keeping-in-memory-server-state-across-rebuilds
+[express-listen]: https://expressjs.com/en/api.html#app.listen

@@ -12,7 +12,7 @@ Deploying a Remix application has four layers:
 3. A server adapter like `@remix-run/express`
 4. A web host or platform
 
-Depending on your web host, you may have fewer layers. For example, deploying to Cloudflare Pages takes care of 2, 3, and 4 all at once. Deploying Remix inside of an express app will have all four, and using the "Remix App Server" combines 2 and 3!
+Depending on your web host, you may have fewer layers. For example, deploying to Cloudflare Pages takes care of 2, 3, and 4 all at once. Deploying Remix inside an Express app will have all four, and using the "Remix App Server" combines 2 and 3!
 
 You can wire all of these up yourself, or start with a Remix Template.
 
@@ -26,10 +26,10 @@ Each runtime has varying support for the standard Web APIs that Remix is built o
 
 The following runtimes packages are available:
 
-- [`@remix-run/cloudflare-pages`][remix-run-cloudflare-pages]
-- [`@remix-run/cloudflare-workers`][remix-run-cloudflare-workers]
-- [`@remix-run/deno`][remix-run-deno]
-- [`@remix-run/node`][remix-run-node]
+- [`@remix-run/cloudflare-pages`][remix_run_cloudflare_pages]
+- [`@remix-run/cloudflare-workers`][remix_run_cloudflare_workers]
+- [`@remix-run/deno`][remix_run_deno]
+- [`@remix-run/node`][remix_run_node]
 
 The majority of the APIs you interact with in your app are not imported directly from these packages, so your code is fairly portable between runtimes. However, occasionally you'll import something from these packages for a specific feature that isn't a standard Web API.
 
@@ -45,16 +45,16 @@ import { createFileSessionStorage } from "@remix-run/node";
 But if you're storing a session in the cookie itself, this is supported in all runtimes:
 
 ```tsx
-import { createCookieSessionStorage } from "remix";
+import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
 ```
 
 ## Adapters
 
-Remix is not an HTTP server, but rather a handler inside of an existing HTTP server. Adapters allow the Remix handler to run inside the HTTP server. Some JavaScript runtimes, especially Node.js, have multiple ways to create an HTTP server. For example, in Node.js you can use Express.js, fastify, or raw `http.createServer`.
+Remix is not an HTTP server, but rather a handler inside an existing HTTP server. Adapters allow the Remix handler to run inside the HTTP server. Some JavaScript runtimes, especially Node.js, have multiple ways to create an HTTP server. For example, in Node.js you can use Express.js, fastify, or raw `http.createServer`.
 
 Each of these servers has its own Request/Response API. The adapter's job is to convert the incoming request to a Web Fetch Request, run the Remix handler, and then adapt the Web Fetch Response back to the host server's response API.
 
-Here's some pseudo code that illustrates the flow.
+Here's some pseudocode that illustrates the flow.
 
 ```tsx
 // import the app build created by `remix build`
@@ -93,7 +93,7 @@ See [`@remix-run/serve`][serve]
 
 ## Templates
 
-Remix is designed to be incredibly flexible with just enough opinions to connect the UI to the back end but it doesn't bring opinions on the database you use, how you cache data, or where and how your app is deployed.
+Remix is designed to be incredibly flexible with just enough opinions to connect the UI to the back end, but it doesn't bring opinions on the database you use, how you cache data, or where and how your app is deployed.
 
 Remix templates are starting points for app development with all of these extra opinions baked in, created by the community.
 
@@ -103,15 +103,15 @@ You can use a template with the `--template` flag in the Remix CLI that points t
 npx create-remix@latest --template <org>/<repo>
 ```
 
-You can read more about templates in the [Templates Guide][templates-guide].
+You can read more about templates in the [Templates Guide][templates_guide].
 
-Once you've picked a template or [set up an app from scratch][quickstart], you're ready for to start building your app!
+Once you've picked a template or [set up an app from scratch][quickstart], you're ready to start building your app!
 
 [templates]: https://remix.guide/templates
 [serve]: ../other-api/serve
 [quickstart]: ../start/quickstart
-[templates-guide]: ../guides/templates
-[remix-run-cloudflare-pages]: https://www.npmjs.com/package/@remix-run/cloudflare-pages
-[remix-run-cloudflare-workers]: https://www.npmjs.com/package/@remix-run/cloudflare-workers
-[remix-run-deno]: https://www.npmjs.com/package/@remix-run/deno
-[remix-run-node]: https://www.npmjs.com/package/@remix-run/node
+[templates_guide]: ../guides/templates
+[remix_run_cloudflare_pages]: https://npm.im/@remix-run/cloudflare-pages
+[remix_run_cloudflare_workers]: https://npm.im/@remix-run/cloudflare-workers
+[remix_run_deno]: https://npm.im/@remix-run/deno
+[remix_run_node]: https://npm.im/@remix-run/node

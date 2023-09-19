@@ -19,18 +19,17 @@ A feature of nested routing is the ability for several routes in the nested rout
 
 In some web applications, the sequential loading of data and assets can sometimes lead to an artificially slow user experience. Even when data dependencies aren't interdependent, they may be loaded sequentially because they are coupled to rendering hierarchy, creating an undesirable chain of requests.
 
-Remix leveraging its nested routing system to optimize load times. When a URL matches multiple routes, Remix will load the required data and assets for all matching routes in parallel. By doing this, Remix effectively sidesteps the conventional pitfall of chained request sequences.
+Remix leverages its nested routing system to optimize load times. When a URL matches multiple routes, Remix will load the required data and assets for all matching routes in parallel. By doing this, Remix effectively sidesteps the conventional pitfall of chained request sequences.
 
 This strategy, combined with modern browsers' capability to handle multiple concurrent requests efficiently, positions Remix as a front-runner in delivering highly responsive and swift web applications. It's not just about making your data fetching fast; it's about fetching it in an organized way to provide the best possible experience for the end user.
 
 ## Conventional Route Configuration
 
-Remix introduces a key convention to help streamline the routing process: the `routes` folder. When a developer introduces a file within this folder, Remix inherently understands it as a route. This convention simplifies the process of defining routes, associating them with URLs, and rendering the associated components.
+Remix introduces a key convention to help streamline the routing process: the `app/routes` folder. When a developer introduces a file within this folder, Remix inherently understands it as a route. This convention simplifies the process of defining routes, associating them with URLs, and rendering the associated components.
 
 Here's a sample directory that uses the routes folder convention:
 
-<!-- prettier-ignore -->
-```markdown
+```text
 app/
 ├── routes/
 │   ├── _index.tsx
@@ -42,19 +41,19 @@ app/
 └── root.tsx
 ```
 
-All the routes that start with `concerts.` will be child routes of `concerts.tsx`.
+All the routes that start with `app/routes/concerts.` will be child routes of `app/routes/concerts.tsx`.
 
-| URL                        | Matched Route           | Layout         |
-| -------------------------- | ----------------------- | -------------- |
-| `/`                        | `_index.tsx`            | `root.tsx`     |
-| `/about`                   | `about.tsx`             | `root.tsx`     |
-| `/concerts`                | `concerts._index.tsx`   | `concerts.tsx` |
-| `/concerts/trending`       | `concerts.trending.tsx` | `concerts.tsx` |
-| `/concerts/salt-lake-city` | `concerts.$city.tsx`    | `concerts.tsx` |
+| URL                        | Matched Route                      | Layout                    |
+| -------------------------- | ---------------------------------- | ------------------------- |
+| `/`                        | `app/routes/_index.tsx`            | `app/root.tsx`            |
+| `/about`                   | `app/routes/about.tsx`             | `app/root.tsx`            |
+| `/concerts`                | `app/routes/concerts._index.tsx`   | `app/routes/concerts.tsx` |
+| `/concerts/trending`       | `app/routes/concerts.trending.tsx` | `app/routes/concerts.tsx` |
+| `/concerts/salt-lake-city` | `app/routes/concerts.$city.tsx`    | `app/routes/concerts.tsx` |
 
 ## Conventional Route Folders
 
-For routes that require additional modules or assets, a folder inside of `routes/` with a `route.tsx` file can be used. This method:
+For routes that require additional modules or assets, a folder inside of `app/routes` with a `route.tsx` file can be used. This method:
 
 - **Co-locates Modules**: It gathers all elements connected to a particular route, ensuring logic, styles, and components are closely knit.
 - **Simplifies Imports**: With related modules in one place, managing imports becomes straightforward, enhancing code maintainability.
@@ -62,69 +61,72 @@ For routes that require additional modules or assets, a folder inside of `routes
 
 The same routes from above could instead be organized like this:
 
-<!-- prettier-ignore -->
-```
+```text
 app/
-└── routes/
-    ├── _index/
-    │   ├── signup-form.tsx
-    │   └── route.tsx
-    ├── about/
-    │   ├── header.tsx
-    │   └── route.tsx
-    ├── concerts/
-    │   ├── favorites-cookie.ts
-    │   └── route.tsx
-    ├── concerts.$city/
-    │   └── route.tsx
-    ├── concerts._index/
-    │   ├── featured.tsx
-    │   └── route.tsx
-    └── concerts.trending/
-        ├── card.tsx
-        ├── route.tsx
-        └── sponsored.tsx
+├── routes/
+│   ├── _index/
+│   │   ├── signup-form.tsx
+│   │   └── route.tsx
+│   ├── about/
+│   │   ├── header.tsx
+│   │   └── route.tsx
+│   ├── concerts/
+│   │   ├── favorites-cookie.ts
+│   │   └── route.tsx
+│   ├── concerts.$city/
+│   │   └── route.tsx
+│   ├── concerts._index/
+│   │   ├── featured.tsx
+│   │   └── route.tsx
+│   └── concerts.trending/
+│       ├── card.tsx
+│       ├── route.tsx
+│       └── sponsored.tsx
+└── root.tsx
 ```
 
-You can read more about the specific patterns in the file names and other features in the [Route File Conventions][route-file-conventions] reference.
+You can read more about the specific patterns in the file names and other features in the [Route File Conventions][route_file_conventions] reference.
 
-Only the folders directly beneath `routes/` will be registered as a route. Deeply nested folders are ignored. The file at `routes/about/header/route.tsx` will not create a route.
+Only the folders directly beneath `app/routes` will be registered as a route. Deeply nested folders are ignored. The file at `app/routes/about/header/route.tsx` will not create a route.
 
-<!-- prettier-ignore -->
-```markdown bad lines=[4]
-routes
-└── about
-    ├── header
-    │   └── route.tsx
-    └── route.tsx
+```text bad lines=[4]
+app/
+├── routes/
+│   └── about/
+│       ├── header/
+│       │   └── route.tsx
+│       └── route.tsx
+└── root.tsx
 ```
 
 ## Manual Route Configuration
 
-While the `routes/` folder offers a convenient convention for developers, Remix appreciates that one size doesn't fit all. There are times when the provided convention might not align with specific project requirements or a developer's preferences. In such cases, Remix allows for manual route configuration via the `remix.config`. This flexibility ensures developers can structure their application in a way that makes sense for their project.
+While the `app/routes` folder offers a convenient convention for developers, Remix appreciates that one size doesn't fit all. There are times when the provided convention might not align with specific project requirements or a developer's preferences. In such cases, Remix allows for manual route configuration via [`remix.config.js`][remix_config]. This flexibility ensures developers can structure their application in a way that makes sense for their project.
 
 A common way to structure an app is by top-level features folders. Consider that routes related to a particular theme, like concerts, likely share several modules. Organizing them under a single folder makes sense:
 
 ```text
 app/
-├── about
-│   └── route.tsx
-├── concerts
-│   ├── card.tsx
-│   ├── city.tsx
-│   ├── favorites-cookie.ts
-│   ├── home.tsx
-│   ├── layout.tsx
-│   ├── sponsored.tsx
-│   └── trending.tsx
-└── home
-    ├── header.tsx
-    └── route.tsx
+├── about/
+│   └── route.tsx
+├── concerts/
+│   ├── card.tsx
+│   ├── city.tsx
+│   ├── favorites-cookie.ts
+│   ├── home.tsx
+│   ├── layout.tsx
+│   ├── sponsored.tsx
+│   └── trending.tsx
+├── home/
+│   ├── header.tsx
+│   └── route.tsx
+└── root.tsx
 ```
 
 To configure this structure into the same URLs as the previous examples, you can use the `routes` function in `remix.config.js`:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 export default {
   routes(defineRoutes) {
     return defineRoutes((route) => {
@@ -140,6 +142,7 @@ export default {
 };
 ```
 
-Remix's route configuration approach blends convention with flexibility. You can use the `routes` folder for an easy, organized way to set up your routes. If you want more control, dislike the file names, or have unique needs, there's `remix.config`. It is expected that many apps forgo the routes folder convention in favor of `remix.config`.
+Remix's route configuration approach blends convention with flexibility. You can use the `app/routes` folder for an easy, organized way to set up your routes. If you want more control, dislike the file names, or have unique needs, there's `remix.config.js`. It is expected that many apps forgo the routes folder convention in favor of `remix.config.js`.
 
-[route-file-conventions]: ../file-conventions/routes
+[route_file_conventions]: ../file-conventions/routes
+[remix_config]: ../file-conventions/remix-config

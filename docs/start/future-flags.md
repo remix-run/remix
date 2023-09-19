@@ -14,7 +14,8 @@ In our approach to software development, we aim to achieve the following goals f
 
 We introduce new features into the current release with a future flag in remix.config that looks something like `unstable_someFeature`.
 
-```tsx filename=remix.config.js
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 export default {
   future: {
     unstable_someFeature: true,
@@ -32,7 +33,8 @@ export default {
 
 When we introduce breaking changes, we do so within the context of the current major version, and we hide them behind future flags. For instance, if we're in `v2`, a breaking change might be placed under a future flag named `v3_somethingDifferent`.
 
-```tsx filename=remix.config.js
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 export default {
   future: {
     v3_someFeature: true,

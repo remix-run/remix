@@ -1,6 +1,5 @@
 ---
 title: useLocation
-toc: false
 ---
 
 # `useLocation`
@@ -36,7 +35,7 @@ The query string of the current URL.
 
 ### `location.state`
 
-The state value of the location created by [`<Link state>`][link-state] or [`navigate`][navigate].
+The state value of the location created by [`<Link state>`][link_component_state] or [`navigate`][navigate].
 
-[link-state]: ../components/link
+[link_component_state]: ../components/link#state
 [navigate]: ./use-navigate
