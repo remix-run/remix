@@ -42,7 +42,7 @@ The path to the browser build, relative to remix.config.js. Defaults to
 
 ## browserNodeBuiltinsPolyfill
 
-The Node.js polyfills to include in the browser build. Polyfills are provided by [JSPM][jspm] and configured via [esbuild-plugins-node-modules-polyfill].
+The Node.js polyfills to include in the browser build. Polyfills are provided by [JSPM][jspm] and configured via \[esbuild-plugins-node-modules-polyfill].
 
 ```js filename=remix.config.js
 exports.browserNodeBuiltinsPolyfill = {
@@ -179,7 +179,7 @@ Defaults to `"esm"`.
 
 ## serverNodeBuiltinsPolyfill
 
-The Node.js polyfills to include in the server build when targeting non-Node.js server platforms. Polyfills are provided by [JSPM][jspm] and configured via [esbuild_plugins_node_modules_polyfill].
+The Node.js polyfills to include in the server build when targeting non-Node.js server platforms. Polyfills are provided by [JSPM][jspm] and configured via [esbuild_plugins_node_modules_polyfill][esbuild_plugins_node_modules_polyfill].
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */

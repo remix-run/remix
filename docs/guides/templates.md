@@ -26,7 +26,7 @@ This is a great place to start if you're just looking to try out Remix for the f
 
 ### Official Templates
 
-If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Cloudflare][cloudflare], or [Deno][deno]—then you can try one of our [official templates][official-templates] from the Remix repository:
+If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Cloudflare][cloudflare], or [Deno][deno]—then you can try one of our \[official templates]\[official-templates] from the Remix repository:
 
 ```shellscript nonumber
 npx create-remix --template remix-run/remix/templates/arc
@@ -106,7 +106,7 @@ If your template is in a private GitHub repo, you can pass a GitHub token via th
 npx create-remix@latest --template your-private/repo --token yourtoken
 ```
 
-The [token just needs `repo` access][repo-access-token].
+The \[token just needs `repo` access]\[repo-access-token].
 
 ### Local Templates
 

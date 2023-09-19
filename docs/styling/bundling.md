@@ -28,7 +28,6 @@ Then, import `cssBundleHref` and add it to a link descriptor—most likely in `a
 import { cssBundleHref } from "@remix-run/css-bundle";
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: cssBundleHref },
 ];

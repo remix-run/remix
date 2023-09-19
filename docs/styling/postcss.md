@@ -50,50 +50,50 @@ An example using SASS.
 
 1. First you'll need to install the tool your preprocess uses to generate CSS files.
 
-    ```shellscript nonumber
-    npm add -D sass
-    ```
+   ```shellscript nonumber
+   npm add -D sass
+   ```
 
 2. Add an npm script to your `package.json`'s `scripts` section that uses the installed tool to generate CSS files.
 
-    ```jsonc filename=package.json
-    {
-      // ...
-      "scripts": {
-        // ...
-        "sass": "sass --watch app/:app/"
-      }
-      // ...
-    }
-    ```
+   ```jsonc filename=package.json
+   {
+     // ...
+     "scripts": {
+       // ...
+       "sass": "sass --watch app/:app/"
+     }
+     // ...
+   }
+   ```
 
-    The above example assumes SASS files will be stored somewhere in the `app` folder.
+   The above example assumes SASS files will be stored somewhere in the `app` folder.
 
-    The `--watch` flag included above will keep `sass` running as an active process, listening for changes to or for any new SASS files. When changes are made to the source file, `sass` will regenerate the CSS file automatically. Generated CSS files will be stored in the same location as their source files.
+   The `--watch` flag included above will keep `sass` running as an active process, listening for changes to or for any new SASS files. When changes are made to the source file, `sass` will regenerate the CSS file automatically. Generated CSS files will be stored in the same location as their source files.
 
 3. Run the npm script.
 
-    ```shellscript nonumber
-    npm run sass
-    ```
+   ```shellscript nonumber
+   npm run sass
+   ```
 
-    This will start the `sass` process. Any new SASS files, or changes to existing SASS files, will be detected by the running process.
+   This will start the `sass` process. Any new SASS files, or changes to existing SASS files, will be detected by the running process.
 
-    You might want to use something like `concurrently` to avoid needing two terminal tabs to generate your CSS files and also run `remix dev`.
+   You might want to use something like `concurrently` to avoid needing two terminal tabs to generate your CSS files and also run `remix dev`.
 
-    ```shellscript nonumber
-    npm add -D concurrently
-    ```
+   ```shellscript nonumber
+   npm add -D concurrently
+   ```
 
-    ```json filename=package.json
-    {
-      "scripts": {
-        "dev": "concurrently \"npm run sass\" \"remix dev\""
-      }
-    }
-    ```
+   ```json filename=package.json
+   {
+     "scripts": {
+       "dev": "concurrently \"npm run sass\" \"remix dev\""
+     }
+   }
+   ```
 
-    Running `npm run dev` will run the specified commands in parallel in a single terminal window.
+   Running `npm run dev` will run the specified commands in parallel in a single terminal window.
 
 [postcss]: https://postcss.org
 [autoprefixer]: https://github.com/postcss/autoprefixer
