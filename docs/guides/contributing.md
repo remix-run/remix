@@ -251,14 +251,11 @@ For every release of Remix (stable, experimental, nightly, and pre-releases), we
 [discord]: https://rmx.as/discord
 [contributorsyaml]: https://github.com/remix-run/remix/blob/main/contributors.yml
 [cla]: https://github.com/remix-run/remix/blob/main/CLA.md
-[examples-repository]: https://github.com/remix-run/examples
 [this-page]: https://github.com/remix-run/remix
 [yarn-version-1]: https://classic.yarnpkg.com/lang/en/docs/install
-[integration-bug-report-test-ts]: https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts
-[pull-request]: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
 [yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces
 [vscode-playwright]: https://playwright.dev/docs/intro#using-the-vs-code-extension
 [nightly-action-comment]: https://github.com/remix-run/remix/blob/main/.github/workflows/nightly.yml#L8-L12
 [postrelease-action]: https://github.com/remix-run/remix/blob/main/.github/workflows/postrelease.yml
-[templates]: /templates
+[templates]: https://github.com/remix-run/remix/tree/main/templates
 [https-remix-new]: https://remix.new
