@@ -1340,7 +1340,7 @@ For a better user experience, let's add some immediate UI feedback for the searc
 
 👉 **Add a variable to know if we're searching**
 
-```tsx filename=app/routes/root.tsx lines=[7-11]
+```tsx filename=app/root.tsx lines=[7-11]
 // existing imports & exports
 
 export default function Root() {
@@ -1361,7 +1361,7 @@ When nothing is happening, `navigation.location` will be `undefined`, but when t
 
 👉 **Add classes to search form elements using the new `searching` state**
 
-```tsx filename=app/routes/root.tsx lines=[22,31]
+```tsx filename=app/root.tsx lines=[22,31]
 // existing imports & exports
 
 export default function Root() {

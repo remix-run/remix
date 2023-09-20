@@ -37,8 +37,9 @@ For example, you might want to store cookies on the file system, or in Cloudflar
 
 ```tsx
 // store sessions on the file system in node
-import { createKVSessionStorage } from "@remix-run/cloudflare-workers";
+import { createWorkersKVSessionStorage } from "@remix-run/cloudflare";
 import { createFileSessionStorage } from "@remix-run/node";
+
 // store sessions in cloudflare KV storage
 ```
 
