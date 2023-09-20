@@ -265,16 +265,69 @@ Check out our [bundle analysis guide][bundle_analysis] for more details.
 
 ### Troubleshooting
 
-#### HMR: hot updates losing app state
+#### HMR: React Fast Refresh Limitations
 
-Hot Module Replacement is supposed to keep your app's state around between hot updates.
-But in some cases React cannot distinguish between existing components being changed and new components being added.
+[React Fast Refresh][react_refresh] does not preserve state for class components.
+This includes higher-order components that internally return classes:
+
+```ts
+export class ComponentA extends Component {} // ❌
+
+export const ComponentB = HOC(ComponentC); // ❌ won't work if HOC returns a class component
+
+export function ComponentD() {} // ✅
+export const ComponentE = () => {}; // ✅
+export default function ComponentF() {} // ✅
+```
+
+Function components must be named, not anonymous, for React Fast Refresh to track changes:
+
+```ts
+export default () => {}; // ❌
+export default function () {} // ❌
+
+const ComponentA = () => {};
+export default ComponentA; // ✅
+
+export default function ComponentB() {} // ✅
+```
+
+React Fast Refresh can only handle component exports. While Remix manages special route exports like `meta`, `links`, and `header` for you, any user-defined, will cause full reloads:
+
+```ts
+// these exports are specially handled by Remix to be HMR-compatible
+export const meta = { title: "Home" }; // ✅
+export const links = [
+  { rel: "stylesheet", href: "style.css" },
+]; // ✅
+export const headers = { "Cache-Control": "max-age=3600" }; // ✅
+
+// these exports are treeshaken by Remix, so they never affect HMR
+export const loader = () => {}; // ✅
+export const action = () => {}; // ✅
+
+// This is not a Remix export, nor a component export
+// so it will cause a full reloads for this route
+export const myValue = "some value"; // ❌
+
+export default function Route() {} // ✅
+```
+
+👆 Routes probably shouldn't be exporting random values like that anyway.
+If you want to reuse values across routes, stick them in their own non-route module:
+
+```ts filename=my-custom-value.ts
+export const myValue = "some value";
+```
+
+React Fast Refresh cannot track changes for a component when hooks are being added or removed from it,
+causing full reloads just for the next render. After the hooks has been added, changes should result in hot updates again.
+For example, if you add [`useLoaderData`][use_loader_data] to your component, you may lose state local to that component for that render.
+
+In some cases React cannot distinguish between existing components being changed and new components being added.
 [React needs `key`s][react_keys] to disambiguate these cases and track changes when sibling elements are modified.
 
-Additionally, when adding or removing hooks, React Refresh treats that as a brand-new component.
-So if you add [`useLoaderData`][use_loader_data] to your component, you may lose state local to that component.
-
-These are limitations of React and [React Refresh][react_refresh], not Remix.
+These are all limitations of React and [React Refresh][react_refresh], not Remix.
 
 #### HDR: every code change triggers HDR
 
