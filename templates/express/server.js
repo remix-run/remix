@@ -4,7 +4,6 @@ import * as url from "node:url";
 
 import { createRequestHandler } from "@remix-run/express";
 import { broadcastDevReady, installGlobals } from "@remix-run/node";
-import chokidar from "chokidar";
 import compression from "compression";
 import express from "express";
 import morgan from "morgan";
@@ -38,15 +37,18 @@ app.use(express.static("public", { maxAge: "1h" }));
 
 app.use(morgan("tiny"));
 
-app.all(
-  "*",
-  process.env.NODE_ENV === "development"
-    ? createDevRequestHandler(initialBuild)
-    : createRequestHandler({
-        build: initialBuild,
-        mode: initialBuild.mode,
-      })
-);
+app.all("*", async (...args) => {
+  if (process.env.NODE_ENV === "development") {
+    const handler = await createDevRequestHandler(initialBuild);
+    return handler(...args);
+  }
+
+  const handler = createRequestHandler({
+    build: initialBuild,
+    mode: initialBuild.mode,
+  });
+  return handler(...args);
+});
 
 const port = process.env.PORT || 3000;
 app.listen(port, async () => {
@@ -74,7 +76,7 @@ async function reimportServer() {
  * @param {ServerBuild} initialBuild
  * @returns {import('@remix-run/express').RequestHandler}
  */
-function createDevRequestHandler(initialBuild) {
+async function createDevRequestHandler(initialBuild) {
   let build = initialBuild;
   async function handleServerUpdate() {
     // 1. re-import the server build
@@ -82,6 +84,7 @@ function createDevRequestHandler(initialBuild) {
     // 2. tell Remix that this app server is now up-to-date and ready
     broadcastDevReady(build);
   }
+  const chokidar = await import("chokidar");
   chokidar
     .watch(VERSION_PATH, { ignoreInitial: true })
     .on("add", handleServerUpdate)
