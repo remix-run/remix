@@ -224,7 +224,13 @@ async function loadRouteModuleWithBlockingLinks(
   return {
     ...routeModule,
     default: undefined,
-    Component: routeModule.default,
+    // Resource routes are built with an empty object as the default export -
+    // ignore those when setting the Component
+    Component:
+      typeof routeModule.default === "object" &&
+      Object.keys(routeModule.default).length === 0
+        ? undefined
+        : routeModule.default,
   };
 }
 
