@@ -1,4 +1,5 @@
 import * as React from "react";
+import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
 import type {
   DataRouteObject,
   ShouldRevalidateFunction,
@@ -140,7 +141,9 @@ export function createClientRoutes(
             `Route "${route.id}" does not have an action, but you are trying ` +
             `to submit to it. To fix this, please add an \`action\` function to the route`;
           console.error(msg);
-          return Promise.reject(new Error(msg));
+          return Promise.reject(
+            new ErrorResponse(405, "Method Not Allowed", new Error(msg), true)
+          );
         }
 
         return fetchServerHandler(request, route);
