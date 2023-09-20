@@ -64,7 +64,13 @@ export async function readableStreamToString(
 }
 
 export const createReadableStreamFromReadable = (
-  source: Readable & { readableHighWaterMark?: number }
+  source: Stream & {
+    readableHighWaterMark?: number;
+    readable?: boolean;
+    resume?: () => void;
+    pause?: () => void;
+    destroy?: (error?: Error) => void;
+  }
 ) => {
   let pump = new StreamPump(source);
   let stream = new ReadableStream(pump, pump);
