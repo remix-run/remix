@@ -40,7 +40,7 @@ For example, you might want to store cookies on the file system, or in Cloudflar
 import { createFileSessionStorage } from "@remix-run/node";
 
 // store sessions in cloudflare KV storage
-import { createKVSessionStorage } from "@remix-run/cloudflare-workers";
+import { createWorkersKVSessionStorage } from "@remix-run/cloudflare";
 ```
 
 But if you're storing a session in the cookie itself, this is supported in all runtimes:
