@@ -1,6 +1,6 @@
 ---
 title: Future Flags
-order: 4
+order: 5
 ---
 
 # Gradual Feature Adoption with Future Flags

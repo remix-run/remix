@@ -31,6 +31,7 @@ Each adapter has the same API. In the future we may have helpers specific to the
 - [`@netlify/remix-edge-adapter`][netlify-remix-edge-adapter] - For [Netlify][netlify] Edge.
 - [`@vercel/remix`][vercel-remix] - For [Vercel][vercel].
 - [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
+- [`partymix`][partymix] - For [PartyKit][partykit].
 
 ## Creating an Adapter
 
@@ -149,3 +150,5 @@ addEventListener("fetch", (event) => {
 [netlify]: https://netlify.com
 [vercel-remix]: https://github.com/vercel/remix/blob/main/packages/vercel-remix
 [vercel]: https://vercel.com
+[partykit]: https://partykit.io
+[partymix]: https://github.com/partykit/partykit/tree/main/packages/partymix

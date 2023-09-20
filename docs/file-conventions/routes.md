@@ -117,7 +117,7 @@ app/
 Remix will parse the value from the URL and pass it to various APIs. We call these values "URL Parameters". The most useful places to access the URL params are in [loaders][loader] and [actions][action].
 
 ```tsx
-export function loader({ params }: LoaderArgs) {
+export function loader({ params }: LoaderFunctionArgs) {
   return fakeDb.getAllConcertsForCity(params.city);
 }
 ```
@@ -127,7 +127,7 @@ You'll note the property name on the `params` object maps directly to the name o
 Routes can have multiple dynamic segments, like `concerts.$city.$date`, both are accessed on the params object by name:
 
 ```tsx
-export function loader({ params }: LoaderArgs) {
+export function loader({ params }: LoaderFunctionArgs) {
   return fake.db.getConcerts({
     date: params.date,
     city: params.city,

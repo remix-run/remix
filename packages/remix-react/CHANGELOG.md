@@ -1,5 +1,79 @@
 # `@remix-run/react`
 
+## 2.0.0
+
+### Major Changes
+
+- Drop React 17 support ([#7121](https://github.com/remix-run/remix/pull/7121))
+- Require Node >=18.0.0 ([#6939](https://github.com/remix-run/remix/pull/6939))
+- Remove `unstable_shouldReload`, which has been replaced by `shouldRevalidate` ([#6865](https://github.com/remix-run/remix/pull/6865))
+- The route `meta` API now defaults to the new "V2 Meta" API ([#6958](https://github.com/remix-run/remix/pull/6958))
+  - Please refer to the ([docs](https://remix.run/docs/en/2.0.0/route/meta) and [Preparing for V2](https://remix.run/docs/en/2.0.0/start/v2#route-meta) guide for more information.
+- Promote the `future.v2_dev` flag in `remix.config.js` to a root level `dev` config ([#7002](https://github.com/remix-run/remix/pull/7002))
+- Remove `v2_errorBoundary` flag and `CatchBoundary` implementation ([#6906](https://github.com/remix-run/remix/pull/6906))
+- Remove back-compat layer for `useFetcher`/`useFetchers`, which includes a few small breaking changes ([#6874](https://github.com/remix-run/remix/pull/6874))
+  - `fetcher.type` has been removed since it can be derived from other available information
+  - "Submission" fields have been flattened from `fetcher.submission` down onto the root `fetcher` object, and prefixed with `form` in some cases (`fetcher.submission.action` => `fetcher.formAction`)
+  - `<fetcher.Form method="get">` is now more accurately categorized as `state:"loading"` instead of `state:"submitting"` to better align with the underlying GET request
+- Remove `v2_normalizeFormMethod` future flag - all `formMethod` values will be normalized in v2 ([#6875](https://github.com/remix-run/remix/pull/6875))
+- Remove deprecated `useTransition` hook in favor of `useNavigation` - `useNavigation` is _almost_ identical with a few exceptions: ([#6870](https://github.com/remix-run/remix/pull/6870))
+  - `useTransition.type` has been removed since it can be derived from other available information
+  - "Submission" fields have been flattened from `useTransition().submission` down onto the root `useNavigation()` object
+  - `<Form method="get">` is now more accurately categorized as `state:"loading"` instead of `state:"submitting"` to better align with the underlying GET navigation
+- Remove `v2_routeConvention` flag - the flat route file convention is now standard. ([#6969](https://github.com/remix-run/remix/pull/6969))
+- Remove `v2_headers` flag - it is now the default behavior to use the deepest `headers` function in the route tree. ([#6979](https://github.com/remix-run/remix/pull/6979))
+- Removed/adjusted types to prefer `unknown` over `any` and to align with underlying React Router types ([#7319](https://github.com/remix-run/remix/pull/7319), [#7354](https://github.com/remix-run/remix/pull/7354)):
+  - Renamed the `useMatches()` return type from `RouteMatch` to `UIMatch`
+  - Renamed `LoaderArgs`/`ActionArgs` to `LoaderFunctionArgs`/`ActionFunctionArgs`
+  - `AppData` changed from `any` to `unknown`
+  - `Location["state"]` (`useLocation.state`) changed from `any` to `unknown`
+  - `UIMatch["data"]` (`useMatches()[i].data`) changed from `any` to `unknown`
+  - `UIMatch["handle"]` (`useMatches()[i].handle`) changed from `{ [k: string]: any }` to `unknown`
+  - `Fetcher["data"]` (`useFetcher().data`) changed from `any` to `unknown`
+  - `MetaMatch.handle` (used in `meta()`) changed from `any` to `unknown`
+  - `AppData`/`RouteHandle` are no longer exported as they are just aliases for `unknown`
+- Remove `imagesizes` & `imagesrcset` properties from `HtmlLinkDescriptor`, `LinkDescriptor` & `PrefetchPageDescriptor` types ([#6936](https://github.com/remix-run/remix/pull/6936))
+- Remove deprecated `REMIX_DEV_SERVER_WS_PORT` env var ([#6965](https://github.com/remix-run/remix/pull/6965))
+  - use `remix dev`'s '`--port`/`port` option instead
+- Removed support for "magic exports" from the `remix` package. This package can be removed from your `package.json` and you should update all imports to use the source `@remix-run/*` packages: ([#6895](https://github.com/remix-run/remix/pull/6895))
+
+  ```diff
+  - import type { ActionArgs } from "remix";
+  - import { json, useLoaderData } from "remix";
+  + import type { ActionArgs } from "@remix-run/node";
+  + import { json } from "@remix-run/node";
+  + import { useLoaderData } from "@remix-run/react";
+  ```
+
+### Minor Changes
+
+- Export the `Navigation` type returned from `useNavigation` ([#7136](https://github.com/remix-run/remix/pull/7136))
+- Update Remix to use React Router `route.lazy` for module loading ([#7133](https://github.com/remix-run/remix/pull/7133))
+
+### Patch Changes
+
+- Add `error` to `meta()` params so you can render error titles, etc. ([#7105](https://github.com/remix-run/remix/pull/7105))
+
+  ```tsx
+  export function meta({ error }) {
+    return [{ title: error.message }];
+  }
+  ```
+
+- Re-Export `ShouldRevalidateFunctionArgs` type from React Router ([#7316](https://github.com/remix-run/remix/pull/7316))
+- Deduplicate prefetch `link` tags ([#7060](https://github.com/remix-run/remix/pull/7060))
+- Skip preloading of stylesheets on client-side route transitions if the browser does not support `<link rel=preload>` ([#7106](https://github.com/remix-run/remix/pull/7106))
+  - This prevents us from hanging on client-side navigations when we try to preload stylesheets and never receive a `load`/`error` event on the `link` tag
+- Export proper `ErrorResponse` type for usage alongside `isRouteErrorResponse` ([#7244](https://github.com/remix-run/remix/pull/7244))
+- Use the hostname from `REMIX_DEV_ORIGIN` to connect to the live reload socket ([#6923](https://github.com/remix-run/remix/pull/6923))
+- Use unique key for `script:ld+json` meta descriptors ([#6954](https://github.com/remix-run/remix/pull/6954))
+- Fix live reload port when set explicitly as a prop ([#7358](https://github.com/remix-run/remix/pull/7358))
+- Fix types for `useLoaderData` when using Yarn PnP ([#7137](https://github.com/remix-run/remix/pull/7137))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0`
+  - [`react-router-dom@6.16.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.16.0)
+  - [`@remix-run/router@1.9.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#190)
+
 ## 1.19.3
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.19.3) for an overview of all changes in v1.19.3.

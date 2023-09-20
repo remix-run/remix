@@ -8,12 +8,12 @@ import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
   TrackedPromise,
+  UIMatch as UIMatchRR,
 } from "@remix-run/router";
 import type {
   FetcherWithComponents,
   LinkProps,
   NavLinkProps,
-  Params,
 } from "react-router-dom";
 import {
   Await as AwaitRR,
@@ -26,6 +26,7 @@ import {
   useActionData as useActionDataRR,
   useFetcher as useFetcherRR,
   useLoaderData as useLoaderDataRR,
+  useMatches as useMatchesRR,
   useRouteLoaderData as useRouteLoaderDataRR,
   useLocation,
   useNavigation,
@@ -51,6 +52,7 @@ import type {
   MetaDescriptor,
   MetaMatch,
   MetaMatches,
+  RouteHandle,
 } from "./routeModules";
 
 function useDataRouterContext() {
@@ -975,32 +977,19 @@ function dedupe(array: any[]) {
   return [...new Set(array)];
 }
 
-// TODO: Can this be re-exported from RR?
-export interface RouteMatch {
-  /**
-   * The id of the matched route
-   */
-  id: string;
-  /**
-   * The pathname of the matched route
-   */
-  pathname: string;
-  /**
-   * The dynamic parameters of the matched route
-   *
-   * @see https://remix.run/file-conventions/routes-files#dynamic-route-parameters
-   */
-  params: Params<string>;
-  /**
-   * Any route data associated with the matched route
-   */
-  data: any;
-  /**
-   * The exported `handle` object of the matched route.
-   *
-   * @see https://remix.run/route/handle
-   */
-  handle: undefined | { [key: string]: any };
+export type UIMatch<D = AppData, H = RouteHandle> = UIMatchRR<
+  SerializeFrom<D>,
+  H
+>;
+
+/**
+ * Returns the active route matches, useful for accessing loaderData for
+ * parent/child routes or the route "handle" property
+ *
+ * @see https://remix.run/hooks/use-matches
+ */
+export function useMatches(): UIMatch[] {
+  return useMatchesRR() as UIMatch[];
 }
 
 /**
@@ -1038,7 +1027,7 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  *
  * @see https://remix.run/hooks/use-fetcher
  */
-export function useFetcher<TData = any>(): FetcherWithComponents<
+export function useFetcher<TData = AppData>(): FetcherWithComponents<
   SerializeFrom<TData>
 > {
   return useFetcherRR();
@@ -1077,8 +1066,7 @@ export const LiveReload =
 
                   url.port =
                     ${port} ||
-                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port :
-                    8002;
+                    (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);
 
                   let ws = new WebSocket(url.href);
                   ws.onmessage = async (message) => {

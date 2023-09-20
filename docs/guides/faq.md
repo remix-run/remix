@@ -40,8 +40,10 @@ export async function requireUserSession(request) {
 
 And now in any loader or action that requires a user session, you can call the function.
 
-```tsx filename=app/routes/projects.tsx lines=[3]
-export async function loader({ request }: LoaderArgs) {
+```tsx filename=app/routes/projects.tsx lines=[5]
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   // if the user isn't authenticated, this will redirect to login
   const session = await requireUserSession(request);
 
@@ -56,7 +58,9 @@ export async function loader({ request }: LoaderArgs) {
 Even if you don't need the session information, the function will still protect the route:
 
 ```tsx
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   await requireUserSession(request);
   // continue
 }
@@ -81,8 +85,10 @@ We find option (1) to be the simplest because you don't have to mess around with
 
 HTML buttons can send a value, so it's the easiest way to implement this:
 
-```tsx filename=app/routes/projects.$id.tsx lines=[3-4,33,39]
-export async function action({ request }: ActionArgs) {
+```tsx filename=app/routes/projects.$id.tsx lines=[5-6,35,41]
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent");
   switch (intent) {
@@ -159,7 +165,9 @@ If you're wanting to send structured data simply to post arrays, you can use the
 Each checkbox has the name: "category". Since `FormData` can have multiple values on the same key, you don't need JSON for this. Access the checkbox values with `formData.getAll()` in your action.
 
 ```tsx
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const formData = await request.formData();
   const categories = formData.getAll("category");
   // ["comedy", "music"]
@@ -186,7 +194,9 @@ And then in your action:
 import queryString from "query-string";
 
 // in your action:
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   // use `request.text()`, not `request.formData` to get the form data as a url
   // encoded form query string
   const formQueryString = await request.text();
@@ -209,7 +219,9 @@ Some folks even dump their JSON into a hidden field. Note that this approach won
 And then parse it in the action:
 
 ```tsx
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const formData = await request.formData();
   const obj = JSON.parse(formData.get("json"));
 }

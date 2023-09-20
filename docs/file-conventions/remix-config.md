@@ -40,6 +40,24 @@ exports.appDirectory = "./elsewhere";
 The path to the browser build, relative to remix.config.js. Defaults to
 "public/build". Should be deployed to static hosting.
 
+## browserNodeBuiltinsPolyfill
+
+The Node.js polyfills to include in the browser build. Polyfills are provided by [JSPM][jspm] and configured via [esbuild-plugins-node-modules-polyfill].
+
+```js filename=remix.config.js
+exports.browserNodeBuiltinsPolyfill = {
+  modules: {
+    buffer: true, // Provide a JSPM polyfill
+    fs: "empty", // Provide an empty polyfill
+  },
+  globals: {
+    Buffer: true,
+  },
+};
+```
+
+When using this option and targeting non-Node.js server platforms, you may also want to configure Node.js polyfills for the server via [`serverNodeBuiltinsPolyfill`][server-node-builtins-polyfill].
+
 ## cacheDirectory
 
 The path to a directory Remix can use for caching things in development,
@@ -94,15 +112,6 @@ main module. If specified, Remix will compile this file along with your
 application into a single file to be deployed to your server. This file can use
 either a `.js` or `.ts` file extension.
 
-## serverBuildDirectory
-
-<docs-warning>This option is deprecated and will likely be removed in a future
-stable release. Use [`serverBuildPath`][server-build-path]
-instead.</docs-warning>
-
-The path to the server build, relative to `remix.config.js`. Defaults to
-"build". This needs to be deployed to your server.
-
 ## serverBuildPath
 
 The path to the server build file, relative to `remix.config.js`. This file
@@ -132,7 +141,7 @@ module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
-  serverBuildDirectory: "build",
+  serverBuildPath: "build/index.js",
   ignoredRouteFiles: ["**/.*"],
   serverDependenciesToBundle: [
     /^rehype.*/,
@@ -168,11 +177,16 @@ The Node.js polyfills to include in the server build when targeting non-Node.js 
 ```js filename=remix.config.js
 exports.serverNodeBuiltinsPolyfill = {
   modules: {
-    path: true, // Provide a JSPM polyfill
+    buffer: true, // Provide a JSPM polyfill
     fs: "empty", // Provide an empty polyfill
+  },
+  globals: {
+    Buffer: true,
   },
 };
 ```
+
+When using this option, you may also want to configure Node.js polyfills for the browser via [`browserNodeBuiltinsPolyfill`][browser-node-builtins-polyfill].
 
 ## serverPlatform
 
@@ -232,3 +246,5 @@ There are a few conventions that Remix uses you should be aware of.
 [jspm]: https://github.com/jspm/jspm-core
 [esbuild-plugins-node-modules-polyfill]: https://www.npmjs.com/package/esbuild-plugins-node-modules-polyfill
 [port]: ../other-api/dev-v2#options-1
+[browser-node-builtins-polyfill]: #browsernodebuiltinspolyfill
+[server-node-builtins-polyfill]: #servernodebuiltinspolyfill

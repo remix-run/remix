@@ -37,13 +37,20 @@ async function run() {
 
   if (!buildPathArg) {
     console.error(`
-  Usage: remix-serve <build-dir>`);
+  Usage: remix-serve <server-build-path> - e.g. remix-serve build/index.js`);
     process.exit(1);
   }
 
   let buildPath = path.resolve(buildPathArg);
+  let versionPath = path.resolve(buildPath, "..", "version.txt");
 
   async function reimportServer() {
+    Object.keys(require.cache).forEach((key) => {
+      if (key.startsWith(buildPath)) {
+        delete require.cache[key];
+      }
+    });
+
     let stat = fs.statSync(buildPath);
 
     // use a timestamp query parameter to bust the import cache
@@ -60,7 +67,7 @@ async function run() {
     }
 
     chokidar
-      .watch(buildPath, { ignoreInitial: true })
+      .watch(versionPath, { ignoreInitial: true })
       .on("add", handleServerUpdate)
       .on("change", handleServerUpdate);
 

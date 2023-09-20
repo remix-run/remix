@@ -32,7 +32,7 @@ export default function Invoices() {
 - [`loader`][loader]
 - [`useFetcher`][use-fetcher]
 
-[fullstack-data-flow]: ../discussion/03-data-flow
-[state-management]: ../discussion/08-state-management
+[fullstack-data-flow]: ../discussion/data-flow
+[state-management]: ../discussion/state-management
 [loader]: ../route/loader
 [use-fetcher]: ./use-fetcher

@@ -228,6 +228,25 @@ describe("create-remix CLI", () => {
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
 
+  it("works for GitHub username/repo/path combo (when dots exist in folder)", async () => {
+    let projectDir = getProjectDir("github-username-repo-path-dots");
+
+    let { status, stderr } = await execCreateRemix({
+      args: [
+        projectDir,
+        "--template",
+        "fake-remix-tester/nested-dir/folder.with.dots",
+        "--no-git-init",
+        "--no-install",
+      ],
+    });
+
+    expect(stderr.trim()).toBeFalsy();
+    expect(status).toBe(0);
+    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+  });
+
   it("fails for GitHub username/repo/path combo when path doesn't exist", async () => {
     let projectDir = getProjectDir("github-username-repo-path-missing");
 

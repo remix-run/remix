@@ -5,7 +5,7 @@ order: 2
 
 # Remix Tutorial
 
-We'll be building a small, but feature-rich app that lets you keep track of your contacts. There's no database or other "production ready" things, so we can stay focused on Remix. We expect it to take about 30m if you're following along, otherwise it's a quick read. Check the other tutorials for more in-depth examples.
+We'll be building a small, but feature-rich app that lets you keep track of your contacts. There's no database or other "production ready" things, so we can stay focused on Remix. We expect it to take about 30m if you're following along, otherwise it's a quick read.
 
 <img class="tutorial" src="/docs-images/contacts/01.webp" />
 
@@ -36,7 +36,7 @@ npm install
 npm run dev
 ```
 
-You should now see an unstyled screen that looks like this:
+You should be able to open up \[http\://localhost:3000]\[http-localhost-3000] and see an unstyled screen that looks like this:
 
 <img class="tutorial" src="/docs-images/contacts/03.webp" />
 
@@ -496,14 +496,16 @@ export default function Contact() {
 
 TypeScript is very upset with us, let's make it happy and see what that forces us to consider:
 
-```tsx filename=app/routes/contacts.$contactId.tsx lines=[1,3,7-8]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/contacts.$contactId.tsx lines=[1,3,7-10]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 // existing imports
 import invariant from "tiny-invariant";
 
 // existing imports
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   const contact = await getContact(params.contactId);
   return json({ contact });
@@ -518,10 +520,12 @@ Next, the `useLoaderData<typeof loader>()` now knows that we got a contact or `n
 
 We could account for the possibility of the contact being not found in component code, but the webby thing to do is send a proper 404. We can do that in the loader and solve all of our problems at once.
 
-```tsx filename=app/routes/contacts.$contactId.tsx lines=[6-8]
+```tsx filename=app/routes/contacts.$contactId.tsx lines=[8-10]
 // existing imports
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   const contact = await getContact(params.contactId);
   if (!contact) {
@@ -605,14 +609,16 @@ Note the weird `_` in `$contactId_`. By default, routes will automatically nest 
 Nothing we haven't seen before, feel free to copy/paste:
 
 ```tsx filename=app/routes/contacts.$contactId.edit.tsx
-import type { LoaderArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
 import { getContact } from "../data";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   const contact = await getContact(params.contactId);
   if (!contact) {
@@ -691,8 +697,8 @@ The edit route we just created already renders a `form`. All we need to do is ad
 
 ```tsx filename=app/routes/contacts.$contactId_.edit.tsx lines=[2,5,8,10-19]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 // existing imports
@@ -702,7 +708,7 @@ import { getContact, updateContact } from "../data";
 export const action = async ({
   params,
   request,
-}: ActionArgs) => {
+}: ActionFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   const formData = await request.formData();
   const updates = Object.fromEntries(formData);
@@ -743,7 +749,7 @@ Each field in the `form` is accessible with `formData.get(name)`. For example, g
 export const action = async ({
   params,
   request,
-}: ActionArgs) => {
+}: ActionFunctionArgs) => {
   const formData = await request.formData();
   const firstName = formData.get("first");
   const lastName = formData.get("last");
@@ -767,7 +773,7 @@ After we finished the `action`, note the [`redirect`][redirect] at the end:
 export const action = async ({
   params,
   request,
-}: ActionArgs) => {
+}: ActionFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   const formData = await request.formData();
   const updates = Object.fromEntries(formData);
@@ -811,7 +817,7 @@ Now that we have a bunch of records, it's not clear which one we're looking at i
 
 👉 **Replace `<Link>` with `<NavLink>` in the sidebar**
 
-```tsx filename=app/root.tsx lines=[7,28-38,42]
+```tsx filename=app/root.tsx lines=[7,28-37,39]
 // existing imports
 import {
   Form,
@@ -961,13 +967,15 @@ touch app/routes/contacts.\$contactId.destroy.tsx
 👉 **Add the destroy action**
 
 ```tsx filename=app/routes/contacts.$contactId.destroy.tsx
-import type { ActionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import invariant from "tiny-invariant";
 
 import { deleteContact } from "../data";
 
-export const action = async ({ params }: ActionArgs) => {
+export const action = async ({
+  params,
+}: ActionFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   await deleteContact(params.contactId);
   return redirect("/");
@@ -1086,15 +1094,17 @@ Since it's not `<Form method="post">`, Remix emulates the browser by serializing
 
 👉 **Filter the list if there are `URLSearchParams`**
 
-```tsx filename=app/root.tsx lines=[3,9-11]
+```tsx filename=app/root.tsx lines=[3,8-13]
 import type {
   LinksFunction,
-  LoaderArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 
 // existing imports & exports
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
   const contacts = await getContacts(q);
@@ -1123,10 +1133,12 @@ Let's solve (2) first and start the input with the value from the URL.
 
 👉 **Return `q` from your `loader`, set it as the input's default value**
 
-```tsx filename=app/root.tsx lines=[7,11,23]
+```tsx filename=app/root.tsx lines=[9,13,26]
 // existing imports & exports
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
   const contacts = await getContacts(q);
@@ -1328,7 +1340,7 @@ For a better user experience, let's add some immediate UI feedback for the searc
 
 👉 **Add a variable to know if we're searching**
 
-```tsx filename=app/routes/root.tsx lines=[8-10,27]
+```tsx filename=app/routes/root.tsx lines=[8-12]
 // existing code
 
 export default function Root() {
@@ -1350,7 +1362,7 @@ When nothing is happening, `navigation.location` will be `undefined`, but when t
 
 👉 **Add classes to search form elements using the new `searching` state**
 
-```tsx filename=app/routes/root.tsx lines=[3,14]
+```tsx filename=app/routes/root.tsx lines=[3,17]
 <Form id="search-form" role="search">
   <input
     className={searching ? "loading" : ""}
@@ -1505,18 +1517,18 @@ This form will no longer cause a navigation, but simply fetch to the `action`. S
 
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[2,7,10-19]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node";
 // existing imports
 
-import type { ContactRecord } from "../data";
+import { getContact, updateContact } from "../data";
 // existing imports
 
 export const action = async ({
   params,
   request,
-}: ActionArgs) => {
+}: ActionFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   const formData = await request.formData();
   return updateContact(params.contactId, {
@@ -1539,7 +1551,7 @@ There is one key difference though, it's not a navigation, so the URL doesn't ch
 
 You probably noticed the app felt kind of unresponsive when we clicked the favorite button from the last section. Once again, we added some network latency because you're going to have it in the real world.
 
-To give the user some feedback, we could put the star into a loading state with [`fetcher.state`][fetcher-state] (a lot like `navigation.state` from before), but we can do something even better this time. We can use a strategy called "Optimistic UI"
+To give the user some feedback, we could put the star into a loading state with [`fetcher.state`][fetcher-state] (a lot like `navigation.state` from before), but we can do something even better this time. We can use a strategy called "Optimistic UI".
 
 The fetcher knows the [`FormData`][form-data] being submitted to the `action`, so it's available to you on `fetcher.formData`. We'll use that to immediately update the star's state, even though the network hasn't finished. If the update eventually fails, the UI will revert to the real data.
 
