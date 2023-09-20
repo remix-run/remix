@@ -27,6 +27,7 @@
     "@babel/traverse": "^7.23.2",
     "@babel/types": "^7.22.5",
     "@mdx-js/mdx": "^2.3.0",
+    "@mdx-js/react": "^2.3.0",
     "@npmcli/package-json": "^4.0.1",
     "@remix-run/node": "2.3.1",
     "@remix-run/router": "1.13.0",

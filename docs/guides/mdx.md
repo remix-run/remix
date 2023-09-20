@@ -179,6 +179,42 @@ export default function Index() {
 
 Clearly this is not a scalable solution for a blog with thousands of posts. Realistically speaking, writing is hard, so if your blog starts to suffer from too much content, that's an awesome problem to have. If you get to 100 posts (congratulations!), we suggest you rethink your strategy and turn your posts into data stored in a database so that you don't have to rebuild and redeploy your blog every time you fix a typo. You can even keep using MDX with [MDX Bundler][mdx-bundler].
 
+## Custom Components
+
+You can use an [MDX provider](https://mdxjs.com/docs/using-mdx/#mdx-provider) to override which React components are used for standard Markdown elements. For example, suppose that for all routes under the `/products` path you want to replace all Markdown links with [`<Link>`](../components/link) components instead of HTML `<a>` elements. Create the following route module `app/routes/products.tsx`:
+
+```tsx filename=app/routes/products.tsx
+import { MDXProvider } from "@mdx-js/react";
+import { Link, Outlet } from "@remix-run/react";
+
+export default function Products() {
+  return (
+    <MDXProvider
+      components={{
+        a: ({ children, href, ref, ...props }) =>
+          href ? (
+            <Link to={href} {...props}>
+              {children}
+            </Link>
+          ) : (
+            <a {...props}>{children}</a>
+          ),
+      }}
+    >
+      <Outlet />
+    </MDXProvider>
+  );
+}
+```
+
+Then `app/routes/products.hammers.mdx` might look like this:
+
+```mdx filename=app/routes/products.hammers.mdx
+# Hammers
+
+If you like our hammers, then you should also check out our [nails](/products/nails)!
+```
+
 ## Advanced Configuration
 
 If you wish to configure your own remark plugins you can do so through the `remix.config.js`'s `mdx` export:

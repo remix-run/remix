@@ -18,7 +18,12 @@ test.describe("mdx", () => {
     fixture = await createFixture({
       files: {
         "app/root.tsx": js`
+          import { MDXProvider } from "@mdx-js/react";
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+          function AWrapper({children, ...props}) {
+            return <a {...props}><b>{children}</b></a>
+          }
 
           export default function Root() {
             return (
@@ -28,7 +33,9 @@ test.describe("mdx", () => {
                   <Links />
                 </head>
                 <body>
-                  <Outlet />
+                  <MDXProvider components={{a: AWrapper}}>
+                    <Outlet />
+                  </MDXProvider>
                   <Scripts />
                 </body>
               </html>
@@ -83,6 +90,8 @@ export function ComponentUsingData() {
 
 # This is some markdown!
 
+[An awesome link](https://remix.run)
+
 <ComponentUsingData />
         `.trim(),
 
@@ -120,6 +129,7 @@ export function ComponentUsingData() {
     expect(await app.getHtml('meta[name="description"]')).toMatch(
       "Isn't this awesome?"
     );
+    expect(await app.getHtml("a b")).toMatch("An awesome link");
     expect(await app.getHtml("title")).toMatch("My First Post");
     expect(await app.getHtml("#loader")).toMatch(/Mambo Number:.+5/s);
     expect(await app.getHtml("#handle")).toMatch("abc");

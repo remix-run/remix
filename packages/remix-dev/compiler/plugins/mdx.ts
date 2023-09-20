@@ -100,6 +100,7 @@ export const handle = typeof attributes !== "undefined" && attributes.handle;
     let compiled = await mdx.compile(fileContents, {
       jsx: true,
       jsxRuntime: "automatic",
+      providerImportSource: "@mdx-js/react",
       rehypePlugins,
       remarkPlugins,
     });
