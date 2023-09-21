@@ -1,5 +1,15 @@
 # `@remix-run/react`
 
+## 2.0.1-pre.0
+
+### Patch Changes
+
+- Add second generic to `UIMatch` for `handle` field ([#7464](https://github.com/remix-run/remix/pull/7464))
+- Fix resource routes being loaded through `route.lazy` ([#7498](https://github.com/remix-run/remix/pull/7498))
+- Throw a semantically correct 405 `ErrorResponse` instead of just an `Error` when submitting to a route without an `action` ([#7423](https://github.com/remix-run/remix/pull/7423))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.1-pre.0`
+
 ## 2.0.0
 
 ### Major Changes

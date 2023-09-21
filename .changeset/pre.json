@@ -20,5 +20,17 @@
     "@remix-run/server-runtime": "2.0.0",
     "@remix-run/testing": "2.0.0"
   },
-  "changesets": []
+  "changesets": [
+    "add-uimatch-handle",
+    "bump-web-fetch",
+    "fix-mdx-types-for-pnpm",
+    "forty-needles-pretend",
+    "four-spies-draw",
+    "get-dependencies-from-esm-without-main",
+    "node-web-crypto",
+    "route-lazy-resource-route",
+    "use-native-blob",
+    "wicked-avocados-fly",
+    "wild-steaks-bathe"
+  ]
 }
