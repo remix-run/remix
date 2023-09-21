@@ -32,10 +32,14 @@ export function handleError(
   error: unknown,
   { request, params, context }: DataFunctionArgs
 ) {
-  sendErrorToErrorReportingService(error);
-  console.error(formatErrorForJsonLogging(error));
+  if (!request.signal.aborted) {
+    sendErrorToErrorReportingService(error);
+    console.error(formatErrorForJsonLogging(error));
+  }
 }
 ```
+
+_Note that you generally want to avoid logging when the request was aborted, since Remix's cancellation and race-condition handling can cause a lot of requests to be aborted._
 
 ### Streaming Rendering Errors
 

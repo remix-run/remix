@@ -1,4 +1,5 @@
 import * as React from "react";
+import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
 import type {
   DataRouteObject,
   ShouldRevalidateFunction,
@@ -140,7 +141,9 @@ export function createClientRoutes(
             `Route "${route.id}" does not have an action, but you are trying ` +
             `to submit to it. To fix this, please add an \`action\` function to the route`;
           console.error(msg);
-          return Promise.reject(new Error(msg));
+          return Promise.reject(
+            new ErrorResponse(405, "Method Not Allowed", new Error(msg), true)
+          );
         }
 
         return fetchServerHandler(request, route);
@@ -221,10 +224,23 @@ async function loadRouteModuleWithBlockingLinks(
 ) {
   let routeModule = await loadRouteModule(route, routeModules);
   await prefetchStyleLinks(routeModule);
+
+  // Resource routes are built with an empty object as the default export -
+  // ignore those when setting the Component
+  let defaultExportIsEmptyObject =
+    typeof routeModule.default === "object" &&
+    Object.keys(routeModule.default || {}).length === 0;
+
+  // Include all `browserSafeRouteExports` fields
   return {
-    ...routeModule,
-    default: undefined,
-    Component: routeModule.default,
+    ...(routeModule.default != null && !defaultExportIsEmptyObject
+      ? { Component: routeModule.default }
+      : {}),
+    ErrorBoundary: routeModule.ErrorBoundary,
+    handle: routeModule.handle,
+    links: routeModule.links,
+    meta: routeModule.meta,
+    shouldRevalidate: routeModule.shouldRevalidate,
   };
 }
 

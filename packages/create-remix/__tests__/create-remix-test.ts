@@ -261,7 +261,7 @@ describe("create-remix CLI", () => {
     });
 
     expect(stderr.trim()).toMatchInlineSnapshot(
-      `"▲  Oh no! The path \\"this/path/does/not/exist\\" was not found in this GitHub repo."`
+      `"▲  Oh no! The path "this/path/does/not/exist" was not found in this GitHub repo."`
     );
     expect(status).toBe(1);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeFalsy();
@@ -400,7 +400,7 @@ describe("create-remix CLI", () => {
     });
 
     expect(stderr.trim()).toMatchInlineSnapshot(
-      `"▲  Oh no! The path \\"this/path/does/not/exist\\" was not found in this GitHub repo."`
+      `"▲  Oh no! The path "this/path/does/not/exist" was not found in this GitHub repo."`
     );
     expect(status).toBe(1);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeFalsy();
@@ -1105,12 +1105,12 @@ describe("create-remix CLI", () => {
         });
 
         expect(stderr.trim()).toMatchInlineSnapshot(`
-        "▲  Oh no! Destination directory contains files that would be overwritten
-                 and no \`--overwrite\` flag was included in a non-interactive
-                 environment. The following files would be overwritten:
-                   package.json
-                   tsconfig.json"
-      `);
+                  "▲  Oh no! Destination directory contains files that would be overwritten
+                           and no \`--overwrite\` flag was included in a non-interactive
+                           environment. The following files would be overwritten:
+                             package.json
+                             tsconfig.json"
+              `);
         expect(status).toBe(1);
         expect(
           fse.existsSync(path.join(projectDir, "app/root.tsx"))

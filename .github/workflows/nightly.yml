@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: "0 7 * * *" # every day at 12AM PST
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CI: true
 
@@ -22,9 +26,6 @@ jobs:
       # allows this to be used in the `comment` job below - will be undefined if there's no release necessary
       NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
         with:

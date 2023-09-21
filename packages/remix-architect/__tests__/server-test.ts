@@ -1,8 +1,8 @@
 import fsp from "node:fs/promises";
 import path from "node:path";
-import lambdaTester from "lambda-tester";
-import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node";
+import type { APIGatewayProxyEventV2 } from "aws-lambda";
+import lambdaTester from "lambda-tester";
 
 import {
   createRequestHandler,
@@ -198,9 +198,7 @@ describe("architect createRemixHeaders", () => {
   describe("creates fetch headers from architect headers", () => {
     it("handles empty headers", () => {
       let headers = createRemixHeaders({});
-      expect(Object.fromEntries(headers.entries())).toMatchInlineSnapshot(
-        `Object {}`
-      );
+      expect(Object.fromEntries(headers.entries())).toMatchInlineSnapshot(`{}`);
     });
 
     it("handles simple headers", () => {
