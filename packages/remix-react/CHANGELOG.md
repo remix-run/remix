@@ -75,6 +75,7 @@
 - Deduplicate prefetch `link` tags ([#7060](https://github.com/remix-run/remix/pull/7060))
 
 - Skip preloading of stylesheets on client-side route transitions if the browser does not support `<link rel=preload>` ([#7106](https://github.com/remix-run/remix/pull/7106))
+
   - This prevents us from hanging on client-side navigations when we try to preload stylesheets and never receive a `load`/`error` event on the `link` tag
 
 - Export proper `ErrorResponse` type for usage alongside `isRouteErrorResponse` ([#7244](https://github.com/remix-run/remix/pull/7244))
