@@ -13,7 +13,7 @@ Ensure your hosting provider supports streaming, not all of them do. If your res
 
 There are three steps to streaming data:
 
-1. **Project Setup:** we need to make sure our server and client entry points are set up to support streaming
+1. **Project Setup:** we need to make sure our client and server entry points are set up to support streaming
 2. **Component Setup:** we need to make sure our components can render streamed data
 3. **Deferring Loader Data:** finally we can defer data in our loaders
 
@@ -23,27 +23,30 @@ There are three steps to streaming data:
 
 **Manual Setup Needed?:** If your project began from scratch or used an older template, verify `entry.server.tsx` and `entry.client.tsx` have streaming support. If you don't see these files then you are using the defaults and streaming is supported. If you have created your own entries, the following are the template defaults for your reference:
 
-- [entry.client.tsx][entry-client-tsx]
-- [entry.server.tsx][entry-server-tsx]
+- [entry.client.tsx][entry_client_tsx]
+- [entry.server.tsx][entry_server_tsx]
 
 ## 2. Component Setup
 
 A route module without streaming might look like this:
 
 ```tsx
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   const [product, reviews] = await Promise.all([
     db.getProduct(params.productId),
     db.getReviews(params.productId),
   ]);
 
-  return { product, reviews };
+  return json({ product, reviews });
 }
 
 export default function Product() {
-  const { product, reviews } = useLoaderData();
+  const { product, reviews } =
+    useLoaderData<typeof loader>();
   return (
     <>
       <ProductPage data={product} />
@@ -53,18 +56,23 @@ export default function Product() {
 }
 ```
 
-In order to render streamed data, you need to use `<Suspense>` from React and `<Await>` from Remix. It's a bit of boilerplate, but straightforward:
+In order to render streamed data, you need to use [`<Suspense>`][suspense_component] from React and [`<Await>`][await_component] from Remix. It's a bit of boilerplate, but straightforward:
 
-```tsx lines=[1,2,13-17]
-import { useLoaderData, Await } from "@remix-run/react";
+```tsx lines=[3-4,18-22]
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
+import { Await, useLoaderData } from "@remix-run/react";
 import { Suspense } from "react";
 
-export async function loader({ params }) {
+import { ReviewsSkeleton } from "./reviews-skeleton";
+
+export async function loader({ params }: LoaderArgs) {
   // existing code
 }
 
 export default function Product() {
-  const { product, reviews } = useLoaderData();
+  const { product, reviews } =
+    useLoaderData<typeof loader>();
   return (
     <>
       <ProductPage data={product} />
@@ -82,16 +90,19 @@ This code will continue to work even before we start deferring data. It's a good
 
 ## 3. Deferring Data in Loaders
 
-Now that our project and route component are set up stream data, we can start deferring data in our loaders. We'll use the `defer` utility from Remix to do this.
+Now that our project and route component are set up stream data, we can start deferring data in our loaders. We'll use the [`defer`][defer] utility from Remix to do this.
 
 Note the change in the async promise code.
 
-```tsx lines=[1,6-14]
-import { defer } from "@remix-run/node";
-import { useLoaderData, Await } from "@remix-run/react";
+```tsx lines=[2,9-17]
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { defer } from "@remix-run/node"; // or cloudflare/deno
+import { Await, useLoaderData } from "@remix-run/react";
 import { Suspense } from "react";
 
-export async function loader({ params }) {
+import { ReviewsSkeleton } from "./reviews-skeleton";
+
+export async function loader({ params }: LoaderArgs) {
   // 👇 note this promise is not awaited
   const reviewsPromise = db.getReviews(params.productId);
   // 👇 but this one is
@@ -103,9 +114,9 @@ export async function loader({ params }) {
   });
 }
 
-export default function SomeRoute() {
-  const { product, reviews } = useLoaderData();
-
+export default function Product() {
+  const { product, reviews } =
+    useLoaderData<typeof loader>();
   // existing code
 }
 ```
@@ -119,7 +130,7 @@ That's it! You should now be streaming data to the browser.
 It's important to initiate promises for deferred data _before_ you await any other promises, otherwise you won't get the full benefit of streaming. Note the difference with this less efficient code example:
 
 ```tsx bad
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   const product = await db.getProduct(params.productId);
   // 👇 this won't initiate loading until `product` is done
   const reviewsPromise = db.getReviews(params.productId);
@@ -131,13 +142,8 @@ export async function loader({ params }) {
 }
 ```
 
-[await]: ../components/await
+[entry_client_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.client.tsx
+[entry_server_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.server.tsx
+[suspense_component]: https://react.dev/reference/react/Suspense
+[await_component]: ../components/await
 [defer]: ../utils/defer
-[link]: ../components/link
-[usefetcher]: ../hooks/use-fetcher
-[useasyncvalue]: ../api/remix#useasyncvalue
-[react-lazy]: https://reactjs.org/docs/code-splitting.html#reactlazy
-[web-streaming-api]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
-[graphs-showing-how-document-and-slow-data-requests-sent-over-the-same-response-significantly-speed-up-the-largest-contentful-paint]: https://user-images.githubusercontent.com/12063586/179609347-36bd7d32-c8af-4e24-9e89-06d9abc0a19f.svg
-[entry-client-tsx]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/entry.client.react-stream.tsx
-[entry-server-tsx]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/node/entry.server.react-stream.tsx

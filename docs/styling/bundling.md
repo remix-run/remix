@@ -18,25 +18,26 @@ Remix does not insert the CSS bundle into the page automatically so that you hav
 
 To get access to the CSS bundle, first install the `@remix-run/css-bundle` package.
 
-```sh
+```shellscript nonumber
 npm install @remix-run/css-bundle
 ```
 
-Then, import `cssBundleHref` and add it to a link descriptor—most likely in `root.tsx` so that it applies to your entire application.
+Then, import `cssBundleHref` and add it to a link descriptor—most likely in `app/root.tsx` so that it applies to your entire application.
 
-```tsx filename=root.tsx lines=[1,5-7]
+```tsx filename=app/root.tsx
 import { cssBundleHref } from "@remix-run/css-bundle";
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-export const links = () => {
-  return [{ rel: "stylesheet", href: cssBundleHref }];
-};
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: cssBundleHref },
+];
 ```
 
 With this link tag inserted into the page, you're now ready to start using the various CSS bundling features built into Remix.
 
 ## Limitations
 
-Avoid using `export *` due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue].
+Avoid using `export *` due to an [issue with `esbuild`'s CSS tree shaking][esbuild-css-tree-shaking-issue].
 
 [esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370
 [css-side-effect-imports]: ./css-imports

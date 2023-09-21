@@ -6,13 +6,13 @@ title: Network Concurrency Management
 
 When building web applications, managing network requests can be a daunting task. The challenges of ensuring up-to-date data and handling simultaneous requests often lead to complex logic in the application to deal with interruptions and race conditions. Remix simplifies this process by automating network management, mirroring and expanding the intuitive behavior of web browsers.
 
-To help understand how Remix works, remember from [Fullstack Data Flow][fullstack-data-flow] that after form submissions, Remix will fetch fresh data from the loaders. This is called revalidation.
+To help understand how Remix works, remember from [Fullstack Data Flow][fullstack_data_flow] that after `form` submissions, Remix will fetch fresh data from the loaders. This is called revalidation.
 
 ## Natural Alignment with Browser Behavior
 
 Remix's handling of network concurrency is heavily inspired by the default behavior of web browsers when processing documents:
 
-- **Browser Link Navigation**: When you click on a link in a browser and then click on another before the page transition completes, the browser prioritizes the most recent action. It cancels the initial request, focusing solely on the latest link clicked.
+- **Browser Link Navigation**: When you click on a link in a browser and then click on another before the page transition completes, the browser prioritizes the most recent `action`. It cancels the initial request, focusing solely on the latest link clicked.
 
   - **Remix's Approach**: Remix manages client-side navigation the same way. When a link is clicked within a Remix application, it initiates fetch requests for each loader tied to the target URL. If another navigation interrupts the initial navigation, Remix cancels the previous fetch requests, ensuring that only the latest requests proceed.
 
@@ -22,9 +22,9 @@ Remix's handling of network concurrency is heavily inspired by the default behav
 
 ## Concurrent Submissions and Revalidation
 
-While standard browsers are limited to one request at a time for navigations and form submissions, Remix elevates this behavior. Unlike navigation, with `useFetcher` multiple requests can be in flight simultaneously.
+While standard browsers are limited to one request at a time for navigations and form submissions, Remix elevates this behavior. Unlike navigation, with [`useFetcher`][use_fetcher] multiple requests can be in flight simultaneously.
 
-Remix is designed to handle multiple form submissions to server actions and concurrent revalidation requests efficiently. It ensures that as soon as new data is available, the state is updated promptly. However, Remix also safeguards against potential pitfalls by refraining from committing stale data when other actions introduce race conditions.
+Remix is designed to handle multiple form submissions to server `action`s and concurrent revalidation requests efficiently. It ensures that as soon as new data is available, the state is updated promptly. However, Remix also safeguards against potential pitfalls by refraining from committing stale data when other `action`s introduce race conditions.
 
 For instance, if three form submissions are in progress, and one completes, Remix updates the UI with that data immediately without waiting for the other two so that the UI remains responsive and dynamic. As the remaining submissions finalize, Remix continues to update the UI, ensuring that the most recent data is displayed.
 
@@ -53,7 +53,7 @@ Because the revalidation from submission (2) started later and landed earlier th
 
 ## Potential for Stale Data
 
-It's unlikely your users will ever experience this, but there are still chances for the user to see stale data in very rare conditions with inconsistent infrastructure. Even though Remix cancels requests for stale data, they will still end up making it to the server. Cancelling a request in the browser simply releases browser resources for that request, it can't "catch up" and stop it from getting to the server. In extremely rare conditions, a cancelled request may change data after the interrupting actions's revalidation lands. Consider this diagram:
+It's unlikely your users will ever experience this, but there are still chances for the user to see stale data in very rare conditions with inconsistent infrastructure. Even though Remix cancels requests for stale data, they will still end up making it to the server. Cancelling a request in the browser simply releases browser resources for that request, it can't "catch up" and stop it from getting to the server. In extremely rare conditions, a cancelled request may change data after the interrupting `action`'s revalidation lands. Consider this diagram:
 
 ```text
      👇 interruption with new submission
@@ -69,10 +69,11 @@ The user is now looking at different data than what is on the server. Note that 
 
 ## Example
 
-In UI components like comboboxes, each keystroke can trigger a network request. Managing such rapid, consecutive requests can be tricky, especially when ensuring that the displayed results match the most recent query. However, with Remix, this challenge is automatically handled, ensuring that users see the correct results without developers having to micro-manage the network.
+In UI components like combo boxes, each keystroke can trigger a network request. Managing such rapid, consecutive requests can be tricky, especially when ensuring that the displayed results match the most recent query. However, with Remix, this challenge is automatically handled, ensuring that users see the correct results without developers having to micromanage the network.
 
 ```tsx filename=app/routes/city-search.tsx
-import { json } from "@remix-run/react";
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
 export async function loader({
   request,
@@ -83,7 +84,7 @@ export async function loader({
 }
 
 export function CitySearchCombobox() {
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<typeof loader>();
 
   return (
     <fetcher.Form action="/city-search">
@@ -99,7 +100,7 @@ export function CitySearchCombobox() {
         {/* render with the loader's data */}
         {fetcher.data ? (
           <ComboboxPopover className="shadow-popup">
-            {fetcher.data.length ? (
+            {fetcher.data.length > 0 ? (
               <ComboboxList>
                 {fetcher.data.map((city) => (
                   <ComboboxOption
@@ -125,4 +126,5 @@ All the application needs to know is how to query the data and how to render it,
 
 Remix offers developers an intuitive, browser-based approach to managing network requests. By mirroring browser behaviors and enhancing them where needed, it simplifies the complexities of concurrency, revalidation, and potential race conditions. Whether you're building a simple webpage or a sophisticated web application, Remix ensures that your user interactions are smooth, reliable, and always up-to-date.
 
-[fullstack-data-flow]: ./data-flow
+[fullstack_data_flow]: ./data-flow
+[use_fetcher]: ../hooks/use-fetcher

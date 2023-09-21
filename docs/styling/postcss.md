@@ -8,7 +8,7 @@ title: PostCSS
 
 For example, to use [Autoprefixer][autoprefixer], first install the PostCSS plugin.
 
-```sh
+```shellscript nonumber
 npm install -D autoprefixer
 ```
 
@@ -22,7 +22,7 @@ module.exports = {
 };
 ```
 
-If you're using [Vanilla Extract][vanilla-extract-2], since it's already playing the role of CSS preprocessor, you may want to apply a different set of PostCSS plugins relative to other styles. To support this, you can export a function from your PostCSS config file which is given a context object that lets you know when Remix is processing a Vanilla Extract file.
+If you're using [Vanilla Extract][vanilla-extract], since it's already playing the role of CSS preprocessor, you may want to apply a different set of PostCSS plugins relative to other styles. To support this, you can export a function from your PostCSS config file which is given a context object that lets you know when Remix is processing a Vanilla Extract file.
 
 ```js filename=postcss.config.cjs
 module.exports = (ctx) => {
@@ -42,7 +42,7 @@ module.exports = (ctx) => {
 
 You can use CSS preprocessors like LESS and SASS. Doing so requires running an additional build process to convert these files to CSS files. This can be done via the command line tools provided by the preprocessor or any equivalent tool.
 
-Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the \[Route Module `links` export]\[route-module-links] function, or included via \[side effect imports]\[css-side-effect-imports] when using \[CSS bundling]\[css-bundling], just like any other CSS file in Remix.
+Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export][route-module-links] function, or included via [side effect imports][css-side-effect-imports] when using [CSS bundling][css-bundling], just like any other CSS file in Remix.
 
 To ease development with CSS preprocessors you can add npm scripts to your `package.json` that generate CSS files from your SASS or LESS files. These scripts can be run in parallel alongside any other npm scripts that you run for developing a Remix application.
 
@@ -50,53 +50,56 @@ An example using SASS.
 
 1. First you'll need to install the tool your preprocess uses to generate CSS files.
 
-```sh
-npm add -D sass
-```
+   ```shellscript nonumber
+   npm add -D sass
+   ```
 
 2. Add an npm script to your `package.json`'s `scripts` section that uses the installed tool to generate CSS files.
 
-```json filename=package.json
-{
-  // ...
-  "scripts": {
-    // ...
-    "sass": "sass --watch app/:app/"
-  }
-  // ...
-}
-```
+   ```jsonc filename=package.json
+   {
+     // ...
+     "scripts": {
+       // ...
+       "sass": "sass --watch app/:app/"
+     }
+     // ...
+   }
+   ```
 
-The above example assumes SASS files will be stored somewhere in the `app` folder.
+   The above example assumes SASS files will be stored somewhere in the `app` folder.
 
-The `--watch` flag included above will keep `sass` running as an active process, listening for changes to or for any new SASS files. When changes are made to the source file, `sass` will regenerate the CSS file automatically. Generated CSS files will be stored in the same location as their source files.
+   The `--watch` flag included above will keep `sass` running as an active process, listening for changes to or for any new SASS files. When changes are made to the source file, `sass` will regenerate the CSS file automatically. Generated CSS files will be stored in the same location as their source files.
 
 3. Run the npm script.
 
-```sh
-npm run sass
-```
+   ```shellscript nonumber
+   npm run sass
+   ```
 
-This will start the `sass` process. Any new SASS files, or changes to existing SASS files, will be detected by the running process.
+   This will start the `sass` process. Any new SASS files, or changes to existing SASS files, will be detected by the running process.
 
-You might want to use something like `concurrently` to avoid needing two terminal tabs to generate your CSS files and also run `remix dev`.
+   You might want to use something like `concurrently` to avoid needing two terminal tabs to generate your CSS files and also run `remix dev`.
 
-```sh
-npm add -D concurrently
-```
+   ```shellscript nonumber
+   npm add -D concurrently
+   ```
 
-```json filename=package.json
-{
-  "scripts": {
-    "dev": "concurrently \"npm run sass\" \"remix dev\""
-  }
-}
-```
+   ```json filename=package.json
+   {
+     "scripts": {
+       "dev": "concurrently \"npm run sass\" \"remix dev\""
+     }
+   }
+   ```
 
-Running `npm run dev` will run the specified commands in parallel in a single terminal window.
+   Running `npm run dev` will run the specified commands in parallel in a single terminal window.
 
 [postcss]: https://postcss.org
 [autoprefixer]: https://github.com/postcss/autoprefixer
+[vanilla-extract]: ./vanilla-extract
+[route-module-links]: ../route/links
+[css-side-effect-imports]: ./css-imports
+[css-bundling]: ./bundling
 [postcss-preset-env]: https://preset-env.cssdb.org
 [esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370
-[vanilla-extract-2]: #vanilla-extract

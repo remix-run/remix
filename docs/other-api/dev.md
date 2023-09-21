@@ -10,7 +10,7 @@ The Remix CLI comes from the `@remix-run/dev` package. It also includes the comp
 
 To get a full list of available commands and flags, run:
 
-```sh
+```shellscript nonumber
 npx @remix-run/dev -h
 ```
 
@@ -18,7 +18,7 @@ npx @remix-run/dev -h
 
 Builds your app for production. This command will set `process.env.NODE_ENV` to `production` and minify the output for deployment.
 
-```sh
+```shellscript nonumber
 remix build
 ```
 
@@ -41,8 +41,8 @@ The Remix compiler will:
 
 🎥 For an introduction and deep dive into HMR and HDR in Remix, check out our videos:
 
-- [HMR and Hot Data Revalidation 🔥][hmr-and-hdr]
-- [Mental model for the new dev flow 🧠][mental-model]
+- [HMR and Hot Data Revalidation 🔥][hmr_and_hdr]
+- [Mental model for the new dev flow 🧠][mental_model]
 - [Migrating your project to v2 dev flow 🚚][migrating]
 
 <docs-info>
@@ -54,10 +54,10 @@ That way you can keep your app state as your edits are applied in your app.
 HMR handles client-side code updates like when you change the components, markup, or styles in your app.
 Likewise, HDR handles server-side code updates.
 
-That means any time your change a `loader` on your current page (or any code that your `loader` depends on), Remix will re-fetch data from your changed loader.
+That means any time your change a [`loader`][loader] on your current page (or any code that your `loader` depends on), Remix will re-fetch data from your changed loader.
 That way your app is _always_ up-to-date with the latest code changes, client-side or server-side.
 
-To learn more about how HMR and HDR work together, check out [Pedro's talk at Remix Conf 2023][legendary-dx].
+To learn more about how HMR and HDR work together, check out [Pedro's talk at Remix Conf 2023][legendary_dx].
 
 </docs-info>
 
@@ -68,55 +68,55 @@ If not, you can follow these steps to integrate your project with `remix dev`:
 
 1. Replace your dev scripts in `package.json` and use `-c` to specify your app server command:
 
-```json filename=package.json
-{
-  "scripts": {
-    "dev": "remix dev -c \"node ./server.js\""
-  }
-}
-```
+   ```json filename=package.json
+   {
+     "scripts": {
+       "dev": "remix dev -c \"node ./server.js\""
+     }
+   }
+   ```
 
 2. Ensure `broadcastDevReady` is called when your app server is up and running:
 
-```js filename=server.js lines=[12,25-27]
-import path from "node:path";
+   ```ts filename=server.ts lines=[12,25-27]
+   import path from "node:path";
 
-import { broadcastDevReady } from "@remix-run/node";
-import express from "express";
+   import { broadcastDevReady } from "@remix-run/node";
+   import express from "express";
 
-const BUILD_DIR = path.resolve(__dirname, "build");
-const build = require(BUILD_DIR);
+   const BUILD_DIR = path.resolve(__dirname, "build");
+   const build = require(BUILD_DIR);
 
-const app = express();
+   const app = express();
 
-// ... code for setting up your express app goes here ...
+   // ... code for setting up your express app goes here ...
 
-app.all(
-  "*",
-  createRequestHandler({
-    build,
-    mode: build.mode,
-  })
-);
+   app.all(
+     "*",
+     createRequestHandler({
+       build,
+       mode: build.mode,
+     })
+   );
 
-const port = 3000;
-app.listen(port, () => {
-  console.log(`👉 http://localhost:${port}`);
+   const port = 3000;
+   app.listen(port, () => {
+     console.log(`👉 http://localhost:${port}`);
 
-  if (process.env.NODE_ENV === "development") {
-    broadcastDevReady(build);
-  }
-});
-```
+     if (process.env.NODE_ENV === "development") {
+       broadcastDevReady(build);
+     }
+   });
+   ```
 
-<docs-info>
+   <docs-info>
 
-For CloudFlare, use `logDevReady` instead of `broadcastDevReady`.
+   For CloudFlare, use `logDevReady` instead of `broadcastDevReady`.
 
-Why? `broadcastDevReady` uses `fetch` to send a ready message to the Remix compiler,
-but CloudFlare does not support async I/O like `fetch` outside of request handling.
+   Why? `broadcastDevReady` uses [`fetch`][fetch] to send a ready message to the Remix compiler,
+   but CloudFlare does not support async I/O like `fetch` outside of request handling.
 
-</docs-info>
+   </docs-info>
 
 ### Options
 
@@ -125,7 +125,7 @@ Options priority order is: 1. flags, 2. config, 3. defaults.
 | Option          | flag               | config    | default                           | description                                              |
 | --------------- | ------------------ | --------- | --------------------------------- | -------------------------------------------------------- |
 | Command         | `-c` / `--command` | `command` | `remix-serve <server build path>` | Command used to run your app server                      |
-| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode][manual-mode]                 |
+| Manual          | `--manual`         | `manual`  | `false`                           | See [guide for manual mode][manual_mode]                 |
 | Port            | `--port`           | `port`    | Dynamically chosen open port      | Internal port used by the Remix compiler for hot updates |
 | TLS key         | `--tls-key`        | `tlsKey`  | N/A                               | TLS key for configuring local HTTPS                      |
 | TLS certificate | `--tls-cert`       | `tlsCert` | N/A                               | TLS certificate for configuring local HTTPS              |
@@ -154,7 +154,7 @@ For example, you may have it hardcoded in your `server.js` file.
 
 If you are using `remix-serve` as your app server, you can use its `--port` flag to set the app server port:
 
-```sh
+```shellscript nonumber
 remix dev -c "remix-serve --port 8000 ./build/index.js"
 ```
 
@@ -164,19 +164,19 @@ Most users, should not need to use `remix dev --port`.
 ### Manual mode
 
 By default, `remix dev` will restart your app server whenever a rebuild occurs.
-If you'd like to keep your app server running without restarts across rebuilds, check out our [guide for manual mode][manual-mode].
+If you'd like to keep your app server running without restarts across rebuilds, check out our [guide for manual mode][manual_mode].
 
 You can see if app server restarts are a bottleneck for your project by comparing the times reported by `remix dev`:
 
 - `rebuilt (Xms)` 👉 the Remix compiler took `X` milliseconds to rebuild your app
-- `app server ready (Yms)` 👉 Remix restarted your app server and it took `Y` milliseconds to start with the new code changes
+- `app server ready (Yms)` 👉 Remix restarted your app server, and it took `Y` milliseconds to start with the new code changes
 
 ### Pick up changes from other packages
 
 If you are using a monorepo, you might want Remix to perform hot updates not only when your app code changes, but whenever you change code in any of your apps dependencies.
 
 For example, you could have a UI library package (`packages/ui`) that is used within your Remix app (`packages/app`).
-To pick up changes in `packages/ui`, you can configure [watchPaths][watch-paths] to include your packages.
+To pick up changes in `packages/ui`, you can configure [watchPaths][watch_paths] to include your packages.
 
 ### How to set up MSW
 
@@ -213,73 +213,6 @@ export const server = setupServer(
 );
 ```
 
-### How to set up local HTTPS
-
-For this example, let's use [mkcert][mkcert].
-After you have it installed, make sure to:
-
-- Create a local Certificate Authority if you haven't already done so
-- Use `NODE_EXTRA_CA_CERTS` for Node compatibility
-
-```sh
-mkcert -install # create a local CA
-export NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" # tell Node to use our local CA
-```
-
-Now, create the TLS key and certificate:
-
-```sh
-mkcert -key-file key.pem -cert-file cert.pem localhost
-```
-
-👆 You can change `localhost` to something else if you are using custom hostnames.
-
-Next, use the `key.pem` and `cert.pem` to get HTTPS working locally with your app server.
-This depends on what you are using for your app server.
-For example, here's how you could use HTTPS with an Express server:
-
-```ts filename=server.js
-import fs from "node:fs";
-import https from "node:https";
-import path from "node:path";
-
-import express from "express";
-
-const BUILD_DIR = path.resolve(__dirname, "build");
-const build = require(BUILD_DIR);
-
-const app = express();
-
-// ... code setting up your express app goes here ...
-
-const server = https.createServer(
-  {
-    key: fs.readFileSync("path/to/key.pem"),
-    cert: fs.readFileSync("path/to/cert.pem"),
-  },
-  app
-);
-
-const port = 3000;
-server.listen(port, () => {
-  console.log(`👉 https://localhost:${port}`);
-
-  if (process.env.NODE_ENV === "development") {
-    broadcastDevReady(build);
-  }
-});
-```
-
-Now that the app server is set up, you should be able to build and run your app in production mode with TLS.
-To get the Remix compiler to interop with TLS, you'll need to specify the TLS cert and key you created:
-
-```sh
-remix dev --tls-key=key.pem --tls-cert=cert.pem -c "node ./server.js"
-```
-
-Alternatively, you can specify the TLS key and cert via the `dev.tlsCert` and `dev.tlsKey` config options.
-Now your app server and Remix compiler are TLS ready!
-
 ### How to integrate with a reverse proxy
 
 Let's say you have the app server and Remix compiler both running on the same machine:
@@ -287,7 +220,7 @@ Let's say you have the app server and Remix compiler both running on the same ma
 - App server 👉 `http://localhost:1234`
 - Remix compiler 👉 `http://localhost:5678`
 
-Then, you setup a reverse proxy in front of the app server:
+Then, you set up a reverse proxy in front of the app server:
 
 - Reverse proxy 👉 `https://myhost`
 
@@ -297,7 +230,7 @@ But the internal HTTP and WebSocket connections to support hot updates will stil
 
 To get the internal connections to point to the reverse proxy, you can use the `REMIX_DEV_ORIGIN` environment variable:
 
-```sh
+```shellscript nonumber
 REMIX_DEV_ORIGIN=https://myhost remix dev
 ```
 
@@ -310,11 +243,11 @@ Now, hot updates will be sent correctly to the proxy:
 #### Path imports
 
 Currently, when Remix rebuilds your app, the compiler has to process your app code along with any of its dependencies.
-The compiler treeshakes unused code from app so that you don't ship any unused code to browser and so that you keep your server as slim as possible.
-But the compiler still needs to _crawl_ all the code to know what to keep and what to treeshake away.
+The compiler tree-shakes unused code from app so that you don't ship any unused code to browser and so that you keep your server as slim as possible.
+But the compiler still needs to _crawl_ all the code to know what to keep and what to tree shake away.
 
 In short, this means that the way you do imports and exports can have a big impact on how long it takes to rebuild your app.
-For example, if you are using a library like Material UI or AntD you can likely speed up your builds by using [path imports][path-imports]:
+For example, if you are using a library like Material UI or AntD you can likely speed up your builds by using [path imports][path_imports]:
 
 ```diff
 - import { Button, TextField } from '@mui/material';
@@ -327,21 +260,74 @@ But today, you can help the compiler out by using path imports.
 
 #### Debugging bundles
 
-Dependending on your app and dependencies, you might be processing much more code than your app needs.
-Check out our [bundle analysis guide][bundle-analysis] for more details.
+Depending on your app and dependencies, you might be processing much more code than your app needs.
+Check out our [bundle analysis guide][bundle_analysis] for more details.
 
 ### Troubleshooting
 
-#### HMR: hot updates losing app state
+#### HMR: React Fast Refresh Limitations
 
-Hot Module Replacement is supposed to keep your app's state around between hot updates.
-But in some cases React cannot distinguish between existing components being changed and new components being added.
-[React needs `key`s][react-keys] to disambiguate these cases and track changes when sibling elements are modified.
+[React Fast Refresh][react_refresh] does not preserve state for class components.
+This includes higher-order components that internally return classes:
 
-Additionally, when adding or removing hooks, React Refresh treats that as a brand-new component.
-So if you add `useLoaderData` to your component, you may lose state local to that component.
+```ts
+export class ComponentA extends Component {} // ❌
 
-These are limitations of React and [React Refresh][react-refresh], not Remix.
+export const ComponentB = HOC(ComponentC); // ❌ won't work if HOC returns a class component
+
+export function ComponentD() {} // ✅
+export const ComponentE = () => {}; // ✅
+export default function ComponentF() {} // ✅
+```
+
+Function components must be named, not anonymous, for React Fast Refresh to track changes:
+
+```ts
+export default () => {}; // ❌
+export default function () {} // ❌
+
+const ComponentA = () => {};
+export default ComponentA; // ✅
+
+export default function ComponentB() {} // ✅
+```
+
+React Fast Refresh can only handle component exports. While Remix manages special route exports like `meta`, `links`, and `header` for you, any user-defined, will cause full reloads:
+
+```ts
+// these exports are specially handled by Remix to be HMR-compatible
+export const meta = { title: "Home" }; // ✅
+export const links = [
+  { rel: "stylesheet", href: "style.css" },
+]; // ✅
+export const headers = { "Cache-Control": "max-age=3600" }; // ✅
+
+// these exports are treeshaken by Remix, so they never affect HMR
+export const loader = () => {}; // ✅
+export const action = () => {}; // ✅
+
+// This is not a Remix export, nor a component export
+// so it will cause a full reloads for this route
+export const myValue = "some value"; // ❌
+
+export default function Route() {} // ✅
+```
+
+👆 Routes probably shouldn't be exporting random values like that anyway.
+If you want to reuse values across routes, stick them in their own non-route module:
+
+```ts filename=my-custom-value.ts
+export const myValue = "some value";
+```
+
+React Fast Refresh cannot track changes for a component when hooks are being added or removed from it,
+causing full reloads just for the next render. After the hooks has been added, changes should result in hot updates again.
+For example, if you add [`useLoaderData`][use_loader_data] to your component, you may lose state local to that component for that render.
+
+In some cases React cannot distinguish between existing components being changed and new components being added.
+[React needs `key`s][react_keys] to disambiguate these cases and track changes when sibling elements are modified.
+
+These are all limitations of React and [React Refresh][react_refresh], not Remix.
 
 #### HDR: every code change triggers HDR
 
@@ -375,15 +361,17 @@ That way Remix can detect loader changes on rebuilds.
 
 While the initial build slowdown is inherently a cost for HDR, we plan to optimize rebuilds so that there is no perceivable slowdown for HDR rebuilds.
 
-[hmr-and-hdr]: https://www.youtube.com/watch?v=2c2OeqOX72s
-[mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
+[hmr_and_hdr]: https://www.youtube.com/watch?v=2c2OeqOX72s
+[mental_model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
 [migrating]: https://www.youtube.com/watch?v=6jTL8GGbIuc
-[legendary-dx]: https://www.youtube.com/watch?v=79M4vYZi-po
-[watch-paths]: https://remix.run/docs/en/1.17.1/file-conventions/remix-config#watchpaths
-[react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
-[react-refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
-[msw]: https://mswjs.io/
-[mkcert]: https://github.com/FiloSottile/mkcert
-[path-imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
-[bundle-analysis]: ../guides/performance
-[manual-mode]: ../guides/manual-mode
+[legendary_dx]: https://www.youtube.com/watch?v=79M4vYZi-po
+[loader]: ../route/loader
+[fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[watch_paths]: ../file-conventions/remix-config#watchpaths
+[react_keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
+[use_loader_data]: ../hooks/use-loader-data
+[react_refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
+[msw]: https://mswjs.io
+[path_imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
+[bundle_analysis]: ../guides/performance
+[manual_mode]: ../guides/manual-mode

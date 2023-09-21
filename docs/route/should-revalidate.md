@@ -225,9 +225,9 @@ export async function loader({
 There are a lot of ways to do this, and the rest of the code in the app matters, but ideally you don't think about the UI you're trying to optimize (the search params changing) but instead look at the values your loader cares about. In our case, it only cares about the projectId, so we can check two things:
 
 - did the params stay the same?
-- was it a GET and not a mutation?
+- was it a `GET` and not a mutation?
 
-If the params didn't change, and we didn't do a POST, then we know our loader will return the same data it did last time, so we can opt out of the revalidation when the child route changes the search params.
+If the params didn't change, and we didn't do a `POST`, then we know our loader will return the same data it did last time, so we can opt out of the revalidation when the child route changes the search params.
 
 ```tsx filename=app/routes/$projectId.tsx
 export function shouldRevalidate({
@@ -247,4 +247,4 @@ export function shouldRevalidate({
 }
 ```
 
-[url-params]: ../guides/routing#dynamic-segments
+[url-params]: ../file-conventions/routes#dynamic-segments

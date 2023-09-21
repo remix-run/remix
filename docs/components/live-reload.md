@@ -5,9 +5,9 @@ toc: false
 
 # `<LiveReload />`
 
-This component connects your app to the Remix asset server and automatically reloads the page when files change in development. In production it renders `null`, so you can safely render it always in your root route.
+This component connects your app to the Remix asset server and automatically reloads the page when files change in development. In production, it renders `null`, so you can safely render it always in your root route.
 
-```tsx filename=root.tsx lines=[8]
+```tsx filename=app/root.tsx lines=[8]
 import { LiveReload } from "@remix-run/react";
 
 export default function Root() {

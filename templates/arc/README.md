@@ -35,7 +35,7 @@ If you make it through all of that, you're ready to deploy!
 2. Deploy with `arc`
 
    ```sh
-   arc deploy production
+   npx arc deploy production
    ```
 
 You're in business!
