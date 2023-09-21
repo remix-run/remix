@@ -1,11 +1,11 @@
 # `@remix-run/cloudflare`
 
-## 2.0.1-pre.0
+## 2.0.1
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.0.1-pre.0`
+  - `@remix-run/server-runtime@2.0.1`
 
 ## 2.0.0
 
