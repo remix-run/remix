@@ -255,7 +255,7 @@ The first thing we want to do is get our routing structure set up. Here are all 
 
 You can programmatically create routes via the [`remix.config.js`][remix-config-js], but the more common way to create the routes is through the file system. This is called "file-based routing."
 
-Each file we put in the `app/routes` directory is called a Route Module and by following [the route filename convention][the-route-filename-convention], we can create the routing URL structure we're looking for. Remix uses [React Router][react-router] under the hood to handle this routing.
+Each file we put in the `app/routes` directory is called a Route Module and by following [the route filename convention][the-route-filename-convention], we can create the routing URL structure we're looking for. Remix uses [React Router][react_router] under the hood to handle this routing.
 
 💿 Let's start with the index route (`/`). To do that, create a file at `app/routes/_index.tsx` and `export default` a component from that route module. For now, you can have it just say "Hello Index Route" or something.
 
@@ -488,7 +488,7 @@ export default function IndexRoute() {
 
 Now if you go to [`/`][http-localhost-3000] you may be a bit disappointed. Our beautiful styles aren't applied! Well, you may recall that in the `app/root.tsx` we're the ones rendering _everything_ about our app. From the `<html>` to the `</html>`. That means if something doesn't show up in there, it's not going to show up at all!
 
-So we need some way to get the `link` exports from all active routes and add `<link />` tags for all of them. Luckily, Remix makes this easy for us by providing a convenience [`<Links />`][links-2] component.
+So we need some way to get the `link` exports from all active routes and add `<link />` tags for all of them. Luckily, Remix makes this easy for us by providing a convenience [`<Links />`][links-component] component.
 
 💿 Go ahead and add the Remix `<Links />` component to `app/root.tsx` within the `<head>`.
 
@@ -6412,7 +6412,7 @@ export function ErrorBoundary() {
 
 ### Forms
 
-Remix has its own [`<Form />`][form] component. When JavaScript is not yet loaded, it works the same way as a regular form, but when JavaScript is enabled, it's "progressively enhanced" to make a `fetch` request instead, so we don't do a full-page reload.
+Remix has its own [`<Form />`][form-component] component. When JavaScript is not yet loaded, it works the same way as a regular form, but when JavaScript is enabled, it's "progressively enhanced" to make a `fetch` request instead, so we don't do a full-page reload.
 
 💿 Find all `<form />` elements and change them to the Remix `<Form />` component.
 
@@ -7799,9 +7799,8 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [http-localhost-3000]: http://localhost:3000
 [bare-bones-hello-world-app]: /jokes-tutorial/img/bare-bones.png
 [remix-config-js]: ../file-conventions/remix-config
-[route-module]: ../route/route-module
-[the-route-filename-convention]: ../file-conventions/route-files-v2
-[react-router]: https://reactrouter.com
+[the-route-filename-convention]: ../file-conventions/routes
+[react_router]: https://reactrouter.com
 [a-greeting-from-the-index-route]: /jokes-tutorial/img/index-route-greeting.png
 [jokes]: http://localhost:3000/jokes
 [a-random-joke-on-the-jokes-page-i-was-wondering-why-the-frisbee-was-getting-bigger-then-it-hit-me]: /jokes-tutorial/img/random-joke.png
@@ -7810,7 +7809,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [jokes-anything-you-want]: http://localhost:3000/jokes/hippos
 [a-new-joke-form-2]: /jokes-tutorial/img/param-route.png
 [links]: ../route/links
-[links-2]: ../components/link
+[links-component]: ../components/link
 [the-homepage-with-a-purple-gradient-background-and-white-text-with-the-words-hello-index-route]: /jokes-tutorial/img/homepage-styles.png
 [the-jokes-page-with-no-background-gradient]: /jokes-tutorial/img/jokes-no-styles.png
 [check-out-the-mdn-page-for-link]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
@@ -7859,8 +7858,8 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [csrf]: https://developer.mozilla.org/en-US/docs/Glossary/CSRF
 [jokes-page-nice-and-designed]: /jokes-tutorial/img/random-joke-designed.png
 [new-joke-form-designed]: /jokes-tutorial/img/new-joke-designed.png
-[error-boundary-feature]: https://reactjs.org/docs/error-boundaries.html#gatsby-focus-wrapper
-[error-boundary-component]: ../route/error-boundary-v2
+[error-boundary-feature]: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
+[error-boundary-component]: ../route/error-boundary
 [app-error]: /jokes-tutorial/img/app-level-error.png
 [joke-page-error]: /jokes-tutorial/img/joke-id-error.png
 [joke-index-page-error]: /jokes-tutorial/img/jokes-index-error.png
@@ -7872,7 +7871,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [a-404-on-the-joke-page]: /jokes-tutorial/img/joke-404.png
 [a-404-on-the-random-joke-page]: /jokes-tutorial/img/jokes-404.png
 [a-401-on-the-new-joke-page]: /jokes-tutorial/img/new-joke-401.png
-[meta]: ../route/meta-v2
+[meta]: ../route/meta
 [meta-component]: ../components/meta
 [resource-routes]: ../guides/resource-routes
 [escaping-special-characters-here]: ../file-conventions/routes-files#escaping-special-characters
@@ -7881,8 +7880,8 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [scripts-component]: ../components/scripts
 [network-tab-showing-java-script-loaded]: /jokes-tutorial/img/yes-javascript.png
 [browser-console-showing-the-log-of-a-server-side-error]: /jokes-tutorial/img/server-side-error-in-browser.png
-[form]: ../components/form
-[guide-on-optimistic-ui]: ../guides/optimistic-ui
+[form-component]: ../components/form
+[guide-on-optimistic-ui]: ../discussion/pending-ui
 [install-fly]: https://fly.io/docs/hands-on/installing
 [sign-up-for-an-account]: https://fly.io/docs/hands-on/sign-up
 [their-blog-article]: https://fly.io/blog/free-postgres/#a-note-about-credit-cards

@@ -4,14 +4,14 @@ title: ScrollRestoration
 
 # `<ScrollRestoration>`
 
-This component will emulate the browser's scroll restoration on location changes after loaders have completed. This ensures the scroll position is restored to the right spot, at the right time, even across domains.
+This component will emulate the browser's scroll restoration on location changes after [`loader`][loader]s have completed. This ensures the scroll position is restored to the right spot, at the right time, even across domains.
 
-You should only render one of these, right before the `<Scripts/>` component.
+You should only render one of these, right before the [`<Scripts/>`][scripts_component] component.
 
-```tsx lines=[2,11]
+```tsx lines=[3,11]
 import {
-  ScrollRestoration,
   Scripts,
+  ScrollRestoration,
 } from "@remix-run/react";
 
 export default function Root() {
@@ -43,6 +43,7 @@ Optional. Defines the key used to restore scroll positions.
 ```
 
 <details>
+
 <summary>Discussion</summary>
 
 Using `location.key` emulates the browser's default behavior. The user can navigate to the same URL multiple times in the stack and each entry gets its own scroll position to restore.
@@ -93,7 +94,7 @@ Or you may want to only use the pathname for some paths, and use the normal beha
 
 ### `nonce`
 
-`<ScrollRestoration>` renders an inline `<script>` to prevent scroll flashing. The `nonce` prop will be passed down to the script tag to allow CSP nonce usage.
+`<ScrollRestoration>` renders an inline [`<script>`][script_element] to prevent scroll flashing. The `nonce` prop will be passed down to the script tag to allow CSP nonce usage.
 
 ```tsx
 <ScrollRestoration nonce={cspNonce} />
@@ -108,9 +109,10 @@ When navigating to new locations, the scroll position is reset to the top of the
 <Form preventScrollReset={true} />;
 ```
 
-See also: [`<Link preventScrollReset>`][preventscrollreset], [`<Form preventScrollReset>`][form-preventscrollreset]
+See also: [`<Form preventScrollReset>`][form_prevent_scroll_reset], [`<Link preventScrollReset>`][link_prevent_scroll_reset]
 
-[remix]: https://remix.run
-[preventscrollreset]: ../components/link#preventscrollreset
-[form-preventscrollreset]: ../components/form#preventscrollreset
-[pickingarouter]: ../routers/picking-a-router
+[loader]: ../route/loader
+[scripts_component]: ./scripts
+[script_element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script
+[form_prevent_scroll_reset]: ../components/form#preventscrollreset
+[link_prevent_scroll_reset]: ../components/link#preventscrollreset

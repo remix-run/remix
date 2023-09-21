@@ -4,7 +4,7 @@ title: CSS Imports
 
 # CSS Side Effect Imports
 
-Some NPM packages use side effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up \[CSS bundling]\[css-bundling] in your application.
+Some NPM packages use side effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling][css-bundling] in your application.
 
 For example, a module may have source code like this:
 
@@ -30,4 +30,5 @@ module.exports = {
 };
 ```
 
+[css-bundling]: ./bundling
 [server-dependencies-to-bundle]: ../file-conventions/remix-config#serverdependenciestobundle

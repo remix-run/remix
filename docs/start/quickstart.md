@@ -69,9 +69,9 @@ First build the app for production:
 npx remix build
 ```
 
-You should now see a `build/` folder (the server version of your app) and `public/build` folder (the browser version) with some build artifacts in them. (This is all [configurable][remix-config].)
+You should now see a `build/` folder (the server version of your app) and `public/build` folder (the browser version) with some build artifacts in them. (This is all [configurable][remix_config].)
 
-💿 **Run the app with `remix-serve`**
+👉 **Run the app with `remix-serve`**
 
 First you will need to specify the type in `package.json` as module so that `remix-serve` can run your app.
 
@@ -94,7 +94,7 @@ You should be able to open up [http://localhost:3000][http-localhost-3000] and s
 Aside from the unholy amount of code in `node_modules`, our Remix app is just one file:
 
 ```
-├── app
+├── app/
 │   └── root.jsx
 └── package.json
 ```
@@ -107,7 +107,7 @@ If you don't care to set up your own server, you can use `remix-serve`. It's a s
 
 Just for kicks, let's stop using `remix-serve` and use express instead.
 
-💿 **Install Express and the Remix Express adapter**
+👉 **Install Express and the Remix Express adapter**
 
 ```shellscript nonumber
 npm i express @remix-run/express
@@ -116,7 +116,7 @@ npm i express @remix-run/express
 npm uninstall @remix-run/serve
 ```
 
-💿 **Create an Express server**
+👉 **Create an Express server**
 
 ```shellscript nonumber
 touch server.mjs
@@ -140,7 +140,7 @@ app.listen(3000, () => {
 });
 ```
 
-💿 **Run your app with express**
+👉 **Run your app with express**
 
 ```shellscript nonumber
 node server.mjs
@@ -158,7 +158,7 @@ Instead of stopping, rebuilding, and starting your server all the time, you can 
 
 First add a dev command in `package.json` that will run `remix dev`:
 
-💿 **Add a "scripts" entry to `package.json`**
+👉 **Add a "scripts" entry to `package.json`**
 
 ```jsonc filename=package.json lines=[2-4] nocopy
 {
@@ -173,7 +173,7 @@ This will start the Remix development server which will watch your files for cha
 
 When files change, Remix will restart your server for you, but because you own your server, you also have to tell Remix when it has restarted so Remix can safely send the hot updates to the browser.
 
-💿 **Add `broadcastDevReady` to your server**
+👉 **Add `broadcastDevReady` to your server**
 
 ```js filename=server.mjs lines=[2,15-17]
 import { createRequestHandler } from "@remix-run/express";
@@ -231,7 +231,7 @@ export default function App() {
 }
 ```
 
-💿 **Start the dev server**
+👉 **Start the dev server**
 
 ```shellscript nonumber
 npm run dev
@@ -271,7 +271,7 @@ What's next?
 [runtimes]: ../discussion/runtimes
 [inspect]: https://nodejs.org/en/docs/guides/debugging-getting-started/
 [tutorial]: ./tutorial
-[remix-config]: ../file-conventions/remix-config
+[remix_config]: ../file-conventions/remix-config
 [templates]: https://remix.guide/templates
 [http-localhost-3000]: http://localhost:3000
 [es-modules]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
