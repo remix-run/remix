@@ -224,13 +224,15 @@ async function loadRouteModuleWithBlockingLinks(
 
   // Resource routes are built with an empty object as the default export -
   // ignore those when setting the Component
-  let hasComponent =
+  let defaultExportIsEmptyObject =
     typeof routeModule.default === "object" &&
-    Object.keys(routeModule.default).length > 0;
+    Object.keys(routeModule.default).length === 0;
 
   // Include all `browserSafeRouteExports` fields
   return {
-    ...(hasComponent ? { Component: routeModule.default } : {}),
+    ...(routeModule.default != null && !defaultExportIsEmptyObject
+      ? { Component: routeModule.default }
+      : {}),
     ErrorBoundary: routeModule.ErrorBoundary,
     handle: routeModule.handle,
     links: routeModule.links,
