@@ -53,16 +53,19 @@ export function createPagesFunctionHandler<Env = any>({
     // https://github.com/cloudflare/wrangler2/issues/117
     context.request.headers.delete("if-none-match");
 
-    try {
-      response = await context.env.ASSETS.fetch(
-        context.request.url,
-        context.request.clone()
-      );
-      response =
-        response && response.status >= 200 && response.status < 400
-          ? new Response(response.body, response)
-          : undefined;
-    } catch {}
+    let method = context.request.method;
+    if (method !== "POST" && method !== "PUT") {
+      try {
+        response = await context.env.ASSETS.fetch(
+          context.request.url,
+          context.request.clone()
+        );
+        response =
+          response && response.status >= 200 && response.status < 400
+            ? new Response(response.body, response)
+            : undefined;
+      } catch {}
+    }
 
     if (!response) {
       response = await handleRequest(context);
