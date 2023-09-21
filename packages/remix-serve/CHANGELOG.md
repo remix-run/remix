@@ -5,14 +5,10 @@
 ### Patch Changes
 
 - Fix HMR for CJS projects using `remix-serve` and manual mode (`remix dev --manual`) ([#7487](https://github.com/remix-run/remix/pull/7487))
-
-  By explicitly busting the `require` cache, `remix-serve` now correctly reimports new server changes in CJS.
-  ESM projects were already working correctly and are not affected by this.
-
+  - By explicitly busting the `require` cache, `remix-serve` now correctly re-imports new server changes in CJS
+  - ESM projects were already working correctly and are not affected by this.
 - Fix error caused by partially written server build ([#7470](https://github.com/remix-run/remix/pull/7470))
-
-  Previously, it was possible to trigger a reimport of the app server code before the new server build had completely been written. Reimporting the partially written server build caused issues related to `build.assets` being undefined and crashing when reading `build.assets.version`.
-
+  - Previously, it was possible to trigger a reimport of the app server code before the new server build had completely been written. Reimporting the partially written server build caused issues related to `build.assets` being undefined and crashing when reading `build.assets.version`
 - Updated dependencies:
   - `@remix-run/node@2.0.1`
   - `@remix-run/express@2.0.1`
@@ -22,12 +18,14 @@
 ### Major Changes
 
 - `remix-serve` now picks an open port if 3000 is taken ([#7278](https://github.com/remix-run/remix/pull/7278))
+
   - If `PORT` env var is set, `remix-serve` will use that port
   - Otherwise, `remix-serve` picks an open port (3000 unless that is already taken)
 
 - Integrate manual mode in `remix-serve` ([#7231](https://github.com/remix-run/remix/pull/7231))
 
 - Remove undocumented `createApp` Node API ([#7229](https://github.com/remix-run/remix/pull/7229))
+
   - `remix-serve` is a CLI, not a library
 
 - Require Node >=18.0.0 ([#6939](https://github.com/remix-run/remix/pull/6939))

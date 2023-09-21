@@ -5,13 +5,9 @@
 ### Patch Changes
 
 - Fix types for MDX files when using pnpm ([#7491](https://github.com/remix-run/remix/pull/7491))
-
-- Update `getDependenciesToBundle` to handle ESM packages without main exports. Note that these packages must expose `package.json` in their `exports` field so that their path can be resolved. ([#7272](https://github.com/remix-run/remix/pull/7272))
-
-- Fix server builds where serverBuildPath extension is `.cjs`. ([#7180](https://github.com/remix-run/remix/pull/7180))
-
-  Fix a bug that caused the server build file to be emitted into the assets directory if the value of `serverBuildPath` ended in `.cjs`.
-
+- Update `getDependenciesToBundle` to handle ESM packages without main exports ([#7272](https://github.com/remix-run/remix/pull/7272))
+  - Note that these packages must expose `package.json` in their `exports` field so that their path can be resolved
+- Fix server builds where `serverBuildPath` extension is `.cjs` ([#7180](https://github.com/remix-run/remix/pull/7180))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.0.1`
 
@@ -91,6 +87,7 @@
 - Fix importing of PNGs, SVGs, and other assets from packages in `node_modules` ([#6813](https://github.com/remix-run/remix/pull/6813), [#7182](https://github.com/remix-run/remix/pull/7182))
 
 - Decouple the `@remix-run/dev` package from the contents of the `@remix-run/css-bundle` package. ([#6982](https://github.com/remix-run/remix/pull/6982))
+
   - The contents of the `@remix-run/css-bundle` package are now entirely managed by the Remix compiler
   - Even though it's still recommended that your Remix dependencies all share the same version, this change ensures that there are no runtime errors when upgrading `@remix-run/dev` without upgrading `@remix-run/css-bundle`
 
@@ -133,6 +130,7 @@
 - Kill app server when remix dev terminates ([#7280](https://github.com/remix-run/remix/pull/7280))
 
 - Support dependencies that import polyfill packages for Node built-ins via a trailing slash (e.g. importing the `buffer` package with `var Buffer = require('buffer/').Buffer` as recommended in their README) ([#7198](https://github.com/remix-run/remix/pull/7198))
+
   - These imports were previously marked as external
   - This meant that they were left as dynamic imports in the client bundle and would throw a runtime error in the browser (e.g. `Dynamic require of "buffer/" is not supported`)
 
@@ -141,12 +139,14 @@
 - Restart dev server when Remix config changes ([#7269](https://github.com/remix-run/remix/pull/7269))
 
 - Remove outdated ESM import warnings ([#6916](https://github.com/remix-run/remix/pull/6916))
+
   - Most of the time these warnings were false positives.
   - Instead, we now rely on built-in Node warnings for ESM imports.
 
 - Do not trigger rebuilds when `.DS_Store` changes ([#7172](https://github.com/remix-run/remix/pull/7172))
 
 - Remove warnings for stabilized flags: ([#6905](https://github.com/remix-run/remix/pull/6905))
+
   - `unstable_cssSideEffectImports`
   - `unstable_cssModules`
   - `unstable_vanillaExtract`
