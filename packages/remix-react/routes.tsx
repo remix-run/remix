@@ -226,7 +226,7 @@ async function loadRouteModuleWithBlockingLinks(
   // ignore those when setting the Component
   let defaultExportIsEmptyObject =
     typeof routeModule.default === "object" &&
-    Object.keys(routeModule.default).length === 0;
+    Object.keys(routeModule.default || {}).length === 0;
 
   // Include all `browserSafeRouteExports` fields
   return {
