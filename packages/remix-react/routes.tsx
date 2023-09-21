@@ -224,10 +224,23 @@ async function loadRouteModuleWithBlockingLinks(
 ) {
   let routeModule = await loadRouteModule(route, routeModules);
   await prefetchStyleLinks(routeModule);
+
+  // Resource routes are built with an empty object as the default export -
+  // ignore those when setting the Component
+  let defaultExportIsEmptyObject =
+    typeof routeModule.default === "object" &&
+    Object.keys(routeModule.default || {}).length === 0;
+
+  // Include all `browserSafeRouteExports` fields
   return {
-    ...routeModule,
-    default: undefined,
-    Component: routeModule.default,
+    ...(routeModule.default != null && !defaultExportIsEmptyObject
+      ? { Component: routeModule.default }
+      : {}),
+    ErrorBoundary: routeModule.ErrorBoundary,
+    handle: routeModule.handle,
+    links: routeModule.links,
+    meta: routeModule.meta,
+    shouldRevalidate: routeModule.shouldRevalidate,
   };
 }
 
