@@ -26,6 +26,7 @@ declare global {
       hmrRuntime?: string;
     };
   };
+  var __remixRouter: Router;
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
   var __remixRevalidation: number | undefined;
@@ -209,6 +210,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         v7_normalizeFormMethod: true,
       },
     });
+    // @ts-ignore
+    router.createRoutesForHMR = createClientRoutesWithHMRRevalidationOptOut;
+    window.__remixRouter = router;
 
     // Notify that the router is ready for HMR
     if (hmrRouterReadyResolve) {
