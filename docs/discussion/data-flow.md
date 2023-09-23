@@ -33,15 +33,18 @@ export async function action() {
 
 ## Route Loader
 
-Route files can export a `loader` function that provides data to the route component. When the user navigates to a matching route, the data is first loaded and then the page is rendered.
+Route files can export a [`loader`][loader] function that provides data to the route component. When the user navigates to a matching route, the data is first loaded and then the page is rendered.
 
-```tsx filename=routes/account.tsx lines=[1-7]
-export async function loader({ request }) {
+```tsx filename=routes/account.tsx lines=[1-2,4-10]
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
+
+export async function loader({ request }: LoaderArgs) {
   const user = await getUser(request);
-  return {
+  return json({
     displayName: user.displayName,
     email: user.email,
-  };
+  });
 }
 
 export default function Component() {
@@ -55,21 +58,23 @@ export async function action() {
 
 ## Route Component
 
-The default export of the route file is the component that renders. It reads the loader data with `useLoaderData`:
+The default export of the route file is the component that renders. It reads the loader data with [`useLoaderData`][use_loader_data]:
 
-```tsx lines=[1,11-22]
+```tsx lines=[3,13-28]
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-export function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const user = await getUser(request);
-  return {
+  return json({
     displayName: user.displayName,
     email: user.email,
-  };
+  });
 }
 
 export default function Component() {
-  const user = useLoaderData();
+  const user = useLoaderData<typeof loader>();
   return (
     <Form action="/account">
       <h1>Settings for {user.displayName}</h1>
@@ -85,28 +90,33 @@ export default function Component() {
   );
 }
 
-export function action({ request }) {
+export async function action() {
   // ...
 }
 ```
 
 ## Route Action
 
-Finally, the action on the route matching the form's action attribute is called when the form is submitted. In this example it's the same route. The values in the form fields will be available on the standard `request.formData()` API. Note the `name` attribute on the inputs is coupled to the `formData.get(fieldName)` getter.
+Finally, the action on the route matching the form's action attribute is called when the form is submitted. In this example it's the same route. The values in the form fields will be available on the standard [`request.formData()`][request_form_data] API. Note the `name` attribute on the inputs is coupled to the [`formData.get(fieldName)`][form_data_get] getter.
 
-```tsx lines=[25-34]
+```tsx lines=[2,33-42]
+import type {
+  ActionArgs,
+  LoaderArgs,
+} from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-export function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const user = await getUser(request);
-  return {
+  return json({
     displayName: user.displayName,
     email: user.email,
-  };
+  });
 }
 
 export default function Component() {
-  const user = useLoaderData();
+  const user = useLoaderData<typeof loader>();
   return (
     <Form action="/account">
       <h1>Settings for {user.displayName}</h1>
@@ -122,7 +132,8 @@ export default function Component() {
   );
 }
 
-export function action({ request }) {
+export async function action({ request }: ActionArgs) {
+  const formData = await request.formData();
   const user = await getUser(request);
 
   await updateUser(user.id, {
@@ -130,7 +141,7 @@ export function action({ request }) {
     displayName: formData.get("displayName"),
   });
 
-  return { ok: true };
+  return json({ ok: true });
 }
 ```
 
@@ -145,3 +156,8 @@ When the user submits the form:
 In this way, the UI is kept in sync with server state without writing any code for that synchronization.
 
 There are various ways to submit a form besides an HTML form element (like in response to drag and drop, or an onChange event). There is also a lot more to talk about around form validation, error handling, pending states, etc. We'll get to all of that later, but this is the gist of data flow in Remix.
+
+[loader]: ../route/loader
+[use_loader_data]: ../hooks/use-loader-data
+[request_form_data]: https://developer.mozilla.org/en-US/docs/Web/API/Request/formData
+[form_data_get]: https://developer.mozilla.org/en-US/docs/Web/API/FormData/get

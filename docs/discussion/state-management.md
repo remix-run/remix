@@ -21,16 +21,16 @@ In certain scenarios, using these libraries may be warranted. However, with Remi
 
 ## How Remix Simplifies State
 
-As discussed in [Fullstack Data Flow][fullstack-data-flow] Remix seamlessly bridges the gap between the backend and frontend via mechanisms like loaders, actions, and forms with automatic synchronization through revalidation. This offers developers the ability to directly use server state within components without managing a cache, the network communication, or data revalidation, making most client-side caching redundant.
+As discussed in [Fullstack Data Flow][fullstack_data_flow] Remix seamlessly bridges the gap between the backend and frontend via mechanisms like loaders, actions, and forms with automatic synchronization through revalidation. This offers developers the ability to directly use server state within components without managing a cache, the network communication, or data revalidation, making most client-side caching redundant.
 
-Here's why using typical React state patterns might be an anti-pattern in Remix:
+Here's why using typical React state patterns might be an antipattern in Remix:
 
 1. **Network-related State:** If your React state is managing anything related to the network—such as data from loaders, pending form submissions, or navigational states—it's likely that you're managing state that Remix already manages:
 
-   - **`useNavigation`**: This hook gives you access to `navigation.state`, `navigation.formData`, `navigation.location`, etc.
-   - **`useFetcher`**: This facilitates interaction with `fetcher.state`, `fetcher.formData`, `fetcher.data` etc.
-   - **`useLoaderData`**: Access the data for a route.
-   - **`useActionData`**: Access the data from the latest action.
+   - **[`useNavigation`][use_navigation]**: This hook gives you access to `navigation.state`, `navigation.formData`, `navigation.location`, etc.
+   - **[`useFetcher`][use_fetcher]**: This facilitates interaction with `fetcher.state`, `fetcher.formData`, `fetcher.data` etc.
+   - **[`useLoaderData`][use_loader_data]**: Access the data for a route.
+   - **[`useActionData`][use_action_data]**: Access the data from the latest action.
 
 2. **Storing Data in Remix:** A lot of data that developers might be tempted to store in React state has a more natural home in Remix, such as:
 
@@ -39,7 +39,7 @@ Here's why using typical React state patterns might be an anti-pattern in Remix:
    - **Server Sessions:** Server-managed user sessions.
    - **Server Caches:** Cached data on the server side for quicker retrieval.
 
-3. **Performance Considerations:** At times, client state is leveraged to avoid redundant data fetching. With Remix, you can use the `Cache-Control` headers within loaders, allowing you to tap into the browser's native cache. However, this approach has its limitations and should be used judiciously. It's usually more beneficial to optimize backend queries or implement a server cache. This is because such changes benefit all users and do away with the need for individual browser caches.
+3. **Performance Considerations:** At times, client state is leveraged to avoid redundant data fetching. With Remix, you can use the [`Cache-Control`][cache_control_header] headers within `loader`s, allowing you to tap into the browser's native cache. However, this approach has its limitations and should be used judiciously. It's usually more beneficial to optimize backend queries or implement a server cache. This is because such changes benefit all users and do away with the need for individual browser caches.
 
 As a developer transitioning to Remix, it's essential to recognize and embrace its inherent efficiencies rather than applying traditional React patterns. Remix offers a streamlined solution to state management leading to less code, fresh data, and no state synchronization bugs.
 
@@ -47,7 +47,7 @@ As a developer transitioning to Remix, it's essential to recognize and embrace i
 
 ### Network Related State
 
-For examples on using Remix's internal state to manage network related state, refer to [Pending UI][pending-ui].
+For examples on using Remix's internal state to manage network related state, refer to [Pending UI][pending_ui].
 
 ### URL Search Params
 
@@ -82,9 +82,9 @@ import {
 
 export function List() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [view, setView] = React.useState(
-    params.get("view") || "list"
+    searchParams.get("view") || "list"
   );
 
   return (
@@ -113,14 +113,14 @@ export function List() {
 }
 ```
 
-Instead of synchronizing state, you can simply read and set the state in the URL directly with boring ol' HTML forms.
+Instead of synchronizing state, you can simply read and set the state in the URL directly with boring old HTML forms.
 
-```tsx lines=[5,9-16]
-import { Form } from "@remix-run/react";
+```tsx good lines=[5,9-16]
+import { Form, useSearchParams } from "@remix-run/react";
 
 export function List() {
-  const [params] = useSearchParams();
-  const view = params.get("view") || "list";
+  const [searchParams] = useSearchParams();
+  const view = searchParams.get("view") || "list";
 
   return (
     <div>
@@ -168,7 +168,7 @@ function Sidebar({ children }) {
   const [isOpen, setIsOpen] = React.useState(false);
   return (
     <div>
-      <button onClick={() => setIsOpen(!isOpen)}>
+      <button onClick={() => setIsOpen((open) => !open)}>
         {isOpen ? "Close" : "Open"}
       </button>
       <aside hidden={!isOpen}>{children}</aside>
@@ -179,7 +179,7 @@ function Sidebar({ children }) {
 
 #### Local Storage
 
-To persist state beyond the component lifecycle, browser local storage is a step up.
+To persist state beyond the component lifecycle, browser local storage is a step-up.
 
 **Pros**:
 
@@ -189,7 +189,7 @@ To persist state beyond the component lifecycle, browser local storage is a step
 **Cons**:
 
 - **Requires Synchronization**: React components must sync up with local storage to initialize and save the current state.
-- **Server Rendering Limitation**: The `window` and `localStorage` objects are not accessible during server-side rendering, so state must be initialized in the browser with an effect.
+- **Server Rendering Limitation**: The [`window`][window_global] and [`localStorage`][local_storage_global] objects are not accessible during server-side rendering, so state must be initialized in the browser with an effect.
 - **UI Flickering**: On initial page loads, the state in local storage may not match what was rendered by the server and the UI will flicker when JavaScript loads.
 
 **Implementation**:
@@ -211,11 +211,7 @@ function Sidebar({ children }) {
 
   return (
     <div>
-      <button
-        onClick={() => {
-          setIsOpen(!isOpen);
-        }}
-      >
+      <button onClick={() => setIsOpen((open) => !open)}>
         {isOpen ? "Close" : "Open"}
       </button>
       <aside hidden={!isOpen}>{children}</aside>
@@ -267,17 +263,23 @@ export const prefs = createCookie("prefs");
 Next we set up the server action and loader to read and write the cookie:
 
 ```tsx
+import type {
+  ActionArgs,
+  LoaderArgs,
+} from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
+
 import { prefs } from "./prefs-cookie";
 
 // read the state from the cookie
-export function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie = await prefs.parse(cookieHeader);
-  return { sidebarIsOpen: cookie.sidebarIsOpen };
+  return json({ sidebarIsOpen: cookie.sidebarIsOpen });
 }
 
 // write the state to the cookie
-export function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie = await prefs.parse(cookieHeader);
   const formData = await request.formData();
@@ -298,7 +300,7 @@ After the server code is set up, we can use the cookie state in our UI:
 ```tsx
 function Sidebar({ children }) {
   const fetcher = useFetcher();
-  let { sidebarIsOpen } = useLoaderData();
+  let { sidebarIsOpen } = useLoaderData<typeof loader>();
 
   // use optimistic UI to immediately change the UI state
   if (fetcher.formData?.has("sidebar")) {
@@ -435,37 +437,39 @@ export function Signup() {
 
 The backend endpoint, `/api/signup`, also performs validation and sends error feedback. Note that some essential validation, like detecting duplicate usernames, can only be done server-side using information the client doesn't have access to.
 
-```tsx
-export function signupHandler(request) {
+```tsx bad
+export async function signupHandler(request: Request) {
   const errors = await validateSignupRequest(request);
   if (errors) {
-    return { ok: false, errors: errors };
+    return json({ ok: false, errors: errors });
   }
   await signupUser(request);
-  return { ok: true, errors: null };
+  return json({ ok: true, errors: null });
 }
 ```
 
-Now, let's contrast this with a Remix-based implementation. The action remains consistent, but the component is vastly simplified due to the direct utilization of server state via `useActionData`, and leveraging the network state that Remix inherently manages.
+Now, let's contrast this with a Remix-based implementation. The action remains consistent, but the component is vastly simplified due to the direct utilization of server state via [`useActionData`][use_action_data], and leveraging the network state that Remix inherently manages.
 
-```tsx filename=app/routes/signup.tsx lines=[19-21]
+```tsx filename=app/routes/signup.tsx good lines=[21-23]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
-  useNavigation,
   useActionData,
+  useNavigation,
 } from "@remix-run/react";
 
-export function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const errors = await validateSignupRequest(request);
   if (errors) {
-    return { ok: false, errors: errors };
+    return json({ ok: false, errors: errors });
   }
   await signupUser(request);
-  return { ok: true, errors: null };
+  return json({ ok: true, errors: null });
 }
 
 export function Signup() {
   const navigation = useNavigation();
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   const userNameError = actionData?.errors?.userName;
   const passwordError = actionData?.errors?.password;
@@ -501,5 +505,12 @@ As bonus party trick, the form is functional even before JavaScript loads. Inste
 
 If you ever find yourself entangled in managing and synchronizing state for network operations, Remix likely offers a more elegant solution.
 
-[fullstack-data-flow]: ./data-flow
-[pending-ui]: ./pending-ui
+[fullstack_data_flow]: ./data-flow
+[use_navigation]: ../hooks/use-navigation
+[use_fetcher]: ../hooks/use-fetcher
+[use_loader_data]: ../hooks/use-loader-data
+[use_action_data]: ../hooks/use-action-data
+[cache_control_header]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+[pending_ui]: ./pending-ui
+[window_global]: https://developer.mozilla.org/en-US/docs/Web/API/Window/window
+[local_storage_global]: https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage

@@ -1,17 +1,16 @@
 ---
 title: Manual Dev Server
-toc: false
 ---
 
 # Manual mode
 
 By default, `remix dev` drives like an automatic.
 It keeps your app server up-to-date with the latest code changes by automatically restarting the app server whenever file changes are detected in your app code.
-This is a simple approach that stays out of your way and we think will work well for most apps.
+This is a simple approach that stays out of your way, and we think will work well for most apps.
 
 But if app server restarts are slowing you down, you can take the wheel and drive `remix dev` like a manual:
 
-```sh
+```shellscript nonumber
 remix dev --manual -c "node ./server.js"
 ```
 
@@ -29,19 +28,39 @@ But if you are, Remix has got you covered.
 Before you start drag racing, it helps to understand how Remix works under the hood.
 It's especially important to understand that `remix dev` spins up _not one, but two processes_: the Remix compiler and your app server.
 
-Check out our video ["Mental model for the new dev flow 🧠"][mental-model] for more details.
+Check out our video ["Mental model for the new dev flow 🧠"][mental_model] for more details.
 
 <docs-info>
 
 Previously, we referred to the Remix compiler as the "new dev server" or the "v2 dev server".
 Technically, `remix dev` is a thin layer around the Remix compiler that _does_ include a tiny server with a single endpoint (`/ping`) for coordinating hot updates.
 But thinking of `remix dev` as a "dev server" is unhelpful and wrongly implies that it is replacing your app server in dev.
-Rather than replacing your app server, `remix dev` runs your app server _alongside_ the Remix compiler so you get the best of both worlds:
+Rather than replacing your app server, `remix dev` runs your app server _alongside_ the Remix compiler, so you get the best of both worlds:
 
 - Hot updates managed by the Remix compiler
 - Real production code paths running in dev within your app server
 
 </docs-info>
+
+## `remix-serve`
+
+The Remix App Server (`remix-serve`) comes with support for manual mode out of the box:
+
+```sh
+remix dev --manual
+```
+
+<docs-info>
+
+If you are running `remix dev` without the `-c` flag, then you are implicitly using `remix-serve` as your app server.
+
+</docs-info>
+
+No need to learn to drive stick, since `remix-serve` has a built-in sports mode that automatically shifts gears for you more aggressively at higher RPMs.
+Ok, I think we're stretching this car metaphor. 😅
+
+In other words, `remix-serve` knows how to reimport server code changes _without_ needing to restart itself.
+But if you are using `-c` to run your own app server, read on.
 
 ## Learning to drive stick
 
@@ -84,11 +103,10 @@ For example, here's how to bust the `require` cache for the Remix server build:
 ```js
 const path = require("node:path");
 
-/**
- * @typedef {import('@remix-run/node').ServerBuild} ServerBuild
- */
+/** @typedef {import('@remix-run/node').ServerBuild} ServerBuild */
 
 const BUILD_PATH = path.resolve("./build/index.js");
+const VERSION_PATH = path.resolve("./build/version.txt");
 const initialBuild = reimportServer();
 
 /**
@@ -116,18 +134,17 @@ The `require` cache keys are _absolute paths_ so make sure you resolve your serv
 ### 1.b ESM: `import` cache busting
 
 Unlike CJS, ESM doesn't give you direct access to the import cache.
-To workaround this, you can use a timestamp query parameter to force ESM to treat the import as a new module.
+To work around this, you can use a timestamp query parameter to force ESM to treat the import as a new module.
 
 ```js
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as url from "node:url";
 
-/**
- * @typedef {import('@remix-run/node').ServerBuild} ServerBuild
- */
+/** @typedef {import('@remix-run/node').ServerBuild} ServerBuild */
 
 const BUILD_PATH = path.resolve("./build/index.js");
+const VERSION_PATH = path.resolve("./build/version.txt");
 const initialBuild = await reimportServer();
 
 /**
@@ -156,7 +173,7 @@ In the future, Remix may pre-bundle your dependencies to keep the import cache s
 
 ### 2. Detecting server code changes
 
-Now that you have a way to bust the import cache for CJS or ESM, its time to put that to use by dynamically updating the server build within your app server.
+Now that you have a way to bust the import cache for CJS or ESM, it's time to put that to use by dynamically updating the server build within your app server.
 To detect when the server code changes, you can use a file watcher like [chokidar][chokidar]:
 
 ```js
@@ -167,7 +184,7 @@ async function handleServerUpdate() {
 }
 
 chokidar
-  .watch(BUILD_PATH, { ignoreInitial: true })
+  .watch(VERSION_PATH, { ignoreInitial: true })
   .on("add", handleServerUpdate)
   .on("change", handleServerUpdate);
 ```
@@ -216,7 +233,7 @@ function createDevRequestHandler(initialBuild) {
   }
 
   chokidar
-    .watch(BUILD_PATH, { ignoreInitial: true })
+    .watch(VERSION_PATH, { ignoreInitial: true })
     .on("add", handleServerUpdate)
     .on("change", handleServerUpdate);
 
@@ -249,7 +266,7 @@ app.all(
 );
 ```
 
-For complete app server code examples, check our [templates][templates] or [community examples][community-examples].
+For complete app server code examples, check our [templates][templates] or [community examples][community_examples].
 
 ## Keeping in-memory server state across rebuilds
 
@@ -287,8 +304,10 @@ export const db = singleton(
 );
 ```
 
-[mental-model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
-[express]: https://expressjs.com/
+There is also a handy [`remember` utility][remember] that can help out here if you prefer to use that.
+
+[mental_model]: https://www.youtube.com/watch?v=zTrjaUt9hLo
 [chokidar]: https://github.com/paulmillr/chokidar
-[templates]: https://github.com/remix-run/remix/blob/main/templates/
-[community-examples]: https://github.com/xHomu/remix-v2-server
+[templates]: https://github.com/remix-run/remix/blob/main/templates
+[community_examples]: https://github.com/xHomu/remix-v2-server
+[remember]: https://npm.im/@epic-web/remember

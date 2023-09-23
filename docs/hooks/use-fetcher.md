@@ -19,7 +19,7 @@ export function SomeComponent() {
 
 ### `fetcher.Form`
 
-Just like `<Form>` except it doesn't cause a navigation.
+Just like [`<Form>`][form_component] except it doesn't cause a navigation.
 
 ```tsx
 function SomeComponent() {
@@ -40,11 +40,11 @@ Submits form data to a route. While multiple nested routes can match a URL, only
 
 The `formData` can be multiple types:
 
-- `FormData` - A `FormData` instance.
-- `HTMLFormElement` - A `<form>` DOM element.
+- [`FormData`][form_data] - A `FormData` instance.
+- [`HTMLFormElement`][html_form_element] - A [`<form>`][form_element] DOM element.
 - `Object` - An object of key/value pairs that will be converted to a `FormData` instance.
 
-If the method is GET, then the route loader is being called and with the formData serialized to the url as URLSearchParams. If POST, PUT, PATCH, or DELETE, then the route action is being called with FormData as the body.
+If the method is `GET`, then the route [`loader`][loader] is being called and with the `formData` serialized to the url as [`URLSearchParams`][url_search_params]. If `DELETE`, `PATCH`, `POST`, or `PUT`, then the route [`action`][action] is being called with `formData` as the body.
 
 ```tsx
 fetcher.submit(event.currentTarget.form, {
@@ -75,12 +75,12 @@ fetcher.load("/some/route?foo=bar");
 You can know the state of the fetcher with `fetcher.state`. It will be one of:
 
 - **idle** - Nothing is being fetched.
-- **submitting** - A form has been submitted. If the method is GET, then the route loader is being called. If POST, PUT, PATCH, or DELETE, then the route action is being called.
-- **loading** - The loaders for the routes are being reloaded after an action submission.
+- **submitting** - A form has been submitted. If the method is `GET`, then the route `loader` is being called. If `DELETE`, `PATCH`, `POST`, or `PUT`, then the route `action` is being called.
+- **loading** - The loaders for the routes are being reloaded after an `action` submission.
 
 ### `fetcher.data`
 
-The returned response data from your loader or action is stored here. Once the data is set, it persists on the fetcher even through reloads and resubmissions (like calling `fetcher.load()` again after having already read the data).
+The returned response data from your `action` or `loader` is stored here. Once the data is set, it persists on the fetcher even through reloads and resubmissions (like calling `fetcher.load()` again after having already read the data).
 
 ### `fetcher.formData`
 
@@ -98,15 +98,22 @@ The form method of the submission.
 
 **Discussions**
 
-- [Form vs. Fetcher][form-vs-fetcher]
-- [Network Concurrency Management][network-concurrency-management]
+- [Form vs. Fetcher][form_vs_fetcher]
+- [Network Concurrency Management][network_concurrency_management]
 
 **Videos**
 
-- [Concurrent Mutations w/ useFetcher][concurrent-mutations-w-use-fetcher]
-- [Optimistic UI][optimistic-ui]
+- [Concurrent Mutations w/ useFetcher][concurrent_mutations_with_use_fetcher]
+- [Optimistic UI][optimistic_ui]
 
-[form-vs-fetcher]: ../discussion/form-vs-fetcher
-[network-concurrency-management]: ../discussion/concurrency
-[concurrent-mutations-w-use-fetcher]: https://www.youtube.com/watch?v=vTzNpiOk668&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
-[optimistic-ui]: https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
+[form_component]: ../components/Form
+[form_data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
+[html_form_element]: https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement
+[form_element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form
+[loader]: ../route/loader
+[url_search_params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
+[action]: ../route/action
+[form_vs_fetcher]: ../discussion/form-vs-fetcher
+[network_concurrency_management]: ../discussion/concurrency
+[concurrent_mutations_with_use_fetcher]: https://www.youtube.com/watch?v=vTzNpiOk668&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
+[optimistic_ui]: https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6

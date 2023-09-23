@@ -51,10 +51,9 @@ Note that whatever you return from your loader will be exposed to the client, ev
 
 ## Type Safety
 
-You can get type safety over the network for your loader and component with `LoaderFunctionArgs` and `useLoaderData<typeof loader>`.
+You can get type safety over the network for your loader and component with `useLoaderData<typeof loader>`.
 
-```tsx lines=[1,5,10]
-import type { LoaderFunctionArgs } from "@remix-run/node";
+```tsx lines=[9]
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
@@ -185,15 +184,15 @@ import { json } from "@remix-run/node"; // or cloudflare/deno
 export const loader = async ({
   params,
 }: LoaderFunctionArgs) => {
-  const user = await fakeDb.project.findOne({
+  const project = await fakeDb.project.findOne({
     where: { id: params.id },
   });
 
-  if (!user) {
+  if (!project) {
     return json("Project not found", { status: 404 });
   }
 
-  return json(user);
+  return json(project);
 };
 ```
 

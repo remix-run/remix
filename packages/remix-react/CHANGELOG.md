@@ -1,5 +1,15 @@
 # `@remix-run/react`
 
+## 2.0.1
+
+### Patch Changes
+
+- Add second generic to `UIMatch` for `handle` field ([#7464](https://github.com/remix-run/remix/pull/7464))
+- Fix resource routes being loaded through `route.lazy` ([#7498](https://github.com/remix-run/remix/pull/7498))
+- Throw a semantically correct 405 `ErrorResponse` instead of just an `Error` when submitting to a route without an `action` ([#7423](https://github.com/remix-run/remix/pull/7423))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.1`
+
 ## 2.0.0
 
 ### Major Changes
@@ -61,14 +71,23 @@
   ```
 
 - Re-Export `ShouldRevalidateFunctionArgs` type from React Router ([#7316](https://github.com/remix-run/remix/pull/7316))
+
 - Deduplicate prefetch `link` tags ([#7060](https://github.com/remix-run/remix/pull/7060))
+
 - Skip preloading of stylesheets on client-side route transitions if the browser does not support `<link rel=preload>` ([#7106](https://github.com/remix-run/remix/pull/7106))
+
   - This prevents us from hanging on client-side navigations when we try to preload stylesheets and never receive a `load`/`error` event on the `link` tag
+
 - Export proper `ErrorResponse` type for usage alongside `isRouteErrorResponse` ([#7244](https://github.com/remix-run/remix/pull/7244))
+
 - Use the hostname from `REMIX_DEV_ORIGIN` to connect to the live reload socket ([#6923](https://github.com/remix-run/remix/pull/6923))
+
 - Use unique key for `script:ld+json` meta descriptors ([#6954](https://github.com/remix-run/remix/pull/6954))
+
 - Fix live reload port when set explicitly as a prop ([#7358](https://github.com/remix-run/remix/pull/7358))
+
 - Fix types for `useLoaderData` when using Yarn PnP ([#7137](https://github.com/remix-run/remix/pull/7137))
+
 - Updated dependencies:
   - `@remix-run/server-runtime@2.0.0`
   - [`react-router-dom@6.16.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.16.0)
