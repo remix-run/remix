@@ -54,7 +54,7 @@ export function createPagesFunctionHandler<Env = any>({
     context.request.headers.delete("if-none-match");
 
     let method = context.request.method;
-    if (method !== "POST" && method !== "PUT") {
+    if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
       try {
         response = await context.env.ASSETS.fetch(
           context.request.url,
