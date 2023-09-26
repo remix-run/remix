@@ -68,7 +68,7 @@ Remix will process it as a classic layout-less container route, because Resource
 An example use case for this decision would be a layout-less route providing shared data for the child routes. 
 In this case, errors from the Loader would be handled by the exported `ErrorBoundary` instead of bubbling higher.
 
-If you export `ErrorBoundary` from a resource route by mistake, the response from the Loader will be ignored, Remix will render partent route with empty `<Outlet>`, and you get a message:
+If you export `ErrorBoundary` from a resource route by mistake, the response from the Loader will be ignored, Remix will render parent route with an empty `<Outlet>`, and you get a message:
 
 ```sh
 Matched leaf route at location "/path/to/resource/" does not have an element or Component. 
