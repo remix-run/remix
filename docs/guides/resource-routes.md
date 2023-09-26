@@ -60,6 +60,21 @@ export async function loader({
 
 When the user clicks the link from the UI route, they will navigate to the PDF.
 
+## Resource Routes and ErrorBoundary
+
+Resource Route will change its behavior when you export `ErrorBoundary` along with the Loader. 
+Remix will process it as a classic layout-less container route, because Resource Route should not contain any UI-related exports.
+
+An example use case for this decision would be a layout-less route providing shared data for the child routes. 
+In this case, errors from the Loader would be handled by the exported `ErrorBoundary` instead of bubbling higher.
+
+If you export `ErrorBoundary` from a resource route by mistake, the response from the Loader will be ignored, Remix will render parent route with an empty `<Outlet>`, and you get a message:
+
+```sh
+Matched leaf route at location "/path/to/resource/" does not have an element or Component. 
+This means it will render an <Outlet /> with a null value by default resulting in an "empty" page.
+```
+
 ## Linking to Resource Routes
 
 <docs-error>It’s imperative that you use <code>reloadDocument</code> on any Links to Resource Routes</docs-error>
