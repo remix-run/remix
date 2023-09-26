@@ -63,9 +63,9 @@ When the user clicks the link from the UI route, they will navigate to the PDF.
 ## Resource Routes and ErrorBoundary
 
 Resource Route will change its behavior when you export `ErrorBoundary` along with the loader. 
-Remix will process it as a classic layout-less container route.
+Remix will process it as a classic layout-less container route, because Resource Route should not contain any UI-related exports.
 
-An example use case would be a layout-less route providing shared data for the child routes. 
+An example use case for this decision would be a layout-less route providing shared data for the child routes. 
 In this case, errors from the Loader would be handled by the exported `ErrorBoundary` instead of bubbling higher.
 
 If you export `ErrorBoundary` from a resource route by mistake, the response from the Loader will be ignored, Remix will render partent route with empty `<Outlet>`, and you get a message:
