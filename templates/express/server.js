@@ -37,18 +37,15 @@ app.use(express.static("public", { maxAge: "1h" }));
 
 app.use(morgan("tiny"));
 
-app.all("*", async (...args) => {
-  if (process.env.NODE_ENV === "development") {
-    const handler = await createDevRequestHandler(initialBuild);
-    return handler(...args);
-  }
-
-  const handler = createRequestHandler({
-    build: initialBuild,
-    mode: initialBuild.mode,
-  });
-  return handler(...args);
-});
+app.all(
+  "*",
+  process.env.NODE_ENV === "development"
+    ? await createDevRequestHandler(initialBuild)
+    : createRequestHandler({
+        build: initialBuild,
+        mode: initialBuild.mode,
+      })
+);
 
 const port = process.env.PORT || 3000;
 app.listen(port, async () => {
@@ -74,7 +71,7 @@ async function reimportServer() {
 
 /**
  * @param {ServerBuild} initialBuild
- * @returns {import('@remix-run/express').RequestHandler}
+ * @returns {Promise<import('@remix-run/express').RequestHandler>}
  */
 async function createDevRequestHandler(initialBuild) {
   let build = initialBuild;
