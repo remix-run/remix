@@ -608,7 +608,7 @@ Note the weird `_` in `$contactId_`. By default, routes will automatically nest 
 
 Nothing we haven't seen before, feel free to copy/paste:
 
-```tsx filename=app/routes/contacts.$contactId.edit.tsx
+```tsx filename=app/routes/contacts.$contactId_.edit.tsx
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
