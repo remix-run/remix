@@ -39,7 +39,7 @@ submit(formData, { method: "get" });
 
 ### `navigation.formData`
 
-Any POST, PUT, PATCH, or DELETE navigation that started from a `<Form>` or `useSubmit` will have your form's submission data attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) object.
+Any POST, PUT, PATCH, or DELETE navigation that started from a `<Form>` or `useSubmit` will have your form's submission data attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`][form-data] object.
 
 For example:
 
@@ -77,3 +77,5 @@ Form submissions with POST, PUT, PATCH, or DELETE transition through these state
 ```
 idle → submitting → loading → idle
 ```
+
+[form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
