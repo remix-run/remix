@@ -37,10 +37,10 @@ For example, you might want to store cookies on the file system, or in Cloudflar
 
 ```tsx
 // store sessions on the file system in node
+import { createWorkersKVSessionStorage } from "@remix-run/cloudflare";
 import { createFileSessionStorage } from "@remix-run/node";
 
 // store sessions in cloudflare KV storage
-import { createWorkersKVSessionStorage } from "@remix-run/cloudflare";
 ```
 
 But if you're storing a session in the cookie itself, this is supported in all runtimes:
