@@ -28,4 +28,6 @@ function SomeComponent() {
 
 ## Additional Resources
 
-- [Breadcrumbs Guide](../guides/breadcrumbs)
+- [Breadcrumbs Guide][breadcrumbs-guide]
+
+[breadcrumbs-guide]: ../guides/breadcrumbs

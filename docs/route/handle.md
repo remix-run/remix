@@ -16,7 +16,8 @@ This is almost always used in conjunction with `useMatches`. To see what kinds o
 
 ## Additional Resources
 
-- [Breadcrumbs Guide](../guides/breadcrumbs)
+- [Breadcrumbs Guide][breadcrumbs-guide]
 - [`useMatches`][use-matches]
 
 [use-matches]: ../hooks/use-matches
+[breadcrumbs-guide]: ../guides/breadcrumbs

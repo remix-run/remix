@@ -80,5 +80,8 @@ Using `useMatches` with `handle` offers a robust way for routes to contribute to
 
 ## Additional Resources
 
-- [`useMatches`](../hooks/use-matches)
-- [`handle`](../route/handle)
+- [`useMatches`][use-matches]
+- [`handle`][handle]
+
+[use-matches]: ../hooks/use-matches
+[handle]: ../route/handle
