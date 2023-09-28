@@ -20,3 +20,13 @@ export function SomeParent() {
   );
 }
 ```
+
+## Props
+
+### `context`
+
+Provides a context value to the element tree below the outlet. Use when the parent route needs to provide values to child routes.
+
+```tsx
+<Outlet context={myContextValue} />
+```
