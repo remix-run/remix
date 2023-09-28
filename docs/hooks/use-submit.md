@@ -81,9 +81,13 @@ submit(data, {
 
 **Discussion**
 
-- [Form vs. Fetcher](../discussion/form-vs-fetcher)
+- [Form vs. Fetcher][form-vs-fetcher]
 
 **Related API**
 
-- [`<Form>`](../components/form)
-- [`fetcher.submit`](../hooks/use-fetcher#fetchersubmitformdata-options)
+- [`<Form>`][form]
+- [`fetcher.submit`][fetcher-submit]
+
+[form-vs-fetcher]: ../discussion/form-vs-fetcher
+[form]: ../components/form
+[fetcher-submit]: ../hooks/use-fetcher#fetchersubmitformdata-options
