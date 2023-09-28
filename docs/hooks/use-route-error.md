@@ -1,10 +1,25 @@
 ---
 title: useRouteError
-toc: false
+new: true
 ---
 
 # `useRouteError`
 
-<docs-info>This hook is simply a re-export of [React Router's `useRouteError`][rr-userouteerror].</docs-info>
+Accesses the error thrown during an action, loader, or rendering to be used in an ErrorBoundary.
 
-[rr-userouteerror]: https://reactrouter.com/hooks/use-route-error
+```jsx filename=routes/some-route.tsx
+export function ErrorBoundary() {
+  const error = useRouteError();
+  return <div>{error.message}</div>;
+}
+```
+
+## Additional Resources
+
+**Guides**
+
+- [Error Handling Guide](../guides/errors)
+
+**API Reference**
+
+- [`ErrorBoundary`](../route/error-boundary)
