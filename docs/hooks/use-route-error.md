@@ -18,8 +18,11 @@ export function ErrorBoundary() {
 
 **Guides**
 
-- [Error Handling Guide](../guides/errors)
+- [Error Handling Guide][error-handling-guide]
 
 **API Reference**
 
-- [`ErrorBoundary`](../route/error-boundary)
+- [`ErrorBoundary`][error-boundary]
+
+[error-handling-guide]: ../guides/errors
+[error-boundary]: ../route/error-boundary
