@@ -30,3 +30,5 @@ Provides a context value to the element tree below the outlet. Use when the pare
 ```tsx
 <Outlet context={myContextValue} />
 ```
+
+See also: [`useOutletContext`](../hooks/use-outlet-context)
