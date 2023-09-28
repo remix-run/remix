@@ -31,4 +31,6 @@ Provides a context value to the element tree below the outlet. Use when the pare
 <Outlet context={myContextValue} />
 ```
 
-See also: [`useOutletContext`](../hooks/use-outlet-context)
+See also: [`useOutletContext`][use-outlet-context]
+
+[use-outlet-context]: ../hooks/use-outlet-context

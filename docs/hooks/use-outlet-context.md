@@ -17,4 +17,6 @@ function Child() {
 
 ## Additional Resources
 
-- [`<Outlet context>`](../components/outlet#context)
+- [`<Outlet context>`][outlet-context]
+
+[outlet-context]: ../components/outlet#context
