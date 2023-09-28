@@ -23,6 +23,10 @@ function SomeComponent() {
 
 ## Additional Resources
 
-- [`<Link replace>`](../components/link#replace)
-- [`<Form replace>`](../components/form#replace)
-- [`navigate` options](../hooks/use-navigate#options)
+- [`<Link replace>`][link-replace]
+- [`<Form replace>`][form-replace]
+- [`navigate` options][navigate-options]
+
+[link-replace]: ../components/link#replace
+[form-replace]: ../components/form#replace
+[navigate-options]: ../hooks/use-navigate#options
