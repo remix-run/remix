@@ -268,7 +268,7 @@ Since Remix is built on top of React Router, it supports nested routing. In orde
 
 👉 **Render an [`<Outlet />`][outlet-component]**
 
-```tsx filename=app/root.tsx lines=[7,20-22]
+```tsx filename=app/root.tsx lines=[7,22-24]
 // existing imports
 import {
   Form,
