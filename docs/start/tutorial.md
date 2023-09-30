@@ -484,7 +484,6 @@ export const loader = async ({ params }) => {
 };
 
 export default function Contact() {
-  // Replace `const contact = { ... }` with this:
   const { contact } = useLoaderData<typeof loader>();
 
   // existing code
