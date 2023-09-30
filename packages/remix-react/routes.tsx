@@ -38,6 +38,7 @@ export interface EntryRoute extends Route {
   hasLoader: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
+  css?: string[];
   module: string;
   parentId?: string;
 }
@@ -241,7 +242,7 @@ async function loadRouteModuleWithBlockingLinks(
   routeModules: RouteModules
 ) {
   let routeModule = await loadRouteModule(route, routeModules);
-  await prefetchStyleLinks(routeModule);
+  await prefetchStyleLinks(route, routeModule);
 
   // Resource routes are built with an empty object as the default export -
   // ignore those when setting the Component

@@ -18,6 +18,7 @@ declare global {
   var __remixContext: {
     url: string;
     state: HydrationState;
+    criticalCss?: string;
     future: FutureConfig;
     // The number of active deferred keys rendered on the server
     a?: number;
@@ -244,6 +245,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         manifest: window.__remixManifest,
         routeModules: window.__remixRouteModules,
         future: window.__remixContext.future,
+        criticalCss: window.__remixContext.criticalCss,
       }}
     >
       <RemixErrorBoundary location={location}>

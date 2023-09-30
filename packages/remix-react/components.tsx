@@ -272,7 +272,7 @@ export function composeEventHandlers<
  * @see https://remix.run/components/links
  */
 export function Links() {
-  let { manifest, routeModules } = useRemixContext();
+  let { manifest, routeModules, criticalCss } = useRemixContext();
   let { errors, matches: routerMatches } = useDataRouterStateContext();
 
   let matches = errors
@@ -289,6 +289,7 @@ export function Links() {
 
   return (
     <>
+      {criticalCss ? <style>{criticalCss}</style> : null}
       {keyedLinks.map(({ key, link }) =>
         isPageLinkDescriptor(link) ? (
           <PrefetchPageLinks key={key} {...link} />
