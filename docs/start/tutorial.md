@@ -287,7 +287,9 @@ export default function App() {
     <html lang="en">
       {/* other elements */}
       <body>
+        <div id="sidebar">
         {/* other elements */}
+        </div>
         <div id="detail">
           <Outlet />
         </div>
