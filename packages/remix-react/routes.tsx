@@ -131,22 +131,38 @@ export function createClientRoutes(
       id: route.id,
       index: route.index,
       path: route.path,
-      loader({ request }) {
-        if (!route.hasLoader) return null;
-        return fetchServerHandler(request, route);
-      },
-      action({ request }) {
-        if (!route.hasAction) {
-          let msg =
-            `Route "${route.id}" does not have an action, but you are trying ` +
-            `to submit to it. To fix this, please add an \`action\` function to the route`;
-          console.error(msg);
-          return Promise.reject(
-            new ErrorResponse(405, "Method Not Allowed", new Error(msg), true)
-          );
+      async loader({ request }) {
+        let routeModulePromise = loadRouteModuleWithBlockingLinks(
+          route,
+          routeModulesCache
+        );
+        try {
+          if (!route.hasLoader) return null;
+          return fetchServerHandler(request, route);
+        } finally {
+          await routeModulePromise;
         }
+      },
+      async action({ request }) {
+        let routeModulePromise = loadRouteModuleWithBlockingLinks(
+          route,
+          routeModulesCache
+        );
+        try {
+          if (!route.hasAction) {
+            let msg =
+              `Route "${route.id}" does not have an action, but you are trying ` +
+              `to submit to it. To fix this, please add an \`action\` function to the route`;
+            console.error(msg);
+            return Promise.reject(
+              new ErrorResponse(405, "Method Not Allowed", new Error(msg), true)
+            );
+          }
 
-        return fetchServerHandler(request, route);
+          return fetchServerHandler(request, route);
+        } finally {
+          await routeModulePromise;
+        }
       },
       ...(routeModule
         ? // Use critical path modules directly
