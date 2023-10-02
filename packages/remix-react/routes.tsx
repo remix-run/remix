@@ -132,10 +132,11 @@ export function createClientRoutes(
       index: route.index,
       path: route.path,
       async loader({ request }) {
-        let routeModulePromise = loadRouteModuleWithBlockingLinks(
-          route,
-          routeModulesCache
-        );
+        // Only prefetch links if we've been loaded into the cache, route.lazy
+        // will handle initial loads
+        let routeModulePromise = routeModulesCache[route.id]
+          ? prefetchStyleLinks(routeModulesCache[route.id])
+          : Promise.resolve();
         try {
           if (!route.hasLoader) return null;
           return fetchServerHandler(request, route);
@@ -144,10 +145,11 @@ export function createClientRoutes(
         }
       },
       async action({ request }) {
-        let routeModulePromise = loadRouteModuleWithBlockingLinks(
-          route,
-          routeModulesCache
-        );
+        // Only prefetch links if we've been loaded into the cache, route.lazy
+        // will handle initial loads
+        let routeModulePromise = routeModulesCache[route.id]
+          ? prefetchStyleLinks(routeModulesCache[route.id])
+          : Promise.resolve();
         try {
           if (!route.hasAction) {
             let msg =
