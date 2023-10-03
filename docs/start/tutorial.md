@@ -602,7 +602,7 @@ Just like creating data, you update data with [`<Form>`][form-component]. Let's 
 touch app/routes/contacts.\$contactId_.edit.tsx
 ```
 
-Note the weird `_` in `$contactId_`. By default, routes will automatically nest inside routes with the same prefixed name. Adding a trialing `_` tells the route to **not** nest inside `app/routes/contacts.$contactId.tsx`. Read more in the [Route File Naming][routes-file-conventions] guide.
+Note the weird `_` in `$contactId_`. By default, routes will automatically nest inside routes with the same prefixed name. Adding a trailing `_` tells the route to **not** nest inside `app/routes/contacts.$contactId.tsx`. Read more in the [Route File Naming][routes-file-conventions] guide.
 
 👉 **Add the edit page UI**
 
