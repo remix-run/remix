@@ -52,8 +52,8 @@ type ResolvedRemixVitePluginConfig = Pick<
   | "appDirectory"
   | "rootDirectory"
   | "assetsBuildDirectory"
-  | "entryClientFile"
-  | "entryServerFile"
+  | "entryClientFilePath"
+  | "entryServerFilePath"
   | "future"
   | "publicPath"
   | "relativeAssetsBuildDirectory"
@@ -98,11 +98,24 @@ const getHash = (source: BinaryLike, maxLength?: number): string => {
 const resolveBuildAssetPaths = (
   pluginConfig: ResolvedRemixVitePluginConfig,
   manifest: ViteManifest,
-  appRelativePath: string
+  absoluteFilePath: string
 ): Manifest["entry"] & { css: string[] } => {
-  let appPath = path.relative(process.cwd(), pluginConfig.appDirectory);
-  let manifestKey = normalizePath(path.join(appPath, appRelativePath));
+  let rootRelativeFilePath = path.relative(
+    pluginConfig.rootDirectory,
+    absoluteFilePath
+  );
+  let manifestKey = normalizePath(rootRelativeFilePath);
   let manifestEntry = manifest[manifestKey];
+
+  if (!manifestEntry) {
+    let knownManifestKeys = Object.keys(manifest)
+      .map((key) => '"' + key + '"')
+      .join(", ");
+    throw new Error(
+      `No manifest entry found for "${manifestKey}". Known manifest keys: ${knownManifestKeys}`
+    );
+  }
+
   return {
     module: `${pluginConfig.publicPath}${manifestEntry.file}`,
     imports:
@@ -206,6 +219,13 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
         relativeAssetsBuildDirectory
       );
 
+      let defaultsDirectory = path.resolve(
+        __dirname,
+        "..",
+        "config",
+        "defaults"
+      );
+
       let userEntryClientFile = findEntry(appDirectory, "entry.client");
       let entryClientFile = userEntryClientFile ?? "entry.client.tsx";
 
@@ -267,6 +287,14 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
         entryServerFile = `entry.server.${serverRuntime}.tsx`;
       }
 
+      let entryClientFilePath = userEntryClientFile
+        ? path.resolve(appDirectory, userEntryClientFile)
+        : path.resolve(defaultsDirectory, entryClientFile);
+
+      let entryServerFilePath = userEntryServerFile
+        ? path.resolve(appDirectory, userEntryServerFile)
+        : path.resolve(defaultsDirectory, entryServerFile);
+
       let publicPath = addTrailingSlash(options.publicPath ?? "/build/");
 
       let rootRouteFile = findEntry(appDirectory, "root");
@@ -295,10 +323,10 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
         appDirectory,
         rootDirectory,
         assetsBuildDirectory,
-        entryClientFile,
+        entryClientFilePath,
         publicPath,
         routes,
-        entryServerFile,
+        entryServerFilePath,
         serverBuildPath,
         serverModuleFormat,
         relativeAssetsBuildDirectory,
@@ -311,9 +339,7 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
 
     return `
     import * as entryServer from ${JSON.stringify(
-      resolveFsUrl(
-        path.resolve(pluginConfig.appDirectory, pluginConfig.entryServerFile)
-      )
+      resolveFsUrl(pluginConfig.entryServerFilePath)
     )};
     ${Object.keys(pluginConfig.routes)
       .map((key, index) => {
@@ -363,11 +389,12 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
     let entry: Manifest["entry"] = resolveBuildAssetPaths(
       pluginConfig,
       viteManifest,
-      pluginConfig.entryClientFile
+      pluginConfig.entryClientFilePath
     );
 
     let routes: Manifest["routes"] = {};
     for (let [key, route] of Object.entries(pluginConfig.routes)) {
+      let routeFilePath = path.join(pluginConfig.appDirectory, route.file);
       let sourceExports = await getRouteModuleExports(
         viteChildCompiler,
         pluginConfig,
@@ -383,7 +410,7 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
-        ...resolveBuildAssetPaths(pluginConfig, viteManifest, route.file),
+        ...resolveBuildAssetPaths(pluginConfig, viteManifest, routeFilePath),
       };
     }
 
@@ -439,9 +466,7 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
       version: String(Math.random()),
       url: VirtualModule.url(browserManifestId),
       entry: {
-        module: resolveFsUrl(
-          path.resolve(pluginConfig.appDirectory, pluginConfig.entryClientFile)
-        ),
+        module: resolveFsUrl(pluginConfig.entryClientFilePath),
         imports: [],
       },
       routes,
@@ -472,10 +497,7 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
                       ...viteUserConfig.build?.rollupOptions,
                       preserveEntrySignatures: "exports-only",
                       input: [
-                        path.resolve(
-                          pluginConfig.appDirectory,
-                          pluginConfig.entryClientFile
-                        ),
+                        pluginConfig.entryClientFilePath,
                         ...Object.values(pluginConfig.routes).map((route) =>
                           path.resolve(pluginConfig.appDirectory, route.file)
                         ),

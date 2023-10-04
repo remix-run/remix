@@ -28,6 +28,7 @@ export interface FixtureInit {
   template?: "cf-template" | "deno-template" | "node-template";
   config?: Partial<AppConfig>;
   useRemixServe?: boolean;
+  env?: Record<string, string>;
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -272,7 +273,7 @@ export async function createFixtureProject(
   );
   fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
 
-  build(projectDir, init.buildStdio, init.sourcemap, mode);
+  build(projectDir, init.buildStdio, init.sourcemap, mode, init.env);
 
   return projectDir;
 }
@@ -281,7 +282,8 @@ function build(
   projectDir: string,
   buildStdio?: Writable,
   sourcemap?: boolean,
-  mode?: ServerMode
+  mode?: ServerMode,
+  env?: Record<string, string>
 ) {
   // We have a "require" instead of a dynamic import in readConfig gated
   // behind mode === ServerMode.Test to make jest happy, but that doesn't
@@ -298,6 +300,7 @@ function build(
     cwd: projectDir,
     env: {
       ...process.env,
+      ...env,
       NODE_ENV: mode || ServerMode.Production,
     },
   });
