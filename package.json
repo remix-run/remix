@@ -123,7 +123,8 @@
     "typescript": "^5.1.0",
     "unified": "^10.1.2",
     "unist-util-remove": "^3.1.0",
-    "unist-util-visit": "^4.1.1"
+    "unist-util-visit": "^4.1.1",
+    "vite": "^4.4.9"
   },
   "engines": {
     "node": ">=18.0.0"
