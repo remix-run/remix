@@ -115,6 +115,17 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "-p": "--port",
       "--tls-key": String,
       "--tls-cert": String,
+
+      // vite
+      ...(process.env.REMIX_EXPERIMENTAL_VITE
+        ? {
+            "--strictPort": Boolean,
+            "--config": String,
+            // TODO: Also support boolean usage? e.g. remix dev --host
+            // Note that arg doesn't support this: https://github.com/vercel/arg/issues/61
+            "--host": String,
+          }
+        : {}),
     },
     {
       argv,
@@ -169,8 +180,12 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.routes(input[1], flags.json ? "json" : "jsx");
       break;
     case "build":
-      if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
-      await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap);
+      if (process.env.REMIX_EXPERIMENTAL_VITE) {
+        await commands.viteBuild(flags);
+      } else {
+        if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
+        await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap);
+      }
       break;
     case "watch":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
@@ -185,10 +200,13 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     }
     case "dev":
-      await commands.dev(input[1], flags);
+      await (process.env.REMIX_EXPERIMENTAL_VITE
+        ? commands.viteDev(flags)
+        : commands.dev(input[1], flags));
       break;
     default:
       // `remix ./my-project` is shorthand for `remix dev ./my-project`
+      // TODO: Support this in Vite mode
       await commands.dev(input[0], flags);
   }
 }
