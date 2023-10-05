@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import resolveBin from "resolve-bin";
 
 export interface ViteDevOptions {
   config?: string;
@@ -15,8 +16,10 @@ export async function dev({
   host,
   force,
 }: ViteDevOptions) {
+  let viteBin = resolveBin.sync("vite");
+
   spawn(
-    "vite",
+    viteBin,
     [
       "dev",
       ...(config ? ["--config", config] : []),

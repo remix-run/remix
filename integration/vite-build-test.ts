@@ -8,7 +8,7 @@ import {
 import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import { PlaywrightFixture, selectHtml } from "./helpers/playwright-fixture.js";
 
-test.describe("Vite", () => {
+test.describe("Vite build", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
 
@@ -51,10 +51,21 @@ test.describe("Vite", () => {
             );
           }
         `,
-
         "app/routes/_index.tsx": js`
+          import { useState, useEffect } from "react";
+
           export default function() {
-            return <h2>Index</h2>;
+            const [mounted, setMounted] = useState(false);
+            useEffect(() => {
+              setMounted(true);
+            }, []);
+            
+            return (
+              <>
+                <h2>Index</h2>
+                {!mounted ? <h3>Loading...</h3> : <h3 data-mounted>Mounted</h3>}
+              </>
+            );
           }
         `,
       },
@@ -73,15 +84,16 @@ test.describe("Vite", () => {
     expect(selectHtml(await res.text(), "#content")).toBe(`<div id="content">
   <h1>Root</h1>
   <h2>Index</h2>
+  <h3>Loading...</h3>
 </div>`);
   });
 
   test("hydrates", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
-    expect(await app.getHtml("#content")).toBe(`<div id="content">
-  <h1>Root</h1>
-  <h2>Index</h2>
-</div>`);
+    expect(await page.locator("#content h2").textContent()).toBe("Index");
+    expect(await page.locator("#content h3[data-mounted]").textContent()).toBe(
+      "Mounted"
+    );
   });
 });
