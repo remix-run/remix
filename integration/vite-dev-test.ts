@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import type { Readable } from "node:stream";
 import execa, { type ExecaChildProcess } from "execa";
 import pidtree from "pidtree";
 import getPort from "get-port";
@@ -91,8 +92,17 @@ test.describe("Vite dev", () => {
         },
       }
     );
+    let devStdout = bufferize(devProc.stdout!);
+    let devStderr = bufferize(devProc.stderr!);
 
-    await waitOn({ resources: [`http://localhost:${devPort}/`] });
+    await waitOn({
+      resources: [`http://localhost:${devPort}/`],
+      timeout: 10000,
+    }).catch((err) => {
+      console.log(devStdout());
+      console.log(devStderr());
+      throw err;
+    });
   });
 
   test.afterAll(async () => {
@@ -109,6 +119,12 @@ test.describe("Vite dev", () => {
     );
   });
 });
+
+let bufferize = (stream: Readable): (() => string) => {
+  let buffer = "";
+  stream.on("data", (data) => (buffer += data.toString()));
+  return () => buffer;
+};
 
 let isWindows = process.platform === "win32";
 
