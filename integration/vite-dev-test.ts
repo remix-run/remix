@@ -1,18 +1,16 @@
 import { test, expect } from "@playwright/test";
 import type { Readable } from "node:stream";
-import { createRequire } from "node:module";
-import execa, { type ExecaChildProcess } from "execa";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import execa from "execa";
 import pidtree from "pidtree";
 import getPort from "get-port";
 import waitOn from "wait-on";
 
 import { createFixtureProject, js } from "./helpers/create-fixture.js";
 
-const require = createRequire(import.meta.url);
-
 test.describe("Vite dev", () => {
   let projectDir: string;
-  let devProc: ExecaChildProcess;
+  let devProc: ChildProcessWithoutNullStreams;
   let devPort: number;
 
   test.beforeAll(async () => {
@@ -83,17 +81,18 @@ test.describe("Vite dev", () => {
       },
     });
 
-    let nodeBin = process.argv[0];
-    let cliPath = require.resolve("@remix-run/dev/dist/cli.js", {
-      paths: [projectDir],
-    });
-    let cliArgs = [cliPath, "dev"];
-    devProc = execa(nodeBin, cliArgs, {
-      cwd: projectDir,
-      env: { ...process.env, REMIX_EXPERIMENTAL_VITE: "1" },
-    });
-    let devStdout = bufferize(devProc.stdout!);
-    let devStderr = bufferize(devProc.stderr!);
+    let nodebin = process.argv[0];
+    devProc = spawn(
+      nodebin,
+      ["./node_modules/@remix-run/dev/dist/cli.js", "dev"],
+      {
+        cwd: projectDir,
+        env: { ...process.env, REMIX_EXPERIMENTAL_VITE: "1" },
+        stdio: "pipe",
+      }
+    );
+    let devStdout = bufferize(devProc.stdout);
+    let devStderr = bufferize(devProc.stderr);
 
     await waitOn({
       resources: [`http://localhost:${devPort}/`],
@@ -105,9 +104,6 @@ test.describe("Vite dev", () => {
         [
           err.message,
           "",
-          "command: " + [nodeBin, ...cliArgs].join(" "),
-          "pid: " + (devProc.pid ?? "undefined"),
-          "connected: " + devProc.connected,
           "exit code: " + devProc.exitCode,
           "stdout: " + stdout ? `\n${stdout}\n` : "<empty>",
           "stderr: " + stderr ? `\n${stderr}\n` : "<empty>",
