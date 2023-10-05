@@ -104,8 +104,14 @@ test.describe("Vite dev", () => {
       throw new Error(
         [
           err.message,
-          ...(stdout ? ["", "stdout:", stdout] : []),
-          ...(stderr ? ["", "stderr:", stderr] : []),
+          "",
+          "exit code: " + devProc.exitCode,
+          "",
+          "stdout:",
+          stdout || "<empty>",
+          "",
+          "stderr:",
+          stderr || "<empty>",
         ].join("\n")
       );
     });
