@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn } from "cross-spawn";
 import resolveBin from "resolve-bin";
 
 export interface ViteDevOptions {
