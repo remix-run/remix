@@ -99,9 +99,15 @@ test.describe("Vite dev", () => {
       resources: [`http://localhost:${devPort}/`],
       timeout: 10000,
     }).catch((err) => {
-      console.log(devStdout());
-      console.log(devStderr());
-      throw err;
+      let stdout = devStdout();
+      let stderr = devStderr();
+      throw new Error(
+        [
+          err.message,
+          ...(stdout ? ["", "stdout:", stdout] : []),
+          ...(stderr ? ["", "stderr:", stderr] : []),
+        ].join("\n")
+      );
     });
   });
 
