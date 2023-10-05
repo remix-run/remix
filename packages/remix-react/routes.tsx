@@ -136,7 +136,7 @@ export function createClientRoutes(
         // Only prefetch links if we've been loaded into the cache, route.lazy
         // will handle initial loads
         let routeModulePromise = routeModulesCache[route.id]
-          ? prefetchStyleLinks(routeModulesCache[route.id])
+          ? prefetchStyleLinks(route, routeModulesCache[route.id])
           : Promise.resolve();
         try {
           if (!route.hasLoader) return null;
@@ -149,7 +149,7 @@ export function createClientRoutes(
         // Only prefetch links if we've been loaded into the cache, route.lazy
         // will handle initial loads
         let routeModulePromise = routeModulesCache[route.id]
-          ? prefetchStyleLinks(routeModulesCache[route.id])
+          ? prefetchStyleLinks(route, routeModulesCache[route.id])
           : Promise.resolve();
         try {
           if (!route.hasAction) {
