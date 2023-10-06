@@ -33,7 +33,9 @@ type Dev = {
   tlsCert?: string;
 };
 
-interface FutureConfig {}
+interface FutureConfig {
+  scss: boolean;
+}
 
 type NodeBuiltinsPolyfillOptions = Pick<
   EsbuildPluginsNodeModulesPolyfillOptions,
@@ -557,7 +559,9 @@ export async function readConfig(
   // list below, so we can let folks know if they have obsolete flags in their
   // config.  If we ever convert remix.config.js to a TS file, so we get proper
   // typings this won't be necessary anymore.
-  let future: FutureConfig = {};
+  let future: FutureConfig = {
+    scss: appConfig.future?.scss ?? false,
+  };
 
   if (appConfig.future) {
     let userFlags = appConfig.future;

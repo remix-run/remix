@@ -1,4 +1,5 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Plugin, PluginBuild } from "esbuild";
 import fse from "fs-extra";
 import postcss from "postcss";
@@ -13,6 +14,7 @@ import type { Context } from "../context";
 const pluginName = "css-modules-plugin";
 const namespace = `${pluginName}-ns`;
 const cssModulesFilter = /\.module\.css$/;
+const cssModulesFilterWithScss = /\.module\.(css|scss)$/;
 const compiledCssQuery = "?css-modules-plugin-compiled-css";
 const compiledCssFilter = /\?css-modules-plugin-compiled-css$/;
 
@@ -25,11 +27,16 @@ export const cssModulesPlugin = (
   { config, options, fileWatchCache }: Context,
   { outputCss }: { outputCss: boolean }
 ): Plugin => {
+  let scssEnabled = !!config?.future?.scss;
+  let filter = scssEnabled
+    ? cssModulesFilterWithScss
+    : cssModulesFilter;
+
   return {
     name: pluginName,
     setup: async (build: PluginBuild) => {
       build.onResolve(
-        { filter: cssModulesFilter, namespace: "file" },
+        { filter: filter, namespace: "file" },
         async (args) => {
           let resolvedPath = (
             await build.resolve(args.path, {
@@ -44,7 +51,7 @@ export const cssModulesPlugin = (
         }
       );
 
-      build.onLoad({ filter: cssModulesFilter }, async (args) => {
+      build.onLoad({ filter: filter }, async (args) => {
         let { path: absolutePath } = args;
         let resolveDir = path.dirname(absolutePath);
 
@@ -52,11 +59,40 @@ export const cssModulesPlugin = (
         let { cacheValue } = await fileWatchCache.getOrSet(
           cacheKey,
           async () => {
-            let fileContents = await fse.readFile(absolutePath, "utf8");
+            let fileContents;
             let exports: Record<string, string> = {};
 
             let fileDependencies = new Set<string>([absolutePath]);
             let globDependencies = new Set<string>();
+
+            if (absolutePath.endsWith(".scss") && scssEnabled) {
+              let sass;
+
+              try {
+                sass = await import("sass");
+              } catch {
+                console.warn("Detected a scss file without having sass installed. Please install 'sass' package.");
+
+                return
+              }
+
+              let { css: compiledSCSS, loadedUrls } = sass.compile(args.path, {
+                sourceMapIncludeSources: true,
+                sourceMap: options.mode !== "production"
+              });
+
+              fileContents = compiledSCSS;
+              loadedUrls
+                ?.filter((url: URL) => url.protocol === "file:")
+                .forEach((url: URL) => {
+                  let filePath = fileURLToPath(url);
+                  fileDependencies.add(filePath);
+
+                  return
+                });
+            } else {
+              fileContents = await fse.readFile(absolutePath, "utf8")
+            }
 
             let postcssPlugins = await loadPostcssPlugins({ config });
 
