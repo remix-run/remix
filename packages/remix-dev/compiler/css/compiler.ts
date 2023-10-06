@@ -9,6 +9,7 @@ import { mdxPlugin } from "../plugins/mdx";
 import { externalPlugin } from "../plugins/external";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
+import { scssFilePlugin } from "../plugins/scssImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import {
   cssBundleEntryModulePlugin,
@@ -57,6 +58,7 @@ const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
       vanillaExtractPlugin(ctx, { outputCss: true }),
       cssSideEffectImportsPlugin(ctx),
       cssFilePlugin(ctx),
+      scssFilePlugin(ctx),
       absoluteCssUrlsPlugin(),
       externalPlugin(/^https?:\/\//, { sideEffects: false }),
       mdxPlugin(ctx),

@@ -5,6 +5,7 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   ".aac": "file",
   ".avif": "file",
   ".css": "file",
+  ".scss": "file",
   ".csv": "file",
   ".eot": "file",
   ".fbx": "file",
