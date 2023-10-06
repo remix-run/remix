@@ -19,8 +19,9 @@ export async function dev({
   let viteBin = resolveBin.sync("vite");
 
   spawn(
-    viteBin,
+    "node",
     [
+      viteBin,
       "dev",
       ...(config ? ["--config", config] : []),
       ...(port ? ["--port", port] : []),
