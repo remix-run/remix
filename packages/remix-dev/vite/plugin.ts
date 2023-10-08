@@ -73,7 +73,20 @@ const normalizePath = (p: string) => {
   return viteNormalizePath(unixPath);
 };
 
-const resolveFsUrl = (filePath: string) => `/@fs${normalizePath(filePath)}`;
+const resolveFileUrl = (
+  { rootDirectory }: Pick<ResolvedRemixVitePluginConfig, "rootDirectory">,
+  filePath: string
+) => {
+  let relativePath = path.relative(rootDirectory, filePath);
+
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new Error(
+      `Cannot resolve asset path "${filePath}" outside of root directory "${rootDirectory}".`
+    );
+  }
+
+  return `/${normalizePath(relativePath)}`;
+};
 
 const isJsFile = (filePath: string) => /\.[cm]?[jt]sx?$/i.test(filePath);
 
@@ -151,7 +164,7 @@ const getRouteModuleExports = async (
   let ssr = true;
   let { pluginContainer, moduleGraph } = viteChildCompiler;
   let routePath = path.join(pluginConfig.appDirectory, routeFile);
-  let url = resolveFsUrl(routePath);
+  let url = resolveFileUrl(pluginConfig, routePath);
 
   let resolveId = async () => {
     let result = await pluginContainer.resolveId(url, undefined, { ssr });
@@ -339,13 +352,16 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
 
     return `
     import * as entryServer from ${JSON.stringify(
-      resolveFsUrl(pluginConfig.entryServerFilePath)
+      resolveFileUrl(pluginConfig, pluginConfig.entryServerFilePath)
     )};
     ${Object.keys(pluginConfig.routes)
       .map((key, index) => {
         let route = pluginConfig.routes[key]!;
         return `import * as route${index} from ${JSON.stringify(
-          resolveFsUrl(resolveRelativeRouteFilePath(route, pluginConfig))
+          resolveFileUrl(
+            pluginConfig,
+            resolveRelativeRouteFilePath(route, pluginConfig)
+          )
         )};`;
       })
       .join("\n")}
@@ -450,7 +466,8 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
         path: route.path,
         index: route.index,
         caseSensitive: route.caseSensitive,
-        module: `${resolveFsUrl(
+        module: `${resolveFileUrl(
+          pluginConfig,
           resolveRelativeRouteFilePath(route, pluginConfig)
         )}${
           isJsFile(route.file) ? "" : "?import" // Ensure the Vite dev server responds with a JS module
@@ -466,7 +483,7 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
       version: String(Math.random()),
       url: VirtualModule.url(browserManifestId),
       entry: {
-        module: resolveFsUrl(pluginConfig.entryClientFilePath),
+        module: resolveFileUrl(pluginConfig, pluginConfig.entryClientFilePath),
         imports: [],
       },
       routes,
@@ -945,7 +962,8 @@ async function getRouteMetadata(
         pluginConfig.rootDirectory,
         resolveRelativeRouteFilePath(route, pluginConfig)
       ),
-    module: `${resolveFsUrl(
+    module: `${resolveFileUrl(
+      pluginConfig,
       resolveRelativeRouteFilePath(route, pluginConfig)
     )}?import`, // Ensure the Vite dev server responds with a JS module
     hasAction: sourceExports.includes("action"),
