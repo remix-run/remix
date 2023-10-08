@@ -21,7 +21,7 @@ export async function dev({
   spawn(
     "node",
     [
-      viteBin,
+      JSON.stringify(viteBin),
       "dev",
       ...(config ? ["--config", config] : []),
       ...(port ? ["--port", port] : []),
