@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import type { Readable } from "node:stream";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import fs from "node:fs/promises";
+import path from "node:path";
 import execa from "execa";
 import pidtree from "pidtree";
 import getPort from "get-port";
@@ -64,17 +66,19 @@ test.describe("Vite dev", () => {
         "app/routes/_index.tsx": js`
           import { useState, useEffect } from "react";
 
-          export default function() {
+          export default function IndexRoute() {
             const [mounted, setMounted] = useState(false);
             useEffect(() => {
               setMounted(true);
             }, []);
 
             return (
-              <>
-                <h2>Index</h2>
-                {!mounted ? <h3>Loading...</h3> : <h3 data-mounted>Mounted</h3>}
-              </>
+              <div id="index">
+                <h2 data-title>Index</h2>
+                <input />
+                <p data-mounted>Mounted: {mounted ? "yes" : "no"}</p>
+                <p data-hmr>HMR updated: no</p>
+              </div>
             );
           }
         `,
@@ -120,10 +124,30 @@ test.describe("Vite dev", () => {
     await page.goto(`http://localhost:${devPort}/`, {
       waitUntil: "networkidle",
     });
-    expect(await page.locator("#content h2").textContent()).toBe("Index");
-    expect(await page.locator("#content h3[data-mounted]").textContent()).toBe(
-      "Mounted"
+    await expect(page.locator("#index [data-title]")).toHaveText("Index");
+    await expect(page.locator("#index [data-mounted]")).toHaveText(
+      "Mounted: yes"
     );
+
+    let hmrStatus = page.locator("#index [data-hmr]");
+    await expect(hmrStatus).toHaveText("HMR updated: no");
+
+    let input = page.locator("#index input");
+    await expect(input).toBeVisible();
+    await input.type("stateful");
+
+    let indexRouteContents = await fs.readFile(
+      path.join(projectDir, "app/routes/_index.tsx"),
+      "utf8"
+    );
+    await fs.writeFile(
+      path.join(projectDir, "app/routes/_index.tsx"),
+      indexRouteContents.replace("HMR updated: no", "HMR updated: yes"),
+      "utf8"
+    );
+    await page.waitForLoadState("networkidle");
+    await expect(hmrStatus).toHaveText("HMR updated: yes");
+    await expect(input).toHaveValue("stateful");
   });
 });
 
