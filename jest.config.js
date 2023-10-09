@@ -7,6 +7,7 @@ module.exports = {
   ],
   projects: [
     "packages/create-remix",
+    "packages/remark-remix-mdx-frontmatter",
     "packages/remix",
     "packages/remix-architect",
     "packages/remix-cloudflare",

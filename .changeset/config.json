@@ -17,6 +17,7 @@
       "@remix-run/express",
       "@remix-run/node",
       "@remix-run/react",
+      "@remix-run/remark-remix-mdx-frontmatter",
       "@remix-run/serve",
       "@remix-run/server-runtime",
       "@remix-run/testing"

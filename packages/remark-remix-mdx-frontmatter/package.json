@@ -1,0 +1,39 @@
+{
+  "name": "@remix-run/remark-remix-mdx-frontmatter",
+  "version": "2.0.1",
+  "description": "Remark plugin to parse Remix-specific frontmatter in MDX files",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remark-remix-mdx-frontmatter"
+  },
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/esm/index.js",
+  "typings": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ],
+  "dependencies": {
+    "@types/estree": "^1.0.2",
+    "@types/mdast": "^3.0.0",
+    "estree-util-value-to-estree": "^3.0.1",
+    "toml": "^3.0.0",
+    "unified": "^10.0.0",
+    "yaml": "^2.0.0"
+  },
+  "devDependencies": {
+    "@mdx-js/mdx": "^2.3.0",
+    "estree-jsx": "^0.0.1",
+    "mdast-util-mdx": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

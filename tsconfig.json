@@ -3,6 +3,7 @@
   "references": [
     { "path": "integration" },
     { "path": "packages/create-remix" },
+    { "path": "packages/remark-remix-mdx-frontmatter" },
     { "path": "packages/remix" },
     { "path": "packages/remix-architect" },
     { "path": "packages/remix-cloudflare" },
