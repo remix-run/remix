@@ -17,10 +17,12 @@ declare module "*.css" {
   export default asset;
 }
 declare module "*.module.scss" {
-  let styles: {
-    readonly [key: string]: string;
-  };
+  let styles: { readonly [key: string]: string };
   export default styles;
+}
+declare module "*.scss" {
+  let asset: string;
+  export default asset;
 }
 declare module "*.csv" {
   let asset: string;
