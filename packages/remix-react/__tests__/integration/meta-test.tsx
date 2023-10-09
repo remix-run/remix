@@ -1,7 +1,8 @@
-import * as React from "react";
 import { Meta, Outlet } from "@remix-run/react";
 import { unstable_createRemixStub } from "@remix-run/testing";
-import { prettyDOM, render } from "@testing-library/react";
+import { prettyDOM, render, screen } from "@testing-library/react";
+import user from "@testing-library/user-event";
+import * as React from "react";
 
 const getHtml = (c: HTMLElement) =>
   prettyDOM(c, undefined, { highlight: false });
@@ -260,6 +261,65 @@ describe("meta", () => {
     let { container } = render(<RemixStub />);
     expect(getHtml(container)).toMatchInlineSnapshot(`
       "<div>
+        <link
+          href="https://website.com/authors/1"
+          rel="canonical"
+        />
+      </div>"
+    `);
+  });
+
+  it("does not mutate meta when using tagName", async () => {
+    let RemixStub = unstable_createRemixStub([
+      {
+        path: "/",
+        meta: ({ data }) => data?.meta,
+        loader: () => ({
+          meta: [
+            {
+              tagName: "link",
+              rel: "canonical",
+              href: "https://website.com/authors/1",
+            },
+          ],
+        }),
+        Component() {
+          let [count, setCount] = React.useState(0);
+          return (
+            <>
+              <button onClick={() => setCount(count + 1)}>
+                {`Increment ${count}`}
+              </button>
+              <Meta key={count} />
+            </>
+          );
+        },
+      },
+    ]);
+
+    let { container } = render(<RemixStub />);
+
+    await screen.findByText("Increment 0");
+    expect(getHtml(container)).toMatchInlineSnapshot(`
+      "<div>
+        <button>
+          Increment 0
+        </button>
+        <link
+          href="https://website.com/authors/1"
+          rel="canonical"
+        />
+      </div>"
+    `);
+
+    user.click(screen.getByRole("button"));
+    await screen.findByText("Increment 1");
+
+    expect(getHtml(container)).toMatchInlineSnapshot(`
+      "<div>
+        <button>
+          Increment 1
+        </button>
         <link
           href="https://website.com/authors/1"
           rel="canonical"
