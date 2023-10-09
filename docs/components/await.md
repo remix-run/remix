@@ -8,6 +8,8 @@ To get started with streaming data, check out the [Streaming Guide][streaming_gu
 
 The `<Await>` component is responsible for resolving deferred loader promises accessed from [`useLoaderData`][use_loader_data].
 
+`<Await>` must be wrapped in a `<Suspense>` parent, otherwise its deferred promise will be blocking.
+
 ```tsx
 import { Await } from "@remix-run/react";
 
