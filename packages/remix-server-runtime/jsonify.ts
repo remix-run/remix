@@ -1,3 +1,10 @@
+import {
+  expectType,
+  type Equal,
+  type Expect,
+  type MutualExtends,
+} from "./typecheck";
+
 // prettier-ignore
 // `Jsonify` emulates `let y = JSON.parse(JSON.stringify(x))`, but for types
 // so that we can infer the shape of the data sent over the network.
@@ -213,25 +220,7 @@ expectType<{ a: string; recur?: Jsonify<Recursive> }>(
   recursive.recur!.recur!.recur!
 );
 
-// testing utils ----------------------------------------------------
-
-// typecheck that expression is assignable to type
-function expectType<T>(_expression: T) {}
-
-// prettier-ignore
-// adapted from https://github.com/type-challenges/type-challenges/blob/main/utils/index.d.ts
-type Equal<X, Y> =
-  (<T>() => T extends X ? 1 : 2) extends
-  (<T>() => T extends Y ? 1 : 2) ? true : false
-
-// adapted from https://github.com/type-challenges/type-challenges/blob/main/utils/index.d.ts
-type Expect<T extends true> = T;
-
-// looser, lazy equality check for recursive types
-// prettier-ignore
-type MutualExtends<A, B> = [A] extends [B] ? [B] extends [A] ? true : false : false
-
-// general utils ----------------------------------------------------
+// utils ------------------------------------------------------------
 
 type Pretty<T> = { [K in keyof T]: T[K] };
 

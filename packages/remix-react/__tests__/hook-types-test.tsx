@@ -9,6 +9,8 @@ function isEqual<A, B>(
   _arg: A extends B ? (B extends A ? true : false) : false
 ): void {}
 
+type Function = (...args: any[]) => any;
+
 type LoaderData<T> = ReturnType<typeof useLoaderData<T>>;
 type RouteLoaderData<T> = ReturnType<typeof useRouteLoaderData<T>>;
 
