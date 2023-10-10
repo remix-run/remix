@@ -209,7 +209,20 @@ type _tests = [
   Expect<Equal<Pretty<Jsonify<{a: never}>>, {a: never}>>,
   Expect<Equal<Pretty<Jsonify<{a: never, b: string}>>, {a: never, b:string}>>,
   Expect<Equal<Pretty<Jsonify<{a: never, b: string} | {a: string, b: never}>>, {a: never, b: string} | {a: string, b: never}>>,
+
+  // class
+  Expect<Equal<Pretty<Jsonify<MyClass>>, {a: string}>>,
 ];
+
+class MyClass {
+  a: string;
+  b: () => string;
+
+  constructor() {
+    this.a = "hello";
+    this.b = () => "world";
+  }
+}
 
 type Recursive = {
   a: Date;
