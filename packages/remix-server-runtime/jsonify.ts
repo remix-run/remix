@@ -12,6 +12,9 @@ export type Jsonify<T> =
   // any
   IsAny<T> extends true ? any :
 
+  // toJSON
+  T extends { toJSON(): infer U } ? (U extends JsonValue ? U : unknown) :
+
   // primitives
   T extends JsonPrimitive ? T :
   T extends String ? string :
@@ -27,9 +30,6 @@ export type Jsonify<T> =
 
   // Not JSON serializable
   T extends NotJson ? never :
-
-  // toJSON
-  T extends { toJSON(): infer U } ? (U extends JsonValue ? U : unknown) :
 
   // tuple & array
   T extends [] ? [] :
@@ -148,6 +148,8 @@ type _tests = [
   Expect<Equal<Jsonify<Date>, string>>,
   Expect<Equal<Jsonify<{ toJSON(): undefined }>, unknown>>,
   Expect<Equal<Jsonify<{ toJSON(): Date }>, unknown>>,
+  Expect<Equal<Jsonify<BooleanWithToJson>, string>>,
+
 
   // tuple & array
   Expect<Equal<Jsonify<[]>, []>>,
@@ -224,6 +226,7 @@ class MyClass {
   }
 }
 
+// real-world example: `InvoiceLineItem` from `stripe`
 type Recursive = {
   a: Date;
   recur?: Recursive;
@@ -232,6 +235,11 @@ declare const recursive: Jsonify<Recursive>;
 expectType<{ a: string; recur?: Jsonify<Recursive> }>(
   recursive.recur!.recur!.recur!
 );
+
+// real-world example: `Temporal` from `@js-temporal/polyfill`
+interface BooleanWithToJson extends Boolean {
+  toJSON(): string;
+}
 
 // utils ------------------------------------------------------------
 
