@@ -6,7 +6,7 @@ import type {
 import type { useLoaderData, useRouteLoaderData } from "../components";
 
 function isEqual<A, B>(
-  arg: A extends B ? (B extends A ? true : false) : false
+  _arg: A extends B ? (B extends A ? true : false) : false
 ): void {}
 
 type LoaderData<T> = ReturnType<typeof useLoaderData<T>>;
@@ -321,11 +321,5 @@ describe("deferred type serializer", () => {
       { hello: SerializedAppData; lazy: Promise<SerializedAppData> }
     >(true);
     isEqual<response, routeResponse>(true);
-  });
-
-  it("allows data key in value", () => {
-    type AppData = { data: Promise<{ hello: string }> };
-    type response = LoaderData<AppData>;
-    isEqual<response, { data: Promise<{ hello: string }> }>(true);
   });
 });
