@@ -31,6 +31,7 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   ".node": "copy",
   ".ogg": "file",
   ".otf": "file",
+  ".pdf": "file",
   ".png": "file",
   ".psd": "file",
   ".sql": "text",
