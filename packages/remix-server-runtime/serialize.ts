@@ -59,9 +59,6 @@ type _tests = [
   // back compat: plain object
   Expect<Equal<Pretty<SerializeFrom<{a: string}>>, {a: string}>>,
 
-  // plain response
-  Expect<Equal<SerializeFrom<() => Response>, any>>,
-
   // only thrown responses (e.g. redirects)
   Expect<Equal<SerializeFrom<Loader<never>>, never>>,
 
