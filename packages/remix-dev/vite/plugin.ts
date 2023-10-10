@@ -7,7 +7,7 @@ import babel from "@babel/core";
 import PackageJson from "@npmcli/package-json";
 import { type ServerBuild } from "@remix-run/server-runtime";
 import {
-  type Plugin,
+  type Plugin as VitePlugin,
   type Manifest as ViteManifest,
   type ResolvedConfig as ResolvedViteConfig,
   type ViteDevServer,
@@ -45,7 +45,9 @@ export type RemixVitePluginOptions = Pick<
   | "routes"
   | "serverBuildPath"
   | "serverModuleFormat"
->;
+> & {
+  legacyCssImports?: boolean;
+};
 
 type ResolvedRemixVitePluginConfig = Pick<
   ResolvedRemixConfig,
@@ -199,7 +201,7 @@ const findEntry = (dir: string, basename: string): string | undefined => {
 const addTrailingSlash = (path: string): string =>
   path.endsWith("/") ? path : path + "/";
 
-export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
+export let remix: (options?: RemixVitePluginOptions) => VitePlugin[] = (
   options = {}
 ) => {
   let viteCommand: ResolvedViteConfig["command"];
@@ -856,6 +858,19 @@ export let remix: (options?: RemixVitePluginOptions) => Plugin[] = (
         return modules;
       },
     },
+    ...((options.legacyCssImports
+      ? [
+          {
+            name: "remix-legacy-css-imports",
+            enforce: "pre",
+            transform(code) {
+              if (code.includes('.css"') || code.includes(".css'")) {
+                return transformLegacyCssImports(code);
+              }
+            },
+          },
+        ]
+      : []) satisfies VitePlugin[]),
   ];
 };
 
@@ -912,20 +927,6 @@ if (import.meta.hot && !inWebWorker) {
     });
   });
 }`;
-
-export let legacyCssImportSemantics: () => Plugin[] = () => {
-  return [
-    {
-      name: "remix-legacy-css-import-semantics",
-      enforce: "pre",
-      transform(code) {
-        if (code.includes('.css"') || code.includes(".css'")) {
-          return transformLegacyCssImports(code);
-        }
-      },
-    },
-  ];
-};
 
 function getRoute(
   pluginConfig: ResolvedRemixVitePluginConfig,

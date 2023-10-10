@@ -12,7 +12,7 @@ export interface RemarkRemixMdxFrontmatterOptions {
   parsers?: FrontmatterParsers;
 }
 
-export const remarkRemixMdxFrontmatter: Plugin<
+export const experimental_remarkRemixMdxFrontmatter: Plugin<
   [RemarkRemixMdxFrontmatterOptions?],
   any
 > = ({ name: frontmatterExportName = "frontmatter", parsers } = {}) => {
@@ -103,5 +103,3 @@ export const remarkRemixMdxFrontmatter: Plugin<
     });
   };
 };
-
-export default remarkRemixMdxFrontmatter;

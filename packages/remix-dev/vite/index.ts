@@ -1,4 +1,1 @@
-export {
-  remix as experimental_remix,
-  legacyCssImportSemantics as experimental_legacyCssImportSemantics,
-} from "./plugin";
+export { remix as experimental_remix } from "./plugin";
