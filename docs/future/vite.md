@@ -9,7 +9,7 @@ toc: false
 
 [Vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we're currently exploring the use of Vite as an alternative compiler to esbuild.
 
-**Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Supported)
+**Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Yet Supported)
 
 | Feature                      | Node | Deno | Cloudflare | Notes                                     |
 | ---------------------------- | ---- | ---- | ---------- | ----------------------------------------- |
