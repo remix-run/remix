@@ -116,8 +116,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--tls-key": String,
       "--tls-cert": String,
 
-      // vite
-      ...(process.env.REMIX_EXPERIMENTAL_VITE
+      ...(process.env.REMIX_UNSTABLE_VITE
         ? {
             "--strictPort": Boolean,
             "--config": String,
@@ -180,7 +179,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.routes(input[1], flags.json ? "json" : "jsx");
       break;
     case "build":
-      if (process.env.REMIX_EXPERIMENTAL_VITE) {
+      if (process.env.REMIX_UNSTABLE_VITE) {
         await commands.viteBuild(flags);
       } else {
         if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
@@ -200,7 +199,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     }
     case "dev":
-      await (process.env.REMIX_EXPERIMENTAL_VITE
+      await (process.env.REMIX_UNSTABLE_VITE
         ? commands.viteDev(flags)
         : commands.dev(input[1], flags));
       break;

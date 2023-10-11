@@ -67,16 +67,16 @@ export default defineConfig({
 
 All other bundling-related options are now [configured with Vite][vite-config]. This means you have much greater control over the bundling process.
 
-To start a development server or run a production build using Vite, set the `REMIX_EXPERIMENTAL_VITE` environment variable when running Remix's `dev` and `build` commands:
+To start a development server or run a production build using Vite, set the `REMIX_UNSTABLE_VITE` environment variable when running Remix's `dev` and `build` commands:
 
 <docs-info>You can use [cross-env](https://www.npmjs.com/package/cross-env) to set this environment variable in a cross-platform manner.</docs-info>
 
 ```shellscript nonumber
 # Start a development server:
-cross-env REMIX_EXPERIMENTAL_VITE=1 remix dev
+cross-env REMIX_UNSTABLE_VITE=1 remix dev
 
 # Run a production build:
-cross-env REMIX_EXPERIMENTAL_VITE=1 remix build
+cross-env REMIX_UNSTABLE_VITE=1 remix build
 ```
 
 ## Differences When Using Vite

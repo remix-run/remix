@@ -15,7 +15,7 @@ test.describe("Vite build", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       env: {
-        REMIX_EXPERIMENTAL_VITE: "1",
+        REMIX_UNSTABLE_VITE: "1",
       },
       files: {
         "remix.config.js": js`

@@ -19,7 +19,7 @@ test.describe("Vite dev", () => {
     devPort = await getPort();
     projectDir = await createFixtureProject({
       env: {
-        REMIX_EXPERIMENTAL_VITE: "1",
+        REMIX_UNSTABLE_VITE: "1",
       },
       files: {
         "remix.config.js": js`
@@ -91,7 +91,7 @@ test.describe("Vite dev", () => {
       ["./node_modules/@remix-run/dev/dist/cli.js", "dev"],
       {
         cwd: projectDir,
-        env: { ...process.env, REMIX_EXPERIMENTAL_VITE: "1" },
+        env: { ...process.env, REMIX_UNSTABLE_VITE: "1" },
         stdio: "pipe",
       }
     );
