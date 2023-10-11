@@ -74,3 +74,4 @@ export function ErrorBoundary() {
 [errors]: ./errors
 [404-status-code]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
 [splat-route]: ./routing#splats
+[error-boundary]: ../route/error-boundary
