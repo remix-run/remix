@@ -9,6 +9,8 @@ toc: false
 
 [Vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we're currently exploring the use of Vite as an alternative compiler to esbuild.
 
+**Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Supported)
+
 | Feature                      | Node | Deno | Cloudflare | Notes                                     |
 | ---------------------------- | ---- | ---- | ---------- | ----------------------------------------- |
 | Built-in dev server          | ✅   | ❓   | ⏳         |                                           |
@@ -16,6 +18,8 @@ toc: false
 | HMR                          | ✅   | ❓   | ⏳         |                                           |
 | HDR                          | ✅   | ❓   | ⏳         |                                           |
 | MDX                          | ⏳   | ⏳   | ⏳         | https://github.com/vitejs/vite/pull/14560 |
+
+## Getting started
 
 To get started with Vite in an existing Remix project (or a new one created with [create-remix]), first install Vite as a dev dependency:
 
