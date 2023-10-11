@@ -28,7 +28,7 @@ test.describe("Vite dev", () => {
         `,
         "vite.config.mjs": js`
           import { defineConfig } from "vite";
-          import { experimental_remix } from "@remix-run/dev/vite";
+          import { unstable_remixVitePlugin } from "@remix-run/dev";
 
           export default defineConfig({
             optimizeDeps: {
@@ -38,7 +38,7 @@ test.describe("Vite dev", () => {
               port: ${devPort},
               strictPort: true,
             },
-            plugins: [experimental_remix()],
+            plugins: [unstable_remixVitePlugin()],
           });
         `,
         "app/root.tsx": js`

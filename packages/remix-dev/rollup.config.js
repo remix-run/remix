@@ -23,7 +23,12 @@ module.exports = function rollup() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: [`${sourceDir}/index.ts`, `${sourceDir}/vite/index.ts`],
+      input: [
+        `${sourceDir}/index.ts`,
+        // Since we're using a dynamic require for the Vite plugin, we
+        // need to tell Rollup it's an entry point
+        `${sourceDir}/vite/plugin.ts`,
+      ],
       output: {
         banner: createBanner("@remix-run/dev", version),
         dir: outputDist,
@@ -48,11 +53,6 @@ module.exports = function rollup() {
               src: `${sourceDir}/config/defaults`,
               dest: [`${outputDir}/config`, `${outputDist}/config`],
             },
-            // This needs to end up in the root of the pkg but also needs to
-            // reference other compiled files. Just copying these are easier
-            // than dealing with output configuration for sharing chunks x-builds.
-            { src: `${sourceDir}/vite.js`, dest: outputDir },
-            { src: `${sourceDir}/vite.d.ts`, dest: outputDir },
           ],
         }),
         // Allow dynamic imports in CJS code to allow us to utilize

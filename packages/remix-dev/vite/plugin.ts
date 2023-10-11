@@ -201,9 +201,10 @@ const findEntry = (dir: string, basename: string): string | undefined => {
 const addTrailingSlash = (path: string): string =>
   path.endsWith("/") ? path : path + "/";
 
-export let remix: (options?: RemixVitePluginOptions) => VitePlugin[] = (
-  options = {}
-) => {
+export type RemixVitePlugin = (
+  options?: RemixVitePluginOptions
+) => VitePlugin[];
+export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
   let viteCommand: ResolvedViteConfig["command"];
   let viteUserConfig: ViteUserConfig;
 
