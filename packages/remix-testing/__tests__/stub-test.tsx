@@ -1,12 +1,12 @@
 import * as React from "react";
 import { render, screen } from "@testing-library/react";
-import { unstable_createRemixStub } from "@remix-run/testing";
+import { createRemixStub } from "@remix-run/testing";
 import { Outlet, useLoaderData, useMatches } from "@remix-run/react";
 import type { DataFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 
 test("renders a route", () => {
-  let RemixStub = unstable_createRemixStub([
+  let RemixStub = createRemixStub([
     {
       path: "/",
       Component: () => <div>HOME</div>,
@@ -19,7 +19,7 @@ test("renders a route", () => {
 });
 
 test("renders a nested route", () => {
-  let RemixStub = unstable_createRemixStub([
+  let RemixStub = createRemixStub([
     {
       Component() {
         return (
@@ -50,7 +50,7 @@ test("loaders work", async () => {
     return <pre data-testid="data">Message: {data.message}</pre>;
   }
 
-  let RemixStub = unstable_createRemixStub([
+  let RemixStub = createRemixStub([
     {
       path: "/",
       index: true,
@@ -73,7 +73,7 @@ test("can pass a predefined loader", () => {
     return json({ hi: "there" });
   }
 
-  unstable_createRemixStub([
+  createRemixStub([
     {
       path: "/example",
       loader,
@@ -97,7 +97,7 @@ test("can pass context values", async () => {
     return <pre data-testid="hello">Context: {data.context}</pre>;
   }
 
-  let RemixStub = unstable_createRemixStub(
+  let RemixStub = createRemixStub(
     [
       {
         path: "/",
@@ -141,7 +141,7 @@ test("all routes have ids", () => {
     );
   }
 
-  let RemixStub = unstable_createRemixStub([
+  let RemixStub = createRemixStub([
     {
       Component() {
         return (
