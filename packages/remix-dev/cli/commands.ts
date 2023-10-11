@@ -135,6 +135,12 @@ export async function build(
 }
 
 export async function viteBuild(options: ViteBuildOptions = {}) {
+  console.warn(
+    pc.yellow(
+      "  ⚠️  Remix support for Vite is unstable\n     and not recommended for production\n"
+    )
+  );
+
   let { build } = await import("../vite/build");
   await build(options);
 }

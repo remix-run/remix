@@ -20,6 +20,7 @@ import {
   parse as esModuleLexer,
 } from "es-module-lexer";
 import jsesc from "jsesc";
+import colors from "picocolors";
 
 import { defineRoutes, type RouteManifest } from "../config/routes";
 import {
@@ -591,6 +592,15 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }
       },
       configureServer(vite) {
+        vite.httpServer?.on("listening", () => {
+          setTimeout(() => {
+            vite.config.logger.warn(
+              colors.yellow(
+                "\n  ⚠️  Remix support for Vite is unstable\n     and not recommended for production\n"
+              )
+            );
+          }, 50);
+        });
         return () => {
           vite.middlewares.use(async (req, res, next) => {
             try {
