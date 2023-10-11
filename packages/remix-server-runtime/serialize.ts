@@ -17,21 +17,27 @@ export type SerializeFrom<T> =
 ;
 
 // note: cannot be inlined as logic requires union distribution
-type Serialize<Output> = Output extends TypedDeferredData<infer U>
-  ? // top-level promises
-    {
-      [K in keyof U as K extends symbol
-        ? never
-        : Promise<any> extends U[K]
-        ? K
-        : never]: DeferValue<U[K]>; // use generic to distribute over union
-    } & Jsonify<{
-      // non-promises
-      [K in keyof U as Promise<any> extends U[K] ? never : K]: U[K];
+// prettier-ignore
+type Serialize<Output> =
+  Output extends TypedDeferredData<infer U> ?
+    // top-level promises
+    & {
+      [K in keyof U as
+        K extends symbol ? never :
+        Promise<any> extends U[K] ? K :
+        never
+      ]: DeferValue<U[K]>; // use generic to distribute over union
+    }
+    // non-promises
+    & Jsonify<{
+      [K in keyof U as
+        Promise<any> extends U[K] ? never :
+        K
+      ]: U[K];
     }>
-  : Output extends TypedResponse<infer U>
-  ? Jsonify<U>
-  : Jsonify<Output>;
+  :
+  Output extends TypedResponse<infer U> ? Jsonify<U> :
+  Jsonify<Output>;
 
 // prettier-ignore
 type DeferValue<T> =
