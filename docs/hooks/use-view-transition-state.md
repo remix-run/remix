@@ -11,8 +11,8 @@ Consider clicking on an image in a list that you need to expand into the hero im
 
 ```jsx
 function NavImage({ src, alt, id }) {
-  let to = `/images/${idx}`;
-  let vt = unstable_useViewTransitionState(href);
+  const to = `/images/${idx}`;
+  const vt = unstable_useViewTransitionState(href);
   return (
     <Link to={to} unstable_viewTransition>
       <img
