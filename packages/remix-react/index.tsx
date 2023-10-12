@@ -50,6 +50,7 @@ export {
   useSubmit,
   unstable_useBlocker,
   unstable_usePrompt,
+  unstable_useViewTransitionState,
 } from "react-router-dom";
 
 export type {
