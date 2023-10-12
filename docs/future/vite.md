@@ -247,7 +247,7 @@ export default defineConfig({
 
 ### MDX
 
-Since Vite's plugin API is an extension of the Rollup plugin API, you can use the official MDX Rollup plugin in Vite:
+Since Vite's plugin API is an extension of the Rollup plugin API, you can use the official [MDX Rollup plugin][mdx-rollup-plugin]:
 
 ```shellscript nonumber
 npm install -D @mdx-js/rollup
@@ -265,21 +265,23 @@ export default defineConfig({
 });
 ```
 
-The Remix compiler allowed you to define [frontmatter in MDX][mdx-frontmatter] including `headers`, `meta` and `handle` route exports. To reinstate this feature, you can install the following [Remark][remark] plugins:
+#### MDX Frontmatter
+
+The Remix compiler allowed you to define [frontmatter in MDX][mdx-frontmatter]. You can achieve this in Vite using [remark-mdx-frontmatter].
+
+First, install the required [Remark][remark] plugins:
 
 ```shellscript nonumber
-npm install -D remark-frontmatter @remix-run/remix-remark-mdx-frontmatter
+npm install -D remark-frontmatter remark-mdx-frontmatter
 ```
-
-<docs-info>These plugins are entirely optional. You can use [remark-mdx-frontmatter] if you don't need your frontmatter to contain Remix route exports (these can be defined with regular export statements if you prefer), or you can skip using frontmatter entirely.</docs-info>
 
 Then provide these plugins to the MDX Rollup plugin:
 
 ```js filename=vite.config.mjs
 import mdx from "@mdx-js/rollup";
 import { unstable_remixVitePlugin } from "@remix-run/dev";
-import { experimental_remarkRemixMdxFrontmatter } from "@remix-run/remix-remark-mdx-frontmatter";
 import remarkFrontmatter from "remark-frontmatter";
+import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -288,22 +290,20 @@ export default defineConfig({
     mdx({
       remarkPlugins: [
         remarkFrontmatter,
-        experimental_remarkRemixMdxFrontmatter,
+        remarkMdxFrontmatter,
       ],
     }),
   ],
 });
 ```
 
-By default the `@remix-run/remark-remix-mdx-frontmatter` plugin provides frontmatter via the `frontmatter` export. This differs from the Remix compiler's frontmatter export name of `attributes`.
-
-To maintain backwards compatibility with the Remix compiler, you can override this via the `name` option and revert it to its original `attributes` export:
+In the Remix compiler, the frontmatter export was named `attributes`. This differs from the frontmatter plugin's default export name of `frontmatter`. To maintain backwards compatibility with the Remix compiler, you can override this via the `name` option:
 
 ```js filename=vite.config.mjs
 import mdx from "@mdx-js/rollup";
 import { unstable_remixVitePlugin } from "@remix-run/dev";
-import { experimental_remarkRemixMdxFrontmatter } from "@remix-run/remix-remark-mdx-frontmatter";
 import remarkFrontmatter from "remark-frontmatter";
+import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -312,13 +312,82 @@ export default defineConfig({
     mdx({
       remarkPlugins: [
         remarkFrontmatter,
-        [
-          experimental_remarkRemixMdxFrontmatter,
-          { name: "attributes" },
-        ],
+        [remarkMdxFrontmatter, { name: "attributes" }],
       ],
     }),
   ],
+});
+```
+
+##### MDX Route Frontmatter
+
+The Remix compiler allowed you to define `headers`, `meta` and `handle` route exports in your frontmatter. This Remix-specific feature is obviously not supported by the `remark-mdx-frontmatter` plugin, but you can manually map frontmatter to route exports yourself:
+
+```mdx
+---
+meta:
+  - title: My First Post
+  - name: description
+    content: Isn't this awesome?
+headers:
+  Cache-Control: no-cache
+---
+
+export const meta = frontmatter.meta;
+export const headers = frontmatter.headers;
+
+# Hello World
+```
+
+By writing these MDX route exports yourself, you're free to use whatever frontmatter structure you like.
+
+```mdx
+---
+title: My First Post
+description: Isn't this awesome?
+---
+
+export const meta = () => {
+  return [
+    { title: frontmatter.title },
+    {
+      name: "description",
+      content: frontmatter.description,
+    },
+  ];
+};
+
+# Hello World
+```
+
+<docs-info>You may even want to take this a step further and create a [remark plugin][remark-plugin] that automatically maps frontmatter to route exports for you.</doc-info>
+
+##### MDX Filename Export
+
+The Remix compiler also provided a `filename` export from all MDX files. This was primarily designed to enable linking to collections of MDX routes. In Vite, you should achieve this via [glob imports][glob-imports] which give you a handy data structure that maps file names to modules. This makes it much easier to maintain a list of MDX files since you no longer need to import each one manually.
+
+For example, to import all MDX files in the `posts` directory:
+
+```ts
+const posts = import.meta.glob("./posts/*.mdx");
+```
+
+This is equivalent to writing this by hand:
+
+```ts
+const posts = {
+  "./posts/a.mdx": () => import("./posts/a.mdx"),
+  "./posts/b.mdx": () => import("./posts/b.mdx"),
+  "./posts/c.mdx": () => import("./posts/c.mdx"),
+  // etc.
+};
+```
+
+You can also eagerly import all MDX files if you'd prefer:
+
+```ts
+const posts = import.meta.glob("./posts/*.mdx", {
+  eager: true,
 });
 ```
 
@@ -439,9 +508,11 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [tailwind-postcss]: https://tailwindcss.com/docs/installation/using-postcss
 [vanilla-extract]: https://vanilla-extract.style
 [vanilla-extract-vite-plugin]: https://vanilla-extract.style/documentation/integrations/vite
+[mdx-rollup-plugin]: https://mdxjs.com/packages/rollup
 [mdx-frontmatter]: https://mdxjs.com/guides/frontmatter
 [remark-mdx-frontmatter]: https://github.com/remcohaszing/remark-mdx-frontmatter
-[remark]: https://remark.js.org
+[remark-plugin]: https://github.com/remarkjs/remark/blob/main/doc/plugins.md
+[glob-imports]: https://vitejs.dev/guide/features.html#glob-import
 [use_loader_data]: ../hooks/use-loader-data
 [react_refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
 [vite-team]: https://vitejs.dev/team.html

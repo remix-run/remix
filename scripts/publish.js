@@ -56,7 +56,6 @@ async function run() {
     "serve",
     "css-bundle",
     "testing",
-    "remark-remix-mdx-frontmatter",
   ]) {
     publish(path.join(buildDir, "@remix-run", name), tag);
   }

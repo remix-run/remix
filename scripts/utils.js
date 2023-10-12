@@ -17,7 +17,6 @@ let remixPackages = {
     "eslint-config",
     "css-bundle",
     "testing",
-    "remark-remix-mdx-frontmatter",
   ],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];
