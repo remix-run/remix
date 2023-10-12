@@ -202,6 +202,14 @@ const findEntry = (dir: string, basename: string): string | undefined => {
 const addTrailingSlash = (path: string): string =>
   path.endsWith("/") ? path : path + "/";
 
+const showUnstableWarning = () => {
+  console.warn(
+    colors.yellow(
+      "\n  ⚠️  Remix support for Vite is unstable\n     and not recommended for production\n"
+    )
+  );
+};
+
 export type RemixVitePlugin = (
   options?: RemixVitePluginOptions
 ) => VitePlugin[];
@@ -591,15 +599,14 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           cssModulesManifest[id] = code;
         }
       },
+      buildStart() {
+        if (viteCommand === "build") {
+          showUnstableWarning();
+        }
+      },
       configureServer(vite) {
         vite.httpServer?.on("listening", () => {
-          setTimeout(() => {
-            vite.config.logger.warn(
-              colors.yellow(
-                "\n  ⚠️  Remix support for Vite is unstable\n     and not recommended for production\n"
-              )
-            );
-          }, 50);
+          setTimeout(showUnstableWarning, 50);
         });
         return () => {
           vite.middlewares.use(async (req, res, next) => {

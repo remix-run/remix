@@ -14,9 +14,7 @@ test.describe("Vite build", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      env: {
-        REMIX_UNSTABLE_VITE: "1",
-      },
+      compiler: "vite",
       files: {
         "remix.config.js": js`
           throw new Error("Remix should not access remix.config.js when using Vite");
@@ -24,10 +22,10 @@ test.describe("Vite build", () => {
         `,
         "vite.config.mjs": js`
           import { defineConfig } from "vite";
-          import { unstable_vitePlugin } from "@remix-run/dev";
+          import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [unstable_vitePlugin()],
+            plugins: [remix()],
           });
         `,
         "app/root.tsx": js`

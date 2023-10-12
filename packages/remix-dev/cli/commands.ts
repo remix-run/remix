@@ -11,8 +11,6 @@ import * as compiler from "../compiler";
 import * as devServer from "../devServer";
 import * as devServer_unstable from "../devServer_unstable";
 import type { RemixConfig } from "../config";
-import { type ViteDevOptions } from "../vite/dev";
-import { type ViteBuildOptions } from "../vite/build";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { detectPackageManager } from "./detectPackageManager";
@@ -134,17 +132,6 @@ export async function build(
   logger.info("built" + pc.gray(` (${prettyMs(Date.now() - start)})`));
 }
 
-export async function viteBuild(options: ViteBuildOptions = {}) {
-  console.warn(
-    pc.yellow(
-      "  ⚠️  Remix support for Vite is unstable\n     and not recommended for production\n"
-    )
-  );
-
-  let { build } = await import("../vite/build");
-  await build(options);
-}
-
 export async function watch(
   remixRootOrConfig: string | RemixConfig,
   mode?: string
@@ -186,11 +173,6 @@ export async function dev(
 
   // keep `remix dev` alive by waiting indefinitely
   await new Promise(() => {});
-}
-
-export async function viteDev(options: ViteDevOptions = {}) {
-  let { dev } = await import("../vite/dev");
-  await dev(options);
 }
 
 let clientEntries = ["entry.client.tsx", "entry.client.js", "entry.client.jsx"];

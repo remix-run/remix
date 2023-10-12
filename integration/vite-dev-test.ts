@@ -3,6 +3,7 @@ import type { Readable } from "node:stream";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import resolveBin from "resolve-bin";
 import execa from "execa";
 import pidtree from "pidtree";
 import getPort from "get-port";
@@ -18,9 +19,7 @@ test.describe("Vite dev", () => {
   test.beforeAll(async () => {
     devPort = await getPort();
     projectDir = await createFixtureProject({
-      env: {
-        REMIX_UNSTABLE_VITE: "1",
-      },
+      compiler: "vite",
       files: {
         "remix.config.js": js`
           throw new Error("Remix should not access remix.config.js when using Vite");
@@ -28,7 +27,7 @@ test.describe("Vite dev", () => {
         `,
         "vite.config.mjs": js`
           import { defineConfig } from "vite";
-          import { unstable_vitePlugin } from "@remix-run/dev";
+          import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
             optimizeDeps: {
@@ -38,7 +37,7 @@ test.describe("Vite dev", () => {
               port: ${devPort},
               strictPort: true,
             },
-            plugins: [unstable_vitePlugin()],
+            plugins: [remix()],
           });
         `,
         "app/root.tsx": js`
@@ -85,16 +84,13 @@ test.describe("Vite dev", () => {
       },
     });
 
-    let nodebin = process.argv[0];
-    devProc = spawn(
-      nodebin,
-      ["./node_modules/@remix-run/dev/dist/cli.js", "dev"],
-      {
-        cwd: projectDir,
-        env: { ...process.env, REMIX_UNSTABLE_VITE: "1" },
-        stdio: "pipe",
-      }
-    );
+    let nodeBin = process.argv[0];
+    let viteBin = resolveBin.sync("vite");
+    devProc = spawn(nodeBin, [viteBin, "dev"], {
+      cwd: projectDir,
+      env: process.env,
+      stdio: "pipe",
+    });
     let devStdout = bufferize(devProc.stdout);
     let devStderr = bufferize(devProc.stderr);
 
