@@ -149,7 +149,7 @@ test("can pass context values", async () => {
           let data = useLoaderData() as { context: string };
           return (
             <div>
-              <pre data-testid="root">Context: {data.context}</pre>;
+              <pre data-testid="root">Context: {data.context}</pre>
               <Outlet />
             </div>
           );
