@@ -24,10 +24,10 @@ test.describe("Vite build", () => {
         `,
         "vite.config.mjs": js`
           import { defineConfig } from "vite";
-          import { unstable_remixVitePlugin } from "@remix-run/dev";
+          import { unstable_vitePlugin } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [unstable_remixVitePlugin()],
+            plugins: [unstable_vitePlugin()],
           });
         `,
         "app/root.tsx": js`

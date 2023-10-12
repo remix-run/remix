@@ -3,7 +3,7 @@
 // be imported at the top level.
 import type { RemixVitePlugin } from "./plugin";
 
-export const unstable_remixVitePlugin: RemixVitePlugin = (...args) => {
+export const unstable_vitePlugin: RemixVitePlugin = (...args) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   let { remixVitePlugin } = require("./plugin") as typeof import("./plugin");
   return remixVitePlugin(...args);
