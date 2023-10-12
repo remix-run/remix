@@ -39,7 +39,7 @@ test("renders loader data", async () => {
 });
 ```
 
-If your loaders rely on the `getLoadContext` method, you can provide a stuibbed context via the second parameter to `createRemixStub`:
+If your loaders rely on the `getLoadContext` method, you can provide a stubbed context via the second parameter to `createRemixStub`:
 
 ```tsx
 const RemixStub = createRemixStub(
