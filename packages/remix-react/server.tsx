@@ -5,10 +5,11 @@ import {
   StaticRouterProvider,
 } from "react-router-dom/server";
 
-import { RemixContext } from "./components";
+import { Links, Meta, RemixContext, Scripts } from "./components";
 import type { EntryContext } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
 import { createServerRoutes } from "./routes";
+import { RemixRootDefaultFallback } from "./fallback";
 
 export interface RemixServerProps {
   context: EntryContext;
@@ -37,6 +38,11 @@ export function RemixServer({
     context.future
   );
   let router = createStaticRouter(routes, context.staticHandlerContext);
+  let showFallback = router.state.matches.some(
+    (m) => manifest.routes[m.route.id].hasClientLoader
+  );
+  let FallbackElement =
+    routeModules["root"].Fallback || RemixRootDefaultFallback;
 
   return (
     <RemixContext.Provider
@@ -55,6 +61,7 @@ export function RemixServer({
           router={router}
           context={context.staticHandlerContext}
           hydrate={false}
+          fallbackElement={showFallback ? <FallbackElement /> : undefined}
         />
       </RemixErrorBoundary>
     </RemixContext.Provider>

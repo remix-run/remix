@@ -1,12 +1,26 @@
 import * as React from "react";
-import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
 import type {
+  HydrationState,
+  UNSAFE_DeferredData as DeferredData,
+} from "@remix-run/router";
+import {
+  UNSAFE_ErrorResponseImpl as ErrorResponse,
+  json as routerJson,
+} from "@remix-run/router";
+import type {
+  ActionFunctionArgs as RRActionFunctionArgs,
+  LoaderFunctionArgs as RRLoaderFunctionArgs,
   DataRouteObject,
   ShouldRevalidateFunction,
 } from "react-router-dom";
 import { redirect, useRouteError } from "react-router-dom";
 
-import type { RouteModule, RouteModules } from "./routeModules";
+import type {
+  ClientActionFunction,
+  ClientLoaderFunction,
+  RouteModule,
+  RouteModules,
+} from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 import {
   fetchData,
@@ -36,6 +50,8 @@ interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
+  hasClientAction: boolean;
+  hasClientLoader: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
   css?: string[];
@@ -103,11 +119,13 @@ export function createClientRoutesWithHMRRevalidationOptOut(
   needsRevalidation: Set<string>,
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
+  initialState: HydrationState,
   future: FutureConfig
 ) {
   return createClientRoutes(
     manifest,
     routeModulesCache,
+    initialState,
     future,
     "",
     groupRoutesByParentId(manifest),
@@ -118,6 +136,7 @@ export function createClientRoutesWithHMRRevalidationOptOut(
 export function createClientRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
+  initialState: HydrationState,
   future: FutureConfig,
   parentId: string = "",
   routesByParentId: Record<
@@ -128,30 +147,66 @@ export function createClientRoutes(
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModulesCache?.[route.id];
-    let dataRoute: DataRouteObject = {
-      id: route.id,
-      index: route.index,
-      path: route.path,
-      async loader({ request }) {
-        // Only prefetch links if we've been loaded into the cache, route.lazy
-        // will handle initial loads
-        let routeModulePromise = routeModulesCache[route.id]
-          ? prefetchStyleLinks(route, routeModulesCache[route.id])
-          : Promise.resolve();
-        try {
+
+    async function serverLoader({ request }: { request: Request }) {
+      // Only prefetch links if we've been loaded into the cache, route.lazy
+      // will handle initial loads
+      let routeModulePromise = routeModulesCache[route.id]
+        ? prefetchStyleLinks(route, routeModulesCache[route.id])
+        : Promise.resolve();
+      try {
+        if (!route.hasLoader) return null;
+        return fetchServerHandler(request, route);
+      } finally {
+        await routeModulePromise;
+      }
+    }
+
+    function callClientLoader(
+      clientLoader: ClientLoaderFunction,
+      { request, params }: RRLoaderFunctionArgs
+    ) {
+      return clientLoader({
+        request,
+        params,
+        serverFetch() {
           if (!route.hasLoader) return null;
           return fetchServerHandler(request, route);
-        } finally {
-          await routeModulePromise;
+        },
+      });
+    }
+
+    async function serverAction({ request }: { request: Request }) {
+      // Only prefetch links if we've been loaded into the cache, route.lazy
+      // will handle initial loads
+      let routeModulePromise = routeModulesCache[route.id]
+        ? prefetchStyleLinks(route, routeModulesCache[route.id])
+        : Promise.resolve();
+      try {
+        if (!route.hasAction) {
+          let msg =
+            `Route "${route.id}" does not have an action, but you are trying ` +
+            `to submit to it. To fix this, please add an \`action\` function to the route`;
+          console.error(msg);
+          return Promise.reject(
+            new ErrorResponse(405, "Method Not Allowed", new Error(msg), true)
+          );
         }
-      },
-      async action({ request }) {
-        // Only prefetch links if we've been loaded into the cache, route.lazy
-        // will handle initial loads
-        let routeModulePromise = routeModulesCache[route.id]
-          ? prefetchStyleLinks(route, routeModulesCache[route.id])
-          : Promise.resolve();
-        try {
+
+        return fetchServerHandler(request, route);
+      } finally {
+        await routeModulePromise;
+      }
+    }
+
+    function callClientAction(
+      clientLoader: ClientActionFunction,
+      { request, params }: RRActionFunctionArgs
+    ) {
+      return clientLoader({
+        request,
+        params,
+        serverFetch() {
           if (!route.hasAction) {
             let msg =
               `Route "${route.id}" does not have an action, but you are trying ` +
@@ -163,50 +218,135 @@ export function createClientRoutes(
           }
 
           return fetchServerHandler(request, route);
-        } finally {
-          await routeModulePromise;
-        }
-      },
-      ...(routeModule
-        ? // Use critical path modules directly
-          {
-            Component: getRouteModuleComponent(routeModule),
-            ErrorBoundary: routeModule.ErrorBoundary
-              ? routeModule.ErrorBoundary
-              : route.id === "root"
-              ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
-              : undefined,
-            handle: routeModule.handle,
-            shouldRevalidate: needsRevalidation
-              ? wrapShouldRevalidateForHdr(
-                  route.id,
-                  routeModule.shouldRevalidate,
-                  needsRevalidation
-                )
-              : routeModule.shouldRevalidate,
-          }
-        : // Load all other modules via route.lazy()
-          {
-            lazy: async () => {
-              let mod = await loadRouteModuleWithBlockingLinks(
-                route,
-                routeModulesCache
-              );
-              if (needsRevalidation) {
-                mod.shouldRevalidate = wrapShouldRevalidateForHdr(
-                  route.id,
-                  mod.shouldRevalidate,
-                  needsRevalidation
-                );
-              }
-              return mod;
-            },
-          }),
+        },
+      });
+    }
+
+    let dataRoute: DataRouteObject = {
+      id: route.id,
+      index: route.index,
+      path: route.path,
     };
+
+    if (routeModule) {
+      // Use critical path modules directly
+      Object.assign(dataRoute, {
+        ...dataRoute,
+        Component: getRouteModuleComponent(routeModule),
+        ErrorBoundary: routeModule.ErrorBoundary
+          ? routeModule.ErrorBoundary
+          : route.id === "root"
+          ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
+          : undefined,
+        handle: routeModule.handle,
+        shouldRevalidate: needsRevalidation
+          ? wrapShouldRevalidateForHdr(
+              route.id,
+              routeModule.shouldRevalidate,
+              needsRevalidation
+            )
+          : routeModule.shouldRevalidate,
+      });
+
+      let initialServerFetch: () => Promise<Response | DeferredData>;
+      if (initialState?.loaderData?.[route.id]) {
+        let initialData = initialState.loaderData[route.id];
+        initialServerFetch = async () => {
+          return routerJson(initialData);
+        };
+      } else {
+        initialServerFetch = async () => {
+          throw new Error(
+            "You are trying to call serverFetch() on a route that does not have a server loader"
+          );
+        };
+      }
+
+      if (routeModule.clientLoader) {
+        let clientLoader = routeModule.clientLoader;
+        dataRoute.loader = ({ request, params }) => {
+          if (request.headers.has("X-Remix-Initial-Load")) {
+            return clientLoader({
+              request,
+              params,
+              serverFetch: initialServerFetch,
+            });
+          } else {
+            return callClientLoader(clientLoader, {
+              request,
+              params,
+            });
+          }
+        };
+      } else if (route.hasLoader) {
+        dataRoute.loader = ({ request, params }) => {
+          if (request.headers.has("X-Remix-Initial-Load")) {
+            return initialServerFetch();
+          } else {
+            return serverLoader({ request });
+          }
+        };
+      }
+
+      // TODO: Action
+    } else {
+      // Load all other modules via route.lazy()
+      Object.assign(dataRoute, {
+        ...dataRoute,
+        ...(!route.hasClientLoader ? { loader: serverLoader } : {}),
+        ...(!route.hasClientAction ? { action: serverAction } : {}),
+        lazy: async () => {
+          let mod = await loadRouteModuleWithBlockingLinks(
+            route,
+            routeModulesCache
+          );
+
+          let lazyRoute: Partial<DataRouteObject> = { ...mod };
+          if (mod.clientLoader) {
+            let clientLoader = mod.clientLoader;
+            lazyRoute = {
+              ...mod,
+              loader: ({ request, params }) =>
+                callClientLoader(clientLoader, {
+                  request,
+                  params,
+                }),
+            };
+          }
+
+          if (mod.clientAction) {
+            let clientAction = mod.clientAction;
+            lazyRoute = {
+              ...mod,
+              loader: (args) => callClientAction(clientAction, args),
+            };
+          }
+
+          if (needsRevalidation) {
+            lazyRoute.shouldRevalidate = wrapShouldRevalidateForHdr(
+              route.id,
+              mod.shouldRevalidate,
+              needsRevalidation
+            );
+          }
+
+          return {
+            loader: lazyRoute.loader,
+            action: lazyRoute.action,
+            hasErrorBoundary: lazyRoute.hasErrorBoundary,
+            shouldRevalidate: lazyRoute.shouldRevalidate,
+            handle: lazyRoute.handle,
+            Component: lazyRoute.Component,
+            ErrorBoundary: lazyRoute.ErrorBoundary,
+          };
+        },
+      });
+    }
 
     let children = createClientRoutes(
       manifest,
       routeModulesCache,
+      initialState,
       future,
       route.id,
       routesByParentId,
@@ -244,10 +384,13 @@ async function loadRouteModuleWithBlockingLinks(
   let routeModule = await loadRouteModule(route, routeModules);
   await prefetchStyleLinks(route, routeModule);
 
-  // Include all `browserSafeRouteExports` fields
+  // Include all `browserSafeRouteExports` fields, except `Fallback` since the
+  // root route is always an initial match
   return {
     Component: getRouteModuleComponent(routeModule),
     ErrorBoundary: routeModule.ErrorBoundary,
+    clientAction: routeModule.clientAction,
+    clientLoader: routeModule.clientLoader,
     handle: routeModule.handle,
     links: routeModule.links,
     meta: routeModule.meta,

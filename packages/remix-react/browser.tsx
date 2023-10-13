@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import * as React from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import { RemixContext } from "./components";
+import { Links, Meta, RemixContext, Scripts } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
@@ -12,6 +12,7 @@ import {
   createClientRoutes,
   createClientRoutesWithHMRRevalidationOptOut,
 } from "./routes";
+import { RemixRootDefaultFallback } from "./fallback";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -142,6 +143,7 @@ if (import.meta && import.meta.hot) {
         needsRevalidation,
         assetsManifest.routes,
         window.__remixRouteModules,
+        window.__remixContext.state,
         window.__remixContext.future
       );
 
@@ -199,10 +201,18 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     let routes = createClientRoutes(
       window.__remixManifest.routes,
       window.__remixRouteModules,
+      window.__remixContext.state,
       window.__remixContext.future
     );
 
-    let hydrationData = window.__remixContext.state;
+    // You cannot <Form reloadDocument method="post" /> and leverage client
+    // actions, so we only skip hydrationData when client loaders exist
+    let hydrationData = Object.values(window.__remixRouteModules).some(
+      (m) => m.clientLoader
+    )
+      ? undefined
+      : window.__remixContext.state;
+
     if (hydrationData && hydrationData.errors) {
       hydrationData = {
         ...hydrationData,
@@ -251,6 +261,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     });
   }, [location]);
 
+  let FallbackElement =
+    window.__remixRouteModules["root"].Fallback || RemixRootDefaultFallback;
+
   // We need to include a wrapper RemixErrorBoundary here in case the root error
   // boundary also throws and we need to bubble up outside of the router entirely.
   // Then we need a stateful location here so the user can back-button navigate
@@ -267,7 +280,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       <RemixErrorBoundary location={location}>
         <RouterProvider
           router={router}
-          fallbackElement={null}
+          fallbackElement={<FallbackElement />}
           future={{ v7_startTransition: true }}
         />
       </RemixErrorBoundary>

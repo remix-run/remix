@@ -24,6 +24,12 @@ export type DataFunctionArgs = RRActionFunctionArgs<AppLoadContext> &
     context: AppLoadContext;
   };
 
+export type ClientDataFunctionArgs = RRActionFunctionArgs<undefined> &
+  RRLoaderFunctionArgs<undefined> & {
+    context: undefined;
+    serverFetch: () => Promise<Response>;
+  };
+
 /**
  * A function that handles data mutations for a route.
  */
@@ -33,6 +39,12 @@ export type ActionFunction = (
 
 export type ActionFunctionArgs = DataFunctionArgs;
 
+export type ClientActionFunction = (
+  args: ClientDataFunctionArgs
+) => ReturnType<RRLoaderFunction>;
+
+export type ClientActionFunctionArgs = ClientDataFunctionArgs;
+
 /**
  * A function that loads data for a route.
  */
@@ -41,6 +53,12 @@ export type LoaderFunction = (
 ) => ReturnType<RRLoaderFunction>;
 
 export type LoaderFunctionArgs = DataFunctionArgs;
+
+export type ClientLoaderFunction = (
+  args: ClientDataFunctionArgs
+) => ReturnType<RRActionFunction>;
+
+export type ClientLoaderFunctionArgs = ClientDataFunctionArgs;
 
 export type HeadersArgs = {
   loaderHeaders: Headers;
@@ -200,7 +218,10 @@ type LdJsonValue = LdJsonPrimitive | LdJsonObject | LdJsonArray;
 export type RouteHandle = unknown;
 
 export interface EntryRouteModule {
+  clientAction?: ClientActionFunction;
+  clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: any; // Weakly typed because server-runtime is not React-aware
+  Fallback?: any; // Weakly typed because server-runtime is not React-aware
   default: any; // Weakly typed because server-runtime is not React-aware
   handle?: RouteHandle;
   links?: LinksFunction;

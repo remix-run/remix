@@ -11,7 +11,12 @@ type Route = RemixConfig["routes"][string];
 // If you change this, make sure you update loadRouteModuleWithBlockingLinks in
 // remix-react/routes.ts
 const browserSafeRouteExports: { [name: string]: boolean } = {
+  clientAction: true,
+  clientLoader: true,
   ErrorBoundary: true,
+  // TODO: This should be root.tsx only - any way we can enforce that or
+  // error the build if it's found elsewhere
+  Fallback: true,
   default: true,
   handle: true,
   links: true,
