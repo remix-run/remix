@@ -57,6 +57,15 @@ export type LoaderFunctionArgs = RRLoaderFunctionArgs<AppLoadContext> & {
   context: AppLoadContext;
 };
 
+export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
+  context: undefined;
+  serverLoader: () => Promise<Response>;
+};
+
+export type ClientLoaderFunction = (
+  args: ClientLoaderFunctionArgs
+) => ReturnType<RRLoaderFunction>;
+
 export type HeadersArgs = {
   loaderHeaders: Headers;
   parentHeaders: Headers;
@@ -215,7 +224,9 @@ type LdJsonValue = LdJsonPrimitive | LdJsonObject | LdJsonArray;
 export type RouteHandle = unknown;
 
 export interface EntryRouteModule {
+  clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: any; // Weakly typed because server-runtime is not React-aware
+  Fallback?: any; // Weakly typed because server-runtime is not React-aware
   default: any; // Weakly typed because server-runtime is not React-aware
   handle?: RouteHandle;
   links?: LinksFunction;

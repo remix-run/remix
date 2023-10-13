@@ -1,5 +1,10 @@
 import type { ComponentType } from "react";
+import type { UNSAFE_DeferredData as DeferredData } from "@remix-run/router";
 import type {
+  ActionFunction as RRActionFunction,
+  ActionFunctionArgs as RRActionFunctionArgs,
+  LoaderFunction as RRLoaderFunction,
+  LoaderFunctionArgs as RRLoaderFunctionArgs,
   DataRouteMatch,
   Params,
   Location,
@@ -16,7 +21,9 @@ export interface RouteModules {
 }
 
 export interface RouteModule {
+  clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: ErrorBoundaryComponent;
+  Fallback?: FallbackComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
@@ -24,12 +31,24 @@ export interface RouteModule {
   shouldRevalidate?: ShouldRevalidateFunction;
 }
 
+export type ClientLoaderFunction = (
+  args: ClientLoaderFunctionArgs
+) => ReturnType<RRLoaderFunction>;
+
+export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
+  serverLoader: () => Promise<Response | DeferredData | null>;
+};
+
 /**
- * V2 version of the ErrorBoundary that eliminates the distinction between
- * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
- * errors with useRouteError()
+ * ErrorBoundary to display for this route
  */
 export type ErrorBoundaryComponent = ComponentType;
+
+/**
+ * `<RouteProvider fallbackElement>` component to render on initial loads
+ * when client loaders are present
+ */
+export type FallbackComponent = ComponentType;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of
