@@ -16,6 +16,7 @@ export type Manifest = {
       imports?: string[];
       hasAction: boolean;
       hasLoader: boolean;
+      hasClientLoader: boolean;
       hasErrorBoundary: boolean;
     };
   };

@@ -1,7 +1,11 @@
 import type { HydrationState, Router } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import {
+  createBrowserRouter,
+  matchRoutes,
+  RouterProvider,
+} from "react-router-dom";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
@@ -128,6 +132,10 @@ if (import.meta && import.meta.hot) {
                       ? window.__remixRouteModules[id]?.ErrorBoundary ??
                         imported.ErrorBoundary
                       : imported.ErrorBoundary,
+                    Fallback: imported.Fallback
+                      ? window.__remixRouteModules[id]?.Fallback ??
+                        imported.Fallback
+                      : imported.Fallback,
                   },
                 ];
               })
@@ -142,6 +150,7 @@ if (import.meta && import.meta.hot) {
         needsRevalidation,
         assetsManifest.routes,
         window.__remixRouteModules,
+        window.__remixContext.state,
         window.__remixContext.future
       );
 
@@ -199,10 +208,33 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     let routes = createClientRoutes(
       window.__remixManifest.routes,
       window.__remixRouteModules,
+      window.__remixContext.state,
       window.__remixContext.future
     );
 
-    let hydrationData = window.__remixContext.state;
+    // Create a shallow clone of loaderData we can mutate for partial hydration.
+    // When a route has a clientLoader and a Fallback, the server will have
+    // rendered the Fallback so we need the client to do the same for hydration.
+    // The server loader data has already been exposed to these route clientLoaders
+    // in createClientRoutes above, so we need to clear out the version we pass to
+    // createBrowserRouter so it initializes and runs the client loaders.
+    let hydrationData = {
+      ...window.__remixContext.state,
+      loaderData: { ...window.__remixContext.state.loaderData },
+    };
+    let initialMatches = matchRoutes(routes, window.location);
+    if (initialMatches) {
+      for (let match of initialMatches) {
+        let routeId = match.route.id;
+        let route = window.__remixRouteModules[routeId];
+        if (route.clientLoader) {
+          if (route.Fallback) {
+            hydrationData.loaderData[routeId] = undefined;
+          }
+        }
+      }
+    }
+
     if (hydrationData && hydrationData.errors) {
       hydrationData = {
         ...hydrationData,
@@ -215,6 +247,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       future: {
         v7_normalizeFormMethod: true,
         v7_fetcherPersist: window.__remixContext.future.v3_fetcherPersist,
+        v7_partialHydration: true,
       },
     });
     // @ts-ignore

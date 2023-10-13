@@ -1,5 +1,9 @@
 import * as React from "react";
-import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
+import type { HydrationState } from "@remix-run/router";
+import {
+  UNSAFE_ErrorResponseImpl as ErrorResponse,
+  json as routerJson,
+} from "@remix-run/router";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -38,6 +42,7 @@ interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
+  hasClientLoader: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
   css?: string[];
@@ -76,6 +81,7 @@ export function createServerRoutes(
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       Component: getRouteModuleComponent(routeModule),
+      Fallback: routeModule.Fallback,
       ErrorBoundary: routeModule.ErrorBoundary
         ? routeModule.ErrorBoundary
         : route.id === "root"
@@ -85,8 +91,12 @@ export function createServerRoutes(
       index: route.index,
       path: route.path,
       handle: routeModules[route.id].handle,
-      // Note: we don't need loader/action/shouldRevalidate on these routes
-      // since they're for a static render
+      // For partial hydration rendering, we need to indicate when the route
+      // has a loader, but it won't ever be called during the static render, so
+      // just give it a no-op function so we can render down to the proper fallback
+      loader: route.hasLoader ? () => null : undefined,
+      // We don't need action/shouldRevalidate on these routes since they're
+      // for a static render
     };
 
     let children = createServerRoutes(
@@ -105,11 +115,13 @@ export function createClientRoutesWithHMRRevalidationOptOut(
   needsRevalidation: Set<string>,
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
+  initialState: HydrationState,
   future: FutureConfig
 ) {
   return createClientRoutes(
     manifest,
     routeModulesCache,
+    initialState,
     future,
     "",
     groupRoutesByParentId(manifest),
@@ -120,6 +132,7 @@ export function createClientRoutesWithHMRRevalidationOptOut(
 export function createClientRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
+  initialState: HydrationState,
   future: FutureConfig,
   parentId: string = "",
   routesByParentId: Record<
@@ -129,7 +142,7 @@ export function createClientRoutes(
   needsRevalidation?: Set<string>
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
-    let routeModule = routeModulesCache?.[route.id];
+    let routeModule = routeModulesCache[route.id];
 
     async function fetchServerLoader(request: Request) {
       if (!route.hasLoader) return null;
@@ -173,8 +186,6 @@ export function createClientRoutes(
       id: route.id,
       index: route.index,
       path: route.path,
-      loader: ({ request }: LoaderFunctionArgs) =>
-        callServerHandler(request, () => fetchServerLoader(request)),
       action: ({ request }: ActionFunctionArgs) =>
         callServerHandler(request, () => fetchServerAction(request)),
     };
@@ -184,6 +195,7 @@ export function createClientRoutes(
       Object.assign(dataRoute, {
         ...dataRoute,
         Component: getRouteModuleComponent(routeModule),
+        Fallback: routeModule.Fallback,
         ErrorBoundary: routeModule.ErrorBoundary
           ? routeModule.ErrorBoundary
           : route.id === "root"
@@ -198,40 +210,101 @@ export function createClientRoutes(
             )
           : routeModule.shouldRevalidate,
       });
-    } else {
-      // Load all other modules via route.lazy()
-      Object.assign(dataRoute, {
-        ...dataRoute,
-        lazy: async () => {
-          let mod = await loadRouteModuleWithBlockingLinks(
-            route,
-            routeModulesCache
-          );
 
-          let lazyRoute: Partial<DataRouteObject> = { ...mod };
+      dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
+        return callServerHandler(request, async (r) => {
+          if (routeModule.clientLoader) {
+            let initialData =
+              initialState &&
+              initialState.loaderData &&
+              initialState.loaderData[route.id];
 
-          if (needsRevalidation) {
-            lazyRoute.shouldRevalidate = wrapShouldRevalidateForHdr(
-              route.id,
-              mod.shouldRevalidate,
-              needsRevalidation
-            );
+            if (request.headers.has("X-Remix-Initial-Load")) {
+              if (initialData) {
+                // FIXME: Is this flow possible once we add route level fallback elements?
+                // The problematic scenario (which was intermittent) is:
+                // * Remix calls createBrowserRouter, which starts as state.initialized=false
+                // * initialize() calls startNavigation which calls client loaders
+                // * RemixBrowser renders RouterProvider
+                // * synchronous client loaders finish _before_ the RouterProvider layout effect
+                //   wires up the subscriber
+                // * So the completeNavigation and setting state.initialized=true never gets picked up by the React Router layer
+                return routeModule.clientLoader({
+                  request,
+                  params,
+                  serverLoader: () => Promise.resolve(routerJson(initialData)),
+                });
+              } else {
+                return routeModule.clientLoader({
+                  request,
+                  params,
+                  async serverLoader() {
+                    throw new Error(
+                      "You are trying to call serverFetch() on a route that does not have a server loader"
+                    );
+                  },
+                });
+              }
+            } else {
+              return routeModule.clientLoader({
+                request,
+                params,
+                serverLoader: () => fetchServerLoader(request),
+              });
+            }
+          } else {
+            return fetchServerLoader(request);
           }
+        });
+      };
+    } else {
+      if (!route.hasClientLoader) {
+        dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
+          callServerHandler(request, fetchServerLoader);
+      }
 
-          return {
-            hasErrorBoundary: lazyRoute.hasErrorBoundary,
-            shouldRevalidate: lazyRoute.shouldRevalidate,
-            handle: lazyRoute.handle,
-            Component: lazyRoute.Component,
-            ErrorBoundary: lazyRoute.ErrorBoundary,
-          };
-        },
-      });
+      // Load all other modules via route.lazy()
+      dataRoute.lazy = async () => {
+        let mod = await loadRouteModuleWithBlockingLinks(
+          route,
+          routeModulesCache
+        );
+
+        let lazyRoute: Partial<DataRouteObject> = { ...mod };
+        if (mod.clientLoader) {
+          let clientLoader = mod.clientLoader;
+          lazyRoute.loader = (args) =>
+            clientLoader({
+              ...args,
+              serverLoader: () => fetchServerLoader(args.request),
+            });
+        }
+
+        if (needsRevalidation) {
+          lazyRoute.shouldRevalidate = wrapShouldRevalidateForHdr(
+            route.id,
+            mod.shouldRevalidate,
+            needsRevalidation
+          );
+        }
+
+        // TODO: Can we just return lazyRoute here?
+        return {
+          ...(lazyRoute.loader ? { loader: lazyRoute.loader } : {}),
+          action: lazyRoute.action,
+          hasErrorBoundary: lazyRoute.hasErrorBoundary,
+          shouldRevalidate: lazyRoute.shouldRevalidate,
+          handle: lazyRoute.handle,
+          Component: lazyRoute.Component,
+          ErrorBoundary: lazyRoute.ErrorBoundary,
+        };
+      };
     }
 
     let children = createClientRoutes(
       manifest,
       routeModulesCache,
+      initialState,
       future,
       route.id,
       routesByParentId,
@@ -269,10 +342,12 @@ async function loadRouteModuleWithBlockingLinks(
   let routeModule = await loadRouteModule(route, routeModules);
   await prefetchStyleLinks(route, routeModule);
 
-  // Include all `browserSafeRouteExports` fields
+  // Include all `browserSafeRouteExports` fields, except `Fallback` since the
+  // root route is always an initial match
   return {
     Component: getRouteModuleComponent(routeModule),
     ErrorBoundary: routeModule.ErrorBoundary,
+    clientLoader: routeModule.clientLoader,
     handle: routeModule.handle,
     links: routeModule.links,
     meta: routeModule.meta,
