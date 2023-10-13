@@ -1,10 +1,7 @@
 import { type BinaryLike, createHash } from "node:crypto";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { existsSync as fsExistsSync } from "node:fs";
-import { execSync } from "node:child_process";
 import babel from "@babel/core";
-import PackageJson from "@npmcli/package-json";
 import { type ServerBuild } from "@remix-run/server-runtime";
 import {
   type Plugin as VitePlugin,
@@ -20,15 +17,15 @@ import {
   parse as esModuleLexer,
 } from "es-module-lexer";
 import jsesc from "jsesc";
+import pick from "lodash/pick";
 import colors from "picocolors";
 
-import { defineRoutes, type RouteManifest } from "../config/routes";
+import { type RouteManifest } from "../config/routes";
 import {
   type AppConfig as RemixUserConfig,
   type RemixConfig as ResolvedRemixConfig,
+  resolveConfig,
 } from "../config";
-import { flatRoutes } from "../config/flat-routes";
-import { detectPackageManager } from "../cli/detectPackageManager";
 import { type Manifest } from "../manifest";
 import { createRequestHandler } from "./node/adapter";
 import { getStylesForUrl, isCssModulesFile } from "./styles";
@@ -37,15 +34,20 @@ import { removeExports } from "./remove-exports";
 import { transformLegacyCssImports } from "./legacy-css-imports";
 import { replaceImportSpecifier } from "./replace-import-specifier";
 
+const supportedRemixConfigKeys = [
+  "appDirectory",
+  "assetsBuildDirectory",
+  "ignoredRouteFiles",
+  "publicPath",
+  "routes",
+  "serverBuildPath",
+  "serverModuleFormat",
+] as const satisfies ReadonlyArray<keyof RemixUserConfig>;
+type SupportedRemixConfigKey = typeof supportedRemixConfigKeys[number];
+
 export type RemixVitePluginOptions = Pick<
   RemixUserConfig,
-  | "appDirectory"
-  | "assetsBuildDirectory"
-  | "ignoredRouteFiles"
-  | "publicPath"
-  | "routes"
-  | "serverBuildPath"
-  | "serverModuleFormat"
+  SupportedRemixConfigKey
 > & {
   legacyCssImports?: boolean;
 };
@@ -189,19 +191,6 @@ const getRouteModuleExports = async (
   return exportNames;
 };
 
-const entryExts = [".js", ".jsx", ".ts", ".tsx"];
-const findEntry = (dir: string, basename: string): string | undefined => {
-  for (let ext of entryExts) {
-    let file = path.resolve(dir, basename + ext);
-    if (fsExistsSync(file)) return path.relative(dir, file);
-  }
-
-  return undefined;
-};
-
-const addTrailingSlash = (path: string): string =>
-  path.endsWith("/") ? path : path + "/";
-
 const showUnstableWarning = () => {
   console.warn(
     colors.yellow(
@@ -228,121 +217,22 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     async (): Promise<ResolvedRemixVitePluginConfig> => {
       let rootDirectory =
         viteUserConfig.root ?? process.env.REMIX_ROOT ?? process.cwd();
-      let appDirectory = path.resolve(
-        rootDirectory,
-        options.appDirectory ?? "app"
-      );
-      let serverBuildPath = path.resolve(
-        rootDirectory,
-        options.serverBuildPath ?? "build/index.js"
-      );
-      let serverModuleFormat = options.serverModuleFormat ?? "esm";
-      let relativeAssetsBuildDirectory =
-        options.assetsBuildDirectory ?? path.join("public", "build");
-      let assetsBuildDirectory = path.resolve(
-        rootDirectory,
-        relativeAssetsBuildDirectory
-      );
 
-      let defaultsDirectory = path.resolve(
-        __dirname,
-        "..",
-        "config",
-        "defaults"
-      );
+      // Avoid leaking any config options that the Vite plugin doesn't support
+      let config = pick(options, supportedRemixConfigKeys);
 
-      let userEntryClientFile = findEntry(appDirectory, "entry.client");
-      let entryClientFile = userEntryClientFile ?? "entry.client.tsx";
-
-      let userEntryServerFile = findEntry(appDirectory, "entry.server");
-      let entryServerFile: string;
-
-      let pkgJson = await PackageJson.load(rootDirectory);
-      let deps = pkgJson.content.dependencies ?? {};
-
-      if (userEntryServerFile) {
-        entryServerFile = userEntryServerFile;
-      } else {
-        let serverRuntime = deps["@remix-run/deno"]
-          ? "deno"
-          : deps["@remix-run/cloudflare"]
-          ? "cloudflare"
-          : deps["@remix-run/node"]
-          ? "node"
-          : undefined;
-
-        if (!serverRuntime) {
-          let serverRuntimes = [
-            "@remix-run/deno",
-            "@remix-run/cloudflare",
-            "@remix-run/node",
-          ];
-          let disjunctionListFormat = new Intl.ListFormat("en", {
-            style: "long",
-            type: "disjunction",
-          });
-          let formattedList = disjunctionListFormat.format(serverRuntimes);
-          throw new Error(
-            `Could not determine server runtime. Please install one of the following: ${formattedList}`
-          );
-        }
-
-        if (!deps["isbot"]) {
-          console.log(
-            "adding `isbot` to your package.json, you should commit this change"
-          );
-
-          pkgJson.update({
-            dependencies: {
-              ...pkgJson.content.dependencies,
-              isbot: "latest",
-            },
-          });
-
-          await pkgJson.save();
-
-          let packageManager = detectPackageManager() ?? "npm";
-
-          execSync(`${packageManager} install`, {
-            cwd: rootDirectory,
-            stdio: "inherit",
-          });
-        }
-
-        entryServerFile = `entry.server.${serverRuntime}.tsx`;
-      }
-
-      let entryClientFilePath = userEntryClientFile
-        ? path.resolve(appDirectory, userEntryClientFile)
-        : path.resolve(defaultsDirectory, entryClientFile);
-
-      let entryServerFilePath = userEntryServerFile
-        ? path.resolve(appDirectory, userEntryServerFile)
-        : path.resolve(defaultsDirectory, entryServerFile);
-
-      let publicPath = addTrailingSlash(options.publicPath ?? "/build/");
-
-      let rootRouteFile = findEntry(appDirectory, "root");
-      if (!rootRouteFile) {
-        throw new Error(`Missing "root" route file in ${appDirectory}`);
-      }
-
-      let routes: RouteManifest = {
-        root: { path: "", id: "root", file: rootRouteFile },
-      };
-
-      if (fsExistsSync(path.resolve(appDirectory, "routes"))) {
-        let fileRoutes = flatRoutes(appDirectory, options.ignoredRouteFiles);
-        for (let route of Object.values(fileRoutes)) {
-          routes[route.id] = { ...route, parentId: route.parentId || "root" };
-        }
-      }
-      if (options.routes) {
-        let manualRoutes = await options.routes(defineRoutes);
-        for (let route of Object.values(manualRoutes)) {
-          routes[route.id] = { ...route, parentId: route.parentId || "root" };
-        }
-      }
+      // Only select the Remix config options that the Vite plugin uses
+      let {
+        appDirectory,
+        assetsBuildDirectory,
+        entryClientFilePath,
+        publicPath,
+        routes,
+        entryServerFilePath,
+        serverBuildPath,
+        serverModuleFormat,
+        relativeAssetsBuildDirectory,
+      } = await resolveConfig(config, { rootDirectory });
 
       return {
         appDirectory,
