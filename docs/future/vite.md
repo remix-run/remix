@@ -186,7 +186,7 @@ export const links: LinksFunction = () => [
 
 ### Tailwind
 
-To use [Tailwind] in Vite, first install the required dependencies:
+To use [Tailwind][tailwind] in Vite, first install the required dependencies:
 
 ```shellscript nonumber
 npm install -D tailwindcss postcss autoprefixer
