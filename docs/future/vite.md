@@ -432,10 +432,10 @@ export const meta = { title: "Home" }; // ✅
 export const links = [
   { rel: "stylesheet", href: "style.css" },
 ]; // ✅
-export const headers = { "Cache-Control": "max-age=3600" }; // ✅
 
 // These exports are removed by the Remix Vite plugin
 // so they never affect HMR
+export const headers = { "Cache-Control": "max-age=3600" }; // ✅
 export const loader = () => {}; // ✅
 export const action = () => {}; // ✅
 
