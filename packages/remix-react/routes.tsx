@@ -38,6 +38,7 @@ export interface EntryRoute extends Route {
   hasLoader: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
+  css?: string[];
   module: string;
   parentId?: string;
 }
@@ -135,7 +136,7 @@ export function createClientRoutes(
         // Only prefetch links if we've been loaded into the cache, route.lazy
         // will handle initial loads
         let routeModulePromise = routeModulesCache[route.id]
-          ? prefetchStyleLinks(routeModulesCache[route.id])
+          ? prefetchStyleLinks(route, routeModulesCache[route.id])
           : Promise.resolve();
         try {
           if (!route.hasLoader) return null;
@@ -148,7 +149,7 @@ export function createClientRoutes(
         // Only prefetch links if we've been loaded into the cache, route.lazy
         // will handle initial loads
         let routeModulePromise = routeModulesCache[route.id]
-          ? prefetchStyleLinks(routeModulesCache[route.id])
+          ? prefetchStyleLinks(route, routeModulesCache[route.id])
           : Promise.resolve();
         try {
           if (!route.hasAction) {
@@ -241,7 +242,7 @@ async function loadRouteModuleWithBlockingLinks(
   routeModules: RouteModules
 ) {
   let routeModule = await loadRouteModule(route, routeModules);
-  await prefetchStyleLinks(routeModule);
+  await prefetchStyleLinks(route, routeModule);
 
   // Resource routes are built with an empty object as the default export -
   // ignore those when setting the Component

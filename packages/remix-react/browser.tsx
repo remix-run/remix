@@ -18,6 +18,7 @@ declare global {
   var __remixContext: {
     url: string;
     state: HydrationState;
+    criticalCss?: string;
     future: FutureConfig;
     // The number of active deferred keys rendered on the server
     a?: number;
@@ -26,6 +27,7 @@ declare global {
       hmrRuntime?: string;
     };
   };
+  var __remixRouter: Router;
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
   var __remixRevalidation: number | undefined;
@@ -209,6 +211,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         v7_normalizeFormMethod: true,
       },
     });
+    // @ts-ignore
+    router.createRoutesForHMR = createClientRoutesWithHMRRevalidationOptOut;
+    window.__remixRouter = router;
 
     // Notify that the router is ready for HMR
     if (hmrRouterReadyResolve) {
@@ -240,6 +245,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         manifest: window.__remixManifest,
         routeModules: window.__remixRouteModules,
         future: window.__remixContext.future,
+        criticalCss: window.__remixContext.criticalCss,
       }}
     >
       <RemixErrorBoundary location={location}>
