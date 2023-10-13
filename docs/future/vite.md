@@ -11,13 +11,13 @@ toc: false
 
 **Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Yet Supported)
 
-| Feature                      | Node | Deno | Cloudflare | Notes                                     |
-| ---------------------------- | ---- | ---- | ---------- | ----------------------------------------- |
-| Built-in dev server          | ✅   | ❓   | ⏳         |                                           |
-| Other servers (e.g. Express) | ⏳   | ⏳   | ⏳         |                                           |
-| HMR                          | ✅   | ❓   | ⏳         |                                           |
-| HDR                          | ✅   | ❓   | ⏳         |                                           |
-| MDX                          | ⏳   | ⏳   | ⏳         | https://github.com/vitejs/vite/pull/14560 |
+| Feature                      | Node | Deno | Cloudflare | Notes                                                                                |
+| ---------------------------- | ---- | ---- | ---------- | ------------------------------------------------------------------------------------ |
+| Built-in dev server          | ✅   | ❓   | ⏳         |                                                                                      |
+| Other servers (e.g. Express) | ⏳   | ⏳   | ⏳         |                                                                                      |
+| HMR                          | ✅   | ❓   | ⏳         |                                                                                      |
+| HDR                          | ✅   | ❓   | ⏳         |                                                                                      |
+| MDX                          | ⏳   | ⏳   | ⏳         | [https://github.com/vitejs/vite/pull/14560][https-github-com-vitejs-vite-pull-14560] |
 
 ## Getting started
 
@@ -266,7 +266,7 @@ export default defineConfig({
 
 The Remix compiler allowed you to define [frontmatter in MDX][mdx-frontmatter]. You can achieve this in Vite using [remark-mdx-frontmatter].
 
-First, install the required [Remark][remark] plugins:
+First, install the required \[Remark]\[remark] plugins:
 
 ```shellscript nonumber
 npm install -D remark-frontmatter remark-mdx-frontmatter
@@ -459,7 +459,7 @@ React Fast Refresh cannot track changes for a component when hooks are being add
 
 #### Component Keys
 
-In some cases, React cannot distinguish between existing components being changed and new components being added. [React needs `key`s][react_keys] to disambiguate these cases and track changes when sibling elements are modified.
+In some cases, React cannot distinguish between existing components being changed and new components being added. \[React needs `key`s]\[react_keys] to disambiguate these cases and track changes when sibling elements are modified.
 
 ## Acknowledgements
 
@@ -515,3 +515,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [astro]: https://astro.build/
 [solidstart]: https://start.solidjs.com/getting-started/what-is-solidstart
 [sveltekit]: https://kit.svelte.dev/
+[https-github-com-vitejs-vite-pull-14560]: https://github.com/vitejs/vite/pull/14560
