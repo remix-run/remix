@@ -357,8 +357,6 @@ export const meta = () => {
 # Hello World
 ```
 
-<docs-info>You may even want to take this a step further and create a [remark plugin][remark-plugin] that automatically maps frontmatter to route exports for you.</doc-info>
-
 ##### MDX Filename Export
 
 The Remix compiler also provided a `filename` export from all MDX files. This was primarily designed to enable linking to collections of MDX routes. In Vite, you should achieve this via [glob imports][glob-imports] which give you a handy data structure that maps file names to modules. This makes it much easier to maintain a list of MDX files since you no longer need to import each one manually.
@@ -508,7 +506,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [mdx-rollup-plugin]: https://mdxjs.com/packages/rollup
 [mdx-frontmatter]: https://mdxjs.com/guides/frontmatter
 [remark-mdx-frontmatter]: https://github.com/remcohaszing/remark-mdx-frontmatter
-[remark-plugin]: https://github.com/remarkjs/remark/blob/main/doc/plugins.md
 [glob-imports]: https://vitejs.dev/guide/features.html#glob-import
 [use_loader_data]: ../hooks/use-loader-data
 [react_refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
