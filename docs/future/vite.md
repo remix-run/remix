@@ -388,20 +388,26 @@ const posts = import.meta.glob("./posts/*.mdx", {
 
 ## HMR & HDR
 
-### React Fast Refresh limitations
+### React Fast Refresh Limitations
 
-[React Fast Refresh][react_refresh] does not preserve state for class components.
+[React Fast Refresh][react_refresh] has some limitations that are worth being aware of.
+
+#### Class Component State
+
+React Fast Refresh does not preserve state for class components.
 This includes higher-order components that internally return classes:
 
 ```ts
 export class ComponentA extends Component {} // ❌
 
-export const ComponentB = HOC(ComponentC); // ❌ won't work if HOC returns a class component
+export const ComponentB = HOC(ComponentC); // ❌ Won't work if HOC returns a class component
 
 export function ComponentD() {} // ✅
 export const ComponentE = () => {}; // ✅
 export default function ComponentF() {} // ✅
 ```
+
+#### Named Function Components
 
 Function components must be named, not anonymous, for React Fast Refresh to track changes:
 
@@ -415,22 +421,26 @@ export default ComponentA; // ✅
 export default function ComponentB() {} // ✅
 ```
 
-React Fast Refresh can only handle component exports. While Remix manages special route exports like `meta`, `links`, and `header` for you, any user-defined, will cause full reloads:
+#### Supported Exports
+
+React Fast Refresh can only handle component exports. While Remix manages special route exports like `meta`, `links`, and `header` for you, any user-defined exports will cause full reloads:
 
 ```ts
-// these exports are specially handled by Remix to be HMR-compatible
+// These exports are handled by the Remix Vite plugin
+// to be HMR-compatible
 export const meta = { title: "Home" }; // ✅
 export const links = [
   { rel: "stylesheet", href: "style.css" },
 ]; // ✅
 export const headers = { "Cache-Control": "max-age=3600" }; // ✅
 
-// these exports are treeshaken by Remix, so they never affect HMR
+// These exports are removed by the Remix Vite plugin
+// so they never affect HMR
 export const loader = () => {}; // ✅
 export const action = () => {}; // ✅
 
-// This is not a Remix export, nor a component export
-// so it will cause a full reloads for this route
+// This is not a Remix export, nor a component export,
+// so it will cause a full reload for this route
 export const myValue = "some value"; // ❌
 
 export default function Route() {} // ✅
@@ -443,14 +453,13 @@ If you want to reuse values across routes, stick them in their own non-route mod
 export const myValue = "some value";
 ```
 
-React Fast Refresh cannot track changes for a component when hooks are being added or removed from it,
-causing full reloads just for the next render. After the hooks has been added, changes should result in hot updates again.
-For example, if you add [`useLoaderData`][use_loader_data] to your component, you may lose state local to that component for that render.
+#### Adding and Removing Hooks
 
-In some cases React cannot distinguish between existing components being changed and new components being added.
-[React needs `key`s][react_keys] to disambiguate these cases and track changes when sibling elements are modified.
+React Fast Refresh cannot track changes for a component when hooks are being added or removed from it, causing full reloads just for the next render. After the hooks have been updated, changes should result in hot updates again. For example, if you add [`useLoaderData`][use_loader_data] to your component, you may lose state local to that component for that render.
 
-These are all limitations of React and [React Refresh][react_refresh], not Remix.
+#### Component Keys
+
+In some cases, React cannot distinguish between existing components being changed and new components being added. [React needs `key`s][react_keys] to disambiguate these cases and track changes when sibling elements are modified.
 
 ## Acknowledgements
 
@@ -468,7 +477,7 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 
 - [Astro][astro]
 - [SolidStart][solidstart]
-- [SvelteKit][svletekit]
+- [SvelteKit][sveltekit]
 
 We're definitely late to the Vite party, but we're excited to be here now!
 
