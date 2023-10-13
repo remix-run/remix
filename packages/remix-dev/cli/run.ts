@@ -189,7 +189,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     default:
       // `remix ./my-project` is shorthand for `remix dev ./my-project`
-      // TODO: Support this in Vite mode
       await commands.dev(input[0], flags);
   }
 }
