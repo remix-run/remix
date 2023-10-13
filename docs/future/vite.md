@@ -386,17 +386,6 @@ const posts = import.meta.glob("./posts/*.mdx", {
 });
 ```
 
-### `*.server.ts` and `*.client.ts` Extensions
-
-The Remix compiler allowed you to define server/client-only files using the `*.server.ts`/`*.client.ts` extensions. The Remix Vite plugin supports this pattern with one notable difference.
-
-Since Vite leverages ESM at runtime to load modules, you may need to use `import *` when importing server/client-only files if the import statement hasn't been removed by dead code elimination.
-
-```diff
--import { something } from "./file.server.ts";
-+import * as serverOnly from "./file.server.ts";
-```
-
 ## HMR & HDR
 
 ### React Fast Refresh limitations
