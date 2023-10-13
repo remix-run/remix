@@ -1,5 +1,5 @@
 import { Meta, Outlet } from "@remix-run/react";
-import { unstable_createRemixStub } from "@remix-run/testing";
+import { createRemixStub } from "@remix-run/testing";
 import { prettyDOM, render, screen } from "@testing-library/react";
 import user from "@testing-library/user-event";
 import * as React from "react";
@@ -9,7 +9,7 @@ const getHtml = (c: HTMLElement) =>
 
 describe("meta", () => {
   it("no meta export renders meta from nearest route meta in the tree", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         id: "root",
         path: "/",
@@ -66,7 +66,7 @@ describe("meta", () => {
   });
 
   it("empty meta array does not render a tag", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [],
@@ -93,7 +93,7 @@ describe("meta", () => {
   });
 
   it("meta from `matches` renders meta tags", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         id: "root",
         path: "/",
@@ -141,7 +141,7 @@ describe("meta", () => {
   });
 
   it("{ charSet } adds a <meta charset='utf-8' />", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [{ charSet: "utf-8" }],
@@ -161,7 +161,7 @@ describe("meta", () => {
   });
 
   it("{ title } adds a <title />", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [{ title: "Document Title" }],
@@ -181,7 +181,7 @@ describe("meta", () => {
   });
 
   it("{ property: 'og:*', content: '*' } adds a <meta property='og:*' />", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [
@@ -221,7 +221,7 @@ describe("meta", () => {
       email: ["sonnyday@fancymail.com", "surfergal@veryprofessional.org"],
     };
 
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [
@@ -244,7 +244,7 @@ describe("meta", () => {
   });
 
   it("{ tagName: 'link' } adds a <link />", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [
@@ -270,7 +270,7 @@ describe("meta", () => {
   });
 
   it("does not mutate meta when using tagName", async () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: ({ data }) => data?.meta,
@@ -329,7 +329,7 @@ describe("meta", () => {
   });
 
   it("loader errors are passed to meta", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         Component() {
