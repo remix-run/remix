@@ -50,9 +50,6 @@ export function createPagesFunctionHandler<Env = any>({
   let handleFetch = async (context: EventContext<Env, any, any>) => {
     let response: Response | undefined;
 
-    // https://github.com/cloudflare/wrangler2/issues/117
-    context.request.headers.delete("if-none-match");
-
     try {
       response = await context.env.ASSETS.fetch(
         context.request.url,
