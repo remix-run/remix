@@ -11,13 +11,13 @@ toc: false
 
 **Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Yet Supported)
 
-| Feature                      | Node | Deno | Cloudflare | Notes                                     |
-| ---------------------------- | ---- | ---- | ---------- | ----------------------------------------- |
-| Built-in dev server          | ✅   | ❓   | ⏳         |                                           |
-| Other servers (e.g. Express) | ⏳   | ⏳   | ⏳         |                                           |
-| HMR                          | ✅   | ❓   | ⏳         |                                           |
-| HDR                          | ✅   | ❓   | ⏳         |                                           |
-| MDX routes                   | ✅   | ❓   | ⏳         | [Supported with some deprecations.](#mdx) |
+| Feature                      | Node | Deno | Cloudflare | Notes                                                                 |
+| ---------------------------- | ---- | ---- | ---------- | --------------------------------------------------------------------- |
+| Built-in dev server          | ✅   | ❓   | ⏳         |                                                                       |
+| Other servers (e.g. Express) | ⏳   | ⏳   | ⏳         |                                                                       |
+| HMR                          | ✅   | ❓   | ⏳         |                                                                       |
+| HDR                          | ✅   | ❓   | ⏳         |                                                                       |
+| MDX routes                   | ✅   | ❓   | ⏳         | [Supported with some deprecations.][supported-with-some-deprecations] |
 
 ## Getting started
 
@@ -516,3 +516,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [astro]: https://astro.build/
 [solidstart]: https://start.solidjs.com/getting-started/what-is-solidstart
 [sveltekit]: https://kit.svelte.dev/
+[supported-with-some-deprecations]: #mdx
