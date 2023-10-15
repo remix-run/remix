@@ -11,13 +11,13 @@ toc: false
 
 **Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Yet Supported)
 
-| Feature                      | Node | Deno | Cloudflare | Notes                                                                                |
-| ---------------------------- | ---- | ---- | ---------- | ------------------------------------------------------------------------------------ |
-| Built-in dev server          | ✅   | ❓   | ⏳         |                                                                                      |
-| Other servers (e.g. Express) | ⏳   | ⏳   | ⏳         |                                                                                      |
-| HMR                          | ✅   | ❓   | ⏳         |                                                                                      |
-| HDR                          | ✅   | ❓   | ⏳         |                                                                                      |
-| MDX                          | ⏳   | ⏳   | ⏳         | [https://github.com/vitejs/vite/pull/14560][https-github-com-vitejs-vite-pull-14560] |
+| Feature                      | Node | Deno | Cloudflare | Notes                                     |
+| ---------------------------- | ---- | ---- | ---------- | ----------------------------------------- |
+| Built-in dev server          | ✅   | ❓   | ⏳         |                                           |
+| Other servers (e.g. Express) | ⏳   | ⏳   | ⏳         |                                           |
+| HMR                          | ✅   | ❓   | ⏳         |                                           |
+| HDR                          | ✅   | ❓   | ⏳         |                                           |
+| MDX routes                   | ✅   | ❓   | ⏳         | [Supported with some deprecations.](#mdx) |
 
 ## Getting started
 
@@ -266,7 +266,7 @@ export default defineConfig({
 
 The Remix compiler allowed you to define [frontmatter in MDX][mdx-frontmatter]. You can achieve this in Vite using [remark-mdx-frontmatter].
 
-First, install the required \[Remark]\[remark] plugins:
+First, install the required [Remark][remark] plugins:
 
 ```shellscript nonumber
 npm install -D remark-frontmatter remark-mdx-frontmatter
@@ -503,6 +503,7 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vanilla-extract-vite-plugin]: https://vanilla-extract.style/documentation/integrations/vite
 [mdx-rollup-plugin]: https://mdxjs.com/packages/rollup
 [mdx-frontmatter]: https://mdxjs.com/guides/frontmatter
+[remark]: https://remark.js.org
 [remark-mdx-frontmatter]: https://github.com/remcohaszing/remark-mdx-frontmatter
 [glob-imports]: https://vitejs.dev/guide/features.html#glob-import
 [use_loader_data]: ../hooks/use-loader-data
@@ -515,4 +516,3 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [astro]: https://astro.build/
 [solidstart]: https://start.solidjs.com/getting-started/what-is-solidstart
 [sveltekit]: https://kit.svelte.dev/
-[https-github-com-vitejs-vite-pull-14560]: https://github.com/vitejs/vite/pull/14560
