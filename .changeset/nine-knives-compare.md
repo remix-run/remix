@@ -4,4 +4,4 @@
 "@remix-run/testing": patch
 ---
 
-[REMOVE} Stable router version
+[REMOVE] Stable router version
