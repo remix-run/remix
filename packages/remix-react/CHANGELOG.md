@@ -1,5 +1,25 @@
 # `@remix-run/react`
 
+## 2.1.0
+
+### Minor Changes
+
+- Add experimental support for the [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/ViewTransition) via `document.startViewTransition` to enable CSS animated transitions on SPA navigations in your application ([#7648](https://github.com/remix-run/remix/pull/7648))
+  - For additional information please refer to the [2.1.0 Release Notes](https://github.com/remix-run/remix/releases/tag/remix%402.1.0) or the [documentation](https://remix.run/docs/components/link#unstable_viewtransition)
+
+### Patch Changes
+
+- Avoid mutating `meta` object when `tagName` is specified ([#7594](https://github.com/remix-run/remix/pull/7594))
+- Fix FOUC on subsequent client-side navigations to `route.lazy` routes ([#7576](https://github.com/remix-run/remix/pull/7576))
+- Emulate types for `JSON.parse(JSON.stringify(x))` in `SerializeFrom` ([#7605](https://github.com/remix-run/remix/pull/7605))
+  - Notably, type fields that are only assignable to `undefined` after serialization are now omitted since `JSON.stringify |> JSON.parse` will omit them -- see test cases for examples
+  - Also fixes type errors when upgrading to v2 from 1.19
+- Export the proper Remix `useMatches` wrapper to fix `UIMatch` typings ([#7551](https://github.com/remix-run/remix/pull/7551))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.1.0`
+  - [`react-router-dom@6.17.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.17.0)
+  - [`@remix-run/router@1.10.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1100)
+
 ## 2.0.1
 
 ### Patch Changes
