@@ -1,70 +1,24 @@
 # `@remix-run/react`
 
-## 2.1.0-pre.1
-
-### Patch Changes
-
-- [REMOVE] Stable router version ([#7677](https://github.com/remix-run/remix/pull/7677))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.1.0-pre.1`
-
-## 2.1.0-pre.0
+## 2.1.0
 
 ### Minor Changes
 
-- Add support for the [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/ViewTransition) via `document.startViewTransition` to enable CSS animated transitions on SPA navigations in your application. ([#7648](https://github.com/remix-run/remix/pull/7648))
-
-  The simplest approach to enabling a View Transition in your Remix app is via the new `<Link unstable_viewTransition>` prop. This will cause the navigation DOM update to be wrapped in `document.startViewTransition` which will enable transitions for the DOM update. Without any additional CSS styles, you'll get a basic cross-fade animation for your page.
-
-  If you need to apply more fine-grained styles for your animations, you can leverage the `unstable_useViewTransitionState` hook which will tell you when a transition is in progress and you can use that to apply classes or styles:
-
-  ```jsx
-  function ImageLink(to, src, alt) {
-    let isTransitioning = unstable_useViewTransitionState(to);
-    return (
-      <Link to={to} unstable_viewTransition>
-        <img
-          src={src}
-          alt={alt}
-          style={{
-            viewTransitionName: isTransitioning ? "image-expand" : "",
-          }}
-        />
-      </Link>
-    );
-  }
-  ```
-
-  You can also use the `<NavLink unstable_viewTransition>` shorthand which will manage the hook usage for you and automatically add a `transitioning` class to the `<a>` during the transition:
-
-  ```css
-  a.transitioning img {
-    view-transition-name: "image-expand";
-  }
-  ```
-
-  ```jsx
-  <NavLink to={to} unstable_viewTransition>
-    <img src={src} alt={alt} />
-  </NavLink>
-  ```
-
-  For more information on using the View Transitions API, please refer to the [Smooth and simple transitions with the View Transitions API](https://developer.chrome.com/docs/web-platform/view-transitions/) guide from the Google Chrome team.
+- Add experimental support for the [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/ViewTransition) via `document.startViewTransition` to enable CSS animated transitions on SPA navigations in your application ([#7648](https://github.com/remix-run/remix/pull/7648))
+  - For additional information please refer to the [2.1.0 Release Notes](https://github.com/remix-run/remix/releases/tag/remix%402.1.0) or the [documentation](https://remix.run/docs/components/link#unstable_viewtransition)
 
 ### Patch Changes
 
 - Avoid mutating `meta` object when `tagName` is specified ([#7594](https://github.com/remix-run/remix/pull/7594))
-- Fix FOUC on subsequent client-side navigations to route.lazy routes ([#7576](https://github.com/remix-run/remix/pull/7576))
+- Fix FOUC on subsequent client-side navigations to `route.lazy` routes ([#7576](https://github.com/remix-run/remix/pull/7576))
 - Emulate types for `JSON.parse(JSON.stringify(x))` in `SerializeFrom` ([#7605](https://github.com/remix-run/remix/pull/7605))
-
-  Notably, type fields that are only assignable to `undefined` after serialization are now omitted since
-  `JSON.stringify |> JSON.parse` will omit them. See test cases for examples.
-
-  Also fixes type errors when upgrading to v2 from 1.19
-
+  - Notably, type fields that are only assignable to `undefined` after serialization are now omitted since `JSON.stringify |> JSON.parse` will omit them -- see test cases for examples
+  - Also fixes type errors when upgrading to v2 from 1.19
 - Export the proper Remix `useMatches` wrapper to fix `UIMatch` typings ([#7551](https://github.com/remix-run/remix/pull/7551))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.1.0-pre.0`
+  - `@remix-run/server-runtime@2.1.0`
+  - [`react-router-dom@6.17.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.17.0)
+  - [`@remix-run/router@1.10.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1100)
 
 ## 2.0.1
 

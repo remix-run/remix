@@ -1,8 +1,8 @@
 # @remix-run/css-bundle
 
-## 2.1.0-pre.1
+## 2.1.0
 
-## 2.1.0-pre.0
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%402.1.0) for an overview of all changes in v2.1.0.
 
 ## 2.0.1
 
