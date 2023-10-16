@@ -36,7 +36,7 @@ npm install
 npm run dev
 ```
 
-You should be able to open up \[http\://localhost:3000]\[http-localhost-3000] and see an unstyled screen that looks like this:
+You should be able to open up [http://localhost:3000][http-localhost-3000] and see an unstyled screen that looks like this:
 
 <img class="tutorial" src="/docs-images/contacts/03.webp" />
 
@@ -58,7 +58,7 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 
-export default function Root() {
+export default function App() {
   return (
     <html lang="en">
       <head>
@@ -282,12 +282,12 @@ import {
 
 // existing imports & code
 
-export default function Root() {
+export default function App() {
   return (
     <html lang="en">
       {/* other elements */}
       <body>
-        {/* other elements */}
+        <div id="sidebar">{/* other elements */}</div>
         <div id="detail">
           <Outlet />
         </div>
@@ -325,7 +325,7 @@ import {
 
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   return (
     <html lang="en">
       {/* other elements */}
@@ -392,7 +392,7 @@ export const loader = async () => {
   return json({ contacts });
 };
 
-export default function Root() {
+export default function App() {
   const { contacts } = useLoaderData();
 
   return (
@@ -446,7 +446,7 @@ You may have noticed TypeScript complaining about the `contact` type inside the 
 ```tsx filename=app/root.tsx lines=[4]
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts } = useLoaderData<typeof loader>();
 
   // existing code
@@ -602,13 +602,13 @@ Just like creating data, you update data with [`<Form>`][form-component]. Let's 
 touch app/routes/contacts.\$contactId_.edit.tsx
 ```
 
-Note the weird `_` in `$contactId_`. By default, routes will automatically nest inside routes with the same prefixed name. Adding a trialing `_` tells the route to **not** nest inside `app/routes/contacts.$contactId.tsx`. Read more in the [Route File Naming][routes-file-conventions] guide.
+Note the weird `_` in `$contactId_`. By default, routes will automatically nest inside routes with the same prefixed name. Adding a trailing `_` tells the route to **not** nest inside `app/routes/contacts.$contactId.tsx`. Read more in the [Route File Naming][routes-file-conventions] guide.
 
 👉 **Add the edit page UI**
 
 Nothing we haven't seen before, feel free to copy/paste:
 
-```tsx filename=app/routes/contacts.$contactId.edit.tsx
+```tsx filename=app/routes/contacts.$contactId_.edit.tsx
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
@@ -833,7 +833,7 @@ import {
 
 // existing imports and exports
 
-export default function Root() {
+export default function App() {
   const { contacts } = useLoaderData<typeof loader>();
 
   return (
@@ -898,7 +898,7 @@ import {
 
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
 
@@ -1145,7 +1145,7 @@ export const loader = async ({
   return json({ contacts, q });
 };
 
-export default function Root() {
+export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
 
@@ -1190,7 +1190,7 @@ import { useEffect } from "react";
 
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
 
@@ -1219,7 +1219,7 @@ import { useEffect, useState } from "react";
 
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   // the query now needs to be kept in state
@@ -1292,7 +1292,7 @@ import {
 } from "@remix-run/react";
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const submit = useSubmit();
@@ -1343,7 +1343,7 @@ For a better user experience, let's add some immediate UI feedback for the searc
 ```tsx filename=app/root.tsx lines=[7-11]
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const submit = useSubmit();
@@ -1364,7 +1364,7 @@ When nothing is happening, `navigation.location` will be `undefined`, but when t
 ```tsx filename=app/root.tsx lines=[22,31]
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   // existing code
 
   return (
@@ -1412,7 +1412,7 @@ Bonus points, avoid fading out the main screen when searching:
 ```tsx filename=app/root.tsx lines=[13]
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   // existing code
 
   return (
@@ -1454,7 +1454,7 @@ We can avoid this by _replacing_ the current entry in the history stack with the
 ```tsx filename=app/root.tsx lines=[16-19]
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   // existing code
 
   return (

@@ -188,9 +188,9 @@ function ImageLink(to) {
 }
 ```
 
-<docs-warn>
+<docs-warning>
 Please note that this API is marked unstable and may be subject to breaking changes without a major release.
-</docs-warn>
+</docs-warning>
 
 [scroll_restoration_component]: ./scroll-restoration
 [history_state]: https://developer.mozilla.org/en-US/docs/Web/API/History/state
