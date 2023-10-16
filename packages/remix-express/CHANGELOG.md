@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Flush headers for text/event-stream responses. ([#7619](https://github.com/remix-run/remix/pull/7619))
+- Flush headers for `text/event-stream` responses ([#7619](https://github.com/remix-run/remix/pull/7619))
 - Updated dependencies:
   - `@remix-run/node@2.1.0`
 
