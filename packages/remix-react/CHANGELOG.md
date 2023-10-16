@@ -1,14 +1,6 @@
 # `@remix-run/react`
 
-## 2.1.0-pre.1
-
-### Patch Changes
-
-- [REMOVE] Stable router version ([#7677](https://github.com/remix-run/remix/pull/7677))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.1.0-pre.1`
-
-## 2.1.0-pre.0
+## 2.1.0
 
 ### Minor Changes
 
@@ -54,7 +46,11 @@
 ### Patch Changes
 
 - Avoid mutating `meta` object when `tagName` is specified ([#7594](https://github.com/remix-run/remix/pull/7594))
+
+- \[REMOVE] Stable router version ([#7677](https://github.com/remix-run/remix/pull/7677))
+
 - Fix FOUC on subsequent client-side navigations to route.lazy routes ([#7576](https://github.com/remix-run/remix/pull/7576))
+
 - Emulate types for `JSON.parse(JSON.stringify(x))` in `SerializeFrom` ([#7605](https://github.com/remix-run/remix/pull/7605))
 
   Notably, type fields that are only assignable to `undefined` after serialization are now omitted since
@@ -63,8 +59,9 @@
   Also fixes type errors when upgrading to v2 from 1.19
 
 - Export the proper Remix `useMatches` wrapper to fix `UIMatch` typings ([#7551](https://github.com/remix-run/remix/pull/7551))
+
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.1.0-pre.0`
+  - `@remix-run/server-runtime@2.1.0`
 
 ## 2.0.1
 
