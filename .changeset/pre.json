@@ -24,6 +24,7 @@
     "dont-mutate-meta",
     "express-flush-stream-headers",
     "fix-cf-sourcemaps",
+    "nine-knives-compare",
     "route-lazy-fouc",
     "stabilize-create-remix-stub",
     "stale-apples-reply",
