@@ -186,9 +186,9 @@ You may also use the `className`/`style` props or the render props passed to `ch
 </NavLink>
 ```
 
-<docs-warn>
+<docs-warning>
 Please note that this API is marked unstable and may be subject to breaking changes without a major release.
-</docs-warn>
+</docs-warning>
 
 ### `<Link>` props
 

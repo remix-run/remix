@@ -7,6 +7,8 @@ title: createRemixStub
 This utility allows you to unit-test your own components that rely on Remix hooks/components by setting up a mocked set of routes:
 
 ```tsx
+import { createRemixStub } from "@remix-run/testing";
+
 test("renders loader data", async () => {
   const RemixStub = createRemixStub([
     {

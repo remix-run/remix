@@ -459,7 +459,7 @@ React Fast Refresh cannot track changes for a component when hooks are being add
 
 #### Component Keys
 
-In some cases, React cannot distinguish between existing components being changed and new components being added. \[React needs `key`s]\[react_keys] to disambiguate these cases and track changes when sibling elements are modified.
+In some cases, React cannot distinguish between existing components being changed and new components being added. [React needs `key`s][react_keys] to disambiguate these cases and track changes when sibling elements are modified.
 
 ## Acknowledgements
 
@@ -508,6 +508,7 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [glob-imports]: https://vitejs.dev/guide/features.html#glob-import
 [use_loader_data]: ../hooks/use-loader-data
 [react_refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
+[react_keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
 [vite-team]: https://vitejs.dev/team.html
 [consider-using-vite]: https://github.com/remix-run/remix/discussions/2427
 [remix-kit]: https://github.com/jrestall/remix-kit

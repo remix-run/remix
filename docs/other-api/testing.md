@@ -13,6 +13,8 @@ The general usage of this is to test components/hooks that rely on Remix hooks/c
 To use `createRemixStub`, define your routes using React Router-like route objects, where you specify the `path`, `Component`, `loader`, etc. These are essentially mocking the nesting and exports of the route files in your Remix app:
 
 ```tsx
+import { createRemixStub } from "@remix-run/testing";
+
 const RemixStub = createRemixStub([
   {
     path: "/",
