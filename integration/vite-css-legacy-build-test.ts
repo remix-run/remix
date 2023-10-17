@@ -11,7 +11,7 @@ import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 const TEST_PADDING_VALUE = "20px";
 
-test.describe("Vite CSS build", () => {
+test.describe("Vite CSS legacy imports build", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
 
