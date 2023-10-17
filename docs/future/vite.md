@@ -14,7 +14,7 @@ toc: false
 | Feature                      | Node | Deno | Cloudflare | Notes                                                                 |
 | ---------------------------- | ---- | ---- | ---------- | --------------------------------------------------------------------- |
 | Built-in dev server          | ✅   | ❓   | ⏳         |                                                                       |
-| Other servers (e.g. Express) | ⏳   | ⏳   | ⏳         |                                                                       |
+| Other servers (e.g. Express) | ✅   | ❓   | ⏳         |                                                                       |
 | HMR                          | ✅   | ❓   | ⏳         |                                                                       |
 | HDR                          | ✅   | ❓   | ⏳         |                                                                       |
 | MDX routes                   | ✅   | ❓   | ⏳         | [Supported with some deprecations.][supported-with-some-deprecations] |
