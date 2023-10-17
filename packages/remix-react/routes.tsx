@@ -1,4 +1,5 @@
 import * as React from "react";
+import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
 import type {
   DataRouteObject,
   ShouldRevalidateFunction,
@@ -37,6 +38,7 @@ export interface EntryRoute extends Route {
   hasLoader: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
+  css?: string[];
   module: string;
   parentId?: string;
 }
@@ -130,20 +132,40 @@ export function createClientRoutes(
       id: route.id,
       index: route.index,
       path: route.path,
-      loader({ request }) {
-        if (!route.hasLoader) return null;
-        return fetchServerHandler(request, route);
-      },
-      action({ request }) {
-        if (!route.hasAction) {
-          let msg =
-            `Route "${route.id}" does not have an action, but you are trying ` +
-            `to submit to it. To fix this, please add an \`action\` function to the route`;
-          console.error(msg);
-          return Promise.reject(new Error(msg));
+      async loader({ request }) {
+        // Only prefetch links if we've been loaded into the cache, route.lazy
+        // will handle initial loads
+        let routeModulePromise = routeModulesCache[route.id]
+          ? prefetchStyleLinks(route, routeModulesCache[route.id])
+          : Promise.resolve();
+        try {
+          if (!route.hasLoader) return null;
+          return fetchServerHandler(request, route);
+        } finally {
+          await routeModulePromise;
         }
+      },
+      async action({ request }) {
+        // Only prefetch links if we've been loaded into the cache, route.lazy
+        // will handle initial loads
+        let routeModulePromise = routeModulesCache[route.id]
+          ? prefetchStyleLinks(route, routeModulesCache[route.id])
+          : Promise.resolve();
+        try {
+          if (!route.hasAction) {
+            let msg =
+              `Route "${route.id}" does not have an action, but you are trying ` +
+              `to submit to it. To fix this, please add an \`action\` function to the route`;
+            console.error(msg);
+            return Promise.reject(
+              new ErrorResponse(405, "Method Not Allowed", new Error(msg), true)
+            );
+          }
 
-        return fetchServerHandler(request, route);
+          return fetchServerHandler(request, route);
+        } finally {
+          await routeModulePromise;
+        }
       },
       ...(routeModule
         ? // Use critical path modules directly
@@ -220,11 +242,24 @@ async function loadRouteModuleWithBlockingLinks(
   routeModules: RouteModules
 ) {
   let routeModule = await loadRouteModule(route, routeModules);
-  await prefetchStyleLinks(routeModule);
+  await prefetchStyleLinks(route, routeModule);
+
+  // Resource routes are built with an empty object as the default export -
+  // ignore those when setting the Component
+  let defaultExportIsEmptyObject =
+    typeof routeModule.default === "object" &&
+    Object.keys(routeModule.default || {}).length === 0;
+
+  // Include all `browserSafeRouteExports` fields
   return {
-    ...routeModule,
-    default: undefined,
-    Component: routeModule.default,
+    ...(routeModule.default != null && !defaultExportIsEmptyObject
+      ? { Component: routeModule.default }
+      : {}),
+    ErrorBoundary: routeModule.ErrorBoundary,
+    handle: routeModule.handle,
+    links: routeModule.links,
+    meta: routeModule.meta,
+    shouldRevalidate: routeModule.shouldRevalidate,
   };
 }
 

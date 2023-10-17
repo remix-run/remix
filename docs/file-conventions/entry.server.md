@@ -32,10 +32,14 @@ export function handleError(
   error: unknown,
   { request, params, context }: DataFunctionArgs
 ) {
-  sendErrorToErrorReportingService(error);
-  console.error(formatErrorForJsonLogging(error));
+  if (!request.signal.aborted) {
+    sendErrorToErrorReportingService(error);
+    console.error(formatErrorForJsonLogging(error));
+  }
 }
 ```
+
+_Note that you generally want to avoid logging when the request was aborted, since Remix's cancellation and race-condition handling can cause a lot of requests to be aborted._
 
 ### Streaming Rendering Errors
 
@@ -53,5 +57,5 @@ Note that this does not handle thrown `Response` instances from your `loader`/`a
 [browser-entry-module]: ./entry.client
 [rendertopipeablestream]: https://react.dev/reference/react-dom/server/renderToPipeableStream
 [rendertoreadablestream]: https://react.dev/reference/react-dom/server/renderToReadableStream
-[node-streaming-entry-server]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/node/entry.server.react-stream.tsx
-[cloudflare-streaming-entry-server]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/cloudflare/entry.server.react-stream.tsx
+[node-streaming-entry-server]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/entry.server.node.tsx
+[cloudflare-streaming-entry-server]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/entry.server.cloudflare.tsx

@@ -52,7 +52,7 @@ import type {
   AppLoadContext,
   EntryContext,
 } from "@remix-run/node";
-import { Response } from "@remix-run/node";
+import { createReadableStreamFromReadable } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
 import isbot from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
@@ -101,10 +101,13 @@ function handleBotRequest(
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
-              headers: responseHeaders,
-              status: responseStatusCode,
-            })
+            new Response(
+              createReadableStreamFromReadable(body),
+              {
+                headers: responseHeaders,
+                status: responseStatusCode,
+              }
+            )
           );
 
           pipe(body);
@@ -143,10 +146,13 @@ function handleBrowserRequest(
           responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(body, {
-              headers: responseHeaders,
-              status: responseStatusCode,
-            })
+            new Response(
+              createReadableStreamFromReadable(body),
+              {
+                headers: responseHeaders,
+                status: responseStatusCode,
+              }
+            )
           );
 
           pipe(body);
@@ -298,7 +304,7 @@ In your `package.json` file, update your scripts to use `remix` commands instead
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
-    "start": "remix-serve build",
+    "start": "remix-serve build/index.js",
     "typecheck": "tsc"
   }
 }

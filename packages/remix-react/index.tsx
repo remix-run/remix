@@ -13,6 +13,7 @@ export type {
   Params,
   Path,
   ShouldRevalidateFunction,
+  ShouldRevalidateFunctionArgs,
   SubmitFunction,
   SubmitOptions,
   unstable_Blocker,
@@ -36,7 +37,6 @@ export {
   useHref,
   useLocation,
   useMatch,
-  useMatches,
   useNavigate,
   useNavigation,
   useNavigationType,
@@ -50,13 +50,14 @@ export {
   useSubmit,
   unstable_useBlocker,
   unstable_usePrompt,
+  unstable_useViewTransitionState,
 } from "react-router-dom";
 
 export type {
   AwaitProps,
-  RouteMatch,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
+  UIMatch,
 } from "./components";
 export {
   Await,
@@ -71,6 +72,7 @@ export {
   useLoaderData,
   useRouteLoaderData,
   useActionData,
+  useMatches,
   RemixContext as UNSAFE_RemixContext,
 } from "./components";
 

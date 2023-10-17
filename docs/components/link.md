@@ -47,7 +47,7 @@ Because of this, if you are using `nav :last-child` you will need to use `nav :l
 
 ### `preventScrollReset`
 
-If you are using [`<ScrollRestoration>`][scroll-restoration], this lets you prevent the scroll position from being reset to the top of the window when the link is clicked.
+If you are using [`<ScrollRestoration>`][scroll_restoration_component], this lets you prevent the scroll position from being reset to the top of the window when the link is clicked.
 
 ```tsx
 <Link to="?tab=one" preventScrollReset />
@@ -56,11 +56,12 @@ If you are using [`<ScrollRestoration>`][scroll-restoration], this lets you prev
 This does not prevent the scroll position from being restored when the user comes back to the location with the back/forward buttons, it just prevents the reset when the user clicks the link.
 
 <details>
+
 <summary>Discussion</summary>
 
 An example when you might want this behavior is a list of tabs that manipulate the url search params that aren't at the top of the page. You wouldn't want the scroll position to jump up to the top because it might scroll the toggled content out of the viewport!
 
-```
+```text
       ┌─────────────────────────┐
       │                         ├──┐
       │                         │  │
@@ -137,15 +138,61 @@ Adds persistent client side routing state to the next location.
 
 The location state is accessed from the `location`.
 
-```ts
+```tsx
 function SomeComp() {
   const location = useLocation();
   location.state; // { some: "value" }
 }
 ```
 
-This state is inaccessible on the server as it is implemented on top of [`history.state`][history-state].
+This state is inaccessible on the server as it is implemented on top of [`history.state`][history_state].
 
-[rr-link]: https://reactrouter.com/en/main/components/link
-[scroll-restoration]: ./scroll-restoration
-[history-state]: https://developer.mozilla.org/en-US/docs/Web/API/History/state
+## `unstable_viewTransition`
+
+The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`:
+
+```jsx
+<Link to={to} unstable_viewTransition>
+  Click me
+</Link>
+```
+
+If you need to apply specific styles for this view transition, you will also need to leverage the [`unstable_useViewTransitionState()`][use-view-transition-state]:
+
+```jsx
+function ImageLink(to) {
+  const isTransitioning =
+    unstable_useViewTransitionState(to);
+  return (
+    <Link to={to} unstable_viewTransition>
+      <p
+        style={{
+          viewTransitionName: isTransitioning
+            ? "image-title"
+            : "",
+        }}
+      >
+        Image Number {idx}
+      </p>
+      <img
+        src={src}
+        alt={`Img ${idx}`}
+        style={{
+          viewTransitionName: isTransitioning
+            ? "image-expand"
+            : "",
+        }}
+      />
+    </Link>
+  );
+}
+```
+
+<docs-warning>
+Please note that this API is marked unstable and may be subject to breaking changes without a major release.
+</docs-warning>
+
+[scroll_restoration_component]: ./scroll-restoration
+[history_state]: https://developer.mozilla.org/en-US/docs/Web/API/History/state
+[use-view-transition-state]: ../hooks//use-view-transition-state
+[view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API

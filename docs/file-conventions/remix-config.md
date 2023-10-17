@@ -40,6 +40,24 @@ exports.appDirectory = "./elsewhere";
 The path to the browser build, relative to remix.config.js. Defaults to
 "public/build". Should be deployed to static hosting.
 
+## browserNodeBuiltinsPolyfill
+
+The Node.js polyfills to include in the browser build. Polyfills are provided by [JSPM][jspm] and configured via \[esbuild-plugins-node-modules-polyfill].
+
+```js filename=remix.config.js
+exports.browserNodeBuiltinsPolyfill = {
+  modules: {
+    buffer: true, // Provide a JSPM polyfill
+    fs: "empty", // Provide an empty polyfill
+  },
+  globals: {
+    Buffer: true,
+  },
+};
+```
+
+When using this option and targeting non-Node.js server platforms, you may also want to configure Node.js polyfills for the server via [`serverNodeBuiltinsPolyfill`][server-node-builtins-polyfill].
+
 ## cacheDirectory
 
 The path to a directory Remix can use for caching things in development,
@@ -60,6 +78,13 @@ The URL prefix of the browser build with a trailing slash. Defaults to
 ## postcss
 
 Whether to process CSS using [PostCSS][postcss] if a PostCSS config file is present. Defaults to `true`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  postcss: false,
+};
+```
 
 ## routes
 
@@ -94,15 +119,6 @@ main module. If specified, Remix will compile this file along with your
 application into a single file to be deployed to your server. This file can use
 either a `.js` or `.ts` file extension.
 
-## serverBuildDirectory
-
-<docs-warning>This option is deprecated and will likely be removed in a future
-stable release. Use [`serverBuildPath`][server-build-path]
-instead.</docs-warning>
-
-The path to the server build, relative to `remix.config.js`. Defaults to
-"build". This needs to be deployed to your server.
-
 ## serverBuildPath
 
 The path to the server build file, relative to `remix.config.js`. This file
@@ -119,7 +135,7 @@ field in `package.json`.
 A list of regex patterns that determines if a module is transpiled and included
 in the server bundle. This can be useful when consuming ESM only packages in a
 CJS build, or when consuming packages with [CSS side effect
-imports][css-side-effect-imports].
+imports][css_side_effect_imports].
 
 For example, the `unified` ecosystem is all ESM-only. Let's also say we're using
 a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be
@@ -132,7 +148,7 @@ module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
-  serverBuildDirectory: "build",
+  serverBuildPath: "build/index.js",
   ignoredRouteFiles: ["**/.*"],
   serverDependenciesToBundle: [
     /^rehype.*/,
@@ -159,20 +175,28 @@ Whether to minify the server build in production or not. Defaults to `false`.
 ## serverModuleFormat
 
 The output format of the server build, which can either be `"cjs"` or `"esm"`.
-Defaults to `"cjs"`.
+Defaults to `"esm"`.
 
 ## serverNodeBuiltinsPolyfill
 
-The Node.js polyfills to include in the server build when targeting non-Node.js server platforms. Polyfills are provided by [JSPM][jspm] and configured via [esbuild-plugins-node-modules-polyfill].
+The Node.js polyfills to include in the server build when targeting non-Node.js server platforms. Polyfills are provided by [JSPM][jspm] and configured via [esbuild_plugins_node_modules_polyfill][esbuild_plugins_node_modules_polyfill].
 
 ```js filename=remix.config.js
-exports.serverNodeBuiltinsPolyfill = {
-  modules: {
-    path: true, // Provide a JSPM polyfill
-    fs: "empty", // Provide an empty polyfill
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  serverNodeBuiltinsPolyfill: {
+    modules: {
+      buffer: true, // Provide a JSPM polyfill
+      fs: "empty", // Provide an empty polyfill
+    },
+  },
+  globals: {
+    Buffer: true,
   },
 };
 ```
+
+When using this option, you may also want to configure Node.js polyfills for the browser via [`browserNodeBuiltinsPolyfill`][browser-node-builtins-polyfill].
 
 ## serverPlatform
 
@@ -181,9 +205,10 @@ The platform the server build is targeting, which can either be `"neutral"` or
 
 ## tailwind
 
-Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `true`.
+Whether to support [Tailwind functions and directives][tailwind_functions_and_directives] in CSS files if `tailwindcss` is installed. Defaults to `true`.
 
-```tsx
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   tailwind: false,
 };
@@ -191,7 +216,7 @@ module.exports = {
 
 ## watchPaths
 
-An array, string, or async function that defines custom directories, relative to the project root, to watch while running [remix dev][remix-dev]. These directories are in addition to [`appDirectory`][app-directory].
+An array, string, or async function that defines custom directories, relative to the project root, to watch while running [remix dev][remix_dev]. These directories are in addition to [`appDirectory`][app_directory].
 
 ```js filename=remix.config.js
 exports.watchPaths = async () => {
@@ -206,29 +231,18 @@ exports.watchPaths = ["./some/path/*"];
 
 There are a few conventions that Remix uses you should be aware of.
 
-<docs-info>[Dilum Sanjaya][dilum-sanjaya] made [an awesome visualization][an-awesome-visualization] of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
+<docs-info>[Dilum Sanjaya][dilum_sanjaya] made [an awesome visualization][an_awesome_visualization] of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
 
-[minimatch]: https://www.npmjs.com/package/minimatch
-[public-path]: #publicpath
-[server-build-path]: #serverbuildpath
-[server-conditions]: #serverconditions
-[server-dependencies-to-bundle]: #serverdependenciestobundle
-[server-main-fields]: #servermainfields
-[server-minify]: #serverminify
-[server-module-format]: #servermoduleformat
-[server-platform]: #serverplatform
-[arc]: https://arc.codes
-[cloudflare-pages]: https://pages.cloudflare.com
-[cloudflare-workers]: https://workers.cloudflare.com
-[deno]: https://deno.land
-[node-cjs]: https://nodejs.org/en
-[dilum-sanjaya]: https://twitter.com/DilumSanjaya
-[an-awesome-visualization]: https://remix-routing-demo.netlify.app
-[remix-dev]: ../other-api/dev#remix-dev
-[app-directory]: #appDirectory
-[css-side-effect-imports]: ../guides/styling#css-side-effect-imports
+[minimatch]: https://npm.im/minimatch
+[dilum_sanjaya]: https://twitter.com/DilumSanjaya
+[an_awesome_visualization]: https://remix-routing-demo.netlify.app
+[remix_dev]: ../other-api/dev#remix-dev
+[app_directory]: #appDirectory
+[css_side_effect_imports]: ../styling/css-imports
 [postcss]: https://postcss.org
-[tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
+[tailwind_functions_and_directives]: https://tailwindcss.com/docs/functions-and-directives
 [jspm]: https://github.com/jspm/jspm-core
-[esbuild-plugins-node-modules-polyfill]: https://www.npmjs.com/package/esbuild-plugins-node-modules-polyfill
-[port]: ../other-api/dev-v2#options-1
+[esbuild_plugins_node_modules_polyfill]: https://npm.im/esbuild-plugins-node-modules-polyfill
+[port]: ../other-api/dev#options-1
+[browser-node-builtins-polyfill]: #browsernodebuiltinspolyfill
+[server-node-builtins-polyfill]: #servernodebuiltinspolyfill

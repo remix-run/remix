@@ -1,10 +1,36 @@
 ---
 title: useAsyncValue
-toc: false
+new: true
 ---
 
 # `useAsyncValue`
 
-<docs-info>This hook is simply a re-export of [React Router's `useAsyncValue`][rr-useassyncvalue].</docs-info>
+Returns the resolved data from the closest [`<Await>`][await_component] ancestor component.
 
-[rr-useassyncvalue]: https://reactrouter.com/hooks/use-async-value
+```tsx
+function SomeDescendant() {
+  const value = useAsyncValue();
+  // ...
+}
+```
+
+```tsx
+<Await resolve={somePromise}>
+  <SomeDescendant />
+</Await>
+```
+
+## Additional Resources
+
+**Guides**
+
+- [Streaming][streaming_guide]
+
+**API**
+
+- [`<Await/>`][await_component]
+- [`useAsyncError`][use_async_error]
+
+[await_component]: ../components/await
+[streaming_guide]: ../guides/streaming
+[use_async_error]: ../hooks/use-async-error

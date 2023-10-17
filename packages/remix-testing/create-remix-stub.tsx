@@ -1,11 +1,11 @@
 import * as React from "react";
 import {
   UNSAFE_convertRoutesToDataRoutes,
-  type ActionFunctionArgs,
   type HydrationState,
   type InitialEntry,
-  type LoaderFunctionArgs,
   type Router,
+  type ActionFunctionArgs as RRActionFunctionArgs,
+  type LoaderFunctionArgs as RRLoaderFunctionArgs,
 } from "@remix-run/router";
 import { UNSAFE_RemixContext as RemixContext } from "@remix-run/react";
 import type {
@@ -85,7 +85,7 @@ export interface RemixStubProps {
   /**
    * Future flags mimicking the settings in remix.config.js
    */
-  remixConfigFuture?: Partial<FutureConfig>;
+  future?: Partial<FutureConfig>;
 }
 
 export function createRemixStub(
@@ -96,14 +96,14 @@ export function createRemixStub(
     initialEntries,
     initialIndex,
     hydrationData,
-    remixConfigFuture,
+    future,
   }: RemixStubProps) {
     let routerRef = React.useRef<Router>();
     let remixContextRef = React.useRef<RemixContextObject>();
 
     if (routerRef.current == null) {
       remixContextRef.current = {
-        future: { ...remixConfigFuture },
+        future: { ...future },
         manifest: {
           routes: {},
           entry: { imports: [], module: "" },
@@ -160,10 +160,10 @@ function processRoutes(
       Component: route.Component,
       ErrorBoundary: route.ErrorBoundary,
       action: action
-        ? (args: ActionFunctionArgs) => action!({ ...args, context })
+        ? (args: RRActionFunctionArgs) => action!({ ...args, context })
         : undefined,
       loader: loader
-        ? (args: LoaderFunctionArgs) => loader!({ ...args, context })
+        ? (args: RRLoaderFunctionArgs) => loader!({ ...args, context })
         : undefined,
       handle: route.handle,
       shouldRevalidate: route.shouldRevalidate,

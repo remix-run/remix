@@ -135,7 +135,7 @@ async function copyTemplateFromLocalFilePath(
   filePath: string,
   destPath: string
 ): Promise<boolean> {
-  if (filePath.endsWith(".tar.gz")) {
+  if (filePath.endsWith(".tar.gz") || filePath.endsWith(".tgz")) {
     await extractLocalTarball(filePath, destPath);
     return false;
   }
@@ -384,10 +384,14 @@ function isValidGithubRepoUrl(
 }
 
 function isGithubRepoShorthand(value: string) {
+  if (isUrl(value)) {
+    return false;
+  }
   // This supports :owner/:repo and :owner/:repo/nested/path, e.g.
   // remix-run/remix
   // remix-run/remix/templates/express
-  return /^[\w-]+\/[\w-]+(\/[\w-]+)*$/.test(value);
+  // remix-run/examples/socket.io
+  return /^[\w-]+\/[\w-]+(\/[\w-.]+)*$/.test(value);
 }
 
 function isGithubReleaseAssetUrl(url: string) {

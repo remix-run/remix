@@ -10,7 +10,7 @@ Most of the time, you'll probably want to proxy the file to a file host.
 
 ```tsx
 import type {
-  ActionArgs,
+  ActionFunctionArgs,
   UploadHandler,
 } from "@remix-run/node"; // or cloudflare/deno
 import {
@@ -54,7 +54,9 @@ async function uploadImageToCloudinary(
   return uploadPromise;
 }
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const userId = getUserId(request);
 
   const uploadHandler = unstable_composeUploadHandlers(

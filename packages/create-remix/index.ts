@@ -32,7 +32,6 @@ import {
 } from "./utils";
 import { renderLoadingIndicator } from "./loading-indicator";
 import { copyTemplate, CopyTemplateError } from "./copy-template";
-import { getLatestRemixVersion } from "./remix-version";
 
 async function createRemix(argv: string[]) {
   let ctx = await getContext(argv);
@@ -121,7 +120,6 @@ async function getContext(argv: string[]): Promise<Context> {
   } = flags;
 
   let cwd = flags["_"][0] as string;
-  let latestRemixVersion = await getLatestRemixVersion();
   let interactive = isInteractive();
   let projectName = cwd;
 
@@ -137,7 +135,7 @@ async function getContext(argv: string[]): Promise<Context> {
     } else {
       log(
         `\n${color.warning(
-          `${selectedRemixVersion} is an invalid version specifier. Using Remix v${latestRemixVersion}.`
+          `${selectedRemixVersion} is an invalid version specifier. Using Remix v${thisRemixVersion}.`
         )}`
       );
       selectedRemixVersion = undefined;
@@ -168,7 +166,7 @@ async function getContext(argv: string[]): Promise<Context> {
     ),
     projectName,
     prompt,
-    remixVersion: selectedRemixVersion || latestRemixVersion,
+    remixVersion: selectedRemixVersion || thisRemixVersion,
     template,
     token,
     versionRequested,
@@ -265,7 +263,7 @@ async function copyTemplateToTempDirStep(ctx: Context) {
   } else {
     log("");
     info("Using basic template", [
-      "See https://remix.run/docs/pages/templates for more",
+      "See https://remix.run/docs/guides/templates for more",
     ]);
   }
 
@@ -317,7 +315,9 @@ async function copyTempDirToAppDirStep(ctx: Context) {
 
   let files1 = await getDirectoryFilesRecursive(ctx.tempDir);
   let files2 = await getDirectoryFilesRecursive(ctx.cwd);
-  let collisions = files1.filter((f) => files2.includes(f));
+  let collisions = files1
+    .filter((f) => files2.includes(f))
+    .sort((a, b) => a.localeCompare(b));
 
   if (collisions.length > 0) {
     let getFileList = (prefix: string) => {

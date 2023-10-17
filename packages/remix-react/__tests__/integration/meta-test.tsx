@@ -1,14 +1,15 @@
-import * as React from "react";
 import { Meta, Outlet } from "@remix-run/react";
-import { unstable_createRemixStub } from "@remix-run/testing";
-import { prettyDOM, render } from "@testing-library/react";
+import { createRemixStub } from "@remix-run/testing";
+import { prettyDOM, render, screen } from "@testing-library/react";
+import user from "@testing-library/user-event";
+import * as React from "react";
 
 const getHtml = (c: HTMLElement) =>
   prettyDOM(c, undefined, { highlight: false });
 
 describe("meta", () => {
   it("no meta export renders meta from nearest route meta in the tree", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         id: "root",
         path: "/",
@@ -65,7 +66,7 @@ describe("meta", () => {
   });
 
   it("empty meta array does not render a tag", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [],
@@ -92,7 +93,7 @@ describe("meta", () => {
   });
 
   it("meta from `matches` renders meta tags", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         id: "root",
         path: "/",
@@ -140,7 +141,7 @@ describe("meta", () => {
   });
 
   it("{ charSet } adds a <meta charset='utf-8' />", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [{ charSet: "utf-8" }],
@@ -160,7 +161,7 @@ describe("meta", () => {
   });
 
   it("{ title } adds a <title />", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [{ title: "Document Title" }],
@@ -180,7 +181,7 @@ describe("meta", () => {
   });
 
   it("{ property: 'og:*', content: '*' } adds a <meta property='og:*' />", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [
@@ -220,7 +221,7 @@ describe("meta", () => {
       email: ["sonnyday@fancymail.com", "surfergal@veryprofessional.org"],
     };
 
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [
@@ -243,7 +244,7 @@ describe("meta", () => {
   });
 
   it("{ tagName: 'link' } adds a <link />", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         meta: () => [
@@ -268,8 +269,67 @@ describe("meta", () => {
     `);
   });
 
+  it("does not mutate meta when using tagName", async () => {
+    let RemixStub = createRemixStub([
+      {
+        path: "/",
+        meta: ({ data }) => data?.meta,
+        loader: () => ({
+          meta: [
+            {
+              tagName: "link",
+              rel: "canonical",
+              href: "https://website.com/authors/1",
+            },
+          ],
+        }),
+        Component() {
+          let [count, setCount] = React.useState(0);
+          return (
+            <>
+              <button onClick={() => setCount(count + 1)}>
+                {`Increment ${count}`}
+              </button>
+              <Meta key={count} />
+            </>
+          );
+        },
+      },
+    ]);
+
+    let { container } = render(<RemixStub />);
+
+    await screen.findByText("Increment 0");
+    expect(getHtml(container)).toMatchInlineSnapshot(`
+      "<div>
+        <button>
+          Increment 0
+        </button>
+        <link
+          href="https://website.com/authors/1"
+          rel="canonical"
+        />
+      </div>"
+    `);
+
+    user.click(screen.getByRole("button"));
+    await screen.findByText("Increment 1");
+
+    expect(getHtml(container)).toMatchInlineSnapshot(`
+      "<div>
+        <button>
+          Increment 1
+        </button>
+        <link
+          href="https://website.com/authors/1"
+          rel="canonical"
+        />
+      </div>"
+    `);
+  });
+
   it("loader errors are passed to meta", () => {
-    let RemixStub = unstable_createRemixStub([
+    let RemixStub = createRemixStub([
       {
         path: "/",
         Component() {

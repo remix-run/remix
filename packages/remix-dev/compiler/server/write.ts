@@ -11,10 +11,10 @@ export async function write(
   await fse.ensureDir(path.dirname(config.serverBuildPath));
 
   for (let file of outputFiles) {
-    if (file.path.endsWith(".js") || file.path.endsWith(".mjs")) {
+    if ([".js", ".cjs", ".mjs"].some((ext) => file.path.endsWith(ext))) {
       // fix sourceMappingURL to be relative to current path instead of /build
       let filename = file.path.substring(file.path.lastIndexOf(path.sep) + 1);
-      let escapedFilename = filename.replace(/\./g, "\\.");
+      let escapedFilename = filename.replace(/([.[\]])/g, "\\$1");
       let pattern = `(//# sourceMappingURL=)(.*)${escapedFilename}`;
       let contents = Buffer.from(file.contents).toString("utf-8");
       contents = contents.replace(new RegExp(pattern), `$1${filename}`);

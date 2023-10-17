@@ -4,7 +4,7 @@ title: Regular CSS
 
 # Regular CSS
 
-Remix helps you scale an app with regular CSS with nested routes and `links`.
+Remix helps you scale an app with regular CSS with nested routes and [`links`][links].
 
 CSS Maintenance issues can creep into a web app for a few reasons. It can get difficult to know:
 
@@ -19,27 +19,33 @@ Remix alleviates these issues with route-based stylesheets. Nested routes can ea
 Each route can add style links to the page, for example:
 
 ```tsx filename=app/routes/dashboard.tsx
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
 import styles from "~/styles/dashboard.css";
 
-export function links() {
-  return [{ rel: "stylesheet", href: styles }];
-}
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: styles },
+];
 ```
 
 ```tsx filename=app/routes/dashboard.accounts.tsx
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
 import styles from "~/styles/accounts.css";
 
-export function links() {
-  return [{ rel: "stylesheet", href: styles }];
-}
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: styles },
+];
 ```
 
 ```tsx filename=app/routes/dashboard.sales.tsx
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
 import styles from "~/styles/sales.css";
 
-export function links() {
-  return [{ rel: "stylesheet", href: styles }];
-}
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: styles },
+];
 ```
 
 Given these routes, this table shows which CSS will apply at specific URLs:
@@ -58,7 +64,7 @@ Websites large and small usually have a set of shared components used throughout
 
 #### Shared stylesheet
 
-The first approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like \[custom properties]\[custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
+The first approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like [custom properties][custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
 
 ```css filename=app/styles/shared.css
 /* scope with class names */
@@ -107,10 +113,12 @@ Note that these are not routes, but they export `links` functions as if they wer
 }
 ```
 
-```tsx filename=app/components/button/index.tsx lines=[1,3-5]
+```tsx filename=app/components/button/index.tsx lines=[1,3,5-7]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
 import styles from "./styles.css";
 
-export const links = () => [
+export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
 ];
 
@@ -131,12 +139,14 @@ And then a `<PrimaryButton>` that extends it:
 }
 ```
 
-```tsx filename=app/components/primary-button/index.tsx lines=[1,6,13]
+```tsx filename=app/components/primary-button/index.tsx lines=[3,8,15]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
 import { Button, links as buttonLinks } from "../button";
 
 import styles from "./styles.css";
 
-export const links = () => [
+export const links: LinksFunction = () => [
   ...buttonLinks(),
   { rel: "stylesheet", href: styles },
 ];
@@ -157,35 +167,37 @@ Because these buttons are not routes, and therefore not associated with a URL se
 
 Consider that `app/routes/_index.tsx` uses the primary button component:
 
-```tsx filename=app/routes/_index.tsx lines=[1-4,9]
+```tsx filename=app/routes/_index.tsx lines=[3-6,10]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
 import {
   PrimaryButton,
   links as primaryButtonLinks,
 } from "~/components/primary-button";
 import styles from "~/styles/index.css";
 
-export function links() {
-  return [
-    ...primaryButtonLinks(),
-    { rel: "stylesheet", href: styles },
-  ];
-}
+export const links: LinksFunction = () => [
+  ...primaryButtonLinks(),
+  { rel: "stylesheet", href: styles },
+];
 ```
 
 Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-button.css`, and the route's `index.css`.
 
 An initial reaction to this is that routes have to know more than you want them to. Keep in mind that each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
-```tsx filename=app/routes/$category.tsx lines=[1-5]
+```tsx filename=app/routes/$category.tsx lines=[3-7]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
 import { AddFavoriteButton } from "~/components/add-favorite-button";
 import { ProductDetails } from "~/components/product-details";
 import { ProductTile } from "~/components/product-tile";
 import { TileGrid } from "~/components/tile-grid";
 import styles from "~/styles/$category.css";
 
-export function links() {
-  return [{ rel: "stylesheet", href: styles }];
-}
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: styles },
+];
 
 export default function Category() {
   const products = useLoaderData<typeof loader>();
@@ -244,7 +256,7 @@ While that's a bit of boilerplate it enables a lot:
 - Co-located styles with your components
 - The only CSS ever loaded is the CSS that's used on the current page
 - When your components aren't used by a route, their CSS is unloaded from the page
-- Remix will prefetch the CSS for the next page with \[`<Link prefetch>`]\[link]
+- Remix will prefetch the CSS for the next page with [`<Link prefetch>`][link]
 - When one component's styles change, browser and CDN caches for the other components won't break because they are all have their own URLs.
 - When a component's JavaScript changes but its styles don't, the cache is not broken for the styles
 
@@ -283,7 +295,7 @@ export const CopyToClipboard = React.forwardRef(
 CopyToClipboard.displayName = "CopyToClipboard";
 ```
 
-Not only will this make the asset high priority in the network tab, but Remix will turn that `preload` into a `prefetch` when you link to the page with \[`<Link prefetch>`]\[link], so the SVG background is prefetched, in parallel, with the next route's data, modules, stylesheets, and any other preloads.
+Not only will this make the asset high priority in the network tab, but Remix will turn that `preload` into a `prefetch` when you link to the page with [`<Link prefetch>`][link], so the SVG background is prefetched, in parallel, with the next route's data, modules, stylesheets, and any other preloads.
 
 ### Link Media Queries
 
@@ -314,3 +326,7 @@ export const links: LinksFunction = () => {
   ];
 };
 ```
+
+[links]: ../route/links
+[custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
+[link]: ../components/link

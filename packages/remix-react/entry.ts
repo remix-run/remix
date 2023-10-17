@@ -12,6 +12,7 @@ type SerializedError = {
 export interface RemixContextObject {
   manifest: AssetsManifest;
   routeModules: RouteModules;
+  criticalCss?: string;
   serverHandoffString?: string;
   future: FutureConfig;
   abortDelay?: number;

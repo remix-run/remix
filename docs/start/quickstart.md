@@ -19,19 +19,19 @@ cd my-remix-app
 npm i @remix-run/node @remix-run/react @remix-run/serve isbot react react-dom
 
 # install dev dependencies
-npm i -D @remix-run/dev typescript
+npm i -D @remix-run/dev
 ```
 
 ## The Root Route
 
 ```shellscript nonumber
 mkdir app
-touch app/root.tsx
+touch app/root.jsx
 ```
 
 `app/root.jsx` is what we call the "Root Route". It's the root layout of your entire app. Here's the basic set of elements you'll need for any project:
 
-```tsx filename=app/root.tsx
+```jsx filename=app/root.jsx
 import {
   Links,
   Meta,
@@ -66,16 +66,27 @@ export default function App() {
 First build the app for production:
 
 ```shellscript nonumber
-remix build
+npx remix build
 ```
 
-You should now see a `build/` folder (the server version of your app) and `public/build` folder (the browser version) with some build artifacts in them. (This is all [configurable][remix-config].)
+You should now see a `build/` folder (the server version of your app) and `public/build` folder (the browser version) with some build artifacts in them. (This is all [configurable][remix_config].)
 
-💿 **Run the app with `remix-serve`**
+👉 **Run the app with `remix-serve`**
+
+First you will need to specify the type in `package.json` as module so that `remix-serve` can run your app.
+
+```jsonc filename=package.json lines=[2] nocopy
+{
+  "type": "module"
+  // ...
+}
+```
+
+Now you can run your app with `remix-serve`:
 
 ```shellscript nonumber
 # note the dash!
-remix-serve build/index.js
+npx remix-serve build/index.js
 ```
 
 You should be able to open up [http://localhost:3000][http-localhost-3000] and see the "hello world" page.
@@ -83,7 +94,7 @@ You should be able to open up [http://localhost:3000][http-localhost-3000] and s
 Aside from the unholy amount of code in `node_modules`, our Remix app is just one file:
 
 ```
-├── app
+├── app/
 │   └── root.jsx
 └── package.json
 ```
@@ -96,7 +107,7 @@ If you don't care to set up your own server, you can use `remix-serve`. It's a s
 
 Just for kicks, let's stop using `remix-serve` and use express instead.
 
-💿 **Install Express and the Remix Express adapter**
+👉 **Install Express and the Remix Express adapter**
 
 ```shellscript nonumber
 npm i express @remix-run/express
@@ -105,7 +116,7 @@ npm i express @remix-run/express
 npm uninstall @remix-run/serve
 ```
 
-💿 **Create an Express server**
+👉 **Create an Express server**
 
 ```shellscript nonumber
 touch server.mjs
@@ -129,7 +140,7 @@ app.listen(3000, () => {
 });
 ```
 
-💿 **Run your app with express**
+👉 **Run your app with express**
 
 ```shellscript nonumber
 node server.mjs
@@ -147,7 +158,7 @@ Instead of stopping, rebuilding, and starting your server all the time, you can 
 
 First add a dev command in `package.json` that will run `remix dev`:
 
-💿 **Add a "scripts" entry to `package.json`**
+👉 **Add a "scripts" entry to `package.json`**
 
 ```jsonc filename=package.json lines=[2-4] nocopy
 {
@@ -162,7 +173,7 @@ This will start the Remix development server which will watch your files for cha
 
 When files change, Remix will restart your server for you, but because you own your server, you also have to tell Remix when it has restarted so Remix can safely send the hot updates to the browser.
 
-💿 **Add `broadcastDevReady` to your server**
+👉 **Add `broadcastDevReady` to your server**
 
 ```js filename=server.mjs lines=[2,15-17]
 import { createRequestHandler } from "@remix-run/express";
@@ -188,7 +199,7 @@ app.listen(3000, () => {
 
 And finally, let's connect your UI in the browser to receive those broadcasts:
 
-```tsx filename=app/root.tsx lines=[3,25]
+```jsx filename=app/root.jsx lines=[3,25]
 import {
   Links,
   LiveReload,
@@ -220,20 +231,20 @@ export default function App() {
 }
 ```
 
-💿 **Start the dev server**
+👉 **Start the dev server**
 
 ```shellscript nonumber
 npm run dev
 ```
 
-Now you can work on your app with immediate feedback. Give it a shot, change the text in `root.tsx` and watch!
+Now you can work on your app with immediate feedback. Give it a shot, change the text in `root.jsx` and watch!
 
 ## Controlling Server and Browser Entries
 
 There are default magic files Remix is using that most apps don't need to mess with, but if you want to customize Remix's entry points to the server and browser you can run `remix reveal` and they'll get dumped into your project.
 
 ```shellscript nonumber
-remix reveal
+npx remix reveal
 ```
 
 ```
@@ -248,7 +259,7 @@ Congrats, you can add Remix to your resume! Summing things up, we've learned:
 - `remix build` and `remix dev` compile your app into two things:
   - A request handler that you add to your own JavaScript server
   - A pile of static assets in your public directory for the browser
-- You can bring your own server with adapters to deploy anywhere.
+- You can bring your own server with adapters to deploy anywhere
 - You can set up a development workflow with HMR built-in
 
 In general, Remix is a bit "guts out". A few minutes of boilerplate but now you own your stack.
@@ -257,10 +268,10 @@ What's next?
 
 - [Tutorial][tutorial]
 
-[runtimes]: ../discussion/01-runtimes
+[runtimes]: ../discussion/runtimes
 [inspect]: https://nodejs.org/en/docs/guides/debugging-getting-started/
 [tutorial]: ./tutorial
-[remix-config]: ../file-conventions/remix-config
+[remix_config]: ../file-conventions/remix-config
 [templates]: https://remix.guide/templates
 [http-localhost-3000]: http://localhost:3000
 [es-modules]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules

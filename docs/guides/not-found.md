@@ -18,7 +18,9 @@ The first case is already handled by Remix, you don't have to throw a response y
 As soon as you know you don't have what the user is looking for you should _throw a response_.
 
 ```tsx filename=app/routes/page.$slug.tsx
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const page = await db.page.findOne({
     where: { slug: params.slug },
   });

@@ -16,7 +16,7 @@ You may run into this strange error in the browser. It almost always means that 
 TypeError: Cannot read properties of undefined (reading 'root')
 ```
 
-For example, you can't import "fs-extra" directly into a route module:
+For example, you can't import `fs-extra` directly into a route module:
 
 ```tsx bad filename=app/routes/_index.tsx lines=[2] nocopy
 import { json } from "@remix-run/node"; // or cloudflare/deno
@@ -53,11 +53,11 @@ export default function SomeRoute() {
 }
 ```
 
-Even better, send a PR to the project to add `"sideEffects": false` to their package.json so that bundlers that tree shake know they can safely remove the code from browser bundles.
+Even better, send a PR to the project to add `"sideEffects": false` to their `package.json` so that bundlers that tree shake know they can safely remove the code from browser bundles.
 
 Similarly, you may run into the same error if you call a function at the top-level scope of your route module that depends on server-only code.
 
-For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`][remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler] use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.ts` or `*.server.js` file, or you can move them into your route's `action` or `loader` function.
+For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`][parse_multipart_form_data_upload_handler] use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.ts` or `*.server.js` file, or you can move them into your route's `action` or `loader` function.
 
 So instead of doing:
 
@@ -91,7 +91,7 @@ export async function action() {
 
 > Why does this happen?
 
-Remix uses "tree shaking" to remove server code from browser bundles. Anything inside of Route module `loader`, `action`, and `headers` exports will be removed. It's a great approach but suffers from ecosystem compatibility.
+Remix uses "tree shaking" to remove server code from browser bundles. Anything inside of Route module `action`, `headers`, and `loader` exports will be removed. It's a great approach but suffers from ecosystem compatibility.
 
 When you import a third-party module, Remix checks the `package.json` of that package for `"sideEffects": false`. If that is configured, Remix knows it can safely remove the code from the client bundles. Without it, the imports remain because code may depend on the module's side effects (like setting global polyfills, etc.).
 
@@ -104,7 +104,7 @@ Error [ERR_REQUIRE_ESM]: require() of ES Module /app/node_modules/dot-prop/index
 Instead change the require of /app/project/node_modules/dot-prop/index.js in /app/project/build/index.js to a dynamic import() which is available in all CommonJS modules.
 ```
 
-To fix it, add the ESM package to the `serverDependenciesToBundle` option in your `remix.config.js` file.
+To fix it, add the ESM package to the [`serverDependenciesToBundle`][server_dependencies_to_bundle] option in your [`remix.config.js`][remix_config] file.
 
 In our case here, we're using the `dot-prop` package, so we would do it like this:
 
@@ -154,8 +154,6 @@ if (typeof document === "undefined") {
 
 This will work for all JS environments (Node.js, Deno, Workers, etc.).
 
-[esbuild]: https://esbuild.github.io/
-
 ## Browser extensions injecting code
 
 You may run into this warning in the browser:
@@ -170,29 +168,35 @@ Check out the page in incognito mode, the warning should disappear.
 
 ## CSS bundle being incorrectly tree-shaken
 
-When using [CSS bundling features][css-bundling] in combination with `export *` (e.g. when using an index file like `components/index.ts` that re-exports from all sub-directories) you may find that styles from the re-exported modules are missing from the build output.
+When using [CSS bundling features][css_bundling] in combination with `export *` (e.g. when using an index file like `components/index.ts` that re-exports from all subdirectories) you may find that styles from the re-exported modules are missing from the build output.
 
-This is due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue]. As a workaround, you should use named re-exports instead.
+This is due to an [issue with `esbuild`'s CSS tree shaking][esbuild_css_tree_shaking_issue]. As a workaround, you should use named re-exports instead.
 
 ```diff
--export * from "./Button";
-+export { Button } from "./Button";
+- export * from "./Button";
++ export { Button } from "./Button";
 ```
 
 Note that, even if this issue didn't exist, we'd still recommend using named re-exports! While it may introduce a bit more boilerplate, you get explicit control over the module's public interface rather than inadvertently exposing everything.
 
-## Writing to Sessions in Loaders
+## Writing to Sessions in `loader`s
 
-Typically you should only write to sessions in actions, but there are occasions where it makes sense in loaders (anonymous users, navigation tracking, etc.)
+Typically, you should only write to sessions in actions, but there are occasions where it makes sense in loaders (anonymous users, navigation tracking, etc.)
 
 While multiple loaders can _read_ from the same session, _writing_ to a session in loaders can cause problems.
 
-Remix loaders run in parallel, and sometimes in separate requests (client transitions call `fetch` for each loader). If one loader is writing to a session while another is attempting to read from it, you will hit bugs and/or non-deterministic behavior.
+Remix loaders run in parallel, and sometimes in separate requests (client transitions call [`fetch`][fetch] for each loader). If one loader is writing to a session while another is attempting to read from it, you will hit bugs and/or non-deterministic behavior.
 
-Additionally, sessions are built on cookies which come from the browser's request. After committing a session, it goes to the browser in a `Set-Cookie` header which is then sent back to the server on the next request in the `Cookie` header. Regardless of parallel loaders, you can't write to a cookie with `Set-Cookie` and then attempt to read it from the original request `Cookie` and expect updated values. It needs to make a round trip to the browser first and come from the next request.
+Additionally, sessions are built on cookies which come from the browser's request. After committing a session, it goes to the browser in a [`Set-Cookie`][set_cookie_header] header which is then sent back to the server on the next request in the [`Cookie`][cookie_header] header. Regardless of parallel loaders, you can't write to a cookie with `Set-Cookie` and then attempt to read it from the original request `Cookie` and expect updated values. It needs to make a round trip to the browser first and come from the next request.
 
 If you need to write to a session in a loader, ensure the loader doesn't share that session with any other loaders.
 
-[remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../utils/parse-multipart-form-data#uploadhandler
-[css-bundling]: ../guides/styling#css-bundling
-[esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370
+[esbuild]: https://esbuild.github.io
+[parse_multipart_form_data_upload_handler]: ../utils/parse-multipart-form-data#uploadhandler
+[server_dependencies_to_bundle]: ../file-conventions/remix-config#serverdependenciestobundle
+[remix_config]: ../file-conventions/remix-config
+[css_bundling]: ../styling/bundling
+[esbuild_css_tree_shaking_issue]: https://github.com/evanw/esbuild/issues/1370
+[fetch]: https://developer.mozilla.org/en-US/docs/Web/API/fetch
+[set_cookie_header]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie
+[cookie_header]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie

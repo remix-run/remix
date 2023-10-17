@@ -48,7 +48,7 @@ export interface MetaMatch<
   id: RouteId;
   pathname: DataRouteMatch["pathname"];
   data: Loader extends LoaderFunction ? SerializeFrom<Loader> : unknown;
-  handle?: unknown;
+  handle?: RouteHandle;
   params: DataRouteMatch["params"];
   meta: MetaDescriptor[];
   error?: unknown;
@@ -121,7 +121,7 @@ export type RouteComponent = ComponentType<{}>;
  *
  * @see https://remix.run/route/handle
  */
-export type RouteHandle = any;
+export type RouteHandle = unknown;
 
 export async function loadRouteModule(
   route: EntryRoute,
