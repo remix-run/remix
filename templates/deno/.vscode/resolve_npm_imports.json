@@ -7,12 +7,12 @@
     "Deno-only dependencies may be imported via URL imports (without using import maps)."
   ],
   "imports": {
-    "@remix-run/css-bundle": "https://esm.sh/@remix-run/css-bundle@0.0.0-experimental-fdbaca2db",
+    "@remix-run/css-bundle": "https://esm.sh/@remix-run/css-bundle@0.0.0-experimental-b5b8702c4",
     "// `@remix-run/deno` code is already a Deno module, so just get types for it directly from `node_modules/`": "",
     "@remix-run/deno": "../node_modules/@remix-run/deno/index.ts",
-    "@remix-run/dev/server-build": "https://esm.sh/@remix-run/dev@0.0.0-experimental-fdbaca2db/server-build",
-    "@remix-run/react": "https://esm.sh/@remix-run/react@0.0.0-experimental-fdbaca2db",
-    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@0.0.0-experimental-fdbaca2db",
+    "@remix-run/dev/server-build": "https://esm.sh/@remix-run/dev@0.0.0-experimental-b5b8702c4/server-build",
+    "@remix-run/react": "https://esm.sh/@remix-run/react@0.0.0-experimental-b5b8702c4",
+    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@0.0.0-experimental-b5b8702c4",
     "isbot": "https://esm.sh/isbot@^3.6.8",
     "react": "https://esm.sh/react@^18.2.0",
     "react-dom": "https://esm.sh/react-dom@^18.2.0",

@@ -1,6 +1,6 @@
 {
   "imports": {
-    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@0.0.0-experimental-fdbaca2db",
+    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@0.0.0-experimental-b5b8702c4",
     "mime": "https://esm.sh/mime@^3.0.0"
   }
 }
