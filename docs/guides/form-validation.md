@@ -84,19 +84,19 @@ import {
 } from "@remix-run/react";
 
 export default function Signup() {
-  const { errors } = useActionData<typeof useAction>();
+  const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
       <p>
         <input type="email" name="email" />
-        {errors?.email ? <em>{errors.email}</em> : null}
+        {actionData?.errors?.email ? <em>{actionData?.errors.email}</em> : null}
       </p>
 
       <p>
         <input type="password" name="password" />
-        {errors?.password ? (
-          <em>{errors.password}</em>
+        {actionData?.errors?.password ? (
+          <em>{actionData?.errors.password}</em>
         ) : null}
       </p>
 
