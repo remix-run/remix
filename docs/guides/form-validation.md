@@ -90,7 +90,9 @@ export default function Signup() {
     <Form method="post">
       <p>
         <input type="email" name="email" />
-        {actionData?.errors?.email ? <em>{actionData?.errors.email}</em> : null}
+        {actionData?.errors?.email ? (
+          <em>{actionData?.errors.email}</em>
+        ) : null}
       </p>
 
       <p>
