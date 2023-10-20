@@ -27,6 +27,10 @@ cd packages/remix-server-runtime
 yarn add -E @remix-run/router@${ROUTER_VERSION}
 cd ../..
 
+cd packages/remix-dev
+yarn add -E @remix-run/router@${ROUTER_VERSION}
+cd ../..
+
 # cd packages/remix-express
 # yarn add -E @remix-run/router@${ROUTER_VERSION}
 # cd ../..
