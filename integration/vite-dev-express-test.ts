@@ -303,6 +303,7 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
 });
 
 async function edit(file: string, transform: (contents: string) => string) {
-  let contents = await fs.readFile(path.join(projectDir, file), "utf8");
-  await fs.writeFile(path.join(projectDir, file), transform(contents), "utf8");
+  let filepath = path.join(projectDir, file);
+  let contents = await fs.readFile(filepath, "utf8");
+  await fs.writeFile(filepath, transform(contents), "utf8");
 }
