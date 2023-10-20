@@ -17,6 +17,6 @@
     "node-fetch": "^2.6.9",
     "semver": "^7.3.7",
     "start-server-and-test": "^1.14.0",
-    "@remix-run/dev": "0.0.0-experimental-9149cd0fe"
+    "@remix-run/dev": "0.0.0-experimental-5603af8a3"
   }
 }
