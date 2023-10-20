@@ -87,6 +87,16 @@ Since Vite is now responsible for bundling your app, there are some differences 
 
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the Remix compiler. Any use of these features will break backwards compatibility with the Remix compiler and should only be used if you intend to use Vite exclusively.
 
+### TypeScript
+
+Add `vite/client` types in a `.d.ts` file. We recommend replacing the existing `remix.env.d.ts` file with a new `env.d.ts` file:
+
+```ts
+/// <reference types="@remix-run/dev" />
+/// <reference types="@remix-run/node" />
+/// <reference types="vite/client" />
+```
+
 ### Path Aliases
 
 The Remix compiler leverages the `paths` option in your `tsconfig.json` to resolve path aliases. This is commonly used in the Remix community to define `~` as an alias for the `app` directory.
