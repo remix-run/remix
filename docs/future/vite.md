@@ -83,6 +83,37 @@ vite build && vite build --ssr
 
 Since Vite is now responsible for bundling your app, there are some differences between Vite and the Remix compiler that you'll need to be aware of.
 
+### `<LiveReload />` before `<Scripts />`
+
+During initial unstable release, the Remix Vite plugin assumes that `<LiveReload />` component comes _before_ `<Scripts />` so that React Fast Refresh initialization from `<Live Reload />` happens first.
+If `<Scripts />` comes before `<Live Reload />`, [React Fast Refresh will not be able to perform HMR][rfr-preamble].
+
+```diff
+// app/root.tsx
+
+export default function App() {
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <Outlet />
+        <ScrollRestoration />
++        <LiveReload />
+        <Scripts />
+-        <LiveReload />
+      </body>
+    </html>
+  );
+}
+```
+
+Before releasing as stable, we will redesign these APIs to make this ordering irrelevant.
+
 ### New Bundling Features
 
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the Remix compiler. Any use of these features will break backwards compatibility with the Remix compiler and should only be used if you intend to use Vite exclusively.
@@ -528,3 +559,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [solidstart]: https://start.solidjs.com/getting-started/what-is-solidstart
 [sveltekit]: https://kit.svelte.dev/
 [supported-with-some-deprecations]: #mdx
+[rfr-preamble]: https://github.com/facebook/react/issues/16604#issuecomment-528663101
