@@ -235,7 +235,7 @@ There are a few conventions that Remix uses you should be aware of.
 
 [minimatch]: https://npm.im/minimatch
 [dilum_sanjaya]: https://twitter.com/DilumSanjaya
-[an_awesome_visualization]: https://remix-routing-demo.netlify.app
+[an_awesome_visualization]: https://interactive-remix-routing-v2.netlify.app
 [remix_dev]: ../other-api/dev#remix-dev
 [app_directory]: #appDirectory
 [css_side_effect_imports]: ../styling/css-imports
