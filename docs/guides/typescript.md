@@ -17,26 +17,26 @@ The Remix compiler will not do any type checking (it simply removes the types). 
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
-    "start": "remix-serve build",
+    "start": "remix-serve build/index.js",
     "typecheck": "tsc"
   },
   "dependencies": {
     "@remix-run/node": "latest",
     "@remix-run/react": "latest",
     "@remix-run/serve": "latest",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@remix-run/dev": "latest",
     "@remix-run/eslint-config": "latest",
-    "@types/react": "^17.0.38",
-    "@types/react-dom": "^17.0.11",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
     "eslint": "^8.23.1",
-    "typescript": "^5.0.4"
+    "typescript": "^5.1.6"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }
 ```
@@ -49,13 +49,13 @@ Remix has TypeScript type definitions built-in as well. The starter templates cr
 {
   "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
   "compilerOptions": {
-    "lib": ["DOM", "DOM.Iterable", "ES2019"],
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "isolatedModules": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
-    "target": "ES2019",
+    "target": "ES2022",
     "strict": true,
     "allowJs": true,
     "forceConsistentCasingInFileNames": true,

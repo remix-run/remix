@@ -13,7 +13,7 @@ tsconfig.tsbuildinfo
 /fixtures/test
 /fixtures/my-remix-app
 /fixtures/deno-app
-/playwright-report
+/integration/playwright-report
 /test-results
 /uploads
 

@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 test.describe("`useSubmit()` returned function", () => {
   let fixture: Fixture;
@@ -10,11 +14,8 @@ test.describe("`useSubmit()` returned function", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           import { useLoaderData, useSubmit } from "@remix-run/react";
 
           export function loader({ request }) {
@@ -43,7 +44,7 @@ test.describe("`useSubmit()` returned function", () => {
             )
           }
         `,
-        "app/routes/action.jsx": js`
+        "app/routes/action.tsx": js`
           import { json } from "@remix-run/node";
           import { useActionData, useSubmit } from "@remix-run/react";
 

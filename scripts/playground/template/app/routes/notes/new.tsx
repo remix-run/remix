@@ -1,4 +1,4 @@
-import type { ActionArgs, V2_MetaFunction } from "@remix-run/node";
+import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 import * as React from "react";
@@ -6,7 +6,7 @@ import * as React from "react";
 import { createNote } from "~/models/note.server";
 import { requireUserId } from "~/session.server";
 
-export async function action({ request }: ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   let userId = await requireUserId(request);
 
   let formData = await request.formData();
@@ -32,7 +32,7 @@ export async function action({ request }: ActionArgs) {
   return redirect(`/notes/${note.id}`);
 }
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return [{ title: "Create a Note" }];
 };
 
@@ -60,12 +60,12 @@ export default function NewNotePage() {
       }}
     >
       <div>
-        <label className="flex w-full flex-col gap-1">
+        <label className="flex flex-col w-full gap-1">
           <span>Title: </span>
           <input
             ref={titleRef}
             name="title"
-            className="flex-1 rounded-md border-2 border-blue-500 px-3 text-lg leading-loose"
+            className="flex-1 px-3 text-lg leading-loose border-2 border-blue-500 rounded-md"
             aria-invalid={actionData?.errors?.title ? true : undefined}
             aria-errormessage={
               actionData?.errors?.title ? "title-error" : undefined
@@ -80,13 +80,13 @@ export default function NewNotePage() {
       </div>
 
       <div>
-        <label className="flex w-full flex-col gap-1">
+        <label className="flex flex-col w-full gap-1">
           <span>Body: </span>
           <textarea
             ref={bodyRef}
             name="body"
             rows={8}
-            className="w-full flex-1 rounded-md border-2 border-blue-500 py-2 px-3 text-lg leading-6"
+            className="flex-1 w-full px-3 py-2 text-lg leading-6 border-2 border-blue-500 rounded-md"
             aria-invalid={actionData?.errors?.body ? true : undefined}
             aria-errormessage={
               actionData?.errors?.body ? "body-error" : undefined
@@ -103,7 +103,7 @@ export default function NewNotePage() {
       <div className="text-right">
         <button
           type="submit"
-          className="rounded bg-blue-500 py-2 px-4 text-white hover:bg-blue-600 focus:bg-blue-400"
+          className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600 focus:bg-blue-400"
         >
           Save
         </button>

@@ -34,7 +34,6 @@ describe("<Scripts /> with activeDeferreds", () => {
           root: {
             hasLoader: false,
             hasAction: false,
-            hasCatchBoundary: false,
             hasErrorBoundary: false,
             id: "root",
             module: "root.js",
@@ -44,10 +43,6 @@ describe("<Scripts /> with activeDeferreds", () => {
         url: "",
         version: "",
       },
-      // @ts-expect-error
-      // Enumerating all flags just to set them to false is overly brittle;
-      // we allow an empty object as a shortcut.
-      future: {},
       // @ts-expect-error
       // Similarly, we have no interest in the rest of the static handler
       // context. We're not trying to write a test for React Router, we

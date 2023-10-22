@@ -1,9 +1,10 @@
 ---
 title: Blog Tutorial (short)
 order: 3
+hidden: true
 ---
 
-# Quickstart
+# Blog Tutorial
 
 We're going to be short on words and quick on code in this quickstart. If you're looking to see what Remix is all about in 15 minutes, this is it.
 
@@ -21,22 +22,23 @@ Click this button to create a [Gitpod][gitpod] workspace with the project set up
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
-- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
+- [Node.js][node-js] version (>=18.0.0)
 - [npm][npm] 7 or greater
 - A code editor ([VSCode][vs-code] is a nice one)
 
 ## Creating the project
 
-<docs-warning>Make sure you are running at least Node v14 or greater</docs-warning>
+<docs-warning>Make sure you are running at least Node v18 or greater</docs-warning>
 
 💿 Initialize a new Remix project. We'll call ours "blog-tutorial" but you can call it something else if you'd like.
 
-```sh
+```shellscript nonumber
 npx create-remix@latest --template remix-run/indie-stack blog-tutorial
 ```
 
 ```
-? Do you want me to run `npm install`? Yes
+Install dependencies with npm?
+Yes
 ```
 
 You can read more about the stacks available in [the stacks docs][the-stacks-docs].
@@ -49,7 +51,7 @@ We're using [the Indie stack][the-indie-stack], which is a full application read
 
 💿 Let's start the dev server:
 
-```sh
+```shellscript nonumber
 npm run dev
 ```
 
@@ -92,7 +94,7 @@ Back in the browser go ahead and click the link. You should see a 404 page since
 
 💿 Create a new file at `app/routes/posts._index.tsx`
 
-```sh
+```shellscript nonumber
 touch app/routes/posts._index.tsx
 ```
 
@@ -200,7 +202,7 @@ A solid practice is to create a module that deals with a particular concern. In 
 
 💿 Create `app/models/post.server.ts`
 
-```sh
+```shellscript nonumber
 touch app/models/post.server.ts
 ```
 
@@ -268,7 +270,7 @@ model Post {
 
 💿 Let's generate a migration file for our schema changes, which will be required if you deploy your application rather than just running in dev mode locally. This will also update our local database and TypeScript definitions to match the schema change. We'll name the migration "create post model".
 
-```sh
+```shellscript nonumber
 npx prisma migrate dev --name "create post model"
 ```
 
@@ -343,11 +345,7 @@ export async function getPosts() {
 
 <docs-info>The `~/db.server` import is importing the file at `app/db.server.ts`. The `~` is a fancy alias to the `app` directory, so you don't have to worry about how many `../../`s to include in your import as you move files around.</docs-info>
 
-💿 Now that the Prisma client has been updated, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
-
-<docs-warning>You only need to ever do this when you change the Prisma schema and update the Prisma client. Normally you don't need to restart the dev server during development. Nice that it's so fast though right?</docs-warning>
-
-With the server up and running again, you should be able to go to `http://localhost:3000/posts` and the posts should still be there, but now they're coming from SQLite!
+You should be able to go to `http://localhost:3000/posts` and the posts should still be there, but now they're coming from SQLite!
 
 ## Dynamic Route Params
 
@@ -362,7 +360,7 @@ Instead of creating a route for every single one of our posts, we can use a "dyn
 
 💿 Create a dynamic route at `app/routes/posts.$slug.tsx`
 
-```sh
+```shellscript nonumber
 touch app/routes/posts.$slug.tsx
 ```
 
@@ -382,12 +380,14 @@ You can click one of your posts and should see the new page.
 
 💿 Add a loader to access the params
 
-```tsx filename=app/routes/posts.$slug.tsx lines=[1-3,5-7,10,14]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.$slug.tsx lines=[1-3,5-9,12,16]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   return json({ slug: params.slug });
 };
 
@@ -423,14 +423,16 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts.$slug.tsx lines=[5,8-9,13,17]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.$slug.tsx lines=[5,10-11,15,19]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
 import { getPost } from "~/models/post.server";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   const post = await getPost(params.slug);
   return json({ post });
 };
@@ -451,15 +453,17 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Let's make TypeScript happy with our code:
 
-```tsx filename=app/routes/posts.$slug.tsx lines=[4,9,12]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.$slug.tsx lines=[4,11,14]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
 import { getPost } from "~/models/post.server";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   invariant(params.slug, "params.slug is required");
 
   const post = await getPost(params.slug);
@@ -488,16 +492,16 @@ Now let's get that markdown parsed and rendered to HTML to the page. There are a
 
 💿 Parse the markdown into HTML
 
-```sh
-npm add marked
+```shellscript nonumber
+npm add marked@^4.3.0
 # additionally, if using typescript
-npm add @types/marked -D
+npm add @types/marked@^4.3.1 -D
 ```
 
 Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
 
-```tsx filename=app/routes/posts.$slug.tsx lines=[4,15-16,20,26]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.$slug.tsx lines=[4,17-18,22,28]
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { marked } from "marked";
@@ -505,7 +509,9 @@ import invariant from "tiny-invariant";
 
 import { getPost } from "~/models/post.server";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({
+  params,
+}: LoaderFunctionArgs) => {
   invariant(params.slug, "params.slug is required");
 
   const post = await getPost(params.slug);
@@ -552,7 +558,7 @@ Put that anywhere in the component. I stuck it right under the `<h1>`.
 
 💿 Create an admin route at `app/routes/posts.admin.tsx`:
 
-```sh
+```shellscript nonumber
 touch app/routes/posts.admin.tsx
 ```
 
@@ -606,7 +612,7 @@ Let's fill in that placeholder with an index route for admin. Hang with us, we'r
 
 💿 Create an index route for `posts.admin.tsx`'s child routes
 
-```sh
+```shellscript nonumber
 touch app/routes/posts.admin._index.tsx
 ```
 
@@ -679,7 +685,7 @@ Maybe this will help, let's add the `/posts/admin/new` route and see what happen
 
 💿 Create the `app/routes/posts.admin.new.tsx` file
 
-```sh
+```shellscript nonumber
 touch app/routes/posts.admin.new.tsx
 ```
 
@@ -766,14 +772,16 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/posts.admin.new.tsx lines=[1-2,5,7-17] nocopy
-import type { ActionArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.admin.new.tsx lines=[1-2,5,7-19] nocopy
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   const title = formData.get("title");
@@ -818,14 +826,16 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/posts.admin.new.tsx lines=[2,14-24]
-import type { ActionArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.admin.new.tsx lines=[2,16-26]
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   const title = formData.get("title");
@@ -856,8 +866,8 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/posts.admin.new.tsx lines=[3,10,17-19,26-28,35-39]
-import type { ActionArgs } from "@remix-run/node";
+```tsx filename=app/routes/posts.admin.new.tsx lines=[3,11,18-20,27-29,36-40]
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect, json } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 
@@ -926,7 +936,9 @@ TypeScript is still mad, because someone could call our API with non-string valu
 import invariant from "tiny-invariant";
 // ..
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   // ...
   invariant(
     typeof title === "string",
@@ -955,9 +967,11 @@ Let's slow this down and add some "pending UI" to our form.
 
 💿 Slow down our action with a fake delay
 
-```tsx filename=app/routes/posts.admin.new.tsx lines=[3-4]
+```tsx filename=app/routes/posts.admin.new.tsx lines=[5-6]
 // ...
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   // TODO: remove me
   await new Promise((res) => setTimeout(res, 1000));
 
@@ -969,7 +983,7 @@ export const action = async ({ request }: ActionArgs) => {
 💿 Add some pending UI with `useNavigation`
 
 ```tsx filename=app/routes/posts.admin.new.tsx lines=[6,14-17,26,28]
-import type { ActionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
   Form,
@@ -1012,9 +1026,9 @@ That's it for today! Here are some bits of homework to implement if you want to 
 
 **Update/Delete posts:** make a `posts.admin.$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar, but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts.$slug.tsx` and `app/routes/posts.admin.new.tsx`. You just gotta put it together.
 
-**Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Optimistic UI guide][the-optimistic-ui-guide].
+**Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Pending UI guide][the-pending-ui-guide].
 
-**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip: if you want to make it so you're the only one who can make posts, simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
+**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip: if you want to make it, so you're the only one who can make posts, simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
 
 **Customize the app:** If you're happy with Tailwind CSS, keep it around, otherwise, check [the styling guide][the-styling-guide] to learn of other options. Remove the `Notes` model and routes, etc. Whatever you want to make this thing yours.
 
@@ -1028,17 +1042,17 @@ We hope you love Remix! 💿 👋
 [node-js]: https://nodejs.org
 [npm]: https://www.npmjs.com
 [vs-code]: https://code.visualstudio.com
-[the-stacks-docs]: /pages/stacks
+[the-stacks-docs]: ../guides/templates#stacks
 [the-indie-stack]: https://github.com/remix-run/indie-stack
 [fly-io]: https://fly.io
 [http-localhost-3000]: http://localhost:3000
 [screenshot-of-the-app-showing-the-blog-post-link]: https://user-images.githubusercontent.com/1500684/160208939-34fe20ed-3146-4f4b-a68a-d82284339c47.png
 [tailwind]: https://tailwindcss.com
-[the-styling-guide]: ../guides/styling
+[the-styling-guide]: ../styling/tailwind
 [prisma]: https://prisma.io
 [http-localhost-3000-posts-admin]: http://localhost:3000/posts/admin
 [mdn-request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
 [mdn-request-form-data]: https://developer.mozilla.org/en-US/docs/Web/API/Request/formData
 [disable-java-script]: https://developer.chrome.com/docs/devtools/javascript/disable
-[the-optimistic-ui-guide]: /guides/optimistic-ui
+[the-pending-ui-guide]: ../discussion/pending-ui
 [somewhere]: https://www.youtube.com/watch?v=dQw4w9WgXcQ

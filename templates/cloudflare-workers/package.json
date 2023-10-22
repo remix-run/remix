@@ -19,16 +19,16 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.19.0",
+    "@cloudflare/workers-types": "^4.20230518.0",
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
-    "@types/react": "^18.0.35",
-    "@types/react-dom": "^18.0.11",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
     "eslint": "^8.38.0",
-    "typescript": "^5.0.4",
+    "typescript": "^5.1.6",
     "wrangler": "^3.1.1"
   },
   "engines": {
-    "node": ">=16.13.0"
+    "node": ">=18.0.0"
   }
 }

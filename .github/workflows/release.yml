@@ -24,11 +24,8 @@ jobs:
       published_packages: ${{ steps.changesets.outputs.publishedPackages }}
       published: ${{ steps.changesets.outputs.published }}
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -72,16 +69,13 @@ jobs:
     outputs:
       package_version: ${{ steps.find_package_version.outputs.package_version }}
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           cache: "npm"
 
       - id: find_package_version
@@ -113,9 +107,6 @@ jobs:
       TEST_CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
       TEST_DENO_DEPLOY_TOKEN: ${{ secrets.TEST_DENO_DEPLOY_TOKEN }}
       TEST_FLY_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
-      TEST_NETLIFY_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
-      TEST_VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
-      TEST_VERCEL_USER_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
 
   stacks:
     name: 🥞 Remix Stacks Test
