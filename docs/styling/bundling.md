@@ -29,7 +29,10 @@ import { cssBundleHref } from "@remix-run/css-bundle";
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: cssBundleHref },
+  ...(cssBundleHref
+    ? [{ rel: "stylesheet", href: cssBundleHref }]
+    : []),
+  // ...
 ];
 ```
 

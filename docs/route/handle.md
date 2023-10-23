@@ -14,4 +14,10 @@ export const handle = {
 
 This is almost always used in conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`][use-matches] for more information.
 
+## Additional Resources
+
+- [Breadcrumbs Guide][breadcrumbs-guide]
+- [`useMatches`][use-matches]
+
 [use-matches]: ../hooks/use-matches
+[breadcrumbs-guide]: ../guides/breadcrumbs

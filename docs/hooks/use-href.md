@@ -4,13 +4,13 @@ title: useHref
 
 # `useHref`
 
-Resolves a full URL to be used as an [`href`][anchor_element_href_attribute] to a [`link`][anchor_element]. If a relative path is supplied, it will resolve to a full URL.
+Resolves a full URL against the current location to be used as an [`href`][anchor_element_href_attribute] to a [`link`][anchor_element]. If a relative path is supplied, it will resolve to a full URL.
 
 ```tsx
 import { useHref } from "@remix-run/react";
 
 function SomeComponent() {
-  const href = useHref();
+  const href = useHref("some/where");
 
   return <a href={href}>Link</a>;
 }
