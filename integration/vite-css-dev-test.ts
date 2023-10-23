@@ -27,14 +27,11 @@ test.describe("Vite CSS dev", () => {
           throw new Error("Remix should not access remix.config.js when using Vite");
           export default {};
         `,
-        "vite.config.mjs": js`
+        "vite.config.ts": js`
           import { defineConfig } from "vite";
           import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            optimizeDeps: {
-              include: ["react", "react-dom/client"],
-            },
             server: {
               port: ${devPort},
               strictPort: true,
