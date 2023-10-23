@@ -29,7 +29,7 @@ npm install -D vite
 
 Then add `vite.config.ts` to the project root, providing the Remix plugin to the `plugins` array:
 
-```js filename=vite.config.ts
+```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -52,7 +52,7 @@ The Vite plugin accepts the following subset of Remix config options:
 
 For example:
 
-```js filename=vite.config.ts
+```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -140,7 +140,7 @@ npm install -D vite-tsconfig-paths
 
 Then add it to your Vite config:
 
-```js filename=vite.config.ts
+```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -152,7 +152,7 @@ export default defineConfig({
 
 Alternatively, you can define path aliases without referencing `tsconfig.json` by using Vite's [`resolve.alias`][vite-resolve-alias] option directly:
 
-```js filename=vite.config.ts
+```ts filename=vite.config.ts
 import { fileURLToPath, URL } from "node:url";
 
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
@@ -194,7 +194,7 @@ If you're using Vite and the Remix compiler in the same project, you can enable 
 
 <docs-info>This option is only intended for use during the transition to Vite and will be removed in the future.</docs-info>
 
-```js filename=vite.config.ts
+```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -273,7 +273,7 @@ npm install -D @vanilla-extract/vite-plugin
 
 Then add the plugin to your Vite config:
 
-```js filename=vite.config.ts
+```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import { defineConfig } from "vite";
@@ -293,7 +293,7 @@ npm install -D @mdx-js/rollup
 
 Then add the Rollup plugin to your Vite config:
 
-```js filename=vite.config.ts
+```ts filename=vite.config.ts
 import mdx from "@mdx-js/rollup";
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
@@ -315,7 +315,7 @@ npm install -D remark-frontmatter remark-mdx-frontmatter
 
 Then provide these plugins to the MDX Rollup plugin:
 
-```js filename=vite.config.ts
+```ts filename=vite.config.ts
 import mdx from "@mdx-js/rollup";
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import remarkFrontmatter from "remark-frontmatter";
@@ -337,7 +337,7 @@ export default defineConfig({
 
 In the Remix compiler, the frontmatter export was named `attributes`. This differs from the frontmatter plugin's default export name of `frontmatter`. To maintain backwards compatibility with the Remix compiler, you can override this via the `name` option:
 
-```js filename=vite.config.ts
+```ts filename=vite.config.ts
 import mdx from "@mdx-js/rollup";
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import remarkFrontmatter from "remark-frontmatter";
