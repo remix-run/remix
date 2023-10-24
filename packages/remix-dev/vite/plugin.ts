@@ -859,8 +859,10 @@ function getRoute(
   pluginConfig: ResolvedRemixVitePluginConfig,
   file: string
 ): Route | undefined {
-  if (!file.startsWith(pluginConfig.appDirectory)) return;
-  let routePath = path.relative(pluginConfig.appDirectory, file);
+  if (!file.startsWith(viteNormalizePath(pluginConfig.appDirectory))) return;
+  let routePath = viteNormalizePath(
+    path.relative(pluginConfig.appDirectory, file)
+  );
   let route = Object.values(pluginConfig.routes).find(
     (r) => r.file === routePath
   );
