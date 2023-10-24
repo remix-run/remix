@@ -578,7 +578,7 @@ export default Component() {
 }
 ```
 
-then React Fast Refresh will preserve state for the `<input />`, though you may need to use [component keys](#component-keys) as described in the next section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
+then React Fast Refresh will preserve state for the `<input />`, though you may need to use [component keys][component-keys] as described in the next section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
 
 #### Component Keys
 
@@ -642,3 +642,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [sveltekit]: https://kit.svelte.dev/
 [supported-with-some-deprecations]: #mdx
 [rfr-preamble]: https://github.com/facebook/react/issues/16604#issuecomment-528663101
+[component-keys]: #component-keys
