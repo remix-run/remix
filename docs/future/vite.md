@@ -14,7 +14,7 @@ toc: false
 | Feature                      | Node | Deno | Cloudflare | Notes                                                                 |
 | ---------------------------- | ---- | ---- | ---------- | --------------------------------------------------------------------- |
 | Built-in dev server          | ✅   | ❓   | ⏳         |                                                                       |
-| Other servers (e.g. Express) | ⏳   | ⏳   | ⏳         |                                                                       |
+| Other servers (e.g. Express) | ✅   | ❓   | ⏳         |                                                                       |
 | HMR                          | ✅   | ❓   | ⏳         |                                                                       |
 | HDR                          | ✅   | ❓   | ⏳         |                                                                       |
 | MDX routes                   | ✅   | ❓   | ⏳         | [Supported with some deprecations.][supported-with-some-deprecations] |
@@ -494,9 +494,91 @@ If you want to reuse values across routes, stick them in their own non-route mod
 export const myValue = "some value";
 ```
 
-#### Adding and Removing Hooks
+#### Changing Hooks
 
 React Fast Refresh cannot track changes for a component when hooks are being added or removed from it, causing full reloads just for the next render. After the hooks have been updated, changes should result in hot updates again. For example, if you add [`useLoaderData`][use_loader_data] to your component, you may lose state local to that component for that render.
+
+Additionally, if you are destructuring a hook's return value, React Fast Refresh will not be able to preserve state for the component if the destructured key is removed or renamed.
+For example:
+
+```tsx
+export const loader = () => {
+  return json({ stuff: "some things" });
+};
+
+export default function Component() {
+  const { stuff } = useLoaderData<typeof loader>();
+  return (
+    <div>
+      <input />
+      <p>{stuff}</p>
+    </div>
+  );
+}
+```
+
+If you change the key `stuff` to `things`:
+
+```diff
+export const loader = () => {
+-  return json({ stuff: "some things" })
++  return json({ things: "some things" })
+}
+
+export default Component() {
+-  let { stuff } = useLoaderData<typeof loader>()
++  let { things } = useLoaderData<typeof loader>()
+  return (
+    <div>
+      <input />
+-      <p>{stuff}</p>
++      <p>{things}</p>
+    </div>
+  )
+}
+```
+
+then React Fast Refresh will not be able to preserve state `<input />` ❌.
+
+As a workaround, you could refrain from destructuring and instead use the hook's return value directly:
+
+```tsx
+export const loader = () => {
+  return json({ stuff: "some things" });
+};
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  return (
+    <div>
+      <input />
+      <p>{data.stuff}</p>
+    </div>
+  );
+}
+```
+
+Now if you change the key `stuff` to `things`:
+
+```diff
+export const loader = () => {
+-  return json({ things: "some things" })
++  return json({ things: "some things" })
+}
+
+export default Component() {
+  let data = useLoaderData<typeof loader>()
+  return (
+    <div>
+      <input />
+-      <p>{data.stuff}</p>
++      <p>{data.things}</p>
+    </div>
+  )
+}
+```
+
+then React Fast Refresh will preserve state for the `<input />`, though you may need to use [component keys](#component-keys) as described in the next section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
 
 #### Component Keys
 
