@@ -43,6 +43,25 @@ describe("<LiveReload />", () => {
       jest.resetModules();
     });
 
+    it("defaults the origin to REMIX_DEV_ORIGIN env variable", () => {
+      let origin = "http://test-origin";
+      LiveReload = require("../components").LiveReload;
+      process.env = { ...oldEnv, REMIX_DEV_ORIGIN: origin };
+      let { container } = render(<LiveReload />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        `let LIVE_RELOAD_ORIGIN = ${JSON.stringify(origin)};`
+      );
+    });
+
+    it("can set the origin explicitly", () => {
+      let origin = "http://test-origin";
+      LiveReload = require("../components").LiveReload;
+      let { container } = render(<LiveReload origin={origin} />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        `let LIVE_RELOAD_ORIGIN = ${JSON.stringify(origin)};`
+      );
+    });
+
     it("defaults the port to 8002", () => {
       LiveReload = require("../components").LiveReload;
       let { container } = render(<LiveReload />);
