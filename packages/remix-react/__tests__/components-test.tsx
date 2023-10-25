@@ -47,14 +47,14 @@ describe("<LiveReload />", () => {
       LiveReload = require("../components").LiveReload;
       let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        "url.port = undefined || (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);"
+        "url.port = undefined || (LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).port : 8002);"
       );
     });
 
     it("can set the port explicitly", () => {
       let { container } = render(<LiveReload port={4321} />);
       expect(container.querySelector("script")).toHaveTextContent(
-        "url.port = 4321 || (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);"
+        "url.port = 4321 || (LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).port : 8002);"
       );
     });
 
