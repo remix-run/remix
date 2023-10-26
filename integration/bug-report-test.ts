@@ -6,6 +6,7 @@ import {
   createAppFixture,
   createFixture,
   js,
+  json,
 } from "./helpers/create-fixture.js";
 
 let fixture: Fixture;
@@ -58,6 +59,38 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
+      "package.json": json({
+        name: "bug-report-test",
+        private: true,
+        sideEffects: false,
+        type: "module",
+        dependencies: {
+          "@remix-run/css-bundle": "0.0.0-local-version",
+          "@remix-run/node": "0.0.0-local-version",
+          "@remix-run/react": "0.0.0-local-version",
+          "@remix-run/serve": "0.0.0-local-version",
+          isbot: "0.0.0-local-version",
+          react: "0.0.0-local-version",
+          "react-dom": "0.0.0-local-version",
+        },
+        devDependencies: {
+          "@remix-run/dev": "0.0.0-local-version",
+          "@types/react": "0.0.0-local-version",
+          "@types/react-dom": "0.0.0-local-version",
+          typescript: "0.0.0-local-version",
+
+          "@vanilla-extract/css": "0.0.0-local-version",
+          tailwindcss: "0.0.0-local-version",
+        },
+        engines: {
+          node: ">=18.0.0",
+        },
+      }),
+      "remix.config.js": js`
+        export default {
+          serverDependenciesToBundle: "all",
+        };
+      `,
       "app/routes/_index.tsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
@@ -98,16 +131,13 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("the build succeeds and the app loads", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  await page.waitForSelector("text=cheeseburger");
+  // We're just testing that the build succeeded and the page loaded;
+  // nothing else to see here.
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
