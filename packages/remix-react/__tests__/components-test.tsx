@@ -1,15 +1,14 @@
+import { createStaticHandler } from "@remix-run/router";
+import { act, fireEvent, render } from "@testing-library/react";
 import * as React from "react";
 import { createMemoryRouter, Outlet, RouterProvider } from "react-router-dom";
-import { fireEvent, render, act } from "@testing-library/react";
 
+import { RemixBrowser } from "../browser";
 import type { LiveReload as ActualLiveReload } from "../components";
 import { Link, NavLink, RemixContext } from "../components";
-import { RemixBrowser } from "../browser";
-import { RemixServer } from "../server";
-
-import "@testing-library/jest-dom/extend-expect";
-import { createStaticHandler } from "@remix-run/router";
 import invariant from "../invariant";
+import { RemixServer } from "../server";
+import "@testing-library/jest-dom/extend-expect";
 
 // TODO: Every time we touch LiveReload (without changing the API) these tests
 // fail, which tells me they're testing implementation details and not actual

@@ -31,7 +31,6 @@ export function RemixServer({
   }
 
   let { manifest, routeModules, criticalCss, serverHandoffString } = context;
-  debugger;
   let routes = createServerRoutes(
     manifest.routes,
     routeModules,
