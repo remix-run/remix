@@ -23,6 +23,10 @@ fi
 
 set -x
 
+cd packages/remix-dev
+yarn add -E @remix-run/router@${ROUTER_VERSION}
+cd ../..
+
 cd packages/remix-server-runtime
 yarn add -E @remix-run/router@${ROUTER_VERSION}
 cd ../..

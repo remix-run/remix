@@ -47,6 +47,14 @@ The encoding type to use for the form submission.
 
 Defaults to `application/x-www-form-urlencoded`, use `multipart/form-data` for file uploads.
 
+## `navigate`
+
+You can tell the form to skip the navigation and use a [fetcher][use_fetcher] internally by specifying `<Form navigate={false}>`. This is essentially a shorthand for `useFetcher()` + `<fetcher.Form>` where you don't care about the resulting data and only want to kick off a submission and access the pending state via [`useFetchers()`][use_fetchers].
+
+## `fetcherKey`
+
+When using a non-navigating `Form`, you may also optionally specify your own fetcher key to use via `<Form navigate={false} fetcherKey="my-key">`.
+
 ### `preventScrollReset`
 
 If you are using [`<ScrollRestoration>`][scroll_restoration_component], this lets you prevent the scroll position from being reset to the top of the window when the form is submitted.
@@ -133,6 +141,8 @@ See also:
 [fullstack_data_flow]: ../discussion/data-flow
 [pending_ui]: ../discussion/pending-ui
 [form_vs_fetcher]: ../discussion/form-vs-fetcher
+[use_fetcher]: ../hooks/use-fetcher
+[use_fetchers]: ../hooks/use-fetchers
 [fetcher_form]: ../hooks/use-fetcher#fetcherform
 [progressive_enhancement]: ../discussion/progressive-enhancement
 [use-view-transition-state]: ../hooks//use-view-transition-state
