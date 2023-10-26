@@ -1,5 +1,37 @@
 # `@remix-run/react`
 
+## 2.2.0-pre.0
+
+### Minor Changes
+
+- Add a new `future.v3_fetcherPersist` flag to change the persistence behavior of fetchers. Instead of being immediately cleaned up when unmoutned in the UI, fetchers will persist until they return to an `idle` state ([RFC](https://github.com/remix-run/remix/discussions/7698)) ([#7704](https://github.com/remix-run/remix/pull/7704))
+
+  - This is sort of a long-standing "bug fix" as the `useFetchers()` API was always supposed to only reflect **in-flight** fetcher information for pending/optimistic UI -- it was not intended to reflect fetcher data or hang onto fetchers after they returned to an `idle` state
+  - Keep an eye out for the following specific behavioral changes when opting into this flag and check your app for compatibility:
+    - Fetchers that complete _while still mounted_ will no longer appear in `useFetchers()`. They served effectively no purpose in there since you can access the data via `useFetcher().data`).
+    - Fetchers that previously unmounted _while in-flight_ will not be immediately aborted and will instead be cleaned up once they return to an `idle` state. They will remain exposed via `useFetchers` while in-flight so you can still access pending/optimistic data after unmount.
+
+- Unstable Vite support for Node-based Remix apps ([#7590](https://github.com/remix-run/remix/pull/7590))
+
+  - `remix build` 👉 `vite build && vite build --ssr`
+  - `remix dev` 👉 `vite dev`
+
+  Other runtimes (e.g. Deno, Cloudflare) not yet supported.
+  Custom server (e.g. Express) not yet supported.
+
+  See "Future > Vite" in the Remix Docs for details.
+
+### Patch Changes
+
+- Fix warning that could be logged when using route files with no `default` export ([#7745](https://github.com/remix-run/remix/pull/7745))
+
+  - It seems our compiler compiles these files to export an empty object as the `default` which we can then end up passing to `React.createElement`, triggering the console warning, but generally no UI issues
+  - By properly detecting these, we can correctly pass `Component: undefined` off to the React Router layer
+  - This is technically an potential issue in the compiler but it's an easy patch in the `@remix-run/react` layer and hopefully disappears in a Vite world
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.2.0-pre.0`
+
 ## 2.1.0
 
 ### Minor Changes
