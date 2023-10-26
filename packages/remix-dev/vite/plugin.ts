@@ -407,6 +407,21 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         return {
           appType: "custom",
           experimental: { hmrPartialAccept: true },
+          optimizeDeps: {
+            include: [
+              // pre-bundle React dependencies to avoid React duplicates,
+              // even if React dependencies are not direct dependencies
+              // https://react.dev/warnings/invalid-hook-call-warning#duplicate-react
+              "react",
+              `react/jsx-runtime`,
+              `react/jsx-dev-runtime`,
+              "react-dom/client",
+            ],
+          },
+          resolve: {
+            // https://react.dev/warnings/invalid-hook-call-warning#duplicate-react
+            dedupe: ["react", "react-dom"],
+          },
           ...(viteCommand === "build" && {
             base: pluginConfig.publicPath,
             build: {
@@ -449,6 +464,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         viteChildCompiler = await createViteDevServer({
           ...viteUserConfig,
+          server: {
+            ...viteUserConfig.server,
+            // when parent compiler runs in middleware mode to support
+            // custom servers, we don't want the child compiler also
+            // run in middleware mode as that will cause websocket port conflicts
+            middlewareMode: false,
+          },
           configFile: false,
           envFile: false,
           plugins: [
@@ -501,6 +523,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         vite.httpServer?.on("listening", () => {
           setTimeout(showUnstableWarning, 50);
         });
+        // Let user servers handle SSR requests in middleware mode
+        if (vite.config.server.middlewareMode) return;
         return () => {
           vite.middlewares.use(async (req, res, next) => {
             try {
@@ -840,8 +864,10 @@ function getRoute(
   pluginConfig: ResolvedRemixVitePluginConfig,
   file: string
 ): Route | undefined {
-  if (!file.startsWith(pluginConfig.appDirectory)) return;
-  let routePath = path.relative(pluginConfig.appDirectory, file);
+  if (!file.startsWith(viteNormalizePath(pluginConfig.appDirectory))) return;
+  let routePath = viteNormalizePath(
+    path.relative(pluginConfig.appDirectory, file)
+  );
   let route = Object.values(pluginConfig.routes).find(
     (r) => r.file === routePath
   );

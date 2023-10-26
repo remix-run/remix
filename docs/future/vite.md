@@ -14,7 +14,7 @@ toc: false
 | Feature                      | Node | Deno | Cloudflare | Notes                                                                 |
 | ---------------------------- | ---- | ---- | ---------- | --------------------------------------------------------------------- |
 | Built-in dev server          | ✅   | ❓   | ⏳         |                                                                       |
-| Other servers (e.g. Express) | ⏳   | ⏳   | ⏳         |                                                                       |
+| Other servers (e.g. Express) | ✅   | ❓   | ⏳         |                                                                       |
 | HMR                          | ✅   | ❓   | ⏳         |                                                                       |
 | HDR                          | ✅   | ❓   | ⏳         |                                                                       |
 | MDX routes                   | ✅   | ❓   | ⏳         | [Supported with some deprecations.][supported-with-some-deprecations] |
@@ -27,9 +27,9 @@ To get started with Vite in an existing Remix project (or a new one created with
 npm install -D vite
 ```
 
-Then add `vite.config.mjs` to the project root, providing the Remix plugin to the `plugins` array:
+Then add `vite.config.ts` to the project root, providing the Remix plugin to the `plugins` array:
 
-```js filename=vite.config.mjs
+```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -52,7 +52,7 @@ The Vite plugin accepts the following subset of Remix config options:
 
 For example:
 
-```js filename=vite.config.mjs
+```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -83,9 +83,50 @@ vite build && vite build --ssr
 
 Since Vite is now responsible for bundling your app, there are some differences between Vite and the Remix compiler that you'll need to be aware of.
 
+### `<LiveReload />` before `<Scripts />`
+
+During initial unstable release, the Remix Vite plugin assumes that `<LiveReload />` component comes _before_ `<Scripts />` so that React Fast Refresh initialization from `<Live Reload />` happens first.
+If `<Scripts />` comes before `<Live Reload />`, [React Fast Refresh will not be able to perform HMR][rfr-preamble].
+
+```diff
+// app/root.tsx
+
+export default function App() {
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <Outlet />
+        <ScrollRestoration />
++        <LiveReload />
+        <Scripts />
+-        <LiveReload />
+      </body>
+    </html>
+  );
+}
+```
+
+Before releasing as stable, we will redesign these APIs to make this ordering irrelevant.
+
 ### New Bundling Features
 
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the Remix compiler. Any use of these features will break backwards compatibility with the Remix compiler and should only be used if you intend to use Vite exclusively.
+
+### TypeScript
+
+Add `vite/client` types in a `.d.ts` file. We recommend replacing the existing `remix.env.d.ts` file with a new `env.d.ts` file:
+
+```ts
+/// <reference types="@remix-run/dev" />
+/// <reference types="@remix-run/node" />
+/// <reference types="vite/client" />
+```
 
 ### Path Aliases
 
@@ -99,7 +140,7 @@ npm install -D vite-tsconfig-paths
 
 Then add it to your Vite config:
 
-```js filename=vite.config.mjs
+```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -111,7 +152,7 @@ export default defineConfig({
 
 Alternatively, you can define path aliases without referencing `tsconfig.json` by using Vite's [`resolve.alias`][vite-resolve-alias] option directly:
 
-```js filename=vite.config.mjs
+```ts filename=vite.config.ts
 import { fileURLToPath, URL } from "node:url";
 
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
@@ -153,7 +194,7 @@ If you're using Vite and the Remix compiler in the same project, you can enable 
 
 <docs-info>This option is only intended for use during the transition to Vite and will be removed in the future.</docs-info>
 
-```js filename=vite.config.mjs
+```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -232,7 +273,7 @@ npm install -D @vanilla-extract/vite-plugin
 
 Then add the plugin to your Vite config:
 
-```js filename=vite.config.mjs
+```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import { defineConfig } from "vite";
@@ -252,7 +293,7 @@ npm install -D @mdx-js/rollup
 
 Then add the Rollup plugin to your Vite config:
 
-```js filename=vite.config.mjs
+```ts filename=vite.config.ts
 import mdx from "@mdx-js/rollup";
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
@@ -274,7 +315,7 @@ npm install -D remark-frontmatter remark-mdx-frontmatter
 
 Then provide these plugins to the MDX Rollup plugin:
 
-```js filename=vite.config.mjs
+```ts filename=vite.config.ts
 import mdx from "@mdx-js/rollup";
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import remarkFrontmatter from "remark-frontmatter";
@@ -296,7 +337,7 @@ export default defineConfig({
 
 In the Remix compiler, the frontmatter export was named `attributes`. This differs from the frontmatter plugin's default export name of `frontmatter`. To maintain backwards compatibility with the Remix compiler, you can override this via the `name` option:
 
-```js filename=vite.config.mjs
+```ts filename=vite.config.ts
 import mdx from "@mdx-js/rollup";
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import remarkFrontmatter from "remark-frontmatter";
@@ -453,9 +494,91 @@ If you want to reuse values across routes, stick them in their own non-route mod
 export const myValue = "some value";
 ```
 
-#### Adding and Removing Hooks
+#### Changing Hooks
 
 React Fast Refresh cannot track changes for a component when hooks are being added or removed from it, causing full reloads just for the next render. After the hooks have been updated, changes should result in hot updates again. For example, if you add [`useLoaderData`][use_loader_data] to your component, you may lose state local to that component for that render.
+
+Additionally, if you are destructuring a hook's return value, React Fast Refresh will not be able to preserve state for the component if the destructured key is removed or renamed.
+For example:
+
+```tsx
+export const loader = () => {
+  return json({ stuff: "some things" });
+};
+
+export default function Component() {
+  const { stuff } = useLoaderData<typeof loader>();
+  return (
+    <div>
+      <input />
+      <p>{stuff}</p>
+    </div>
+  );
+}
+```
+
+If you change the key `stuff` to `things`:
+
+```diff
+export const loader = () => {
+-  return json({ stuff: "some things" })
++  return json({ things: "some things" })
+}
+
+export default Component() {
+-  let { stuff } = useLoaderData<typeof loader>()
++  let { things } = useLoaderData<typeof loader>()
+  return (
+    <div>
+      <input />
+-      <p>{stuff}</p>
++      <p>{things}</p>
+    </div>
+  )
+}
+```
+
+then React Fast Refresh will not be able to preserve state `<input />` ❌.
+
+As a workaround, you could refrain from destructuring and instead use the hook's return value directly:
+
+```tsx
+export const loader = () => {
+  return json({ stuff: "some things" });
+};
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  return (
+    <div>
+      <input />
+      <p>{data.stuff}</p>
+    </div>
+  );
+}
+```
+
+Now if you change the key `stuff` to `things`:
+
+```diff
+export const loader = () => {
+-  return json({ things: "some things" })
++  return json({ things: "some things" })
+}
+
+export default Component() {
+  let data = useLoaderData<typeof loader>()
+  return (
+    <div>
+      <input />
+-      <p>{data.stuff}</p>
++      <p>{data.things}</p>
+    </div>
+  )
+}
+```
+
+then React Fast Refresh will preserve state for the `<input />`, though you may need to use [component keys][component-keys] as described in the next section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
 
 #### Component Keys
 
@@ -518,3 +641,5 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [solidstart]: https://start.solidjs.com/getting-started/what-is-solidstart
 [sveltekit]: https://kit.svelte.dev/
 [supported-with-some-deprecations]: #mdx
+[rfr-preamble]: https://github.com/facebook/react/issues/16604#issuecomment-528663101
+[component-keys]: #component-keys
