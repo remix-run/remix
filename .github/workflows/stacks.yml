@@ -28,7 +28,7 @@ jobs:
             name: "grunge"
     steps:
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
@@ -37,7 +37,7 @@ jobs:
           npx -y create-remix@${{ inputs.version }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --no-install --no-git-init
 
       - name: ⎔ Setup dependency caching
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           cache: npm
           cache-dependency-path: ${{ matrix.stack.name }}/package.json
@@ -90,7 +90,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
@@ -130,7 +130,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
@@ -170,7 +170,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
@@ -213,7 +213,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
