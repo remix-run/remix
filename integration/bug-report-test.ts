@@ -58,28 +58,32 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
+      "app/utils/buggy.server.ts": js`
+        export function buggy() {
+          return "this is a bug";
+        }
+      `,
+      "app/routes/about.tsx": js`
+        import { buggy } from "../utils/buggy.server";
+        const forcebug = buggy();
+
+        export default function Index() {
+          return <div id='tst'>about {forcebug}</div>;
+        }
+      `,
       "app/routes/_index.tsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
-
-        export function loader() {
-          return json("pizza");
-        }
 
         export default function Index() {
           let data = useLoaderData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              home
+              <Link id="link" to="/about">Other Route</Link>
+              <a id="aelm" href="/about">Other Route with a element</a>
             </div>
           )
-        }
-      `,
-
-      "app/routes/burgers.tsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -98,22 +102,32 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("[navigate to about page using a element]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  await page.waitForSelector("text=cheeseburger");
-
+  expect(await response.text()).toMatch("home");
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
   // await app.poke(20);
 
-  // Go check out the other tests to see what else you can do.
+  // If you need to test interactivity use the `app`
+  await app.goto("/");
+  await app.clickElement("#aelm");
+  await page.waitForSelector("#tst");
+  await page.waitForSelector("text=about this is a bug");
+});
+
+test("[navigate to about page using Link]", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
+  // You can test any request your app might get using `fixture`.
+  let response = await fixture.requestDocument("/");
+  expect(await response.text()).toMatch("home");
+
+  await app.goto("/");
+  await app.clickElement("#link");
+  await page.waitForSelector("#tst");
+  await page.waitForSelector("text=about this is a bug");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
