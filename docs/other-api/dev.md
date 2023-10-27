@@ -268,7 +268,7 @@ Check out our [bundle analysis guide][bundle_analysis] for more details.
 #### HMR
 
 If you are expecting hot updates but getting full page reloads,
-check out our [discussion on Hot Module Replacement][../discussion/hot-module-replacement.md] to learn more about the limitations of React Fast Refresh and workarounds for common issues.
+check out our [discussion on Hot Module Replacement][hmr] to learn more about the limitations of React Fast Refresh and workarounds for common issues.
 
 #### HDR: every code change triggers HDR
 
@@ -316,3 +316,4 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [path_imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
 [bundle_analysis]: ../guides/performance
 [manual_mode]: ../guides/manual-mode
+[hmr]: ../discussion/hot-module-replacement.md
