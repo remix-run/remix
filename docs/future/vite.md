@@ -426,162 +426,14 @@ const posts = import.meta.glob("./posts/*.mdx", {
 });
 ```
 
-## HMR & HDR
+## Troubleshooting
 
-### React Fast Refresh Limitations
+Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
 
-[React Fast Refresh][react_refresh] has some limitations that are worth being aware of.
+### HMR
 
-#### Class Component State
-
-React Fast Refresh does not preserve state for class components.
-This includes higher-order components that internally return classes:
-
-```ts
-export class ComponentA extends Component {} // ❌
-
-export const ComponentB = HOC(ComponentC); // ❌ Won't work if HOC returns a class component
-
-export function ComponentD() {} // ✅
-export const ComponentE = () => {}; // ✅
-export default function ComponentF() {} // ✅
-```
-
-#### Named Function Components
-
-Function components must be named, not anonymous, for React Fast Refresh to track changes:
-
-```ts
-export default () => {}; // ❌
-export default function () {} // ❌
-
-const ComponentA = () => {};
-export default ComponentA; // ✅
-
-export default function ComponentB() {} // ✅
-```
-
-#### Supported Exports
-
-React Fast Refresh can only handle component exports. While Remix manages special route exports like `meta`, `links`, and `header` for you, any user-defined exports will cause full reloads:
-
-```ts
-// These exports are handled by the Remix Vite plugin
-// to be HMR-compatible
-export const meta = { title: "Home" }; // ✅
-export const links = [
-  { rel: "stylesheet", href: "style.css" },
-]; // ✅
-
-// These exports are removed by the Remix Vite plugin
-// so they never affect HMR
-export const headers = { "Cache-Control": "max-age=3600" }; // ✅
-export const loader = () => {}; // ✅
-export const action = () => {}; // ✅
-
-// This is not a Remix export, nor a component export,
-// so it will cause a full reload for this route
-export const myValue = "some value"; // ❌
-
-export default function Route() {} // ✅
-```
-
-👆 Routes probably shouldn't be exporting random values like that anyway.
-If you want to reuse values across routes, stick them in their own non-route module:
-
-```ts filename=my-custom-value.ts
-export const myValue = "some value";
-```
-
-#### Changing Hooks
-
-React Fast Refresh cannot track changes for a component when hooks are being added or removed from it, causing full reloads just for the next render. After the hooks have been updated, changes should result in hot updates again. For example, if you add [`useLoaderData`][use_loader_data] to your component, you may lose state local to that component for that render.
-
-Additionally, if you are destructuring a hook's return value, React Fast Refresh will not be able to preserve state for the component if the destructured key is removed or renamed.
-For example:
-
-```tsx
-export const loader = () => {
-  return json({ stuff: "some things" });
-};
-
-export default function Component() {
-  const { stuff } = useLoaderData<typeof loader>();
-  return (
-    <div>
-      <input />
-      <p>{stuff}</p>
-    </div>
-  );
-}
-```
-
-If you change the key `stuff` to `things`:
-
-```diff
-export const loader = () => {
--  return json({ stuff: "some things" })
-+  return json({ things: "some things" })
-}
-
-export default Component() {
--  let { stuff } = useLoaderData<typeof loader>()
-+  let { things } = useLoaderData<typeof loader>()
-  return (
-    <div>
-      <input />
--      <p>{stuff}</p>
-+      <p>{things}</p>
-    </div>
-  )
-}
-```
-
-then React Fast Refresh will not be able to preserve state `<input />` ❌.
-
-As a workaround, you could refrain from destructuring and instead use the hook's return value directly:
-
-```tsx
-export const loader = () => {
-  return json({ stuff: "some things" });
-};
-
-export default function Component() {
-  const data = useLoaderData<typeof loader>();
-  return (
-    <div>
-      <input />
-      <p>{data.stuff}</p>
-    </div>
-  );
-}
-```
-
-Now if you change the key `stuff` to `things`:
-
-```diff
-export const loader = () => {
--  return json({ things: "some things" })
-+  return json({ things: "some things" })
-}
-
-export default Component() {
-  let data = useLoaderData<typeof loader>()
-  return (
-    <div>
-      <input />
--      <p>{data.stuff}</p>
-+      <p>{data.things}</p>
-    </div>
-  )
-}
-```
-
-then React Fast Refresh will preserve state for the `<input />`, though you may need to use [component keys][component-keys] as described in the next section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
-
-#### Component Keys
-
-In some cases, React cannot distinguish between existing components being changed and new components being added. [React needs `key`s][react_keys] to disambiguate these cases and track changes when sibling elements are modified.
+If you are expecting hot updates but getting full page reloads,
+check out our [discussion on Hot Module Replacement][../discussion/hot-module-replacement.md] to learn more about the limitations of React Fast Refresh and workarounds for common issues.
 
 ## Acknowledgements
 
@@ -628,9 +480,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [remark]: https://remark.js.org
 [remark-mdx-frontmatter]: https://github.com/remcohaszing/remark-mdx-frontmatter
 [glob-imports]: https://vitejs.dev/guide/features.html#glob-import
-[use_loader_data]: ../hooks/use-loader-data
-[react_refresh]: https://github.com/facebook/react/tree/main/packages/react-refresh
-[react_keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
 [vite-team]: https://vitejs.dev/team.html
 [consider-using-vite]: https://github.com/remix-run/remix/discussions/2427
 [remix-kit]: https://github.com/jrestall/remix-kit
@@ -642,3 +491,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [supported-with-some-deprecations]: #mdx
 [rfr-preamble]: https://github.com/facebook/react/issues/16604#issuecomment-528663101
 [component-keys]: #component-keys
+[issues-vite]: https://github.com/remix-run/remix/labels/vite
