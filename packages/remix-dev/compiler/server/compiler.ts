@@ -69,6 +69,26 @@ const createEsbuildConfig = (
     plugins.unshift(serverNodeBuiltinsPolyfillPlugin(ctx));
   }
 
+  // Apply workaround from https://github.com/evanw/esbuild/issues/1921#issuecomment-1152991694
+  // to avoid "Dynamic require of <pkg> not supported" errors when bundling sevrer packages
+  let bannerObj = {};
+  if (
+    ctx.config.serverModuleFormat === "esm" &&
+    ctx.config.serverPlatform === "node"
+  ) {
+    bannerObj = {
+      banner: {
+        js: `
+          const require = await (async () => {
+            const { createRequire } = await import("node:module");
+
+            return createRequire(import.meta.url);
+          })();
+        `,
+      },
+    };
+  }
+
   return {
     absWorkingDir: ctx.config.rootDirectory,
     stdin,
@@ -77,6 +97,7 @@ const createEsbuildConfig = (
     conditions: ctx.config.serverConditions,
     platform: ctx.config.serverPlatform,
     format: ctx.config.serverModuleFormat,
+    ...bannerObj,
     treeShaking: true,
     // The type of dead code elimination we want to do depends on the
     // minify syntax property: https://github.com/evanw/esbuild/issues/672#issuecomment-1029682369
