@@ -433,7 +433,7 @@ Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] b
 ### HMR
 
 If you are expecting hot updates but getting full page reloads,
-check out our [discussion on Hot Module Replacement][../discussion/hot-module-replacement.md] to learn more about the limitations of React Fast Refresh and workarounds for common issues.
+check out our [discussion on Hot Module Replacement][hmr] to learn more about the limitations of React Fast Refresh and workarounds for common issues.
 
 ## Acknowledgements
 
@@ -492,3 +492,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [rfr-preamble]: https://github.com/facebook/react/issues/16604#issuecomment-528663101
 [component-keys]: #component-keys
 [issues-vite]: https://github.com/remix-run/remix/labels/vite
+[hmr]: ../discussion/hot-module-replacement.md
