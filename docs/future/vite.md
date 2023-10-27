@@ -492,4 +492,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [rfr-preamble]: https://github.com/facebook/react/issues/16604#issuecomment-528663101
 [component-keys]: #component-keys
 [issues-vite]: https://github.com/remix-run/remix/labels/vite
-[hmr]: ../discussion/hot-module-replacement.md
+[hmr]: ../discussion/hot-module-replacement
