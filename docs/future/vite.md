@@ -123,7 +123,6 @@ Vite has many [features][vite-features] and [plugins][vite-plugins] that are not
 Add `vite/client` types in a `.d.ts` file. We recommend replacing the existing `remix.env.d.ts` file with a new `env.d.ts` file:
 
 ```ts
-/// <reference types="@remix-run/dev" />
 /// <reference types="@remix-run/node" />
 /// <reference types="vite/client" />
 ```
