@@ -316,4 +316,4 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [path_imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
 [bundle_analysis]: ../guides/performance
 [manual_mode]: ../guides/manual-mode
-[hmr]: ../discussion/hot-module-replacement.md
+[hmr]: ../discussion/hot-module-replacement
