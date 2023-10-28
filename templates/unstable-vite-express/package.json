@@ -3,9 +3,9 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "build": "vite build && vite build --ssr",
     "dev": "node ./server.mjs",
-    "start": "NODE_ENV=production node ./server.mjs",
+    "build": "vite build && vite build --ssr",
+    "start": "cross-env NODE_ENV=production node ./server.mjs",
     "typecheck": "tsc"
   },
   "dependencies": {

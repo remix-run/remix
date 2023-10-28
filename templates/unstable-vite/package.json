@@ -3,8 +3,8 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "build": "vite build && vite build --ssr",
     "dev": "vite dev",
+    "build": "vite build && vite build --ssr",
     "start": "remix-serve ./build/index.js",
     "typecheck": "tsc"
   },
@@ -22,7 +22,6 @@
     "@remix-run/eslint-config": "*",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
-    "cross-env": "^7.0.3",
     "eslint": "^8.38.0",
     "typescript": "^5.1.6",
     "vite": "^4.5.0",
