@@ -535,6 +535,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [component-keys]: #component-keys
 [issues-vite]: https://github.com/remix-run/remix/labels/vite
 [hmr]: ../discussion/hot-module-replacement
-[template-vite-express]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite
+[template-vite]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite
 [template-vite-express]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-express
 [server-only-code]: https://remix.run/docs/en/main/guides/gotchas#server-code-in-client-bundles
