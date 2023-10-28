@@ -71,9 +71,9 @@ All other bundling-related options are now [configured with Vite][vite-config]. 
 
 ## Migrating
 
-### Setup Vite
+#### Setup Vite
 
-👉 Install Vite as a development dependency:
+👉 **Install Vite as a development dependency**
 
 ```shellscript nonumber
 npm install -D vite
@@ -81,7 +81,7 @@ npm install -D vite
 
 Remix is now just a Vite plugin, so you'll need to hook it up to Vite.
 
-👉 Replace `remix.config.js` with `vite.config.ts` at the root of your Remix app:
+👉 **Replace `remix.config.js` with `vite.config.ts` at the root of your Remix app**
 
 ```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
@@ -92,17 +92,17 @@ export default defineConfig({
 });
 ```
 
-### Update your server scripts
+#### Update your server scripts
 
 In development, Vite will lazily compile your app code on-demand, both for the server and the browser assets.
 In production, Vite will handle bundling your app into client assets and a server bundle.
 
-#### Migrating from Remix App Server
+##### Migrating from Remix App Server
 
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
 It comes built-in with the Remix Vite plugin and will take over when you run `vite dev`.
 
-👉 Update your `dev` and `build` scripts:
+👉 **Update your `dev` and `build` scripts**
 
 ```json filename=package.json
 {
@@ -114,7 +114,7 @@ It comes built-in with the Remix Vite plugin and will take over when you run `vi
 }
 ```
 
-#### Migrating from a custom server
+##### Migrating from a custom server
 
 If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
 This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
@@ -130,7 +130,7 @@ import {
 
 For example, if you were using Express, here's how you could do it.
 
-👉 Update your `server.mjs` file:
+👉 **Update your `server.mjs` file**
 
 ```ts
 import {
@@ -180,7 +180,7 @@ app.listen(port, () =>
 );
 ```
 
-👉 Update your `dev`, `build`, and `start` scripts:
+👉 **Update your `dev`, `build`, and `start` scripts**
 
 ```json filename=package.json
 {
@@ -202,25 +202,25 @@ node --loader tsm ./server.ts
 
 Just remember that there might be some noticeable slowdown for initial server startup if you do this.
 
-### Setup TS types
+#### TypeScript integration
 
 Vite now handles imports for all sorts of different file types, so let's use those instead of the obsolete Remix compiler types.
 
-👉 Replace your `remix.env.d.ts` with a new `env.d.ts` file:
+👉 **Replace your `remix.env.d.ts` with a new `env.d.ts` file**
 
 ```ts filename=env.d.ts
 /// <reference types="@remix-run/node" />
 /// <reference types="vite/client" />
 ```
 
-👉 Replace reference to `remix.env.d.ts` in `tsconfig.json`:
+👉 **Replace reference to `remix.env.d.ts` in `tsconfig.json`**
 
 ```diff
 - "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
 + "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
 ```
 
-### `LiveReload` before `Scripts`
+#### `LiveReload` before `Scripts`
 
 <docs-info>
   This is a temporary workaround for a limitation that will be removed in the future.
@@ -233,7 +233,7 @@ We're working on a better API that would eliminate issues with ordering scripts.
 But for now, you can work around this limitation by manually moving `LiveReload` before `Scripts`.
 If your app doesn't use `Scripts`, you can safely ignore this step.
 
-👉 Ensure `LiveReload` comes _before_ `Scripts`:
+👉 **Ensure `LiveReload` comes _before_ `Scripts`**
 
 ```diff
 // app/root.tsx
@@ -259,7 +259,31 @@ export default function App() {
 }
 ```
 
-## Additional features via plugins
+#### Fix up CSS imports
+
+Vite interprets CSS imports differently from the existing Remix compiler.
+See the [_Regular CSS Imports_](#regular-css-imports) section for details.
+
+If you want to proceed without changing your CSS imports, you can enable `legacyCssImports` in the Remix Vite plugin which will automatically append `?url` to all relevant CSS imports:
+
+<docs-warning>
+  This option is only intended for use during the migration to Vite and will be removed in the future.
+</docs-warning>
+
+```ts filename=vite.config.ts
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      legacyCssImports: true,
+    }),
+  ],
+});
+```
+
+## Additional features & plugins
 
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
 Using any such features means will render the existing Remix compiler unable to compile your app, so only use them if you intend to use Vite exclusively from here on out.
@@ -309,7 +333,9 @@ export default defineConfig({
 
 #### Regular CSS Imports
 
-When importing a CSS file in Vite, its default export is its file contents as a string. This differs from the Remix compiler which provides the file's URL. To import the URL of a CSS file in Vite, you'll need to explicitly add `?url` to the end of the import path:
+When importing a CSS file in Vite, the default export will be the file contents as a string.
+This differs from the Remix compiler, which instead provides the file's URL.
+To import the URL of a CSS file in Vite, you'll need to explicitly add `?url` to the end of the import path:
 
 ```diff
 -import styles from "./styles.css";
@@ -326,23 +352,6 @@ import styles from "./dashboard.css?url";
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
 ];
-```
-
-If you're using Vite and the Remix compiler in the same project, you can enable `legacyCssImports` in the Remix Vite plugin which will automatically append `?url` to all relevant CSS imports:
-
-<docs-info>This option is only intended for use during the transition to Vite and will be removed in the future.</docs-info>
-
-```ts filename=vite.config.ts
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
-import { defineConfig } from "vite";
-
-export default defineConfig({
-  plugins: [
-    remix({
-      legacyCssImports: true,
-    }),
-  ],
-});
 ```
 
 #### CSS Bundling
