@@ -81,7 +81,7 @@ npm install -D vite
 
 Remix is now just a Vite plugin, so you'll need to hook it up to Vite.
 
-👉 Create a `vite.config.ts` at the root of your Remix app:
+👉 Replace `remix.config.js` with `vite.config.ts` at the root of your Remix app:
 
 ```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
@@ -208,10 +208,16 @@ Vite now handles imports for all sorts of different file types, so let's use tho
 
 👉 Replace your `remix.env.d.ts` with a new `env.d.ts` file:
 
-```diff filename=env.d.ts
-- /// <reference types="@remix-run/dev" />
+```ts filename=env.d.ts
 /// <reference types="@remix-run/node" />
-+ /// <reference types="vite/client" />
+/// <reference types="vite/client" />
+```
+
+👉 Replace reference to `remix.env.d.ts` in `tsconfig.json`:
+
+```diff
+- "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
++ "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
 ```
 
 ### `LiveReload` before `Scripts`
