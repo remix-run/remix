@@ -36,6 +36,8 @@ If you'd rather customize your server, you can use the [`unstable-vite-express`]
 npx create-remix@nightly --template remix-run/remix/templates/unstable-vite-express
 ```
 
+## Configuration
+
 The Vite plugin accepts the following subset of Remix config options:
 
 <docs-warning>
@@ -69,13 +71,17 @@ All other bundling-related options are now [configured with Vite][vite-config]. 
 
 ## Migrating
 
-To get started with Vite in an existing Remix project, first install Vite as a dev dependency:
+### Setup Vite
+
+👉 Install Vite as a development dependency:
 
 ```shellscript nonumber
 npm install -D vite
 ```
 
-Then add `vite.config.ts` to the project root, providing the Remix plugin to the `plugins` array:
+Remix is now just a Vite plugin, so you'll need to hook it up to Vite.
+
+👉 Create a `vite.config.ts` at the root of your Remix app:
 
 ```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
@@ -86,38 +92,138 @@ export default defineConfig({
 });
 ```
 
-To start a development server, just run Vite's `dev` command directly.
-Similarly, to run a production build, first run Vite's `build` command for the client, then for the server using the `--ssr` flag.
+### Update your server scripts
+
+In development, Vite will lazily compile your app code on-demand, both for the server and the browser assets.
+In production, Vite will handle bundling your app into client assets and a server bundle.
+
+#### Migrating from Remix App Server
+
+If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
+It comes built-in with the Remix Vite plugin and will take over when you run `vite dev`.
+
+👉 Update your `dev` and `build` scripts:
 
 ```json filename=package.json
 {
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build && vite build --ssr"
+    "build": "vite build && vite build --ssr",
+    "start": "remix-serve ./build/index.js"
   }
 }
 ```
 
-### Custom server
+#### Migrating from a custom server
 
-If you have a custom server, you'll need to update it to use Vite's `connect` middleware.
-See the [Vite + Express template][template-vite-express] for an example.
+If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
+This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
 
-Then you can run your server directly in development and in production:
+Remix exposes APIs for exactly this purpose:
+
+```ts
+import {
+  unstable_createViteServer, // provides middleware for handling asset requests
+  unstable_loadViteServerBuild, // handles initial render requests
+} from "@remix-run/dev";
+```
+
+For example, if you were using Express, here's how you could do it.
+
+👉 Update your `server.mjs` file:
+
+```ts
+import {
+  unstable_createViteServer,
+  unstable_loadViteServerBuild,
+} from "@remix-run/dev";
+import { createRequestHandler } from "@remix-run/express";
+import { installGlobals } from "@remix-run/node";
+import express from "express";
+
+installGlobals();
+
+let vite =
+  process.env.NODE_ENV === "production"
+    ? undefined
+    : await unstable_createViteServer();
+
+const app = express();
+
+// handle asset requests
+if (vite) {
+  app.use(vite.middlewares);
+} else {
+  app.use(
+    "/build",
+    express.static("public/build", {
+      immutable: true,
+      maxAge: "1y",
+    })
+  );
+}
+app.use(express.static("public", { maxAge: "1h" }));
+
+// handle SSR requests
+app.all(
+  "*",
+  createRequestHandler({
+    build: vite
+      ? () => unstable_loadViteServerBuild(vite)
+      : await import("./build/index.js"),
+  })
+);
+
+const port = 3000;
+app.listen(port, () =>
+  console.log("http://localhost:" + port)
+);
+```
+
+👉 Update your `dev`, `build`, and `start` scripts:
 
 ```json filename=package.json
 {
   "scripts": {
     "dev": "node ./server.mjs",
-    "build": "cross-env NODE_ENV=production node ./server.mjs"
+    "build": "vite build && vite build --ssr",
+    "start": "cross-env NODE_ENV=production node ./server.mjs"
   }
 }
 ```
 
-### `<LiveReload />` before `<Scripts />`
+<docs-info>
+  If you prefer, you can author your custom server in TypeScript.
+  You could then use tools like [`tsx`][tsx] or [`node --loader tsm`][tsm] to run your custom server.
+  Just remember that there might be some noticeable slowdown for initial server startup if you do this.
+</docs-info>
 
-During initial unstable release, the Remix Vite plugin assumes that `<LiveReload />` component comes _before_ `<Scripts />` so that React Fast Refresh initialization from `<Live Reload />` happens first.
-If `<Scripts />` comes before `<Live Reload />`, [React Fast Refresh will not be able to perform HMR][rfr-preamble].
+### Setup TS types
+
+Vite now handles imports for all sorts of different file types, so let's use those instead of the obsolete Remix compiler types.
+
+👉 Replace your `remix.env.d.ts` with a new `env.d.ts` file:
+
+```diff filename=env.d.ts
+- /// <reference types="@remix-run/dev" />
+/// <reference types="@remix-run/node" />
++ /// <reference types="vite/client" />
+```
+
+### `LiveReload` before `Scripts`
+
+<docs-info>
+  This is a temporary workaround for a limitation that will be removed in the future.
+</docs-info>
+
+For React Fast Refresh to work, it [needs to be initialized before any app code is run][rfr-preamble].
+That means it needs to come _before_ your `<Scripts />` component that loads your app code.
+
+We're working on a better API that would eliminate issues with ordering scripts.
+But for now, you can work around this limitation by manually moving `LiveReload` before `Scripts`.
+If your app doesn't use `Scripts`, you can safely ignore this step.
+
+👉 Ensure `LiveReload` comes _before_ `Scripts`:
 
 ```diff
 // app/root.tsx
@@ -143,20 +249,10 @@ export default function App() {
 }
 ```
 
-Before releasing as stable, we will redesign these APIs to make this ordering irrelevant.
+## Additional features via plugins
 
-### New Bundling Features
-
-Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the Remix compiler. Any use of these features will break backwards compatibility with the Remix compiler and should only be used if you intend to use Vite exclusively.
-
-### TypeScript
-
-Add `vite/client` types in a `.d.ts` file. We recommend replacing the existing `remix.env.d.ts` file with a new `env.d.ts` file:
-
-```ts
-/// <reference types="@remix-run/node" />
-/// <reference types="vite/client" />
-```
+Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
+Using any such features means will render the existing Remix compiler unable to compile your app, so only use them if you intend to use Vite exclusively from here on out.
 
 ### Path Aliases
 
@@ -199,7 +295,9 @@ export default defineConfig({
 });
 ```
 
-### Regular CSS Imports
+### Styling & CSS
+
+#### Regular CSS Imports
 
 When importing a CSS file in Vite, its default export is its file contents as a string. This differs from the Remix compiler which provides the file's URL. To import the URL of a CSS file in Vite, you'll need to explicitly add `?url` to the end of the import path:
 
@@ -237,7 +335,7 @@ export default defineConfig({
 });
 ```
 
-### CSS Bundling
+#### CSS Bundling
 
 Vite has built-in support for CSS side-effect imports, PostCSS and CSS Modules, among other CSS bundling features. The Remix Vite plugin automatically attaches bundled CSS to the relevant routes so the [`@remix-run/css-bundle`][css-bundling] package is no longer required.
 
@@ -255,7 +353,7 @@ export const links: LinksFunction = () => [
 ];
 ```
 
-### Tailwind
+#### Tailwind
 
 To use [Tailwind][tailwind] in Vite, first install the required dependencies:
 
@@ -293,7 +391,7 @@ Then include the `@tailwind` directives somewhere in your app CSS. For example, 
 @tailwind utilities;
 ```
 
-### Vanilla Extract
+#### Vanilla Extract
 
 To use [Vanilla Extract][vanilla-extract] in Vite, install the official [Vite plugin][vanilla-extract-vite-plugin].
 
@@ -457,7 +555,16 @@ const posts = import.meta.glob("./posts/*.mdx", {
 });
 ```
 
-### Server code removal in development
+## Troubleshooting
+
+Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
+
+#### HMR
+
+If you are expecting hot updates but getting full page reloads,
+check out our [discussion on Hot Module Replacement][hmr] to learn more about the limitations of React Fast Refresh and workarounds for common issues.
+
+#### Server code not treeshaken in development
 
 In production, Vite treeshakes server-only code from your client bundle, just like the existing Remix compiler.
 However, in development, Vite lazily compiles each module on-demand and therefore _does not_ treeshake across module boundaries.
@@ -467,15 +574,6 @@ If you run into browser errors in development that reference server-only code, b
 At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but it actually has some nice benefits.
 To start, the mental model is much simpler: `.server` is for server-only code, everything else could be on both the client and the server.
 Additionally, this brings Remix in alignment with module-level `"use client"` and `"use server"` directives necessary for when Remix adopts React Server Components.
-
-## Troubleshooting
-
-Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
-
-### HMR
-
-If you are expecting hot updates but getting full page reloads,
-check out our [discussion on Hot Module Replacement][hmr] to learn more about the limitations of React Fast Refresh and workarounds for common issues.
 
 ## Acknowledgements
 
@@ -538,3 +636,5 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [template-vite]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite
 [template-vite-express]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-express
 [server-only-code]: https://remix.run/docs/en/main/guides/gotchas#server-code-in-client-bundles
+[tsx]: https://github.com/esbuild-kit/tsx
+[tsm]: https://github.com/lukeed/tsm
