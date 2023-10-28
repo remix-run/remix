@@ -192,11 +192,15 @@ app.listen(port, () =>
 }
 ```
 
-<docs-info>
-  If you prefer, you can author your custom server in TypeScript.
-  You could then use tools like [`tsx`][tsx] or [`node --loader tsm`][tsm] to run your custom server.
-  Just remember that there might be some noticeable slowdown for initial server startup if you do this.
-</docs-info>
+If you prefer, you can instead author your custom server in TypeScript.
+You could then use tools like [`tsx`][tsx] or [`tsm`][tsm] to run your custom server:
+
+```shellscript nonumber
+tsx ./server.tsx
+node --loader tsm ./server.ts
+```
+
+Just remember that there might be some noticeable slowdown for initial server startup if you do this.
 
 ### Setup TS types
 
