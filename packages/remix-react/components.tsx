@@ -1027,10 +1027,10 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  *
  * @see https://remix.run/hooks/use-fetcher
  */
-export function useFetcher<TData = AppData>(): FetcherWithComponents<
-  SerializeFrom<TData>
-> {
-  return useFetcherRR();
+export function useFetcher<TData = AppData>(
+  opts: Parameters<typeof useFetcherRR>[0] = {}
+): FetcherWithComponents<SerializeFrom<TData>> {
+  return useFetcherRR(opts);
 }
 
 // Dead Code Elimination magic for production builds.

@@ -37,6 +37,7 @@ import { replaceImportSpecifier } from "./replace-import-specifier";
 const supportedRemixConfigKeys = [
   "appDirectory",
   "assetsBuildDirectory",
+  "future",
   "ignoredRouteFiles",
   "publicPath",
   "routes",
@@ -245,7 +246,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         serverBuildPath,
         serverModuleFormat,
         relativeAssetsBuildDirectory,
-        future: {},
+        future: {
+          v3_fetcherPersist: options.future?.v3_fetcherPersist === true,
+        },
       };
     };
 
@@ -461,6 +464,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         viteChildCompiler = await createViteDevServer({
           ...viteUserConfig,
+          server: {
+            ...viteUserConfig.server,
+            // when parent compiler runs in middleware mode to support
+            // custom servers, we don't want the child compiler also
+            // run in middleware mode as that will cause websocket port conflicts
+            middlewareMode: false,
+          },
           configFile: false,
           envFile: false,
           plugins: [
@@ -513,6 +523,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         vite.httpServer?.on("listening", () => {
           setTimeout(showUnstableWarning, 50);
         });
+        // Let user servers handle SSR requests in middleware mode
+        if (vite.config.server.middlewareMode) return;
         return () => {
           vite.middlewares.use(async (req, res, next) => {
             try {
@@ -852,8 +864,10 @@ function getRoute(
   pluginConfig: ResolvedRemixVitePluginConfig,
   file: string
 ): Route | undefined {
-  if (!file.startsWith(pluginConfig.appDirectory)) return;
-  let routePath = path.relative(pluginConfig.appDirectory, file);
+  if (!file.startsWith(viteNormalizePath(pluginConfig.appDirectory))) return;
+  let routePath = viteNormalizePath(
+    path.relative(pluginConfig.appDirectory, file)
+  );
   let route = Object.values(pluginConfig.routes).find(
     (r) => r.file === routePath
   );
