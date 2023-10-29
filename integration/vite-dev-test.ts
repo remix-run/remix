@@ -61,6 +61,8 @@ test.describe("Vite dev", () => {
         "app/routes/_index.tsx": js`
           import { useState, useEffect } from "react";
 
+          export const meta = () => [{ title: "Hello" }];
+
           export default function IndexRoute() {
             const [mounted, setMounted] = useState(false);
             useEffect(() => {
@@ -132,14 +134,27 @@ test.describe("Vite dev", () => {
       path.join(projectDir, "app/routes/_index.tsx"),
       "utf8"
     );
+    indexRouteContents = indexRouteContents.replace("HMR updated: no", "HMR updated: yes")
     await fs.writeFile(
       path.join(projectDir, "app/routes/_index.tsx"),
-      indexRouteContents.replace("HMR updated: no", "HMR updated: yes"),
+      indexRouteContents,
       "utf8"
     );
     await page.waitForLoadState("networkidle");
     await expect(hmrStatus).toHaveText("HMR updated: yes");
     await expect(input).toHaveValue("stateful");
+
+    // verify meta title hmr
+    await page.pause();
+    await expect(page).toHaveTitle("Hello");
+    indexRouteContents = indexRouteContents.replace(`{ title: "Hello" }`, `{ title: "Goodbye" }`)
+    await fs.writeFile(
+      path.join(projectDir, "app/routes/_index.tsx"),
+      indexRouteContents,
+      "utf8"
+    );
+    await page.waitForLoadState("networkidle");
+    await expect(page).toHaveTitle("Goodbye");
   });
 });
 
