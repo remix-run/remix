@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.2.0-pre.1
+
+### Patch Changes
+
+- Fix critical CSS hydration errors for Vite dev ([#7812](https://github.com/remix-run/remix/pull/7812))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.2.0-pre.1`
+
 ## 2.2.0-pre.0
 
 ### Minor Changes
