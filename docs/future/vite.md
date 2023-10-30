@@ -1,6 +1,5 @@
 ---
 title: Vite (Unstable)
-toc: false
 ---
 
 # Vite (Unstable)
@@ -36,13 +35,11 @@ If you'd rather customize your server, you can use the [`unstable-vite-express`]
 npx create-remix@nightly --template remix-run/remix/templates/unstable-vite-express
 ```
 
+These templates include a `vite.config.ts` file which is where the Remix Vite plugin is configured.
+
 ## Configuration
 
-The Vite plugin accepts the following subset of Remix config options:
-
-<docs-warning>
-  Note that `remix.config.js` is not used by the Remix Vite plugin unless you manually import it in your Vite config and pass it to the plugin.
-</docs-warning>
+The Vite plugin does not use `remix.config.js`. Instead, the plugin directly accepts the following subset of Remix config options:
 
 - [appDirectory][appdirectory]
 - [assetsBuildDirectory][assetsbuilddirectory]
@@ -52,7 +49,7 @@ The Vite plugin accepts the following subset of Remix config options:
 - [serverBuildPath][serverbuildpath]
 - [serverModuleFormat][servermoduleformat]
 
-For example:
+For example, to configure `ignoredRouteFiles`:
 
 ```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
@@ -68,6 +65,14 @@ export default defineConfig({
 ```
 
 All other bundling-related options are now [configured with Vite][vite-config]. This means you have much greater control over the bundling process.
+
+## Additional features & plugins
+
+One of the reasons that Remix is moving to Vite is so you have less to learn when adopting Remix.
+This means that, for any additional bundling features you'd like to use, you should reference [Vite documentation][vite] and the [Vite plugin community][vite-plugins] rather than the Remix documentation.
+
+Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
+The use of any such features will render the existing Remix compiler unable to compile your app, so only use them if you intend to use Vite exclusively from here on out.
 
 ## Migrating
 
@@ -89,6 +94,18 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [remix()],
+});
+```
+
+The subset of [supported Remix config options](#configuration) should be passed directly to the plugin:
+
+```ts filename=vite.config.ts
+export default defineConfig({
+  plugins: [
+    remix({
+      ignoredRouteFiles: ["**/.*"],
+    }),
+  ],
 });
 ```
 
@@ -143,7 +160,7 @@ import express from "express";
 
 installGlobals();
 
-let vite =
+const vite =
   process.env.NODE_ENV === "production"
     ? undefined
     : await unstable_createViteServer();
@@ -204,7 +221,7 @@ Just remember that there might be some noticeable slowdown for initial server st
 
 #### TypeScript integration
 
-Vite now handles imports for all sorts of different file types, so let's use those instead of the obsolete Remix compiler types.
+Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
 
 👉 **Replace your `remix.env.d.ts` with a new `env.d.ts` file**
 
@@ -215,7 +232,7 @@ Vite now handles imports for all sorts of different file types, so let's use tho
 
 👉 **Replace reference to `remix.env.d.ts` in `tsconfig.json`**
 
-```diff
+```diff filename=tsconfig.json
 - "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
 + "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
 ```
@@ -227,17 +244,15 @@ Vite now handles imports for all sorts of different file types, so let's use tho
 </docs-info>
 
 For React Fast Refresh to work, it [needs to be initialized before any app code is run][rfr-preamble].
-That means it needs to come _before_ your `<Scripts />` component that loads your app code.
+That means it needs to come _before_ your `<Scripts />` element that loads your app code.
 
 We're working on a better API that would eliminate issues with ordering scripts.
-But for now, you can work around this limitation by manually moving `LiveReload` before `Scripts`.
-If your app doesn't use `Scripts`, you can safely ignore this step.
+But for now, you can work around this limitation by manually moving `<LiveReload />` before `<Scripts />`.
+If your app doesn't the `Scripts` component, you can safely ignore this step.
 
-👉 **Ensure `LiveReload` comes _before_ `Scripts`**
+👉 **Ensure `<LiveReload />` comes _before_ `<Scripts />`**
 
-```diff
-// app/root.tsx
-
+```diff filename=app/root.tsx
 export default function App() {
   return (
     <html lang="en">
@@ -259,46 +274,19 @@ export default function App() {
 }
 ```
 
-#### Fix up CSS imports
-
-Vite interprets CSS imports differently from the existing Remix compiler.
-See the [_Regular CSS Imports_](#regular-css-imports) section for details.
-
-If you want to proceed without changing your CSS imports, you can enable `legacyCssImports` in the Remix Vite plugin which will automatically append `?url` to all relevant CSS imports:
-
-<docs-warning>
-  This option is only intended for use during the migration to Vite and will be removed in the future.
-</docs-warning>
-
-```ts filename=vite.config.ts
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
-import { defineConfig } from "vite";
-
-export default defineConfig({
-  plugins: [
-    remix({
-      legacyCssImports: true,
-    }),
-  ],
-});
-```
-
-## Additional features & plugins
-
-Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
-Using any such features means will render the existing Remix compiler unable to compile your app, so only use them if you intend to use Vite exclusively from here on out.
-
-### Path Aliases
+#### Configure path aliases
 
 The Remix compiler leverages the `paths` option in your `tsconfig.json` to resolve path aliases. This is commonly used in the Remix community to define `~` as an alias for the `app` directory.
 
-Vite does not provide any path aliases by default. You can install the [vite-tsconfig-paths][vite-tsconfig-paths] plugin to automatically resolve path aliases from your `tsconfig.json` in Vite, matching the behavior of the Remix compiler:
+Vite does not provide any path aliases by default. If you were relying on this feature, you can install the [vite-tsconfig-paths][vite-tsconfig-paths] plugin to automatically resolve path aliases from your `tsconfig.json` in Vite, matching the behavior of the Remix compiler:
+
+👉 **Install `vite-tsconfig-paths`**
 
 ```shellscript nonumber
 npm install -D vite-tsconfig-paths
 ```
 
-Then add it to your Vite config:
+👉 **Add `vite-tsconfig-paths` to your Vite config**
 
 ```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
@@ -310,115 +298,136 @@ export default defineConfig({
 });
 ```
 
-Alternatively, you can define path aliases without referencing `tsconfig.json` by using Vite's [`resolve.alias`][vite-resolve-alias] option directly:
+#### Optionally remove `@remix-run/css-bundle`
 
-```ts filename=vite.config.ts
-import { fileURLToPath, URL } from "node:url";
+Vite has built-in support for CSS side-effect imports, PostCSS and CSS Modules, among other CSS bundling features.
 
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
-import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
+The Remix Vite plugin automatically attaches bundled CSS to the relevant routes so the <nobr>[`@remix-run/css-bundle`][css-bundling]</nobr> package can be removed if you only intend to use Vite in your project.
 
-export default defineConfig({
-  resolve: {
-    alias: {
-      "~": fileURLToPath(new URL("./app", import.meta.url)),
-    },
-  },
-  plugins: [remix()],
-});
-```
+👉 **Remove references to `@remix-run/css-bundle`**
 
-### Styling & CSS
-
-#### Regular CSS Imports
-
-When importing a CSS file in Vite, the default export will be the file contents as a string.
-This differs from the Remix compiler, which instead provides the file's URL.
-To import the URL of a CSS file in Vite, you'll need to explicitly add `?url` to the end of the import path:
-
-```diff
--import styles from "./styles.css";
-+import styles from "./styles.css?url";
-```
-
-For example:
-
-```ts filename=app/dashboard/route.tsx
-import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
-
-import styles from "./dashboard.css?url";
-
-export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: styles },
-];
-```
-
-#### CSS Bundling
-
-Vite has built-in support for CSS side-effect imports, PostCSS and CSS Modules, among other CSS bundling features. The Remix Vite plugin automatically attaches bundled CSS to the relevant routes so the [`@remix-run/css-bundle`][css-bundling] package is no longer required.
-
-If you're using Vite and the Remix compiler in the same project, you can continue to use `@remix-run/css-bundle` as long as you check for the existence of `cssBundleHref` before using it:
-
-```ts
-import { cssBundleHref } from "@remix-run/css-bundle";
+```diff filename=app/root.tsx
+-import { cssBundleHref } from "@remix-run/css-bundle";
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const links: LinksFunction = () => [
-  ...(cssBundleHref
-    ? [{ rel: "stylesheet", href: cssBundleHref }]
-    : []),
+-  ...(cssBundleHref
+-    ? [{ rel: "stylesheet", href: cssBundleHref }]
+-    : []),
   // ...
 ];
 ```
 
-#### Tailwind
+Of course, if this is the only style sheet for a given route, you can remove the links function entirely.
 
-To use [Tailwind][tailwind] in Vite, first install the required dependencies:
+```diff filename=app/root.tsx
+-import { cssBundleHref } from "@remix-run/css-bundle";
+-import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-```shellscript nonumber
-npm install -D tailwindcss postcss autoprefixer
+-export const links: LinksFunction = () => [
+-  ...(cssBundleHref
+-    ? [{ rel: "stylesheet", href: cssBundleHref }]
+-    : []),
+-];
 ```
 
-Then generate config files for both Tailwind and PostCSS:
+#### Fix up CSS imports
 
-```shellscript nonumber
-npx tailwindcss init --ts -p
+Vite interprets CSS imports differently from the existing Remix compiler. If you want to get access to the `href` for a CSS file in Vite, you need to explicitly add `?url` to the end of your CSS import path.
+
+```diff filename=app/dashboard/route.tsx
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
+-import dashboardStyles from "./dashboard.css";
++import dashboardStyles from "./dashboard.css?url";
+
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: dashboardStyles },
+];
 ```
 
-<docs-warning>If your Remix project already has a PostCSS config file, you'll need to ensure that the `tailwindcss` plugin has been configured. This plugin was previously being injected by the Remix compiler if it was missing.</docs-warning>
+**However, manually attaching CSS imports to link descriptors is now optional when using Vite!**
 
-Now we can tell it which files to generate classes from:
+Instead, all CSS imports can now be side-effects.
+The Remix Vite plugin will automatically attach these CSS files to the relevant routes.
+This is more in line with how most Vite users manage CSS and means that in many cases you won't need the `links` function export anymore.
 
-```ts filename=tailwind.config.ts lines=[4]
-import type { Config } from "tailwindcss";
+👉 **Convert CSS imports to side effects**
 
+```diff filename=app/dashboard/route.tsx
+// No need to export a links function anymore:
+-import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
+-import dashboardStyles from "./dashboard.css?url";
+
+-export const links: LinksFunction = () => [
+-  { rel: "stylesheet", href: dashboardStyles },
+-];
+
+// Just import the CSS as a side effect:
++import "./dashboard.css";
+```
+
+<docs-warning>If you're using PostCSS/Tailwind, you should **always** use CSS side-effect imports due to a [known issue with Vite when using `?url` with CSS imports and PostCSS.][vite-css-url-issue]</docs-warning>
+
+#### Enable Tailwind via PostCSS
+
+If your project is using Tailwind, you'll first need to ensure that you have a PostCSS config file which will get automatically picked up by Vite.
+This is because the Remix compiler didn't require a PostCSS config file when Remix's `tailwind` option was enabled.
+
+👉 **Add PostCSS config if it's missing, including the `tailwindcss` plugin**
+
+```js filename=postcss.config.mjs
 export default {
-  content: ["./app/**/*.{js,jsx,ts,tsx}"],
-  theme: {
-    extend: {},
+  plugins: {
+    tailwindcss: {},
   },
-  plugins: [],
-} satisfies Config;
+};
 ```
 
-Then include the `@tailwind` directives somewhere in your app CSS. For example, you could create a `tailwind.css` file at the root of your app:
+If your project already has a PostCSS config file, you'll need to add the `tailwindcss` plugin if it's not already present.
+This is because the Remix compiler included this plugin automatically when Remix's `tailwind` option was enabled.
 
-```css filename=app/tailwind.css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+👉 **Add the `tailwindcss` plugin to your PostCSS config if it's missing**
+
+```js filename=postcss.config.mjs lines=[3]
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
 ```
 
-#### Vanilla Extract
+Due to a [known issue with Vite when using `?url` with CSS imports and PostCSS,][vite-css-url-issue] you should ensure that you're using a side-effect import for your Tailwind CSS file, otherwise the Tailwind styles won't be present in the production build.
 
-To use [Vanilla Extract][vanilla-extract] in Vite, install the official [Vite plugin][vanilla-extract-vite-plugin].
+👉 **Convert Tailwind CSS import to a side effect**
+
+```diff filename=app/dashboard/route.tsx
+// Don't export as a link descriptor:
+-import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
+-import tailwind from "./tailwind.css";
+
+-export const links: LinksFunction = () => [
+-  { rel: "stylesheet", href: tailwind },
+-];
+
+// Import as a side effect instead:
++import "./tailwind.css";
+```
+
+#### Add Vanilla Extract plugin
+
+If you're using [Vanilla Extract][vanilla-extract], you'll need to set up the Vite plugin.
+
+👉 **Install the official [Vanilla Extract plugin for Vite][vanilla-extract-vite-plugin]**
 
 ```shellscript nonumber
 npm install -D @vanilla-extract/vite-plugin
 ```
 
-Then add the plugin to your Vite config:
+👉 **Add the Vanilla Extract plugin to your Vite config**
 
 ```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
@@ -430,15 +439,17 @@ export default defineConfig({
 });
 ```
 
-### MDX
+#### Add MDX plugin
 
-Since Vite's plugin API is an extension of the Rollup plugin API, you can use the official [MDX Rollup plugin][mdx-rollup-plugin]:
+If you're using MDX, since Vite's plugin API is an extension of the Rollup plugin API, you should use the official [MDX Rollup plugin][mdx-rollup-plugin]:
+
+👉 **Install the MDX Rollup plugin**
 
 ```shellscript nonumber
 npm install -D @mdx-js/rollup
 ```
 
-Then add the Rollup plugin to your Vite config:
+👉 **Add the MDX Rollup plugin to your Vite config**
 
 ```ts filename=vite.config.ts
 import mdx from "@mdx-js/rollup";
@@ -450,17 +461,17 @@ export default defineConfig({
 });
 ```
 
-#### MDX Frontmatter
+##### Add MDX frontmatter support
 
-The Remix compiler allowed you to define [frontmatter in MDX][mdx-frontmatter]. You can achieve this in Vite using [remark-mdx-frontmatter].
+The Remix compiler allowed you to define [frontmatter in MDX][mdx-frontmatter]. If you were using this feature, you can achieve this in Vite using [remark-mdx-frontmatter].
 
-First, install the required [Remark][remark] plugins:
+👉 **Install the required [Remark][remark] frontmatter plugins**
 
 ```shellscript nonumber
 npm install -D remark-frontmatter remark-mdx-frontmatter
 ```
 
-Then provide these plugins to the MDX Rollup plugin:
+👉 **Pass the Remark frontmatter plugins to the MDX Rollup plugin**
 
 ```ts filename=vite.config.ts
 import mdx from "@mdx-js/rollup";
@@ -482,33 +493,50 @@ export default defineConfig({
 });
 ```
 
-In the Remix compiler, the frontmatter export was named `attributes`. This differs from the frontmatter plugin's default export name of `frontmatter`. To maintain backwards compatibility with the Remix compiler, you can override this via the `name` option:
+In the Remix compiler, the frontmatter export was named `attributes`. This differs from the frontmatter plugin's default export name of `frontmatter`. Although it's possible to configure the frontmatter export name, we recommend updating your app code to use the default export name instead.
 
-```ts filename=vite.config.ts
-import mdx from "@mdx-js/rollup";
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
-import remarkFrontmatter from "remark-frontmatter";
-import remarkMdxFrontmatter from "remark-mdx-frontmatter";
-import { defineConfig } from "vite";
+👉 **Rename MDX `attributes` export to `frontmatter` within MDX files**
 
-export default defineConfig({
-  plugins: [
-    remix(),
-    mdx({
-      remarkPlugins: [
-        remarkFrontmatter,
-        [remarkMdxFrontmatter, { name: "attributes" }],
-      ],
-    }),
-  ],
-});
+```diff filename=app/posts/first-post.mdx
+---
+title: Hello, World!
+---
+
+-# {attributes.title}
++# {frontmatter.title}
 ```
 
-##### MDX Route Frontmatter
+👉 **Rename MDX `attributes` export to `frontmatter` for consumers**
 
-The Remix compiler allowed you to define `headers`, `meta` and `handle` route exports in your frontmatter. This Remix-specific feature is obviously not supported by the `remark-mdx-frontmatter` plugin, but you can manually map frontmatter to route exports yourself:
+```diff filename=app/routes/posts/first-post.tsx
+import Component, {
+-  attributes,
++  frontmatter,
+} from "./posts/first-post.mdx";
+```
 
-```mdx
+###### Define types for MDX files
+
+👉 **Add types for `*.mdx` files to `env.d.ts`**
+
+```ts filename=env.d.ts lines=[4-8]
+/// <reference types="@remix-run/node" />
+/// <reference types="vite/client" />
+
+declare module "*.mdx" {
+  let MDXComponent: (props: any) => JSX.Element;
+  export const frontmatter: any;
+  export default MDXComponent;
+}
+```
+
+###### Map MDX frontmatter to route exports
+
+The Remix compiler allowed you to define `headers`, `meta` and `handle` route exports in your frontmatter. This Remix-specific feature is obviously not supported by the `remark-mdx-frontmatter` plugin. If you were using this feature, you should manually map frontmatter to route exports yourself:
+
+👉 **Map frontmatter to route exports for MDX routes**
+
+```mdx lines=[10-11]
 ---
 meta:
   - title: My First Post
@@ -524,7 +552,7 @@ export const headers = frontmatter.headers;
 # Hello World
 ```
 
-By writing these MDX route exports yourself, you're free to use whatever frontmatter structure you like.
+Note that, since you're explicitly mapping MDX route exports, you're now free to use whatever frontmatter structure you like.
 
 ```mdx
 ---
@@ -545,9 +573,9 @@ export const meta = () => {
 # Hello World
 ```
 
-##### MDX Filename Export
+###### Update MDX filename usage
 
-The Remix compiler also provided a `filename` export from all MDX files. This was primarily designed to enable linking to collections of MDX routes. In Vite, you should achieve this via [glob imports][glob-imports] which give you a handy data structure that maps file names to modules. This makes it much easier to maintain a list of MDX files since you no longer need to import each one manually.
+The Remix compiler also provided a `filename` export from all MDX files. This was primarily designed to enable linking to collections of MDX routes. If you were using this feature, you can achieve this in Vite via [glob imports][glob-imports] which give you a handy data structure that maps file names to modules. This makes it much easier to maintain a list of MDX files since you no longer need to import each one manually.
 
 For example, to import all MDX files in the `posts` directory:
 
@@ -590,9 +618,7 @@ However, in development, Vite lazily compiles each module on-demand and therefor
 
 If you run into browser errors in development that reference server-only code, be sure to place that [server-only code in a `.server` file][server-only-code].
 
-At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but it actually has some nice benefits.
-To start, the mental model is much simpler: `.server` is for server-only code, everything else could be on both the client and the server.
-Additionally, this brings Remix in alignment with module-level `"use client"` and `"use server"` directives necessary for when Remix adopts React Server Components.
+At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but the mental model is simpler: `.server` is for server-only code, everything else could be on both the client and the server.
 
 ## Acknowledgements
 
@@ -657,3 +683,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [server-only-code]: https://remix.run/docs/en/main/guides/gotchas#server-code-in-client-bundles
 [tsx]: https://github.com/esbuild-kit/tsx
 [tsm]: https://github.com/lukeed/tsm
+[vite-css-url-issue]: https://github.com/vitejs/vite/issues/13416
