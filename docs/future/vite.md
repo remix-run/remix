@@ -333,24 +333,11 @@ Of course, if this is the only style sheet for a given route, you can remove the
 
 #### Fix up CSS imports
 
-Vite interprets CSS imports differently from the existing Remix compiler. If you want to get access to the `href` for a CSS file in Vite, you need to explicitly add `?url` to the end of your CSS import path.
+In Vite, CSS files are typically imported as side effects.
 
-```diff filename=app/dashboard/route.tsx
-import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+During development, [Vite injects imported CSS files into the page via JavaScript,][vite-css] and the Remix Vite plugin will inline imported CSS alongside your link tags to avoid a flash of unstyled content. In the production build, the Remix Vite plugin will automatically attach CSS files to the relevant routes.
 
--import dashboardStyles from "./dashboard.css";
-+import dashboardStyles from "./dashboard.css?url";
-
-export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: dashboardStyles },
-];
-```
-
-**However, manually attaching CSS imports to link descriptors is now optional when using Vite!**
-
-Instead, all CSS imports can now be side-effects.
-The Remix Vite plugin will automatically attach these CSS files to the relevant routes.
-This is more in line with how most Vite users manage CSS and means that in many cases you won't need the `links` function export anymore.
+This also means that in many cases you won't need the `links` function export anymore.
 
 👉 **Convert CSS imports to side effects**
 
@@ -368,7 +355,7 @@ This is more in line with how most Vite users manage CSS and means that in many 
 +import "./dashboard.css";
 ```
 
-<docs-warning>If you're using PostCSS/Tailwind, you should **always** use CSS side-effect imports due to a [known issue with Vite when using `?url` with CSS imports and PostCSS.][vite-css-url-issue]</docs-warning>
+<docs-warning>While [Vite supports importing static asset URLs via an explicit `?url` query string][vite-url-imports], which in theory would match the behavior of the existing Remix compiler when used for CSS files, there is a [known Vite issue with `?url` for CSS imports.][vite-css-url-issue] This may be fixed in the future, but in the meantime you should exclusively use side-effect imports for CSS.</docs-warning>
 
 #### Enable Tailwind via PostCSS
 
@@ -399,9 +386,9 @@ export default {
 };
 ```
 
-Due to a [known issue with Vite when using `?url` with CSS imports and PostCSS,][vite-css-url-issue] you should ensure that you're using a side-effect import for your Tailwind CSS file, otherwise the Tailwind styles won't be present in the production build.
-
 👉 **Convert Tailwind CSS import to a side effect**
+
+If you haven't already, be sure to [convert your CSS imports to side effects.](#fix-up-css-imports)
 
 ```diff filename=app/dashboard/route.tsx
 // Don't export as a link descriptor:
@@ -683,4 +670,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [server-only-code]: https://remix.run/docs/en/main/guides/gotchas#server-code-in-client-bundles
 [tsx]: https://github.com/esbuild-kit/tsx
 [tsm]: https://github.com/lukeed/tsm
-[vite-css-url-issue]: https://github.com/vitejs/vite/issues/13416
+[vite-css]: https://vitejs.dev/guide/features.html#css
+[vite-url-imports]: https://vitejs.dev/guide/assets.html#explicit-url-imports
+[vite-css-url-issue]: https://github.com/remix-run/remix/issues/7786
