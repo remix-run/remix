@@ -9,7 +9,7 @@ State management in React typically involves maintaining a synchronized cache of
 
 ## Understanding State Management in React
 
-In a typical React context, when we refer to "state management", we're primarily discussing how we synchronize server state with the client. A more apt term could be "cache management" because the server is the source of truth and the client state is mostly functioning as a cache.
+In a typical React context, when we refer to "state management", we're primarily discussing how we synchronize the server state with the client. A more apt term could be "cache management" because the server is the source of truth and the client state is mostly functioning as a cache.
 
 Popular caching solutions in React include:
 
@@ -21,11 +21,11 @@ In certain scenarios, using these libraries may be warranted. However, with Remi
 
 ## How Remix Simplifies State
 
-As discussed in [Fullstack Data Flow][fullstack_data_flow] Remix seamlessly bridges the gap between the backend and frontend via mechanisms like loaders, actions, and forms with automatic synchronization through revalidation. This offers developers the ability to directly use server state within components without managing a cache, the network communication, or data revalidation, making most client-side caching redundant.
+As discussed in [Fullstack Data Flow][fullstack_data_flow] Remix seamlessly bridges the gap between the backend and frontend via mechanisms like loaders, actions, and forms with automatic synchronization through revalidation. This offers developers the ability to directly use server state within components without managing a cache, network communication, or data revalidation, making most client-side caching redundant.
 
 Here's why using typical React state patterns might be an antipattern in Remix:
 
-1. **Network-related State:** If your React state is managing anything related to the network—such as data from loaders, pending form submissions, or navigational states—it's likely that you're managing state that Remix already manages:
+1. **Network-related State:** If your React state is managing anything related to the network—such as data from loaders, pending form submissions, or navigational states—it's likely that you're managing a state that Remix already manages:
 
    - **[`useNavigation`][use_navigation]**: This hook gives you access to `navigation.state`, `navigation.formData`, `navigation.location`, etc.
    - **[`useFetcher`][use_fetcher]**: This facilitates interaction with `fetcher.state`, `fetcher.formData`, `fetcher.data` etc.
@@ -39,7 +39,7 @@ Here's why using typical React state patterns might be an antipattern in Remix:
    - **Server Sessions:** Server-managed user sessions.
    - **Server Caches:** Cached data on the server side for quicker retrieval.
 
-3. **Performance Considerations:** At times, client state is leveraged to avoid redundant data fetching. With Remix, you can use the [`Cache-Control`][cache_control_header] headers within `loader`s, allowing you to tap into the browser's native cache. However, this approach has its limitations and should be used judiciously. It's usually more beneficial to optimize backend queries or implement a server cache. This is because such changes benefit all users and do away with the need for individual browser caches.
+3. **Performance Considerations:** At times, the client state is leveraged to avoid redundant data fetching. With Remix, you can use the [`Cache-Control`][cache_control_header] headers within `loader`s, allowing you to tap into the browser's native cache. However, this approach has its limitations and should be used judiciously. It's usually more beneficial to optimize backend queries or implement a server cache. This is because such changes benefit all users and do away with the need for individual browser caches.
 
 As a developer transitioning to Remix, it's essential to recognize and embrace its inherent efficiencies rather than applying traditional React patterns. Remix offers a streamlined solution to state management leading to less code, fresh data, and no state synchronization bugs.
 
@@ -47,11 +47,11 @@ As a developer transitioning to Remix, it's essential to recognize and embrace i
 
 ### Network Related State
 
-For examples on using Remix's internal state to manage network related state, refer to [Pending UI][pending_ui].
+For examples on using Remix's internal state to manage network related states, refer to [Pending UI][pending_ui].
 
 ### URL Search Params
 
-Consider a UI that lets the user customize between list view or detail view. Your instinct might be to reach for React state:
+Consider a UI that lets the user customize between a list view or detail view. Your instinct might be to reach for React state:
 
 ```tsx bad lines=[2,6,9]
 export function List() {
@@ -189,7 +189,7 @@ To persist state beyond the component lifecycle, browser local storage is a step
 **Cons**:
 
 - **Requires Synchronization**: React components must sync up with local storage to initialize and save the current state.
-- **Server Rendering Limitation**: The [`window`][window_global] and [`localStorage`][local_storage_global] objects are not accessible during server-side rendering, so state must be initialized in the browser with an effect.
+- **Server Rendering Limitation**: The [`window`][window_global] and [`localStorage`][local_storage_global] objects are not accessible during server-side rendering, so the state must be initialized in the browser with an effect.
 - **UI Flickering**: On initial page loads, the state in local storage may not match what was rendered by the server and the UI will flicker when JavaScript loads.
 
 **Implementation**:
@@ -220,7 +220,7 @@ function Sidebar({ children }) {
 }
 ```
 
-In this approach, state must be initialized within an effect. This is crucial to avoid complications during server-side rendering. Directly initializing the React state from `localStorage` will cause errors since `window.localStorage` is unavailable during server rendering. Furthermore, even if it were accessible, it wouldn't mirror the user's browser local storage.
+In this approach, the state must be initialized within an effect. This is crucial to avoid complications during server-side rendering. Directly initializing the React state from `localStorage` will cause errors since `window.localStorage` is unavailable during server rendering. Furthermore, even if it were accessible, it wouldn't mirror the user's browser's local storage.
 
 ```tsx bad lines=[4]
 function Sidebar() {
@@ -237,13 +237,13 @@ By initializing the state within an effect, there's potential for a mismatch bet
 
 #### Cookies
 
-Cookies offer a comprehensive solution for this use case. However, this method introduces added preliminary setup before making the state accessible within the component.
+Cookies offer a comprehensive solution for this use case. However, this method introduces an added preliminary setup before making the state accessible within the component.
 
 **Pros**:
 
 - **Server Rendering**: State is available on the server for rendering and even for server actions.
 - **Single Source of Truth**: Eliminates state synchronization hassles.
-- **Persistence**: Maintains state across page loads and component mounts/unmounts. State can even persist across devices if you switch to a database-backed session.
+- **Persistence**: Maintains state across page loads and component mounts/unmounts. The state can even persist across devices if you switch to a database-backed session.
 - **Progressive Enhancement**: Functions even before JavaScript loads.
 
 **Cons**:
