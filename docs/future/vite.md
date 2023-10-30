@@ -109,6 +109,61 @@ export default defineConfig({
 });
 ```
 
+#### TypeScript integration
+
+Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
+
+👉 **Replace your `remix.env.d.ts` with a new `env.d.ts` file**
+
+```ts filename=env.d.ts
+/// <reference types="@remix-run/node" />
+/// <reference types="vite/client" />
+```
+
+👉 **Replace reference to `remix.env.d.ts` in `tsconfig.json`**
+
+```diff filename=tsconfig.json
+- "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
++ "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
+```
+
+#### `LiveReload` before `Scripts`
+
+<docs-info>
+  This is a temporary workaround for a limitation that will be removed in the future.
+</docs-info>
+
+For React Fast Refresh to work, it [needs to be initialized before any app code is run][rfr-preamble].
+That means it needs to come _before_ your `<Scripts />` element that loads your app code.
+
+We're working on a better API that would eliminate issues with ordering scripts.
+But for now, you can work around this limitation by manually moving `<LiveReload />` before `<Scripts />`.
+If your app doesn't the `Scripts` component, you can safely ignore this step.
+
+👉 **Ensure `<LiveReload />` comes _before_ `<Scripts />`**
+
+```diff filename=app/root.tsx
+export default function App() {
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <Outlet />
+        <ScrollRestoration />
++        <LiveReload />
+        <Scripts />
+-        <LiveReload />
+      </body>
+    </html>
+  );
+}
+```
+
 #### Update your server scripts
 
 In development, Vite will lazily compile your app code on-demand, both for the server and the browser assets.
@@ -218,61 +273,6 @@ node --loader tsm ./server.ts
 ```
 
 Just remember that there might be some noticeable slowdown for initial server startup if you do this.
-
-#### TypeScript integration
-
-Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
-
-👉 **Replace your `remix.env.d.ts` with a new `env.d.ts` file**
-
-```ts filename=env.d.ts
-/// <reference types="@remix-run/node" />
-/// <reference types="vite/client" />
-```
-
-👉 **Replace reference to `remix.env.d.ts` in `tsconfig.json`**
-
-```diff filename=tsconfig.json
-- "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
-+ "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
-```
-
-#### `LiveReload` before `Scripts`
-
-<docs-info>
-  This is a temporary workaround for a limitation that will be removed in the future.
-</docs-info>
-
-For React Fast Refresh to work, it [needs to be initialized before any app code is run][rfr-preamble].
-That means it needs to come _before_ your `<Scripts />` element that loads your app code.
-
-We're working on a better API that would eliminate issues with ordering scripts.
-But for now, you can work around this limitation by manually moving `<LiveReload />` before `<Scripts />`.
-If your app doesn't the `Scripts` component, you can safely ignore this step.
-
-👉 **Ensure `<LiveReload />` comes _before_ `<Scripts />`**
-
-```diff filename=app/root.tsx
-export default function App() {
-  return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <Meta />
-        <Links />
-      </head>
-      <body>
-        <Outlet />
-        <ScrollRestoration />
-+        <LiveReload />
-        <Scripts />
--        <LiveReload />
-      </body>
-    </html>
-  );
-}
-```
 
 #### Configure path aliases
 
