@@ -100,7 +100,7 @@ export default function Component() {
 
 You can force code out of either the client or the server with the [`*.client.tsx`][file_convention_client] and [`*.server.tsx`][file_convention_server] conventions.
 
-While rare, sometimes server code makes it to client bundles because of how the compiler determines the dependencies of a route module, or because you accidentally try to use it in code that needs to ship to the client. You can force it out by adding `*.server.tsx` on the end of the file name.
+While rare, sometimes server code makes it to client bundles because of how the compiler determines the dependencies of a route module, or because you accidentally try to use it in code that needs to ship to the client. You can force it out by adding `*.server.tsx` at the end of the file name.
 
 For example, we could name a module `app/user.server.ts` instead of `app/user.ts` to ensure that the code in that module is never bundled into the client — even if you try to use it in the component.
 
