@@ -4,7 +4,7 @@ title: ScrollRestoration
 
 # `<ScrollRestoration>`
 
-This component will emulate the browser's scroll restoration on location changes after [`loader`][loader]s have completed. This ensures the scroll position is restored to the right spot, at the right time, even across domains.
+This component will emulate the browser's scroll restoration on location changes after [`loader`][loader]s have been completed. This ensures the scroll position is restored to the right spot, at the right time, even across domains.
 
 You should only render one of these, right before the [`<Scripts/>`][scripts_component] component.
 
@@ -65,7 +65,7 @@ If the user starts at "/home", scrolls down a bit, clicks "messages" in the navi
 
 By default, React Router (and the browser) will have two different scroll positions stored for `1` and `3` even though they have the same URL. That means as the user navigated from `2` → `3` the scroll position goes to the top instead of restoring to where it was in `1`.
 
-A solid product decision here is to keep the users scroll position on the home feed no matter how they got there (back button or new link clicks). For this, you'd want to use the `location.pathname` as the key.
+A solid product decision here is to keep the user's scroll position on the home feed no matter how they got there (back button or new link clicks). For this, you'd want to use the `location.pathname` as the key.
 
 ```tsx
 <ScrollRestoration
@@ -82,9 +82,9 @@ Or you may want to only use the pathname for some paths, and use the normal beha
   getKey={(location, matches) => {
     const paths = ["/home", "/notifications"];
     return paths.includes(location.pathname)
-      ? // home and notifications restore by pathname
+      ? // home and notifications restored by pathname
         location.pathname
-      : // everything else by location like the browser
+      : //Everything else by location like the browser
         location.key;
   }}
 />
