@@ -51,7 +51,7 @@ For examples on using Remix's internal state to manage network related states, r
 
 ### URL Search Params
 
-Consider a UI that lets the user customize between a list view or detail view. Your instinct might be to reach for React state:
+Consider a UI that lets the user customize between a list view or a detail view. Your instinct might be to reach for React state:
 
 ```tsx bad lines=[2,6,9]
 export function List() {
@@ -113,7 +113,7 @@ export function List() {
 }
 ```
 
-Instead of synchronizing state, you can simply read and set the state in the URL directly with boring old HTML forms.
+Instead of synchronizing the state, you can simply read and set the state in the URL directly with boring old HTML forms.
 
 ```tsx good lines=[5,9-16]
 import { Form, useSearchParams } from "@remix-run/react";
@@ -505,7 +505,7 @@ export function Signup() {
 
 The extensive state management from our previous example is distilled into just three code lines. We eliminate the necessity for React state, change event listeners, submit handlers, and state management libraries for such network interactions.
 
-Direct access to the server state is made possible through `useActionData`, and network state through `useNavigation` (or `useFetcher`).
+Direct access to the server state is made possible through `useActionData`, and the network state through `useNavigation` (or `useFetcher`).
 
 As bonus party trick, the form is functional even before JavaScript loads. Instead of Remix managing the network operations, the default browser behaviors step in.
 
