@@ -11,8 +11,8 @@ When you use `<Form method="post">` in Remix, as opposed to using the native HTM
 In a standard browser environment, form submissions are navigation events. This means that when a user clicks the back button, the browser will typically resubmit the form. For example:
 
 1. User visits `/buy`
-2. Submits a form to `/checkout`
-3. Navigates to `/order/123`
+2. Submit a form to `/checkout`
+3. Navigate to `/order/123`
 
 The browser history stack would look like this:
 
