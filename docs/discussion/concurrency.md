@@ -26,7 +26,7 @@ While standard browsers are limited to one request at a time for navigations and
 
 Remix is designed to handle multiple form submissions to server `action`s and concurrent revalidation requests efficiently. It ensures that as soon as new data is available, the state is updated promptly. However, Remix also safeguards against potential pitfalls by refraining from committing stale data when other `action`s introduce race conditions.
 
-For instance, if three form submissions are in progress, and one completes, Remix updates the UI with that data immediately without waiting for the other two so that the UI remains responsive and dynamic. As the remaining submissions finalize, Remix continues to update the UI, ensuring that the most recent data is displayed.
+For instance, if three form submissions are in progress, and one is completed, Remix updates the UI with that data immediately without waiting for the other two so that the UI remains responsive and dynamic. As the remaining submissions are finalized, Remix continues to update the UI, ensuring that the most recent data is displayed.
 
 To help understand some visualizations, below is a key for the symbols used in the diagrams:
 
@@ -49,14 +49,14 @@ submission 2:    |-----✓-----✅
 submission 3:             |-----✓-----✅
 ```
 
-Because the revalidation from submission (2) started later and landed earlier than submission (1), the requests from submission (1) are cancelled and only the data from submission (2) is committed to the UI. It was requested later so its more likely to contain the updated values from both (1) and (2).
+Because the revalidation from submission (2) started later and landed earlier than submission (1), the requests from submission (1) are canceled and only the data from submission (2) is committed to the UI. It was requested later so it's more likely to contain the updated values from both (1) and (2).
 
 ## Potential for Stale Data
 
-It's unlikely your users will ever experience this, but there are still chances for the user to see stale data in very rare conditions with inconsistent infrastructure. Even though Remix cancels requests for stale data, they will still end up making it to the server. Cancelling a request in the browser simply releases browser resources for that request, it can't "catch up" and stop it from getting to the server. In extremely rare conditions, a cancelled request may change data after the interrupting `action`'s revalidation lands. Consider this diagram:
+It's unlikely your users will ever experience this, but there are still chances for the user to see stale data in very rare conditions with inconsistent infrastructure. Even though Remix cancels requests for stale data, they will still end up making it to the server. Canceling a request in the browser simply releases browser resources for that request, it can't "catch up" and stop it from getting to the server. In extremely rare conditions, a canceled request may change data after the interrupting `action`'s revalidation lands. Consider this diagram:
 
 ```text
-     👇 interruption with new submission
+     👇 interruption with a new submission
 |----❌----------------------✓
        |-------✓-----✅
                              👆
@@ -65,7 +65,7 @@ It's unlikely your users will ever experience this, but there are still chances 
                   has completed revalidation
 ```
 
-The user is now looking at different data than what is on the server. Note that this problem is both extremely rare and exists with default browser behavior, too. The chance of the initial request reaching the server later than both the submission and revalidation of the second is unexpected on any network and server infrastructure. If this is a concern in with your infrastructure, you can send time stamps with your form submissions and write server logic to ignore stale submissions.
+The user is now looking at different data than what is on the server. Note that this problem is extremely rare and exists with default browser behavior, too. The chance of the initial request reaching the server later than both the submission and revalidation of the second is unexpected on any network and server infrastructure. If this is a concern with your infrastructure, you can send time stamps with your form submissions and write server logic to ignore stale submissions.
 
 ## Example
 
@@ -92,7 +92,7 @@ export function CitySearchCombobox() {
         <ComboboxInput
           name="q"
           onChange={(event) =>
-            // submit the form onChange to get the list of cities
+            //Submit the form onChange to get the list of cities
             fetcher.submit(event.target.form)
           }
         />
