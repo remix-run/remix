@@ -47,7 +47,7 @@ As a developer transitioning to Remix, it's essential to recognize and embrace i
 
 ### Network Related State
 
-For examples on using Remix's internal state to manage network related states, refer to [Pending UI][pending_ui].
+For examples of using Remix's internal state to manage network related states, refer to [Pending UI][pending_ui].
 
 ### URL Search Params
 
@@ -507,7 +507,7 @@ The extensive state management from our previous example is distilled into just 
 
 Direct access to the server state is made possible through `useActionData`, and the network state through `useNavigation` (or `useFetcher`).
 
-As bonus party trick, the form is functional even before JavaScript loads. Instead of Remix managing the network operations, the default browser behaviors step in.
+As a bonus party trick, the form is functional even before JavaScript loads. Instead of Remix managing the network operations, the default browser behaviors step in.
 
 If you ever find yourself entangled in managing and synchronizing state for network operations, Remix likely offers a more elegant solution.
 
