@@ -55,7 +55,7 @@ a.pending {
 
 ### `.transitioning`
 
-A `transitioning` class is added to a `<NavLink unstable_viewTransition>` component when it is transitioning during a navigation, so you can use CSS to style it.
+A `transitioning` class is added to a `<NavLink unstable_viewTransition>` component when it is transitioning during navigation, so you can use CSS to style it.
 
 ```tsx
 <NavLink to="/messages" unstable_viewTransition />
