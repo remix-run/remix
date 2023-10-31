@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.2.0-pre.4
+
+### Patch Changes
+
+- Lock into react router stable versions ([#7838](https://github.com/remix-run/remix/pull/7838))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.2.0-pre.4`
+
 ## 2.2.0-pre.3
 
 ### Patch Changes
