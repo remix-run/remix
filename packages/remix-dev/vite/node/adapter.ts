@@ -172,9 +172,26 @@ async function handleNodeResponse(webRes: Response, res: ServerResponse) {
   res.statusMessage = webRes.statusText;
 
   for (let [name, value] of webRes.headers) {
-    if (name === "set-cookie") {
-      res.setHeader(name, splitCookiesString(value));
-    } else res.setHeader(name, value);
+    let existingHeader = res.getHeader(name);
+
+    let newValue;
+
+    if (name.toLowerCase() === "set-cookie") {
+      newValue = splitCookiesString(value);
+    } else {
+      newValue = [value];
+    }
+
+    if (existingHeader) {
+      res.setHeader(
+        name,
+        Array.isArray(existingHeader)
+          ? [...existingHeader, ...newValue]
+          : [existingHeader, ...newValue]
+      );
+    } else {
+      res.setHeader(name, newValue);
+    }
   }
 
   if (webRes.body) {
