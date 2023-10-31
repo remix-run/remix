@@ -54,7 +54,7 @@ test.describe("Vite build", () => {
         `,
         "app/routes/_index.tsx": js`
           import { useState, useEffect } from "react";
-          import { json} from "@remix-run/node";
+          import { json } from "@remix-run/node";
 
           import { serverOnly1, serverOnly2 } from "../utils.server";
 
@@ -82,7 +82,7 @@ test.describe("Vite build", () => {
           }
         `,
         "app/routes/resource.ts": js`
-          import { json} from "@remix-run/node";
+          import { json } from "@remix-run/node";
 
           import { serverOnly1, serverOnly2 } from "../utils.server";
 
