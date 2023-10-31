@@ -164,12 +164,7 @@ export default function App() {
 }
 ```
 
-#### Update your server scripts
-
-In development, Vite will lazily compile your app code on-demand, both for the server and the browser assets.
-In production, Vite will handle bundling your app into client assets and a server bundle.
-
-##### Migrating from Remix App Server
+#### Migrating from Remix App Server
 
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
 It comes built-in with the Remix Vite plugin and will take over when you run `vite dev`.
@@ -186,7 +181,7 @@ It comes built-in with the Remix Vite plugin and will take over when you run `vi
 }
 ```
 
-##### Migrating from a custom server
+#### Migrating from a custom server
 
 If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
 This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
