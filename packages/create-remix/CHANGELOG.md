@@ -1,34 +1,20 @@
 # `create-remix`
 
-## 2.2.0-pre.4
-
-## 2.2.0-pre.3
-
-## 2.2.0-pre.2
-
-## 2.2.0-pre.1
-
-## 2.2.0-pre.0
+## 2.2.0
 
 ### Minor Changes
 
 - Unstable Vite support for Node-based Remix apps ([#7590](https://github.com/remix-run/remix/pull/7590))
-
   - `remix build` 👉 `vite build && vite build --ssr`
   - `remix dev` 👉 `vite dev`
-
-  Other runtimes (e.g. Deno, Cloudflare) not yet supported.
-  Custom server (e.g. Express) not yet supported.
-
-  See "Future > Vite" in the Remix Docs for details.
+  - Other runtimes (e.g. Deno, Cloudflare) not yet supported.
+  - See "Future > Vite" in the Remix Docs for details
 
 ### Patch Changes
 
-- Support local tarballs with `.tgz` extension ([#7649](https://github.com/remix-run/remix/pull/7649))
-
-  It allows to directly support [`pnpm pack` tarballs](https://pnpm.io/cli/pack).
-
-- Set default Remix version to match the version of `create-remix` being used. This most notably enables easier usage of tags, e.g. `npm create remix@nightly`. ([#7670](https://github.com/remix-run/remix/pull/7670))
+- Support local tarballs with `.tgz` extension, which allows direct support for [`pnpm pack` tarballs](https://pnpm.io/cli/pack) ([#7649](https://github.com/remix-run/remix/pull/7649))
+- Set default Remix version to match the version of `create-remix` being used ([#7670](https://github.com/remix-run/remix/pull/7670))
+  - This most notably enables easier usage of tags, e.g. `npm create remix@nightly`
 
 ## 2.1.0
 
