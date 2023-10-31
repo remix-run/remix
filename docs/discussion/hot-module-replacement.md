@@ -169,7 +169,7 @@ export default Component() {
 }
 ```
 
-then React Fast Refresh will preserve state for the `<input />`, though you may need to use [component keys][component-keys] as described in the next section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
+then React Fast Refresh will preserve state for the `<input />`, though you may need to use \[component keys]\[component-keys] as described in the next section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
 
 ### Component Keys
 
