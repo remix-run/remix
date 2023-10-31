@@ -512,8 +512,7 @@ export function Meta() {
         }
 
         if ("tagName" in metaProps) {
-          let tagName = metaProps.tagName;
-          delete metaProps.tagName;
+          let { tagName, ...rest } = metaProps;
           if (!isValidMetaTag(tagName)) {
             console.warn(
               `A meta object uses an invalid tagName: ${tagName}. Expected either 'link' or 'meta'`
@@ -521,7 +520,7 @@ export function Meta() {
             return null;
           }
           let Comp = tagName;
-          return <Comp key={JSON.stringify(metaProps)} {...metaProps} />;
+          return <Comp key={JSON.stringify(rest)} {...rest} />;
         }
 
         if ("title" in metaProps) {

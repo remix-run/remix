@@ -37,7 +37,6 @@ export {
   useHref,
   useLocation,
   useMatch,
-  useMatches,
   useNavigate,
   useNavigation,
   useNavigationType,
@@ -51,6 +50,7 @@ export {
   useSubmit,
   unstable_useBlocker,
   unstable_usePrompt,
+  unstable_useViewTransitionState,
 } from "react-router-dom";
 
 export type {
@@ -72,6 +72,7 @@ export {
   useLoaderData,
   useRouteLoaderData,
   useActionData,
+  useMatches,
   RemixContext as UNSAFE_RemixContext,
 } from "./components";
 

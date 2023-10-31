@@ -49,7 +49,7 @@ For example:
   <input name="email" />
 </Form>;
 
-// So a navigation will will have the field's value in `navigation.formData`
+// So a navigation will have the field's value in `navigation.formData`
 // while the navigation is pending.
 navigation.formData.get("email");
 ```

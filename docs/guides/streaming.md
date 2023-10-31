@@ -31,11 +31,13 @@ There are three steps to streaming data:
 A route module without streaming might look like this:
 
 ```tsx
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const [product, reviews] = await Promise.all([
     db.getProduct(params.productId),
     db.getReviews(params.productId),
@@ -58,15 +60,17 @@ export default function Product() {
 
 In order to render streamed data, you need to use [`<Suspense>`][suspense_component] from React and [`<Await>`][await_component] from Remix. It's a bit of boilerplate, but straightforward:
 
-```tsx lines=[3-4,18-22]
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[3-4,20-24]
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { Await, useLoaderData } from "@remix-run/react";
 import { Suspense } from "react";
 
 import { ReviewsSkeleton } from "./reviews-skeleton";
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   // existing code
 }
 
@@ -94,15 +98,17 @@ Now that our project and route component are set up stream data, we can start de
 
 Note the change in the async promise code.
 
-```tsx lines=[2,9-17]
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[2,11-19]
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { defer } from "@remix-run/node"; // or cloudflare/deno
 import { Await, useLoaderData } from "@remix-run/react";
 import { Suspense } from "react";
 
 import { ReviewsSkeleton } from "./reviews-skeleton";
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   // 👇 note this promise is not awaited
   const reviewsPromise = db.getReviews(params.productId);
   // 👇 but this one is
@@ -130,7 +136,9 @@ That's it! You should now be streaming data to the browser.
 It's important to initiate promises for deferred data _before_ you await any other promises, otherwise you won't get the full benefit of streaming. Note the difference with this less efficient code example:
 
 ```tsx bad
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const product = await db.getProduct(params.productId);
   // 👇 this won't initiate loading until `product` is done
   const reviewsPromise = db.getReviews(params.productId);

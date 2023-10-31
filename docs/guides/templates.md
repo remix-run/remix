@@ -19,22 +19,22 @@ npx create-remix@latest
 If you are not interested in using TypeScript, you can install the simpler Javascript template instead:
 
 ```shellscript nonumber
-npx create-remix --template remix-run/remix/templates/remix-javascript
+npx create-remix@latest --template remix-run/remix/templates/remix-javascript
 ```
 
 This is a great place to start if you're just looking to try out Remix for the first time. You can always extend this starting point yourself or migrate to a more advanced template later.
 
 ### Official Templates
 
-If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Cloudflare][cloudflare], or [Deno][deno]—then you can try one of our \[official templates]\[official-templates] from the Remix repository:
+If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Cloudflare][cloudflare], or [Deno][deno]—then you can try one of our [official templates][official_templates] from the Remix repository:
 
 ```shellscript nonumber
-npx create-remix --template remix-run/remix/templates/arc
-npx create-remix --template remix-run/remix/templates/cloudflare-pages
-npx create-remix --template remix-run/remix/templates/cloudflare-workers
-npx create-remix --template remix-run/remix/templates/deno
-npx create-remix --template remix-run/remix/templates/express
-npx create-remix --template remix-run/remix/templates/fly
+npx create-remix@latest --template remix-run/remix/templates/arc
+npx create-remix@latest --template remix-run/remix/templates/cloudflare-pages
+npx create-remix@latest --template remix-run/remix/templates/cloudflare-workers
+npx create-remix@latest --template remix-run/remix/templates/deno
+npx create-remix@latest --template remix-run/remix/templates/express
+npx create-remix@latest --template remix-run/remix/templates/fly
 ```
 
 ### Third-Party Templates
@@ -106,7 +106,7 @@ If your template is in a private GitHub repo, you can pass a GitHub token via th
 npx create-remix@latest --template your-private/repo --token yourtoken
 ```
 
-The \[token just needs `repo` access]\[repo-access-token].
+The [token just needs `repo` access][repo_access_token].
 
 ### Local Templates
 
@@ -143,7 +143,7 @@ After the init script has been run, the `remix.init` folder gets deleted, so you
 
 [create_remix]: ../other-api/create-remix
 [remix_app_server]: ../other-api/serve
-[repo access token]: https://github.com/settings/tokens/new?description=Remix%20Private%20Stack%20Access&scopes=repo
+[repo_access_token]: https://github.com/settings/tokens/new?description=Remix%20Private%20Stack%20Access&scopes=repo
 [inquirer]: https://npm.im/inquirer
 [feature_announcement_blog_post]: /blog/remix-stacks
 [remix_stacks_videos_on_youtube]: https://www.youtube.com/playlist?list=PLXoynULbYuEC8-gJCqyXo94RufAvSA6R3
