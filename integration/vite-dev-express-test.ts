@@ -98,7 +98,7 @@ test.beforeAll(async () => {
         // imports
         import { useState, useEffect } from "react";
 
-        export const meta = () => [{ title: "HMR updated title: 0"}]
+        export const meta = () => [{ title: "HMR updated title: 0" }]
 
         // loader
 
