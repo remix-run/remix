@@ -77,6 +77,50 @@ test.describe("Vite dev", () => {
             );
           }
         `,
+        "app/routes/view-cookie.tsx": js`
+          import { useState, useEffect } from "react";
+          import { json } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react"
+
+          export const loader = ({ request }: LoaderFunctionArgs) => json({cookies: request.headers.get("Cookie")});
+
+          export default function IndexRoute() {
+            const { cookies } = useLoaderData<typeof loader>();
+
+            return (
+              <div id="view-cookie">
+                <h2 data-title>View Cookie</h2>
+                <p data-cookie>{cookies}</p>
+              </div>
+            );
+          }
+        `,
+        "app/routes/set-cookie.tsx": js`
+          import { LoaderFunction } from "@remix-run/node";
+
+          export const loader: LoaderFunction = () => {
+            const headers = new Headers();
+          
+            headers.append(
+              "Set-Cookie",
+              "foo=bar; Domain=localhost; Path=/; SameSite=Lax"
+            );
+
+            headers.append(
+              "Set-Cookie",
+              "hello=world; Domain=localhost; Path=/; SameSite=Lax"
+            );
+
+            headers.append("location", "http://localhost:${devPort}/view-cookie");
+          
+            const response = new Response(null, {
+              headers,
+              status: 302,
+            });
+          
+            return response;
+          };
+        `,
       },
     });
 
@@ -140,6 +184,20 @@ test.describe("Vite dev", () => {
     await page.waitForLoadState("networkidle");
     await expect(hmrStatus).toHaveText("HMR updated: yes");
     await expect(input).toHaveValue("stateful");
+  });
+
+  test("handles multiple set-cookie headers", async ({ page }) => {
+    // setup: initial render
+    await page.goto(`http://localhost:${devPort}/set-cookie`, {
+      waitUntil: "networkidle",
+    });
+    await expect(page.locator("#view-cookie [data-title]")).toHaveText(
+      "View Cookie"
+    );
+
+    await expect(page.locator("#view-cookie [data-cookie]")).toHaveText(
+      "foo=bar; hello=world"
+    );
   });
 });
 
