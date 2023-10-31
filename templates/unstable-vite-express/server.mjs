@@ -21,7 +21,7 @@ if (vite) {
 } else {
   app.use(
     "/build",
-    express.static("public/build", { immutable: true, maxAge: "1y" }),
+    express.static("public/build", { immutable: true, maxAge: "1y" })
   );
 }
 app.use(express.static("public", { maxAge: "1h" }));
@@ -33,7 +33,7 @@ app.all(
     build: vite
       ? () => unstable_loadViteServerBuild(vite)
       : await import("./build/index.js"),
-  }),
+  })
 );
 
 const port = 3000;
