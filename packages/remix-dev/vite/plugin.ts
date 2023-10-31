@@ -676,6 +676,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             'export const LiveReload = process.env.NODE_ENV !== "development" ? () => null : ',
             '() => createElement("script", {',
             ' type: "module",',
+            " async: true,",
             " suppressHydrationWarning: true,",
             " dangerouslySetInnerHTML: { __html: `",
             `   import RefreshRuntime from "${VirtualModule.url(
