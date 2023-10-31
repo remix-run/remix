@@ -111,7 +111,7 @@ test.describe("Vite dev", () => {
               "hello=world; Domain=localhost; Path=/; SameSite=Lax"
             );
 
-            headers.append("location", "http://localhost:${devPort}/view-cookie");
+            headers.set("location", "http://localhost:${devPort}/view-cookie");
           
             const response = new Response(null, {
               headers,
