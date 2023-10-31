@@ -92,7 +92,7 @@ export function CitySearchCombobox() {
         <ComboboxInput
           name="q"
           onChange={(event) =>
-            //Submit the form onChange to get the list of cities
+            // Submit the form onChange to get the list of cities
             fetcher.submit(event.target.form)
           }
         />
