@@ -210,7 +210,7 @@ export type RemixVitePlugin = (
   options?: RemixVitePluginOptions
 ) => VitePlugin[];
 export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
-  let isViteV5 = getViteMajor() === 5;
+  let isViteGTEv5 = getViteMajor() >= 5;
 
   let viteCommand: ResolvedViteConfig["command"];
   let viteUserConfig: ViteUserConfig;
@@ -309,7 +309,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
   let createBuildManifest = async (): Promise<Manifest> => {
     let pluginConfig = await resolvePluginConfig();
 
-    let viteManifestPath = isViteV5
+    let viteManifestPath = isViteGTEv5
       ? path.join(".vite", "manifest.json")
       : "manifest.json";
 
