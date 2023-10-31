@@ -49,7 +49,7 @@ submission 2:    |-----✓-----✅
 submission 3:             |-----✓-----✅
 ```
 
-Because the revalidation from submission (2) started later and landed earlier than submission (1), the requests from submission (1) are canceled and only the data from submission (2) is committed to the UI. It was requested later so it's more likely to contain the updated values from both (1) and (2).
+Because the revalidation from submission (2) started later and landed earlier than submission (1), the requests from submission (1) are cancelled and only the data from submission (2) is committed to the UI. It was requested later so it's more likely to contain the updated values from both (1) and (2).
 
 ## Potential for Stale Data
 
