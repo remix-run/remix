@@ -1,40 +1,6 @@
 # `@remix-run/dev`
 
-## 2.2.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.2.0-pre.4`
-  - `@remix-run/server-runtime@2.2.0-pre.4`
-
-## 2.2.0-pre.3
-
-### Patch Changes
-
-- fix server code interop for vite build ([#7828](https://github.com/remix-run/remix/pull/7828))
-- fix behind-by-one-render bug for meta hmr ([#7829](https://github.com/remix-run/remix/pull/7829))
-- Updated dependencies:
-  - `@remix-run/node@2.2.0-pre.3`
-  - `@remix-run/server-runtime@2.2.0-pre.3`
-
-## 2.2.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.2.0-pre.2`
-  - `@remix-run/server-runtime@2.2.0-pre.2`
-
-## 2.2.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.2.0-pre.1`
-  - `@remix-run/server-runtime@2.2.0-pre.1`
-
-## 2.2.0-pre.0
+## 2.2.0
 
 ### Minor Changes
 
@@ -57,10 +23,11 @@
 
 ### Patch Changes
 
+- fix server code interop for vite build ([#7828](https://github.com/remix-run/remix/pull/7828))
+- fix behind-by-one-render bug for meta hmr ([#7829](https://github.com/remix-run/remix/pull/7829))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.2.0-pre.0`
-  - `@remix-run/serve@2.2.0-pre.0`
-  - `@remix-run/node@2.2.0-pre.0`
+  - `@remix-run/server-runtime@2.2.0`
+  - `@remix-run/node@2.2.0`
 
 ## 2.1.0
 

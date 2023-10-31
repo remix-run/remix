@@ -1,37 +1,6 @@
 # `@remix-run/react`
 
-## 2.2.0-pre.4
-
-### Patch Changes
-
-- Lock into react router stable versions ([#7838](https://github.com/remix-run/remix/pull/7838))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.2.0-pre.4`
-
-## 2.2.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.2.0-pre.3`
-
-## 2.2.0-pre.2
-
-### Patch Changes
-
-- [REMOVE] bump to latest router prerelease ([#7825](https://github.com/remix-run/remix/pull/7825))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.2.0-pre.2`
-
-## 2.2.0-pre.1
-
-### Patch Changes
-
-- Fix critical CSS hydration errors for Vite dev ([#7812](https://github.com/remix-run/remix/pull/7812))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.2.0-pre.1`
-
-## 2.2.0-pre.0
+## 2.2.0
 
 ### Minor Changes
 
@@ -54,14 +23,20 @@
 
 ### Patch Changes
 
+- Lock into react router stable versions ([#7838](https://github.com/remix-run/remix/pull/7838))
+
 - Fix warning that could be logged when using route files with no `default` export ([#7745](https://github.com/remix-run/remix/pull/7745))
 
   - It seems our compiler compiles these files to export an empty object as the `default` which we can then end up passing to `React.createElement`, triggering the console warning, but generally no UI issues
   - By properly detecting these, we can correctly pass `Component: undefined` off to the React Router layer
   - This is technically an potential issue in the compiler but it's an easy patch in the `@remix-run/react` layer and hopefully disappears in a Vite world
 
+- Fix critical CSS hydration errors for Vite dev ([#7812](https://github.com/remix-run/remix/pull/7812))
+
+- \[REMOVE] bump to latest router prerelease ([#7825](https://github.com/remix-run/remix/pull/7825))
+
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.2.0-pre.0`
+  - `@remix-run/server-runtime@2.2.0`
 
 ## 2.1.0
 

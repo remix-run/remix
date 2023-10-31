@@ -1,38 +1,6 @@
 # `@remix-run/testing`
 
-## 2.2.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/react@2.2.0-pre.4`
-  - `@remix-run/node@2.2.0-pre.4`
-
-## 2.2.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.2.0-pre.3`
-  - `@remix-run/react@2.2.0-pre.3`
-
-## 2.2.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/react@2.2.0-pre.2`
-  - `@remix-run/node@2.2.0-pre.2`
-
-## 2.2.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/react@2.2.0-pre.1`
-  - `@remix-run/node@2.2.0-pre.1`
-
-## 2.2.0-pre.0
+## 2.2.0
 
 ### Minor Changes
 
@@ -49,8 +17,8 @@
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/react@2.2.0-pre.0`
-  - `@remix-run/node@2.2.0-pre.0`
+  - `@remix-run/react@2.2.0`
+  - `@remix-run/node@2.2.0`
 
 ## 2.1.0
 

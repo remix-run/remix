@@ -1,14 +1,6 @@
 # `create-remix`
 
-## 2.2.0-pre.4
-
-## 2.2.0-pre.3
-
-## 2.2.0-pre.2
-
-## 2.2.0-pre.1
-
-## 2.2.0-pre.0
+## 2.2.0
 
 ### Minor Changes
 

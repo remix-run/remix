@@ -1,34 +1,6 @@
 # `@remix-run/express`
 
-## 2.2.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.2.0-pre.4`
-
-## 2.2.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.2.0-pre.3`
-
-## 2.2.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.2.0-pre.2`
-
-## 2.2.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.2.0-pre.1`
-
-## 2.2.0-pre.0
+## 2.2.0
 
 ### Patch Changes
 
@@ -38,7 +10,7 @@
   - This now uses `req.hostname` which will respect `X-Forwarded-Host`
 
 - Updated dependencies:
-  - `@remix-run/node@2.2.0-pre.0`
+  - `@remix-run/node@2.2.0`
 
 ## 2.1.0
 
