@@ -26,13 +26,13 @@ title: Vite (Unstable)
 To get started with a minimal server, you can use the [`unstable-vite`][template-vite] template:
 
 ```shellscript nonumber
-npx create-remix@nightly --template remix-run/remix/templates/unstable-vite
+npx create-remix@latest --template remix-run/remix/templates/unstable-vite
 ```
 
 If you'd rather customize your server, you can use the [`unstable-vite-express`][template-vite-express] template:
 
 ```shellscript nonumber
-npx create-remix@nightly --template remix-run/remix/templates/unstable-vite-express
+npx create-remix@latest --template remix-run/remix/templates/unstable-vite-express
 ```
 
 These templates include a `vite.config.ts` file which is where the Remix Vite plugin is configured.
