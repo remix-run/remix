@@ -53,7 +53,7 @@ Because the revalidation from submission (2) started later and landed earlier th
 
 ## Potential for Stale Data
 
-It's unlikely your users will ever experience this, but there are still chances for the user to see stale data in very rare conditions with inconsistent infrastructure. Even though Remix cancels requests for stale data, they will still end up making it to the server. Canceling a request in the browser simply releases browser resources for that request, it can't "catch up" and stop it from getting to the server. In extremely rare conditions, a canceled request may change data after the interrupting `action`'s revalidation lands. Consider this diagram:
+It's unlikely your users will ever experience this, but there are still chances for the user to see stale data in very rare conditions with inconsistent infrastructure. Even though Remix cancels requests for stale data, they will still end up making it to the server. Cancelling a request in the browser simply releases browser resources for that request, it can't "catch up" and stop it from getting to the server. In extremely rare conditions, a cancelled request may change data after the interrupting `action`'s revalidation lands. Consider this diagram:
 
 ```text
      👇 interruption with a new submission
