@@ -290,7 +290,9 @@ export function Links() {
 
   return (
     <>
-      {criticalCss ? <style>{criticalCss}</style> : null}
+      {criticalCss ? (
+        <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
+      ) : null}
       {keyedLinks.map(({ key, link }) =>
         isPageLinkDescriptor(link) ? (
           <PrefetchPageLinks key={key} {...link} />
