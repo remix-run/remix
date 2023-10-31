@@ -115,6 +115,7 @@ You can provide a local directory or tarball on disk to the `--template` option,
 ```shellscript nonumber
 npx create-remix@latest --template /my/remix-stack
 npx create-remix@latest --template /my/remix-stack.tar.gz
+npx create-remix@latest --template /my/remix-stack.tgz
 npx create-remix@latest --template file:///Users/michael/my-remix-stack.tar.gz
 ```
 

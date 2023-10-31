@@ -272,7 +272,7 @@ export function composeEventHandlers<
  * @see https://remix.run/components/links
  */
 export function Links() {
-  let { manifest, routeModules } = useRemixContext();
+  let { manifest, routeModules, criticalCss } = useRemixContext();
   let { errors, matches: routerMatches } = useDataRouterStateContext();
 
   let matches = errors
@@ -289,6 +289,9 @@ export function Links() {
 
   return (
     <>
+      {criticalCss ? (
+        <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
+      ) : null}
       {keyedLinks.map(({ key, link }) =>
         isPageLinkDescriptor(link) ? (
           <PrefetchPageLinks key={key} {...link} />
@@ -1026,10 +1029,10 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  *
  * @see https://remix.run/hooks/use-fetcher
  */
-export function useFetcher<TData = AppData>(): FetcherWithComponents<
-  SerializeFrom<TData>
-> {
-  return useFetcherRR();
+export function useFetcher<TData = AppData>(
+  opts: Parameters<typeof useFetcherRR>[0] = {}
+): FetcherWithComponents<SerializeFrom<TData>> {
+  return useFetcherRR(opts);
 }
 
 // Dead Code Elimination magic for production builds.
