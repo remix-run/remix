@@ -43,7 +43,7 @@ These actions are generally more subtle and don't require a context switch for t
 
 - **Updating a Single Field**: Maybe a user wants to change the name of an item in a list or update a specific property of a record. This action is minor and doesn't necessitate a new page or URL.
 
-- **Deleting a Record from a List**: In a list view, if a user deletes an item, they likely expect to remain on the list view, with that item simply disappearing.
+- **Deleting a Record from a List**: In a list view, if a user deletes an item, they likely expect to remain on the list view, with that item no longer in the list.
 
 - **Creating a Record in a List View**: When adding a new item to a list, it often makes sense for the user to remain in that context, seeing their new item added to the list without a full page transition.
 
