@@ -1,6 +1,5 @@
 ---
 title: meta
-new: true
 ---
 
 # `meta`
@@ -93,7 +92,9 @@ The interface for `matches` is similar to the return value of [`useMatches`][use
 This is the data from your route's loader.
 
 ```tsx
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   return json({
     task: await getTask(params.projectId, params.taskId),
   });
@@ -110,6 +111,16 @@ export const meta: MetaFunction<typeof loader> = ({
 
 The route's URL params. See [Dynamic Segments in the Routing Guide][url-params].
 
+### `error`
+
+Thrown errors that trigger error boundaries will be passed to the `meta` function. This is useful for generating metadata for error pages.
+
+```tsx
+export const meta: MetaFunction = ({ error }) => {
+  return [{ title: error ? "oops!" : "Actual title" }];
+};
+```
+
 ## Accessing Data from Parent Route Loaders
 
 In addition to the current route's data, often you'll want to access data from a route higher up in the route hierarchy. You can look it up by its route ID in `matches`.
@@ -117,7 +128,9 @@ In addition to the current route's data, often you'll want to access data from a
 ```tsx filename=app/routes/project.$pid.tasks.$tid.tsx
 import type { loader as projectDetailsLoader } from "./project.$pid";
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   return json({ task: await getTask(params.tid) });
 }
 
@@ -173,7 +186,7 @@ With this code, we will lose the `viewport` meta tag at `/projects` and `/projec
 
 ### Global `meta`
 
-Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal `<meta>` tags inside the [root route][root-route] instead of the `meta` export, so you simply don't have to deal with merging:
+Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal `<meta>` tags inside the [root route][root_route] instead of the `meta` export, so you simply don't have to deal with merging:
 
 ```tsx filename=app/root.tsx lines=[12-16]
 import {
@@ -206,7 +219,7 @@ export default function Root() {
 
 ### Avoid `meta` in Parent Routes
 
-You can also avoid the merge problem by simply not exporting meta that you want to override from parent routes. Instead of defining meta on the parent route, use the [index route][index-route]. This way you can avoid complex merge logic for things like the title. Otherwise, you will need to find the parent title descriptor and replace it with the child's title. It's much easier to simply not need to override by using index routes.
+You can also avoid the merge problem by simply not exporting meta that you want to override from parent routes. Instead of defining meta on the parent route, use the [index route][index_route]. This way you can avoid complex merge logic for things like the title. Otherwise, you will need to find the parent title descriptor and replace it with the child's title. It's much easier to simply not need to override by using index routes.
 
 ### Merging with Parent `meta`
 
@@ -241,8 +254,8 @@ If you can't avoid the merge problem with global meta or index routes, we've cre
 [links-export]: ./links
 [use-matches]: ../hooks/use-matches
 [merging-metadata-across-the-route-hierarchy]: #merging-with-parent-meta
-[url-params]: ../guides/routing#dynamic-segments
-[root-route]: ../file-conventions/root
-[index-route]: ../guides/routing#index-routes
+[url-params]: ../file-conventions/routes#dynamic-segments
+[root_route]: ../file-conventions/root
+[index_route]: ../discussion/routes#index-routes
 [matches]: #matches
 [merge-meta]: https://gist.github.com/ryanflorence/ec1849c6d690cfbffcb408ecd633e069

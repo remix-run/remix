@@ -1,10 +1,11 @@
 {
   "private": true,
   "sideEffects": false,
+  "type": "module",
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev",
-    "start": "remix-serve build"
+    "dev": "remix dev --manual",
+    "start": "remix-serve ./build/index.js"
   },
   "dependencies": {
     "@remix-run/css-bundle": "*",

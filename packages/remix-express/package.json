@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/express",
-  "version": "1.19.2",
+  "version": "2.2.0",
   "description": "Express server request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -14,7 +14,7 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "dependencies": {
-    "@remix-run/node": "1.19.2"
+    "@remix-run/node": "2.2.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.9",
@@ -23,7 +23,7 @@
     "express": "^4.17.1",
     "node-mocks-http": "^1.10.1",
     "supertest": "^6.3.3",
-    "typescript": "^5.1.0"
+    "typescript": "^5.1.6"
   },
   "peerDependencies": {
     "express": "^4.17.1",

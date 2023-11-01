@@ -1,11 +1,12 @@
 {
   "private": true,
+  "type": "module",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
     "deploy": "fly deploy --remote-only",
     "dev": "remix dev",
-    "start": "remix-serve build",
+    "start": "remix-serve ./build/index.js",
     "typecheck": "tsc"
   },
   "dependencies": {
@@ -20,10 +21,10 @@
   "devDependencies": {
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
-    "@types/react": "^18.0.35",
-    "@types/react-dom": "^18.0.11",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
     "eslint": "^8.38.0",
-    "typescript": "^5.1.0"
+    "typescript": "^5.1.6"
   },
   "engines": {
     "node": ">=18.0.0"

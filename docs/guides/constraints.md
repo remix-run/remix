@@ -208,7 +208,9 @@ import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import { removeTrailingSlash } from "~/http";
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   removeTrailingSlash(request.url);
   return json({ some: "data" });
 };
@@ -218,7 +220,9 @@ It reads much nicer as well when you've got a lot of these:
 
 ```tsx
 // this
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   return removeTrailingSlash(request.url, () => {
     return withSession(request, (session) => {
       return requireUser(session, (user) => {
@@ -231,7 +235,9 @@ export const loader = async ({ request }: LoaderArgs) => {
 
 ```tsx
 // vs. this
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   removeTrailingSlash(request.url);
   const session = await getSession(request);
   const user = await requireUser(session);

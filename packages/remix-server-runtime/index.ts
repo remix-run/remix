@@ -4,7 +4,7 @@ export {
   composeUploadHandlers as unstable_composeUploadHandlers,
   parseMultipartFormData as unstable_parseMultipartFormData,
 } from "./formData";
-export { defer, json, redirect } from "./responses";
+export { defer, json, redirect, redirectDocument } from "./responses";
 export { createRequestHandler } from "./server";
 export {
   createSession,
@@ -33,9 +33,8 @@ export type {
 
 // Remix server runtime packages should re-export these types
 export type {
-  ActionArgs,
   ActionFunction,
-  AppData,
+  ActionFunctionArgs,
   AppLoadContext,
   Cookie,
   CookieOptions,
@@ -44,6 +43,7 @@ export type {
   CookieSignatureOptions,
   DataFunctionArgs,
   EntryContext,
+  ErrorResponse,
   FlashSessionData,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
@@ -52,14 +52,13 @@ export type {
   HtmlLinkDescriptor,
   LinkDescriptor,
   LinksFunction,
-  LoaderArgs,
   LoaderFunction,
+  LoaderFunctionArgs,
   MemoryUploadHandlerFilterArgs,
   MemoryUploadHandlerOptions,
   HandleErrorFunction,
   PageLinkDescriptor,
   RequestHandler,
-  RouteHandle,
   SerializeFrom,
   ServerBuild,
   ServerEntryModule,

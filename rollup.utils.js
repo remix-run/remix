@@ -189,6 +189,15 @@ function getCliConfig({ packageName, version }) {
         extensions: [".ts"],
       }),
       nodeResolve({ extensions: [".ts"] }),
+      {
+        name: "dynamic-import-polyfill",
+        renderDynamicImport() {
+          return {
+            left: "import(",
+            right: ")",
+          };
+        },
+      },
       copyPublishFiles(packageName),
       copyToPlaygrounds(),
     ],

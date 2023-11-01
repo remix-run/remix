@@ -1,11 +1,3 @@
-export type {
-  HeadersInit,
-  RequestInfo,
-  RequestInit,
-  ResponseInit,
-} from "./fetch";
-export { fetch, FormData, Headers, Request, Response } from "./fetch";
-
 export { installGlobals } from "./globals";
 
 export { createFileSessionStorage } from "./sessions/fileStorage";
@@ -40,15 +32,15 @@ export {
   json,
   MaxPartSizeExceededError,
   redirect,
+  redirectDocument,
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
 } from "@remix-run/server-runtime";
 
 export type {
-  ActionArgs,
   ActionFunction,
-  AppData,
+  ActionFunctionArgs,
   AppLoadContext,
   Cookie,
   CookieOptions,
@@ -57,6 +49,7 @@ export type {
   CookieSignatureOptions,
   DataFunctionArgs,
   EntryContext,
+  ErrorResponse,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HeadersArgs,
@@ -65,14 +58,13 @@ export type {
   JsonFunction,
   LinkDescriptor,
   LinksFunction,
-  LoaderArgs,
   LoaderFunction,
+  LoaderFunctionArgs,
   MemoryUploadHandlerFilterArgs,
   MemoryUploadHandlerOptions,
   HandleErrorFunction,
   PageLinkDescriptor,
   RequestHandler,
-  RouteHandle,
   SerializeFrom,
   ServerBuild,
   ServerEntryModule,

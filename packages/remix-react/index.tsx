@@ -1,6 +1,7 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
+  ErrorResponse,
   Fetcher,
   FetcherWithComponents,
   FormEncType,
@@ -8,9 +9,11 @@ export type {
   FormProps,
   Location,
   NavigateFunction,
+  Navigation,
   Params,
   Path,
   ShouldRevalidateFunction,
+  ShouldRevalidateFunctionArgs,
   SubmitFunction,
   SubmitOptions,
   unstable_Blocker,
@@ -29,7 +32,6 @@ export {
   useAsyncValue,
   isRouteErrorResponse,
   useBeforeUnload,
-  useFetcher,
   useFetchers,
   useFormAction,
   useHref,
@@ -48,13 +50,14 @@ export {
   useSubmit,
   unstable_useBlocker,
   unstable_usePrompt,
+  unstable_useViewTransitionState,
 } from "react-router-dom";
 
 export type {
   AwaitProps,
-  RouteMatch,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
+  UIMatch,
 } from "./components";
 export {
   Await,
@@ -65,10 +68,11 @@ export {
   NavLink,
   PrefetchPageLinks,
   LiveReload,
+  useFetcher,
   useLoaderData,
   useRouteLoaderData,
-  useMatches,
   useActionData,
+  useMatches,
   RemixContext as UNSAFE_RemixContext,
 } from "./components";
 

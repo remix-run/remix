@@ -1,9 +1,11 @@
+import path from "node:path";
 import process from "node:process";
 import os from "node:os";
 import fs from "node:fs";
 import { type Key as ActionKey } from "node:readline";
 import { erase, cursor } from "sisteransi";
 import chalk from "chalk";
+import recursiveReaddir from "recursive-readdir";
 
 // https://no-color.org/
 const SUPPORTS_COLOR = chalk.supportsColor && !process.env.NO_COLOR;
@@ -89,44 +91,48 @@ export function logError(message: string) {
   return stderr.write(message + "\n");
 }
 
-export function info(prefix: string, text?: string | string[]) {
+function logBullet(
+  logger: typeof log | typeof logError,
+  colorizePrefix: <V>(v: V) => V,
+  colorizeText: <V>(v: V) => V,
+  symbol: string,
+  prefix: string,
+  text?: string | string[]
+) {
   let textParts = Array.isArray(text) ? text : [text || ""].filter(Boolean);
-  let formattedText = textParts.map((textPart) => color.dim(textPart)).join("");
+  let formattedText = textParts
+    .map((textPart) => colorizeText(textPart))
+    .join("");
 
   if (process.stdout.columns < 80) {
-    log(`${" ".repeat(5)} ${color.cyan("◼")}  ${color.cyan(prefix)}`);
-    log(`${" ".repeat(9)}${formattedText}`);
+    logger(
+      `${" ".repeat(5)} ${colorizePrefix(symbol)}  ${colorizePrefix(prefix)}`
+    );
+    logger(`${" ".repeat(9)}${formattedText}`);
   } else {
-    log(
-      `${" ".repeat(5)} ${color.cyan("◼")}  ${color.cyan(
+    logger(
+      `${" ".repeat(5)} ${colorizePrefix(symbol)}  ${colorizePrefix(
         prefix
       )} ${formattedText}`
     );
   }
+}
+
+export function debug(prefix: string, text?: string | string[]) {
+  logBullet(log, color.yellow, color.dim, "●", prefix, text);
+}
+
+export function info(prefix: string, text?: string | string[]) {
+  logBullet(log, color.cyan, color.dim, "◼", prefix, text);
 }
 
 export function success(text: string) {
-  log(`${" ".repeat(5)} ${color.green("✔")}  ${color.green(text)}`);
+  logBullet(log, color.green, color.dim, "✔", text);
 }
 
 export function error(prefix: string, text?: string | string[]) {
-  let textParts = Array.isArray(text) ? text : [text || ""].filter(Boolean);
-  let formattedText = textParts
-    .map((textPart) => color.error(textPart))
-    .join("");
-
   log("");
-
-  if (process.stdout.columns < 80) {
-    logError(`${" ".repeat(5)} ${color.red("▲")}  ${color.red(prefix)}`);
-    logError(`${" ".repeat(9)}${formattedText}`);
-  } else {
-    logError(
-      `${" ".repeat(5)} ${color.red("▲")}  ${color.red(
-        prefix
-      )} ${formattedText}`
-    );
-  }
+  logBullet(logError, color.red, color.error, "▲", prefix, text);
 }
 
 export function sleep(ms: number) {
@@ -265,4 +271,35 @@ export function action(key: ActionKey, isSelect: boolean) {
   if (key.name === "left") return "left";
 
   return false;
+}
+
+export function stripDirectoryFromPath(dir: string, filePath: string) {
+  // Can't just do a regexp replace here since the windows paths mess it up :/
+  let stripped = filePath;
+  if (
+    (dir.endsWith(path.sep) && filePath.startsWith(dir)) ||
+    (!dir.endsWith(path.sep) && filePath.startsWith(dir + path.sep))
+  ) {
+    stripped = filePath.slice(dir.length);
+    if (stripped.startsWith(path.sep)) {
+      stripped = stripped.slice(1);
+    }
+  }
+  return stripped;
+}
+
+// We do not copy these folders from templates so we can ignore them for comparisons
+export const IGNORED_TEMPLATE_DIRECTORIES = [".git", "node_modules"];
+
+export async function getDirectoryFilesRecursive(dir: string) {
+  let files = await recursiveReaddir(dir, [
+    (file) => {
+      let strippedFile = stripDirectoryFromPath(dir, file);
+      let parts = strippedFile.split(path.sep);
+      return (
+        parts.length > 1 && IGNORED_TEMPLATE_DIRECTORIES.includes(parts[0])
+      );
+    },
+  ]);
+  return files.map((f) => stripDirectoryFromPath(dir, f));
 }

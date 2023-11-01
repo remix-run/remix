@@ -2,8 +2,7 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
-import NPMCliPackageJson from "@npmcli/package-json";
-import { coerce } from "semver";
+import PackageJson from "@npmcli/package-json";
 import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
@@ -34,11 +33,13 @@ type Dev = {
   tlsCert?: string;
 };
 
-interface FutureConfig {}
+interface FutureConfig {
+  v3_fetcherPersist: boolean;
+}
 
-type ServerNodeBuiltinsPolyfillOptions = Pick<
+type NodeBuiltinsPolyfillOptions = Pick<
   EsbuildPluginsNodeModulesPolyfillOptions,
-  "modules"
+  "modules" | "globals"
 >;
 
 /**
@@ -84,20 +85,12 @@ export interface AppConfig {
   dev?: Dev;
 
   /**
-   * @deprecated
-   *
-   * The delay, in milliseconds, before the dev server broadcasts a reload
-   * event. There is no delay by default.
-   */
-  devServerBroadcastDelay?: number;
-
-  /**
    * Additional MDX remark / rehype plugins.
    */
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Whether to process CSS using PostCSS if a PostCSS config file is present.
    * Defaults to `true`.
    */
   postcss?: boolean;
@@ -146,7 +139,7 @@ export interface AppConfig {
   serverMinify?: boolean;
 
   /**
-   * The output format of the server build. Defaults to "cjs".
+   * The output format of the server build. Defaults to "esm".
    */
   serverModuleFormat?: ServerModuleFormat;
 
@@ -154,7 +147,12 @@ export interface AppConfig {
    * The Node.js polyfills to include in the server build when targeting
    * non-Node.js server platforms.
    */
-  serverNodeBuiltinsPolyfill?: ServerNodeBuiltinsPolyfillOptions;
+  serverNodeBuiltinsPolyfill?: NodeBuiltinsPolyfillOptions;
+
+  /**
+   * The Node.js polyfills to include in the browser build.
+   */
+  browserNodeBuiltinsPolyfill?: NodeBuiltinsPolyfillOptions;
 
   /**
    * The platform the server build is targeting. Defaults to "node".
@@ -182,7 +180,9 @@ export interface AppConfig {
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  future?: Partial<FutureConfig>;
+  future?: Partial<FutureConfig> & {
+    [propName: string]: never;
+  };
 }
 
 /**
@@ -250,17 +250,12 @@ export interface RemixConfig {
   dev: Dev;
 
   /**
-   * The delay before the dev (asset) server broadcasts a reload event.
-   */
-  devServerBroadcastDelay: number;
-
-  /**
    * Additional MDX remark / rehype plugins.
    */
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Whether to process CSS using PostCSS if a PostCSS config file is present.
    * Defaults to `true`.
    */
   postcss: boolean;
@@ -317,7 +312,7 @@ export interface RemixConfig {
   serverMode: ServerMode;
 
   /**
-   * The output format of the server build. Defaults to "cjs".
+   * The output format of the server build. Defaults to "esm".
    */
   serverModuleFormat: ServerModuleFormat;
 
@@ -325,7 +320,12 @@ export interface RemixConfig {
    * The Node.js polyfills to include in the server build when targeting
    * non-Node.js server platforms.
    */
-  serverNodeBuiltinsPolyfill?: ServerNodeBuiltinsPolyfillOptions;
+  serverNodeBuiltinsPolyfill?: NodeBuiltinsPolyfillOptions;
+
+  /**
+   * The Node.js polyfills to include in the browser build.
+   */
+  browserNodeBuiltinsPolyfill?: NodeBuiltinsPolyfillOptions;
 
   /**
    * The platform the server build is targeting. Defaults to "node".
@@ -357,12 +357,8 @@ export interface RemixConfig {
  */
 export async function readConfig(
   remixRoot?: string,
-  serverMode = ServerMode.Production
+  serverMode?: ServerMode
 ): Promise<RemixConfig> {
-  if (!isValidServerMode(serverMode)) {
-    throw new Error(`Invalid server mode "${serverMode}"`);
-  }
-
   if (!remixRoot) {
     remixRoot = process.env.REMIX_ROOT || process.cwd();
   }
@@ -376,13 +372,16 @@ export async function readConfig(
     try {
       // shout out to next
       // https://github.com/vercel/next.js/blob/b15a976e11bf1dc867c241a4c1734757427d609c/packages/next/server/config.ts#L748-L765
-      if (process.env.NODE_ENV === "test") {
-        // dynamic import does not currently work inside of vm which
-        // jest relies on so we fall back to require for this case
+      if (process.env.JEST_WORKER_ID) {
+        // dynamic import does not currently work inside vm which
+        // jest relies on, so we fall back to require for this case
         // https://github.com/nodejs/node/issues/35889
         appConfigModule = require(configFile);
       } else {
-        appConfigModule = await import(pathToFileURL(configFile).href);
+        let stat = fse.statSync(configFile);
+        appConfigModule = await import(
+          pathToFileURL(configFile).href + "?t=" + stat.mtimeMs
+        );
       }
       appConfig = appConfigModule?.default || appConfigModule;
     } catch (error: unknown) {
@@ -390,6 +389,26 @@ export async function readConfig(
         `Error loading Remix config at ${configFile}\n${String(error)}`
       );
     }
+  }
+
+  return await resolveConfig(appConfig, {
+    rootDirectory,
+    serverMode,
+  });
+}
+
+export async function resolveConfig(
+  appConfig: AppConfig,
+  {
+    rootDirectory,
+    serverMode = ServerMode.Production,
+  }: {
+    rootDirectory: string;
+    serverMode?: ServerMode;
+  }
+): Promise<RemixConfig> {
+  if (!isValidServerMode(serverMode)) {
+    throw new Error(`Invalid server mode "${serverMode}"`);
   }
 
   let serverBuildPath = path.resolve(
@@ -405,17 +424,14 @@ export async function readConfig(
   let serverMainFields = appConfig.serverMainFields;
   let serverMinify = appConfig.serverMinify;
 
-  if (!appConfig.serverModuleFormat) {
-    serverModuleFormatWarning();
-  }
-
-  let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
+  let serverModuleFormat = appConfig.serverModuleFormat || "esm";
   let serverPlatform = appConfig.serverPlatform || "node";
   serverMainFields ??=
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
 
   let serverNodeBuiltinsPolyfill = appConfig.serverNodeBuiltinsPolyfill;
+  let browserNodeBuiltinsPolyfill = appConfig.browserNodeBuiltinsPolyfill;
   let mdx = appConfig.mdx;
   let postcss = appConfig.postcss ?? true;
   let tailwind = appConfig.tailwind ?? true;
@@ -436,9 +452,9 @@ export async function readConfig(
   let userEntryServerFile = findEntry(appDirectory, "entry.server");
 
   let entryServerFile: string;
-  let entryClientFile: string;
+  let entryClientFile = userEntryClientFile || "entry.client.tsx";
 
-  let pkgJson = await NPMCliPackageJson.load(remixRoot);
+  let pkgJson = await PackageJson.load(rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
   if (userEntryServerFile) {
@@ -464,29 +480,7 @@ export async function readConfig(
       );
     }
 
-    let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
-
-    if (!clientRenderer) {
-      throw new Error(
-        `Could not determine renderer. Please install the following: @remix-run/react`
-      );
-    }
-
-    let maybeReactVersion = coerce(deps.react);
-    if (!maybeReactVersion) {
-      let react = ["react", "react-dom"];
-      let list = conjunctionListFormat.format(react);
-      throw new Error(
-        `Could not determine React version. Please install the following packages: ${list}`
-      );
-    }
-
-    let type: "stream" | "string" =
-      maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
-        ? "stream"
-        : "string";
-
-    if (!deps["isbot"] && type === "stream") {
+    if (!deps["isbot"]) {
       console.log(
         "adding `isbot` to your package.json, you should commit this change"
       );
@@ -503,40 +497,12 @@ export async function readConfig(
       let packageManager = detectPackageManager() ?? "npm";
 
       execSync(`${packageManager} install`, {
-        cwd: remixRoot,
+        cwd: rootDirectory,
         stdio: "inherit",
       });
     }
 
-    entryServerFile = `${serverRuntime}/entry.server.${clientRenderer}-${type}.tsx`;
-  }
-
-  if (userEntryClientFile) {
-    entryClientFile = userEntryClientFile;
-  } else {
-    let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
-
-    if (!clientRenderer) {
-      throw new Error(
-        `Could not determine runtime. Please install the following: @remix-run/react`
-      );
-    }
-
-    let maybeReactVersion = coerce(deps.react);
-    if (!maybeReactVersion) {
-      let react = ["react", "react-dom"];
-      let list = conjunctionListFormat.format(react);
-      throw new Error(
-        `Could not determine React version. Please install the following packages: ${list}`
-      );
-    }
-
-    let type: "stream" | "string" =
-      maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
-        ? "stream"
-        : "string";
-
-    entryClientFile = `entry.client.${clientRenderer}-${type}.tsx`;
+    entryServerFile = `entry.server.${serverRuntime}.tsx`;
   }
 
   let entryClientFilePath = userEntryClientFile
@@ -554,9 +520,6 @@ export async function readConfig(
     rootDirectory,
     assetsBuildDirectory
   );
-
-  // set env variable so un-bundled servers can use it
-  let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
@@ -609,10 +572,12 @@ export async function readConfig(
   }
 
   // Note: When a future flag is removed from here, it should be added to the
-  // list below so we can let folks know if they have obsolete flags in their
-  // config.  If we ever convert remix.config.js to a TS file so we get proper
+  // list below, so we can let folks know if they have obsolete flags in their
+  // config.  If we ever convert remix.config.js to a TS file, so we get proper
   // typings this won't be necessary anymore.
-  let future: FutureConfig = {};
+  let future: FutureConfig = {
+    v3_fetcherPersist: appConfig.future?.v3_fetcherPersist === true,
+  };
 
   if (appConfig.future) {
     let userFlags = appConfig.future;
@@ -623,18 +588,29 @@ export async function readConfig(
       "unstable_postcss",
       "unstable_tailwind",
       "unstable_vanillaExtract",
-      "v2_dev",
       "v2_errorBoundary",
       "v2_headers",
       "v2_meta",
       "v2_normalizeFormMethod",
       "v2_routeConvention",
-    ] as const;
+    ];
+
+    if ("v2_dev" in userFlags) {
+      if (userFlags.v2_dev === true) {
+        deprecatedFlags.push("v2_dev");
+      } else {
+        logger.warn("The `v2_dev` future flag is obsolete.", {
+          details: [
+            "Move your dev options from `future.v2_dev` to `dev` within your `remix.config.js` file",
+          ],
+        });
+      }
+    }
 
     let obsoleteFlags = deprecatedFlags.filter((f) => f in userFlags);
     if (obsoleteFlags.length > 0) {
       logger.warn(
-        `⚠️ REMIX FUTURE CHANGE: the following Remix future flags are now obsolete ` +
+        `The following Remix future flags are now obsolete ` +
           `and can be removed from your remix.config.js file:\n` +
           obsoleteFlags.map((f) => `- ${f}\n`).join("")
       );
@@ -649,7 +625,6 @@ export async function readConfig(
     entryServerFile,
     entryServerFilePath,
     dev: appConfig.dev ?? {},
-    devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
     relativeAssetsBuildDirectory: assetsBuildDirectory,
     publicPath,
@@ -665,6 +640,7 @@ export async function readConfig(
     serverMode,
     serverModuleFormat,
     serverNodeBuiltinsPolyfill,
+    browserNodeBuiltinsPolyfill,
     serverPlatform,
     mdx,
     postcss,
@@ -733,23 +709,7 @@ declare namespace Intl {
   }
 }
 
-let conjunctionListFormat = new Intl.ListFormat("en", {
-  style: "long",
-  type: "conjunction",
-});
-
 let disjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "disjunction",
 });
-
-let serverModuleFormatWarning = () =>
-  logger.warn("The default server module format is changing in v2", {
-    details: [
-      "The default format will change from `cjs` to `esm`.",
-      "You can keep using `cjs` by explicitly specifying `serverModuleFormat: 'cjs'`.",
-      "You can opt-in early to this change by explicitly specifying `serverModuleFormat: 'esm'`",
-      "-> https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat",
-    ],
-    key: "serverModuleFormatWarning",
-  });

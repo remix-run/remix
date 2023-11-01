@@ -1,5 +1,5 @@
 import type { Router as RemixRouter } from "@remix-run/router";
-import { ErrorResponse } from "@remix-run/router";
+import { UNSAFE_ErrorResponseImpl as ErrorResponseImpl } from "@remix-run/router";
 
 export function deserializeErrors(
   errors: RemixRouter["state"]["errors"]
@@ -11,7 +11,7 @@ export function deserializeErrors(
     // Hey you!  If you change this, please change the corresponding logic in
     // serializeErrors in remix-server-runtime/errors.ts :)
     if (val && val.__type === "RouteErrorResponse") {
-      serialized[key] = new ErrorResponse(
+      serialized[key] = new ErrorResponseImpl(
         val.status,
         val.statusText,
         val.data,

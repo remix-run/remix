@@ -1,10 +1,9 @@
 import * as path from "node:path";
 import { execSync } from "node:child_process";
-import * as fse from "fs-extra";
+import fse from "fs-extra";
 import getPort, { makeRange } from "get-port";
 import prettyMs from "pretty-ms";
-import NPMCliPackageJson from "@npmcli/package-json";
-import { coerce } from "semver";
+import PackageJson from "@npmcli/package-json";
 import pc from "picocolors";
 
 import * as colors from "../colors";
@@ -36,7 +35,6 @@ export async function init(
   }
 
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-  let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
   let packageManager = detectPackageManager() ?? "npm";
 
   if (await fse.pathExists(initPackageJson)) {
@@ -51,7 +49,7 @@ export async function init(
     initFn = initFn.default;
   }
   try {
-    await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
+    await initFn({ packageManager, rootDirectory: projectDir });
 
     if (deleteScript) {
       await fse.remove(initScriptDir);
@@ -91,14 +89,14 @@ export async function routes(
 
 export async function build(
   remixRoot: string,
-  modeArg?: string,
+  mode?: string,
   sourcemap: boolean = false
 ): Promise<void> {
-  let mode = parseMode(modeArg) ?? "production";
+  mode = mode ?? "production";
 
   logger.info(`building...` + pc.gray(` (NODE_ENV=${mode})`));
 
-  if (modeArg === "production" && sourcemap) {
+  if (mode === "production" && sourcemap) {
     logger.warn("🚨  source maps enabled in production", {
       details: [
         "You are using `--sourcemap` to enable source maps in production,",
@@ -136,9 +134,9 @@ export async function build(
 
 export async function watch(
   remixRootOrConfig: string | RemixConfig,
-  modeArg?: string
+  mode?: string
 ): Promise<void> {
-  let mode = parseMode(modeArg) ?? "development";
+  mode = mode ?? "development";
   console.log(`Watching Remix app in ${mode} mode...`);
 
   let config =
@@ -147,7 +145,7 @@ export async function watch(
       : await readConfig(remixRootOrConfig);
 
   let resolved = await resolveDev(config);
-  devServer.liveReload(config, resolved);
+  void devServer.liveReload(config, { ...resolved, mode });
   return await new Promise(() => {});
 }
 
@@ -171,22 +169,21 @@ export async function dev(
   let config = await readConfig(remixRoot);
 
   let resolved = await resolveDevServe(config, flags);
-  await devServer_unstable.serve(config, resolved);
+  devServer_unstable.serve(config, resolved);
+
+  // keep `remix dev` alive by waiting indefinitely
+  await new Promise(() => {});
 }
 
 let clientEntries = ["entry.client.tsx", "entry.client.js", "entry.client.jsx"];
 let serverEntries = ["entry.server.tsx", "entry.server.js", "entry.server.jsx"];
 let entries = ["entry.client", "entry.server"];
 
-// @ts-expect-error available in node 12+
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
 let conjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
 });
 
-// @ts-expect-error available in node 12+
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
 let disjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "disjunction",
@@ -216,22 +213,8 @@ export async function generateEntry(
     return;
   }
 
-  let pkgJson = await NPMCliPackageJson.load(config.rootDirectory);
+  let pkgJson = await PackageJson.load(config.rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
-
-  let maybeReactVersion = coerce(deps.react);
-  if (!maybeReactVersion) {
-    let react = ["react", "react-dom"];
-    let list = conjunctionListFormat.format(react);
-    throw new Error(
-      `Could not determine React version. Please install the following packages: ${list}`
-    );
-  }
-
-  let type =
-    maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
-      ? ("stream" as const)
-      : ("string" as const);
 
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
@@ -256,26 +239,11 @@ export async function generateEntry(
     return;
   }
 
-  let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
-
-  if (!clientRenderer) {
-    console.error(
-      colors.error(
-        `Could not determine runtime. Please install the following: @remix-run/react`
-      )
-    );
-    return;
-  }
-
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
-  let defaultEntryClient = path.resolve(
-    defaultsDirectory,
-    `entry.client.${clientRenderer}-${type}.tsx`
-  );
+  let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
   let defaultEntryServer = path.resolve(
     defaultsDirectory,
-    serverRuntime,
-    `entry.server.${clientRenderer}-${type}.tsx`
+    `entry.server.${serverRuntime}.tsx`
   );
 
   let isServerEntry = entry === "entry.server";
@@ -351,17 +319,6 @@ async function createClientEntry(
   let contents = await fse.readFile(inputFile, "utf-8");
   return contents;
 }
-
-let parseMode = (
-  mode?: string
-): compiler.CompileOptions["mode"] | undefined => {
-  if (mode === undefined) return undefined;
-  if (mode === "development") return mode;
-  if (mode === "production") return mode;
-  if (mode === "test") return mode;
-  console.error(`Unrecognized mode: ${mode}`);
-  process.exit(1);
-};
 
 let findPort = async () => getPort({ port: makeRange(3001, 3100) });
 

@@ -4,25 +4,37 @@ title: useFormAction
 
 # `useFormAction`
 
-<docs-info>This hook is simply a re-export of [React Router's `useFormAction`][rr-useformaction].</docs-info>
+Resolves the URL to the closest route in the component hierarchy instead of the current URL of the app.
 
-Resolves the value of a `<form action>` attribute using React Router's relative paths. This can be useful when computing the correct action for a `<button formAction>`, for example, when a `<button>` changes the action of its `<form>`.
+This is used internally by [`<Form>`][form_component] to resolve the action to the closest route, but can be used generically as well.
 
 ```tsx
+import { useFormAction } from "@remix-run/react";
+
 function SomeComponent() {
-  return (
-    <button
-      formAction={useFormAction("destroy")}
-      formMethod="post"
-    >
-      Delete
-    </button>
-  );
+  // closest route URL
+  const action = useFormAction();
+
+  // closest route URL + "destroy"
+  const destroyAction = useFormAction("destroy");
 }
 ```
 
-(Yes, HTML buttons can change the action of their form!)
+## Signature
 
-<docs-info>For more information and usage, please refer to the [React Router `useFormAction` docs][rr-useformaction].</docs-info>
+```
+useFormAction(action, options)
+```
 
-[rr-useformaction]: https://reactrouter.com/hooks/use-form-action
+### `action`
+
+Optional. The action to append to the closest route URL.
+
+### `options`
+
+The only option is `{ relative: "route" | "path"}`.
+
+- **route** default - relative to the route hierarchy, not the URL
+- **path** - makes the action relative to the URL paths, so `..` will remove one URL segment.
+
+[form_component]: ../components/form

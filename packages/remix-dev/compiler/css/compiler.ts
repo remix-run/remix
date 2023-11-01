@@ -1,8 +1,6 @@
 import { builtinModules as nodeBuiltins } from "node:module";
 import * as esbuild from "esbuild";
 
-import type { RemixConfig } from "../../config";
-import { getAppDependencies } from "../../dependencies";
 import { loaders } from "../utils/loaders";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
@@ -20,25 +18,6 @@ import type { Context } from "../context";
 import { isBundle } from "./bundle";
 import { writeMetafile } from "../analysis";
 
-const getExternals = (config: RemixConfig): string[] => {
-  // For the browser build, exclude node built-ins that don't have a
-  // browser-safe alternative installed in node_modules. Nothing should
-  // *actually* be external in the browser build (we want to bundle all deps) so
-  // this is really just making sure we don't accidentally have any dependencies
-  // on node built-ins in browser bundles.
-  let dependencies = Object.keys(getAppDependencies(config));
-  let fakeBuiltins = nodeBuiltins.filter((mod) => dependencies.includes(mod));
-
-  if (fakeBuiltins.length > 0) {
-    throw new Error(
-      `It appears you're using a module that is built in to node, but you installed it as a dependency which could cause problems. Please remove ${fakeBuiltins.join(
-        ", "
-      )} before continuing.`
-    );
-  }
-  return nodeBuiltins.filter((mod) => !dependencies.includes(mod));
-};
-
 const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
   return {
     entryPoints: {
@@ -47,7 +26,11 @@ const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
     outdir: ctx.config.assetsBuildDirectory,
     platform: "browser",
     format: "esm",
-    external: getExternals(ctx.config),
+    // Node built-ins (and any polyfills) are guaranteed to never contain CSS,
+    // and the JS from this build will never be executed, so we can safely skip
+    // bundling them and leave any imports of them as-is in the generated JS.
+    // Any issues with Node built-ins will be caught by the browser JS build.
+    external: nodeBuiltins,
     loader: loaders,
     bundle: true,
     logLevel: "silent",

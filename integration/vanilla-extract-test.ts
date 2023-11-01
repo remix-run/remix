@@ -1,8 +1,13 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+  json,
+} from "./helpers/create-fixture.js";
 
 const TEST_PADDING_VALUE = "20px";
 
@@ -13,6 +18,33 @@ test.describe("Vanilla Extract", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
+        "package.json": json({
+          name: "remix-template-remix",
+          private: true,
+          sideEffects: false,
+          type: "module",
+          dependencies: {
+            "@remix-run/css-bundle": "0.0.0-local-version",
+            "@remix-run/node": "0.0.0-local-version",
+            "@remix-run/react": "0.0.0-local-version",
+            "@remix-run/serve": "0.0.0-local-version",
+            isbot: "0.0.0-local-version",
+            react: "0.0.0-local-version",
+            "react-dom": "0.0.0-local-version",
+          },
+          devDependencies: {
+            "@remix-run/dev": "0.0.0-local-version",
+            "@types/react": "0.0.0-local-version",
+            "@types/react-dom": "0.0.0-local-version",
+            typescript: "0.0.0-local-version",
+
+            "@vanilla-extract/css": "0.0.0-local-version",
+          },
+          engines: {
+            node: ">=18.0.0",
+          },
+        }),
+
         "app/root.tsx": js`
           import { Links, Outlet } from "@remix-run/react";
           import { cssBundleHref } from "@remix-run/css-bundle";

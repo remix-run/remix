@@ -1,4 +1,4 @@
-/** @type {import('@jest/types').Config.InitialOptions} */
+/** @type {import('jest').Config} */
 module.exports = {
   modulePathIgnorePatterns: [
     "<rootDir>/.tmp",
@@ -23,10 +23,13 @@ module.exports = {
     "packages/remix-server-runtime",
     "packages/remix-testing",
   ],
+  reporters:
+    process.env.GITHUB_ACTIONS == null
+      ? ["default"]
+      : [["github-actions", { silent: false }], "summary"],
   watchPlugins: [
     require.resolve("jest-watch-select-projects"),
     require.resolve("jest-watch-typeahead/filename"),
     require.resolve("jest-watch-typeahead/testname"),
   ],
-  reporters: ["default"],
 };

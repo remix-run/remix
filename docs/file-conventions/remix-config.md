@@ -11,6 +11,9 @@ This file has a few build and development configuration options, but does not ac
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
+  future: {
+    /* any enabled future flags */
+  },
   ignoredRouteFiles: ["**/.*"],
   publicPath: "/build/",
   routes(defineRoutes) {
@@ -40,23 +43,36 @@ exports.appDirectory = "./elsewhere";
 The path to the browser build, relative to remix.config.js. Defaults to
 "public/build". Should be deployed to static hosting.
 
+## browserNodeBuiltinsPolyfill
+
+The Node.js polyfills to include in the browser build. Polyfills are provided by [JSPM][jspm] and configured via \[esbuild-plugins-node-modules-polyfill].
+
+```js filename=remix.config.js
+exports.browserNodeBuiltinsPolyfill = {
+  modules: {
+    buffer: true, // Provide a JSPM polyfill
+    fs: "empty", // Provide an empty polyfill
+  },
+  globals: {
+    Buffer: true,
+  },
+};
+```
+
+When using this option and targeting non-Node.js server platforms, you may also want to configure Node.js polyfills for the server via [`serverNodeBuiltinsPolyfill`][server-node-builtins-polyfill].
+
 ## cacheDirectory
 
 The path to a directory Remix can use for caching things in development,
 relative to `remix.config.js`. Defaults to `".cache"`.
 
-## devServerBroadcastDelay (deprecated)
+## future
 
-The delay, in milliseconds, before the dev server broadcasts a reload event.
-There is no delay by default.
+The `future` config lets you opt-into future breaking changes via [Future Flags][future-flags]. The following future flags currently exist in Remix v2 and will become the default behavior in Remix v3:
 
-For v2, the race conditions that necessitated this option have been eliminated.
-
-## devServerPort (deprecated)
-
-The port number to use for the dev websocket server. Defaults to 8002.
-
-For v2, use [`--port` / `dev.port` option][port].
+- **`v3_fetcherPersist`**: Change fetcher persistence/cleanup behavior in 2 ways ([RFC][fetcherpersist-rfc]):
+  - Fetchers are no longer removed on unmount, and remain exposed via `useFetchers` until they return to an `idle` state
+  - Fetchers that complete while still mounted no longer persist in `useFetchers` since you can access those fetchers via `useFetcher`
 
 ## ignoredRouteFiles
 
@@ -72,7 +88,14 @@ The URL prefix of the browser build with a trailing slash. Defaults to
 
 ## postcss
 
-Whether to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `true`.
+Whether to process CSS using [PostCSS][postcss] if a PostCSS config file is present. Defaults to `true`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  postcss: false,
+};
+```
 
 ## routes
 
@@ -107,15 +130,6 @@ main module. If specified, Remix will compile this file along with your
 application into a single file to be deployed to your server. This file can use
 either a `.js` or `.ts` file extension.
 
-## serverBuildDirectory
-
-<docs-warning>This option is deprecated and will likely be removed in a future
-stable release. Use [`serverBuildPath`][server-build-path]
-instead.</docs-warning>
-
-The path to the server build, relative to `remix.config.js`. Defaults to
-"build". This needs to be deployed to your server.
-
 ## serverBuildPath
 
 The path to the server build file, relative to `remix.config.js`. This file
@@ -132,7 +146,7 @@ field in `package.json`.
 A list of regex patterns that determines if a module is transpiled and included
 in the server bundle. This can be useful when consuming ESM only packages in a
 CJS build, or when consuming packages with [CSS side effect
-imports][css-side-effect-imports].
+imports][css_side_effect_imports].
 
 For example, the `unified` ecosystem is all ESM-only. Let's also say we're using
 a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be
@@ -145,7 +159,7 @@ module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
-  serverBuildDirectory: "build",
+  serverBuildPath: "build/index.js",
   ignoredRouteFiles: ["**/.*"],
   serverDependenciesToBundle: [
     /^rehype.*/,
@@ -172,20 +186,28 @@ Whether to minify the server build in production or not. Defaults to `false`.
 ## serverModuleFormat
 
 The output format of the server build, which can either be `"cjs"` or `"esm"`.
-Defaults to `"cjs"`.
+Defaults to `"esm"`.
 
 ## serverNodeBuiltinsPolyfill
 
-The Node.js polyfills to include in the server build when targeting non-Node.js server platforms. Polyfills are provided by [JSPM][jspm] and configured via [esbuild-plugins-node-modules-polyfill].
+The Node.js polyfills to include in the server build when targeting non-Node.js server platforms. Polyfills are provided by [JSPM][jspm] and configured via [esbuild_plugins_node_modules_polyfill][esbuild_plugins_node_modules_polyfill].
 
 ```js filename=remix.config.js
-exports.serverNodeBuiltinsPolyfill = {
-  modules: {
-    path: true, // Provide a JSPM polyfill
-    fs: "empty", // Provide an empty polyfill
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  serverNodeBuiltinsPolyfill: {
+    modules: {
+      buffer: true, // Provide a JSPM polyfill
+      fs: "empty", // Provide an empty polyfill
+    },
+  },
+  globals: {
+    Buffer: true,
   },
 };
 ```
+
+When using this option, you may also want to configure Node.js polyfills for the browser via [`browserNodeBuiltinsPolyfill`][browser-node-builtins-polyfill].
 
 ## serverPlatform
 
@@ -194,11 +216,18 @@ The platform the server build is targeting, which can either be `"neutral"` or
 
 ## tailwind
 
-Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `true`.
+Whether to support [Tailwind functions and directives][tailwind_functions_and_directives] in CSS files if `tailwindcss` is installed. Defaults to `true`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  tailwind: false,
+};
+```
 
 ## watchPaths
 
-An array, string, or async function that defines custom directories, relative to the project root, to watch while running [remix dev][remix-dev]. These directories are in addition to [`appDirectory`][app-directory].
+An array, string, or async function that defines custom directories, relative to the project root, to watch while running [remix dev][remix_dev]. These directories are in addition to [`appDirectory`][app_directory].
 
 ```js filename=remix.config.js
 exports.watchPaths = async () => {
@@ -213,29 +242,19 @@ exports.watchPaths = ["./some/path/*"];
 
 There are a few conventions that Remix uses you should be aware of.
 
-<docs-info>[Dilum Sanjaya][dilum-sanjaya] made [an awesome visualization][an-awesome-visualization] of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
+<docs-info>[Dilum Sanjaya][dilum_sanjaya] made [an awesome visualization][an_awesome_visualization] of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
 
-[minimatch]: https://www.npmjs.com/package/minimatch
-[public-path]: #publicpath
-[server-build-path]: #serverbuildpath
-[server-conditions]: #serverconditions
-[server-dependencies-to-bundle]: #serverdependenciestobundle
-[server-main-fields]: #servermainfields
-[server-minify]: #serverminify
-[server-module-format]: #servermoduleformat
-[server-platform]: #serverplatform
-[arc]: https://arc.codes
-[cloudflare-pages]: https://pages.cloudflare.com
-[cloudflare-workers]: https://workers.cloudflare.com
-[deno]: https://deno.land
-[node-cjs]: https://nodejs.org/en
-[dilum-sanjaya]: https://twitter.com/DilumSanjaya
-[an-awesome-visualization]: https://remix-routing-demo.netlify.app
-[remix-dev]: ../other-api/dev#remix-dev
-[app-directory]: #appDirectory
-[css-side-effect-imports]: ../guides/styling#css-side-effect-imports
+[minimatch]: https://npm.im/minimatch
+[dilum_sanjaya]: https://twitter.com/DilumSanjaya
+[an_awesome_visualization]: https://interactive-remix-routing-v2.netlify.app
+[remix_dev]: ../other-api/dev#remix-dev
+[app_directory]: #appdirectory
+[css_side_effect_imports]: ../styling/css-imports
 [postcss]: https://postcss.org
-[tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
+[tailwind_functions_and_directives]: https://tailwindcss.com/docs/functions-and-directives
 [jspm]: https://github.com/jspm/jspm-core
-[esbuild-plugins-node-modules-polyfill]: https://www.npmjs.com/package/esbuild-plugins-node-modules-polyfill
-[port]: ../other-api/dev-v2#option-1
+[esbuild_plugins_node_modules_polyfill]: https://npm.im/esbuild-plugins-node-modules-polyfill
+[browser-node-builtins-polyfill]: #browsernodebuiltinspolyfill
+[server-node-builtins-polyfill]: #servernodebuiltinspolyfill
+[future-flags]: ../start/future-flags.md
+[fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698

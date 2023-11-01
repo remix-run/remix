@@ -3,7 +3,7 @@ import path from "node:path";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 
-const remixRoot = path.resolve(__dirname, "./fixtures/stack");
+const remixRoot = path.join(__dirname, "fixtures", "stack");
 
 describe("readConfig", () => {
   let config: RemixConfig;
@@ -25,46 +25,48 @@ describe("readConfig", () => {
         tsconfigPath: expect.any(String),
       },
       `
-      Object {
+      {
         "appDirectory": Any<String>,
         "assetsBuildDirectory": Any<String>,
+        "browserNodeBuiltinsPolyfill": undefined,
         "cacheDirectory": Any<String>,
-        "dev": Object {},
-        "devServerBroadcastDelay": 0,
+        "dev": {},
         "entryClientFile": "entry.client.tsx",
         "entryClientFilePath": Any<String>,
         "entryServerFile": "entry.server.tsx",
         "entryServerFilePath": Any<String>,
-        "future": Object {},
+        "future": {
+          "v3_fetcherPersist": false,
+        },
         "mdx": undefined,
         "postcss": true,
         "publicPath": "/build/",
         "relativeAssetsBuildDirectory": Any<String>,
         "rootDirectory": Any<String>,
-        "routes": Object {
-          "root": Object {
+        "routes": {
+          "root": {
             "file": "root.tsx",
             "id": "root",
             "path": "",
           },
         },
         "serverBuildPath": Any<String>,
-        "serverBuildTargetEntryModule": "export * from \\"@remix-run/dev/server-build\\";",
+        "serverBuildTargetEntryModule": "export * from "@remix-run/dev/server-build";",
         "serverConditions": undefined,
-        "serverDependenciesToBundle": Array [],
+        "serverDependenciesToBundle": [],
         "serverEntryPoint": undefined,
-        "serverMainFields": Array [
-          "main",
+        "serverMainFields": [
           "module",
+          "main",
         ],
         "serverMinify": false,
         "serverMode": "production",
-        "serverModuleFormat": "cjs",
+        "serverModuleFormat": "esm",
         "serverNodeBuiltinsPolyfill": undefined,
         "serverPlatform": "node",
         "tailwind": true,
         "tsconfigPath": Any<String>,
-        "watchPaths": Array [],
+        "watchPaths": [],
       }
     `
     );

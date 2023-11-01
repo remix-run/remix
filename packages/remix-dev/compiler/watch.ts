@@ -11,8 +11,10 @@ import { normalizeSlashes } from "../config/routes";
 import type { Manifest } from "../manifest";
 
 function isEntryPoint(config: RemixConfig, file: string): boolean {
+  let configFile = path.join(config.rootDirectory, "remix.config.js");
   let appFile = path.relative(config.appDirectory, file);
   let entryPoints = [
+    configFile,
     config.entryClientFile,
     config.entryServerFile,
     ...Object.values(config.routes).map((route) => route.file),
@@ -31,6 +33,11 @@ export type WatchOptions = {
   onFileDeleted?(file: string): void;
 };
 
+function shouldIgnore(file: string): boolean {
+  let filename = path.basename(file);
+  return filename === ".DS_Store";
+}
+
 export async function watch(
   ctx: Context,
   {
@@ -47,6 +54,18 @@ export async function watch(
   let compiler = await Compiler.create(ctx);
   let compile = () =>
     compiler.compile({ onManifest: onBuildManifest }).catch((thrown) => {
+      if (
+        thrown instanceof Error &&
+        thrown.message === "The service is no longer running"
+      ) {
+        ctx.logger.error("esbuild is no longer running", {
+          details: [
+            "Most likely, your machine ran out of memory and killed the esbuild process",
+            "that `remix dev` relies on for builds and rebuilds.",
+          ],
+        });
+        process.exit(1);
+      }
       logThrown(thrown);
       return undefined;
     });
@@ -58,7 +77,7 @@ export async function watch(
 
   let restart = debounce(async () => {
     let start = Date.now();
-    compiler.dispose();
+    void compiler.dispose();
 
     try {
       ctx.config = await reloadConfig(ctx.config.rootDirectory);
@@ -81,7 +100,8 @@ export async function watch(
     onBuildFinish?.(ctx, Date.now() - start, manifest !== undefined);
   }, 100);
 
-  let toWatch = [ctx.config.appDirectory];
+  let remixConfigPath = path.join(ctx.config.rootDirectory, "remix.config.js");
+  let toWatch = [remixConfigPath, ctx.config.appDirectory];
 
   // WARNING: Chokidar returns different paths in change events depending on
   // whether the path provided to the watcher is absolute or relative. If the
@@ -108,10 +128,12 @@ export async function watch(
     })
     .on("error", (error) => ctx.logger.error(String(error)))
     .on("change", async (file) => {
+      if (shouldIgnore(file)) return;
       onFileChanged?.(file);
-      await rebuild();
+      await (file === remixConfigPath ? restart : rebuild)();
     })
     .on("add", async (file) => {
+      if (shouldIgnore(file)) return;
       onFileCreated?.(file);
 
       try {
@@ -124,12 +146,13 @@ export async function watch(
       await (isEntryPoint(ctx.config, file) ? restart : rebuild)();
     })
     .on("unlink", async (file) => {
+      if (shouldIgnore(file)) return;
       onFileDeleted?.(file);
       await (isEntryPoint(ctx.config, file) ? restart : rebuild)();
     });
 
   return async () => {
     await watcher.close().catch(() => undefined);
-    compiler.dispose();
+    void compiler.dispose();
   };
 }

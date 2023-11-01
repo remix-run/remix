@@ -1,9 +1,13 @@
 import { test, expect } from "@playwright/test";
-import { ServerMode } from "@remix-run/server-runtime/mode";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { AppFixture, Fixture } from "./helpers/create-fixture";
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
+import { ServerMode } from "../build/node_modules/@remix-run/server-runtime/dist/mode.js";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { AppFixture, Fixture } from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 test.describe("loader in an app", async () => {
   let appFixture: AppFixture;
@@ -23,6 +27,7 @@ test.describe("loader in an app", async () => {
           export default () => (
             <>
               <Link to="/redirect">Redirect</Link>
+              <Link to="/some-404-path">404 route</Link>
               <Form action="/redirect-to" method="post">
                 <input name="destination" defaultValue="/redirect-destination" />
                 <button type="submit">Redirect</button>
@@ -105,6 +110,19 @@ test.describe("loader in an app", async () => {
             return json({ ok: true });
           }
         `,
+        "app/routes/$.tsx": js`
+          import { json } from "@remix-run/node";
+          import { useRouteError } from "@remix-run/react";
+          export function loader({ request }) {
+            throw json({ message: new URL(request.url).pathname + ' not found' }, {
+              status: 404
+            });
+          }
+          export function ErrorBoundary() {
+            let error = useRouteError();
+            return <pre>{error.status + ' ' + error.data.message}</pre>;
+          }
+        `,
       },
     });
     appFixture = await createAppFixture(fixture, ServerMode.Test);
@@ -163,6 +181,16 @@ test.describe("loader in an app", async () => {
         "Unexpected Server Error\n\nError: Oh noes!"
       );
     });
+
+    test("should let loader throw to it's own boundary without a default export", async ({
+      page,
+    }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/", true);
+      await app.clickLink("/some-404-path");
+      let html = await app.getHtml();
+      expect(html).toMatch("404 /some-404-path not found");
+    });
   }
 
   test("should handle responses returned from resource routes", async ({
@@ -219,7 +247,7 @@ test.describe("loader in an app", async () => {
     await app.goto("/");
     await app.clickSubmitButton("/no-action");
     let html = await app.getHtml();
-    expect(html).toMatch("Application Error");
+    expect(html).toMatch("405 Method Not Allowed");
     expect(logs[0]).toContain(
       'Route "routes/no-action" does not have an action'
     );

@@ -1,13 +1,14 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import {
   createAppFixture,
   createFixture,
   css,
   js,
-} from "./helpers/create-fixture";
+  json,
+} from "./helpers/create-fixture.js";
 
 const TEST_PADDING_VALUE = "20px";
 
@@ -19,7 +20,7 @@ function runTests(ext: typeof extensions[number]) {
 
   let tailwindConfigName = `tailwind.config.${ext}`;
 
-  let tailwindConfig = ["mjs", "ts"].includes(ext)
+  let tailwindConfig = ["mjs", "ts", "js"].includes(ext)
     ? js`
       export default {
         content: ["./app/**/*.{ts,tsx,jsx,js}"],
@@ -44,6 +45,34 @@ function runTests(ext: typeof extensions[number]) {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
+        "package.json": json({
+          name: "remix-template-remix",
+          private: true,
+          sideEffects: false,
+          type: "module",
+          dependencies: {
+            "@remix-run/css-bundle": "0.0.0-local-version",
+            "@remix-run/node": "0.0.0-local-version",
+            "@remix-run/react": "0.0.0-local-version",
+            "@remix-run/serve": "0.0.0-local-version",
+            isbot: "0.0.0-local-version",
+            react: "0.0.0-local-version",
+            "react-dom": "0.0.0-local-version",
+          },
+          devDependencies: {
+            "@remix-run/dev": "0.0.0-local-version",
+            "@types/react": "0.0.0-local-version",
+            "@types/react-dom": "0.0.0-local-version",
+            typescript: "0.0.0-local-version",
+
+            "@vanilla-extract/css": "0.0.0-local-version",
+            tailwindcss: "0.0.0-local-version",
+          },
+          engines: {
+            node: ">=18.0.0",
+          },
+        }),
+
         [tailwindConfigName]: tailwindConfig,
 
         "app/tailwind.css": css`

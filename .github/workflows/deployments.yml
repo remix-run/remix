@@ -22,20 +22,21 @@ on:
       TEST_FLY_TOKEN:
         required: true
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   arc_deploy:
     name: Architect Deploy
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
@@ -65,14 +66,11 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
@@ -103,14 +101,11 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
@@ -142,14 +137,11 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
@@ -184,14 +176,11 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
