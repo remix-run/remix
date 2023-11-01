@@ -372,15 +372,15 @@ app/routes/app._index/route.tsx
 
 Even your root route can be a folder. For example:
 
-```
-root/
-  route.tsx
-  menu.tsx
-  footer.tsx
-routes/
-  _index.tsx
-  about.tsx
-```
+```text
+app/
+├── root/
+|   ├── footer.tsx
+|   ├── menu.tsx
+|   └── route.tsx
+└── routes/
+    ├── _index.tsx
+    └── about.tsx
 
 ## Scaling
 
