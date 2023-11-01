@@ -23,7 +23,7 @@
     "@types/react": "0.0.0-local-version",
     "@types/react-dom": "0.0.0-local-version",
     "typescript": "0.0.0-local-version",
-    "wrangler": "0.0.0-local-version"
+    "wrangler": "2.20.1"
   },
   "engines": {
     "node": ">=18.0.0"
