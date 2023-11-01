@@ -21,7 +21,7 @@ function SomeComponent() {
 }
 ```
 
-It's often better to use [`redirect`][redirect] in loaders and actions than this hook, but it still has use cases.
+It's often better to use [`redirect`][redirect] in [`action`][action]s and [`loader`][loader]s than this hook, but it still has use cases.
 
 ## Arguments
 
@@ -80,4 +80,6 @@ navigate(".", {
 - **relative**: `"route" | "path"` - defines the relative path behavior for the link. `"route"` will use the route hierarchy so `".."` will remove all URL segments of the current route pattern while `"path"` will use the URL path so `".."` will remove one URL segment.
 - **state**: any - adds persistent client side routing state to the next location.
 
-[redirect]: ../fetch/redirect
+[redirect]: ../utils/redirect
+[action]: ../route/action
+[loader]: ../route/loader
