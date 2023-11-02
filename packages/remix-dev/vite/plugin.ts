@@ -666,11 +666,11 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           return;
         }
 
-        let referencesLiveReload =
-          code.includes("@remix-run/react") && code.includes("LiveReload");
+        let hasLiveReloadHints =
+          code.includes("LiveReload") && code.includes("@remix-run/react");
 
         // Don't transform files that don't need the proxy
-        if (!referencesLiveReload) {
+        if (!hasLiveReloadHints) {
           return;
         }
 
