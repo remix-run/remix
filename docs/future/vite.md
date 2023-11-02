@@ -97,7 +97,7 @@ export default defineConfig({
 });
 ```
 
-The subset of [supported Remix config options](#configuration) should be passed directly to the plugin:
+The subset of [supported Remix config options][supported-remix-config-options] should be passed directly to the plugin:
 
 ```ts filename=vite.config.ts
 export default defineConfig({
@@ -383,7 +383,7 @@ export default {
 
 👉 **Convert Tailwind CSS import to a side effect**
 
-If you haven't already, be sure to [convert your CSS imports to side effects.](#fix-up-css-imports)
+If you haven't already, be sure to [convert your CSS imports to side effects.][convert-your-css-imports-to-side-effects]
 
 ```diff filename=app/dashboard/route.tsx
 // Don't export as a link descriptor:
@@ -668,3 +668,5 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-css]: https://vitejs.dev/guide/features.html#css
 [vite-url-imports]: https://vitejs.dev/guide/assets.html#explicit-url-imports
 [vite-css-url-issue]: https://github.com/remix-run/remix/issues/7786
+[supported-remix-config-options]: #configuration
+[convert-your-css-imports-to-side-effects]: #fix-up-css-imports
