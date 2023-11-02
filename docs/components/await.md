@@ -67,7 +67,7 @@ function SomeChild() {
 
 ### `errorElement`
 
-The `errorElement` prop can be used to render an error boundary when the promise rejects.
+The `errorElement` prop can be used to render an error boundary when the promise is rejected.
 
 ```tsx
 <Await errorElement={<div>Oops!</div>} />

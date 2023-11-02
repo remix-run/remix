@@ -59,7 +59,7 @@ This does not prevent the scroll position from being restored when the user come
 
 <summary>Discussion</summary>
 
-An example when you might want this behavior is a list of tabs that manipulate the url search params that aren't at the top of the page. You wouldn't want the scroll position to jump up to the top because it might scroll the toggled content out of the viewport!
+An example of when you might want this behavior is a list of tabs that manipulate the URL search params that aren't at the top of the page. You wouldn't want the scroll position to jump up to the top because it might scroll the toggled content out of the viewport!
 
 ```text
       ┌─────────────────────────┐
