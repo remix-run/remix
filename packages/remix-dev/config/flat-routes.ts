@@ -165,8 +165,16 @@ export function flatRoutesUniversal(
     routeIds.set(routeId, normalizedFile);
   }
 
+  console.log(
+    "routeIds before sorting in flatRoutesUniversal",
+    Array.from(routeIds.keys())
+  );
   let sortedRouteIds = Array.from(routeIds).sort(
     ([a], [b]) => b.length - a.length
+  );
+  console.log(
+    "routeIds after sorting in flatRoutesUniversal (wrong!)",
+    sortedRouteIds.map((e) => e[0])
   );
 
   for (let [routeId, file] of sortedRouteIds) {
@@ -293,6 +301,26 @@ export function flatRoutesUniversal(
       console.error(getRoutePathConflictErrorMessage(path, files));
     }
   }
+
+  // Return a manifest with keys added in file order to match the build
+  routeManifest = Object.entries(routeManifest)
+    .sort((a, b) => {
+      let aIdx = routes.findIndex((r) => r.endsWith(a[1].file));
+      let bIdx = routes.findIndex((r) => r.endsWith(b[1].file));
+      return aIdx < bIdx ? -1 : aIdx > bIdx ? 1 : 0;
+    })
+    .reduce(
+      (acc, [routeId, routeConfig]) =>
+        Object.assign(acc, {
+          [routeId]: routeConfig,
+        }),
+      {}
+    );
+
+  console.log(
+    "Fixed routeIds in the final manifest",
+    Object.keys(routeManifest)
+  );
 
   return routeManifest;
 }

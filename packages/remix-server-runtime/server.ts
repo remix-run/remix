@@ -46,6 +46,12 @@ export type CreateRequestHandlerFunction = (
 ) => RequestHandler;
 
 function derive(build: ServerBuild, mode?: string) {
+  console.log("Build.routes:");
+  Object.entries(build.routes).forEach((e) => console.log("  ", e[0], e[1].id));
+  console.log("Build.assets:");
+  Object.entries(build.assets.routes).forEach((e) =>
+    console.log("  ", e[0], e[1].id)
+  );
   let routes = createRoutes(build.routes);
   let dataRoutes = createStaticHandlerDataRoutes(build.routes, build.future);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
