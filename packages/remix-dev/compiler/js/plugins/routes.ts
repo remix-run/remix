@@ -8,8 +8,9 @@ import type { Context } from "../../context";
 
 type Route = RemixConfig["routes"][string];
 
+// If you change this, make sure you update loadRouteModuleWithBlockingLinks in
+// remix-react/routes.ts
 const browserSafeRouteExports: { [name: string]: boolean } = {
-  CatchBoundary: true,
   ErrorBoundary: true,
   default: true,
   handle: true,

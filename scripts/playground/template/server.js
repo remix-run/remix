@@ -1,4 +1,4 @@
-let path = require("path");
+let path = require("node:path");
 let express = require("express");
 let morgan = require("morgan");
 let { createRequestHandler } = require("@remix-run/express");

@@ -1,14 +1,19 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
+  ErrorResponse,
+  Fetcher,
+  FetcherWithComponents,
   FormEncType,
   FormMethod,
   FormProps,
   Location,
   NavigateFunction,
+  Navigation,
   Params,
   Path,
   ShouldRevalidateFunction,
+  ShouldRevalidateFunctionArgs,
   SubmitFunction,
   SubmitOptions,
   unstable_Blocker,
@@ -27,6 +32,7 @@ export {
   useAsyncValue,
   isRouteErrorResponse,
   useBeforeUnload,
+  useFetchers,
   useFormAction,
   useHref,
   useLocation,
@@ -44,14 +50,14 @@ export {
   useSubmit,
   unstable_useBlocker,
   unstable_usePrompt,
+  unstable_useViewTransitionState,
 } from "react-router-dom";
 
 export type {
   AwaitProps,
-  FetcherWithComponents,
-  RouteMatch,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
+  UIMatch,
 } from "./components";
 export {
   Await,
@@ -62,36 +68,26 @@ export {
   NavLink,
   PrefetchPageLinks,
   LiveReload,
-  useTransition,
   useFetcher,
-  useFetchers,
   useLoaderData,
   useRouteLoaderData,
-  useMatches,
   useActionData,
+  useMatches,
   RemixContext as UNSAFE_RemixContext,
 } from "./components";
 
-export type { ThrownResponse } from "./errors";
-export { useCatch } from "./errorBoundaries";
-
 export type { HtmlLinkDescriptor } from "./links";
 export type {
-  CatchBoundaryComponent,
-  HtmlMetaDescriptor,
-  V2_MetaArgs,
-  V2_MetaDescriptor,
-  V2_MetaFunction,
+  MetaArgs,
+  MetaDescriptor,
+  MetaFunction,
   RouteModules as UNSAFE_RouteModules,
-  ShouldReloadFunction,
 } from "./routeModules";
 
 export { ScrollRestoration } from "./scroll-restoration";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";
-
-export type { Fetcher } from "./transition";
 
 export type {
   FutureConfig as UNSAFE_FutureConfig,

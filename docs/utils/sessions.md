@@ -66,17 +66,19 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```tsx filename=app/routes/login.js lines=[8,11-13,15,21-22,27-28,34-36,47-48,53,58,63]
+```tsx filename=app/routes/login.js lines=[8,13-15,17,23-24,29-30,38-40,51-52,57,62,67]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { getSession, commitSession } from "../sessions.server";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -99,7 +101,9 @@ export async function loader({ request }: LoaderArgs) {
   });
 }
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -163,7 +167,9 @@ And then a logout form might look something like this:
 ```tsx
 import { getSession, destroySession } from "../sessions.server";
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -215,6 +221,11 @@ console.log(isSession(session));
 ## `createSessionStorage`
 
 Remix makes it easy to store sessions in your own database if needed. The `createSessionStorage()` API requires a `cookie` (or options for creating a cookie, see [cookies][cookies]) and a set of create, read, update, and delete (CRUD) methods for managing the session data. The cookie is used to persist the session ID.
+
+- `createData` will be called from `commitSession` on the initial session creation when no session ID exists in the cookie
+- `readData` will be called from `getSession` when a session ID exists in the cookie
+- `updateData` will be called from `commitSession` when a session ID already exists in the cookie
+- `deleteData` is called from `destorySession`
 
 The following example shows how you could do this using a generic database client:
 
@@ -421,7 +432,9 @@ export { getSession, commitSession, destroySession };
 After retrieving a session with `getSession()`, the returned session object has a handful of methods to read and update the retrieved session data:
 
 ```tsx
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );

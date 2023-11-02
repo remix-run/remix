@@ -10,10 +10,7 @@ FIXME: This is mostly the wrong doc, right code.
 These components are to be used once inside your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
 ```tsx
-import type {
-  LinksFunction,
-  MetaFunction,
-} from "@remix-run/node"; // or cloudflare/deno
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 import {
   Links,
   LiveReload,
@@ -29,16 +26,16 @@ export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: globalStylesheetUrl }];
 };
 
-export const meta: MetaFunction = () => ({
-  charset: "utf-8",
-  title: "My Amazing App",
-  viewport: "width=device-width, initial-scale=1",
-});
-
 export default function App() {
   return (
     <html lang="en">
       <head>
+        <meta charSet="utf-8" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1"
+        />
+
         {/* All meta exports on all routes will go here */}
         <Meta />
 

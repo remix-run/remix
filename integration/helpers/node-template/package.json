@@ -2,12 +2,14 @@
   "name": "remix-template-remix",
   "private": true,
   "sideEffects": false,
+  "type": "module",
   "scripts": {
     "build": "node ../../../build/node_modules/@remix-run/dev/dist/cli.js build",
     "dev": "node ../../../build/node_modules/@remix-run/dev/dist/cli.js dev",
-    "start": "node ../../../build/node_modules/@remix-run/serve/dist/cli.js build"
+    "start": "node ../../../build/node_modules/@remix-run/serve/dist/cli.js ./build/index.js"
   },
   "dependencies": {
+    "@remix-run/css-bundle": "0.0.0-local-version",
     "@remix-run/node": "0.0.0-local-version",
     "@remix-run/react": "0.0.0-local-version",
     "@remix-run/serve": "0.0.0-local-version",
@@ -19,10 +21,9 @@
     "@remix-run/dev": "0.0.0-local-version",
     "@types/react": "0.0.0-local-version",
     "@types/react-dom": "0.0.0-local-version",
-    "@vanilla-extract/css": "^1.10.0",
     "typescript": "0.0.0-local-version"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }

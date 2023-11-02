@@ -5,10 +5,8 @@ import {
 
 /**
  * Data for a route that was returned from a `loader()`.
- *
- * Note: This moves to unknown in ReactRouter and eventually likely in Remix
  */
-export type AppData = any;
+export type AppData = unknown;
 
 export function isCatchResponse(response: Response): boolean {
   return response.headers.get("X-Remix-Catch") != null;
@@ -175,7 +173,7 @@ export async function parseDeferredReadableStream(
     }
 
     // Read the rest of the stream and resolve deferred promises
-    (async () => {
+    void (async () => {
       try {
         for await (let section of sectionReader) {
           // Determine event type and data

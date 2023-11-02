@@ -1,13 +1,5 @@
-import type {
-  AppLoadContext,
-  ServerBuild,
-  RequestInit as NodeRequestInit,
-  Response as NodeResponse,
-} from "@remix-run/node";
+import type { AppLoadContext, ServerBuild } from "@remix-run/node";
 import {
-  AbortController as NodeAbortController,
-  Headers as NodeHeaders,
-  Request as NodeRequest,
   createRequestHandler as createRemixRequestHandler,
   readableStreamToString,
 } from "@remix-run/node";
@@ -52,13 +44,13 @@ export function createRequestHandler({
     let request = createRemixRequest(event);
     let loadContext = await getLoadContext?.(event);
 
-    let response = (await handleRequest(request, loadContext)) as NodeResponse;
+    let response = await handleRequest(request, loadContext);
 
     return sendRemixResponse(response);
   };
 }
 
-export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
+export function createRemixRequest(event: APIGatewayProxyEventV2): Request {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let scheme = process.env.ARC_SANDBOX ? "http" : "https";
@@ -67,15 +59,13 @@ export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
     "multipart/form-data"
   );
   // Note: No current way to abort these for Architect, but our router expects
-  // requests to contain a signal so it can detect aborted requests
-  let controller = new NodeAbortController();
+  // requests to contain a signal, so it can detect aborted requests
+  let controller = new AbortController();
 
-  return new NodeRequest(url.href, {
+  return new Request(url.href, {
     method: event.requestContext.http.method,
     headers: createRemixHeaders(event.headers, event.cookies),
-    // Cast until reason/throwIfAborted added
-    // https://github.com/mysticatea/abort-controller/issues/36
-    signal: controller.signal as NodeRequestInit["signal"],
+    signal: controller.signal,
     body:
       event.body && event.isBase64Encoded
         ? isFormData
@@ -88,8 +78,8 @@ export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
 export function createRemixHeaders(
   requestHeaders: APIGatewayProxyEventHeaders,
   requestCookies?: string[]
-): NodeHeaders {
-  let headers = new NodeHeaders();
+): Headers {
+  let headers = new Headers();
 
   for (let [header, value] of Object.entries(requestHeaders)) {
     if (value) {
@@ -105,16 +95,14 @@ export function createRemixHeaders(
 }
 
 export async function sendRemixResponse(
-  nodeResponse: NodeResponse
+  nodeResponse: Response
 ): Promise<APIGatewayProxyStructuredResultV2> {
   let cookies: string[] = [];
 
   // Arc/AWS API Gateway will send back set-cookies outside of response headers.
-  for (let [key, values] of Object.entries(nodeResponse.headers.raw())) {
+  for (let [key, value] of nodeResponse.headers.entries()) {
     if (key.toLowerCase() === "set-cookie") {
-      for (let value of values) {
-        cookies.push(value);
-      }
+      cookies.push(value);
     }
   }
 

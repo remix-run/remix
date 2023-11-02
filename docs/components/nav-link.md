@@ -1,11 +1,10 @@
 ---
 title: NavLink
-toc: false
 ---
 
 # `<NavLink>`
 
-A `<NavLink>` is a special kind of [`<Link>`][link] that knows whether or not it is "active" or "pending". This is useful when building a navigation menu, such as a breadcrumb or a set of tabs where you'd like to show which of them is currently selected. It also provides useful context for assistive technology like screen readers.
+Wraps [`<Link>`][link_component] with additional props for styling active and pending states.
 
 ```tsx
 import { NavLink } from "@remix-run/react";
@@ -20,25 +19,59 @@ import { NavLink } from "@remix-run/react";
 </NavLink>;
 ```
 
-## Default `active` class
+## Automatic Attributes
 
-By default, an `active` class is added to a `<NavLink>` component when it is active so you can use CSS to style it.
+### `.active`
+
+An `active` class is added to a `<NavLink>` component when it is active, so you can use CSS to style it.
 
 ```tsx
-<nav id="sidebar">
-  <NavLink to="/messages" />
-</nav>
+<NavLink to="/messages" />
 ```
 
 ```css
-#sidebar a.active {
+a.active {
   color: red;
 }
 ```
 
-## `className`
+### `aria-current`
 
-The `className` prop works like a normal className, but you can also pass it a function to customize the classNames applied based on the active and pending state of the link.
+When a `NavLink` is active it will automatically apply `<a aria-current="page">` to the underlying anchor tag. See [aria_current][aria_current] on MDN.
+
+### `.pending`
+
+A `pending` class is added to a `<NavLink>` component when it is pending during a navigation, so you can use CSS to style it.
+
+```tsx
+<NavLink to="/messages" />
+```
+
+```css
+a.pending {
+  color: red;
+}
+```
+
+### `.transitioning`
+
+A `transitioning` class is added to a `<NavLink unstable_viewTransition>` component when it is transitioning during a navigation, so you can use CSS to style it.
+
+```tsx
+<NavLink to="/messages" unstable_viewTransition />
+```
+
+```css
+a.transitioning {
+  view-transition-name: my-transition;
+}
+```
+
+## Props
+
+### `className` callback
+
+Calls back with the active and pending states to allow customizing the class names applied.
 
 ```tsx
 <NavLink
@@ -51,9 +84,9 @@ The `className` prop works like a normal className, but you can also pass it a f
 </NavLink>
 ```
 
-## `style`
+### `style` callback
 
-The `style` prop works like a normal style prop, but you can also pass it a function to customize the styles applied based on the active and pending state of the link.
+Calls back with the active and pending states to allow customizing the styles applied.
 
 ```tsx
 <NavLink
@@ -69,9 +102,9 @@ The `style` prop works like a normal style prop, but you can also pass it a func
 </NavLink>
 ```
 
-## `children`
+### `children` callback
 
-You can pass a render prop as children to customize the content of the `<NavLink>` based on the active and pending state, which is useful to change styles on internal elements.
+Calls back with the active and pending states to allow customizing the content of the `<NavLink>`.
 
 ```tsx
 <NavLink to="/tasks">
@@ -81,9 +114,9 @@ You can pass a render prop as children to customize the content of the `<NavLink
 </NavLink>
 ```
 
-## `end`
+### `end`
 
-The `end` prop changes the matching logic for the `active` and `pending` states to only match to the "end" of the NavLinks's `to` path. If the URL is longer than `to`, it will no longer be considered active.
+The `end` prop changes the matching logic for the `active` and `pending` states to only match to the "end" of the `NavLinks`'s `to` path. If the URL is longer than `to`, it will no longer be considered active.
 
 | Link                          | URL          | isActive |
 | ----------------------------- | ------------ | -------- |
@@ -92,22 +125,75 @@ The `end` prop changes the matching logic for the `active` and `pending` states 
 | `<NavLink to="/tasks" end />` | `/tasks`     | true     |
 | `<NavLink to="/tasks" end />` | `/tasks/123` | false    |
 
-**A note on links to the root route**
-
 `<NavLink to="/">` is an exceptional case because _every_ URL matches `/`. To avoid this matching every single route by default, it effectively ignores the `end` prop and only matches when you're at the root route.
 
-## `caseSensitive`
+### `caseSensitive`
 
-Adding the `caseSensitive` prop changes the matching logic to make it case sensitive.
+Adding the `caseSensitive` prop changes the matching logic to make it case-sensitive.
 
 | Link                                         | URL           | isActive |
 | -------------------------------------------- | ------------- | -------- |
 | `<NavLink to="/SpOnGe-bOB" />`               | `/sponge-bob` | true     |
 | `<NavLink to="/SpOnGe-bOB" caseSensitive />` | `/sponge-bob` | false    |
 
-## `aria-current`
+## `unstable_viewTransition`
 
-When a `NavLink` is active it will automatically apply `<a aria-current="page">` to the underlying anchor tag. See [aria-current][aria-current] on MDN.
+The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`. By default, during the transition a `transitioning` class will be added to the `<a>` element that you can use to customize the view transition.
 
-[aria-current]: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-current
-[link]: ./link.md
+```css
+a.transitioning p {
+  view-transition-name: "image-title";
+}
+
+a.transitioning img {
+  view-transition-name: "image-expand";
+}
+```
+
+```jsx
+<NavLink to={to} unstable_viewTransition>
+  <p>Image Number {idx}</p>
+  <img src={src} alt={`Img ${idx}`} />
+</NavLink>
+```
+
+You may also use the `className`/`style` props or the render props passed to `children` to further customize based on the `isTransitioning` value.
+
+```jsx
+<NavLink to={to} unstable_viewTransition>
+  {({ isTransitioning }) => (
+    <>
+      <p
+        style={{
+          viewTransitionName: isTransitioning
+            ? "image-title"
+            : "",
+        }}
+      >
+        Image Number {idx}
+      </p>
+      <img
+        src={src}
+        alt={`Img ${idx}`}
+        style={{
+          viewTransitionName: isTransitioning
+            ? "image-expand"
+            : "",
+        }}
+      />
+    </>
+  )}
+</NavLink>
+```
+
+<docs-warning>
+Please note that this API is marked unstable and may be subject to breaking changes without a major release.
+</docs-warning>
+
+### `<Link>` props
+
+All other props of [`<Link>`][link_component] are supported.
+
+[link_component]: ./link
+[aria_current]: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-current
+[view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API

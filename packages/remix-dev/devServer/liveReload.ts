@@ -1,6 +1,6 @@
 import exitHook from "exit-hook";
 import fse from "fs-extra";
-import path from "path";
+import path from "node:path";
 import prettyMs from "pretty-ms";
 import WebSocket from "ws";
 
@@ -19,9 +19,12 @@ let clean = (config: RemixConfig) => {
   }
 };
 
-export async function liveReload(config: RemixConfig) {
+export async function liveReload(
+  config: RemixConfig,
+  options: { port: number; mode: string }
+) {
   clean(config);
-  let wss = new WebSocket.Server({ port: config.devServerPort });
+  let wss = new WebSocket.Server({ port: options.port });
   function broadcast(event: { type: string } & Record<string, unknown>) {
     setTimeout(() => {
       wss.clients.forEach((client) => {
@@ -29,7 +32,7 @@ export async function liveReload(config: RemixConfig) {
           client.send(JSON.stringify(event));
         }
       });
-    }, config.devServerBroadcastDelay);
+    }, 500);
   }
 
   function log(message: string) {
@@ -45,7 +48,7 @@ export async function liveReload(config: RemixConfig) {
     {
       config,
       options: {
-        mode: "development",
+        mode: options.mode,
         sourcemap: true,
       },
       fileWatchCache,

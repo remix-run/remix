@@ -2,7 +2,6 @@ import type {
   UNSAFE_DeferredData as DeferredData,
   ErrorResponse,
   StaticHandler,
-  StaticHandlerContext,
 } from "@remix-run/router";
 import {
   UNSAFE_DEFERRED_SYMBOL as DEFERRED_SYMBOL,
@@ -13,7 +12,7 @@ import {
 } from "@remix-run/router";
 
 import type { AppLoadContext } from "./data";
-import type { ServerBuild } from "./build";
+import type { HandleErrorFunction, ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryRouteModules } from "./entry";
 import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
@@ -21,7 +20,7 @@ import { getDocumentHeadersRR } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import { matchServerRoutes } from "./routeMatching";
-import type { ServerRouteManifest } from "./routes";
+import type { ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
@@ -32,18 +31,21 @@ import { createServerHandoffString } from "./serverHandoff";
 
 export type RequestHandler = (
   request: Request,
-  loadContext?: AppLoadContext
+  loadContext?: AppLoadContext,
+  args?: {
+    /**
+     * @private This is an internal API intended for use by the Remix Vite plugin in dev mode
+     */
+    __criticalCss?: string;
+  }
 ) => Promise<Response>;
 
 export type CreateRequestHandlerFunction = (
-  build: ServerBuild,
+  build: ServerBuild | (() => Promise<ServerBuild>),
   mode?: string
 ) => RequestHandler;
 
-export const createRequestHandler: CreateRequestHandlerFunction = (
-  build,
-  mode
-) => {
+function derive(build: ServerBuild, mode?: string) {
   let routes = createRoutes(build.routes);
   let dataRoutes = createStaticHandlerDataRoutes(build.routes, build.future);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
@@ -53,11 +55,51 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     build.entry.module.handleError ||
     ((error, { request }) => {
       if (serverMode !== ServerMode.Test && !request.signal.aborted) {
-        console.error(error);
+        console.error(
+          // @ts-expect-error This is "private" from users but intended for internal use
+          isRouteErrorResponse(error) && error.error ? error.error : error
+        );
       }
     });
+  return {
+    routes,
+    dataRoutes,
+    serverMode,
+    staticHandler,
+    errorHandler,
+  };
+}
 
-  return async function requestHandler(request, loadContext = {}) {
+export const createRequestHandler: CreateRequestHandlerFunction = (
+  build,
+  mode
+) => {
+  let _build: ServerBuild;
+  let routes: ServerRoute[];
+  let serverMode: ServerMode;
+  let staticHandler: StaticHandler;
+  let errorHandler: HandleErrorFunction;
+
+  return async function requestHandler(
+    request,
+    loadContext = {},
+    { __criticalCss: criticalCss } = {}
+  ) {
+    _build = typeof build === "function" ? await build() : build;
+    if (typeof build === "function") {
+      let derived = derive(_build, mode);
+      routes = derived.routes;
+      serverMode = derived.serverMode;
+      staticHandler = derived.staticHandler;
+      errorHandler = derived.errorHandler;
+    } else if (!routes || !serverMode || !staticHandler || !errorHandler) {
+      let derived = derive(_build, mode);
+      routes = derived.routes;
+      serverMode = derived.serverMode;
+      staticHandler = derived.staticHandler;
+      errorHandler = derived.errorHandler;
+    }
+
     let url = new URL(request.url);
 
     let matches = matchServerRoutes(routes, url.pathname);
@@ -81,8 +123,8 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         handleError
       );
 
-      if (build.entry.module.handleDataRequest) {
-        response = await build.entry.module.handleDataRequest(response, {
+      if (_build.entry.module.handleDataRequest) {
+        response = await _build.entry.module.handleDataRequest(response, {
           context: loadContext,
           params: matches?.find((m) => m.route.id == routeId)?.params || {},
           request,
@@ -90,7 +132,8 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       }
     } else if (
       matches &&
-      matches[matches.length - 1].route.module.default == null
+      matches[matches.length - 1].route.module.default == null &&
+      matches[matches.length - 1].route.module.ErrorBoundary == null
     ) {
       response = await handleResourceRequestRR(
         serverMode,
@@ -103,11 +146,12 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     } else {
       response = await handleDocumentRequestRR(
         serverMode,
-        build,
+        _build,
         staticHandler,
         request,
         loadContext,
-        handleError
+        handleError,
+        criticalCss
       );
     }
 
@@ -183,8 +227,8 @@ async function handleDataRequestRR(
     }
 
     if (isRouteErrorResponse(error)) {
-      if (error.error) {
-        handleError(error.error);
+      if (error) {
+        handleError(error);
       }
       return errorResponseToJson(error, serverMode);
     }
@@ -201,62 +245,14 @@ async function handleDataRequestRR(
   }
 }
 
-function findParentBoundary(
-  routes: ServerRouteManifest,
-  routeId: string,
-  error: any
-): string {
-  // Fall back to the root route if we don't match any routes, since Remix
-  // has default error/catch boundary handling.  This handles the case where
-  // react-router doesn't have a matching "root" route to assign the error to
-  // so it returns context.errors = { __shim-error-route__: ErrorResponse }
-  let route = routes[routeId] || routes["root"];
-  // Router-thrown ErrorResponses will have the error instance.  User-thrown
-  // Responses will not have an error. The one exception here is internal 404s
-  // which we handle the same as user-thrown 404s
-  let isCatch =
-    isRouteErrorResponse(error) && (!error.error || error.status === 404);
-  if (
-    (isCatch && route.module.CatchBoundary) ||
-    (!isCatch && route.module.ErrorBoundary) ||
-    !route.parentId
-  ) {
-    return route.id;
-  }
-
-  return findParentBoundary(routes, route.parentId, error);
-}
-
-// Re-generate a remix-friendly context.errors structure.  The Router only
-// handles generic errors and does not distinguish error versus catch.  We
-// may have a thrown response tagged to a route that only exports an
-// ErrorBoundary or vice versa.  So we adjust here and ensure that
-// data-loading errors are properly associated with routes that have the right
-// type of boundaries.
-export function differentiateCatchVersusErrorBoundaries(
-  build: ServerBuild,
-  context: StaticHandlerContext
-) {
-  if (!context.errors) {
-    return;
-  }
-
-  let errors: Record<string, any> = {};
-  for (let routeId of Object.keys(context.errors)) {
-    let error = context.errors[routeId];
-    let handlingRouteId = findParentBoundary(build.routes, routeId, error);
-    errors[handlingRouteId] = error;
-  }
-  context.errors = errors;
-}
-
 async function handleDocumentRequestRR(
   serverMode: ServerMode,
   build: ServerBuild,
   staticHandler: StaticHandler,
   request: Request,
   loadContext: AppLoadContext,
-  handleError: (err: unknown) => void
+  handleError: (err: unknown) => void,
+  criticalCss?: string
 ) {
   let context;
   try {
@@ -275,16 +271,12 @@ async function handleDocumentRequestRR(
   // Sanitize errors outside of development environments
   if (context.errors) {
     Object.values(context.errors).forEach((err) => {
+      // @ts-expect-error This is "private" from users but intended for internal use
       if (!isRouteErrorResponse(err) || err.error) {
         handleError(err);
       }
     });
     context.errors = sanitizeErrors(context.errors, serverMode);
-  }
-
-  // Restructure context.errors to the right Catch/Error Boundary
-  if (build.future.v2_errorBoundary !== true) {
-    differentiateCatchVersusErrorBoundaries(build, context);
   }
 
   let headers = getDocumentHeadersRR(build, context);
@@ -293,8 +285,10 @@ async function handleDocumentRequestRR(
     manifest: build.assets,
     routeModules: createEntryRouteModules(build.routes),
     staticHandlerContext: context,
+    criticalCss,
     serverHandoffString: createServerHandoffString({
       url: context.location.pathname,
+      criticalCss,
       state: {
         loaderData: context.loaderData,
         actionData: context.actionData,
@@ -328,11 +322,6 @@ async function handleDocumentRequestRR(
     // Sanitize errors outside of development environments
     if (context.errors) {
       context.errors = sanitizeErrors(context.errors, serverMode);
-    }
-
-    // Restructure context.errors to the right Catch/Error Boundary
-    if (build.future.v2_errorBoundary !== true) {
-      differentiateCatchVersusErrorBoundaries(build, context);
     }
 
     // Update entryContext for the second render pass
@@ -396,8 +385,8 @@ async function handleResourceRequestRR(
     }
 
     if (isRouteErrorResponse(error)) {
-      if (error.error) {
-        handleError(error.error);
+      if (error) {
+        handleError(error);
       }
       return errorResponseToJson(error, serverMode);
     }
@@ -413,6 +402,7 @@ function errorResponseToJson(
 ): Response {
   return routerJson(
     serializeError(
+      // @ts-expect-error This is "private" from users but intended for internal use
       errorResponse.error || new Error("Unexpected Server Error"),
       serverMode
     ),

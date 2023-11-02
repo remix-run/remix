@@ -1,20 +1,5 @@
 import type { Router as RemixRouter } from "@remix-run/router";
-import { ErrorResponse } from "@remix-run/router";
-
-import type { AppData } from "./data";
-
-/**
- * @deprecated in favor of the `ErrorResponse` class in React Router.  Please
- * enable the `future.v2_errorBoundary` flag to ease your migration to Remix v2.
- */
-export interface ThrownResponse<
-  Status extends number = number,
-  Data = AppData
-> {
-  status: Status;
-  statusText: string;
-  data: Data;
-}
+import { UNSAFE_ErrorResponseImpl as ErrorResponseImpl } from "@remix-run/router";
 
 export function deserializeErrors(
   errors: RemixRouter["state"]["errors"]
@@ -26,7 +11,7 @@ export function deserializeErrors(
     // Hey you!  If you change this, please change the corresponding logic in
     // serializeErrors in remix-server-runtime/errors.ts :)
     if (val && val.__type === "RouteErrorResponse") {
-      serialized[key] = new ErrorResponse(
+      serialized[key] = new ErrorResponseImpl(
         val.status,
         val.statusText,
         val.data,

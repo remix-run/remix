@@ -30,10 +30,10 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in a `*.server.ts` file and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
-```tsx filename=app/routes/index.tsx lines=[8,12-13,19-20,24]
+```tsx filename=app/routes/_index.tsx lines=[12,17-19,26-28,37]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
@@ -44,14 +44,18 @@ import {
 
 import { userPrefs } from "~/cookies.server";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
   return json({ showBanner: cookie.showBanner });
 }
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
@@ -141,7 +145,9 @@ export const cookie = createCookie("user-prefs", {
 ```tsx filename=app/routes/route.tsx
 import { cookie } from "~/cookies.server";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const oldCookie = request.headers.get("Cookie");
   // oldCookie may have been signed with "olds3cret", but still parses ok
   const value = await cookie.parse(oldCookie);

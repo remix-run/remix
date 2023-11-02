@@ -7,30 +7,15 @@ import type { RouteModules, EntryRouteModule } from "./routeModules";
 export interface EntryContext {
   manifest: AssetsManifest;
   routeModules: RouteModules<EntryRouteModule>;
+  criticalCss?: string;
   serverHandoffString?: string;
   staticHandlerContext: StaticHandlerContext;
   future: FutureConfig;
   serializeError(error: Error): SerializedError;
 }
 
-type Dev = {
-  port?: number;
-  appServerPort?: number;
-  remixRequestHandlerPath?: string;
-  rebuildPollIntervalMs?: number;
-};
-
 export interface FutureConfig {
-  v2_dev: boolean | Dev;
-  /** @deprecated Use the `postcss` config option instead */
-  unstable_postcss: boolean;
-  /** @deprecated Use the `tailwind` config option instead */
-  unstable_tailwind: boolean;
-  v2_errorBoundary: boolean;
-  v2_headers: boolean;
-  v2_meta: boolean;
-  v2_normalizeFormMethod: boolean;
-  v2_routeConvention: boolean;
+  v3_fetcherPersist: boolean;
 }
 
 export interface AssetsManifest {

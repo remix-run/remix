@@ -12,10 +12,10 @@ type SerializedError = {
 export interface RemixContextObject {
   manifest: AssetsManifest;
   routeModules: RouteModules;
+  criticalCss?: string;
   serverHandoffString?: string;
   future: FutureConfig;
   abortDelay?: number;
-  dev?: { port: number };
   serializeError?(error: Error): SerializedError;
 }
 
@@ -25,24 +25,8 @@ export interface EntryContext extends RemixContextObject {
   staticHandlerContext: StaticHandlerContext;
 }
 
-type Dev = {
-  port?: number;
-  appServerPort?: number;
-  remixRequestHandlerPath?: string;
-  rebuildPollIntervalMs?: number;
-};
-
 export interface FutureConfig {
-  v2_dev: boolean | Dev;
-  /** @deprecated Use the `postcss` config option instead */
-  unstable_postcss: boolean;
-  /** @deprecated Use the `tailwind` config option instead */
-  unstable_tailwind: boolean;
-  v2_errorBoundary: boolean;
-  v2_headers: boolean;
-  v2_meta: boolean;
-  v2_normalizeFormMethod: boolean;
-  v2_routeConvention: boolean;
+  v3_fetcherPersist: boolean;
 }
 
 export interface AssetsManifest {

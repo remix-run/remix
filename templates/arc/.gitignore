@@ -5,6 +5,7 @@ node_modules
 /server/index.mjs
 /server/index.mjs.map
 /server/metafile.*
+/server/version.txt
 preferences.arc
 sam.json
 sam.yaml

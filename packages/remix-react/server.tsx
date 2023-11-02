@@ -7,10 +7,7 @@ import {
 
 import { RemixContext } from "./components";
 import type { EntryContext } from "./entry";
-import {
-  RemixErrorBoundary,
-  RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
+import { RemixErrorBoundary } from "./errorBoundaries";
 import { createServerRoutes } from "./routes";
 
 export interface RemixServerProps {
@@ -33,7 +30,7 @@ export function RemixServer({
     url = new URL(url);
   }
 
-  let { manifest, routeModules, serverHandoffString } = context;
+  let { manifest, routeModules, criticalCss, serverHandoffString } = context;
   let routes = createServerRoutes(
     manifest.routes,
     routeModules,
@@ -46,16 +43,14 @@ export function RemixServer({
       value={{
         manifest,
         routeModules,
+        criticalCss,
         serverHandoffString,
         future: context.future,
         serializeError: context.serializeError,
         abortDelay,
       }}
     >
-      <RemixErrorBoundary
-        location={router.state.location}
-        component={RemixRootDefaultErrorBoundary}
-      >
+      <RemixErrorBoundary location={router.state.location}>
         <StaticRouterProvider
           router={router}
           context={context.staticHandlerContext}

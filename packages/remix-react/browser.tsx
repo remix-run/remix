@@ -5,10 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
-import {
-  RemixErrorBoundary,
-  RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
+import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
 import {
@@ -21,6 +18,7 @@ declare global {
   var __remixContext: {
     url: string;
     state: HydrationState;
+    criticalCss?: string;
     future: FutureConfig;
     // The number of active deferred keys rendered on the server
     a?: number;
@@ -29,9 +27,11 @@ declare global {
       hmrRuntime?: string;
     };
   };
+  var __remixRouter: Router;
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
   var __remixRevalidation: number | undefined;
+  var __remixClearCriticalCss: () => void;
   var $RefreshRuntime$: {
     performReactRefresh: () => void;
   };
@@ -61,6 +61,10 @@ let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
   // in the console. The promise is never rejected.
   return undefined;
 });
+
+type CriticalCssReducer = () => typeof window.__remixContext.criticalCss;
+// The critical CSS can only be cleared, so the reducer always returns undefined
+let criticalCssReducer: CriticalCssReducer = () => undefined;
 
 if (import.meta && import.meta.hot) {
   import.meta.hot.accept(
@@ -120,10 +124,6 @@ if (import.meta && import.meta.hot) {
                       ? window.__remixRouteModules[id]?.default ??
                         imported.default
                       : imported.default,
-                    CatchBoundary: imported.CatchBoundary
-                      ? window.__remixRouteModules[id]?.CatchBoundary ??
-                        imported.CatchBoundary
-                      : imported.CatchBoundary,
                     ErrorBoundary: imported.ErrorBoundary
                       ? window.__remixRouteModules[id]?.ErrorBoundary ??
                         imported.ErrorBoundary
@@ -176,6 +176,26 @@ if (import.meta && import.meta.hot) {
  */
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
+    // Hard reload if the path we tried to load is not the current path.
+    // This is usually the result of 2 rapid back/forward clicks from an
+    // external site into a Remix app, where we initially start the load for
+    // one URL and while the JS chunks are loading a second forward click moves
+    // us to a new URL.  Avoid comparing search params because of CDNs which
+    // can be configured to ignore certain params and only pathname is relevant
+    // towards determining the route matches.
+    let initialPathname = window.__remixContext.url;
+    let hydratedPathname = window.location.pathname;
+    if (initialPathname !== hydratedPathname) {
+      let errorMsg =
+        `Initial URL (${initialPathname}) does not match URL at time of hydration ` +
+        `(${hydratedPathname}), reloading page...`;
+      console.error(errorMsg);
+      window.location.reload();
+      // Get out of here so the reload can happen - don't create the router
+      // since it'll then kick off unnecessary route.lazy() loads
+      return <></>;
+    }
+
     let routes = createClientRoutes(
       window.__remixManifest.routes,
       window.__remixRouteModules,
@@ -193,32 +213,13 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     router = createBrowserRouter(routes, {
       hydrationData,
       future: {
-        // Pass through the Remix future flag to avoid a v1 breaking change in
-        // useNavigation() - users can control the casing via the flag in v1.
-        // useFetcher still always uppercases in the back-compat layer in v1.
-        // In v2 we can just always pass true here and remove the back-compat
-        // layer
-        v7_normalizeFormMethod:
-          window.__remixContext.future.v2_normalizeFormMethod,
+        v7_normalizeFormMethod: true,
+        v7_fetcherPersist: window.__remixContext.future.v3_fetcherPersist,
       },
     });
-
-    // Hard reload if the path we tried to load is not the current path.
-    // This is usually the result of 2 rapid back/forward clicks from an
-    // external site into a Remix app, where we initially start the load for
-    // one URL and while the JS chunks are loading a second forward click moves
-    // us to a new URL.  Avoid comparing search params because of CDNs which
-    // can be configured to ignore certain params and only pathname is relevant
-    // towards determining the route matches.
-    let initialPathname = window.__remixContext.url;
-    let hydratedPathname = window.location.pathname;
-    if (initialPathname !== hydratedPathname) {
-      let errorMsg =
-        `Initial URL (${initialPathname}) does not match URL at time of hydration ` +
-        `(${hydratedPathname}), reloading page...`;
-      console.error(errorMsg);
-      window.location.reload();
-    }
+    // @ts-ignore
+    router.createRoutesForHMR = createClientRoutesWithHMRRevalidationOptOut;
+    window.__remixRouter = router;
 
     // Notify that the router is ready for HMR
     if (hmrRouterReadyResolve) {
@@ -226,8 +227,22 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     }
   }
 
+  // Critical CSS can become stale after code changes, e.g. styles might be
+  // removed from a component, but the styles will still be present in the
+  // server HTML. This allows our HMR logic to clear the critical CSS state.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  let [criticalCss, clearCriticalCss] = React.useReducer(
+    criticalCssReducer,
+    window.__remixContext.criticalCss
+  );
+  window.__remixClearCriticalCss = clearCriticalCss;
+
+  // This is due to the shit circuit return above which is an exceptional
+  // scenario which we can't hydrate anyway
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   let [location, setLocation] = React.useState(router.state.location);
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useLayoutEffect(() => {
     return router.subscribe((newState) => {
       if (newState.location !== location) {
@@ -246,12 +261,10 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         manifest: window.__remixManifest,
         routeModules: window.__remixRouteModules,
         future: window.__remixContext.future,
+        criticalCss,
       }}
     >
-      <RemixErrorBoundary
-        location={location}
-        component={RemixRootDefaultErrorBoundary}
-      >
+      <RemixErrorBoundary location={location}>
         <RouterProvider
           router={router}
           fallbackElement={null}

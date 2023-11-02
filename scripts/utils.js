@@ -1,21 +1,14 @@
-const fsp = require("fs").promises;
+const fsp = require("node:fs").promises;
 const chalk = require("chalk");
-const path = require("path");
-const { execSync } = require("child_process");
+const path = require("node:path");
+const { execSync } = require("node:child_process");
 const jsonfile = require("jsonfile");
 const Confirm = require("prompt-confirm");
 
 let rootDir = path.resolve(__dirname, "..");
 
 let remixPackages = {
-  adapters: [
-    "architect",
-    "cloudflare-pages",
-    "cloudflare-workers",
-    "express",
-    "netlify",
-    "vercel",
-  ],
+  adapters: ["architect", "cloudflare-pages", "cloudflare-workers", "express"],
   runtimes: ["cloudflare", "deno", "node"],
   core: [
     "dev",

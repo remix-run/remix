@@ -18,12 +18,12 @@ jobs:
 
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.FORMAT_PAT }}
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
@@ -41,6 +41,6 @@ jobs:
             echo "💿 no deduplication needed"
             exit 0
           fi
-          git commit -m "chore: deduplicate `yarn.lock`"
+          git commit -m "chore: deduplicate yarn.lock"
           git push
           echo "💿 https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
