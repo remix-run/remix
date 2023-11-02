@@ -86,6 +86,22 @@ dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
 The URL prefix of the browser build with a trailing slash. Defaults to
 `"/build/"`. This is the path the browser will use to find assets.
 
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  publicPath: "/assets/",
+};
+```
+
+If you wish to serve static assets from a separate domain you may also specify an absolute path:
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  publicPath: "https://static.example.com/assets/",
+};
+```
+
 ## postcss
 
 Whether to process CSS using [PostCSS][postcss] if a PostCSS config file is present. Defaults to `true`.
