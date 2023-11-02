@@ -77,25 +77,7 @@ test.describe("Vite dev", () => {
             );
           }
         `,
-        "app/routes/view-cookie.tsx": js`
-          import { useState, useEffect } from "react";
-          import { json } from "@remix-run/node";
-          import { useLoaderData } from "@remix-run/react"
-
-          export const loader = ({ request }: LoaderFunctionArgs) => json({cookies: request.headers.get("Cookie")});
-
-          export default function IndexRoute() {
-            const { cookies } = useLoaderData<typeof loader>();
-
-            return (
-              <div id="view-cookie">
-                <h2 data-title>View Cookie</h2>
-                <p data-cookie>{cookies}</p>
-              </div>
-            );
-          }
-        `,
-        "app/routes/set-cookie.tsx": js`
+        "app/routes/set-cookies.tsx": js`
           import { LoaderFunction } from "@remix-run/node";
 
           export const loader: LoaderFunction = () => {
@@ -103,15 +85,20 @@ test.describe("Vite dev", () => {
           
             headers.append(
               "Set-Cookie",
-              "foo=bar; Domain=localhost; Path=/; SameSite=Lax"
+              "first=one; Domain=localhost; Path=/; SameSite=Lax"
             );
 
             headers.append(
               "Set-Cookie",
-              "hello=world; Domain=localhost; Path=/; SameSite=Lax"
+              "second=two; Domain=localhost; Path=/; SameSite=Lax"
             );
 
-            headers.set("location", "http://localhost:${devPort}/view-cookie");
+            headers.append(
+              "Set-Cookie",
+              "third=three; Domain=localhost; Path=/; SameSite=Lax"
+            );
+
+            headers.set("location", "http://localhost:${devPort}/get-cookies");
           
             const response = new Response(null, {
               headers,
@@ -120,6 +107,23 @@ test.describe("Vite dev", () => {
           
             return response;
           };
+        `,
+        "app/routes/get-cookies.tsx": js`
+          import { json, LoaderFunctionArgs } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react"
+
+          export const loader = ({ request }: LoaderFunctionArgs) => json({cookies: request.headers.get("Cookie")});
+
+          export default function IndexRoute() {
+            const { cookies } = useLoaderData<typeof loader>();
+
+            return (
+              <div id="get-cookies">
+                <h2 data-title>Get Cookies</h2>
+                <p data-cookies>{cookies}</p>
+              </div>
+            );
+          }
         `,
       },
     });
@@ -187,16 +191,15 @@ test.describe("Vite dev", () => {
   });
 
   test("handles multiple set-cookie headers", async ({ page }) => {
-    // setup: initial render
-    await page.goto(`http://localhost:${devPort}/set-cookie`, {
+    await page.goto(`http://localhost:${devPort}/set-cookies`, {
       waitUntil: "networkidle",
     });
-    await expect(page.locator("#view-cookie [data-title]")).toHaveText(
-      "View Cookie"
-    );
 
-    await expect(page.locator("#view-cookie [data-cookie]")).toHaveText(
-      "foo=bar; hello=world"
+    // Ensure we redirected
+    expect(new URL(page.url()).pathname).toBe("/get-cookies");
+
+    await expect(page.locator("#get-cookies [data-cookies]")).toHaveText(
+      "first=one; second=two; third=three"
     );
   });
 });
