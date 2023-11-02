@@ -209,9 +209,14 @@ test.describe("Vite dev", () => {
   });
 
   test("handles multiple set-cookie headers", async ({ page }) => {
+    let pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
     await page.goto(`http://localhost:${devPort}/set-cookies`, {
       waitUntil: "networkidle",
     });
+
+    expect(pageErrors).toEqual([]);
 
     // Ensure we redirected
     expect(new URL(page.url()).pathname).toBe("/get-cookies");
