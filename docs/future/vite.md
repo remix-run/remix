@@ -293,6 +293,34 @@ export default defineConfig({
 });
 ```
 
+#### Configure environment variables
+
+Vite provides its [own mechanism](https://vitejs.dev/guide/env-and-mode.html#env-files) for exposing environment variables through [`import.meta.env`](https://vitejs.dev/guide/env-and-mode.html#env-files). You can either convert your existing environment variables to add a `VITE_` prefix and use the `import.meta.env` API, or you can use the [`vite-plugin-environment`](https://github.com/ElMassimo/vite-plugin-environment) plugin to keep using `process.env`:
+
+👉 **Install `vite-plugin-environment`**
+
+```shellscript nonumber
+npm install -D vite-plugin-environment
+```
+
+👉 **Add `vite-plugin-environment` to your Vite config**
+
+```ts filename=vite.config.ts
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+import environmentPlugin from "vite-plugin-environment";
+
+export default defineConfig({
+  plugins: [
+    remix(),
+    environmentPlugin([
+      'SESSION_SECRET',
+      // Other environment variables...
+    ])
+  ],
+});
+```
+
 #### Optionally remove `@remix-run/css-bundle`
 
 Vite has built-in support for CSS side-effect imports, PostCSS and CSS Modules, among other CSS bundling features.
