@@ -284,9 +284,9 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load-balanced scenarios.
 
-However, cookie-based sessions may not exceed the browser's cookie size limit, typically 1024 bytes per cookie value (and 4 KB total for all cookies).
+However, cookie-based sessions may not exceed browser cookie size limits of 4k bytes. If your cookie size exceeds this limit, `commitSession()` will throw an error.
 
-The other downside is that you need to update the `Set-Cookie` header in every loader and action that modifies the session. With other strategies you only need to set the session cookie once, because it doesn't actually store any session data, just the key to find it elsewhere.
+The other downside is that you need to update the `Set-Cookie` header in every loader and action that modifies the session (this includes reading a flashed session value). With other strategies you only need to set the session cookie once, because it doesn't actually store any session data, just the key to find it elsewhere.
 
 ```ts
 import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
@@ -332,7 +332,7 @@ export { getSession, commitSession, destroySession };
 
 For file-backed sessions, use `createFileSessionStorage()`. File session storage requires a file system, but this should be readily available on most cloud providers that run express, maybe with some extra configuration.
 
-The advantage of file-backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a regular file on disk, ideal for sessions with more than 1024 bytes of data.
+The advantage of file-backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a regular file on disk, ideal for sessions with more than 4k bytes of data.
 
 <docs-info>If you are deploying to a serverless function, ensure you have access to a persistent file system. They usually don't have one without extra configuration.</docs-info>
 
