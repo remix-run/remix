@@ -136,10 +136,10 @@ test.describe("Vite dev", () => {
             );
           }
         `,
-        "app/routes/non-ts.jsx": js`
-          export default function Page() {
+        "app/routes/jsx.jsx": js`
+          export default function JsxRoute() {
             return (
-              <div id="non-ts">
+              <div id="jsx">
                 <p data-hmr>HMR updated: no</p>
               </div>
             );
@@ -238,31 +238,32 @@ test.describe("Vite dev", () => {
     );
   });
 
-  test("handle non-typescript jsx file", async ({ page }) => {
+  test("handles JSX in .jsx file without React import", async ({ page }) => {
     let pageErrors: unknown[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
 
-    await page.goto(`http://localhost:${devPort}/non-ts`, {
+    await page.goto(`http://localhost:${devPort}/jsx`, {
       waitUntil: "networkidle",
     });
     expect(pageErrors).toEqual([]);
 
-    let hmrStatus = page.locator("#non-ts [data-hmr]");
+    let hmrStatus = page.locator("#jsx [data-hmr]");
     await expect(hmrStatus).toHaveText("HMR updated: no");
 
     let indexRouteContents = await fs.readFile(
-      path.join(projectDir, "app/routes/non-ts.jsx"),
+      path.join(projectDir, "app/routes/jsx.jsx"),
       "utf8"
     );
     await fs.writeFile(
-      path.join(projectDir, "app/routes/non-ts.jsx"),
+      path.join(projectDir, "app/routes/jsx.jsx"),
       indexRouteContents.replace("HMR updated: no", "HMR updated: yes"),
       "utf8"
     );
     await page.waitForLoadState("networkidle");
     await expect(hmrStatus).toHaveText("HMR updated: yes");
+
     expect(pageErrors).toEqual([]);
-  })
+  });
 });
 
 let bufferize = (stream: Readable): (() => string) => {

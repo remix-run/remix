@@ -432,9 +432,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               "react-dom/client",
             ],
           },
-          // for server module, JSX transpilation is done by vite's esbuild
           esbuild: {
-            jsx: 'automatic',
+            jsx: "automatic",
+            jsxDev: viteCommand !== "build",
           },
           resolve: {
             // https://react.dev/warnings/invalid-hook-call-warning#duplicate-react
