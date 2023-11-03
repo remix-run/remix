@@ -34,9 +34,6 @@ test.describe("Vite dev", () => {
               strictPort: true,
             },
             plugins: [remix()],
-            esbuild: {
-              jsx: "automatic",
-            }
           });
         `,
         "app/root.tsx": js`
