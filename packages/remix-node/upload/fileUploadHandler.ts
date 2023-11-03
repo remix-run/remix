@@ -150,22 +150,14 @@ export function createFileUploadHandler({
       }
     }
 
-    // TODO: remove this typecast once TS fixed File class regression
-    //  https://github.com/microsoft/TypeScript/issues/52166
-    return new NodeOnDiskFile(filepath, contentType) as unknown as File;
+    return new NodeOnDiskFile(filepath, contentType);
   };
 }
 
-// TODO: remove this `Omit` usage once TS fixed File class regression
-//  https://github.com/microsoft/TypeScript/issues/52166
-export class NodeOnDiskFile implements Omit<File, "constructor"> {
+export class NodeOnDiskFile implements File {
   name: string;
   lastModified: number = 0;
   webkitRelativePath: string = "";
-
-  // TODO: remove this property once TS fixed File class regression
-  //  https://github.com/microsoft/TypeScript/issues/52166
-  prototype = File.prototype;
 
   constructor(
     private filepath: string,
@@ -201,9 +193,7 @@ export class NodeOnDiskFile implements Omit<File, "constructor"> {
         start,
         end,
       }
-      // TODO: remove this typecast once TS fixed File class regression
-      //  https://github.com/microsoft/TypeScript/issues/52166
-    ) as unknown as Blob;
+    );
   }
 
   async arrayBuffer(): Promise<ArrayBuffer> {
