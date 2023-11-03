@@ -1182,7 +1182,7 @@ function mergeRefs<T = any>(
 
 // WIP: I'm sure there's a better way to listen for submit complete internally?
 // If this is the only solution, then this will need to also handle state changes
-// returned from `useFetches`
+// returned from `useFetchers`
 const useSubmitCompleteEffect = (callback: () => unknown) => {
   let navigation = useNavigation();
   let ref = React.useRef(navigation.state);
