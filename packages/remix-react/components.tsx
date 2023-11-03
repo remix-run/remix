@@ -368,6 +368,13 @@ function PrefetchPageLinksImpl({
   let location = useLocation();
   let { manifest } = useRemixContext();
   let { matches } = useDataRouterStateContext();
+  let [dataLinksKey, setDataLinksKey] = React.useState<"1" | "2">("1");
+
+  useSubmitCompleteEffect(() =>
+    // We change the key after a form submission to force the browser
+    // to re-prefetch, effectively revalidating the cache.
+    setDataLinksKey((key) => (key === "1" ? "2" : "1"))
+  );
 
   let newMatchesForData = React.useMemo(
     () =>
@@ -411,9 +418,18 @@ function PrefetchPageLinksImpl({
 
   return (
     <>
-      {dataHrefs.map((href) => (
-        <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
-      ))}
+      <React.Fragment key={dataLinksKey}>
+        {dataHrefs.map((href) => (
+          <link
+            data-key={dataLinksKey}
+            key={href}
+            rel="prefetch"
+            as="fetch"
+            href={href}
+            {...linkProps}
+          />
+        ))}
+      </React.Fragment>
       {moduleHrefs.map((href) => (
         <link key={href} rel="modulepreload" href={href} {...linkProps} />
       ))}
@@ -1163,3 +1179,17 @@ function mergeRefs<T = any>(
     });
   };
 }
+
+// WIP: I'm sure there's a better way to listen for submit complete internally?
+// If this is the only solution, then this will need to also handle state changes
+// returned from `useFetches`
+const useSubmitCompleteEffect = (callback: () => unknown) => {
+  let navigation = useNavigation();
+  let ref = React.useRef(navigation.state);
+  React.useEffect(() => {
+    if (ref.current === "submitting" && navigation.state !== "submitting") {
+      callback();
+    }
+    ref.current = navigation.state;
+  });
+};
