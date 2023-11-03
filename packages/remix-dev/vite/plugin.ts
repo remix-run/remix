@@ -462,6 +462,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                     },
                   }
                 : {
+                    // unstable option? https://github.com/vitejs/vite/discussions/13808
+                    ssrEmitAssets: true,
                     outDir: path.dirname(pluginConfig.serverBuildPath),
                     rollupOptions: {
                       ...viteUserConfig.build?.rollupOptions,
@@ -478,6 +480,28 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             },
           }),
         };
+      },
+      // after ssr asset generation, move them to client assets directory
+      // https://rollupjs.org/plugin-development/#writebundle
+      // we could intercept during `generateBundle` and write files directly
+      // but that would lose file name/size logging by rollup
+      // https://rollupjs.org/plugin-development/#generatebundle
+      writeBundle: {
+        async handler(options, bundle) {
+          if (!ssrBuildContext.isSsrBuild) {
+            return;
+          }
+          let pluginConfig = await resolvePluginConfig();
+          for (const entry of Object.values(bundle)) {
+            if (entry.type === "asset") {
+              // TODO: when is "dir" undefined?
+              await fs.rename(
+                path.join(options.dir!, entry.fileName),
+                path.join(pluginConfig.assetsBuildDirectory, entry.fileName)
+              );
+            }
+          }
+        },
       },
       async configResolved(viteConfig) {
         await initEsModuleLexer;
