@@ -29,6 +29,10 @@ test.describe("Vite build", () => {
 
           export default defineConfig({
             plugins: [remix()],
+            build: {
+              // force emitting asset files instead of inline as data-url
+              assetsInlineLimit: 0,
+            }
           });
         `,
         "app/root.tsx": js`
@@ -99,6 +103,29 @@ test.describe("Vite build", () => {
           export const serverOnly1 = "SERVER_ONLY_1"
           export const serverOnly2 = "SERVER_ONLY_2"
         `,
+
+        "app/routes/ssr-assets.tsx": js`
+          import url1 from "../assets/test1.txt?url";
+          import url2 from "../assets/test2.txt?url";
+          import { useLoaderData } from "@remix-run/react"
+
+          export const loader: LoaderFunction = () => {
+            return { url2 };
+          };
+
+          export default function SsrAssetRoute() {
+            const loaderData = useLoaderData();
+            return (
+              <div>
+                <a href={url1}>url1</a>
+                <a href={loaderData.url2}>url2</a>
+              </div>
+            );
+          }
+        `,
+
+        "app/assets/test1.txt": "test1",
+        "app/assets/test2.txt": "test2",
       },
     });
 
@@ -145,5 +172,20 @@ test.describe("Vite build", () => {
     expect(await page.locator("#content h3[data-mounted]").textContent()).toBe(
       "Mounted"
     );
+  });
+
+  test("emit ssr assets", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/ssr-assets");
+
+    // verify asset files are emitted and served correctly
+    await page.getByRole('link', { name: 'url1' }).click();
+    await page.waitForURL("**/build/assets/test1-1b4f0e98.txt");
+    await page.getByText('test1').click();
+    await page.goBack();
+
+    await page.getByRole('link', { name: 'url2' }).click();
+    await page.waitForURL("**/build/assets/test2-60303ae2.txt");
+    await page.getByText('test2').click();
   });
 });
