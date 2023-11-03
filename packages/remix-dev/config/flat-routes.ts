@@ -302,6 +302,8 @@ export function flatRoutesUniversal(
     }
   }
 
+  console.log("routeIds in the manifest", Object.keys(routeManifest));
+
   // Return a manifest with keys added in file order to match the build
   routeManifest = Object.entries(routeManifest)
     .sort((a, b) => {

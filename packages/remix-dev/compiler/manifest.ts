@@ -107,7 +107,7 @@ export async function create({
   // At this point, `routes` is sorted by the esbuild metafile order, so put
   // them back in our config.routes order.
   // TODO: Optimize away the findIndex() calls
-  console.log("routes", Object.keys(routes));
+  console.log("manifest routes (from metafile outputs)", Object.keys(routes));
   routes = Object.keys(routes)
     .sort((a, b) => {
       let aIdx = Object.keys(config.routes).findIndex((r) => r === a);
@@ -116,7 +116,10 @@ export async function create({
     })
     .reduce((acc, id) => Object.assign(acc, { [id]: routes[id] }), {});
 
-  console.log("sorted routes", Object.keys(routes));
+  console.log(
+    "sorted manifest routes (from metafile outputs)",
+    Object.keys(routes)
+  );
 
   invariant(entry, `Missing output for entry point`);
 
