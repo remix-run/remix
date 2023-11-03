@@ -47,9 +47,11 @@ export type CreateRequestHandlerFunction = (
 
 function derive(build: ServerBuild, mode?: string) {
   console.log("Build.routes:");
-  Object.entries(build.routes).forEach((e) => console.log("  ", e[0], e[1].id));
+  Object.entries(build.routes || {}).forEach((e) =>
+    console.log("  ", e[0], e[1].id)
+  );
   console.log("Build.assets:");
-  Object.entries(build.assets.routes).forEach((e) =>
+  Object.entries(build.assets?.routes || {}).forEach((e) =>
     console.log("  ", e[0], e[1].id)
   );
   let routes = createRoutes(build.routes);

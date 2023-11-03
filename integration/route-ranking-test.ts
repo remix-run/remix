@@ -28,17 +28,18 @@ async function setup(files: { [key: string]: string }, page: Page) {
   let buildStdio = new PassThrough();
   let buildOutput: string;
 
-  debugger;
   let fixture = await createFixture({
     buildStdio,
     files,
   });
+
   let chunks: Buffer[] = [];
   buildOutput = await new Promise<string>((resolve, reject) => {
     buildStdio.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
     buildStdio.on("error", (err) => reject(err));
     buildStdio.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
   });
+
   let appFixture = await createAppFixture(fixture);
   console.log("buildOutput\n", buildOutput);
   let app = new PlaywrightFixture(appFixture, page);
@@ -97,7 +98,7 @@ test.describe("route ranking", () => {
   });
 
   test("preserves user-ordering from remix.config.js", async ({ page }) => {
-    let { app, buildOutput } = await setup(
+    let { app } = await setup(
       {
         "app/root.tsx": ROOT_FILE_CONTENTS,
         "remix.config.js": js`
