@@ -90,23 +90,59 @@ Remix is now just a Vite plugin, so you'll need to hook it up to Vite.
 
 ```ts filename=vite.config.ts
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
-import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+import { defineConfig, loadEnv } from "vite";
 
-export default defineConfig({
-  plugins: [remix()],
-});
+export default ({ mode }: { mode: string }) => {
+    const env = loadEnv(mode, process.cwd(), "");
+    process.env = { ...process.env, ...env };
+    return defineConfig({
+        plugins: [
+            remix(),
+            tsconfigPaths(),
+        ],
+    });
+};
 ```
 
 The subset of [supported Remix config options][supported-remix-config-options] should be passed directly to the plugin:
 
 ```ts filename=vite.config.ts lines=[3-5]
-export default defineConfig({
-  plugins: [
-    remix({
-      ignoredRouteFiles: ["**/.*"],
-    }),
-  ],
-});
+export default ({ mode }: { mode: string }) => {
+    const env = loadEnv(mode, process.cwd(), "");
+    process.env = { ...process.env, ...env };
+    return defineConfig({
+        plugins: [
+            remix({
+              ignoredRouteFiles: ["**/.*"],
+            }),
+            tsconfigPaths(),
+        ],
+    });
+};
+```
+
+#### CSS Import
+
+If you were importing file like this
+
+```ts
+import stylesheet from "~/styles/app.css";
+
+export const links: LinksFunction = () => [
+    ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
+    { rel: "stylesheet", href: stylesheet },
+];
+```
+
+now you can just do this:
+
+```ts
+import "~/styles/app.css";
+
+export const links: LinksFunction = () => [
+    ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
+];
 ```
 
 #### TypeScript integration
