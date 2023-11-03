@@ -421,7 +421,6 @@ function PrefetchPageLinksImpl({
       <React.Fragment key={dataLinksKey}>
         {dataHrefs.map((href) => (
           <link
-            data-key={dataLinksKey}
             key={href}
             rel="prefetch"
             as="fetch"
