@@ -104,30 +104,23 @@ export async function create({
     }
   }
 
-  // At this point, `routes` is sorted by the esbuild metafile order, so put
-  // them back in our config.routes order.
-  // TODO: Optimize away the findIndex() calls
-  console.log("manifest routes (from metafile outputs)", Object.keys(routes));
-  routes = Object.keys(routes)
-    .sort((a, b) => {
-      let aIdx = Object.keys(config.routes).findIndex((r) => r === a);
-      let bIdx = Object.keys(config.routes).findIndex((r) => r === b);
-      return aIdx < bIdx ? -1 : aIdx > bIdx ? 1 : 0;
-    })
-    .reduce((acc, id) => Object.assign(acc, { [id]: routes[id] }), {});
-
-  console.log(
-    "sorted manifest routes (from metafile outputs)",
-    Object.keys(routes)
+  // At this point, `routes` is sorted by the esbuild metafile order, but we
+  // want them exposed in the order they came in from the config
+  let order: Record<string, number> = Object.keys(config.routes).reduce(
+    (acc, routeId, idx) => Object.assign(acc, { [routeId]: idx }),
+    {}
   );
+  let sortedRoutes = Object.keys(routes)
+    .sort((a, b) => (order[a] < order[b] ? -1 : order[a] > order[b] ? 1 : 0))
+    .reduce((acc, id) => Object.assign(acc, { [id]: routes[id] }), {});
 
   invariant(entry, `Missing output for entry point`);
 
-  optimizeRoutes(routes, entry.imports);
+  optimizeRoutes(sortedRoutes, entry.imports);
 
   let fingerprintedValues = {
     entry,
-    routes,
+    routes: sortedRoutes,
   };
 
   let version = getHash(JSON.stringify(fingerprintedValues)).slice(0, 8);

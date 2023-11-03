@@ -138,8 +138,9 @@ export function flatRoutesUniversal(
 
   // id -> file
   let routeIds = new Map<string, string>();
+  let configRouteOrder = new Map<string, number>();
 
-  for (let file of routes) {
+  for (let [idx, file] of routes.entries()) {
     let normalizedFile = normalizeSlashes(file);
     let routeExt = path.extname(normalizedFile);
     let routeDir = path.dirname(normalizedFile);
@@ -163,18 +164,11 @@ export function flatRoutesUniversal(
     }
 
     routeIds.set(routeId, normalizedFile);
+    configRouteOrder.set(routeId, idx);
   }
 
-  console.log(
-    "routeIds before sorting in flatRoutesUniversal",
-    Array.from(routeIds.keys())
-  );
   let sortedRouteIds = Array.from(routeIds).sort(
     ([a], [b]) => b.length - a.length
-  );
-  console.log(
-    "routeIds after sorting in flatRoutesUniversal (wrong!)",
-    sortedRouteIds.map((e) => e[0])
   );
 
   for (let [routeId, file] of sortedRouteIds) {
@@ -302,29 +296,21 @@ export function flatRoutesUniversal(
     }
   }
 
-  console.log("routeIds in the manifest", Object.keys(routeManifest));
-
-  // Return a manifest with keys added in file order to match the build
-  routeManifest = Object.entries(routeManifest)
+  // At this point, `routeManifest` is ordered by the routeId length above, but
+  // we want them exposed in the order they came in from the config
+  return Object.keys(routeManifest)
     .sort((a, b) => {
-      let aIdx = routes.findIndex((r) => r.endsWith(a[1].file));
-      let bIdx = routes.findIndex((r) => r.endsWith(b[1].file));
+      let aIdx = configRouteOrder.get(a) ?? -1;
+      let bIdx = configRouteOrder.get(b) ?? -1;
       return aIdx < bIdx ? -1 : aIdx > bIdx ? 1 : 0;
     })
     .reduce(
-      (acc, [routeId, routeConfig]) =>
+      (acc, routeId) =>
         Object.assign(acc, {
-          [routeId]: routeConfig,
+          [routeId]: routeManifest[routeId],
         }),
       {}
     );
-
-  console.log(
-    "Fixed routeIds in the final manifest",
-    Object.keys(routeManifest)
-  );
-
-  return routeManifest;
 }
 
 function findRouteModuleForFile(

@@ -617,7 +617,6 @@ export async function resolveConfig(
     }
   }
 
-  console.log("config routes", Object.keys(routes));
   return {
     appDirectory,
     cacheDirectory,
