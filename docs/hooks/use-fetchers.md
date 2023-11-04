@@ -5,7 +5,7 @@ toc: false
 
 # `useFetchers`
 
-Returns an array of all inflight fetchers. This is useful for components throughout the app that didn't create the fetchers but want to use their submissions to participate in optimistic UI.
+Returns an array of all in-flight fetchers. This is useful for components throughout the app that didn't create the fetchers but want to use their submissions to participate in optimistic UI.
 
 ```tsx
 import { useFetchers } from "@remix-run/react";
@@ -30,6 +30,7 @@ The fetchers don't contain [`fetcher.Form`][fetcher_form], [`fetcher.submit`][fe
 **API**
 
 - [`useFetcher`][use_fetcher]
+- [`v3_fetcherPersist`][fetcherpersist]
 
 [fetcher_form]: ./use-fetcher#fetcherform
 [fetcher_submit]: ./use-fetcher#fetchersubmitformdata-options
@@ -39,3 +40,4 @@ The fetchers don't contain [`fetcher.Form`][fetcher_form], [`fetcher.submit`][fe
 [form_vs_fetcher]: ../discussion/form-vs-fetcher
 [pending_optimistic_ui]: ../discussion/pending-ui
 [use_fetcher]: ./use-fetcher
+[fetcherpersist]: ../file-conventions/remix-config#future

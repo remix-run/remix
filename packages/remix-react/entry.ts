@@ -25,7 +25,9 @@ export interface EntryContext extends RemixContextObject {
   staticHandlerContext: StaticHandlerContext;
 }
 
-export interface FutureConfig {}
+export interface FutureConfig {
+  v3_fetcherPersist: boolean;
+}
 
 export interface AssetsManifest {
   entry: {

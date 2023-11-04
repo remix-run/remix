@@ -37,6 +37,7 @@ import { replaceImportSpecifier } from "./replace-import-specifier";
 const supportedRemixConfigKeys = [
   "appDirectory",
   "assetsBuildDirectory",
+  "future",
   "ignoredRouteFiles",
   "publicPath",
   "routes",
@@ -72,6 +73,7 @@ let serverManifestId = VirtualModule.id("server-manifest");
 let browserManifestId = VirtualModule.id("browser-manifest");
 let remixReactProxyId = VirtualModule.id("remix-react-proxy");
 let hmrRuntimeId = VirtualModule.id("hmr-runtime");
+let injectHmrRuntimeId = VirtualModule.id("inject-hmr-runtime");
 
 const normalizePath = (p: string) => {
   let unixPath = p.replace(/[\\/]+/g, "/").replace(/^([a-zA-Z]+:|\.\/)/, "");
@@ -199,10 +201,18 @@ const showUnstableWarning = () => {
   );
 };
 
+const getViteMajor = () => {
+  let vitePkg = require("vite/package.json");
+
+  return parseInt(vitePkg.version.split(".")[0]!);
+};
+
 export type RemixVitePlugin = (
   options?: RemixVitePluginOptions
 ) => VitePlugin[];
 export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
+  let isViteGTEv5 = getViteMajor() >= 5;
+
   let viteCommand: ResolvedViteConfig["command"];
   let viteUserConfig: ViteUserConfig;
 
@@ -245,7 +255,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         serverBuildPath,
         serverModuleFormat,
         relativeAssetsBuildDirectory,
-        future: {},
+        future: {
+          v3_fetcherPersist: options.future?.v3_fetcherPersist === true,
+        },
       };
     };
 
@@ -297,9 +309,14 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
   let createBuildManifest = async (): Promise<Manifest> => {
     let pluginConfig = await resolvePluginConfig();
+
+    let viteManifestPath = isViteGTEv5
+      ? path.join(".vite", "manifest.json")
+      : "manifest.json";
+
     let viteManifest = JSON.parse(
       await fs.readFile(
-        path.resolve(pluginConfig.assetsBuildDirectory, "manifest.json"),
+        path.resolve(pluginConfig.assetsBuildDirectory, viteManifestPath),
         "utf-8"
       )
     ) as ViteManifest;
@@ -415,6 +432,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               "react-dom/client",
             ],
           },
+          esbuild: {
+            jsx: "automatic",
+            jsxDev: viteCommand !== "build",
+          },
           resolve: {
             // https://react.dev/warnings/invalid-hook-call-warning#duplicate-react
             dedupe: ["react", "react-dom"],
@@ -520,6 +541,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         vite.httpServer?.on("listening", () => {
           setTimeout(showUnstableWarning, 50);
         });
+        // Let user servers handle SSR requests in middleware mode
+        if (vite.config.server.middlewareMode) return;
         return () => {
           vite.middlewares.use(async (req, res, next) => {
             try {
@@ -627,20 +650,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         let serverExports = ["loader", "action", "headers"];
 
-        let routeExports = await getRouteModuleExports(
-          viteChildCompiler,
-          pluginConfig,
-          route.file
-        );
-
-        // ignore resource routes that only have server exports
-        // note: resource routes for fullstack components don't need a `default` export
-        // but still need their server exports removed
-        let browserExports = routeExports.filter(
-          (x) => !serverExports.includes(x)
-        );
-        if (browserExports.length === 0) return;
-
         return {
           code: removeExports(code, serverExports),
           map: null,
@@ -661,11 +670,11 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           return;
         }
 
+        let hasLiveReloadHints =
+          code.includes("LiveReload") && code.includes("@remix-run/react");
+
         // Don't transform files that don't need the proxy
-        if (
-          !code.includes("@remix-run/react") &&
-          !code.includes("LiveReload")
-        ) {
+        if (!hasLiveReloadHints) {
           return;
         }
 
@@ -685,19 +694,30 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             'export const LiveReload = process.env.NODE_ENV !== "development" ? () => null : ',
             '() => createElement("script", {',
             ' type: "module",',
-            " suppressHydrationWarning: true,",
-            " dangerouslySetInnerHTML: { __html: `",
-            `   import RefreshRuntime from "${VirtualModule.url(
-              hmrRuntimeId
-            )}"`,
-            "   RefreshRuntime.injectIntoGlobalHook(window)",
-            "   window.$RefreshReg$ = () => {}",
-            "   window.$RefreshSig$ = () => (type) => type",
-            "   window.__vite_plugin_react_preamble_installed__ = true",
-            " `}",
+            " async: true,",
+            ` src: "${VirtualModule.url(injectHmrRuntimeId)}"`,
             "});",
           ].join("\n");
         }
+      },
+    },
+    {
+      name: "remix-inject-hmr-runtime",
+      enforce: "pre",
+      resolveId(id) {
+        if (id === injectHmrRuntimeId)
+          return VirtualModule.resolve(injectHmrRuntimeId);
+      },
+      async load(id) {
+        if (id !== VirtualModule.resolve(injectHmrRuntimeId)) return;
+
+        return [
+          `import RefreshRuntime from "${hmrRuntimeId}"`,
+          "RefreshRuntime.injectIntoGlobalHook(window)",
+          "window.$RefreshReg$ = () => {}",
+          "window.$RefreshSig$ = () => (type) => type",
+          "window.__vite_plugin_react_preamble_installed__ = true",
+        ].join("\n");
       },
     },
     {

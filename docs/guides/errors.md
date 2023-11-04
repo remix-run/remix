@@ -17,7 +17,7 @@ Remix will automatically catch errors and render the nearest error boundary for 
 
 ## Root Error Boundary
 
-If you used one of the starter templates you should already have an [`ErrorBoundary`][error-boundary] in your `app/root.tsx` file. You’ll want to edit that right away because that’s what your users will see whenever an uncaught error is thrown.
+By default, Remix ships with a default `ErrorBoundary` built-in, but we hope you'll want to add a little branding to your own global error boundary. You can do so by exporting your own [`ErrorBoundary`][error-boundary] from `app/root.tsx`. This is what your users will see whenever an uncaught error is thrown.
 
 ```tsx
 export function ErrorBoundary() {

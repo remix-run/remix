@@ -24,9 +24,9 @@ test.beforeAll(async () => {
             hmr: {
               port: ${hmrPort}
             }
-          },
+          },          
           optimizeDeps: {
-            include: ["react", "react-dom/client"],
+            include: ["react", "react-dom/client", "@remix-run/react"],
           },
           plugins: [remix()],
         });
@@ -65,6 +65,7 @@ test.beforeAll(async () => {
             build: vite
               ? () => unstable_loadViteServerBuild(vite)
               : await import("./build/index.js"),
+            getLoadContext: () => ({ value: "context" }),
           })
         );
 
@@ -96,6 +97,8 @@ test.beforeAll(async () => {
       "app/routes/_index.tsx": js`
         // imports
         import { useState, useEffect } from "react";
+
+        export const meta = () => [{ title: "HMR updated title: 0" }]
 
         // loader
 
@@ -140,6 +143,7 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
 
   // setup: browser state
   let hmrStatus = page.locator("#index [data-hmr]");
+  await expect(page).toHaveTitle("HMR updated title: 0");
   await expect(hmrStatus).toHaveText("HMR updated: 0");
   let input = page.locator("#index input");
   await expect(input).toBeVisible();
@@ -147,9 +151,12 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
 
   // route: HMR
   await edit("app/routes/_index.tsx", (contents) =>
-    contents.replace("HMR updated: 0", "HMR updated: 1")
+    contents
+      .replace("HMR updated title: 0", "HMR updated title: 1")
+      .replace("HMR updated: 0", "HMR updated: 1")
   );
   await page.waitForLoadState("networkidle");
+  await expect(page).toHaveTitle("HMR updated title: 1");
   await expect(hmrStatus).toHaveText("HMR updated: 1");
   await expect(input).toHaveValue("stateful");
 
@@ -162,18 +169,19 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
       )
       .replace(
         "// loader",
-        `// loader\nexport const loader = () => json({ message: "HDR updated: 0" });`
+        `// loader\nexport const loader = ({ context }) => json({ message: "HDR updated: 0", context });`
       )
       .replace(
         "// hooks",
-        "// hooks\nconst { message } = useLoaderData<typeof loader>();"
+        "// hooks\nconst { message, context } = useLoaderData<typeof loader>();"
       )
       .replace(
         "{/* elements */}",
-        `{/* elements */}\n<p data-hdr>{message}</p>`
+        `{/* elements */}\n<p data-context>{context.value}</p>\n<p data-hdr>{message}</p>`
       )
   );
   await page.waitForLoadState("networkidle");
+  await expect(page.locator("#index [data-context]")).toHaveText("context");
   let hdrStatus = page.locator("#index [data-hdr]");
   await expect(hdrStatus).toHaveText("HDR updated: 0");
   // React Fast Refresh cannot preserve state for a component when hooks are added or removed
@@ -252,8 +260,8 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
         `// imports\nimport { direct } from "../direct-hdr-dep"`
       )
       .replace(
-        `json({ message: "HDR updated: 2" })`,
-        `json({ message: "HDR updated: " + direct })`
+        `json({ message: "HDR updated: 2", context })`,
+        `json({ message: "HDR updated: " + direct, context })`
       )
   );
   await page.waitForLoadState("networkidle");

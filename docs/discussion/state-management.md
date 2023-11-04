@@ -233,7 +233,7 @@ function Sidebar() {
 }
 ```
 
-By initializing the state within an effect, there's potential for a mismatch between the server-rendered state and the state stored in local storage. This discrepancy wll lead to brief UI flickering shortly after the page renders and should be avoided.
+By initializing the state within an effect, there's potential for a mismatch between the server-rendered state and the state stored in local storage. This discrepancy will lead to brief UI flickering shortly after the page renders and should be avoided.
 
 #### Cookies
 

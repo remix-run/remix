@@ -214,6 +214,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       hydrationData,
       future: {
         v7_normalizeFormMethod: true,
+        v7_fetcherPersist: window.__remixContext.future.v3_fetcherPersist,
       },
     });
     // @ts-ignore

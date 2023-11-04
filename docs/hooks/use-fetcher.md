@@ -15,6 +15,34 @@ export function SomeComponent() {
 }
 ```
 
+## Options
+
+### `key`
+
+By default, `useFetcher` generate a unique fetcher scoped to that component (however, it may be looked up in [`useFetchers()`][use_fetchers] while in-flight). If you want to identify a fetcher with your own key such that you can access it from elsewhere in your app, you can do that with the `key` option:
+
+```tsx lines=[2,8]
+function AddToBagButton() {
+  const fetcher = useFetcher({ key: "add-to-bag" });
+  return <fetcher.Form method="post">...</fetcher.Form>;
+}
+
+// Then, up in the header...
+function CartCount({ count }) {
+  const fetcher = useFetcher({ key: "add-to-bag" });
+  const inFlightCount = Number(
+    fetcher.formData?.get("quantity") || 0
+  );
+  const optimisticCount = count + inFlightCount;
+  return (
+    <>
+      <BagIcon />
+      <span>{optimisticCount}</span>
+    </>
+  );
+}
+```
+
 ## Components
 
 ### `fetcher.Form`
@@ -117,3 +145,4 @@ The form method of the submission.
 [network_concurrency_management]: ../discussion/concurrency
 [concurrent_mutations_with_use_fetcher]: https://www.youtube.com/watch?v=vTzNpiOk668&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
 [optimistic_ui]: https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
+[use_fetchers]: ./use-fetchers

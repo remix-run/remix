@@ -6,7 +6,7 @@ import type {
 } from "react-router-dom";
 import { redirect, useRouteError } from "react-router-dom";
 
-import type { RouteModules } from "./routeModules";
+import type { RouteModule, RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 import {
   fetchData,
@@ -73,7 +73,7 @@ export function createServerRoutes(
     let routeModule = routeModules[route.id];
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
-      Component: routeModule.default,
+      Component: getRouteModuleComponent(routeModule),
       ErrorBoundary: routeModule.ErrorBoundary
         ? routeModule.ErrorBoundary
         : route.id === "root"
@@ -170,7 +170,7 @@ export function createClientRoutes(
       ...(routeModule
         ? // Use critical path modules directly
           {
-            Component: routeModule.default,
+            Component: getRouteModuleComponent(routeModule),
             ErrorBoundary: routeModule.ErrorBoundary
               ? routeModule.ErrorBoundary
               : route.id === "root"
@@ -244,17 +244,9 @@ async function loadRouteModuleWithBlockingLinks(
   let routeModule = await loadRouteModule(route, routeModules);
   await prefetchStyleLinks(route, routeModule);
 
-  // Resource routes are built with an empty object as the default export -
-  // ignore those when setting the Component
-  let defaultExportIsEmptyObject =
-    typeof routeModule.default === "object" &&
-    Object.keys(routeModule.default || {}).length === 0;
-
   // Include all `browserSafeRouteExports` fields
   return {
-    ...(routeModule.default != null && !defaultExportIsEmptyObject
-      ? { Component: routeModule.default }
-      : {}),
+    Component: getRouteModuleComponent(routeModule),
     ErrorBoundary: routeModule.ErrorBoundary,
     handle: routeModule.handle,
     links: routeModule.links,
@@ -298,4 +290,18 @@ function getRedirect(response: Response): Response {
     headers["X-Remix-Reload-Document"] = reloadDocument;
   }
   return redirect(url, { status, headers });
+}
+
+// Our compiler generates the default export as `{}` when no default is provided,
+// which can lead us to trying to use that as a Component in RR and calling
+// createElement on it.  Patching here as a quick fix and hoping it's no longer
+// an issue in Vite.
+function getRouteModuleComponent(routeModule: RouteModule) {
+  if (routeModule.default == null) return undefined;
+  let isEmptyObject =
+    typeof routeModule.default === "object" &&
+    Object.keys(routeModule.default).length === 0;
+  if (!isEmptyObject) {
+    return routeModule.default;
+  }
 }

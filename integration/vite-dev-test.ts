@@ -33,6 +33,9 @@ test.describe("Vite dev", () => {
               port: ${devPort},
               strictPort: true,
             },
+            optimizeDeps: {
+              include: ["react", "react-dom/client", "@remix-run/react"],
+            },
             plugins: [remix()],
           });
         `,
@@ -59,19 +62,84 @@ test.describe("Vite dev", () => {
           }
         `,
         "app/routes/_index.tsx": js`
-          import { useState, useEffect } from "react";
+          import { Suspense } from "react";
+          import { defer } from "@remix-run/node";
+          import { Await, useLoaderData } from "@remix-run/react";
+
+          export function loader() {
+            let deferred = new Promise((resolve) => {
+              setTimeout(() => resolve(true), 1000)
+            });
+            return defer({ deferred });
+          }
 
           export default function IndexRoute() {
-            const [mounted, setMounted] = useState(false);
-            useEffect(() => {
-              setMounted(true);
-            }, []);
+            const { deferred } = useLoaderData<typeof loader>();
 
             return (
               <div id="index">
                 <h2 data-title>Index</h2>
                 <input />
-                <p data-mounted>Mounted: {mounted ? "yes" : "no"}</p>
+                <p data-hmr>HMR updated: no</p>
+                <Suspense fallback={<p data-defer>Defer finished: no</p>}>
+                  <Await resolve={deferred}>{() => <p data-defer>Defer finished: yes</p>}</Await>
+                </Suspense>
+              </div>
+            );
+          }
+        `,
+        "app/routes/set-cookies.tsx": js`
+          import { LoaderFunction } from "@remix-run/node";
+
+          export const loader: LoaderFunction = () => {
+            const headers = new Headers();
+
+            headers.append(
+              "Set-Cookie",
+              "first=one; Domain=localhost; Path=/; SameSite=Lax"
+            );
+
+            headers.append(
+              "Set-Cookie",
+              "second=two; Domain=localhost; Path=/; SameSite=Lax"
+            );
+
+            headers.append(
+              "Set-Cookie",
+              "third=three; Domain=localhost; Path=/; SameSite=Lax"
+            );
+
+            headers.set("location", "http://localhost:${devPort}/get-cookies");
+
+            const response = new Response(null, {
+              headers,
+              status: 302,
+            });
+
+            return response;
+          };
+        `,
+        "app/routes/get-cookies.tsx": js`
+          import { json, LoaderFunctionArgs } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react"
+
+          export const loader = ({ request }: LoaderFunctionArgs) => json({cookies: request.headers.get("Cookie")});
+
+          export default function IndexRoute() {
+            const { cookies } = useLoaderData<typeof loader>();
+
+            return (
+              <div id="get-cookies">
+                <h2 data-title>Get Cookies</h2>
+                <p data-cookies>{cookies}</p>
+              </div>
+            );
+          }
+        `,
+        "app/routes/jsx.jsx": js`
+          export default function JsxRoute() {
+            return (
+              <div id="jsx">
                 <p data-hmr>HMR updated: no</p>
               </div>
             );
@@ -113,12 +181,19 @@ test.describe("Vite dev", () => {
   });
 
   test("renders matching routes", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
     await page.goto(`http://localhost:${devPort}/`, {
       waitUntil: "networkidle",
     });
+
+    // Ensure no errors on page load
+    expect(pageErrors).toEqual([]);
+
     await expect(page.locator("#index [data-title]")).toHaveText("Index");
-    await expect(page.locator("#index [data-mounted]")).toHaveText(
-      "Mounted: yes"
+    await expect(page.locator("#index [data-defer]")).toHaveText(
+      "Defer finished: yes"
     );
 
     let hmrStatus = page.locator("#index [data-hmr]");
@@ -140,6 +215,54 @@ test.describe("Vite dev", () => {
     await page.waitForLoadState("networkidle");
     await expect(hmrStatus).toHaveText("HMR updated: yes");
     await expect(input).toHaveValue("stateful");
+
+    // Ensure no errors after HMR
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("handles multiple set-cookie headers", async ({ page }) => {
+    let pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    await page.goto(`http://localhost:${devPort}/set-cookies`, {
+      waitUntil: "networkidle",
+    });
+
+    expect(pageErrors).toEqual([]);
+
+    // Ensure we redirected
+    expect(new URL(page.url()).pathname).toBe("/get-cookies");
+
+    await expect(page.locator("#get-cookies [data-cookies]")).toHaveText(
+      "first=one; second=two; third=three"
+    );
+  });
+
+  test("handles JSX in .jsx file without React import", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    await page.goto(`http://localhost:${devPort}/jsx`, {
+      waitUntil: "networkidle",
+    });
+    expect(pageErrors).toEqual([]);
+
+    let hmrStatus = page.locator("#jsx [data-hmr]");
+    await expect(hmrStatus).toHaveText("HMR updated: no");
+
+    let indexRouteContents = await fs.readFile(
+      path.join(projectDir, "app/routes/jsx.jsx"),
+      "utf8"
+    );
+    await fs.writeFile(
+      path.join(projectDir, "app/routes/jsx.jsx"),
+      indexRouteContents.replace("HMR updated: no", "HMR updated: yes"),
+      "utf8"
+    );
+    await page.waitForLoadState("networkidle");
+    await expect(hmrStatus).toHaveText("HMR updated: yes");
+
+    expect(pageErrors).toEqual([]);
   });
 });
 

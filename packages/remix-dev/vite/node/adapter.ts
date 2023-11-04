@@ -167,14 +167,22 @@ function createRequest(req: IncomingMessage): Request {
   return new NodeRequest(url.href, init);
 }
 
+// Adapted from more recent version of `handleNodeResponse`:
+// https://github.com/solidjs/solid-start/blob/7398163869b489cce503c167e284891cf51a6613/packages/start/node/fetch.js#L162-L185
 async function handleNodeResponse(webRes: Response, res: ServerResponse) {
   res.statusCode = webRes.status;
   res.statusMessage = webRes.statusText;
 
+  let cookiesStrings = [];
+
   for (let [name, value] of webRes.headers) {
     if (name === "set-cookie") {
-      res.setHeader(name, splitCookiesString(value));
+      cookiesStrings.push(...splitCookiesString(value));
     } else res.setHeader(name, value);
+  }
+
+  if (cookiesStrings.length) {
+    res.setHeader("set-cookie", cookiesStrings);
   }
 
   if (webRes.body) {
@@ -199,7 +207,7 @@ export let createRequestHandler = (
   let handler = createBaseRequestHandler(build, mode);
   return async (req: IncomingMessage, res: ServerResponse) => {
     let request = createRequest(req);
-    let response = await handler(request, {}, { criticalCss });
+    let response = await handler(request, {}, { __criticalCss: criticalCss });
     handleNodeResponse(response, res);
   };
 };
