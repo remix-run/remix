@@ -543,11 +543,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         vite.httpServer?.on("listening", () => {
           setTimeout(showUnstableWarning, 50);
         });
+
         // We cache the pluginConfig here to make sure we're only invalidating virtual modules when necessary.
         // This requires a separate cache from `cachedPluginConfig`, which is updated by remix-hmr-updates. If
         // we shared the cache, it would already be refreshed by remix-hmr-updates at this point, and we'd
         // have no way of comparing against the cache to know if the virtual modules need to be invalidated.
-        let localCachedPluginConfig: ResolvedRemixVitePluginConfig | undefined;
+        let previousPluginConfig: ResolvedRemixVitePluginConfig | undefined;
 
         // Let user servers handle SSR requests in middleware mode
         if (vite.config.server.middlewareMode) return;
@@ -555,12 +556,14 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           vite.middlewares.use(async (req, res, next) => {
             try {
               let pluginConfig = await resolvePluginConfig();
+
               if (
-                JSON.stringify(localCachedPluginConfig) !==
-                JSON.stringify(pluginConfig)
+                JSON.stringify(pluginConfig) !==
+                JSON.stringify(previousPluginConfig)
               ) {
+                previousPluginConfig = pluginConfig;
+
                 // Invalidate all virtual modules
-                localCachedPluginConfig = pluginConfig;
                 vmods.forEach((vmod) => {
                   let mod = vite.moduleGraph.getModuleById(
                     VirtualModule.resolve(vmod)
