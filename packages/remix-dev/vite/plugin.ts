@@ -84,6 +84,17 @@ const resolveFileUrl = (
   { rootDirectory }: Pick<ResolvedRemixVitePluginConfig, "rootDirectory">,
   filePath: string
 ) => {
+  if (filePath.includes("/node_modules/")) {
+    // use "/@fs/" url to workaround the case where remix client/server default entry files live outside of app root,
+    // for example, when using pnpm, the structure becomes:
+    //   (workspace-root)
+    //   |- node_modules/.pnpm/@remix-run+dev@xxx/node_modules/@remix-run/dev/dist/config/defaults/entry.client.tsx
+    //   |- packages/remix-app/vite.config.ts
+    // note that, by default, vite allows serving files from workspace root.
+    // https://vitejs.dev/config/server-options.html#server-fs-allow
+    return `/@fs` + filePath;
+  }
+
   let relativePath = path.relative(rootDirectory, filePath);
 
   if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
