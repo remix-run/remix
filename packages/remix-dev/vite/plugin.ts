@@ -407,6 +407,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         imports: [],
       },
       routes,
+      hmr: {
+        runtime: VirtualModule.url(injectHmrRuntimeId),
+        timestamp: -1, // not used for vite hmr
+      }
     };
   };
 
@@ -707,12 +711,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           return [
             'import { createElement } from "react";',
             'export * from "@remix-run/react";',
-            'export const LiveReload = process.env.NODE_ENV !== "development" ? () => null : ',
-            '() => createElement("script", {',
-            ' type: "module",',
-            " async: true,",
-            ` src: "${VirtualModule.url(injectHmrRuntimeId)}"`,
-            "});",
+            'export const LiveReload = () => null;',
+            // 'export const LiveReload = process.env.NODE_ENV !== "development" ? () => null : ',
+            // '() => createElement("script", {',
+            // ' type: "module",',
+            // " async: true,",
+            // ` src: "${VirtualModule.url(injectHmrRuntimeId)}"`,
+            // "});",
           ].join("\n");
         }
       },
