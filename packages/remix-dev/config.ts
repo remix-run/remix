@@ -33,7 +33,9 @@ type Dev = {
   tlsCert?: string;
 };
 
-interface FutureConfig {}
+interface FutureConfig {
+  v3_fetcherPersist: boolean;
+}
 
 type NodeBuiltinsPolyfillOptions = Pick<
   EsbuildPluginsNodeModulesPolyfillOptions,
@@ -178,9 +180,13 @@ export interface AppConfig {
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  future?: Partial<FutureConfig> & {
-    [propName: string]: never;
-  };
+  /**
+   * Enabled future flags
+   */
+  future?: [keyof FutureConfig] extends [never]
+    ? // Partial<FutureConfig> doesn't work when it's empty so just prevent any keys
+      { [key: string]: never }
+    : Partial<FutureConfig>;
 }
 
 /**
@@ -573,7 +579,9 @@ export async function resolveConfig(
   // list below, so we can let folks know if they have obsolete flags in their
   // config.  If we ever convert remix.config.js to a TS file, so we get proper
   // typings this won't be necessary anymore.
-  let future: FutureConfig = {};
+  let future: FutureConfig = {
+    v3_fetcherPersist: appConfig.future?.v3_fetcherPersist === true,
+  };
 
   if (appConfig.future) {
     let userFlags = appConfig.future;

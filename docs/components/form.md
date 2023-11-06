@@ -47,6 +47,22 @@ The encoding type to use for the form submission.
 
 Defaults to `application/x-www-form-urlencoded`, use `multipart/form-data` for file uploads.
 
+### `navigate`
+
+You can tell the form to skip the navigation and use a [fetcher][use_fetcher] internally by specifying `<Form navigate={false}>`. This is essentially a shorthand for `useFetcher()` + `<fetcher.Form>` where you don't care about the resulting data and only want to kick off a submission and access the pending state via [`useFetchers()`][use_fetchers].
+
+```tsx
+<Form method="post" navigate={false} />
+```
+
+### `fetcherKey`
+
+When using a non-navigating `Form`, you may also optionally specify your own fetcher `key` to use.
+
+```tsx
+<Form method="post" navigate={false} fetcherKey="my-key" />
+```
+
 ### `preventScrollReset`
 
 If you are using [`<ScrollRestoration>`][scroll_restoration_component], this lets you prevent the scroll position from being reset to the top of the window when the form is submitted.
@@ -73,7 +89,7 @@ If true, it will submit the form with the browser instead of client side routing
 
 This is recommended over [`<form>`][form_element]. When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is since `<form>` uses the current URL as the default, but `<Form>` uses the URL for the route the form is rendered in.
 
-## `unstable_viewTransition`
+### `unstable_viewTransition`
 
 The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`. If you need to apply specific styles for this view transition, you will also need to leverage the [`unstable_useViewTransitionState()`][use-view-transition-state].
 
@@ -133,6 +149,8 @@ See also:
 [fullstack_data_flow]: ../discussion/data-flow
 [pending_ui]: ../discussion/pending-ui
 [form_vs_fetcher]: ../discussion/form-vs-fetcher
+[use_fetcher]: ../hooks/use-fetcher
+[use_fetchers]: ../hooks/use-fetchers
 [fetcher_form]: ../hooks/use-fetcher#fetcherform
 [progressive_enhancement]: ../discussion/progressive-enhancement
 [use-view-transition-state]: ../hooks//use-view-transition-state

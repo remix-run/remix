@@ -93,9 +93,10 @@ function useRemixContext(): RemixContextObject {
 /**
  * Defines the prefetching behavior of the link:
  *
+ * - "none": Never fetched
  * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
- * - "none": Never fetched
+ * - "viewport": Fetched when the link is in the viewport
  */
 type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
@@ -289,7 +290,9 @@ export function Links() {
 
   return (
     <>
-      {criticalCss ? <style>{criticalCss}</style> : null}
+      {criticalCss ? (
+        <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
+      ) : null}
       {keyedLinks.map(({ key, link }) =>
         isPageLinkDescriptor(link) ? (
           <PrefetchPageLinks key={key} {...link} />
@@ -1032,10 +1035,10 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  *
  * @see https://remix.run/hooks/use-fetcher
  */
-export function useFetcher<TData = AppData>(): FetcherWithComponents<
-  SerializeFrom<TData>
-> {
-  return useFetcherRR();
+export function useFetcher<TData = AppData>(
+  opts: Parameters<typeof useFetcherRR>[0] = {}
+): FetcherWithComponents<SerializeFrom<TData>> {
+  return useFetcherRR(opts);
 }
 
 // Dead Code Elimination magic for production builds.
