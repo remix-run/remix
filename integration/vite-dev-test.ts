@@ -311,5 +311,3 @@ let bufferize = (stream: Readable): (() => string) => {
   stream.on("data", (data) => (buffer += data.toString()));
   return () => buffer;
 };
-
-// let sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
