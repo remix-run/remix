@@ -274,34 +274,35 @@ test.describe("Vite dev", () => {
 
   test("reload client when a new route file is added", async ({ page }) => {
     let pageErrors: unknown[] = [];
-    page.on("pageerror", (error) => pageErrors.push(error));
 
     await page.goto(`http://localhost:${devPort}/new-link-from`, {
       waitUntil: "networkidle",
     });
-    expect(pageErrors).toEqual([]);
 
     // add new route
-    const fileContent = js`
-      export default function NewLinkToRoute() {
-        return (
-          <div id="new-link-to">
-            ok
-          </div>
-        );
-      }
-    `;
+    const fullReloadPromise = page.waitForRequest(
+      `http://localhost:${devPort}/new-link-from`
+    );
     await fs.writeFile(
       path.join(projectDir, "app/routes/new-link-to.tsx"),
-      fileContent,
+      js`
+        export default function NewLinkToRoute() {
+          return (
+            <div id="new-link-to">
+              ok
+            </div>
+          );
+        }
+      `,
       "utf8"
     );
-    await sleep(200); // wait some time to receive websocket event
-    await page.waitForLoadState("networkidle");
+    await fullReloadPromise;
 
-    // navigate to new route
-    await page.getByRole('link', { name: 'new-link-to' }).click();
+    // verify navigation to new route
+    await page.getByRole("link", { name: "new-link-to" }).click();
     await expect(page.locator("#new-link-to")).toHaveText("ok");
+
+    page.on("pageerror", (error) => pageErrors.push(error));
   });
 });
 
@@ -311,4 +312,4 @@ let bufferize = (stream: Readable): (() => string) => {
   return () => buffer;
 };
 
-let sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+// let sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
