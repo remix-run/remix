@@ -159,14 +159,14 @@ function channel() {
   return { promise, resolve, reject };
 }
 
-import.meta.hot.on("remix:hmr", async ({ route, triggerEnqueueUpdate }) => {
+import.meta.hot.on("remix:hmr", async ({ route, isNewFile }) => {
   window.__remixClearCriticalCss();
 
   if (route) {
     routeUpdates.set(route.id, route);
   }
 
-  if (triggerEnqueueUpdate) {
+  if (isNewFile) {
     enqueueUpdate();
   }
 });
