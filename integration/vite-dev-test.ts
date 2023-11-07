@@ -142,6 +142,17 @@ test.describe("Vite dev", () => {
             );
           }
         `,
+        "app/routes/new-link-from.tsx": js`
+          import { Link } from "@remix-run/react";
+
+          export default function NewLinkFromRoute() {
+            return (
+              <div id="new-link-from" ref={(el) => { el?.setAttribute("data-testid", "hydrated"); }}>
+                <Link to="/new-link-to">new-link-to</Link>
+              </div>
+            );
+          }
+        `,
       },
     });
 
@@ -261,6 +272,57 @@ test.describe("Vite dev", () => {
 
     expect(pageErrors).toEqual([]);
   });
+
+  test("hot update for new route file", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    await page.goto(`http://localhost:${devPort}/new-link-from`, {
+      waitUntil: "networkidle",
+    });
+    expect(pageErrors).toEqual([]);
+
+    // wait for hydration for client side navigation
+    await page.getByTestId("hydrated").waitFor();
+
+    // verify page not found
+    await page.getByRole('link', { name: 'new-link-to' }).click();
+    await page.getByRole('heading', { name: '404 Not Found' }).click();
+    await page.goBack();
+
+    // add new route
+    // (TODO: how to assert there was no full-reload triggered?)
+    const fileContent = js`
+      export default function NewLinkToRoute() {
+        return (
+          <div id="new-link-to">
+            <p data-hmr>HMR updated: no</p>
+          </div>
+        );
+      }
+    `;
+    await fs.writeFile(
+      path.join(projectDir, "app/routes/new-link-to.tsx"),
+      fileContent,
+      "utf8"
+    );
+    await sleep(300); // need to wait some time to process hot update
+    await page.waitForLoadState("networkidle");
+
+    // navigate again
+    await page.getByRole('link', { name: 'new-link-to' }).click();
+
+    // verify hmr on new route
+    let hmrStatus = page.locator("#new-link-to [data-hmr]");
+    await expect(hmrStatus).toHaveText("HMR updated: no");
+    await fs.writeFile(
+      path.join(projectDir, "app/routes/new-link-to.tsx"),
+      fileContent.replace("HMR updated: no", "HMR updated: yes"),
+      "utf8"
+    );
+    await expect(hmrStatus).toHaveText("HMR updated: yes");
+    expect(pageErrors).toEqual([]);
+  });
 });
 
 let bufferize = (stream: Readable): (() => string) => {
@@ -268,3 +330,5 @@ let bufferize = (stream: Readable): (() => string) => {
   stream.on("data", (data) => (buffer += data.toString()));
   return () => buffer;
 };
+
+let sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
