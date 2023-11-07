@@ -166,6 +166,8 @@ import.meta.hot.on("remix:hmr", async ({ route, isNewFile }) => {
     routeUpdates.set(route.id, route);
   }
 
+  // for existing files, "import.meta.hot.accept" in REACT_REFRESH_FOOTER triggers update, which comes right after this custom "remix:hmr" handler.
+  // for new files, it has never been imported on client yet, so need to trigger manually.
   if (isNewFile) {
     enqueueUpdate();
   }
