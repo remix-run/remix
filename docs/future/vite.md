@@ -593,6 +593,18 @@ Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] b
 If you are expecting hot updates but getting full page reloads,
 check out our [discussion on Hot Module Replacement][hmr] to learn more about the limitations of React Fast Refresh and workarounds for common issues.
 
+#### ESM / CJS
+
+Vite supports both ESM and CJS dependencies, but sometimes you might still run into issues with ESM / CJS interop.
+Usually, this is because a dependency is not properly configured to support ESM.
+And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
+
+You can check [_Are The Types Wrong_][arethetypeswrong] to see if the dependency giving you trouble might be misconfigured.
+Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
+
+Finally, you can also explicitly configure which dependencies to bundle into your server bundled
+with [Vite's `ssr.noExternal` option][ssr-no-external] to emulate the Remix compiler's [`serverDependenciesToBundle`][server-dependencies-to-bundle] with the Remix Vite plugin.
+
 #### Server code not tree shaken in development
 
 In production, Vite tree-shakes server-only code from your client bundle, just like the existing Remix compiler.
@@ -672,3 +684,8 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [astro]: https://astro.build/
 [solidstart]: https://start.solidjs.com/getting-started/what-is-solidstart
 [sveltekit]: https://kit.svelte.dev
+[modernizing-packages-to-esm]: https://blog.isquaredsoftware.com/2023/08/esm-modernization-lessons/
+[arethetypeswrong]: https://arethetypeswrong.github.io/
+[vite-plugin-cjs-interop]: https://github.com/cyco130/vite-plugin-cjs-interop
+[ssr-no-external]: https://vitejs.dev/config/ssr-options.html#ssr-noexternal
+[server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
