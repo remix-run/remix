@@ -11,6 +11,7 @@ import {
   type UserConfig as ViteUserConfig,
   normalizePath as viteNormalizePath,
   createServer as createViteDevServer,
+  createFilter,
 } from "vite";
 import {
   init as initEsModuleLexer,
@@ -822,6 +823,27 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     },
     {
       name: "remix-hmr-updates",
+      async configureServer(server) {
+        server.watcher.addListener("add", async (file: string) => {
+          let pluginConfig = await resolvePluginConfig();
+          cachedPluginConfig = pluginConfig;
+          let route = getRoute(pluginConfig, file);
+          if (route) {
+            server.ws.send({
+              type: "custom",
+              event: "remix:hmr",
+              data: {
+                route: await getRouteMetadata(
+                  pluginConfig,
+                  viteChildCompiler,
+                  route
+                ),
+                triggerEnqueueUpdate: true,
+              },
+            });
+          }
+        });
+      },
       async handleHotUpdate({ server, file, modules }) {
         let pluginConfig = await resolvePluginConfig();
         // Update the config cache any time there is a file change
