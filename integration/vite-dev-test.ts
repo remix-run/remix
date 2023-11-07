@@ -272,8 +272,11 @@ test.describe("Vite dev", () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test("reload client when a new route file is added", async ({ page }) => {
+  test("trigger full reload when a new route file is added", async ({
+    page,
+  }) => {
     let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
 
     await page.goto(`http://localhost:${devPort}/new-link-from`, {
       waitUntil: "networkidle",
@@ -302,7 +305,7 @@ test.describe("Vite dev", () => {
     await page.getByRole("link", { name: "new-link-to" }).click();
     await expect(page.locator("#new-link-to")).toHaveText("ok");
 
-    page.on("pageerror", (error) => pageErrors.push(error));
+    expect(pageErrors).toEqual([]);
   });
 });
 
