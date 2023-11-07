@@ -822,6 +822,16 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     },
     {
       name: "remix-hmr-updates",
+      async configureServer(server) {
+        // trigger full reload when adding a new route file
+        server.watcher.addListener("add", async (file: string) => {
+          let pluginConfig = await resolvePluginConfig();
+          let route = getRoute(pluginConfig, file);
+          if (route) {
+            server.ws.send({ type: "full-reload" });
+          }
+        });
+      },
       async handleHotUpdate({ server, file, modules }) {
         let pluginConfig = await resolvePluginConfig();
         // Update the config cache any time there is a file change
