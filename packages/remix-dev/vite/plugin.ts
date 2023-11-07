@@ -11,7 +11,6 @@ import {
   type UserConfig as ViteUserConfig,
   normalizePath as viteNormalizePath,
   createServer as createViteDevServer,
-  createFilter,
 } from "vite";
 import {
   init as initEsModuleLexer,
