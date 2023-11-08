@@ -283,7 +283,7 @@ test.describe("Vite dev", () => {
     });
 
     // add new route and wait for full-reload
-    let fullReloadPromise = page.waitForRequest(
+    let fullReloadPromise = page.waitForResponse(
       `http://localhost:${devPort}/new-link-from`
     );
     await fs.writeFile(
@@ -300,6 +300,7 @@ test.describe("Vite dev", () => {
       "utf8"
     );
     await fullReloadPromise;
+    await page.waitForLoadState("networkidle");
 
     // verify navigation to new route
     await page.getByRole("link", { name: "new-link-to" }).click();
