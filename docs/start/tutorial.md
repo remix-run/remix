@@ -994,6 +994,10 @@ When the user clicks the submit button:
 
 Add a `Form`, add an `action`, Remix does the rest.
 
+Note that we created the delete action in a separate file simply to explore that option. In reality we recommend you to stay
+in your page file and distinguish between the different actions, for example with a switch statement.
+You can learn more about that in [this awesome video](https://youtu.be/w2i-9cYxSdc?si=DDa78AYojCM6VCt7&t=117)
+
 ## Index Routes
 
 When we load up the app, you'll notice a big blank page on the right side of our list.
