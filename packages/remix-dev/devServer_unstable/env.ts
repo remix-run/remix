@@ -6,7 +6,7 @@ export async function loadEnv(rootDirectory: string): Promise<void> {
   let envPath = path.join(rootDirectory, ".env");
   if (!fse.existsSync(envPath)) return;
 
-  var dotenvExpand = require('dotenv-expand');
+  let dotenvExpand = require('dotenv-expand');
   let result = require("dotenv").config({ path: envPath });
   dotenvExpand.expand(result)
   
