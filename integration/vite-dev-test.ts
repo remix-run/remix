@@ -146,7 +146,7 @@ test.describe("Vite dev", () => {
           import { Link } from "@remix-run/react";
           export default function NewLinkFromRoute() {
             return (
-              <div id="new-link-from">
+              <div id="new-link-from" ref={el => el?.setAttribute("data-testid", "hydrated")}>
                 <Link to="/new-link-to">new-link-to</Link>
               </div>
             );
@@ -281,6 +281,7 @@ test.describe("Vite dev", () => {
     await page.goto(`http://localhost:${devPort}/new-link-from`, {
       waitUntil: "networkidle",
     });
+    await page.getByTestId("hydrated").waitFor();
 
     // add new route and wait for full-reload
     let fullReloadPromise = page.waitForResponse(
@@ -301,6 +302,7 @@ test.describe("Vite dev", () => {
     );
     await fullReloadPromise;
     await page.waitForLoadState("networkidle");
+    await page.getByTestId("hydrated").waitFor();
 
     // verify navigation to new route
     await page.getByRole("link", { name: "new-link-to" }).click();
