@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-fix(vite): pass same `config.mode` from parent to child compiler
+Fix Vite production builds when plugins that have different local state between `development` and `production` modes are present
