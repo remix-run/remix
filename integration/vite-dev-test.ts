@@ -282,8 +282,8 @@ test.describe("Vite dev", () => {
       waitUntil: "networkidle",
     });
 
-    // add new route
-    const fullReloadPromise = page.waitForRequest(
+    // add new route and wait for full-reload
+    let fullReloadPromise = page.waitForRequest(
       `http://localhost:${devPort}/new-link-from`
     );
     await fs.writeFile(

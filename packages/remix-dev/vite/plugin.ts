@@ -825,8 +825,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       async configureServer(server) {
         // trigger full reload when adding a new route file
         server.watcher.addListener("add", async (file: string) => {
-          let pluginConfig = await resolvePluginConfig();
-          let route = getRoute(pluginConfig, file);
+          cachedPluginConfig = await resolvePluginConfig();
+          let route = getRoute(cachedPluginConfig, file);
           if (route) {
             server.ws.send({ type: "full-reload" });
           }
