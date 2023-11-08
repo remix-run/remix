@@ -85,12 +85,13 @@ const resolveFileUrl = (
   filePath: string
 ) => {
   let relativePath = path.relative(rootDirectory, filePath);
+  let isWithinRoot =
+    !relativePath.startsWith("..") && !path.isAbsolute(relativePath);
 
-  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
-    throw new Error(
-      `Cannot resolve asset path "${filePath}" outside of root directory "${rootDirectory}".`
-    );
-  }
+  // Vite will prevent serving files outside of the workspace
+  // unless user explictly opts in with `server.fs.allow`
+  // https://vitejs.dev/config/server-options.html#server-fs-allow
+  if (!isWithinRoot) return `/@fs` + filePath;
 
   return `/${normalizePath(relativePath)}`;
 };
@@ -402,6 +403,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     return {
       version: String(Math.random()),
       url: VirtualModule.url(browserManifestId),
+      hmr: {
+        runtime: VirtualModule.url(injectHmrRuntimeId),
+      },
       entry: {
         module: resolveFileUrl(pluginConfig, pluginConfig.entryClientFilePath),
         imports: [],
@@ -425,13 +429,20 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           experimental: { hmrPartialAccept: true },
           optimizeDeps: {
             include: [
-              // pre-bundle React dependencies to avoid React duplicates,
-              // even if React dependencies are not direct dependencies
+              // Pre-bundle React dependencies to avoid React duplicates,
+              // even if React dependencies are not direct dependencies.
               // https://react.dev/warnings/invalid-hook-call-warning#duplicate-react
               "react",
-              `react/jsx-runtime`,
-              `react/jsx-dev-runtime`,
+              "react/jsx-runtime",
+              "react/jsx-dev-runtime",
               "react-dom/client",
+
+              // Pre-bundle Remix dependencies to avoid Remix router duplicates.
+              // Our remix-remix-react-proxy plugin does not process default client and
+              // server entry files since those come from within `node_modules`.
+              // That means that before Vite pre-bundles dependencies (e.g. first time dev server is run)
+              // mismatching Remix routers cause `Error: You must render this element inside a <Remix> element`.
+              "@remix-run/react",
             ],
           },
           esbuild: {
@@ -439,8 +450,14 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             jsxDev: viteCommand !== "build",
           },
           resolve: {
-            // https://react.dev/warnings/invalid-hook-call-warning#duplicate-react
-            dedupe: ["react", "react-dom"],
+            dedupe: [
+              // https://react.dev/warnings/invalid-hook-call-warning#duplicate-react
+              "react",
+              "react-dom",
+
+              // see description for `@remix-run/react` in `optimizeDeps.include`
+              "@remix-run/react",
+            ],
           },
           ...(viteCommand === "build" && {
             base: pluginConfig.publicPath,
@@ -710,9 +727,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             'export * from "@remix-run/react";',
             'export const LiveReload = process.env.NODE_ENV !== "development" ? () => null : ',
             '() => createElement("script", {',
-            ' type: "module",',
-            " async: true,",
-            ` src: "${VirtualModule.url(injectHmrRuntimeId)}"`,
+            "  dangerouslySetInnerHTML: { ",
+            "    __html: `window.__remixLiveReloadEnabled = true`",
+            "  }",
             "});",
           ].join("\n");
         }
@@ -789,7 +806,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             allowAwaitOutsideFunction: true,
             plugins: ["jsx", "typescript"],
           },
-          plugins: ["react-refresh/babel"],
+          plugins: [require("react-refresh/babel")],
           sourceMaps: true,
         });
         if (result === null) return;
@@ -865,11 +882,10 @@ const inWebWorker = typeof WorkerGlobalScope !== 'undefined' && self instanceof 
 let prevRefreshReg;
 let prevRefreshSig;
 
-if (import.meta.hot && !inWebWorker) {
+if (import.meta.hot && !inWebWorker && window.__remixLiveReloadEnabled) {
   if (!window.__vite_plugin_react_preamble_installed__) {
     throw new Error(
-      "@vitejs/plugin-react can't detect preamble. Something is wrong. " +
-      "See https://github.com/vitejs/vite-plugin-react/pull/11#discussion_r430879201"
+      "Remix Vite plugin can't detect preamble. Something is wrong."
     );
   }
 
@@ -882,7 +898,7 @@ if (import.meta.hot && !inWebWorker) {
 }`.replace(/\n+/g, "");
 
 const REACT_REFRESH_FOOTER = `
-if (import.meta.hot && !inWebWorker) {
+if (import.meta.hot && !inWebWorker && window.__remixLiveReloadEnabled) {
   window.$RefreshReg$ = prevRefreshReg;
   window.$RefreshSig$ = prevRefreshSig;
   RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {

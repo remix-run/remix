@@ -24,9 +24,6 @@ test.beforeAll(async () => {
             hmr: {
               port: ${hmrPort}
             }
-          },          
-          optimizeDeps: {
-            include: ["react", "react-dom/client", "@remix-run/react"],
           },
           plugins: [remix()],
         });
@@ -87,8 +84,8 @@ test.beforeAll(async () => {
                   <h1>Root</h1>
                   <Outlet />
                 </div>
-                <LiveReload />
                 <Scripts />
+                <LiveReload />
               </body>
             </html>
           );

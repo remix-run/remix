@@ -33,9 +33,6 @@ test.describe("Vite dev", () => {
               port: ${devPort},
               strictPort: true,
             },
-            optimizeDeps: {
-              include: ["react", "react-dom/client", "@remix-run/react"],
-            },
             plugins: [remix()],
           });
         `,
@@ -54,8 +51,8 @@ test.describe("Vite dev", () => {
                     <h1>Root</h1>
                     <Outlet />
                   </div>
-                  <LiveReload />
                   <Scripts />
+                  <LiveReload />
                 </body>
               </html>
             );
