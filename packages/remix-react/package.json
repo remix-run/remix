@@ -16,9 +16,9 @@
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
   "dependencies": {
-    "@remix-run/router": "0.0.0-experimental-e192105b",
+    "@remix-run/router": "0.0.0-experimental-7f486334",
     "@remix-run/server-runtime": "2.2.0",
-    "react-router-dom": "0.0.0-experimental-e192105b"
+    "react-router-dom": "0.0.0-experimental-7f486334"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.17.0",
