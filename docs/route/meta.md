@@ -140,7 +140,7 @@ export const meta: MetaFunction<
 > = ({ data, matches }) => {
   const project = matches.find(
     (match) => match.id === "routes/project.$pid"
-  ).project;
+  ).data.project;
   const task = data.task;
   return [{ title: `${project.name}: ${task.name}` }];
 };
