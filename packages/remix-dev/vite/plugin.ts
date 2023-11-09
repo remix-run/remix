@@ -139,18 +139,44 @@ const resolveBuildAssetPaths = (
     );
   }
 
+  let keys = resolveViteManifestDepChunks(manifest, manifestKey);
+  let entries = [...keys].map((key) => manifest[key]);
+
   return {
     module: `${pluginConfig.publicPath}${manifestEntry.file}`,
     imports:
-      manifestEntry.imports?.map((imported) => {
+      dedupe(entries.flatMap((e) => e.imports ?? [])).map((imported) => {
         return `${pluginConfig.publicPath}${manifest[imported].file}`;
       }) ?? [],
     css:
-      manifestEntry.css?.map((href) => {
+      dedupe(entries.flatMap((e) => e.css ?? [])).map((href) => {
         return `${pluginConfig.publicPath}${href}`;
       }) ?? [],
   };
 };
+
+function resolveViteManifestDepChunks(manifest: ViteManifest, base: string) {
+  let keys = new Set<string>();
+
+  function dfs(key: string) {
+    if (keys.has(key)) {
+      return;
+    }
+    keys.add(key);
+    let chunk = manifest[key];
+    for (let next of chunk.imports ?? []) {
+      dfs(next);
+    }
+  }
+  dfs(base);
+
+  return keys;
+}
+
+// common utils?
+function dedupe(array: any[]) {
+  return [...new Set(array)];
+}
 
 const writeFileSafe = async (file: string, contents: string): Promise<void> => {
   await fs.mkdir(path.dirname(file), { recursive: true });
