@@ -233,7 +233,7 @@ test.describe("Vite build", () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test.only("supports code-split css", async ({ page }) => {
+  test("supports code-split css", async ({ page }) => {
     let pageErrors: unknown[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
 
