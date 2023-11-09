@@ -252,6 +252,20 @@ export function createClientRoutes(
       if (initialState?.loaderData?.[route.id]) {
         let initialData = initialState.loaderData[route.id];
         initialServerFetch = async () => {
+          // Force an async tick so React can properly render the fallback element
+          // and let the router subscriber initialize
+
+          // TODO: This feels suboptimal, but there's no _real_ way for us to
+          // know if clientLoaders are synchronous...?  We should try to fix this.
+          // The problematic scenario (which is intermittent) is:
+          // * Remix calls createBrowserRouter, which starts as state.initialized=false
+          // * initialize() calls startNavigation which calls client loaders
+          // * RemixBrowser renders RouterProvider
+          // * synchronous client loaders finish _before_ the RouterProvider layout effect
+          //   wires up the subscriber
+          // * So the completeNAvigation and setting state.initialized=true never gets picked up by the React Router layer
+          // console.log("sleeping!");
+          // await new Promise((r) => setTimeout(r, 10));
           return routerJson(initialData);
         };
       } else {
@@ -270,6 +284,7 @@ export function createClientRoutes(
               request,
               params,
               serverFetch: initialServerFetch,
+              initialData,
             });
           } else {
             return callClientLoader(clientLoader, {
