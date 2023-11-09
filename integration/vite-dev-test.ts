@@ -27,16 +27,17 @@ test.describe("Vite dev", () => {
         "vite.config.ts": js`
           import { defineConfig } from "vite";
           import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import mdx from "@mdx-js/rollup";
 
           export default defineConfig({
             server: {
               port: ${devPort},
               strictPort: true,
             },
-            optimizeDeps: {
-              include: ["react", "react-dom/client", "@remix-run/react"],
-            },
-            plugins: [remix()],
+            plugins: [
+              remix(),
+              mdx(),
+            ],
           });
         `,
         "app/root.tsx": js`
@@ -54,8 +55,8 @@ test.describe("Vite dev", () => {
                     <h1>Root</h1>
                     <Outlet />
                   </div>
-                  <LiveReload />
                   <Scripts />
+                  <LiveReload />
                 </body>
               </html>
             );
@@ -144,6 +145,25 @@ test.describe("Vite dev", () => {
               </div>
             );
           }
+        `,
+        "app/routes/mdx.mdx": js`
+          import { json } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react";
+
+          export const loader = () => {
+            return json({
+              content: "MDX route content from loader",
+            })
+          }
+
+          export function MdxComponent() {
+            const { content } = useLoaderData();
+            return <div data-mdx-route>{content}</div>
+          }
+
+          ## MDX Route
+
+          <MdxComponent />
         `,
       },
     });
@@ -261,6 +281,21 @@ test.describe("Vite dev", () => {
     );
     await page.waitForLoadState("networkidle");
     await expect(hmrStatus).toHaveText("HMR updated: yes");
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("handles MDX routes", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    await page.goto(`http://localhost:${devPort}/mdx`, {
+      waitUntil: "networkidle",
+    });
+    expect(pageErrors).toEqual([]);
+
+    let mdxContent = page.locator("[data-mdx-route]");
+    await expect(mdxContent).toHaveText("MDX route content from loader");
 
     expect(pageErrors).toEqual([]);
   });
