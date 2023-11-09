@@ -164,6 +164,10 @@ test.describe("Vite dev", () => {
           ## MDX Route
 
           <MdxComponent />
+
+          ### HMR updated: no
+
+          <input />
         `,
       },
     });
@@ -296,6 +300,23 @@ test.describe("Vite dev", () => {
 
     let mdxContent = page.locator("[data-mdx-route]");
     await expect(mdxContent).toHaveText("MDX route content from loader");
+
+    // verify HMR
+    let hmrStatus = page.locator("h3");
+    await expect(hmrStatus).toHaveText("HMR updated: no");
+
+    let input = page.locator("input");
+    await input.type("stateful");
+
+    let filepath = path.join(projectDir, "app/routes/mdx.mdx");
+    let src = await fs.readFile(filepath, "utf8");
+    await fs.writeFile(
+      filepath,
+      src.replace("HMR updated: no", "HMR updated: yes"),
+      "utf8"
+    );
+    await expect(hmrStatus).toHaveText("HMR updated: yes");
+    await expect(input).toHaveValue("stateful");
 
     expect(pageErrors).toEqual([]);
   });

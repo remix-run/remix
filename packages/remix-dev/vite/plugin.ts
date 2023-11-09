@@ -835,7 +835,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         if (id.includes("/node_modules/")) return;
 
         let [filepath] = id.split("?");
-        if (!/.[tj]sx?$/.test(filepath)) return;
+        if (!/\.(mdx|[tj]sx?)$/.test(filepath)) return;
 
         let devRuntime = "react/jsx-dev-runtime";
         let ssr = options?.ssr === true;
