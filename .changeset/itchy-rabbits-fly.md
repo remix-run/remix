@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-fix: include css from code-split assets when "build"
+Attach CSS from shared chunks to routes in Vite build
