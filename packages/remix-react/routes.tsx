@@ -8,19 +8,16 @@ import {
   json as routerJson,
 } from "@remix-run/router";
 import type {
-  ActionFunctionArgs as RRActionFunctionArgs,
-  LoaderFunctionArgs as RRLoaderFunctionArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+} from "@remix-run/server-runtime";
+import type {
   DataRouteObject,
   ShouldRevalidateFunction,
 } from "react-router-dom";
 import { redirect, useRouteError } from "react-router-dom";
 
-import type {
-  ClientActionFunction,
-  ClientLoaderFunction,
-  RouteModule,
-  RouteModules,
-} from "./routeModules";
+import type { RouteModule, RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 import {
   fetchData,
@@ -148,78 +145,42 @@ export function createClientRoutes(
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModulesCache?.[route.id];
 
-    async function serverLoader({ request }: { request: Request }) {
+    async function actuallyCallServerLoader(request: Request) {
+      if (!route.hasLoader) return null;
+      return fetchServerHandler(request, route);
+    }
+
+    async function actuallyCallServerAction(request: Request) {
+      if (!route.hasAction) {
+        let msg =
+          `Route "${route.id}" does not have an action, but you are trying ` +
+          `to submit to it. To fix this, please add an \`action\` function to the route`;
+        console.error(msg);
+        throw new ErrorResponse(
+          405,
+          "Method Not Allowed",
+          new Error(msg),
+          true
+        );
+      }
+
+      return fetchServerHandler(request, route);
+    }
+
+    async function callServerHandler(
+      request: Request,
+      handler: typeof actuallyCallServerLoader | typeof actuallyCallServerAction
+    ) {
       // Only prefetch links if we've been loaded into the cache, route.lazy
       // will handle initial loads
       let routeModulePromise = routeModulesCache[route.id]
         ? prefetchStyleLinks(route, routeModulesCache[route.id])
         : Promise.resolve();
       try {
-        if (!route.hasLoader) return null;
-        return fetchServerHandler(request, route);
+        return handler(request);
       } finally {
         await routeModulePromise;
       }
-    }
-
-    function callClientLoader(
-      clientLoader: ClientLoaderFunction,
-      { request, params }: RRLoaderFunctionArgs
-    ) {
-      return clientLoader({
-        request,
-        params,
-        serverFetch() {
-          if (!route.hasLoader) return null;
-          return fetchServerHandler(request, route);
-        },
-      });
-    }
-
-    async function serverAction({ request }: { request: Request }) {
-      // Only prefetch links if we've been loaded into the cache, route.lazy
-      // will handle initial loads
-      let routeModulePromise = routeModulesCache[route.id]
-        ? prefetchStyleLinks(route, routeModulesCache[route.id])
-        : Promise.resolve();
-      try {
-        if (!route.hasAction) {
-          let msg =
-            `Route "${route.id}" does not have an action, but you are trying ` +
-            `to submit to it. To fix this, please add an \`action\` function to the route`;
-          console.error(msg);
-          return Promise.reject(
-            new ErrorResponse(405, "Method Not Allowed", new Error(msg), true)
-          );
-        }
-
-        return fetchServerHandler(request, route);
-      } finally {
-        await routeModulePromise;
-      }
-    }
-
-    function callClientAction(
-      clientLoader: ClientActionFunction,
-      { request, params }: RRActionFunctionArgs
-    ) {
-      return clientLoader({
-        request,
-        params,
-        serverFetch() {
-          if (!route.hasAction) {
-            let msg =
-              `Route "${route.id}" does not have an action, but you are trying ` +
-              `to submit to it. To fix this, please add an \`action\` function to the route`;
-            console.error(msg);
-            return Promise.reject(
-              new ErrorResponse(405, "Method Not Allowed", new Error(msg), true)
-            );
-          }
-
-          return fetchServerHandler(request, route);
-        },
-      });
     }
 
     let dataRoute: DataRouteObject = {
@@ -248,68 +209,91 @@ export function createClientRoutes(
           : routeModule.shouldRevalidate,
       });
 
-      let initialServerFetch: () => Promise<Response | DeferredData>;
-      if (initialState?.loaderData?.[route.id]) {
-        let initialData = initialState.loaderData[route.id];
-        initialServerFetch = async () => {
-          // Force an async tick so React can properly render the fallback element
-          // and let the router subscriber initialize
+      dataRoute.loader = ({ request, params }) => {
+        return callServerHandler(request, async (r) => {
+          if (routeModule.clientLoader) {
+            let initialData = initialState?.loaderData?.[route.id];
 
-          // TODO: This feels suboptimal, but there's no _real_ way for us to
-          // know if clientLoaders are synchronous...?  We should try to fix this.
-          // The problematic scenario (which is intermittent) is:
-          // * Remix calls createBrowserRouter, which starts as state.initialized=false
-          // * initialize() calls startNavigation which calls client loaders
-          // * RemixBrowser renders RouterProvider
-          // * synchronous client loaders finish _before_ the RouterProvider layout effect
-          //   wires up the subscriber
-          // * So the completeNAvigation and setting state.initialized=true never gets picked up by the React Router layer
-          // console.log("sleeping!");
-          // await new Promise((r) => setTimeout(r, 10));
-          return routerJson(initialData);
-        };
-      } else {
-        initialServerFetch = async () => {
-          throw new Error(
-            "You are trying to call serverFetch() on a route that does not have a server loader"
-          );
-        };
-      }
-
-      if (routeModule.clientLoader) {
-        let clientLoader = routeModule.clientLoader;
-        dataRoute.loader = ({ request, params }) => {
-          if (request.headers.has("X-Remix-Initial-Load")) {
-            return clientLoader({
-              request,
-              params,
-              serverFetch: initialServerFetch,
-              initialData,
-            });
+            if (request.headers.has("X-Remix-Initial-Load")) {
+              if (initialData) {
+                // FIXME: Is this flow possible once we add route level fallback elements?
+                // The problematic scenario (which was intermittent) is:
+                // * Remix calls createBrowserRouter, which starts as state.initialized=false
+                // * initialize() calls startNavigation which calls client loaders
+                // * RemixBrowser renders RouterProvider
+                // * synchronous client loaders finish _before_ the RouterProvider layout effect
+                //   wires up the subscriber
+                // * So the completeNavigation and setting state.initialized=true never gets picked up by the React Router layer
+                return routeModule.clientLoader({
+                  request,
+                  params,
+                  serverFetch: () => Promise.resolve(routerJson(initialData)),
+                });
+              } else {
+                return routeModule.clientLoader({
+                  request,
+                  params,
+                  async serverFetch() {
+                    throw new Error(
+                      "You are trying to call serverFetch() on a route that does not have a server loader"
+                    );
+                  },
+                });
+              }
+            } else {
+              return routeModule.clientLoader({
+                request,
+                params,
+                serverFetch: () => actuallyCallServerLoader(request),
+              });
+            }
           } else {
-            return callClientLoader(clientLoader, {
-              request,
-              params,
-            });
+            return actuallyCallServerLoader(request);
           }
-        };
-      } else if (route.hasLoader) {
-        dataRoute.loader = ({ request, params }) => {
-          if (request.headers.has("X-Remix-Initial-Load")) {
-            return initialServerFetch();
-          } else {
-            return serverLoader({ request });
-          }
-        };
-      }
+        });
+      };
 
-      // TODO: Action
+      dataRoute.action = ({ request, params }) => {
+        return callServerHandler(request, () => {
+          if (routeModule.clientAction) {
+            if (request.headers.has("X-Remix-Initial-Load")) {
+              return routeModule.clientAction({
+                request,
+                params,
+                async serverFetch() {
+                  throw new Error(
+                    "clientAction is unsupported on initial load"
+                  );
+                },
+              });
+            } else {
+              return routeModule.clientAction({
+                request,
+                params,
+                serverFetch: () => actuallyCallServerAction(request),
+              });
+            }
+          } else {
+            return actuallyCallServerAction(request);
+          }
+        });
+      };
     } else {
       // Load all other modules via route.lazy()
       Object.assign(dataRoute, {
         ...dataRoute,
-        ...(!route.hasClientLoader ? { loader: serverLoader } : {}),
-        ...(!route.hasClientAction ? { action: serverAction } : {}),
+        ...(!route.hasClientLoader
+          ? {
+              loader: ({ request }: LoaderFunctionArgs) =>
+                callServerHandler(request, actuallyCallServerLoader),
+            }
+          : {}),
+        ...(!route.hasClientAction
+          ? {
+              action: ({ request }: ActionFunctionArgs) =>
+                callServerHandler(request, actuallyCallServerAction),
+            }
+          : {}),
         lazy: async () => {
           let mod = await loadRouteModuleWithBlockingLinks(
             route,
@@ -321,10 +305,10 @@ export function createClientRoutes(
             let clientLoader = mod.clientLoader;
             lazyRoute = {
               ...mod,
-              loader: ({ request, params }) =>
-                callClientLoader(clientLoader, {
-                  request,
-                  params,
+              loader: (args) =>
+                clientLoader({
+                  ...args,
+                  serverFetch: () => actuallyCallServerLoader(args.request),
                 }),
             };
           }
@@ -333,7 +317,11 @@ export function createClientRoutes(
             let clientAction = mod.clientAction;
             lazyRoute = {
               ...mod,
-              loader: (args) => callClientAction(clientAction, args),
+              action: (args) =>
+                clientAction({
+                  ...args,
+                  serverFetch: () => actuallyCallServerAction(args.request),
+                }),
             };
           }
 

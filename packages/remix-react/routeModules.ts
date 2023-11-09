@@ -34,7 +34,7 @@ export interface RouteModule {
 
 export type ClientDataFunctionArgs = RRActionFunctionArgs<undefined> &
   RRLoaderFunctionArgs<undefined> & {
-    serverFetch: () => Promise<Response | DeferredData> | null;
+    serverFetch: () => Promise<Response | DeferredData | null>;
   };
 
 export type ClientActionFunction = (
