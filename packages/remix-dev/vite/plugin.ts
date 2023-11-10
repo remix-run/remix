@@ -4,8 +4,10 @@ import * as fs from "node:fs/promises";
 import babel from "@babel/core";
 import { type ServerBuild } from "@remix-run/server-runtime";
 import {
+  type Connect,
   type Plugin as VitePlugin,
   type Manifest as ViteManifest,
+  type ManifestChunk,
   type ResolvedConfig as ResolvedViteConfig,
   type ViteDevServer,
   type UserConfig as ViteUserConfig,
@@ -27,6 +29,7 @@ import {
   resolveConfig,
 } from "../config";
 import { type Manifest } from "../manifest";
+import invariant from "../invariant";
 import { createRequestHandler } from "./node/adapter";
 import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
@@ -118,7 +121,7 @@ const getHash = (source: BinaryLike, maxLength?: number): string => {
 
 const resolveBuildAssetPaths = (
   pluginConfig: ResolvedRemixVitePluginConfig,
-  manifest: ViteManifest,
+  viteManifest: ViteManifest,
   absoluteFilePath: string
 ): Manifest["entry"] & { css: string[] } => {
   let rootRelativeFilePath = path.relative(
@@ -126,10 +129,10 @@ const resolveBuildAssetPaths = (
     absoluteFilePath
   );
   let manifestKey = normalizePath(rootRelativeFilePath);
-  let manifestEntry = manifest[manifestKey];
+  let entryChunk = viteManifest[manifestKey];
 
-  if (!manifestEntry) {
-    let knownManifestKeys = Object.keys(manifest)
+  if (!entryChunk) {
+    let knownManifestKeys = Object.keys(viteManifest)
       .map((key) => '"' + key + '"')
       .join(", ");
     throw new Error(
@@ -137,18 +140,49 @@ const resolveBuildAssetPaths = (
     );
   }
 
+  let chunks = resolveDependantChunks(viteManifest, entryChunk);
+
   return {
-    module: `${pluginConfig.publicPath}${manifestEntry.file}`,
+    module: `${pluginConfig.publicPath}${entryChunk.file}`,
     imports:
-      manifestEntry.imports?.map((imported) => {
-        return `${pluginConfig.publicPath}${manifest[imported].file}`;
+      dedupe(chunks.flatMap((e) => e.imports ?? [])).map((imported) => {
+        return `${pluginConfig.publicPath}${viteManifest[imported].file}`;
       }) ?? [],
     css:
-      manifestEntry.css?.map((href) => {
+      dedupe(chunks.flatMap((e) => e.css ?? [])).map((href) => {
         return `${pluginConfig.publicPath}${href}`;
       }) ?? [],
   };
 };
+
+function resolveDependantChunks(
+  viteManifest: ViteManifest,
+  entryChunk: ManifestChunk
+): ManifestChunk[] {
+  let chunks = new Set<ManifestChunk>();
+
+  function walk(chunk: ManifestChunk) {
+    if (chunks.has(chunk)) {
+      return;
+    }
+
+    if (chunk.imports) {
+      for (let importKey of chunk.imports) {
+        walk(viteManifest[importKey]);
+      }
+    }
+
+    chunks.add(chunk);
+  }
+
+  walk(entryChunk);
+
+  return Array.from(chunks);
+}
+
+function dedupe<T>(array: T[]): T[] {
+  return [...new Set(array)];
+}
 
 const writeFileSafe = async (file: string, contents: string): Promise<void> => {
   await fs.mkdir(path.dirname(file), { recursive: true });
@@ -501,6 +535,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         viteChildCompiler = await createViteDevServer({
           ...viteUserConfig,
+          mode: viteConfig.mode,
           server: {
             ...viteUserConfig.server,
             // when parent compiler runs in middleware mode to support
@@ -567,8 +602,14 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         // have no way of comparing against the cache to know if the virtual modules need to be invalidated.
         let previousPluginConfig: ResolvedRemixVitePluginConfig | undefined;
 
-        // Let user servers handle SSR requests in middleware mode
-        if (vite.config.server.middlewareMode) return;
+        let localsByRequest = new WeakMap<
+          Connect.IncomingMessage,
+          {
+            build: ServerBuild;
+            criticalCss: string | undefined;
+          }
+        >();
+
         return () => {
           vite.middlewares.use(async (req, res, next) => {
             try {
@@ -596,22 +637,59 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                 serverEntryId
               ) as Promise<ServerBuild>);
 
-              let handle = createRequestHandler(build, {
-                mode: "development",
-                criticalCss: await getStylesForUrl(
-                  vite,
-                  pluginConfig,
-                  cssModulesManifest,
-                  build,
-                  url
-                ),
+              let criticalCss = await getStylesForUrl(
+                vite,
+                pluginConfig,
+                cssModulesManifest,
+                build,
+                url
+              );
+
+              localsByRequest.set(req, {
+                build,
+                criticalCss,
               });
 
-              await handle(req, res);
+              // If the middleware is being used in Express, the "res.locals"
+              // object (https://expressjs.com/en/api.html#res.locals) will be
+              // present. If so, we attach the critical CSS as metadata to the
+              // response object so the Remix Express adapter has access to it.
+              if (
+                "locals" in res &&
+                typeof res.locals === "object" &&
+                res.locals !== null
+              ) {
+                (res.locals as Record<string, any>).__remixDevCriticalCss =
+                  criticalCss;
+              }
+
+              next();
             } catch (error) {
               next(error);
             }
           });
+
+          // Let user servers handle SSR requests in middleware mode,
+          // otherwise the Vite plugin will handle the request
+          if (!vite.config.server.middlewareMode) {
+            vite.middlewares.use(async (req, res, next) => {
+              try {
+                let locals = localsByRequest.get(req);
+                invariant(locals, "No Remix locals found for request");
+
+                let { build, criticalCss } = locals;
+
+                let handle = createRequestHandler(build, {
+                  mode: "development",
+                  criticalCss,
+                });
+
+                await handle(req, res);
+              } catch (error) {
+                next(error);
+              }
+            });
+          }
         };
       },
       async buildEnd() {
