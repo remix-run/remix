@@ -5,7 +5,7 @@ toc: false
 
 # `defer`
 
-To get started with streaming data, check out the [Streaming Guide][streaming_guide].
+To get started with streaming data, check out the \[Streaming Guide]\[streaming_guide].
 
 This is a shortcut for creating a streaming/deferred response. It assumes you are using `utf-8` encoding. From a developer perspective it behaves just like [`json()`][json], but with the ability to transport promises to your UI components.
 
