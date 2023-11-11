@@ -494,7 +494,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               "@remix-run/react",
             ],
             // prevent virtual modules (e.g. @remix-run/dev/server-build) from being optimized
-            // (note that optimization would make this vite plugin's transform to be skipped)
+            // (note that optimization would skip custom resolution/transformation by vite plugins)
             exclude: ["@remix-run/dev"],
           },
           ssr: {
