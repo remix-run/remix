@@ -37,6 +37,7 @@ import * as VirtualModule from "./vmod";
 import { removeExports } from "./remove-exports";
 import { transformLegacyCssImports } from "./legacy-css-imports";
 import { replaceImportSpecifier } from "./replace-import-specifier";
+import { serverBuildVirtualModule } from "../compiler/server/virtualModules";
 
 const supportedRemixConfigKeys = [
   "appDirectory",
@@ -492,6 +493,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               // mismatching Remix routers cause `Error: You must render this element inside a <Remix> element`.
               "@remix-run/react",
             ],
+            // prevent virtual modules (e.g. @remix-run/dev/server-build) from being optimized
+            // (note that optimization would make this vite plugin's transform to be skipped)
+            exclude: ["@remix-run/dev"],
+          },
+          ssr: {
+            noExternal: ["@remix-run/dev"],
           },
           esbuild: {
             jsx: "automatic",
@@ -714,6 +721,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       name: "remix-virtual-modules",
       enforce: "pre",
       resolveId(id) {
+        if (id === serverBuildVirtualModule.id) {
+          id = serverEntryId;
+        }
         if (vmods.includes(id)) return VirtualModule.resolve(id);
       },
       async load(id) {
