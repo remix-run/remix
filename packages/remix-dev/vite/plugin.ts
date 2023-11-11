@@ -55,6 +55,7 @@ export type RemixVitePluginOptions = Pick<
   SupportedRemixConfigKey
 > & {
   legacyCssImports?: boolean;
+  serverBuildEntry?: string;
 };
 
 type ResolvedRemixVitePluginConfig = Pick<
@@ -530,7 +531,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                     rollupOptions: {
                       ...viteUserConfig.build?.rollupOptions,
                       preserveEntrySignatures: "exports-only",
-                      input: serverEntryId,
+                      input: options.serverBuildEntry ?? serverEntryId,
                       output: {
                         entryFileNames: path.basename(
                           pluginConfig.serverBuildPath
@@ -647,7 +648,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               }
               let { url } = req;
               let build = await (vite.ssrLoadModule(
-                serverEntryId
+                options.serverBuildEntry ?? serverEntryId
               ) as Promise<ServerBuild>);
 
               let criticalCss = await getStylesForUrl(
