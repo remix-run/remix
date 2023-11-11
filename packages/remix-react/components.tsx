@@ -1041,8 +1041,13 @@ export function useFetcher<TData = AppData>(
   return useFetcherRR(opts);
 }
 
-// Dead Code Elimination magic for production builds.
-// This way devs don't have to worry about doing the NODE_ENV check themselves.
+/**
+ * This component connects your app to the Remix asset server and 
+ * automatically reloads the page when files change in development.
+ * In production, it renders null, so you can safely render it always in your root route.
+ * 
+ * @see https://remix.run/docs/components/live-reload
+ */
 export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
