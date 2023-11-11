@@ -740,25 +740,34 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       },
     },
     {
+      // run empty plugins without `enforce: "pre"` so that non-js code (e.g. JSX, typescript) are transpiled by Vite before using es-module-lexer
       name: "remix-empty-server-modules",
-      enforce: "pre",
-      async transform(_code, id, options) {
-        if (!options?.ssr && /\.server(\.[cm]?[jt]sx?)?$/.test(id))
-          return {
-            code: "export default {}",
-            map: null,
-          };
+      async transform(code, id, options) {
+        if (!options?.ssr && /\.server(\.[cm]?[jt]sx?)?$/.test(id)) {
+          let [, exports] = esModuleLexer(code);
+          return exports
+            .map((e) =>
+              e.n === "default"
+                ? `export default {};\n`
+                : `export var ${e.n} = {};\n`
+            )
+            .join("");
+        }
       },
     },
     {
       name: "remix-empty-client-modules",
-      enforce: "pre",
-      async transform(_code, id, options) {
-        if (options?.ssr && /\.client(\.[cm]?[jt]sx?)?$/.test(id))
-          return {
-            code: "export default {}",
-            map: null,
-          };
+      async transform(code, id, options) {
+        if (options?.ssr && /\.client(\.[cm]?[jt]sx?)?$/.test(id)) {
+          let [, exports] = esModuleLexer(code);
+          return exports
+            .map((e) =>
+              e.n === "default"
+                ? `export default {};\n`
+                : `export var ${e.n} = {};\n`
+            )
+            .join("");
+        }
       },
     },
     {
