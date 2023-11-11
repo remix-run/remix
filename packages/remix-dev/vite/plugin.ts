@@ -229,6 +229,15 @@ const getRouteModuleExports = async (
   return exportNames;
 };
 
+function emptifyExports(code: string) {
+  let [, exports] = esModuleLexer(code);
+  return exports
+    .map((e) =>
+      e.n === "default" ? `export default {};\n` : `export var ${e.n} = {};\n`
+    )
+    .join("");
+}
+
 const showUnstableWarning = () => {
   console.warn(
     colors.yellow(
@@ -744,14 +753,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       name: "remix-empty-server-modules",
       async transform(code, id, options) {
         if (!options?.ssr && /\.server(\.[cm]?[jt]sx?)?$/.test(id)) {
-          let [, exports] = esModuleLexer(code);
-          return exports
-            .map((e) =>
-              e.n === "default"
-                ? `export default {};\n`
-                : `export var ${e.n} = {};\n`
-            )
-            .join("");
+          return {
+            code: emptifyExports(code),
+            map: null,
+          };
         }
       },
     },
@@ -759,14 +764,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       name: "remix-empty-client-modules",
       async transform(code, id, options) {
         if (options?.ssr && /\.client(\.[cm]?[jt]sx?)?$/.test(id)) {
-          let [, exports] = esModuleLexer(code);
-          return exports
-            .map((e) =>
-              e.n === "default"
-                ? `export default {};\n`
-                : `export var ${e.n} = {};\n`
-            )
-            .join("");
+          return {
+            code: emptifyExports(code),
+            map: null,
+          };
         }
       },
     },
