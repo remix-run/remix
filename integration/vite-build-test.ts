@@ -183,6 +183,56 @@ test.describe("Vite build", () => {
             return <div data-dotenv-route-loader-content>{loaderContent}</div>;
           }
         `,
+        // exact same test as integration/vite-dev-test.ts
+        "app/server-lib.server.tsx": js`
+          const serverLibDefault = "serverLibDefault";
+          export default serverLibDefault;
+
+          export const serverLibNamed = "serverLibNamed";
+        `,
+        "app/client-lib.client.tsx": js`
+          const clientLibDefault = "clientLibDefault";
+          export default clientLibDefault;
+
+          export const clientLibNamed = "clientLibNamed";
+        `,
+        "app/routes/empty-server-client-only.tsx": js`
+          import { useState, useEffect } from "react";
+          import { json } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react";
+          import serverLibDefault, { serverLibNamed } from "../server-lib.server";
+          import clientLibDefault, { clientLibNamed } from "../client-lib.client";
+
+          export const loader = () => {
+            return json({
+              serverContent: JSON.stringify({
+                serverLibDefault,
+                serverLibNamed,
+                clientLibDefault,
+                clientLibNamed,
+              }),
+            })
+          }
+
+          export default function EmptyServerClientOnlyRoute() {
+            const { serverContent } = useLoaderData();
+
+            const [clientContent, setClientContent] = useState('');
+            useEffect(() => {
+              setClientContent(JSON.stringify({
+                serverLibDefault,
+                serverLibNamed,
+                clientLibDefault,
+                clientLibNamed,
+              }));
+            }, []);
+
+            return <>
+              <div data-server-only>{serverContent}</div>
+              <div data-client-only>{clientContent}</div>
+            </>
+          }
+        `,
       },
     });
 
@@ -285,6 +335,25 @@ test.describe("Vite build", () => {
     let loaderContent = page.locator("[data-dotenv-route-loader-content]");
     await expect(loaderContent).toHaveText(
       ".env file was NOT loaded, which is a good thing"
+    );
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("emptify named exports from server/client only files", async ({
+    page,
+  }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/empty-server-client-only`);
+
+    await expect(page.locator("[data-server-only]")).toHaveText(
+      `{"serverLibDefault":"serverLibDefault","serverLibNamed":"serverLibNamed","clientLibDefault":{},"clientLibNamed":{}}`
+    );
+    await expect(page.locator("[data-client-only]")).toHaveText(
+      `{"serverLibDefault":{},"serverLibNamed":{},"clientLibDefault":"clientLibDefault","clientLibNamed":"clientLibNamed"}`
     );
 
     expect(pageErrors).toEqual([]);
