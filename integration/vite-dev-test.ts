@@ -197,6 +197,55 @@ test.describe("Vite dev", () => {
             </>
           }
         `,
+        "app/server-lib.server.tsx": js`
+          const serverLibDefault = "serverLibDefault";
+          export default serverLibDefault;
+
+          export const serverLibNamed = "serverLibNamed";
+        `,
+        "app/client-lib.client.tsx": js`
+          const clientLibDefault = "clientLibDefault";
+          export default clientLibDefault;
+
+          export const clientLibNamed = "clientLibNamed";
+        `,
+        "app/routes/empty-server-client-only.tsx": js`
+          import { useState, useEffect } from "react";
+          import { json } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react";
+          import serverLibDefault, { serverLibNamed } from "../server-lib.server";
+          import clientLibDefault, { clientLibNamed } from "../client-lib.client";
+
+          export const loader = () => {
+            return json({
+              serverContent: JSON.stringify({
+                serverLibDefault,
+                serverLibNamed,
+                clientLibDefault,
+                clientLibNamed,
+              }),
+            })
+          }
+
+          export default function EmptyServerClientOnlyRoute() {
+            const { serverContent } = useLoaderData();
+
+            const [clientContent, setClientContent] = useState('');
+            useEffect(() => {
+              setClientContent(JSON.stringify({
+                serverLibDefault,
+                serverLibNamed,
+                clientLibDefault,
+                clientLibNamed,
+              }));
+            }, []);
+
+            return <>
+              <div data-server-only>{serverContent}</div>
+              <div data-client-only>{clientContent}</div>
+            </>
+          }
+        `,
       },
     });
 
@@ -347,6 +396,26 @@ test.describe("Vite dev", () => {
     let clientContent = page.locator("[data-dotenv-route-client-content]");
     await expect(clientContent).toHaveText(
       "process.env.ENV_VAR_FROM_DOTENV_FILE not available on the client, which is a good thing"
+    );
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("emptify named exports from server/client only files", async ({
+    page,
+  }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    await page.goto(`http://localhost:${devPort}/empty-server-client-only`, {
+      waitUntil: "networkidle",
+    });
+
+    await expect(page.locator("[data-server-only]")).toHaveText(
+      `{"serverLibDefault":"serverLibDefault","serverLibNamed":"serverLibNamed","clientLibDefault":{},"clientLibNamed":{}}`
+    );
+    await expect(page.locator("[data-client-only]")).toHaveText(
+      `{"serverLibDefault":{},"serverLibNamed":{},"clientLibDefault":"clientLibDefault","clientLibNamed":"clientLibNamed"}`
     );
 
     expect(pageErrors).toEqual([]);
