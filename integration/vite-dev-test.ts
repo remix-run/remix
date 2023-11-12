@@ -204,7 +204,7 @@ test.describe("Vite dev", () => {
     let viteBin = resolveBin.sync("vite");
     devProc = spawn(nodeBin, [viteBin, "dev"], {
       cwd: projectDir,
-      env: process.env,
+      env: { ...process.env, NODE_ENV: "test" },
       stdio: "pipe",
     });
     let devStdout = bufferize(devProc.stdout);
