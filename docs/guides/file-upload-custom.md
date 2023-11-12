@@ -5,7 +5,7 @@ toc: false
 # Customizing File Uploads in Remix with S3 and Local Storage
 ---
 #### Upload Locally
-To upload a file to a local directory use `unstable_createFileUploadHandler`
+To upload a file to a local directory use `unstable_createFileUploadHandler` and `unstable_composeUploadHandlers`
 
 **Example:**
 
