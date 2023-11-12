@@ -470,6 +470,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           )
         );
 
+        let isSsrBuild =
+          "ssrBuild" in viteConfigEnv &&
+          typeof viteConfigEnv.ssrBuild === "boolean"
+            ? viteConfigEnv.ssrBuild // Vite v4 back compat
+            : viteConfigEnv.isSsrBuild;
+
         return {
           appType: "custom",
           experimental: { hmrPartialAccept: true },
@@ -509,7 +515,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             base: pluginConfig.publicPath,
             build: {
               ...viteUserConfig.build,
-              ...(!viteConfigEnv.ssrBuild
+              ...(!isSsrBuild
                 ? {
                     manifest: true,
                     outDir: pluginConfig.assetsBuildDirectory,
