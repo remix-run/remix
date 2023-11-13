@@ -293,13 +293,19 @@ export default defineConfig({
 });
 ```
 
-#### Optionally remove `@remix-run/css-bundle`
+#### Remove `@remix-run/css-bundle`
 
-Vite has built-in support for CSS side effect imports, PostCSS and CSS Modules, among other CSS bundling features.
+Vite has built-in support for CSS side effect imports, PostCSS and CSS Modules, among other CSS bundling features. The Remix Vite plugin automatically attaches bundled CSS to the relevant routes.
 
-The Remix Vite plugin automatically attaches bundled CSS to the relevant routes so the <nobr>[`@remix-run/css-bundle`][css-bundling]</nobr> package can be removed if you only intend to use Vite in your project.
+The <nobr>[`@remix-run/css-bundle`][css-bundling]</nobr> package is redundant when using Vite since its `cssBundleHref` export will always be `undefined`.
 
-👉 **Remove references to `@remix-run/css-bundle`**
+👉 **Uninstall `@remix-run/css-bundle`**
+
+```shellscript nonumber
+npm uninstall @remix-run/css-bundle
+```
+
+👉 **Remove references to `cssBundleHref`**
 
 ```diff filename=app/root.tsx
 - import { cssBundleHref } from "@remix-run/css-bundle";
@@ -313,7 +319,7 @@ The Remix Vite plugin automatically attaches bundled CSS to the relevant routes 
   ];
 ```
 
-Of course, if this is the only style sheet for a given route, you can remove the links function entirely.
+If a route's `links` function is only used to wire up `cssBundleHref`, you can remove it entirely.
 
 ```diff filename=app/root.tsx
 - import { cssBundleHref } from "@remix-run/css-bundle";
