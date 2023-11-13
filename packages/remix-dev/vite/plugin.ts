@@ -818,7 +818,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           return [
             'import { createElement } from "react";',
             'export * from "@remix-run/react";',
-            'export const LiveReload = process.env.NODE_ENV !== "development" ? () => null : ',
+            `export const LiveReload = ${viteCommand !== "serve"} ? () => null : `,
             '() => createElement("script", {',
             "  dangerouslySetInnerHTML: { ",
             "    __html: `window.__remixLiveReloadEnabled = true`",
@@ -899,7 +899,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             allowAwaitOutsideFunction: true,
             plugins: ["jsx", "typescript"],
           },
-          plugins: [require("react-refresh/babel")],
+          plugins: [[require("react-refresh/babel"), { skipEnvCheck: true }]],
           sourceMaps: true,
         });
         if (result === null) return;
