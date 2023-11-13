@@ -573,6 +573,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                   typeof plugin === "object" &&
                   plugin !== null &&
                   "name" in plugin &&
+                  plugin.name !== "vanilla-extract" &&
                   plugin.name !== "remix" &&
                   plugin.name !== "remix-hmr-updates"
               ),
