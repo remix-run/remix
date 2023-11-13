@@ -21,7 +21,7 @@ export function SomeComponent() {
 
 By default, `useFetcher` generate a unique fetcher scoped to that component (however, it may be looked up in [`useFetchers()`][use_fetchers] while in-flight). If you want to identify a fetcher with your own key such that you can access it from elsewhere in your app, you can do that with the `key` option:
 
-```tsx
+```tsx lines=[2,8]
 function AddToBagButton() {
   const fetcher = useFetcher({ key: "add-to-bag" });
   return <fetcher.Form method="post">...</fetcher.Form>;

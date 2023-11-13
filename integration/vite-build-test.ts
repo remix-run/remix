@@ -1,4 +1,7 @@
+import * as path from "node:path";
 import { test, expect } from "@playwright/test";
+import shell from "shelljs";
+import glob from "glob";
 
 import {
   createAppFixture,
@@ -20,12 +23,19 @@ test.describe("Vite build", () => {
           throw new Error("Remix should not access remix.config.js when using Vite");
           export default {};
         `,
+        ".env": `
+          ENV_VAR_FROM_DOTENV_FILE=true
+        `,
         "vite.config.ts": js`
           import { defineConfig } from "vite";
           import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import mdx from "@mdx-js/rollup";
 
           export default defineConfig({
-            plugins: [remix()],
+            plugins: [
+              remix(),
+              mdx(),
+            ],
           });
         `,
         "app/root.tsx": js`
@@ -51,19 +61,126 @@ test.describe("Vite build", () => {
         `,
         "app/routes/_index.tsx": js`
           import { useState, useEffect } from "react";
+          import { json } from "@remix-run/node";
+
+          import { serverOnly1, serverOnly2 } from "../utils.server";
+
+          export const loader = () => {
+            return json({ serverOnly1 })
+          }
+
+          export const action = () => {
+            console.log(serverOnly2)
+            return null
+          }
 
           export default function() {
             const [mounted, setMounted] = useState(false);
             useEffect(() => {
               setMounted(true);
             }, []);
-            
+
             return (
               <>
                 <h2>Index</h2>
                 {!mounted ? <h3>Loading...</h3> : <h3 data-mounted>Mounted</h3>}
               </>
             );
+          }
+        `,
+        "app/utils.server.ts": js`
+          export const serverOnly1 = "SERVER_ONLY_1"
+          export const serverOnly2 = "SERVER_ONLY_2"
+        `,
+        "app/routes/resource.ts": js`
+          import { json } from "@remix-run/node";
+
+          import { serverOnly1, serverOnly2 } from "../utils.server";
+
+          export const loader = () => {
+            return json({ serverOnly1 })
+          }
+
+          export const action = () => {
+            console.log(serverOnly2)
+            return null
+          }
+        `,
+        "app/routes/mdx.mdx": js`
+          import { useEffect, useState } from "react";
+          import { json } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react";
+
+          import { serverOnly1, serverOnly2 } from "../utils.server";
+
+          export const loader = () => {
+            return json({
+              serverOnly1,
+              content: "MDX route content from loader",
+            })
+          }
+
+          export const action = () => {
+            console.log(serverOnly2)
+            return null
+          }
+
+          export function MdxComponent() {
+            const [mounted, setMounted] = useState(false);
+            useEffect(() => {
+              setMounted(true);
+            }, []);
+            const { content } = useLoaderData();
+            const text = content + (mounted
+              ? ": mounted"
+              : ": not mounted");
+            return <div data-mdx-route>{text}</div>
+          }
+
+          ## MDX Route
+
+          <MdxComponent />
+        `,
+        "app/routes/code-split1.tsx": js`
+          import { CodeSplitComponent } from "../code-split-component";
+
+          export default function CodeSplit1Route() {
+            return <div id="code-split1"><CodeSplitComponent /></div>;
+          }
+        `,
+        "app/routes/code-split2.tsx": js`
+          import { CodeSplitComponent } from "../code-split-component";
+
+          export default function CodeSplit2Route() {
+            return <div id="code-split2"><CodeSplitComponent /></div>;
+          }
+        `,
+        "app/code-split-component.tsx": js`
+          import classes from "./code-split.module.css";
+
+          export function CodeSplitComponent() {
+            return <span className={classes.test}>ok</span>
+          }
+        `,
+        "app/code-split.module.css": js`
+          .test {
+            background-color: rgb(255, 170, 0);
+          }
+        `,
+        "app/routes/dotenv.tsx": js`
+          import { json } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react";
+
+          export const loader = () => {
+            return json({
+              loaderContent: process.env.ENV_VAR_FROM_DOTENV_FILE ?? '.env file was NOT loaded, which is a good thing',
+            })
+          }
+
+          export default function DotenvRoute() {
+            const { loaderContent } = useLoaderData();
+
+            return <div data-dotenv-route-loader-content>{loaderContent}</div>;
           }
         `,
       },
@@ -74,6 +191,25 @@ test.describe("Vite build", () => {
 
   test.afterAll(() => {
     appFixture.close();
+  });
+
+  test("server code is removed from client assets", async () => {
+    let publicBuildDir = path.join(fixture.projectDir, "public/build");
+
+    // detect client asset files
+    let assetFiles = glob.sync("**/*.@(js|jsx|ts|tsx)", {
+      cwd: publicBuildDir,
+      absolute: true,
+    });
+
+    // grep for server-only values in client assets
+    let result = shell
+      .grep("-l", /SERVER_ONLY_1|SERVER_ONLY_2/, assetFiles)
+      .stdout.trim()
+      .split("\n")
+      .filter((line) => line.length > 0);
+
+    expect(result).toHaveLength(0);
   });
 
   test("server renders matching routes", async () => {
@@ -93,5 +229,64 @@ test.describe("Vite build", () => {
     expect(await page.locator("#content h3[data-mounted]").textContent()).toBe(
       "Mounted"
     );
+  });
+
+  test("server renders matching MDX routes", async ({ page }) => {
+    let res = await fixture.requestDocument("/mdx");
+    expect(res.status).toBe(200);
+    expect(selectHtml(await res.text(), "[data-mdx-route]")).toBe(
+      `<div data-mdx-route="true">MDX route content from loader: not mounted</div>`
+    );
+  });
+
+  test("hydrates matching MDX routes", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/mdx");
+    await expect(page.locator("[data-mdx-route]")).toContainText(
+      "MDX route content from loader: mounted"
+    );
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("supports code-split css", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/code-split1");
+    expect(
+      await page
+        .locator("#code-split1 span")
+        .evaluate((e) => window.getComputedStyle(e).backgroundColor)
+    ).toBe("rgb(255, 170, 0)");
+
+    await app.goto("/code-split2");
+    expect(
+      await page
+        .locator("#code-split2 span")
+        .evaluate((e) => window.getComputedStyle(e).backgroundColor)
+    ).toBe("rgb(255, 170, 0)");
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("doesn't load .env file", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/dotenv`);
+    expect(pageErrors).toEqual([]);
+
+    let loaderContent = page.locator("[data-dotenv-route-loader-content]");
+    await expect(loaderContent).toHaveText(
+      ".env file was NOT loaded, which is a good thing"
+    );
+
+    expect(pageErrors).toEqual([]);
   });
 });

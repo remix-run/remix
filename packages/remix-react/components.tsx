@@ -93,9 +93,10 @@ function useRemixContext(): RemixContextObject {
 /**
  * Defines the prefetching behavior of the link:
  *
+ * - "none": Never fetched
  * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
- * - "none": Never fetched
+ * - "viewport": Fetched when the link is in the viewport
  */
 type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
@@ -289,7 +290,9 @@ export function Links() {
 
   return (
     <>
-      {criticalCss ? <style>{criticalCss}</style> : null}
+      {criticalCss ? (
+        <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
+      ) : null}
       {keyedLinks.map(({ key, link }) =>
         isPageLinkDescriptor(link) ? (
           <PrefetchPageLinks key={key} {...link} />
@@ -853,6 +856,11 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   return isHydrated ? null : (
     <>
+      <link
+        rel="modulepreload"
+        href={manifest.url}
+        crossOrigin={props.crossOrigin}
+      />
       <link
         rel="modulepreload"
         href={manifest.entry.module}
