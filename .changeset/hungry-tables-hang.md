@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-fix: allow custom NODE_ENV on vite dev with remix plugin
+Allow `process.env.NODE_ENV` values other than `"development"` in Vite dev
