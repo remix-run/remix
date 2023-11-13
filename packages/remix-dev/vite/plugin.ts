@@ -547,9 +547,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       async configResolved(viteConfig) {
         await initEsModuleLexer;
 
-        // load same config file again for child compiler so that each parent/child compiler plugins have independent state.
-        // reusing `viteUserConfig.plugins` for child compiler would lead to mutating single plugin instance in an unexpected way.
-        // (for example, when `vite build`, `config` plugin hook is called with `command = "build"` by parent and then `command = "serve"` by child)
+        // load same config file again for child compiler so that
+        // parent and child compiler's plugins have independent state.
+        // note that reusing `viteUserConfig.plugins` for child compiler would lead
+        // to mutating single plugin instance in an unexpected way,
+        // for example, during `vite build`, `configResolved` plugin hook would called
+        // with `command = "build"` by parent and then `command = "serve"` by child.
         let childConfig = await loadConfigFromFile(
           {
             command: viteConfig.command,
@@ -572,23 +575,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           configFile: false,
           envFile: false,
           plugins: [
-            // ...(viteUserConfig.plugins ?? [])
-            //   .flat()
-            //   // Exclude this plugin from the child compiler to prevent an
-            //   // infinite loop (plugin creates a child compiler with the same
-            //   // plugin that creates another child compiler, repeat ad
-            //   // infinitum), and to prevent the manifest from being written to
-            //   // disk from the child compiler. This is important in the
-            //   // production build because the child compiler is a Vite dev
-            //   // server and will generate incorrect manifests.
-            //   .filter(
-            //     (plugin) =>
-            //       typeof plugin === "object" &&
-            //       plugin !== null &&
-            //       "name" in plugin &&
-            //       plugin.name !== "remix" &&
-            //       plugin.name !== "remix-hmr-updates"
-            //   ),
             ...(childConfig?.config.plugins ?? [])
               .flat()
               // Exclude this plugin from the child compiler to prevent an
