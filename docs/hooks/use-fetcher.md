@@ -112,7 +112,7 @@ fetcher.submit(
 
 Loads data from a route loader. While multiple nested routes can match a URL, only the leaf route will be called. 
 
-Note that when calling `load` on an index route's loader, you [must include](https://remix.run/docs/en/1.19.3/guides/routing#what-is-the-index-query-param) a `?index` query parameter in order to disambiguate between the `index.tsx` layout and the `root.tsx` route.
+Note that when calling `load` on an index route's loader, you must include an [`?index` query param](../guides/index-query-param) in order to disambiguate between the `index.tsx` layout and the `root.tsx` route.
 
 ```ts
 fetcher.load("/some/route");
