@@ -554,13 +554,20 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             ? { isSsrBuild: true, getManifest: createBuildManifest }
             : { isSsrBuild: false };
 
-        // load same config file again for child compiler so that
-        // parent and child compiler's plugins have independent state.
-        // note that reusing `viteUserConfig.plugins` for child compiler would lead
-        // to mutating single plugin instance in an unexpected way,
-        // for example, during `vite build`, `configResolved` plugin hook would called
-        // with `command = "build"` by parent and then `command = "serve"` by child.
-        let childConfigFile = await vite.loadConfigFromFile(
+        // We load the same Vite config file again for the child compiler so
+        // that both parent and child compiler's plugins have independent state.
+        // If we re-used the `viteUserConfig.plugins` array for the child
+        // compiler, it could lead to mutating shared state between plugin
+        // instances in unexpected ways, e.g. during `vite build` the
+        // `configResolved` plugin hook would be called with `command = "build"`
+        // by parent and then `command = "serve"` by child, which some plugins
+        // may respond to by updating state referenced by the parent.
+        if (!viteConfig.configFile) {
+          throw new Error(
+            "The Remix Vite plugin requires the use of a Vite config file"
+          );
+        }
+        let childCompilerConfigFile = await vite.loadConfigFromFile(
           {
             command: viteConfig.command,
             mode: viteConfig.mode,
@@ -569,6 +576,11 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               : { isSsrBuild: ssrBuildContext.isSsrBuild }),
           },
           viteConfig.configFile
+        );
+
+        invariant(
+          childCompilerConfigFile,
+          "Vite config file was unable to be resolved for Remix child compiler"
         );
 
         viteChildCompiler = await vite.createServer({
@@ -584,7 +596,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           configFile: false,
           envFile: false,
           plugins: [
-            ...(childConfigFile?.config.plugins ?? [])
+            ...(childCompilerConfigFile.config.plugins ?? [])
               .flat()
               // Exclude this plugin from the child compiler to prevent an
               // infinite loop (plugin creates a child compiler with the same
