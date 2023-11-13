@@ -24,7 +24,10 @@ There are three steps to streaming data:
 **Manual Setup Needed?:** If your project began from scratch or used an older template, verify `entry.server.tsx` and `entry.client.tsx` have streaming support. If you don't see these files then you are using the defaults and streaming is supported. If you have created your own entries, the following are the template defaults for your reference:
 
 - [entry.client.tsx][entry_client_tsx]
-- [entry.server.tsx][entry_server_tsx]
+- entry.server.tsx:
+  - [cloudflare][entry_server_cloudflare_tsx]
+  - [deno][entry_server_deno_tsx]
+  - [node][entry_server_node_tsx]
 
 ## 2. Component Setup
 
@@ -151,7 +154,9 @@ export async function loader({
 ```
 
 [entry_client_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.client.tsx
-[entry_server_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.server.tsx
+[entry_server_cloudflare_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.server.cloudflare.tsx
+[entry_server_deno_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.server.deno.tsx
+[entry_server_node_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.server.node.tsx
 [suspense_component]: https://react.dev/reference/react/Suspense
 [await_component]: ../components/await
 [defer]: ../utils/defer
