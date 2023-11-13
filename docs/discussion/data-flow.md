@@ -5,7 +5,7 @@ order: 4
 
 # Fullstack Data Flow
 
-One of the primary features of Remix is the way it automatically keeps your UI in sync with persistent server state. It happens in three steps:
+One of the primary features of Remix is the way it automatically keeps your UI in sync with the persistent server state. It happens in three steps:
 
 1. Route loaders provide data to the UI
 2. Forms post data to route actions that update persistent state
@@ -161,7 +161,7 @@ When the user submits the form:
 2. After the action completes, loaders are revalidated to get the new server state.
 3. `useLoaderData` returns the updated values from the server.
 
-In this way, the UI is kept in sync with server state without writing any code for that synchronization.
+In this way, the UI is kept in sync with the server state without writing any code for that synchronization.
 
 There are various ways to submit a form besides an HTML form element (like in response to drag and drop, or an onChange event). There is also a lot more to talk about around form validation, error handling, pending states, etc. We'll get to all of that later, but this is the gist of data flow in Remix.
 

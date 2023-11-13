@@ -9,7 +9,7 @@ While Remix works as a multipage app, when JavaScript is loaded, it uses client 
 
 Remix is built on top of [React Router][react_router] and maintained by the same team. This means that you can use all the features of React Router in your Remix app.
 
-This also means that the 90% of Remix is really just React Router: a very old, very stable library that is perhaps the largest dependency in the React ecosystem. Remix simply adds a server behind it.
+This also means that 90% of Remix is really just React Router: a very old, very stable library that is perhaps the largest dependency in the React ecosystem. Remix simply adds a server behind it.
 
 ## Importing Components and Hooks
 
@@ -29,7 +29,7 @@ import { useLocation } from "@remix-run/react";
 
 ## Extended Behavior
 
-Some of the components and hooks have been extended to work with Remix's server-rendering and data fetching features. For example, `Link` can prefetch data and resources in Remix, where the React Router version cannot.
+Some of the components and hooks have been extended to work with Remix's server-rendering and data fetching features. For example, `Link` can prefetch data and resources in Remix, whereas the React Router version cannot.
 
 🚫 Don't do this:
 

@@ -11,13 +11,13 @@ One of the foundational concepts in Remix's routing system is the use of nested 
 
 Nested routes provide clarity by segmenting URLs into multiple parts. Each segment directly correlates with a particular data requirement and component. For instance, in the URL `/sales/invoices/102000`, each segment - `sales`, `invoices`, and `102000` - can be associated with specific data points and UI sections, making it intuitive to manage in the codebase.
 
-A feature of nested routing is the ability for several routes in the nested route tree to match a single URL. This granularity ensures that each route is primarily focused on its specific URL segment and related slice of UI. This approach champions the principles of modularity and separation of concerns, ensuring each route remains focused on its core responsibilities.
+A feature of nested routing is the ability for several routes in the nested route tree to match a single URL. This granularity ensures that each route is primarily focused on its specific URL segment and a related slice of UI. This approach champions the principles of modularity and separation of concerns, ensuring each route remains focused on its core responsibilities.
 
 <iframe src="/_docs/routing" class="w-full aspect-[1/1] rounded-lg overflow-hidden pb-4"></iframe>
 
 ## Parallel Loading
 
-In some web applications, the sequential loading of data and assets can sometimes lead to an artificially slow user experience. Even when data dependencies aren't interdependent, they may be loaded sequentially because they are coupled to rendering hierarchy, creating an undesirable chain of requests.
+In some web applications, the sequential loading of data and assets can sometimes lead to an artificially slow user experience. Even when data dependencies aren't interdependent, they may be loaded sequentially because they are coupled to the rendering hierarchy, creating an undesirable chain of requests.
 
 Remix leverages its nested routing system to optimize load times. When a URL matches multiple routes, Remix will load the required data and assets for all matching routes in parallel. By doing this, Remix effectively sidesteps the conventional pitfall of chained request sequences.
 
@@ -101,9 +101,9 @@ app/
 
 ## Manual Route Configuration
 
-While the `app/routes` folder offers a convenient convention for developers, Remix appreciates that one size doesn't fit all. There are times when the provided convention might not align with specific project requirements or a developer's preferences. In such cases, Remix allows for manual route configuration via [`remix.config.js`][remix_config]. This flexibility ensures developers can structure their application in a way that makes sense for their project.
+While the `app/routes` folder offers a convenient convention for developers, Remix appreciates that one size doesn't fit all. There are times when the provided convention might not align with specific project requirements or a developer's preferences. In such cases, Remix allows for manual route configuration via [`remix.config.js`][remix_config]. This flexibility ensures developers can structure their applications in a way that makes sense for their projects.
 
-A common way to structure an app is by top-level features folders. Consider that routes related to a particular theme, like concerts, likely share several modules. Organizing them under a single folder makes sense:
+A common way to structure an app is by top-level feature folders. Consider that routes related to a particular theme, like concerts, likely share several modules. Organizing them under a single folder makes sense:
 
 ```text
 app/
