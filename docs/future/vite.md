@@ -127,43 +127,6 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 + "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
 ```
 
-#### `LiveReload` before `Scripts`
-
-<docs-info>
-  This is a temporary workaround for a limitation that will be removed in the future.
-</docs-info>
-
-For React Fast Refresh to work, it [needs to be initialized before any app code is run][rfr-preamble].
-That means it needs to come _before_ your `<Scripts />` element that loads your app code.
-
-We're working on a better API that would eliminate issues with ordering scripts.
-But for now, you can work around this limitation by manually moving `<LiveReload />` before `<Scripts />`.
-If your app doesn't the `Scripts` component, you can safely ignore this step.
-
-👉 **Ensure `<LiveReload />` comes _before_ `<Scripts />`**
-
-```diff filename=app/root.tsx
-export default function App() {
-  return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <Meta />
-        <Links />
-      </head>
-      <body>
-        <Outlet />
-        <ScrollRestoration />
-+        <LiveReload />
-        <Scripts />
--        <LiveReload />
-      </body>
-    </html>
-  );
-}
-```
-
 #### Migrating from Remix App Server
 
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
@@ -656,7 +619,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [solidstart]: https://start.solidjs.com/getting-started/what-is-solidstart
 [sveltekit]: https://kit.svelte.dev/
 [supported-with-some-deprecations]: #mdx
-[rfr-preamble]: https://github.com/facebook/react/issues/16604#issuecomment-528663101
 [component-keys]: #component-keys
 [issues-vite]: https://github.com/remix-run/remix/labels/vite
 [hmr]: ../discussion/hot-module-replacement
