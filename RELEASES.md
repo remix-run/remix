@@ -110,20 +110,15 @@ npx create-remix@latest --template remix-run/remix/templates/unstable-vite
 npx create-remix@latest --template remix-run/remix/templates/unstable-vite-express
 ```
 
-**New APIs in `@remix-run/dev`**
-
-- `unstable_vitePlugin`: The new Remix Vite plugin
-- `unstable_createViteServer`: Creates a Vite server in middleware mode for interop with custom servers
-- `unstable_loadViteServerBuild`: Allows your custom server to delegate SSR requests to Vite during development
-
-**Changed APIs**
-
-- `createRequestHandler`: Now also allows the `build` argument to be a function that will be used to dynamically load new builds for each request during development
-
-**Other Runtimes**
-
-- Deno support is untested, but should work through Deno's Node/`npm` interop
-- CloudFlare support is not yet available
+- **New APIs in `@remix-run/dev`**
+  - `unstable_vitePlugin`: The new Remix Vite plugin
+  - `unstable_createViteServer`: Creates a Vite server in middleware mode for interop with custom servers
+  - `unstable_loadViteServerBuild`: Allows your custom server to delegate SSR requests to Vite during development
+- **Changed APIs**
+  - `createRequestHandler`: Now also allows the `build` argument to be a function that will be used to dynamically load new builds for each request during development
+- **Other Runtimes**
+  - Deno support is untested, but should work through Deno's Node/`npm` interop
+  - CloudFlare support is not yet available
 
 #### New Fetcher APIs
 
