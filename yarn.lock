@@ -2319,10 +2319,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/router@1.11.0":
-  version "1.11.0"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.11.0.tgz#e0e45ac3fff9d8a126916f166809825537e9f955"
-  integrity sha512-BHdhcWgeiudl91HvVa2wxqZjSHbheSgIiDvxrF1VjFzBzpTtuDPkOdOi3Iqvc08kXtFkLjhbS+ML9aM8mJS+wQ==
+"@remix-run/router@1.12.0-pre.0":
+  version "1.12.0-pre.0"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.12.0-pre.0.tgz#a7a3ed1941016f574147a97d64d3c687bf343113"
+  integrity sha512-+bBn9KqD2AC0pttSGydVFOZSsT0NqQ1+rGFwMTx9dRANk6oGxrPbKTDxLLikocscGzSL5przvcK4Uxfq8yU7BQ==
 
 "@remix-run/web-blob@^3.1.0":
   version "3.1.0"
@@ -3417,9 +3417,9 @@ acorn-jsx@^5.0.0, acorn-jsx@^5.3.2:
   integrity sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==
 
 acorn@^8.0.0, acorn@^8.8.0, acorn@^8.8.1:
-  version "8.11.0"
-  resolved "https://registry.npmjs.org/acorn/-/acorn-8.11.0.tgz#04306e13732231c995ac4363f331ee09db278d82"
-  integrity sha512-hNiSyky+cuYVALBrsjB7f9gMN9P4u09JyAiMNMLaVfsmkDJuH84M1T/0pfDX/OJfGWcobd2A7ecXYzygn8wibA==
+  version "8.11.2"
+  resolved "https://registry.npmjs.org/acorn/-/acorn-8.11.2.tgz#ca0d78b51895be5390a5903c5b3bdcdaf78ae40b"
+  integrity sha512-nc0Axzp/0FILLEVsm4fNwLCwMttvhEI263QtVPQcbpfZZ3ts0hLsZGOpE6czNlid7CJ9MlyH8reXkpsf3YUY4w==
 
 agent-base@6:
   version "6.0.2"
@@ -10918,9 +10918,9 @@ pumpify@^1.3.3:
     pump "^2.0.0"
 
 punycode@^2.1.0, punycode@^2.1.1, punycode@^2.3.0:
-  version "2.3.0"
-  resolved "https://registry.npmjs.org/punycode/-/punycode-2.3.0.tgz#f67fa67c94da8f4d0cfff981aee4118064199b8f"
-  integrity sha512-rRV+zQD8tVFys26lAGR9WUuS4iUAngJScM+ZRSKtvl5tKeZ2t5bvdNFdNHBW9FWR4guGHlgmsZ1G7BSm2wTbuA==
+  version "2.3.1"
+  resolved "https://registry.npmjs.org/punycode/-/punycode-2.3.1.tgz#027422e2faec0b25e1549c3e1bd8309b9133b6e5"
+  integrity sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==
 
 pure-rand@^6.0.0:
   version "6.0.2"
@@ -11028,20 +11028,20 @@ react-refresh@^0.14.0:
   resolved "https://registry.npmjs.org/react-refresh/-/react-refresh-0.14.0.tgz"
   integrity sha512-wViHqhAd8OHeLS/IRMJjTSDHF3U9eWi62F/MledQGPdJGDhodXJ9PBLNGr6WWL7qlH12Mt3TyTpbS+hGXMjCzQ==
 
-react-router-dom@6.18.0:
-  version "6.18.0"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.18.0.tgz#0a50c167209d6e7bd2ed9de200a6579ea4fb1dca"
-  integrity sha512-Ubrue4+Ercc/BoDkFQfc6og5zRQ4A8YxSO3Knsne+eRbZ+IepAsK249XBH/XaFuOYOYr3L3r13CXTLvYt5JDjw==
+react-router-dom@6.19.0-pre.0:
+  version "6.19.0-pre.0"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.19.0-pre.0.tgz#99d561cf50babea4c8c65317950884bb1db76395"
+  integrity sha512-elYzIXUmv92//Stn0IK8EYQixv1zeuUWw/HZM9LTQ4aGdNeBTqpTEq/K66KJbmfklzgVpg29Nr515onohZA1dA==
   dependencies:
-    "@remix-run/router" "1.11.0"
-    react-router "6.18.0"
+    "@remix-run/router" "1.12.0-pre.0"
+    react-router "6.19.0-pre.0"
 
-react-router@6.18.0:
-  version "6.18.0"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-6.18.0.tgz#32e2bedc318e095a48763b5ed7758e54034cd36a"
-  integrity sha512-vk2y7Dsy8wI02eRRaRmOs9g2o+aE72YCx5q9VasT1N9v+lrdB79tIqrjMfByHiY5+6aYkH2rUa5X839nwWGPDg==
+react-router@6.19.0-pre.0:
+  version "6.19.0-pre.0"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-6.19.0-pre.0.tgz#bebd659375430700b894e6007311bd1ff4bd84c5"
+  integrity sha512-qyPRUTh6jnZHu9t0UtdLdcVeKCWVmJbIZo0YgZb4ETxygqe/43WAPHsJ8TjA6/b6A+SeYhDZqeVu/U/lpBdUsA==
   dependencies:
-    "@remix-run/router" "1.11.0"
+    "@remix-run/router" "1.12.0-pre.0"
 
 react@^18.2.0:
   version "18.2.0"
