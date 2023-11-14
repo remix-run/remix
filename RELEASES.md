@@ -13,25 +13,33 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.2.0 🏷️](#v220-️)
+  - [v2.3.0 🏷️](#v230-️)
     - [What's Changed](#whats-changed)
-      - [Vite!](#vite)
-      - [New Fetcher APIs](#new-fetcher-apis)
-      - [Persistence Future Flag](#persistence-future-flag)
+      - [Stabilized `useBlocker`](#stabilized-useblocker)
+      - [`unstable_flushSync` API](#unstable_flushsync-api)
     - [Minor Changes](#minor-changes)
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
     - [Changes by Package](#changes-by-package)
-  - [v2.1.0 🏷️](#v210-️)
+  - [v2.2.0 🏷️](#v220-️)
     - [What's Changed](#whats-changed-1)
-      - [View Transitions](#view-transitions)
-      - [Stable `createRemixStub`](#stable-createremixstub)
+      - [Vite!](#vite)
+      - [New Fetcher APIs](#new-fetcher-apis)
+      - [Persistence Future Flag](#persistence-future-flag)
     - [Minor Changes](#minor-changes-1)
     - [Patch Changes](#patch-changes-1)
     - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
-  - [v2.0.1 🏷️](#v201-️)
+  - [v2.1.0 🏷️](#v210-️)
+    - [What's Changed](#whats-changed-2)
+      - [View Transitions](#view-transitions)
+      - [Stable `createRemixStub`](#stable-createremixstub)
+    - [Minor Changes](#minor-changes-2)
     - [Patch Changes](#patch-changes-2)
+    - [Updated Dependencies](#updated-dependencies-2)
+    - [Changes by Package](#changes-by-package-2)
+  - [v2.0.1 🏷️](#v201-️)
+    - [Patch Changes](#patch-changes-3)
     - [Changes by Package 🔗](#changes-by-package-)
   - [v2.0.0 🏷️](#v200-️)
     - [Breaking Changes](#breaking-changes)
@@ -43,8 +51,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
         - [Breaking Type Changes](#breaking-type-changes)
     - [New Features](#new-features)
     - [Other Notable Changes](#other-notable-changes)
-    - [Updated Dependencies](#updated-dependencies-2)
-    - [Changes by Package](#changes-by-package-2)
+    - [Updated Dependencies](#updated-dependencies-3)
+    - [Changes by Package](#changes-by-package-3)
 
 </details>
 
@@ -86,11 +94,87 @@ To add a new release, copy from this template:
 - [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-server-runtime/CHANGELOG.md#2XY)
 - [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-testing/CHANGELOG.md#2XY)
 
----
-
 **Full Changelog**: [`v2.X.Y...v2.X.Y`](https://github.com/remix-run/remix/compare/remix@2.X.Y...remix@2.X.Y)
 
 -->
+
+## v2.3.0 [🏷️](https://github.com/remix-run/remix/releases/tag/remix%402.3.0)
+
+### What's Changed
+
+#### Stabilized `useBlocker`
+
+We've removed the `unstable_` prefix from the [`useBlocker`](https://remix.run/hooks/use-blocker) hook as it's been in use for enough time that we are confident in the API. We do not plan to remove the prefix from [`unstable_usePrompt`](https://remix.run/hooks/use-prompt) due to differences in how browsers handle `window.confirm` that prevent React Router from guaranteeing consistent/correct behavior.
+
+#### `unstable_flushSync` API
+
+We've added a new `unstable_flushSync` option to the imperative APIs (`useSubmit`, `useNavigate`, `fetcher.submit`, `fetcher.load`) to let users opt-into synchronous DOM updates for pending/optimistic UI.
+
+```js
+function handleClick() {
+  submit(data, { flushSync: true });
+  // Everything is flushed to the DOM so you can focus/scroll to your pending/optimistic UI
+  setFocusAndOrScrollToNewlyAddedThing();
+}
+```
+
+### Minor Changes
+
+- Remove the `unstable_` prefix from the [`useBlocker`](https://reactrouter.com/en/main/hooks/use-blocker) hook ([#7882](https://github.com/remix-run/remix/pull/7882))
+- Add `unstable_flushSync` option to `useNavigate`/`useSubmit`/`fetcher.load`/`fetcher.submit` to opt-out of `React.startTransition` and into `ReactDOM.flushSync` for state updates ([#7996](https://github.com/remix-run/remix/pull/7996))
+
+### Patch Changes
+
+- `@remix-run/react`: Add missing `modulepreload` for the manifest ([#7684](https://github.com/remix-run/remix/pull/7684))
+- `@remix-run/server-runtime`: Updated `cookie` dependency from `0.4.1` to [`0.5.0`](https://github.com/jshttp/cookie/blob/v0.5.0/HISTORY.md#050--2022-04-11) to inherit support for `Priority` attribute in Chrome ([#6770](https://github.com/remix-run/remix/pull/6770))
+- `@remix-run/dev`: Fix `FutureConfig` type ([#7895](https://github.com/remix-run/remix/pull/7895))
+- _Lots_ of small fixes for the unstable `vite` compiler:
+  - Support optional rendering of the `LiveReload` component in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
+  - Support rendering of the `LiveReload` component after `Scripts` in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
+  - Fix `react-refresh/babel` resolution for custom server with `pnpm` ([#7904](https://github.com/remix-run/remix/pull/7904))
+  - Support JSX usage in `.jsx` files without manual `React` import in Vite ([#7888](https://github.com/remix-run/remix/pull/7888))
+  - Fix Vite production builds when plugins that have different local state between `development` and `production` modes are present (e.g. `@mdx-js/rollup`) ([#7911](https://github.com/remix-run/remix/pull/7911))
+  - Cache resolution of Remix Vite plugin options ([#7908](https://github.com/remix-run/remix/pull/7908))
+  - Support Vite 5 ([#7846](https://github.com/remix-run/remix/pull/7846))
+  - Allow `process.env.NODE_ENV` values other than `"development"` in Vite dev ([#7980](https://github.com/remix-run/remix/pull/7980))
+  - Attach CSS from shared chunks to routes in Vite build ([#7952](https://github.com/remix-run/remix/pull/7952))
+  - Let Vite handle serving files outside of project root via `/@fs` ([#7913](https://github.com/remix-run/remix/pull/7913))
+    - This fixes errors when using default client entry or server entry in a pnpm project where those files may be outside of the project root, but within the workspace root
+    - By default, Vite prevents access to files outside the workspace root (when using workspaces) or outside of the project root (when not using workspaces) unless user explicitly opts into it via Vite's `server.fs.allow`
+  - Improve performance of LiveReload proxy in Vite dev ([#7883](https://github.com/remix-run/remix/pull/7883))
+  - Deduplicate `@remix-run/react` ([#7926](https://github.com/remix-run/remix/pull/7926))
+    - Pre-bundle Remix dependencies to avoid Remix router duplicates
+    - Our `remix-react-proxy` plugin does not process default client and server entry files since those come from within `node_modules`
+    - That means that before Vite pre-bundles dependencies (e.g. first time dev server is run) mismatching Remix routers cause `Error: You must render this element inside a <Remix> element`
+  - Fix React Fast Refresh error on load when using `defer` in Vite dev server ([#7842](https://github.com/remix-run/remix/pull/7842))
+  - Handle multiple `Set-Cookie` headers in Vite dev server ([#7843](https://github.com/remix-run/remix/pull/7843))
+  - Fix flash of unstyled content on initial page load in Vite dev when using a custom Express server ([#7937](https://github.com/remix-run/remix/pull/7937))
+  - Populate `process.env` from `.env` files on the server in Vite dev ([#7958](https://github.com/remix-run/remix/pull/7958))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.19.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.19.0)
+- [`@remix-run/router@1.12.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1120)
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/create-remix/CHANGELOG.md#230)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-architect/CHANGELOG.md#230)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-cloudflare/CHANGELOG.md#230)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-cloudflare-pages/CHANGELOG.md#230)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-cloudflare-workers/CHANGELOG.md#230)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-css-bundle/CHANGELOG.md#230)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-deno/CHANGELOG.md#230)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-dev/CHANGELOG.md#230)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-eslint-config/CHANGELOG.md#230)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-express/CHANGELOG.md#230)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-node/CHANGELOG.md#230)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-react/CHANGELOG.md#230)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-serve/CHANGELOG.md#230)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-server-runtime/CHANGELOG.md#230)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.3.0/packages/remix-testing/CHANGELOG.md#230)
+
+**Full Changelog**: [`v2.2.0...v2.3.0`](https://github.com/remix-run/remix/compare/remix@2.2.0...remix@2.3.0)
 
 ## v2.2.0 [🏷️](https://github.com/remix-run/remix/releases/tag/remix%402.2.0)
 
@@ -182,8 +266,6 @@ Per the same [RFC](https://github.com/remix-run/remix/discussions/7698) as above
 - [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.2.0/packages/remix-serve/CHANGELOG.md#220)
 - [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.2.0/packages/remix-server-runtime/CHANGELOG.md#220)
 - [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.2.0/packages/remix-testing/CHANGELOG.md#220)
-
----
 
 **Full Changelog**: [`v2.1.0...v2.2.0`](https://github.com/remix-run/remix/compare/remix@2.1.0...remix@2.2.0)
 
@@ -279,8 +361,6 @@ After real-world experience, we're confident in the [`createRemixStub`](https://
 - [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.1.0/packages/remix-server-runtime/CHANGELOG.md#210)
 - [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.1.0/packages/remix-testing/CHANGELOG.md#210)
 
----
-
 **Full Changelog**: [`v2.0.1...v2.1.0`](https://github.com/remix-run/remix/compare/remix@2.0.1...remix@2.1.0)
 
 ## v2.0.1 [🏷️](https://github.com/remix-run/remix/releases/tag/remix%402.0.1)
@@ -309,8 +389,6 @@ After real-world experience, we're confident in the [`createRemixStub`](https://
 - [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.0.1/packages/remix-node/CHANGELOG.md#201)
 - [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.0.1/packages/remix-react/CHANGELOG.md#201)
 - [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.0.1/packages/remix-serve/CHANGELOG.md#201)
-
----
 
 **Full Changelog**: [`v2.0.0...v2.0.1`](https://github.com/remix-run/remix/compare/remix@2.0.0...remix@2.0.1)
 
