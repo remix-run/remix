@@ -272,11 +272,11 @@ test.describe("Vite CSS dev", () => {
         "utf8"
       );
 
-      await editFile(
+      await edit(
         path.join(projectDir, "app/styles-vanilla-global.css.ts"),
         (data) => data.replace(TEST_PADDING_VALUE, UPDATED_TEST_PADDING_VALUE)
       );
-      await editFile(
+      await edit(
         path.join(projectDir, "app/styles-vanilla-local.css.ts"),
         (data) => data.replace(TEST_PADDING_VALUE, UPDATED_TEST_PADDING_VALUE)
       );
@@ -315,7 +315,7 @@ let bufferize = (stream: Readable): (() => string) => {
   return () => buffer;
 };
 
-async function editFile(filepath: string, edit: (content: string) => string) {
+async function edit(filepath: string, edit: (content: string) => string) {
   let content = await fs.readFile(filepath, "utf-8");
   await fs.writeFile(filepath, edit(content));
 }
