@@ -16,49 +16,64 @@ export interface RouteModules<RouteModule> {
   [routeId: string]: RouteModule;
 }
 
-// Context is always provided in Remix, and typed for module augmentation support.
-// RR also doesn't export DataFunctionArgs, so we extend the two interfaces here
-// even tough they're identical under the hood
+/**
+ * @deprecated Use `LoaderFunctionArgs`/`ActionFunctionArgs` instead
+ */
 export type DataFunctionArgs = RRActionFunctionArgs<AppLoadContext> &
   RRLoaderFunctionArgs<AppLoadContext> & {
+    // Context is always provided in Remix, and typed for module augmentation support.
+    // RR also doesn't export DataFunctionArgs, so we extend the two interfaces here
+    // even tough they're identical under the hood
     context: AppLoadContext;
-  };
-
-export type ClientDataFunctionArgs = RRActionFunctionArgs<undefined> &
-  RRLoaderFunctionArgs<undefined> & {
-    context: undefined;
-    serverFetch: () => Promise<Response>;
   };
 
 /**
  * A function that handles data mutations for a route.
  */
 export type ActionFunction = (
-  args: DataFunctionArgs
+  args: ActionFunctionArgs
 ) => ReturnType<RRActionFunction>;
 
-export type ActionFunctionArgs = DataFunctionArgs;
+/**
+ * Arguments passed to a route `action` function
+ */
+export type ActionFunctionArgs = RRActionFunctionArgs<AppLoadContext> & {
+  // Context is always provided in Remix, and typed for module augmentation support.
+  context: AppLoadContext;
+};
+
+export type ClientActionFunctionArgs = RRActionFunctionArgs<undefined> & {
+  context: undefined;
+  serverAction: () => Promise<Response>;
+};
 
 export type ClientActionFunction = (
-  args: ClientDataFunctionArgs
+  args: ClientActionFunctionArgs
 ) => ReturnType<RRLoaderFunction>;
-
-export type ClientActionFunctionArgs = ClientDataFunctionArgs;
 
 /**
  * A function that loads data for a route.
  */
 export type LoaderFunction = (
-  args: DataFunctionArgs
+  args: LoaderFunctionArgs
 ) => ReturnType<RRLoaderFunction>;
 
-export type LoaderFunctionArgs = DataFunctionArgs;
+/**
+ * Arguments passed to a route `loader` function
+ */
+export type LoaderFunctionArgs = RRLoaderFunctionArgs<AppLoadContext> & {
+  // Context is always provided in Remix, and typed for module augmentation support.
+  context: AppLoadContext;
+};
+
+export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
+  context: undefined;
+  serverLoader: () => Promise<Response>;
+};
 
 export type ClientLoaderFunction = (
-  args: ClientDataFunctionArgs
-) => ReturnType<RRActionFunction>;
-
-export type ClientLoaderFunctionArgs = ClientDataFunctionArgs;
+  args: ClientLoaderFunctionArgs
+) => ReturnType<RRLoaderFunction>;
 
 export type HeadersArgs = {
   loaderHeaders: Headers;

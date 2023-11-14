@@ -32,22 +32,21 @@ export interface RouteModule {
   shouldRevalidate?: ShouldRevalidateFunction;
 }
 
-export type ClientDataFunctionArgs = RRActionFunctionArgs<undefined> &
-  RRLoaderFunctionArgs<undefined> & {
-    serverFetch: () => Promise<Response | DeferredData | null>;
-  };
-
 export type ClientActionFunction = (
-  args: ClientDataFunctionArgs
+  args: ClientActionFunctionArgs
 ) => ReturnType<RRActionFunction>;
 
-export type ClientActionFunctionArgs = ClientDataFunctionArgs;
+export type ClientActionFunctionArgs = RRActionFunctionArgs<undefined> & {
+  serverAction: () => Promise<Response | DeferredData | null>;
+};
 
 export type ClientLoaderFunction = (
-  args: ClientDataFunctionArgs
+  args: ClientLoaderFunctionArgs
 ) => ReturnType<RRLoaderFunction>;
 
-export type ClientLoaderFunctionArgs = ClientDataFunctionArgs;
+export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
+  serverLoader: () => Promise<Response | DeferredData | null>;
+};
 
 /**
  * ErrorBoundary to display for this route
