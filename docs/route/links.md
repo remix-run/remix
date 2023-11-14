@@ -58,7 +58,7 @@ export const links: LinksFunction = () => {
     {
       rel: "stylesheet",
       href: "https://example.com/some/styles.css",
-      crossOrigin: "true",
+      crossOrigin: "anonymous",
     },
 
     // add a local stylesheet, remix will fingerprint the file name for
