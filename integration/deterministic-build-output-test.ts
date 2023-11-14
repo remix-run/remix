@@ -60,7 +60,7 @@ test("builds deterministically under different paths", async () => {
         },
       }),
 
-      "postcss.config.js": js`
+      "postcss.config.mjs": js`
         export default {
           plugins: {
             "postcss-import": {},
