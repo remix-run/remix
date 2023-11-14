@@ -611,6 +611,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                   plugin !== null &&
                   "name" in plugin &&
                   plugin.name !== "remix" &&
+                  plugin.name !== "remix-react-refresh-babel" &&
                   plugin.name !== "remix-hmr-updates"
               ),
             {
