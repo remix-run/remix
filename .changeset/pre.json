@@ -20,5 +20,26 @@
     "@remix-run/server-runtime": "2.2.0",
     "@remix-run/testing": "2.2.0"
   },
-  "changesets": []
+  "changesets": [
+    "afraid-suns-yawn",
+    "brown-panthers-lay",
+    "clever-months-swim",
+    "early-trees-walk",
+    "eight-jeans-float",
+    "friendly-insects-compete",
+    "gentle-ghosts-wait",
+    "green-buses-suffer",
+    "hungry-tables-hang",
+    "itchy-rabbits-fly",
+    "manifest-modulepreload",
+    "nasty-waves-whisper",
+    "nervous-fans-do",
+    "ninety-boats-fail",
+    "sharp-kids-bake",
+    "silent-rice-march",
+    "slow-eyes-joke",
+    "stabilize-use-blocker",
+    "tricky-news-thank",
+    "two-boxes-dance"
+  ]
 }

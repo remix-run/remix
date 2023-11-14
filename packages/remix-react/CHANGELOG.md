@@ -1,5 +1,19 @@
 # `@remix-run/react`
 
+## 2.3.0-pre.0
+
+### Minor Changes
+
+- Remove the `unstable_` prefix from the [`useBlocker`](https://reactrouter.com/en/main/hooks/use-blocker) hook as it's been in use for enough time that we are confident in the API. We do not plan to remove the prefix from `unstable_usePrompt` due to differences in how browsers handle `window.confirm` that prevent React Router from guaranteeing consistent/correct behavior. ([#7882](https://github.com/remix-run/remix/pull/7882))
+
+### Patch Changes
+
+- Support rendering of `LiveReload` component after `Scripts` in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
+- Support optional rendering of `LiveReload` component in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
+- add missing modulepreload for the manifest ([#7684](https://github.com/remix-run/remix/pull/7684))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.3.0-pre.0`
+
 ## 2.2.0
 
 ### Minor Changes
