@@ -9,6 +9,45 @@ We manage release notes in this file instead of the paginated Github Releases Pa
 - Pagination in the Github UI means that you cannot easily search release notes for a large span of releases at once
 - The paginated Github interface also cuts off longer releases notes without indication in list view, and you need to click into the detail view to see the full set of release notes
 
+<details>
+  <summary>Table of Contents</summary>
+
+- [Remix Releases](#remix-releases)
+  - [v2.2.0 🏷️](#v220-️)
+    - [What's Changed](#whats-changed)
+      - [Vite!](#vite)
+      - [New Fetcher APIs](#new-fetcher-apis)
+      - [Persistence Future Flag](#persistence-future-flag)
+    - [Minor Changes](#minor-changes)
+    - [Patch Changes](#patch-changes)
+    - [Updated Dependencies](#updated-dependencies)
+    - [Changes by Package](#changes-by-package)
+  - [v2.1.0 🏷️](#v210-️)
+    - [What's Changed](#whats-changed-1)
+      - [View Transitions](#view-transitions)
+      - [Stable `createRemixStub`](#stable-createremixstub)
+    - [Minor Changes](#minor-changes-1)
+    - [Patch Changes](#patch-changes-1)
+    - [Updated Dependencies](#updated-dependencies-1)
+    - [Changes by Package](#changes-by-package-1)
+  - [v2.0.1 🏷️](#v201-️)
+    - [Patch Changes](#patch-changes-2)
+    - [Changes by Package 🔗](#changes-by-package-)
+  - [v2.0.0 🏷️](#v200-️)
+    - [Breaking Changes](#breaking-changes)
+      - [Upgraded Dependency Requirements](#upgraded-dependency-requirements)
+      - [Removed Future Flags](#removed-future-flags)
+      - [Breaking Changes/API Removals](#breaking-changesapi-removals)
+        - [With deprecation warnings](#with-deprecation-warnings)
+        - [Without deprecation warnings](#without-deprecation-warnings)
+        - [Breaking Type Changes](#breaking-type-changes)
+    - [New Features](#new-features)
+    - [Other Notable Changes](#other-notable-changes)
+    - [Updated Dependencies](#updated-dependencies-2)
+    - [Changes by Package](#changes-by-package-2)
+
+</details>
+
 <!--
 To add a new release, copy from this template:
 
