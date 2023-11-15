@@ -3407,15 +3407,15 @@
   resolved "https://registry.npmjs.org/@vanilla-extract/private/-/private-1.0.3.tgz"
   integrity sha512-17kVyLq3ePTKOkveHxXuIJZtGYs+cSoev7BlP+Lf4916qfDhk/HBjvlYDe8egrea7LNPHKwSZJK/bzZC+Q6AwQ==
 
-"@vanilla-extract/vite-plugin@^3.9.0":
-  version "3.9.0"
-  resolved "https://registry.npmjs.org/@vanilla-extract/vite-plugin/-/vite-plugin-3.9.0.tgz#40bbb39df09865b4ffe1c5e6db10d85c73e71d2a"
-  integrity sha512-Q2HYAyEJ93Uy7GHQPPiP8SXwPMHGpd4d0YnrIQqB0YZccYbGJR/WFIln9Dmbzx2pdngQUoOfhwEg6kJF8sQrog==
+"@vanilla-extract/vite-plugin@^3.9.1":
+  version "3.9.1"
+  resolved "https://registry.npmjs.org/@vanilla-extract/vite-plugin/-/vite-plugin-3.9.1.tgz#28da454974d4dbc45871d715202dac8332d2d6ae"
+  integrity sha512-FI0Tzga+iuqPqFGms9qjeeb+PbdJdIGuG1Yc8gnzHSsRVy61u05wmfSbN9AN+FKzcvV/O1zAvRrusXCXi1oHYA==
   dependencies:
     "@vanilla-extract/integration" "^6.0.2"
     outdent "^0.8.0"
     postcss "^8.3.6"
-    postcss-load-config "^3.1.0"
+    postcss-load-config "^4.0.1"
 
 "@web3-storage/multipart-parser@^1.0.0":
   version "1.0.0"
@@ -10662,7 +10662,7 @@ postcss-js@^4.0.0:
   dependencies:
     camelcase-css "^2.0.1"
 
-postcss-load-config@^3.1.0, postcss-load-config@^3.1.4:
+postcss-load-config@^3.1.4:
   version "3.1.4"
   resolved "https://registry.npmjs.org/postcss-load-config/-/postcss-load-config-3.1.4.tgz"
   integrity sha512-6DiM4E7v4coTE4uzA8U//WhtPwyhiim3eyjEMFCnUpzbrkK9wJHgKDT2mR+HbtSrd/NubVaYTOpSpjUl8NQeRg==
