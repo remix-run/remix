@@ -33,7 +33,7 @@ test.describe("Vite build", () => {
 
           export default defineConfig({
             build: {
-              // force emitting asset files instead of inline as data-url
+              // force emitting asset files instead of inlined as data-url
               assetsInlineLimit: 0,
             },
             plugins: [
