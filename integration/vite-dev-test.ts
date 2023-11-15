@@ -27,13 +27,17 @@ test.describe("Vite dev", () => {
         "vite.config.ts": js`
           import { defineConfig } from "vite";
           import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import mdx from "@mdx-js/rollup";
 
           export default defineConfig({
             server: {
               port: ${devPort},
               strictPort: true,
             },
-            plugins: [remix()],
+            plugins: [
+              remix(),
+              mdx(),
+            ],
           });
         `,
         "app/root.tsx": js`
@@ -140,6 +144,57 @@ test.describe("Vite dev", () => {
                 <p data-hmr>HMR updated: no</p>
               </div>
             );
+          }
+        `,
+        "app/routes/mdx.mdx": js`
+          import { json } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react";
+
+          export const loader = () => {
+            return json({
+              content: "MDX route content from loader",
+            })
+          }
+
+          export function MdxComponent() {
+            const { content } = useLoaderData();
+            return <div data-mdx-route>{content}</div>
+          }
+
+          ## MDX Route
+
+          <MdxComponent />
+        `,
+        ".env": `
+          ENV_VAR_FROM_DOTENV_FILE=Content from .env file
+        `,
+        "app/routes/dotenv.tsx": js`
+          import { useState, useEffect } from "react";
+          import { json } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react";
+
+          export const loader = () => {
+            return json({
+              loaderContent: process.env.ENV_VAR_FROM_DOTENV_FILE,
+            })
+          }
+
+          export default function DotenvRoute() {
+            const { loaderContent } = useLoaderData();
+
+            const [clientContent, setClientContent] = useState('');
+            useEffect(() => {
+              try {
+                setClientContent("process.env.ENV_VAR_FROM_DOTENV_FILE shouldn't be available on the client, found: " + process.env.ENV_VAR_FROM_DOTENV_FILE);
+              } catch (err) {
+                setClientContent("process.env.ENV_VAR_FROM_DOTENV_FILE not available on the client, which is a good thing");
+              }
+            }, []);
+
+            return <>
+              <div data-dotenv-route-loader-content>{loaderContent}</div>
+              <div data-dotenv-route-client-content>{clientContent}</div>
+            </>
           }
         `,
       },
@@ -258,6 +313,41 @@ test.describe("Vite dev", () => {
     );
     await page.waitForLoadState("networkidle");
     await expect(hmrStatus).toHaveText("HMR updated: yes");
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("handles MDX routes", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    await page.goto(`http://localhost:${devPort}/mdx`, {
+      waitUntil: "networkidle",
+    });
+    expect(pageErrors).toEqual([]);
+
+    let mdxContent = page.locator("[data-mdx-route]");
+    await expect(mdxContent).toHaveText("MDX route content from loader");
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("loads .env file", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    await page.goto(`http://localhost:${devPort}/dotenv`, {
+      waitUntil: "networkidle",
+    });
+    expect(pageErrors).toEqual([]);
+
+    let loaderContent = page.locator("[data-dotenv-route-loader-content]");
+    await expect(loaderContent).toHaveText("Content from .env file");
+
+    let clientContent = page.locator("[data-dotenv-route-client-content]");
+    await expect(clientContent).toHaveText(
+      "process.env.ENV_VAR_FROM_DOTENV_FILE not available on the client, which is a good thing"
+    );
 
     expect(pageErrors).toEqual([]);
   });

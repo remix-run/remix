@@ -61,6 +61,7 @@
     "@babel/preset-typescript": "^7.21.5",
     "@changesets/cli": "^2.25.2",
     "@mcansh/remark-definition-links": "2.4.1",
+    "@mdx-js/rollup": "^3.0.0",
     "@octokit/core": "^3.6.0",
     "@octokit/graphql": "^4.8.0",
     "@octokit/plugin-paginate-rest": "^2.17.0",
@@ -127,7 +128,7 @@
     "unified": "^10.1.2",
     "unist-util-remove": "^3.1.0",
     "unist-util-visit": "^4.1.1",
-    "vite": "^4.4.9",
+    "vite": "5.0.0-beta.18",
     "wait-on": "^7.0.1"
   },
   "engines": {
