@@ -258,21 +258,6 @@ test.describe("Vite build", () => {
     );
   });
 
-  test("emit ssr assets", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/ssr-assets");
-
-    // verify asset files are emitted and served correctly
-    await page.getByRole("link", { name: "url1" }).click();
-    await page.waitForURL("**/build/assets/test1-*.txt");
-    await page.getByText("test1").click();
-    await page.goBack();
-
-    await page.getByRole("link", { name: "url2" }).click();
-    await page.waitForURL("**/build/assets/test2-*.txt");
-    await page.getByText("test2").click();
-  });
-
   test("server renders matching MDX routes", async ({ page }) => {
     let res = await fixture.requestDocument("/mdx");
     expect(res.status).toBe(200);
@@ -292,6 +277,21 @@ test.describe("Vite build", () => {
     );
 
     expect(pageErrors).toEqual([]);
+  });
+
+  test("emits SSR assets to the client assets directory", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/ssr-assets");
+
+    // verify asset files are emitted and served correctly
+    await page.getByRole("link", { name: "url1" }).click();
+    await page.waitForURL("**/build/assets/test1-*.txt");
+    await page.getByText("test1").click();
+    await page.goBack();
+
+    await page.getByRole("link", { name: "url2" }).click();
+    await page.waitForURL("**/build/assets/test2-*.txt");
+    await page.getByText("test2").click();
   });
 
   test("supports code-split css", async ({ page }) => {
