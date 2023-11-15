@@ -87,7 +87,9 @@ fetcher.submit(
 fetcher.submit(formData);
 ```
 
-## `fetcher.load(href)`
+`fetcher.submit` is a wrapper around a [`useSubmit`][use-submit] call for the fetcher instance, so it also accepts the same options as `useSubmit`.
+
+### `fetcher.load(href, options)`
 
 Loads data from a route loader. While multiple nested routes can match a URL, only the leaf route will be called.
 
@@ -95,6 +97,12 @@ Loads data from a route loader. While multiple nested routes can match a URL, on
 fetcher.load("/some/route");
 fetcher.load("/some/route?foo=bar");
 ```
+
+#### `options.unstable_flushSync`
+
+The `unstable_flushSync` option tells React Router DOM to wrap the initial state update for this `fetcher.load` in a [`ReactDOM.flushSync`][flush-sync] call instead of the default [`React.startTransition`][start-transition]. This allows you to perform synchronous DOM actions immediately after the update is flushed to the DOM.
+
+<docs-warning>`ReactDOM.flushSync` de-optimizes React and can hurt the performance of your app.</docs-warning>
 
 ## Properties
 
@@ -146,3 +154,6 @@ The form method of the submission.
 [concurrent_mutations_with_use_fetcher]: https://www.youtube.com/watch?v=vTzNpiOk668&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
 [optimistic_ui]: https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
 [use_fetchers]: ./use-fetchers
+[flush-sync]: https://react.dev/reference/react-dom/flushSync
+[start-transition]: https://react.dev/reference/react/startTransition
+[use-submit]: ./use-submit
