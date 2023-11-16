@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-fix(vite): emit asset files referenced only by server-only file
+Emit assets that were only referenced in the server build into the client assets directory in Vite build

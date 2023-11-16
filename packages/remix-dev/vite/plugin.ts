@@ -794,7 +794,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             })
           );
 
-          let logger = vite.createLogger();
+          let logger = resolvedViteConfig.logger;
 
           if (movedAssetPaths.length) {
             logger.info(
@@ -817,15 +817,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
           if (fse.existsSync(ssrAssetsDir)) {
             await fse.remove(ssrAssetsDir);
-            logger.info(
-              [
-                "",
-                colors.dim(
-                  `${colors.green("✓")} Cleaned Remix server assets directory.`
-                ),
-                colors.dim(path.relative(rootDirectory, ssrAssetsDir)),
-              ].join("\n")
-            );
           }
         },
       },
