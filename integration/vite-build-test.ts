@@ -23,12 +23,23 @@ test.describe("Vite build", () => {
           throw new Error("Remix should not access remix.config.js when using Vite");
           export default {};
         `,
+        ".env": `
+          ENV_VAR_FROM_DOTENV_FILE=true
+        `,
         "vite.config.ts": js`
           import { defineConfig } from "vite";
           import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import mdx from "@mdx-js/rollup";
 
           export default defineConfig({
-            plugins: [remix()],
+            build: {
+              // force emitting asset files instead of inlined as data-url
+              assetsInlineLimit: 0,
+            },
+            plugins: [
+              remix(),
+              mdx(),
+            ],
           });
         `,
         "app/root.tsx": js`
@@ -81,6 +92,10 @@ test.describe("Vite build", () => {
             );
           }
         `,
+        "app/utils.server.ts": js`
+          export const serverOnly1 = "SERVER_ONLY_1"
+          export const serverOnly2 = "SERVER_ONLY_2"
+        `,
         "app/routes/resource.ts": js`
           import { json } from "@remix-run/node";
 
@@ -95,10 +110,106 @@ test.describe("Vite build", () => {
             return null
           }
         `,
-        "app/utils.server.ts": js`
-          export const serverOnly1 = "SERVER_ONLY_1"
-          export const serverOnly2 = "SERVER_ONLY_2"
+        "app/routes/mdx.mdx": js`
+          import { useEffect, useState } from "react";
+          import { json } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react";
+
+          import { serverOnly1, serverOnly2 } from "../utils.server";
+
+          export const loader = () => {
+            return json({
+              serverOnly1,
+              content: "MDX route content from loader",
+            })
+          }
+
+          export const action = () => {
+            console.log(serverOnly2)
+            return null
+          }
+
+          export function MdxComponent() {
+            const [mounted, setMounted] = useState(false);
+            useEffect(() => {
+              setMounted(true);
+            }, []);
+            const { content } = useLoaderData();
+            const text = content + (mounted
+              ? ": mounted"
+              : ": not mounted");
+            return <div data-mdx-route>{text}</div>
+          }
+
+          ## MDX Route
+
+          <MdxComponent />
         `,
+        "app/routes/code-split1.tsx": js`
+          import { CodeSplitComponent } from "../code-split-component";
+
+          export default function CodeSplit1Route() {
+            return <div id="code-split1"><CodeSplitComponent /></div>;
+          }
+        `,
+        "app/routes/code-split2.tsx": js`
+          import { CodeSplitComponent } from "../code-split-component";
+
+          export default function CodeSplit2Route() {
+            return <div id="code-split2"><CodeSplitComponent /></div>;
+          }
+        `,
+        "app/code-split-component.tsx": js`
+          import classes from "./code-split.module.css";
+
+          export function CodeSplitComponent() {
+            return <span className={classes.test}>ok</span>
+          }
+        `,
+        "app/code-split.module.css": js`
+          .test {
+            background-color: rgb(255, 170, 0);
+          }
+        `,
+        "app/routes/dotenv.tsx": js`
+          import { json } from "@remix-run/node";
+          import { useLoaderData } from "@remix-run/react";
+
+          export const loader = () => {
+            return json({
+              loaderContent: process.env.ENV_VAR_FROM_DOTENV_FILE ?? '.env file was NOT loaded, which is a good thing',
+            })
+          }
+
+          export default function DotenvRoute() {
+            const { loaderContent } = useLoaderData();
+
+            return <div data-dotenv-route-loader-content>{loaderContent}</div>;
+          }
+        `,
+
+        "app/routes/ssr-assets.tsx": js`
+          import url1 from "../assets/test1.txt?url";
+          import url2 from "../assets/test2.txt?url";
+          import { useLoaderData } from "@remix-run/react"
+
+          export const loader: LoaderFunction = () => {
+            return { url2 };
+          };
+
+          export default function SsrAssetRoute() {
+            const loaderData = useLoaderData();
+            return (
+              <div>
+                <a href={url1}>url1</a>
+                <a href={loaderData.url2}>url2</a>
+              </div>
+            );
+          }
+        `,
+
+        "app/assets/test1.txt": "test1",
+        "app/assets/test2.txt": "test2",
       },
     });
 
@@ -145,5 +256,79 @@ test.describe("Vite build", () => {
     expect(await page.locator("#content h3[data-mounted]").textContent()).toBe(
       "Mounted"
     );
+  });
+
+  test("server renders matching MDX routes", async ({ page }) => {
+    let res = await fixture.requestDocument("/mdx");
+    expect(res.status).toBe(200);
+    expect(selectHtml(await res.text(), "[data-mdx-route]")).toBe(
+      `<div data-mdx-route="true">MDX route content from loader: not mounted</div>`
+    );
+  });
+
+  test("hydrates matching MDX routes", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/mdx");
+    await expect(page.locator("[data-mdx-route]")).toContainText(
+      "MDX route content from loader: mounted"
+    );
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("emits SSR assets to the client assets directory", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/ssr-assets");
+
+    // verify asset files are emitted and served correctly
+    await page.getByRole("link", { name: "url1" }).click();
+    await page.waitForURL("**/build/assets/test1-*.txt");
+    await page.getByText("test1").click();
+    await page.goBack();
+
+    await page.getByRole("link", { name: "url2" }).click();
+    await page.waitForURL("**/build/assets/test2-*.txt");
+    await page.getByText("test2").click();
+  });
+
+  test("supports code-split css", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/code-split1");
+    expect(
+      await page
+        .locator("#code-split1 span")
+        .evaluate((e) => window.getComputedStyle(e).backgroundColor)
+    ).toBe("rgb(255, 170, 0)");
+
+    await app.goto("/code-split2");
+    expect(
+      await page
+        .locator("#code-split2 span")
+        .evaluate((e) => window.getComputedStyle(e).backgroundColor)
+    ).toBe("rgb(255, 170, 0)");
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("doesn't load .env file", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/dotenv`);
+    expect(pageErrors).toEqual([]);
+
+    let loaderContent = page.locator("[data-dotenv-route-loader-content]");
+    await expect(loaderContent).toHaveText(
+      ".env file was NOT loaded, which is a good thing"
+    );
+
+    expect(pageErrors).toEqual([]);
   });
 });

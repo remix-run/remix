@@ -1,25 +1,21 @@
 import { test, expect } from "@playwright/test";
-import type { Readable } from "node:stream";
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import resolveBin from "resolve-bin";
 import getPort from "get-port";
-import waitOn from "wait-on";
 
 import { createFixtureProject, js, css } from "./helpers/create-fixture.js";
-import { killtree } from "./helpers/killtree.js";
+import { kill, node } from "./helpers/dev.js";
 
 const TEST_PADDING_VALUE = "20px";
 const UPDATED_TEST_PADDING_VALUE = "30px";
 
-test.describe("Vite CSS dev", () => {
+test.describe("Vite CSS dev (Express server)", () => {
   let projectDir: string;
-  let devProc: ChildProcessWithoutNullStreams;
-  let devPort: number;
+  let dev: { pid: number; port: number };
 
   test.beforeAll(async () => {
-    devPort = await getPort();
+    let port = await getPort();
+    let hmrPort = await getPort();
     projectDir = await createFixtureProject({
       compiler: "vite",
       files: {
@@ -33,11 +29,52 @@ test.describe("Vite CSS dev", () => {
 
           export default defineConfig({
             server: {
-              port: ${devPort},
-              strictPort: true,
+              hmr: {
+                port: ${hmrPort}
+              }
             },
             plugins: [remix()],
           });
+        `,
+        "server.mjs": js`
+          import {
+            unstable_createViteServer,
+            unstable_loadViteServerBuild,
+          } from "@remix-run/dev";
+          import { createRequestHandler } from "@remix-run/express";
+          import { installGlobals } from "@remix-run/node";
+          import express from "express";
+
+          installGlobals();
+
+          let vite =
+            process.env.NODE_ENV === "production"
+              ? undefined
+              : await unstable_createViteServer();
+
+          const app = express();
+
+          if (vite) {
+            app.use(vite.middlewares);
+          } else {
+            app.use(
+              "/build",
+              express.static("public/build", { immutable: true, maxAge: "1y" })
+            );
+          }
+          app.use(express.static("public", { maxAge: "1h" }));
+
+          app.all(
+            "*",
+            createRequestHandler({
+              build: vite
+                ? () => unstable_loadViteServerBuild(vite)
+                : await import("./build/index.js"),
+            })
+          );
+
+          const port = ${port};
+          app.listen(port, () => console.log('http://localhost:' + port));
         `,
         "app/root.tsx": js`
           import { Links, Meta, Outlet, Scripts, LiveReload } from "@remix-run/react";
@@ -104,42 +141,17 @@ test.describe("Vite CSS dev", () => {
       },
     });
 
-    let nodeBin = process.argv[0];
-    let viteBin = resolveBin.sync("vite");
-    devProc = spawn(nodeBin, [viteBin, "dev"], {
-      cwd: projectDir,
-      env: process.env,
-      stdio: "pipe",
-    });
-    let devStdout = bufferize(devProc.stdout);
-    let devStderr = bufferize(devProc.stderr);
-
-    await waitOn({
-      resources: [`http://localhost:${devPort}/`],
-      timeout: 10000,
-    }).catch((err) => {
-      let stdout = devStdout();
-      let stderr = devStderr();
-      throw new Error(
-        [
-          err.message,
-          "",
-          "exit code: " + devProc.exitCode,
-          "stdout: " + stdout ? `\n${stdout}\n` : "<empty>",
-          "stderr: " + stderr ? `\n${stderr}\n` : "<empty>",
-        ].join("\n")
-      );
-    });
+    dev = await node(projectDir, ["./server.mjs"], { port });
   });
 
   test.afterAll(async () => {
-    devProc.pid && (await killtree(devProc.pid));
+    await kill(dev.pid);
   });
 
   test.describe("without JS", () => {
     test.use({ javaScriptEnabled: false });
     test("renders CSS", async ({ page }) => {
-      await page.goto(`http://localhost:${devPort}/`, {
+      await page.goto(`http://localhost:${dev.port}/`, {
         waitUntil: "networkidle",
       });
       await expect(page.locator("#index [data-css-modules]")).toHaveCSS(
@@ -163,7 +175,7 @@ test.describe("Vite CSS dev", () => {
       let pageErrors: unknown[] = [];
       page.on("pageerror", (error) => pageErrors.push(error));
 
-      await page.goto(`http://localhost:${devPort}/`, {
+      await page.goto(`http://localhost:${dev.port}/`, {
         waitUntil: "networkidle",
       });
 
@@ -237,9 +249,3 @@ test.describe("Vite CSS dev", () => {
     });
   });
 });
-
-let bufferize = (stream: Readable): (() => string) => {
-  let buffer = "";
-  stream.on("data", (data) => (buffer += data.toString()));
-  return () => buffer;
-};

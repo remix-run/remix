@@ -169,7 +169,7 @@ Now if you change the key `stuff` to `things`:
   }
 ```
 
-then React Fast Refresh will preserve state for the `<input />`, though you may need to use component keys as described in the next section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
+Then React Fast Refresh will preserve state for the `<input />`, though you may need to use component keys as described in the next section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
 
 ### Component Keys
 

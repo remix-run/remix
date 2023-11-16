@@ -38,7 +38,7 @@ export interface AssetsManifest {
   url: string;
   version: string;
   hmr?: {
-    timestamp: number;
+    timestamp?: number;
     runtime: string;
   };
 }
