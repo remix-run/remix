@@ -21,7 +21,7 @@ function SomeComponent() {
 }
 ```
 
-It's often better to use [`redirect`][redirect] in loaders and actions than this hook, but it still has use cases.
+It's often better to use [`redirect`][redirect] in [`action`][action]s and [`loader`][loader]s than this hook, but it still has use cases.
 
 ## Arguments
 
@@ -84,8 +84,10 @@ navigate(".", {
 - **unstable_viewTransition**: boolean - enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`
   - If you need to apply specific styles for this view transition, you will also need to leverage the [`unstable_useViewTransitionState()`][use-view-transition-state]
 
-[redirect]: ../fetch/redirect
+[redirect]: ../utils/redirect
 [flush-sync]: https://react.dev/reference/react-dom/flushSync
 [start-transition]: https://react.dev/reference/react/startTransition
 [view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API
 [use-view-transition-state]: ../hooks//use-view-transition-state
+[action]: ../route/action
+[loader]: ../route/loader

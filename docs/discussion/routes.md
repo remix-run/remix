@@ -133,7 +133,7 @@ export default {
       route("/", "home/route.tsx", { index: true });
       route("about", "about/route.tsx");
       route("concerts", "concerts/layout.tsx", () => {
-        route("/", "concerts/home.tsx", { index: true });
+        route("", "concerts/home.tsx", { index: true });
         route("trending", "concerts/trending.tsx");
         route(":city", "concerts/city.tsx");
       });

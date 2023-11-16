@@ -4,23 +4,23 @@ title: headers
 
 # `headers`
 
-Each route can define its own HTTP headers. One of the common headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
+Each route can define its own HTTP headers. One of the common headers is the [`Cache-Control` header][cache-control-header] that indicates to browser and CDN caches where and for how long a page is able to be cached.
 
 ```tsx
 import type { HeadersFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const headers: HeadersFunction = ({
   actionHeaders,
+  errorHeaders,
   loaderHeaders,
   parentHeaders,
-  errorHeaders,
 }) => ({
   "X-Stretchy-Pants": "its for fun",
   "Cache-Control": "max-age=300, s-maxage=3600",
 });
 ```
 
-Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the `action`'s & `loader`'s headers are passed in to `headers()` too:
+Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the [`action`][action]'s & [`loader`][loader]'s headers are passed in to `headers()` too:
 
 ```tsx
 import type { HeadersFunction } from "@remix-run/node"; // or cloudflare/deno
@@ -32,9 +32,9 @@ export const headers: HeadersFunction = ({
 });
 ```
 
-Note: `actionHeaders` & `loaderHeaders` are an instance of the [Web Fetch API][headers] `Headers` class.
+Note: `actionHeaders` & `loaderHeaders` are an instance of the [Web Fetch API `Headers`][headers] class.
 
-If an action or a loader threw a `Response` and we're rendering a boundary, any headers from the thrown `Response` will be available in `errorHeaders`. This allows you to access headers from a child loader that threw in a parent error boundary.
+If an `action` or a `loader` threw a [`Response`][response] and we're rendering a boundary, any headers from the thrown `Response` will be available in `errorHeaders`. This allows you to access headers from a child loader that threw in a parent error boundary.
 
 ## Nested Routes
 
@@ -94,7 +94,7 @@ export const headers: HeadersFunction = ({
 
 All that said, you can avoid this entire problem by _not defining headers in parent routes_ and only in leaf routes. Every layout that can be visited directly will likely have an "index route". If you only define headers on your leaf routes, not your parent routes, you will never have to worry about merging headers.
 
-Note that you can also add headers in your `entry.server.tsx` file for things that should be global, for example:
+Note that you can also add headers in your [`entry.server.tsx`][entry-server] file for things that should be global, for example:
 
 ```tsx filename=app/entry.server.tsx lines=[20]
 import type {
@@ -119,13 +119,18 @@ export default function handleRequest(
   responseHeaders.set("X-Powered-By", "Hugs");
 
   return new Response("<!DOCTYPE html>" + markup, {
-    status: responseStatusCode,
     headers: responseHeaders,
+    status: responseStatusCode,
   });
 }
 ```
 
-Just keep in mind that doing this will apply to _all_ document requests, but does not apply to `data` requests (for client-side transitions for example). For those, use [`handleDataRequest`][handledatarequest].
+Just keep in mind that doing this will apply to _all_ document requests, but does not apply to `data` requests (for client-side transitions for example). For those, use [`handleDataRequest`][handle-data-request].
 
+[cache-control-header]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+[action]: ./action
+[loader]: ./loader
 [headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
-[handledatarequest]: ../file-conventions/entry.server
+[response]: https://developer.mozilla.org/en-US/docs/Web/API/Response
+[entry-server]: ../file-conventions/entry.server
+[handle-data-request]: ../file-conventions/entry.server#handledatarequest

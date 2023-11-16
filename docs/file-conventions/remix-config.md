@@ -71,8 +71,8 @@ relative to `remix.config.js`. Defaults to `".cache"`.
 The `future` config lets you opt-into future breaking changes via [Future Flags][future-flags]. The following future flags currently exist in Remix v2 and will become the default behavior in Remix v3:
 
 - **`v3_fetcherPersist`**: Change fetcher persistence/cleanup behavior in 2 ways ([RFC][fetcherpersist-rfc]):
-  - Fetchers are no longer removed on unmount, and remain exposed via `useFetchers` until they return to an `idle` state
-  - Fetchers that complete while still mounted no longer persist in `useFetchers` since you can access those fetchers via `useFetcher`
+  - Fetchers are no longer removed on unmount, and remain exposed via [`useFetchers`][use-fetchers] until they return to an `idle` state
+  - Fetchers that complete while still mounted no longer persist in [`useFetchers`][use-fetchers] since you can access those fetchers via [`useFetcher`][use-fetcher]
 
 ## ignoredRouteFiles
 
@@ -85,6 +85,22 @@ dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
 
 The URL prefix of the browser build with a trailing slash. Defaults to
 `"/build/"`. This is the path the browser will use to find assets.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  publicPath: "/assets/",
+};
+```
+
+If you wish to serve static assets from a separate domain you may also specify an absolute path:
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  publicPath: "https://static.example.com/assets/",
+};
+```
 
 ## postcss
 
@@ -258,3 +274,5 @@ There are a few conventions that Remix uses you should be aware of.
 [server-node-builtins-polyfill]: #servernodebuiltinspolyfill
 [future-flags]: ../start/future-flags.md
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
+[use-fetchers]: ../hooks/use-fetchers
+[use-fetcher]: ../hooks/use-fetcher
