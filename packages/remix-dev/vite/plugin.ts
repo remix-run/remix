@@ -806,6 +806,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                 ...movedAssetPaths.map((movedAssetPath) =>
                   colors.dim(path.relative(rootDirectory, movedAssetPath))
                 ),
+                "",
               ].join("\n")
             );
           }
