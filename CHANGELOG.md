@@ -13,7 +13,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.3.0 🏷️](#v230-️)
+  - [v2.3.0](#v230)
     - [What's Changed](#whats-changed)
       - [Stabilized `useBlocker`](#stabilized-useblocker)
       - [`unstable_flushSync` API](#unstable_flushsync-api)
@@ -21,7 +21,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
     - [Changes by Package](#changes-by-package)
-  - [v2.2.0 🏷️](#v220-️)
+  - [v2.2.0](#v220)
     - [What's Changed](#whats-changed-1)
       - [Vite!](#vite)
       - [New Fetcher APIs](#new-fetcher-apis)
@@ -30,7 +30,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
     - [Patch Changes](#patch-changes-1)
     - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
-  - [v2.1.0 🏷️](#v210-️)
+  - [v2.1.0](#v210)
     - [What's Changed](#whats-changed-2)
       - [View Transitions](#view-transitions)
       - [Stable `createRemixStub`](#stable-createremixstub)
@@ -38,10 +38,10 @@ We manage release notes in this file instead of the paginated Github Releases Pa
     - [Patch Changes](#patch-changes-2)
     - [Updated Dependencies](#updated-dependencies-2)
     - [Changes by Package](#changes-by-package-2)
-  - [v2.0.1 🏷️](#v201-️)
+  - [v2.0.1](#v201)
     - [Patch Changes](#patch-changes-3)
     - [Changes by Package 🔗](#changes-by-package-)
-  - [v2.0.0 🏷️](#v200-️)
+  - [v2.0.0](#v200)
     - [Breaking Changes](#breaking-changes)
       - [Upgraded Dependency Requirements](#upgraded-dependency-requirements)
       - [Removed Future Flags](#removed-future-flags)
@@ -59,7 +59,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
 <!--
 To add a new release, copy from this template:
 
-## v2.X.Y [🏷️](https://github.com/remix-run/remix/releases/tag/remix%402.X.Y)
+## v2.X.Y
 
 ### What's Changed
 
@@ -98,7 +98,7 @@ To add a new release, copy from this template:
 
 -->
 
-## v2.3.0 [🏷️](https://github.com/remix-run/remix/releases/tag/remix%402.3.0)
+## v2.3.0
 
 ### What's Changed
 
@@ -176,7 +176,7 @@ function handleClick() {
 
 **Full Changelog**: [`v2.2.0...v2.3.0`](https://github.com/remix-run/remix/compare/remix@2.2.0...remix@2.3.0)
 
-## v2.2.0 [🏷️](https://github.com/remix-run/remix/releases/tag/remix%402.2.0)
+## v2.2.0
 
 ### What's Changed
 
@@ -269,7 +269,7 @@ Per the same [RFC](https://github.com/remix-run/remix/discussions/7698) as above
 
 **Full Changelog**: [`v2.1.0...v2.2.0`](https://github.com/remix-run/remix/compare/remix@2.1.0...remix@2.2.0)
 
-## v2.1.0 [🏷️](https://github.com/remix-run/remix/releases/tag/remix%402.1.0)
+## v2.1.0
 
 ### What's Changed
 
@@ -363,7 +363,7 @@ After real-world experience, we're confident in the [`createRemixStub`](https://
 
 **Full Changelog**: [`v2.0.1...v2.1.0`](https://github.com/remix-run/remix/compare/remix@2.0.1...remix@2.1.0)
 
-## v2.0.1 [🏷️](https://github.com/remix-run/remix/releases/tag/remix%402.0.1)
+## v2.0.1
 
 ### Patch Changes
 
@@ -392,7 +392,7 @@ After real-world experience, we're confident in the [`createRemixStub`](https://
 
 **Full Changelog**: [`v2.0.0...v2.0.1`](https://github.com/remix-run/remix/compare/remix@2.0.0...remix@2.0.1)
 
-## v2.0.0 [🏷️](https://github.com/remix-run/remix/releases/tag/remix%402.0.0)
+## v2.0.0
 
 We're _**so**_ excited to release Remix v2 to you and we really hope this upgrade is one of the smoothest framework upgrades you've ever experienced! That was our primary goal with v2 - something we aimed to achieve through a heavy use of deprecation warnings and [Future Flags](https://remix.run/blog/future-flags) in Remix v1.
 
