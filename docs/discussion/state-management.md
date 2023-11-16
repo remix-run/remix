@@ -276,7 +276,7 @@ export async function loader({
   request,
 }: LoaderFunctionArgs) {
   const cookieHeader = request.headers.get("Cookie");
-  const cookie = await prefs.parse(cookieHeader);
+  const cookie = (await prefs.parse(cookieHeader)) || {};
   return json({ sidebarIsOpen: cookie.sidebarIsOpen });
 }
 
@@ -285,7 +285,7 @@ export async function action({
   request,
 }: ActionFunctionArgs) {
   const cookieHeader = request.headers.get("Cookie");
-  const cookie = await prefs.parse(cookieHeader);
+  const cookie = (await prefs.parse(cookieHeader)) || {};
   const formData = await request.formData();
 
   const isOpen = formData.get("sidebar") === "open";
