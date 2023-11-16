@@ -1,21 +1,6 @@
 # `@remix-run/react`
 
-## 2.3.0-pre.2
-
-### Patch Changes
-
-- [REMOVE} Bump router ([#8029](https://github.com/remix-run/remix/pull/8029))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.3.0-pre.2`
-
-## 2.3.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.3.0-pre.1`
-
-## 2.3.0-pre.0
+## 2.3.0
 
 ### Minor Changes
 
@@ -27,7 +12,9 @@
 - Support optional rendering of `LiveReload` component in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
 - add missing modulepreload for the manifest ([#7684](https://github.com/remix-run/remix/pull/7684))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.3.0-pre.0`
+  - [`react-router-dom@6.19.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.19.0)
+  - [`@remix-run/router@1.12.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1120)
+  - `@remix-run/server-runtime@2.3.0`
 
 ## 2.2.0
 
