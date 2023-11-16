@@ -72,7 +72,7 @@
     "set-cookie-parser": "^2.6.0",
     "tar-fs": "^2.1.1",
     "tsconfig-paths": "^4.0.0",
-    "undici": "^5.22.1",
+    "undici": "^5.26.2",
     "ws": "^7.4.5"
   },
   "devDependencies": {
