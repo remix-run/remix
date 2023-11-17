@@ -210,6 +210,28 @@ test.describe("Vite build", () => {
 
         "app/assets/test1.txt": "test1",
         "app/assets/test2.txt": "test2",
+
+        "app/routes/ssr-code-split.tsx": js`
+          import { useLoaderData } from "@remix-run/react"
+
+          export const loader: LoaderFunction = async () => {
+            const lib = await import("../ssr-code-split-lib");
+            return lib.ssrCodeSplitTest();
+          };
+
+          export default function SsrCodeSplitRoute() {
+            const loaderData = useLoaderData();
+            return (
+              <div data-ssr-code-split>{loaderData}</div>
+            );
+          }
+        `,
+
+        "app/ssr-code-split-lib.ts": js`
+          export function ssrCodeSplitTest() {
+            return "ssrCodeSplitTest";
+          }
+        `,
       },
     });
 
@@ -327,6 +349,21 @@ test.describe("Vite build", () => {
     let loaderContent = page.locator("[data-dotenv-route-loader-content]");
     await expect(loaderContent).toHaveText(
       ".env file was NOT loaded, which is a good thing"
+    );
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("supports code split assets from ssr build", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/ssr-code-split`);
+    expect(pageErrors).toEqual([]);
+
+    await expect(page.locator("[data-ssr-code-split]")).toHaveText(
+      "ssrCodeSplitTest"
     );
 
     expect(pageErrors).toEqual([]);
