@@ -535,9 +535,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                     },
                   }
                 : {
-                    // We move SSR-only assets to client assets.
+                    // We copy SSR-only assets to client assets.
                     // Note that ssr build can also emit code-split js files (e.g. by dynamic import)
-                    // under the same assets directory (regardless of ssrEmitAssets option),
+                    // under the same assets directory regardless of "ssrEmitAssets" option,
                     // but such js files have to be kept as is.
                     ssrEmitAssets: true,
                     manifest: true, // We need the manifest to detect SSR-only assets
@@ -793,7 +793,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             Array.from(ssrOnlyAssetPaths).map(async (ssrAssetPath) => {
               let src = path.join(serverBuildDir, ssrAssetPath);
               let dest = path.join(assetsBuildDirectory, ssrAssetPath);
-              await fse.move(src, dest);
+              await fse.copy(src, dest);
               return dest;
             })
           );
