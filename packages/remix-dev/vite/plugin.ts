@@ -784,19 +784,18 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           let clientViteManifest = await loadViteManifest(assetsBuildDirectory);
 
           let clientAssetPaths = new Set(
-            Object.values(clientViteManifest).flatMap((chunk) => [
-              ...(chunk.assets ?? []),
-            ])
+            Object.values(clientViteManifest).flatMap(
+              (chunk) => chunk.assets ?? []
+            )
           );
 
           let ssrAssetPaths = new Set(
-            Object.values(ssrViteManifest).flatMap((chunk) => [
-              ...(chunk.assets ?? []),
-            ])
+            Object.values(ssrViteManifest).flatMap(
+              (chunk) => chunk.assets ?? []
+            )
           );
 
           let movedAssetPaths: string[] = [];
-
           for (let ssrAssetPath of ssrAssetPaths) {
             // Only move assets that aren't in the client build
             // otherwise remove a file
