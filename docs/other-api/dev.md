@@ -197,6 +197,17 @@ For example, you can use `NODE_OPTIONS` to set Node's `--require` flag when runn
 }
 ```
 
+If you're using ESM as the default module system you will need to set the `--import` flag instead of `--require`:
+
+```json filename=package.json
+{
+  "scripts": {
+    "dev": "remix dev -c \"npm run dev:app\"",
+    "dev:app": "cross-env NODE_OPTIONS=\"--import ./mocks/index.js\" remix-serve ./build/index.js"
+  }
+}
+```
+
 Next, you can use `REMIX_DEV_ORIGIN` to let MSW forward internal "dev ready" messages on `/ping`:
 
 ```ts
