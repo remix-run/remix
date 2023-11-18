@@ -56,6 +56,10 @@ Changesets will do most of the heavy lifting for our releases. When changes are 
 - Review the updated `CHANGELOG` files and make any adjustments necessary, then merge the PR into the `release-*` branch
   - `find packages -name 'CHANGELOG.md' -mindepth 2 -maxdepth 2 -exec code {} \;`
 - Once the PR is merged, the release workflow will publish the updated packages to npm
+- At this point, you can begin crafting the release notes for the eventual stable release in the root `CHANGELOG.md` file in the repo
+  - Copy the template for a new release and update the version numbers and links accordingly
+  - Copy the relevant changelog entries from all packages into the release notes and adjust accordingly
+  - Commit these changes directly to the `release-*` branch - they will not trigger a new prerelease since they do not include a changeset
 
 ### Iterating a pre-release
 
@@ -69,6 +73,7 @@ You may need to make changes to a pre-release prior to publishing a final stable
 - Wait for the release workflow to finish and the Changesets action to open its PR that will increment all versions
 - Review the PR, make any adjustments necessary, and merge it into the `release-*` branch
 - Once the PR is merged, the release workflow will publish the updated packages to npm
+- Make sure you copy over the new changeset contents into stable release notes in the root `CHANGELOG.md` file in the repo
 
 ### Publishing the stable release
 
@@ -79,8 +84,9 @@ You may need to make changes to a pre-release prior to publishing a final stable
   - `find packages -name 'CHANGELOG.md' -mindepth 2 -maxdepth 2 -exec code {} \;`
   - We should remove the changelogs for all pre-releases ahead of publishing the stable version
   - [TODO: We should automate this]
-- Prepare the github release notes
-  - Copy the relevant changelog entries from all packages into the Release Notes and adjust accordingly, matching the format used by prior releases
+- Finalize the release notes
+  - This should already be in pretty good shape in the root `CHANGELOG.md` file in the repo
+  - Do a quick double check that all iterated prerelease changesets got copied over
 - Merge the PR into the `release-*` branch
 - Once the PR is merged, the release workflow will publish the updated packages to npm
 - Once the release is published:
@@ -89,7 +95,7 @@ You may need to make changes to a pre-release prior to publishing a final stable
     - `git checkout main; git merge --no-ff release-next`
   - Merge the `release-*` branch into `dev` **using a non-fast-forward merge** and push it up to GitHub
     - `git checkout dev; git merge --no-ff release-next`
-  - Convert the `remix@1.x.y` tag to a Release on Github with the name `v1.x.y` using he release notes prepared above
+  - Convert the `remix@1.x.y` tag to a Release on GitHub with the name `v2.x.y` and add a deep-link to the release heading in `CHANGELOG.md`
 
 ### Hotfix releases
 
