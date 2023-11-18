@@ -200,7 +200,7 @@ For example, you can use `NODE_OPTIONS` to set Node's `--require` flag when runn
 Next, you can use `REMIX_DEV_ORIGIN` to let MSW forward internal "dev ready" messages on `/ping`:
 
 ```ts
-import { rest } from "msw";
+import { http, passthrough } from "msw";
 
 const REMIX_DEV_PING = new URL(
   process.env.REMIX_DEV_ORIGIN
@@ -208,7 +208,7 @@ const REMIX_DEV_PING = new URL(
 REMIX_DEV_PING.pathname = "/ping";
 
 export const server = setupServer(
-  rest.post(REMIX_DEV_PING.href, (req) => req.passthrough())
+  http.post(REMIX_DEV_PING.href, () => passthrough())
   // ... other request handlers go here ...
 );
 ```
