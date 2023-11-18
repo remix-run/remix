@@ -368,4 +368,11 @@ test.describe("Vite build", () => {
 
     expect(pageErrors).toEqual([]);
   });
+
+  test("keep only code-split js files in ssr build asssets", async () => {
+    let assetFiles = glob.sync("*", {
+      cwd: path.join(fixture.projectDir, "build/assets"),
+    });
+    expect(assetFiles).toEqual(["ssr-code-split-lib-l8BW9uKL.js"]);
+  });
 });
