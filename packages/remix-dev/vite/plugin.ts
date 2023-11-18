@@ -3,7 +3,7 @@
 import type * as Vite from "vite";
 import { type BinaryLike, createHash } from "node:crypto";
 import * as path from "node:path";
-import * as fs from "node:fs/promises";
+import * as fse from "fs-extra";
 import babel from "@babel/core";
 import { type ServerBuild } from "@remix-run/server-runtime";
 import {
@@ -182,8 +182,8 @@ function dedupe<T>(array: T[]): T[] {
 }
 
 const writeFileSafe = async (file: string, contents: string): Promise<void> => {
-  await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(file, contents);
+  await fse.ensureDir(path.dirname(file));
+  await fse.writeFile(file, contents);
 };
 
 const getRouteModuleExports = async (
@@ -213,7 +213,7 @@ const getRouteModuleExports = async (
 
   let [id, code] = await Promise.all([
     resolveId(),
-    fs.readFile(routePath, "utf-8"),
+    fse.readFile(routePath, "utf-8"),
     // pluginContainer.transform(...) fails if we don't do this first:
     moduleGraph.ensureEntryFromUrl(url, ssr),
   ]);
@@ -253,6 +253,8 @@ export type RemixVitePlugin = (
 export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
   let viteCommand: Vite.ResolvedConfig["command"];
   let viteUserConfig: Vite.UserConfig;
+  let resolvedViteConfig: Vite.ResolvedConfig | undefined;
+
   let isViteV4 = getViteMajorVersion() === 4;
 
   let cssModulesManifest: Record<string, string> = {};
@@ -347,19 +349,23 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       };`;
   };
 
+  let loadViteManifest = async (directory: string) => {
+    let manifestPath = isViteV4
+      ? "manifest.json"
+      : path.join(".vite", "manifest.json");
+    let manifestContents = await fse.readFile(
+      path.resolve(directory, manifestPath),
+      "utf-8"
+    );
+    return JSON.parse(manifestContents) as Vite.Manifest;
+  };
+
   let createBuildManifest = async (): Promise<Manifest> => {
     let pluginConfig = await resolvePluginConfig();
 
-    let viteManifestPath = isViteV4
-      ? "manifest.json"
-      : path.join(".vite", "manifest.json");
-
-    let viteManifest = JSON.parse(
-      await fs.readFile(
-        path.resolve(pluginConfig.assetsBuildDirectory, viteManifestPath),
-        "utf-8"
-      )
-    ) as Vite.Manifest;
+    let viteManifest = await loadViteManifest(
+      pluginConfig.assetsBuildDirectory
+    );
 
     let entry: Manifest["entry"] = resolveBuildAssetPaths(
       pluginConfig,
@@ -522,6 +528,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             base: pluginConfig.publicPath,
             build: {
               ...viteUserConfig.build,
+              // By convention Remix builds into a subdirectory within the
+              // public directory ("public/build" by default) so we don't want
+              // to copy the contents of the public directory around. This also
+              // ensures that we don't get caught in an infinite loop when
+              // `assetsBuildDirectory` is nested multiple levels deep within
+              // the public directory, e.g. "public/custom-base-dir/build"
+              copyPublicDir: false,
               ...(!isSsrBuild
                 ? {
                     manifest: true,
@@ -538,6 +551,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                     },
                   }
                 : {
+                    ssrEmitAssets: true, // We move SSR-only assets to client assets and clean the rest
+                    manifest: true, // We need the manifest to detect SSR-only assets
                     outDir: path.dirname(pluginConfig.serverBuildPath),
                     rollupOptions: {
                       ...viteUserConfig.build?.rollupOptions,
@@ -557,6 +572,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       },
       async configResolved(viteConfig) {
         await initEsModuleLexer;
+
+        resolvedViteConfig = viteConfig;
 
         ssrBuildContext =
           viteConfig.build.ssr && viteCommand === "build"
@@ -746,6 +763,80 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           }
         };
       },
+      writeBundle: {
+        // After the SSR build is finished, we inspect the Vite manifest for
+        // the SSR build and move all server assets to client assets directory
+        async handler() {
+          if (!ssrBuildContext.isSsrBuild) {
+            return;
+          }
+
+          invariant(
+            cachedPluginConfig,
+            "Expected plugin config to be cached when writeBundle hook is called"
+          );
+
+          invariant(
+            resolvedViteConfig,
+            "Expected resolvedViteConfig to exist when writeBundle hook is called"
+          );
+
+          let { assetsBuildDirectory, serverBuildPath, rootDirectory } =
+            cachedPluginConfig;
+          let serverBuildDir = path.dirname(serverBuildPath);
+
+          let ssrViteManifest = await loadViteManifest(serverBuildDir);
+          let clientViteManifest = await loadViteManifest(assetsBuildDirectory);
+
+          let clientAssetPaths = new Set(
+            Object.values(clientViteManifest).flatMap(
+              (chunk) => chunk.assets ?? []
+            )
+          );
+
+          let ssrOnlyAssetPaths = new Set(
+            Object.values(ssrViteManifest)
+              .flatMap((chunk) => chunk.assets ?? [])
+              // Only move assets that aren't in the client build
+              .filter((asset) => !clientAssetPaths.has(asset))
+          );
+
+          let movedAssetPaths = await Promise.all(
+            Array.from(ssrOnlyAssetPaths).map(async (ssrAssetPath) => {
+              let src = path.join(serverBuildDir, ssrAssetPath);
+              let dest = path.join(assetsBuildDirectory, ssrAssetPath);
+              await fse.move(src, dest);
+              return dest;
+            })
+          );
+
+          let logger = resolvedViteConfig.logger;
+
+          if (movedAssetPaths.length) {
+            logger.info(
+              [
+                "",
+                `${colors.green("✓")} ${movedAssetPaths.length} asset${
+                  movedAssetPaths.length > 1 ? "s" : ""
+                } moved from Remix server build to client assets.`,
+                ...movedAssetPaths.map((movedAssetPath) =>
+                  colors.dim(path.relative(rootDirectory, movedAssetPath))
+                ),
+                "",
+              ].join("\n")
+            );
+          }
+
+          let ssrAssetsDir = path.join(
+            resolvedViteConfig.build.outDir,
+            resolvedViteConfig.build.assetsDir
+          );
+
+          if (fse.existsSync(ssrAssetsDir)) {
+            await fse.remove(ssrAssetsDir);
+          }
+        },
+      },
       async buildEnd() {
         await viteChildCompiler?.close();
       },
@@ -907,8 +998,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         return [
           "const exports = {}",
-          await fs.readFile(reactRefreshRuntimePath, "utf8"),
-          await fs.readFile(
+          await fse.readFile(reactRefreshRuntimePath, "utf8"),
+          await fse.readFile(
             require.resolve("./static/refresh-utils.cjs"),
             "utf8"
           ),

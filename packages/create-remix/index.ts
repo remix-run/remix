@@ -263,7 +263,7 @@ async function copyTemplateToTempDirStep(ctx: Context) {
   } else {
     log("");
     info("Using basic template", [
-      "See https://remix.run/docs/guides/templates for more",
+      "See https://remix.run/guides/templates for more",
     ]);
   }
 

@@ -27,4 +27,4 @@ installGlobals();
 
 Remix officially supports **Active** and **Maintenance** [Node LTS versions][node-releases] at any given point in time. Dropped support for End of Life Node versions is done in a Remix Minor release.
 
-[node-releases]: https://nodejs.dev/en/about/releases
+[node-releases]: https://nodejs.org/en/about/previous-releases

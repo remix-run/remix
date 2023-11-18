@@ -36,11 +36,11 @@ The majority of the APIs you interact with in your app are not imported directly
 For example, you might want to store cookies on the file system, or in Cloudflare KV storage. These are specific features of runtimes that aren't shared with other runtimes:
 
 ```tsx
-// store sessions on the file system in node
-import { createWorkersKVSessionStorage } from "@remix-run/cloudflare";
-import { createFileSessionStorage } from "@remix-run/node";
-
 // store sessions in cloudflare KV storage
+import { createWorkersKVSessionStorage } from "@remix-run/cloudflare";
+
+// store sessions on the file system in node
+import { createFileSessionStorage } from "@remix-run/node";
 ```
 
 But if you're storing a session in the cookie itself, this is supported in all runtimes:

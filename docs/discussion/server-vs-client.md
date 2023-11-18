@@ -19,9 +19,9 @@ Consider this route module from the last section:
 
 ```tsx filename=routes/settings.tsx
 import type {
-  ActionArgs,
+  ActionFunctionArgs,
   HeadersFunction,
-  LoaderArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
@@ -32,7 +32,9 @@ export const headers: HeadersFunction = () => ({
   "Cache-Control": "max-age=300, s-maxage=3600",
 });
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const user = await getUser(request);
   return json({
     displayName: user.displayName,
@@ -57,7 +59,9 @@ export default function Component() {
   );
 }
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const user = await getUser(request);
 
   await updateUser(user.id, {
