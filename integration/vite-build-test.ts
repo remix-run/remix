@@ -373,6 +373,7 @@ test.describe("Vite build", () => {
     let assetFiles = glob.sync("*", {
       cwd: path.join(fixture.projectDir, "build/assets"),
     });
-    expect(assetFiles).toEqual(["ssr-code-split-lib-l8BW9uKL.js"]);
+    expect(assetFiles.length).toEqual(1);
+    expect(assetFiles[0]).toMatch(/ssr-code-split-lib-.*\.js/);
   });
 });
