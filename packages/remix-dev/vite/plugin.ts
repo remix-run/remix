@@ -795,10 +795,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             )
           );
 
+          // Only move assets that aren't in the client build, otherwise remove them
           let movedAssetPaths: string[] = [];
           for (let ssrAssetPath of ssrAssetPaths) {
-            // Only move assets that aren't in the client build
-            // otherwise remove a file
             let src = path.join(serverBuildDir, ssrAssetPath);
             if (!clientAssetPaths.has(ssrAssetPath)) {
               let dest = path.join(assetsBuildDirectory, ssrAssetPath);
@@ -809,7 +808,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             }
           }
 
-          // we assume css from server build is unncessary and delete them for cleaner build output
+          // we assume css from server build is unncessary and remove them for cleaner build output
           let ssrCssPaths = Object.values(ssrViteManifest).flatMap(
             (chunk) => chunk.css ?? []
           );

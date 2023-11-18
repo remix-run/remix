@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Keep SSR build assets directory to support code-split js files (e.g. due to dynamic import)
+Keep code-split js files from ssr build and delete only unnecessary assets
