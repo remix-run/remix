@@ -331,7 +331,7 @@ test.describe("Vite build", () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test("removes assets and CSS files from SSR build", async () => {
+  test("removes assets (other than code-split JS) and CSS files from SSR build", async () => {
     let assetFiles = glob.sync("*", {
       cwd: path.join(fixture.projectDir, "build/assets"),
     });
