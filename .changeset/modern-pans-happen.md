@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Keep code-split JS files in Vite server build and only delete static assets and CSS files
+Ensure code-split JS files in the server build's assets directory aren't cleaned up after Vite build
