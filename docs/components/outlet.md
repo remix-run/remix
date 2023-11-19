@@ -1,6 +1,5 @@
 ---
 title: Outlet
-toc: false
 ---
 
 # `<Outlet>`

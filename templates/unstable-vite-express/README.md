@@ -7,7 +7,7 @@
 ## Setup
 
 ```shellscript
-npx create-remix@nightly --template remix-run/remix/templates/unstable-vite-express
+npx create-remix@latest --template remix-run/remix/templates/unstable-vite-express
 ```
 
 ## Run

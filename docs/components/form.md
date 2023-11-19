@@ -91,7 +91,7 @@ This is recommended over [`<form>`][form_element]. When the `action` prop is omi
 
 ### `unstable_viewTransition`
 
-The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`. If you need to apply specific styles for this view transition, you will also need to leverage the [`unstable_useViewTransitionState()`][use-view-transition-state].
+The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in [`document.startViewTransition()`][document-start-view-transition]. If you need to apply specific styles for this view transition, you will also need to leverage the [`unstable_useViewTransitionState()`][use-view-transition-state].
 
 <docs-warning>
 Please note that this API is marked unstable and may be subject to breaking changes without a major release.
@@ -153,5 +153,6 @@ See also:
 [use_fetchers]: ../hooks/use-fetchers
 [fetcher_form]: ../hooks/use-fetcher#fetcherform
 [progressive_enhancement]: ../discussion/progressive-enhancement
-[use-view-transition-state]: ../hooks//use-view-transition-state
 [view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API
+[document-start-view-transition]: https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition
+[use-view-transition-state]: ../hooks/use-view-transition-state
