@@ -316,6 +316,30 @@ test.describe("Vite build", () => {
     await page.getByText("test2").click();
   });
 
+  test("supports code-split JS from SSR build", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/ssr-code-split`);
+    expect(pageErrors).toEqual([]);
+
+    await expect(page.locator("[data-ssr-code-split]")).toHaveText(
+      "ssrCodeSplitTest"
+    );
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("removes assets and CSS files from SSR build", async () => {
+    let assetFiles = glob.sync("*", {
+      cwd: path.join(fixture.projectDir, "build/assets"),
+    });
+    let [asset, ...rest] = assetFiles;
+    expect(rest).toEqual([]); // Provide more useful test output if this fails
+    expect(asset).toMatch(/ssr-code-split-lib-.*\.js/);
+  });
+
   test("supports code-split css", async ({ page }) => {
     let pageErrors: unknown[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
@@ -352,28 +376,5 @@ test.describe("Vite build", () => {
     );
 
     expect(pageErrors).toEqual([]);
-  });
-
-  test("supports code split assets from ssr build", async ({ page }) => {
-    let pageErrors: unknown[] = [];
-    page.on("pageerror", (error) => pageErrors.push(error));
-
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto(`/ssr-code-split`);
-    expect(pageErrors).toEqual([]);
-
-    await expect(page.locator("[data-ssr-code-split]")).toHaveText(
-      "ssrCodeSplitTest"
-    );
-
-    expect(pageErrors).toEqual([]);
-  });
-
-  test("keep only code-split js files in ssr build asssets", async () => {
-    let assetFiles = glob.sync("*", {
-      cwd: path.join(fixture.projectDir, "build/assets"),
-    });
-    expect(assetFiles.length).toEqual(1);
-    expect(assetFiles[0]).toMatch(/ssr-code-split-lib-.*\.js/);
   });
 });
