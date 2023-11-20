@@ -150,6 +150,7 @@ function handleClick() {
   - Handle multiple `Set-Cookie` headers in Vite dev server ([#7843](https://github.com/remix-run/remix/pull/7843))
   - Fix flash of unstyled content on initial page load in Vite dev when using a custom Express server ([#7937](https://github.com/remix-run/remix/pull/7937))
   - Populate `process.env` from `.env` files on the server in Vite dev ([#7958](https://github.com/remix-run/remix/pull/7958))
+  - Emit assets that were only referenced in the server build into the client assets directory in Vite build ([#7892](https://github.com/remix-run/remix/pull/7892))
 
 ### Updated Dependencies
 
