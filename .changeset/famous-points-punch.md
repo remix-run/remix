@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Fix LiveReload's nonce prop
+Support `nonce` prop on `LiveReload` component in Vite dev
