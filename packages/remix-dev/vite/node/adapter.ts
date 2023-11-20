@@ -2,10 +2,8 @@
 // adapted from https://github.com/solidjs/solid-start/blob/ccff60ce75e066f6613daf0272dbb43a196235a4/packages/start/node/fetch.js
 import { once } from "events";
 import { type IncomingMessage, type ServerResponse } from "http";
-import multipart from "parse-multipart-data";
 import { splitCookiesString } from "set-cookie-parser";
 import { Readable } from "stream";
-import { File, FormData, Headers, Request as BaseNodeRequest } from "undici";
 import {
   type ServerBuild,
   installGlobals,
@@ -13,59 +11,8 @@ import {
 } from "@remix-run/node";
 import { createRequestHandler as createBaseRequestHandler } from "@remix-run/server-runtime";
 
+// polyfill should be also opt-in? (move to template?)
 installGlobals();
-
-function nodeToWeb(nodeStream) {
-  let destroyed = false;
-  let listeners = {};
-
-  function start(controller) {
-    listeners["data"] = onData;
-    listeners["end"] = onData;
-    listeners["end"] = onDestroy;
-    listeners["close"] = onDestroy;
-    listeners["error"] = onDestroy;
-    for (let name in listeners) nodeStream.on(name, listeners[name]);
-
-    nodeStream.pause();
-
-    function onData(chunk) {
-      if (destroyed) return;
-      controller.enqueue(chunk);
-      nodeStream.pause();
-    }
-
-    function onDestroy(err) {
-      if (destroyed) return;
-      destroyed = true;
-
-      for (let name in listeners)
-        nodeStream.removeListener(name, listeners[name]);
-
-      if (err) controller.error(err);
-      else controller.close();
-    }
-  }
-
-  function pull() {
-    if (destroyed) return;
-    nodeStream.resume();
-  }
-
-  function cancel() {
-    destroyed = true;
-
-    for (let name in listeners)
-      nodeStream.removeListener(name, listeners[name]);
-
-    nodeStream.push(null);
-    nodeStream.pause();
-    if (nodeStream.destroy) nodeStream.destroy();
-    else if (nodeStream.close) nodeStream.close();
-  }
-
-  return new ReadableStream({ start: start, pull: pull, cancel: cancel });
-}
 
 function createHeaders(requestHeaders) {
   let headers = new Headers();
@@ -85,94 +32,8 @@ function createHeaders(requestHeaders) {
   return headers;
 }
 
-class NodeRequest extends BaseNodeRequest {
-  constructor(input, init) {
-    if (init && init.data && init.data.on) {
-      init = {
-        duplex: "half",
-        ...init,
-        body: init.data.headers["content-type"]?.includes("x-www")
-          ? init.data
-          : nodeToWeb(init.data),
-      };
-    }
-
-    super(input, init);
-  }
-
-  // async json() {
-  //   return JSON.parse(await this.text());
-  // }
-
-  async buffer() {
-    return Buffer.from(await super.arrayBuffer());
-  }
-
-  // async text() {
-  //   return (await this.buffer()).toString();
-  // }
-
-  // @ts-ignore
-  async formData() {
-    if (
-      this.headers.get("content-type") === "application/x-www-form-urlencoded"
-    ) {
-      return await super.formData();
-    } else {
-      let data = await this.buffer();
-      let input = multipart.parse(
-        data,
-        this.headers
-          .get("content-type")
-          .replace("multipart/form-data; boundary=", "")
-      );
-      let form = new FormData();
-      input.forEach(({ name, data, filename, type }) => {
-        // file fields have Content-Type set,
-        // whereas non-file fields must not
-        // https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#multipart-form-data
-        let isFile = type !== undefined;
-        if (isFile) {
-          let value = new File([data], filename, { type });
-          form.append(name, value, filename);
-        } else {
-          let value = data.toString("utf-8");
-          form.append(name, value);
-        }
-      });
-      return form;
-    }
-  }
-
-  // @ts-ignore
-  clone() {
-    /** @type {BaseNodeRequest & { buffer?: () => Promise<Buffer>; formData?: () => Promise<FormData> }}  */
-    let el = super.clone();
-    el.buffer = this.buffer.bind(el);
-    el.formData = this.formData.bind(el);
-    return el;
-  }
-}
-
-function createRequest(req: IncomingMessage): Request {
-  let origin =
-    req.headers.origin && "null" !== req.headers.origin
-      ? req.headers.origin
-      : `http://${req.headers.host}`;
-  let url = new URL(req.url, origin);
-
-  let init = {
-    method: req.method,
-    headers: createHeaders(req.headers),
-    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
-    data: ["POST", "PUT", "DELETE", "PATCH"].includes(req.method) ? req : null,
-  };
-
-  return new NodeRequest(url.href, init);
-}
-
 // based on `createRemixRequest` in packages/remix-express/server.ts
-function createRequest2(req: IncomingMessage, res: ServerResponse): Request {
+function createRequest(req: IncomingMessage, res: ServerResponse): Request {
   let origin =
     req.headers.origin && "null" !== req.headers.origin
       ? req.headers.origin
@@ -235,8 +96,7 @@ export let createRequestHandler = (
 ) => {
   let handler = createBaseRequestHandler(build, mode);
   return async (req: IncomingMessage, res: ServerResponse) => {
-    // let request = createRequest(req);
-    let request = createRequest2(req, res);
+    let request = createRequest(req, res);
     let response = await handler(request, {}, { __criticalCss: criticalCss });
     handleNodeResponse(response, res);
   };
