@@ -142,7 +142,7 @@ The form method of the submission.
 - [Concurrent Mutations w/ useFetcher][concurrent_mutations_with_use_fetcher]
 - [Optimistic UI][optimistic_ui]
 
-[form_component]: ../components/Form
+[form_component]: ../components/form
 [form_data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [html_form_element]: https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement
 [form_element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form
