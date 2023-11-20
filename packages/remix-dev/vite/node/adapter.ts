@@ -6,7 +6,11 @@ import multipart from "parse-multipart-data";
 import { splitCookiesString } from "set-cookie-parser";
 import { Readable } from "stream";
 import { File, FormData, Headers, Request as BaseNodeRequest } from "undici";
-import { type ServerBuild, installGlobals } from "@remix-run/node";
+import {
+  type ServerBuild,
+  installGlobals,
+  createReadableStreamFromReadable,
+} from "@remix-run/node";
 import { createRequestHandler as createBaseRequestHandler } from "@remix-run/server-runtime";
 
 installGlobals();
@@ -167,6 +171,31 @@ function createRequest(req: IncomingMessage): Request {
   return new NodeRequest(url.href, init);
 }
 
+// based on `createRemixRequest` in packages/remix-express/server.ts
+function createRequest2(req: IncomingMessage, res: ServerResponse): Request {
+  let origin =
+    req.headers.origin && "null" !== req.headers.origin
+      ? req.headers.origin
+      : `http://${req.headers.host}`;
+  let url = new URL(req.url, origin);
+
+  let controller = new AbortController();
+  res.on("close", () => controller.abort());
+
+  let init: RequestInit = {
+    method: req.method,
+    headers: createHeaders(req.headers),
+    signal: controller.signal,
+  };
+
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    init.body = createReadableStreamFromReadable(req);
+    (init as { duplex: "half" }).duplex = "half";
+  }
+
+  return new Request(url.href, init);
+}
+
 // Adapted from more recent version of `handleNodeResponse`:
 // https://github.com/solidjs/solid-start/blob/7398163869b489cce503c167e284891cf51a6613/packages/start/node/fetch.js#L162-L185
 async function handleNodeResponse(webRes: Response, res: ServerResponse) {
@@ -206,7 +235,8 @@ export let createRequestHandler = (
 ) => {
   let handler = createBaseRequestHandler(build, mode);
   return async (req: IncomingMessage, res: ServerResponse) => {
-    let request = createRequest(req);
+    // let request = createRequest(req);
+    let request = createRequest2(req, res);
     let response = await handler(request, {}, { __criticalCss: criticalCss });
     handleNodeResponse(response, res);
   };
