@@ -3335,24 +3335,7 @@
   dependencies:
     "@babel/core" "^7.20.7"
 
-"@vanilla-extract/css@^1.10.0":
-  version "1.10.0"
-  resolved "https://registry.npmjs.org/@vanilla-extract/css/-/css-1.10.0.tgz#4ed13c89c5f4e452f306440415d4591bba8ac01b"
-  integrity sha512-s/EFfLDKbU1c2jnELNl+l14AufvIyryDh09ZZxRRqKjRKitiKvEjoiUy964pGKmfHngc9O0mkbzqrbhWaH+96Q==
-  dependencies:
-    "@emotion/hash" "^0.9.0"
-    "@vanilla-extract/private" "^1.0.3"
-    ahocorasick "1.0.2"
-    chalk "^4.1.1"
-    css-what "^5.0.1"
-    cssesc "^3.0.0"
-    csstype "^3.0.7"
-    deep-object-diff "^1.1.9"
-    deepmerge "^4.2.2"
-    media-query-parser "^2.0.2"
-    outdent "^0.8.0"
-
-"@vanilla-extract/css@^1.14.0":
+"@vanilla-extract/css@^1.10.0", "@vanilla-extract/css@^1.14.0":
   version "1.14.0"
   resolved "https://registry.npmjs.org/@vanilla-extract/css/-/css-1.14.0.tgz#45fab9c04d893e3e363cf2cde7559d21233b7f63"
   integrity sha512-rYfm7JciWZ8PFzBM/HDiE2GLnKI3xJ6/vdmVJ5BSgcCZ5CxRlM9Cjqclni9lGzF3eMOijnUhCd/KV8TOzyzbMA==
@@ -3369,7 +3352,7 @@
     modern-ahocorasick "^1.0.0"
     outdent "^0.8.0"
 
-"@vanilla-extract/integration@^6.0.2":
+"@vanilla-extract/integration@^6.0.2", "@vanilla-extract/integration@^6.2.0":
   version "6.2.3"
   resolved "https://registry.npmjs.org/@vanilla-extract/integration/-/integration-6.2.3.tgz#fd6d4dcca4a52db9c1b2de26f7e524f8155f9b3a"
   integrity sha512-Ix7xCClFlERl3ZwPuqHCOTyat8Wq5LQVRaGI+1i0HUagu+vtUvrDXUPLF0gCtdBGvnypD3QuYx6lLz3sV2H/ZA==
@@ -3380,25 +3363,6 @@
     "@vanilla-extract/css" "^1.14.0"
     esbuild "0.17.6"
     eval "0.1.8"
-    find-up "^5.0.0"
-    javascript-stringify "^2.0.1"
-    lodash "^4.17.21"
-    mlly "^1.1.0"
-    outdent "^0.8.0"
-    vite "^4.1.4"
-    vite-node "^0.28.5"
-
-"@vanilla-extract/integration@^6.2.0":
-  version "6.2.0"
-  resolved "https://registry.npmjs.org/@vanilla-extract/integration/-/integration-6.2.0.tgz#b45927c5e9efb78a8c3c66ccc2aacdfb996a6b9e"
-  integrity sha512-sHF571lXE7tdk0Sx3kcbbopmpyiYfRIxhHET2vGjH0Mddch1NK93VztWyliaBdPltR++OuvYruzzYAt3Ob18VQ==
-  dependencies:
-    "@babel/core" "^7.20.7"
-    "@babel/plugin-syntax-typescript" "^7.20.0"
-    "@vanilla-extract/babel-plugin-debug-ids" "^1.0.2"
-    "@vanilla-extract/css" "^1.10.0"
-    esbuild "0.17.6"
-    eval "0.1.6"
     find-up "^5.0.0"
     javascript-stringify "^2.0.1"
     lodash "^4.17.21"
@@ -3493,11 +3457,6 @@ aggregate-error@^3.0.0:
   dependencies:
     clean-stack "^2.0.0"
     indent-string "^4.0.0"
-
-ahocorasick@1.0.2:
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/ahocorasick/-/ahocorasick-1.0.2.tgz"
-  integrity sha512-hCOfMzbFx5IDutmWLAt6MZwOUjIfSM9G9FyVxytmE4Rs/5YDPWQrD/+IR1w+FweD9H2oOZEnv36TmkjhNURBVA==
 
 ajv@^6.10.0, ajv@^6.12.4:
   version "6.12.6"
@@ -4870,11 +4829,6 @@ css-select@^5.1.0:
     domutils "^3.0.1"
     nth-check "^2.0.1"
 
-css-what@^5.0.1:
-  version "5.0.1"
-  resolved "https://registry.npmjs.org/css-what/-/css-what-5.0.1.tgz"
-  integrity sha512-FYDTSHb/7KXsWICVsxdmiExPjCfRC4qRFBdVwv7Ax9hMnvMmEjP9RfxTEZ3qPZGmADDn2vAKSo9UcN1jKVYscg==
-
 css-what@^6.1.0:
   version "6.1.0"
   resolved "https://registry.npmjs.org/css-what/-/css-what-6.1.0.tgz#fb5effcf76f1ddea2c81bdfaa4de44e79bac70f4"
@@ -6030,13 +5984,6 @@ etag@~1.8.1:
   version "1.8.1"
   resolved "https://registry.npmjs.org/etag/-/etag-1.8.1.tgz"
   integrity sha1-Qa4u62XvpiJorr/qg6x9eSmbCIc=
-
-eval@0.1.6:
-  version "0.1.6"
-  resolved "https://registry.npmjs.org/eval/-/eval-0.1.6.tgz"
-  integrity sha512-o0XUw+5OGkXw4pJZzQoXUk+H87DHuC+7ZE//oSrRGtatTmr12oTnLfg6QOq9DyTt0c/p4TwzgmkKrBzWTSizyQ==
-  dependencies:
-    require-like ">= 0.1.1"
 
 eval@0.1.8:
   version "0.1.8"
