@@ -749,6 +749,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                 let handle = createRequestHandler(build, {
                   mode: "development",
                   criticalCss,
+                  ssrFixStacktrace: vite.ssrFixStacktrace,
                 });
 
                 await handle(req, res);

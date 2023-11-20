@@ -37,6 +37,7 @@ export type RequestHandler = (
      * @private This is an internal API intended for use by the Remix Vite plugin in dev mode
      */
     __criticalCss?: string;
+    __ssrFixStacktrace?: (error: Error) => void;
   }
 ) => Promise<Response>;
 
@@ -83,7 +84,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   return async function requestHandler(
     request,
     loadContext = {},
-    { __criticalCss: criticalCss } = {}
+    { __criticalCss: criticalCss, __ssrFixStacktrace: ssrFixStacktrace } = {}
   ) {
     _build = typeof build === "function" ? await build() : build;
     if (typeof build === "function") {
@@ -103,12 +104,16 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     let url = new URL(request.url);
 
     let matches = matchServerRoutes(routes, url.pathname);
-    let handleError = (error: unknown) =>
+    let handleError = (error: unknown) => {
+      if (ssrFixStacktrace && error instanceof Error) {
+        ssrFixStacktrace(error);
+      }
       errorHandler(error, {
         context: loadContext,
         params: matches && matches.length > 0 ? matches[0].params : {},
         request,
       });
+    };
 
     let response: Response;
     if (url.searchParams.has("_data")) {

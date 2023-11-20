@@ -199,15 +199,21 @@ export let createRequestHandler = (
   {
     mode = "production",
     criticalCss,
+    ssrFixStacktrace,
   }: {
     mode?: string;
     criticalCss?: string;
+    ssrFixStacktrace?: (error: Error) => void;
   }
 ) => {
   let handler = createBaseRequestHandler(build, mode);
   return async (req: IncomingMessage, res: ServerResponse) => {
     let request = createRequest(req);
-    let response = await handler(request, {}, { __criticalCss: criticalCss });
+    let response = await handler(
+      request,
+      {},
+      { __criticalCss: criticalCss, __ssrFixStacktrace: ssrFixStacktrace }
+    );
     handleNodeResponse(response, res);
   };
 };
