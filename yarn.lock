@@ -3352,10 +3352,29 @@
     modern-ahocorasick "^1.0.0"
     outdent "^0.8.0"
 
-"@vanilla-extract/integration@^6.0.2", "@vanilla-extract/integration@^6.2.0":
+"@vanilla-extract/integration@^6.2.0":
   version "6.2.3"
   resolved "https://registry.npmjs.org/@vanilla-extract/integration/-/integration-6.2.3.tgz#fd6d4dcca4a52db9c1b2de26f7e524f8155f9b3a"
   integrity sha512-Ix7xCClFlERl3ZwPuqHCOTyat8Wq5LQVRaGI+1i0HUagu+vtUvrDXUPLF0gCtdBGvnypD3QuYx6lLz3sV2H/ZA==
+  dependencies:
+    "@babel/core" "^7.20.7"
+    "@babel/plugin-syntax-typescript" "^7.20.0"
+    "@vanilla-extract/babel-plugin-debug-ids" "^1.0.2"
+    "@vanilla-extract/css" "^1.14.0"
+    esbuild "0.17.6"
+    eval "0.1.8"
+    find-up "^5.0.0"
+    javascript-stringify "^2.0.1"
+    lodash "^4.17.21"
+    mlly "^1.1.0"
+    outdent "^0.8.0"
+    vite "^4.1.4"
+    vite-node "^0.28.5"
+
+"@vanilla-extract/integration@^6.2.4":
+  version "6.2.4"
+  resolved "https://registry.npmjs.org/@vanilla-extract/integration/-/integration-6.2.4.tgz#bd8a5ec0916051c1ef5fb66d8484a5cad8d8c58d"
+  integrity sha512-+AfymNMVq9sEUe0OJpdCokmPZg4Zi6CqKaW/PnUOfDwEn53ighHOMOBl5hAgxYR8Kiz9NG43Bn00mkjWlFi+ng==
   dependencies:
     "@babel/core" "^7.20.7"
     "@babel/plugin-syntax-typescript" "^7.20.0"
@@ -3376,12 +3395,12 @@
   resolved "https://registry.npmjs.org/@vanilla-extract/private/-/private-1.0.3.tgz"
   integrity sha512-17kVyLq3ePTKOkveHxXuIJZtGYs+cSoev7BlP+Lf4916qfDhk/HBjvlYDe8egrea7LNPHKwSZJK/bzZC+Q6AwQ==
 
-"@vanilla-extract/vite-plugin@^3.9.1":
-  version "3.9.1"
-  resolved "https://registry.npmjs.org/@vanilla-extract/vite-plugin/-/vite-plugin-3.9.1.tgz#28da454974d4dbc45871d715202dac8332d2d6ae"
-  integrity sha512-FI0Tzga+iuqPqFGms9qjeeb+PbdJdIGuG1Yc8gnzHSsRVy61u05wmfSbN9AN+FKzcvV/O1zAvRrusXCXi1oHYA==
+"@vanilla-extract/vite-plugin@^3.9.2":
+  version "3.9.2"
+  resolved "https://registry.npmjs.org/@vanilla-extract/vite-plugin/-/vite-plugin-3.9.2.tgz#5f4a8e884b768d5c9332931b69479295285064c8"
+  integrity sha512-WYgWiEs+nw+lNazyW0Ixp0MMgtNgPL+8fFKrol1V5XoNIzRrYPGfuLhRI7PwheSWQVGF7OOer0kUWQcLey1vOQ==
   dependencies:
-    "@vanilla-extract/integration" "^6.0.2"
+    "@vanilla-extract/integration" "^6.2.4"
     outdent "^0.8.0"
     postcss "^8.3.6"
     postcss-load-config "^4.0.1"
