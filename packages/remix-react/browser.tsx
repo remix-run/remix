@@ -227,10 +227,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       for (let match of initialMatches) {
         let routeId = match.route.id;
         let route = window.__remixRouteModules[routeId];
-        if (route.clientLoader) {
-          if (route.Fallback) {
-            hydrationData.loaderData[routeId] = undefined;
-          }
+        if (route.clientLoader && route.Fallback) {
+          hydrationData.loaderData[routeId] = undefined;
         }
       }
     }
