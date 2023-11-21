@@ -223,7 +223,6 @@ export function createClientRoutes(
             shouldRevalidate: lazyRoute.shouldRevalidate,
             handle: lazyRoute.handle,
             Component: lazyRoute.Component,
-            Fallback: lazyRoute.Fallback,
             ErrorBoundary: lazyRoute.ErrorBoundary,
           };
         },
