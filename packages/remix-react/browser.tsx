@@ -227,8 +227,16 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       for (let match of initialMatches) {
         let routeId = match.route.id;
         let route = window.__remixRouteModules[routeId];
-        if (route.clientLoader && route.Fallback) {
+        let manifestRoute = window.__remixManifest.routes[routeId];
+        if (route && route.clientLoader && route.Fallback) {
           hydrationData.loaderData[routeId] = undefined;
+        } else if (manifestRoute && !manifestRoute.hasLoader) {
+          // Since every Remix route gets a `loader` on the client side to load
+          // the route JS module, we need to add a `null` value to `loaderData`
+          // for any routes that don't have server loaders so our partial
+          // hydration logic doesn't kick off the route module loaders during
+          // hydration
+          hydrationData.loaderData[routeId] = null;
         }
       }
     }

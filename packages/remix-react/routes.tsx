@@ -287,7 +287,6 @@ export function createClientRoutes(
           );
         }
 
-        // TODO: Can we just return lazyRoute here?
         return {
           ...(lazyRoute.loader ? { loader: lazyRoute.loader } : {}),
           action: lazyRoute.action,
