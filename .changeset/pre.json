@@ -20,5 +20,11 @@
     "@remix-run/server-runtime": "2.3.0",
     "@remix-run/testing": "2.3.0"
   },
-  "changesets": []
+  "changesets": [
+    "breezy-emus-fold",
+    "famous-points-punch",
+    "lovely-pumas-smell",
+    "modern-pans-happen",
+    "proud-otters-cheat"
+  ]
 }
