@@ -289,7 +289,6 @@ export function createClientRoutes(
 
         return {
           ...(lazyRoute.loader ? { loader: lazyRoute.loader } : {}),
-          action: lazyRoute.action,
           hasErrorBoundary: lazyRoute.hasErrorBoundary,
           shouldRevalidate: lazyRoute.shouldRevalidate,
           handle: lazyRoute.handle,
