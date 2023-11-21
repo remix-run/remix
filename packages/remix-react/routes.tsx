@@ -12,11 +12,7 @@ import type {
 } from "react-router-dom";
 import { redirect, useRouteError } from "react-router-dom";
 
-import type {
-  ClientLoaderFunction,
-  RouteModule,
-  RouteModules,
-} from "./routeModules";
+import type { RouteModule, RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 import {
   fetchData,
@@ -172,7 +168,7 @@ export function createClientRoutes(
 
     async function callServerHandler(
       request: Request,
-      handler: typeof fetchServerLoader | typeof fetchServerAction
+      handler: () => Promise<unknown>
     ) {
       // Only prefetch links if we've been loaded into the cache, route.lazy
       // will handle initial loads
@@ -180,7 +176,7 @@ export function createClientRoutes(
         ? prefetchStyleLinks(route, routeModulesCache[route.id])
         : Promise.resolve();
       try {
-        return handler(request);
+        return handler();
       } finally {
         await linkPrefetchPromise;
       }
@@ -216,7 +212,6 @@ export function createClientRoutes(
       });
 
       dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
-        // FIXME: Figure these typings out
         return callServerHandler(request, async () => {
           if (!routeModule.clientLoader) {
             // Call the server when no client loader exists
@@ -264,7 +259,7 @@ export function createClientRoutes(
     } else {
       if (!route.hasClientLoader) {
         dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
-          callServerHandler(request, fetchServerLoader);
+          callServerHandler(request, () => fetchServerLoader(request));
       }
 
       // Load all other modules via route.lazy()
@@ -346,8 +341,8 @@ async function loadRouteModuleWithBlockingLinks(
   let routeModule = await loadRouteModule(route, routeModules);
   await prefetchStyleLinks(route, routeModule);
 
-  // Include all `browserSafeRouteExports` fields, except `Fallback` since the
-  // root route is always an initial match
+  // Include all `browserSafeRouteExports` fields, except `Fallback` since those
+  // aren't used on lazily loaded routes
   return {
     Component: getRouteModuleComponent(routeModule),
     ErrorBoundary: routeModule.ErrorBoundary,

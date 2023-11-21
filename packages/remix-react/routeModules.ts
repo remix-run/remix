@@ -1,8 +1,6 @@
 import type { ComponentType } from "react";
 import type { UNSAFE_DeferredData as DeferredData } from "@remix-run/router";
 import type {
-  ActionFunction as RRActionFunction,
-  ActionFunctionArgs as RRActionFunctionArgs,
   LoaderFunction as RRLoaderFunction,
   LoaderFunctionArgs as RRLoaderFunctionArgs,
   DataRouteMatch,
