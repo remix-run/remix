@@ -12,7 +12,11 @@ import type {
 } from "react-router-dom";
 import { redirect, useRouteError } from "react-router-dom";
 
-import type { RouteModule, RouteModules } from "./routeModules";
+import type {
+  ClientLoaderFunction,
+  RouteModule,
+  RouteModules,
+} from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 import {
   fetchData,
@@ -214,48 +218,47 @@ export function createClientRoutes(
       dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
         // FIXME: Figure these typings out
         return callServerHandler(request, async (r) => {
-          if (routeModule.clientLoader) {
-            let initialData =
-              initialState &&
-              initialState.loaderData &&
-              initialState.loaderData[route.id];
-
-            if (request.headers.has("X-Remix-Initial-Load")) {
-              if (initialData) {
-                // FIXME: Is this flow possible once we add route level fallback elements?
-                // The problematic scenario (which was intermittent) is:
-                // * Remix calls createBrowserRouter, which starts as state.initialized=false
-                // * initialize() calls startNavigation which calls client loaders
-                // * RemixBrowser renders RouterProvider
-                // * synchronous client loaders finish _before_ the RouterProvider layout effect
-                //   wires up the subscriber
-                // * So the completeNavigation and setting state.initialized=true never gets picked up by the React Router layer
-                return routeModule.clientLoader({
-                  request,
-                  params,
-                  serverLoader: () => Promise.resolve(routerJson(initialData)),
-                });
-              } else {
-                return routeModule.clientLoader({
-                  request,
-                  params,
-                  async serverLoader() {
-                    throw new Error(
-                      "You are trying to call serverFetch() on a route that does not have a server loader"
-                    );
-                  },
-                });
-              }
-            } else {
-              return routeModule.clientLoader({
-                request,
-                params,
-                serverLoader: () => fetchServerLoader(request),
-              });
-            }
-          } else {
+          if (!routeModule.clientLoader) {
+            // Call the server when no client loader exists
             return fetchServerLoader(request);
           }
+
+          let initialData =
+            initialState &&
+            initialState.loaderData &&
+            initialState.loaderData[route.id];
+
+          return routeModule.clientLoader({
+            request,
+            params,
+            serverLoader() {
+              // Call the server loader for client-side navigations
+              if (!request.headers.has("X-Remix-Initial-Load")) {
+                return fetchServerLoader(request);
+              }
+
+              // Throw an error if a clientLoader tries to call a serverLoader that doesn't exist
+              if (initialData === undefined) {
+                return Promise.reject(
+                  new Error(
+                    "You are trying to call serverFetch() on a route that does not have a server loader"
+                  )
+                );
+              }
+
+              // FIXME: Fix the intermittent race condition this introduces:
+              // * Remix calls createBrowserRouter, which starts as state.initialized=false
+              // * initialize() calls startNavigation which calls client loaders
+              // * RemixBrowser renders RouterProvider
+              // * synchronous client loaders finish _before_ the RouterProvider
+              //   layout effect wires up the subscriber
+              // * So the completeNavigation and setting state.initialized=true
+              //   never gets picked up by the React Router layer
+
+              // Otherwise, resolve the hydration clientLoader with the pre-loaded server data
+              return Promise.resolve(routerJson(initialData));
+            },
+          });
         });
       };
     } else {
