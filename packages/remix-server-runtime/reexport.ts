@@ -39,6 +39,8 @@ export type { TypedDeferredData, TypedResponse } from "./responses";
 export type {
   ActionFunction,
   ActionFunctionArgs,
+  ClientLoaderFunction,
+  ClientLoaderFunctionArgs,
   DataFunctionArgs,
   HeadersArgs,
   HeadersFunction,

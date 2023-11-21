@@ -43,7 +43,7 @@ export type ActionFunctionArgs = RRActionFunctionArgs<AppLoadContext> & {
 };
 
 /**
- * A function that loads data for a route.
+ * A function that loads data for a route on the server
  */
 export type LoaderFunction = (
   args: LoaderFunctionArgs
@@ -57,14 +57,20 @@ export type LoaderFunctionArgs = RRLoaderFunctionArgs<AppLoadContext> & {
   context: AppLoadContext;
 };
 
+/**
+ * A function that loads data for a route on the client
+ */
+export type ClientLoaderFunction = (
+  args: ClientLoaderFunctionArgs
+) => ReturnType<RRLoaderFunction>;
+
+/**
+ * Arguments passed to a route `clientLoader` function
+ */
 export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
   context: undefined;
   serverLoader: () => Promise<Response>;
 };
-
-export type ClientLoaderFunction = (
-  args: ClientLoaderFunctionArgs
-) => ReturnType<RRLoaderFunction>;
 
 export type HeadersArgs = {
   loaderHeaders: Headers;
