@@ -16,6 +16,13 @@ export interface ServerBuild {
   publicPath: string;
   assetsBuildDirectory: string;
   future: FutureConfig;
+  // expose utilities from vite plugin to server-runtime for extra dev functionality
+  __unstableRemixViteRuntime?: {
+    getCriticalCss: (
+      build: ServerBuild,
+      url: string
+    ) => Promise<string | undefined>;
+  };
 }
 
 export interface HandleDocumentRequestFunction {

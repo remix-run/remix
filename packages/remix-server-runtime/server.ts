@@ -144,6 +144,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         handleError
       );
     } else {
+      let criticalCss = await _build.__unstableRemixViteRuntime?.getCriticalCss(
+        _build,
+        url.pathname
+      );
       response = await handleDocumentRequestRR(
         serverMode,
         _build,
