@@ -59,15 +59,17 @@ export type LoaderFunctionArgs = RRLoaderFunctionArgs<AppLoadContext> & {
 
 /**
  * A function that loads data for a route on the client
+ * @private Public API is exported from @remix-run/react
  */
-export type ClientLoaderFunction = (
+type ClientLoaderFunction = (
   args: ClientLoaderFunctionArgs
 ) => ReturnType<RRLoaderFunction>;
 
 /**
  * Arguments passed to a route `clientLoader` function
+ * @private Public API is exported from @remix-run/react
  */
-export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
+type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
   context: undefined;
   serverLoader: () => Promise<Response>;
 };

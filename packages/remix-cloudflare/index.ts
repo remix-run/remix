@@ -30,8 +30,6 @@ export type {
   ActionFunction,
   ActionFunctionArgs,
   AppLoadContext,
-  ClientLoaderFunction,
-  ClientLoaderFunctionArgs,
   Cookie,
   CookieOptions,
   CookieParseOptions,
