@@ -47,7 +47,7 @@ export function RemixServer({
   for (let match of context.staticHandlerContext.matches) {
     let routeId = match.route.id;
     let route = routeModules[routeId];
-    if (route.clientLoader && route.Fallback) {
+    if (route && route.clientLoader && route.Fallback) {
       staticHandlerContext.loaderData[routeId] = undefined;
     }
   }
