@@ -50,7 +50,7 @@ test.describe("Vite dev server", () => {
         ...files,
       },
     });
-    dev = await viteDev(projectDir, { port });
+    dev = await viteDev({ cwd: projectDir, port });
   });
 
   test.afterAll(async () => {
@@ -76,7 +76,7 @@ test.describe("Vite custom Express server", () => {
         ...files,
       },
     });
-    dev = await node(projectDir, ["./server.mjs"], { port });
+    dev = await node(["./server.mjs"], { cwd: projectDir, port });
   });
 
   test.afterAll(async () => {
