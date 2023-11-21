@@ -258,11 +258,19 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
   let resolvePluginConfig =
     async (): Promise<ResolvedRemixVitePluginConfig> => {
+      let defaults: Partial<RemixVitePluginOptions> = {
+        serverBuildPath: "build/server/index.js",
+        assetsBuildDirectory: "build/client",
+        publicPath: "/",
+      };
+
+      let config = {
+        ...defaults,
+        ...pick(options, supportedRemixConfigKeys), // Avoid leaking any config options that the Vite plugin doesn't support
+      };
+
       let rootDirectory =
         viteUserConfig.root ?? process.env.REMIX_ROOT ?? process.cwd();
-
-      // Avoid leaking any config options that the Vite plugin doesn't support
-      let config = pick(options, supportedRemixConfigKeys);
 
       // Only select the Remix config options that the Vite plugin uses
       let {
@@ -388,8 +396,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
     let fingerprintedValues = { entry, routes };
     let version = getHash(JSON.stringify(fingerprintedValues), 8);
-    let manifestFilename = `manifest-${version}.js`;
-    let url = `${pluginConfig.publicPath}${manifestFilename}`;
+    let manifestPath = `assets/manifest-${version}.js`;
+    let url = `${pluginConfig.publicPath}${manifestPath}`;
     let nonFingerprintedValues = { url, version };
 
     let manifest: Manifest = {
@@ -398,7 +406,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     };
 
     await writeFileSafe(
-      path.join(pluginConfig.assetsBuildDirectory, manifestFilename),
+      path.join(pluginConfig.assetsBuildDirectory, manifestPath),
       `window.__remixManifest=${JSON.stringify(manifest)};`
     );
 
@@ -519,13 +527,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             base: pluginConfig.publicPath,
             build: {
               ...viteUserConfig.build,
-              // By convention Remix builds into a subdirectory within the
-              // public directory ("public/build" by default) so we don't want
-              // to copy the contents of the public directory around. This also
-              // ensures that we don't get caught in an infinite loop when
-              // `assetsBuildDirectory` is nested multiple levels deep within
-              // the public directory, e.g. "public/custom-base-dir/build"
-              copyPublicDir: false,
               ...(!isSsrBuild
                 ? {
                     manifest: true,
@@ -548,6 +549,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                     // regardless of "ssrEmitAssets" option, so we also need to
                     // keep these JS files have to be kept as-is.
                     ssrEmitAssets: true,
+                    copyPublicDir: false, // Assets in the public directory are only used by the client
                     manifest: true, // We need the manifest to detect SSR-only assets
                     outDir: path.dirname(pluginConfig.serverBuildPath),
                     rollupOptions: {

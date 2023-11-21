@@ -50,11 +50,11 @@ test.beforeAll(async () => {
           app.use(vite.middlewares);
         } else {
           app.use(
-            "/build",
-            express.static("public/build", { immutable: true, maxAge: "1y" })
+            "/assets",
+            express.static("build/client/assets", { immutable: true, maxAge: "1y" })
           );
         }
-        app.use(express.static("public", { maxAge: "1h" }));
+        app.use(express.static("build/client", { maxAge: "1h" }));
 
         app.all(
           "*",
