@@ -5,6 +5,8 @@ toc: false
 
 # `defer`
 
+To get started with streaming data, check out the [Streaming Guide][streaming_guide].
+
 This is a shortcut for creating a streaming/deferred response. It assumes you are using `utf-8` encoding. From a developer perspective it behaves just like [`json()`][json], but with the ability to transport promises to your UI components.
 
 ```tsx lines=[1,7-10]
@@ -42,4 +44,5 @@ export const loader = async () => {
 };
 ```
 
+[streaming_guide]: ../guides/streaming
 [json]: ./json

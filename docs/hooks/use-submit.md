@@ -4,7 +4,7 @@ title: useSubmit
 
 # `useSubmit`
 
-The imperative version of `<Form>` that lets you, the programmer, submit a form instead of the user.
+The imperative version of [`<Form>`][form-component] that lets you, the programmer, submit a form instead of the user.
 
 ```tsx
 import { useSubmit } from "@remix-run/react";
@@ -31,7 +31,7 @@ submit(targetOrData, options);
 
 Can be any of the following:
 
-**HTMLFormElement instance**
+**[`HTMLFormElement`][html-form-element] instance**
 
 ```tsx
 <Form
@@ -41,7 +41,7 @@ Can be any of the following:
 />
 ```
 
-**`FormData` instance**
+**[`FormData`][form-data] instance**
 
 ```tsx
 const formData = new FormData();
@@ -57,11 +57,11 @@ submit({ myKey: "myValue" });
 
 ### `options`
 
-Options for the submission, the same as `<Form>` props. All options are optional.
+Options for the submission, the same as [`<Form>`][form-component] props. All options are optional.
 
 - **action**: The href to submit to. Default is the current route path.
 - **method**: The HTTP method to use like POST, default is GET.
-- **encType**: The encoding type to use for the form submission: `application/x-www-form-urlencoded` or `multipart/form-data`. Default is url encoded.
+- **encType**: The encoding type to use for the form submission: `application/x-www-form-urlencoded` or `multipart/form-data`. Default is `application/x-www-form-urlencoded`.
 - **navigate**: Specify `false` to submit using a fetcher instead of performing a navigation
 - **fetcherKey**: The fetcher key to use when submitting using a fetcher via `navigate: false`
 - **preventScrollReset**: Prevents the scroll position from being reset to the top of the window when the data is submitted. Default is `false`.
@@ -90,11 +90,13 @@ submit(data, {
 
 **Related API**
 
-- [`<Form>`][form]
+- [`<Form>`][form-component]
 - [`fetcher.submit`][fetcher-submit]
 
+[form-component]: ../components/form
+[html-form-element]: https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement
+[form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [form-vs-fetcher]: ../discussion/form-vs-fetcher
-[form]: ../components/form
 [fetcher-submit]: ../hooks/use-fetcher#fetchersubmitformdata-options
 [flush-sync]: https://react.dev/reference/react-dom/flushSync
 [start-transition]: https://react.dev/reference/react/startTransition

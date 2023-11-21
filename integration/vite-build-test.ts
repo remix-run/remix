@@ -32,6 +32,10 @@ test.describe("Vite build", () => {
           import mdx from "@mdx-js/rollup";
 
           export default defineConfig({
+            build: {
+              // force emitting asset files instead of inlined as data-url
+              assetsInlineLimit: 0,
+            },
             plugins: [
               remix(),
               mdx(),
@@ -183,6 +187,51 @@ test.describe("Vite build", () => {
             return <div data-dotenv-route-loader-content>{loaderContent}</div>;
           }
         `,
+
+        "app/routes/ssr-assets.tsx": js`
+          import url1 from "../assets/test1.txt?url";
+          import url2 from "../assets/test2.txt?url";
+          import { useLoaderData } from "@remix-run/react"
+
+          export const loader: LoaderFunction = () => {
+            return { url2 };
+          };
+
+          export default function SsrAssetRoute() {
+            const loaderData = useLoaderData();
+            return (
+              <div>
+                <a href={url1}>url1</a>
+                <a href={loaderData.url2}>url2</a>
+              </div>
+            );
+          }
+        `,
+
+        "app/assets/test1.txt": "test1",
+        "app/assets/test2.txt": "test2",
+
+        "app/routes/ssr-code-split.tsx": js`
+          import { useLoaderData } from "@remix-run/react"
+
+          export const loader: LoaderFunction = async () => {
+            const lib = await import("../ssr-code-split-lib");
+            return lib.ssrCodeSplitTest();
+          };
+
+          export default function SsrCodeSplitRoute() {
+            const loaderData = useLoaderData();
+            return (
+              <div data-ssr-code-split>{loaderData}</div>
+            );
+          }
+        `,
+
+        "app/ssr-code-split-lib.ts": js`
+          export function ssrCodeSplitTest() {
+            return "ssrCodeSplitTest";
+          }
+        `,
       },
     });
 
@@ -250,6 +299,45 @@ test.describe("Vite build", () => {
     );
 
     expect(pageErrors).toEqual([]);
+  });
+
+  test("emits SSR assets to the client assets directory", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/ssr-assets");
+
+    // verify asset files are emitted and served correctly
+    await page.getByRole("link", { name: "url1" }).click();
+    await page.waitForURL("**/build/assets/test1-*.txt");
+    await page.getByText("test1").click();
+    await page.goBack();
+
+    await page.getByRole("link", { name: "url2" }).click();
+    await page.waitForURL("**/build/assets/test2-*.txt");
+    await page.getByText("test2").click();
+  });
+
+  test("supports code-split JS from SSR build", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/ssr-code-split`);
+    expect(pageErrors).toEqual([]);
+
+    await expect(page.locator("[data-ssr-code-split]")).toHaveText(
+      "ssrCodeSplitTest"
+    );
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("removes assets (other than code-split JS) and CSS files from SSR build", async () => {
+    let assetFiles = glob.sync("*", {
+      cwd: path.join(fixture.projectDir, "build/assets"),
+    });
+    let [asset, ...rest] = assetFiles;
+    expect(rest).toEqual([]); // Provide more useful test output if this fails
+    expect(asset).toMatch(/ssr-code-split-lib-.*\.js/);
   });
 
   test("supports code-split css", async ({ page }) => {
