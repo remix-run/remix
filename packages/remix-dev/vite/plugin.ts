@@ -297,7 +297,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
   let setupRemixViteRuntime = (viteDevServer: Vite.ViteDevServer) => {
     (globalThis as any as ServerBuild).__unstableRemixViteRuntime = {
       getCriticalCss: async (build, url) => {
-        invariant(viteDevServer);
         invariant(cachedPluginConfig);
         return getStylesForUrl(
           viteDevServer,
