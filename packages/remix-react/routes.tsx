@@ -212,6 +212,7 @@ export function createClientRoutes(
       });
 
       dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
+        // FIXME: Figure these typings out
         return callServerHandler(request, async (r) => {
           if (routeModule.clientLoader) {
             let initialData =
