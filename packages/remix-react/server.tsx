@@ -37,12 +37,29 @@ export function RemixServer({
     routeModules,
     context.future
   );
-  let router = createStaticRouter(routes, context.staticHandlerContext);
-  let showFallback = router.state.matches.some(
-    (m) => manifest.routes[m.route.id].hasClientLoader
-  );
-  let FallbackElement =
-    routeModules["root"].Fallback || RemixRootDefaultFallback;
+
+  // Create a shallow clone of loaderData we can mutate for partial hydration.
+  // When a route has a clientLoader and a Fallback, then we clear out the
+  // loaderData so that the router renders the Fallback during SSR
+  let staticHandlerContext = {
+    ...context.staticHandlerContext,
+    loaderData: { ...context.staticHandlerContext.loaderData },
+  };
+  for (let match of context.staticHandlerContext.matches) {
+    let routeId = match.route.id;
+    let route = routeModules[routeId];
+    if (route.clientLoader && route.Fallback) {
+      staticHandlerContext.loaderData[routeId] = undefined;
+    }
+  }
+
+  // TODO: Is there a case we need to warn/error here for root?
+
+  let router = createStaticRouter(routes, staticHandlerContext, {
+    future: {
+      v7_partialHydration: true,
+    },
+  });
 
   return (
     <RemixContext.Provider
@@ -59,9 +76,8 @@ export function RemixServer({
       <RemixErrorBoundary location={router.state.location}>
         <StaticRouterProvider
           router={router}
-          context={context.staticHandlerContext}
+          context={staticHandlerContext}
           hydrate={false}
-          fallbackElement={showFallback ? <FallbackElement /> : undefined}
         />
       </RemixErrorBoundary>
     </RemixContext.Provider>

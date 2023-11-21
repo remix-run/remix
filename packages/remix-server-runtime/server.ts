@@ -281,21 +281,38 @@ async function handleDocumentRequestRR(
 
   let headers = getDocumentHeadersRR(build, context);
 
+  let serverHandoffString = createServerHandoffString({
+    url: context.location.pathname,
+    criticalCss,
+    state: {
+      loaderData: context.loaderData,
+      actionData: context.actionData,
+      errors: serializeErrors(context.errors, serverMode),
+    },
+    future: build.future,
+  });
+
+  // // let hasClientLoaders = false;
+  // // let shouldRunClientSideLoaders = false;
+  // if (context.matches) {
+  //   for (let match of context.matches) {
+  //     let route = build.routes[match.route.id];
+  //     if (route && route.module.clientLoader) {
+  //       // hasClientLoaders = true;
+  //       context.loaderData[route.id] = undefined;
+  //     }
+  //     // if (route.id !== "root" && route.module.Fallback) {
+  //     //   shouldRunClientSideLoaders = true;
+  //     // }
+  //   }
+  // }
+
   let entryContext: EntryContext = {
     manifest: build.assets,
     routeModules: createEntryRouteModules(build.routes),
     staticHandlerContext: context,
     criticalCss,
-    serverHandoffString: createServerHandoffString({
-      url: context.location.pathname,
-      criticalCss,
-      state: {
-        loaderData: context.loaderData,
-        actionData: context.actionData,
-        errors: serializeErrors(context.errors, serverMode),
-      },
-      future: build.future,
-    }),
+    serverHandoffString,
     future: build.future,
     serializeError: (err) => serializeError(err, serverMode),
   };

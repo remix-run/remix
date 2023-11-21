@@ -87,6 +87,7 @@ export function createServerRoutes(
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       Component: getRouteModuleComponent(routeModule),
+      Fallback: routeModule.Fallback,
       ErrorBoundary: routeModule.ErrorBoundary
         ? routeModule.ErrorBoundary
         : route.id === "root"
@@ -98,6 +99,9 @@ export function createServerRoutes(
       handle: routeModules[route.id].handle,
       // Note: we don't need loader/action/shouldRevalidate on these routes
       // since they're for a static render
+
+      // TODO: Might need to add loader/etc. here for rendering to the proper fallback
+      loader: route.hasLoader ? () => null : undefined,
     };
 
     let children = createServerRoutes(
@@ -194,6 +198,8 @@ export function createClientRoutes(
       Object.assign(dataRoute, {
         ...dataRoute,
         Component: getRouteModuleComponent(routeModule),
+        // TODO: Do we want need a default fallback?
+        Fallback: routeModule.Fallback,
         ErrorBoundary: routeModule.ErrorBoundary
           ? routeModule.ErrorBoundary
           : route.id === "root"
@@ -303,26 +309,20 @@ export function createClientRoutes(
           let lazyRoute: Partial<DataRouteObject> = { ...mod };
           if (mod.clientLoader) {
             let clientLoader = mod.clientLoader;
-            lazyRoute = {
-              ...mod,
-              loader: (args) =>
-                clientLoader({
-                  ...args,
-                  serverFetch: () => actuallyCallServerLoader(args.request),
-                }),
-            };
+            lazyRoute.loader = (args) =>
+              clientLoader({
+                ...args,
+                serverFetch: () => actuallyCallServerLoader(args.request),
+              });
           }
 
           if (mod.clientAction) {
             let clientAction = mod.clientAction;
-            lazyRoute = {
-              ...mod,
-              action: (args) =>
-                clientAction({
-                  ...args,
-                  serverFetch: () => actuallyCallServerAction(args.request),
-                }),
-            };
+            lazyRoute.action = (args) =>
+              clientAction({
+                ...args,
+                serverFetch: () => actuallyCallServerAction(args.request),
+              });
           }
 
           if (needsRevalidation) {
@@ -334,12 +334,14 @@ export function createClientRoutes(
           }
 
           return {
-            loader: lazyRoute.loader,
+            ...(lazyRoute.loader ? { loader: lazyRoute.loader } : {}),
+            ...(lazyRoute.action ? { action: lazyRoute.action } : {}),
             action: lazyRoute.action,
             hasErrorBoundary: lazyRoute.hasErrorBoundary,
             shouldRevalidate: lazyRoute.shouldRevalidate,
             handle: lazyRoute.handle,
             Component: lazyRoute.Component,
+            Fallback: lazyRoute.Fallback,
             ErrorBoundary: lazyRoute.ErrorBoundary,
           };
         },
