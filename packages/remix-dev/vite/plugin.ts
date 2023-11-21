@@ -245,7 +245,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
   let viteCommand: Vite.ResolvedConfig["command"];
   let viteUserConfig: Vite.UserConfig;
   let resolvedViteConfig: Vite.ResolvedConfig | undefined;
-  let viteDevServer: Vite.ViteDevServer | undefined;
 
   let isViteV4 = getViteMajorVersion() === 4;
 
@@ -295,9 +294,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       };
     };
 
-  let setupRemixViteRuntime = () => {
+  let setupRemixViteRuntime = (viteDevServer: Vite.ViteDevServer) => {
     (globalThis as any as ServerBuild).__unstableRemixViteRuntime = {
-      getCriticalCss: async (build: ServerBuild, url: string) => {
+      getCriticalCss: async (build, url) => {
         invariant(viteDevServer);
         invariant(cachedPluginConfig);
         return getStylesForUrl(
@@ -682,9 +681,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }
       },
       configureServer(vite) {
-        setupRemixViteRuntime();
-
-        viteDevServer = vite;
+        setupRemixViteRuntime(vite);
 
         vite.httpServer?.on("listening", () => {
           setTimeout(showUnstableWarning, 50);
