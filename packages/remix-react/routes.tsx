@@ -217,7 +217,7 @@ export function createClientRoutes(
 
       dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
         // FIXME: Figure these typings out
-        return callServerHandler(request, async (r) => {
+        return callServerHandler(request, async () => {
           if (!routeModule.clientLoader) {
             // Call the server when no client loader exists
             return fetchServerLoader(request);
