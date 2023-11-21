@@ -7,7 +7,7 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
-import { Links, Meta, RemixContext, Scripts } from "./components";
+import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
@@ -16,7 +16,6 @@ import {
   createClientRoutes,
   createClientRoutesWithHMRRevalidationOptOut,
 } from "./routes";
-import { RemixRootDefaultFallback } from "./fallback";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -246,8 +245,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     router = createBrowserRouter(routes, {
       hydrationData,
       future: {
-        v7_fetcherPersist: window.__remixContext.future.v3_fetcherPersist,
         v7_normalizeFormMethod: true,
+        v7_fetcherPersist: window.__remixContext.future.v3_fetcherPersist,
         v7_partialHydration: true,
       },
     });
@@ -285,9 +284,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     });
   }, [location]);
 
-  // let FallbackElement =
-  //   window.__remixRouteModules["root"].Fallback || RemixRootDefaultFallback;
-
   // We need to include a wrapper RemixErrorBoundary here in case the root error
   // boundary also throws and we need to bubble up outside of the router entirely.
   // Then we need a stateful location here so the user can back-button navigate
@@ -304,7 +300,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       <RemixErrorBoundary location={location}>
         <RouterProvider
           router={router}
-          // fallbackElement={<FallbackElement />}
+          fallbackElement={null}
           future={{ v7_startTransition: true }}
         />
       </RemixErrorBoundary>

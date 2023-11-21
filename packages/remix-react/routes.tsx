@@ -149,12 +149,12 @@ export function createClientRoutes(
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModulesCache?.[route.id];
 
-    async function actuallyCallServerLoader(request: Request) {
+    async function fetchServerLoader(request: Request) {
       if (!route.hasLoader) return null;
       return fetchServerHandler(request, route);
     }
 
-    async function actuallyCallServerAction(request: Request) {
+    async function fetchServerAction(request: Request) {
       if (!route.hasAction) {
         let msg =
           `Route "${route.id}" does not have an action, but you are trying ` +
@@ -173,17 +173,17 @@ export function createClientRoutes(
 
     async function callServerHandler(
       request: Request,
-      handler: typeof actuallyCallServerLoader | typeof actuallyCallServerAction
+      handler: typeof fetchServerLoader | typeof fetchServerAction
     ) {
       // Only prefetch links if we've been loaded into the cache, route.lazy
       // will handle initial loads
-      let routeModulePromise = routeModulesCache[route.id]
+      let linkPrefetchPromise = routeModulesCache[route.id]
         ? prefetchStyleLinks(route, routeModulesCache[route.id])
         : Promise.resolve();
       try {
         return handler(request);
       } finally {
-        await routeModulePromise;
+        await linkPrefetchPromise;
       }
     }
 
@@ -233,13 +233,13 @@ export function createClientRoutes(
                 return routeModule.clientLoader({
                   request,
                   params,
-                  serverFetch: () => Promise.resolve(routerJson(initialData)),
+                  serverLoader: () => Promise.resolve(routerJson(initialData)),
                 });
               } else {
                 return routeModule.clientLoader({
                   request,
                   params,
-                  async serverFetch() {
+                  async serverLoader() {
                     throw new Error(
                       "You are trying to call serverFetch() on a route that does not have a server loader"
                     );
@@ -250,11 +250,11 @@ export function createClientRoutes(
               return routeModule.clientLoader({
                 request,
                 params,
-                serverFetch: () => actuallyCallServerLoader(request),
+                serverLoader: () => fetchServerLoader(request),
               });
             }
           } else {
-            return actuallyCallServerLoader(request);
+            return fetchServerLoader(request);
           }
         });
       };
@@ -266,7 +266,7 @@ export function createClientRoutes(
               return routeModule.clientAction({
                 request,
                 params,
-                async serverFetch() {
+                async serverAction() {
                   throw new Error(
                     "clientAction is unsupported on initial load"
                   );
@@ -276,11 +276,11 @@ export function createClientRoutes(
               return routeModule.clientAction({
                 request,
                 params,
-                serverFetch: () => actuallyCallServerAction(request),
+                serverAction: () => fetchServerAction(request),
               });
             }
           } else {
-            return actuallyCallServerAction(request);
+            return fetchServerAction(request);
           }
         });
       };
@@ -291,13 +291,13 @@ export function createClientRoutes(
         ...(!route.hasClientLoader
           ? {
               loader: ({ request }: LoaderFunctionArgs) =>
-                callServerHandler(request, actuallyCallServerLoader),
+                callServerHandler(request, fetchServerLoader),
             }
           : {}),
         ...(!route.hasClientAction
           ? {
               action: ({ request }: ActionFunctionArgs) =>
-                callServerHandler(request, actuallyCallServerAction),
+                callServerHandler(request, fetchServerAction),
             }
           : {}),
         lazy: async () => {
@@ -312,7 +312,7 @@ export function createClientRoutes(
             lazyRoute.loader = (args) =>
               clientLoader({
                 ...args,
-                serverFetch: () => actuallyCallServerLoader(args.request),
+                serverLoader: () => fetchServerLoader(args.request),
               });
           }
 
@@ -321,7 +321,7 @@ export function createClientRoutes(
             lazyRoute.action = (args) =>
               clientAction({
                 ...args,
-                serverFetch: () => actuallyCallServerAction(args.request),
+                serverAction: () => fetchServerAction(args.request),
               });
           }
 
