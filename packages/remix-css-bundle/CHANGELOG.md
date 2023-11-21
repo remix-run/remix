@@ -1,5 +1,9 @@
 # @remix-run/css-bundle
 
+## 2.3.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.3.0.
+
 ## 2.2.0
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%402.2.0) for an overview of all changes in v2.2.0.

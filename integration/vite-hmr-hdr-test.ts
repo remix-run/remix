@@ -1,134 +1,110 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { Page, PlaywrightWorkerOptions } from "@playwright/test";
 import { test, expect } from "@playwright/test";
 import getPort from "get-port";
 
 import { createFixtureProject, js } from "./helpers/create-fixture.js";
-import { kill, node } from "./helpers/dev.js";
+import { basicTemplate, kill, node, viteDev } from "./helpers/dev.js";
 
-let projectDir: string;
-let dev: { pid: number; port: number };
+const files = {
+  "app/routes/_index.tsx": js`
+    // imports
+    import { useState, useEffect } from "react";
 
-test.beforeAll(async () => {
-  let port = await getPort();
-  let hmrPort = await getPort();
-  projectDir = await createFixtureProject({
-    compiler: "vite",
-    files: {
-      "vite.config.ts": js`
-        import { defineConfig } from "vite";
-        import { unstable_vitePlugin as remix } from "@remix-run/dev";
+    export const meta = () => [{ title: "HMR updated title: 0" }]
 
-        export default defineConfig({
-          server: {
-            hmr: {
-              port: ${hmrPort}
-            }
-          },
-          plugins: [remix()],
-        });
-      `,
-      "server.mjs": js`
-        import {
-          unstable_createViteServer,
-          unstable_loadViteServerBuild,
-        } from "@remix-run/dev";
-        import { createRequestHandler } from "@remix-run/express";
-        import { installGlobals } from "@remix-run/node";
-        import express from "express";
+    // loader
 
-        installGlobals();
+    export default function IndexRoute() {
+      // hooks
+      const [mounted, setMounted] = useState(false);
+      useEffect(() => {
+        setMounted(true);
+      }, []);
 
-        let vite =
-          process.env.NODE_ENV === "production"
-            ? undefined
-            : await unstable_createViteServer();
+      return (
+        <div id="index">
+          <h2 data-title>Index</h2>
+          <input />
+          <p data-mounted>Mounted: {mounted ? "yes" : "no"}</p>
+          <p data-hmr>HMR updated: 0</p>
+          {/* elements */}
+        </div>
+      );
+    }
+  `,
+};
 
-        const app = express();
+test.describe("Vite dev server", () => {
+  let projectDir: string;
+  let dev: { pid: number; port: number };
 
-        if (vite) {
-          app.use(vite.middlewares);
-        } else {
-          app.use(
-            "/build",
-            express.static("public/build", { immutable: true, maxAge: "1y" })
-          );
-        }
-        app.use(express.static("public", { maxAge: "1h" }));
-
-        app.all(
-          "*",
-          createRequestHandler({
-            build: vite
-              ? () => unstable_loadViteServerBuild(vite)
-              : await import("./build/index.js"),
-            getLoadContext: () => ({ value: "context" }),
-          })
-        );
-
-        const port = ${port};
-        app.listen(port, () => console.log('http://localhost:' + port));
-      `,
-      "app/root.tsx": js`
-        import { Links, Meta, Outlet, Scripts, LiveReload } from "@remix-run/react";
-
-        export default function Root() {
-          return (
-            <html lang="en">
-              <head>
-                <Meta />
-                <Links />
-              </head>
-              <body>
-                <div id="content">
-                  <h1>Root</h1>
-                  <Outlet />
-                </div>
-                <Scripts />
-                <LiveReload />
-              </body>
-            </html>
-          );
-        }
-      `,
-      "app/routes/_index.tsx": js`
-        // imports
-        import { useState, useEffect } from "react";
-
-        export const meta = () => [{ title: "HMR updated title: 0" }]
-
-        // loader
-
-        export default function IndexRoute() {
-          // hooks
-          const [mounted, setMounted] = useState(false);
-          useEffect(() => {
-            setMounted(true);
-          }, []);
-
-          return (
-            <div id="index">
-              <h2 data-title>Index</h2>
-              <input />
-              <p data-mounted>Mounted: {mounted ? "yes" : "no"}</p>
-              <p data-hmr>HMR updated: 0</p>
-              {/* elements */}
-            </div>
-          );
-        }
-      `,
-    },
+  test.beforeAll(async () => {
+    let port = await getPort();
+    let hmrPort = await getPort();
+    projectDir = await createFixtureProject({
+      compiler: "vite",
+      files: {
+        ...basicTemplate({ port, hmrPort }),
+        ...files,
+      },
+    });
+    dev = await viteDev({ cwd: projectDir, port });
   });
-  dev = await node(projectDir, ["./server.mjs"], { port });
+
+  test.afterAll(async () => {
+    await kill(dev.pid);
+  });
+
+  test("handles HMR & HDR", async ({ page, browserName }) => {
+    await workflow({ page, browserName, projectDir, port: dev.port });
+  });
 });
 
-test.afterAll(async () => {
-  await kill(dev.pid);
+test.describe("Vite custom Express server", () => {
+  let projectDir: string;
+  let dev: { pid: number; port: number };
+
+  test.beforeAll(async () => {
+    let port = await getPort();
+    let hmrPort = await getPort();
+    projectDir = await createFixtureProject({
+      compiler: "vite",
+      files: {
+        ...basicTemplate({ port, hmrPort }),
+        ...files,
+      },
+    });
+    dev = await node(["./server.mjs"], { cwd: projectDir, port });
+  });
+
+  test.afterAll(async () => {
+    await kill(dev.pid);
+  });
+
+  test("handles HMR & HDR", async ({ page, browserName }) => {
+    await workflow({ page, browserName, projectDir, port: dev.port });
+  });
 });
 
-test("Vite custom server HMR & HDR", async ({ page }) => {
+async function workflow({
+  page,
+  browserName,
+  projectDir,
+  port,
+}: {
+  page: Page;
+  browserName: PlaywrightWorkerOptions["browserName"];
+  projectDir: string;
+  port: number;
+}) {
+  let pageErrors: Error[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error));
+  let edit = editor(projectDir);
+
   // setup: initial render
-  await page.goto(`http://localhost:${dev.port}/`, {
+  await page.goto(`http://localhost:${port}/`, {
     waitUntil: "networkidle",
   });
   await expect(page.locator("#index [data-title]")).toHaveText("Index");
@@ -145,6 +121,7 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
   let input = page.locator("#index input");
   await expect(input).toBeVisible();
   await input.type("stateful");
+  expect(pageErrors).toEqual([]);
 
   // route: HMR
   await edit("app/routes/_index.tsx", (contents) =>
@@ -156,6 +133,7 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
   await expect(page).toHaveTitle("HMR updated title: 1");
   await expect(hmrStatus).toHaveText("HMR updated: 1");
   await expect(input).toHaveValue("stateful");
+  expect(pageErrors).toEqual([]);
 
   // route: add loader
   await edit("app/routes/_index.tsx", (contents) =>
@@ -166,24 +144,43 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
       )
       .replace(
         "// loader",
-        `// loader\nexport const loader = ({ context }) => json({ message: "HDR updated: 0", context });`
+        `// loader\nexport const loader = () => json({ message: "HDR updated: 0" });`
       )
       .replace(
         "// hooks",
-        "// hooks\nconst { message, context } = useLoaderData<typeof loader>();"
+        "// hooks\nconst { message } = useLoaderData<typeof loader>();"
       )
       .replace(
         "{/* elements */}",
-        `{/* elements */}\n<p data-context>{context.value}</p>\n<p data-hdr>{message}</p>`
+        `{/* elements */}\n<p data-hdr>{message}</p>`
       )
   );
   await page.waitForLoadState("networkidle");
-  await expect(page.locator("#index [data-context]")).toHaveText("context");
   let hdrStatus = page.locator("#index [data-hdr]");
   await expect(hdrStatus).toHaveText("HDR updated: 0");
   // React Fast Refresh cannot preserve state for a component when hooks are added or removed
   await expect(input).toHaveValue("");
   await input.type("stateful");
+  expect(pageErrors.length).toBeGreaterThan(0);
+  expect(
+    // When adding a loader, a harmless error is logged to the browser console.
+    // HMR works as intended, so this seems like a React Fast Refresh bug caused by off-screen rendering with old server data or something like that 🤷
+    pageErrors.filter((error) => {
+      let chromium =
+        browserName === "chromium" &&
+        error.message ===
+          "Cannot destructure property 'message' of 'useLoaderData(...)' as it is null.";
+      let firefox =
+        browserName === "firefox" &&
+        error.message === "(intermediate value)() is null";
+      let webkit =
+        browserName === "webkit" &&
+        error.message === "Right side of assignment cannot be destructured";
+      let expected = chromium || firefox || webkit;
+      return !expected;
+    })
+  ).toEqual([]);
+  pageErrors = [];
 
   // route: HDR
   await edit("app/routes/_index.tsx", (contents) =>
@@ -203,6 +200,7 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
   await expect(hmrStatus).toHaveText("HMR updated: 2");
   await expect(hdrStatus).toHaveText("HDR updated: 2");
   await expect(input).toHaveValue("stateful");
+  expect(pageErrors).toEqual([]);
 
   // create new non-route component module
   await fs.writeFile(
@@ -227,6 +225,7 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
   await expect(component).toBeVisible();
   await expect(component).toHaveText("Component HMR: 0");
   await expect(input).toHaveValue("stateful");
+  expect(pageErrors).toEqual([]);
 
   // non-route: HMR
   await edit("app/component.tsx", (contents) =>
@@ -235,6 +234,7 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
   await page.waitForLoadState("networkidle");
   await expect(component).toHaveText("Component HMR: 1");
   await expect(input).toHaveValue("stateful");
+  expect(pageErrors).toEqual([]);
 
   // create new non-route server module
   await fs.writeFile(
@@ -257,13 +257,14 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
         `// imports\nimport { direct } from "../direct-hdr-dep"`
       )
       .replace(
-        `json({ message: "HDR updated: 2", context })`,
-        `json({ message: "HDR updated: " + direct, context })`
+        `json({ message: "HDR updated: 2" })`,
+        `json({ message: "HDR updated: " + direct })`
       )
   );
   await page.waitForLoadState("networkidle");
   await expect(hdrStatus).toHaveText("HDR updated: direct 0 & indirect 0");
   await expect(input).toHaveValue("stateful");
+  expect(pageErrors).toEqual([]);
 
   // non-route: HDR for direct dependency
   await edit("app/direct-hdr-dep.ts", (contents) =>
@@ -272,6 +273,7 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
   await page.waitForLoadState("networkidle");
   await expect(hdrStatus).toHaveText("HDR updated: direct 1 & indirect 0");
   await expect(input).toHaveValue("stateful");
+  expect(pageErrors).toEqual([]);
 
   // non-route: HDR for indirect dependency
   await edit("app/indirect-hdr-dep.ts", (contents) =>
@@ -280,6 +282,7 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
   await page.waitForLoadState("networkidle");
   await expect(hdrStatus).toHaveText("HDR updated: direct 1 & indirect 1");
   await expect(input).toHaveValue("stateful");
+  expect(pageErrors).toEqual([]);
 
   // everything everywhere all at once
   await Promise.all([
@@ -305,10 +308,13 @@ test("Vite custom server HMR & HDR", async ({ page }) => {
     "HDR updated: route & direct 2 & indirect 2"
   );
   await expect(input).toHaveValue("stateful");
-});
-
-async function edit(file: string, transform: (contents: string) => string) {
-  let filepath = path.join(projectDir, file);
-  let contents = await fs.readFile(filepath, "utf8");
-  await fs.writeFile(filepath, transform(contents), "utf8");
+  expect(pageErrors).toEqual([]);
 }
+
+const editor =
+  (projectDir: string) =>
+  async (file: string, transform: (contents: string) => string) => {
+    let filepath = path.join(projectDir, file);
+    let contents = await fs.readFile(filepath, "utf8");
+    await fs.writeFile(filepath, transform(contents), "utf8");
+  };
