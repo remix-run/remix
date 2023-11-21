@@ -19,6 +19,8 @@ export const basicTemplate = (args: {
 
     export default defineConfig({
       server: {
+        port: ${args.port},
+        strictPort: true,
         hmr: {
           port: ${args.hmrPort}
         }
