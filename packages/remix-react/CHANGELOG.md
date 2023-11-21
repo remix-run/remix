@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.3.1-pre.0
+
+### Patch Changes
+
+- [REMOVE] Update router versions ([#8082](https://github.com/remix-run/remix/pull/8082))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.3.1-pre.0`
+
 ## 2.3.0
 
 ### Minor Changes
