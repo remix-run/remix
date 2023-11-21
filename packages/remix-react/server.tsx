@@ -39,20 +39,21 @@ export function RemixServer({
 
   // Create a shallow clone of loaderData we can mutate for partial hydration.
   // When a route has a clientLoader and a Fallback, then we clear out the
-  // loaderData so that the router renders the Fallback during SSR
-  let staticHandlerContext = {
-    ...context.staticHandlerContext,
-    loaderData: { ...context.staticHandlerContext.loaderData },
+  // loaderData so that the router renders the Fallback during SSR.
+  // Important not to change the `context` reference since we use it for
+  // context._deepestRenderedBoundaryId tracking
+  context.staticHandlerContext.loaderData = {
+    ...context.staticHandlerContext.loaderData,
   };
   for (let match of context.staticHandlerContext.matches) {
     let routeId = match.route.id;
     let route = routeModules[routeId];
     if (route && route.clientLoader && route.Fallback) {
-      staticHandlerContext.loaderData[routeId] = undefined;
+      context.staticHandlerContext.loaderData[routeId] = undefined;
     }
   }
 
-  let router = createStaticRouter(routes, staticHandlerContext, {
+  let router = createStaticRouter(routes, context.staticHandlerContext, {
     future: {
       v7_partialHydration: true,
     },
@@ -73,7 +74,7 @@ export function RemixServer({
       <RemixErrorBoundary location={router.state.location}>
         <StaticRouterProvider
           router={router}
-          context={staticHandlerContext}
+          context={context.staticHandlerContext}
           hydrate={false}
         />
       </RemixErrorBoundary>
