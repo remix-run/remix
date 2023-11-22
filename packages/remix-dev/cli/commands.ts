@@ -24,6 +24,21 @@ type InitFlags = {
   deleteScript?: boolean;
 };
 
+async function crossPlatformDynamicImport(modulePath: string) {
+  try {
+    // Attempt ESM import, using filePathToUrl to support Windows with absolute paths
+    return await import(pathToFileURL(modulePath).href);
+  } catch (esmError) {
+    try {
+      // Fall back to CommonJS require
+      return require(modulePath);
+    } catch (cjsError) {
+      console.error("Errors attempting to import module:", esmError, cjsError);
+      throw cjsError;
+    }
+  }
+}
+
 export async function init(
   projectDir: string,
   { deleteScript = true }: InitFlags = {}
@@ -45,8 +60,7 @@ export async function init(
     });
   }
 
-  let initFn = await import(pathToFileURL(initScriptFilePath).href);
-
+  let initFn = await crossPlatformDynamicImport(initScriptFilePath);
   if (typeof initFn !== "function" && initFn.default) {
     initFn = initFn.default;
   }
