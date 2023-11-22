@@ -1,2 +1,1 @@
-console.log('Remix.init without export succeeded');
-
+console.log("exportless remix init succeeded");

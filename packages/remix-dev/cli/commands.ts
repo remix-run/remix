@@ -44,12 +44,12 @@ export async function init(
     });
   }
 
-  let initFn = await import(initScript);
+  let initFn = require(initScript);
   if (typeof initFn !== "function" && initFn.default) {
     initFn = initFn.default;
   }
   try {
-    if (typeof initFn !== "function") {
+    if (typeof initFn === "function") {
       await initFn({ packageManager, rootDirectory: projectDir });
     }
 

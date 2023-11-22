@@ -50,6 +50,10 @@ let originalLog = console.log;
 let originalWarn = console.warn;
 let originalError = console.error;
 
+const convertLogToOutputLine = (messageString: string) => {
+  return "\n" + stripAnsi(messageString).replace(TEMP_DIR, "<TEMP_DIR>");
+};
+
 beforeEach(async () => {
   output = "";
   function hijackLog(message: unknown = "", ...rest: Array<unknown>) {
@@ -58,6 +62,7 @@ beforeEach(async () => {
     if (typeof message === "string" && message.startsWith("debug:")) {
       return originalLog(message, ...rest);
     }
+
     let messageString =
       typeof message === "string" ? message : JSON.stringify(message, null, 2);
     if (rest[0]) {
@@ -65,7 +70,7 @@ beforeEach(async () => {
         "Our tests are not set up to handle multiple arguments to console.log."
       );
     }
-    output += "\n" + stripAnsi(messageString).replace(TEMP_DIR, "<TEMP_DIR>");
+    output += convertLogToOutputLine(messageString);
   }
   console.log = hijackLog;
   console.warn = hijackLog;
@@ -131,7 +136,7 @@ describe("the init command", () => {
   });
 
   it("It succeeds for a `remix.init` script without an export or package.json", async () => {
-    let projectDir = await getProjectDir("remix-init-manual");
+    let projectDir = await getProjectDir("remix-init-manual-exportless");
 
     fse.copySync(
       path.join(__dirname, "fixtures", "exportless-remix-init"),
@@ -140,12 +145,12 @@ describe("the init command", () => {
     process.chdir(projectDir);
     await run(["init"]);
 
-    expect(output).toBe("Remix.init without export succeeded");
+    expect(output).toBe(convertLogToOutputLine("exportless remix init succeeded"));
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
 
   it("It succeeds for remix.init defined as an ES6 module", async () => {
-    let projectDir = await getProjectDir("remix-init-manual");
+    let projectDir = await getProjectDir("remix-init-manual-es6");
 
     fse.copySync(
       path.join(__dirname, "fixtures", "es6-remix-init"),
@@ -154,21 +159,8 @@ describe("the init command", () => {
     process.chdir(projectDir);
     await run(["init"]);
 
-    expect(output).toBe("remix.init succeeded as an ES6 module");
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
-  });
-
-  it("It succeeds for remix.init defined as an ES6 module", async () => {
-    let projectDir = await getProjectDir("remix-init-manual");
-
-    fse.copySync(
-      path.join(__dirname, "fixtures", "es6-remix-init"),
-      projectDir
-    );
-    process.chdir(projectDir);
-    await run(["init"]);
-
-    expect(output).toBe("remix.init succeeded as an ES6 module");
+    expect(output).toBe("");
+    expect(fse.existsSync(path.join(projectDir, "es6-remix-init-test.txt"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
 
