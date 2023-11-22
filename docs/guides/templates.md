@@ -136,14 +136,14 @@ This allows you to not have to regularly update your template to the latest vers
 
 If the template has a `remix.init/index.js` file at the root then that file will be executed after the project has been generated and dependencies have been installed. This gives you a chance to do anything you'd like as part of the initialization of your template. For example, in the blues stack, the `app` property has to be globally unique, so we use the `remix.init/index.js` file to change it to the name of the directory that was created for the project + a couple random characters.
 
-`remix.init/index.js` file can contain script code to be executed immediately:
+The `remix.init/index.js` file can contain code to be executed immediately:
 
 ```javascript
 console.log('initializing project');
 // further initialization code here
 ```
 
-Or can alternatively contain a default export of a function to be invoked. In that case, your init function will be passed the user's selected package manager and the root directory of their project:
+Or can contain a default export of a function that will be invoked. In that case, your init function will be passed the user's selected package manager and the root directory of their project:
 
 ```javascript
 export default ({
