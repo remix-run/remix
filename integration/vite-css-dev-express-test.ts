@@ -29,11 +29,6 @@ test.describe("Vite CSS dev (Express server)", () => {
           import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 
           export default defineConfig({
-            server: {
-              hmr: {
-                port: ${hmrPort}
-              }
-            },
             plugins: [
               vanillaExtractPlugin(),
               remix(),
@@ -48,15 +43,28 @@ test.describe("Vite CSS dev (Express server)", () => {
           import { createRequestHandler } from "@remix-run/express";
           import { installGlobals } from "@remix-run/node";
           import express from "express";
+          import http from "node:http";
+          import { createServer } from "vite";
 
           installGlobals();
 
+          const app = express();
+
+          const server = http.createServer(app);
+
+          // TODO: should support custom server config via "unstable_createViteServer"?
+          // https://github.com/sapphi-red/vite-setup-catalogue/blob/7ff3dd0850e5f575a01e222342f979bd70f46523/examples/middleware-mode/server.js#L12-L20
           let vite =
             process.env.NODE_ENV === "production"
-              ? undefined
-              : await unstable_createViteServer();
-
-          const app = express();
+            ? undefined
+            : await createServer({
+                server: {
+                  middlewareMode: true,
+                  hmr: {
+                    server,
+                  },
+                }
+              })
 
           if (vite) {
             app.use(vite.middlewares);
@@ -78,7 +86,7 @@ test.describe("Vite CSS dev (Express server)", () => {
           );
 
           const port = ${port};
-          app.listen(port, () => console.log('http://localhost:' + port));
+          server.listen(port, () => console.log('http://localhost:' + port));
         `,
         "app/root.tsx": js`
           import { Links, Meta, Outlet, Scripts, LiveReload } from "@remix-run/react";
