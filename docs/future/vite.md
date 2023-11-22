@@ -66,6 +66,21 @@ export default defineConfig({
 
 All other bundling-related options are now [configured with Vite][vite-config]. This means you have much greater control over the bundling process.
 
+## New build output paths
+
+There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. During the build, Vite copies files from the `public` directory into `build/client`, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
+
+In order to align the default Remix project structure with the way Vite works, the build output paths have been changed.
+
+- The server is now compiled into `build/server` by default.
+- The client is now compiled into `build/client` by default.
+
+This means that the following configuration defaults have been changed:
+
+- [assetsBuildDirectory][assets-build-directory] defaults to `"build/client"` rather than `"public/build"`
+- [publicPath][public-path] defaults to `"/"` rather than `"/build/"`
+- [serverBuildPath][server-build-path] defaults to `"build/server/index.js"` rather than `"build/index.js"`
+
 ## Additional features & plugins
 
 One of the reasons that Remix is moving to Vite is, so you have less to learn when adopting Remix.
@@ -132,21 +147,25 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
 It comes built-in with the Remix Vite plugin and will take over when you run `vite dev`.
 
-👉 **Update your `dev` and `build` scripts**
+You'll also need to update to the new build output paths, which are `build/server` for the server and `build/client` for client assets.
+
+👉 **Update your `dev`, `build` and `start` scripts**
 
 ```json filename=package.json lines=[3-4]
 {
   "scripts": {
     "build": "vite build && vite build --ssr",
     "dev": "vite dev",
-    "start": "remix-serve ./build/index.js"
+    "start": "remix-serve ./build/server/index.js"
   }
 }
 ```
 
 #### Migrating from a custom server
 
-If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
+If you were using a custom server in development, you'll need to update your server code to reference the new build output paths, which are `build/server` for the server build and `build/client` for client assets.
+
+You'll also need to edit your custom server to use Vite's `connect` middleware.
 This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
 
 Remix exposes APIs for exactly this purpose:
@@ -185,14 +204,14 @@ if (vite) {
   app.use(vite.middlewares);
 } else {
   app.use(
-    "/build",
-    express.static("public/build", {
+    "/assets",
+    express.static("build/client/assets", {
       immutable: true,
       maxAge: "1y",
     })
   );
 }
-app.use(express.static("public", { maxAge: "1h" }));
+app.use(express.static("build/client", { maxAge: "1h" }));
 
 // handle SSR requests
 app.all(
@@ -200,7 +219,7 @@ app.all(
   createRequestHandler({
     build: vite
       ? () => unstable_loadViteServerBuild(vite)
-      : await import("./build/index.js"),
+      : await import("./build/server/index.js"),
   })
 );
 
@@ -231,6 +250,24 @@ node --loader tsm ./server.ts
 ```
 
 Just remember that there might be some noticeable slowdown for initial server startup if you do this.
+
+#### Migrate references to build output paths
+
+When using the existing Remix compiler's default options, the server was compiled into `build` and the client was compiled into `public/build`. Due to differences with the way Vite typically works with its `public` directory compared to the existing Remix compiler, these output paths have changed.
+
+👉 **Update references to build output paths**
+
+- The server is now compiled into `build/server` by default.
+- The client is now compiled into `build/client` by default.
+
+For example, to update the Dockerfile from the [Blues Stack][blues-stack]:
+
+```diff filename=Dockerfile
+-COPY --from=build /myapp/build /myapp/build
+-COPY --from=build /myapp/public /myapp/public
++COPY --from=build /myapp/server/build /myapp/server/build
++COPY --from=build /myapp/client/build /myapp/client/build
+```
 
 #### Configure path aliases
 
@@ -655,3 +692,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-plugin-cjs-interop]: https://github.com/cyco130/vite-plugin-cjs-interop
 [ssr-no-external]: https://vitejs.dev/config/ssr-options.html#ssr-noexternal
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
+[blues-stack]: https://github.com/remix-run/blues-stack
