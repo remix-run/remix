@@ -97,13 +97,13 @@ export async function init(
   } catch (error: unknown) {
     if (error instanceof Error) {
       logger.error(error.message);
-      error.message = `${colors.error("🚨 Oh no! remix.init failed during execution.")}`;
+      error.message = `${colors.error("▲  Oh no! Template's remix.init script failed")}`;
     }
     throw error;
   }
 
   logger.info("");
-  logger.info("Template's remix.init script complete.");
+  logger.info("Template's remix.init script complete");
 }
 
 /**

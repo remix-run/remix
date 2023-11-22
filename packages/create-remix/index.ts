@@ -545,12 +545,9 @@ async function runInitScriptStep(ctx: Context) {
   }
 
   // call out to the remix init command to run the init script
-  try {
-  await execa.command(initCommand, {cwd: ctx.cwd, stdio: "inherit"})
-  } catch (err) {
-    error("Template's remix.init script failed to complete.");
-    throw err;
-  }
+
+  await execa.command(initCommand, {cwd: ctx.cwd})
+ 
 
   if (ctx.git) {
     await loadingIndicator({

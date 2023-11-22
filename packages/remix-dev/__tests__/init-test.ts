@@ -166,7 +166,7 @@ describe("the init command", () => {
     );
     process.chdir(projectDir);
     await expect(run(["init"])).rejects.toThrowError(
-      "🚨 Oh no! remix.init failed during execution."
+      "▲  Oh no! Template's remix.init script failed"
     );
 
     // we should keep remix.init around if the init script fails
@@ -198,7 +198,7 @@ describe("the init command", () => {
     );
     process.chdir(projectDir);
     await expect(run(["init"])).rejects.toThrowError(
-      "🚨 Oh no! remix.init failed during execution."
+      "▲  Oh no! Template's remix.init script failed"
     );
     // we should keep remix.init around if the init script fails
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
