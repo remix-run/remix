@@ -4,8 +4,6 @@
 
 ### Patch Changes
 
-- \[REMOVE] Update router versions ([#8082](https://github.com/remix-run/remix/pull/8082))
-- \[REMOVE] Bump router to stable ([#8105](https://github.com/remix-run/remix/pull/8105))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.3.1`
 
