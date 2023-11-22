@@ -130,18 +130,46 @@ describe("the init command", () => {
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
 
-  it("It succeeds for a `remix.init` script without an export", async () => {
+  it("It succeeds for a `remix.init` script without an export or package.json", async () => {
     let projectDir = await getProjectDir("remix-init-manual");
 
     fse.copySync(
-      path.join(__dirname, "fixtures", "successful-remix-init"),
+      path.join(__dirname, "fixtures", "exportless-remix-init"),
       projectDir
     );
     process.chdir(projectDir);
-    await run(["init", "--no-delete"]);
+    await run(["init"]);
 
-    expect(output).toBe("");
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
+    expect(output).toBe("Remix.init without export succeeded");
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
+  });
+
+  it("It succeeds for remix.init defined as an ES6 module", async () => {
+    let projectDir = await getProjectDir("remix-init-manual");
+
+    fse.copySync(
+      path.join(__dirname, "fixtures", "es6-remix-init"),
+      projectDir
+    );
+    process.chdir(projectDir);
+    await run(["init"]);
+
+    expect(output).toBe("remix.init succeeded as an ES6 module");
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
+  });
+
+  it("It succeeds for remix.init defined as an ES6 module", async () => {
+    let projectDir = await getProjectDir("remix-init-manual");
+
+    fse.copySync(
+      path.join(__dirname, "fixtures", "es6-remix-init"),
+      projectDir
+    );
+    process.chdir(projectDir);
+    await run(["init"]);
+
+    expect(output).toBe("remix.init succeeded as an ES6 module");
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
 
   it("throws an error when invalid remix.init script when manually ran", async () => {
