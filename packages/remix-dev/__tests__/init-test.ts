@@ -36,7 +36,7 @@ jest.mock("child_process", () => {
 // Certain bugs only manifest when using this approach.
 const execRemixInitInProject = (projectDir: string) => {
   execSync(`npm install`, {
-    stdio: "pipe",
+    stdio: "inherit",
   });
 
   // overwrite installed @remix-run/dev with the one we just built
@@ -53,7 +53,7 @@ const execRemixInitInProject = (projectDir: string) => {
 
   fse.chmodSync(path.join(projectDir, "node_modules", ".bin/remix"), 0o755);
   execSync(`npm exec remix init`, {
-    stdio: "pipe",
+    stdio: "inherit",
   });
 };
 
@@ -157,7 +157,7 @@ describe("the init command", () => {
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
 
-  it("succeeds for a remix.init script that doesn't default export a function", async () => {
+  it("fails for a remix.init script that doesn't default export a function", async () => {
     let projectDir = await getProjectDir("remix-init-manual-no-export");
 
     fse.copySync(
@@ -165,14 +165,12 @@ describe("the init command", () => {
       projectDir
     );
     process.chdir(projectDir);
-    await run(["init"]);
+    await expect(run(["init"])).rejects.toThrowError(
+      "🚨 Oh no! remix.init failed during execution."
+    );
 
-    expect(
-      fse.existsSync(path.join(projectDir, "no-export-remix-init.txt"))
-    ).toBeTruthy();
-
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
-  });
+    // we should keep remix.init around if the init script fails
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();  });
 
   it("succeeds for remix.init defined as an ES6 module", async () => {
     let projectDir = await getProjectDir("remix-init-manual-es6");
@@ -200,7 +198,7 @@ describe("the init command", () => {
     );
     process.chdir(projectDir);
     await expect(run(["init"])).rejects.toThrowError(
-      `🚨 Oops, remix.init failed`
+      "🚨 Oh no! remix.init failed during execution."
     );
     // we should keep remix.init around if the init script fails
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();

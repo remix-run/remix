@@ -74,10 +74,13 @@ export async function init(
 
 
   try {
-    let initFn = await importEsmOrCjsModule(initScriptFilePath);
-    if (typeof initFn !== "function" && typeof initFn.default === "function") {
-      initFn = initFn.default;
-    } else {
+    let importedInitModule = await importEsmOrCjsModule(initScriptFilePath);
+    let initFn = typeof importedInitModule === "function" ? importedInitModule : importedInitModule.default;
+
+
+    console.log('debug:', 'initFn', initFn, typeof initFn)
+    if (typeof initFn !== "function") {
+    
 
       throw new Error("remix.init/index.js must export an init function.");
 
@@ -93,8 +96,8 @@ export async function init(
 
   } catch (error: unknown) {
     if (error instanceof Error) {
-      error.message = `${colors.error("🚨 Oh no! remix.init failed during execution.")}\n\n${error.message
-        }`;
+      logger.error(error.message);
+      error.message = `${colors.error("🚨 Oh no! remix.init failed during execution.")}`;
     }
     throw error;
   }
