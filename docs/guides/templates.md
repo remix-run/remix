@@ -76,7 +76,7 @@ What you're left with is everything completely set up for you to just get to wor
 - [The Indie Stack][indie_stack]: Deployed to a long-running Node.js server with a persistent SQLite database. This stack is great for websites with dynamic data that you control (blogs, marketing, content sites). It's also a perfect, low-complexity bootstrap for MVPs, prototypes, and proof-of-concepts that can later be updated to the Blues stack easily.
 - [The Grunge Stack][grunge_stack]: Deployed to a serverless function running Node.js with DynamoDB for persistence. Intended for folks who want to deploy a production-grade application on AWS infrastructure serving millions of users.
 
-You can use these stacks by proving the `--template` option when running `create-remix`, for example:
+You can use these stacks by providing the `--template` option when running `create-remix`, for example:
 
 ```shellscript nonumber
 npx create-remix@latest --template remix-run/blues-stack
