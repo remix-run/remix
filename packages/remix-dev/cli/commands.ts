@@ -5,6 +5,7 @@ import getPort, { makeRange } from "get-port";
 import prettyMs from "pretty-ms";
 import PackageJson from "@npmcli/package-json";
 import pc from "picocolors";
+import { pathToFileURL } from "node:url";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -18,7 +19,6 @@ import { transpile as convertFileToJS } from "./useJavascript";
 import type { Options } from "../compiler/options";
 import { createFileWatchCache } from "../compiler/fileWatchCache";
 import { logger } from "../tux";
-import { pathToFileURL } from "node:url";
 
 type InitFlags = {
   deleteScript?: boolean;
