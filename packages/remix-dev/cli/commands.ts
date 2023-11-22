@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { execSync } from "node:child_process";
+import { execa } from "execa";
 import fse from "fs-extra";
 import getPort, { makeRange } from "get-port";
 import prettyMs from "pretty-ms";
@@ -22,6 +22,7 @@ import { logger } from "../tux";
 
 type InitFlags = {
   deleteScript?: boolean;
+  showInstallOutput?: boolean;
 };
 
 async function importEsmOrCjsModule(modulePath: string) {
@@ -44,7 +45,7 @@ async function importEsmOrCjsModule(modulePath: string) {
 
 export async function init(
   projectDir: string,
-  { deleteScript = true }: InitFlags = {}
+  { deleteScript = true, showInstallOutput = false }: Required<InitFlags>
 ) {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScriptFilePath = path.resolve(initScriptDir, "index.js");
@@ -57,9 +58,9 @@ export async function init(
   let packageManager = detectPackageManager() ?? "npm";
 
   if (await fse.pathExists(initPackageJson)) {
-    execSync(`${packageManager} install`, {
+    await execa(packageManager, `install`, {
       cwd: initScriptDir,
-      stdio: "ignore",
+      stdio: showInstallOutput ? "inherit" : "ignore",
     });
   }
 

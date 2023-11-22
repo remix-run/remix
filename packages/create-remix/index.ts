@@ -520,6 +520,7 @@ async function gitInitStep(ctx: Context) {
   });
 }
 
+// TODO(lt): vvv here
 async function runInitScriptStep(ctx: Context) {
   if (!ctx.initScriptPath) {
     return;
@@ -541,6 +542,7 @@ async function runInitScriptStep(ctx: Context) {
     ]);
     return;
   }
+  // ******* //
 
   let initScriptDir = path.dirname(ctx.initScriptPath);
   let initPackageJson = path.resolve(initScriptDir, "package.json");
@@ -592,6 +594,8 @@ async function runInitScriptStep(ctx: Context) {
 
   log("");
   success("Template's remix.init script complete");
+
+  // **** *** //
 
   if (ctx.git) {
     await loadingIndicator({

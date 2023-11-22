@@ -95,6 +95,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
   let args = arg(
     {
       "--no-delete": Boolean,
+      "--show-install-output": Boolean,
       "--dry": Boolean,
       "--force": Boolean,
       "--help": Boolean,
@@ -147,9 +148,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     flags.tlsCert = flags["tls-cert"];
     delete flags["tls-cert"];
   }
-
   if (args["--no-delete"]) {
     flags.delete = false;
+  }
+  if (args["--show-install-output"]) {
+    flags.showInstallOutput = true;
   }
   flags.interactive = flags.interactive ?? require.main === module;
   if (args["--no-typescript"]) {
@@ -157,12 +160,13 @@ export async function run(argv: string[] = process.argv.slice(2)) {
   }
 
   let command = input[0];
-  
+
   // Note: Keep each case in this switch statement small.
   switch (command) {
     case "init":
       await commands.init(input[1] || process.env.REMIX_ROOT || process.cwd(), {
         deleteScript: flags.delete,
+        showInstallOutput: flags.showInstallOutput,
       });
       break;
     case "routes":
