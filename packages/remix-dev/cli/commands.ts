@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { execa } from "execa";
+import execa from "execa";
 import fse from "fs-extra";
 import getPort, { makeRange } from "get-port";
 import prettyMs from "pretty-ms";
@@ -36,8 +36,8 @@ async function importEsmOrCjsModule(modulePath: string) {
     } catch (cjsError) {
       throw new Error(
         "Failed to import module.\n" +
-          `ESM error: ${esmError}\n` +
-          `CJS error: ${cjsError}`
+        `ESM error: ${esmError}\n` +
+        `CJS error: ${cjsError}`
       );
     }
   }
@@ -58,32 +58,49 @@ export async function init(
   let packageManager = detectPackageManager() ?? "npm";
 
   if (await fse.pathExists(initPackageJson)) {
-    await execa(packageManager, `install`, {
-      cwd: initScriptDir,
-      stdio: showInstallOutput ? "inherit" : "ignore",
-    });
+    try {
+      await execa(packageManager, [`install`], {
+        cwd: initScriptDir,
+        stdio: showInstallOutput ? "inherit" : "ignore",
+      });
+    } catch (err) {
+      logger.error("Oh no! Failed to install dependencies for template init script.");
+      throw err;
+    }
   }
 
-  let initFn = await importEsmOrCjsModule(initScriptFilePath);
-  if (typeof initFn !== "function" && initFn.default) {
-    initFn = initFn.default;
-  }
+  logger.info("");
+  logger.info("Running template's remix.init script...\n");
+
+
   try {
-    if (typeof initFn === "function") {
-      await initFn({ packageManager, rootDirectory: projectDir });
+    let initFn = await importEsmOrCjsModule(initScriptFilePath);
+    if (typeof initFn !== "function" && typeof initFn.default === "function") {
+      initFn = initFn.default;
+    } else {
+
+      throw new Error("remix.init/index.js must export an init function.");
+
+
     }
+
+    await initFn({ packageManager, rootDirectory: projectDir });
+
 
     if (deleteScript) {
       await fse.remove(initScriptDir);
     }
+
   } catch (error: unknown) {
     if (error instanceof Error) {
-      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
-        error.message
-      }`;
+      error.message = `${colors.error("🚨 Oh no! remix.init failed during execution.")}\n\n${error.message
+        }`;
     }
     throw error;
   }
+
+  logger.info("");
+  logger.info("Template's remix.init script complete.");
 }
 
 /**
@@ -168,7 +185,7 @@ export async function watch(
 
   let resolved = await resolveDev(config);
   void devServer.liveReload(config, { ...resolved, mode });
-  return await new Promise(() => {});
+  return await new Promise(() => { });
 }
 
 export async function dev(
@@ -194,7 +211,7 @@ export async function dev(
   devServer_unstable.serve(config, resolved);
 
   // keep `remix dev` alive by waiting indefinitely
-  await new Promise(() => {});
+  await new Promise(() => { });
 }
 
 let clientEntries = ["entry.client.tsx", "entry.client.js", "entry.client.jsx"];
@@ -241,10 +258,10 @@ export async function generateEntry(
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
     : deps["@remix-run/cloudflare"]
-    ? "cloudflare"
-    : deps["@remix-run/node"]
-    ? "node"
-    : undefined;
+      ? "cloudflare"
+      : deps["@remix-run/node"]
+        ? "node"
+        : undefined;
 
   if (!serverRuntime) {
     let serverRuntimes = [
@@ -272,15 +289,15 @@ export async function generateEntry(
 
   let contents = isServerEntry
     ? await createServerEntry(
-        config.rootDirectory,
-        config.appDirectory,
-        defaultEntryServer
-      )
+      config.rootDirectory,
+      config.appDirectory,
+      defaultEntryServer
+    )
     : await createClientEntry(
-        config.rootDirectory,
-        config.appDirectory,
-        defaultEntryClient
-      );
+      config.rootDirectory,
+      config.appDirectory,
+      defaultEntryClient
+    );
 
   let outputExtension = useTypeScript ? "tsx" : "jsx";
   let outputEntry = `${entry}.${outputExtension}`;
