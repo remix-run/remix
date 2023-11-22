@@ -68,14 +68,14 @@ All other bundling-related options are now [configured with Vite][vite-config]. 
 
 ## New build output paths
 
-There is a notable difference with the way Vite manages the `public` directory between Vite and the existing Remix compiler. During the build, Vite copies files from the `public` directory into `build/client`, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
+There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. During the build, Vite copies files from the `public` directory into `build/client`, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
 
-As a result, the build output paths are now different when using Vite:
+In order to align the default Remix project structure with the way Vite works, the build output paths have been changed.
 
 - The server is now compiled into `build/server` by default.
 - The client is now compiled into `build/client` by default.
 
-This means that the following configuration defaults have now been changed:
+This means that the following configuration defaults have been changed:
 
 - [assetsBuildDirectory][assets-build-directory] defaults to `"build/client"` rather than `"public/build"`
 - [publicPath][public-path] defaults to `"/"` rather than `"/build/"`
