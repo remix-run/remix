@@ -24,17 +24,20 @@ type InitFlags = {
   deleteScript?: boolean;
 };
 
-async function crossPlatformDynamicImport(modulePath: string) {
+async function importEsmOrCjsModule(modulePath: string) {
   try {
-    // Attempt ESM import, using filePathToUrl to support Windows with absolute paths
+    // Attempt ESM dynamic import using pathToFileURL to support absolute paths on Windows
     return await import(pathToFileURL(modulePath).href);
   } catch (esmError) {
     try {
       // Fall back to CommonJS require
       return require(modulePath);
     } catch (cjsError) {
-      console.error("Errors attempting to import module:", esmError, cjsError);
-      throw cjsError;
+      throw new Error(
+        "Failed to import module.\n" +
+          `ESM error: ${esmError}\n` +
+          `CJS error: ${cjsError}`
+      );
     }
   }
 }
@@ -60,7 +63,7 @@ export async function init(
     });
   }
 
-  let initFn = await crossPlatformDynamicImport(initScriptFilePath);
+  let initFn = await importEsmOrCjsModule(initScriptFilePath);
   if (typeof initFn !== "function" && initFn.default) {
     initFn = initFn.default;
   }
