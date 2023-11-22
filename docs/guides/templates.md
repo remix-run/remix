@@ -136,7 +136,27 @@ This allows you to not have to regularly update your template to the latest vers
 
 If the template has a `remix.init/index.js` file at the root then that file will be executed after the project has been generated and dependencies have been installed. This gives you a chance to do anything you'd like as part of the initialization of your template. For example, in the blues stack, the `app` property has to be globally unique, so we use the `remix.init/index.js` file to change it to the name of the directory that was created for the project + a couple random characters.
 
-You could even use `remix.init/index.js` to ask further questions to the developer for additional configuration (using something like [inquirer][inquirer]). Sometimes, you'll need dependencies installed to do this, but those deps are only useful during initialization. In that case, you can also create a `remix.init/package.json` with dependencies and the Remix CLI will install those before running your script.
+`remix.init/index.js` file can contain script code to be executed immediately:
+
+```javascript
+console.log('initializing project');
+// further initialization code here
+```
+
+Or can alternatively contain a default export of a function to be invoked. In that case, your init function will be passed the user's selected package manager and the root directory of their project:
+
+```javascript
+export default ({
+    packageManager, // "npm" | "pnpm" | "yarn" | "bun"
+    rootDirectory:  // "path/to/project/root"
+
+}) => {
+    console.log('initializing project');
+    // initialization code here
+};
+```
+
+You could even use `remix.init/index.js` to ask further questions to the developer for additional configuration (using something like [inquirer][inquirer]). Sometimes, you'll need dependencies installed to do this, but those deps are only useful during initialization. In that case, you can also create a `remix.init/package.json` with dependencies and the Remix CLI will install those before running your script. Note: if you wish for your init script to be a commonjs module, and the top-level module of your project is defined as an ES6 module, `remix.init/package.json` will be required.
 
 After the init script has been run, the `remix.init` folder gets deleted, so you don't need to worry about it cluttering up the finished codebase.
 
