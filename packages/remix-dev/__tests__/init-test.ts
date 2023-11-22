@@ -161,7 +161,7 @@ describe("the init command", () => {
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
 
-  it("It succeeds for a remix.init script that doesn't default export a function", async () => {
+  it("succeeds for a remix.init script that doesn't default export a function", async () => {
     let projectDir = await getProjectDir("remix-init-manual-no-export");
 
     fse.copySync(
@@ -179,7 +179,7 @@ describe("the init command", () => {
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
 
-  it("It succeeds for remix.init defined as an ES6 module", async () => {
+  it("succeeds for remix.init defined as an ES6 module", async () => {
     let projectDir = await getProjectDir("remix-init-manual-es6");
 
     fse.copySync(
