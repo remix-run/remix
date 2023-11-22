@@ -219,7 +219,7 @@ const getRouteModuleExports = async (
   let url = resolveFileUrl(pluginConfig, routePath);
 
   let transformed = await viteChildCompiler.transformRequest(url, { ssr });
-  invariant(transformed);
+  invariant(transformed); // TODO: what if failed? syntax error?
 
   let [, exports] = esModuleLexer(transformed.code);
   let exportNames = exports.map((e) => e.n);
@@ -630,7 +630,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           envFile: false,
           experimental: {
             // ssrTransform transforms "import" into "__vite_ssr_import__"
-            // which would export extraction based on es-module-lexer
+            // which would break es-module-lexer-based route exports extraction.
             // https://github.com/vitejs/vite/discussions/13812
             // TODO: instead of relying on this, child compiler can run transformRequest with `ssr: false`? (and can remove all "remix-..." plugins?)
             skipSsrTransform: true,
