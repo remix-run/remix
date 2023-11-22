@@ -130,6 +130,20 @@ describe("the init command", () => {
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
 
+  it("It succeeds for a `remix.init` script without an export", async () => {
+    let projectDir = await getProjectDir("remix-init-manual");
+
+    fse.copySync(
+      path.join(__dirname, "fixtures", "successful-remix-init"),
+      projectDir
+    );
+    process.chdir(projectDir);
+    await run(["init", "--no-delete"]);
+
+    expect(output).toBe("");
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
+  });
+
   it("throws an error when invalid remix.init script when manually ran", async () => {
     let projectDir = await getProjectDir("invalid-remix-init-manual");
 
