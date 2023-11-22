@@ -18,6 +18,7 @@ import { transpile as convertFileToJS } from "./useJavascript";
 import type { Options } from "../compiler/options";
 import { createFileWatchCache } from "../compiler/fileWatchCache";
 import { logger } from "../tux";
+import { pathToFileURL } from "node:url";
 
 type InitFlags = {
   deleteScript?: boolean;
@@ -28,9 +29,9 @@ export async function init(
   { deleteScript = true }: InitFlags = {}
 ) {
   let initScriptDir = path.join(projectDir, "remix.init");
-  let initScript = path.resolve(initScriptDir, "index.js");
+  let initScriptFilePath = path.resolve(initScriptDir, "index.js");
 
-  if (!(await fse.pathExists(initScript))) {
+  if (!(await fse.pathExists(initScriptFilePath))) {
     return;
   }
 
@@ -44,7 +45,7 @@ export async function init(
     });
   }
 
-  let initFn = await import(initScript);
+  let initFn = await import(pathToFileURL(initScriptFilePath).href);
 
   if (typeof initFn !== "function" && initFn.default) {
     initFn = initFn.default;
