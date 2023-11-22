@@ -17,8 +17,10 @@ import { loadRouteModule } from "./routeModules";
 import {
   fetchData,
   isCatchResponse,
+  isDeferredData,
   isDeferredResponse,
   isRedirectResponse,
+  isResponse,
   parseDeferredReadableStream,
 } from "./data";
 import type { FutureConfig } from "./entry";
@@ -229,7 +231,9 @@ export function createClientRoutes(
             serverLoader() {
               // Call the server loader for client-side navigations
               if (!request.headers.has("X-Remix-Initial-Load")) {
-                return fetchServerLoader(request);
+                return fetchServerLoader(request).then((res) =>
+                  unwrapServerResponse(res)
+                );
               }
 
               // Throw an error if a clientLoader tries to call a serverLoader that doesn't exist
@@ -251,7 +255,7 @@ export function createClientRoutes(
               //   never gets picked up by the React Router layer
 
               // Otherwise, resolve the hydration clientLoader with the pre-loaded server data
-              return Promise.resolve(routerJson(initialData));
+              return Promise.resolve(initialData);
             },
           });
         });
@@ -275,7 +279,10 @@ export function createClientRoutes(
           lazyRoute.loader = (args) =>
             clientLoader({
               ...args,
-              serverLoader: () => fetchServerLoader(args.request),
+              serverLoader: () =>
+                fetchServerLoader(args.request).then((res) =>
+                  unwrapServerResponse(res)
+                ),
             });
         }
 
@@ -369,6 +376,27 @@ async function fetchServerHandler(request: Request, route: EntryRoute) {
 
   if (isDeferredResponse(result) && result.body) {
     return await parseDeferredReadableStream(result.body);
+  }
+
+  return result;
+}
+
+function unwrapServerResponse(
+  result: Awaited<ReturnType<typeof fetchServerHandler>> | null
+) {
+  if (isDeferredData(result)) {
+    return result.data;
+  }
+
+  if (isResponse(result)) {
+    let contentType = result.headers.get("Content-Type");
+    // Check between word boundaries instead of startsWith() due to the last
+    // paragraph of https://httpwg.org/specs/rfc9110.html#field.content-type
+    if (contentType && /\bapplication\/json\b/.test(contentType)) {
+      return result.json();
+    } else {
+      return result.text();
+    }
   }
 
   return result;

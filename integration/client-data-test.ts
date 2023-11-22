@@ -107,17 +107,17 @@ test.describe("Client Data", () => {
         await createFixture({
           files: getFiles({
             parentAdditions: js`
-            export async function clientLoader() {
-              await new Promise(r => setTimeout(r, 100));
-              return { message: "Parent Client Loader" };
-            }
-          `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Parent Client Loader" };
+              }
+            `,
             childAdditions: js`
-            export async function clientLoader() {
-              await new Promise(r => setTimeout(r, 100));
-              return { message: "Child Client Loader" };
-            }
-          `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Child Client Loader" };
+              }
+            `,
           }),
         })
       );
@@ -139,20 +139,20 @@ test.describe("Client Data", () => {
         await createFixture({
           files: getFiles({
             parentAdditions: js`
-            export async function clientLoader() {
-              await new Promise(r => setTimeout(r, 100));
-              return { message: "Parent Client Loader" };
-            }
-            export function Fallback() {
-              return <p>Parent Fallback</p>
-            }
-          `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Parent Client Loader" };
+              }
+              export function Fallback() {
+                return <p>Parent Fallback</p>
+              }
+            `,
             childAdditions: js`
-            export async function clientLoader() {
-              await new Promise(r => setTimeout(r, 100));
-              return { message: "Child Client Loader" };
-            }
-          `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Child Client Loader" };
+              }
+            `,
           }),
         })
       );
@@ -187,20 +187,20 @@ test.describe("Client Data", () => {
         await createFixture({
           files: getFiles({
             parentAdditions: js`
-            export async function clientLoader() {
-              await new Promise(r => setTimeout(r, 100));
-              return { message: "Parent Client Loader" };
-            }
-          `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Parent Client Loader" };
+              }
+            `,
             childAdditions: js`
-            export async function clientLoader() {
-              await new Promise(r => setTimeout(r, 100));
-              return { message: "Child Client Loader" };
-            }
-            export function Fallback() {
-              return <p>Child Fallback</p>
-            }
-          `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Child Client Loader" };
+              }
+              export function Fallback() {
+                return <p>Child Fallback</p>
+              }
+            `,
           }),
         })
       );
@@ -232,23 +232,23 @@ test.describe("Client Data", () => {
         await createFixture({
           files: getFiles({
             parentAdditions: js`
-            export async function clientLoader() {
-              await new Promise(r => setTimeout(r, 100));
-              return { message: "Parent Client Loader" };
-            }
-            export function Fallback() {
-              return <p>Parent Fallback</p>
-            }
-          `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Parent Client Loader" };
+              }
+              export function Fallback() {
+                return <p>Parent Fallback</p>
+              }
+            `,
             childAdditions: js`
-            export async function clientLoader() {
-              await new Promise(r => setTimeout(r, 100));
-              return { message: "Child Client Loader" };
-            }
-            export function Fallback() {
-              return <p>Child Fallback</p>
-            }
-        `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Child Client Loader" };
+              }
+              export function Fallback() {
+                return <p>Child Fallback</p>
+              }
+          `,
           }),
         })
       );
@@ -272,6 +272,48 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Parent Client Loader");
       expect(html).toMatch("Child Component");
       expect(html).toMatch("Child Client Loader");
+    });
+
+    test("provides server loader data to client loaders (JSON)", async ({
+      page,
+    }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentAdditions: js`
+              export async function clientLoader({ serverLoader }) {
+                await new Promise(r => setTimeout(r, 100));
+                let serverData = await serverLoader();
+                return { message: serverData.message + " - mutated by parent client" };
+              }
+              export function Fallback() {
+                return <p>Parent Fallback</p>
+              }
+            `,
+            childAdditions: js`
+              export async function clientLoader({ serverLoader }) {
+                await new Promise(r => setTimeout(r, 100));
+                let serverData = await serverLoader();
+                return { message: serverData.message + " - mutated by child client" };
+              }
+              export function Fallback() {
+                return null;
+              }
+            `,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+
+      // Renders parent fallback on initial render and calls both clientLoader's
+      await app.goto("/parent/child");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Fallback");
+
+      await page.waitForSelector("#child-heading");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader - mutated by parent client");
+      expect(html).toMatch("Child Server Loader - mutated by child client");
     });
   });
 
@@ -300,11 +342,11 @@ test.describe("Client Data", () => {
         await createFixture({
           files: getFiles({
             parentAdditions: js`
-            export async function clientLoader() {
-              await new Promise(r => setTimeout(r, 100));
-              return { message: "Parent Client Loader" };
-            }
-          `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Parent Client Loader" };
+              }
+            `,
             childAdditions: "",
           }),
         })
@@ -314,7 +356,7 @@ test.describe("Client Data", () => {
       await app.clickLink("/parent/child");
       await page.waitForSelector("#child-heading");
 
-      // Both clientLoaders should run
+      // Parent client loader should run
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Client Loader");
@@ -327,17 +369,17 @@ test.describe("Client Data", () => {
         await createFixture({
           files: getFiles({
             parentAdditions: js`
-          export async function clientLoader() {
-            await new Promise(r => setTimeout(r, 100));
-            return { message: "Parent Client Loader" };
-          }
-        `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Parent Client Loader" };
+              }
+            `,
             childAdditions: js`
-          export async function clientLoader() {
-            await new Promise(r => setTimeout(r, 100));
-            return { message: "Child Client Loader" };
-          }
-        `,
+              export async function clientLoader() {
+                await new Promise(r => setTimeout(r, 100));
+                return { message: "Child Client Loader" };
+              }
+            `,
           }),
         })
       );
