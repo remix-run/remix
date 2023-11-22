@@ -2,9 +2,6 @@
     "name": "remix-init-as-es6-module-test",
     "private": true,
     "type": "module",
-    "scripts": {
-      "remix-init": "remix init"
-    },
     "devDependencies": {
       "@remix-run/dev": "latest"
     }

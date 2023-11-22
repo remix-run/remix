@@ -5,6 +5,7 @@ import stripAnsi from "strip-ansi";
 import { execSync } from "node:child_process";
 
 import { run } from "../cli/run";
+import { pathToFileURL } from "node:url";
 
 // this is so we can mock execSync for "npm install" and the like
 jest.mock("child_process", () => {
@@ -52,7 +53,7 @@ const execRemixInitInProject = (projectDir: string) => {
   );
 
   fse.chmodSync(path.join(projectDir, "node_modules", ".bin/remix"), 0o755);
-  execSync(`npm run remix-init`, {
+  execSync(`npm exec remix init`, {
     stdio: "pipe",
   });
 };
