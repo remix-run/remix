@@ -609,10 +609,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           ...viteUserConfig,
           mode: viteConfig.mode,
           server: {
-            // when parent compiler runs in middleware mode to support
-            // custom servers, we don't want the child compiler also
-            // run in middleware mode as that will cause websocket port conflicts
-            middlewareMode: false,
             hmr: false,
           },
           configFile: false,
@@ -635,16 +631,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                   plugin.name !== "remix" &&
                   plugin.name !== "remix-hmr-updates"
               ),
-            // TODO: can remove this if `hmr: false`?
-            // {
-            //   name: "no-hmr",
-            //   handleHotUpdate() {
-            //     // parent vite server is already sending HMR updates
-            //     // do not send duplicate HMR updates from child server
-            //     // which log confusing "page reloaded" messages that aren't true
-            //     return [];
-            //   },
-            // },
           ],
         });
         await viteChildCompiler.pluginContainer.buildStart({});
