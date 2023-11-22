@@ -274,6 +274,44 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Child Client Loader");
     });
 
+    test("handles synchronous client loaders", async ({ page }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentAdditions: js`
+              export function clientLoader() {
+                return { message: "Parent Client Loader" };
+              }
+              export function Fallback() {
+                return <p>Parent Fallback</p>
+              }
+            `,
+            childAdditions: js`
+              export function clientLoader() {
+                return { message: "Child Client Loader" };
+              }
+              export function Fallback() {
+                return <p>Child Fallback</p>
+              }
+          `,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+
+      // Renders parent fallback on initial render and calls both clientLoader's
+      await app.goto("/parent/child");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Fallback");
+
+      await page.waitForSelector("#parent-heading");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Component");
+      expect(html).toMatch("Parent Client Loader");
+      expect(html).toMatch("Child Component");
+      expect(html).toMatch("Child Client Loader");
+    });
+
     test("provides server loader data to client loaders (JSON)", async ({
       page,
     }) => {

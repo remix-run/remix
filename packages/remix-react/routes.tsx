@@ -225,37 +225,37 @@ export function createClientRoutes(
             initialState.loaderData &&
             initialState.loaderData[route.id];
 
+          if (routeModule.Fallback) {
+            // If a critical route module has a clientLoader and a Fallback,
+            // then we SSR'd the Fallback and we need to ensure we let it hydrate.
+            // If the clientLoader is synchronous, then it'll resolve and we'll
+            // try to hydrate a rendered Component on top of a SSR'd Fallback.
+            // This also ensure's we delay the initialization state update until
+            // after the layoutEffect has registered the subscriber.
+            // TODO: This is a hack :/
+            await new Promise((r) => setTimeout(r, 10));
+          }
+
           return routeModule.clientLoader({
             request,
             params,
-            serverLoader() {
+            async serverLoader() {
               // Call the server loader for client-side navigations
               if (!request.headers.has("X-Remix-Initial-Load")) {
-                return fetchServerLoader(request).then((res) =>
-                  unwrapServerResponse(res)
-                );
+                let result = await fetchServerLoader(request);
+                let unwrapped = await unwrapServerResponse(result);
+                return unwrapped;
               }
 
               // Throw an error if a clientLoader tries to call a serverLoader that doesn't exist
               if (initialData === undefined) {
-                return Promise.reject(
-                  new Error(
-                    "You are trying to call serverFetch() on a route that does not have a server loader"
-                  )
+                throw new Error(
+                  "You are trying to call serverFetch() on a route that does not have a server loader"
                 );
               }
 
-              // FIXME: Fix the intermittent race condition this introduces:
-              // * Remix calls createBrowserRouter, which starts as state.initialized=false
-              // * initialize() calls startNavigation which calls client loaders
-              // * RemixBrowser renders RouterProvider
-              // * synchronous client loaders finish _before_ the RouterProvider
-              //   layout effect wires up the subscriber
-              // * So the completeNavigation and setting state.initialized=true
-              //   never gets picked up by the React Router layer
-
               // Otherwise, resolve the hydration clientLoader with the pre-loaded server data
-              return Promise.resolve(initialData);
+              return initialData;
             },
           });
         });
