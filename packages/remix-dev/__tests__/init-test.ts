@@ -32,24 +32,30 @@ jest.mock("child_process", () => {
   };
 });
 
-// cCpy over the current build of @remix-run/dev and execute remix init from the node_modules dir there.
+// Copy over the current build of @remix-run/dev and execute remix init from the node_modules dir there.
 // Certain bugs only manifest when using this approach.
 const execRemixInitInProject = (projectDir: string) => {
   execSync(`npm install`, {
     stdio: "pipe",
   });
 
-  // overwrite installed @remix-run/dev with the one we just built  
+  // overwrite installed @remix-run/dev with the one we just built
   fse.copySync(
-    path.join(__dirname, "../../../", "build", "node_modules", "@remix-run/dev"),
-    path.join(projectDir, "node_modules", "@remix-run/dev"),
+    path.join(
+      __dirname,
+      "../../../",
+      "build",
+      "node_modules",
+      "@remix-run/dev"
+    ),
+    path.join(projectDir, "node_modules", "@remix-run/dev")
   );
 
-  fse.chmodSync(path.join(projectDir, "node_modules", ".bin/remix"), 0o755)
-  execSync(`npm exec remix init`, {
+  fse.chmodSync(path.join(projectDir, "node_modules", ".bin/remix"), 0o755);
+  execSync(`npm run remix-init`, {
     stdio: "pipe",
   });
-}
+};
 
 const TEMP_DIR = path.join(
   fse.realpathSync(os.tmpdir()),
@@ -58,7 +64,7 @@ const TEMP_DIR = path.join(
 
 beforeAll(async () => {
   await fse.remove(TEMP_DIR);
-  await fse.ensureDir(TEMP_DIR, 0o755);
+  await fse.ensureDir(TEMP_DIR);
 });
 
 afterAll(async () => {
@@ -155,18 +161,21 @@ describe("the init command", () => {
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
 
-  it("It succeeds for a commonjs `remix.init` script under an ES6 module parent with no package.json of its own", async () => {
-    let projectDir = await getProjectDir("remix-init-manual-cjs-under-es6");
+  it("It succeeds for a remix.init script that doesn't default export a function", async () => {
+    let projectDir = await getProjectDir("remix-init-manual-no-export");
 
     fse.copySync(
-      path.join(__dirname, "fixtures", "cjs-es6-parent-remix-init"),
+      path.join(__dirname, "fixtures", "no-export-remix-init"),
       projectDir
     );
     process.chdir(projectDir);
-   execRemixInitInProject(projectDir);
+    await run(["init"]);
 
+    expect(
+      fse.existsSync(path.join(projectDir, "no-export-remix-init.txt"))
+    ).toBeTruthy();
 
-    expect(output).toBe(convertLogToOutputLine("exportless commonjs remix init with ES6 parent module succeeded"));
+    // expect(output).toBe(convertLogToOutputLine("exportless commonjs remix init with ES6 parent module succeeded"));
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
 
@@ -180,9 +189,10 @@ describe("the init command", () => {
     process.chdir(projectDir);
     execRemixInitInProject(projectDir);
 
-
     expect(output).toBe("");
-    expect(fse.existsSync(path.join(projectDir, "es6-remix-init-test.txt"))).toBeTruthy();
+    expect(
+      fse.existsSync(path.join(projectDir, "es6-remix-init-test.txt"))
+    ).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
 

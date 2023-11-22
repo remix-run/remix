@@ -1,9 +1,0 @@
-{
-    "name": "cjs-es6-parent-remix-init-test",
-    "private": true,
-    "sideEffects": false,
-    "type": "module",
-    "devDependencies": {
-      "@remix-run/dev": "latest"
-    }
-  }

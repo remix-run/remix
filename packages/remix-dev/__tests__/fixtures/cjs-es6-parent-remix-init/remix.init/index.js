@@ -1,1 +1,0 @@
-console.log("exportless commonjs remix init with ES6 parent module succeeded");
