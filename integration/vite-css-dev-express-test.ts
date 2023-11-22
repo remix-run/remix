@@ -15,7 +15,6 @@ test.describe("Vite CSS dev (Express server)", () => {
 
   test.beforeAll(async () => {
     let port = await getPort();
-    let hmrPort = await getPort();
     projectDir = await createFixtureProject({
       compiler: "vite",
       files: {
