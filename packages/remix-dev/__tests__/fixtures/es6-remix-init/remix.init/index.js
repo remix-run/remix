@@ -3,7 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 export default ({ rootDirectory }) => {
   fs.writeFileSync(
-    pathToFileURL(path.join(rootDirectory, "es6-remix-init-test.txt")),
+    pathToFileURL(path.join(rootDirectory, "es6-remix-init-test.txt")).href,
     "added via es6 remix.init"
   );
 };
