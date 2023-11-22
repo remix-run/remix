@@ -76,10 +76,6 @@ let originalLog = console.log;
 let originalWarn = console.warn;
 let originalError = console.error;
 
-const convertLogToOutputLine = (messageString: string) => {
-  return "\n" + stripAnsi(messageString).replace(TEMP_DIR, "<TEMP_DIR>");
-};
-
 beforeEach(async () => {
   output = "";
   function hijackLog(message: unknown = "", ...rest: Array<unknown>) {
@@ -96,7 +92,7 @@ beforeEach(async () => {
         "Our tests are not set up to handle multiple arguments to console.log."
       );
     }
-    output += convertLogToOutputLine(messageString);
+    output += "\n" + stripAnsi(messageString).replace(TEMP_DIR, "<TEMP_DIR>");
   }
   console.log = hijackLog;
   console.warn = hijackLog;
@@ -175,7 +171,6 @@ describe("the init command", () => {
       fse.existsSync(path.join(projectDir, "no-export-remix-init.txt"))
     ).toBeTruthy();
 
-    // expect(output).toBe(convertLogToOutputLine("exportless commonjs remix init with ES6 parent module succeeded"));
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
 
