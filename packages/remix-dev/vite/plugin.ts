@@ -45,13 +45,33 @@ const supportedRemixConfigKeys = [
   "serverModuleFormat",
 ] as const satisfies ReadonlyArray<keyof RemixUserConfig>;
 type SupportedRemixConfigKey = typeof supportedRemixConfigKeys[number];
+type SupportedRemixConfig = Pick<RemixUserConfig, SupportedRemixConfigKey>;
 
-export type RemixVitePluginOptions = Pick<
-  RemixUserConfig,
-  SupportedRemixConfigKey
-> & {
-  legacyCssImports?: boolean;
+// We need to provide different JSDoc comments in some cases due to differences
+// between the Remix config and the Vite plugin.
+type RemixConfigJsdocOverrides = {
+  /**
+   * The path to the browser build, relative to the project root. Defaults to
+   * `"build/client"`.
+   */
+  assetsBuildDirectory?: SupportedRemixConfig["assetsBuildDirectory"];
+  /**
+   * The URL prefix of the browser build with a trailing slash. Defaults to
+   * `"/"`. This is the path the browser will use to find assets.
+   */
+  publicPath?: SupportedRemixConfig["publicPath"];
+  /**
+   * The path to the server build file, relative to the project. This file
+   * should end in a `.js` extension and should be deployed to your server.
+   * Defaults to `"build/server/index.js"`.
+   */
+  serverBuildPath?: SupportedRemixConfig["serverBuildPath"];
 };
+
+export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
+  Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides> & {
+    legacyCssImports?: boolean;
+  };
 
 type ResolvedRemixVitePluginConfig = Pick<
   ResolvedRemixConfig,
