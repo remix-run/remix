@@ -26,7 +26,6 @@ import { createRequestHandler } from "./node/adapter";
 import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
 import { removeExports } from "./remove-exports";
-import { transformLegacyCssImports } from "./legacy-css-imports";
 import { replaceImportSpecifier } from "./replace-import-specifier";
 
 // We reassign the "vite" variable from a dynamic import of Vite's ESM build
@@ -45,13 +44,31 @@ const supportedRemixConfigKeys = [
   "serverModuleFormat",
 ] as const satisfies ReadonlyArray<keyof RemixUserConfig>;
 type SupportedRemixConfigKey = typeof supportedRemixConfigKeys[number];
+type SupportedRemixConfig = Pick<RemixUserConfig, SupportedRemixConfigKey>;
 
-export type RemixVitePluginOptions = Pick<
-  RemixUserConfig,
-  SupportedRemixConfigKey
-> & {
-  legacyCssImports?: boolean;
+// We need to provide different JSDoc comments in some cases due to differences
+// between the Remix config and the Vite plugin.
+type RemixConfigJsdocOverrides = {
+  /**
+   * The path to the browser build, relative to the project root. Defaults to
+   * `"build/client"`.
+   */
+  assetsBuildDirectory?: SupportedRemixConfig["assetsBuildDirectory"];
+  /**
+   * The URL prefix of the browser build with a trailing slash. Defaults to
+   * `"/"`. This is the path the browser will use to find assets.
+   */
+  publicPath?: SupportedRemixConfig["publicPath"];
+  /**
+   * The path to the server build file, relative to the project. This file
+   * should end in a `.js` extension and should be deployed to your server.
+   * Defaults to `"build/server/index.js"`.
+   */
+  serverBuildPath?: SupportedRemixConfig["serverBuildPath"];
 };
+
+export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
+  Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides>;
 
 type ResolvedRemixVitePluginConfig = Pick<
   ResolvedRemixConfig,
@@ -75,11 +92,6 @@ let remixReactProxyId = VirtualModule.id("remix-react-proxy");
 let hmrRuntimeId = VirtualModule.id("hmr-runtime");
 let injectHmrRuntimeId = VirtualModule.id("inject-hmr-runtime");
 
-const normalizePath = (p: string) => {
-  let unixPath = p.replace(/[\\/]+/g, "/").replace(/^([a-zA-Z]+:|\.\/)/, "");
-  return vite.normalizePath(unixPath);
-};
-
 const resolveFileUrl = (
   { rootDirectory }: Pick<ResolvedRemixVitePluginConfig, "rootDirectory">,
   filePath: string
@@ -88,12 +100,14 @@ const resolveFileUrl = (
   let isWithinRoot =
     !relativePath.startsWith("..") && !path.isAbsolute(relativePath);
 
-  // Vite will prevent serving files outside of the workspace
-  // unless user explictly opts in with `server.fs.allow`
-  // https://vitejs.dev/config/server-options.html#server-fs-allow
-  if (!isWithinRoot) return `/@fs` + filePath;
+  if (!isWithinRoot) {
+    // Vite will prevent serving files outside of the workspace
+    // unless user explictly opts in with `server.fs.allow`
+    // https://vitejs.dev/config/server-options.html#server-fs-allow
+    return path.posix.join("/@fs", vite.normalizePath(filePath));
+  }
 
-  return `/${normalizePath(relativePath)}`;
+  return "/" + vite.normalizePath(relativePath);
 };
 
 const isJsFile = (filePath: string) => /\.[cm]?[jt]sx?$/i.test(filePath);
@@ -106,7 +120,7 @@ const resolveRelativeRouteFilePath = (
   let file = route.file;
   let fullPath = path.resolve(pluginConfig.appDirectory, file);
 
-  return normalizePath(fullPath);
+  return vite.normalizePath(fullPath);
 };
 
 let vmods = [serverEntryId, serverManifestId, browserManifestId];
@@ -125,7 +139,7 @@ const resolveBuildAssetPaths = (
     pluginConfig.rootDirectory,
     absoluteFilePath
   );
-  let manifestKey = normalizePath(rootRelativeFilePath);
+  let manifestKey = vite.normalizePath(rootRelativeFilePath);
   let entryChunk = viteManifest[manifestKey];
 
   if (!entryChunk) {
@@ -258,11 +272,19 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
   let resolvePluginConfig =
     async (): Promise<ResolvedRemixVitePluginConfig> => {
+      let defaults: Partial<RemixVitePluginOptions> = {
+        serverBuildPath: "build/server/index.js",
+        assetsBuildDirectory: "build/client",
+        publicPath: "/",
+      };
+
+      let config = {
+        ...defaults,
+        ...pick(options, supportedRemixConfigKeys), // Avoid leaking any config options that the Vite plugin doesn't support
+      };
+
       let rootDirectory =
         viteUserConfig.root ?? process.env.REMIX_ROOT ?? process.cwd();
-
-      // Avoid leaking any config options that the Vite plugin doesn't support
-      let config = pick(options, supportedRemixConfigKeys);
 
       // Only select the Remix config options that the Vite plugin uses
       let {
@@ -388,8 +410,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
     let fingerprintedValues = { entry, routes };
     let version = getHash(JSON.stringify(fingerprintedValues), 8);
-    let manifestFilename = `manifest-${version}.js`;
-    let url = `${pluginConfig.publicPath}${manifestFilename}`;
+    let manifestPath = `assets/manifest-${version}.js`;
+    let url = `${pluginConfig.publicPath}${manifestPath}`;
     let nonFingerprintedValues = { url, version };
 
     let manifest: Manifest = {
@@ -398,7 +420,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     };
 
     await writeFileSafe(
-      path.join(pluginConfig.assetsBuildDirectory, manifestFilename),
+      path.join(pluginConfig.assetsBuildDirectory, manifestPath),
       `window.__remixManifest=${JSON.stringify(manifest)};`
     );
 
@@ -519,13 +541,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             base: pluginConfig.publicPath,
             build: {
               ...viteUserConfig.build,
-              // By convention Remix builds into a subdirectory within the
-              // public directory ("public/build" by default) so we don't want
-              // to copy the contents of the public directory around. This also
-              // ensures that we don't get caught in an infinite loop when
-              // `assetsBuildDirectory` is nested multiple levels deep within
-              // the public directory, e.g. "public/custom-base-dir/build"
-              copyPublicDir: false,
               ...(!isSsrBuild
                 ? {
                     manifest: true,
@@ -548,6 +563,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                     // regardless of "ssrEmitAssets" option, so we also need to
                     // keep these JS files have to be kept as-is.
                     ssrEmitAssets: true,
+                    copyPublicDir: false, // Assets in the public directory are only used by the client
                     manifest: true, // We need the manifest to detect SSR-only assets
                     outDir: path.dirname(pluginConfig.serverBuildPath),
                     rollupOptions: {
@@ -1074,19 +1090,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         return modules;
       },
     },
-    ...((options.legacyCssImports
-      ? [
-          {
-            name: "remix-legacy-css-imports",
-            enforce: "pre",
-            transform(code) {
-              if (code.includes('.css"') || code.includes(".css'")) {
-                return transformLegacyCssImports(code);
-              }
-            },
-          },
-        ]
-      : []) satisfies Vite.Plugin[]),
   ];
 };
 
@@ -1096,7 +1099,9 @@ function addRefreshWrapper(
   id: string
 ): string {
   let isRoute = getRoute(pluginConfig, id);
-  let acceptExports = isRoute ? ["meta", "links", "shouldRevalidate"] : [];
+  let acceptExports = isRoute
+    ? ["handle", "meta", "links", "shouldRevalidate"]
+    : [];
   return (
     REACT_REFRESH_HEADER.replace("__SOURCE__", JSON.stringify(id)) +
     code +
