@@ -242,10 +242,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     }
 
     if (hydrationData && hydrationData.errors) {
-      hydrationData = {
-        ...hydrationData,
-        errors: deserializeErrors(hydrationData.errors),
-      };
+      hydrationData.errors = deserializeErrors(hydrationData.errors);
     }
 
     router = createBrowserRouter(routes, {
