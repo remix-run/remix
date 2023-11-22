@@ -44,7 +44,7 @@ export async function init(
     });
   }
 
-  let initFn = require(initScript);
+  let initFn = await import(initScript);
   if (typeof initFn !== "function" && initFn.default) {
     initFn = initFn.default;
   }

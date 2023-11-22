@@ -157,7 +157,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
   }
 
   let command = input[0];
-
+  
   // Note: Keep each case in this switch statement small.
   switch (command) {
     case "init":
