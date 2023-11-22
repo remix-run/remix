@@ -215,24 +215,12 @@ const getRouteModuleExports = async (
   // the route file formats that the Remix compiler historically supported.
 
   let ssr = true;
-  let { pluginContainer, moduleGraph } = viteChildCompiler;
   let routePath = path.join(pluginConfig.appDirectory, routeFile);
   let url = resolveFileUrl(pluginConfig, routePath);
 
-  let resolveId = async () => {
-    let result = await pluginContainer.resolveId(url, undefined, { ssr });
-    if (!result) throw new Error(`Could not resolve module ID for ${url}`);
-    return result.id;
-  };
+  let transformed = await viteChildCompiler.transformRequest(url, { ssr });
+  invariant(transformed);
 
-  let [id, code] = await Promise.all([
-    resolveId(),
-    fse.readFile(routePath, "utf-8"),
-    // pluginContainer.transform(...) fails if we don't do this first:
-    moduleGraph.ensureEntryFromUrl(url, ssr),
-  ]);
-
-  let transformed = await pluginContainer.transform(code, id, { ssr });
   let [, exports] = esModuleLexer(transformed.code);
   let exportNames = exports.map((e) => e.n);
 
@@ -431,13 +419,20 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     let pluginConfig = await resolvePluginConfig();
     let routes: Manifest["routes"] = {};
 
-    for (let [key, route] of Object.entries(pluginConfig.routes)) {
-      let sourceExports = await getRouteModuleExports(
-        viteChildCompiler,
-        pluginConfig,
-        route.file
-      );
+    // transform route file and extract exports in parallel
+    // TODO: can do same for "createBuildManifest" above?
+    let routesWithExports = await Promise.all(
+      Object.entries(pluginConfig.routes).map(async ([key, route]) => {
+        let sourceExports = await getRouteModuleExports(
+          viteChildCompiler,
+          pluginConfig,
+          route.file
+        );
+        return [key, route, sourceExports] as const;
+      })
+    );
 
+    for (let [key, route, sourceExports] of routesWithExports) {
       routes[key] = {
         id: route.id,
         parentId: route.parentId,
@@ -633,6 +628,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           },
           configFile: false,
           envFile: false,
+          experimental: {
+            // ssrTransform transforms "import" into "__vite_ssr_import__"
+            // which would export extraction based on es-module-lexer
+            // https://github.com/vitejs/vite/discussions/13812
+            // TODO: instead of relying on this, child compiler can run transformRequest with `ssr: false`? (and can remove all "remix-..." plugins?)
+            skipSsrTransform: true,
+          },
           plugins: [
             ...(childCompilerConfigFile.config.plugins ?? [])
               .flat()
