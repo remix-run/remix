@@ -166,7 +166,7 @@ export default ({
 };
 ```
 
-You could even use `remix.init/index.js` to ask further questions to the developer for additional configuration (using something like [inquirer][inquirer]). Sometimes, you'll need dependencies installed to do this, but those deps are only useful during initialization. In that case, you can also create a `remix.init/package.json` with dependencies and the Remix CLI will install those before running your script. Note: if you wish for your init script to be a commonjs module, and the top-level module of your project is defined as an ES6 module, `remix.init/package.json` will be required.
+You could even use `remix.init/index.js` to ask further questions to the developer for additional configuration (using something like [inquirer][inquirer]). Sometimes, you'll need dependencies installed to do this, but those deps are only useful during initialization. In that case, you can also create a `remix.init/package.json` with dependencies and the Remix CLI will install those before running your script.
 
 After the init script has been run, the `remix.init` folder gets deleted, so you don't need to worry about it cluttering up the finished codebase.
 
