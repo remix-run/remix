@@ -30,17 +30,17 @@ async function importEsmOrCjsModule(modulePath: string) {
     // Attempt ESM dynamic import using pathToFileURL to support absolute paths on Windows
     return await import(pathToFileURL(modulePath).href);
   } catch (esmError) {
-  try {
-    // Fall back to CommonJS require
-    return require(modulePath);
-  } catch (cjsError) {
-    throw new Error(
-      "Failed to import module.\n" +
-        `ESM error: ${esmError}\n` +
-        `CJS error: ${cjsError}`
-    );
+    try {
+      // Fall back to CommonJS require
+      return require(modulePath);
+    } catch (cjsError) {
+      throw new Error(
+        "Failed to import module.\n" +
+          `ESM error: ${esmError}\n` +
+          `CJS error: ${cjsError}`
+      );
+    }
   }
-  // }
 }
 
 export async function init(
