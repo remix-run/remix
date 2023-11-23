@@ -35,7 +35,7 @@ async function importEsmOrCjsModule(modulePath: string) {
       return require(modulePath);
     } catch (cjsError) {
       throw new Error(
-        "Failed to import module.\n" +
+        "Unable to import remix.init module.\n" +
           `ESM error: ${esmError}\n` +
           `CJS error: ${cjsError}`
       );
