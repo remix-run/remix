@@ -5,7 +5,10 @@ import { type BinaryLike, createHash } from "node:crypto";
 import * as path from "node:path";
 import * as fse from "fs-extra";
 import babel from "@babel/core";
-import { type ServerBuild } from "@remix-run/server-runtime";
+import {
+  type ServerBuild,
+  unstable_setDevServerRuntime as setDevServerRuntime,
+} from "@remix-run/server-runtime";
 import {
   init as initEsModuleLexer,
   parse as esModuleLexer,
@@ -316,21 +319,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       };
     };
 
-  let setupRemixViteRuntime = (viteDevServer: Vite.ViteDevServer) => {
-    (globalThis as any as ServerBuild).__unstableRemixViteRuntime = {
-      getCriticalCss: async (build, url) => {
-        invariant(cachedPluginConfig);
-        return getStylesForUrl(
-          viteDevServer,
-          cachedPluginConfig,
-          cssModulesManifest,
-          build,
-          url
-        );
-      },
-    };
-  };
-
   let getServerEntry = async () => {
     let pluginConfig = await resolvePluginConfig();
 
@@ -374,11 +362,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }`;
           })
           .join(",\n  ")}
-      };
-      export const __unstableRemixViteRuntime = ${
-        viteCommand === "serve"
-          ? "globalThis.__unstableRemixViteRuntime"
-          : "undefined"
       };
     `;
   };
@@ -683,7 +666,18 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }
       },
       configureServer(vite) {
-        setupRemixViteRuntime(vite);
+        setDevServerRuntime({
+          getCriticalCss: async (build, url) => {
+            invariant(cachedPluginConfig);
+            return getStylesForUrl(
+              vite,
+              cachedPluginConfig,
+              cssModulesManifest,
+              build,
+              url
+            );
+          },
+        });
 
         vite.httpServer?.on("listening", () => {
           setTimeout(showUnstableWarning, 50);

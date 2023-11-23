@@ -25,3 +25,22 @@ export async function broadcastDevReady(build: ServerBuild, origin?: string) {
 export function logDevReady(build: ServerBuild) {
   console.log(`[REMIX DEV] ${build.assets.version} ready`);
 }
+
+type DevServerRuntime = {
+  getCriticalCss: (
+    build: ServerBuild,
+    pathname: string
+  ) => Promise<string | undefined>;
+};
+
+const globalDevServerRuntimeKey = "__unstableRemixDevRuntime";
+
+export function setDevServerRuntime(devServerRuntime: DevServerRuntime) {
+  // @ts-expect-error
+  globalThis[globalDevServerRuntimeKey] = devServerRuntime;
+}
+
+export function getDevServerRuntime(): DevServerRuntime | undefined {
+  // @ts-expect-error
+  return globalThis[globalDevServerRuntimeKey];
+}

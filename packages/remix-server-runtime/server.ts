@@ -28,6 +28,7 @@ import {
   isResponse,
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
+import { getDevServerRuntime } from "./dev";
 
 export type RequestHandler = (
   request: Request,
@@ -134,10 +135,13 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         handleError
       );
     } else {
-      let criticalCss = await _build.__unstableRemixViteRuntime?.getCriticalCss(
-        _build,
-        url.pathname
-      );
+      let devServerRuntime =
+        mode === ServerMode.Development ? getDevServerRuntime() : undefined;
+
+      let criticalCss = devServerRuntime
+        ? await devServerRuntime.getCriticalCss(_build, url.pathname)
+        : undefined;
+
       response = await handleDocumentRequestRR(
         serverMode,
         _build,
