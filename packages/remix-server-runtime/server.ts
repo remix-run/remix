@@ -97,7 +97,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     let handleError = (error: unknown) => {
       let devServerHooks = getDevServerHooks();
       if (devServerHooks && error instanceof Error) {
-        devServerHooks.fixStackTrace(error);
+        devServerHooks.fixStacktrace(error);
       }
       errorHandler(error, {
         context: loadContext,

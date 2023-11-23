@@ -31,7 +31,7 @@ type DevServerHooks = {
     build: ServerBuild,
     pathname: string
   ) => Promise<string | undefined>;
-  fixStackTrace: (error: Error) => void;
+  fixStacktrace: (error: Error) => void;
 };
 
 const globalDevServerHooksKey = "__remix_devServerHooks";
