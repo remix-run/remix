@@ -217,29 +217,24 @@ const getRouteModuleExports = async (
   // understand the exports from anything that Vite can compile to JS, not just
   // the route file formats that the Remix compiler historically supported.
 
-  let ssr = true;
-  let { pluginContainer, moduleGraph } = viteChildCompiler;
   let routePath = path.join(pluginConfig.appDirectory, routeFile);
   let url = resolveFileUrl(pluginConfig, routePath);
 
-  let resolveId = async () => {
-    let result = await pluginContainer.resolveId(url, undefined, { ssr });
-    if (!result) throw new Error(`Could not resolve module ID for ${url}`);
-    return result.id;
-  };
+  let transformed = await viteChildCompiler.transformRequest(url, {
+    ssr: true,
+  });
+  invariant(transformed, "Failed to transform: " + routeFile);
+  return extractViteSsrExports(transformed.code);
+};
 
-  let [id, code] = await Promise.all([
-    resolveId(),
-    fse.readFile(routePath, "utf-8"),
-    // pluginContainer.transform(...) fails if we don't do this first:
-    moduleGraph.ensureEntryFromUrl(url, ssr),
-  ]);
+// either extract exports out of vite's ssrTransform or
+// use `experimental.skipSsrTransform` to disable ssrTransform and manually extract via e
+// https://github.com/vitejs/vite/discussions/13812
+const viteSsrExrportsRegExp =
+  /Object\.defineProperty\(__vite_ssr_exports__,\s*"(\w+)"/g;
 
-  let transformed = await pluginContainer.transform(code, id, { ssr });
-  let [, exports] = esModuleLexer(transformed.code);
-  let exportNames = exports.map((e) => e.n);
-
-  return exportNames;
+const extractViteSsrExports = (code: string): string[] => {
+  return [...code.matchAll(viteSsrExrportsRegExp)].map((m) => m[1]);
 };
 
 const showUnstableWarning = () => {
