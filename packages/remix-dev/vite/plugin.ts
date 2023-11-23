@@ -362,8 +362,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }`;
           })
           .join(",\n  ")}
-      };
-    `;
+      };`;
   };
 
   let loadViteManifest = async (directory: string) => {
