@@ -653,20 +653,19 @@ describe("create-remix CLI", () => {
         path.join(__dirname, "fixtures", "esm-remix-init"),
         "--no-git-init",
         "--install",
-        "--no-init-script",
+        "--init-script",
       ],
     });
 
     expect(stderr.trim()).toBeFalsy();
-    expect(stdout).toContain(`Skipping template's remix.init script.`);
     expect(status).toBe(0);
+
+    expect(stdout).toContain(`Template's remix.init script complete`);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-
-    // Init script hasn't run so file exists
-    expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeFalsy();
-
-    // Init script hasn't run so remix.init directory still exists
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
+    expect(
+      fse.existsSync(path.join(projectDir, "esm-remix-init-test.txt"))
+    ).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
 
   it("throws an error when invalid remix.init script when automatically ran", async () => {
