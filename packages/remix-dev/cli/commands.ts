@@ -83,20 +83,20 @@ export async function init(
   if (typeof initFn !== "function") {
     throw new Error("remix.init/index.js must export an init function.");
   }
-  try {
-    await initFn({ packageManager, rootDirectory: projectDir });
+  // try {
+  await initFn({ packageManager, rootDirectory: projectDir });
 
-    if (deleteScript) {
-      await fse.remove(initScriptDir);
-    }
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      error.message = `${colors.error(
-        "▲  Oh no! Template's remix.init script failed"
-      )}\n\n${error.message}`;
-    }
-    throw error;
+  if (deleteScript) {
+    await fse.remove(initScriptDir);
   }
+  // } catch (error: unknown) {
+  //   if (error instanceof Error) {
+  //     error.message = `${colors.error(
+  //       "▲  Oh no! Template's remix.init script failed"
+  //     )}\n\n${error.message}`;
+  //   }
+  //   throw error;
+  // }
   // } catch (error: unknown) {
   //   if (error instanceof Error) {
   //     error.message = `${colors.error(
