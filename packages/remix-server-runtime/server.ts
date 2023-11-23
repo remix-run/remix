@@ -135,12 +135,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         handleError
       );
     } else {
-      let devServerRuntime =
-        mode === ServerMode.Development ? getDevServerRuntime() : undefined;
-
-      let criticalCss = devServerRuntime
-        ? await devServerRuntime.getCriticalCss(_build, url.pathname)
-        : undefined;
+      let criticalCss =
+        mode === ServerMode.Development
+          ? await getDevServerRuntime()?.getCriticalCss(_build, url.pathname)
+          : undefined;
 
       response = await handleDocumentRequestRR(
         serverMode,
