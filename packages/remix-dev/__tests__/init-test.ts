@@ -32,10 +32,10 @@ jest.mock("child_process", () => {
   };
 });
 
-// Copy over the current build of @remix-run/dev and execute remix init from the node_modules dir there.
-// Certain bugs only manifest when using this approach.
+// Copy over the current build of @remix-run/dev and execute 'remix init' in the test project's context.
+// Certain bugs are only tested for when using this approach (vs directly calling remix-dev/cli/run).
 const execRemixInitInProject = (projectDir: string) => {
-  execSync(`npm install`, {
+  execSync(`yarn install`, {
     stdio: "inherit",
   });
 
@@ -52,7 +52,7 @@ const execRemixInitInProject = (projectDir: string) => {
   );
 
   fse.chmodSync(path.join(projectDir, "node_modules", ".bin/remix"), 0o755);
-  execSync(`npm exec remix init`, {
+  execSync(`yarn remix init`, {
     stdio: "inherit",
   });
 };
@@ -174,6 +174,12 @@ describe("the init command", () => {
   });
 
   it("succeeds for remix.init defined as an ESM module", async () => {
+    // if we keep the mock implementation of execSync for this test
+    // it hides the failure case
+    let cp = jest.requireActual(
+      "child_process"
+    ) as typeof import("child_process");
+    
     let projectDir = await getProjectDir("remix-init-manual-esm");
 
     fse.copySync(
@@ -181,6 +187,9 @@ describe("the init command", () => {
       projectDir
     );
     process.chdir(projectDir);
+
+    // test passes for conditions where it should fail if
+    // we only use run(["init"]) here
     execRemixInitInProject(projectDir);
 
     expect(output).toBe("");
