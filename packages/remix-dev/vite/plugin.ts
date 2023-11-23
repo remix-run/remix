@@ -666,6 +666,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }
       },
       configureServer(vite) {
+        vite.httpServer?.on("listening", () => {
+          setTimeout(showUnstableWarning, 50);
+        });
+
+        // Give the request handler access to the critical CSS in dev to avoid a
+        // flash of unstyled content since Vite injects CSS file contents via JS
         setDevServerRuntime({
           getCriticalCss: async (build, url) => {
             invariant(cachedPluginConfig);
@@ -677,10 +683,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               url
             );
           },
-        });
-
-        vite.httpServer?.on("listening", () => {
-          setTimeout(showUnstableWarning, 50);
         });
 
         // We cache the pluginConfig here to make sure we're only invalidating virtual modules when necessary.
