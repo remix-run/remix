@@ -544,11 +544,9 @@ async function runInitScriptStep(ctx: Context) {
   // call out to the remix init command to run the init script
   try {
     await runRemixCmd(
-      [
-        "init",
-        ctx.cwd,
-        ctx.showInstallOutput ? "--show-install-output" : "",
-      ].filter(Boolean)
+      ["init", ctx.showInstallOutput ? "--show-install-output" : ""].filter(
+        Boolean
+      )
     );
   } catch (err: unknown) {
     console.error(`▲  Oh no! Template's remix.init script failed`);
