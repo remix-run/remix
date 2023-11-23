@@ -519,7 +519,6 @@ async function gitInitStep(ctx: Context) {
   });
 }
 
-// TODO(lt): vvv here
 async function runInitScriptStep(ctx: Context) {
   if (!ctx.initScriptPath) {
     return;

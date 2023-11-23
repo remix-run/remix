@@ -26,7 +26,6 @@ type InitFlags = {
 };
 
 async function importEsmOrCjsModule(modulePath: string) {
-  // TODO(lt): vvv revert
   try {
     // Attempt ESM dynamic import using pathToFileURL to support absolute paths on Windows
     return await import(pathToFileURL(modulePath).href);
