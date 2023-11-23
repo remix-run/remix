@@ -552,9 +552,6 @@ async function runInitScriptStep(ctx: Context) {
     );
   } catch (err: unknown) {
     console.error(`▲  Oh no! Template's remix.init script failed`);
-    if (err instanceof Error) {
-      err.message = `▲  Oh no! Template's remix.init script failed`;
-    }
     throw err;
   }
 
