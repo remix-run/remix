@@ -220,7 +220,9 @@ const getRouteModuleExports = async (
   let routePath = path.join(pluginConfig.appDirectory, routeFile);
   let url = resolveFileUrl(pluginConfig, routePath);
 
-  let transformed = await viteChildCompiler.transformRequest(url);
+  let transformed = await viteChildCompiler.transformRequest(url, {
+    ssr: true,
+  });
   invariant(transformed, "Failed to transform: " + routeFile);
   let [, exports] = esModuleLexer(transformed.code);
   let exportNames = exports.map((e) => e.n);
@@ -611,6 +613,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         viteChildCompiler = await vite.createServer({
           ...viteUserConfig,
+          experimental: {
+            skipSsrTransform: true,
+          },
           mode: viteConfig.mode,
           server: {
             hmr: false,
