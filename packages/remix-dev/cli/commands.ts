@@ -93,9 +93,9 @@ export async function init(
     }
   } catch (error: unknown) {
     if (error instanceof Error) {
-      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
-        error.message
-      }`;
+      error.message = `${colors.error(
+        "▲  Oh no! Template's remix.init script failed"
+      )}\n\n${error.message}`;
     }
     throw error;
   }
