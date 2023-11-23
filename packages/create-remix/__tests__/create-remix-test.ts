@@ -657,9 +657,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
-    expect(stderr.trim()).toMatchInlineSnapshot(
-      `"▲  Oh no! Template's remix.init script failed"`
-    );
+    expect(stderr.trim()).toMatchInlineSnapshot(`"🚨 Oops, remix.init failed"`);
     expect(status).toBe(1);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeFalsy();

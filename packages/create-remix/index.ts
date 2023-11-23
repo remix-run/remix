@@ -4,12 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import fse from "fs-extra";
 import stripAnsi from "strip-ansi";
-import rm from "rimraf";
 import execa from "execa";
 import arg from "arg";
 import * as semver from "semver";
 import sortPackageJSON from "sort-package-json";
-
+import { run as runRemixCmd } from "@remix-run/dev/cli/run";
 
 import { version as thisRemixVersion } from "./package.json";
 import { prompt } from "./prompt";
@@ -28,7 +27,6 @@ import {
   sleep,
   strip,
   stripDirectoryFromPath,
-  success,
   toValidProjectName,
 } from "./utils";
 import { renderLoadingIndicator } from "./loading-indicator";
@@ -546,8 +544,13 @@ async function runInitScriptStep(ctx: Context) {
 
   // call out to the remix init command to run the init script
 
-  await execa.command(initCommand, {cwd: ctx.cwd})
- 
+  runRemixCmd(
+    [
+      "init",
+      ctx.cwd,
+      ctx.showInstallOutput ? "--show-install-output" : "",
+    ].filter(Boolean)
+  );
 
   if (ctx.git) {
     await loadingIndicator({

@@ -26,6 +26,7 @@ type InitFlags = {
 };
 
 async function importEsmOrCjsModule(modulePath: string) {
+  // TODO(lt): vvv revert
   try {
     // Attempt ESM dynamic import using pathToFileURL to support absolute paths on Windows
     return await import(pathToFileURL(modulePath).href);
@@ -36,8 +37,8 @@ async function importEsmOrCjsModule(modulePath: string) {
     } catch (cjsError) {
       throw new Error(
         "Failed to import module.\n" +
-        `ESM error: ${esmError}\n` +
-        `CJS error: ${cjsError}`
+          `ESM error: ${esmError}\n` +
+          `CJS error: ${cjsError}`
       );
     }
   }
@@ -64,7 +65,9 @@ export async function init(
         stdio: showInstallOutput ? "inherit" : "ignore",
       });
     } catch (err) {
-      logger.error("Oh no! Failed to install dependencies for template init script.");
+      logger.error(
+        "Oh no! Failed to install dependencies for template init script."
+      );
       throw err;
     }
   }
@@ -72,32 +75,27 @@ export async function init(
   logger.info("");
   logger.info("Running template's remix.init script...\n");
 
-
   try {
     let importedInitModule = await importEsmOrCjsModule(initScriptFilePath);
-    let initFn = typeof importedInitModule === "function" ? importedInitModule : importedInitModule.default;
+    let initFn =
+      typeof importedInitModule === "function"
+        ? importedInitModule
+        : importedInitModule.default;
 
-
-    console.log('debug:', 'initFn', initFn, typeof initFn)
     if (typeof initFn !== "function") {
-    
-
       throw new Error("remix.init/index.js must export an init function.");
-
-
     }
 
     await initFn({ packageManager, rootDirectory: projectDir });
 
-
     if (deleteScript) {
       await fse.remove(initScriptDir);
     }
-
   } catch (error: unknown) {
     if (error instanceof Error) {
-      logger.error(error.message);
-      error.message = `${colors.error("▲  Oh no! Template's remix.init script failed")}`;
+      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
+        error.message
+      }`;
     }
     throw error;
   }
@@ -188,7 +186,7 @@ export async function watch(
 
   let resolved = await resolveDev(config);
   void devServer.liveReload(config, { ...resolved, mode });
-  return await new Promise(() => { });
+  return await new Promise(() => {});
 }
 
 export async function dev(
@@ -214,7 +212,7 @@ export async function dev(
   devServer_unstable.serve(config, resolved);
 
   // keep `remix dev` alive by waiting indefinitely
-  await new Promise(() => { });
+  await new Promise(() => {});
 }
 
 let clientEntries = ["entry.client.tsx", "entry.client.js", "entry.client.jsx"];
@@ -261,10 +259,10 @@ export async function generateEntry(
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
     : deps["@remix-run/cloudflare"]
-      ? "cloudflare"
-      : deps["@remix-run/node"]
-        ? "node"
-        : undefined;
+    ? "cloudflare"
+    : deps["@remix-run/node"]
+    ? "node"
+    : undefined;
 
   if (!serverRuntime) {
     let serverRuntimes = [
@@ -292,15 +290,15 @@ export async function generateEntry(
 
   let contents = isServerEntry
     ? await createServerEntry(
-      config.rootDirectory,
-      config.appDirectory,
-      defaultEntryServer
-    )
+        config.rootDirectory,
+        config.appDirectory,
+        defaultEntryServer
+      )
     : await createClientEntry(
-      config.rootDirectory,
-      config.appDirectory,
-      defaultEntryClient
-    );
+        config.rootDirectory,
+        config.appDirectory,
+        defaultEntryClient
+      );
 
   let outputExtension = useTypeScript ? "tsx" : "jsx";
   let outputEntry = `${entry}.${outputExtension}`;

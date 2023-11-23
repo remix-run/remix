@@ -170,7 +170,8 @@ describe("the init command", () => {
     );
 
     // we should keep remix.init around if the init script fails
-    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();  });
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
+  });
 
   it("succeeds for remix.init defined as an ES6 module", async () => {
     let projectDir = await getProjectDir("remix-init-manual-es6");
