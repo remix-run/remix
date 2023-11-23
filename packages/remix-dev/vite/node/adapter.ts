@@ -1,9 +1,11 @@
-// @ts-nocheck
-// adapted from https://github.com/solidjs/solid-start/blob/ccff60ce75e066f6613daf0272dbb43a196235a4/packages/start/node/fetch.js
-import { once } from "events";
-import { type IncomingMessage, type ServerResponse } from "http";
+import type {
+  IncomingHttpHeaders,
+  IncomingMessage,
+  ServerResponse,
+} from "node:http";
+import { once } from "node:events";
+import { Readable } from "node:stream";
 import { splitCookiesString } from "set-cookie-parser";
-import { Readable } from "stream";
 import {
   type ServerBuild,
   installGlobals,
@@ -11,10 +13,11 @@ import {
 } from "@remix-run/node";
 import { createRequestHandler as createBaseRequestHandler } from "@remix-run/server-runtime";
 
-// polyfill should be also opt-in? (move to template?)
+import invariant from "../../invariant";
+
 installGlobals();
 
-function createHeaders(requestHeaders) {
+function createHeaders(requestHeaders: IncomingHttpHeaders) {
   let headers = new Headers();
 
   for (let [key, values] of Object.entries(requestHeaders)) {
@@ -32,12 +35,13 @@ function createHeaders(requestHeaders) {
   return headers;
 }
 
-// based on `createRemixRequest` in packages/remix-express/server.ts
+// Based on `createRemixRequest` in packages/remix-express/server.ts
 function createRequest(req: IncomingMessage, res: ServerResponse): Request {
   let origin =
     req.headers.origin && "null" !== req.headers.origin
       ? req.headers.origin
       : `http://${req.headers.host}`;
+  invariant(req.url, 'Expected "req.url" to be defined');
   let url = new URL(req.url, origin);
 
   let controller = new AbortController();
@@ -57,7 +61,7 @@ function createRequest(req: IncomingMessage, res: ServerResponse): Request {
   return new Request(url.href, init);
 }
 
-// Adapted from more recent version of `handleNodeResponse`:
+// Adapted from solid-start's `handleNodeResponse`:
 // https://github.com/solidjs/solid-start/blob/7398163869b489cce503c167e284891cf51a6613/packages/start/node/fetch.js#L162-L185
 async function handleNodeResponse(webRes: Response, res: ServerResponse) {
   res.statusCode = webRes.status;
@@ -76,7 +80,9 @@ async function handleNodeResponse(webRes: Response, res: ServerResponse) {
   }
 
   if (webRes.body) {
-    let readable = Readable.from(webRes.body);
+    // https://github.com/microsoft/TypeScript/issues/29867
+    let responseBody = webRes.body as unknown as AsyncIterable<Uint8Array>;
+    let readable = Readable.from(responseBody);
     readable.pipe(res);
     await once(readable, "end");
   } else {
@@ -86,15 +92,11 @@ async function handleNodeResponse(webRes: Response, res: ServerResponse) {
 
 export let createRequestHandler = (
   build: ServerBuild,
-  {
-    mode = "production",
-  }: {
-    mode?: string;
-  }
+  { mode = "production" }: { mode?: string }
 ) => {
   let handler = createBaseRequestHandler(build, mode);
   return async (req: IncomingMessage, res: ServerResponse) => {
-    let request = createRequest(req);
+    let request = createRequest(req, res);
     let response = await handler(request, {});
     handleNodeResponse(response, res);
   };
