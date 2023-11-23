@@ -682,6 +682,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               url
             );
           },
+          fixStackTrace: vite.ssrFixStacktrace,
         });
 
         // We cache the pluginConfig here to make sure we're only invalidating virtual modules when necessary.

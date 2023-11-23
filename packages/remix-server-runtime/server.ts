@@ -95,8 +95,9 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     let matches = matchServerRoutes(routes, url.pathname);
     let handleError = (error: unknown) => {
-      if (ssrFixStacktrace && error instanceof Error) {
-        ssrFixStacktrace(error);
+      let devServerHooks = getDevServerHooks();
+      if (devServerHooks && error instanceof Error) {
+        devServerHooks.fixStackTrace(error);
       }
       errorHandler(error, {
         context: loadContext,
