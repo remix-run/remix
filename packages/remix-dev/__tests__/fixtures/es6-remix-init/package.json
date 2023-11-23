@@ -1,8 +1,0 @@
-{
-    "name": "remix-init-as-es6-module-test",
-    "private": true,
-    "type": "module",
-    "devDependencies": {
-      "@remix-run/dev": "latest"
-    }
-  }

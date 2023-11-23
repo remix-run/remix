@@ -173,11 +173,11 @@ describe("the init command", () => {
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
 
-  it("succeeds for remix.init defined as an ES6 module", async () => {
-    let projectDir = await getProjectDir("remix-init-manual-es6");
+  it("succeeds for remix.init defined as an ESM module", async () => {
+    let projectDir = await getProjectDir("remix-init-manual-esm");
 
     fse.copySync(
-      path.join(__dirname, "fixtures", "es6-remix-init"),
+      path.join(__dirname, "fixtures", "esm-remix-init"),
       projectDir
     );
     process.chdir(projectDir);
@@ -185,7 +185,7 @@ describe("the init command", () => {
 
     expect(output).toBe("");
     expect(
-      fse.existsSync(path.join(projectDir, "es6-remix-init-test.txt"))
+      fse.existsSync(path.join(projectDir, "esm-remix-init-test.txt"))
     ).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
