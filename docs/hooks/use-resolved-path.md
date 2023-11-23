@@ -22,7 +22,7 @@ This is useful when building links from relative values and used internally for 
 
 ## Additional Resources
 
-- [`resolvePath`][resolve-path]
+- [`resolvePath`][rr-resolve-path]
 
 [nav-link-component]: ../components/nav-link
-[resolve-path]: ../utils/resolve-path
+[rr-resolve-path]: https://reactrouter.com/utils/resolve-path

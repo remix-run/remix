@@ -4,7 +4,7 @@ import path from "node:path";
 import getPort from "get-port";
 
 import { createFixtureProject, js, css } from "./helpers/create-fixture.js";
-import { kill, node } from "./helpers/dev.js";
+import { kill, node } from "./helpers/vite.js";
 
 const TEST_PADDING_VALUE = "20px";
 const UPDATED_TEST_PADDING_VALUE = "30px";
@@ -168,7 +168,7 @@ test.describe("Vite CSS dev (Express server)", () => {
       },
     });
 
-    dev = await node(projectDir, ["./server.mjs"], { port });
+    dev = await node(["./server.mjs"], { cwd: projectDir, port });
   });
 
   test.afterAll(async () => {

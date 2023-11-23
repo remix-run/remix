@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build && vite build --ssr",
-    "start": "remix-serve ./build/index.js",
+    "start": "remix-serve ./build/server/index.js",
     "typecheck": "tsc"
   },
   "dependencies": {

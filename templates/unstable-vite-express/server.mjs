@@ -8,7 +8,7 @@ import express from "express";
 
 installGlobals();
 
-let vite =
+const vite =
   process.env.NODE_ENV === "production"
     ? undefined
     : await unstable_createViteServer();
@@ -20,11 +20,11 @@ if (vite) {
   app.use(vite.middlewares);
 } else {
   app.use(
-    "/build",
-    express.static("public/build", { immutable: true, maxAge: "1y" })
+    "/assets",
+    express.static("build/client/assets", { immutable: true, maxAge: "1y" })
   );
 }
-app.use(express.static("public", { maxAge: "1h" }));
+app.use(express.static("build/client", { maxAge: "1h" }));
 
 // handle SSR requests
 app.all(
@@ -32,7 +32,7 @@ app.all(
   createRequestHandler({
     build: vite
       ? () => unstable_loadViteServerBuild(vite)
-      : await import("./build/index.js"),
+      : await import("./build/server/index.js"),
   })
 );
 
