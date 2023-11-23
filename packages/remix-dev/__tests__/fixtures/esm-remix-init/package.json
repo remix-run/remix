@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "devDependencies": {
-    "@remix-run/dev": "^2"
+    "@remix-run/dev": "latest"
   }
 }
