@@ -7,7 +7,7 @@ import * as fse from "fs-extra";
 import babel from "@babel/core";
 import {
   type ServerBuild,
-  unstable_setDevServerRuntime as setDevServerRuntime,
+  unstable_setDevServerHooks as setDevServerHooks,
 } from "@remix-run/server-runtime";
 import {
   init as initEsModuleLexer,
@@ -672,7 +672,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         // Give the request handler access to the critical CSS in dev to avoid a
         // flash of unstyled content since Vite injects CSS file contents via JS
-        setDevServerRuntime({
+        setDevServerHooks({
           getCriticalCss: async (build, url) => {
             invariant(cachedPluginConfig);
             return getStylesForUrl(

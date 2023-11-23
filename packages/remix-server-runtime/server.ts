@@ -28,7 +28,7 @@ import {
   isResponse,
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
-import { getDevServerRuntime } from "./dev";
+import { getDevServerHooks } from "./dev";
 
 export type RequestHandler = (
   request: Request,
@@ -137,7 +137,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     } else {
       let criticalCss =
         mode === ServerMode.Development
-          ? await getDevServerRuntime()?.getCriticalCss(_build, url.pathname)
+          ? await getDevServerHooks()?.getCriticalCss(_build, url.pathname)
           : undefined;
 
       response = await handleDocumentRequestRR(

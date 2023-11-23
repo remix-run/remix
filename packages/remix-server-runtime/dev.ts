@@ -26,21 +26,21 @@ export function logDevReady(build: ServerBuild) {
   console.log(`[REMIX DEV] ${build.assets.version} ready`);
 }
 
-type DevServerRuntime = {
+type DevServerHooks = {
   getCriticalCss: (
     build: ServerBuild,
     pathname: string
   ) => Promise<string | undefined>;
 };
 
-const globalDevServerRuntimeKey = "__unstableRemixDevRuntime";
+const globalDevServerHooksKey = "__remix_devServerHooks";
 
-export function setDevServerRuntime(devServerRuntime: DevServerRuntime) {
+export function setDevServerHooks(devServerHooks: DevServerHooks) {
   // @ts-expect-error
-  globalThis[globalDevServerRuntimeKey] = devServerRuntime;
+  globalThis[globalDevServerHooksKey] = devServerHooks;
 }
 
-export function getDevServerRuntime(): DevServerRuntime | undefined {
+export function getDevServerHooks(): DevServerHooks | undefined {
   // @ts-expect-error
-  return globalThis[globalDevServerRuntimeKey];
+  return globalThis[globalDevServerHooksKey];
 }

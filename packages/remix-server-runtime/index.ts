@@ -18,7 +18,7 @@ export { MaxPartSizeExceededError } from "./upload/errors";
 export {
   broadcastDevReady,
   logDevReady,
-  setDevServerRuntime as unstable_setDevServerRuntime,
+  setDevServerHooks as unstable_setDevServerHooks,
 } from "./dev";
 
 // Types for the Remix server runtime interface
