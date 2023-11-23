@@ -8,7 +8,7 @@ import execa from "execa";
 import arg from "arg";
 import * as semver from "semver";
 import sortPackageJSON from "sort-package-json";
-import { run as runRemixCmd } from "@remix-run/dev/cli/run";
+import { cli } from "@remix-run/dev";
 
 import { version as thisRemixVersion } from "./package.json";
 import { prompt } from "./prompt";
@@ -543,7 +543,7 @@ async function runInitScriptStep(ctx: Context) {
 
   // call out to the remix init command to run the init script
   try {
-    await runRemixCmd(
+    await cli.run(
       [
         "init",
         ctx.cwd,
