@@ -26,7 +26,7 @@
     "build": "node scripts/build.mjs",
     "clean": "git clean -fdX .",
     "clean:build": "node ./scripts/clean-build.mjs",
-    "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint:fix",
+    "format": "prettier --cache --ignore-path .eslintignore --write ./ && npm run lint:fix",
     "format:deno": "deno fmt integration/helpers/deno-template packages/remix-deno templates/deno --ignore=node_modules,build,public/build",
     "license": "node ./scripts/license.js",
     "lint": "eslint --cache .",

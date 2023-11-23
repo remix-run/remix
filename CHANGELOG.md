@@ -13,33 +13,37 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
+  - [v2.3.1](#v231)
+    - [Patch Changes](#patch-changes)
+    - [Updated Dependencies](#updated-dependencies)
+    - [Changes by Package](#changes-by-package)
   - [v2.3.0](#v230)
     - [What's Changed](#whats-changed)
       - [Stabilized `useBlocker`](#stabilized-useblocker)
       - [`unstable_flushSync` API](#unstable_flushsync-api)
     - [Minor Changes](#minor-changes)
-    - [Patch Changes](#patch-changes)
-    - [Updated Dependencies](#updated-dependencies)
-    - [Changes by Package](#changes-by-package)
+    - [Patch Changes](#patch-changes-1)
+    - [Updated Dependencies](#updated-dependencies-1)
+    - [Changes by Package](#changes-by-package-1)
   - [v2.2.0](#v220)
     - [What's Changed](#whats-changed-1)
       - [Vite!](#vite)
       - [New Fetcher APIs](#new-fetcher-apis)
       - [Persistence Future Flag](#persistence-future-flag)
     - [Minor Changes](#minor-changes-1)
-    - [Patch Changes](#patch-changes-1)
-    - [Updated Dependencies](#updated-dependencies-1)
-    - [Changes by Package](#changes-by-package-1)
+    - [Patch Changes](#patch-changes-2)
+    - [Updated Dependencies](#updated-dependencies-2)
+    - [Changes by Package](#changes-by-package-2)
   - [v2.1.0](#v210)
     - [What's Changed](#whats-changed-2)
       - [View Transitions](#view-transitions)
       - [Stable `createRemixStub`](#stable-createremixstub)
     - [Minor Changes](#minor-changes-2)
-    - [Patch Changes](#patch-changes-2)
-    - [Updated Dependencies](#updated-dependencies-2)
-    - [Changes by Package](#changes-by-package-2)
-  - [v2.0.1](#v201)
     - [Patch Changes](#patch-changes-3)
+    - [Updated Dependencies](#updated-dependencies-3)
+    - [Changes by Package](#changes-by-package-3)
+  - [v2.0.1](#v201)
+    - [Patch Changes](#patch-changes-4)
     - [Changes by Package 🔗](#changes-by-package-)
   - [v2.0.0](#v200)
     - [Breaking Changes](#breaking-changes)
@@ -51,8 +55,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
         - [Breaking Type Changes](#breaking-type-changes)
     - [New Features](#new-features)
     - [Other Notable Changes](#other-notable-changes)
-    - [Updated Dependencies](#updated-dependencies-3)
-    - [Changes by Package](#changes-by-package-3)
+    - [Updated Dependencies](#updated-dependencies-4)
+    - [Changes by Package](#changes-by-package-4)
 
 </details>
 
@@ -97,6 +101,41 @@ To add a new release, copy from this template:
 **Full Changelog**: [`v2.X.Y...v2.X.Y`](https://github.com/remix-run/remix/compare/remix@2.X.Y...remix@2.X.Y)
 
 -->
+
+## v2.3.1
+
+### Patch Changes
+
+- `@remix-run/dev`: Support `nonce` prop on `LiveReload` component in Vite dev ([#8014](https://github.com/remix-run/remix/pull/8014))
+- `@remix-run/dev`: Ensure code-split JS files in the server build's assets directory aren't cleaned up after Vite build ([#8042](https://github.com/remix-run/remix/pull/8042))
+- `@remix-run/dev`: Fix redundant copying of assets from `public` directory in Vite build ([#8039](https://github.com/remix-run/remix/pull/8039))
+  - This ensures that static assets aren't duplicated in the server build directory
+  - This also fixes an issue where the build would break if `assetsBuildDirectory` was deeply nested within the `public` directory
+
+### Updated Dependencies
+
+- [`react-router-dom@6.20.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.20.0)
+- [`@remix-run/router@1.13.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1130)
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/create-remix/CHANGELOG.md#231)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-architect/CHANGELOG.md#231)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-cloudflare/CHANGELOG.md#231)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-cloudflare-pages/CHANGELOG.md#231)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-cloudflare-workers/CHANGELOG.md#231)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-css-bundle/CHANGELOG.md#231)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-deno/CHANGELOG.md#231)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-dev/CHANGELOG.md#231)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-eslint-config/CHANGELOG.md#231)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-express/CHANGELOG.md#231)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-node/CHANGELOG.md#231)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-react/CHANGELOG.md#231)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-serve/CHANGELOG.md#231)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-server-runtime/CHANGELOG.md#231)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.3.1/packages/remix-testing/CHANGELOG.md#231)
+
+**Full Changelog**: [`v2.3.0...v2.3.1`](https://github.com/remix-run/remix/compare/remix@2.3.0...remix@2.3.1)
 
 ## v2.3.0
 
