@@ -68,8 +68,8 @@ test.describe("Vite custom entry dev", () => {
 
                     responseHeaders.set("Content-Type", "text/html");
 
-                    // quick-and-dirty way to verify request instance
-                    responseHeaders.set("x-test-request-instance", String(request instanceof Request));
+                    // Used to test that the request object is an instance of the global Request constructor
+                    responseHeaders.set("x-test-request-instanceof-request", String(request instanceof Request));
 
                     resolve(
                       new Response(stream, {
@@ -161,9 +161,12 @@ test.describe("Vite custom entry dev", () => {
     devProc.pid && (await killtree(devProc.pid));
   });
 
-  test("instanceof Request", async ({ request }) => {
+  // Ensure libraries/consumers can perform an instanceof check on the request
+  test("request instanceof Request", async ({ request }) => {
     let res = await request.get(`http://localhost:${devPort}/`);
-    expect(res.headers()).toMatchObject({ "x-test-request-instance": "true" });
+    expect(res.headers()).toMatchObject({
+      "x-test-request-instanceof-request": "true",
+    });
   });
 });
 
