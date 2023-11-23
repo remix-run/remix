@@ -166,7 +166,7 @@ describe("the init command", () => {
     );
     process.chdir(projectDir);
     await expect(run(["init"])).rejects.toThrowError(
-      "▲  Oh no! Template's remix.init script failed"
+      "remix.init/index.js must export an init function."
     );
 
     // we should keep remix.init around if the init script fails

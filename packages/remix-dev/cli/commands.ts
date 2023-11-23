@@ -75,17 +75,16 @@ export async function init(
   logger.info("");
   logger.info("Running template's remix.init script...\n");
 
+  let importedInitModule = await importEsmOrCjsModule(initScriptFilePath);
+  let initFn =
+    typeof importedInitModule === "function"
+      ? importedInitModule
+      : importedInitModule.default;
+
+  if (typeof initFn !== "function") {
+    throw new Error("remix.init/index.js must export an init function.");
+  }
   try {
-    let importedInitModule = await importEsmOrCjsModule(initScriptFilePath);
-    let initFn =
-      typeof importedInitModule === "function"
-        ? importedInitModule
-        : importedInitModule.default;
-
-    if (typeof initFn !== "function") {
-      throw new Error("remix.init/index.js must export an init function.");
-    }
-
     await initFn({ packageManager, rootDirectory: projectDir });
 
     if (deleteScript) {
@@ -99,6 +98,22 @@ export async function init(
     }
     throw error;
   }
+  // } catch (error: unknown) {
+  //   if (error instanceof Error) {
+  //     error.message = `${colors.error(
+  //       "▲  Oh no! Template's remix.init script failed"
+  //     )}\n\n${error.message}`;
+  //   }
+  //   throw error;
+  // }
+  // } catch (error: unknown) {
+  //   if (error instanceof Error) {
+  //     error.message = `${colors.error(
+  //       "▲  Oh no! Template's remix.init script failed"
+  //     )}\n\n${error.message}`;
+  //   }
+  //   throw error;
+  // }
 
   logger.info("");
   logger.info("Template's remix.init script complete");

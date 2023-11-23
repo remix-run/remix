@@ -543,14 +543,21 @@ async function runInitScriptStep(ctx: Context) {
   }
 
   // call out to the remix init command to run the init script
-
-  runRemixCmd(
-    [
-      "init",
-      ctx.cwd,
-      ctx.showInstallOutput ? "--show-install-output" : "",
-    ].filter(Boolean)
-  );
+  try {
+    await runRemixCmd(
+      [
+        "init",
+        ctx.cwd,
+        ctx.showInstallOutput ? "--show-install-output" : "",
+      ].filter(Boolean)
+    );
+  } catch (err: unknown) {
+    console.error(`▲  Oh no! Template's remix.init script failed`);
+    if (err instanceof Error) {
+      err.message = `▲  Oh no! Template's remix.init script failed`;
+    }
+    throw err;
+  }
 
   if (ctx.git) {
     await loadingIndicator({
