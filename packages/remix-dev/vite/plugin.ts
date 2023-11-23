@@ -220,21 +220,11 @@ const getRouteModuleExports = async (
   let routePath = path.join(pluginConfig.appDirectory, routeFile);
   let url = resolveFileUrl(pluginConfig, routePath);
 
-  let transformed = await viteChildCompiler.transformRequest(url, {
-    ssr: true,
-  });
+  let transformed = await viteChildCompiler.transformRequest(url);
   invariant(transformed, "Failed to transform: " + routeFile);
-  return extractViteSsrExports(transformed.code);
-};
-
-// either extract exports out of vite's ssrTransform or
-// use `experimental.skipSsrTransform` to disable ssrTransform and manually extract via e
-// https://github.com/vitejs/vite/discussions/13812
-const viteSsrExrportsRegExp =
-  /Object\.defineProperty\(__vite_ssr_exports__,\s*"(\w+)"/g;
-
-const extractViteSsrExports = (code: string): string[] => {
-  return [...code.matchAll(viteSsrExrportsRegExp)].map((m) => m[1]);
+  let [, exports] = esModuleLexer(transformed.code);
+  let exportNames = exports.map((e) => e.n);
+  return exportNames;
 };
 
 const showUnstableWarning = () => {
@@ -643,6 +633,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                   plugin !== null &&
                   "name" in plugin &&
                   plugin.name !== "remix" &&
+                  plugin.name !== "remix-react-refresh-babel" &&
+                  plugin.name !== "remix-remove-server-exports" &&
                   plugin.name !== "remix-hmr-updates"
               ),
           ],
