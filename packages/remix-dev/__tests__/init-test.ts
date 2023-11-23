@@ -174,12 +174,6 @@ describe("the init command", () => {
   });
 
   it("succeeds for remix.init defined as an ESM module", async () => {
-    // if we keep the mock implementation of execSync for this test
-    // it hides the failure case
-    let cp = jest.requireActual(
-      "child_process"
-    ) as typeof import("child_process");
-    
     let projectDir = await getProjectDir("remix-init-manual-esm");
 
     fse.copySync(
@@ -189,7 +183,8 @@ describe("the init command", () => {
     process.chdir(projectDir);
 
     // test passes for conditions where it should fail if
-    // we only use run(["init"]) here
+    // we only use run(["init"]) here, so we instead simulate
+    // running the 'remix init' CLI command
     execRemixInitInProject(projectDir);
 
     expect(output).toBe("");
