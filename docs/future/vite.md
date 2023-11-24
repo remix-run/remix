@@ -583,6 +583,48 @@ If you run into browser errors in development that reference server-only code, b
 
 At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but the mental model is simpler: `.server` is for server-only code, everything else could be on both the client and the server.
 
+#### Plugin usage outside of Vite (e.g. Vitest, Storybook)
+
+Remix Vite plugin is intended to be used only with Vite to extend a development server and build a production app.
+Other tools which works on top of Vite (e.g. Vitest, Storybook) also make use of the same configuration file `vite.config.ts`.
+However, Remix Vite plugin is not intended to function nor required for such use cases,
+and thus it's recommended to exclude the plugin when used with other tools.
+
+For Vitest,
+
+```ts filename=vite.config.ts lines=[]
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig, loadEnv } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+
+export default defineConfig({
+  plugins: [
+    !process.env.VITEST && remix(),
+    tsconfigPaths(),
+  ],
+  test: {
+    environment: "happy-dom",
+    // Additionally, this is to load ".env.test" during vitest
+    env: loadEnv("test", process.cwd(), ""),
+  },
+});
+```
+
+For Storybook,
+
+```ts filename=vite.config.ts lines=[]
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+
+export default defineConfig({
+  plugins: [
+    !process.argv[1]?.includes('storybook') && remix(),
+    tsconfigPaths(),
+  ],
+});
+```
+
 ## Acknowledgements
 
 Vite is an amazing project, and we're grateful to the Vite team for their work.
