@@ -418,7 +418,7 @@ test.describe("Vite dev", () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test("server error stacktrace", async ({ page }) => {
+  test("request errors map to original source code", async ({ page }) => {
     let pageErrors: unknown[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
 
