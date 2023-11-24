@@ -69,7 +69,8 @@ test.describe("Vite CSS dev (Express server)", () => {
               express.static("build/client/assets", { immutable: true, maxAge: "1y" })
             );
           }
-          app.use(express.static("build/client", { maxAge: "1h" }));          
+          app.use(express.static("build/client", { maxAge: "1h" }));
+
           app.all(
             "*",
             createRequestHandler({
