@@ -260,6 +260,14 @@ test.describe("Vite dev", () => {
             );
           }
         `,
+        "app/routes/server-build.tsx": js`
+          import { json } from "@remix-run/server-runtime";
+
+          export const loader = async () => {
+            const build = await import("@remix-run/dev/server-build");
+            return json(build);
+          }
+        `,
       },
     });
 
@@ -488,6 +496,18 @@ test.describe("Vite dev", () => {
     );
 
     expect(pageErrors).toEqual([]);
+  });
+
+  test("access server build", async ({ request }) => {
+    let res = await request.get(`http://localhost:${devPort}/server-build`);
+    expect(res.status()).toBe(200);
+    let build = await res.json();
+    expect(build).toMatchObject({
+      routes: {
+        root: { path: "" },
+        "routes/server-build": { path: "server-build" },
+      },
+    });
   });
 });
 
