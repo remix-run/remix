@@ -30,6 +30,7 @@ import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
 import { removeExports } from "./remove-exports";
 import { replaceImportSpecifier } from "./replace-import-specifier";
+import { serverBuildVirtualModule } from "../compiler/server/virtualModules";
 
 // We reassign the "vite" variable from a dynamic import of Vite's ESM build
 // when the Vite plugin's config hook is executed
@@ -88,7 +89,7 @@ type ResolvedRemixVitePluginConfig = Pick<
   | "serverModuleFormat"
 >;
 
-let serverEntryId = VirtualModule.id("server-entry");
+let serverEntryId = serverBuildVirtualModule.id;
 let serverManifestId = VirtualModule.id("server-manifest");
 let browserManifestId = VirtualModule.id("browser-manifest");
 let remixReactProxyId = VirtualModule.id("remix-react-proxy");
@@ -525,6 +526,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               // mismatching Remix routers cause `Error: You must render this element inside a <Remix> element`.
               "@remix-run/react",
             ],
+            // exclude virtual modules (e.g. @remix-run/dev/server-build) from optimization
+            // to ensure they are processed via custom transform of remix plugin
+            exclude: ["@remix-run/dev"],
+          },
+          ssr: {
+            noExternal: ["@remix-run/dev"],
           },
           esbuild: {
             jsx: "automatic",
@@ -839,11 +846,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       name: "remix-virtual-modules",
       enforce: "pre",
       resolveId(id) {
+        if (id === serverBuildVirtualModule.id) return id;
         if (vmods.includes(id)) return VirtualModule.resolve(id);
       },
       async load(id) {
         switch (id) {
-          case VirtualModule.resolve(serverEntryId): {
+          case serverBuildVirtualModule.id: {
             return await getServerEntry();
           }
           case VirtualModule.resolve(serverManifestId): {
