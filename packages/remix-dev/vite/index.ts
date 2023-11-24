@@ -4,7 +4,7 @@
 import type { ViteDevServer } from "vite";
 
 import type { RemixVitePlugin } from "./plugin";
-import { id } from "./vmod";
+import { serverBuildVirtualModule } from "../compiler/server/virtualModules";
 
 export const unstable_vitePlugin: RemixVitePlugin = (...args) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -22,5 +22,5 @@ export const unstable_createViteServer = async () => {
 };
 
 export const unstable_loadViteServerBuild = async (vite: ViteDevServer) => {
-  return vite.ssrLoadModule(id("server-entry"));
+  return vite.ssrLoadModule(serverBuildVirtualModule.id);
 };
