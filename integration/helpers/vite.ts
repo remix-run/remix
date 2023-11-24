@@ -29,10 +29,7 @@ export const basicTemplate = (args: {
     });
   `,
   "server.mjs": js`
-    import {
-      unstable_createViteServer,
-      unstable_loadViteServerBuild,
-    } from "@remix-run/dev";
+    import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
     import { createRequestHandler } from "@remix-run/express";
     import { installGlobals } from "@remix-run/node";
     import express from "express";
@@ -42,7 +39,11 @@ export const basicTemplate = (args: {
     let vite =
       process.env.NODE_ENV === "production"
         ? undefined
-        : await unstable_createViteServer();
+        : await import("vite").then(({ createServer }) =>
+            createServer({
+              server: { middlewareMode: true },
+            })
+          );
 
     const app = express();
 
@@ -50,18 +51,18 @@ export const basicTemplate = (args: {
       app.use(vite.middlewares);
     } else {
       app.use(
-        "/build",
-        express.static("public/build", { immutable: true, maxAge: "1y" })
+        "/assets",
+        express.static("build/client/assets", { immutable: true, maxAge: "1y" })
       );
     }
-    app.use(express.static("public", { maxAge: "1h" }));
+    app.use(express.static("build/client", { maxAge: "1h" }));
 
     app.all(
       "*",
       createRequestHandler({
         build: vite
-          ? () => unstable_loadViteServerBuild(vite)
-          : await import("./build/index.js"),
+          ? () => vite.ssrLoadModule(unstable_viteServerBuildModuleId)
+          : await import("./build/server/index.js"),
         ${args.requestHandlerArgs ?? ""}
       })
     );
