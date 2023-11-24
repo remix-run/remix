@@ -78,7 +78,7 @@ test.describe("Vite CSS dev (Express server)", () => {
                 : await import("./build/server/index.js"),
             })
           );
-          
+
           const port = ${port};
           app.listen(port, () => console.log('http://localhost:' + port));
         `,
