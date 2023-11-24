@@ -95,10 +95,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     let matches = matchServerRoutes(routes, url.pathname);
     let handleError = (error: unknown) => {
-      let devServerHooks = getDevServerHooks();
-      if (devServerHooks && error instanceof Error) {
-        devServerHooks.fixStacktrace(error);
+      if (mode === ServerMode.Development) {
+        getDevServerHooks()?.processRequestError?.(error);
       }
+
       errorHandler(error, {
         context: loadContext,
         params: matches && matches.length > 0 ? matches[0].params : {},
@@ -142,7 +142,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     } else {
       let criticalCss =
         mode === ServerMode.Development
-          ? await getDevServerHooks()?.getCriticalCss(_build, url.pathname)
+          ? await getDevServerHooks()?.getCriticalCss?.(_build, url.pathname)
           : undefined;
 
       response = await handleDocumentRequestRR(
