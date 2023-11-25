@@ -585,10 +585,10 @@ At first, this might seem like a compromise for DX when compared to the existing
 
 #### Plugin usage outside of Vite (e.g. Vitest, Storybook)
 
-Remix Vite plugin is intended to be used only with Vite to extend a development server and build a production app.
-Other tools which work on top of Vite (e.g. Vitest, Storybook) also make use of the same configuration file `vite.config.ts`.
-However, Remix Vite plugin is not intended to function nor required for such use cases,
-and thus it's recommended to exclude the plugin when used with other tools.
+Remix Vite plugin is intended to be used only with Vite to extend a development server and build a production application.
+While there are other tools (e.g. Vitest, Storybook) which work on top of Vite and make use of the same configuration file `vite.config.ts`,
+Remix Vite plugin is not intended to function nor required for such use cases.
+So we currently recommend to exclude the plugin when used with other tools.
 
 For Vitest,
 
@@ -619,7 +619,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   plugins: [
-    !process.argv[1]?.includes('storybook') && remix(),
+    !process.argv[1]?.includes("storybook") && remix(),
     tsconfigPaths(),
   ],
 });
