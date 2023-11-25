@@ -44,13 +44,14 @@ function createRequest(req: IncomingMessage, res: ServerResponse): Request {
   invariant(req.url, 'Expected "req.url" to be defined');
   let url = new URL(req.url, origin);
 
-  let controller = new AbortController();
-  res.on("close", () => controller.abort());
+  // https://github.com/hattipjs/hattip/blob/37f824115c85ef96f6e2b28cfe289f882f225c73/packages/adapter/adapter-node/src/request.ts#L112-L118
+  // https://github.com/honojs/node-server/blob/5b0c13ba1f0a0ffbf3b21740bcb1d67c90d9e405/src/listener.ts#L25-L28
+  // let controller = new AbortController();
+  // res.on("close", () => controller.abort());
 
   let init: RequestInit = {
     method: req.method,
     headers: createHeaders(req.headers),
-    signal: controller.signal,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
