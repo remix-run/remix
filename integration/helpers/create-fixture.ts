@@ -8,9 +8,10 @@ import dedent from "dedent";
 import resolveBin from "resolve-bin";
 import stripIndent from "strip-indent";
 import serializeJavaScript from "serialize-javascript";
-import { sync as spawnSync, spawn } from "cross-spawn";
+import { spawn } from "cross-spawn";
 import type { JsonObject } from "type-fest";
 import type { AppConfig } from "@remix-run/dev";
+import execa from "execa";
 
 import { ServerMode } from "../../build/node_modules/@remix-run/server-runtime/dist/mode.js";
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime/dist/index.js";
@@ -284,7 +285,7 @@ export async function createFixtureProject(
       at the same time, unless the \`remix.config.js\` file contains a reference
       to the \`global.INJECTED_FIXTURE_REMIX_CONFIG\` placeholder so it can
       accept the injected config values. Either move all config values into
-      \`remix.config.js\` file, or spread the  injected config, 
+      \`remix.config.js\` file, or spread the  injected config,
       e.g. \`export default { ...global.INJECTED_FIXTURE_REMIX_CONFIG }\`.
     `);
   }
@@ -294,12 +295,12 @@ export async function createFixtureProject(
   );
   fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
 
-  build(projectDir, init.buildStdio, init.sourcemap, mode, compiler);
+  await build(projectDir, init.buildStdio, init.sourcemap, mode, compiler);
 
   return projectDir;
 }
 
-function build(
+async function build(
   projectDir: string,
   buildStdio?: Writable,
   sourcemap?: boolean,
@@ -323,8 +324,8 @@ function build(
         ]
       : [[remixBin, "build", ...(sourcemap ? ["--sourcemap"] : [])]];
 
-  commands.forEach((buildArgs) => {
-    let buildSpawn = spawnSync("node", buildArgs, {
+  for (let buildArgs of commands) {
+    let proc = await execa("node", buildArgs, {
       cwd: projectDir,
       env: {
         ...process.env,
@@ -335,23 +336,23 @@ function build(
     // These logs are helpful for debugging. Remove comments if needed.
     // console.log("spawning node " + buildArgs.join(" ") + ":\n");
     // console.log("  STDOUT:");
-    // console.log("  " + buildSpawn.stdout.toString("utf-8"));
+    // console.log("  " + proc.stdout);
     // console.log("  STDERR:");
-    // console.log("  " + buildSpawn.stderr.toString("utf-8"));
+    // console.log("  " + proc.stderr);
 
     if (buildStdio) {
-      buildStdio.write(buildSpawn.stdout.toString("utf-8"));
-      buildStdio.write(buildSpawn.stderr.toString("utf-8"));
+      buildStdio.write(proc.stdout);
+      buildStdio.write(proc.stderr);
       buildStdio.end();
     }
 
-    if (buildSpawn.error || buildSpawn.status) {
-      console.error(buildSpawn.stderr.toString("utf-8"));
-      throw (
-        buildSpawn.error || new Error(`Build failed, check the output above`)
+    if (proc.exitCode) {
+      console.error(proc.stderr);
+      throw new Error(
+        `Build failed, check the output above (exitCode: ${proc.exitCode})`
       );
     }
-  });
+  }
 }
 
 async function writeTestFiles(init: FixtureInit, dir: string) {
