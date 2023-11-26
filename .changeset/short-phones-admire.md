@@ -2,4 +2,6 @@
 "@remix-run/dev": patch
 ---
 
-Improve performance of Vite child compiler by disabling `server.preTransformRequests`
+Improve Vite plugin performance
+- Parallelize detection of route module exports
+- Disable `server.preTransformRequests` in Vite child compiler since it's only used to process route modules
