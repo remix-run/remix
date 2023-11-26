@@ -163,18 +163,15 @@ You'll also need to update to the new build output paths, which are `build/serve
 
 #### Migrating from a custom server
 
-If you were using a custom server in development, you'll need to update your server code to reference the new build output paths, which are `build/server` for the server build and `build/client` for client assets.
-
-You'll also need to edit your custom server to use Vite's `connect` middleware.
+If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
 This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
 
-Remix exposes APIs for exactly this purpose:
+You'll also need to update your server code to reference the new build output paths, which are `build/server` for the server build and `build/client` for client assets.
+
+Remix exposes the server build's module ID so that it can be loaded dynamically in your request handler during development via `vite.ssrLoadModule`.
 
 ```ts
-import {
-  unstable_createViteServer, // provides middleware for handling asset requests
-  unstable_loadViteServerBuild, // handles initial render requests
-} from "@remix-run/dev";
+import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
 ```
 
 For example, if you were using Express, here's how you could do it.
@@ -182,10 +179,7 @@ For example, if you were using Express, here's how you could do it.
 👉 **Update your `server.mjs` file**
 
 ```ts filename=server.mjs lines=[1-4,11-14,18-21,29,36-38]
-import {
-  unstable_createViteServer,
-  unstable_loadViteServerBuild,
-} from "@remix-run/dev";
+import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
 import { createRequestHandler } from "@remix-run/express";
 import { installGlobals } from "@remix-run/node";
 import express from "express";
@@ -195,7 +189,13 @@ installGlobals();
 const vite =
   process.env.NODE_ENV === "production"
     ? undefined
-    : await unstable_createViteServer();
+    : await import("vite").then(({ createServer }) =>
+        createServer({
+          server: {
+            middlewareMode: true,
+          },
+        })
+      );
 
 const app = express();
 
@@ -218,7 +218,10 @@ app.all(
   "*",
   createRequestHandler({
     build: vite
-      ? () => unstable_loadViteServerBuild(vite)
+      ? () =>
+          vite.ssrLoadModule(
+            unstable_viteServerBuildModuleId
+          )
       : await import("./build/server/index.js"),
   })
 );
