@@ -1679,11 +1679,6 @@
   resolved "https://registry.npmjs.org/@extra-number/significant-digits/-/significant-digits-1.3.9.tgz"
   integrity sha512-E5PY/bCwrNqEHh4QS6AQBinLZ+sxM1lT8tsSVYk8VwhWIPp6fCU/BMRVq0V8iJ8LwS3FHmaA4vUzb78s4BIIyA==
 
-"@fastify/busboy@^2.0.0":
-  version "2.0.0"
-  resolved "https://registry.npmjs.org/@fastify/busboy/-/busboy-2.0.0.tgz#f22824caff3ae506b18207bad4126dbc6ccdb6b8"
-  integrity sha512-JUFJad5lv7jxj926GPgymrWQxxjPYuJNiNjNMzqT+HiuP6Vl3dk5xzG+8sTX96np0ZAluvaMzPsjhHZ5rNuNQQ==
-
 "@hapi/hoek@^9.0.0":
   version "9.3.0"
   resolved "https://registry.npmjs.org/@hapi/hoek/-/hoek-9.3.0.tgz#8368869dcb735be2e7f5cb7647de78e167a251fb"
@@ -10381,11 +10376,6 @@ parse-ms@^2.1.0:
   resolved "https://registry.npmjs.org/parse-ms/-/parse-ms-2.1.0.tgz"
   integrity sha512-kHt7kzLoS9VBZfUsiKjv43mr91ea+U05EyKkEtqp7vNbHxmaVuEqN7XxeEVnGrMtYOAxGrDElSi96K7EgO1zCA==
 
-parse-multipart-data@^1.5.0:
-  version "1.5.0"
-  resolved "https://registry.npmjs.org/parse-multipart-data/-/parse-multipart-data-1.5.0.tgz#ab894cc6c40229d0a2042500e120df7562d94b87"
-  integrity sha512-ck5zaMF0ydjGfejNMnlo5YU2oJ+pT+80Jb1y4ybanT27j+zbVP/jkYmCrUGsEln0Ox/hZmuvgy8Ra7AxbXP2Mw==
-
 parse5-htmlparser2-tree-adapter@^7.0.0:
   version "7.0.0"
   resolved "https://registry.npmjs.org/parse5-htmlparser2-tree-adapter/-/parse5-htmlparser2-tree-adapter-7.0.0.tgz#23c2cc233bcf09bb7beba8b8a69d46b08c62c2f1"
@@ -12729,13 +12719,6 @@ unbox-primitive@^1.0.2:
     has-bigints "^1.0.2"
     has-symbols "^1.0.3"
     which-boxed-primitive "^1.0.2"
-
-undici@^5.22.1:
-  version "5.25.4"
-  resolved "https://registry.npmjs.org/undici/-/undici-5.25.4.tgz#7d8ef81d94f84cd384986271e5e5599b6dff4296"
-  integrity sha512-450yJxT29qKMf3aoudzFpIciqpx6Pji3hEWaXqXmanbXF58LTAGCKxcJjxMXWu3iG+Mudgo3ZUfDB6YDFd/dAw==
-  dependencies:
-    "@fastify/busboy" "^2.0.0"
 
 unicode-canonical-property-names-ecmascript@^2.0.0:
   version "2.0.0"
