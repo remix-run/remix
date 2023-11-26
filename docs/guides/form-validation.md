@@ -35,15 +35,17 @@ export default function Signup() {
 In this step, we'll define a server `action` in the same file as our `Signup` component. Note that the aim here is to provide a broad overview of the mechanics involved rather than digging deep into form validation rules or error object structures. We'll use rudimentary checks for the email and password to demonstrate the core concepts.
 
 ```tsx filename=app/routes/signup.tsx
-import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
-import { json } from "@remix-run/node"; // or cloudflare/deno
-import { Form, redirect } from "@remix-run/react";
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
+import { Form } from "@remix-run/react";
 
 export default function Signup() {
   // omitted for brevity
 }
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const formData = await request.formData();
   const email = String(formData.get("email"));
   const password = String(formData.get("password"));
@@ -74,29 +76,27 @@ If any validation errors are found, they are returned from the `action` to the c
 
 Finally, we'll modify the `Signup` component to display validation errors, if any. We'll use [`useActionData`][use_action_data] to access and display these errors.
 
-```tsx filename=app/routes/signup.tsx lines=[6,10,16,21]
-import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
-import { json } from "@remix-run/node"; // or cloudflare/deno
-import {
-  Form,
-  redirect,
-  useActionData,
-} from "@remix-run/react";
+```tsx filename=app/routes/signup.tsx lines=[3,6,12-14,19-21]
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
+import { Form, useActionData } from "@remix-run/react";
 
 export default function Signup() {
-  const { errors } = useActionData<typeof useAction>();
+  const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
       <p>
         <input type="email" name="email" />
-        {errors?.email ? <em>{errors.email}</em> : null}
+        {actionData?.errors?.email ? (
+          <em>{actionData?.errors.email}</em>
+        ) : null}
       </p>
 
       <p>
         <input type="password" name="password" />
-        {errors?.password ? (
-          <em>{errors.password}</em>
+        {actionData?.errors?.password ? (
+          <em>{actionData?.errors.password}</em>
         ) : null}
       </p>
 
@@ -105,7 +105,9 @@ export default function Signup() {
   );
 }
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   // omitted for brevity
 }
 ```

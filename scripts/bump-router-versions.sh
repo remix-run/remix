@@ -23,13 +23,13 @@ fi
 
 set -x
 
-cd packages/remix-server-runtime
+cd packages/remix-dev
 yarn add -E @remix-run/router@${ROUTER_VERSION}
 cd ../..
 
-# cd packages/remix-express
-# yarn add -E @remix-run/router@${ROUTER_VERSION}
-# cd ../..
+cd packages/remix-server-runtime
+yarn add -E @remix-run/router@${ROUTER_VERSION}
+cd ../..
 
 cd packages/remix-react
 yarn add -E @remix-run/router@${ROUTER_VERSION} react-router-dom@${RR_VERSION}
@@ -38,5 +38,8 @@ cd ../..
 cd packages/remix-testing
 yarn add -E @remix-run/router@${ROUTER_VERSION} react-router-dom@${RR_VERSION}
 cd ../..
+
+# Because deplicates...
+npx yarn-deduplicate && rm -rf ./node_modules && yarn
 
 set +x

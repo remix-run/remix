@@ -30,7 +30,7 @@ export function RemixServer({
     url = new URL(url);
   }
 
-  let { manifest, routeModules, serverHandoffString } = context;
+  let { manifest, routeModules, criticalCss, serverHandoffString } = context;
   let routes = createServerRoutes(
     manifest.routes,
     routeModules,
@@ -43,6 +43,7 @@ export function RemixServer({
       value={{
         manifest,
         routeModules,
+        criticalCss,
         serverHandoffString,
         future: context.future,
         serializeError: context.serializeError,

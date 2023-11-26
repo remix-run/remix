@@ -1,10 +1,13 @@
 ---
 title: useOutlet
-toc: false
 ---
 
 # `useOutlet`
 
-<docs-info>This hook is simply a re-export of [React Router's `useOutlet`][rr-useoutlet].</docs-info>
+Returns the element for the child route at this level of the route hierarchy. This hook is used internally by [`<Outlet>`][outlet-component] to render child routes.
 
-[rr-useoutlet]: https://reactrouter.com/hooks/use-outlet
+```tsx
+import { useOutlet } from "@remix-run/react";
+```
+
+[outlet-component]: ../components/outlet

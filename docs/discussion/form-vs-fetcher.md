@@ -43,7 +43,7 @@ These actions are generally more subtle and don't require a context switch for t
 
 - **Updating a Single Field**: Maybe a user wants to change the name of an item in a list or update a specific property of a record. This action is minor and doesn't necessitate a new page or URL.
 
-- **Deleting a Record from a List**: In a list view, if a user deletes an item, they likely expect to remain on the list view, with that item simply disappearing.
+- **Deleting a Record from a List**: In a list view, if a user deletes an item, they likely expect to remain on the list view, with that item no longer in the list.
 
 - **Creating a Record in a List View**: When adding a new item to a list, it often makes sense for the user to remain in that context, seeing their new item added to the list without a full page transition.
 
@@ -67,8 +67,8 @@ As you can see, the two sets of APIs have a lot of similarities:
 
 ### Creating a New Record
 
-```tsx filename=app/routes/recipes/new.tsx lines=[16,20-21,26]
-import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/recipes/new.tsx lines=[18,22-23,28]
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
   Form,
@@ -76,7 +76,9 @@ import {
   useNavigation,
 } from "@remix-run/react";
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const formData = await request.formData();
   const errors = await validateRecipeFormData(formData);
   if (errors) {
@@ -135,11 +137,13 @@ Now consider we're looking at a list of recipes that have delete buttons on each
 First consider the basic route setup to get a list of recipes on the page:
 
 ```tsx filename=app/routes/recipes/_index.tsx
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   return json({
     recipes: await db.recipes.findAll({ limit: 30 }),
   });
@@ -159,8 +163,10 @@ export function Recipes() {
 
 Now we'll look at the action that deletes a recipe and the component that renders each recipe in the list.
 
-```tsx filename=app/routes/recipes/_index.tsx lines=[5,11,17]
-export async function action({ request }: ActionArgs) {
+```tsx filename=app/routes/recipes/_index.tsx lines=[7,13,19]
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const formData = await request.formData();
   const id = formData.get("id");
   await db.recipes.delete(id);
@@ -222,7 +228,7 @@ function useMarkAsRead({ articleId, userId }) {
 
 Anytime you show the user avatar, you could put a hover effect that fetches data from a loader and displays it in a popup.
 
-```tsx filename=app/routes/user.$id.details.tsx
+```tsx filename=app/routes/users.$id.details.tsx
 export async function loader({
   params,
 }: LoaderFunctionArgs) {

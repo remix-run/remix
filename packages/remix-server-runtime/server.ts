@@ -12,7 +12,7 @@ import {
 } from "@remix-run/router";
 
 import type { AppLoadContext } from "./data";
-import type { ServerBuild } from "./build";
+import type { HandleErrorFunction, ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryRouteModules } from "./entry";
 import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
@@ -20,6 +20,7 @@ import { getDocumentHeadersRR } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import { matchServerRoutes } from "./routeMatching";
+import type { ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
@@ -27,6 +28,7 @@ import {
   isResponse,
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
+import { getDevServerHooks } from "./dev";
 
 export type RequestHandler = (
   request: Request,
@@ -34,14 +36,11 @@ export type RequestHandler = (
 ) => Promise<Response>;
 
 export type CreateRequestHandlerFunction = (
-  build: ServerBuild,
+  build: ServerBuild | (() => Promise<ServerBuild>),
   mode?: string
 ) => RequestHandler;
 
-export const createRequestHandler: CreateRequestHandlerFunction = (
-  build,
-  mode
-) => {
+function derive(build: ServerBuild, mode?: string) {
   let routes = createRoutes(build.routes);
   let dataRoutes = createStaticHandlerDataRoutes(build.routes, build.future);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
@@ -57,17 +56,55 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         );
       }
     });
+  return {
+    routes,
+    dataRoutes,
+    serverMode,
+    staticHandler,
+    errorHandler,
+  };
+}
+
+export const createRequestHandler: CreateRequestHandlerFunction = (
+  build,
+  mode
+) => {
+  let _build: ServerBuild;
+  let routes: ServerRoute[];
+  let serverMode: ServerMode;
+  let staticHandler: StaticHandler;
+  let errorHandler: HandleErrorFunction;
 
   return async function requestHandler(request, loadContext = {}) {
+    _build = typeof build === "function" ? await build() : build;
+    if (typeof build === "function") {
+      let derived = derive(_build, mode);
+      routes = derived.routes;
+      serverMode = derived.serverMode;
+      staticHandler = derived.staticHandler;
+      errorHandler = derived.errorHandler;
+    } else if (!routes || !serverMode || !staticHandler || !errorHandler) {
+      let derived = derive(_build, mode);
+      routes = derived.routes;
+      serverMode = derived.serverMode;
+      staticHandler = derived.staticHandler;
+      errorHandler = derived.errorHandler;
+    }
+
     let url = new URL(request.url);
 
     let matches = matchServerRoutes(routes, url.pathname);
-    let handleError = (error: unknown) =>
+    let handleError = (error: unknown) => {
+      if (mode === ServerMode.Development) {
+        getDevServerHooks()?.processRequestError?.(error);
+      }
+
       errorHandler(error, {
         context: loadContext,
         params: matches && matches.length > 0 ? matches[0].params : {},
         request,
       });
+    };
 
     let response: Response;
     if (url.searchParams.has("_data")) {
@@ -82,8 +119,8 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         handleError
       );
 
-      if (build.entry.module.handleDataRequest) {
-        response = await build.entry.module.handleDataRequest(response, {
+      if (_build.entry.module.handleDataRequest) {
+        response = await _build.entry.module.handleDataRequest(response, {
           context: loadContext,
           params: matches?.find((m) => m.route.id == routeId)?.params || {},
           request,
@@ -103,13 +140,19 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         handleError
       );
     } else {
+      let criticalCss =
+        mode === ServerMode.Development
+          ? await getDevServerHooks()?.getCriticalCss?.(_build, url.pathname)
+          : undefined;
+
       response = await handleDocumentRequestRR(
         serverMode,
-        build,
+        _build,
         staticHandler,
         request,
         loadContext,
-        handleError
+        handleError,
+        criticalCss
       );
     }
 
@@ -209,7 +252,8 @@ async function handleDocumentRequestRR(
   staticHandler: StaticHandler,
   request: Request,
   loadContext: AppLoadContext,
-  handleError: (err: unknown) => void
+  handleError: (err: unknown) => void,
+  criticalCss?: string
 ) {
   let context;
   try {
@@ -242,8 +286,10 @@ async function handleDocumentRequestRR(
     manifest: build.assets,
     routeModules: createEntryRouteModules(build.routes),
     staticHandlerContext: context,
+    criticalCss,
     serverHandoffString: createServerHandoffString({
       url: context.location.pathname,
+      criticalCss,
       state: {
         loaderData: context.loaderData,
         actionData: context.actionData,

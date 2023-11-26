@@ -18,6 +18,7 @@ declare global {
   var __remixContext: {
     url: string;
     state: HydrationState;
+    criticalCss?: string;
     future: FutureConfig;
     // The number of active deferred keys rendered on the server
     a?: number;
@@ -26,9 +27,11 @@ declare global {
       hmrRuntime?: string;
     };
   };
+  var __remixRouter: Router;
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
   var __remixRevalidation: number | undefined;
+  var __remixClearCriticalCss: () => void;
   var $RefreshRuntime$: {
     performReactRefresh: () => void;
   };
@@ -58,6 +61,10 @@ let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
   // in the console. The promise is never rejected.
   return undefined;
 });
+
+type CriticalCssReducer = () => typeof window.__remixContext.criticalCss;
+// The critical CSS can only be cleared, so the reducer always returns undefined
+let criticalCssReducer: CriticalCssReducer = () => undefined;
 
 if (import.meta && import.meta.hot) {
   import.meta.hot.accept(
@@ -207,14 +214,28 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       hydrationData,
       future: {
         v7_normalizeFormMethod: true,
+        v7_fetcherPersist: window.__remixContext.future.v3_fetcherPersist,
       },
     });
+    // @ts-ignore
+    router.createRoutesForHMR = createClientRoutesWithHMRRevalidationOptOut;
+    window.__remixRouter = router;
 
     // Notify that the router is ready for HMR
     if (hmrRouterReadyResolve) {
       hmrRouterReadyResolve(router);
     }
   }
+
+  // Critical CSS can become stale after code changes, e.g. styles might be
+  // removed from a component, but the styles will still be present in the
+  // server HTML. This allows our HMR logic to clear the critical CSS state.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  let [criticalCss, clearCriticalCss] = React.useReducer(
+    criticalCssReducer,
+    window.__remixContext.criticalCss
+  );
+  window.__remixClearCriticalCss = clearCriticalCss;
 
   // This is due to the shit circuit return above which is an exceptional
   // scenario which we can't hydrate anyway
@@ -240,6 +261,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         manifest: window.__remixManifest,
         routeModules: window.__remixRouteModules,
         future: window.__remixContext.future,
+        criticalCss,
       }}
     >
       <RemixErrorBoundary location={location}>

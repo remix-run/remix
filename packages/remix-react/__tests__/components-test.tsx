@@ -1,10 +1,13 @@
+import { createStaticHandler } from "@remix-run/router";
+import { act, fireEvent, render } from "@testing-library/react";
 import * as React from "react";
-import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { fireEvent, render, act } from "@testing-library/react";
+import { createMemoryRouter, Outlet, RouterProvider } from "react-router-dom";
 
+import { RemixBrowser } from "../browser";
 import type { LiveReload as ActualLiveReload } from "../components";
 import { Link, NavLink, RemixContext } from "../components";
-
+import invariant from "../invariant";
+import { RemixServer } from "../server";
 import "@testing-library/jest-dom/extend-expect";
 
 // TODO: Every time we touch LiveReload (without changing the API) these tests
@@ -198,4 +201,127 @@ describe("<Link />", () => {
 
 describe("<NavLink />", () => {
   itPrefetchesPageLinks(NavLink);
+});
+
+describe("<RemixServer>", () => {
+  it("handles empty default export objects from the compiler", async () => {
+    let staticHandlerContext = await createStaticHandler([{ path: "/" }]).query(
+      new Request("http://localhost/")
+    );
+    invariant(
+      !(staticHandlerContext instanceof Response),
+      "Expected a context"
+    );
+
+    let context = {
+      manifest: {
+        routes: {
+          root: {
+            hasLoader: false,
+            hasAction: false,
+            hasErrorBoundary: false,
+            id: "root",
+            module: "root.js",
+            path: "/",
+          },
+          empty: {
+            hasLoader: false,
+            hasAction: false,
+            hasErrorBoundary: false,
+            id: "empty",
+            module: "empty.js",
+            index: true,
+            parentId: "root",
+          },
+        },
+        entry: { imports: [], module: "" },
+        url: "",
+        version: "",
+      },
+      routeModules: {
+        root: {
+          default: () => {
+            return (
+              <>
+                <h1>Root</h1>
+                <Outlet />
+              </>
+            );
+          },
+        },
+        empty: { default: {} },
+      },
+      staticHandlerContext,
+      future: {},
+    };
+
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    jest.spyOn(console, "error");
+
+    let { container } = render(
+      <RemixServer context={context} url="http://localhost/" />
+    );
+
+    expect(console.warn).toHaveBeenCalledWith(
+      'Matched leaf route at location "/" does not have an element or Component. This means it will render an <Outlet /> with a null value by default resulting in an "empty" page.'
+    );
+    expect(console.error).not.toHaveBeenCalled();
+    expect(container.innerHTML).toMatch("<h1>Root</h1>");
+  });
+});
+
+describe("<RemixBrowser>", () => {
+  it("handles empty default export objects from the compiler", () => {
+    window.__remixContext = {
+      url: "/",
+      state: {
+        loaderData: {},
+      },
+      future: {},
+    };
+    window.__remixRouteModules = {
+      root: {
+        default: () => {
+          return (
+            <>
+              <h1>Root</h1>
+              <Outlet />
+            </>
+          );
+        },
+      },
+      empty: { default: {} },
+    };
+    window.__remixManifest = {
+      routes: {
+        root: {
+          hasLoader: false,
+          hasAction: false,
+          hasErrorBoundary: false,
+          id: "root",
+          module: "root.js",
+          path: "/",
+        },
+        empty: {
+          hasLoader: false,
+          hasAction: false,
+          hasErrorBoundary: false,
+          id: "empty",
+          module: "empty.js",
+          index: true,
+          parentId: "root",
+        },
+      },
+      entry: { imports: [], module: "" },
+      url: "",
+      version: "",
+    };
+
+    jest.spyOn(console, "error");
+
+    let { container } = render(<RemixBrowser />);
+
+    expect(console.error).not.toHaveBeenCalled();
+    expect(container.innerHTML).toMatch("<h1>Root</h1>");
+  });
 });

@@ -5,6 +5,7 @@ import fse from "fs-extra";
 import express from "express";
 import getPort from "get-port";
 import dedent from "dedent";
+import resolveBin from "resolve-bin";
 import stripIndent from "strip-indent";
 import serializeJavaScript from "serialize-javascript";
 import { sync as spawnSync, spawn } from "cross-spawn";
@@ -21,6 +22,8 @@ import { installGlobals } from "../../build/node_modules/@remix-run/node/dist/in
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
+const viteBin = resolveBin.sync("vite");
+
 export interface FixtureInit {
   buildStdio?: Writable;
   sourcemap?: boolean;
@@ -28,6 +31,7 @@ export interface FixtureInit {
   template?: "cf-template" | "deno-template" | "node-template";
   config?: Partial<AppConfig>;
   useRemixServe?: boolean;
+  compiler?: "remix" | "vite";
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -42,9 +46,13 @@ export function json(value: JsonObject) {
 
 export async function createFixture(init: FixtureInit, mode?: ServerMode) {
   installGlobals();
+  let compiler = init.compiler ?? "remix";
   let projectDir = await createFixtureProject(init, mode);
   let buildPath = url.pathToFileURL(
-    path.join(projectDir, "build/index.js")
+    path.join(
+      projectDir,
+      compiler === "vite" ? "build/server/index.js" : "build/index.js"
+    )
   ).href;
   let app: ServerBuild = await import(buildPath);
   let handler = createRequestHandler(app, mode || ServerMode.Production);
@@ -94,6 +102,7 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
   return {
     projectDir,
     build: app,
+    compiler,
     requestDocument,
     requestData,
     postDocument,
@@ -114,7 +123,12 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
         let nodebin = process.argv[0];
         let serveProcess = spawn(
           nodebin,
-          ["node_modules/@remix-run/serve/dist/cli.js", "build/index.js"],
+          [
+            "node_modules/@remix-run/serve/dist/cli.js",
+            fixture.compiler === "vite"
+              ? "server/build/index.js"
+              : "build/index.js",
+          ],
           {
             env: {
               NODE_ENV: mode || "production",
@@ -167,7 +181,14 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
     return new Promise(async (accept) => {
       let port = await getPort();
       let app = express();
-      app.use(express.static(path.join(fixture.projectDir, "public")));
+      app.use(
+        express.static(
+          path.join(
+            fixture.projectDir,
+            fixture.compiler === "vite" ? "build/client" : "public"
+          )
+        )
+      );
 
       app.all(
         "*",
@@ -215,6 +236,7 @@ export async function createFixtureProject(
   let integrationTemplateDir = path.resolve(__dirname, template);
   let projectName = `remix-${template}-${Math.random().toString(32).slice(2)}`;
   let projectDir = path.join(TMP_DIR, projectName);
+  let compiler = init.compiler ?? "remix";
 
   await fse.ensureDir(projectDir);
   await fse.copy(integrationTemplateDir, projectDir);
@@ -272,7 +294,7 @@ export async function createFixtureProject(
   );
   fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
 
-  build(projectDir, init.buildStdio, init.sourcemap, mode);
+  build(projectDir, init.buildStdio, init.sourcemap, mode, compiler);
 
   return projectDir;
 }
@@ -281,7 +303,8 @@ function build(
   projectDir: string,
   buildStdio?: Writable,
   sourcemap?: boolean,
-  mode?: ServerMode
+  mode?: ServerMode,
+  compiler?: "remix" | "vite"
 ) {
   // We have a "require" instead of a dynamic import in readConfig gated
   // behind mode === ServerMode.Test to make jest happy, but that doesn't
@@ -289,36 +312,46 @@ function build(
   // force the mode to be production for ESM configs when runtime mode is
   // tested.
   mode = mode === ServerMode.Test ? ServerMode.Production : mode;
-  let buildArgs = ["node_modules/@remix-run/dev/dist/cli.js", "build"];
-  if (sourcemap) {
-    buildArgs.push("--sourcemap");
-  }
 
-  let buildSpawn = spawnSync("node", buildArgs, {
-    cwd: projectDir,
-    env: {
-      ...process.env,
-      NODE_ENV: mode || ServerMode.Production,
-    },
+  let remixBin = "node_modules/@remix-run/dev/dist/cli.js";
+
+  let commands: string[][] =
+    compiler === "vite"
+      ? [
+          [viteBin, "build"],
+          [viteBin, "build", "--ssr"],
+        ]
+      : [[remixBin, "build", ...(sourcemap ? ["--sourcemap"] : [])]];
+
+  commands.forEach((buildArgs) => {
+    let buildSpawn = spawnSync("node", buildArgs, {
+      cwd: projectDir,
+      env: {
+        ...process.env,
+        NODE_ENV: mode || ServerMode.Production,
+      },
+    });
+
+    // These logs are helpful for debugging. Remove comments if needed.
+    // console.log("spawning node " + buildArgs.join(" ") + ":\n");
+    // console.log("  STDOUT:");
+    // console.log("  " + buildSpawn.stdout.toString("utf-8"));
+    // console.log("  STDERR:");
+    // console.log("  " + buildSpawn.stderr.toString("utf-8"));
+
+    if (buildStdio) {
+      buildStdio.write(buildSpawn.stdout.toString("utf-8"));
+      buildStdio.write(buildSpawn.stderr.toString("utf-8"));
+      buildStdio.end();
+    }
+
+    if (buildSpawn.error || buildSpawn.status) {
+      console.error(buildSpawn.stderr.toString("utf-8"));
+      throw (
+        buildSpawn.error || new Error(`Build failed, check the output above`)
+      );
+    }
   });
-
-  // These logs are helpful for debugging. Remove comments if needed.
-  // console.log("spawning @remix-run/dev/cli.js `build`:\n");
-  // console.log("  STDOUT:");
-  // console.log("  " + buildSpawn.stdout.toString("utf-8"));
-  // console.log("  STDERR:");
-  // console.log("  " + buildSpawn.stderr.toString("utf-8"));
-
-  if (buildStdio) {
-    buildStdio.write(buildSpawn.stdout.toString("utf-8"));
-    buildStdio.write(buildSpawn.stderr.toString("utf-8"));
-    buildStdio.end();
-  }
-
-  if (buildSpawn.error || buildSpawn.status) {
-    console.error(buildSpawn.stderr.toString("utf-8"));
-    throw buildSpawn.error || new Error(`Build failed, check the output above`);
-  }
 }
 
 async function writeTestFiles(init: FixtureInit, dir: string) {

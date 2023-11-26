@@ -1,5 +1,33 @@
 # `@remix-run/server-runtime`
 
+## 2.3.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.3.1.
+
+## 2.3.0
+
+### Minor Changes
+
+- Updated `cookie` dependency from `0.4.1` to [`0.5.0`](https://github.com/jshttp/cookie/blob/v0.5.0/HISTORY.md#050--2022-04-11) to inherit support for `Priority` attribute in Chrome ([#6770](https://github.com/remix-run/remix/pull/6770))
+
+## 2.2.0
+
+### Minor Changes
+
+- Unstable Vite support for Node-based Remix apps ([#7590](https://github.com/remix-run/remix/pull/7590))
+  - `remix build` 👉 `vite build && vite build --ssr`
+  - `remix dev` 👉 `vite dev`
+  - Other runtimes (e.g. Deno, Cloudflare) not yet supported.
+  - See "Future > Vite" in the Remix Docs for details
+
+## 2.1.0
+
+### Patch Changes
+
+- Emulate types for `JSON.parse(JSON.stringify(x))` in `SerializeFrom` ([#7605](https://github.com/remix-run/remix/pull/7605))
+  - Notably, type fields that are only assignable to `undefined` after serialization are now omitted since `JSON.stringify |> JSON.parse` will omit them -- see test cases for examples
+  - Also fixes type errors when upgrading to v2 from 1.19
+
 ## 2.0.1
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%402.0.1) for an overview of all changes in v2.0.1.

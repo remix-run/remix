@@ -85,7 +85,7 @@ export interface RemixStubProps {
   /**
    * Future flags mimicking the settings in remix.config.js
    */
-  remixConfigFuture?: Partial<FutureConfig>;
+  future?: Partial<FutureConfig>;
 }
 
 export function createRemixStub(
@@ -96,14 +96,16 @@ export function createRemixStub(
     initialEntries,
     initialIndex,
     hydrationData,
-    remixConfigFuture,
+    future,
   }: RemixStubProps) {
     let routerRef = React.useRef<Router>();
     let remixContextRef = React.useRef<RemixContextObject>();
 
     if (routerRef.current == null) {
       remixContextRef.current = {
-        future: { ...remixConfigFuture },
+        future: {
+          v3_fetcherPersist: future?.v3_fetcherPersist === true,
+        },
         manifest: {
           routes: {},
           entry: { imports: [], module: "" },

@@ -14,6 +14,7 @@ When you're ready to get serious about your Remix project, you might consider st
 ```shellscript nonumber
 mkdir my-remix-app
 cd my-remix-app
+npm init -y
 
 # install runtime dependencies
 npm i @remix-run/node @remix-run/react @remix-run/serve isbot react react-dom
