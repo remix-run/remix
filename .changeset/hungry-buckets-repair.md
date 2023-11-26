@@ -4,7 +4,7 @@
 
 Remove `unstable_createViteServer` and `unstable_loadViteServerBuild` which were only minimal wrappers around Vite's `createServer` and `ssrLoadModule` functions when using a custom server.
 
-**This is a breaking change for projects using the unstable Vite plugin.**
+**This is a breaking change for projects using the unstable Vite plugin with a custom server.**
 
 Instead, we now provide `unstable_viteServerBuildModuleId` so that custom servers interact with Vite directly rather than via Remix APIs, for example:
 
@@ -22,7 +22,7 @@ Creating the Vite server in middleware mode:
 const vite =
   process.env.NODE_ENV === "production"
     ? undefined
--    : await unstable_loadViteServerBuild();
+-    : await unstable_createViteServer();
 +    : await import("vite").then(({ createServer }) =>
 +        createServer({
 +          server: {
