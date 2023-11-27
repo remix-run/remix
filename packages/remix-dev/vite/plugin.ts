@@ -70,7 +70,7 @@ type RemixConfigJsdocOverrides = {
    */
   serverBuildPath?: SupportedRemixConfig["serverBuildPath"];
   /**
-   * TODO: doc
+   * TODO: for now sneak this in as remix vite only option
    */
   basename?: string;
 };
