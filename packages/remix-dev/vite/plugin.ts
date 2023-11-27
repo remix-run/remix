@@ -364,6 +364,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           : ""
       };
       export const publicPath = ${JSON.stringify(pluginConfig.publicPath)};
+      // TODO: dedicated option
+      export const basename = ${JSON.stringify(pluginConfig.publicPath)};
       export const entry = { module: entryServer };
       export const routes = {
         ${Object.keys(pluginConfig.routes)

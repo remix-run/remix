@@ -14,6 +14,7 @@ export interface ServerBuild {
   routes: ServerRouteManifest;
   assets: AssetsManifest;
   publicPath: string;
+  basename?: string;
   assetsBuildDirectory: string;
   future: FutureConfig;
 }

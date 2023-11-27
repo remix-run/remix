@@ -46,7 +46,7 @@ function derive(build: ServerBuild, mode?: string) {
   let dataRoutes = createStaticHandlerDataRoutes(build.routes, build.future);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
   let staticHandler = createStaticHandler(dataRoutes, {
-    basename: build.publicPath,
+    basename: build.basename,
   });
 
   let errorHandler =
@@ -95,8 +95,9 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     }
 
     let url = new URL(request.url);
+    let basename = _build.basename ?? "/";
 
-    let matches = matchServerRoutes(routes, url.pathname, _build.publicPath);
+    let matches = matchServerRoutes(routes, url.pathname, basename);
     let handleError = (error: unknown) => {
       if (mode === ServerMode.Development) {
         getDevServerHooks()?.processRequestError?.(error);
@@ -120,7 +121,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         request,
         loadContext,
         handleError,
-        _build.publicPath
+        basename
       );
 
       if (_build.entry.module.handleDataRequest) {
