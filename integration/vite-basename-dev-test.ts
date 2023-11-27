@@ -70,6 +70,7 @@ test.describe(() => {
           },
           plugins: [
             remix({
+              basename: "/mybase/",
               publicPath: "/mybase/",
             }),
           ],

@@ -69,6 +69,10 @@ type RemixConfigJsdocOverrides = {
    * Defaults to `"build/server/index.js"`.
    */
   serverBuildPath?: SupportedRemixConfig["serverBuildPath"];
+  /**
+   * TODO: doc
+   */
+  basename?: string;
 };
 
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
@@ -87,7 +91,7 @@ type ResolvedRemixVitePluginConfig = Pick<
   | "routes"
   | "serverBuildPath"
   | "serverModuleFormat"
->;
+> & { basename: string };
 
 let serverManifestId = VirtualModule.id("server-manifest");
 let browserManifestId = VirtualModule.id("browser-manifest");
@@ -325,6 +329,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         assetsBuildDirectory,
         entryClientFilePath,
         publicPath,
+        basename: options.basename ?? "/",
         routes,
         entryServerFilePath,
         serverBuildPath,
@@ -364,8 +369,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           : ""
       };
       export const publicPath = ${JSON.stringify(pluginConfig.publicPath)};
-      // TODO: dedicated option
-      export const basename = ${JSON.stringify(pluginConfig.publicPath)};
+      export const basename = ${JSON.stringify(pluginConfig.basename)};
       export const entry = { module: entryServer };
       export const routes = {
         ${Object.keys(pluginConfig.routes)
