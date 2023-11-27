@@ -3,7 +3,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 import { matchSorter } from "match-sorter";
-// @ts-ignore - no types, but it's a tiny function
+// @ts-expect-error - no types, but it's a tiny function
 import sortBy from "sort-by";
 import invariant from "tiny-invariant";
 
