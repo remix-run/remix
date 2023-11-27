@@ -14,7 +14,6 @@ export function matchServerRoutes(
   pathname: string,
   basename: string
 ): RouteMatch<ServerRoute>[] | null {
-  // TODO: basename
   let matches = matchRoutes(
     routes as unknown as AgnosticRouteObject[],
     pathname,
