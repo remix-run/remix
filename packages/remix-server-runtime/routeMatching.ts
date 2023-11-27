@@ -11,12 +11,14 @@ export interface RouteMatch<Route> {
 
 export function matchServerRoutes(
   routes: ServerRoute[],
-  pathname: string
+  pathname: string,
+  basename: string
 ): RouteMatch<ServerRoute>[] | null {
   // TODO: basename
   let matches = matchRoutes(
     routes as unknown as AgnosticRouteObject[],
-    pathname
+    pathname,
+    basename
   );
   if (!matches) return null;
 

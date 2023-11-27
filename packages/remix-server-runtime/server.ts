@@ -95,7 +95,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     let url = new URL(request.url);
 
-    let matches = matchServerRoutes(routes, url.pathname);
+    let matches = matchServerRoutes(routes, url.pathname, _build.publicPath);
     let handleError = (error: unknown) => {
       if (mode === ServerMode.Development) {
         getDevServerHooks()?.processRequestError?.(error);
