@@ -12553,6 +12553,11 @@ ts-interface-checker@^0.1.9:
   resolved "https://registry.npmjs.org/ts-interface-checker/-/ts-interface-checker-0.1.13.tgz#784fd3d679722bc103b1b4b8030bcddb5db2a699"
   integrity sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==
 
+tsconfck@^2.1.0:
+  version "2.1.2"
+  resolved "https://registry.npmjs.org/tsconfck/-/tsconfck-2.1.2.tgz#f667035874fa41d908c1fe4d765345fcb1df6e35"
+  integrity sha512-ghqN1b0puy3MhhviwO2kGF8SeMDNhEbnKxjK7h6+fvY9JAxqvXi8y5NAHSQv687OVboS2uZIByzGd45/YxrRHg==
+
 tsconfig-paths@^3.14.1:
   version "3.14.1"
   resolved "https://registry.npmjs.org/tsconfig-paths/-/tsconfig-paths-3.14.1.tgz"
@@ -13121,6 +13126,15 @@ vite-node@^0.28.5:
     source-map "^0.6.1"
     source-map-support "^0.5.21"
     vite "^3.0.0 || ^4.0.0"
+
+vite-tsconfig-paths@^4.2.1:
+  version "4.2.1"
+  resolved "https://registry.npmjs.org/vite-tsconfig-paths/-/vite-tsconfig-paths-4.2.1.tgz#e53b89096b91d31a6d1e26f75999ea8c336a89ed"
+  integrity sha512-GNUI6ZgPqT3oervkvzU+qtys83+75N/OuDaQl7HmOqFTb0pjZsuARrRipsyJhJ3enqV8beI1xhGbToR4o78nSQ==
+  dependencies:
+    debug "^4.1.1"
+    globrex "^0.1.2"
+    tsconfck "^2.1.0"
 
 "vite@^3.0.0 || ^4.0.0", vite@^4.1.4:
   version "4.4.10"
