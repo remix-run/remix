@@ -323,13 +323,23 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         relativeAssetsBuildDirectory,
       } = await resolveConfig(config, { rootDirectory });
 
+      let basename = options.basename ?? "/";
+      if (viteCommand === "serve" && !viteUserConfig.server?.middlewareMode) {
+        // Odd restriction for default vite dev server
+        // since Vite requires SSR request URL to be under `base` option (= `publicPath`)
+        invariant(
+          basename.startsWith(publicPath),
+          "'publicPath' must be a prefix of 'basename' for default Vite dev server."
+        );
+      }
+
       return {
         appDirectory,
         rootDirectory,
         assetsBuildDirectory,
         entryClientFilePath,
         publicPath,
-        basename: options.basename ?? "/",
+        basename,
         routes,
         entryServerFilePath,
         serverBuildPath,
