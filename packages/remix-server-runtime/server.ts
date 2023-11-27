@@ -4,6 +4,7 @@ import type {
   StaticHandler,
 } from "@remix-run/router";
 import {
+  stripBasename,
   UNSAFE_DEFERRED_SYMBOL as DEFERRED_SYMBOL,
   getStaticContextFromError,
   isRouteErrorResponse,
@@ -118,7 +119,8 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         routeId,
         request,
         loadContext,
-        handleError
+        handleError,
+        _build.publicPath
       );
 
       if (_build.entry.module.handleDataRequest) {
@@ -176,7 +178,8 @@ async function handleDataRequestRR(
   routeId: string,
   request: Request,
   loadContext: AppLoadContext,
-  handleError: (err: unknown) => void
+  handleError: (err: unknown) => void,
+  basename: string
 ) {
   try {
     let response = await staticHandler.queryRoute(request, {
@@ -189,7 +192,11 @@ async function handleDataRequestRR(
       // redirects. So we use the `X-Remix-Redirect` header to indicate the
       // next URL, and then "follow" the redirect manually on the client.
       let headers = new Headers(response.headers);
-      headers.set("X-Remix-Redirect", headers.get("Location")!);
+      // strip basename on server side since client react-router adds back same basename
+      headers.set(
+        "X-Remix-Redirect",
+        stripBasename(headers.get("Location")!, basename)!
+      );
       headers.set("X-Remix-Status", response.status);
       headers.delete("Location");
       if (response.headers.get("Set-Cookie") !== null) {
