@@ -21,6 +21,7 @@ export function createServerHandoffString<T>(serverHandoff: {
   state: ValidateShape<T, HydrationState>;
   criticalCss?: string;
   url: string;
+  basename?: string;
   future: FutureConfig;
 }): string {
   // Uses faster alternative of jsesc to escape data returned from the loaders.

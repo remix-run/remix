@@ -44,7 +44,9 @@ function derive(build: ServerBuild, mode?: string) {
   let routes = createRoutes(build.routes);
   let dataRoutes = createStaticHandlerDataRoutes(build.routes, build.future);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
-  let staticHandler = createStaticHandler(dataRoutes);
+  let staticHandler = createStaticHandler(dataRoutes, {
+    basename: build.publicPath,
+  });
 
   let errorHandler =
     build.entry.module.handleError ||
@@ -289,6 +291,7 @@ async function handleDocumentRequestRR(
     criticalCss,
     serverHandoffString: createServerHandoffString({
       url: context.location.pathname,
+      basename: context.basename,
       criticalCss,
       state: {
         loaderData: context.loaderData,
