@@ -186,8 +186,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     // towards determining the route matches.
     let initialPathname = window.__remixContext.url;
     let hydratedPathname = window.location.pathname;
-    // TODO: consider basename
-    if (0 && initialPathname !== hydratedPathname) {
+    if (initialPathname !== hydratedPathname) {
       let errorMsg =
         `Initial URL (${initialPathname}) does not match URL at time of hydration ` +
         `(${hydratedPathname}), reloading page...`;
@@ -233,7 +232,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // Critical CSS can become stale after code changes, e.g. styles might be
   // removed from a component, but the styles will still be present in the
   // server HTML. This allows our HMR logic to clear the critical CSS state.
-
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   let [criticalCss, clearCriticalCss] = React.useReducer(
     criticalCssReducer,
     window.__remixContext.criticalCss
@@ -242,9 +241,10 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
 
   // This is due to the shit circuit return above which is an exceptional
   // scenario which we can't hydrate anyway
-
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   let [location, setLocation] = React.useState(router.state.location);
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useLayoutEffect(() => {
     return router.subscribe((newState) => {
       if (newState.location !== location) {
