@@ -108,9 +108,9 @@ export function shouldRevalidate({
   defaultShouldRevalidate,
 }) {
   const currentId = currentParams.slug.split("--")[1];
-  const nextID = nextParams.slug.split("--")[1];
-  if (currentId !== nextID) {
-    return true;
+  const nextId = nextParams.slug.split("--")[1];
+  if (currentId === nextId) {
+    return false;
   }
 
   return defaultShouldRevalidate;
