@@ -165,8 +165,7 @@ export function createClientRoutes(
       return fetchServerHandler(request, route);
     }
 
-    async function callServerHandler(
-      request: Request,
+    async function prefetchStylesAndCallHandler(
       handler: () => Promise<unknown>
     ) {
       // Only prefetch links if we've been loaded into the cache, route.lazy
@@ -186,7 +185,7 @@ export function createClientRoutes(
       index: route.index,
       path: route.path,
       action: ({ request }: ActionFunctionArgs) =>
-        callServerHandler(request, () => fetchServerAction(request)),
+        prefetchStylesAndCallHandler(() => fetchServerAction(request)),
     };
 
     if (routeModule) {
@@ -211,7 +210,7 @@ export function createClientRoutes(
       });
 
       dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
-        return callServerHandler(request, async () => {
+        return prefetchStylesAndCallHandler(async () => {
           if (!routeModule.clientLoader) {
             // Call the server when no client loader exists
             return fetchServerLoader(request);
@@ -221,17 +220,6 @@ export function createClientRoutes(
             initialState &&
             initialState.loaderData &&
             initialState.loaderData[route.id];
-
-          if (routeModule.Fallback) {
-            // If a critical route module has a clientLoader and a Fallback,
-            // then we SSR'd the Fallback and we need to ensure we let it hydrate.
-            // If the clientLoader is synchronous, then it'll resolve and we'll
-            // try to hydrate a rendered Component on top of a SSR'd Fallback.
-            // This also ensure's we delay the initialization state update until
-            // after the layoutEffect has registered the subscriber.
-            // TODO: This is a hack :/
-            await new Promise((r) => setTimeout(r, 10));
-          }
 
           return routeModule.clientLoader({
             request,
@@ -260,7 +248,7 @@ export function createClientRoutes(
     } else {
       if (!route.hasClientLoader) {
         dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
-          callServerHandler(request, () => fetchServerLoader(request));
+          prefetchStylesAndCallHandler(() => fetchServerLoader(request));
       }
 
       // Load all other modules via route.lazy()

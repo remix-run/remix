@@ -1,11 +1,13 @@
-import type { HydrationState, Router } from "@remix-run/router";
+import {
+  createBrowserHistory,
+  createRouter,
+  type HydrationState,
+  type Router,
+} from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
-import {
-  createBrowserRouter,
-  matchRoutes,
-  RouterProvider,
-} from "react-router-dom";
+import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
+import { matchRoutes, RouterProvider } from "react-router-dom";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
@@ -51,6 +53,8 @@ declare global {
 }
 
 let router: Router;
+let didServerRenderFallback = false;
+let routerInitialized = false;
 let hmrAbortController: AbortController | undefined;
 let hmrRouterReadyResolve: ((router: Router) => void) | undefined;
 // There's a race condition with HMR where the remix:manifest is signaled before
@@ -230,6 +234,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         let manifestRoute = window.__remixManifest.routes[routeId];
         if (route && route.clientLoader && route.Fallback) {
           hydrationData.loaderData[routeId] = undefined;
+          didServerRenderFallback = true;
         } else if (manifestRoute && !manifestRoute.hasLoader) {
           // Since every Remix route gets a `loader` on the client side to load
           // the route JS module, we need to add a `null` value to `loaderData`
@@ -245,14 +250,27 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       hydrationData.errors = deserializeErrors(hydrationData.errors);
     }
 
-    router = createBrowserRouter(routes, {
-      hydrationData,
+    // We don't use createBrowserRouter here because we need fine-grained control
+    // over initialization to support synchronous clientLoader/Fallback flows.
+    router = createRouter({
+      routes,
+      history: createBrowserHistory(),
       future: {
         v7_normalizeFormMethod: true,
         v7_fetcherPersist: window.__remixContext.future.v3_fetcherPersist,
         v7_partialHydration: true,
+        v7_prependBasename: true,
       },
+      hydrationData,
+      mapRouteProperties,
     });
+
+    // As long as we didn't SSR a Fallback, we can initialize immediately since
+    // there's no initial client-side data loading to perform
+    if (!didServerRenderFallback) {
+      router.initialize();
+    }
+
     // @ts-ignore
     router.createRoutesForHMR = createClientRoutesWithHMRRevalidationOptOut;
     window.__remixRouter = router;
@@ -273,10 +291,21 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   );
   window.__remixClearCriticalCss = clearCriticalCss;
 
-  // This is due to the shit circuit return above which is an exceptional
-  // scenario which we can't hydrate anyway
+  // This is due to the short circuit return above when the pathname doesn't
+  // match and we force a hard reload.  This is an exceptional scenario in which
+  // we can't hydrate anyway.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   let [location, setLocation] = React.useState(router.state.location);
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  React.useLayoutEffect(() => {
+    // If we rendered a Fallback on the server, delay initialization until after
+    // we've hydrated with the Fallback in case the client loaders are synchronous
+    if (didServerRenderFallback && !routerInitialized) {
+      routerInitialized = true;
+      router.initialize();
+    }
+  }, []);
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useLayoutEffect(() => {

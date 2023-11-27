@@ -18,6 +18,7 @@
   "dependencies": {
     "@remix-run/router": "0.0.0-experimental-4841e12b",
     "@remix-run/server-runtime": "2.3.0",
+    "react-router": "0.0.0-experimental-4841e12b",
     "react-router-dom": "0.0.0-experimental-4841e12b"
   },
   "devDependencies": {
