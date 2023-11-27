@@ -153,7 +153,7 @@ Now if you change the key `stuff` to `things`:
 
 ```diff
   export const loader = async () => {
--   return json({ things: "some things" })
+-   return json({ stuff: "some things" })
 +   return json({ things: "some things" })
   }
 
