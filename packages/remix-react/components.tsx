@@ -320,7 +320,7 @@ export function PrefetchPageLinks({
   let { router } = useDataRouterContext();
   let matches = React.useMemo(
     () => matchRoutes(router.routes, page, router.basename),
-    [router.routes, page]
+    [router.routes, page, router.basename]
   );
 
   if (!matches) {
@@ -846,7 +846,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     }
 
     return [];
-  }, [navigation.location, router.routes]);
+  }, [navigation.location, router.routes, router.basename]);
 
   let routePreloads = matches
     .concat(nextMatches)
