@@ -1,8 +1,4 @@
-import type {
-  IncomingHttpHeaders,
-  IncomingMessage,
-  ServerResponse,
-} from "node:http";
+import type { IncomingHttpHeaders, ServerResponse } from "node:http";
 import { once } from "node:events";
 import { Readable } from "node:stream";
 import { splitCookiesString } from "set-cookie-parser";
@@ -12,6 +8,7 @@ import {
   createReadableStreamFromReadable,
 } from "@remix-run/node";
 import { createRequestHandler as createBaseRequestHandler } from "@remix-run/server-runtime";
+import type * as Vite from "vite";
 
 import invariant from "../../invariant";
 
@@ -36,13 +33,16 @@ function createHeaders(requestHeaders: IncomingHttpHeaders) {
 }
 
 // Based on `createRemixRequest` in packages/remix-express/server.ts
-function createRequest(req: IncomingMessage, res: ServerResponse): Request {
+function createRequest(
+  req: Vite.Connect.IncomingMessage,
+  res: ServerResponse
+): Request {
   let origin =
     req.headers.origin && "null" !== req.headers.origin
       ? req.headers.origin
       : `http://${req.headers.host}`;
-  invariant(req.url, 'Expected "req.url" to be defined');
-  let url = new URL(req.url, origin);
+  invariant(req.originalUrl, 'Expected "req.originalUrl" to be defined');
+  let url = new URL(req.originalUrl, origin);
 
   let init: RequestInit = {
     method: req.method,
@@ -91,7 +91,7 @@ export let createRequestHandler = (
   { mode = "production" }: { mode?: string }
 ) => {
   let handler = createBaseRequestHandler(build, mode);
-  return async (req: IncomingMessage, res: ServerResponse) => {
+  return async (req: Vite.Connect.IncomingMessage, res: ServerResponse) => {
     let request = createRequest(req, res);
     let response = await handler(request, {});
     handleNodeResponse(response, res);

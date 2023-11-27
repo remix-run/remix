@@ -466,12 +466,15 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         path: route.path,
         index: route.index,
         caseSensitive: route.caseSensitive,
-        module: `${resolveFileUrl(
-          pluginConfig,
-          resolveRelativeRouteFilePath(route, pluginConfig)
-        )}${
-          isJsFile(route.file) ? "" : "?import" // Ensure the Vite dev server responds with a JS module
-        }`,
+        module: path.posix.join(
+          pluginConfig.publicPath,
+          `${resolveFileUrl(
+            pluginConfig,
+            resolveRelativeRouteFilePath(route, pluginConfig)
+          )}${
+            isJsFile(route.file) ? "" : "?import" // Ensure the Vite dev server responds with a JS module
+          }`
+        ),
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
@@ -481,12 +484,21 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
     return {
       version: String(Math.random()),
-      url: VirtualModule.url(browserManifestId),
+      url: path.posix.join(
+        pluginConfig.publicPath,
+        VirtualModule.url(browserManifestId)
+      ),
       hmr: {
-        runtime: VirtualModule.url(injectHmrRuntimeId),
+        runtime: path.posix.join(
+          pluginConfig.publicPath,
+          VirtualModule.url(injectHmrRuntimeId)
+        ),
       },
       entry: {
-        module: resolveFileUrl(pluginConfig, pluginConfig.entryClientFilePath),
+        module: path.posix.join(
+          pluginConfig.publicPath,
+          resolveFileUrl(pluginConfig, pluginConfig.entryClientFilePath)
+        ),
         imports: [],
       },
       routes,
@@ -559,8 +571,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               "@remix-run/react",
             ],
           },
+          base: pluginConfig.publicPath,
           ...(viteCommand === "build" && {
-            base: pluginConfig.publicPath,
             build: {
               ...viteUserConfig.build,
               ...(!isSsrBuild
@@ -1170,16 +1182,21 @@ async function getRouteMetadata(
     path: route.path,
     index: route.index,
     caseSensitive: route.caseSensitive,
-    url:
+    url: path.posix.join(
+      pluginConfig.publicPath,
       "/" +
-      path.relative(
-        pluginConfig.rootDirectory,
+        path.relative(
+          pluginConfig.rootDirectory,
+          resolveRelativeRouteFilePath(route, pluginConfig)
+        )
+    ),
+    module: path.posix.join(
+      pluginConfig.publicPath,
+      `${resolveFileUrl(
+        pluginConfig,
         resolveRelativeRouteFilePath(route, pluginConfig)
-      ),
-    module: `${resolveFileUrl(
-      pluginConfig,
-      resolveRelativeRouteFilePath(route, pluginConfig)
-    )}?import`, // Ensure the Vite dev server responds with a JS module
+      )}?import`
+    ), // Ensure the Vite dev server responds with a JS module
     hasAction: sourceExports.includes("action"),
     hasLoader: sourceExports.includes("loader"),
     hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
