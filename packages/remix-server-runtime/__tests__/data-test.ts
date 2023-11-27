@@ -142,6 +142,7 @@ describe("loaders", () => {
           handleError() {},
         },
       },
+      publicPath: "/",
     } as unknown as ServerBuild;
 
     let handler = createRequestHandler(build);

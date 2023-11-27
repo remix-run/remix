@@ -193,9 +193,10 @@ async function handleDataRequestRR(
       // next URL, and then "follow" the redirect manually on the client.
       let headers = new Headers(response.headers);
       // strip basename on server side since client react-router adds back same basename
+      let redirectUrl = headers.get("Location")!;
       headers.set(
         "X-Remix-Redirect",
-        stripBasename(headers.get("Location")!, basename)!
+        stripBasename(redirectUrl, basename) || redirectUrl
       );
       headers.set("X-Remix-Status", response.status);
       headers.delete("Location");
