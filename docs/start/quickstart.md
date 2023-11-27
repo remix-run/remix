@@ -9,7 +9,7 @@ This guide will get you familiar with the basic plumbing required to run a Remix
 
 When you're ready to get serious about your Remix project, you might consider starting with a community template. They include TypeScript setups, databases, testing harnesses, authentication, and more. You can find a list of community templates on the [Remix Guide Templates][templates] page.
 
-If you prefer to initialize a batteries-included Remix project, you can use the [`create-remix` CLI][create-remix]. This guide will explain all of the different pieces the CLI initializes for you you.
+If you prefer to initialize a batteries-included Remix project, you can use the [`create-remix` CLI][create-remix]. This guide will explain all of the different pieces the CLI initializes for you.
 
 ## Installation
 
