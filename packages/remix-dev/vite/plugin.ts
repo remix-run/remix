@@ -28,6 +28,7 @@ import invariant from "../invariant";
 import { createRequestHandler } from "./node/adapter";
 import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
+import { serverEntryId } from "./server-entry-id";
 import { removeExports } from "./remove-exports";
 import { replaceImportSpecifier } from "./replace-import-specifier";
 
@@ -88,7 +89,6 @@ type ResolvedRemixVitePluginConfig = Pick<
   | "serverModuleFormat"
 >;
 
-let serverEntryId = VirtualModule.id("server-entry");
 let serverManifestId = VirtualModule.id("server-manifest");
 let browserManifestId = VirtualModule.id("browser-manifest");
 let remixReactProxyId = VirtualModule.id("remix-react-proxy");
@@ -201,6 +201,23 @@ function dedupe<T>(array: T[]): T[] {
 const writeFileSafe = async (file: string, contents: string): Promise<void> => {
   await fse.ensureDir(path.dirname(file));
   await fse.writeFile(file, contents);
+};
+
+const getRouteManifestModuleExports = async (
+  viteChildCompiler: Vite.ViteDevServer | null,
+  pluginConfig: ResolvedRemixVitePluginConfig
+): Promise<Record<string, string[]>> => {
+  let entries = await Promise.all(
+    Object.entries(pluginConfig.routes).map(async ([key, route]) => {
+      let sourceExports = await getRouteModuleExports(
+        viteChildCompiler,
+        pluginConfig,
+        route.file
+      );
+      return [key, sourceExports] as const;
+    })
+  );
+  return Object.fromEntries(entries);
 };
 
 const getRouteModuleExports = async (
@@ -390,13 +407,15 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     );
 
     let routes: Manifest["routes"] = {};
+
+    let routeManifestExports = await getRouteManifestModuleExports(
+      viteChildCompiler,
+      pluginConfig
+    );
+
     for (let [key, route] of Object.entries(pluginConfig.routes)) {
       let routeFilePath = path.join(pluginConfig.appDirectory, route.file);
-      let sourceExports = await getRouteModuleExports(
-        viteChildCompiler,
-        pluginConfig,
-        route.file
-      );
+      let sourceExports = routeManifestExports[key];
 
       routes[key] = {
         id: route.id,
@@ -434,13 +453,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     let pluginConfig = await resolvePluginConfig();
     let routes: Manifest["routes"] = {};
 
-    for (let [key, route] of Object.entries(pluginConfig.routes)) {
-      let sourceExports = await getRouteModuleExports(
-        viteChildCompiler,
-        pluginConfig,
-        route.file
-      );
+    let routeManifestExports = await getRouteManifestModuleExports(
+      viteChildCompiler,
+      pluginConfig
+    );
 
+    for (let [key, route] of Object.entries(pluginConfig.routes)) {
+      let sourceExports = routeManifestExports[key];
       routes[key] = {
         id: route.id,
         parentId: route.parentId,
@@ -628,6 +647,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           ...viteUserConfig,
           mode: viteConfig.mode,
           server: {
+            preTransformRequests: false,
             hmr: false,
           },
           configFile: false,
