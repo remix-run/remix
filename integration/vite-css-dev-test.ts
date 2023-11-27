@@ -263,19 +263,6 @@ test.describe("Vite CSS dev", () => {
       await input.type("stateful");
       await expect(input).toHaveValue("stateful");
 
-      let clientEntryCssContents = await fs.readFile(
-        path.join(projectDir, "app/entry.client.css"),
-        "utf8"
-      );
-      await fs.writeFile(
-        path.join(projectDir, "app/entry.client.css"),
-        clientEntryCssContents.replace(
-          TEST_PADDING_VALUE,
-          UPDATED_TEST_PADDING_VALUE
-        ),
-        "utf8"
-      );
-
       let bundledCssContents = await fs.readFile(
         path.join(projectDir, "app/styles-bundled.css"),
         "utf8"
@@ -324,11 +311,6 @@ test.describe("Vite CSS dev", () => {
         (data) => data.replace(TEST_PADDING_VALUE, UPDATED_TEST_PADDING_VALUE)
       );
 
-      await expect(page.locator("#index [data-client-entry]")).toHaveCSS(
-        "padding",
-        UPDATED_TEST_PADDING_VALUE
-      );
-
       await expect(page.locator("#index [data-css-modules]")).toHaveCSS(
         "padding",
         UPDATED_TEST_PADDING_VALUE
@@ -350,7 +332,29 @@ test.describe("Vite CSS dev", () => {
         UPDATED_TEST_PADDING_VALUE
       );
 
+      // Ensure CSS updates were handled by HMR
       await expect(input).toHaveValue("stateful");
+
+      let clientEntryCssContents = await fs.readFile(
+        path.join(projectDir, "app/entry.client.css"),
+        "utf8"
+      );
+      await fs.writeFile(
+        path.join(projectDir, "app/entry.client.css"),
+        clientEntryCssContents.replace(
+          TEST_PADDING_VALUE,
+          UPDATED_TEST_PADDING_VALUE
+        ),
+        "utf8"
+      );
+
+      await expect(page.locator("#index [data-client-entry]")).toHaveCSS(
+        "padding",
+        UPDATED_TEST_PADDING_VALUE
+      );
+
+      // Changes to the client entry fall back to a full page reload
+      await expect(input).toHaveValue("");
 
       expect(pageErrors).toEqual([]);
     });
