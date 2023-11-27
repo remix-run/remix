@@ -1,5 +1,4 @@
 ---
-"integration-tests": minor
 "@remix-run/dev": minor
 ---
 
