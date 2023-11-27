@@ -222,8 +222,8 @@ test.describe("Vite CSS dev", () => {
 
   test.describe("with JS", () => {
     test.use({ javaScriptEnabled: true });
-    test("updates CSS", async ({ page, browserName }) => {
-      let pageErrors: Error[] = [];
+    test("updates CSS", async ({ page }) => {
+      let pageErrors: unknown[] = [];
       page.on("pageerror", (error) => pageErrors.push(error));
 
       await page.goto(`http://localhost:${devPort}/`, {
