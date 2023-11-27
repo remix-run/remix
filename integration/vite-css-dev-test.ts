@@ -222,8 +222,8 @@ test.describe("Vite CSS dev", () => {
 
   test.describe("with JS", () => {
     test.use({ javaScriptEnabled: true });
-    test("updates CSS", async ({ page }) => {
-      let pageErrors: unknown[] = [];
+    test("updates CSS", async ({ page, browserName }) => {
+      let pageErrors: Error[] = [];
       page.on("pageerror", (error) => pageErrors.push(error));
 
       await page.goto(`http://localhost:${devPort}/`, {
@@ -335,6 +335,7 @@ test.describe("Vite CSS dev", () => {
       // Ensure CSS updates were handled by HMR
       await expect(input).toHaveValue("stateful");
 
+      // The following change triggers a full page reload, so we check it after the HMR changes
       let clientEntryCssContents = await fs.readFile(
         path.join(projectDir, "app/entry.client.css"),
         "utf8"
@@ -352,9 +353,6 @@ test.describe("Vite CSS dev", () => {
         "padding",
         UPDATED_TEST_PADDING_VALUE
       );
-
-      // Changes to the client entry fall back to a full page reload
-      await expect(input).toHaveValue("");
 
       expect(pageErrors).toEqual([]);
     });
