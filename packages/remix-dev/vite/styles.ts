@@ -168,6 +168,7 @@ export const getStylesForUrl = async (
 
   let routes = createRoutes(build.routes);
   let appPath = path.relative(process.cwd(), config.appDirectory);
+  // TODO: basename
   let documentRouteFiles =
     matchRoutes(routes, url)?.map((match) =>
       path.join(appPath, config.routes[match.route.id].file)
