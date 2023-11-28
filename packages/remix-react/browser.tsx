@@ -216,12 +216,12 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       window.__remixContext.future
     );
 
-    // Create a shallow clone of loaderData we can mutate for partial hydration.
-    // When a route has a clientLoader and a HydrateFallback, the server will have
-    // rendered the HydrateFallback so we need the client to do the same for hydration.
-    // The server loader data has already been exposed to these route clientLoaders
-    // in createClientRoutes above, so we need to clear out the version we pass to
-    // createBrowserRouter so it initializes and runs the client loaders.
+    // Create a shallow clone of `loaderData` we can mutate for partial hydration.
+    // When a route sets `clientLoader.hydrate=true`, the server will have rendered
+    // the `HydrateFallback` so we need the client to do the same for hydration.
+    // The server loader data has already been exposed to these route `clientLoader`'s
+    // in `createClientRoutes` above, so we need to clear out the version we pass to
+    // `createBrowserRouter` so it initializes and runs the client loaders.
     let hydrationData = {
       ...window.__remixContext.state,
       loaderData: { ...window.__remixContext.state.loaderData },
@@ -232,7 +232,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         let routeId = match.route.id;
         let route = window.__remixRouteModules[routeId];
         let manifestRoute = window.__remixManifest.routes[routeId];
-        if (route && route.clientLoader && route.HydrateFallback) {
+        if (route && route.clientLoader && route.clientLoader.hydrate) {
           hydrationData.loaderData[routeId] = undefined;
           didServerRenderFallback = true;
         } else if (manifestRoute && !manifestRoute.hasLoader) {
@@ -251,7 +251,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     }
 
     // We don't use createBrowserRouter here because we need fine-grained control
-    // over initialization to support synchronous clientLoader/HydrateFallback flows.
+    // over initialization to support synchronous `clientLoader` flows.
     router = createRouter({
       routes,
       history: createBrowserHistory(),
@@ -265,7 +265,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       mapRouteProperties,
     });
 
-    // As long as we didn't SSR a HydrateFallback, we can initialize immediately since
+    // As long as we didn't SSR a `HydrateFallback`, we can initialize immediately since
     // there's no initial client-side data loading to perform
     if (!didServerRenderFallback) {
       router.initialize();
@@ -299,8 +299,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useLayoutEffect(() => {
-    // If we rendered a HydrateFallback on the server, delay initialization until after
-    // we've hydrated with the HydrateFallback in case the client loaders are synchronous
+    // If we rendered a `HydrateFallback` on the server, delay initialization until
+    // after we've hydrated with the `HydrateFallback` in case the client loaders
+    // are synchronous
     if (didServerRenderFallback && !routerInitialized) {
       routerInitialized = true;
       router.initialize();

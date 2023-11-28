@@ -29,9 +29,11 @@ export interface RouteModule {
   shouldRevalidate?: ShouldRevalidateFunction;
 }
 
-export type ClientLoaderFunction = (
+export type ClientLoaderFunction = ((
   args: ClientLoaderFunctionArgs
-) => ReturnType<RRLoaderFunction>;
+) => ReturnType<RRLoaderFunction>) & {
+  hydrate?: boolean;
+};
 
 export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
   serverLoader: <T = AppData>() => Promise<SerializeFrom<T>>;

@@ -23,6 +23,7 @@ import {
 import type { FutureConfig } from "./entry";
 import { prefetchStyleLinks } from "./links";
 import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
+import { RemixRootDefaultHydrateFallback } from "./fallback";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;
@@ -80,7 +81,11 @@ export function createServerRoutes(
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       Component: getRouteModuleComponent(routeModule),
-      HydrateFallback: routeModule.HydrateFallback,
+      HydrateFallback: routeModule.HydrateFallback
+        ? routeModule.HydrateFallback
+        : route.id === "root"
+        ? RemixRootDefaultHydrateFallback
+        : undefined,
       ErrorBoundary: routeModule.ErrorBoundary
         ? routeModule.ErrorBoundary
         : route.id === "root"
@@ -193,7 +198,11 @@ export function createClientRoutes(
       Object.assign(dataRoute, {
         ...dataRoute,
         Component: getRouteModuleComponent(routeModule),
-        HydrateFallback: routeModule.HydrateFallback,
+        HydrateFallback: routeModule.HydrateFallback
+          ? routeModule.HydrateFallback
+          : route.id === "root"
+          ? RemixRootDefaultHydrateFallback
+          : undefined,
         ErrorBoundary: routeModule.ErrorBoundary
           ? routeModule.ErrorBoundary
           : route.id === "root"
@@ -217,7 +226,7 @@ export function createClientRoutes(
       let isHydrationRequest =
         needsRevalidation == null &&
         routeModule.clientLoader != null &&
-        routeModule.HydrateFallback != null;
+        routeModule.clientLoader.hydrate === true;
 
       dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
