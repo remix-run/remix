@@ -1106,6 +1106,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             viteChildCompiler,
             route
           );
+          hotData.route = newMetadata;
           if (
             (["hasLoader", "hasAction", "hasErrorBoundary"] as const).some(
               (key) => metadata[key] !== newMetadata[key]
