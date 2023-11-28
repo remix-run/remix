@@ -3,11 +3,7 @@ import path from "node:path";
 import { test } from "@playwright/test";
 import getPort from "get-port";
 
-import {
-  createProject,
-  viteDev,
-  VITE_CONFIG,
-} from "./helpers/vite.js";
+import { createProject, viteDev, VITE_CONFIG } from "./helpers/vite.js";
 
 const files = {
   "app/routes/_index.tsx": String.raw`
@@ -58,7 +54,9 @@ test.describe(async () => {
   });
   test.afterAll(async () => await stop());
 
-  test("Vite / dev / invalidate manifest on route exports hot update", async ({ page }) => {
+  test("Vite / dev / invalidate manifest on route exports hot update", async ({
+    page,
+  }) => {
     let pageErrors: Error[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
     let edit = editor(cwd);
@@ -68,38 +66,32 @@ test.describe(async () => {
     });
 
     // wait hydration to test client navigation with data request
-    await page.getByText('Mounted: yes').click()
+    await page.getByText("Mounted: yes").click();
 
     // remove loader export in other page
     await edit("app/routes/other.tsx", (contents) =>
-      contents
-        .replace(
-          /export const loader.*/,
-          ''
-        )
+      contents.replace(/export const loader.*/, "")
     );
-    // ensure last hot update is handled by triggering HMR in current page
-    await edit("app/routes/_index.tsx", (contents) =>
-      contents
-        .replace(
-          "<p data-hmr>HMR updated: 0</p>",
-          "<p data-hmr>HMR updated: 1</p>"
-        )
+
+    // probe internal to ensure hot update is ready
+    await page.waitForFunction(
+      () =>
+        (window as any).__remixManifest.routes["routes/other"].hasLoader ===
+        false
     );
-    await page.getByText('HMR updated: 1').click();
 
     // navigate to a route which previously had a loader
-    await page.getByRole('link', { name: '/other' }).click();
-    await page.getByText('loaderData = null').click();
+    await page.getByRole("link", { name: "/other" }).click();
+    await page.getByText("loaderData = null").click();
 
     // test again after browser reload
     await page.goto(`http://localhost:${port}/`, {
       waitUntil: "networkidle",
     });
-    await page.getByText('Mounted: yes').click()
+    await page.getByText("Mounted: yes").click();
 
-    await page.getByRole('link', { name: '/other' }).click();
-    await page.getByText('loaderData = null').click();
+    await page.getByRole("link", { name: "/other" }).click();
+    await page.getByText("loaderData = null").click();
   });
 });
 
