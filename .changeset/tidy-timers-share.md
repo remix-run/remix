@@ -2,11 +2,11 @@
 "@remix-run/dev": patch
 ---
 
-Allow consumers to opt-in to global Node polyfills by removing automatic polyfill installation from the Vite Node adapter which is used in the built-in dev server.
+Remove automatic global Node polyfill installation from the built-in Vite dev server and instead allow explicit opt-in.
 
-**This is a breaking change for projects using the unstable Vite plugin with the built-in Vite dev server.**
+**This is a breaking change for projects using the unstable Vite plugin without a custom server.**
 
-Instead, consumers who aren't using a custom server should call `installGlobals` in their Vite config.
+If you're not using a custom server, you should call `installGlobals` in your Vite config instead.
 
 ```diff
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
