@@ -147,6 +147,8 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
 It comes built-in with the Remix Vite plugin and will take over when you run `vite dev`.
 
+Unlike `remix-serve`, the Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
+
 You'll also need to update to the new build output paths, which are `build/server` for the server and `build/client` for client assets.
 
 👉 **Update your `dev`, `build` and `start` scripts**
@@ -159,6 +161,20 @@ You'll also need to update to the new build output paths, which are `build/serve
     "start": "remix-serve ./build/server/index.js"
   }
 }
+```
+
+👉 **Install global Node polyfills in your Vite config**
+
+```diff filename=vite.config.ts
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
++import { installGlobals } from "@remix-run/node";
+import { defineConfig } from "vite";
+
++installGlobals();
+
+export default defineConfig({
+  plugins: [remix()],
+});
 ```
 
 #### Migrating from a custom server
@@ -696,3 +712,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [ssr-no-external]: https://vitejs.dev/config/ssr-options.html#ssr-noexternal
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
 [blues-stack]: https://github.com/remix-run/blues-stack
+[global-node-polyfills]: ../other-api/node#polyfills
