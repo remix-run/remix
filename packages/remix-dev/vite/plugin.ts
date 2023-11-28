@@ -108,6 +108,17 @@ const resolveRelativeRouteFilePath = (
 
 let vmods = [serverEntryId, serverManifestId, browserManifestId];
 
+const invalidateVirtualModules = (viteDevServer: Vite.ViteDevServer) => {
+  vmods.forEach((vmod) => {
+    let mod = viteDevServer.moduleGraph.getModuleById(
+      VirtualModule.resolve(vmod)
+    );
+    if (mod) {
+      viteDevServer.moduleGraph.invalidateModule(mod);
+    }
+  });
+};
+
 const getHash = (source: BinaryLike, maxLength?: number): string => {
   let hash = createHash("sha256").update(source).digest("hex");
   return typeof maxLength === "number" ? hash.slice(0, maxLength) : hash;
@@ -745,16 +756,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               ) {
                 previousPluginConfig = pluginConfig;
 
-                // Invalidate all virtual modules
-                vmods.forEach((vmod) => {
-                  let mod = viteDevServer.moduleGraph.getModuleById(
-                    VirtualModule.resolve(vmod)
-                  );
-
-                  if (mod) {
-                    viteDevServer.moduleGraph.invalidateModule(mod);
-                  }
-                });
+                invalidateVirtualModules(viteDevServer);
               }
 
               next();
@@ -1092,15 +1094,31 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         // Update the config cache any time there is a file change
         cachedPluginConfig = pluginConfig;
         let route = getRoute(pluginConfig, file);
+        let hotData = { route: null as any };
+
+        if (route) {
+          // invalidate manifest on route exports change
+          let mod = await server.ssrLoadModule(serverManifestId);
+          let manifest = mod.default as Manifest;
+          let metadata = manifest.routes[route.id];
+          let newMetadata = await getRouteMetadata(
+            pluginConfig,
+            viteChildCompiler,
+            route
+          );
+          if (
+            (["hasLoader", "hasAction", "hasErrorBoundary"] as const).some(
+              (key) => metadata[key] !== newMetadata[key]
+            )
+          ) {
+            invalidateVirtualModules(server);
+          }
+        }
 
         server.ws.send({
           type: "custom",
           event: "remix:hmr",
-          data: {
-            route: route
-              ? await getRouteMetadata(pluginConfig, viteChildCompiler, route)
-              : null,
-          },
+          data: hotData,
         });
 
         return modules;
