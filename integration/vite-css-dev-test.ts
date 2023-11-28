@@ -335,7 +335,7 @@ test.describe("Vite CSS dev", () => {
       // Ensure CSS updates were handled by HMR
       await expect(input).toHaveValue("stateful");
 
-      // The following change triggers a full page reload, so we check it after the HMR changes
+      // The following change triggers a full page reload, so we check it after all the checks for HMR state preservation
       let clientEntryCssContents = await fs.readFile(
         path.join(projectDir, "app/entry.client.css"),
         "utf8"
