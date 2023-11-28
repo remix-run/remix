@@ -18,7 +18,7 @@ The rest is just there for your information and deeper understanding. Let's get 
 👉 **Generate a basic template**
 
 ```shellscript nonumber
-npx create-remix@latest --template ryanflorence/remix-tutorial-template
+npx create-remix@latest --template remix-run/remix/templates/remix-tutorial
 ```
 
 This uses a pretty bare-bones template but includes our css and data model, so we can focus on Remix. The [Quick Start][quickstart] can familiarize you with the basic setup of a Remix project if you'd like to learn more.
