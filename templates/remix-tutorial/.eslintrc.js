@@ -38,12 +38,6 @@ module.exports = {
           { name: "NavLink", linkAttribute: "to" },
         ],
       },
-      rules: {
-        "react/jsx-no-leaked-render": [
-          "warn",
-          { validStrategies: ["ternary"] },
-        ],
-      },
     },
 
     // Typescript
