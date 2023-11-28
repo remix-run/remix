@@ -123,7 +123,7 @@ test.describe("Client Data", () => {
       );
       let app = new PlaywrightFixture(appFixture, page);
 
-      // Full SSR - normal Remix behavior due to lack of HydrationFallback components
+      // Full SSR - normal Remix behavior due to lack of HydrateFallback components
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Component");
@@ -132,7 +132,7 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Child Server Loader");
     });
 
-    test("parent.clientLoader/parent.HydrationFallback/child.clientLoader", async ({
+    test("parent.clientLoader/parent.HydrateFallback/child.clientLoader", async ({
       page,
     }) => {
       appFixture = await createAppFixture(
@@ -143,8 +143,8 @@ test.describe("Client Data", () => {
                 await new Promise(r => setTimeout(r, 100));
                 return { message: "Parent Client Loader" };
               }
-              export function HydrationFallback() {
-                return <p>Parent HydrationFallback</p>
+              export function HydrateFallback() {
+                return <p>Parent Fallback</p>
               }
             `,
             childAdditions: js`
@@ -159,28 +159,28 @@ test.describe("Client Data", () => {
       let app = new PlaywrightFixture(appFixture, page);
 
       // Renders parent fallback on initial render and calls parent clientLoader
-      // Does not call child clientLoader due to lack of HydrationFallback
+      // Does not call child clientLoader due to lack of HydrateFallback
       // TODO: confirm behavior here
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
-      expect(html).toMatch("Parent HydrationFallback");
+      expect(html).toMatch("Parent Fallback");
       expect(html).not.toMatch("Parent Component");
       expect(html).not.toMatch("Parent Server Loader");
-      expect(html).not.toMatch("Child HydrationFallback");
+      expect(html).not.toMatch("Child Fallback");
       expect(html).not.toMatch("Child Component");
       expect(html).not.toMatch("Child Server Loader");
 
       await page.waitForSelector("#parent-heading");
       html = await app.getHtml("main");
-      expect(html).not.toMatch("Parent HydrationFallback");
-      expect(html).not.toMatch("Child HydrationFallback");
+      expect(html).not.toMatch("Parent Fallback");
+      expect(html).not.toMatch("Child Fallback");
       expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Client Loader");
       expect(html).toMatch("Child Component");
       expect(html).toMatch("Child Server Loader");
     });
 
-    test("parent.clientLoader/child.clientLoader/child.HydrationFallback", async ({
+    test("parent.clientLoader/child.clientLoader/child.Fallback", async ({
       page,
     }) => {
       appFixture = await createAppFixture(
@@ -197,8 +197,8 @@ test.describe("Client Data", () => {
                 await new Promise(r => setTimeout(r, 100));
                 return { message: "Child Client Loader" };
               }
-              export function HydrationFallback() {
-                return <p>Child HydrationFallback</p>
+              export function HydrateFallback() {
+                return <p>Child Fallback</p>
               }
             `,
           }),
@@ -207,25 +207,25 @@ test.describe("Client Data", () => {
       let app = new PlaywrightFixture(appFixture, page);
 
       // Renders child fallback on initial render and calls child clientLoader
-      // Does not call parent clientLoader due to lack of HydrationFallback
+      // Does not call parent clientLoader due to lack of HydrateFallback
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Server Loader");
-      expect(html).toMatch("Child HydrationFallback");
+      expect(html).toMatch("Child Fallback");
       expect(html).not.toMatch("Child Component");
       expect(html).not.toMatch("Child Server Loader");
 
       await page.waitForSelector("#child-heading");
       html = await app.getHtml("main");
-      expect(html).not.toMatch("Child HydrationFallback");
+      expect(html).not.toMatch("Child Fallback");
       expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Server Loader");
       expect(html).toMatch("Child Component");
       expect(html).toMatch("Child Client Loader");
     });
 
-    test("parent.clientLoader/parent.HydrationFallback/child.clientLoader/child.HydrationFallback", async ({
+    test("parent.clientLoader/parent.HydrateFallback/child.clientLoader/child.Fallback", async ({
       page,
     }) => {
       appFixture = await createAppFixture(
@@ -236,8 +236,8 @@ test.describe("Client Data", () => {
                 await new Promise(r => setTimeout(r, 100));
                 return { message: "Parent Client Loader" };
               }
-              export function HydrationFallback() {
-                return <p>Parent HydrationFallback</p>
+              export function HydrateFallback() {
+                return <p>Parent Fallback</p>
               }
             `,
             childAdditions: js`
@@ -245,8 +245,8 @@ test.describe("Client Data", () => {
                 await new Promise(r => setTimeout(r, 100));
                 return { message: "Child Client Loader" };
               }
-              export function HydrationFallback() {
-                return <p>Child HydrationFallback</p>
+              export function HydrateFallback() {
+                return <p>Child Fallback</p>
               }
           `,
           }),
@@ -257,17 +257,17 @@ test.describe("Client Data", () => {
       // Renders parent fallback on initial render and calls both clientLoader's
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
-      expect(html).toMatch("Parent HydrationFallback");
+      expect(html).toMatch("Parent Fallback");
       expect(html).not.toMatch("Parent Component");
       expect(html).not.toMatch("Parent Server Loader");
-      expect(html).not.toMatch("Child HydrationFallback");
+      expect(html).not.toMatch("Child Fallback");
       expect(html).not.toMatch("Child Component");
       expect(html).not.toMatch("Child Server Loader");
 
       await page.waitForSelector("#parent-heading");
       html = await app.getHtml("main");
-      expect(html).not.toMatch("Parent HydrationFallback");
-      expect(html).not.toMatch("Child HydrationFallback");
+      expect(html).not.toMatch("Parent Fallback");
+      expect(html).not.toMatch("Child Fallback");
       expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Client Loader");
       expect(html).toMatch("Child Component");
@@ -282,16 +282,16 @@ test.describe("Client Data", () => {
               export function clientLoader() {
                 return { message: "Parent Client Loader" };
               }
-              export function HydrationFallback() {
-                return <p>Parent HydrationFallback</p>
+              export function HydrateFallback() {
+                return <p>Parent Fallback</p>
               }
             `,
             childAdditions: js`
               export function clientLoader() {
                 return { message: "Child Client Loader" };
               }
-              export function HydrationFallback() {
-                return <p>Child HydrationFallback</p>
+              export function HydrateFallback() {
+                return <p>Child Fallback</p>
               }
           `,
           }),
@@ -302,7 +302,7 @@ test.describe("Client Data", () => {
       // Renders parent fallback on initial render and calls both clientLoader's
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
-      expect(html).toMatch("Parent HydrationFallback");
+      expect(html).toMatch("Parent Fallback");
 
       await page.waitForSelector("#parent-heading");
       html = await app.getHtml("main");
@@ -324,8 +324,8 @@ test.describe("Client Data", () => {
                 let serverData = await serverLoader();
                 return { message: serverData.message + " - mutated by parent client" };
               }
-              export function HydrationFallback() {
-                return <p>Parent HydrationFallback</p>
+              export function HydrateFallback() {
+                return <p>Parent Fallback</p>
               }
             `,
             childAdditions: js`
@@ -334,7 +334,7 @@ test.describe("Client Data", () => {
                 let serverData = await serverLoader();
                 return { message: serverData.message + " - mutated by child client" };
               }
-              export function HydrationFallback() {
+              export function HydrateFallback() {
                 return null;
               }
             `,
@@ -346,7 +346,7 @@ test.describe("Client Data", () => {
       // Renders parent fallback on initial render and calls both clientLoader's
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
-      expect(html).toMatch("Parent HydrationFallback");
+      expect(html).toMatch("Parent Fallback");
 
       await page.waitForSelector("#child-heading");
       html = await app.getHtml("main");

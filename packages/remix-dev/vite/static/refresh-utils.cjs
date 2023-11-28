@@ -30,10 +30,10 @@ const enqueueUpdate = debounce(async () => {
           ? window.__remixRouteModules[route.id]?.ErrorBoundary ??
             imported.ErrorBoundary
           : imported.ErrorBoundary,
-        HydrationFallback: imported.HydrationFallback
-          ? window.__remixRouteModules[route.id]?.HydrationFallback ??
-            imported.HydrationFallback
-          : imported.HydrationFallback,
+        HydrateFallback: imported.HydrateFallback
+          ? window.__remixRouteModules[route.id]?.HydrateFallback ??
+            imported.HydrateFallback
+          : imported.HydrateFallback,
       };
       window.__remixRouteModules[route.id] = routeModule;
     }

@@ -233,7 +233,7 @@ export type RouteHandle = unknown;
 export interface EntryRouteModule {
   clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: any; // Weakly typed because server-runtime is not React-aware
-  HydrationFallback?: any; // Weakly typed because server-runtime is not React-aware
+  HydrateFallback?: any; // Weakly typed because server-runtime is not React-aware
   default: any; // Weakly typed because server-runtime is not React-aware
   handle?: RouteHandle;
   links?: LinksFunction;
