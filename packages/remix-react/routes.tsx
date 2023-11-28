@@ -209,6 +209,16 @@ export function createClientRoutes(
           : routeModule.shouldRevalidate,
       });
 
+      let initialData =
+        initialState &&
+        initialState.loaderData &&
+        initialState.loaderData[route.id];
+
+      let isHydrationRequest =
+        needsRevalidation == null &&
+        routeModule.clientLoader != null &&
+        routeModule.HydrateFallback != null;
+
       dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
           if (!routeModule.clientLoader) {
@@ -216,31 +226,28 @@ export function createClientRoutes(
             return fetchServerLoader(request);
           }
 
-          let initialData =
-            initialState &&
-            initialState.loaderData &&
-            initialState.loaderData[route.id];
-
           return routeModule.clientLoader({
             request,
             params,
             async serverLoader() {
+              if (isHydrationRequest) {
+                isHydrationRequest = false;
+
+                // Throw an error if a clientLoader tries to call a serverLoader that doesn't exist
+                if (initialData === undefined) {
+                  throw new Error(
+                    "You are trying to call serverFetch() on a route that does not have a server loader"
+                  );
+                }
+
+                // Otherwise, resolve the hydration clientLoader with the pre-loaded server data
+                return initialData;
+              }
+
               // Call the server loader for client-side navigations
-              if (!request.headers.has("X-Remix-Initial-Load")) {
-                let result = await fetchServerLoader(request);
-                let unwrapped = await unwrapServerResponse(result);
-                return unwrapped;
-              }
-
-              // Throw an error if a clientLoader tries to call a serverLoader that doesn't exist
-              if (initialData === undefined) {
-                throw new Error(
-                  "You are trying to call serverFetch() on a route that does not have a server loader"
-                );
-              }
-
-              // Otherwise, resolve the hydration clientLoader with the pre-loaded server data
-              return initialData;
+              let result = await fetchServerLoader(request);
+              let unwrapped = await unwrapServerResponse(result);
+              return unwrapped;
             },
           });
         });
