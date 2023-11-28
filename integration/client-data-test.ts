@@ -132,9 +132,7 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Child Server Loader");
     });
 
-    test("parent.clientLoader/parent.HydrateFallback/child.clientLoader", async ({
-      page,
-    }) => {
+    test("parent.clientLoader.hydrate/child.clientLoader", async ({ page }) => {
       appFixture = await createAppFixture(
         await createFixture({
           files: getFiles({
@@ -143,6 +141,7 @@ test.describe("Client Data", () => {
                 await new Promise(r => setTimeout(r, 100));
                 return { message: "Parent Client Loader" };
               }
+              clientLoader.hydrate=true
               export function HydrateFallback() {
                 return <p>Parent Fallback</p>
               }
@@ -159,8 +158,7 @@ test.describe("Client Data", () => {
       let app = new PlaywrightFixture(appFixture, page);
 
       // Renders parent fallback on initial render and calls parent clientLoader
-      // Does not call child clientLoader due to lack of HydrateFallback
-      // TODO: confirm behavior here
+      // Does not call child clientLoader
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Fallback");
@@ -180,9 +178,7 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Child Server Loader");
     });
 
-    test("parent.clientLoader/child.clientLoader/child.Fallback", async ({
-      page,
-    }) => {
+    test("parent.clientLoader/child.clientLoader.hydrate", async ({ page }) => {
       appFixture = await createAppFixture(
         await createFixture({
           files: getFiles({
@@ -197,6 +193,7 @@ test.describe("Client Data", () => {
                 await new Promise(r => setTimeout(r, 100));
                 return { message: "Child Client Loader" };
               }
+              clientLoader.hydrate=true
               export function HydrateFallback() {
                 return <p>Child Fallback</p>
               }
@@ -225,7 +222,7 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Child Client Loader");
     });
 
-    test("parent.clientLoader/parent.HydrateFallback/child.clientLoader/child.Fallback", async ({
+    test("parent.clientLoader.hydrate/child.clientLoader.hydrate", async ({
       page,
     }) => {
       appFixture = await createAppFixture(
@@ -236,6 +233,7 @@ test.describe("Client Data", () => {
                 await new Promise(r => setTimeout(r, 100));
                 return { message: "Parent Client Loader" };
               }
+              clientLoader.hydrate=true
               export function HydrateFallback() {
                 return <p>Parent Fallback</p>
               }
@@ -245,6 +243,7 @@ test.describe("Client Data", () => {
                 await new Promise(r => setTimeout(r, 100));
                 return { message: "Child Client Loader" };
               }
+              clientLoader.hydrate=true
               export function HydrateFallback() {
                 return <p>Child Fallback</p>
               }
@@ -282,6 +281,7 @@ test.describe("Client Data", () => {
               export function clientLoader() {
                 return { message: "Parent Client Loader" };
               }
+              clientLoader.hydrate=true
               export function HydrateFallback() {
                 return <p>Parent Fallback</p>
               }
@@ -290,9 +290,7 @@ test.describe("Client Data", () => {
               export function clientLoader() {
                 return { message: "Child Client Loader" };
               }
-              export function HydrateFallback() {
-                return <p>Child Fallback</p>
-              }
+              clientLoader.hydrate=true
           `,
           }),
         })
@@ -324,6 +322,7 @@ test.describe("Client Data", () => {
                 let serverData = await serverLoader();
                 return { message: serverData.message + " - mutated by parent client" };
               }
+              clientLoader.hydrate=true
               export function HydrateFallback() {
                 return <p>Parent Fallback</p>
               }
@@ -334,9 +333,7 @@ test.describe("Client Data", () => {
                 let serverData = await serverLoader();
                 return { message: serverData.message + " - mutated by child client" };
               }
-              export function HydrateFallback() {
-                return null;
-              }
+              clientLoader.hydrate=true
             `,
           }),
         })
