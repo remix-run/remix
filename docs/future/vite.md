@@ -321,6 +321,12 @@ This also means that in many cases you won't need the `links` function export an
 
 <docs-warning>While [Vite supports importing static asset URLs via an explicit `?url` query string][vite-url-imports], which in theory would match the behavior of the existing Remix compiler when used for CSS files, there is a [known Vite issue with `?url` for CSS imports][vite-css-url-issue]. This may be fixed in the future, but in the meantime you should exclusively use side effect imports for CSS.</docs-warning>
 
+#### Optionally scope regular CSS
+
+If you were using [Remix's regular CSS support][regular-css], one important caveat to be aware of is that these styles will no longer be mounted and unmounted automatically when navigating between routes during development.
+
+As a result, you may be more likely to encounter CSS collisions. If this is a concern, you might want to consider migrating your regular CSS files to [CSS Modules][vite-css-modules] or using a naming convention that prefixes class names with the corresponding file name.
+
 #### Enable Tailwind via PostCSS
 
 If your project is using [Tailwind CSS][tailwind], you'll first need to ensure that you have a [PostCSS][postcss] config file which will get automatically picked up by Vite.
@@ -670,6 +676,8 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-tsconfig-paths]: https://github.com/aleclarson/vite-tsconfig-paths
 [css-bundling]: ../styling/bundling
 [vite-css]: https://vitejs.dev/guide/features.html#css
+[regular-css]: ../styling/css
+[vite-css-modules]: https://vitejs.dev/guide/features#css-modules
 [vite-url-imports]: https://vitejs.dev/guide/assets.html#explicit-url-imports
 [vite-css-url-issue]: https://github.com/remix-run/remix/issues/7786
 [tailwind]: https://tailwindcss.com
