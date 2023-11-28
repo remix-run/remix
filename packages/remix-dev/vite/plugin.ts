@@ -243,6 +243,7 @@ const getRouteModuleExports = async (
   invariant(transformed, "Failed to transform: " + routeFile);
   let [, exports] = esModuleLexer(transformed.code);
   let exportNames = exports.map((e) => e.n);
+
   return exportNames;
 };
 
