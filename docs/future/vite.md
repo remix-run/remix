@@ -701,7 +701,3 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-plugin-cjs-interop]: https://github.com/cyco130/vite-plugin-cjs-interop
 [ssr-no-external]: https://vitejs.dev/config/ssr-options.html#ssr-noexternal
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
-
-```
-
-```
