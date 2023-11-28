@@ -21,7 +21,7 @@ export interface RouteModules {
 export interface RouteModule {
   clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: ErrorBoundaryComponent;
-  Fallback?: FallbackComponent;
+  HydrationFallback?: HydrationFallbackComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
@@ -43,10 +43,10 @@ export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
 export type ErrorBoundaryComponent = ComponentType;
 
 /**
- * `<RouteProvider fallbackElement>` component to render on initial loads
+ * `<Route HydrationFallback>` component to render on initial loads
  * when client loaders are present
  */
-export type FallbackComponent = ComponentType;
+export type HydrationFallbackComponent = ComponentType;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of

@@ -80,7 +80,7 @@ export function createServerRoutes(
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       Component: getRouteModuleComponent(routeModule),
-      Fallback: routeModule.Fallback,
+      InitialFallback: routeModule.HydrationFallback,
       ErrorBoundary: routeModule.ErrorBoundary
         ? routeModule.ErrorBoundary
         : route.id === "root"
@@ -193,7 +193,7 @@ export function createClientRoutes(
       Object.assign(dataRoute, {
         ...dataRoute,
         Component: getRouteModuleComponent(routeModule),
-        Fallback: routeModule.Fallback,
+        InitialFallback: routeModule.HydrationFallback,
         ErrorBoundary: routeModule.ErrorBoundary
           ? routeModule.ErrorBoundary
           : route.id === "root"
@@ -331,8 +331,8 @@ async function loadRouteModuleWithBlockingLinks(
   let routeModule = await loadRouteModule(route, routeModules);
   await prefetchStyleLinks(route, routeModule);
 
-  // Include all `browserSafeRouteExports` fields, except `Fallback` since those
-  // aren't used on lazily loaded routes
+  // Include all `browserSafeRouteExports` fields, except `HydrationFallback`
+  // since those aren't used on lazily loaded routes
   return {
     Component: getRouteModuleComponent(routeModule),
     ErrorBoundary: routeModule.ErrorBoundary,

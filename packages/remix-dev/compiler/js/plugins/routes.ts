@@ -13,7 +13,7 @@ type Route = RemixConfig["routes"][string];
 const browserSafeRouteExports: { [name: string]: boolean } = {
   clientLoader: true,
   ErrorBoundary: true,
-  Fallback: true,
+  HydrationFallback: true,
   default: true,
   handle: true,
   links: true,
