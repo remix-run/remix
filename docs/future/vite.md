@@ -583,25 +583,20 @@ If you run into browser errors in development that reference server-only code, b
 
 At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but the mental model is simpler: `.server` is for server-only code, everything else could be on both the client and the server.
 
-#### Plugin usage outside of Vite (e.g. Vitest, Storybook)
+#### Plugin usage with other Vite-based tools (e.g. Vitest, Storybook)
 
-Remix Vite plugin is intended to be used only with Vite to extend a development server and build a production application.
-While there are other tools (e.g. Vitest, Storybook) which work on top of Vite and make use of the same configuration file `vite.config.ts`,
-Remix Vite plugin is not intended to function nor required for such use cases.
-So we currently recommend to exclude the plugin when used with other tools.
+The Remix Vite plugin is only intended for use in your application's development server and production builds.
+While there are other Vite-based tools such as Vitest and Storybook that make use of the Vite config file, the Remix Vite plugin has not been designed for use with these tools.
+We currently recommend excluding the plugin when used with other Vite-based tools.
 
-For Vitest,
+For Vitest:
 
 ```ts filename=vite.config.ts lines=[7,12-13]
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig, loadEnv } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [
-    !process.env.VITEST && remix(),
-    tsconfigPaths(),
-  ],
+  plugins: [!process.env.VITEST && remix()],
   test: {
     environment: "happy-dom",
     // Additionally, this is to load ".env.test" during vitest
@@ -610,19 +605,28 @@ export default defineConfig({
 });
 ```
 
-For Storybook,
+For Storybook:
 
 ```ts filename=vite.config.ts lines=[7]
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
+
+const isStorybook = process.argv[1]?.includes("storybook");
 
 export default defineConfig({
-  plugins: [
-    !process.argv[1]?.includes("storybook") && remix(),
-    tsconfigPaths(),
-  ],
+  plugins: [!isStorybook && remix()],
 });
+```
+
+Alternatively, you can use separate Vite config files for each tool.
+For example, to use a Vite config specifically scoped to Remix:
+
+```shellscript nonumber
+# Development
+vite dev --config vite.config.remix.ts
+
+# Production
+vite build --config vite.config.remix.ts && vite build  --config vite.config.remix.ts --ssr
 ```
 
 ## Acknowledgements
@@ -697,3 +701,7 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-plugin-cjs-interop]: https://github.com/cyco130/vite-plugin-cjs-interop
 [ssr-no-external]: https://vitejs.dev/config/ssr-options.html#ssr-noexternal
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
+
+```
+
+```
