@@ -205,21 +205,7 @@ const writeFileSafe = async (file: string, contents: string): Promise<void> => {
   await fse.writeFile(file, contents);
 };
 
-function wrapConsoleTimeAsync<F extends (...args: any[]) => any>(f: F) {
-  const wrapper = async function (this: any, ...args: any[]) {
-    const id = Math.random().toString(36).slice(2).padStart(12, "0");
-    const label = `${f.name}:${id}`;
-    globalThis.console.time(label);
-    try {
-      return await f.apply(this, args);
-    } finally {
-      globalThis.console.timeEnd(label);
-    }
-  }
-  return wrapper as F;
-}
-
-let getRouteManifestModuleExports = async (
+const getRouteManifestModuleExports = async (
   viteChildCompiler: Vite.ViteDevServer | null,
   pluginConfig: ResolvedRemixVitePluginConfig
 ): Promise<Record<string, string[]>> => {
@@ -236,9 +222,7 @@ let getRouteManifestModuleExports = async (
   return Object.fromEntries(entries);
 };
 
-getRouteManifestModuleExports = wrapConsoleTimeAsync(getRouteManifestModuleExports);
-
-let getRouteModuleExports = async (
+const getRouteModuleExports = async (
   viteChildCompiler: Vite.ViteDevServer | null,
   pluginConfig: ResolvedRemixVitePluginConfig,
   routeFile: string
@@ -262,8 +246,6 @@ let getRouteModuleExports = async (
 
   return exportNames;
 };
-
-getRouteModuleExports = wrapConsoleTimeAsync(getRouteModuleExports);
 
 const showUnstableWarning = () => {
   console.warn(
