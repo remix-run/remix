@@ -70,8 +70,7 @@ type ClientLoaderFunction = (
  * @private Public API is exported from @remix-run/react
  */
 type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
-  context: undefined;
-  serverLoader: () => Promise<Response>;
+  serverLoader: <T = AppData>() => Promise<SerializeFrom<T>>;
 };
 
 export type HeadersArgs = {

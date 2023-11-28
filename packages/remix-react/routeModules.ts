@@ -34,7 +34,7 @@ export type ClientLoaderFunction = (
 ) => ReturnType<RRLoaderFunction>;
 
 export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
-  serverLoader: () => Promise<Response | DeferredData | null>;
+  serverLoader: <T = AppData>() => Promise<SerializeFrom<T>>;
 };
 
 /**
