@@ -22,8 +22,6 @@ const isCssFile = (file: string) => cssFileRegExp.test(file);
 export const isCssModulesFile = (file: string) => cssModulesRegExp.test(file);
 
 const getStylesForFiles = async (
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  vite: typeof import("vite"),
   viteDevServer: ViteDevServer,
   config: { rootDirectory: string },
   cssModulesManifest: Record<string, string>,
@@ -43,7 +41,7 @@ const getStylesForFiles = async (
       if (!node) {
         try {
           await viteDevServer.transformRequest(
-            resolveFileUrl(vite, config, normalizedPath)
+            resolveFileUrl(config, normalizedPath)
           );
         } catch (err) {
           console.error(err);
@@ -52,14 +50,8 @@ const getStylesForFiles = async (
       }
 
       if (!node) {
-        let absolutePath = path.resolve(file);
-        await viteDevServer.ssrLoadModule(absolutePath);
-        node = await viteDevServer.moduleGraph.getModuleByUrl(absolutePath);
-
-        if (!node) {
-          console.log(`Could not resolve module for file: ${file}`);
-          continue;
-        }
+        console.log(`Could not resolve module for file: ${file}`);
+        continue;
       }
 
       await findDeps(viteDevServer, node, deps);
@@ -175,8 +167,6 @@ const createRoutes = (
 };
 
 export const getStylesForUrl = async (
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  vite: typeof import("vite"),
   viteDevServer: ViteDevServer,
   config: Pick<
     ResolvedRemixConfig,
@@ -198,7 +188,6 @@ export const getStylesForUrl = async (
     ) ?? [];
 
   let styles = await getStylesForFiles(
-    vite,
     viteDevServer,
     config,
     cssModulesManifest,

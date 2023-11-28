@@ -1,11 +1,12 @@
 import * as path from "node:path";
 
+import { importViteEsmSync } from "./import-vite-esm-sync";
+
 export const resolveFileUrl = (
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  vite: typeof import("vite"),
   { rootDirectory }: { rootDirectory: string },
   filePath: string
 ) => {
+  let vite = importViteEsmSync();
   let relativePath = path.relative(rootDirectory, filePath);
   let isWithinRoot =
     !relativePath.startsWith("..") && !path.isAbsolute(relativePath);

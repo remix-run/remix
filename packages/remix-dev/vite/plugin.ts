@@ -32,11 +32,7 @@ import { serverEntryId } from "./server-entry-id";
 import { resolveFileUrl } from "./resolve-file-url";
 import { removeExports } from "./remove-exports";
 import { replaceImportSpecifier } from "./replace-import-specifier";
-
-// We reassign the "vite" variable from a dynamic import of Vite's ESM build
-// when the Vite plugin's config hook is executed
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-let vite: typeof import("vite");
+import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
 
 const supportedRemixConfigKeys = [
   "appDirectory",
@@ -103,6 +99,7 @@ const resolveRelativeRouteFilePath = (
   route: Route,
   pluginConfig: ResolvedRemixVitePluginConfig
 ) => {
+  let vite = importViteEsmSync();
   let file = route.file;
   let fullPath = path.resolve(pluginConfig.appDirectory, file);
 
@@ -121,6 +118,7 @@ const resolveChunk = (
   viteManifest: Vite.Manifest,
   absoluteFilePath: string
 ) => {
+  let vite = importViteEsmSync();
   let rootRelativeFilePath = path.relative(
     pluginConfig.rootDirectory,
     absoluteFilePath
@@ -144,16 +142,18 @@ const resolveBuildAssetPaths = (
   pluginConfig: ResolvedRemixVitePluginConfig,
   viteManifest: Vite.Manifest,
   entryFilePath: string,
-  includedAssetFilePaths: string[] = []
+  prependedAssetFilePaths: string[] = []
 ): Manifest["entry"] & { css: string[] } => {
   let entryChunk = resolveChunk(pluginConfig, viteManifest, entryFilePath);
-  let includedAssetChunks = includedAssetFilePaths.map((filePath) =>
+
+  // This is here to support prepending client entry assets to the root route
+  let prependedAssetChunks = prependedAssetFilePaths.map((filePath) =>
     resolveChunk(pluginConfig, viteManifest, filePath)
   );
 
   let chunks = resolveDependantChunks(viteManifest, [
+    ...prependedAssetChunks,
     entryChunk,
-    ...includedAssetChunks,
   ]);
 
   return {
@@ -239,7 +239,7 @@ const getRouteModuleExports = async (
   let ssr = true;
   let { pluginContainer, moduleGraph } = viteChildCompiler;
   let routePath = path.join(pluginConfig.appDirectory, routeFile);
-  let url = resolveFileUrl(vite, pluginConfig, routePath);
+  let url = resolveFileUrl(pluginConfig, routePath);
 
   let resolveId = async () => {
     let result = await pluginContainer.resolveId(url, undefined, { ssr });
@@ -343,14 +343,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
     return `
     import * as entryServer from ${JSON.stringify(
-      resolveFileUrl(vite, pluginConfig, pluginConfig.entryServerFilePath)
+      resolveFileUrl(pluginConfig, pluginConfig.entryServerFilePath)
     )};
     ${Object.keys(pluginConfig.routes)
       .map((key, index) => {
         let route = pluginConfig.routes[key]!;
         return `import * as route${index} from ${JSON.stringify(
           resolveFileUrl(
-            vite,
             pluginConfig,
             resolveRelativeRouteFilePath(route, pluginConfig)
           )
@@ -419,6 +418,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     for (let [key, route] of Object.entries(pluginConfig.routes)) {
       let routeFilePath = path.join(pluginConfig.appDirectory, route.file);
       let sourceExports = routeManifestExports[key];
+      let isRootRoute = route.parentId === undefined;
 
       routes[key] = {
         id: route.id,
@@ -436,7 +436,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           // If this is the root route, we also need to include assets from the
           // client entry file as this is a common way for consumers to import
           // global reset styles, etc.
-          route.parentId === undefined ? [pluginConfig.entryClientFilePath] : []
+          isRootRoute ? [pluginConfig.entryClientFilePath] : []
         ),
       };
     }
@@ -478,7 +478,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         index: route.index,
         caseSensitive: route.caseSensitive,
         module: `${resolveFileUrl(
-          vite,
           pluginConfig,
           resolveRelativeRouteFilePath(route, pluginConfig)
         )}${
@@ -498,11 +497,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         runtime: VirtualModule.url(injectHmrRuntimeId),
       },
       entry: {
-        module: resolveFileUrl(
-          vite,
-          pluginConfig,
-          pluginConfig.entryClientFilePath
-        ),
+        module: resolveFileUrl(pluginConfig, pluginConfig.entryClientFilePath),
         imports: [],
       },
       routes,
@@ -513,8 +508,11 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     {
       name: "remix",
       config: async (_viteUserConfig, viteConfigEnv) => {
-        // Load Vite's ESM build up-front as soon as we're in an async context
-        vite = await import("vite");
+        // Preload Vite's ESM build up-front as soon as we're in an async context
+        await preloadViteEsm();
+
+        // Ensure sync import of Vite works after async preload
+        let vite = importViteEsmSync();
 
         viteUserConfig = _viteUserConfig;
         viteCommand = viteConfigEnv.command;
@@ -643,6 +641,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             "The Remix Vite plugin requires the use of a Vite config file"
           );
         }
+
+        let vite = importViteEsmSync();
+
         let childCompilerConfigFile = await vite.loadConfigFromFile(
           {
             command: viteConfig.command,
@@ -711,7 +712,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           getCriticalCss: async (build, url) => {
             invariant(cachedPluginConfig);
             return getStylesForUrl(
-              vite,
               viteDevServer,
               cachedPluginConfig,
               cssModulesManifest,
@@ -1168,6 +1168,7 @@ function getRoute(
   pluginConfig: ResolvedRemixVitePluginConfig,
   file: string
 ): Route | undefined {
+  let vite = importViteEsmSync();
   if (!file.startsWith(vite.normalizePath(pluginConfig.appDirectory))) return;
   let routePath = vite.normalizePath(
     path.relative(pluginConfig.appDirectory, file)
@@ -1202,7 +1203,6 @@ async function getRouteMetadata(
         resolveRelativeRouteFilePath(route, pluginConfig)
       ),
     module: `${resolveFileUrl(
-      vite,
       pluginConfig,
       resolveRelativeRouteFilePath(route, pluginConfig)
     )}?import`, // Ensure the Vite dev server responds with a JS module
