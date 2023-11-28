@@ -649,6 +649,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         viteChildCompiler = await vite.createServer({
           ...viteUserConfig,
           mode: viteConfig.mode,
+          optimizeDeps: {
+            disabled: true,
+          },
           server: {
             preTransformRequests: false,
             hmr: false,
