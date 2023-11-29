@@ -377,6 +377,12 @@ This also means that in many cases you won't need the `links` function export an
 
 <docs-warning>While [Vite supports importing static asset URLs via an explicit `?url` query string][vite-url-imports], which in theory would match the behavior of the existing Remix compiler when used for CSS files, there is a [known Vite issue with `?url` for CSS imports][vite-css-url-issue]. This may be fixed in the future, but in the meantime you should exclusively use side effect imports for CSS.</docs-warning>
 
+#### Optionally scope regular CSS
+
+If you were using [Remix's regular CSS support][regular-css], one important caveat to be aware of is that these styles will no longer be mounted and unmounted automatically when navigating between routes during development.
+
+As a result, you may be more likely to encounter CSS collisions. If this is a concern, you might want to consider migrating your regular CSS files to [CSS Modules][vite-css-modules] or using a naming convention that prefixes class names with the corresponding file name.
+
 #### Enable Tailwind via PostCSS
 
 If your project is using [Tailwind CSS][tailwind], you'll first need to ensure that you have a [PostCSS][postcss] config file which will get automatically picked up by Vite.
@@ -639,6 +645,52 @@ If you run into browser errors in development that reference server-only code, b
 
 At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but the mental model is simpler: `.server` is for server-only code, everything else could be on both the client and the server.
 
+#### Plugin usage with other Vite-based tools (e.g. Vitest, Storybook)
+
+The Remix Vite plugin is only intended for use in your application's development server and production builds.
+While there are other Vite-based tools such as Vitest and Storybook that make use of the Vite config file, the Remix Vite plugin has not been designed for use with these tools.
+We currently recommend excluding the plugin when used with other Vite-based tools.
+
+For Vitest:
+
+```ts filename=vite.config.ts lines=[7,12-13]
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig, loadEnv } from "vite";
+
+export default defineConfig({
+  plugins: [!process.env.VITEST && remix()],
+  test: {
+    environment: "happy-dom",
+    // Additionally, this is to load ".env.test" during vitest
+    env: loadEnv("test", process.cwd(), ""),
+  },
+});
+```
+
+For Storybook:
+
+```ts filename=vite.config.ts lines=[7]
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+const isStorybook = process.argv[1]?.includes("storybook");
+
+export default defineConfig({
+  plugins: [!isStorybook && remix()],
+});
+```
+
+Alternatively, you can use separate Vite config files for each tool.
+For example, to use a Vite config specifically scoped to Remix:
+
+```shellscript nonumber
+# Development
+vite dev --config vite.config.remix.ts
+
+# Production
+vite build --config vite.config.remix.ts && vite build  --config vite.config.remix.ts --ssr
+```
+
 ## Acknowledgements
 
 Vite is an amazing project, and we're grateful to the Vite team for their work.
@@ -680,6 +732,8 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-tsconfig-paths]: https://github.com/aleclarson/vite-tsconfig-paths
 [css-bundling]: ../styling/bundling
 [vite-css]: https://vitejs.dev/guide/features.html#css
+[regular-css]: ../styling/css
+[vite-css-modules]: https://vitejs.dev/guide/features#css-modules
 [vite-url-imports]: https://vitejs.dev/guide/assets.html#explicit-url-imports
 [vite-css-url-issue]: https://github.com/remix-run/remix/issues/7786
 [tailwind]: https://tailwindcss.com
