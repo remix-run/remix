@@ -7,7 +7,6 @@ import {
 } from "./helpers/create-fixture.js";
 import type { AppFixture } from "./helpers/create-fixture.js";
 import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
-import { ServerMode } from "@remix-run/dev/dist/config/serverModes.js";
 
 function getFiles({
   parentClientLoader,
@@ -58,6 +57,9 @@ function getFiles({
         parentClientLoader
           ? js`
               export async function clientLoader({ serverLoader }) {
+                // Need a small delay to ensure we capture the server-rendered
+                // fallbacks for assertions
+                await new Promise(r => setTimeout(r, 100))
                 let data = await serverLoader();
                 return { message: data.message + " (mutated by client)" };
               }
@@ -95,6 +97,9 @@ function getFiles({
         childClientLoader
           ? js`
               export async function clientLoader({ serverLoader }) {
+                // Need a small delay to ensure we capture the server-rendered
+                // fallbacks for assertions
+                await new Promise(r => setTimeout(r, 100))
                 let data = await serverLoader();
                 return { message: data.message + " (mutated by client)" };
               }
@@ -261,38 +266,40 @@ test.describe("Client Data", () => {
     });
 
     test("handles synchronous client loaders", async ({ page }) => {
-      appFixture = await createAppFixture(
-        await createFixture({
-          files: getFiles({
-            parentClientLoader: false,
-            parentClientLoaderHydrate: false,
-            childClientLoader: false,
-            childClientLoaderHydrate: false,
-            parentAdditions: js`
-              export function clientLoader() {
-                return { message: "Parent Client Loader" };
-              }
-              clientLoader.hydrate=true
-              export function HydrateFallback() {
-                return <p>Parent Fallback</p>
-              }
-            `,
-            childAdditions: js`
-              export function clientLoader() {
-                return { message: "Child Client Loader" };
-              }
-              clientLoader.hydrate=true
+      let fixture = await createFixture({
+        files: getFiles({
+          parentClientLoader: false,
+          parentClientLoaderHydrate: false,
+          childClientLoader: false,
+          childClientLoaderHydrate: false,
+          parentAdditions: js`
+            export function clientLoader() {
+              return { message: "Parent Client Loader" };
+            }
+            clientLoader.hydrate=true
+            export function HydrateFallback() {
+              return <p>Parent Fallback</p>
+            }
           `,
-          }),
-        })
-      );
+          childAdditions: js`
+            export function clientLoader() {
+              return { message: "Child Client Loader" };
+            }
+            clientLoader.hydrate=true
+        `,
+        }),
+      });
+
+      // Ensure we SSR the fallbacks
+      let doc = await fixture.requestDocument("/parent/child");
+      let html = await doc.text();
+      expect(html).toMatch("Parent Fallback");
+
+      appFixture = await createAppFixture(fixture);
       let app = new PlaywrightFixture(appFixture, page);
 
       // Renders parent fallback on initial render and calls both clientLoader's
       await app.goto("/parent/child");
-      let html = await app.getHtml("main");
-      expect(html).toMatch("Parent Fallback");
-
       await page.waitForSelector("#child-data");
       html = await app.getHtml("main");
       expect(html).toMatch("Parent Client Loader");
@@ -300,17 +307,16 @@ test.describe("Client Data", () => {
     });
 
     test("handles deferred data through client loaders", async ({ page }) => {
-      let fixture = await createFixture(
-        {
-          files: {
-            ...getFiles({
-              parentClientLoader: false,
-              parentClientLoaderHydrate: false,
-              childClientLoader: false,
-              childClientLoaderHydrate: false,
-            }),
-            // Blow away parent.child.tsx with our own deferred version
-            "app/routes/parent.child.tsx": js`
+      let fixture = await createFixture({
+        files: {
+          ...getFiles({
+            parentClientLoader: false,
+            parentClientLoaderHydrate: false,
+            childClientLoader: false,
+            childClientLoaderHydrate: false,
+          }),
+          // Blow away parent.child.tsx with our own deferred version
+          "app/routes/parent.child.tsx": js`
             import * as React from 'react';
             import { defer, json } from '@remix-run/node'
             import { Await, Outlet, useLoaderData } from '@remix-run/react'
@@ -346,10 +352,8 @@ test.describe("Client Data", () => {
               );
             }
           `,
-          },
         },
-        ServerMode.Development
-      );
+      });
 
       // Ensure initial document request contains the child fallback _and_ the
       // subsequent streamed/resolved deferred data
@@ -359,7 +363,7 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Child Fallback");
       expect(html).toMatch("Child Deferred Data");
 
-      appFixture = await createAppFixture(fixture, ServerMode.Development);
+      appFixture = await createAppFixture(fixture);
       let app = new PlaywrightFixture(appFixture, page);
 
       await app.goto("/parent/child");
