@@ -89,9 +89,12 @@ function getFiles({
     `,
     "app/routes/parent.child.tsx": js`
       import { json } from '@remix-run/node'
-      import { Outlet, useLoaderData } from '@remix-run/react'
+      import { Form, Outlet, useActionData, useLoaderData } from '@remix-run/react'
       export function loader() {
         return json({ message: 'Child Server Loader'});
+      }
+      export function action() {
+        return json({ message: 'Child Server Action'});
       }
       ${
         childClientLoader
@@ -119,10 +122,14 @@ function getFiles({
       ${childAdditions || ""}
       export default function Component() {
         let data = useLoaderData();
+        let actionData = useActionData();
         return (
           <>
             <p id="child-data">{data.message}</p>
-            <Outlet/>
+            <Form method="post">
+              <button type="submit">Submit</button>
+              {actionData ? <p id="child-action-data">{actionData.message}</p> : null}
+            </Form>
           </>
         );
       }
@@ -137,7 +144,7 @@ test.describe("Client Data", () => {
     appFixture.close();
   });
 
-  test.describe("Initial Hydration", () => {
+  test.describe("clientLoader - critical route module", () => {
     test("no client loaders or fallbacks", async ({ page }) => {
       appFixture = await createAppFixture(
         await createFixture({
@@ -191,8 +198,6 @@ test.describe("Client Data", () => {
       );
       let app = new PlaywrightFixture(appFixture, page);
 
-      // Renders parent fallback on initial render and calls parent clientLoader
-      // Does not call child clientLoader
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Fallback");
@@ -219,8 +224,6 @@ test.describe("Client Data", () => {
       );
       let app = new PlaywrightFixture(appFixture, page);
 
-      // Renders child fallback on initial render and calls child clientLoader
-      // Does not call parent clientLoader due to lack of HydrateFallback
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Server Loader");
@@ -249,7 +252,6 @@ test.describe("Client Data", () => {
       );
       let app = new PlaywrightFixture(appFixture, page);
 
-      // Renders parent fallback on initial render and calls both clientLoader's
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Fallback");
@@ -297,8 +299,6 @@ test.describe("Client Data", () => {
 
       appFixture = await createAppFixture(fixture);
       let app = new PlaywrightFixture(appFixture, page);
-
-      // Renders parent fallback on initial render and calls both clientLoader's
       await app.goto("/parent/child");
       await page.waitForSelector("#child-data");
       html = await app.getHtml("main");
@@ -377,7 +377,7 @@ test.describe("Client Data", () => {
     });
   });
 
-  test.describe("SPA Navigations", () => {
+  test.describe("clientLoader - lazy route module", () => {
     test("no client loaders or fallbacks", async ({ page }) => {
       appFixture = await createAppFixture(
         await createFixture({
@@ -416,10 +416,30 @@ test.describe("Client Data", () => {
       await app.clickLink("/parent/child");
       await page.waitForSelector("#child-data");
 
-      // Parent client loader should run
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Server Loader (mutated by client)");
       expect(html).toMatch("Child Server Loader");
+    });
+
+    test("child.clientLoader", async ({ page }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentClientLoader: false,
+            parentClientLoaderHydrate: false,
+            childClientLoader: true,
+            childClientLoaderHydrate: false,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.clickLink("/parent/child");
+      await page.waitForSelector("#child-data");
+
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader (mutated by client)");
     });
 
     test("parent.clientLoader/child.clientLoader", async ({ page }) => {
@@ -438,10 +458,345 @@ test.describe("Client Data", () => {
       await app.clickLink("/parent/child");
       await page.waitForSelector("#child-data");
 
-      // Both clientLoaders should run
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Server Loader (mutated by client)");
       expect(html).toMatch("Child Server Loader (mutated by client");
+    });
+  });
+
+  test.describe("clientAction - critical route module", () => {
+    test("child.clientAction", async ({ page }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentClientLoader: false,
+            parentClientLoaderHydrate: false,
+            childClientLoader: false,
+            childClientLoaderHydrate: false,
+            childAdditions: js`
+              export async function clientAction({ serverAction }) {
+                let data = await serverAction();
+                return {
+                  message: data.message + " (mutated by client)"
+                }
+              }
+            `,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/parent/child");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).not.toMatch("Child Server Action");
+
+      app.clickSubmitButton("/parent/child");
+      await page.waitForSelector("#child-action-data");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+    });
+
+    test("child.clientAction/parent.childLoader", async ({ page }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentClientLoader: true,
+            parentClientLoaderHydrate: false,
+            childClientLoader: false,
+            childClientLoaderHydrate: false,
+            childAdditions: js`
+              export async function clientAction({ serverAction }) {
+                let data = await serverAction();
+                return {
+                  message: data.message + " (mutated by client)"
+                }
+              }
+            `,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/parent/child");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).not.toMatch("Child Server Action");
+
+      app.clickSubmitButton("/parent/child");
+      await page.waitForSelector("#child-action-data");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader"); // still revalidating
+      expect(html).toMatch("Child Server Loader");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+
+      await page.waitForSelector(
+        ':has-text("Parent Server Loader (mutated by client)")'
+      );
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader (mutated by client)");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+    });
+
+    test("child.clientAction/child.clientLoader", async ({ page }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentClientLoader: false,
+            parentClientLoaderHydrate: false,
+            childClientLoader: true,
+            childClientLoaderHydrate: false,
+            childAdditions: js`
+              export async function clientAction({ serverAction }) {
+                let data = await serverAction();
+                return {
+                  message: data.message + " (mutated by client)"
+                }
+              }
+            `,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/parent/child");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).not.toMatch("Child Server Action");
+
+      app.clickSubmitButton("/parent/child");
+      await page.waitForSelector("#child-action-data");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader"); // still revalidating
+      expect(html).toMatch("Child Server Loader");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+
+      await page.waitForSelector(
+        ':has-text("Child Server Loader (mutated by client)")'
+      );
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader (mutated by client)");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+    });
+
+    test("child.clientAction/parent.childLoader/child.clientLoader", async ({
+      page,
+    }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentClientLoader: true,
+            parentClientLoaderHydrate: false,
+            childClientLoader: true,
+            childClientLoaderHydrate: false,
+            childAdditions: js`
+              export async function clientAction({ serverAction }) {
+                let data = await serverAction();
+                return {
+                  message: data.message + " (mutated by client)"
+                }
+              }
+            `,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/parent/child");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).not.toMatch("Child Server Action");
+
+      app.clickSubmitButton("/parent/child");
+      await page.waitForSelector("#child-action-data");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader"); // still revalidating
+      expect(html).toMatch("Child Server Loader"); // still revalidating
+      expect(html).toMatch("Child Server Action (mutated by client)");
+
+      await page.waitForSelector(
+        ':has-text("Child Server Loader (mutated by client)")'
+      );
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader (mutated by client)");
+      expect(html).toMatch("Child Server Loader (mutated by client)");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+    });
+  });
+
+  test.describe("clientAction - lazy route module", () => {
+    test("child.clientAction", async ({ page }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentClientLoader: false,
+            parentClientLoaderHydrate: false,
+            childClientLoader: false,
+            childClientLoaderHydrate: false,
+            childAdditions: js`
+              export async function clientAction({ serverAction }) {
+                let data = await serverAction();
+                return {
+                  message: data.message + " (mutated by client)"
+                }
+              }
+            `,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.clickLink("/parent/child");
+      await page.waitForSelector("#child-data");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).not.toMatch("Child Server Action");
+
+      app.clickSubmitButton("/parent/child");
+      await page.waitForSelector("#child-action-data");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+    });
+
+    test("child.clientAction/parent.childLoader", async ({ page }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentClientLoader: true,
+            parentClientLoaderHydrate: false,
+            childClientLoader: false,
+            childClientLoaderHydrate: false,
+            childAdditions: js`
+              export async function clientAction({ serverAction }) {
+                let data = await serverAction();
+                return {
+                  message: data.message + " (mutated by client)"
+                }
+              }
+            `,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.clickLink("/parent/child");
+      await page.waitForSelector("#child-data");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).not.toMatch("Child Server Action");
+
+      app.clickSubmitButton("/parent/child");
+      await page.waitForSelector("#child-action-data");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader"); // still revalidating
+      expect(html).toMatch("Child Server Loader");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+
+      await page.waitForSelector(
+        ':has-text("Parent Server Loader (mutated by client)")'
+      );
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader (mutated by client)");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+    });
+
+    test("child.clientAction/child.clientLoader", async ({ page }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentClientLoader: false,
+            parentClientLoaderHydrate: false,
+            childClientLoader: true,
+            childClientLoaderHydrate: false,
+            childAdditions: js`
+              export async function clientAction({ serverAction }) {
+                let data = await serverAction();
+                return {
+                  message: data.message + " (mutated by client)"
+                }
+              }
+            `,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.clickLink("/parent/child");
+      await page.waitForSelector("#child-data");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).not.toMatch("Child Server Action");
+
+      app.clickSubmitButton("/parent/child");
+      await page.waitForSelector("#child-action-data");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader"); // still revalidating
+      expect(html).toMatch("Child Server Loader");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+
+      await page.waitForSelector(
+        ':has-text("Child Server Loader (mutated by client)")'
+      );
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader (mutated by client)");
+      expect(html).toMatch("Child Server Action (mutated by client)");
+    });
+
+    test("child.clientAction/parent.childLoader/child.clientLoader", async ({
+      page,
+    }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: getFiles({
+            parentClientLoader: true,
+            parentClientLoaderHydrate: false,
+            childClientLoader: true,
+            childClientLoaderHydrate: false,
+            childAdditions: js`
+              export async function clientAction({ serverAction }) {
+                let data = await serverAction();
+                return {
+                  message: data.message + " (mutated by client)"
+                }
+              }
+            `,
+          }),
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.clickLink("/parent/child");
+      await page.waitForSelector("#child-data");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Server Loader");
+      expect(html).not.toMatch("Child Server Action");
+
+      app.clickSubmitButton("/parent/child");
+      await page.waitForSelector("#child-action-data");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader"); // still revalidating
+      expect(html).toMatch("Child Server Loader"); // still revalidating
+      expect(html).toMatch("Child Server Action (mutated by client)");
+
+      await page.waitForSelector(
+        ':has-text("Child Server Loader (mutated by client)")'
+      );
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader (mutated by client)");
+      expect(html).toMatch("Child Server Loader (mutated by client)");
+      expect(html).toMatch("Child Server Action (mutated by client)");
     });
   });
 });
