@@ -42,6 +42,7 @@ interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
+  hasClientAction: boolean;
   hasClientLoader: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
@@ -189,8 +190,6 @@ export function createClientRoutes(
       id: route.id,
       index: route.index,
       path: route.path,
-      action: ({ request }: ActionFunctionArgs) =>
-        prefetchStylesAndCallHandler(() => fetchServerAction(request)),
     };
 
     if (routeModule) {
@@ -262,6 +261,24 @@ export function createClientRoutes(
           });
         });
       };
+
+      dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
+        return prefetchStylesAndCallHandler(async () => {
+          if (!routeModule.clientAction) {
+            return fetchServerAction(request);
+          }
+
+          return routeModule.clientAction({
+            request,
+            params,
+            async serverAction() {
+              let result = await fetchServerAction(request);
+              let unwrapped = await unwrapServerResponse(result);
+              return unwrapped;
+            },
+          });
+        });
+      };
     } else {
       // If the lazy route does not have a client loader/action we want to call
       // the server loader/action in parallel with the module load so we add
@@ -269,6 +286,10 @@ export function createClientRoutes(
       if (!route.hasClientLoader) {
         dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
           prefetchStylesAndCallHandler(() => fetchServerLoader(request));
+      }
+      if (!route.hasClientAction) {
+        dataRoute.action = ({ request }: ActionFunctionArgs) =>
+          prefetchStylesAndCallHandler(() => fetchServerAction(request));
       }
 
       // Load all other modules via route.lazy()
@@ -292,6 +313,19 @@ export function createClientRoutes(
             });
         }
 
+        if (mod.clientAction) {
+          let clientAction = mod.clientAction;
+          lazyRoute.action = (args) =>
+            clientAction({
+              ...args,
+              async serverAction() {
+                let response = await fetchServerAction(args.request);
+                let result = await unwrapServerResponse(response);
+                return result;
+              },
+            });
+        }
+
         if (needsRevalidation) {
           lazyRoute.shouldRevalidate = wrapShouldRevalidateForHdr(
             route.id,
@@ -302,6 +336,7 @@ export function createClientRoutes(
 
         return {
           ...(lazyRoute.loader ? { loader: lazyRoute.loader } : {}),
+          ...(lazyRoute.action ? { action: lazyRoute.action } : {}),
           hasErrorBoundary: lazyRoute.hasErrorBoundary,
           shouldRevalidate: lazyRoute.shouldRevalidate,
           handle: lazyRoute.handle,
@@ -357,6 +392,7 @@ async function loadRouteModuleWithBlockingLinks(
   return {
     Component: getRouteModuleComponent(routeModule),
     ErrorBoundary: routeModule.ErrorBoundary,
+    clientAction: routeModule.clientAction,
     clientLoader: routeModule.clientLoader,
     handle: routeModule.handle,
     links: routeModule.links,
