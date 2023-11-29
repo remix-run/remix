@@ -66,6 +66,21 @@ export default defineConfig({
 
 All other bundling-related options are now [configured with Vite][vite-config]. This means you have much greater control over the bundling process.
 
+## New build output paths
+
+There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. During the build, Vite copies files from the `public` directory into `build/client`, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
+
+In order to align the default Remix project structure with the way Vite works, the build output paths have been changed.
+
+- The server is now compiled into `build/server` by default.
+- The client is now compiled into `build/client` by default.
+
+This means that the following configuration defaults have been changed:
+
+- [assetsBuildDirectory][assets-build-directory] defaults to `"build/client"` rather than `"public/build"`
+- [publicPath][public-path] defaults to `"/"` rather than `"/build/"`
+- [serverBuildPath][server-build-path] defaults to `"build/server/index.js"` rather than `"build/index.js"`
+
 ## Additional features & plugins
 
 One of the reasons that Remix is moving to Vite is, so you have less to learn when adopting Remix.
@@ -132,16 +147,34 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
 It comes built-in with the Remix Vite plugin and will take over when you run `vite dev`.
 
-👉 **Update your `dev` and `build` scripts**
+Unlike `remix-serve`, the Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
+
+You'll also need to update to the new build output paths, which are `build/server` for the server and `build/client` for client assets.
+
+👉 **Update your `dev`, `build` and `start` scripts**
 
 ```json filename=package.json lines=[3-4]
 {
   "scripts": {
     "build": "vite build && vite build --ssr",
     "dev": "vite dev",
-    "start": "remix-serve ./build/index.js"
+    "start": "remix-serve ./build/server/index.js"
   }
 }
+```
+
+👉 **Install global Node polyfills in your Vite config**
+
+```diff filename=vite.config.ts
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
++import { installGlobals } from "@remix-run/node";
+import { defineConfig } from "vite";
+
++installGlobals();
+
+export default defineConfig({
+  plugins: [remix()],
+});
 ```
 
 #### Migrating from a custom server
@@ -149,13 +182,12 @@ It comes built-in with the Remix Vite plugin and will take over when you run `vi
 If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
 This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
 
-Remix exposes APIs for exactly this purpose:
+You'll also need to update your server code to reference the new build output paths, which are `build/server` for the server build and `build/client` for client assets.
+
+Remix exposes the server build's module ID so that it can be loaded dynamically in your request handler during development via `vite.ssrLoadModule`.
 
 ```ts
-import {
-  unstable_createViteServer, // provides middleware for handling asset requests
-  unstable_loadViteServerBuild, // handles initial render requests
-} from "@remix-run/dev";
+import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
 ```
 
 For example, if you were using Express, here's how you could do it.
@@ -163,10 +195,7 @@ For example, if you were using Express, here's how you could do it.
 👉 **Update your `server.mjs` file**
 
 ```ts filename=server.mjs lines=[1-4,11-14,18-21,29,36-38]
-import {
-  unstable_createViteServer,
-  unstable_loadViteServerBuild,
-} from "@remix-run/dev";
+import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
 import { createRequestHandler } from "@remix-run/express";
 import { installGlobals } from "@remix-run/node";
 import express from "express";
@@ -176,7 +205,13 @@ installGlobals();
 const vite =
   process.env.NODE_ENV === "production"
     ? undefined
-    : await unstable_createViteServer();
+    : await import("vite").then(({ createServer }) =>
+        createServer({
+          server: {
+            middlewareMode: true,
+          },
+        })
+      );
 
 const app = express();
 
@@ -185,22 +220,25 @@ if (vite) {
   app.use(vite.middlewares);
 } else {
   app.use(
-    "/build",
-    express.static("public/build", {
+    "/assets",
+    express.static("build/client/assets", {
       immutable: true,
       maxAge: "1y",
     })
   );
 }
-app.use(express.static("public", { maxAge: "1h" }));
+app.use(express.static("build/client", { maxAge: "1h" }));
 
 // handle SSR requests
 app.all(
   "*",
   createRequestHandler({
     build: vite
-      ? () => unstable_loadViteServerBuild(vite)
-      : await import("./build/index.js"),
+      ? () =>
+          vite.ssrLoadModule(
+            unstable_viteServerBuildModuleId
+          )
+      : await import("./build/server/index.js"),
   })
 );
 
@@ -231,6 +269,24 @@ node --loader tsm ./server.ts
 ```
 
 Just remember that there might be some noticeable slowdown for initial server startup if you do this.
+
+#### Migrate references to build output paths
+
+When using the existing Remix compiler's default options, the server was compiled into `build` and the client was compiled into `public/build`. Due to differences with the way Vite typically works with its `public` directory compared to the existing Remix compiler, these output paths have changed.
+
+👉 **Update references to build output paths**
+
+- The server is now compiled into `build/server` by default.
+- The client is now compiled into `build/client` by default.
+
+For example, to update the Dockerfile from the [Blues Stack][blues-stack]:
+
+```diff filename=Dockerfile
+-COPY --from=build /myapp/build /myapp/build
+-COPY --from=build /myapp/public /myapp/public
++COPY --from=build /myapp/server/build /myapp/server/build
++COPY --from=build /myapp/client/build /myapp/client/build
+```
 
 #### Configure path aliases
 
@@ -320,6 +376,12 @@ This also means that in many cases you won't need the `links` function export an
 ```
 
 <docs-warning>While [Vite supports importing static asset URLs via an explicit `?url` query string][vite-url-imports], which in theory would match the behavior of the existing Remix compiler when used for CSS files, there is a [known Vite issue with `?url` for CSS imports][vite-css-url-issue]. This may be fixed in the future, but in the meantime you should exclusively use side effect imports for CSS.</docs-warning>
+
+#### Optionally scope regular CSS
+
+If you were using [Remix's regular CSS support][regular-css], one important caveat to be aware of is that these styles will no longer be mounted and unmounted automatically when navigating between routes during development.
+
+As a result, you may be more likely to encounter CSS collisions. If this is a concern, you might want to consider migrating your regular CSS files to [CSS Modules][vite-css-modules] or using a naming convention that prefixes class names with the corresponding file name.
 
 #### Enable Tailwind via PostCSS
 
@@ -583,6 +645,52 @@ If you run into browser errors in development that reference server-only code, b
 
 At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but the mental model is simpler: `.server` is for server-only code, everything else could be on both the client and the server.
 
+#### Plugin usage with other Vite-based tools (e.g. Vitest, Storybook)
+
+The Remix Vite plugin is only intended for use in your application's development server and production builds.
+While there are other Vite-based tools such as Vitest and Storybook that make use of the Vite config file, the Remix Vite plugin has not been designed for use with these tools.
+We currently recommend excluding the plugin when used with other Vite-based tools.
+
+For Vitest:
+
+```ts filename=vite.config.ts lines=[7,12-13]
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig, loadEnv } from "vite";
+
+export default defineConfig({
+  plugins: [!process.env.VITEST && remix()],
+  test: {
+    environment: "happy-dom",
+    // Additionally, this is to load ".env.test" during vitest
+    env: loadEnv("test", process.cwd(), ""),
+  },
+});
+```
+
+For Storybook:
+
+```ts filename=vite.config.ts lines=[7]
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+const isStorybook = process.argv[1]?.includes("storybook");
+
+export default defineConfig({
+  plugins: [!isStorybook && remix()],
+});
+```
+
+Alternatively, you can use separate Vite config files for each tool.
+For example, to use a Vite config specifically scoped to Remix:
+
+```shellscript nonumber
+# Development
+vite dev --config vite.config.remix.ts
+
+# Production
+vite build --config vite.config.remix.ts && vite build  --config vite.config.remix.ts --ssr
+```
+
 ## Acknowledgements
 
 Vite is an amazing project, and we're grateful to the Vite team for their work.
@@ -624,6 +732,8 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-tsconfig-paths]: https://github.com/aleclarson/vite-tsconfig-paths
 [css-bundling]: ../styling/bundling
 [vite-css]: https://vitejs.dev/guide/features.html#css
+[regular-css]: ../styling/css
+[vite-css-modules]: https://vitejs.dev/guide/features#css-modules
 [vite-url-imports]: https://vitejs.dev/guide/assets.html#explicit-url-imports
 [vite-css-url-issue]: https://github.com/remix-run/remix/issues/7786
 [tailwind]: https://tailwindcss.com
@@ -655,3 +765,5 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-plugin-cjs-interop]: https://github.com/cyco130/vite-plugin-cjs-interop
 [ssr-no-external]: https://vitejs.dev/config/ssr-options.html#ssr-noexternal
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
+[blues-stack]: https://github.com/remix-run/blues-stack
+[global-node-polyfills]: ../other-api/node#polyfills
