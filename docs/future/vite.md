@@ -634,6 +634,43 @@ const posts = import.meta.glob("./posts/*.mdx", {
 });
 ```
 
+#### Strict route exports
+
+With Vite, Remix gets stricter about which exports are allowed from your route modules.
+Previously, the Remix compiler would allow any export from routes.
+While this was convenient, it was also a common source of bugs that were hard to track down because they only surfaced at runtime.
+
+👉 **Move any non-route exports to a separate file**
+
+For example, with take this route:
+
+```ts filename=app/routes/super-cool.tsx
+// ❌ This is the problematic export
+export const mySuperCoolThing =
+  "Some value I wanted to colocate with my route!";
+
+// ✅ This is a valid Remix route export, so it's fine
+export const loader = () => {};
+
+// ✅ This is also a valid Remix route export
+export default function SuperCool() {}
+```
+
+Using the default route convention in v2, you can refactor to:
+
+```ts filename=app/routes/super-cool/route.tsx
+export const loader = () => {};
+
+export default function SuperCool() {}
+```
+
+```ts filename=app/routes/super-cool/utils.ts
+export const mySuperCoolThing =
+  "Some value I wanted to colocate with my route!";
+```
+
+That way your utilities are still colocated with your route, but in a separate module.
+
 ## Troubleshooting
 
 Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
