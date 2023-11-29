@@ -8,14 +8,11 @@ import { Readable } from "node:stream";
 import { splitCookiesString } from "set-cookie-parser";
 import {
   type ServerBuild,
-  installGlobals,
   createReadableStreamFromReadable,
 } from "@remix-run/node";
 import { createRequestHandler as createBaseRequestHandler } from "@remix-run/server-runtime";
 
 import invariant from "../../invariant";
-
-installGlobals();
 
 function createHeaders(requestHeaders: IncomingHttpHeaders) {
   let headers = new Headers();
@@ -44,13 +41,9 @@ function createRequest(req: IncomingMessage, res: ServerResponse): Request {
   invariant(req.url, 'Expected "req.url" to be defined');
   let url = new URL(req.url, origin);
 
-  let controller = new AbortController();
-  res.on("close", () => controller.abort());
-
   let init: RequestInit = {
     method: req.method,
     headers: createHeaders(req.headers),
-    signal: controller.signal,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
