@@ -29,30 +29,6 @@ There are three steps to streaming data:
   - [deno][entry_server_deno_tsx]
   - [node][entry_server_node_tsx]
 
-<docs-warning>
-
-Streaming works by inserting script tags into the DOM as deferred promises resolve. If your page includes a [Content Security Policy for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src), you'll either need to include a nonce in your `Content-Security-Policy` header and on your `<Scripts/>` component in the root route, or weaken your securtiy policy by including `script-src 'self' 'unsafe-inline'` in your `Content-Security-Policy` header.
-
-If you are using a nonce, it needs to be included in three places: 
-
-- The `Content-Security-Policy` header, like so: `Content-Security-Policy: script-src 'nonce-secretnoncevalue'`
-- The `<Scripts />`, `<ScrollRestoration />` and `<LiveReload />` components, like so: `<Scripts nonce="secretnoncevalue" />`
-- In `entry.server.ts` where you call `renderToPipeableStream`, like so:
-
-```ts
-const { pipe, abort } = renderToPipeableStream(
-  <RemixServer ... />,
-  {
-    nonce: "secretnoncevalue",
-    ...
-  }
-);
-```
-
-This will ensure the nonce value is included on any deferred script tags.
-
-</docs-warning>
-
 ## 2. Component Setup
 
 A route module without streaming might look like this:
@@ -176,6 +152,29 @@ export async function loader({
   });
 }
 ```
+
+## Streaming with a Content Security Policy
+
+
+Streaming works by inserting script tags into the DOM as deferred promises resolve. If your page includes a [Content Security Policy for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src), you'll either need to weaken your securtiy policy by including `script-src 'self' 'unsafe-inline'` in your `Content-Security-Policy` header, or add nonces to all of your script tags.
+
+If you are using a nonce, it needs to be included in three places: 
+
+- The `Content-Security-Policy` header, like so: `Content-Security-Policy: script-src 'nonce-secretnoncevalue'`
+- The `<Scripts />`, `<ScrollRestoration />` and `<LiveReload />` components, like so: `<Scripts nonce="secretnoncevalue" />`
+- In `entry.server.ts` where you call `renderToPipeableStream`, like so:
+
+```ts
+const { pipe, abort } = renderToPipeableStream(
+  <RemixServer ... />,
+  {
+    nonce: "secretnoncevalue",
+    ...
+  }
+);
+```
+
+This will ensure the nonce value is included on any deferred script tags.
 
 [entry_client_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.client.tsx
 [entry_server_cloudflare_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.server.cloudflare.tsx
