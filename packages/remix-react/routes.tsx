@@ -245,7 +245,8 @@ export function createClientRoutes(
                 // Throw an error if a clientLoader tries to call a serverLoader that doesn't exist
                 if (initialData === undefined) {
                   throw new Error(
-                    "You are trying to call serverFetch() on a route that does not have a server loader"
+                    `You are trying to call serverLoader() on a route that does " +
+                      "not have a server loader (routeId: "${route.id}")`
                   );
                 }
 
@@ -262,6 +263,9 @@ export function createClientRoutes(
         });
       };
     } else {
+      // If the lazy route does not have a client loader/action we want to call
+      // the server loader/action in parallel with the module load so we add
+      // loader/action as static props on the route
       if (!route.hasClientLoader) {
         dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
           prefetchStylesAndCallHandler(() => fetchServerLoader(request));
@@ -280,10 +284,11 @@ export function createClientRoutes(
           lazyRoute.loader = (args) =>
             clientLoader({
               ...args,
-              serverLoader: () =>
-                fetchServerLoader(args.request).then((res) =>
-                  unwrapServerResponse(res)
-                ),
+              async serverLoader() {
+                let response = await fetchServerLoader(args.request);
+                let result = await unwrapServerResponse(response);
+                return result;
+              },
             });
         }
 
