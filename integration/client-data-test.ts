@@ -7,13 +7,22 @@ import {
 } from "./helpers/create-fixture.js";
 import type { AppFixture } from "./helpers/create-fixture.js";
 import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import { ServerMode } from "@remix-run/dev/dist/config/serverModes.js";
 
 function getFiles({
-  childAdditions,
+  parentClientLoader,
+  parentClientLoaderHydrate,
   parentAdditions,
+  childClientLoader,
+  childClientLoaderHydrate,
+  childAdditions,
 }: {
-  childAdditions: string;
-  parentAdditions: string;
+  parentClientLoader: boolean;
+  parentClientLoaderHydrate: boolean;
+  parentAdditions?: string;
+  childClientLoader: boolean;
+  childClientLoaderHydrate: boolean;
+  childAdditions?: string;
 }) {
   return {
     "app/root.tsx": js`
@@ -22,6 +31,7 @@ function getFiles({
       export default function Root() {
         return (
           <html>
+            <head></head>
             <body>
               <main>
                 <Outlet />
@@ -44,12 +54,31 @@ function getFiles({
       export function loader() {
         return json({ message: 'Parent Server Loader'});
       }
-      ${parentAdditions}
+      ${
+        parentClientLoader
+          ? js`
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (mutated by client)" };
+              }
+            `
+          : ""
+      }
+      ${
+        parentClientLoaderHydrate
+          ? js`
+              clientLoader.hydrate = true;
+              export function HydrateFallback() {
+                return <p>Parent Fallback</p>
+              }
+            `
+          : ""
+      }
+      ${parentAdditions || ""}
       export default function Component() {
         let data = useLoaderData();
         return (
           <>
-            <h1 id="parent-heading">Parent Component</h1>
             <p id="parent-data">{data.message}</p>
             <Outlet/>
           </>
@@ -62,12 +91,31 @@ function getFiles({
       export function loader() {
         return json({ message: 'Child Server Loader'});
       }
-      ${childAdditions}
+      ${
+        childClientLoader
+          ? js`
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (mutated by client)" };
+              }
+            `
+          : ""
+      }
+      ${
+        childClientLoaderHydrate
+          ? js`
+              clientLoader.hydrate = true;
+              export function HydrateFallback() {
+                return <p>Child Fallback</p>
+              }
+            `
+          : ""
+      }
+      ${childAdditions || ""}
       export default function Component() {
         let data = useLoaderData();
         return (
           <>
-            <h2 id="child-heading">Child Component</h2>
             <p id="child-data">{data.message}</p>
             <Outlet/>
           </>
@@ -88,7 +136,12 @@ test.describe("Client Data", () => {
     test("no client loaders or fallbacks", async ({ page }) => {
       appFixture = await createAppFixture(
         await createFixture({
-          files: getFiles({ parentAdditions: "", childAdditions: "" }),
+          files: getFiles({
+            parentClientLoader: false,
+            parentClientLoaderHydrate: false,
+            childClientLoader: false,
+            childClientLoaderHydrate: false,
+          }),
         })
       );
       let app = new PlaywrightFixture(appFixture, page);
@@ -96,9 +149,7 @@ test.describe("Client Data", () => {
       // Full SSR - normal Remix behavior due to lack of clientLoader
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
-      expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Server Loader");
-      expect(html).toMatch("Child Component");
       expect(html).toMatch("Child Server Loader");
     });
 
@@ -106,18 +157,10 @@ test.describe("Client Data", () => {
       appFixture = await createAppFixture(
         await createFixture({
           files: getFiles({
-            parentAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Parent Client Loader" };
-              }
-            `,
-            childAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Child Client Loader" };
-              }
-            `,
+            parentClientLoader: true,
+            parentClientLoaderHydrate: false,
+            childClientLoader: true,
+            childClientLoaderHydrate: false,
           }),
         })
       );
@@ -126,9 +169,7 @@ test.describe("Client Data", () => {
       // Full SSR - normal Remix behavior due to lack of HydrateFallback components
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
-      expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Server Loader");
-      expect(html).toMatch("Child Component");
       expect(html).toMatch("Child Server Loader");
     });
 
@@ -136,22 +177,10 @@ test.describe("Client Data", () => {
       appFixture = await createAppFixture(
         await createFixture({
           files: getFiles({
-            parentAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Parent Client Loader" };
-              }
-              clientLoader.hydrate=true
-              export function HydrateFallback() {
-                return <p>Parent Fallback</p>
-              }
-            `,
-            childAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Child Client Loader" };
-              }
-            `,
+            parentClientLoader: true,
+            parentClientLoaderHydrate: true,
+            childClientLoader: true,
+            childClientLoaderHydrate: false,
           }),
         })
       );
@@ -162,19 +191,13 @@ test.describe("Client Data", () => {
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Fallback");
-      expect(html).not.toMatch("Parent Component");
       expect(html).not.toMatch("Parent Server Loader");
-      expect(html).not.toMatch("Child Fallback");
-      expect(html).not.toMatch("Child Component");
       expect(html).not.toMatch("Child Server Loader");
 
-      await page.waitForSelector("#parent-heading");
+      await page.waitForSelector("#child-data");
       html = await app.getHtml("main");
       expect(html).not.toMatch("Parent Fallback");
-      expect(html).not.toMatch("Child Fallback");
-      expect(html).toMatch("Parent Component");
-      expect(html).toMatch("Parent Client Loader");
-      expect(html).toMatch("Child Component");
+      expect(html).toMatch("Parent Server Loader (mutated by client)");
       expect(html).toMatch("Child Server Loader");
     });
 
@@ -182,22 +205,10 @@ test.describe("Client Data", () => {
       appFixture = await createAppFixture(
         await createFixture({
           files: getFiles({
-            parentAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Parent Client Loader" };
-              }
-            `,
-            childAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Child Client Loader" };
-              }
-              clientLoader.hydrate=true
-              export function HydrateFallback() {
-                return <p>Child Fallback</p>
-              }
-            `,
+            parentClientLoader: true,
+            parentClientLoaderHydrate: false,
+            childClientLoader: true,
+            childClientLoaderHydrate: true,
           }),
         })
       );
@@ -207,19 +218,15 @@ test.describe("Client Data", () => {
       // Does not call parent clientLoader due to lack of HydrateFallback
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
-      expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Server Loader");
       expect(html).toMatch("Child Fallback");
-      expect(html).not.toMatch("Child Component");
       expect(html).not.toMatch("Child Server Loader");
 
-      await page.waitForSelector("#child-heading");
+      await page.waitForSelector("#child-data");
       html = await app.getHtml("main");
       expect(html).not.toMatch("Child Fallback");
-      expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Server Loader");
-      expect(html).toMatch("Child Component");
-      expect(html).toMatch("Child Client Loader");
+      expect(html).toMatch("Child Server Loader (mutated by client)");
     });
 
     test("parent.clientLoader.hydrate/child.clientLoader.hydrate", async ({
@@ -228,26 +235,10 @@ test.describe("Client Data", () => {
       appFixture = await createAppFixture(
         await createFixture({
           files: getFiles({
-            parentAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Parent Client Loader" };
-              }
-              clientLoader.hydrate=true
-              export function HydrateFallback() {
-                return <p>Parent Fallback</p>
-              }
-            `,
-            childAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Child Client Loader" };
-              }
-              clientLoader.hydrate=true
-              export function HydrateFallback() {
-                return <p>Child Fallback</p>
-              }
-          `,
+            parentClientLoader: true,
+            parentClientLoaderHydrate: true,
+            childClientLoader: true,
+            childClientLoaderHydrate: true,
           }),
         })
       );
@@ -257,26 +248,26 @@ test.describe("Client Data", () => {
       await app.goto("/parent/child");
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Fallback");
-      expect(html).not.toMatch("Parent Component");
       expect(html).not.toMatch("Parent Server Loader");
       expect(html).not.toMatch("Child Fallback");
-      expect(html).not.toMatch("Child Component");
       expect(html).not.toMatch("Child Server Loader");
 
-      await page.waitForSelector("#parent-heading");
+      await page.waitForSelector("#child-data");
       html = await app.getHtml("main");
       expect(html).not.toMatch("Parent Fallback");
       expect(html).not.toMatch("Child Fallback");
-      expect(html).toMatch("Parent Component");
-      expect(html).toMatch("Parent Client Loader");
-      expect(html).toMatch("Child Component");
-      expect(html).toMatch("Child Client Loader");
+      expect(html).toMatch("Parent Server Loader (mutated by client)");
+      expect(html).toMatch("Child Server Loader (mutated by client)");
     });
 
     test("handles synchronous client loaders", async ({ page }) => {
       appFixture = await createAppFixture(
         await createFixture({
           files: getFiles({
+            parentClientLoader: false,
+            parentClientLoaderHydrate: false,
+            childClientLoader: false,
+            childClientLoaderHydrate: false,
             parentAdditions: js`
               export function clientLoader() {
                 return { message: "Parent Client Loader" };
@@ -302,53 +293,82 @@ test.describe("Client Data", () => {
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Fallback");
 
-      await page.waitForSelector("#parent-heading");
+      await page.waitForSelector("#child-data");
       html = await app.getHtml("main");
-      expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Client Loader");
-      expect(html).toMatch("Child Component");
       expect(html).toMatch("Child Client Loader");
     });
 
-    test("provides server loader data to client loaders (JSON)", async ({
-      page,
-    }) => {
-      appFixture = await createAppFixture(
-        await createFixture({
-          files: getFiles({
-            parentAdditions: js`
-              export async function clientLoader({ serverLoader }) {
-                await new Promise(r => setTimeout(r, 100));
-                let serverData = await serverLoader();
-                return { message: serverData.message + " - mutated by parent client" };
-              }
-              clientLoader.hydrate=true
-              export function HydrateFallback() {
-                return <p>Parent Fallback</p>
-              }
-            `,
-            childAdditions: js`
-              export async function clientLoader({ serverLoader }) {
-                await new Promise(r => setTimeout(r, 100));
-                let serverData = await serverLoader();
-                return { message: serverData.message + " - mutated by child client" };
-              }
-              clientLoader.hydrate=true
-            `,
-          }),
-        })
+    test("handles deferred data through client loaders", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          files: {
+            ...getFiles({
+              parentClientLoader: false,
+              parentClientLoaderHydrate: false,
+              childClientLoader: false,
+              childClientLoaderHydrate: false,
+            }),
+            // Blow away parent.child.tsx with our own deferred version
+            "app/routes/parent.child.tsx": js`
+            import * as React from 'react';
+            import { defer, json } from '@remix-run/node'
+            import { Await, Outlet, useLoaderData } from '@remix-run/react'
+            export function loader() {
+              return defer({
+                message: 'Child Server Loader',
+                lazy: new Promise(r => setTimeout(() => r("Child Deferred Data"), 1000)),
+              });
+            }
+            export async function clientLoader({ serverLoader }) {
+              let data = await serverLoader();
+              return {
+                ...data,
+                message: data.message + " (mutated by client)",
+              };
+            }
+            clientLoader.hydrate = true;
+            export function HydrateFallback() {
+              return <p>Child Fallback</p>
+            }
+            export default function Component() {
+              let data = useLoaderData();
+              console.log('rendering component', data.lazy, data.lazy._tracked, data.lazy._value)
+              return (
+                <>
+                  <p id="child-data">{data.message}</p>
+                  <React.Suspense fallback={<p>Loading Deferred Data...</p>}>
+                    <Await resolve={data.lazy}>
+                      {(value) => <p id="child-deferred-data">{value}</p>}
+                    </Await>
+                  </React.Suspense>
+                </>
+              );
+            }
+          `,
+          },
+        },
+        ServerMode.Development
       );
+
+      // Ensure initial document request contains the child fallback _and_ the
+      // subsequent streamed/resolved deferred data
+      let doc = await fixture.requestDocument("/parent/child");
+      let html = await doc.text();
+      expect(html).toMatch("Parent Server Loader");
+      expect(html).toMatch("Child Fallback");
+      expect(html).toMatch("Child Deferred Data");
+
+      appFixture = await createAppFixture(fixture, ServerMode.Development);
       let app = new PlaywrightFixture(appFixture, page);
 
-      // Renders parent fallback on initial render and calls both clientLoader's
       await app.goto("/parent/child");
-      let html = await app.getHtml("main");
-      expect(html).toMatch("Parent Fallback");
-
-      await page.waitForSelector("#child-heading");
       html = await app.getHtml("main");
-      expect(html).toMatch("Parent Server Loader - mutated by parent client");
-      expect(html).toMatch("Child Server Loader - mutated by child client");
+      expect(html).toMatch("Parent Server Loader");
+      // app.goto() doesn't resolve until the document finishes loading so by
+      // then the HTML has updated via the streamed suspense updates
+      expect(html).toMatch("Child Server Loader (mutated by client)");
+      expect(html).toMatch("Child Deferred Data");
     });
   });
 
@@ -356,19 +376,22 @@ test.describe("Client Data", () => {
     test("no client loaders or fallbacks", async ({ page }) => {
       appFixture = await createAppFixture(
         await createFixture({
-          files: getFiles({ parentAdditions: "", childAdditions: "" }),
+          files: getFiles({
+            parentClientLoader: false,
+            parentClientLoaderHydrate: false,
+            childClientLoader: false,
+            childClientLoaderHydrate: false,
+          }),
         })
       );
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/");
       await app.clickLink("/parent/child");
-      await page.waitForSelector("#child-heading");
+      await page.waitForSelector("#child-data");
 
       // Normal Remix behavior due to lack of clientLoader
       let html = await app.getHtml("main");
-      expect(html).toMatch("Parent Component");
       expect(html).toMatch("Parent Server Loader");
-      expect(html).toMatch("Child Component");
       expect(html).toMatch("Child Server Loader");
     });
 
@@ -376,26 +399,21 @@ test.describe("Client Data", () => {
       appFixture = await createAppFixture(
         await createFixture({
           files: getFiles({
-            parentAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Parent Client Loader" };
-              }
-            `,
-            childAdditions: "",
+            parentClientLoader: true,
+            parentClientLoaderHydrate: false,
+            childClientLoader: false,
+            childClientLoaderHydrate: false,
           }),
         })
       );
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/");
       await app.clickLink("/parent/child");
-      await page.waitForSelector("#child-heading");
+      await page.waitForSelector("#child-data");
 
       // Parent client loader should run
       let html = await app.getHtml("main");
-      expect(html).toMatch("Parent Component");
-      expect(html).toMatch("Parent Client Loader");
-      expect(html).toMatch("Child Component");
+      expect(html).toMatch("Parent Server Loader (mutated by client)");
       expect(html).toMatch("Child Server Loader");
     });
 
@@ -403,32 +421,22 @@ test.describe("Client Data", () => {
       appFixture = await createAppFixture(
         await createFixture({
           files: getFiles({
-            parentAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Parent Client Loader" };
-              }
-            `,
-            childAdditions: js`
-              export async function clientLoader() {
-                await new Promise(r => setTimeout(r, 100));
-                return { message: "Child Client Loader" };
-              }
-            `,
+            parentClientLoader: true,
+            parentClientLoaderHydrate: false,
+            childClientLoader: true,
+            childClientLoaderHydrate: false,
           }),
         })
       );
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/");
       await app.clickLink("/parent/child");
-      await page.waitForSelector("#child-heading");
+      await page.waitForSelector("#child-data");
 
       // Both clientLoaders should run
       let html = await app.getHtml("main");
-      expect(html).toMatch("Parent Component");
-      expect(html).toMatch("Parent Client Loader");
-      expect(html).toMatch("Child Component");
-      expect(html).toMatch("Child Client Loader");
+      expect(html).toMatch("Parent Server Loader (mutated by client)");
+      expect(html).toMatch("Child Server Loader (mutated by client");
     });
   });
 });

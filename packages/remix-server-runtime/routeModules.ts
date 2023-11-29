@@ -28,7 +28,7 @@ export type DataFunctionArgs = RRActionFunctionArgs<AppLoadContext> &
   };
 
 /**
- * A function that handles data mutations for a route.
+ * A function that handles data mutations for a route on the server
  */
 export type ActionFunction = (
   args: ActionFunctionArgs
