@@ -29,6 +29,12 @@ There are three steps to streaming data:
   - [deno][entry_server_deno_tsx]
   - [node][entry_server_node_tsx]
 
+<docs-warning>
+
+Streaming works by inserting script tags into the DOM as deferred promises resolve. If your page includes a [Content Security Policy for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src), you'll either need to include a nonce in your `Content-Security-Policy` header and on your `<Scripts/>` component in the root route, or weaken your securtiy policy by including `script-src 'self' 'unsafe-inline'` in your `Content-Security-Policy` header.
+
+</docs-warning>
+
 ## 2. Component Setup
 
 A route module without streaming might look like this:
