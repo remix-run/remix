@@ -29,7 +29,7 @@
     "format": "prettier --cache --ignore-path .eslintignore --write ./ && npm run lint:fix",
     "format:deno": "deno fmt integration/helpers/deno-template packages/remix-deno templates/deno --ignore=node_modules,build,public/build",
     "license": "node ./scripts/license.js",
-    "lint": "eslint --cache .",
+    "lint": "eslint  .",
     "lint:deno": "deno lint integration/helpers/deno-template packages/remix-deno templates/deno --ignore=node_modules,build,public/build",
     "lint:fix": "yarn lint --fix",
     "playground:new": "node ./scripts/playground/new.js",
