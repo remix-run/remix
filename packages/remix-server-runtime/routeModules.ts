@@ -28,7 +28,7 @@ export type DataFunctionArgs = RRActionFunctionArgs<AppLoadContext> &
   };
 
 /**
- * A function that handles data mutations for a route.
+ * A function that handles data mutations for a route on the server
  */
 export type ActionFunction = (
   args: ActionFunctionArgs
@@ -43,7 +43,7 @@ export type ActionFunctionArgs = RRActionFunctionArgs<AppLoadContext> & {
 };
 
 /**
- * A function that loads data for a route.
+ * A function that loads data for a route on the server
  */
 export type LoaderFunction = (
   args: LoaderFunctionArgs
@@ -55,6 +55,24 @@ export type LoaderFunction = (
 export type LoaderFunctionArgs = RRLoaderFunctionArgs<AppLoadContext> & {
   // Context is always provided in Remix, and typed for module augmentation support.
   context: AppLoadContext;
+};
+
+/**
+ * A function that loads data for a route on the client
+ * @private Public API is exported from @remix-run/react
+ */
+type ClientLoaderFunction = ((
+  args: ClientLoaderFunctionArgs
+) => ReturnType<RRLoaderFunction>) & {
+  hydrate?: boolean;
+};
+
+/**
+ * Arguments passed to a route `clientLoader` function
+ * @private Public API is exported from @remix-run/react
+ */
+type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
+  serverLoader: <T = AppData>() => Promise<SerializeFrom<T>>;
 };
 
 export type HeadersArgs = {
@@ -215,7 +233,9 @@ type LdJsonValue = LdJsonPrimitive | LdJsonObject | LdJsonArray;
 export type RouteHandle = unknown;
 
 export interface EntryRouteModule {
+  clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: any; // Weakly typed because server-runtime is not React-aware
+  HydrateFallback?: any; // Weakly typed because server-runtime is not React-aware
   default: any; // Weakly typed because server-runtime is not React-aware
   handle?: RouteHandle;
   links?: LinksFunction;

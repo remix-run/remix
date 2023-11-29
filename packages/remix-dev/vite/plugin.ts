@@ -381,6 +381,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         caseSensitive: route.caseSensitive,
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
+        hasClientLoader: sourceExports.includes("clientLoader"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
         ...resolveBuildAssetPaths(pluginConfig, viteManifest, routeFilePath),
       };
@@ -430,6 +431,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }`,
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
+        hasClientLoader: sourceExports.includes("clientLoader"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
         imports: [],
       };

@@ -78,6 +78,8 @@ export {
 
 export type { HtmlLinkDescriptor } from "./links";
 export type {
+  ClientLoaderFunction,
+  ClientLoaderFunctionArgs,
   MetaArgs,
   MetaDescriptor,
   MetaFunction,
