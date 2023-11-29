@@ -368,6 +368,7 @@ test.describe("Client Data", () => {
 
       await app.goto("/parent/child");
       html = await app.getHtml("main");
+      await page.waitForSelector("#child-deferred-data");
       expect(html).toMatch("Parent Server Loader");
       // app.goto() doesn't resolve until the document finishes loading so by
       // then the HTML has updated via the streamed suspense updates
