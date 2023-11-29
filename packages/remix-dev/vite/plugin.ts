@@ -291,7 +291,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
   let viteChildCompiler: Vite.ViteDevServer | null = null;
 
-  // initialized during `config` hook, so most of the code can assume this is defined without null check
+  // This is initialized during `config` hook, so most of the code can assume this is defined without null check.
+  // During dev, this is updated on config file change or route file addition/removal.
   let pluginConfig: ResolvedRemixVitePluginConfig;
 
   let resolvePluginConfig =
