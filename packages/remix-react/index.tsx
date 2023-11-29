@@ -48,7 +48,7 @@ export {
   useRouteError,
   useSearchParams,
   useSubmit,
-  unstable_useBlocker,
+  useBlocker,
   unstable_usePrompt,
   unstable_useViewTransitionState,
 } from "react-router-dom";

@@ -18,11 +18,11 @@ function SomeComponent() {
 }
 ```
 
-This is useful when building links from relative values and used internally for [`<NavLink>`][navlink].
+This is useful when building links from relative values and used internally for [`<NavLink>`][nav-link-component].
 
 ## Additional Resources
 
-- [`resolvePath`][resolvepath]
+- [`resolvePath`][rr-resolve-path]
 
-[navlink]: ../components/nav-link
-[resolvepath]: ../utils/resolve-path
+[nav-link-component]: ../components/nav-link
+[rr-resolve-path]: https://reactrouter.com/utils/resolve-path
