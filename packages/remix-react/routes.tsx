@@ -1,6 +1,8 @@
 import * as React from "react";
 import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
 import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
   DataRouteObject,
   ShouldRevalidateFunction,
 } from "react-router-dom";
@@ -128,81 +130,104 @@ export function createClientRoutes(
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModulesCache?.[route.id];
+
+    async function fetchServerLoader(request: Request) {
+      if (!route.hasLoader) return null;
+      return fetchServerHandler(request, route);
+    }
+
+    async function fetchServerAction(request: Request) {
+      if (!route.hasAction) {
+        let msg =
+          `Route "${route.id}" does not have an action, but you are trying ` +
+          `to submit to it. To fix this, please add an \`action\` function to the route`;
+        console.error(msg);
+        throw new ErrorResponse(
+          405,
+          "Method Not Allowed",
+          new Error(msg),
+          true
+        );
+      }
+
+      return fetchServerHandler(request, route);
+    }
+
+    async function callServerHandler(
+      request: Request,
+      handler: typeof fetchServerLoader | typeof fetchServerAction
+    ) {
+      // Only prefetch links if we've been loaded into the cache, route.lazy
+      // will handle initial loads
+      let linkPrefetchPromise = routeModulesCache[route.id]
+        ? prefetchStyleLinks(route, routeModulesCache[route.id])
+        : Promise.resolve();
+      try {
+        return handler(request);
+      } finally {
+        await linkPrefetchPromise;
+      }
+    }
+
     let dataRoute: DataRouteObject = {
       id: route.id,
       index: route.index,
       path: route.path,
-      async loader({ request }) {
-        // Only prefetch links if we've been loaded into the cache, route.lazy
-        // will handle initial loads
-        let routeModulePromise = routeModulesCache[route.id]
-          ? prefetchStyleLinks(route, routeModulesCache[route.id])
-          : Promise.resolve();
-        try {
-          if (!route.hasLoader) return null;
-          return fetchServerHandler(request, route);
-        } finally {
-          await routeModulePromise;
-        }
-      },
-      async action({ request }) {
-        // Only prefetch links if we've been loaded into the cache, route.lazy
-        // will handle initial loads
-        let routeModulePromise = routeModulesCache[route.id]
-          ? prefetchStyleLinks(route, routeModulesCache[route.id])
-          : Promise.resolve();
-        try {
-          if (!route.hasAction) {
-            let msg =
-              `Route "${route.id}" does not have an action, but you are trying ` +
-              `to submit to it. To fix this, please add an \`action\` function to the route`;
-            console.error(msg);
-            return Promise.reject(
-              new ErrorResponse(405, "Method Not Allowed", new Error(msg), true)
+      loader: ({ request }: LoaderFunctionArgs) =>
+        callServerHandler(request, () => fetchServerLoader(request)),
+      action: ({ request }: ActionFunctionArgs) =>
+        callServerHandler(request, () => fetchServerAction(request)),
+    };
+
+    if (routeModule) {
+      // Use critical path modules directly
+      Object.assign(dataRoute, {
+        ...dataRoute,
+        Component: getRouteModuleComponent(routeModule),
+        ErrorBoundary: routeModule.ErrorBoundary
+          ? routeModule.ErrorBoundary
+          : route.id === "root"
+          ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
+          : undefined,
+        handle: routeModule.handle,
+        shouldRevalidate: needsRevalidation
+          ? wrapShouldRevalidateForHdr(
+              route.id,
+              routeModule.shouldRevalidate,
+              needsRevalidation
+            )
+          : routeModule.shouldRevalidate,
+      });
+    } else {
+      // Load all other modules via route.lazy()
+      Object.assign(dataRoute, {
+        ...dataRoute,
+        lazy: async () => {
+          let mod = await loadRouteModuleWithBlockingLinks(
+            route,
+            routeModulesCache
+          );
+
+          let lazyRoute: Partial<DataRouteObject> = { ...mod };
+
+          if (needsRevalidation) {
+            lazyRoute.shouldRevalidate = wrapShouldRevalidateForHdr(
+              route.id,
+              mod.shouldRevalidate,
+              needsRevalidation
             );
           }
 
-          return fetchServerHandler(request, route);
-        } finally {
-          await routeModulePromise;
-        }
-      },
-      ...(routeModule
-        ? // Use critical path modules directly
-          {
-            Component: getRouteModuleComponent(routeModule),
-            ErrorBoundary: routeModule.ErrorBoundary
-              ? routeModule.ErrorBoundary
-              : route.id === "root"
-              ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
-              : undefined,
-            handle: routeModule.handle,
-            shouldRevalidate: needsRevalidation
-              ? wrapShouldRevalidateForHdr(
-                  route.id,
-                  routeModule.shouldRevalidate,
-                  needsRevalidation
-                )
-              : routeModule.shouldRevalidate,
-          }
-        : // Load all other modules via route.lazy()
-          {
-            lazy: async () => {
-              let mod = await loadRouteModuleWithBlockingLinks(
-                route,
-                routeModulesCache
-              );
-              if (needsRevalidation) {
-                mod.shouldRevalidate = wrapShouldRevalidateForHdr(
-                  route.id,
-                  mod.shouldRevalidate,
-                  needsRevalidation
-                );
-              }
-              return mod;
-            },
-          }),
-    };
+          return {
+            hasErrorBoundary: lazyRoute.hasErrorBoundary,
+            shouldRevalidate: lazyRoute.shouldRevalidate,
+            handle: lazyRoute.handle,
+            Component: lazyRoute.Component,
+            ErrorBoundary: lazyRoute.ErrorBoundary,
+          };
+        },
+      });
+    }
 
     let children = createClientRoutes(
       manifest,
