@@ -731,22 +731,14 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         });
 
         // Invalidate plugin config and virtual module via file watcher
-        invariant(resolvedViteConfig);
-        let viteConfigFile = resolvedViteConfig.configFile;
-        let viteRoot = resolvedViteConfig.root;
         viteDevServer.watcher.addListener(
           "all",
           async (event: string, filepath: string) => {
-            // TODO
-            // - debounce for bulk file deletion?
-            // - any race condition?
-            let filePathAbs = path.resolve(viteRoot, filepath);
             if (
               ((event === "add" || event === "unlink") &&
-                filePathAbs.startsWith(pluginConfig.appDirectory)) ||
+                filepath.startsWith(pluginConfig.appDirectory)) ||
               (event === "change" &&
-                viteConfigFile &&
-                filePathAbs === path.resolve(viteRoot, viteConfigFile))
+                filepath === resolvedViteConfig?.configFile)
             ) {
               let lastPluginConfig = pluginConfig;
               pluginConfig = await resolvePluginConfig();
