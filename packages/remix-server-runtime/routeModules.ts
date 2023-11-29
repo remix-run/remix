@@ -43,6 +43,22 @@ export type ActionFunctionArgs = RRActionFunctionArgs<AppLoadContext> & {
 };
 
 /**
+ * A function that handles data mutations for a route on the client
+ * @private Public API is exported from @remix-run/react
+ */
+type ClientActionFunction = (
+  args: ClientActionFunctionArgs
+) => ReturnType<RRActionFunction>;
+
+/**
+ * Arguments passed to a route `clientAction` function
+ * @private Public API is exported from @remix-run/react
+ */
+type ClientActionFunctionArgs = RRActionFunctionArgs<undefined> & {
+  serverAction: <T = AppData>() => Promise<SerializeFrom<T>>;
+};
+
+/**
  * A function that loads data for a route on the server
  */
 export type LoaderFunction = (
@@ -233,6 +249,7 @@ type LdJsonValue = LdJsonPrimitive | LdJsonObject | LdJsonArray;
 export type RouteHandle = unknown;
 
 export interface EntryRouteModule {
+  clientAction?: ClientActionFunction;
   clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: any; // Weakly typed because server-runtime is not React-aware
   HydrateFallback?: any; // Weakly typed because server-runtime is not React-aware

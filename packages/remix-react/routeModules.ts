@@ -1,5 +1,7 @@
 import type { ComponentType } from "react";
 import type {
+  ActionFunction as RRActionFunction,
+  ActionFunctionArgs as RRActionFunctionArgs,
   LoaderFunction as RRLoaderFunction,
   LoaderFunctionArgs as RRLoaderFunctionArgs,
   DataRouteMatch,
@@ -18,6 +20,7 @@ export interface RouteModules {
 }
 
 export interface RouteModule {
+  clientAction?: ClientActionFunction;
   clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: ErrorBoundaryComponent;
   HydrateFallback?: HydrateFallbackComponent;
@@ -27,6 +30,20 @@ export interface RouteModule {
   meta?: MetaFunction;
   shouldRevalidate?: ShouldRevalidateFunction;
 }
+
+/**
+ * A function that handles data mutations for a route on the client
+ */
+export type ClientActionFunction = (
+  args: ClientActionFunctionArgs
+) => ReturnType<RRActionFunction>;
+
+/**
+ * Arguments passed to a route `clientAction` function
+ */
+export type ClientActionFunctionArgs = RRActionFunctionArgs<undefined> & {
+  serverAction: <T = AppData>() => Promise<SerializeFrom<T>>;
+};
 
 /**
  * A function that loads data for a route on the client
