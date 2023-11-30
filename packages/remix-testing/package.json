@@ -18,8 +18,8 @@
   "dependencies": {
     "@remix-run/node": "2.3.1",
     "@remix-run/react": "2.3.1",
-    "@remix-run/router": "0.0.0-experimental-8f9ef191",
-    "react-router-dom": "0.0.0-experimental-8f9ef191"
+    "@remix-run/router": "0.0.0-experimental-35fa15e5",
+    "react-router-dom": "0.0.0-experimental-35fa15e5"
   },
   "devDependencies": {
     "@types/node": "^18.17.1",
