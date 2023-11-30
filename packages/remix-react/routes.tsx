@@ -262,6 +262,11 @@ export function createClientRoutes(
         });
       };
 
+      // Let React Router know whether to run this on hydration
+      dataRoute.loader.hydrate =
+        routeModule.clientLoader != null &&
+        routeModule.clientLoader.hydrate === true;
+
       dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
           if (!routeModule.clientAction) {

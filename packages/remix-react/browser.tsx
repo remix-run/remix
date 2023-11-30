@@ -217,8 +217,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     );
 
     // Create a shallow clone of `loaderData` we can mutate for partial hydration.
-    // When a route sets `clientLoader.hydrate=true`, the server will have rendered
-    // the `HydrateFallback` so we need the client to do the same for hydration.
+    // When a route exports a `clientLoader` and a `HydrateFallback`, the SSR will
+    // render the fallback so we need the client to do the same for hydration.
     // The server loader data has already been exposed to these route `clientLoader`'s
     // in `createClientRoutes` above, so we need to clear out the version we pass to
     // `createBrowserRouter` so it initializes and runs the client loaders.
@@ -232,7 +232,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         let routeId = match.route.id;
         let route = window.__remixRouteModules[routeId];
         let manifestRoute = window.__remixManifest.routes[routeId];
-        if (route && route.clientLoader && route.clientLoader.hydrate) {
+        if (route && route.clientLoader && route.HydrateFallback) {
           hydrationData.loaderData[routeId] = undefined;
           didServerRenderFallback = true;
         } else if (manifestRoute && !manifestRoute.hasLoader) {

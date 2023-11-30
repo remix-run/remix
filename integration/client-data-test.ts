@@ -375,6 +375,35 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Child Server Loader (mutated by client)");
       expect(html).toMatch("Child Deferred Data");
     });
+
+    test("allows hydration execution without rendering a fallback", async ({
+      page,
+    }) => {
+      let fixture = await createFixture({
+        files: getFiles({
+          parentClientLoader: false,
+          parentClientLoaderHydrate: false,
+          childClientLoader: false,
+          childClientLoaderHydrate: false,
+          childAdditions: js`
+            export async function clientLoader() {
+              await new Promise(r => setTimeout(r, 100));
+              return { message: "Child Client Loader" };
+            }
+            clientLoader.hydrate=true
+        `,
+        }),
+      });
+
+      appFixture = await createAppFixture(fixture);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/parent/child");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Child Server Loader");
+      await page.waitForSelector(':has-text("Child Client Loader")');
+      html = await app.getHtml("main");
+      expect(html).toMatch("Child Client Loader");
+    });
   });
 
   test.describe("clientLoader - lazy route module", () => {
