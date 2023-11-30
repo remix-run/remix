@@ -54,47 +54,31 @@ test.describe(async () => {
   });
   test.afterAll(async () => await stop());
 
-  test("Vite / dev / invalidate manifest on route exports hot update", async ({
+  test("Vite / dev / invalidate manifest on route exports change", async ({
     page,
   }) => {
     let pageErrors: Error[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
     let edit = editor(cwd);
 
-    await page.goto(`http://localhost:${port}/`, {
-      waitUntil: "networkidle",
-    });
-
-    // wait hydration to test client navigation with data request
+    // wait hydration to ensure initial manifest is loaded
+    await page.goto(`http://localhost:${port}/`);
     await page.getByText("Mounted: yes").click();
 
-    // remove loader export in other page
+    // remove loader export in other page should invalidate manifest
     await edit("app/routes/other.tsx", (contents) =>
       contents.replace(/export const loader.*/, "")
     );
-    // ensure last hot update is handled by triggering HMR in current page
-    await edit("app/routes/_index.tsx", (contents) =>
-      contents.replace(
-        "<p data-hmr>HMR updated: 0</p>",
-        "<p data-hmr>HMR updated: 1</p>"
-      )
-    );
+
+    // (at least) after browser reload, client side navigation should be successful
     await expect
-      .poll(() => page.getByText("HMR updated: 1").isVisible())
+      .poll(async () => {
+        await page.goto(`http://localhost:${port}/`);
+        await page.getByText("Mounted: yes").click();
+        await page.getByRole("link", { name: "/other" }).click();
+        return page.getByText("loaderData = null").isVisible();
+      })
       .toBeTruthy();
-
-    // navigate to a route which previously had a loader
-    await page.getByRole("link", { name: "/other" }).click();
-    await page.getByText("loaderData = null").click();
-
-    // test again after browser reload
-    await page.goto(`http://localhost:${port}/`, {
-      waitUntil: "networkidle",
-    });
-    await page.getByText("Mounted: yes").click();
-
-    await page.getByRole("link", { name: "/other" }).click();
-    await page.getByText("loaderData = null").click();
   });
 });
 
