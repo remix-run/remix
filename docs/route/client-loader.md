@@ -14,7 +14,12 @@ export const clientLoader = async ({
   params,
   serverLoader,
 }: ClientLoaderFunctionArgs) => {
-  return { ok: true };
+  // call the server loader
+  const serverData = await serverLoader();
+  // And/or fetch data on the client
+  const data = getDataFromClient();
+  // Return the data to expose through useLoaderData()
+  return data;
 };
 ```
 
@@ -26,6 +31,7 @@ This function is only ever run on the client, and can used in a few ways:
   - Bypassing the Remix [BFF][bff] hop and hitting your API directly from the client
 - To further augment data loaded from the server
   - I.e., loading user-specific preferences from `localStorage`
+- To facilitate a migration from React Router
 
 ## Hydration Behavior
 
@@ -33,23 +39,17 @@ By default, `clientLoader` **will not** execute for the route during initial hyd
 
 ```tsx
 export async function loader() {
-  // Server-side, we talk to the DB directly
+  // During SSR, we talk to the DB directly
   const data = getServerDataFromDb();
   return json(data);
 }
 
-// This will not run on hydration, and will run on subsequent client-side navigations
-export async function clientLoader({
-  request,
-  params,
-  serverLoader,
-}: ClientLoaderFunctionArgs) {
-  // Client-side, we hit our exposed API endpoints directly
-  const data = await fetcDataFromApi();
+export async function clientLoader() {
+  // During client-side navigations, we hit our exposed API endpoints directly
+  const data = await fetchDataFromApi();
   return data;
 }
 
-// This will render on the server
 export default function Component() {
   const data = useLoaderData<typeof loader>();
   return <>...</>;
@@ -58,44 +58,44 @@ export default function Component() {
 
 ### `clientLoader.hydrate`
 
-If you need to run your clientLoader on hydration, you can opt-into that by setting `clientLoader.hydrate=true`. This will tell Remix that it needs to run the `clientLoader` on hydration to get a complete set of loader data. The impact of this is that Remix can no longer server-render the route component because the loader data is not complete with only the server data. Therefore, you can (and should!) export a `HydrateFallback` component for Remix to render on the server. Remix will then run the `clientLoader` on hydration and render the default route component once completed.
+If you need to run your `clientLoader` on hydration, you can opt-into that by setting `clientLoader.hydrate=true`. This will tell Remix that it needs to run the `clientLoader` on hydration. A common use-case for this is to prime a client-side cache with the data loaded on the server:
 
 ```tsx
 export async function loader() {
-  const data = getServerData();
+  const data = await getDataFromDB();
   return json(data);
 }
 
-// This *will* run on hydration
-export async function clientLoader({
-  request,
-  params,
-  serverLoader,
-}: ClientLoaderFunctionArgs) {
-  const [serverData, preferences] = await Promise.all([
-    serverLoader(),
-    getUserPreferences(),
-  ]);
-  return {
-    ...serverData,
-    preferences,
-  };
+let isInitialHydration = true;
+export async function clientLoader({ serverLoader }) {
+  if (isInitialHydration) {
+    isInitialHydration = false;
+    // This will resolve with the hydrated server data, it won't fetch()
+    const serverData = await serverLoader();
+    cache.set(cacheKey, serverData);
+    return serverData;
+  }
+
+  const cachedData = await cache.get(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
+  const data = await serverLoader();
+  cache.set(cacheKey, data);
+  return data;
 }
 clientLoader.hydrate = true;
 
-// This will render on the server
-export function HydrateFallback() {
-  return <p>Loading user preferences...</p>;
-}
-
-// This will render on the client once clientLoader has completed
 export default function Component() {
-  const data = useLoaderData<typeof clientLoader>();
+  const data = useLoaderData<typeof loader>();
   return <>...</>;
 }
 ```
 
-If you have multiple routes with `clientLoader.hydrate=true`, then Remix will server-render up until the highest-discovered `HydrateFallback`. You cannot render an `<Outlet/>` in a `HydrateFallback` because children routes can't be guaranteed to operate correctly since their ancestor loader data may not yet be available if they are running `clientLoader` functions on hydration (i.e., use cases such as `useRouteLoaderData()` or `useMatches()`).
+### HydrateFallback
+
+If you need to avoid rendering your default route component during SSR because you have data that must come from a `clientLoader`, you can export a [`HydrateFallback`][hydratefallback] component from your route that will be rendered during SSR, and only once the clientLoader runs on hydration will your router component be rendered.
 
 ## Arguments
 
@@ -114,5 +114,6 @@ This function receives the same [`request`][loader-request] argument as a [`load
 [loader]: ./loader
 [loader-params]: ./loader#params
 [loader-request]: ./loader#request
+[hydratefallback]: ./hydrate-fallback
 [bff]: ../guides/bff
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API

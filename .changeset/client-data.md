@@ -5,79 +5,21 @@
 "@remix-run/testing": minor
 ---
 
-Add support for `clientLoader`/`clientAction` route exports ([RFC](https://github.com/remix-run/remix/discussions/7634)).
+Add support for `clientLoader`/`clientAction`/`HydrateFallback` route exports ([RFC](https://github.com/remix-run/remix/discussions/7634)).
 
-Remix now supports loaders/actions that run on the client (in addition to or instead of the loader/action that runs on the server). While we still recommend server loaders/actions for the majority of your data need sin a Remix app - these provide some levers you can pull for more advanced use-cases such as:
+Remix now supports loaders/actions that run on the client (in addition to, or instead of the loader/action that runs on the server). While we still recommend server loaders/actions for the majority of your data needs in a Remix app - these provide some levers you can pull for more advanced use-cases such as:
 
 - Leveraging a data source local to the browser (i.e., `localStorage`)
 - Managing a client-side cache of server data (like `IndexedDB`)
 - Bypassing the Remix server in a BFF setup nd hitting your API directly from the browser
+- Migrating a React Router SPA to a Remix application
 
-The primary (and simpler) use-case is when the `clientLoader` does not change the shape of the server `loader` data and is just an optimization - and therefore does not need to run on hydration. To use a `clientLoader` in this fashion, you may export one from your route module:
+By default, `clientLoader` will not run on hydration, and will only run on subsequent client side navigations.
 
-```tsx
-export async function loader({ request, params }: LoaderFunctionArgs) {
-  const data = await getDataFromDB();
-  return json(data);
-}
+If you wish to run your client loader on hydration, you can set `clientLoader.hydrate=true` to force Remix to execute it on initial page load. Keep in mind that Remix will still SSR your route component so you should ensure that there is no new _required_ data being added by your `clientLoader`.
 
-// This will not run on hydration, only on subsequent client-side navs
-export async function clientLoader({
-  request,
-  params,
-  serverLoader,
-}: ClientLoaderFunctionArgs) {
-  const cacheKey = "whatever";
-  const cachedData = await cache.get(cacheKey);
-  if (cachedData) {
-    return cachedData;
-  }
-  // Fetch the data from the server loader
-  const serverData = await serverLoader();
-  await cache.set(cacheKey, serverData);
-  return serverData;
-}
+If your `clientLoader` neds to run on hydration and adds data you require to render the route component, you can export a `HydrateFallback` component that will render during SSR, and then your route component will not render until the `clientLoader` has executed on hydration.
 
-// This will render on the server
-export default function Component() {
-  const data = useLoaderData<typeof loader>();
-  return <>...</>;
-}
-```
+`clientAction1` is simpler than `clientLoader` because it has no hydration use-cases. `clientAction` will only run on client-side navigations.
 
-If you _need_ to run your `clientLoader` to get a complete set of loader data (either because you don't have a server loader, or because you need to augment the server loader data), you can set `clientLoader.hydrate = true` to force Remix to skip server-rendering of the route component and run the `clientLoader` on hydration. When you do this, you want to export a `HydrateFallback` component that Remix can SSR instead of the default route component:
-
-```tsx
-export async function loader({ request, params }: LoaderFunctionArgs) {
-  const data = await getDataFromDB();
-  return json(data);
-}
-
-// This will run on hydration!
-export async function clientLoader({
-  request,
-  params,
-  serverLoader,
-}: ClientLoaderFunctionArgs) {
-  const [serverData, preferences] = await Promise.all([
-    serverLoader(),
-    getUserPreferences(),
-  ]);
-  return {
-    ...serverData,
-    preferences,
-  };
-}
-clientLoader.hydrate = true;
-
-// This will render on the server
-export function HydrateFallback() {
-  return <p>Loading user preferences...</p>;
-}
-
-// This will render on the client once clientLoader has completed
-export default function Component() {
-  const data = useLoaderData<typeof clientLoader>();
-  return <>...</>;
-}
-```
+For more information, please refer to the [`clientLoader`](https://remix.run/route/client-loader) and [`clientAction`](https://remix.run/route/client-action) documentation.
