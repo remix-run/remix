@@ -71,8 +71,10 @@ test.describe(async () => {
     );
 
     // (at least) after browser reload, client side navigation should be successful
+    let i = 0;
     await expect
       .poll(async () => {
+        console.log("@@@@@@@ trial", i++);
         await page.goto(`http://localhost:${port}/`);
         await page.getByText("Mounted: yes").click();
         await page.getByRole("link", { name: "/other" }).click();
