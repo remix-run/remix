@@ -85,7 +85,8 @@ test.describe(async () => {
     await expect
       .poll(async () => {
         console.log("@@@@@@@ trial", i++);
-        await page.goto(`http://localhost:${port}/`);
+        await page.reload();
+        // await page.goto(`http://localhost:${port}/`);
         await page.getByText("Mounted: yes").click();
         console.log(await page.evaluate(() => (window as any).__remixManifest));
         return page.evaluate(
