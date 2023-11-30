@@ -48,7 +48,19 @@ export function RemixServer({
   for (let match of context.staticHandlerContext.matches) {
     let routeId = match.route.id;
     let route = routeModules[routeId];
-    if (route && route.clientLoader && route.HydrateFallback) {
+    let manifestRoute = context.manifest.routes[routeId];
+    if (
+      // This route specifically gave us a HydrateFallback
+      (route && route.clientLoader && route.HydrateFallback) ||
+      // This handles routes without a server loader but _with_ a clientLoader
+      // that will automatically opt-into clientLoader.hydrate=true.  The
+      // staticHandler always puts a `null` in loaderData for non-loader routes
+      // for proper serialization but we need to set that back to `undefined`
+      // so _renderMatches will detect a required fallback at this level
+      (manifestRoute &&
+        manifestRoute.hasLoader == false &&
+        context.staticHandlerContext.loaderData[routeId] === null)
+    ) {
       context.staticHandlerContext.loaderData[routeId] = undefined;
     }
   }

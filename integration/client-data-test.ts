@@ -319,7 +319,7 @@ test.describe("Client Data", () => {
           "app/routes/parent.child.tsx": js`
             import * as React from 'react';
             import { defer, json } from '@remix-run/node'
-            import { Await, Outlet, useLoaderData } from '@remix-run/react'
+            import { Await, useLoaderData } from '@remix-run/react'
             export function loader() {
               return defer({
                 message: 'Child Server Loader',
@@ -339,7 +339,6 @@ test.describe("Client Data", () => {
             }
             export default function Component() {
               let data = useLoaderData();
-              console.log('rendering component', data.lazy, data.lazy._tracked, data.lazy._value)
               return (
                 <>
                   <p id="child-data">{data.message}</p>
@@ -403,6 +402,50 @@ test.describe("Client Data", () => {
       await page.waitForSelector(':has-text("Child Client Loader")');
       html = await app.getHtml("main");
       expect(html).toMatch("Child Client Loader");
+    });
+
+    test("clientLoader.hydrate is automatically implied when no server loader exists", async ({
+      page,
+    }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: {
+            ...getFiles({
+              parentClientLoader: false,
+              parentClientLoaderHydrate: false,
+              childClientLoader: false,
+              childClientLoaderHydrate: false,
+            }),
+            // Blow away parent.child.tsx with our own version without a server loader
+            "app/routes/parent.child.tsx": js`
+              import * as React from 'react';
+              import { useLoaderData } from '@remix-run/react';
+              // Even without setting hydrate=true, this should run on hydration
+              export async function clientLoader({ serverLoader }) {
+                await new Promise(r => setTimeout(r, 100));
+                return {
+                  message: "Loader Data (clientLoader only)",
+                };
+              }
+              export function HydrateFallback() {
+                return <p>Child Fallback</p>
+              }
+              export default function Component() {
+                let data = useLoaderData();
+                return <p id="child-data">{data.message}</p>;
+              }
+            `,
+          },
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+
+      await app.goto("/parent/child");
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Child Fallback");
+      await page.waitForSelector("#child-data");
+      html = await app.getHtml("main");
+      expect(html).toMatch("Loader Data (clientLoader only)");
     });
   });
 

@@ -97,9 +97,10 @@ export function createServerRoutes(
       path: route.path,
       handle: routeModules[route.id].handle,
       // For partial hydration rendering, we need to indicate when the route
-      // has a loader, but it won't ever be called during the static render, so
-      // just give it a no-op function so we can render down to the proper fallback
-      loader: route.hasLoader ? () => null : undefined,
+      // has a loader/clientLoader, but it won't ever be called during the static
+      // render, so just give it a no-op function so we can render down to the
+      // proper fallback
+      loader: route.hasLoader || route.hasClientLoader ? () => null : undefined,
       // We don't need action/shouldRevalidate on these routes since they're
       // for a static render
     };
@@ -264,8 +265,9 @@ export function createClientRoutes(
 
       // Let React Router know whether to run this on hydration
       dataRoute.loader.hydrate =
-        routeModule.clientLoader != null &&
-        routeModule.clientLoader.hydrate === true;
+        route.hasLoader !== true ||
+        (routeModule.clientLoader != null &&
+          routeModule.clientLoader.hydrate === true);
 
       dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
