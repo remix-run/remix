@@ -80,13 +80,17 @@ test.describe(async () => {
       await page.evaluate(() => (window as any).__remixManifest)
     );
 
+    // TODO: maybe caching?
+    page.on("request", (request) => {
+      console.log("@@@@ request.url", request.url())
+    });
+
     // after browser reload, client knows there's no loader
     let i = 0;
     await expect
       .poll(async () => {
         console.log("@@@@@@@ trial", i++);
-        await page.reload();
-        // await page.goto(`http://localhost:${port}/`);
+        await page.goto(`http://localhost:${port}/`);
         await page.getByText("Mounted: yes").click();
         console.log(await page.evaluate(() => (window as any).__remixManifest));
         return page.evaluate(
