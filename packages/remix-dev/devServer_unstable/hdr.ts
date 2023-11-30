@@ -128,3 +128,120 @@ export let detectLoaderChanges = async (
 
   return entries;
 };
+
+export let detectClientLoaderChanges = async (
+  ctx: Context
+): Promise<Record<string, string>> => {
+  let entryPoints: Record<string, string> = {};
+  for (let id of Object.keys(ctx.config.routes)) {
+    entryPoints[id] = ctx.config.routes[id].file + "?clientLoader";
+  }
+  let options: esbuild.BuildOptions = {
+    bundle: true,
+    entryPoints: entryPoints,
+    treeShaking: true,
+    metafile: true,
+    outdir: ".",
+    write: false,
+    entryNames: "[hash]",
+    loader: loaders,
+    logLevel: "silent",
+    plugins: [
+      {
+        name: "hmr-client-loader",
+        setup(build) {
+          let routesByFile: Map<string, Route> = Object.keys(
+            ctx.config.routes
+          ).reduce((map, key) => {
+            let route = ctx.config.routes[key];
+            map.set(route.file, route);
+            return map;
+          }, new Map());
+          let filter = /\?clientLoader$/;
+          build.onResolve({ filter }, (args) => {
+            return { path: args.path, namespace: "hmr-client-loader" };
+          });
+          build.onLoad(
+            { filter, namespace: "hmr-client-loader" },
+            async (args) => {
+              let file = args.path.replace(filter, "");
+              let route = routesByFile.get(file);
+              invariant(route, `Cannot get route by path: ${args.path}`);
+              let cacheKey = `module-exports:${route.id}`;
+              let { cacheValue: theExports } =
+                await ctx.fileWatchCache.getOrSet(cacheKey, async () => {
+                  let file = path.resolve(
+                    ctx.config.appDirectory,
+                    ctx.config.routes[route!.id].file
+                  );
+                  return {
+                    cacheValue: await getRouteModuleExports(
+                      ctx.config,
+                      route!.id
+                    ),
+                    fileDependencies: new Set([file]),
+                  };
+                });
+
+              let contents = "module.exports = {};";
+              if (theExports.includes("clientLoader")) {
+                contents = `export { clientLoader } from ${JSON.stringify(
+                  `./${file}`
+                )};`;
+              }
+              console.log("contents", contents);
+              return {
+                contents,
+                resolveDir: ctx.config.appDirectory,
+                loader: "js",
+              };
+            }
+          );
+        },
+      },
+      externalPlugin(/^node:.*/, { sideEffects: false }),
+      externalPlugin(/\.css$/, { sideEffects: false }),
+      externalPlugin(/^https?:\/\//, { sideEffects: false }),
+      mdxPlugin(ctx),
+      emptyModulesPlugin(ctx, /\.client(\.[jt]sx?)?$/),
+      {
+        name: "hmr-bare-modules",
+        setup(build) {
+          let matchPath = ctx.config.tsconfigPath
+            ? createMatchPath(ctx.config.tsconfigPath)
+            : undefined;
+          function resolvePath(id: string) {
+            if (!matchPath) return id;
+            return (
+              matchPath(id, undefined, undefined, [
+                ".ts",
+                ".tsx",
+                ".js",
+                ".jsx",
+              ]) || id
+            );
+          }
+          build.onResolve({ filter: /.*/ }, (args) => {
+            if (!isBareModuleId(resolvePath(args.path))) {
+              return undefined;
+            }
+            return { path: args.path, external: true };
+          });
+        },
+      },
+    ],
+  };
+
+  let { metafile } = await esbuild.build(options);
+
+  let entries: Record<string, string> = {};
+  for (let [hashjs, { entryPoint }] of Object.entries(metafile!.outputs)) {
+    if (entryPoint === undefined) continue;
+    let file = entryPoint
+      .replace(/^hmr-client-loader:/, "")
+      .replace(/\?clientLoader$/, "");
+    entries[file] = hashjs.replace(/\.js$/, "");
+  }
+
+  return entries;
+};

@@ -59,6 +59,8 @@ export let serve = async (
     appReady?: Channel.Type<void>;
     loaderChanges?: Promise<Result<Record<string, string>>>;
     prevLoaderHashes?: Record<string, string>;
+    clientLoaderChanges?: Promise<Result<Record<string, string>>>;
+    prevClientLoaderHashes?: Record<string, string>;
   } = {};
 
   let app = express()
@@ -186,6 +188,10 @@ export let serve = async (
         }
 
         state.loaderChanges = HDR.detectLoaderChanges(ctx).then(ok, err);
+        state.clientLoaderChanges = HDR.detectClientLoaderChanges(ctx).then(
+          ok,
+          err
+        );
       },
       onBuildManifest: (manifest: Manifest) => {
         state.manifest = manifest;
@@ -231,6 +237,32 @@ export let serve = async (
               loaderChanges.value,
               state.prevLoaderHashes
             );
+
+            let clientLoaderChanges = await state.clientLoaderChanges!;
+            if (clientLoaderChanges.ok) {
+              newState.prevClientLoaderHashes = clientLoaderChanges.value;
+              console.log("clientLoaderChanges", clientLoaderChanges.value);
+            } else {
+              console.log(
+                "clientLoaderChanges not ok",
+                clientLoaderChanges.value
+              );
+            }
+            if (
+              clientLoaderChanges?.ok &&
+              state.manifest &&
+              state.prevManifest
+            ) {
+              updates.push(
+                ...HMR.updates(
+                  ctx.config,
+                  state.manifest,
+                  state.prevManifest,
+                  clientLoaderChanges.value,
+                  state.prevClientLoaderHashes
+                )
+              );
+            }
             websocket.hmr(state.manifest, updates);
 
             let hdr = updates.some((u) => u.revalidate);
