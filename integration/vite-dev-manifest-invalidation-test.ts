@@ -66,7 +66,7 @@ test.describe(async () => {
     let i = 0;
     await expect(async () => {
       console.log(":::::::: TRIAL", i++);
-      await page.goto(`http://localhost:${port}/other`);
+      await page.goto(`http://localhost:${port}/other`, { timeout: 1000 });
       await page.getByText("new route").click();
     }).toPass();
   });
