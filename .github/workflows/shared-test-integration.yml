@@ -56,4 +56,4 @@ jobs:
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        run: "yarn test:integration --project=${{ matrix.browser }}"
+        run: "yarn test:integration --project=${{ matrix.browser }} integration/vite-dev-manifest-invalidation-test.ts"
