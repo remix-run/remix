@@ -65,9 +65,19 @@ test.describe(async () => {
     await page.goto(`http://localhost:${port}/`);
     await page.getByText("Mounted: yes").click();
 
+    console.log(
+      "@@@ before",
+      await page.evaluate(() => (window as any).__remixManifest)
+    );
+
     // remove loader export in other page should invalidate manifest
     await edit("app/routes/other.tsx", (contents) =>
       contents.replace(/export const loader.*/, "")
+    );
+
+    console.log(
+      "@@@ after",
+      await page.evaluate(() => (window as any).__remixManifest)
     );
 
     // after browser reload, client knows there's no loader
