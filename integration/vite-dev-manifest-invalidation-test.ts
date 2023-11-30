@@ -64,10 +64,12 @@ test.describe(async () => {
     // client is not aware of new route addition yet (https://github.com/remix-run/remix/issues/7894)
     // however server should be able to handle new route (thought it needs a few retries to process invalidation)
     let i = 0;
-    await expect(async () => {
-      console.log(":::::::: TRIAL", i++);
-      await page.goto(`http://localhost:${port}/other`, { timeout: 1000 });
-      await page.getByText("new route").click();
-    }).toPass();
+    await expect
+      .poll(async () => {
+        console.log(":::::::: TRIAL", i++);
+        await page.goto(`http://localhost:${port}/other`);
+        return page.getByText("new route").isVisible();
+      })
+      .toBe(true);
   });
 });
