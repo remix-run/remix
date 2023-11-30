@@ -730,12 +730,17 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         viteDevServer.watcher.on(
           "all",
           async (event: string, filepath: string) => {
-            console.log("@@@@@@ watcher @@@@@@", { event, filepath });
+            console.log("@@@@@@ watcher @@@@@@", {
+              event,
+              filepath,
+              appDirectory: pluginConfig.appDirectory,
+              configFile: resolvedViteConfig?.configFile,
+            });
             if (
               ((event === "add" || event === "unlink") &&
-                filepath.startsWith(
-                  vite.normalizePath(pluginConfig.appDirectory)
-                )) ||
+                vite
+                  .normalizePath(filepath)
+                  .startsWith(vite.normalizePath(pluginConfig.appDirectory))) ||
               (event === "change" &&
                 filepath === resolvedViteConfig?.configFile)
             ) {

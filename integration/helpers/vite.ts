@@ -141,7 +141,7 @@ export const viteBuild = (args: { cwd: string }) => {
 export const viteDev = createDev([resolveBin.sync("vite"), "dev"]);
 export const customDev = createDev(["./server.mjs"]);
 
-function node(args: string[], options: { cwd: string, debug?: boolean }) {
+function node(args: string[], options: { cwd: string; debug?: boolean }) {
   let nodeBin = process.argv[0];
 
   let proc = spawn(nodeBin, args, {
