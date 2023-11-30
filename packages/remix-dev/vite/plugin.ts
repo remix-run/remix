@@ -554,6 +554,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               // That means that before Vite pre-bundles dependencies (e.g. first time dev server is run)
               // mismatching Remix routers cause `Error: You must render this element inside a <Remix> element`.
               "@remix-run/react",
+              "@remix-run/node",
             ],
           },
           esbuild: {
