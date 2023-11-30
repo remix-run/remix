@@ -93,6 +93,8 @@ export default function Component() {
 }
 ```
 
+<docs-info>If a route exports a `clientLoader` and does not export a server `loader`, then `clientLoader.hydrate` is automatically treated as `true` since there is no server data to SSR with. Therefore, we always need to run the `clientLoader` on hydration before rendering the route component.</docs-info>
+
 ### HydrateFallback
 
 If you need to avoid rendering your default route component during SSR because you have data that must come from a `clientLoader`, you can export a [`HydrateFallback`][hydratefallback] component from your route that will be rendered during SSR, and only once the clientLoader runs on hydration will your router component be rendered.
