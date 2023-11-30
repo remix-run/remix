@@ -6,18 +6,22 @@ title: clientLoader
 
 In addition to (or in place of) your [`loader`][loader], you may define a `clientLoader` function that will execute on the client.
 
-Each route can define a "clientLoader" function that provides data to the route when rendering.
+Each route can define a `clientLoader` function that provides data to the route when rendering:
 
 ```tsx
-export const clientLoader = async () => {
+export const clientLoader = async ({
+  request,
+  params,
+  serverLoader,
+}: ClientLoaderFunctionArgs) => {
   return { ok: true };
 };
 ```
 
 This function is only ever run on the client, and can used in a few ways:
 
-- Instead of a server loader for full-client routes
-- To optimize loading data from the server:
+- Instead of a server action for full-client routes
+- To use alongside a `clientLoader` cache by invalidating the cache on mutations
   - Maintaining a client-side cache to skip calls to the server
   - Bypassing the Remix [BFF][bff] hop and hitting your API directly from the client
 - To further augment data loaded from the server
@@ -25,7 +29,7 @@ This function is only ever run on the client, and can used in a few ways:
 
 ## Hydration Behavior
 
-By default, `clientLoader` **will not** execute for the route during initial hydration. Thi is for the primary (and simpler) use-case where the `clientLoader` does not change the shape of the server `loader` data and is just an optimization on subsequent client side navigations (to read from a cache or hit an API directly).
+By default, `clientLoader` **will not** execute for the route during initial hydration. This is for the primary (and simpler) use-case where the `clientLoader` does not change the shape of the server `loader` data and is just an optimization on subsequent client side navigations (to read from a cache or hit an API directly).
 
 ### `clientLoader.hydrate`
 
@@ -63,6 +67,8 @@ export default function Component() {
   return <>...</>;
 }
 ```
+
+If you have multiple routes with `clientLoader.hydrate=true`, then Remix will server-render up until the highest-discovered `HydrateFallback`. You cannot render an `<Outlet/>` in a `HydrateFallback` because children routes can't be guaranteed to operate correctly since their ancestor loader data may not yet be available if they are running `clientLoader` functions on hydration (i.e., use cases such as `useRouteLoaderData()` or `useMatches()`).
 
 ## Arguments
 
