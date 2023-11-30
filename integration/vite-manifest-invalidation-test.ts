@@ -61,6 +61,11 @@ test.describe(async () => {
     page.on("pageerror", (error) => pageErrors.push(error));
     let edit = editor(cwd);
 
+    // TODO: maybe caching?
+    page.on("request", (request) => {
+      console.log("@@@@ request.url", request.url());
+    });
+
     // wait hydration to ensure initial manifest is loaded
     await page.goto(`http://localhost:${port}/`);
     await page.getByText("Mounted: yes").click();
@@ -79,11 +84,6 @@ test.describe(async () => {
       "@@@ after",
       await page.evaluate(() => (window as any).__remixManifest)
     );
-
-    // TODO: maybe caching?
-    page.on("request", (request) => {
-      console.log("@@@@ request.url", request.url())
-    });
 
     // after browser reload, client knows there's no loader
     let i = 0;
