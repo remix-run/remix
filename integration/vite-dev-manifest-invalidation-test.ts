@@ -36,7 +36,7 @@ test.describe(async () => {
       "vite.config.js": await VITE_CONFIG({ port }),
       ...files,
     });
-    stop = await viteDev({ cwd, port, debug: true });
+    stop = await viteDev({ cwd, port });
   });
   test.afterAll(async () => await stop());
 
@@ -63,10 +63,8 @@ test.describe(async () => {
 
     // client is not notified of new route addition (https://github.com/remix-run/remix/issues/7894)
     // however server can handle new route
-    let i = 0;
     await expect
       .poll(async () => {
-        console.log(":::::::: TRIAL", i++);
         await page.goto(`http://localhost:${port}/other`);
         return page.getByText("new route").isVisible();
       })
