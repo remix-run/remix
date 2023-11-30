@@ -62,7 +62,8 @@ test.describe(async () => {
     );
 
     // client is not aware of new route addition yet (https://github.com/remix-run/remix/issues/7894)
-    // however server should be able to handle new route (thought it needs a few retries to process invalidation)
+    // however server can handle new route
+    // though it needs a few retries to process invalidation, thus reliance on expect.poll
     let i = 0;
     await expect
       .poll(async () => {
