@@ -89,6 +89,25 @@ This means that, for any additional bundling features you'd like to use, you sho
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
 The use of any such features will render the existing Remix compiler unable to compile your app, so only use them if you intend to use Vite exclusively from here on out.
 
+#### `.server` directories
+
+In addition to `.server` files, the Remix's Vite plugin also supports `.server` directories.
+Any code in a `.server` directory will be excluded from the client bundle.
+
+```txt
+app
+├── .server 👈 everything in this directory is excluded from the client bundle
+│   ├── auth.ts
+│   └── db.ts
+├── cms.server.ts 👈 everything in this file is excluded from the client bundle
+├── root.tsx
+└── routes
+    └── _index.tsx
+```
+
+`.server` files and directories can be _anywhere_ within your Remix app directory (typically `app/`).
+If you need more control, you can always write your own Vite plugins to exclude other files or directories from any other locations.
+
 ## Migrating
 
 #### Setup Vite
