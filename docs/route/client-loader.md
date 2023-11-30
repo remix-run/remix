@@ -31,15 +31,42 @@ This function is only ever run on the client, and can used in a few ways:
 
 By default, `clientLoader` **will not** execute for the route during initial hydration. This is for the primary (and simpler) use-case where the `clientLoader` does not change the shape of the server `loader` data and is just an optimization on subsequent client side navigations (to read from a cache or hit an API directly).
 
+```tsx
+export async function loader() {
+  // Server-side, we talk to the DB directly
+  const data = getServerDataFromDb();
+  return json(data);
+}
+
+// This will not run on hydration, and will run on subsequent client-side navigations
+export async function clientLoader({
+  request,
+  params,
+  serverLoader,
+}: ClientLoaderFunctionArgs) {
+  // Client-side, we hit our exposed API endpoints directly
+  const data = await fetcDataFromApi();
+  return data;
+}
+
+// This will render on the server
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  return <>...</>;
+}
+```
+
 ### `clientLoader.hydrate`
 
 If you need to run your clientLoader on hydration, you can opt-into that by setting `clientLoader.hydrate=true`. This will tell Remix that it needs to run the `clientLoader` on hydration to get a complete set of loader data. The impact of this is that Remix can no longer server-render the route component because the loader data is not complete with only the server data. Therefore, you can (and should!) export a `HydrateFallback` component for Remix to render on the server. Remix will then run the `clientLoader` on hydration and render the default route component once completed.
 
 ```tsx
 export async function loader() {
-  /* ... */
+  const data = getServerData();
+  return json(data);
 }
 
+// This *will* run on hydration
 export async function clientLoader({
   request,
   params,
@@ -87,5 +114,5 @@ This function receives the same [`request`][loader-request] argument as a [`load
 [loader]: ./loader
 [loader-params]: ./loader#params
 [loader-request]: ./loader#request
-[bff]: ../guides/bff.md
+[bff]: ../guides/bff
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
