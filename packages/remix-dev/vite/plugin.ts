@@ -730,6 +730,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         viteDevServer.watcher.on(
           "all",
           async (event: string, filepath: string) => {
+            console.log("@@@@@@ watcher @@@@@@", { event, filepath });
             if (
               ((event === "add" || event === "unlink") &&
                 filepath.startsWith(
