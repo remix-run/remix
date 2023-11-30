@@ -155,28 +155,30 @@ export async function loader({
 
 ## Streaming with a Content Security Policy
 
+Streaming works by inserting script tags into the DOM as deferred promises resolve. If your page includes a [Content Security Policy for scripts][csp], you'll either need to weaken your security policy by including `script-src 'self' 'unsafe-inline'` in your `Content-Security-Policy` header, or add nonces to all of your script tags.
 
-Streaming works by inserting script tags into the DOM as deferred promises resolve. If your page includes a [Content Security Policy for scripts][csp], you'll either need to weaken your securtiy policy by including `script-src 'self' 'unsafe-inline'` in your `Content-Security-Policy` header, or add nonces to all of your script tags.
-
-If you are using a nonce, it needs to be included in three places: 
+If you are using a nonce, it needs to be included in three places:
 
 - The `Content-Security-Policy` header, like so: `Content-Security-Policy: script-src 'nonce-secretnoncevalue'`
 - The `<Scripts />`, `<ScrollRestoration />` and `<LiveReload />` components, like so: `<Scripts nonce="secretnoncevalue" />`
 - In `entry.server.ts` where you call `renderToPipeableStream`, like so:
 
-```ts
+```tsx
 const { pipe, abort } = renderToPipeableStream(
-  <RemixServer ... />,
+  <RemixServer
+    context={remixContext}
+    url={request.url}
+    abortDelay={ABORT_DELAY}
+  />,
   {
     nonce: "secretnoncevalue",
-    ...
+    /* ...remaining fields */
   }
 );
 ```
 
 This will ensure the nonce value is included on any deferred script tags.
 
-[csp]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
 [entry_client_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.client.tsx
 [entry_server_cloudflare_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.server.cloudflare.tsx
 [entry_server_deno_tsx]: https://github.com/remix-run/remix/blob/dev/packages/remix-dev/config/defaults/entry.server.deno.tsx
@@ -184,3 +186,4 @@ This will ensure the nonce value is included on any deferred script tags.
 [suspense_component]: https://react.dev/reference/react/Suspense
 [await_component]: ../components/await
 [defer]: ../utils/defer
+[csp]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
