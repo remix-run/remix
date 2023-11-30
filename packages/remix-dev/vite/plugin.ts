@@ -744,6 +744,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               (event === "change" &&
                 filepath === resolvedViteConfig?.configFile)
             ) {
+              console.log("@@@@@@ resolvePluginConfig @@@@@@");
               let lastPluginConfig = pluginConfig;
               pluginConfig = await resolvePluginConfig();
               if (!isEqualJson(lastPluginConfig, pluginConfig)) {
@@ -751,8 +752,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                   let mod = viteDevServer.moduleGraph.getModuleById(
                     VirtualModule.resolve(vmod)
                   );
+                  console.log("@@@@@@ getModuleById @@@@@@", mod?.file);
 
                   if (mod) {
+                    console.log("@@@@@@ invalidateModule @@@@@@", mod.file);
                     viteDevServer.moduleGraph.invalidateModule(mod);
                   }
                 });
