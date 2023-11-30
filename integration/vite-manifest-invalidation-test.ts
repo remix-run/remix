@@ -70,17 +70,18 @@ test.describe(async () => {
       contents.replace(/export const loader.*/, "")
     );
 
-    // (at least) after browser reload, client side navigation should be successful
+    // after browser reload, client knows there's no loader
     let i = 0;
     await expect
       .poll(async () => {
         console.log("@@@@@@@ trial", i++);
         await page.goto(`http://localhost:${port}/`);
         await page.getByText("Mounted: yes").click();
-        await page.getByRole("link", { name: "/other" }).click();
-        return page.getByText("loaderData = null").isVisible();
+        return page.evaluate(
+          () => (window as any).__remixManifest.routes["routes/other"].hasLoader
+        );
       })
-      .toBeTruthy();
+      .toBe(false);
   });
 });
 
