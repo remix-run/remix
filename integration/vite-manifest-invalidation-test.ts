@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { test } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import getPort from "get-port";
 
 import { createProject, viteDev, VITE_CONFIG } from "./helpers/vite.js";
@@ -72,13 +72,16 @@ test.describe(async () => {
     await edit("app/routes/other.tsx", (contents) =>
       contents.replace(/export const loader.*/, "")
     );
-
-    // probe internal to ensure hot update is ready
-    await page.waitForFunction(
-      () =>
-        (window as any).__remixManifest.routes["routes/other"].hasLoader ===
-        false
+    // ensure last hot update is handled by triggering HMR in current page
+    await edit("app/routes/_index.tsx", (contents) =>
+      contents.replace(
+        "<p data-hmr>HMR updated: 0</p>",
+        "<p data-hmr>HMR updated: 1</p>"
+      )
     );
+    await expect
+      .poll(() => page.getByText("HMR updated: 1").isVisible())
+      .toBeTruthy();
 
     // navigate to a route which previously had a loader
     await page.getByRole("link", { name: "/other" }).click();
