@@ -727,7 +727,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         // Invalidate plugin config and virtual module via file watcher
         let vite = importViteEsmSync();
-        viteDevServer.watcher.addListener(
+        viteDevServer.watcher.on(
           "all",
           async (event: string, filepath: string) => {
             if (

@@ -57,7 +57,8 @@ test.describe(async () => {
             <div id="other">new route</div>
           );
         }
-      `
+      `,
+      "utf-8"
     );
 
     // client is not aware of new route addition yet (https://github.com/remix-run/remix/issues/7894)
