@@ -726,25 +726,20 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         });
 
         // Invalidate plugin config and virtual module via file watcher
-        let vite = importViteEsmSync();
+        let { normalizePath } = importViteEsmSync();
         viteDevServer.watcher.on(
           "all",
           async (event: string, filepath: string) => {
-            console.log("@@@@@@ watcher @@@@@@", {
-              event,
-              filepath,
-              appDirectory: pluginConfig.appDirectory,
-              configFile: resolvedViteConfig?.configFile,
-            });
             if (
               ((event === "add" || event === "unlink") &&
-                vite
-                  .normalizePath(filepath)
-                  .startsWith(vite.normalizePath(pluginConfig.appDirectory))) ||
+                normalizePath(filepath).startsWith(
+                  normalizePath(pluginConfig.appDirectory)
+                )) ||
               (event === "change" &&
-                filepath === resolvedViteConfig?.configFile)
+                resolvedViteConfig?.configFile &&
+                normalizePath(filepath) ===
+                  normalizePath(resolvedViteConfig.configFile))
             ) {
-              console.log("@@@@@@ resolvePluginConfig @@@@@@");
               let lastPluginConfig = pluginConfig;
               pluginConfig = await resolvePluginConfig();
               if (!isEqualJson(lastPluginConfig, pluginConfig)) {
@@ -752,10 +747,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
                   let mod = viteDevServer.moduleGraph.getModuleById(
                     VirtualModule.resolve(vmod)
                   );
-                  console.log("@@@@@@ getModuleById @@@@@@", mod?.file);
 
                   if (mod) {
-                    console.log("@@@@@@ invalidateModule @@@@@@", mod.file);
                     viteDevServer.moduleGraph.invalidateModule(mod);
                   }
                 });
