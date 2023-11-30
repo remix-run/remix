@@ -1107,12 +1107,14 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             route
           );
           hotData.route = newMetadata;
+          console.log("@@@@@@ hot route", { metadata, newMetadata });
           if (
             !metadata ||
             (["hasLoader", "hasAction", "hasErrorBoundary"] as const).some(
               (key) => metadata[key] !== newMetadata[key]
             )
           ) {
+            console.log("@@@@@@ invalidateVirtualModules");
             invalidateVirtualModules(server);
           }
         }
