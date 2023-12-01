@@ -89,6 +89,25 @@ This means that, for any additional bundling features you'd like to use, you sho
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
 The use of any such features will render the existing Remix compiler unable to compile your app, so only use them if you intend to use Vite exclusively from here on out.
 
+#### `.server` directories
+
+In addition to `.server` files, the Remix's Vite plugin also supports `.server` directories.
+Any code in a `.server` directory will be excluded from the client bundle.
+
+```txt
+app
+├── .server 👈 everything in this directory is excluded from the client bundle
+│   ├── auth.ts
+│   └── db.ts
+├── cms.server.ts 👈 everything in this file is excluded from the client bundle
+├── root.tsx
+└── routes
+    └── _index.tsx
+```
+
+`.server` files and directories can be _anywhere_ within your Remix app directory (typically `app/`).
+If you need more control, you can always write your own Vite plugins to exclude other files or directories from any other locations.
+
 ## Migrating
 
 #### Setup Vite
@@ -613,6 +632,74 @@ You can also eagerly import all MDX files if you'd prefer:
 const posts = import.meta.glob("./posts/*.mdx", {
   eager: true,
 });
+```
+
+#### Strict route exports
+
+With Vite, Remix gets stricter about which exports are allowed from your route modules.
+
+Previously, Remix allowed user-defined exports from routes.
+The Remix compiler would then rely on treeshaking to remove any code only intended for use on the server from the client bundle.
+
+In contrast, Vite processes each module in isolation during development, so cross-module treeshaking is not possible.
+You should already be separating server-only code into `.server` files or directories, so treeshaking isn't needed for those modules.
+But routes are a special case since they intentionally blend client and server code.
+Remix knows that exports like `loader`, `action`, `headers`, etc. are server-only, so it can safely remove them from the client bundle.
+But there's no way to know when looking at a single route module in isolation whether user-defined exports are server-only.
+That's why Remix's Vite plugin is stricter about which exports are allowed from your route modules.
+
+In fact, we'd rather not rely on treeshaking for correctness at all.
+If tomorrow you or your coworker accidentally imports something you _thought_ was client-safe,
+treeshaking will no longer exclude that from your client bundle and you might end up with server code in your app!
+Treeshaking is designed as a pure optimization, so relying on it for correctness is brittle.
+
+So instead of treeshaking, its better to be explicit about what code is client-safe and what code is server-only.
+For route modules, that means only exporting Remix route exports.
+For anything else, put it in a separate module and use a `.server` file or directory when needed.
+
+Ultimately, Route exports are Remix API.
+Think of a Remix route module like a function and the exports like named arguments to the function.
+
+```ts
+// Not real API, just a mental model
+const route = createRoute({ loader, mySuperCoolThing });
+//                                  ^^^^^^^^^^^^^^^^
+// Object literal may only specify known properties, and 'mySuperCoolThing' does not exist in type 'RemixRoute'
+```
+
+Just like how you shouldn't pass unexpected named arguments to a function, you shouldn't create unexpected exports from a route module.
+The result is that Remix is simpler and more predictable.
+In short, Vite made us eat our veggies, but turns out they were delicious all along!
+
+👉 **Move any user-defined route exports to a separate module**
+
+For example, here's a route with a user-defined export called `mySuperCoolThing`:
+
+```ts filename=app/routes/super-cool.tsx
+// ❌ This isn't a Remix-specific route export, just something I made up
+export const mySuperCoolThing =
+  "Some value I wanted to colocate with my route!";
+
+// ✅ This is a valid Remix route export, so it's fine
+export const loader = () => {};
+
+// ✅ This is also a valid Remix route export
+export default function SuperCool() {}
+```
+
+One option is to colocate your route and related utilities in the same directory if your routing convention allows it.
+For example, with the default route convention in v2:
+
+```ts filename=app/routes/super-cool/route.tsx
+export const loader = () => {};
+
+export default function SuperCool() {}
+```
+
+```ts filename=app/routes/super-cool/utils.ts
+// If this was server-only code, I'd rename this file to "utils.server.ts"
+export const mySuperCoolThing =
+  "Some value I wanted to colocate with my route!";
 ```
 
 ## Troubleshooting
