@@ -113,7 +113,6 @@ const invalidateVirtualModules = (viteDevServer: Vite.ViteDevServer) => {
     let mod = viteDevServer.moduleGraph.getModuleById(
       VirtualModule.resolve(vmod)
     );
-    console.log("===== invalidateVirtualModules", { vmod, file: mod?.file });
     if (mod) {
       viteDevServer.moduleGraph.invalidateModule(mod);
     }
@@ -1122,10 +1121,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               (key) => metadata[key] !== newMetadata[key]
             )
           ) {
-            console.log("======= invalidateVirtualModules");
             invalidateVirtualModules(server);
-            console.log("======= invalidateAll");
-            server.moduleGraph.invalidateAll();
           }
         }
 
