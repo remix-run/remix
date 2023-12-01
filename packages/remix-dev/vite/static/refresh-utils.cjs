@@ -40,7 +40,7 @@ const enqueueUpdate = debounce(async () => {
 
     let needsRevalidation = new Set(
       Array.from(routeUpdates.values())
-        .filter((route) => route.hasLoader)
+        .filter((route) => route.hasLoader || route.hasClientLoader)
         .map((route) => route.id)
     );
 
@@ -53,6 +53,11 @@ const enqueueUpdate = debounce(async () => {
     __remixRouter._internalSetRoutes(routes);
     routeUpdates.clear();
   }
+
+  // TODO: Can we determine if the routeUpdate had a change to the
+  // loader/clientLoader?  If the route update only changed HydrateFallback and
+  // HydrateFallback is currently rendered (we can determine this by checking
+  // loader data) then we can skip the revalidation.
 
   await revalidate();
   if (manifest) {
