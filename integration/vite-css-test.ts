@@ -44,9 +44,7 @@ const files = {
             <Links />
           </head>
           <body>
-            <div id="content">
-              <Outlet />
-            </div>
+            <Outlet />
             <Scripts />
             <LiveReload />
           </body>
@@ -55,7 +53,7 @@ const files = {
     }
   `,
   "app/entry.client.css": `
-    .client-entry {
+    .entry-client {
       background: pink;
       padding: ${PADDING};
     }
@@ -107,14 +105,14 @@ const files = {
 
     export default function IndexRoute() {
       return (
-        <div id="index">
+        <>
           <input />
-          <div data-client-entry className="client-entry">
-            <div data-css-modules className={cssModulesStyles.index}>
-              <div data-css-linked className="index_linked">
-                <div data-css-bundled className="index_bundled">
-                  <div data-css-vanilla-global className="index_vanilla_global">
-                    <div data-css-vanilla-local className={stylesVanillaLocal.index}>
+          <div id="entry-client" className="entry-client">
+            <div id="css-modules" className={cssModulesStyles.index}>
+              <div id="css-linked" className="index_linked">
+                <div id="css-bundled" className="index_bundled">
+                  <div id="css-vanilla-global" className="index_vanilla_global">
+                    <div id="css-vanilla-local" className={stylesVanillaLocal.index}>
                       <h2>CSS test</h2>
                     </div>
                   </div>
@@ -122,7 +120,7 @@ const files = {
               </div>
             </div>
           </div>
-        </div>
+        </>
       );
     }
   `,
@@ -243,11 +241,11 @@ async function pageLoadWorkflow({ page, port }: { page: Page; port: number }) {
 
   await Promise.all(
     [
-      "#index [data-css-bundled]",
-      "#index [data-css-linked]",
-      "#index [data-css-modules]",
-      "#index [data-css-vanilla-global]",
-      "#index [data-css-vanilla-local]",
+      "#css-bundled",
+      "#css-linked",
+      "#css-modules",
+      "#css-vanilla-global",
+      "#css-vanilla-local",
     ].map(
       async (selector) =>
         await expect(page.locator(selector)).toHaveCSS("padding", PADDING)
@@ -271,7 +269,7 @@ async function hmrWorkflow({
     waitUntil: "networkidle",
   });
 
-  let input = page.locator("#index input");
+  let input = page.locator("input");
   await expect(input).toBeVisible();
   await input.type("stateful");
   await expect(input).toHaveValue("stateful");
@@ -289,11 +287,11 @@ async function hmrWorkflow({
 
   await Promise.all(
     [
-      "#index [data-css-bundled]",
-      "#index [data-css-linked]",
-      "#index [data-css-modules]",
-      "#index [data-css-vanilla-global]",
-      "#index [data-css-vanilla-local]",
+      "#css-bundled",
+      "#css-linked",
+      "#css-modules",
+      "#css-vanilla-global",
+      "#css-vanilla-local",
     ].map(
       async (selector) =>
         await expect(page.locator(selector)).toHaveCSS("padding", NEW_PADDING)
@@ -304,13 +302,8 @@ async function hmrWorkflow({
   await expect(input).toHaveValue("stateful");
 
   // The following change triggers a full page reload, so we check it after all the checks for HMR state preservation
-  await edit("app/entry.client.css", (contents) =>
-    contents.replace(PADDING, NEW_PADDING)
-  );
-  await expect(page.locator("#index [data-client-entry]")).toHaveCSS(
-    "padding",
-    NEW_PADDING
-  );
+  await edit("app/entry.client.css", modifyCss);
+  await expect(page.locator("#entry-client")).toHaveCSS("padding", NEW_PADDING);
 
   expect(pageErrors).toEqual([]);
 }
