@@ -56,6 +56,7 @@ test.describe(async () => {
 
   test("Vite / dev / invalidate manifest on route exports change", async ({
     page,
+    context,
   }) => {
     let pageErrors: Error[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
@@ -92,6 +93,7 @@ test.describe(async () => {
     await expect
       .poll(async () => {
         console.log("@@@@@@@ trial", i++);
+        let page = await context.newPage();
         await page.goto(`http://localhost:${port}/`);
         await page.getByText("Mounted: yes").click();
         console.log(await page.evaluate(() => (window as any).__remixManifest));
