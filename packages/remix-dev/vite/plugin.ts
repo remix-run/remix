@@ -554,6 +554,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               // That means that before Vite pre-bundles dependencies (e.g. first time dev server is run)
               // mismatching Remix routers cause `Error: You must render this element inside a <Remix> element`.
               "@remix-run/react",
+
+              // For some reason, the `vite-dotenv` integration test consistently fails on webkit
+              // with `504 (Outdated Optimize Dep)` from Vite  unless `@remix-run/node` is included
+              // in `optimizeDeps.include`. 🤷
+              // This could be caused by how we copy `node_modules/` into integration test fixtures,
+              // so maybe this will be unnecessary once we switch to pnpm
               "@remix-run/node",
             ],
           },
@@ -901,7 +907,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         let serverDirRE = /\/\.server\//;
         if (serverFileRE.test(id) || serverDirRE.test(id)) {
           return {
-            code: "export default {}",
+            code: "export {}",
             map: null,
           };
         }
@@ -916,7 +922,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         let clientDirRE = /\/\.client\//;
         if (clientFileRE.test(id) || clientDirRE.test(id)) {
           return {
-            code: "export default {}",
+            code: "export {}",
             map: null,
           };
         }
