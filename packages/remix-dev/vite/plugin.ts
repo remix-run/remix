@@ -1124,6 +1124,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           ) {
             console.log("======= invalidateVirtualModules");
             invalidateVirtualModules(server);
+            console.log("======= invalidateAll");
+            server.moduleGraph.invalidateAll();
           }
         }
 
