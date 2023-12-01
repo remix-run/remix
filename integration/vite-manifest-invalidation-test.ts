@@ -61,7 +61,9 @@ test.describe(async () => {
     page.on("pageerror", (error) => pageErrors.push(error));
     let edit = editor(cwd);
 
-    // TODO: maybe caching?
+    // TODO: maybe caching? how about https://stackoverflow.com/a/68650186
+    page.route("**", (route) => route.continue());
+
     page.on("request", (request) => {
       console.log("@@@@ request.url", request.url());
     });
