@@ -641,12 +641,36 @@ With Vite, Remix gets stricter about which exports are allowed from your route m
 Previously, Remix allowed user-defined exports from routes.
 The Remix compiler would then rely on treeshaking to remove any code only intended for use on the server from the client bundle.
 
-In contrast, Vite processes each module in isolation during development, so cross-module treeshaking is not possible.
-You should already be separating server-only code into `.server` files or directories, so treeshaking isn't needed for those modules.
+```ts filename=app/routes/super-cool.tsx
+// `loader`: always server-only, remove from client bundle 👍
+export const loader = () => {};
+
+// `default`: always client-safe, keep `default` in client bundle 👍
+export default function SuperCool() {}
+
+// User-defined export
+export const mySuperCoolThing = () => {
+  /*
+  Client-safe or server-only? Depends on what code is in here... 🤷
+  Rely on treeshaking to remove from client bundle if it depends on server-only code.
+  */
+};
+```
+
+In contrast, Vite processes each module in isolation during development, so relying on cross-module treeshaking is not an option.
+For most modules, you should already be using `.server` files or directories to isolate server-only code.
 But routes are a special case since they intentionally blend client and server code.
 Remix knows that exports like `loader`, `action`, `headers`, etc. are server-only, so it can safely remove them from the client bundle.
 But there's no way to know when looking at a single route module in isolation whether user-defined exports are server-only.
 That's why Remix's Vite plugin is stricter about which exports are allowed from your route modules.
+
+```ts filename=app/routes/super-cool.tsx
+export const loader = () => {}; // server-only 👍
+export default function SuperCool() {} // client-safe 👍
+
+// Need to decide whether this is client-safe or server-only without any other information 😬
+export const mySuperCoolThing = () => {};
+```
 
 In fact, we'd rather not rely on treeshaking for correctness at all.
 If tomorrow you or your coworker accidentally imports something you _thought_ was client-safe,
@@ -676,15 +700,14 @@ In short, Vite made us eat our veggies, but turns out they were delicious all al
 For example, here's a route with a user-defined export called `mySuperCoolThing`:
 
 ```ts filename=app/routes/super-cool.tsx
-// ❌ This isn't a Remix-specific route export, just something I made up
-export const mySuperCoolThing =
-  "Some value I wanted to colocate with my route!";
-
 // ✅ This is a valid Remix route export, so it's fine
 export const loader = () => {};
 
 // ✅ This is also a valid Remix route export
 export default function SuperCool() {}
+
+// ❌ This isn't a Remix-specific route export, just something I made up
+export const mySuperCoolThing = () => {};
 ```
 
 One option is to colocate your route and related utilities in the same directory if your routing convention allows it.
@@ -698,8 +721,7 @@ export default function SuperCool() {}
 
 ```ts filename=app/routes/super-cool/utils.ts
 // If this was server-only code, I'd rename this file to "utils.server.ts"
-export const mySuperCoolThing =
-  "Some value I wanted to colocate with my route!";
+export const mySuperCoolThing = () => {};
 ```
 
 ## Troubleshooting
