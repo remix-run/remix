@@ -265,9 +265,8 @@ export function createClientRoutes(
 
       // Let React Router know whether to run this on hydration
       dataRoute.loader.hydrate =
-        route.hasLoader !== true ||
-        (routeModule.clientLoader != null &&
-          routeModule.clientLoader.hydrate === true);
+        routeModule.clientLoader != null &&
+        (routeModule.clientLoader.hydrate === true || route.hasLoader !== true);
 
       dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
