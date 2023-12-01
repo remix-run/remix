@@ -50,7 +50,7 @@ test.describe(async () => {
       "vite.config.js": await VITE_CONFIG({ port }),
       ...files,
     });
-    stop = await viteDev({ cwd, port, debug: true });
+    stop = await viteDev({ cwd, port });
   });
   test.afterAll(async () => await stop());
 
