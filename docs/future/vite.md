@@ -663,7 +663,7 @@ Think of a Remix route module like a function and the exports like named argumen
 ```ts
 // Not real API, just a mental model
 const route = createRoute({ loader, mySuperCoolThing });
-//                                ^^^^^^^^^^^^^^^^
+//                                  ^^^^^^^^^^^^^^^^
 // Object literal may only specify known properties, and 'mySuperCoolThing' does not exist in type 'RemixRoute'
 ```
 
