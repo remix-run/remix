@@ -72,7 +72,7 @@ test.describe(async () => {
       contents.replace(/export const loader.*/, "")
     );
 
-    // after browser reload, client should be aware there no loader
+    // after browser reload, client should be aware of there's no loader
     if (browserName === "webkit") {
       // force new page instance for webkit.
       // otherwise browser doesn't seem to fetch new manifest probably due to caching.
