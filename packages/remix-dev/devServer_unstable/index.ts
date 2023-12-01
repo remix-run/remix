@@ -241,6 +241,12 @@ export let serve = async (
             let clientLoaderChanges = await state.clientLoaderChanges!;
             if (clientLoaderChanges.ok) {
               newState.prevClientLoaderHashes = clientLoaderChanges.value;
+              console.log("clientLoaderChanges", clientLoaderChanges.value);
+            } else {
+              console.log(
+                "clientLoaderChanges not ok",
+                clientLoaderChanges.value
+              );
             }
             if (
               clientLoaderChanges?.ok &&
