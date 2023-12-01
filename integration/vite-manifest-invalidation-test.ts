@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 import getPort from "get-port";
 
 import { createProject, viteDev, VITE_CONFIG } from "./helpers/vite.js";
@@ -57,43 +57,31 @@ test.describe(async () => {
   test("Vite / dev / invalidate manifest on route exports change", async ({
     page,
     context,
+    browserName,
   }) => {
     let pageErrors: Error[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
     let edit = editor(cwd);
 
-    page.on("request", (request) => {
-      console.log("@@@@ request.url", request.url());
-    });
-
     // wait hydration to ensure initial manifest is loaded
     await page.goto(`http://localhost:${port}/`);
     await page.getByText("Mounted: yes").click();
-
-    console.log(
-      "@@@@@@ before",
-      await page.evaluate(() => (window as any).__remixManifest)
-    );
 
     // remove loader export in other page should invalidate manifest
     await edit("app/routes/other.tsx", (contents) =>
       contents.replace(/export const loader.*/, "")
     );
 
-    // after browser reload, client knows there's no loader
-    let i = 0;
-    await expect
-      .poll(async () => {
-        console.log("@@@@@@@ trial", i++);
-        let page = await context.newPage();
-        await page.goto(`http://localhost:${port}/`);
-        await page.getByText("Mounted: yes").click();
-        console.log(await page.evaluate(() => (window as any).__remixManifest));
-        return page.evaluate(
-          () => (window as any).__remixManifest.routes["routes/other"].hasLoader
-        );
-      })
-      .toBe(false);
+    // after browser reload, client should be aware there no loader
+    if (browserName === "webkit") {
+      // force new page instance for webkit.
+      // otherwise browser doesn't seem to fetch new manifest probably due to caching.
+      page = await context.newPage();
+    }
+    await page.goto(`http://localhost:${port}/`);
+    await page.getByText("Mounted: yes").click();
+    await page.getByRole("link", { name: "/other" }).click();
+    await page.getByText("loaderData = null").click();
   });
 });
 

@@ -906,7 +906,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
             let manifest = await getDevManifest();
 
-            console.log("======= browserManifestId", manifest);
             return `window.__remixManifest=${jsesc(manifest, { es6: true })};`;
           }
         }
@@ -1114,7 +1113,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             route
           );
           hotData.route = newMetadata;
-          console.log("====== hot route", { metadata, newMetadata });
           if (
             !metadata ||
             (["hasLoader", "hasAction", "hasErrorBoundary"] as const).some(
