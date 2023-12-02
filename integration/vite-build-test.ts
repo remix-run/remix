@@ -210,6 +210,28 @@ test.describe("Vite build", () => {
 
         "app/assets/test1.txt": "test1",
         "app/assets/test2.txt": "test2",
+
+        "app/routes/ssr-code-split.tsx": js`
+          import { useLoaderData } from "@remix-run/react"
+
+          export const loader: LoaderFunction = async () => {
+            const lib = await import("../ssr-code-split-lib");
+            return lib.ssrCodeSplitTest();
+          };
+
+          export default function SsrCodeSplitRoute() {
+            const loaderData = useLoaderData();
+            return (
+              <div data-ssr-code-split>{loaderData}</div>
+            );
+          }
+        `,
+
+        "app/ssr-code-split-lib.ts": js`
+          export function ssrCodeSplitTest() {
+            return "ssrCodeSplitTest";
+          }
+        `,
       },
     });
 
@@ -220,12 +242,12 @@ test.describe("Vite build", () => {
     appFixture.close();
   });
 
-  test("server code is removed from client assets", async () => {
-    let publicBuildDir = path.join(fixture.projectDir, "public/build");
+  test("server code is removed from client build", async () => {
+    let clientBuildDir = path.join(fixture.projectDir, "build/client");
 
     // detect client asset files
     let assetFiles = glob.sync("**/*.@(js|jsx|ts|tsx)", {
-      cwd: publicBuildDir,
+      cwd: clientBuildDir,
       absolute: true,
     });
 
@@ -285,13 +307,37 @@ test.describe("Vite build", () => {
 
     // verify asset files are emitted and served correctly
     await page.getByRole("link", { name: "url1" }).click();
-    await page.waitForURL("**/build/assets/test1-*.txt");
+    await page.waitForURL("**/assets/test1-*.txt");
     await page.getByText("test1").click();
     await page.goBack();
 
     await page.getByRole("link", { name: "url2" }).click();
-    await page.waitForURL("**/build/assets/test2-*.txt");
+    await page.waitForURL("**/assets/test2-*.txt");
     await page.getByText("test2").click();
+  });
+
+  test("supports code-split JS from SSR build", async ({ page }) => {
+    let pageErrors: unknown[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/ssr-code-split`);
+    expect(pageErrors).toEqual([]);
+
+    await expect(page.locator("[data-ssr-code-split]")).toHaveText(
+      "ssrCodeSplitTest"
+    );
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("removes assets (other than code-split JS) and CSS files from SSR build", async () => {
+    let assetFiles = glob.sync("*", {
+      cwd: path.join(fixture.projectDir, "build/server/assets"),
+    });
+    let [asset, ...rest] = assetFiles;
+    expect(rest).toEqual([]); // Provide more useful test output if this fails
+    expect(asset).toMatch(/ssr-code-split-lib-.*\.js/);
   });
 
   test("supports code-split css", async ({ page }) => {
