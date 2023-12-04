@@ -128,19 +128,10 @@ const createDev =
 export const viteBuild = ({ cwd }: { cwd: string }) => {
   let nodeBin = process.argv[0];
   let viteBin = resolveBin.sync("vite");
-  let commands = [
-    [viteBin, "build"],
-    [viteBin, "build", "--ssr"],
-  ];
-  let results = [];
-  for (let command of commands) {
-    let result = spawnSync(nodeBin, command, {
-      cwd,
-      env: { ...process.env },
-    });
-    results.push(result);
-  }
-  return results;
+  return spawnSync(nodeBin, [viteBin, "build"], {
+    cwd,
+    env: { ...process.env },
+  });
 };
 
 export const viteRemixServe = async ({

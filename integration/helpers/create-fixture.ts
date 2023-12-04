@@ -315,43 +315,36 @@ function build(
 
   let remixBin = "node_modules/@remix-run/dev/dist/cli.js";
 
-  let commands: string[][] =
+  let buildArgs: string[] =
     compiler === "vite"
-      ? [
-          [viteBin, "build"],
-          [viteBin, "build", "--ssr"],
-        ]
-      : [[remixBin, "build", ...(sourcemap ? ["--sourcemap"] : [])]];
+      ? [viteBin, "build"]
+      : [remixBin, "build", ...(sourcemap ? ["--sourcemap"] : [])];
 
-  commands.forEach((buildArgs) => {
-    let buildSpawn = spawnSync("node", buildArgs, {
-      cwd: projectDir,
-      env: {
-        ...process.env,
-        NODE_ENV: mode || ServerMode.Production,
-      },
-    });
-
-    // These logs are helpful for debugging. Remove comments if needed.
-    // console.log("spawning node " + buildArgs.join(" ") + ":\n");
-    // console.log("  STDOUT:");
-    // console.log("  " + buildSpawn.stdout.toString("utf-8"));
-    // console.log("  STDERR:");
-    // console.log("  " + buildSpawn.stderr.toString("utf-8"));
-
-    if (buildStdio) {
-      buildStdio.write(buildSpawn.stdout.toString("utf-8"));
-      buildStdio.write(buildSpawn.stderr.toString("utf-8"));
-      buildStdio.end();
-    }
-
-    if (buildSpawn.error || buildSpawn.status) {
-      console.error(buildSpawn.stderr.toString("utf-8"));
-      throw (
-        buildSpawn.error || new Error(`Build failed, check the output above`)
-      );
-    }
+  let buildSpawn = spawnSync("node", buildArgs, {
+    cwd: projectDir,
+    env: {
+      ...process.env,
+      NODE_ENV: mode || ServerMode.Production,
+    },
   });
+
+  // These logs are helpful for debugging. Remove comments if needed.
+  // console.log("spawning node " + buildArgs.join(" ") + ":\n");
+  // console.log("  STDOUT:");
+  // console.log("  " + buildSpawn.stdout.toString("utf-8"));
+  // console.log("  STDERR:");
+  // console.log("  " + buildSpawn.stderr.toString("utf-8"));
+
+  if (buildStdio) {
+    buildStdio.write(buildSpawn.stdout.toString("utf-8"));
+    buildStdio.write(buildSpawn.stderr.toString("utf-8"));
+    buildStdio.end();
+  }
+
+  if (buildSpawn.error || buildSpawn.status) {
+    console.error(buildSpawn.stderr.toString("utf-8"));
+    throw buildSpawn.error || new Error(`Build failed, check the output above`);
+  }
 }
 
 async function writeTestFiles(init: FixtureInit, dir: string) {

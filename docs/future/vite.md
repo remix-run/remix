@@ -175,7 +175,7 @@ You'll also need to update to the new build output paths, which are `build/serve
 ```json filename=package.json lines=[3-4]
 {
   "scripts": {
-    "build": "vite build && vite build --ssr",
+    "build": "vite build",
     "dev": "vite dev",
     "start": "remix-serve ./build/server/index.js"
   }
@@ -272,7 +272,7 @@ app.listen(port, () =>
 ```json filename=package.json
 {
   "scripts": {
-    "build": "vite build && vite build --ssr",
+    "build": "vite build",
     "dev": "node ./server.mjs",
     "start": "cross-env NODE_ENV=production node ./server.mjs"
   }

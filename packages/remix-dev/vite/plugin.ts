@@ -296,6 +296,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
   let isViteV4 = getViteMajorVersion() === 4;
 
+  // This lets us queue up subsequent builds after the initial build while
+  // staying within the same "vite build" pass. This lets us be "just a Vite
+  // plugin" while being able to run as many Vite builds as we need.
+  type BuildDirective = { ssr: true }; // Only one type of build directive for now
+  let buildQueue: BuildDirective[] = [];
+
   let cssModulesManifest: Record<string, string> = {};
   let ssrBuildContext:
     | { isSsrBuild: false }
@@ -642,10 +648,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         resolvedViteConfig = viteConfig;
 
-        ssrBuildContext =
-          viteConfig.build.ssr && viteCommand === "build"
-            ? { isSsrBuild: true, getManifest: createBuildManifest }
-            : { isSsrBuild: false };
+        let isSsrBuild = viteConfig.build.ssr && viteCommand === "build";
 
         // We load the same Vite config file again for the child compiler so
         // that both parent and child compiler's plugins have independent state.
@@ -655,11 +658,19 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         // `configResolved` plugin hook would be called with `command = "build"`
         // by parent and then `command = "serve"` by child, which some plugins
         // may respond to by updating state referenced by the parent.
-        if (!viteConfig.configFile) {
+        if (!viteConfig.configFile && !isSsrBuild) {
           throw new Error(
             "The Remix Vite plugin requires the use of a Vite config file"
           );
         }
+
+        if (!isSsrBuild) {
+          buildQueue.push({ ssr: true });
+        }
+
+        ssrBuildContext = isSsrBuild
+          ? { isSsrBuild: true, getManifest: createBuildManifest }
+          : { isSsrBuild: false };
 
         let vite = importViteEsmSync();
 
@@ -716,7 +727,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }
       },
       buildStart() {
-        if (viteCommand === "build") {
+        if (viteCommand === "build" && !ssrBuildContext.isSsrBuild) {
           showUnstableWarning();
         }
       },
@@ -851,7 +862,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             let src = path.join(serverBuildDir, ssrAssetPath);
             if (!clientAssetPaths.has(ssrAssetPath)) {
               let dest = path.join(assetsBuildDirectory, ssrAssetPath);
-              await fse.move(src, dest);
+              await fse.move(src, dest, { overwrite: true });
               movedAssetPaths.push(dest);
             } else {
               await fse.remove(src);
@@ -889,6 +900,41 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       },
       async buildEnd() {
         await viteChildCompiler?.close();
+      },
+    },
+    {
+      name: "remix-build-runner",
+      async writeBundle() {
+        let vite = importViteEsmSync();
+        invariant(resolvedViteConfig);
+
+        for (let buildDirective of buildQueue) {
+          let buildConfigFile = await vite.loadConfigFromFile(
+            {
+              command: resolvedViteConfig.command,
+              mode: resolvedViteConfig.mode,
+              ...(isViteV4
+                ? { ssrBuild: buildDirective.ssr }
+                : { isSsrBuild: buildDirective.ssr }),
+            },
+            resolvedViteConfig.configFile
+          );
+
+          invariant(
+            buildConfigFile,
+            "Vite config file was unable to be resolved for Remix child compiler"
+          );
+
+          await vite.build({
+            configFile: false,
+            envFile: false,
+            ...buildConfigFile.config,
+            build: {
+              ...(buildConfigFile.config.build ?? {}),
+              ssr: buildDirective.ssr,
+            },
+          });
+        }
       },
     },
     {
