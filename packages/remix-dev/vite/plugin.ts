@@ -290,17 +290,15 @@ export type RemixVitePlugin = (
   options?: RemixVitePluginOptions
 ) => Vite.Plugin[];
 export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
+  // This lets us queue up a subsequent SSR build after the initial build while
+  // staying within the same "vite build" pass.
+  let ssrBuildQueued = false;
+
   let viteCommand: Vite.ResolvedConfig["command"];
   let viteUserConfig: Vite.UserConfig;
   let resolvedViteConfig: Vite.ResolvedConfig | undefined;
 
   let isViteV4 = getViteMajorVersion() === 4;
-
-  // This lets us queue up subsequent builds after the initial build while
-  // staying within the same "vite build" pass. This lets us be "just a Vite
-  // plugin" while being able to run as many Vite builds as we need.
-  type BuildDirective = { ssr: true }; // Only one type of build directive for now
-  let buildQueue: BuildDirective[] = [];
 
   let cssModulesManifest: Record<string, string> = {};
   let ssrBuildContext:
@@ -664,8 +662,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           );
         }
 
+        // If this is the client build, we queue up the subsequent SSR build
         if (!isSsrBuild) {
-          buildQueue.push({ ssr: true });
+          ssrBuildQueued = true;
         }
 
         ssrBuildContext = isSsrBuild
@@ -903,38 +902,36 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       },
     },
     {
-      name: "remix-build-runner",
+      name: "remix-ssr-build-runner",
       async writeBundle() {
+        if (!ssrBuildQueued) return;
+
         let vite = importViteEsmSync();
         invariant(resolvedViteConfig);
 
-        for (let buildDirective of buildQueue) {
-          let buildConfigFile = await vite.loadConfigFromFile(
-            {
-              command: resolvedViteConfig.command,
-              mode: resolvedViteConfig.mode,
-              ...(isViteV4
-                ? { ssrBuild: buildDirective.ssr }
-                : { isSsrBuild: buildDirective.ssr }),
-            },
-            resolvedViteConfig.configFile
-          );
+        let buildConfigFile = await vite.loadConfigFromFile(
+          {
+            command: resolvedViteConfig.command,
+            mode: resolvedViteConfig.mode,
+            ...(isViteV4 ? { ssrBuild: true } : { isSsrBuild: true }),
+          },
+          resolvedViteConfig.configFile
+        );
 
-          invariant(
-            buildConfigFile,
-            "Vite config file was unable to be resolved for Remix child compiler"
-          );
+        invariant(
+          buildConfigFile,
+          "Vite config file was unable to be resolved for Remix child compiler"
+        );
 
-          await vite.build({
-            configFile: false,
-            envFile: false,
-            ...buildConfigFile.config,
-            build: {
-              ...(buildConfigFile.config.build ?? {}),
-              ssr: buildDirective.ssr,
-            },
-          });
-        }
+        await vite.build({
+          configFile: false,
+          envFile: false,
+          ...buildConfigFile.config,
+          build: {
+            ...(buildConfigFile.config.build ?? {}),
+            ssr: true,
+          },
+        });
       },
     },
     {
