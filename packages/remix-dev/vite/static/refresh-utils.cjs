@@ -54,11 +54,6 @@ const enqueueUpdate = debounce(async () => {
     routeUpdates.clear();
   }
 
-  // TODO: Can we determine if the routeUpdate had a change to the
-  // loader/clientLoader?  If the route update only changed HydrateFallback and
-  // HydrateFallback is currently rendered (we can determine this by checking
-  // loader data) then we can skip the revalidation.
-
   await revalidate();
   if (manifest) {
     Object.assign(window.__remixManifest, manifest);
