@@ -161,28 +161,23 @@ if (import.meta && import.meta.hot) {
       // This is temporary API and will be more granular before release
       router._internalSetRoutes(routes);
 
-      if (needsRevalidation.size === 0) {
-        Object.assign(window.__remixManifest, assetsManifest);
-        window.$RefreshRuntime$.performReactRefresh();
-      } else {
-        // Wait for router to be idle before updating the manifest and route modules
-        // and triggering a react-refresh
-        let unsub = router.subscribe((state) => {
-          if (state.revalidation === "idle") {
-            unsub();
-            // Abort if a new update comes in while we're waiting for the
-            // router to be idle.
-            if (signal.aborted) return;
-            // Ensure RouterProvider setState has flushed before re-rendering
-            setTimeout(() => {
-              Object.assign(window.__remixManifest, assetsManifest);
-              window.$RefreshRuntime$.performReactRefresh();
-            }, 1);
-          }
-        });
-        window.__remixRevalidation = (window.__remixRevalidation || 0) + 1;
-        router.revalidate();
-      }
+      // Wait for router to be idle before updating the manifest and route modules
+      // and triggering a react-refresh
+      let unsub = router.subscribe((state) => {
+        if (state.revalidation === "idle") {
+          unsub();
+          // Abort if a new update comes in while we're waiting for the
+          // router to be idle.
+          if (signal.aborted) return;
+          // Ensure RouterProvider setState has flushed before re-rendering
+          setTimeout(() => {
+            Object.assign(window.__remixManifest, assetsManifest);
+            window.$RefreshRuntime$.performReactRefresh();
+          }, 1);
+        }
+      });
+      window.__remixRevalidation = (window.__remixRevalidation || 0) + 1;
+      router.revalidate();
     }
   );
 }
