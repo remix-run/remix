@@ -40,7 +40,7 @@ const enqueueUpdate = debounce(async () => {
 
     let needsRevalidation = new Set(
       Array.from(routeUpdates.values())
-        .filter((route) => route.hasLoader)
+        .filter((route) => route.hasLoader || route.hasClientLoader)
         .map((route) => route.id)
     );
 
