@@ -49,7 +49,10 @@ type SupportedRemixConfig = Pick<RemixUserConfig, SupportedRemixConfigKey>;
 
 const ROUTE_EXPORTS = new Set([
   "ErrorBoundary",
+  "HydrateFallback",
   "action",
+  "clientAction",
+  "clientLoader",
   "default", // component
   "handle",
   "headers",
