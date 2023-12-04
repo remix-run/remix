@@ -3055,11 +3055,6 @@
   dependencies:
     "@types/node" "*"
 
-"@types/resolve-bin@^0.4.1":
-  version "0.4.1"
-  resolved "https://registry.npmjs.org/@types/resolve-bin/-/resolve-bin-0.4.1.tgz#e5f2c2de1de8b77f2222a9e28e56ecc37028116c"
-  integrity sha512-5bWIuv+28N2+WxIQNdLwkzD+THqH221tR1rsjHV23CiM46+AZZ/U5V5KsuoBywkB/x7gK/xEBW1l9R7Ucdkcvg==
-
 "@types/resolve@1.17.1":
   version "1.17.1"
   resolved "https://registry.npmjs.org/@types/resolve/-/resolve-1.17.1.tgz"
@@ -6237,11 +6232,6 @@ finalhandler@~1.1.2:
     parseurl "~1.3.3"
     statuses "~1.5.0"
     unpipe "~1.0.0"
-
-find-parent-dir@~0.3.0:
-  version "0.3.1"
-  resolved "https://registry.npmjs.org/find-parent-dir/-/find-parent-dir-0.3.1.tgz#c5c385b96858c3351f95d446cab866cbf9f11125"
-  integrity sha512-o4UcykWV/XN9wm+jMEtWLPlV8RXCZnMhQI6F6OdHeSez7iiJWePw8ijOlskJZMsaQoGR/b7dH6lO02HhaTN7+A==
 
 find-up@^4.0.0, find-up@^4.1.0:
   version "4.1.0"
@@ -11360,13 +11350,6 @@ requires-port@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/requires-port/-/requires-port-1.0.0.tgz#925d2601d39ac485e091cf0da5c6e694dc3dcaff"
   integrity sha512-KigOCHcocU3XODJxsu8i/j8T9tzT4adHiecwORRQ0ZZFcp7ahwXuRU1m+yuO90C5ZUyGeGfocHDI14M3L3yDAQ==
-
-resolve-bin@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.npmjs.org/resolve-bin/-/resolve-bin-1.0.1.tgz#795255591443e7007b21f2eadd8baa39b7378e50"
-  integrity sha512-4G9C3udcDB1c9qaopB+9dygm2bMyF2LeJ2JHBIc24N7ob+UuSSwX3ID1hQwpDEQep9ZRNdhT//rgEd6xbWA/SA==
-  dependencies:
-    find-parent-dir "~0.3.0"
 
 resolve-cwd@^3.0.0:
   version "3.0.0"

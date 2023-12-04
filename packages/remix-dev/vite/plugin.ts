@@ -83,7 +83,7 @@ type RemixConfigJsdocOverrides = {
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
   Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides>;
 
-type ResolvedRemixVitePluginConfig = Pick<
+export type ResolvedRemixVitePluginConfig = Pick<
   ResolvedRemixConfig,
   | "appDirectory"
   | "rootDirectory"
@@ -551,6 +551,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             : viteConfigEnv.isSsrBuild;
 
         return {
+          __remixPluginResolvedConfig: pluginConfig,
           appType: "custom",
           experimental: { hmrPartialAccept: true },
           optimizeDeps: {

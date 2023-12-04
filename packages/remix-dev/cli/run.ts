@@ -92,6 +92,21 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     );
   }
 
+  // Vite dev's --host arg can be a boolean or a string, but the "arg" package
+  // doesn't support having multiple types for a single arg. As a workaround, we
+  // detect boolean usage and inject the equivalent string value.
+  if (argv[0] === "vite:dev") {
+    for (let [i, arg] of argv.entries()) {
+      if (arg === "--host") {
+        let nextIndex = i + 1;
+        if (!argv[nextIndex] || argv[nextIndex].startsWith("-")) {
+          argv.splice(nextIndex, 0, "0.0.0.0");
+          break;
+        }
+      }
+    }
+  }
+
   let args = arg(
     {
       "--no-delete": Boolean,
@@ -115,6 +130,12 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "-p": "--port",
       "--tls-key": String,
       "--tls-cert": String,
+
+      // vite
+      // --force and --port are already defined above
+      "--strictPort": Boolean,
+      "--config": String,
+      "--host": String,
     },
     {
       argv,
@@ -172,6 +193,9 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
       await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap);
       break;
+    case "vite:build":
+      await commands.viteBuild(input[1], flags);
+      break;
     case "watch":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
       await commands.watch(input[1], process.env.NODE_ENV);
@@ -186,6 +210,9 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     }
     case "dev":
       await commands.dev(input[1], flags);
+      break;
+    case "vite:dev":
+      await commands.viteDev(input[1], flags);
       break;
     default:
       // `remix ./my-project` is shorthand for `remix dev ./my-project`
