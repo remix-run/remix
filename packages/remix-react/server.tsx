@@ -68,6 +68,7 @@ export function RemixServer({
   let router = createStaticRouter(routes, context.staticHandlerContext, {
     future: {
       v7_partialHydration: true,
+      v7_relativeSplatPath: context.future.v3_relativeSplatPath,
     },
   });
 
