@@ -3,13 +3,15 @@ import colors from "picocolors";
 import type { ResolvedRemixVitePluginConfig } from "./plugin";
 
 export async function extractPluginConfig({
-  root,
-  mode,
+  command,
   configFile,
+  mode,
+  root,
 }: {
-  root: string;
-  mode?: string;
+  command: "build" | "serve";
   configFile?: string;
+  mode?: string;
+  root: string;
 }): Promise<ResolvedRemixVitePluginConfig> {
   let vite = await import("vite");
 
@@ -17,7 +19,7 @@ export async function extractPluginConfig({
   // process so we don't need to have a separate Remix config
   let viteConfig = await vite.resolveConfig(
     { mode, configFile, root },
-    "build"
+    command
   );
 
   // Our use of a child compiler requires a config file be present so that we

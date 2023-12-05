@@ -92,20 +92,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     );
   }
 
-  // Vite dev's --host arg can be a boolean or a string, but the "arg" package
-  // doesn't support having multiple types for a single arg. As a workaround, we
-  // detect boolean usage and inject the equivalent string value.
-  if (argv[0] === "vite:dev") {
-    for (let [i, arg] of argv.entries()) {
-      if (arg === "--host") {
-        let nextIndex = i + 1;
-        if (!argv[nextIndex] || argv[nextIndex].startsWith("-")) {
-          argv.splice(nextIndex, 0, "0.0.0.0");
-          break;
-        }
-      }
-    }
-  }
+  let isBooleanFlag = (arg: string) => {
+    let index = argv.indexOf(arg);
+    let nextArg = argv[index + 1];
+    return !nextArg || nextArg.startsWith("-");
+  };
 
   let args = arg(
     {
@@ -115,7 +106,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--help": Boolean,
       "-h": "--help",
       "--json": Boolean,
-      "--sourcemap": Boolean,
       "--token": String,
       "--typescript": Boolean,
       "--no-typescript": Boolean,
@@ -124,18 +114,36 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
       // dev server
       "--command": String,
-      "-c": "--command",
       "--manual": Boolean,
       "--port": Number,
       "-p": "--port",
       "--tls-key": String,
       "--tls-cert": String,
 
-      // vite
-      // --force and --port are already defined above
-      "--strictPort": Boolean,
-      "--config": String,
-      "--host": String,
+      ...(argv[0].startsWith("vite:")
+        ? {
+            // Vite commands
+            // --force and --port are already defined above
+            "--assetsInlineLimit": Number,
+            "--clearScreen": Boolean,
+            "--config": String,
+            "-c": "--config",
+            "--cors": Boolean,
+            "--emptyOutDir": Boolean,
+            "--host": isBooleanFlag("--host") ? Boolean : String,
+            "--logLevel": String,
+            "-l": "--logLevel",
+            "--minify": String,
+            "--mode": String,
+            "-m": "--mode",
+            "--open": isBooleanFlag("--open") ? Boolean : String,
+            "--strictPort": Boolean,
+          }
+        : {
+            // Non Vite commands
+            "-c": "--command",
+            "--sourcemap": Boolean,
+          }),
     },
     {
       argv,
