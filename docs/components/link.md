@@ -12,6 +12,8 @@ import { Link } from "@remix-run/react";
 <Link to="/dashboard">Dashboard</Link>;
 ```
 
+<docs-info>Please see the [Splat Paths][relativesplatpath] section on the `useResolvedPath` docs for a note on the behavior of the `future.v3_relativeSplatPath` future flag for relative `<Link to>` behavior within splat routes</docs-info>
+
 ## Props
 
 ### `prefetch`
@@ -197,3 +199,4 @@ Please note that this API is marked unstable and may be subject to breaking chan
 [view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API
 [document-start-view-transition]: https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition
 [use-view-transition-state]: ../hooks/use-view-transition-state
+[relativesplatpath]: ../hooks/use-resolved-path#splat-paths

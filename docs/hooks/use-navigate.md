@@ -40,6 +40,8 @@ navigate("..");
 navigate("../other/path");
 ```
 
+<docs-info>Please see the [Splat Paths][relativesplatpath] section on the `useResolvedPath` docs for a note on the behavior of the `future.v3_relativeSplatPath` future flag for relative `useNavigate()` behavior within splat routes</docs-info>
+
 ### `to: To`
 
 You can also pass a `To` value:
@@ -91,3 +93,4 @@ navigate(".", {
 [use-view-transition-state]: ../hooks//use-view-transition-state
 [action]: ../route/action
 [loader]: ../route/loader
+[relativesplatpath]: ./use-resolved-path#splat-paths

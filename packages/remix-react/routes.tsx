@@ -1,6 +1,9 @@
 import * as React from "react";
+import type { HydrationState } from "@remix-run/router";
 import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
 import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
   DataRouteObject,
   ShouldRevalidateFunction,
 } from "react-router-dom";
@@ -11,13 +14,16 @@ import { loadRouteModule } from "./routeModules";
 import {
   fetchData,
   isCatchResponse,
+  isDeferredData,
   isDeferredResponse,
   isRedirectResponse,
+  isResponse,
   parseDeferredReadableStream,
 } from "./data";
 import type { FutureConfig } from "./entry";
 import { prefetchStyleLinks } from "./links";
 import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
+import { RemixRootDefaultHydrateFallback } from "./fallback";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;
@@ -36,6 +42,8 @@ interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
+  hasClientAction: boolean;
+  hasClientLoader: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
   css?: string[];
@@ -74,6 +82,11 @@ export function createServerRoutes(
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       Component: getRouteModuleComponent(routeModule),
+      HydrateFallback: routeModule.HydrateFallback
+        ? routeModule.HydrateFallback
+        : route.id === "root"
+        ? RemixRootDefaultHydrateFallback
+        : undefined,
       ErrorBoundary: routeModule.ErrorBoundary
         ? routeModule.ErrorBoundary
         : route.id === "root"
@@ -83,8 +96,13 @@ export function createServerRoutes(
       index: route.index,
       path: route.path,
       handle: routeModules[route.id].handle,
-      // Note: we don't need loader/action/shouldRevalidate on these routes
-      // since they're for a static render
+      // For partial hydration rendering, we need to indicate when the route
+      // has a loader/clientLoader, but it won't ever be called during the static
+      // render, so just give it a no-op function so we can render down to the
+      // proper fallback
+      loader: route.hasLoader || route.hasClientLoader ? () => null : undefined,
+      // We don't need action/shouldRevalidate on these routes since they're
+      // for a static render
     };
 
     let children = createServerRoutes(
@@ -103,11 +121,13 @@ export function createClientRoutesWithHMRRevalidationOptOut(
   needsRevalidation: Set<string>,
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
+  initialState: HydrationState,
   future: FutureConfig
 ) {
   return createClientRoutes(
     manifest,
     routeModulesCache,
+    initialState,
     future,
     "",
     groupRoutesByParentId(manifest),
@@ -118,6 +138,7 @@ export function createClientRoutesWithHMRRevalidationOptOut(
 export function createClientRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
+  initialState: HydrationState,
   future: FutureConfig,
   parentId: string = "",
   routesByParentId: Record<
@@ -127,86 +148,214 @@ export function createClientRoutes(
   needsRevalidation?: Set<string>
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
-    let routeModule = routeModulesCache?.[route.id];
+    let routeModule = routeModulesCache[route.id];
+
+    async function fetchServerLoader(request: Request) {
+      if (!route.hasLoader) return null;
+      return fetchServerHandler(request, route);
+    }
+
+    async function fetchServerAction(request: Request) {
+      if (!route.hasAction) {
+        let msg =
+          `Route "${route.id}" does not have an action, but you are trying ` +
+          `to submit to it. To fix this, please add an \`action\` function to the route`;
+        console.error(msg);
+        throw new ErrorResponse(
+          405,
+          "Method Not Allowed",
+          new Error(msg),
+          true
+        );
+      }
+
+      return fetchServerHandler(request, route);
+    }
+
+    async function prefetchStylesAndCallHandler(
+      handler: () => Promise<unknown>
+    ) {
+      // Only prefetch links if we've been loaded into the cache, route.lazy
+      // will handle initial loads
+      let linkPrefetchPromise = routeModulesCache[route.id]
+        ? prefetchStyleLinks(route, routeModulesCache[route.id])
+        : Promise.resolve();
+      try {
+        return handler();
+      } finally {
+        await linkPrefetchPromise;
+      }
+    }
+
     let dataRoute: DataRouteObject = {
       id: route.id,
       index: route.index,
       path: route.path,
-      async loader({ request }) {
-        // Only prefetch links if we've been loaded into the cache, route.lazy
-        // will handle initial loads
-        let routeModulePromise = routeModulesCache[route.id]
-          ? prefetchStyleLinks(route, routeModulesCache[route.id])
-          : Promise.resolve();
-        try {
-          if (!route.hasLoader) return null;
-          return fetchServerHandler(request, route);
-        } finally {
-          await routeModulePromise;
-        }
-      },
-      async action({ request }) {
-        // Only prefetch links if we've been loaded into the cache, route.lazy
-        // will handle initial loads
-        let routeModulePromise = routeModulesCache[route.id]
-          ? prefetchStyleLinks(route, routeModulesCache[route.id])
-          : Promise.resolve();
-        try {
-          if (!route.hasAction) {
-            let msg =
-              `Route "${route.id}" does not have an action, but you are trying ` +
-              `to submit to it. To fix this, please add an \`action\` function to the route`;
-            console.error(msg);
-            return Promise.reject(
-              new ErrorResponse(405, "Method Not Allowed", new Error(msg), true)
-            );
+    };
+
+    if (routeModule) {
+      // Use critical path modules directly
+      Object.assign(dataRoute, {
+        ...dataRoute,
+        Component: getRouteModuleComponent(routeModule),
+        HydrateFallback: routeModule.HydrateFallback
+          ? routeModule.HydrateFallback
+          : route.id === "root"
+          ? RemixRootDefaultHydrateFallback
+          : undefined,
+        ErrorBoundary: routeModule.ErrorBoundary
+          ? routeModule.ErrorBoundary
+          : route.id === "root"
+          ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
+          : undefined,
+        handle: routeModule.handle,
+        shouldRevalidate: needsRevalidation
+          ? wrapShouldRevalidateForHdr(
+              route.id,
+              routeModule.shouldRevalidate,
+              needsRevalidation
+            )
+          : routeModule.shouldRevalidate,
+      });
+
+      let initialData =
+        initialState &&
+        initialState.loaderData &&
+        initialState.loaderData[route.id];
+
+      let isHydrationRequest =
+        needsRevalidation == null &&
+        routeModule.clientLoader != null &&
+        routeModule.clientLoader.hydrate === true;
+
+      dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
+        return prefetchStylesAndCallHandler(async () => {
+          if (!routeModule.clientLoader) {
+            // Call the server when no client loader exists
+            return fetchServerLoader(request);
           }
 
-          return fetchServerHandler(request, route);
-        } finally {
-          await routeModulePromise;
-        }
-      },
-      ...(routeModule
-        ? // Use critical path modules directly
-          {
-            Component: getRouteModuleComponent(routeModule),
-            ErrorBoundary: routeModule.ErrorBoundary
-              ? routeModule.ErrorBoundary
-              : route.id === "root"
-              ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
-              : undefined,
-            handle: routeModule.handle,
-            shouldRevalidate: needsRevalidation
-              ? wrapShouldRevalidateForHdr(
-                  route.id,
-                  routeModule.shouldRevalidate,
-                  needsRevalidation
-                )
-              : routeModule.shouldRevalidate,
-          }
-        : // Load all other modules via route.lazy()
-          {
-            lazy: async () => {
-              let mod = await loadRouteModuleWithBlockingLinks(
-                route,
-                routeModulesCache
-              );
-              if (needsRevalidation) {
-                mod.shouldRevalidate = wrapShouldRevalidateForHdr(
-                  route.id,
-                  mod.shouldRevalidate,
-                  needsRevalidation
-                );
+          return routeModule.clientLoader({
+            request,
+            params,
+            async serverLoader() {
+              if (isHydrationRequest) {
+                isHydrationRequest = false;
+
+                // Throw an error if a clientLoader tries to call a serverLoader that doesn't exist
+                if (initialData === undefined) {
+                  throw new Error(
+                    `You are trying to call serverLoader() on a route that does " +
+                      "not have a server loader (routeId: "${route.id}")`
+                  );
+                }
+
+                // Otherwise, resolve the hydration clientLoader with the pre-loaded server data
+                return initialData;
               }
-              return mod;
+
+              // Call the server loader for client-side navigations
+              let result = await fetchServerLoader(request);
+              let unwrapped = await unwrapServerResponse(result);
+              return unwrapped;
             },
-          }),
-    };
+          });
+        });
+      };
+
+      // Let React Router know whether to run this on hydration
+      dataRoute.loader.hydrate =
+        routeModule.clientLoader != null &&
+        (routeModule.clientLoader.hydrate === true || route.hasLoader !== true);
+
+      dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
+        return prefetchStylesAndCallHandler(async () => {
+          if (!routeModule.clientAction) {
+            return fetchServerAction(request);
+          }
+
+          return routeModule.clientAction({
+            request,
+            params,
+            async serverAction() {
+              let result = await fetchServerAction(request);
+              let unwrapped = await unwrapServerResponse(result);
+              return unwrapped;
+            },
+          });
+        });
+      };
+    } else {
+      // If the lazy route does not have a client loader/action we want to call
+      // the server loader/action in parallel with the module load so we add
+      // loader/action as static props on the route
+      if (!route.hasClientLoader) {
+        dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
+          prefetchStylesAndCallHandler(() => fetchServerLoader(request));
+      }
+      if (!route.hasClientAction) {
+        dataRoute.action = ({ request }: ActionFunctionArgs) =>
+          prefetchStylesAndCallHandler(() => fetchServerAction(request));
+      }
+
+      // Load all other modules via route.lazy()
+      dataRoute.lazy = async () => {
+        let mod = await loadRouteModuleWithBlockingLinks(
+          route,
+          routeModulesCache
+        );
+
+        let lazyRoute: Partial<DataRouteObject> = { ...mod };
+        if (mod.clientLoader) {
+          let clientLoader = mod.clientLoader;
+          lazyRoute.loader = (args) =>
+            clientLoader({
+              ...args,
+              async serverLoader() {
+                let response = await fetchServerLoader(args.request);
+                let result = await unwrapServerResponse(response);
+                return result;
+              },
+            });
+        }
+
+        if (mod.clientAction) {
+          let clientAction = mod.clientAction;
+          lazyRoute.action = (args) =>
+            clientAction({
+              ...args,
+              async serverAction() {
+                let response = await fetchServerAction(args.request);
+                let result = await unwrapServerResponse(response);
+                return result;
+              },
+            });
+        }
+
+        if (needsRevalidation) {
+          lazyRoute.shouldRevalidate = wrapShouldRevalidateForHdr(
+            route.id,
+            mod.shouldRevalidate,
+            needsRevalidation
+          );
+        }
+
+        return {
+          ...(lazyRoute.loader ? { loader: lazyRoute.loader } : {}),
+          ...(lazyRoute.action ? { action: lazyRoute.action } : {}),
+          hasErrorBoundary: lazyRoute.hasErrorBoundary,
+          shouldRevalidate: lazyRoute.shouldRevalidate,
+          handle: lazyRoute.handle,
+          Component: lazyRoute.Component,
+          ErrorBoundary: lazyRoute.ErrorBoundary,
+        };
+      };
+    }
 
     let children = createClientRoutes(
       manifest,
       routeModulesCache,
+      initialState,
       future,
       route.id,
       routesByParentId,
@@ -244,10 +393,13 @@ async function loadRouteModuleWithBlockingLinks(
   let routeModule = await loadRouteModule(route, routeModules);
   await prefetchStyleLinks(route, routeModule);
 
-  // Include all `browserSafeRouteExports` fields
+  // Include all `browserSafeRouteExports` fields, except `HydrateFallback`
+  // since those aren't used on lazily loaded routes
   return {
     Component: getRouteModuleComponent(routeModule),
     ErrorBoundary: routeModule.ErrorBoundary,
+    clientAction: routeModule.clientAction,
+    clientLoader: routeModule.clientLoader,
     handle: routeModule.handle,
     links: routeModule.links,
     meta: routeModule.meta,
@@ -272,6 +424,27 @@ async function fetchServerHandler(request: Request, route: EntryRoute) {
 
   if (isDeferredResponse(result) && result.body) {
     return await parseDeferredReadableStream(result.body);
+  }
+
+  return result;
+}
+
+function unwrapServerResponse(
+  result: Awaited<ReturnType<typeof fetchServerHandler>> | null
+) {
+  if (isDeferredData(result)) {
+    return result.data;
+  }
+
+  if (isResponse(result)) {
+    let contentType = result.headers.get("Content-Type");
+    // Check between word boundaries instead of startsWith() due to the last
+    // paragraph of https://httpwg.org/specs/rfc9110.html#field.content-type
+    if (contentType && /\bapplication\/json\b/.test(contentType)) {
+      return result.json();
+    } else {
+      return result.text();
+    }
   }
 
   return result;

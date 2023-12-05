@@ -49,7 +49,10 @@ type SupportedRemixConfig = Pick<RemixUserConfig, SupportedRemixConfigKey>;
 
 const ROUTE_EXPORTS = new Set([
   "ErrorBoundary",
+  "HydrateFallback",
   "action",
+  "clientAction",
+  "clientLoader",
   "default", // component
   "handle",
   "headers",
@@ -83,7 +86,7 @@ type RemixConfigJsdocOverrides = {
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
   Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides>;
 
-type ResolvedRemixVitePluginConfig = Pick<
+export type ResolvedRemixVitePluginConfig = Pick<
   ResolvedRemixConfig,
   | "appDirectory"
   | "rootDirectory"
@@ -346,6 +349,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         relativeAssetsBuildDirectory,
         future: {
           v3_fetcherPersist: options.future?.v3_fetcherPersist === true,
+          v3_relativeSplatPath: options.future?.v3_relativeSplatPath === true,
         },
       };
     };
@@ -440,6 +444,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         caseSensitive: route.caseSensitive,
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
+        hasClientAction: sourceExports.includes("clientAction"),
+        hasClientLoader: sourceExports.includes("clientLoader"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
         ...resolveBuildAssetPaths(
           pluginConfig,
@@ -497,6 +503,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }`,
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
+        hasClientAction: sourceExports.includes("clientAction"),
+        hasClientLoader: sourceExports.includes("clientLoader"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
         imports: [],
       };
@@ -551,6 +559,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             : viteConfigEnv.isSsrBuild;
 
         return {
+          __remixPluginResolvedConfig: pluginConfig,
           appType: "custom",
           experimental: { hmrPartialAccept: true },
           optimizeDeps: {
@@ -938,14 +947,21 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     },
     {
       name: "remix-empty-client-modules",
-      enforce: "pre",
-      async transform(_code, id, options) {
+      enforce: "post",
+      async transform(code, id, options) {
         if (!options?.ssr) return;
         let clientFileRE = /\.client(\.[cm]?[jt]sx?)?$/;
         let clientDirRE = /\/\.client\//;
         if (clientFileRE.test(id) || clientDirRE.test(id)) {
+          let exports = esModuleLexer(code)[1];
           return {
-            code: "export {}",
+            code: exports
+              .map(({ n: name }) =>
+                name === "default"
+                  ? "export default {};"
+                  : `export const ${name} = {};`
+              )
+              .join("\n"),
             map: null,
           };
         }
@@ -1151,7 +1167,14 @@ function addRefreshWrapper(
 ): string {
   let isRoute = getRoute(pluginConfig, id);
   let acceptExports = isRoute
-    ? ["handle", "meta", "links", "shouldRevalidate"]
+    ? [
+        "clientAction",
+        "clientLoader",
+        "handle",
+        "meta",
+        "links",
+        "shouldRevalidate",
+      ]
     : [];
   return (
     REACT_REFRESH_HEADER.replace("__SOURCE__", JSON.stringify(id)) +
@@ -1242,7 +1265,9 @@ async function getRouteMetadata(
       resolveRelativeRouteFilePath(route, pluginConfig)
     )}?import`, // Ensure the Vite dev server responds with a JS module
     hasAction: sourceExports.includes("action"),
+    hasClientAction: sourceExports.includes("clientAction"),
     hasLoader: sourceExports.includes("loader"),
+    hasClientLoader: sourceExports.includes("clientLoader"),
     hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
     imports: [],
   };

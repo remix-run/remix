@@ -164,7 +164,7 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 #### Migrating from Remix App Server
 
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
-It comes built-in with the Remix Vite plugin and will take over when you run `vite dev`.
+It comes built-in with the Remix Vite plugin and will take over when you run `remix vite:dev`.
 
 Unlike `remix-serve`, the Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
 
@@ -175,8 +175,8 @@ You'll also need to update to the new build output paths, which are `build/serve
 ```json filename=package.json lines=[3-4]
 {
   "scripts": {
-    "build": "vite build && vite build --ssr",
-    "dev": "vite dev",
+    "dev": "remix vite:dev",
+    "build": "remix vite:build",
     "start": "remix-serve ./build/server/index.js"
   }
 }
@@ -272,8 +272,8 @@ app.listen(port, () =>
 ```json filename=package.json
 {
   "scripts": {
-    "build": "vite build && vite build --ssr",
     "dev": "node ./server.mjs",
+    "build": "remix vite:build",
     "start": "cross-env NODE_ENV=production node ./server.mjs"
   }
 }
@@ -793,11 +793,7 @@ Alternatively, you can use separate Vite config files for each tool.
 For example, to use a Vite config specifically scoped to Remix:
 
 ```shellscript nonumber
-# Development
-vite dev --config vite.config.remix.ts
-
-# Production
-vite build --config vite.config.remix.ts && vite build  --config vite.config.remix.ts --ssr
+remix vite:dev --config vite.config.remix.ts
 ```
 
 ## Acknowledgements
