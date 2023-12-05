@@ -13,37 +13,46 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.3.1](#v231)
+  - [v2.4.o](#v24o)
+    - [What's Changed](#whats-changed)
+      - [Client Data](#client-data)
+      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
+      - [Vite Updates (Unstable)](#vite-updates-unstable)
+    - [Minor Changes](#minor-changes)
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
     - [Changes by Package](#changes-by-package)
-  - [v2.3.0](#v230)
-    - [What's Changed](#whats-changed)
-      - [Stabilized `useBlocker`](#stabilized-useblocker)
-      - [`unstable_flushSync` API](#unstable_flushsync-api)
-    - [Minor Changes](#minor-changes)
+  - [v2.3.1](#v231)
     - [Patch Changes](#patch-changes-1)
     - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
-  - [v2.2.0](#v220)
+  - [v2.3.0](#v230)
     - [What's Changed](#whats-changed-1)
-      - [Vite!](#vite)
-      - [New Fetcher APIs](#new-fetcher-apis)
-      - [Persistence Future Flag](#persistence-future-flag)
+      - [Stabilized `useBlocker`](#stabilized-useblocker)
+      - [`unstable_flushSync` API](#unstable_flushsync-api)
     - [Minor Changes](#minor-changes-1)
     - [Patch Changes](#patch-changes-2)
     - [Updated Dependencies](#updated-dependencies-2)
     - [Changes by Package](#changes-by-package-2)
-  - [v2.1.0](#v210)
+  - [v2.2.0](#v220)
     - [What's Changed](#whats-changed-2)
-      - [View Transitions](#view-transitions)
-      - [Stable `createRemixStub`](#stable-createremixstub)
+      - [Vite!](#vite)
+      - [New Fetcher APIs](#new-fetcher-apis)
+      - [Persistence Future Flag](#persistence-future-flag)
     - [Minor Changes](#minor-changes-2)
     - [Patch Changes](#patch-changes-3)
     - [Updated Dependencies](#updated-dependencies-3)
     - [Changes by Package](#changes-by-package-3)
-  - [v2.0.1](#v201)
+  - [v2.1.0](#v210)
+    - [What's Changed](#whats-changed-3)
+      - [View Transitions](#view-transitions)
+      - [Stable `createRemixStub`](#stable-createremixstub)
+    - [Minor Changes](#minor-changes-3)
     - [Patch Changes](#patch-changes-4)
+    - [Updated Dependencies](#updated-dependencies-4)
+    - [Changes by Package](#changes-by-package-4)
+  - [v2.0.1](#v201)
+    - [Patch Changes](#patch-changes-5)
     - [Changes by Package 🔗](#changes-by-package-)
   - [v2.0.0](#v200)
     - [Breaking Changes](#breaking-changes)
@@ -55,8 +64,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
         - [Breaking Type Changes](#breaking-type-changes)
     - [New Features](#new-features)
     - [Other Notable Changes](#other-notable-changes)
-    - [Updated Dependencies](#updated-dependencies-4)
-    - [Changes by Package](#changes-by-package-4)
+    - [Updated Dependencies](#updated-dependencies-5)
+    - [Changes by Package](#changes-by-package-5)
 
 </details>
 
@@ -101,6 +110,169 @@ To add a new release, copy from this template:
 **Full Changelog**: [`v2.X.Y...v2.X.Y`](https://github.com/remix-run/remix/compare/remix@2.X.Y...remix@2.X.Y)
 
 -->
+
+## v2.4.o
+
+### What's Changed
+
+#### Client Data
+
+We're excited to finally land the [Client Data RFC](https://github.com/remix-run/remix/discussions/7634) in this release! The final API differs slightly from the RFC, so please check out the docs for [`clientLoader`](https://remix.run/route/client-loader), [`clientAction`](https://remix.run/route/client-loader), and [`HydrateFallback`](https://remix.run/route/hydrate-fallback) for the final API.
+
+While we still recommend server loaders/actions for the majority of your data needs in a Remix app - these provide some levers you can pull for more advanced use-cases such as:
+
+- Leveraging a data source local to the browser (i.e., `localStorage`)
+- Managing a client-side cache of server data (like `IndexedDB`)
+- Bypassing the Remix server in a BFF setup and hitting your API directly from the browser
+- Migrating a React Router SPA to a Remix application
+
+By default, `clientLoader` will not run on hydration, and will only run on subsequent client side navigations.
+
+If you wish to run your client loader on hydration, you can set `clientLoader.hydrate=true` to force Remix to execute it on initial page load. Keep in mind that Remix will still SSR your route component so you should ensure that there is no new _required_ data being added by your `clientLoader`.
+
+If your `clientLoader` needs to run on hydration and adds data you require to render the route component, you can export a `HydrateFallback` component that will render during SSR, and then your route component will not render until the `clientLoader` has executed on hydration.
+
+`clientAction` is simpler than `clientLoader` because it has no hydration use-cases. `clientAction` will only run on client-side navigations.
+
+#### `future.v3_relativeSplatPath`
+
+We introduced a `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/main/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths)
+
+#### Vite Updates (Unstable)
+
+Remix now excludes modules within `.server` directories from client build.
+
+Remix now enforces strict route exports, and will will throw an error if you have unsupported exports in your route modules. Previously, the Remix compiler would allow any export from routes. While this was convenient, it was also a common source of bugs that were hard to track down because they only surfaced at runtime. For more information, please see [the docs](https://remix.run/docs/en/main/future/vite#strict-route-exports).
+
+### Minor Changes
+
+- Add support for `clientLoader`/`clientAction`/`HydrateFallback` route exports ([#8173](https://github.com/remix-run/remix/pull/8173))
+- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route ([#8216](https://github.com/remix-run/remix/pull/8216))
+- Deprecate `DataFunctionArgs` in favor of `LoaderFunctionArgs`/`ActionFunctionArgs` ([#8173](https://github.com/remix-run/remix/pull/8173))
+  - This is aimed at keeping the types aligned across server/client loaders/actions now that `clientLoader`/`clientActon` functions have `serverLoader`/`serverAction` parameters which differentiate `ClientLoaderFunctionArgs`/`ClientActionFunctionArgs`
+- Vite: Exclude modules within `.server` directories from client build ([#8154](https://github.com/remix-run/remix/pull/8154))
+- Vite: Strict route exports ([#8171](https://github.com/remix-run/remix/pull/8171))
+
+### Patch Changes
+
+- `@remix-run/server-runtime`: Fix flash of unstyled content for non-Express custom servers in Vite dev ([#8076](https://github.com/remix-run/remix/pull/8076))
+- `@remix-run/server-runtime`: Pass request handler errors to `vite.ssrFixStacktrace` in Vite dev to ensure stack traces correctly map to the original source code ([#8066](https://github.com/remix-run/remix/pull/8066))
+- `remix-serve`: Fix source map loading when file has `?t=timestamp` suffix (rebuilds) ([#8174](https://github.com/remix-run/remix/pull/8174))
+- `@remix-run/dev`: Change Vite build output paths to fix a conflict between how Vite and the Remix compiler each manage the `public` directory ([#8077](https://github.com/remix-run/remix/pull/8077))
+  - ⚠️ **This is a breaking change for projects using the unstable Vite plugin**
+  - The server is now compiled into `build/server` rather than `build`, and the client is now compiled into `build/client` rather than `public`
+  - For more information on the changes and guidance on how to migrate your project, refer to the updated [Remix Vite documentation](https://remix.run/future/vite)
+- `@remix-run/dev`: Upgrade Vite peer dependency range to v5 ([#8172](https://github.com/remix-run/remix/pull/8172))
+- `@remix-run/dev`: Support HMR for routes with `handle` export in Vite dev ([#8022](https://github.com/remix-run/remix/pull/8022))
+- `@remix-run/dev`: Fix flash of unstyled content for non-Express custom servers in Vite dev ([#8076](https://github.com/remix-run/remix/pull/8076))
+- `@remix-run/dev`: Bundle CSS imported in client entry file in Vite plugin ([#8143](https://github.com/remix-run/remix/pull/8143))
+- `@remix-run/dev`: Remove undocumented `legacyCssImports` option from Vite plugin due to issues with `?url` imports of CSS files not being processed correctly in Vite ([#8096](https://github.com/remix-run/remix/pull/8096))
+- `@remix-run/dev`: Vite: fix access to default `entry.{client,server}.tsx` within `pnpm` workspaces on Windows ([#8057](https://github.com/remix-run/remix/pull/8057))
+- `@remix-run/dev`: Remove `unstable_createViteServer` and `unstable_loadViteServerBuild` which were only minimal wrappers around Vite's `createServer` and `ssrLoadModule` functions when using a custom server ([#8120](https://github.com/remix-run/remix/pull/8120))
+
+  - ⚠️ **This is a breaking change for projects using the unstable Vite plugin with a custom server.**
+  - Instead, we now provide `unstable_viteServerBuildModuleId` so that custom servers interact with Vite directly rather than via Remix APIs, for example:
+
+    ```diff
+    -import {
+    -  unstable_createViteServer,
+    -  unstable_loadViteServerBuild,
+    -} from "@remix-run/dev";
+    +import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
+    ```
+
+    Creating the Vite server in middleware mode:
+
+    ```diff
+    const vite =
+      process.env.NODE_ENV === "production"
+        ? undefined
+    -    : await unstable_createViteServer();
+    +    : await import("vite").then(({ createServer }) =>
+    +        createServer({
+    +          server: {
+    +            middlewareMode: true,
+    +          },
+    +        })
+    +      );
+    ```
+
+    Loading the Vite server build in the request handler:
+
+    ```diff
+    app.all(
+      "*",
+      createRequestHandler({
+        build: vite
+    -      ? () => unstable_loadViteServerBuild(vite)
+    +      ? () => vite.ssrLoadModule(unstable_viteServerBuildModuleId)
+          : await import("./build/server/index.js"),
+      })
+    );
+    ```
+
+- `@remix-run/dev`: Pass request handler errors to `vite.ssrFixStacktrace` in Vite dev to ensure stack traces correctly map to the original source code ([#8066](https://github.com/remix-run/remix/pull/8066))
+- `@remix-run/dev`: Vite: Preserve names for exports from `.client` imports ([#8200](https://github.com/remix-run/remix/pull/8200))
+  - Unlike `.server` modules, the main idea is not to prevent code from leaking into the server build
+    since the client build is already public. Rather, the goal is to isolate the SSR render from client-only code.
+    Routes need to import code from `.client` modules without compilation failing and then rely on runtime checks
+    to determine if the code is running on the server or client
+  - Replacing `.client` modules with empty modules would cause the build to fail as ESM named imports are statically analyzed.
+    So instead, we preserve the named export but replace each exported value with an empty object.
+    That way, the import is valid at build time and the standard runtime checks can be used to determine if then
+    code is running on the server or client
+- `@remix-run/dev`: Add `@remix-run/node` to Vite's `optimizeDeps.include` array ([#8177](https://github.com/remix-run/remix/pull/8177))
+- `@remix-run/dev`: Improve Vite plugin performance ([#8121](https://github.com/remix-run/remix/pull/8121))
+  - Parallelize detection of route module exports
+  - Disable `server.preTransformRequests` in Vite child compiler since it's only used to process route modules
+- `@remix-run/dev`: Remove automatic global Node polyfill installation from the built-in Vite dev server and instead allow explicit opt-in ([#8119](https://github.com/remix-run/remix/pull/8119))
+
+  - ⚠️ **This is a breaking change for projects using the unstable Vite plugin without a custom server.**
+  - If you're not using a custom server, you should call `installGlobals` in your Vite config instead.
+
+    ```diff
+    import { unstable_vitePlugin as remix } from "@remix-run/dev";
+    +import { installGlobals } from "@remix-run/node";
+    import { defineConfig } from "vite";
+
+    +installGlobals();
+
+    export default defineConfig({
+      plugins: [remix()],
+    });
+    ```
+
+- `@remix-run/dev`: Vite: Errors at build-time when client imports .server default export ([#8184](https://github.com/remix-run/remix/pull/8184))
+  - Remix already stripped .server file code before ensuring that server code never makes it into the client.
+  - That results in errors when client code tries to import server code, which is exactly what we want!
+  - But those errors were happening at runtime for default imports.
+  - A better experience is to have those errors happen at build-time so that you guarantee that your users won't hit them.
+- `@remix-run/dev`: Fix `request instanceof Request` checks when using Vite dev server ([#8062](https://github.com/remix-run/remix/pull/8062))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.21.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.21.0)
+- [`@remix-run/router@1.14.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1140)
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/create-remix/CHANGELOG.md#240)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-architect/CHANGELOG.md#240)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-cloudflare/CHANGELOG.md#240)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-cloudflare-pages/CHANGELOG.md#240)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-cloudflare-workers/CHANGELOG.md#240)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-css-bundle/CHANGELOG.md#240)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-deno/CHANGELOG.md#240)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-dev/CHANGELOG.md#240)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-eslint-config/CHANGELOG.md#240)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-express/CHANGELOG.md#240)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-node/CHANGELOG.md#240)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-react/CHANGELOG.md#240)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-serve/CHANGELOG.md#240)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-server-runtime/CHANGELOG.md#240)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-testing/CHANGELOG.md#240)
+
+**Full Changelog**: [`v2.3.Y...v2.4.0`](https://github.com/remix-run/remix/compare/remix@2.3.1...remix@2.4.0)
 
 ## v2.3.1
 
