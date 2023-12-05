@@ -1,6 +1,36 @@
 import type * as Vite from "vite";
+import colors from "picocolors";
 
-import { extractPluginConfig } from "./extract-plugin-config";
+import type { ResolvedRemixVitePluginConfig } from "./plugin";
+
+async function extractRemixPluginConfig({
+  configFile,
+  mode,
+  root,
+}: {
+  configFile?: string;
+  mode?: string;
+  root: string;
+}): Promise<ResolvedRemixVitePluginConfig> {
+  let vite = await import("vite");
+
+  // Leverage the Vite config as a way to configure the entire multi-step build
+  // process so we don't need to have a separate Remix config
+  let viteConfig = await vite.resolveConfig(
+    { mode, configFile, root },
+    "build"
+  );
+
+  let pluginConfig = viteConfig[
+    "__remixPluginResolvedConfig" as keyof typeof viteConfig
+  ] as ResolvedRemixVitePluginConfig | undefined;
+  if (!pluginConfig) {
+    console.error(colors.red("Remix Vite plugin not found in Vite config"));
+    process.exit(1);
+  }
+
+  return pluginConfig;
+}
 
 export interface ViteBuildOptions {
   assetsInlineLimit?: number;
@@ -29,8 +59,7 @@ export async function build(
   // For now we just use this function to validate that the Vite config is
   // targeting Remix, but in the future the return value can be used to
   // configure the entire multi-step build process.
-  await extractPluginConfig({
-    command: "serve",
+  await extractRemixPluginConfig({
     configFile,
     mode,
     root,
@@ -40,12 +69,13 @@ export async function build(
 
   async function viteBuild({ ssr }: { ssr: boolean }) {
     await vite.build({
-      build: { assetsInlineLimit, emptyOutDir, minify, ssr },
-      clearScreen,
-      configFile,
-      logLevel,
+      root,
       mode,
+      configFile,
+      build: { assetsInlineLimit, emptyOutDir, minify, ssr },
       optimizeDeps: { force },
+      clearScreen,
+      logLevel,
     });
   }
 

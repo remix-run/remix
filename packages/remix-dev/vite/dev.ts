@@ -1,6 +1,5 @@
 import type * as Vite from "vite";
-
-import { extractPluginConfig } from "./extract-plugin-config";
+import colors from "picocolors";
 
 export interface ViteDevOptions {
   clearScreen?: boolean;
@@ -30,25 +29,21 @@ export async function dev(
     strictPort,
   }: ViteDevOptions
 ) {
-  // For now we just use this function to validate that the Vite config is
-  // targeting Remix, but in the future the return value can be used to
-  // configure the entire multi-step build process.
-  await extractPluginConfig({
-    command: "serve",
-    configFile,
-    mode,
-    root,
-  });
-
   let vite = await import("vite");
   let server = await vite.createServer({
-    clearScreen,
-    configFile,
-    logLevel,
+    root,
     mode,
-    optimizeDeps: { force },
+    configFile,
     server: { open, cors, host, port, strictPort },
+    optimizeDeps: { force },
+    clearScreen,
+    logLevel,
   });
+
+  if (!server.config.plugins.find((plugin) => plugin.name === "remix")) {
+    console.error(colors.red("Remix Vite plugin not found in Vite config"));
+    process.exit(1);
+  }
 
   await server.listen();
   server.printUrls();
