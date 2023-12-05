@@ -36,7 +36,40 @@ export function RemixServer({
     routeModules,
     context.future
   );
-  let router = createStaticRouter(routes, context.staticHandlerContext);
+
+  // Create a shallow clone of `loaderData` we can mutate for partial hydration.
+  // When a route exports a `clientLoader` and a `HydrateFallback`, we want to
+  // render the fallback on the server so we clear our the `loaderData` during SSR.
+  // Is it important not to change the `context` reference here since we use it
+  // for context._deepestRenderedBoundaryId tracking
+  context.staticHandlerContext.loaderData = {
+    ...context.staticHandlerContext.loaderData,
+  };
+  for (let match of context.staticHandlerContext.matches) {
+    let routeId = match.route.id;
+    let route = routeModules[routeId];
+    let manifestRoute = context.manifest.routes[routeId];
+    if (
+      // This route specifically gave us a HydrateFallback
+      (route && route.clientLoader && route.HydrateFallback) ||
+      // This handles routes without a server loader but _with_ a clientLoader
+      // that will automatically opt-into clientLoader.hydrate=true.  The
+      // staticHandler always puts a `null` in loaderData for non-loader routes
+      // for proper serialization but we need to set that back to `undefined`
+      // so _renderMatches will detect a required fallback at this level
+      (manifestRoute &&
+        manifestRoute.hasLoader == false &&
+        context.staticHandlerContext.loaderData[routeId] === null)
+    ) {
+      context.staticHandlerContext.loaderData[routeId] = undefined;
+    }
+  }
+
+  let router = createStaticRouter(routes, context.staticHandlerContext, {
+    future: {
+      v7_partialHydration: true,
+    },
+  });
 
   return (
     <RemixContext.Provider

@@ -129,7 +129,7 @@ function BoundaryShell({
           dangerouslySetInnerHTML={{
             __html: `
               console.log(
-                "💿 Hey developer👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
+                "💿 Hey developer 👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
               );
             `,
           }}
