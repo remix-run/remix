@@ -260,6 +260,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         v7_fetcherPersist: window.__remixContext.future.v3_fetcherPersist,
         v7_partialHydration: true,
         v7_prependBasename: true,
+        v7_relativeSplatPath: window.__remixContext.future.v3_relativeSplatPath,
       },
       hydrationData,
       mapRouteProperties,
