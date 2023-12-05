@@ -16,6 +16,7 @@ export const action = async () => {
   const userSession = await getUserSessionOrWhatever();
 
   if (!userSession) {
+    // Assuming `/login` is a separate non-Remix app
     return redirectDocument("/login");
   }
 
