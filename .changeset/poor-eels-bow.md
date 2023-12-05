@@ -10,8 +10,8 @@ In order to handle upcoming Remix features where your plugin options can impact 
 {
   "scripts": {
 -    "dev": "vite dev",
-+    "dev": "remix vite:dev",
 -    "build": "vite build && vite build --ssr"
++    "dev": "remix vite:dev",
 +    "build": "remix vite:build"
   }
 }
