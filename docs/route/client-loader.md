@@ -58,13 +58,13 @@ export default function Component() {
 
 ### `clientLoader.hydrate`
 
-If you need to run your `clientLoader` on hydration, you can opt-into that by setting `clientLoader.hydrate=true`. This will tell Remix that it needs to run the `clientLoader` on hydration. Without a `HydrateFallback`, your route componen t will be SSr'd with the server loader data - so if you opt-into running the `clientLoader` on hydration - it's will run and the returned data will be updated in-place in the hydrated route Component.
+If you need to run your `clientLoader` on hydration, you can opt-into that by setting `clientLoader.hydrate=true`. This will tell Remix that it needs to run the `clientLoader` on hydration. Without a `HydrateFallback`, your route component will be SSR'd with the server loader data - and then `clientLoader` will run and the returned data will be updated in-place in the hydrated route Component.
 
 <docs-info>If a route exports a `clientLoader` and does not export a server `loader`, then `clientLoader.hydrate` is automatically treated as `true` since there is no server data to SSR with. Therefore, we always need to run the `clientLoader` on hydration before rendering the route component.</docs-info>
 
 ### HydrateFallback
 
-If you need to avoid rendering your default route component during SSR because you have data that must come from a `clientLoader`, you can export a [`HydrateFallback`][hydratefallback] component from your route that will be rendered during SSR, and only once the clientLoader runs on hydration will your router component be rendered.
+If you need to avoid rendering your default route component during SSR because you have data that must come from a `clientLoader`, you can export a [`HydrateFallback`][hydratefallback] component from your route that will be rendered during SSR, and only once the `clientLoader` runs on hydration will your router component be rendered.
 
 ## Arguments
 
