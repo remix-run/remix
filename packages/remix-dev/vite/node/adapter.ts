@@ -4,15 +4,12 @@ import { Readable } from "node:stream";
 import { splitCookiesString } from "set-cookie-parser";
 import {
   type ServerBuild,
-  installGlobals,
   createReadableStreamFromReadable,
 } from "@remix-run/node";
 import { createRequestHandler as createBaseRequestHandler } from "@remix-run/server-runtime";
 import type * as Vite from "vite";
 
 import invariant from "../../invariant";
-
-installGlobals();
 
 function createHeaders(requestHeaders: IncomingHttpHeaders) {
   let headers = new Headers();

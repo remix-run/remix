@@ -82,6 +82,8 @@ submit(data, {
 });
 ```
 
+<docs-info>Please see the [Splat Paths][relativesplatpath] section on the `useResolvedPath` docs for a note on the behavior of the `future.v3_relativeSplatPath` future flag for relative `useSubmit()` behavior within splat routes</docs-info>
+
 ## Additional Resources
 
 **Discussion**
@@ -102,3 +104,4 @@ submit(data, {
 [start-transition]: https://react.dev/reference/react/startTransition
 [view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API
 [use-view-transition-state]: ../hooks//use-view-transition-state
+[relativesplatpath]: ./use-resolved-path#splat-paths

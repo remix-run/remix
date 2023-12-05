@@ -1,5 +1,9 @@
 import type { ComponentType } from "react";
 import type {
+  ActionFunction as RRActionFunction,
+  ActionFunctionArgs as RRActionFunctionArgs,
+  LoaderFunction as RRLoaderFunction,
+  LoaderFunctionArgs as RRLoaderFunctionArgs,
   DataRouteMatch,
   Params,
   Location,
@@ -16,7 +20,10 @@ export interface RouteModules {
 }
 
 export interface RouteModule {
+  clientAction?: ClientActionFunction;
+  clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: ErrorBoundaryComponent;
+  HydrateFallback?: HydrateFallbackComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
@@ -25,11 +32,45 @@ export interface RouteModule {
 }
 
 /**
- * V2 version of the ErrorBoundary that eliminates the distinction between
- * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
- * errors with useRouteError()
+ * A function that handles data mutations for a route on the client
+ */
+export type ClientActionFunction = (
+  args: ClientActionFunctionArgs
+) => ReturnType<RRActionFunction>;
+
+/**
+ * Arguments passed to a route `clientAction` function
+ */
+export type ClientActionFunctionArgs = RRActionFunctionArgs<undefined> & {
+  serverAction: <T = AppData>() => Promise<SerializeFrom<T>>;
+};
+
+/**
+ * A function that loads data for a route on the client
+ */
+export type ClientLoaderFunction = ((
+  args: ClientLoaderFunctionArgs
+) => ReturnType<RRLoaderFunction>) & {
+  hydrate?: boolean;
+};
+
+/**
+ * Arguments passed to a route `clientLoader` function
+ */
+export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
+  serverLoader: <T = AppData>() => Promise<SerializeFrom<T>>;
+};
+
+/**
+ * ErrorBoundary to display for this route
  */
 export type ErrorBoundaryComponent = ComponentType;
+
+/**
+ * `<Route HydrateFallback>` component to render on initial loads
+ * when client loaders are present
+ */
+export type HydrateFallbackComponent = ComponentType;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of

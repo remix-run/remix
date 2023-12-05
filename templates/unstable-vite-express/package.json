@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node ./server.mjs",
-    "build": "vite build && vite build --ssr",
+    "build": "remix vite:build",
     "start": "cross-env NODE_ENV=production node ./server.mjs",
     "typecheck": "tsc"
   },

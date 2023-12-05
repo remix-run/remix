@@ -6,7 +6,7 @@ title: loader
 
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
 
-Each route can define a "loader" function that provides data to the route when rendering.
+Each route can define a `loader` function that provides data to the route when rendering.
 
 ```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno

@@ -1,17 +1,23 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import path from "node:path";
+import fs from "node:fs/promises";
 import type { Readable } from "node:stream";
 import url from "node:url";
 import execa from "execa";
 import fse from "fs-extra";
-import resolveBin from "resolve-bin";
 import stripIndent from "strip-indent";
 import waitOn from "wait-on";
 import getPort from "get-port";
+import shell from "shelljs";
+import glob from "glob";
 
+const remixBin = "node_modules/@remix-run/dev/dist/cli.js";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
-export const VITE_CONFIG = async (args: { port: number }) => {
+export const VITE_CONFIG = async (args: {
+  port: number;
+  vitePlugins?: string;
+}) => {
   let hmrPort = await getPort();
   return String.raw`
     import { defineConfig } from "vite";
@@ -25,7 +31,7 @@ export const VITE_CONFIG = async (args: { port: number }) => {
           port: ${hmrPort}
         }
       },
-      plugins: [remix()],
+      plugins: [remix(),${args.vitePlugins ?? ""}],
     });
   `;
 };
@@ -115,11 +121,45 @@ const createDev =
   (nodeArgs: string[]) =>
   async ({ cwd, port }: ServerArgs): Promise<() => Promise<void>> => {
     let proc = node(nodeArgs, { cwd });
-    await waitForServer(proc, { port: port });
+    await waitForServer(proc, { port });
     return async () => await kill(proc.pid!);
   };
 
-export const viteDev = createDev([resolveBin.sync("vite"), "dev"]);
+export const viteBuild = ({ cwd }: { cwd: string }) => {
+  let nodeBin = process.argv[0];
+
+  return spawnSync(nodeBin, [remixBin, "vite:build"], {
+    cwd,
+    env: { ...process.env },
+  });
+};
+
+export const viteRemixServe = async ({
+  cwd,
+  port,
+}: {
+  cwd: string;
+  port: number;
+}) => {
+  let nodeBin = process.argv[0];
+  let serveProc = spawn(
+    nodeBin,
+    ["node_modules/@remix-run/serve/dist/cli.js", "build/server/index.js"],
+    {
+      cwd,
+      stdio: "pipe",
+      env: { NODE_ENV: "production", PORT: port.toFixed(0) },
+    }
+  );
+
+  await waitForServer(serveProc, { port });
+
+  return () => {
+    serveProc.kill();
+  };
+};
+
+export const viteDev = createDev([remixBin, "vite:dev"]);
 export const customDev = createDev(["./server.mjs"]);
 
 function node(args: string[], options: { cwd: string }) {
@@ -193,4 +233,26 @@ function bufferize(stream: Readable): () => string {
   let buffer = "";
   stream.on("data", (data) => (buffer += data.toString()));
   return () => buffer;
+}
+
+export function createEditor(projectDir: string) {
+  return async (file: string, transform: (contents: string) => string) => {
+    let filepath = path.join(projectDir, file);
+    let contents = await fs.readFile(filepath, "utf8");
+    await fs.writeFile(filepath, transform(contents), "utf8");
+  };
+}
+
+export function grep(cwd: string, pattern: RegExp): string[] {
+  let assetFiles = glob.sync("**/*.@(js|jsx|ts|tsx)", {
+    cwd,
+    absolute: true,
+  });
+
+  let lines = shell
+    .grep("-l", pattern, assetFiles)
+    .stdout.trim()
+    .split("\n")
+    .filter((line) => line.length > 0);
+  return lines;
 }
