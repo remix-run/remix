@@ -47,6 +47,21 @@ const supportedRemixConfigKeys = [
 type SupportedRemixConfigKey = typeof supportedRemixConfigKeys[number];
 type SupportedRemixConfig = Pick<RemixUserConfig, SupportedRemixConfigKey>;
 
+const ROUTE_EXPORTS = new Set([
+  "ErrorBoundary",
+  "HydrateFallback",
+  "action",
+  "clientAction",
+  "clientLoader",
+  "default", // component
+  "handle",
+  "headers",
+  "links",
+  "loader",
+  "meta",
+  "shouldRevalidate",
+]);
+
 // We need to provide different JSDoc comments in some cases due to differences
 // between the Remix config and the Vite plugin.
 type RemixConfigJsdocOverrides = {
@@ -75,7 +90,7 @@ type RemixConfigJsdocOverrides = {
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
   Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides>;
 
-type ResolvedRemixVitePluginConfig = Pick<
+export type ResolvedRemixVitePluginConfig = Pick<
   ResolvedRemixConfig,
   | "appDirectory"
   | "rootDirectory"
@@ -349,6 +364,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         relativeAssetsBuildDirectory,
         future: {
           v3_fetcherPersist: options.future?.v3_fetcherPersist === true,
+          v3_relativeSplatPath: options.future?.v3_relativeSplatPath === true,
         },
       };
     };
@@ -444,6 +460,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         caseSensitive: route.caseSensitive,
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
+        hasClientAction: sourceExports.includes("clientAction"),
+        hasClientLoader: sourceExports.includes("clientLoader"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
         ...resolveBuildAssetPaths(
           pluginConfig,
@@ -504,6 +522,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         ),
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
+        hasClientAction: sourceExports.includes("clientAction"),
+        hasClientLoader: sourceExports.includes("clientLoader"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
         imports: [],
       };
@@ -567,6 +587,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             : viteConfigEnv.isSsrBuild;
 
         return {
+          __remixPluginResolvedConfig: pluginConfig,
           appType: "custom",
           experimental: { hmrPartialAccept: true },
           optimizeDeps: {
@@ -585,6 +606,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               // That means that before Vite pre-bundles dependencies (e.g. first time dev server is run)
               // mismatching Remix routers cause `Error: You must render this element inside a <Remix> element`.
               "@remix-run/react",
+
+              // For some reason, the `vite-dotenv` integration test consistently fails on webkit
+              // with `504 (Outdated Optimize Dep)` from Vite  unless `@remix-run/node` is included
+              // in `optimizeDeps.include`. 🤷
+              // This could be caused by how we copy `node_modules/` into integration test fixtures,
+              // so maybe this will be unnecessary once we switch to pnpm
+              "@remix-run/node",
             ],
           },
           esbuild: {
@@ -939,7 +967,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         let serverDirRE = /\/\.server\//;
         if (serverFileRE.test(id) || serverDirRE.test(id)) {
           return {
-            code: "export default {}",
+            code: "export {}",
             map: null,
           };
         }
@@ -947,21 +975,28 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     },
     {
       name: "remix-empty-client-modules",
-      enforce: "pre",
-      async transform(_code, id, options) {
+      enforce: "post",
+      async transform(code, id, options) {
         if (!options?.ssr) return;
         let clientFileRE = /\.client(\.[cm]?[jt]sx?)?$/;
         let clientDirRE = /\/\.client\//;
         if (clientFileRE.test(id) || clientDirRE.test(id)) {
+          let exports = esModuleLexer(code)[1];
           return {
-            code: "export default {}",
+            code: exports
+              .map(({ n: name }) =>
+                name === "default"
+                  ? "export default {};"
+                  : `export const ${name} = {};`
+              )
+              .join("\n"),
             map: null,
           };
         }
       },
     },
     {
-      name: "remix-remove-server-exports",
+      name: "remix-route-exports",
       enforce: "post", // Ensure we're operating on the transformed code to support MDX etc.
       async transform(code, id, options) {
         if (options?.ssr) return;
@@ -970,6 +1005,23 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         let route = getRoute(pluginConfig, id);
         if (!route) return;
+
+        // check the exports, fail if unknown exists, unless id ends with .mdx
+        let nonRemixExports = esModuleLexer(code)[1]
+          .map((exp) => exp.n)
+          .filter((exp) => !ROUTE_EXPORTS.has(exp));
+        if (nonRemixExports.length > 0 && !id.endsWith(".mdx")) {
+          let message = [
+            `${nonRemixExports.length} invalid route export${
+              nonRemixExports.length > 1 ? "s" : ""
+            } in \`${route.file}\`:`,
+            ...nonRemixExports.map((exp) => `  - \`${exp}\``),
+            "",
+            "See https://remix.run/docs/en/main/future/vite#strict-route-exports",
+            "",
+          ].join("\n");
+          throw Error(message);
+        }
 
         let serverExports = ["loader", "action", "headers"];
 
@@ -1076,7 +1128,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     },
     {
       name: "remix-react-refresh-babel",
-      enforce: "post",
+      enforce: "post", // jsx and typescript (in ts, jsx, tsx files) are already transpiled by vite
       async transform(code, id, options) {
         if (viteCommand !== "serve") return;
         if (id.includes("/node_modules/")) return;
@@ -1096,7 +1148,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           parserOpts: {
             sourceType: "module",
             allowAwaitOutsideFunction: true,
-            plugins: ["jsx", "typescript"],
           },
           plugins: [[require("react-refresh/babel"), { skipEnvCheck: true }]],
           sourceMaps: true,
@@ -1144,7 +1195,14 @@ function addRefreshWrapper(
 ): string {
   let isRoute = getRoute(pluginConfig, id);
   let acceptExports = isRoute
-    ? ["handle", "meta", "links", "shouldRevalidate"]
+    ? [
+        "clientAction",
+        "clientLoader",
+        "handle",
+        "meta",
+        "links",
+        "shouldRevalidate",
+      ]
     : [];
   return (
     REACT_REFRESH_HEADER.replace("__SOURCE__", JSON.stringify(id)) +
@@ -1240,7 +1298,9 @@ async function getRouteMetadata(
       )}?import`
     ), // Ensure the Vite dev server responds with a JS module
     hasAction: sourceExports.includes("action"),
+    hasClientAction: sourceExports.includes("clientAction"),
     hasLoader: sourceExports.includes("loader"),
+    hasClientLoader: sourceExports.includes("clientLoader"),
     hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
     imports: [],
   };
