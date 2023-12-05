@@ -58,40 +58,7 @@ export default function Component() {
 
 ### `clientLoader.hydrate`
 
-If you need to run your `clientLoader` on hydration, you can opt-into that by setting `clientLoader.hydrate=true`. This will tell Remix that it needs to run the `clientLoader` on hydration. A common use-case for this is to prime a client-side cache with the data loaded on the server:
-
-```tsx
-export async function loader() {
-  const data = await getDataFromDB();
-  return json(data);
-}
-
-let isInitialHydration = true;
-export async function clientLoader({ serverLoader }) {
-  if (isInitialHydration) {
-    isInitialHydration = false;
-    // This will resolve with the hydrated server data, it won't fetch()
-    const serverData = await serverLoader();
-    cache.set(cacheKey, serverData);
-    return serverData;
-  }
-
-  const cachedData = await cache.get(cacheKey);
-  if (cachedData) {
-    return cachedData;
-  }
-
-  const data = await serverLoader();
-  cache.set(cacheKey, data);
-  return data;
-}
-clientLoader.hydrate = true;
-
-export default function Component() {
-  const data = useLoaderData<typeof loader>();
-  return <>...</>;
-}
-```
+If you need to run your `clientLoader` on hydration, you can opt-into that by setting `clientLoader.hydrate=true`. This will tell Remix that it needs to run the `clientLoader` on hydration. Without a `HydrateFallback`, your route componen t will be SSr'd with the server loader data - so if you opt-into running the `clientLoader` on hydration - it's will run and the returned data will be updated in-place in the hydrated route Component.
 
 <docs-info>If a route exports a `clientLoader` and does not export a server `loader`, then `clientLoader.hydrate` is automatically treated as `true` since there is no server data to SSR with. Therefore, we always need to run the `clientLoader` on hydration before rendering the route component.</docs-info>
 
