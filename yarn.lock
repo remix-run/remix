@@ -6027,10 +6027,10 @@ executable@^4.1.1:
   dependencies:
     pify "^2.2.0"
 
-exit-hook@2.2.1:
-  version "2.2.1"
-  resolved "https://registry.npmjs.org/exit-hook/-/exit-hook-2.2.1.tgz"
-  integrity sha512-eNTPlAD67BmP31LDINZ3U7HSF8l57TxOY2PmBJ1shpCvpnxBF93mWCE8YHBnXs8qiUZJc9WDcWIeC3a2HIAMfw==
+exit-hook@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.npmjs.org/exit-hook/-/exit-hook-4.0.0.tgz#c1e16ebd03d3166f837b1502dac755bb5c460d58"
+  integrity sha512-Fqs7ChZm72y40wKjOFXBKg7nJZvQJmewP5/7LtePDdnah/+FH9Hp5sgMujSCMPXlxOAW2//1jrW9pnsY7o20vQ==
 
 exit@^0.1.2:
   version "0.1.2"

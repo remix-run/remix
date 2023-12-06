@@ -1,4 +1,3 @@
-import exitHook from "exit-hook";
 import fse from "fs-extra";
 import path from "node:path";
 import prettyMs from "pretty-ms";
@@ -81,6 +80,8 @@ export async function liveReload(
 
   let heartbeat = setInterval(broadcast, 60000, { type: "PING" });
 
+  // FIXME: this should be a top-level static import, but exit-hook is ESM only
+  let { default: exitHook } = await import("exit-hook");
   exitHook(() => clean(config));
   return async () => {
     wss.close();

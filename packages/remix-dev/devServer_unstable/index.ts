@@ -7,7 +7,6 @@ import prettyMs from "pretty-ms";
 import execa from "execa";
 import express from "express";
 import pc from "picocolors";
-import exitHook from "exit-hook";
 
 import * as Channel from "../channel";
 import { type Manifest } from "../manifest";
@@ -272,9 +271,11 @@ export let serve = async (
     state.appServer?.kill();
     websocket.close();
     server.close();
-    await dispose();
+    await Promise.allSettled([dispose(), state.appServer]);
   };
-  exitHook(cleanup);
+  // FIXME: this should be a top-level static import, but exit-hook is ESM only
+  let { asyncExitHook } = await import("exit-hook");
+  asyncExitHook(cleanup, { wait: 5000 });
   return cleanup;
 };
 
