@@ -4,7 +4,7 @@ title: Client Data
 
 # Client Data
 
-Remix introduced support for "Client Data" ([RFC][rfc]) in [`v2.4.0`][2.4.0] which allows you to opt-into running route loaders/actions in the browser via [`clientLoader`][clientloader] and [`clientAction`][clientaction] exports from your route.
+Remix introduced support for "Client Data" ([RFC][rfc]) in [`v2.4.0`][2.4.0] which allows you to opt-into running route loaders/actions in the browser via [`clientLoader`][clientloader], [`clientAction`][clientaction], and [`HydrateFallback`][hydratefallback] exports from your route.
 
 These new exports are a bit of a sharp knife and are not recommended as your _primary_ data loading/submission mechanisms - but instead give you a lever to pull on for some of the following advanced use cases:
 
@@ -236,5 +236,6 @@ We expect to write up a separate guide for migrations once [SPA mode][rfc-spa] l
 [2.4.0]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#v240
 [clientloader]: ../route/client-loader
 [clientaction]: ../route/client-action
+[hydratefallback]: ../route/hydrate-fallback
 [rfc-spa]: https://github.com/remix-run/remix/discussions/7638
 [bff]: ../guides/bff
