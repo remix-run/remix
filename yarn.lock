@@ -2327,10 +2327,10 @@
     "@remix-run/web-stream" "^1.1.0"
     web-encoding "1.1.5"
 
-"@remix-run/web-fetch@^4.4.2-pre.0":
-  version "4.4.2-pre.0"
-  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.4.2-pre.0.tgz#ec118035eb67f5b0539799a3caa8aea2552f065f"
-  integrity sha512-fVdJBGfYCBQWeYkCxHuZ/jlB/hRNGATbseIdbH+r0/MyaTuwU2WNvwvwAw2X1qgQ5VDC6qdRMP8KX+PJIGEO6g==
+"@remix-run/web-fetch@^4.4.2":
+  version "4.4.2"
+  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.4.2.tgz#ce7aedef72cc26e15060e8cf84674029f92809b6"
+  integrity sha512-jgKfzA713/4kAW/oZ4bC3MoLWyjModOVDjFPNseVqcJKSafgIscrYL9G50SurEYLswPuoU3HzSbO0jQCMYWHhA==
   dependencies:
     "@remix-run/web-blob" "^3.1.0"
     "@remix-run/web-file" "^3.1.0"
