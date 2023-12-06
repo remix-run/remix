@@ -13,7 +13,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.4.o](#v24o)
+  - [v2.4.0](#v240)
     - [What's Changed](#whats-changed)
       - [Client Data](#client-data)
       - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
@@ -111,7 +111,7 @@ To add a new release, copy from this template:
 
 -->
 
-## v2.4.o
+## v2.4.0
 
 ### What's Changed
 
