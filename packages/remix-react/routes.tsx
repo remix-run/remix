@@ -105,6 +105,11 @@ export function createServerRoutes(
       // for a static render
     };
 
+    // Let React Router know whether to run this on hydration
+    if (dataRoute.loader) {
+      dataRoute.loader.hydrate = shouldHydrateRouteLoader(route, routeModule);
+    }
+
     let children = createServerRoutes(
       manifest,
       routeModules,
@@ -264,9 +269,7 @@ export function createClientRoutes(
       };
 
       // Let React Router know whether to run this on hydration
-      dataRoute.loader.hydrate =
-        routeModule.clientLoader != null &&
-        (routeModule.clientLoader.hydrate === true || route.hasLoader !== true);
+      dataRoute.loader.hydrate = shouldHydrateRouteLoader(route, routeModule);
 
       dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
@@ -477,4 +480,14 @@ function getRouteModuleComponent(routeModule: RouteModule) {
   if (!isEmptyObject) {
     return routeModule.default;
   }
+}
+
+export function shouldHydrateRouteLoader(
+  route: EntryRoute,
+  routeModule: RouteModule
+) {
+  return (
+    routeModule.clientLoader != null &&
+    (routeModule.clientLoader.hydrate === true || route.hasLoader !== true)
+  );
 }
