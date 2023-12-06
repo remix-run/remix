@@ -279,7 +279,9 @@ const getRouteModuleExports = async (
 const showUnstableWarning = () => {
   console.warn(
     colors.yellow(
-      "\n  ⚠️  Remix support for Vite is unstable\n     and not recommended for production\n"
+      colors.bold(
+        "\n  ⚠️  Remix support for Vite is unstable and\n     not yet recommended for production\n"
+      )
     )
   );
 };
@@ -295,7 +297,7 @@ export type RemixVitePlugin = (
 export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
   let viteCommand: Vite.ResolvedConfig["command"];
   let viteUserConfig: Vite.UserConfig;
-  let resolvedViteConfig: Vite.ResolvedConfig | undefined;
+  let viteConfig: Vite.ResolvedConfig | undefined;
 
   let isViteV4 = getViteMajorVersion() === 4;
 
@@ -334,6 +336,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         serverBuildPath,
         serverModuleFormat,
         relativeAssetsBuildDirectory,
+        future,
       } = await resolveConfig(config, { rootDirectory });
 
       return {
@@ -347,10 +350,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         serverBuildPath,
         serverModuleFormat,
         relativeAssetsBuildDirectory,
-        future: {
-          v3_fetcherPersist: options.future?.v3_fetcherPersist === true,
-          v3_relativeSplatPath: options.future?.v3_relativeSplatPath === true,
-        },
+        future,
       };
     };
 
@@ -376,11 +376,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       export const assetsBuildDirectory = ${JSON.stringify(
         pluginConfig.relativeAssetsBuildDirectory
       )};
-      ${
-        pluginConfig.future
-          ? `export const future = ${JSON.stringify(pluginConfig.future)}`
-          : ""
-      };
+      export const future = ${JSON.stringify(pluginConfig.future)};
       export const publicPath = ${JSON.stringify(pluginConfig.publicPath)};
       export const entry = { module: entryServer };
       export const routes = {
@@ -646,10 +642,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           }),
         };
       },
-      async configResolved(viteConfig) {
+      async configResolved(resolvedViteConfig) {
         await initEsModuleLexer;
 
-        resolvedViteConfig = viteConfig;
+        viteConfig = resolvedViteConfig;
 
         ssrBuildContext =
           viteConfig.build.ssr && viteCommand === "build"
@@ -725,8 +721,37 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }
       },
       buildStart() {
-        if (viteCommand === "build") {
+        invariant(viteConfig);
+
+        if (
+          viteCommand === "build" &&
+          // Only show warning on initial client build
+          !viteConfig.build.ssr
+        ) {
           showUnstableWarning();
+        }
+
+        if (
+          viteCommand === "build" &&
+          viteConfig.mode === "production" &&
+          !viteConfig.build.ssr &&
+          viteConfig.build.sourcemap
+        ) {
+          viteConfig.logger.warn(
+            colors.yellow(
+              colors.bold("  ⚠️  Source maps are enabled in production\n") +
+                [
+                  "This makes your server code publicly",
+                  "visible in the browser. This is highly",
+                  "discouraged! If you insist, ensure that",
+                  "you are using environment variables for",
+                  "secrets and not hard-coding them in",
+                  "your source code.\n",
+                ]
+                  .map((line) => "     " + line)
+                  .join("\n")
+            )
+          );
         }
       },
       configureServer(viteDevServer) {
@@ -820,15 +845,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             return;
           }
 
-          invariant(
-            cachedPluginConfig,
-            "Expected plugin config to be cached when writeBundle hook is called"
-          );
-
-          invariant(
-            resolvedViteConfig,
-            "Expected resolvedViteConfig to exist when writeBundle hook is called"
-          );
+          invariant(cachedPluginConfig);
+          invariant(viteConfig);
 
           let { assetsBuildDirectory, serverBuildPath, rootDirectory } =
             cachedPluginConfig;
@@ -878,10 +896,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             )
           );
 
-          let logger = resolvedViteConfig.logger;
-
           if (movedAssetPaths.length) {
-            logger.info(
+            viteConfig.logger.info(
               [
                 "",
                 `${colors.green("✓")} ${movedAssetPaths.length} asset${
