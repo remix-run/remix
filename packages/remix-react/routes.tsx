@@ -105,11 +105,6 @@ export function createServerRoutes(
       // for a static render
     };
 
-    // Let React Router know whether to run this on hydration
-    if (dataRoute.loader) {
-      dataRoute.loader.hydrate = shouldHydrateRouteLoader(route, routeModule);
-    }
-
     let children = createServerRoutes(
       manifest,
       routeModules,
