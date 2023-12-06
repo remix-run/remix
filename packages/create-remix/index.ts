@@ -4,11 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import fse from "fs-extra";
 import stripAnsi from "strip-ansi";
+import rm from "rimraf";
 import execa from "execa";
 import arg from "arg";
 import * as semver from "semver";
 import sortPackageJSON from "sort-package-json";
-import { cli } from "@remix-run/dev";
 
 import { version as thisRemixVersion } from "./package.json";
 import { prompt } from "./prompt";
@@ -27,6 +27,7 @@ import {
   sleep,
   strip,
   stripDirectoryFromPath,
+  success,
   toValidProjectName,
 } from "./utils";
 import { renderLoadingIndicator } from "./loading-indicator";
@@ -541,19 +542,56 @@ async function runInitScriptStep(ctx: Context) {
     return;
   }
 
-  // call out to the remix init command to run the init script
+  let initScriptDir = path.dirname(ctx.initScriptPath);
+  let initPackageJson = path.resolve(initScriptDir, "package.json");
+  let packageManager = ctx.pkgManager;
+
   try {
-    await cli.run(
-      [
-        "init",
-        ctx.cwd,
-        ctx.showInstallOutput ? "--show-install-output" : "",
-      ].filter(Boolean)
-    );
-  } catch (err: unknown) {
-    console.error(`▲  Oh no! Template's remix.init script failed`);
+    if (await fileExists(initPackageJson)) {
+      await loadingIndicator({
+        start: `Dependencies for remix.init script installing with ${ctx.pkgManager}...`,
+        end: "Dependencies for remix.init script installed",
+        while: () =>
+          installDependencies({
+            pkgManager: ctx.pkgManager,
+            cwd: initScriptDir,
+            showInstallOutput: ctx.showInstallOutput,
+          }),
+        ctx,
+      });
+    }
+  } catch (err) {
+    error("Oh no!", "Failed to install dependencies for template init script");
     throw err;
   }
+
+  log("");
+  info("Running template's remix.init script...", "\n");
+
+  try {
+    let initFn = require(ctx.initScriptPath);
+    if (typeof initFn !== "function" && initFn.default) {
+      initFn = initFn.default;
+    }
+    if (typeof initFn !== "function") {
+      throw new Error("remix.init script doesn't export a function.");
+    }
+    let rootDirectory = path.resolve(ctx.cwd);
+    await initFn({ packageManager, rootDirectory });
+  } catch (err) {
+    error("Oh no!", "Template's remix.init script failed");
+    throw err;
+  }
+
+  try {
+    await rm(initScriptDir);
+  } catch (err) {
+    error("Oh no!", "Failed to remove template's remix.init script");
+    throw err;
+  }
+
+  log("");
+  success("Template's remix.init script complete");
 
   if (ctx.git) {
     await loadingIndicator({
