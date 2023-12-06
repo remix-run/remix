@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.4.0-pre.6
+
+### Patch Changes
+
+- [REMOVE] Minor client data updates ([#8236](https://github.com/remix-run/remix/pull/8236))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.4.0-pre.6`
+
 ## 2.4.0-pre.5
 
 ### Patch Changes
