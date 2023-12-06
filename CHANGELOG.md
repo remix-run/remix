@@ -253,6 +253,7 @@ Remix now enforces strict route exports, and will will throw an error if you hav
 
 - [`react-router-dom@6.21.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.21.0)
 - [`@remix-run/router@1.14.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1140)
+- [`@remix-run/web-fetch@4.4.2`](https://github.com/remix-run/web-std-io/releases/tag/%40remix-run%2Fweb-fetch%404.4.2)
 
 ### Changes by Package
 
