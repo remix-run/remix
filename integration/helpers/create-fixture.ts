@@ -5,7 +5,6 @@ import fse from "fs-extra";
 import express from "express";
 import getPort from "get-port";
 import dedent from "dedent";
-import resolveBin from "resolve-bin";
 import stripIndent from "strip-indent";
 import serializeJavaScript from "serialize-javascript";
 import { sync as spawnSync, spawn } from "cross-spawn";
@@ -21,8 +20,6 @@ import { installGlobals } from "../../build/node_modules/@remix-run/node/dist/in
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-
-const viteBin = resolveBin.sync("vite");
 
 export interface FixtureInit {
   buildStdio?: Writable;
@@ -46,9 +43,13 @@ export function json(value: JsonObject) {
 
 export async function createFixture(init: FixtureInit, mode?: ServerMode) {
   installGlobals();
+  let compiler = init.compiler ?? "remix";
   let projectDir = await createFixtureProject(init, mode);
   let buildPath = url.pathToFileURL(
-    path.join(projectDir, "build/index.js")
+    path.join(
+      projectDir,
+      compiler === "vite" ? "build/server/index.js" : "build/index.js"
+    )
   ).href;
   let app: ServerBuild = await import(buildPath);
   let handler = createRequestHandler(app, mode || ServerMode.Production);
@@ -98,6 +99,7 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
   return {
     projectDir,
     build: app,
+    compiler,
     requestDocument,
     requestData,
     postDocument,
@@ -118,7 +120,12 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
         let nodebin = process.argv[0];
         let serveProcess = spawn(
           nodebin,
-          ["node_modules/@remix-run/serve/dist/cli.js", "build/index.js"],
+          [
+            "node_modules/@remix-run/serve/dist/cli.js",
+            fixture.compiler === "vite"
+              ? "server/build/index.js"
+              : "build/index.js",
+          ],
           {
             env: {
               NODE_ENV: mode || "production",
@@ -171,7 +178,14 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
     return new Promise(async (accept) => {
       let port = await getPort();
       let app = express();
-      app.use(express.static(path.join(fixture.projectDir, "public")));
+      app.use(
+        express.static(
+          path.join(
+            fixture.projectDir,
+            fixture.compiler === "vite" ? "build/client" : "public"
+          )
+        )
+      );
 
       app.all(
         "*",
@@ -298,43 +312,36 @@ function build(
 
   let remixBin = "node_modules/@remix-run/dev/dist/cli.js";
 
-  let commands: string[][] =
+  let buildArgs: string[] =
     compiler === "vite"
-      ? [
-          [viteBin, "build"],
-          [viteBin, "build", "--ssr"],
-        ]
-      : [[remixBin, "build", ...(sourcemap ? ["--sourcemap"] : [])]];
+      ? [remixBin, "vite:build"]
+      : [remixBin, "build", ...(sourcemap ? ["--sourcemap"] : [])];
 
-  commands.forEach((buildArgs) => {
-    let buildSpawn = spawnSync("node", buildArgs, {
-      cwd: projectDir,
-      env: {
-        ...process.env,
-        NODE_ENV: mode || ServerMode.Production,
-      },
-    });
-
-    // These logs are helpful for debugging. Remove comments if needed.
-    // console.log("spawning node " + buildArgs.join(" ") + ":\n");
-    // console.log("  STDOUT:");
-    // console.log("  " + buildSpawn.stdout.toString("utf-8"));
-    // console.log("  STDERR:");
-    // console.log("  " + buildSpawn.stderr.toString("utf-8"));
-
-    if (buildStdio) {
-      buildStdio.write(buildSpawn.stdout.toString("utf-8"));
-      buildStdio.write(buildSpawn.stderr.toString("utf-8"));
-      buildStdio.end();
-    }
-
-    if (buildSpawn.error || buildSpawn.status) {
-      console.error(buildSpawn.stderr.toString("utf-8"));
-      throw (
-        buildSpawn.error || new Error(`Build failed, check the output above`)
-      );
-    }
+  let buildSpawn = spawnSync("node", buildArgs, {
+    cwd: projectDir,
+    env: {
+      ...process.env,
+      NODE_ENV: mode || ServerMode.Production,
+    },
   });
+
+  // These logs are helpful for debugging. Remove comments if needed.
+  // console.log("spawning node " + buildArgs.join(" ") + ":\n");
+  // console.log("  STDOUT:");
+  // console.log("  " + buildSpawn.stdout.toString("utf-8"));
+  // console.log("  STDERR:");
+  // console.log("  " + buildSpawn.stderr.toString("utf-8"));
+
+  if (buildStdio) {
+    buildStdio.write(buildSpawn.stdout.toString("utf-8"));
+    buildStdio.write(buildSpawn.stderr.toString("utf-8"));
+    buildStdio.end();
+  }
+
+  if (buildSpawn.error || buildSpawn.status) {
+    console.error(buildSpawn.stderr.toString("utf-8"));
+    throw buildSpawn.error || new Error(`Build failed, check the output above`);
+  }
 }
 
 async function writeTestFiles(init: FixtureInit, dir: string) {
