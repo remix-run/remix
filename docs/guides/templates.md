@@ -158,9 +158,8 @@ The init function will be passed an object with additional project information.
 
 ```javascript
 export default ({
-    packageManager, // "npm" | "pnpm" | "yarn" | "bun"
-    rootDirectory:  // "path/to/project/root"
-
+  packageManager, // "npm" | "pnpm" | "yarn" | "bun"
+  rootDirectory, // "path/to/project/root"
 }) => {
   /* initialization logic here */
 };
