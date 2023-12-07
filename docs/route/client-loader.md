@@ -23,9 +23,9 @@ export const clientLoader = async ({
 };
 ```
 
-This function is only ever run on the client, and can used in a few ways:
+This function is only ever run on the client, and can be used in a few ways:
 
-- Instead of a server action for full-client routes
+- Instead of a server loader for full-client routes
 - To use alongside a `clientLoader` cache by invalidating the cache on mutations
   - Maintaining a client-side cache to skip calls to the server
   - Bypassing the Remix [BFF][bff] hop and hitting your API directly from the client
@@ -80,9 +80,17 @@ This function receives the same [`request`][loader-request] argument as a [`load
 
 `serverLoader` is an asynchronous function to get the data from the server `loader` for this route. On client-side navigations, this will make a [fetch][fetch] call to the Remix server loader. If you opt-into running your `clientLoader` on hydration, then this function will return you the data that was already loaded on the server (via `Promise.resolve`).
 
+See also:
+
+- [Client Data Guide][client-data-guide]
+- [HydrateFallback][hydratefallback]
+- [clientAction][clientaction]
+
 [loader]: ./loader
 [loader-params]: ./loader#params
 [loader-request]: ./loader#request
+[clientaction]: ./client-action
 [hydratefallback]: ./hydrate-fallback
 [bff]: ../guides/bff
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[client-data-guide]: ../guides/client-data
