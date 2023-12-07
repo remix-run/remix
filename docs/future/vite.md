@@ -213,7 +213,7 @@ For example, if you were using Express, here's how you could do it.
 
 👉 **Update your `server.mjs` file**
 
-```ts filename=server.mjs lines=[1-4,11-14,18-21,29,36-38]
+```ts filename=server.mjs lines=[1,8-17,21-24,32,39-44]
 import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
 import { createRequestHandler } from "@remix-run/express";
 import { installGlobals } from "@remix-run/node";
