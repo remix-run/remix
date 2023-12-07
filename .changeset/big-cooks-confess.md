@@ -2,4 +2,4 @@
 "@remix-run/server-runtime": patch
 ---
 
-Add error to ServerRuntimeMetaArgs type
+Add optional `error` to `ServerRuntimeMetaArgs` type to align with `MetaArgs`
