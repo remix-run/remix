@@ -574,7 +574,7 @@ Vite supports both ESM and CJS dependencies, but sometimes you might still run i
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
 
-You can check [_Are The Types Wrong_][arethetypeswrong] to see if the dependency giving you trouble might be misconfigured.
+To diagnose if your one of dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
 
 Finally, you can also explicitly configure which dependencies to bundle into your server bundled
@@ -706,6 +706,7 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [sveltekit]: https://kit.svelte.dev/
 [modernizing-packages-to-esm]: https://blog.isquaredsoftware.com/2023/08/esm-modernization-lessons/
 [arethetypeswrong]: https://arethetypeswrong.github.io/
+[publint]: https://publint.dev/
 [vite-plugin-cjs-interop]: https://github.com/cyco130/vite-plugin-cjs-interop
 [ssr-no-external]: https://vitejs.dev/config/ssr-options.html#ssr-noexternal
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
