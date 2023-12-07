@@ -1,5 +1,82 @@
 # `@remix-run/react`
 
+## 2.3.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.3.1`
+
+## 2.3.0
+
+### Minor Changes
+
+- Remove the `unstable_` prefix from the [`useBlocker`](https://reactrouter.com/en/main/hooks/use-blocker) hook as it's been in use for enough time that we are confident in the API. We do not plan to remove the prefix from `unstable_usePrompt` due to differences in how browsers handle `window.confirm` that prevent React Router from guaranteeing consistent/correct behavior. ([#7882](https://github.com/remix-run/remix/pull/7882))
+
+### Patch Changes
+
+- Support rendering of `LiveReload` component after `Scripts` in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
+- Support optional rendering of `LiveReload` component in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
+- add missing modulepreload for the manifest ([#7684](https://github.com/remix-run/remix/pull/7684))
+- Updated dependencies:
+  - [`react-router-dom@6.19.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.19.0)
+  - [`@remix-run/router@1.12.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1120)
+  - `@remix-run/server-runtime@2.3.0`
+
+## 2.2.0
+
+### Minor Changes
+
+- Unstable Vite support for Node-based Remix apps ([#7590](https://github.com/remix-run/remix/pull/7590))
+  - `remix build` 👉 `vite build && vite build --ssr`
+  - `remix dev` 👉 `vite dev`
+  - Other runtimes (e.g. Deno, Cloudflare) not yet supported.
+  - See "Future > Vite" in the Remix Docs for details
+- Add a new `future.v3_fetcherPersist` flag to change the persistence behavior of fetchers. Instead of being immediately cleaned up when unmounted in the UI, fetchers will persist until they return to an `idle` state ([RFC](https://github.com/remix-run/remix/discussions/7698)) ([#7704](https://github.com/remix-run/remix/pull/7704))
+  - For more details, please refer to the [React Router 6.18.0](https://github.com/remix-run/react-router/releases/tag/react-router%406.18.0) release notes
+
+### Patch Changes
+
+- Fix warning that could be logged when using route files with no `default` export ([#7745](https://github.com/remix-run/remix/pull/7745))
+  - It seems our compiler compiles these files to export an empty object as the `default` which we can then end up passing to `React.createElement`, triggering the console warning, but generally no UI issues
+  - By properly detecting these, we can correctly pass `Component: undefined` off to the React Router layer
+  - This is technically an potential issue in the compiler but it's an easy patch in the `@remix-run/react` layer and hopefully disappears in a Vite world
+- Fix critical CSS hydration errors for Vite dev ([#7812](https://github.com/remix-run/remix/pull/7812))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.2.0`
+  - [`react-router-dom@6.18.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.18.0)
+  - [`@remix-run/router@1.11.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1110)
+
+## 2.1.0
+
+### Minor Changes
+
+- Add experimental support for the [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/ViewTransition) via `document.startViewTransition` to enable CSS animated transitions on SPA navigations in your application ([#7648](https://github.com/remix-run/remix/pull/7648))
+  - For additional information please refer to the [2.1.0 Release Notes](https://github.com/remix-run/remix/releases/tag/remix%402.1.0) or the [documentation](https://remix.run/docs/components/link#unstable_viewtransition)
+
+### Patch Changes
+
+- Avoid mutating `meta` object when `tagName` is specified ([#7594](https://github.com/remix-run/remix/pull/7594))
+- Fix FOUC on subsequent client-side navigations to `route.lazy` routes ([#7576](https://github.com/remix-run/remix/pull/7576))
+- Emulate types for `JSON.parse(JSON.stringify(x))` in `SerializeFrom` ([#7605](https://github.com/remix-run/remix/pull/7605))
+  - Notably, type fields that are only assignable to `undefined` after serialization are now omitted since `JSON.stringify |> JSON.parse` will omit them -- see test cases for examples
+  - Also fixes type errors when upgrading to v2 from 1.19
+- Export the proper Remix `useMatches` wrapper to fix `UIMatch` typings ([#7551](https://github.com/remix-run/remix/pull/7551))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.1.0`
+  - [`react-router-dom@6.17.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.17.0)
+  - [`@remix-run/router@1.10.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1100)
+
+## 2.0.1
+
+### Patch Changes
+
+- Add second generic to `UIMatch` for `handle` field ([#7464](https://github.com/remix-run/remix/pull/7464))
+- Fix resource routes being loaded through `route.lazy` ([#7498](https://github.com/remix-run/remix/pull/7498))
+- Throw a semantically correct 405 `ErrorResponse` instead of just an `Error` when submitting to a route without an `action` ([#7423](https://github.com/remix-run/remix/pull/7423))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.1`
+
 ## 2.0.0
 
 ### Major Changes
@@ -61,14 +138,23 @@
   ```
 
 - Re-Export `ShouldRevalidateFunctionArgs` type from React Router ([#7316](https://github.com/remix-run/remix/pull/7316))
+
 - Deduplicate prefetch `link` tags ([#7060](https://github.com/remix-run/remix/pull/7060))
+
 - Skip preloading of stylesheets on client-side route transitions if the browser does not support `<link rel=preload>` ([#7106](https://github.com/remix-run/remix/pull/7106))
+
   - This prevents us from hanging on client-side navigations when we try to preload stylesheets and never receive a `load`/`error` event on the `link` tag
+
 - Export proper `ErrorResponse` type for usage alongside `isRouteErrorResponse` ([#7244](https://github.com/remix-run/remix/pull/7244))
+
 - Use the hostname from `REMIX_DEV_ORIGIN` to connect to the live reload socket ([#6923](https://github.com/remix-run/remix/pull/6923))
+
 - Use unique key for `script:ld+json` meta descriptors ([#6954](https://github.com/remix-run/remix/pull/6954))
+
 - Fix live reload port when set explicitly as a prop ([#7358](https://github.com/remix-run/remix/pull/7358))
+
 - Fix types for `useLoaderData` when using Yarn PnP ([#7137](https://github.com/remix-run/remix/pull/7137))
+
 - Updated dependencies:
   - `@remix-run/server-runtime@2.0.0`
   - [`react-router-dom@6.16.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.16.0)

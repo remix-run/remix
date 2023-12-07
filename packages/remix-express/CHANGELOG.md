@@ -1,10 +1,51 @@
 # `@remix-run/express`
 
+## 2.3.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.3.1`
+
+## 2.3.0
+
+### Patch Changes
+
+- Fix flash of unstyled content on initial page load in Vite dev when using a custom Express server ([#7937](https://github.com/remix-run/remix/pull/7937))
+- Updated dependencies:
+  - `@remix-run/node@2.3.0`
+
+## 2.2.0
+
+### Patch Changes
+
+- Allow the `@remix-run/express` adapter to work behind a proxy when using `app.enable('trust proxy')` ([#7323](https://github.com/remix-run/remix/pull/7323))
+  - Previously, this used `req.get('host')` to construct the Remix `Request`, but that does not respect `X-Forwarded-Host`
+  - This now uses `req.hostname` which will respect `X-Forwarded-Host`
+- Updated dependencies:
+  - `@remix-run/node@2.2.0`
+
+## 2.1.0
+
+### Patch Changes
+
+- Flush headers for `text/event-stream` responses ([#7619](https://github.com/remix-run/remix/pull/7619))
+- Updated dependencies:
+  - `@remix-run/node@2.1.0`
+
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.0.1`
+
 ## 2.0.0
 
 ### Major Changes
 
 - Require Node >=18.0.0 ([#6939](https://github.com/remix-run/remix/pull/6939))
+
 - For preparation of using Node's built in fetch implementation, installing the fetch globals is now a responsibility of the app server ([#7009](https://github.com/remix-run/remix/pull/7009))
 
   - If you are using `remix-serve`, nothing is required

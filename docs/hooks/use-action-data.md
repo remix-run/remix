@@ -5,10 +5,11 @@ toc: false
 
 # `useActionData`
 
-Returns the serialized data from the most recent route action or undefined if there isn't one.
+Returns the serialized data from the most recent route action or `undefined` if there isn't one.
 
-```tsx lines=[9,13]
-import type { ActionFunctionArgs } from "@remix-run/node";
+```tsx lines=[10,14]
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { Form, useActionData } from "@remix-run/react";
 
 export async function action({
@@ -16,7 +17,7 @@ export async function action({
 }: ActionFunctionArgs) {
   const body = await request.formData();
   const name = body.get("visitorsName");
-  return { message: `Hello, ${name}` };
+  return json({ message: `Hello, ${name}` });
 }
 
 export default function Invoices() {
@@ -34,19 +35,18 @@ export default function Invoices() {
 
 **Guides**
 
-- [Form Validation][form-validation]
+- [Form Validation][form_validation]
 
 **Related API**
 
 - [`action`][action]
-- [`useNavigation`][usenavigation]
+- [`useNavigation`][use_navigation]
 
 **Discussions**
 
-- [Fullstack Data Flow][fullstack-data-flow]
+- [Fullstack Data Flow][fullstack_data_flow]
 
+[form_validation]: ../guides/form-validation
 [action]: ../route/action
-[usenavigation]: ../hooks/use-navigation
-[rr-useactiondata]: https://reactrouter.com/hooks/use-action-data
-[form-validation]: ../guides/form-validation
-[fullstack-data-flow]: ../discussion/data-flow
+[use_navigation]: ../hooks/use-navigation
+[fullstack_data_flow]: ../discussion/data-flow

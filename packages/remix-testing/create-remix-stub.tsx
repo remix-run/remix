@@ -85,7 +85,7 @@ export interface RemixStubProps {
   /**
    * Future flags mimicking the settings in remix.config.js
    */
-  remixConfigFuture?: Partial<FutureConfig>;
+  future?: Partial<FutureConfig>;
 }
 
 export function createRemixStub(
@@ -96,14 +96,17 @@ export function createRemixStub(
     initialEntries,
     initialIndex,
     hydrationData,
-    remixConfigFuture,
+    future,
   }: RemixStubProps) {
     let routerRef = React.useRef<Router>();
     let remixContextRef = React.useRef<RemixContextObject>();
 
     if (routerRef.current == null) {
       remixContextRef.current = {
-        future: { ...remixConfigFuture },
+        future: {
+          v3_fetcherPersist: future?.v3_fetcherPersist === true,
+          v3_relativeSplatPath: future?.v3_relativeSplatPath === true,
+        },
         manifest: {
           routes: {},
           entry: { imports: [], module: "" },
@@ -177,6 +180,11 @@ function processRoutes(
       parentId,
       hasAction: route.action != null,
       hasLoader: route.loader != null,
+      // When testing routes, you should just be stubbing loader/action, not
+      // trying to re-implement the full loader/clientLoader/SSR/hydration flow.
+      // That is better tested via E2E tests.
+      hasClientAction: false,
+      hasClientLoader: false,
       hasErrorBoundary: route.ErrorBoundary != null,
       module: "build/stub-path-to-module.js", // any need for this?
     };

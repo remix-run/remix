@@ -12,9 +12,10 @@ In our approach to software development, we aim to achieve the following goals f
 
 ## Unstable APIs and Future Flags
 
-We introduce new features into the current release with a future flag in remix.config that looks something like `unstable_someFeature`.
+We introduce new features into the current release with a future flag in [`remix.config.js`][remix-config] that looks something like `unstable_someFeature`.
 
-```tsx filename=remix.config.js
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 export default {
   future: {
     unstable_someFeature: true,
@@ -32,7 +33,8 @@ export default {
 
 When we introduce breaking changes, we do so within the context of the current major version, and we hide them behind future flags. For instance, if we're in `v2`, a breaking change might be placed under a future flag named `v3_somethingDifferent`.
 
-```tsx filename=remix.config.js
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 export default {
   future: {
     v3_someFeature: true,
@@ -48,3 +50,8 @@ export default {
 ## Summary
 
 Our development strategy focuses on gradual feature adoption and seamless version upgrades for major releases. This empowers developers to selectively integrate new features, avoiding the need for extensive code adjustments during version transitions. By introducing features through `unstable_*` flags, we refine the API collaboratively with early adopters while ensuring stable releases benefit from enhancements. Through careful management of breaking changes using `v3_*` flags, we provide the flexibility to adopt changes incrementally, facilitating a smoother transition between major versions. While this increases the complexity for developing Remix the framework, this developer-centric approach greatly simplifies application development with Remix, ultimately leading to improved software quality and (hopefully!) developer satisfaction.
+
+For a list of currently available Future Flags, please see the [`future`][remix-config-future] section in the `remix.config.js` documentation.
+
+[remix-config]: ../file-conventions/remix-config
+[remix-config-future]: ../file-conventions/remix-config#future

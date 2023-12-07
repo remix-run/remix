@@ -4,21 +4,39 @@ import * as url from "node:url";
 
 import { createRequestHandler } from "@remix-run/express";
 import { broadcastDevReady, installGlobals } from "@remix-run/node";
-import chokidar from "chokidar";
 import compression from "compression";
 import express from "express";
 import morgan from "morgan";
 import sourceMapSupport from "source-map-support";
 
-sourceMapSupport.install();
+sourceMapSupport.install({
+  retrieveSourceMap: function (source) {
+    // get source file without the `file://` prefix or `?t=...` suffix
+    const match = source.match(/^file:\/\/(.*)\?t=[.\d]+$/);
+    if (match) {
+      return {
+        url: source,
+        map: fs.readFileSync(`${match[1]}.map`, "utf8"),
+      };
+    }
+    return null;
+  },
+});
 installGlobals();
 
-/**
- * @typedef {import('@remix-run/node').ServerBuild} ServerBuild
- */
+/** @typedef {import('@remix-run/node').ServerBuild} ServerBuild */
 
 const BUILD_PATH = path.resolve("build/index.js");
+const VERSION_PATH = path.resolve("build/version.txt");
+
 const initialBuild = await reimportServer();
+const remixHandler =
+  process.env.NODE_ENV === "development"
+    ? await createDevRequestHandler(initialBuild)
+    : createRequestHandler({
+        build: initialBuild,
+        mode: initialBuild.mode,
+      });
 
 const app = express();
 
@@ -39,15 +57,7 @@ app.use(express.static("public", { maxAge: "1h" }));
 
 app.use(morgan("tiny"));
 
-app.all(
-  "*",
-  process.env.NODE_ENV === "development"
-    ? createDevRequestHandler(initialBuild)
-    : createRequestHandler({
-        build: initialBuild,
-        mode: initialBuild.mode,
-      })
-);
+app.all("*", remixHandler);
 
 const port = process.env.PORT || 3000;
 app.listen(port, async () => {
@@ -73,9 +83,9 @@ async function reimportServer() {
 
 /**
  * @param {ServerBuild} initialBuild
- * @returns {import('@remix-run/express').RequestHandler}
+ * @returns {Promise<import('@remix-run/express').RequestHandler>}
  */
-function createDevRequestHandler(initialBuild) {
+async function createDevRequestHandler(initialBuild) {
   let build = initialBuild;
   async function handleServerUpdate() {
     // 1. re-import the server build
@@ -83,8 +93,9 @@ function createDevRequestHandler(initialBuild) {
     // 2. tell Remix that this app server is now up-to-date and ready
     broadcastDevReady(build);
   }
+  const chokidar = await import("chokidar");
   chokidar
-    .watch(BUILD_PATH, { ignoreInitial: true })
+    .watch(VERSION_PATH, { ignoreInitial: true })
     .on("add", handleServerUpdate)
     .on("change", handleServerUpdate);
 

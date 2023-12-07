@@ -32,7 +32,7 @@ If you want to follow this tutorial locally on your own computer, it is importan
 
 💿 Initialize a new Remix project. We'll call ours "blog-tutorial" but you can call it something else if you'd like.
 
-```sh
+```shellscript nonumber
 npx create-remix@latest --template remix-run/indie-stack blog-tutorial
 ```
 
@@ -51,7 +51,7 @@ We're using [the Indie stack][the-indie-stack], which is a full application read
 
 💿 Let's start the dev server:
 
-```sh
+```shellscript nonumber
 npm run dev
 ```
 
@@ -94,7 +94,7 @@ Back in the browser go ahead and click the link. You should see a 404 page since
 
 💿 Create a new file at `app/routes/posts._index.tsx`
 
-```sh
+```shellscript nonumber
 touch app/routes/posts._index.tsx
 ```
 
@@ -202,7 +202,7 @@ A solid practice is to create a module that deals with a particular concern. In 
 
 💿 Create `app/models/post.server.ts`
 
-```sh
+```shellscript nonumber
 touch app/models/post.server.ts
 ```
 
@@ -270,7 +270,7 @@ model Post {
 
 💿 Let's generate a migration file for our schema changes, which will be required if you deploy your application rather than just running in dev mode locally. This will also update our local database and TypeScript definitions to match the schema change. We'll name the migration "create post model".
 
-```sh
+```shellscript nonumber
 npx prisma migrate dev --name "create post model"
 ```
 
@@ -360,7 +360,7 @@ Instead of creating a route for every single one of our posts, we can use a "dyn
 
 💿 Create a dynamic route at `app/routes/posts.$slug.tsx`
 
-```sh
+```shellscript nonumber
 touch app/routes/posts.$slug.tsx
 ```
 
@@ -492,7 +492,7 @@ Now let's get that markdown parsed and rendered to HTML to the page. There are a
 
 💿 Parse the markdown into HTML
 
-```sh
+```shellscript nonumber
 npm add marked@^4.3.0
 # additionally, if using typescript
 npm add @types/marked@^4.3.1 -D
@@ -558,7 +558,7 @@ Put that anywhere in the component. I stuck it right under the `<h1>`.
 
 💿 Create an admin route at `app/routes/posts.admin.tsx`:
 
-```sh
+```shellscript nonumber
 touch app/routes/posts.admin.tsx
 ```
 
@@ -612,7 +612,7 @@ Let's fill in that placeholder with an index route for admin. Hang with us, we'r
 
 💿 Create an index route for `posts.admin.tsx`'s child routes
 
-```sh
+```shellscript nonumber
 touch app/routes/posts.admin._index.tsx
 ```
 
@@ -685,7 +685,7 @@ Maybe this will help, let's add the `/posts/admin/new` route and see what happen
 
 💿 Create the `app/routes/posts.admin.new.tsx` file
 
-```sh
+```shellscript nonumber
 touch app/routes/posts.admin.new.tsx
 ```
 
@@ -1026,9 +1026,9 @@ That's it for today! Here are some bits of homework to implement if you want to 
 
 **Update/Delete posts:** make a `posts.admin.$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar, but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts.$slug.tsx` and `app/routes/posts.admin.new.tsx`. You just gotta put it together.
 
-**Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Optimistic UI guide][the-optimistic-ui-guide].
+**Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Pending UI guide][the-pending-ui-guide].
 
-**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip: if you want to make it so you're the only one who can make posts, simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
+**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip: if you want to make it, so you're the only one who can make posts, simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
 
 **Customize the app:** If you're happy with Tailwind CSS, keep it around, otherwise, check [the styling guide][the-styling-guide] to learn of other options. Remove the `Notes` model and routes, etc. Whatever you want to make this thing yours.
 
@@ -1042,17 +1042,17 @@ We hope you love Remix! 💿 👋
 [node-js]: https://nodejs.org
 [npm]: https://www.npmjs.com
 [vs-code]: https://code.visualstudio.com
-[the-stacks-docs]: /pages/stacks
+[the-stacks-docs]: ../guides/templates#stacks
 [the-indie-stack]: https://github.com/remix-run/indie-stack
 [fly-io]: https://fly.io
 [http-localhost-3000]: http://localhost:3000
 [screenshot-of-the-app-showing-the-blog-post-link]: https://user-images.githubusercontent.com/1500684/160208939-34fe20ed-3146-4f4b-a68a-d82284339c47.png
 [tailwind]: https://tailwindcss.com
-[the-styling-guide]: ../guides/styling
+[the-styling-guide]: ../styling/tailwind
 [prisma]: https://prisma.io
 [http-localhost-3000-posts-admin]: http://localhost:3000/posts/admin
 [mdn-request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
 [mdn-request-form-data]: https://developer.mozilla.org/en-US/docs/Web/API/Request/formData
 [disable-java-script]: https://developer.chrome.com/docs/devtools/javascript/disable
-[the-optimistic-ui-guide]: /guides/optimistic-ui
+[the-pending-ui-guide]: ../discussion/pending-ui
 [somewhere]: https://www.youtube.com/watch?v=dQw4w9WgXcQ

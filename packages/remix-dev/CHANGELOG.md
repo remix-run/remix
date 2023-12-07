@@ -1,5 +1,87 @@
 # `@remix-run/dev`
 
+## 2.3.1
+
+### Patch Changes
+
+- Support `nonce` prop on `LiveReload` component in Vite dev ([#8014](https://github.com/remix-run/remix/pull/8014))
+- Ensure code-split JS files in the server build's assets directory aren't cleaned up after Vite build ([#8042](https://github.com/remix-run/remix/pull/8042))
+- Fix redundant copying of assets from `public` directory in Vite build ([#8039](https://github.com/remix-run/remix/pull/8039))
+  - This ensures that static assets aren't duplicated in the server build directory
+  - This also fixes an issue where the build would break if `assetsBuildDirectory` was deeply nested within the `public` directory
+- Updated dependencies:
+  - `@remix-run/node@2.3.1`
+  - `@remix-run/server-runtime@2.3.1`
+
+## 2.3.0
+
+### Patch Changes
+
+- Support rendering of `LiveReload` component after `Scripts` in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
+- fix(vite): fix "react-refresh/babel" resolution for custom server with pnpm ([#7904](https://github.com/remix-run/remix/pull/7904))
+- Support JSX usage in `.jsx` files without manual `React` import in Vite ([#7888](https://github.com/remix-run/remix/pull/7888))
+- Support optional rendering of `LiveReload` component in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
+- Fix Vite production builds when plugins that have different local state between `development` and `production` modes are present, e.g. `@mdx-js/rollup`. ([#7911](https://github.com/remix-run/remix/pull/7911))
+- Cache resolution of Remix Vite plugin options ([#7908](https://github.com/remix-run/remix/pull/7908))
+- Support Vite 5 ([#7846](https://github.com/remix-run/remix/pull/7846))
+- Allow `process.env.NODE_ENV` values other than `"development"` in Vite dev ([#7980](https://github.com/remix-run/remix/pull/7980))
+- Attach CSS from shared chunks to routes in Vite build ([#7952](https://github.com/remix-run/remix/pull/7952))
+- fix(vite): Let Vite handle serving files outside of project root via `/@fs` ([#7913](https://github.com/remix-run/remix/pull/7913))
+  - This fixes errors when using default client entry or server entry in a pnpm project where those files may be outside of the project root, but within the workspace root.
+  - By default, Vite prevents access to files outside the workspace root (when using workspaces) or outside of the project root (when not using workspaces) unless user explicitly opts into it via Vite's `server.fs.allow`.
+- Improve performance of LiveReload proxy in Vite dev ([#7883](https://github.com/remix-run/remix/pull/7883))
+- fix(vite): deduplicate `@remix-run/react` ([#7926](https://github.com/remix-run/remix/pull/7926))
+  - Pre-bundle Remix dependencies to avoid Remix router duplicates.
+  - Our remix-react-proxy plugin does not process default client and
+  - server entry files since those come from within `node_modules`.
+  - That means that before Vite pre-bundles dependencies (e.g. first time dev server is run) mismatching Remix routers cause `Error: You must render this element inside a <Remix> element`.
+- Fix React Fast Refresh error on load when using `defer` in Vite dev server ([#7842](https://github.com/remix-run/remix/pull/7842))
+- Handle multiple "Set-Cookie" headers in Vite dev server ([#7843](https://github.com/remix-run/remix/pull/7843))
+- Fix flash of unstyled content on initial page load in Vite dev when using a custom Express server ([#7937](https://github.com/remix-run/remix/pull/7937))
+- Emit assets that were only referenced in the server build into the client assets directory in Vite build ([#7892](https://github.com/remix-run/remix/pull/7892), cherry-picked in [`8cd31d65`](https://github.com/remix-run/remix/commit/8cd31d6543ef4c765220fc64dca9bcc9c61ee9eb))
+- Populate `process.env` from `.env` files on the server in Vite dev ([#7958](https://github.com/remix-run/remix/pull/7958))
+- Fix `FutureConfig` type ([#7895](https://github.com/remix-run/remix/pull/7895))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.3.0`
+  - `@remix-run/node@2.3.0`
+
+## 2.2.0
+
+### Minor Changes
+
+- Unstable Vite support for Node-based Remix apps ([#7590](https://github.com/remix-run/remix/pull/7590))
+  - `remix build` 👉 `vite build && vite build --ssr`
+  - `remix dev` 👉 `vite dev`
+  - Other runtimes (e.g. Deno, Cloudflare) not yet supported.
+  - See "Future > Vite" in the Remix Docs for details
+- Add a new `future.v3_fetcherPersist` flag to change the persistence behavior of fetchers. Instead of being immediately cleaned up when unmounted in the UI, fetchers will persist until they return to an `idle` state ([RFC](https://github.com/remix-run/remix/discussions/7698)) ([#7704](https://github.com/remix-run/remix/pull/7704))
+  - For more details, please refer to the [React Router 6.18.0](https://github.com/remix-run/react-router/releases/tag/react-router%406.18.0) release notes
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.2.0`
+  - `@remix-run/node@2.2.0`
+
+## 2.1.0
+
+### Patch Changes
+
+- Sourcemap takes into account special chars in output file ([#7574](https://github.com/remix-run/remix/pull/7574))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.1.0`
+
+## 2.0.1
+
+### Patch Changes
+
+- Fix types for MDX files when using pnpm ([#7491](https://github.com/remix-run/remix/pull/7491))
+- Update `getDependenciesToBundle` to handle ESM packages without main exports ([#7272](https://github.com/remix-run/remix/pull/7272))
+  - Note that these packages must expose `package.json` in their `exports` field so that their path can be resolved
+- Fix server builds where `serverBuildPath` extension is `.cjs` ([#7180](https://github.com/remix-run/remix/pull/7180))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.1`
+
 ## 2.0.0
 
 ### Major Changes
@@ -33,8 +115,8 @@
 - Remove deprecated `--scheme`/`scheme` and `--host`/`host` cli args/flags - use `REMIX_DEV_ORIGIN` instead ([#6962](https://github.com/remix-run/remix/pull/6962))
 - Promote the `future.v2_dev` flag in `remix.config.js` to a root level `dev` config ([#7002](https://github.com/remix-run/remix/pull/7002))
 - Remove `browserBuildDirectory` config option ([#6900](https://github.com/remix-run/remix/pull/6900))
-- Remove `serverBuildDirectory` config option ([#6897](https://github.com/remix-run/remix/pull/- Remove `codemod` command ([#6918](https://github.com/remix-run/remix/pull/6918))
-  6897))
+- Remove `serverBuildDirectory` config option (\[#6897]\(<https://github.com/remix-run/remix/pull/-> Remove `codemod` command ([#6918](https://github.com/remix-run/remix/pull/6918))
+  6897\))
 - Removed support for "magic exports" from the `remix` package. This package can be removed from your `package.json` and you should update all imports to use the source `@remix-run/*` packages: ([#6895](https://github.com/remix-run/remix/pull/6895))
 
   ```diff
@@ -74,11 +156,16 @@
 ### Patch Changes
 
 - Fix importing of PNGs, SVGs, and other assets from packages in `node_modules` ([#6813](https://github.com/remix-run/remix/pull/6813), [#7182](https://github.com/remix-run/remix/pull/7182))
+
 - Decouple the `@remix-run/dev` package from the contents of the `@remix-run/css-bundle` package. ([#6982](https://github.com/remix-run/remix/pull/6982))
+
   - The contents of the `@remix-run/css-bundle` package are now entirely managed by the Remix compiler
   - Even though it's still recommended that your Remix dependencies all share the same version, this change ensures that there are no runtime errors when upgrading `@remix-run/dev` without upgrading `@remix-run/css-bundle`
+
 - Allow non-development modes for `remix watch` ([#7117](https://github.com/remix-run/remix/pull/7117))
+
 - Stop `remix dev` when `esbuild` is not running ([#7158](https://github.com/remix-run/remix/pull/7158))
+
 - Do not interpret JSX in `.ts` files ([#7306](https://github.com/remix-run/remix/pull/7306))
 
   - While JSX is supported in `.js` files for compatibility with existing apps and libraries,
@@ -106,25 +193,41 @@
     ```
 
 - Enhance obsolete flag warning for `future.v2_dev` if it was an object, and prompt users to lift it to the root `dev` config ([#7427](https://github.com/remix-run/remix/pull/7427))
+
 - Allow decorators in app code ([#7176](https://github.com/remix-run/remix/pull/7176))
+
 - Allow JSX in `.js` files during HMR ([#7112](https://github.com/remix-run/remix/pull/7112))
+
 - Kill app server when remix dev terminates ([#7280](https://github.com/remix-run/remix/pull/7280))
+
 - Support dependencies that import polyfill packages for Node built-ins via a trailing slash (e.g. importing the `buffer` package with `var Buffer = require('buffer/').Buffer` as recommended in their README) ([#7198](https://github.com/remix-run/remix/pull/7198))
+
   - These imports were previously marked as external
   - This meant that they were left as dynamic imports in the client bundle and would throw a runtime error in the browser (e.g. `Dynamic require of "buffer/" is not supported`)
+
 - Surface errors when PostCSS config is invalid ([#7391](https://github.com/remix-run/remix/pull/7391))
+
 - Restart dev server when Remix config changes ([#7269](https://github.com/remix-run/remix/pull/7269))
+
 - Remove outdated ESM import warnings ([#6916](https://github.com/remix-run/remix/pull/6916))
+
   - Most of the time these warnings were false positives.
   - Instead, we now rely on built-in Node warnings for ESM imports.
+
 - Do not trigger rebuilds when `.DS_Store` changes ([#7172](https://github.com/remix-run/remix/pull/7172))
+
 - Remove warnings for stabilized flags: ([#6905](https://github.com/remix-run/remix/pull/6905))
+
   - `unstable_cssSideEffectImports`
   - `unstable_cssModules`
   - `unstable_vanillaExtract`
+
 - Allow any mode (`NODE_ENV`) ([#7113](https://github.com/remix-run/remix/pull/7113))
+
 - Replace the deprecated [`xdm`](https://github.com/wooorm/xdm) package with [`@mdx-js/mdx`](https://github.com/mdx-js/mdx) ([#4054](https://github.com/remix-run/remix/pull/4054))
+
 - Write a `version.txt` sentinel file _after_ server build is completely written ([#7299](https://github.com/remix-run/remix/pull/7299))
+
 - Updated dependencies:
   - `@remix-run/server-runtime@2.0.0`
 

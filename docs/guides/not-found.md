@@ -36,7 +36,7 @@ export async function loader({
 }
 ```
 
-Remix will catch the response and send your app down the \[Error Boundary]\[error-boundary] path. It's actually exactly like Remix's automatic [error handling][errors], but instead of receiving an `Error` from `useRouteError()`, you'll receive an object with your response `status`, `statusText`, and extracted `data`.
+Remix will catch the response and send your app down the [Error Boundary][error-boundary] path. It's actually exactly like Remix's automatic [error handling][errors], but instead of receiving an `Error` from `useRouteError()`, you'll receive an object with your response `status`, `statusText`, and extracted `data`.
 
 What's nice about throwing a response is that code in your loader _stops executing_. The rest of your code doesn't have to deal with the chance that the page is defined or not (this is especially handy for TypeScript).
 
@@ -71,6 +71,7 @@ export function ErrorBoundary() {
 }
 ```
 
+[error-boundary]: ../route/error-boundary
 [errors]: ./errors
 [404-status-code]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
 [splat-route]: ./routing#splats

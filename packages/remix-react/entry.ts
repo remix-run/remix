@@ -12,6 +12,7 @@ type SerializedError = {
 export interface RemixContextObject {
   manifest: AssetsManifest;
   routeModules: RouteModules;
+  criticalCss?: string;
   serverHandoffString?: string;
   future: FutureConfig;
   abortDelay?: number;
@@ -24,7 +25,10 @@ export interface EntryContext extends RemixContextObject {
   staticHandlerContext: StaticHandlerContext;
 }
 
-export interface FutureConfig {}
+export interface FutureConfig {
+  v3_fetcherPersist: boolean;
+  v3_relativeSplatPath: boolean;
+}
 
 export interface AssetsManifest {
   entry: {
@@ -35,7 +39,7 @@ export interface AssetsManifest {
   url: string;
   version: string;
   hmr?: {
-    timestamp: number;
+    timestamp?: number;
     runtime: string;
   };
 }

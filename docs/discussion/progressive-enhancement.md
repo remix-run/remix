@@ -75,7 +75,7 @@ When you start to rely on basic features of the web like HTML and URLs, you will
 
 Consider the button from before, with no fundamental change to the code, we can pepper in some client side behavior:
 
-```tsx lines=[4,10-12]
+```tsx lines=[1,4,7,10-12,14]
 import { useFetcher } from "@remix-run/react";
 
 export function AddToCart({ id }) {
@@ -109,7 +109,7 @@ Another example where progressive enhancement leads to simplicity is with the UR
 export function SearchBox() {
   return (
     <Form method="get" action="/search">
-      <input type="text" name="query" />
+      <input type="search" name="query" />
       <SearchIcon />
     </Form>
   );
@@ -118,7 +118,7 @@ export function SearchBox() {
 
 This component doesn't need any state management. It just renders a form that submits to `/search`. When JavaScript loads, Remix will intercept the form submission and handle it client side. This allows you to add your own pending UI, or other client side behavior. Here's the next iteration:
 
-```tsx
+```tsx lines=[1,4-6,11]
 import { useNavigation } from "@remix-run/react";
 
 export function SearchBox() {
@@ -128,7 +128,7 @@ export function SearchBox() {
 
   return (
     <Form method="get" action="/search">
-      <input type="text" name="query" />
+      <input type="search" name="query" />
       {isSearching ? <Spinner /> : <SearchIcon />}
     </Form>
   );
@@ -137,7 +137,7 @@ export function SearchBox() {
 
 No fundamental change in architecture, simply a progressive enhancement for both the user and the code.
 
-See also: [State Management][state-management]
+See also: [State Management][state_management]
 
 [wikipedia]: https://en.wikipedia.org/wiki/Progressive_enhancement
-[state-management]: ./state-management
+[state_management]: ./state-management

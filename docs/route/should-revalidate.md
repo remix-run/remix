@@ -31,6 +31,8 @@ During client-side transitions, Remix will optimize reloading of routes that are
 
 This function lets apps further optimize by returning `false` when Remix is about to reload a route. If you define this function on a route module, Remix will defer to your function on every navigation and every revalidation after an action is called. Again, this makes it possible for your UI to get out of sync with your server if you do it wrong, so be careful.
 
+`fetcher.load` calls also revalidate, but because they load a specific URL, they don't have to worry about route param or URL search param revalidations. `fetcher.load`'s only revalidate by default after action submissions and explicit revalidation requests via [`useRevalidator`][userevalidator].
+
 ## `actionResult`
 
 When a submission causes the revalidation this will be the result of the action—either action data or an error if the action failed. It's common to include some information in the action result to instruct `shouldRevalidate` to revalidate or not.
@@ -106,9 +108,9 @@ export function shouldRevalidate({
   defaultShouldRevalidate,
 }) {
   const currentId = currentParams.slug.split("--")[1];
-  const nextID = nextParams.slug.split("--")[1];
-  if (currentId !== nextID) {
-    return true;
+  const nextId = nextParams.slug.split("--")[1];
+  if (currentId === nextId) {
+    return false;
   }
 
   return defaultShouldRevalidate;
@@ -225,9 +227,9 @@ export async function loader({
 There are a lot of ways to do this, and the rest of the code in the app matters, but ideally you don't think about the UI you're trying to optimize (the search params changing) but instead look at the values your loader cares about. In our case, it only cares about the projectId, so we can check two things:
 
 - did the params stay the same?
-- was it a GET and not a mutation?
+- was it a `GET` and not a mutation?
 
-If the params didn't change, and we didn't do a POST, then we know our loader will return the same data it did last time, so we can opt out of the revalidation when the child route changes the search params.
+If the params didn't change, and we didn't do a `POST`, then we know our loader will return the same data it did last time, so we can opt out of the revalidation when the child route changes the search params.
 
 ```tsx filename=app/routes/$projectId.tsx
 export function shouldRevalidate({
@@ -247,4 +249,5 @@ export function shouldRevalidate({
 }
 ```
 
-[url-params]: ../guides/routing#dynamic-segments
+[url-params]: ../file-conventions/routes#dynamic-segments
+[userevalidator]: ../hooks/use-revalidator

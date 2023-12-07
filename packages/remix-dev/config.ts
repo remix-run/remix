@@ -33,7 +33,10 @@ type Dev = {
   tlsCert?: string;
 };
 
-interface FutureConfig {}
+interface FutureConfig {
+  v3_fetcherPersist: boolean;
+  v3_relativeSplatPath: boolean;
+}
 
 type NodeBuiltinsPolyfillOptions = Pick<
   EsbuildPluginsNodeModulesPolyfillOptions,
@@ -78,7 +81,7 @@ export interface AppConfig {
   publicPath?: string;
 
   /**
-   * Options for `remix dev`. See https://remix.run/docs/en/main/other-api/dev-v2#options-1
+   * Options for `remix dev`. See https://remix.run/other-api/dev#options-1
    */
   dev?: Dev;
 
@@ -137,7 +140,7 @@ export interface AppConfig {
   serverMinify?: boolean;
 
   /**
-   * The output format of the server build. Defaults to "cjs".
+   * The output format of the server build. Defaults to "esm".
    */
   serverModuleFormat?: ServerModuleFormat;
 
@@ -178,9 +181,13 @@ export interface AppConfig {
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  future?: Partial<FutureConfig> & {
-    [propName: string]: never;
-  };
+  /**
+   * Enabled future flags
+   */
+  future?: [keyof FutureConfig] extends [never]
+    ? // Partial<FutureConfig> doesn't work when it's empty so just prevent any keys
+      { [key: string]: never }
+    : Partial<FutureConfig>;
 }
 
 /**
@@ -243,7 +250,7 @@ export interface RemixConfig {
   publicPath: string;
 
   /**
-   * Options for `remix dev`. See https://remix.run/docs/en/main/other-api/dev-v2#options-1
+   * Options for `remix dev`. See https://remix.run/other-api/dev#options-1
    */
   dev: Dev;
 
@@ -310,7 +317,7 @@ export interface RemixConfig {
   serverMode: ServerMode;
 
   /**
-   * The output format of the server build. Defaults to "cjs".
+   * The output format of the server build. Defaults to "esm".
    */
   serverModuleFormat: ServerModuleFormat;
 
@@ -355,12 +362,8 @@ export interface RemixConfig {
  */
 export async function readConfig(
   remixRoot?: string,
-  serverMode = ServerMode.Production
+  serverMode?: ServerMode
 ): Promise<RemixConfig> {
-  if (!isValidServerMode(serverMode)) {
-    throw new Error(`Invalid server mode "${serverMode}"`);
-  }
-
   if (!remixRoot) {
     remixRoot = process.env.REMIX_ROOT || process.cwd();
   }
@@ -391,6 +394,26 @@ export async function readConfig(
         `Error loading Remix config at ${configFile}\n${String(error)}`
       );
     }
+  }
+
+  return await resolveConfig(appConfig, {
+    rootDirectory,
+    serverMode,
+  });
+}
+
+export async function resolveConfig(
+  appConfig: AppConfig,
+  {
+    rootDirectory,
+    serverMode = ServerMode.Production,
+  }: {
+    rootDirectory: string;
+    serverMode?: ServerMode;
+  }
+): Promise<RemixConfig> {
+  if (!isValidServerMode(serverMode)) {
+    throw new Error(`Invalid server mode "${serverMode}"`);
   }
 
   let serverBuildPath = path.resolve(
@@ -436,7 +459,7 @@ export async function readConfig(
   let entryServerFile: string;
   let entryClientFile = userEntryClientFile || "entry.client.tsx";
 
-  let pkgJson = await PackageJson.load(remixRoot);
+  let pkgJson = await PackageJson.load(rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
   if (userEntryServerFile) {
@@ -479,7 +502,7 @@ export async function readConfig(
       let packageManager = detectPackageManager() ?? "npm";
 
       execSync(`${packageManager} install`, {
-        cwd: remixRoot,
+        cwd: rootDirectory,
         stdio: "inherit",
       });
     }
@@ -557,7 +580,10 @@ export async function readConfig(
   // list below, so we can let folks know if they have obsolete flags in their
   // config.  If we ever convert remix.config.js to a TS file, so we get proper
   // typings this won't be necessary anymore.
-  let future: FutureConfig = {};
+  let future: FutureConfig = {
+    v3_fetcherPersist: appConfig.future?.v3_fetcherPersist === true,
+    v3_relativeSplatPath: appConfig.future?.v3_relativeSplatPath === true,
+  };
 
   if (appConfig.future) {
     let userFlags = appConfig.future;

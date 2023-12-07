@@ -5,7 +5,7 @@ order: 1
 
 # Introduction, Technical Explanation
 
-Built on top of [React Router][reactrouter], Remix is four things:
+Built on top of [React Router][react_router], Remix is four things:
 
 1. A compiler
 2. A server-side HTTP handler
@@ -42,7 +42,7 @@ app.all(
 );
 ```
 
-Express (or Node.js) is the actual server, Remix is just a handler on that server. The `"@remix-run/express"` package is called an adapter. Remix handlers are server agnostic. Adapters make them work for a specific server by converting the server's request/response API into the Fetch API on the way in, and then adapting the Fetch Response coming from Remix into the server's response API. Here's some pseudo code of what an adapter does:
+Express (or Node.js) is the actual server, Remix is just a handler on that server. The `"@remix-run/express"` package is called an adapter. Remix handlers are server agnostic. Adapters make them work for a specific server by converting the server's request/response API into the Fetch API on the way in, and then adapting the Fetch Response coming from Remix into the server's response API. Here's some pseudocode of what an adapter does:
 
 ```ts
 export function createRequestHandler({ build }) {
@@ -138,7 +138,7 @@ export async function action({
 
 You can actually use Remix as just a server-side framework without using any browser JavaScript at all. The route conventions for data loading with `loader`, mutations with `action` and HTML forms, and components that render at URLs, can provide the core feature set of a lot of web projects.
 
-In this way, **Remix scales down**. Not every page in your application needs a bunch of JavaScript in the browser and not every user interaction requires any extra flair than the browser's default behaviors. In Remix you can build it the simple way first, and then scale up without changing the fundamental model. Additionally, the majority of the app works before JavaScript loads in the browser, which makes Remix apps resilient to choppy network conditions by design.
+In this way, **Remix scales down**. Not every page in your application needs a bunch of JavaScript in the browser and not every user interaction requires any extra flair than the browser's default behaviors. In Remix, you can build it the simple way first, and then scale up without changing the fundamental model. Additionally, the majority of the app works before JavaScript loads in the browser, which makes Remix apps resilient to choppy network conditions by design.
 
 If you're not familiar with traditional back-end web frameworks, you can think of Remix routes as React components that are already their own API route and already know how to load and submit data to themselves on the server.
 
@@ -146,7 +146,7 @@ If you're not familiar with traditional back-end web frameworks, you can think o
 
 Once Remix has served the document to the browser, it "hydrates" the page with the browser build's JavaScript modules. This is where we talk a lot about Remix "emulating the browser".
 
-When the user clicks a link, instead of making a round trip to the server for the entire document and all of the assets, Remix simply fetches the data for the next page and updates the UI. This has many performance benefits over making a full-document request:
+When the user clicks a link, instead of making a round trip to the server for the entire document and all the assets, Remix simply fetches the data for the next page and updates the UI. This has many performance benefits over making a full-document request:
 
 1. Assets don't need to be re-downloaded (or pulled from cache)
 2. Assets don't need to be parsed by the browser again
@@ -158,7 +158,7 @@ This approach also has UX benefits like not resetting the scroll position of a s
 
 Remix can also prefetch all resources for a page when the user is about to click a link. The browser framework knows about the compiler's asset manifest. It can match the URL of the link, read the manifest, and then prefetch all data, JavaScript modules, and even CSS resources for the next page. This is how Remix apps feel fast even when networks are slow.
 
-Remix then provides client side APIs so you can create rich user experiences without changing the fundamental model of HTML and browsers.
+Remix then provides client side APIs, so you can create rich user experiences without changing the fundamental model of HTML and browsers.
 
 Taking our route module from before, here are a few small, but useful UX improvements to the form that you can only do with JavaScript in the browser:
 
@@ -166,7 +166,7 @@ Taking our route module from before, here are a few small, but useful UX improve
 2. Focus the input when server-side form validation fails
 3. Animate in the error messages
 
-```tsx nocopy lines=[4-6,8-12,23-26,30-32]
+```tsx lines=[4-6,8-12,23-26,30-32] nocopy
 export default function Projects() {
   const projects = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
@@ -213,7 +213,7 @@ Because Remix reaches into the controller level of the backend, it can do this s
 
 And while it doesn't reach as far back into the stack as server-side frameworks like Rails and Laravel, it does reach way farther up the stack into the browser to make the transition from the back end to the front end seamless.
 
-For example. Building a plain HTML form and server-side handler in a back-end heavy web framework is just as easy to do as it is in Remix. But as soon as you want to cross over into an experience with animated validation messages, focus management, and pending UI, it requires a fundamental change in the code. Typically people build an API route and then bring in a splash of client-side JavaScript to connect the two. With Remix you simply add some code around the existing "server side view" without changing how it works fundamentally.
+For example. Building a plain HTML form and server-side handler in a back-end heavy web framework is just as easy to do as it is in Remix. But as soon as you want to cross over into an experience with animated validation messages, focus management, and pending UI, it requires a fundamental change in the code. Typically, people build an API route and then bring in a splash of client-side JavaScript to connect the two. With Remix, you simply add some code around the existing "server side view" without changing how it works fundamentally.
 
 We borrowed an old term and called this Progressive Enhancement in Remix. Start small with a plain HTML form (Remix scales down) and then scale the UI up when you have the time and ambition.
 
@@ -224,4 +224,4 @@ We borrowed an old term and called this Progressive Enhancement in Remix. Start 
 [vercel]: https://vercel.com
 [netlify]: https://netlify.com
 [arc]: https://arc.codes
-[reactrouter]: https://reactrouter.com
+[react_router]: https://reactrouter.com

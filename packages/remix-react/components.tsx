@@ -93,9 +93,10 @@ function useRemixContext(): RemixContextObject {
 /**
  * Defines the prefetching behavior of the link:
  *
+ * - "none": Never fetched
  * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
- * - "none": Never fetched
+ * - "viewport": Fetched when the link is in the viewport
  */
 type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
@@ -272,7 +273,7 @@ export function composeEventHandlers<
  * @see https://remix.run/components/links
  */
 export function Links() {
-  let { manifest, routeModules } = useRemixContext();
+  let { manifest, routeModules, criticalCss } = useRemixContext();
   let { errors, matches: routerMatches } = useDataRouterStateContext();
 
   let matches = errors
@@ -289,6 +290,9 @@ export function Links() {
 
   return (
     <>
+      {criticalCss ? (
+        <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
+      ) : null}
       {keyedLinks.map(({ key, link }) =>
         isPageLinkDescriptor(link) ? (
           <PrefetchPageLinks key={key} {...link} />
@@ -512,8 +516,7 @@ export function Meta() {
         }
 
         if ("tagName" in metaProps) {
-          let tagName = metaProps.tagName;
-          delete metaProps.tagName;
+          let { tagName, ...rest } = metaProps;
           if (!isValidMetaTag(tagName)) {
             console.warn(
               `A meta object uses an invalid tagName: ${tagName}. Expected either 'link' or 'meta'`
@@ -521,7 +524,7 @@ export function Meta() {
             return null;
           }
           let Comp = tagName;
-          return <Comp key={JSON.stringify(metaProps)} {...metaProps} />;
+          return <Comp key={JSON.stringify(rest)} {...rest} />;
         }
 
         if ("title" in metaProps) {
@@ -855,6 +858,11 @@ import(${JSON.stringify(manifest.entry.module)});`;
     <>
       <link
         rel="modulepreload"
+        href={manifest.url}
+        crossOrigin={props.crossOrigin}
+      />
+      <link
+        rel="modulepreload"
         href={manifest.entry.module}
         crossOrigin={props.crossOrigin}
       />
@@ -1027,22 +1035,31 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  *
  * @see https://remix.run/hooks/use-fetcher
  */
-export function useFetcher<TData = AppData>(): FetcherWithComponents<
-  SerializeFrom<TData>
-> {
-  return useFetcherRR();
+export function useFetcher<TData = AppData>(
+  opts: Parameters<typeof useFetcherRR>[0] = {}
+): FetcherWithComponents<SerializeFrom<TData>> {
+  return useFetcherRR(opts);
 }
 
-// Dead Code Elimination magic for production builds.
-// This way devs don't have to worry about doing the NODE_ENV check themselves.
+/**
+ * This component connects your app to the Remix asset server and
+ * automatically reloads the page when files change in development.
+ * In production, it renders null, so you can safely render it always in your root route.
+ *
+ * @see https://remix.run/docs/components/live-reload
+ */
 export const LiveReload =
+  // Dead Code Elimination magic for production builds.
+  // This way devs don't have to worry about doing the NODE_ENV check themselves.
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
+        origin = process.env.REMIX_DEV_ORIGIN,
         port,
         timeoutMs = 1000,
         nonce = undefined,
       }: {
+        origin?: string;
         port?: number;
         timeoutMs?: number;
         nonce?: string;
@@ -1055,18 +1072,16 @@ export const LiveReload =
             dangerouslySetInnerHTML={{
               __html: js`
                 function remixLiveReloadConnect(config) {
-                  let REMIX_DEV_ORIGIN = ${JSON.stringify(
-                    process.env.REMIX_DEV_ORIGIN
-                  )};
+                  let LIVE_RELOAD_ORIGIN = ${JSON.stringify(origin)};
                   let protocol =
-                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).protocol.replace(/^http/, "ws") :
+                    LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).protocol.replace(/^http/, "ws") :
                     location.protocol === "https:" ? "wss:" : "ws:"; // remove in v2?
-                  let hostname = REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).hostname : location.hostname;
+                  let hostname = LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).hostname : location.hostname;
                   let url = new URL(protocol + "//" + hostname + "/socket");
 
                   url.port =
                     ${port} ||
-                    (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);
+                    (LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).port : 8002);
 
                   let ws = new WebSocket(url.href);
                   ws.onmessage = async (message) => {

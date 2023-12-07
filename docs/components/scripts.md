@@ -5,9 +5,9 @@ toc: false
 
 # `<Scripts />`
 
-This component renders the client runtime of your app. You should render it inside the `<body>` of your HTML, usually in `app/root.tsx`.
+This component renders the client runtime of your app. You should render it inside the [`<body>`][body-element] of your HTML, usually in `app/root.tsx`.
 
-```tsx filename=root.tsx lines=[8]
+```tsx filename=app/root.tsx lines=[8]
 import { Scripts } from "@remix-run/react";
 
 export default function Root() {
@@ -24,4 +24,4 @@ export default function Root() {
 
 If you don't render the `<Scripts/>` component, your app will still work like a traditional web app without JavaScript, relying solely on HTML and browser behaviors.
 
-[meta]: ../route/meta
+[body-element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/body

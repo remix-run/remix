@@ -37,7 +37,6 @@ export {
   useHref,
   useLocation,
   useMatch,
-  useMatches,
   useNavigate,
   useNavigation,
   useNavigationType,
@@ -49,8 +48,9 @@ export {
   useRouteError,
   useSearchParams,
   useSubmit,
-  unstable_useBlocker,
+  useBlocker,
   unstable_usePrompt,
+  unstable_useViewTransitionState,
 } from "react-router-dom";
 
 export type {
@@ -72,11 +72,16 @@ export {
   useLoaderData,
   useRouteLoaderData,
   useActionData,
+  useMatches,
   RemixContext as UNSAFE_RemixContext,
 } from "./components";
 
 export type { HtmlLinkDescriptor } from "./links";
 export type {
+  ClientActionFunction,
+  ClientActionFunctionArgs,
+  ClientLoaderFunction,
+  ClientLoaderFunctionArgs,
   MetaArgs,
   MetaDescriptor,
   MetaFunction,
