@@ -278,8 +278,6 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load-balanced scenarios. However, cookie-based sessions may not exceed the browser's max-allowed cookie length (typically 4kb).
 
-Note that `session.id` will always be empty in a cookie session, so if you need some sort of session ID (e.g. to identify anonymous users in your analytics), just create your own ID and pass to `session.set()`.
-
 The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
 ```ts
@@ -295,6 +293,8 @@ const { getSession, commitSession, destroySession } =
     },
   });
 ```
+
+Note that other session implementations store a unique session ID in a cookie and use that ID to look up the session in the source of truth (in-memory, filesystem, DB, etc.).  In a cookie session, the cookie _is_ the source of truth so there is no unique ID out of the box.  If you need to track a unique ID in your cookie session you will need to add an ID value yourself via `session.set()`.
 
 ## `createMemorySessionStorage`
 
