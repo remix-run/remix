@@ -4,7 +4,7 @@ title: Client Data
 
 # Client Data
 
-Remix introduced support for "Client Data" ([RFC][rfc]) in [`v2.4.0`][2.4.0] which allows you to opt-into running route loaders/actions in the browser via [`clientLoader`][clientloader], [`clientAction`][clientaction], and [`HydrateFallback`][hydratefallback] exports from your route.
+Remix introduced support for "Client Data" ([RFC][rfc]) in [`v2.4.0`][2.4.0] which allows you to opt-into running route loaders/actions in the browser via [`clientLoader`][clientloader]/[`clientAction`][clientaction] exports from your route.
 
 These new exports are a bit of a sharp knife and are not recommended as your _primary_ data loading/submission mechanisms - but instead give you a lever to pull on for some of the following advanced use cases:
 
@@ -50,7 +50,7 @@ export async function clientLoader({
 Sometimes, you may want to leverage "Fullstack State" where some of your data comes from the server, and some of your data comes from the browser (i.e., `IndexedDB` or other browser SDKs) - but you can't render your component until you have the combined set of data. You can combine these two data sources as follows:
 
 1. Load the partial data from server `loader` on the document load
-2. Render a `HydrateFallback` during SSR because we don't yet have a full set of data
+2. Export a [`HydrateFallback`][hydratefallback] component to render during SSR because we don't yet have a full set of data
 3. Set `clientLoader.hydrate = true` to load the rest of the data on hydration
 4. Combine the server data with the client data in `clientLoader`
 

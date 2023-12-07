@@ -43,9 +43,11 @@ This function receives the same [`request`][action-request] argument as an [`act
 See also:
 
 - [Client Data Guide][client-data-guide]
+- [clientLoader][clientloader]
 
 [action]: ./action
 [action-params]: ./loader#params
 [action-request]: ./loader#request
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
 [client-data-guide]: ../guides/client-data
+[clientloader]: ./client-loader

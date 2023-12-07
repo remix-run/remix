@@ -83,10 +83,13 @@ This function receives the same [`request`][loader-request] argument as a [`load
 See also:
 
 - [Client Data Guide][client-data-guide]
+- [HydrateFallback][hydratefallback]
+- [clientAction][clientaction]
 
 [loader]: ./loader
 [loader-params]: ./loader#params
 [loader-request]: ./loader#request
+[clientaction]: ./client-action
 [hydratefallback]: ./hydrate-fallback
 [bff]: ../guides/bff
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
