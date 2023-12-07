@@ -305,8 +305,12 @@ async function downloadAndExtractTarball(
   let filePathHasFiles = false;
 
   try {
+    let input = new stream.PassThrough();
+    // Start reading stream into passthrough, don't await to avoid buffering
+    writeReadableStreamToWritable(response.body, input);
     await pipeline(
-      response.body.pipe(gunzip()),
+      input,
+      gunzip(),
       tar.extract(downloadPath, {
         map(header) {
           let originalDirName = header.name.split("/")[0];
@@ -353,6 +357,34 @@ async function downloadAndExtractTarball(
         isGithubUrl ? "GitHub repo." : "tarball."
       }`
     );
+  }
+}
+
+// Copied from remix-node/stream.ts
+async function writeReadableStreamToWritable(
+  stream: ReadableStream,
+  writable: stream.Writable
+) {
+  let reader = stream.getReader();
+  let flushable = writable as { flush?: Function };
+
+  try {
+    while (true) {
+      let { done, value } = await reader.read();
+
+      if (done) {
+        writable.end();
+        break;
+      }
+
+      writable.write(value);
+      if (typeof flushable.flush === "function") {
+        flushable.flush();
+      }
+    }
+  } catch (error: unknown) {
+    writable.destroy(error as Error);
+    throw error;
   }
 }
 
