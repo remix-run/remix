@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.4.0-pre.8
+
+### Patch Changes
+
+- [REMOVE] Fix a few edge cases with client data (throw if server handler doesnt exist, and only return initialData on first loader call) ([#8253](https://github.com/remix-run/remix/pull/8253))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.4.0-pre.8`
+
 ## 2.4.0-pre.7
 
 ### Patch Changes
