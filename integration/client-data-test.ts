@@ -315,7 +315,6 @@ test.describe("Client Data", () => {
             childClientLoader: false,
             childClientLoaderHydrate: false,
           }),
-          // Blow away parent.child.tsx with our own deferred version
           "app/routes/parent.child.tsx": js`
             import * as React from 'react';
             import { defer, json } from '@remix-run/node'
@@ -415,7 +414,6 @@ test.describe("Client Data", () => {
             childClientLoader: false,
             childClientLoaderHydrate: false,
           }),
-          // Blow away parent.child.tsx with our own version
           "app/routes/parent.child.tsx": js`
             import * as React from 'react';
             import { json } from '@remix-run/node';
@@ -470,7 +468,6 @@ test.describe("Client Data", () => {
               childClientLoader: false,
               childClientLoaderHydrate: false,
             }),
-            // Blow away parent.child.tsx with our own version without a server loader
             "app/routes/parent.child.tsx": js`
               import * as React from 'react';
               import { useLoaderData } from '@remix-run/react';
@@ -514,7 +511,6 @@ test.describe("Client Data", () => {
               childClientLoader: false,
               childClientLoaderHydrate: false,
             }),
-            // Blow away parent.child.tsx with our own version without a server loader
             "app/routes/parent.child.tsx": js`
               import * as React from 'react';
               import { useLoaderData } from '@remix-run/react';
@@ -558,7 +554,6 @@ test.describe("Client Data", () => {
               childClientLoader: false,
               childClientLoaderHydrate: false,
             }),
-            // Blow away parent.child.tsx with our own version without a server loader
             "app/routes/parent.child.tsx": js`
               import * as React from 'react';
               import { useLoaderData, useRouteError } from '@remix-run/react';
@@ -602,7 +597,6 @@ test.describe("Client Data", () => {
               childClientLoader: false,
               childClientLoaderHydrate: false,
             }),
-            // Blow away parent.child.tsx with our own version without a server loader
             "app/routes/parent.child.tsx": js`
               import * as React from 'react';
               import { json } from '@remix-run/node';
@@ -668,7 +662,6 @@ test.describe("Client Data", () => {
               childClientLoader: false,
               childClientLoaderHydrate: false,
             }),
-            // Blow away parent.child.tsx with our own version without a server loader
             "app/routes/parent.child.tsx": js`
               import * as React from 'react';
               import { json } from '@remix-run/node';
@@ -831,7 +824,6 @@ test.describe("Client Data", () => {
               childClientLoader: false,
               childClientLoaderHydrate: false,
             }),
-            // Blow away parent.child.tsx with our own version without a server loader
             "app/routes/parent.child.tsx": js`
               import * as React from 'react';
               import { useLoaderData, useRouteError } from '@remix-run/react';
@@ -1040,7 +1032,6 @@ test.describe("Client Data", () => {
               childClientLoader: false,
               childClientLoaderHydrate: false,
             }),
-            // Blow away parent.child.tsx with our own version without a server loader
             "app/routes/parent.child.tsx": js`
               import * as React from 'react';
               import { json } from '@remix-run/node';
@@ -1258,7 +1249,6 @@ test.describe("Client Data", () => {
               childClientLoader: false,
               childClientLoaderHydrate: false,
             }),
-            // Blow away parent.child.tsx with our own version without a server loader
             "app/routes/parent.child.tsx": js`
               import * as React from 'react';
               import { json } from '@remix-run/node';
