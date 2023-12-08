@@ -135,6 +135,15 @@ export function createClientRoutesWithHMRRevalidationOptOut(
   );
 }
 
+function getNoServerHandlerError(type: "action" | "loader", routeId: string) {
+  let fn = type === "action" ? "serverAction()" : "serverLoader()";
+  let msg =
+    `You are trying to call ${fn} on a route that does not have a server ` +
+    `${type} (routeId: "${routeId}")`;
+  console.error(msg);
+  throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
+}
+
 export function createClientRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
@@ -226,7 +235,7 @@ export function createClientRoutes(
       let isHydrationRequest =
         needsRevalidation == null &&
         routeModule.clientLoader != null &&
-        routeModule.clientLoader.hydrate === true;
+        (routeModule.clientLoader.hydrate === true || !route.hasLoader);
 
       dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
@@ -242,12 +251,8 @@ export function createClientRoutes(
               if (isHydrationRequest) {
                 isHydrationRequest = false;
 
-                // Throw an error if a clientLoader tries to call a serverLoader that doesn't exist
-                if (initialData === undefined) {
-                  throw new Error(
-                    `You are trying to call serverLoader() on a route that does " +
-                      "not have a server loader (routeId: "${route.id}")`
-                  );
+                if (!route.hasLoader) {
+                  throw getNoServerHandlerError("loader", route.id);
                 }
 
                 // Otherwise, resolve the hydration clientLoader with the pre-loaded server data
@@ -276,6 +281,9 @@ export function createClientRoutes(
             request,
             params,
             async serverAction() {
+              if (!route.hasAction) {
+                throw getNoServerHandlerError("action", route.id);
+              }
               let result = await fetchServerAction(request);
               let unwrapped = await unwrapServerResponse(result);
               return unwrapped;
@@ -310,6 +318,9 @@ export function createClientRoutes(
             clientLoader({
               ...args,
               async serverLoader() {
+                if (!route.hasLoader) {
+                  throw getNoServerHandlerError("loader", route.id);
+                }
                 let response = await fetchServerLoader(args.request);
                 let result = await unwrapServerResponse(response);
                 return result;
@@ -323,6 +334,9 @@ export function createClientRoutes(
             clientAction({
               ...args,
               async serverAction() {
+                if (!route.hasAction) {
+                  throw getNoServerHandlerError("action", route.id);
+                }
                 let response = await fetchServerAction(args.request);
                 let result = await unwrapServerResponse(response);
                 return result;

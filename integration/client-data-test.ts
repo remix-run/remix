@@ -545,6 +545,50 @@ test.describe("Client Data", () => {
       html = await app.getHtml("main");
       expect(html).toMatch("Loader Data (clientLoader only)");
     });
+
+    test("throws a 400 if you call serverLoader without a server loader", async ({
+      page,
+    }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: {
+            ...getFiles({
+              parentClientLoader: false,
+              parentClientLoaderHydrate: false,
+              childClientLoader: false,
+              childClientLoaderHydrate: false,
+            }),
+            // Blow away parent.child.tsx with our own version without a server loader
+            "app/routes/parent.child.tsx": js`
+              import * as React from 'react';
+              import { useLoaderData, useRouteError } from '@remix-run/react';
+              export async function clientLoader({ serverLoader }) {
+                return await serverLoader();
+              }
+              export default function Component() {
+                return <p>Child</p>;
+              }
+              export function HydrateFallback() {
+                return <p>Loading...</p>;
+              }
+              export function ErrorBoundary() {
+                let error = useRouteError();
+                return <p id="child-error">{error.status} {error.data}</p>;
+              }
+            `,
+          },
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+
+      await app.goto("/parent/child");
+      await page.waitForSelector("#child-error");
+      let html = await app.getHtml("#child-error");
+      expect(html.replace(/\n/g, " ").replace(/ +/g, " ")).toMatch(
+        "400 Error: You are trying to call serverLoader() on a route that does " +
+          'not have a server loader (routeId: "routes/parent.child")'
+      );
+    });
   });
 
   test.describe("clientLoader - lazy route module", () => {
@@ -631,6 +675,51 @@ test.describe("Client Data", () => {
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Server Loader (mutated by client)");
       expect(html).toMatch("Child Server Loader (mutated by client");
+    });
+
+    test("throws a 400 if you call serverLoader without a server loader", async ({
+      page,
+    }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: {
+            ...getFiles({
+              parentClientLoader: false,
+              parentClientLoaderHydrate: false,
+              childClientLoader: false,
+              childClientLoaderHydrate: false,
+            }),
+            // Blow away parent.child.tsx with our own version without a server loader
+            "app/routes/parent.child.tsx": js`
+              import * as React from 'react';
+              import { useLoaderData, useRouteError } from '@remix-run/react';
+              export async function clientLoader({ serverLoader }) {
+                return await serverLoader();
+              }
+              export default function Component() {
+                return <p>Child</p>;
+              }
+              export function HydrateFallback() {
+                return <p>Loading...</p>;
+              }
+              export function ErrorBoundary() {
+                let error = useRouteError();
+                return <p id="child-error">{error.status} {error.data}</p>;
+              }
+            `,
+          },
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+
+      await app.goto("/");
+      await app.clickLink("/parent/child");
+      await page.waitForSelector("#child-error");
+      let html = await app.getHtml("#child-error");
+      expect(html.replace(/\n/g, " ").replace(/ +/g, " ")).toMatch(
+        "400 Error: You are trying to call serverLoader() on a route that does " +
+          'not have a server loader (routeId: "routes/parent.child")'
+      );
     });
   });
 
@@ -795,6 +884,52 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Parent Server Loader (mutated by client)");
       expect(html).toMatch("Child Server Loader (mutated by client)");
       expect(html).toMatch("Child Server Action (mutated by client)");
+    });
+
+    test("throws a 400 if you call serverAction without a server action", async ({
+      page,
+    }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: {
+            ...getFiles({
+              parentClientLoader: false,
+              parentClientLoaderHydrate: false,
+              childClientLoader: false,
+              childClientLoaderHydrate: false,
+            }),
+            // Blow away parent.child.tsx with our own version without a server loader
+            "app/routes/parent.child.tsx": js`
+              import * as React from 'react';
+              import { json } from '@remix-run/node';
+              import { Form, useRouteError } from '@remix-run/react';
+              export async function clientAction({ serverAction }) {
+                return await serverAction();
+              }
+              export default function Component() {
+                return (
+                  <Form method="post">
+                    <button type="submit">Submit</button>
+                  </Form>
+                );
+              }
+              export function ErrorBoundary() {
+                let error = useRouteError();
+                return <p id="child-error">{error.status} {error.data}</p>;
+              }
+            `,
+          },
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/parent/child");
+      app.clickSubmitButton("/parent/child");
+      await page.waitForSelector("#child-error");
+      let html = await app.getHtml("#child-error");
+      expect(html.replace(/\n/g, " ").replace(/ +/g, " ")).toMatch(
+        "400 Error: You are trying to call serverAction() on a route that does " +
+          'not have a server action (routeId: "routes/parent.child")'
+      );
     });
   });
 
@@ -967,6 +1102,54 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Parent Server Loader (mutated by client)");
       expect(html).toMatch("Child Server Loader (mutated by client)");
       expect(html).toMatch("Child Server Action (mutated by client)");
+    });
+
+    test("throws a 400 if you call serverAction without a server action", async ({
+      page,
+    }) => {
+      appFixture = await createAppFixture(
+        await createFixture({
+          files: {
+            ...getFiles({
+              parentClientLoader: false,
+              parentClientLoaderHydrate: false,
+              childClientLoader: false,
+              childClientLoaderHydrate: false,
+            }),
+            // Blow away parent.child.tsx with our own version without a server loader
+            "app/routes/parent.child.tsx": js`
+              import * as React from 'react';
+              import { json } from '@remix-run/node';
+              import { Form, useRouteError } from '@remix-run/react';
+              export async function clientAction({ serverAction }) {
+                return await serverAction();
+              }
+              export default function Component() {
+                return (
+                  <Form method="post">
+                    <button type="submit">Submit</button>
+                  </Form>
+                );
+              }
+              export function ErrorBoundary() {
+                let error = useRouteError();
+                return <p id="child-error">{error.status} {error.data}</p>;
+              }
+            `,
+          },
+        })
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.goto("/parent/child");
+      await page.waitForSelector("form");
+      app.clickSubmitButton("/parent/child");
+      await page.waitForSelector("#child-error");
+      let html = await app.getHtml("#child-error");
+      expect(html.replace(/\n/g, " ").replace(/ +/g, " ")).toMatch(
+        "400 Error: You are trying to call serverAction() on a route that does " +
+          'not have a server action (routeId: "routes/parent.child")'
+      );
     });
   });
 });
