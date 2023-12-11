@@ -154,7 +154,7 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 +/env.d.ts
 ```
 
-👉 **Replace `@remix-run/dev` types with `vite/client`**
+👉 **Replace `@remix-run/dev` types with `vite/client` in `env.d.ts`**
 
 ```diff filename=env.d.ts
 -/// <reference types="@remix-run/dev" />
@@ -162,7 +162,7 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 /// <reference types="@remix-run/node" />
 ```
 
-👉 **Replace reference to `remix.env.d.ts` in `tsconfig.json`**
+👉 **Replace reference to `remix.env.d.ts` with `env.d.ts` in `tsconfig.json`**
 
 ```diff filename=tsconfig.json
 - "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
