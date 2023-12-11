@@ -147,11 +147,19 @@ export default defineConfig({
 
 Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
 
-👉 **Replace your `remix.env.d.ts` with a new `env.d.ts` file**
+👉 **Rename `remix.env.d.ts` to `env.d.ts`**
 
-```ts filename=env.d.ts
+```diff nonumber
+-/remix.env.d.ts
++/env.d.ts
+```
+
+👉 **Replace `@remix-run/dev` types with `vite/client`**
+
+```diff filename=env.d.ts
+-/// <reference types="@remix-run/dev" />
++/// <reference types="vite/client" />
 /// <reference types="@remix-run/node" />
-/// <reference types="vite/client" />
 ```
 
 👉 **Replace reference to `remix.env.d.ts` in `tsconfig.json`**
@@ -159,6 +167,13 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 ```diff filename=tsconfig.json
 - "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
 + "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
+```
+
+👉 **Ensure `module` and `moduleResolution` fields are set correctly in `tsconfig.json`**
+
+```json filename=tsconfig.json
+"module": "ESNext",
+"moduleResolution": "Bundler",
 ```
 
 #### Migrating from Remix App Server
