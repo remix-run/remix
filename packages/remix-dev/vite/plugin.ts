@@ -948,8 +948,11 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         if (!importer) throw Error(`Importer not found: ${id}`);
 
+        let vite = importViteEsmSync();
         let pluginConfig = await resolvePluginConfig();
-        let importerShort = path.relative(pluginConfig.rootDirectory, importer);
+        let importerShort = vite.normalizePath(
+          path.relative(pluginConfig.rootDirectory, importer)
+        );
         let isRoute = getRoute(pluginConfig, importer);
 
         if (isRoute) {
@@ -974,10 +977,11 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }
 
         let importedBy = path.parse(importerShort);
-        let ext = importedBy.ext === ".jsx" ? ".js" : ".ts";
-        let dotServerFile = path.join(
-          importedBy.dir,
-          importedBy.name + ".server" + ext
+        let dotServerFile = vite.normalizePath(
+          path.join(
+            importedBy.dir,
+            importedBy.name + ".server" + importedBy.ext
+          )
         );
 
         throw Error(

@@ -135,8 +135,10 @@ test.describe("Vite / route / server-only module referenced by client", () => {
 
         `    '${specifier}' imported by route 'app/routes/_index.tsx'`,
 
-        "  The only route exports that can reference server-only modules are: `loader`, `action`, `headers`",
-        `  but other route exports in 'app/routes/_index.tsx' depend on '${specifier}'.`,
+        "  The only route exports that can reference server-only modules are:",
+        "    `loader`, `action`, `headers`",
+
+        `  But other route exports in 'app/routes/_index.tsx' depend on '${specifier}'.`,
 
         "  For more see https://remix.run/docs/en/main/discussion/server-vs-client",
       ].forEach(expect(stderr).toMatch);
@@ -204,11 +206,12 @@ test.describe("Vite / non-route / server-only module referenced by client", () =
 
         "  * Otherwise:",
 
-        "    Keep client-safe code in 'app/reexport-server-only.ts'",
-        "    and move server-only code:",
+        `    - Keep client-safe code in 'app/reexport-server-only.ts'`,
+        `    - And move server-only code to a \`.server\` file`,
+        `      e.g. 'app/reexport-server-only.server.ts'`,
 
-        "    - Into a `.server` directory   e.g. 'app/.server/utils.ts'",
-        "    - Or into a `.server` file     e.g. 'app/reexport-server-only.server.ts'",
+        "  If you have lots of `.server` files, try using",
+        "  a `.server` directory e.g. 'app/.server'",
 
         "For more, see https://remix.run/docs/en/main/future/vite#server-code-not-tree-shaken-in-development",
       ].forEach(expect(stderr).toMatch);
