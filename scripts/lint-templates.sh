@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# Helper script for us to use to validate template lint setups outside of the
+# monorepo.  This script will, for each template in your local Remix repo clone:
+#
+# * Install an app via create-remix for the template (into a temp/ directory)
+# * Install deps
+# * npm run lint
+#
+# Usage:
+#   lint-templates.sh [path-to-remix-repo]
+#
+# So from a sibling folder to the remix repo:
+#   ../remix/scripts/lint-templates.sh ../remix
+
 REPO_DIR="${1}"
 
 if [ "${REPO_DIR}" == "" ]; then
