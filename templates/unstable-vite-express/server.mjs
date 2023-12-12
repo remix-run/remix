@@ -1,4 +1,3 @@
-import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
 import { createRequestHandler } from "@remix-run/express";
 import { installGlobals } from "@remix-run/node";
 import express from "express";
@@ -34,7 +33,7 @@ app.all(
   "*",
   createRequestHandler({
     build: vite
-      ? () => vite.ssrLoadModule(unstable_viteServerBuildModuleId)
+      ? () => vite.ssrLoadModule("virtual:remix/server-build")
       : await import("./build/server/index.js"),
   })
 );

@@ -216,20 +216,15 @@ export default defineConfig({
 If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
 This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
 
+You can then load the virtual module named `"virtual:remix/server-build"` during development to create a Vite-based request handler.
+
 You'll also need to update your server code to reference the new build output paths, which are `build/server` for the server build and `build/client` for client assets.
-
-Remix exposes the server build's module ID so that it can be loaded dynamically in your request handler during development via `vite.ssrLoadModule`.
-
-```ts
-import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
-```
 
 For example, if you were using Express, here's how you could do it.
 
 👉 **Update your `server.mjs` file**
 
 ```ts filename=server.mjs lines=[1,8-17,21-24,32,39-44]
-import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
 import { createRequestHandler } from "@remix-run/express";
 import { installGlobals } from "@remix-run/node";
 import express from "express";
@@ -269,9 +264,7 @@ app.all(
   createRequestHandler({
     build: vite
       ? () =>
-          vite.ssrLoadModule(
-            unstable_viteServerBuildModuleId
-          )
+          vite.ssrLoadModule("virtual:remix/server-build")
       : await import("./build/server/index.js"),
   })
 );
