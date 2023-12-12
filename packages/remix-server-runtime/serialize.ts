@@ -9,9 +9,9 @@ import { type Expect, type Equal } from "./typecheck";
 
 // prettier-ignore
 /**
- * Infer JSON serialized data type returned by a loader or action, while avoiding
- * deserialization if the input type if a clientLoader/clientAction that returns
- * a non-Response
+ * Infer JSON serialized data type returned by a loader or action, while
+ * avoiding deserialization if the input type if it's a clientLoader or
+ * clientAction that returns a non-Response
  *
  * For example:
  * `type LoaderData = SerializeFrom<typeof loader>`
