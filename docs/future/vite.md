@@ -4,11 +4,6 @@ title: Vite (Unstable)
 
 # Vite (Unstable)
 
-<docs-warning>
-  Vite support is currently unstable and only intended to gather early feedback.
-  We don't yet recommend using this in production.
-</docs-warning>
-
 [Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we're currently exploring the use of Vite as an alternative compiler to esbuild.
 
 **Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Yet Supported)
