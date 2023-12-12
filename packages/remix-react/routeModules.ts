@@ -9,11 +9,7 @@ import type {
   Location,
   ShouldRevalidateFunction,
 } from "react-router-dom";
-import type {
-  LoaderFunction,
-  SerializeFrom,
-  SerializeFromImpl,
-} from "@remix-run/server-runtime";
+import type { LoaderFunction, SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
@@ -46,7 +42,7 @@ export type ClientActionFunction = (
  * Arguments passed to a route `clientAction` function
  */
 export type ClientActionFunctionArgs = RRActionFunctionArgs<undefined> & {
-  serverAction: <T = AppData>() => Promise<SerializeFromImpl<T>>;
+  serverAction: <T = AppData>() => Promise<SerializeFrom<T>>;
 };
 
 /**
@@ -62,7 +58,7 @@ export type ClientLoaderFunction = ((
  * Arguments passed to a route `clientLoader` function
  */
 export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
-  serverLoader: <T = AppData>() => Promise<SerializeFromImpl<T>>;
+  serverLoader: <T = AppData>() => Promise<SerializeFrom<T>>;
 };
 
 /**
