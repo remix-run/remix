@@ -1,26 +1,23 @@
-import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
 import { createRequestHandler } from "@remix-run/express";
 import { installGlobals } from "@remix-run/node";
 import express from "express";
 
 installGlobals();
 
-const vite =
+const viteDevServer =
   process.env.NODE_ENV === "production"
     ? undefined
-    : await import("vite").then(({ createServer }) =>
-        createServer({
-          server: {
-            middlewareMode: true,
-          },
+    : await import("vite").then((vite) =>
+        vite.createServer({
+          server: { middlewareMode: true },
         })
       );
 
 const app = express();
 
 // handle asset requests
-if (vite) {
-  app.use(vite.middlewares);
+if (viteDevServer) {
+  app.use(viteDevServer.middlewares);
 } else {
   app.use(
     "/assets",
@@ -33,8 +30,8 @@ app.use(express.static("build/client", { maxAge: "1h" }));
 app.all(
   "*",
   createRequestHandler({
-    build: vite
-      ? () => vite.ssrLoadModule(unstable_viteServerBuildModuleId)
+    build: viteDevServer
+      ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
       : await import("./build/server/index.js"),
   })
 );

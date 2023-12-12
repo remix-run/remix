@@ -41,26 +41,25 @@ export const EXPRESS_SERVER = (args: {
   loadContext?: Record<string, unknown>;
 }) =>
   String.raw`
-    import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
     import { createRequestHandler } from "@remix-run/express";
     import { installGlobals } from "@remix-run/node";
     import express from "express";
 
     installGlobals();
 
-    let vite =
+    let viteDevServer =
       process.env.NODE_ENV === "production"
         ? undefined
-        : await import("vite").then(({ createServer }) =>
-            createServer({
+        : await import("vite").then((vite) =>
+            vite.createServer({
               server: { middlewareMode: true },
             })
           );
 
     const app = express();
 
-    if (vite) {
-      app.use(vite.middlewares);
+    if (viteDevServer) {
+      app.use(viteDevServer.middlewares);
     } else {
       app.use(
         "/assets",
@@ -72,8 +71,8 @@ export const EXPRESS_SERVER = (args: {
     app.all(
       "*",
       createRequestHandler({
-        build: vite
-          ? () => vite.ssrLoadModule(unstable_viteServerBuildModuleId)
+        build: viteDevServer
+          ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
           : await import("./build/index.js"),
         getLoadContext: () => (${JSON.stringify(args.loadContext ?? {})}),
       })
