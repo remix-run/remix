@@ -33,7 +33,6 @@ module.exports = {
         "plugin:react/jsx-runtime",
         "plugin:react-hooks/recommended",
         "plugin:jsx-a11y/recommended",
-        "prettier",
       ],
       settings: {
         react: {
@@ -43,12 +42,6 @@ module.exports = {
         linkComponents: [
           { name: "Link", linkAttribute: "to" },
           { name: "NavLink", linkAttribute: "to" },
-        ],
-      },
-      rules: {
-        "react/jsx-no-leaked-render": [
-          "warn",
-          { validStrategies: ["ternary"] },
         ],
       },
     },
@@ -71,26 +64,14 @@ module.exports = {
       },
       extends: [
         "plugin:@typescript-eslint/recommended",
-        "plugin:@typescript-eslint/stylistic",
         "plugin:import/recommended",
         "plugin:import/typescript",
-        "prettier",
       ],
-      rules: {
-        "import/order": [
-          "error",
-          {
-            alphabetize: { caseInsensitive: true, order: "asc" },
-            groups: ["builtin", "external", "internal", "parent", "sibling"],
-            "newlines-between": "always",
-          },
-        ],
-      },
     },
 
     // Node
     {
-      files: [".eslintrc.js", "remix.config.js"],
+      files: [".eslintrc.js"],
       env: {
         node: true,
       },
