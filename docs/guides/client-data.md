@@ -41,7 +41,7 @@ export async function clientLoader({
   request,
 }: ClientLoaderFunctionArgs) {
   const data = await fetchApiFromClient({ request }); // (2)
-  return json(data);
+  return data;
 }
 ```
 
@@ -76,10 +76,10 @@ export async function clientLoader({
     serverLoader(),
     getClientData(request),
   ]);
-  return json({
+  return {
     ...serverData, // (4)
     ...clientData, // (4)
-  });
+  };
 }
 clientLoader.hydrate = true; // (3)
 
@@ -129,10 +129,10 @@ export async function clientLoader({
     serverLoader(),
     getClientData(request),
   ]);
-  return json({
+  return {
     ...serverData, // (4)
     ...clientData, // (4)
-  });
+  };
 }
 // Note: you do not have to set this explicitly - it is implied if there is no `loader`
 clientLoader.hydrate = true;
@@ -195,17 +195,17 @@ export async function clientLoader({
     isInitialRequest = false;
     const serverData = await serverLoader();
     cache.set(cacheKey, serverData); // (2)
-    return json(serverData);
+    return serverData;
   }
 
   const cachedData = await cache.get(cacheKey);
   if (cachedData) {
-    return json(cachedData); // (3)
+    return cachedData; // (3)
   }
 
   const serverData = await serverLoader();
   cache.set(cacheKey, serverData);
-  return json(serverData);
+  return serverData;
 }
 clientLoader.hydrate = true; // (2)
 
@@ -216,7 +216,7 @@ export async function clientAction({
   const cacheKey = generateKey(request);
   cache.delete(cacheKey); // (4)
   const serverData = await serverAction();
-  return json(serverData);
+  return serverData;
 }
 ```
 
