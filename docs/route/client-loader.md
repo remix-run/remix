@@ -19,7 +19,7 @@ export const clientLoader = async ({
   // And/or fetch data on the client
   const data = getDataFromClient();
   // Return the data to expose through useLoaderData()
-  return data;
+  return json(data);
 };
 ```
 
@@ -47,7 +47,7 @@ export async function loader() {
 export async function clientLoader() {
   // During client-side navigations, we hit our exposed API endpoints directly
   const data = await fetchDataFromApi();
-  return data;
+  return json(data);
 }
 
 export default function Component() {

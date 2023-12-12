@@ -16,7 +16,7 @@ export const clientAction = async ({
 }: ClientActionFunctionArgs) => {
   invalidateClientSideCache();
   const data = await serverAction();
-  return data;
+  return json(data);
 };
 ```
 
