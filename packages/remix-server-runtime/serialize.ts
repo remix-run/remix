@@ -35,7 +35,7 @@ export type SerializeFrom<T> = (
  * For example:
  * `type LoaderData = SerializeFrom<typeof loader>`
  */
-type SerializeFromImpl<T> =
+export type SerializeFromImpl<T> =
   T extends (...args: any[]) => infer Output ? Serialize<Awaited<Output>> :
   // Back compat: manually defined data type, not inferred from loader nor action
   Jsonify<Awaited<T>>
