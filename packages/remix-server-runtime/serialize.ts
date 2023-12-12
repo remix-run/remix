@@ -22,8 +22,8 @@ export type SerializeFrom<T> = (
       ? SerializeFromImpl<T>
       : Parameters<T> extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs]
         ? Output extends Promise<TypedDeferredData<infer D>>
-          ? D
-          : Awaited<Output>
+          ? D // client defer() is just the raw data
+          : Awaited<Output> // client naked object is just the object
         : SerializeFromImpl<T>
     : SerializeFromImpl<T>
 );
