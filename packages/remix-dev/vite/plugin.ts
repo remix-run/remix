@@ -962,8 +962,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               "",
               `    '${id}' imported by route '${importerShort}'`,
               "",
-              `  The only route exports that can reference server-only modules are: ${serverOnlyExports}`,
-              `  but other route exports in '${importerShort}' depend on '${id}'.`,
+              `  The only route exports that can reference server-only modules are:`,
+              `    ${serverOnlyExports}`,
+              "",
+              `  But other route exports in '${importerShort}' depend on '${id}'.`,
               "",
               "  For more see https://remix.run/docs/en/main/discussion/server-vs-client",
               "",
@@ -973,13 +975,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
         let importedBy = path.parse(importerShort);
         let ext = importedBy.ext === ".jsx" ? ".js" : ".ts";
-        let dotServerDir = path
-          .join(
-            path.basename(pluginConfig.appDirectory),
-            ".server",
-            "utils" + ext
-          )
-          .replace(/\.jsx$/, ".js");
         let dotServerFile = path.join(
           importedBy.dir,
           importedBy.name + ".server" + ext
@@ -991,17 +986,19 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             "",
             `    '${id}' imported by '${importerShort}'`,
             "",
+
             `  * If all code in '${importerShort}' is server-only:`,
             "",
             `    Rename it to '${dotServerFile}'`,
             "",
             `  * Otherwise:`,
             "",
-            `    Keep client-safe code in '${importerShort}'`,
-            `    and move server-only code:`,
+            `    - Keep client-safe code in '${importerShort}'`,
+            `    - And move server-only code to a \`.server\` file`,
+            `      e.g. '${dotServerFile}'`,
             "",
-            `    - Into a \`.server\` directory   e.g. '${dotServerDir}'`,
-            `    - Or into a \`.server\` file     e.g. '${dotServerFile}'`,
+            "  If you have lots of `.server` files, try using",
+            "  a `.server` directory e.g. 'app/.server'",
             "",
             "  For more, see https://remix.run/docs/en/main/future/vite#server-code-not-tree-shaken-in-development",
             "",
