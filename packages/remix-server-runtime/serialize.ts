@@ -1,7 +1,32 @@
 import type { Jsonify } from "./jsonify";
 import type { TypedDeferredData, TypedResponse } from "./responses";
+import type {
+  ClientActionFunctionArgs,
+  ClientLoaderFunctionArgs,
+} from "./routeModules";
 import { expectType } from "./typecheck";
 import { type Expect, type Equal } from "./typecheck";
+
+// prettier-ignore
+/**
+ * Infer JSON serialized data type returned by a loader or action, while avoiding
+ * deserialization if the input type if a clientLoader/clientAction that returns
+ * a non-Response
+ *
+ * For example:
+ * `type LoaderData = SerializeFrom<typeof loader>`
+ */
+export type SerializeFrom<T> = (
+  T extends (...args: any[]) => infer Output
+    ? Output extends Promise<TypedResponse>
+      ? SerializeFromImpl<T>
+      : Parameters<T> extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs]
+        ? Output extends Promise<TypedDeferredData<infer D>>
+          ? D
+          : Awaited<Output>
+        : SerializeFromImpl<T>
+    : SerializeFromImpl<T>
+);
 
 // prettier-ignore
 /**
@@ -10,7 +35,7 @@ import { type Expect, type Equal } from "./typecheck";
  * For example:
  * `type LoaderData = SerializeFrom<typeof loader>`
  */
-export type SerializeFrom<T> =
+type SerializeFromImpl<T> =
   T extends (...args: any[]) => infer Output ? Serialize<Awaited<Output>> :
   // Back compat: manually defined data type, not inferred from loader nor action
   Jsonify<Awaited<T>>
