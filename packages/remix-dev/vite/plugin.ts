@@ -924,7 +924,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       },
       async load(id) {
         switch (id) {
-          case VirtualModule.resolve(serverEntryId): {
+          case VirtualModule.resolve(serverBuildId): {
             return await getServerEntry();
           }
           case VirtualModule.resolve(serverManifestId): {
