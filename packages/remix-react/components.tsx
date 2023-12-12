@@ -53,6 +53,7 @@ import type {
   MetaMatch,
   MetaMatches,
   RouteHandle,
+  ClientLoaderFunctionArgs,
 } from "./routeModules";
 
 function useDataRouterContext() {
@@ -1000,13 +1001,23 @@ export function useMatches(): UIMatch[] {
   return useMatchesRR() as UIMatch[];
 }
 
+// prettier-ignore
+type InferDataType<T = AppData> =
+  T extends (...args: any[]) => unknown
+    ? Parameters<T> extends [ClientLoaderFunctionArgs]
+      ? ReturnType<T> extends Promise<Response>
+        ? SerializeFrom<T>
+        : Awaited<ReturnType<T>>
+      : SerializeFrom<T>
+    : SerializeFrom<T>
+
 /**
  * Returns the JSON parsed data from the current route's `loader`.
  *
  * @see https://remix.run/hooks/use-loader-data
  */
-export function useLoaderData<T = AppData>(): SerializeFrom<T> {
-  return useLoaderDataRR() as SerializeFrom<T>;
+export function useLoaderData<T = AppData>(): InferDataType<T> {
+  return useLoaderDataRR() as InferDataType<T>;
 }
 
 /**
@@ -1025,8 +1036,8 @@ export function useRouteLoaderData<T = AppData>(
  *
  * @see https://remix.run/hooks/use-action-data
  */
-export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
-  return useActionDataRR() as SerializeFrom<T> | undefined;
+export function useActionData<T = AppData>(): InferDataType<T> | undefined {
+  return useActionDataRR() as InferDataType<T> | undefined;
 }
 
 /**
