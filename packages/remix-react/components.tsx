@@ -54,6 +54,7 @@ import type {
   MetaMatches,
   RouteHandle,
   ClientLoaderFunctionArgs,
+  ClientActionFunctionArgs,
 } from "./routeModules";
 
 function useDataRouterContext() {
@@ -1001,15 +1002,19 @@ export function useMatches(): UIMatch[] {
   return useMatchesRR() as UIMatch[];
 }
 
+// Deserialize unless it's a clientLoader/clientAction returning a non-Response
 // prettier-ignore
-type InferDataType<T = AppData> =
+type InferDataType<T = AppData> = (
   T extends (...args: any[]) => unknown
-    ? Parameters<T> extends [ClientLoaderFunctionArgs]
-      ? ReturnType<T> extends Promise<Response>
+    ? ReturnType<T> extends Promise<Response>
+      ? Parameters<T> extends [ClientLoaderFunctionArgs]
         ? SerializeFrom<T>
-        : Awaited<ReturnType<T>>
+        : Parameters<T> extends [ClientActionFunctionArgs]
+          ? SerializeFrom<T>
+          : Awaited<ReturnType<T>>
       : SerializeFrom<T>
     : SerializeFrom<T>
+);
 
 /**
  * Returns the JSON parsed data from the current route's `loader`.
