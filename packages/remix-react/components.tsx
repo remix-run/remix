@@ -1007,12 +1007,10 @@ export function useMatches(): UIMatch[] {
 type InferDataType<T = AppData> = (
   T extends (...args: any[]) => unknown
     ? ReturnType<T> extends Promise<Response>
-      ? Parameters<T> extends [ClientLoaderFunctionArgs]
-        ? SerializeFrom<T>
-        : Parameters<T> extends [ClientActionFunctionArgs]
-          ? SerializeFrom<T>
-          : Awaited<ReturnType<T>>
-      : SerializeFrom<T>
+      ? SerializeFrom<T>
+      : Parameters<T> extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs]
+        ? Awaited<ReturnType<T>>
+        : SerializeFrom<T>
     : SerializeFrom<T>
 );
 
