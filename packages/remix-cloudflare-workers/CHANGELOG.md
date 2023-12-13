@@ -1,81 +1,11 @@
 # `@remix-run/cloudflare-workers`
 
-## 2.4.0-pre.10
+## 2.4.0
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.10`
-
-## 2.4.0-pre.9
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.9`
-
-## 2.4.0-pre.8
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.8`
-
-## 2.4.0-pre.7
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.7`
-
-## 2.4.0-pre.6
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.6`
-
-## 2.4.0-pre.5
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.5`
-
-## 2.4.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.4`
-
-## 2.4.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.3`
-
-## 2.4.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.2`
-
-## 2.4.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.1`
-
-## 2.4.0-pre.0
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.4.0-pre.0`
+  - `@remix-run/cloudflare@2.4.0`
 
 ## 2.3.1
 
