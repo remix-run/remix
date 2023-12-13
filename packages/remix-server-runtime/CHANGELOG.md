@@ -31,7 +31,6 @@
 
 - Fix flash of unstyled content for non-Express custom servers in Vite dev ([#8076](https://github.com/remix-run/remix/pull/8076))
 - Pass request handler errors to `vite.ssrFixStacktrace` in Vite dev to ensure stack traces correctly map to the original source code ([#8066](https://github.com/remix-run/remix/pull/8066))
-- \[REMOVE] Add missing `hasClientAction`/`hasClientLoader` to `EntryRoute` type ([#8248](https://github.com/remix-run/remix/pull/8248))
 
 ## 2.3.1
 

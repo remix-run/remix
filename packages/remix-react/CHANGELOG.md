@@ -27,13 +27,6 @@
 
 ### Patch Changes
 
-- \[REMOVE] Enhance inferred types to avoid deserialization for client data functions ([#8269](https://github.com/remix-run/remix/pull/8269))
-- \[Remove] Bump router ([#8227](https://github.com/remix-run/remix/pull/8227))
-- \[REMOVE] Fix a few edge cases with client data (throw if server handler doesnt exist, and only return initialData on first loader call) ([#8253](https://github.com/remix-run/remix/pull/8253))
-- \[REMOVE] Lock into stable router version ([#8277](https://github.com/remix-run/remix/pull/8277))
-- \[REMOVE] Minor client data updates ([#8236](https://github.com/remix-run/remix/pull/8236))
-- \[Remove] Bump router ([`49a850c20`](https://github.com/remix-run/remix/commit/49a850c2067592a301fdde78c2bad14a88c7e444))
-- \[Remove] Bump router ([`b0edb429f`](https://github.com/remix-run/remix/commit/b0edb429ff189300a934b5b9ddebb4af37e6f64e))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.4.0`
 

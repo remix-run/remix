@@ -211,14 +211,12 @@ Remix now enforces strict route exports, and will will throw an error if you hav
 
 - `@remix-run/dev`: Pass request handler errors to `vite.ssrFixStacktrace` in Vite dev to ensure stack traces correctly map to the original source code ([#8066](https://github.com/remix-run/remix/pull/8066))
 - `@remix-run/dev`: Vite: Preserve names for exports from `.client` imports ([#8200](https://github.com/remix-run/remix/pull/8200))
-  - Unlike `.server` modules, the main idea is not to prevent code from leaking into the server build
-    since the client build is already public. Rather, the goal is to isolate the SSR render from client-only code.
-    Routes need to import code from `.client` modules without compilation failing and then rely on runtime checks
-    to determine if the code is running on the server or client
-  - Replacing `.client` modules with empty modules would cause the build to fail as ESM named imports are statically analyzed.
-    So instead, we preserve the named export but replace each exported value with an empty object.
-    That way, the import is valid at build time and the standard runtime checks can be used to determine if then
-    code is running on the server or client
+  - Unlike `.server` modules, the main idea is not to prevent code from leaking into the server build since the client build is already public
+  - Rather, the goal is to isolate the SSR render from client-only code
+  - Routes need to import code from `.client` modules without compilation failing and then rely on runtime checks to determine if the code is running on the server or client
+  - Replacing `.client` modules with empty modules would cause the build to fail as ESM named imports are statically analyzed
+    - So instead, we preserve the named export but replace each exported value with an empty object
+    - That way, the import is valid at build time and the standard runtime checks can be used to determine if then code is running on the server or client
 - `@remix-run/dev`: Add `@remix-run/node` to Vite's `optimizeDeps.include` array ([#8177](https://github.com/remix-run/remix/pull/8177))
 - `@remix-run/dev`: Improve Vite plugin performance ([#8121](https://github.com/remix-run/remix/pull/8121))
   - Parallelize detection of route module exports
@@ -241,10 +239,10 @@ Remix now enforces strict route exports, and will will throw an error if you hav
     ```
 
 - `@remix-run/dev`: Vite: Errors at build-time when client imports .server default export ([#8184](https://github.com/remix-run/remix/pull/8184))
-  - Remix already stripped .server file code before ensuring that server code never makes it into the client.
+  - Remix already stripped .server file code before ensuring that server code never makes it into the client
   - That results in errors when client code tries to import server code, which is exactly what we want!
-  - But those errors were happening at runtime for default imports.
-  - A better experience is to have those errors happen at build-time so that you guarantee that your users won't hit them.
+  - But those errors were happening at runtime for default imports
+  - A better experience is to have those errors happen at build-time so that you guarantee that your users won't hit them
 - `@remix-run/dev`: Fix `request instanceof Request` checks when using Vite dev server ([#8062](https://github.com/remix-run/remix/pull/8062))
 
 ### Updated Dependencies
@@ -271,7 +269,7 @@ Remix now enforces strict route exports, and will will throw an error if you hav
 - [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-server-runtime/CHANGELOG.md#240)
 - [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.4.0/packages/remix-testing/CHANGELOG.md#240)
 
-**Full Changelog**: [`v2.3.Y...v2.4.0`](https://github.com/remix-run/remix/compare/remix@2.3.1...remix@2.4.0)
+**Full Changelog**: [`v2.3.1...v2.4.0`](https://github.com/remix-run/remix/compare/remix@2.3.1...remix@2.4.0)
 
 ## v2.3.1
 
