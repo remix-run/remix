@@ -20,7 +20,7 @@ export type SerializeFrom<T> =
   T extends (...args: any[]) => infer Output ?
     Parameters<T> extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ?
       // Client data functions may not serialize
-      SerializeClientDataFunction<Awaited<Output>>
+      SerializeClient<Awaited<Output>>
     :
     // Serialize responses
     Serialize<Awaited<Output>>
@@ -29,30 +29,31 @@ export type SerializeFrom<T> =
   Jsonify<Awaited<T>>
 ;
 
+// note: cannot be inlined as logic requires union distribution
 // prettier-ignore
-type SerializeClientDataFunction<Output> =
-  Output extends TypedResponse<infer J> ? Serialize<J> :
-  Output extends TypedDeferredData<infer D> ? MergeDeferAndJsonNoSerialize<D> :
+type SerializeClient<Output> =
+  Output extends TypedDeferredData<infer U> ?
+    // top-level promises
+    & {
+        [K in keyof U as K extends symbol
+          ? never
+          : Promise<any> extends U[K]
+          ? K
+          : never]: DeferValueClient<U[K]>; // use generic to distribute over union
+    }
+    // non-promises
+    & {
+      [K in keyof U as Promise<any> extends U[K] ? never : K]: U[K];
+    }
+  :
+  Output extends TypedResponse<infer U> ? Jsonify<U> :
   Awaited<Output>
 
-type MergeDeferAndJsonNoSerialize<U> =
-  // top-level promises
-  {
-    [K in keyof U as K extends symbol
-      ? never
-      : Promise<any> extends U[K]
-      ? K
-      : never]: DeferValueNonJsonify<U[K]>; // use generic to distribute over union
-  } & {
-    // non-promises
-    [K in keyof U as Promise<any> extends U[K] ? never : K]: U[K];
-  };
-
-type DeferValueNonJsonify<T> = T extends undefined
-  ? undefined
-  : T extends Promise<unknown>
-  ? Promise<Awaited<T>>
-  : T;
+// prettier-ignore
+type DeferValueClient<T> =
+  T extends undefined ? undefined :
+  T extends Promise<unknown> ? Promise<Awaited<T>> :
+  T;
 
 // note: cannot be inlined as logic requires union distribution
 // prettier-ignore
