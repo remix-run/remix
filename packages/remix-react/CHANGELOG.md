@@ -1,83 +1,6 @@
 # `@remix-run/react`
 
-## 2.4.0-pre.10
-
-### Patch Changes
-
-- [REMOVE] Lock into stable router version ([#8277](https://github.com/remix-run/remix/pull/8277))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.10`
-
-## 2.4.0-pre.9
-
-### Patch Changes
-
-- [REMOVE] Enhance inferred types to avoid deserialization for client data functions ([#8269](https://github.com/remix-run/remix/pull/8269))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.9`
-
-## 2.4.0-pre.8
-
-### Patch Changes
-
-- [REMOVE] Fix a few edge cases with client data (throw if server handler doesnt exist, and only return initialData on first loader call) ([#8253](https://github.com/remix-run/remix/pull/8253))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.8`
-
-## 2.4.0-pre.7
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.7`
-
-## 2.4.0-pre.6
-
-### Patch Changes
-
-- [REMOVE] Minor client data updates ([#8236](https://github.com/remix-run/remix/pull/8236))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.6`
-
-## 2.4.0-pre.5
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.5`
-
-## 2.4.0-pre.4
-
-### Patch Changes
-
-- [Remove] Bump router ([#8227](https://github.com/remix-run/remix/pull/8227))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.4`
-
-## 2.4.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.3`
-
-## 2.4.0-pre.2
-
-### Patch Changes
-
-- [Remove] Bump router ([`49a850c20`](https://github.com/remix-run/remix/commit/49a850c2067592a301fdde78c2bad14a88c7e444))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.2`
-
-## 2.4.0-pre.1
-
-### Patch Changes
-
-- [Remove] Bump router ([`b0edb429f`](https://github.com/remix-run/remix/commit/b0edb429ff189300a934b5b9ddebb4af37e6f64e))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.1`
-
-## 2.4.0-pre.0
+## 2.4.0
 
 ### Minor Changes
 
@@ -105,7 +28,7 @@
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.0`
+  - `@remix-run/server-runtime@2.4.0`
 
 ## 2.3.1
 

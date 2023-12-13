@@ -1,85 +1,16 @@
 # `@remix-run/cloudflare`
 
-## 2.4.0-pre.10
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.10`
-
-## 2.4.0-pre.9
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.9`
-
-## 2.4.0-pre.8
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.8`
-
-## 2.4.0-pre.7
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.7`
-
-## 2.4.0-pre.6
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.6`
-
-## 2.4.0-pre.5
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.5`
-
-## 2.4.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.4`
-
-## 2.4.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.3`
-
-## 2.4.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.2`
-
-## 2.4.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.1`
-
-## 2.4.0-pre.0
+## 2.4.0
 
 ### Minor Changes
 
-- Deprecate `DataFunctionArgs` in favor of `LoaderFunctionArgs`/`ActionFunctionArgs`. This is aimed at keeping the types aligned across server/client loaders/actions now that `clientLoader`/`clientActon` functions have `serverLoader`/`serverAction` parameters which differentiate `ClientLoaderFunctionArgs`/`ClientActionFunctionArgs`. ([#8173](https://github.com/remix-run/remix/pull/8173))
+- Deprecate `DataFunctionArgs` in favor of `LoaderFunctionArgs`/`ActionFunctionArgs` ([#8173](https://github.com/remix-run/remix/pull/8173))
+  - This is aimed at keeping the types aligned across server/client loaders/actions now that `clientLoader`/`clientActon` functions have `serverLoader`/`serverAction` parameters which differentiate `ClientLoaderFunctionArgs`/`ClientActionFunctionArgs`
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.4.0-pre.0`
+  - `@remix-run/server-runtime@2.4.0`
 
 ## 2.3.1
 
