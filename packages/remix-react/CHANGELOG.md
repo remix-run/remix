@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.4.0-pre.9
+
+### Patch Changes
+
+- [REMOVE] Enhance inferred types to avoid deserialization for client data functions ([#8269](https://github.com/remix-run/remix/pull/8269))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.4.0-pre.9`
+
 ## 2.4.0-pre.8
 
 ### Patch Changes
