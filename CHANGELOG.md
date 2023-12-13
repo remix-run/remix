@@ -117,22 +117,20 @@ To add a new release, copy from this template:
 
 #### Client Data
 
-We're excited to finally land the [Client Data RFC](https://github.com/remix-run/remix/discussions/7634) in this release! The final API differs slightly from the RFC, so please check out the docs for [`clientLoader`](https://remix.run/route/client-loader), [`clientAction`](https://remix.run/route/client-loader), and [`HydrateFallback`](https://remix.run/route/hydrate-fallback) for the final API.
+We're excited to land the [Client Data RFC](https://github.com/remix-run/remix/discussions/7634) in this release! The final API differs slightly from the RFC, so please check out the docs for use-cases and final APIs:
+
+- [Client Data Guide](https://remix.run/guides/client-data)
+- [`clientLoader`](https://remix.run/route/client-loader)
+- [`HydrateFallback`](https://remix.run/route/hydrate-fallback)
+- [`clientAction`](https://remix.run/route/client-loader)
 
 While we still recommend server loaders/actions for the majority of your data needs in a Remix app - these provide some levers you can pull for more advanced use-cases such as:
 
-- Leveraging a data source local to the browser (i.e., `localStorage`)
-- Managing a client-side cache of server data (like `IndexedDB`)
-- Bypassing the Remix server in a BFF setup and hitting your API directly from the browser
-- Migrating a React Router SPA to a Remix application
-
-By default, `clientLoader` will not run on hydration, and will only run on subsequent client side navigations.
-
-If you wish to run your client loader on hydration, you can set `clientLoader.hydrate=true` to force Remix to execute it on initial page load. Keep in mind that Remix will still SSR your route component so you should ensure that there is no new _required_ data being added by your `clientLoader`.
-
-If your `clientLoader` needs to run on hydration and adds data you require to render the route component, you can export a `HydrateFallback` component that will render during SSR, and then your route component will not render until the `clientLoader` has executed on hydration.
-
-`clientAction` is simpler than `clientLoader` because it has no hydration use-cases. `clientAction` will only run on client-side navigations.
+- **Skip the Hop:** Query a data API directly from the browser, using loaders simply for SSR
+- **Fullstack State:** Augment server data with client data for your full set of loader data
+- **One or the Other:** Sometimes you use server loaders, sometimes you use client loaders, but not both on one route
+- **Client Cache:** Cache server loader data in the client and avoid some server calls
+- **Migration:** Ease your migration from React Router -> Remix SPA -> Remix SSR
 
 #### `future.v3_relativeSplatPath`
 
