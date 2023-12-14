@@ -122,7 +122,7 @@ We're excited to land the [Client Data RFC](https://github.com/remix-run/remix/d
 - [Client Data Guide](https://remix.run/guides/client-data)
 - [`clientLoader`](https://remix.run/route/client-loader)
 - [`HydrateFallback`](https://remix.run/route/hydrate-fallback)
-- [`clientAction`](https://remix.run/route/client-loader)
+- [`clientAction`](https://remix.run/route/client-action)
 
 While we still recommend server loaders/actions for the majority of your data needs in a Remix app - these provide some levers you can pull for more advanced use-cases such as:
 
