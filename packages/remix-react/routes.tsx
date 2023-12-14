@@ -135,6 +135,15 @@ export function createClientRoutesWithHMRRevalidationOptOut(
   );
 }
 
+function getNoServerHandlerError(type: "action" | "loader", routeId: string) {
+  let fn = type === "action" ? "serverAction()" : "serverLoader()";
+  let msg =
+    `You are trying to call ${fn} on a route that does not have a server ` +
+    `${type} (routeId: "${routeId}")`;
+  console.error(msg);
+  throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
+}
+
 export function createClientRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
@@ -226,47 +235,46 @@ export function createClientRoutes(
       let isHydrationRequest =
         needsRevalidation == null &&
         routeModule.clientLoader != null &&
-        routeModule.clientLoader.hydrate === true;
+        (routeModule.clientLoader.hydrate === true || !route.hasLoader);
 
-      dataRoute.loader = ({ request, params }: LoaderFunctionArgs) => {
-        return prefetchStylesAndCallHandler(async () => {
-          if (!routeModule.clientLoader) {
-            // Call the server when no client loader exists
-            return fetchServerLoader(request);
-          }
+      dataRoute.loader = async ({ request, params }: LoaderFunctionArgs) => {
+        try {
+          let result = await prefetchStylesAndCallHandler(async () => {
+            if (!routeModule.clientLoader) {
+              // Call the server when no client loader exists
+              return fetchServerLoader(request);
+            }
 
-          return routeModule.clientLoader({
-            request,
-            params,
-            async serverLoader() {
-              if (isHydrationRequest) {
-                isHydrationRequest = false;
-
-                // Throw an error if a clientLoader tries to call a serverLoader that doesn't exist
-                if (initialData === undefined) {
-                  throw new Error(
-                    `You are trying to call serverLoader() on a route that does " +
-                      "not have a server loader (routeId: "${route.id}")`
-                  );
+            return routeModule.clientLoader({
+              request,
+              params,
+              async serverLoader() {
+                if (!route.hasLoader) {
+                  throw getNoServerHandlerError("loader", route.id);
                 }
 
-                // Otherwise, resolve the hydration clientLoader with the pre-loaded server data
-                return initialData;
-              }
+                // On the first call, resolve with the pre-loaded server data
+                if (isHydrationRequest) {
+                  return initialData;
+                }
 
-              // Call the server loader for client-side navigations
-              let result = await fetchServerLoader(request);
-              let unwrapped = await unwrapServerResponse(result);
-              return unwrapped;
-            },
+                // Call the server loader for client-side navigations
+                let result = await fetchServerLoader(request);
+                let unwrapped = await unwrapServerResponse(result);
+                return unwrapped;
+              },
+            });
           });
-        });
+          return result;
+        } finally {
+          // Whether or not the user calls `serverLoader`, we only let this
+          // stick around as true for one loader call
+          isHydrationRequest = false;
+        }
       };
 
       // Let React Router know whether to run this on hydration
-      dataRoute.loader.hydrate =
-        routeModule.clientLoader != null &&
-        (routeModule.clientLoader.hydrate === true || route.hasLoader !== true);
+      dataRoute.loader.hydrate = shouldHydrateRouteLoader(route, routeModule);
 
       dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
@@ -278,6 +286,9 @@ export function createClientRoutes(
             request,
             params,
             async serverAction() {
+              if (!route.hasAction) {
+                throw getNoServerHandlerError("action", route.id);
+              }
               let result = await fetchServerAction(request);
               let unwrapped = await unwrapServerResponse(result);
               return unwrapped;
@@ -312,6 +323,9 @@ export function createClientRoutes(
             clientLoader({
               ...args,
               async serverLoader() {
+                if (!route.hasLoader) {
+                  throw getNoServerHandlerError("loader", route.id);
+                }
                 let response = await fetchServerLoader(args.request);
                 let result = await unwrapServerResponse(response);
                 return result;
@@ -325,6 +339,9 @@ export function createClientRoutes(
             clientAction({
               ...args,
               async serverAction() {
+                if (!route.hasAction) {
+                  throw getNoServerHandlerError("action", route.id);
+                }
                 let response = await fetchServerAction(args.request);
                 let result = await unwrapServerResponse(response);
                 return result;
@@ -477,4 +494,14 @@ function getRouteModuleComponent(routeModule: RouteModule) {
   if (!isEmptyObject) {
     return routeModule.default;
   }
+}
+
+export function shouldHydrateRouteLoader(
+  route: EntryRoute,
+  routeModule: RouteModule
+) {
+  return (
+    routeModule.clientLoader != null &&
+    (routeModule.clientLoader.hydrate === true || route.hasLoader !== true)
+  );
 }

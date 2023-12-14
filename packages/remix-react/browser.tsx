@@ -17,6 +17,7 @@ import type { RouteModules } from "./routeModules";
 import {
   createClientRoutes,
   createClientRoutesWithHMRRevalidationOptOut,
+  shouldHydrateRouteLoader,
 } from "./routes";
 
 /* eslint-disable prefer-let/prefer-let */
@@ -53,7 +54,6 @@ declare global {
 }
 
 let router: Router;
-let didServerRenderFallback = false;
 let routerInitialized = false;
 let hmrAbortController: AbortController | undefined;
 let hmrRouterReadyResolve: ((router: Router) => void) | undefined;
@@ -232,9 +232,16 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         let routeId = match.route.id;
         let route = window.__remixRouteModules[routeId];
         let manifestRoute = window.__remixManifest.routes[routeId];
-        if (route && route.clientLoader && route.HydrateFallback) {
+        // Clear out the loaderData to avoid rendering the route component when the
+        // route opted into clientLoader hydration and either:
+        // * gave us a HydrateFallback
+        // * or doesn't have a server loader and we have no data to render
+        if (
+          route &&
+          shouldHydrateRouteLoader(manifestRoute, route) &&
+          (route.HydrateFallback || !manifestRoute.hasLoader)
+        ) {
           hydrationData.loaderData[routeId] = undefined;
-          didServerRenderFallback = true;
         } else if (manifestRoute && !manifestRoute.hasLoader) {
           // Since every Remix route gets a `loader` on the client side to load
           // the route JS module, we need to add a `null` value to `loaderData`
@@ -266,9 +273,10 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       mapRouteProperties,
     });
 
-    // As long as we didn't SSR a `HydrateFallback`, we can initialize immediately since
-    // there's no initial client-side data loading to perform
-    if (!didServerRenderFallback) {
+    // We can call initialize() immediately if the router doesn't have any
+    // loaders to run on hydration
+    if (router.state.initialized) {
+      routerInitialized = true;
       router.initialize();
     }
 
@@ -300,10 +308,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useLayoutEffect(() => {
-    // If we rendered a `HydrateFallback` on the server, delay initialization until
-    // after we've hydrated with the `HydrateFallback` in case the client loaders
-    // are synchronous
-    if (didServerRenderFallback && !routerInitialized) {
+    // If we had to run clientLoaders on hydration, we delay initialization until
+    // after we've hydrated to avoid hydration issues from synchronous client loaders
+    if (!routerInitialized) {
       routerInitialized = true;
       router.initialize();
     }

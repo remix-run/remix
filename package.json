@@ -67,7 +67,7 @@
     "@octokit/plugin-paginate-rest": "^2.17.0",
     "@octokit/rest": "^18.12.0",
     "@remix-run/changelog-github": "^0.0.5",
-    "@remix-run/web-fetch": "^4.4.0-pre.0",
+    "@remix-run/web-fetch": "^4.4.2",
     "@rollup/plugin-babel": "^5.2.2",
     "@rollup/plugin-json": "^5.0.0",
     "@rollup/plugin-node-resolve": "^11.0.1",
