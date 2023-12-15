@@ -378,20 +378,24 @@ During development, [Vite injects imported CSS files into the page via JavaScrip
 
 This also means that in many cases you won't need the `links` function export anymore.
 
-👉 **Convert CSS imports to side effects**
+Since the order of your CSS is determined by its import order, you'll need to ensure that your CSS imports are in the same order as your `links` function.
+
+👉 **Convert CSS imports into side effects — in the same order they were in your `links` function!**
 
 ```diff filename=app/dashboard/route.tsx
-// No need to export a links function anymore:
 - import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 - import dashboardStyles from "./dashboard.css?url";
+- import sharedStyles from "./shared.css?url";
++ // ⚠️ NOTE: The import order has been updated
++ //   to match the original `links` function!
++ import "./shared.css";
++ import "./dashboard.css";
 
 - export const links: LinksFunction = () => [
+-   { rel: "stylesheet", href: sharedStyles },
 -   { rel: "stylesheet", href: dashboardStyles },
 - ];
-
-// Just import the CSS as a side effect:
-+ import "./dashboard.css";
 ```
 
 <docs-warning>While [Vite supports importing static asset URLs via an explicit `?url` query string][vite-url-imports], which in theory would match the behavior of the existing Remix compiler when used for CSS files, there is a [known Vite issue with `?url` for CSS imports][vite-css-url-issue]. This may be fixed in the future, but in the meantime you should exclusively use side effect imports for CSS.</docs-warning>
