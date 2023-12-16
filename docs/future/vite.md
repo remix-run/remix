@@ -303,8 +303,8 @@ For example, to update the Dockerfile from the [Blues Stack][blues-stack]:
 ```diff filename=Dockerfile
 -COPY --from=build /myapp/build /myapp/build
 -COPY --from=build /myapp/public /myapp/public
-+COPY --from=build /myapp/server/build /myapp/server/build
-+COPY --from=build /myapp/client/build /myapp/client/build
++COPY --from=build /myapp/build/server /myapp/build/server
++COPY --from=build /myapp/build/client /myapp/build/client
 ```
 
 #### Configure path aliases
