@@ -170,7 +170,7 @@ export default function Contact() {
   const contact = {
     first: "Your",
     last: "Name",
-    avatar: "https://placekitten.com/g/200/200",
+    avatar: "https://picsum.photos/id/237/200/200",
     twitter: "your_handle",
     notes: "Some notes",
     favorite: true,
