@@ -8,7 +8,7 @@ import {
 import { RemixContext } from "./components";
 import type { EntryContext } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
-import { createServerRoutes } from "./routes";
+import { createServerRoutes, shouldHydrateRouteLoader } from "./routes";
 
 export interface RemixServerProps {
   context: EntryContext;
@@ -36,7 +36,38 @@ export function RemixServer({
     routeModules,
     context.future
   );
-  let router = createStaticRouter(routes, context.staticHandlerContext);
+
+  // Create a shallow clone of `loaderData` we can mutate for partial hydration.
+  // When a route exports a `clientLoader` and a `HydrateFallback`, we want to
+  // render the fallback on the server so we clear our the `loaderData` during SSR.
+  // Is it important not to change the `context` reference here since we use it
+  // for context._deepestRenderedBoundaryId tracking
+  context.staticHandlerContext.loaderData = {
+    ...context.staticHandlerContext.loaderData,
+  };
+  for (let match of context.staticHandlerContext.matches) {
+    let routeId = match.route.id;
+    let route = routeModules[routeId];
+    let manifestRoute = context.manifest.routes[routeId];
+    // Clear out the loaderData to avoid rendering the route component when the
+    // route opted into clientLoader hydration and either:
+    // * gave us a HydrateFallback
+    // * or doesn't have a server loader and we have no data to render
+    if (
+      route &&
+      shouldHydrateRouteLoader(manifestRoute, route) &&
+      (route.HydrateFallback || !manifestRoute.hasLoader)
+    ) {
+      context.staticHandlerContext.loaderData[routeId] = undefined;
+    }
+  }
+
+  let router = createStaticRouter(routes, context.staticHandlerContext, {
+    future: {
+      v7_partialHydration: true,
+      v7_relativeSplatPath: context.future.v3_relativeSplatPath,
+    },
+  });
 
   return (
     <RemixContext.Provider
