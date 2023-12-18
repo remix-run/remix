@@ -63,6 +63,30 @@ export type FileUploadHandlerOptions = {
    * @param name
    */
   filter?(args: FileUploadHandlerFilterArgs): boolean | Promise<boolean>;
+
+  /**
+   * Callback function invoked upon the successful uploading of a file chunk.
+   * @param args
+   * @returns
+   */
+  onProgress?: (args: {
+    name: string;
+    filename: string;
+    contentType: string;
+    uploadedBytes: number;
+  }) => void;
+
+  /**
+   * Callback function triggered upon completion of the entire file upload process.
+   * @param args
+   * @returns
+   */
+  onDone?: (args: {
+    name: string;
+    filename: string;
+    contentType: string;
+    uploadedBytes: number;
+  }) => void;
 };
 
 let defaultFilePathResolver: FileUploadHandlerPathResolver = ({ filename }) => {
@@ -95,6 +119,8 @@ export function createFileUploadHandler({
   file = defaultFilePathResolver,
   filter,
   maxPartSize = 3000000,
+  onProgress,
+  onDone,
 }: FileUploadHandlerOptions = {}): UploadHandler {
   return async ({ name, filename, contentType, data }) => {
     if (
@@ -132,6 +158,13 @@ export function createFileUploadHandler({
     let writeFileStream = createWriteStream(filepath);
     let size = 0;
     let deleteFile = false;
+
+    let onWrite = () => {
+      if (onProgress) {
+        onProgress({ name, filename, contentType, uploadedBytes: size });
+      }
+    };
+
     try {
       for await (let chunk of data) {
         size += chunk.byteLength;
@@ -139,7 +172,7 @@ export function createFileUploadHandler({
           deleteFile = true;
           throw new MaxPartSizeExceededError(name, maxPartSize);
         }
-        writeFileStream.write(chunk);
+        writeFileStream.write(chunk, onWrite);
       }
     } finally {
       writeFileStream.end();
@@ -150,6 +183,9 @@ export function createFileUploadHandler({
       }
     }
 
+    if (onDone) {
+      onDone({ name, filename, contentType, uploadedBytes: size });
+    }
     // TODO: remove this typecast once TS fixed File class regression
     //  https://github.com/microsoft/TypeScript/issues/52166
     return new NodeOnDiskFile(filepath, contentType) as unknown as File;
@@ -224,6 +260,7 @@ export class NodeOnDiskFile implements Omit<File, "constructor"> {
 
   stream(): ReadableStream<any>;
   stream(): NodeJS.ReadableStream;
+
   stream(): ReadableStream<any> | NodeJS.ReadableStream {
     let stream: Readable = createReadStream(this.filepath);
     if (this.slicer) {
