@@ -283,7 +283,7 @@ If you prefer, you can instead author your custom server in TypeScript.
 You could then use tools like [`tsx`][tsx] or [`tsm`][tsm] to run your custom server:
 
 ```shellscript nonumber
-tsx ./server.tsx
+tsx ./server.ts
 node --loader tsm ./server.ts
 ```
 
