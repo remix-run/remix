@@ -728,6 +728,47 @@ export default function SuperCool() {}
 export const mySuperCoolThing = () => {};
 ```
 
+##### Full Stack components
+
+[Full stack components][fullstack-components] are components that are colocated in the same file as a resource route and exported for use in other routes.
+They access data from a resource route by fetching that route's URL.
+
+Conceptually, it's tempting to think of full stack components as a new concept,
+but as far as Remix is concerned, they are standard React components.
+Looking closer, they only depend on the resource route's URL and the type for the corresponding `loader`.
+That means they are shared components with _zero_ runtime dependencies on code from the resource route.
+Organize them they way you would organize any shared component.
+
+For better intuition, consider a full stack component that needs to fetch data from multiple resource routes.
+It doesn't belong to any particular resource route.
+
+👉 **Move full stack components alongside other shared components**
+
+```ts filename=app/components/hello.tsx
+export function Hello() {
+  /* ... */
+}
+```
+
+👉 **Export the loader's type from the resource route**
+
+```diff filename=app/routes/api/hello.ts
++ export type Loader = typeof loader;
+```
+
+👉 **Replace `typeof loader` with `Loader` type**
+
+```diff filename=app/components/hello.tsx
++ import type { Loader } from "~/routes/api/hello";
+
+export function Hello() {
+  // ...
+-   const data = useFetcher<typeof loader>()
++   const data = useFetcher<Loader>()
+  // ...
+}
+```
+
 ## Troubleshooting
 
 Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
@@ -881,3 +922,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
 [blues-stack]: https://github.com/remix-run/blues-stack
 [global-node-polyfills]: ../other-api/node#polyfills
+[fullstack-components]: https://www.epicweb.dev/full-stack-components
