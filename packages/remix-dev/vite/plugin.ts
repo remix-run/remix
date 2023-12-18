@@ -44,6 +44,7 @@ const supportedRemixConfigKeys = [
   "routes",
   "serverBuildPath",
   "serverModuleFormat",
+  "ssr",
 ] as const satisfies ReadonlyArray<keyof RemixUserConfig>;
 type SupportedRemixConfigKey = typeof supportedRemixConfigKeys[number];
 type SupportedRemixConfig = Pick<RemixUserConfig, SupportedRemixConfigKey>;
@@ -102,6 +103,7 @@ export type ResolvedRemixVitePluginConfig = Pick<
   | "routes"
   | "serverBuildPath"
   | "serverModuleFormat"
+  | "ssr"
 >;
 
 let serverBuildId = VirtualModule.id("server-build");
@@ -329,6 +331,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         entryServerFilePath,
         serverBuildPath,
         serverModuleFormat,
+        ssr,
         relativeAssetsBuildDirectory,
         future,
       } = await resolveConfig(config, { rootDirectory });
@@ -343,6 +346,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         entryServerFilePath,
         serverBuildPath,
         serverModuleFormat,
+        ssr,
         relativeAssetsBuildDirectory,
         future,
       };
@@ -895,17 +899,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             );
           }
 
-          let build = await import(serverBuildPath);
-          let { createRequestHandler } = await import("@remix-run/node");
-          let handler = createRequestHandler(build, ServerMode.Production);
-          let response = await handler(new Request("http://localhost/"));
-          let html = await response.text();
-          let indexHtmlPath = path.join(
-            path.dirname(assetsBuildDirectory),
-            "client",
-            "index.html"
-          );
-          await fse.writeFile(indexHtmlPath, html, { encoding: "utf-8" });
+          let isSpaMode = cachedPluginConfig.ssr === false;
+          if (isSpaMode) {
+            await handleSpaMode(serverBuildPath, assetsBuildDirectory);
+          }
         },
       },
       async buildEnd() {
@@ -1075,7 +1072,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }
 
         return {
-          code: removeExports(code, SERVER_ONLY_EXPORTS),
+          code: removeExports(
+            route.file,
+            code,
+            SERVER_ONLY_EXPORTS,
+            pluginConfig.ssr === false
+          ),
           map: null,
         };
       },
@@ -1349,4 +1351,37 @@ async function getRouteMetadata(
     imports: [],
   };
   return info;
+}
+
+async function handleSpaMode(
+  serverBuildPath: string,
+  assetsBuildDirectory: string
+) {
+  // Create a handler and call iot for the `/` path - rendering down to the
+  // proper HydrateFallback ... or not!  Maybe they have a static landing page
+  // generated from routes/_index.tsx.
+  let build = await import(serverBuildPath);
+  let { createRequestHandler } = await import("@remix-run/node");
+  let handler = createRequestHandler(build, ServerMode.Production);
+  let response = await handler(new Request("http://localhost/"));
+
+  // Write out the index.html file for the SPA
+  await fse.writeFile(
+    path.join(assetsBuildDirectory, "index.html"),
+    await response.text()
+  );
+  console.log(
+    colors.green("Remix SPA Mode: index.html has been written to your"),
+    colors.green(
+      colors.bold(path.relative(process.cwd(), assetsBuildDirectory))
+    ),
+    colors.green("directory")
+  );
+
+  // Cleanup
+  fse.removeSync(serverBuildPath);
+  // TODO: Is it safe to remove the build/server/ directory here?
+  // path.dirname(serverBuildPath) feels risky since who knows what else is in
+  // there?  Maybe we only remove it if it's empty (barring the build/server/.vite/ cache
+  // directory)?
 }

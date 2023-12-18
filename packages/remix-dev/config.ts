@@ -161,8 +161,16 @@ export interface AppConfig {
   serverPlatform?: ServerPlatform;
 
   /**
-   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
-   * Defaults to `true`.
+   * Enable server-side rendering for your application. When disabled, Remix
+   * will request the `/` path at build-time and save it as an `index.html` file
+   * with your assets so your application can be deployed as a SPA without
+   * server-rendering. Default's to `true`.
+   */
+  ssr?: boolean;
+
+  /**
+   * Whether to support Tailwind functions and directives in CSS files if
+   * `tailwindcss` is installed. Defaults to `true`.
    */
   tailwind?: boolean;
 
@@ -174,7 +182,8 @@ export interface AppConfig {
   ignoredRouteFiles?: string[];
 
   /**
-   * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
+   * A function for defining custom directories to watch while running `remix dev`,
+   * in addition to `appDirectory`.
    */
   watchPaths?:
     | string
@@ -338,6 +347,14 @@ export interface RemixConfig {
   serverPlatform: ServerPlatform;
 
   /**
+   * Enable server-side rendering for your application. When disabled, Remix
+   * will request the `/` path at build-time and save it as an `index.html` file
+   * with your assets so your application can be deployed as a SPA without
+   * server-rendering. Default's to `true`.
+   */
+  ssr?: boolean;
+
+  /**
    * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
    * Defaults to `true`.
    */
@@ -434,6 +451,7 @@ export async function resolveConfig(
   serverMainFields ??=
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
+  let isSpaMode = appConfig.ssr === false;
 
   let serverNodeBuiltinsPolyfill = appConfig.serverNodeBuiltinsPolyfill;
   let browserNodeBuiltinsPolyfill = appConfig.browserNodeBuiltinsPolyfill;
@@ -462,7 +480,22 @@ export async function resolveConfig(
   let pkgJson = await PackageJson.load(rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
-  if (userEntryServerFile) {
+  if (isSpaMode) {
+    if (userEntryServerFile) {
+      let file = path.basename(userEntryServerFile);
+      throw new Error(
+        `You cannot have an ${file} file when you have configured ` +
+          "`ssr:false` in your `remix.config.js`"
+      );
+    }
+    // TODO: Probably should do the same for the rest of the server-related
+    // configs?  We need to be able to create and run a request handler to
+    // generate index.html, so we need _some_ aspect of server available.
+
+    // No server loaders = no need for streaming, so we can just use a super-simple
+    // renderToString implementation
+    entryServerFile = `entry.server.spa.tsx`;
+  } else if (userEntryServerFile) {
     entryServerFile = userEntryServerFile;
   } else {
     let serverRuntime = deps["@remix-run/deno"]
@@ -646,6 +679,7 @@ export async function resolveConfig(
     serverMode,
     serverModuleFormat,
     serverNodeBuiltinsPolyfill,
+    ssr: !isSpaMode,
     browserNodeBuiltinsPolyfill,
     serverPlatform,
     mdx,

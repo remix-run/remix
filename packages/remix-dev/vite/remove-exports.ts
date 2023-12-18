@@ -61,7 +61,12 @@ function isIdentifierReferenced(
   return false;
 }
 
-export const removeExports = (source: string, exportsToRemove: string[]) => {
+export const removeExports = (
+  filename: string,
+  source: string,
+  exportsToRemove: string[],
+  isSpaMode: boolean
+) => {
   let document = parse(source, { sourceType: "module" });
   let generateCode = () => generate(document).code;
 
@@ -214,6 +219,13 @@ export const removeExports = (source: string, exportsToRemove: string[]) => {
     // No server-specific exports found so there's
     // no need to remove unused references
     return generateCode();
+  }
+
+  if (isSpaMode) {
+    throw new Error(
+      `You cannot export the following from ${filename} when \`ssr:false\` is ` +
+        `set in your \`remix.config.js\`: ${[...removedExports.values()]}`
+    );
   }
 
   let referencesRemovedInThisPass: number;
