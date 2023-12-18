@@ -32,6 +32,8 @@ import { resolveFileUrl } from "./resolve-file-url";
 import { removeExports } from "./remove-exports";
 import { replaceImportSpecifier } from "./replace-import-specifier";
 import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
+import { ServerMode } from "../config/serverModes";
+import { text } from "stream/consumers";
 
 const supportedRemixConfigKeys = [
   "appDirectory",
@@ -892,6 +894,18 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               ].join("\n")
             );
           }
+
+          let build = await import(serverBuildPath);
+          let { createRequestHandler } = await import("@remix-run/node");
+          let handler = createRequestHandler(build, ServerMode.Production);
+          let response = await handler(new Request("http://localhost/"));
+          let html = await response.text();
+          let indexHtmlPath = path.join(
+            path.dirname(assetsBuildDirectory),
+            "client",
+            "index.html"
+          );
+          await fse.writeFile(indexHtmlPath, html, { encoding: "utf-8" });
         },
       },
       async buildEnd() {
