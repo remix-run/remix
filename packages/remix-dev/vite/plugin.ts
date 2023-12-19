@@ -33,7 +33,6 @@ import { removeExports } from "./remove-exports";
 import { replaceImportSpecifier } from "./replace-import-specifier";
 import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
 import { ServerMode } from "../config/serverModes";
-import { text } from "stream/consumers";
 
 const supportedRemixConfigKeys = [
   "appDirectory",
@@ -103,7 +102,7 @@ export type ResolvedRemixVitePluginConfig = Pick<
   | "routes"
   | "serverBuildPath"
   | "serverModuleFormat"
-  | "ssr"
+  | "isSpaMode"
 >;
 
 let serverBuildId = VirtualModule.id("server-build");
@@ -331,7 +330,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         entryServerFilePath,
         serverBuildPath,
         serverModuleFormat,
-        ssr,
+        isSpaMode,
         relativeAssetsBuildDirectory,
         future,
       } = await resolveConfig(config, { rootDirectory });
@@ -346,7 +345,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         entryServerFilePath,
         serverBuildPath,
         serverModuleFormat,
-        ssr,
+        isSpaMode,
         relativeAssetsBuildDirectory,
         future,
       };
@@ -375,7 +374,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         pluginConfig.relativeAssetsBuildDirectory
       )};
       export const future = ${JSON.stringify(pluginConfig.future)};
-      export const ssr = ${pluginConfig.ssr === true};
+      export const isSpaMode = ${pluginConfig.isSpaMode === true};
       export const publicPath = ${JSON.stringify(pluginConfig.publicPath)};
       export const entry = { module: entryServer };
       export const routes = {
@@ -900,8 +899,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             );
           }
 
-          let isSpaMode = cachedPluginConfig.ssr === false;
-          if (isSpaMode) {
+          if (cachedPluginConfig.isSpaMode) {
             await handleSpaMode(serverBuildPath, assetsBuildDirectory);
           }
         },
@@ -1072,8 +1070,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           throw Error(message);
         }
 
-        let isSpaMode = pluginConfig.ssr === false;
-        if (isSpaMode) {
+        if (pluginConfig.isSpaMode) {
           let serverOnlyExports = esModuleLexer(code)[1]
             .map((exp) => exp.n)
             .filter((exp) => SERVER_ONLY_EXPORTS.includes(exp));

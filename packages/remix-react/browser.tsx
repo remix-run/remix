@@ -27,7 +27,7 @@ declare global {
     state: HydrationState;
     criticalCss?: string;
     future: FutureConfig;
-    ssr: boolean;
+    isSpaMode: boolean;
     // The number of active deferred keys rendered on the server
     a?: number;
     dev?: {
@@ -157,7 +157,7 @@ if (import.meta && import.meta.hot) {
         window.__remixRouteModules,
         window.__remixContext.state,
         window.__remixContext.future,
-        window.__remixContext.ssr === false
+        window.__remixContext.isSpaMode
       );
 
       // This is temporary API and will be more granular before release
@@ -216,7 +216,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       window.__remixRouteModules,
       window.__remixContext.state,
       window.__remixContext.future,
-      window.__remixContext.ssr === false
+      window.__remixContext.isSpaMode
     );
 
     // Create a shallow clone of `loaderData` we can mutate for partial hydration.
@@ -339,7 +339,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         routeModules: window.__remixRouteModules,
         future: window.__remixContext.future,
         criticalCss,
-        ssr: window.__remixContext.ssr,
+        isSpaMode: window.__remixContext.isSpaMode,
       }}
     >
       <RemixErrorBoundary location={location}>

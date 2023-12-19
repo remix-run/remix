@@ -161,10 +161,10 @@ export interface AppConfig {
   serverPlatform?: ServerPlatform;
 
   /**
-   * Enable server-side rendering for your application. When disabled, Remix
-   * will request the `/` path at build-time and save it as an `index.html` file
-   * with your assets so your application can be deployed as a SPA without
-   * server-rendering. Default's to `true`.
+   * Enable server-side rendering for your application. Disable to use Remix in
+   * "SPA Mode", which will request the `/` path at build-time and save it as
+   * an `index.html` file with your assets so your application can be deployed
+   * as a SPA without server-rendering. Default's to `true`.
    */
   ssr?: boolean;
 
@@ -347,12 +347,9 @@ export interface RemixConfig {
   serverPlatform: ServerPlatform;
 
   /**
-   * Enable server-side rendering for your application. When disabled, Remix
-   * will request the `/` path at build-time and save it as an `index.html` file
-   * with your assets so your application can be deployed as a SPA without
-   * server-rendering. Default's to `true`.
+   * Enable SPA Mode.  Default's to `false`.
    */
-  ssr?: boolean;
+  isSpaMode: boolean;
 
   /**
    * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
@@ -451,7 +448,6 @@ export async function resolveConfig(
   serverMainFields ??=
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
-  let isSpaMode = appConfig.ssr === false;
 
   let serverNodeBuiltinsPolyfill = appConfig.serverNodeBuiltinsPolyfill;
   let browserNodeBuiltinsPolyfill = appConfig.browserNodeBuiltinsPolyfill;
@@ -480,18 +476,19 @@ export async function resolveConfig(
   let pkgJson = await PackageJson.load(rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
+  let isSpaMode = appConfig.ssr === false;
   if (isSpaMode) {
+    // Don't allow the user to provide their own entry.server.tsx - we'll use an
+    // internal renderToString implementation since no streaming is required
     if (userEntryServerFile) {
       let file = path.basename(userEntryServerFile);
       throw new Error(`SPA Mode: ${file} is not permitted in SPA Mode`);
     }
-    // TODO: Probably should do the same for the rest of the server-related
-    // configs?  We need to be able to create and run a request handler to
-    // generate index.html, so we need _some_ aspect of server available.
-
-    // No server loaders = no need for streaming, so we can just use a super-simple
-    // renderToString implementation
     entryServerFile = `entry.server.spa.tsx`;
+
+    // TODO: Should we check the rest of the server related configs and throw
+    // errors if present?  We need to be able to create and run a request handler
+    // to generate index.html, so we need _some_ aspect of "server" available.
   } else if (userEntryServerFile) {
     entryServerFile = userEntryServerFile;
   } else {
@@ -676,7 +673,7 @@ export async function resolveConfig(
     serverMode,
     serverModuleFormat,
     serverNodeBuiltinsPolyfill,
-    ssr: !isSpaMode,
+    isSpaMode,
     browserNodeBuiltinsPolyfill,
     serverPlatform,
     mdx,

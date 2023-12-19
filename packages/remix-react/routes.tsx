@@ -137,39 +137,38 @@ export function createClientRoutesWithHMRRevalidationOptOut(
   );
 }
 
-function getNoServerHandlerError(type: "action" | "loader", routeId: string) {
+function preventInvalidServerHandlerCall(
+  type: "action" | "loader",
+  route: Omit<EntryRoute, "children">,
+  isSpaMode: boolean
+) {
+  if (isSpaMode) {
+    let fn = type === "action" ? "serverAction()" : "serverLoader()";
+    let msg = `You cannot call ${fn} in SPA Mode (routeId: "${route.id}")`;
+    console.error(msg);
+    throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
+  }
+
   let fn = type === "action" ? "serverAction()" : "serverLoader()";
   let msg =
     `You are trying to call ${fn} on a route that does not have a server ` +
-    `${type} (routeId: "${routeId}")`;
-  console.error(msg);
-  throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
+    `${type} (routeId: "${route.id}")`;
+  if (
+    (type === "loader" && !route.hasLoader) ||
+    (type === "action" && !route.hasAction)
+  ) {
+    console.error(msg);
+    throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
+  }
 }
 
-function getNoServerActionError(routeId: string) {
-  let msg =
-    `Route "${routeId}" does not have an action, but you are trying ` +
-    `to submit to it. To fix this, please add an \`action\` function to the route`;
-  console.error(msg);
-  throw new ErrorResponse(405, "Method Not Allowed", new Error(msg), true);
-}
-
-function getNoClientActionError(routeId: string) {
+function noClientActionError(routeId: string) {
   let msg =
     `Route "${routeId}" does not have a clientAction, but you are ` +
     `trying to submit to it. To fix this, please add a \`clientAction\` ` +
     `function to the route`;
   console.error(msg);
   throw new ErrorResponse(405, "Method Not Allowed", new Error(msg), true);
-}
-
-function getSpaModeError(type: "action" | "loader", routeId: string) {
-  let fn = type === "action" ? "serverAction()" : "serverLoader()";
-  let msg =
-    `You cannot call ${fn} when using \`ssr:false\` in your \`remix.config.js\` ` +
-    `(routeId: "${routeId}")`;
-  console.error(msg);
-  throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
 }
 
 export function createClientRoutes(
@@ -195,7 +194,16 @@ export function createClientRoutes(
 
     async function fetchServerAction(request: Request) {
       if (!route.hasAction) {
-        throw getNoServerActionError(route.id);
+        let msg =
+          `Route "${route.id}" does not have an action, but you are trying ` +
+          `to submit to it. To fix this, please add an \`action\` function to the route`;
+        console.error(msg);
+        throw new ErrorResponse(
+          405,
+          "Method Not Allowed",
+          new Error(msg),
+          true
+        );
       }
       return fetchServerHandler(request, route);
     }
@@ -265,12 +273,7 @@ export function createClientRoutes(
               request,
               params,
               async serverLoader() {
-                if (isSpaMode) {
-                  throw getSpaModeError("loader", route.id);
-                }
-                if (!route.hasLoader) {
-                  throw getNoServerHandlerError("loader", route.id);
-                }
+                preventInvalidServerHandlerCall("loader", route, isSpaMode);
 
                 // On the first call, resolve with the server result
                 if (isHydrationRequest) {
@@ -302,7 +305,7 @@ export function createClientRoutes(
         return prefetchStylesAndCallHandler(async () => {
           if (!routeModule.clientAction) {
             if (isSpaMode) {
-              throw getNoClientActionError(route.id);
+              throw noClientActionError(route.id);
             }
             return fetchServerAction(request);
           }
@@ -311,12 +314,7 @@ export function createClientRoutes(
             request,
             params,
             async serverAction() {
-              if (isSpaMode) {
-                throw getSpaModeError("loader", route.id);
-              }
-              if (!route.hasAction) {
-                throw getNoServerHandlerError("action", route.id);
-              }
+              preventInvalidServerHandlerCall("action", route, isSpaMode);
               let result = await fetchServerAction(request);
               let unwrapped = await unwrapServerResponse(result);
               return unwrapped;
@@ -328,23 +326,13 @@ export function createClientRoutes(
       // If the lazy route does not have a client loader/action we want to call
       // the server loader/action in parallel with the module load so we add
       // loader/action as static props on the route
-      if (!route.hasClientLoader) {
+      if (!route.hasClientLoader && !isSpaMode) {
         dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
-          prefetchStylesAndCallHandler(() => {
-            if (isSpaMode) {
-              throw getSpaModeError("loader", route.id);
-            }
-            return fetchServerLoader(request);
-          });
+          prefetchStylesAndCallHandler(() => fetchServerLoader(request));
       }
-      if (!route.hasClientAction) {
+      if (!route.hasClientAction && !isSpaMode) {
         dataRoute.action = ({ request }: ActionFunctionArgs) =>
-          prefetchStylesAndCallHandler(() => {
-            if (isSpaMode) {
-              throw getNoClientActionError(route.id);
-            }
-            return fetchServerAction(request);
-          });
+          prefetchStylesAndCallHandler(() => fetchServerAction(request));
       }
 
       // Load all other modules via route.lazy()
@@ -361,12 +349,7 @@ export function createClientRoutes(
             clientLoader({
               ...args,
               async serverLoader() {
-                if (isSpaMode) {
-                  throw getSpaModeError("loader", route.id);
-                }
-                if (!route.hasLoader) {
-                  throw getNoServerHandlerError("loader", route.id);
-                }
+                preventInvalidServerHandlerCall("loader", route, isSpaMode);
                 let response = await fetchServerLoader(args.request);
                 let result = await unwrapServerResponse(response);
                 return result;
@@ -380,12 +363,7 @@ export function createClientRoutes(
             clientAction({
               ...args,
               async serverAction() {
-                if (isSpaMode) {
-                  throw getSpaModeError("action", route.id);
-                }
-                if (!route.hasAction) {
-                  throw getNoServerHandlerError("action", route.id);
-                }
+                preventInvalidServerHandlerCall("action", route, isSpaMode);
                 let response = await fetchServerAction(args.request);
                 let result = await unwrapServerResponse(response);
                 return result;
