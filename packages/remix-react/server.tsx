@@ -77,6 +77,7 @@ export function RemixServer({
         criticalCss,
         serverHandoffString,
         future: context.future,
+        ssr: context.ssr,
         serializeError: context.serializeError,
         abortDelay,
       }}

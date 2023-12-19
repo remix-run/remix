@@ -122,13 +122,15 @@ export function createClientRoutesWithHMRRevalidationOptOut(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
   initialState: HydrationState,
-  future: FutureConfig
+  future: FutureConfig,
+  isSpaMode: boolean
 ) {
   return createClientRoutes(
     manifest,
     routeModulesCache,
     initialState,
     future,
+    isSpaMode,
     "",
     groupRoutesByParentId(manifest),
     needsRevalidation
@@ -144,11 +146,38 @@ function getNoServerHandlerError(type: "action" | "loader", routeId: string) {
   throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
 }
 
+function getNoServerActionError(routeId: string) {
+  let msg =
+    `Route "${routeId}" does not have an action, but you are trying ` +
+    `to submit to it. To fix this, please add an \`action\` function to the route`;
+  console.error(msg);
+  throw new ErrorResponse(405, "Method Not Allowed", new Error(msg), true);
+}
+
+function getNoClientActionError(routeId: string) {
+  let msg =
+    `Route "${routeId}" does not have a clientAction, but you are ` +
+    `trying to submit to it. To fix this, please add a \`clientAction\` ` +
+    `function to the route`;
+  console.error(msg);
+  throw new ErrorResponse(405, "Method Not Allowed", new Error(msg), true);
+}
+
+function getSpaModeError(type: "action" | "loader", routeId: string) {
+  let fn = type === "action" ? "serverAction()" : "serverLoader()";
+  let msg =
+    `You cannot call ${fn} when using \`ssr:false\` in your \`remix.config.js\` ` +
+    `(routeId: "${routeId}")`;
+  console.error(msg);
+  throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
+}
+
 export function createClientRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
   initialState: HydrationState,
   future: FutureConfig,
+  isSpaMode: boolean,
   parentId: string = "",
   routesByParentId: Record<
     string,
@@ -166,18 +195,8 @@ export function createClientRoutes(
 
     async function fetchServerAction(request: Request) {
       if (!route.hasAction) {
-        let msg =
-          `Route "${route.id}" does not have an action, but you are trying ` +
-          `to submit to it. To fix this, please add an \`action\` function to the route`;
-        console.error(msg);
-        throw new ErrorResponse(
-          405,
-          "Method Not Allowed",
-          new Error(msg),
-          true
-        );
+        throw getNoServerActionError(route.id);
       }
-
       return fetchServerHandler(request, route);
     }
 
@@ -237,6 +256,7 @@ export function createClientRoutes(
         try {
           let result = await prefetchStylesAndCallHandler(async () => {
             if (!routeModule.clientLoader) {
+              if (isSpaMode) return null;
               // Call the server when no client loader exists
               return fetchServerLoader(request);
             }
@@ -245,6 +265,9 @@ export function createClientRoutes(
               request,
               params,
               async serverLoader() {
+                if (isSpaMode) {
+                  throw getSpaModeError("loader", route.id);
+                }
                 if (!route.hasLoader) {
                   throw getNoServerHandlerError("loader", route.id);
                 }
@@ -278,6 +301,9 @@ export function createClientRoutes(
       dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
           if (!routeModule.clientAction) {
+            if (isSpaMode) {
+              throw getNoClientActionError(route.id);
+            }
             return fetchServerAction(request);
           }
 
@@ -285,6 +311,9 @@ export function createClientRoutes(
             request,
             params,
             async serverAction() {
+              if (isSpaMode) {
+                throw getSpaModeError("loader", route.id);
+              }
               if (!route.hasAction) {
                 throw getNoServerHandlerError("action", route.id);
               }
@@ -301,11 +330,21 @@ export function createClientRoutes(
       // loader/action as static props on the route
       if (!route.hasClientLoader) {
         dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
-          prefetchStylesAndCallHandler(() => fetchServerLoader(request));
+          prefetchStylesAndCallHandler(() => {
+            if (isSpaMode) {
+              throw getSpaModeError("loader", route.id);
+            }
+            return fetchServerLoader(request);
+          });
       }
       if (!route.hasClientAction) {
         dataRoute.action = ({ request }: ActionFunctionArgs) =>
-          prefetchStylesAndCallHandler(() => fetchServerAction(request));
+          prefetchStylesAndCallHandler(() => {
+            if (isSpaMode) {
+              throw getNoClientActionError(route.id);
+            }
+            return fetchServerAction(request);
+          });
       }
 
       // Load all other modules via route.lazy()
@@ -322,6 +361,9 @@ export function createClientRoutes(
             clientLoader({
               ...args,
               async serverLoader() {
+                if (isSpaMode) {
+                  throw getSpaModeError("loader", route.id);
+                }
                 if (!route.hasLoader) {
                   throw getNoServerHandlerError("loader", route.id);
                 }
@@ -338,6 +380,9 @@ export function createClientRoutes(
             clientAction({
               ...args,
               async serverAction() {
+                if (isSpaMode) {
+                  throw getSpaModeError("action", route.id);
+                }
                 if (!route.hasAction) {
                   throw getNoServerHandlerError("action", route.id);
                 }
@@ -373,6 +418,7 @@ export function createClientRoutes(
       routeModulesCache,
       initialState,
       future,
+      isSpaMode,
       route.id,
       routesByParentId,
       needsRevalidation

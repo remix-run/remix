@@ -375,6 +375,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         pluginConfig.relativeAssetsBuildDirectory
       )};
       export const future = ${JSON.stringify(pluginConfig.future)};
+      export const ssr = ${pluginConfig.ssr === true};
       export const publicPath = ${JSON.stringify(pluginConfig.publicPath)};
       export const entry = { module: entryServer };
       export const routes = {
@@ -1071,13 +1072,28 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           throw Error(message);
         }
 
+        let isSpaMode = pluginConfig.ssr === false;
+        if (isSpaMode) {
+          let serverOnlyExports = esModuleLexer(code)[1]
+            .map((exp) => exp.n)
+            .filter((exp) => SERVER_ONLY_EXPORTS.includes(exp));
+          if (serverOnlyExports.length > 0) {
+            let message = [
+              `SPA Mode: ${serverOnlyExports.length} invalid route export${
+                serverOnlyExports.length > 1 ? "s" : ""
+              } in \`${route.file}\`:`,
+              ...serverOnlyExports.map((exp) => `  - \`${exp}\``),
+              "",
+              // TODO: Docs!
+              //"See https://remix.run/docs/en/main/future/vite#strict-route-exports",
+              "",
+            ].join("\n");
+            throw Error(message);
+          }
+        }
+
         return {
-          code: removeExports(
-            route.file,
-            code,
-            SERVER_ONLY_EXPORTS,
-            pluginConfig.ssr === false
-          ),
+          code: removeExports(code, SERVER_ONLY_EXPORTS),
           map: null,
         };
       },
@@ -1364,6 +1380,12 @@ async function handleSpaMode(
   let { createRequestHandler } = await import("@remix-run/node");
   let handler = createRequestHandler(build, ServerMode.Production);
   let response = await handler(new Request("http://localhost/"));
+
+  if (response.status !== 200) {
+    throw new Error(
+      "Received a non-200 response generating the index.html file"
+    );
+  }
 
   // Write out the index.html file for the SPA
   await fse.writeFile(

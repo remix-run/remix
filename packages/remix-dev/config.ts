@@ -483,10 +483,7 @@ export async function resolveConfig(
   if (isSpaMode) {
     if (userEntryServerFile) {
       let file = path.basename(userEntryServerFile);
-      throw new Error(
-        `You cannot have an ${file} file when you have configured ` +
-          "`ssr:false` in your `remix.config.js`"
-      );
+      throw new Error(`SPA Mode: ${file} is not permitted in SPA Mode`);
     }
     // TODO: Probably should do the same for the rest of the server-related
     // configs?  We need to be able to create and run a request handler to

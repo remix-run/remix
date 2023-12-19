@@ -2,6 +2,7 @@ import type {
   UNSAFE_DeferredData as DeferredData,
   ErrorResponse,
   StaticHandler,
+  StaticHandlerContext,
 } from "@remix-run/router";
 import {
   UNSAFE_DEFERRED_SYMBOL as DEFERRED_SYMBOL,
@@ -300,6 +301,7 @@ async function handleDocumentRequestRR(
         errors: serializeErrors(context.errors, serverMode),
       },
       future: build.future,
+      ssr: build.ssr,
     }),
     future: build.future,
     serializeError: (err) => serializeError(err, serverMode),
@@ -341,6 +343,7 @@ async function handleDocumentRequestRR(
           errors: serializeErrors(context.errors, serverMode),
         },
         future: build.future,
+        ssr: build.ssr,
       }),
     };
 
