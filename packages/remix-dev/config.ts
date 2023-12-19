@@ -487,7 +487,7 @@ export async function resolveConfig(
       let file = path.basename(userEntryServerFile);
       throw new Error(`SPA Mode: ${file} is not permitted in SPA Mode`);
     }
-    entryServerFile = `entry.server.spa.tsx`;
+    entryServerFile = "entry.server.spa.tsx";
 
     // TODO: Should we check the rest of the server related configs and throw
     // errors if present?  We need to be able to create and run a request handler

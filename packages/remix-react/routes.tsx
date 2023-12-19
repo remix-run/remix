@@ -320,13 +320,21 @@ export function createClientRoutes(
       // If the lazy route does not have a client loader/action we want to call
       // the server loader/action in parallel with the module load so we add
       // loader/action as static props on the route
-      if (!route.hasClientLoader && !isSpaMode) {
+      if (!route.hasClientLoader) {
         dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
-          prefetchStylesAndCallHandler(() => fetchServerLoader(request));
+          prefetchStylesAndCallHandler(() => {
+            if (isSpaMode) return Promise.resolve(null);
+            return fetchServerLoader(request);
+          });
       }
-      if (!route.hasClientAction && !isSpaMode) {
+      if (!route.hasClientAction) {
         dataRoute.action = ({ request }: ActionFunctionArgs) =>
-          prefetchStylesAndCallHandler(() => fetchServerAction(request));
+          prefetchStylesAndCallHandler(() => {
+            if (isSpaMode) {
+              throw noActionDefinedError("clientAction", route.id);
+            }
+            return fetchServerAction(request);
+          });
       }
 
       // Load all other modules via route.lazy()
