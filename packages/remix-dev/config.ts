@@ -348,6 +348,9 @@ export interface RemixConfig {
 
   /**
    * Enable SPA Mode.  Default's to `false`.
+   *
+   * This is the inverse of the user-level `ssr` config and used throughout
+   * the codebase to avoid confusion with Vite's `ssr` config
    */
   isSpaMode: boolean;
 

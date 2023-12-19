@@ -1370,19 +1370,16 @@ async function handleSpaMode(
   serverBuildPath: string,
   assetsBuildDirectory: string
 ) {
-  // Create a handler and call iot for the `/` path - rendering down to the
+  // Create a handler and call it for the `/` path - rendering down to the
   // proper HydrateFallback ... or not!  Maybe they have a static landing page
   // generated from routes/_index.tsx.
   let build = await import(serverBuildPath);
-  let { createRequestHandler } = await import("@remix-run/node");
-  let handler = createRequestHandler(build, ServerMode.Production);
+  let { createRequestHandler: createNodeRequestHandler } = await import(
+    "@remix-run/node"
+  );
+  let handler = createNodeRequestHandler(build, ServerMode.Production);
   let response = await handler(new Request("http://localhost/"));
-
-  if (response.status !== 200) {
-    throw new Error(
-      "Received a non-200 response generating the index.html file"
-    );
-  }
+  invariant(response.status === 200, "Error generating the index.html file");
 
   // Write out the index.html file for the SPA
   await fse.writeFile(
@@ -1397,8 +1394,9 @@ async function handleSpaMode(
     colors.green("directory")
   );
 
-  // Cleanup
+  // Cleanup - we no longer need the server build
   fse.removeSync(serverBuildPath);
+
   // TODO: Is it safe to remove the build/server/ directory here?
   // path.dirname(serverBuildPath) feels risky since who knows what else is in
   // there?  Maybe we only remove it if it's empty (barring the build/server/.vite/ cache

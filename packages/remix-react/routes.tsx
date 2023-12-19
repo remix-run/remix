@@ -162,11 +162,14 @@ function preventInvalidServerHandlerCall(
   }
 }
 
-function noClientActionError(routeId: string) {
+function noActionDefinedError(
+  type: "action" | "clientAction",
+  routeId: string
+) {
+  let subject = type === "clientAction" ? "a `clientAction`" : "an `action`";
   let msg =
-    `Route "${routeId}" does not have a clientAction, but you are ` +
-    `trying to submit to it. To fix this, please add a \`clientAction\` ` +
-    `function to the route`;
+    `Route "${routeId}" does not have ${subject}, but you are trying to ` +
+    `submit to it. To fix this, please add ${subject} function to the route`;
   console.error(msg);
   throw new ErrorResponse(405, "Method Not Allowed", new Error(msg), true);
 }
@@ -194,16 +197,7 @@ export function createClientRoutes(
 
     async function fetchServerAction(request: Request) {
       if (!route.hasAction) {
-        let msg =
-          `Route "${route.id}" does not have an action, but you are trying ` +
-          `to submit to it. To fix this, please add an \`action\` function to the route`;
-        console.error(msg);
-        throw new ErrorResponse(
-          405,
-          "Method Not Allowed",
-          new Error(msg),
-          true
-        );
+        throw noActionDefinedError("action", route.id);
       }
       return fetchServerHandler(request, route);
     }
@@ -305,7 +299,7 @@ export function createClientRoutes(
         return prefetchStylesAndCallHandler(async () => {
           if (!routeModule.clientAction) {
             if (isSpaMode) {
-              throw noClientActionError(route.id);
+              throw noActionDefinedError("clientAction", route.id);
             }
             return fetchServerAction(request);
           }
