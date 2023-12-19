@@ -133,7 +133,7 @@ async function getServerBundles({
         branch: branch.map((route) => ({
           ...route,
           // Ensure absolute paths are passed to the serverBundles function
-          file: normalizePath(path.join(resolvedAppDirectory, route.file)),
+          file: path.join(resolvedAppDirectory, route.file),
         })),
       });
       serverBundlesManifest.routeIdToBundleId[route.id] = bundleId;
@@ -154,7 +154,10 @@ async function getServerBundles({
         serverBundles.set(bundleId, serverBuildConfig);
       }
       for (let route of branch) {
-        serverBuildConfig.routes[route.id] = route;
+        serverBuildConfig.routes[route.id] = {
+          ...route,
+          file: normalizePath(route.file),
+        };
       }
     })
   );
