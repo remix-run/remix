@@ -34,15 +34,7 @@ These templates include a `vite.config.ts` file which is where the Remix Vite pl
 
 ## Configuration
 
-The Vite plugin does not use [`remix.config.js`][remix-config]. Instead, the plugin directly accepts the following subset of Remix config options:
-
-- [appDirectory][app-directory]
-- [assetsBuildDirectory][assets-build-directory]
-- [ignoredRouteFiles][ignored-route-files]
-- [publicPath][public-path]
-- [routes][routes]
-- [serverBuildPath][server-build-path]
-- [serverModuleFormat][server-module-format]
+The Vite plugin does not use [`remix.config.js`][remix-config]. Instead, the plugin accepts options directly.
 
 For example, to configure `ignoredRouteFiles`:
 
@@ -61,6 +53,32 @@ export default defineConfig({
 
 All other bundling-related options are now [configured with Vite][vite-config]. This means you have much greater control over the bundling process.
 
+#### Supported Remix config options
+
+The following subset of Remix config options are supported:
+
+- [appDirectory][app-directory]
+- [assetsBuildDirectory][assets-build-directory]
+- [ignoredRouteFiles][ignored-route-files]
+- [publicPath][public-path]
+- [routes][routes]
+- [serverBuildPath][server-build-path]
+- [serverModuleFormat][server-module-format]
+
+The Vite plugin also accepts the following additional options:
+
+#### serverBuildDirectory
+
+The path to the server build directory, relative to the project root. Defaults to `"build/server"`.
+
+#### serverBuildFile
+
+The name of the server file generated in the server build directory. Defaults to `"index.js"`.
+
+#### unstable_serverBundles
+
+A function for assigning addressable routes to [server bundles][server-bundles].
+
 ## New build output paths
 
 There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. During the build, Vite copies files from the `public` directory into `build/client`, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
@@ -74,7 +92,7 @@ This means that the following configuration defaults have been changed:
 
 - [assetsBuildDirectory][assets-build-directory] defaults to `"build/client"` rather than `"public/build"`
 - [publicPath][public-path] defaults to `"/"` rather than `"/build/"`
-- [serverBuildPath][server-build-path] defaults to `"build/server/index.js"` rather than `"build/index.js"`
+- [serverBuildPath][server-build-path] has been split into `serverBuildDirectory` and `serverBuildFile`, with the equivalent default for `serverBuildDirectory` being `"build/server"` rather than `"build"`
 
 ## Additional features & plugins
 
@@ -875,3 +893,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
 [blues-stack]: https://github.com/remix-run/blues-stack
 [global-node-polyfills]: ../other-api/node#polyfills
+[server-bundles]: ./server-bundles
