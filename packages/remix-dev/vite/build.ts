@@ -113,7 +113,9 @@ async function getServerBundles({
   let rootRelativeRoutes = Object.fromEntries(
     Object.entries(routes).map(([id, route]) => {
       let filePath = path.join(resolvedAppDirectory, route.file);
-      let rootRelativeFilePath = path.relative(rootDirectory, filePath);
+      let rootRelativeFilePath = normalizePath(
+        path.relative(rootDirectory, filePath)
+      );
       return [id, { ...route, file: rootRelativeFilePath }];
     })
   );
@@ -154,10 +156,7 @@ async function getServerBundles({
         serverBundles.set(bundleId, serverBuildConfig);
       }
       for (let route of branch) {
-        serverBuildConfig.routes[route.id] = {
-          ...route,
-          file: normalizePath(route.file),
-        };
+        serverBuildConfig.routes[route.id] = route;
       }
     })
   );
