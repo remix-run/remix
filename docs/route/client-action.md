@@ -20,9 +20,9 @@ export const clientAction = async ({
 };
 ```
 
-This function is only ever run on the client, and can used in a few ways:
+This function is only ever run on the client, and can be used in a few ways:
 
-- Instead of a server action for full-client routes
+- Instead of a server `action` for full-client routes
 - To use alongside a `clientLoader` cache by invalidating the cache on mutations
 - To facilitate a migration from React Router
 
@@ -40,7 +40,14 @@ This function receives the same [`request`][action-request] argument as an [`act
 
 `serverAction` is an asynchronous function that makes the [fetch][fetch] call to the server `action` for this route.
 
+See also:
+
+- [Client Data Guide][client-data-guide]
+- [clientLoader][clientloader]
+
 [action]: ./action
 [action-params]: ./loader#params
 [action-request]: ./loader#request
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[client-data-guide]: ../guides/client-data
+[clientloader]: ./client-loader

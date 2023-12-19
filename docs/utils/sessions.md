@@ -135,8 +135,7 @@ export async function action({
 }
 
 export default function Login() {
-  const { currentUser, error } =
-    useLoaderData<typeof loader>();
+  const { error } = useLoaderData<typeof loader>();
 
   return (
     <div>
