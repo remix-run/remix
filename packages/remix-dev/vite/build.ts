@@ -79,6 +79,10 @@ function getRouteBranch(routes: RouteManifest, routeId: string) {
   return branch.reverse();
 }
 
+function normalizePath(filePath: string) {
+  return filePath.replace(/\\/g, "/");
+}
+
 export type ServerBundlesManifest = {
   serverBundles: {
     [serverBundleId: string]: {
@@ -129,7 +133,7 @@ async function getServerBundles({
         branch: branch.map((route) => ({
           ...route,
           // Ensure absolute paths are passed to the serverBundles function
-          file: path.join(resolvedAppDirectory, route.file),
+          file: normalizePath(path.join(resolvedAppDirectory, route.file)),
         })),
       });
       serverBundlesManifest.routeIdToBundleId[route.id] = bundleId;
@@ -139,7 +143,9 @@ async function getServerBundles({
       if (!serverBuildConfig) {
         serverBundlesManifest.serverBundles[bundleId] = {
           id: bundleId,
-          file: path.join(serverBundleDirectory, serverBuildFile),
+          file: normalizePath(
+            path.join(serverBundleDirectory, serverBuildFile)
+          ),
         };
         serverBuildConfig = {
           routes: {},
