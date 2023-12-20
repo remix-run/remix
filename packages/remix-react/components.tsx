@@ -611,6 +611,7 @@ export function Scripts(props: ScriptProps) {
   let { matches: dontUseTheseMatches } = useDataRouterStateContext();
   let navigation = useNavigation();
 
+  // Use these `matches` instead :)
   // In SPA Mode we only want to import root on the critical path, since we
   // want the generated HTML file to be able to be loaded at non-/ paths as
   // well.  This lets the router handle initial match loads via lazy().
