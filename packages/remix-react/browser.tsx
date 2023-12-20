@@ -246,7 +246,11 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
           // * or doesn't have a server loader and we have no data to render
           if (
             route &&
-            shouldHydrateRouteLoader(manifestRoute, route) &&
+            shouldHydrateRouteLoader(
+              manifestRoute,
+              route,
+              window.__remixContext.isSpaMode
+            ) &&
             (route.HydrateFallback || !manifestRoute.hasLoader)
           ) {
             hydrationData.loaderData[routeId] = undefined;

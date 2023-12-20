@@ -72,6 +72,7 @@ export function createServerRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModules: RouteModules,
   future: FutureConfig,
+  isSpaMode: boolean,
   parentId: string = "",
   routesByParentId: Record<
     string,
@@ -101,6 +102,11 @@ export function createServerRoutes(
       index: route.index,
       path: route.path,
       handle: routeModule.handle,
+      // For SPA mode, all routes are lazy except root
+      lazy:
+        isSpaMode && route.id !== "root"
+          ? () => Promise.resolve({ Component: () => null })
+          : undefined,
       // For partial hydration rendering, we need to indicate when the route
       // has a loader/clientLoader, but it won't ever be called during the static
       // render, so just give it a no-op function so we can render down to the
@@ -114,6 +120,7 @@ export function createServerRoutes(
       manifest,
       routeModules,
       future,
+      isSpaMode,
       route.id,
       routesByParentId
     );
@@ -305,7 +312,11 @@ export function createClientRoutes(
       };
 
       // Let React Router know whether to run this on hydration
-      dataRoute.loader.hydrate = shouldHydrateRouteLoader(route, routeModule);
+      dataRoute.loader.hydrate = shouldHydrateRouteLoader(
+        route,
+        routeModule,
+        isSpaMode
+      );
 
       dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
@@ -539,10 +550,12 @@ function getRouteModuleComponent(routeModule: RouteModule) {
 
 export function shouldHydrateRouteLoader(
   route: EntryRoute,
-  routeModule: RouteModule
+  routeModule: RouteModule,
+  isSpaMode: boolean
 ) {
   return (
-    routeModule.clientLoader != null &&
-    (routeModule.clientLoader.hydrate === true || route.hasLoader !== true)
+    (isSpaMode && route.id !== "root") ||
+    (routeModule.clientLoader != null &&
+      (routeModule.clientLoader.hydrate === true || route.hasLoader !== true))
   );
 }
