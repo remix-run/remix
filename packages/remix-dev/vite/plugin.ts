@@ -77,8 +77,21 @@ type RemixConfigJsdocOverrides = {
   publicPath?: SupportedRemixConfig["publicPath"];
 };
 
+// Only expose a subset of route properties to the "serverBundles" function
+const branchRouteProperties = [
+  "id",
+  "path",
+  "file",
+  "index",
+] as const satisfies ReadonlyArray<keyof ConfigRoute>;
+type BranchRoute = Pick<ConfigRoute, typeof branchRouteProperties[number]>;
+
+export const configRouteToBranchRoute = (
+  configRoute: ConfigRoute
+): BranchRoute => pick(configRoute, branchRouteProperties);
+
 type ServerBundlesFunction = (args: {
-  branch: ConfigRoute[];
+  branch: BranchRoute[];
 }) => string | Promise<string>;
 
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &

@@ -39,8 +39,6 @@ Each `route` in the `branch` array contains the following properties:
 - `path` — The path this route uses to match on the URL pathname.
 - `file` — The absolute path to the entry point for this route.
 - `index` — Whether or not this route is an index route.
-- `caseSensitive` — Whether or not the `path` is case-sensitive.
-- `parentId` — The unique `id` for this route's parent route, if there is one.
 
 ## Server bundle manifest
 

@@ -3,9 +3,10 @@ import path from "node:path";
 import fse from "fs-extra";
 import colors from "picocolors";
 
-import type {
-  ResolvedRemixVitePluginConfig,
-  ServerBuildConfig,
+import {
+  type ResolvedRemixVitePluginConfig,
+  type ServerBuildConfig,
+  configRouteToBranchRoute,
 } from "./plugin";
 import type { ConfigRoute, RouteManifest } from "../config/routes";
 import invariant from "../invariant";
@@ -131,11 +132,13 @@ async function getServerBundles({
     getAddressableRoutes(routes).map(async (route) => {
       let branch = getRouteBranch(routes, route.id);
       let bundleId = await getServerBundles({
-        branch: branch.map((route) => ({
-          ...route,
-          // Ensure absolute paths are passed to the serverBundles function
-          file: path.join(resolvedAppDirectory, route.file),
-        })),
+        branch: branch.map((route) =>
+          configRouteToBranchRoute({
+            ...route,
+            // Ensure absolute paths are passed to the serverBundles function
+            file: path.join(resolvedAppDirectory, route.file),
+          })
+        ),
       });
       serverBundlesManifest.routeIdToBundleId[route.id] = bundleId;
 
