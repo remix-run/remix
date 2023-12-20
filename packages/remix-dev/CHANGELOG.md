@@ -1,5 +1,221 @@
 # `@remix-run/dev`
 
+## 2.4.0
+
+### Minor Changes
+
+- Vite: exclude modules within `.server` directories from client build ([#8154](https://github.com/remix-run/remix/pull/8154))
+
+- Add support for `clientLoader`/`clientAction`/`HydrateFallback` route exports ([RFC](https://github.com/remix-run/remix/discussions/7634)) ([#8173](https://github.com/remix-run/remix/pull/8173))
+
+  Remix now supports loaders/actions that run on the client (in addition to, or instead of the loader/action that runs on the server). While we still recommend server loaders/actions for the majority of your data needs in a Remix app - these provide some levers you can pull for more advanced use-cases such as:
+
+  - Leveraging a data source local to the browser (i.e., `localStorage`)
+  - Managing a client-side cache of server data (like `IndexedDB`)
+  - Bypassing the Remix server in a BFF setup and hitting your API directly from the browser
+  - Migrating a React Router SPA to a Remix application
+
+  By default, `clientLoader` will not run on hydration, and will only run on subsequent client side navigations.
+
+  If you wish to run your client loader on hydration, you can set `clientLoader.hydrate=true` to force Remix to execute it on initial page load. Keep in mind that Remix will still SSR your route component so you should ensure that there is no new _required_ data being added by your `clientLoader`.
+
+  If your `clientLoader` needs to run on hydration and adds data you require to render the route component, you can export a `HydrateFallback` component that will render during SSR, and then your route component will not render until the `clientLoader` has executed on hydration.
+
+  `clientAction` is simpler than `clientLoader` because it has no hydration use-cases. `clientAction` will only run on client-side navigations.
+
+  For more information, please refer to the [`clientLoader`](https://remix.run/route/client-loader) and [`clientAction`](https://remix.run/route/client-action) documentation.
+
+- Vite: Strict route exports ([#8171](https://github.com/remix-run/remix/pull/8171))
+
+  With Vite, Remix gets stricter about which exports are allowed from your route modules.
+  Previously, the Remix compiler would allow any export from routes.
+  While this was convenient, it was also a common source of bugs that were hard to track down because they only surfaced at runtime.
+
+  For more, see <https://remix.run/docs/en/main/future/vite#strict-route-exports>
+
+- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/release-next/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths). ([#8216](https://github.com/remix-run/remix/pull/8216))
+
+### Patch Changes
+
+- Upgrade Vite peer dependency range to v5 ([#8172](https://github.com/remix-run/remix/pull/8172))
+
+- Support HMR for routes with `handle` export in Vite dev ([#8022](https://github.com/remix-run/remix/pull/8022))
+
+- Fix flash of unstyled content for non-Express custom servers in Vite dev ([#8076](https://github.com/remix-run/remix/pull/8076))
+
+- Bundle CSS imported in client entry file in Vite plugin ([#8143](https://github.com/remix-run/remix/pull/8143))
+
+- Change Vite build output paths to fix a conflict between how Vite and the Remix compiler each manage the `public` directory. ([#8077](https://github.com/remix-run/remix/pull/8077))
+
+  **This is a breaking change for projects using the unstable Vite plugin.**
+
+  The server is now compiled into `build/server` rather than `build`, and the client is now compiled into `build/client` rather than `public`.
+
+  For more information on the changes and guidance on how to migrate your project, refer to the updated [Remix Vite documentation](https://remix.run/docs/en/main/future/vite).
+
+- Remove undocumented `legacyCssImports` option from Vite plugin due to issues with `?url` imports of CSS files not being processed correctly in Vite ([#8096](https://github.com/remix-run/remix/pull/8096))
+
+- Vite: fix access to default `entry.{client,server}.tsx` within pnpm workspace on Windows ([#8057](https://github.com/remix-run/remix/pull/8057))
+
+- Remove `unstable_createViteServer` and `unstable_loadViteServerBuild` which were only minimal wrappers around Vite's `createServer` and `ssrLoadModule` functions when using a custom server. ([#8120](https://github.com/remix-run/remix/pull/8120))
+
+  **This is a breaking change for projects using the unstable Vite plugin with a custom server.**
+
+  Instead, we now provide `unstable_viteServerBuildModuleId` so that custom servers interact with Vite directly rather than via Remix APIs, for example:
+
+  ```diff
+  -import {
+  -  unstable_createViteServer,
+  -  unstable_loadViteServerBuild,
+  -} from "@remix-run/dev";
+  +import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
+  ```
+
+  Creating the Vite server in middleware mode:
+
+  ```diff
+  const vite =
+    process.env.NODE_ENV === "production"
+      ? undefined
+  -    : await unstable_createViteServer();
+  +    : await import("vite").then(({ createServer }) =>
+  +        createServer({
+  +          server: {
+  +            middlewareMode: true,
+  +          },
+  +        })
+  +      );
+  ```
+
+  Loading the Vite server build in the request handler:
+
+  ```diff
+  app.all(
+    "*",
+    createRequestHandler({
+      build: vite
+  -      ? () => unstable_loadViteServerBuild(vite)
+  +      ? () => vite.ssrLoadModule(unstable_viteServerBuildModuleId)
+        : await import("./build/server/index.js"),
+    })
+  );
+  ```
+
+- Pass request handler errors to `vite.ssrFixStacktrace` in Vite dev to ensure stack traces correctly map to the original source code ([#8066](https://github.com/remix-run/remix/pull/8066))
+
+- Vite: Preserve names for exports from .client imports ([#8200](https://github.com/remix-run/remix/pull/8200))
+
+  Unlike `.server` modules, the main idea is not to prevent code from leaking into the server build
+  since the client build is already public. Rather, the goal is to isolate the SSR render from client-only code.
+  Routes need to import code from `.client` modules without compilation failing and then rely on runtime checks
+  to determine if the code is running on the server or client.
+
+  Replacing `.client` modules with empty modules would cause the build to fail as ESM named imports are statically analyzed.
+  So instead, we preserve the named export but replace each exported value with an empty object.
+  That way, the import is valid at build time and the standard runtime checks can be used to determine if then
+  code is running on the server or client.
+
+- Add `@remix-run/node` to Vite's `optimizeDeps.include` array ([#8177](https://github.com/remix-run/remix/pull/8177))
+
+- Improve Vite plugin performance ([#8121](https://github.com/remix-run/remix/pull/8121))
+
+  - Parallelize detection of route module exports
+  - Disable `server.preTransformRequests` in Vite child compiler since it's only used to process route modules
+
+- Remove automatic global Node polyfill installation from the built-in Vite dev server and instead allow explicit opt-in. ([#8119](https://github.com/remix-run/remix/pull/8119))
+
+  **This is a breaking change for projects using the unstable Vite plugin without a custom server.**
+
+  If you're not using a custom server, you should call `installGlobals` in your Vite config instead.
+
+  ```diff
+  import { unstable_vitePlugin as remix } from "@remix-run/dev";
+  +import { installGlobals } from "@remix-run/node";
+  import { defineConfig } from "vite";
+
+  +installGlobals();
+
+  export default defineConfig({
+    plugins: [remix()],
+  });
+  ```
+
+- Vite: Errors at build-time when client imports .server default export ([#8184](https://github.com/remix-run/remix/pull/8184))
+
+  Remix already stripped .server file code before ensuring that server code never makes it into the client.
+  That results in errors when client code tries to import server code, which is exactly what we want!
+  But those errors were happening at runtime for default imports.
+  A better experience is to have those errors happen at build-time so that you guarantee that your users won't hit them.
+
+- Fix `request instanceof Request` checks when using Vite dev server ([#8062](https://github.com/remix-run/remix/pull/8062))
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.4.0`
+  - `@remix-run/node@2.4.0`
+
+## 2.3.1
+
+### Patch Changes
+
+- Support `nonce` prop on `LiveReload` component in Vite dev ([#8014](https://github.com/remix-run/remix/pull/8014))
+- Ensure code-split JS files in the server build's assets directory aren't cleaned up after Vite build ([#8042](https://github.com/remix-run/remix/pull/8042))
+- Fix redundant copying of assets from `public` directory in Vite build ([#8039](https://github.com/remix-run/remix/pull/8039))
+  - This ensures that static assets aren't duplicated in the server build directory
+  - This also fixes an issue where the build would break if `assetsBuildDirectory` was deeply nested within the `public` directory
+- Updated dependencies:
+  - `@remix-run/node@2.3.1`
+  - `@remix-run/server-runtime@2.3.1`
+
+## 2.3.0
+
+### Patch Changes
+
+- Support rendering of `LiveReload` component after `Scripts` in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
+- fix(vite): fix "react-refresh/babel" resolution for custom server with pnpm ([#7904](https://github.com/remix-run/remix/pull/7904))
+- Support JSX usage in `.jsx` files without manual `React` import in Vite ([#7888](https://github.com/remix-run/remix/pull/7888))
+- Support optional rendering of `LiveReload` component in Vite dev ([#7919](https://github.com/remix-run/remix/pull/7919))
+- Fix Vite production builds when plugins that have different local state between `development` and `production` modes are present, e.g. `@mdx-js/rollup`. ([#7911](https://github.com/remix-run/remix/pull/7911))
+- Cache resolution of Remix Vite plugin options ([#7908](https://github.com/remix-run/remix/pull/7908))
+- Support Vite 5 ([#7846](https://github.com/remix-run/remix/pull/7846))
+- Allow `process.env.NODE_ENV` values other than `"development"` in Vite dev ([#7980](https://github.com/remix-run/remix/pull/7980))
+- Attach CSS from shared chunks to routes in Vite build ([#7952](https://github.com/remix-run/remix/pull/7952))
+- fix(vite): Let Vite handle serving files outside of project root via `/@fs` ([#7913](https://github.com/remix-run/remix/pull/7913))
+  - This fixes errors when using default client entry or server entry in a pnpm project where those files may be outside of the project root, but within the workspace root.
+  - By default, Vite prevents access to files outside the workspace root (when using workspaces) or outside of the project root (when not using workspaces) unless user explicitly opts into it via Vite's `server.fs.allow`.
+- Improve performance of LiveReload proxy in Vite dev ([#7883](https://github.com/remix-run/remix/pull/7883))
+- fix(vite): deduplicate `@remix-run/react` ([#7926](https://github.com/remix-run/remix/pull/7926))
+  - Pre-bundle Remix dependencies to avoid Remix router duplicates.
+  - Our remix-react-proxy plugin does not process default client and
+  - server entry files since those come from within `node_modules`.
+  - That means that before Vite pre-bundles dependencies (e.g. first time dev server is run) mismatching Remix routers cause `Error: You must render this element inside a <Remix> element`.
+- Fix React Fast Refresh error on load when using `defer` in Vite dev server ([#7842](https://github.com/remix-run/remix/pull/7842))
+- Handle multiple "Set-Cookie" headers in Vite dev server ([#7843](https://github.com/remix-run/remix/pull/7843))
+- Fix flash of unstyled content on initial page load in Vite dev when using a custom Express server ([#7937](https://github.com/remix-run/remix/pull/7937))
+- Emit assets that were only referenced in the server build into the client assets directory in Vite build ([#7892](https://github.com/remix-run/remix/pull/7892), cherry-picked in [`8cd31d65`](https://github.com/remix-run/remix/commit/8cd31d6543ef4c765220fc64dca9bcc9c61ee9eb))
+- Populate `process.env` from `.env` files on the server in Vite dev ([#7958](https://github.com/remix-run/remix/pull/7958))
+- Fix `FutureConfig` type ([#7895](https://github.com/remix-run/remix/pull/7895))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.3.0`
+  - `@remix-run/node@2.3.0`
+
+## 2.2.0
+
+### Minor Changes
+
+- Unstable Vite support for Node-based Remix apps ([#7590](https://github.com/remix-run/remix/pull/7590))
+  - `remix build` 👉 `vite build && vite build --ssr`
+  - `remix dev` 👉 `vite dev`
+  - Other runtimes (e.g. Deno, Cloudflare) not yet supported.
+  - See "Future > Vite" in the Remix Docs for details
+- Add a new `future.v3_fetcherPersist` flag to change the persistence behavior of fetchers. Instead of being immediately cleaned up when unmounted in the UI, fetchers will persist until they return to an `idle` state ([RFC](https://github.com/remix-run/remix/discussions/7698)) ([#7704](https://github.com/remix-run/remix/pull/7704))
+  - For more details, please refer to the [React Router 6.18.0](https://github.com/remix-run/react-router/releases/tag/react-router%406.18.0) release notes
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.2.0`
+  - `@remix-run/node@2.2.0`
+
 ## 2.1.0
 
 ### Patch Changes

@@ -15,6 +15,34 @@ export function SomeComponent() {
 }
 ```
 
+## Options
+
+### `key`
+
+By default, `useFetcher` generate a unique fetcher scoped to that component (however, it may be looked up in [`useFetchers()`][use_fetchers] while in-flight). If you want to identify a fetcher with your own key such that you can access it from elsewhere in your app, you can do that with the `key` option:
+
+```tsx lines=[2,8]
+function AddToBagButton() {
+  const fetcher = useFetcher({ key: "add-to-bag" });
+  return <fetcher.Form method="post">...</fetcher.Form>;
+}
+
+// Then, up in the header...
+function CartCount({ count }) {
+  const fetcher = useFetcher({ key: "add-to-bag" });
+  const inFlightCount = Number(
+    fetcher.formData?.get("quantity") || 0
+  );
+  const optimisticCount = count + inFlightCount;
+  return (
+    <>
+      <BagIcon />
+      <span>{optimisticCount}</span>
+    </>
+  );
+}
+```
+
 ## Components
 
 ### `fetcher.Form`
@@ -59,7 +87,9 @@ fetcher.submit(
 fetcher.submit(formData);
 ```
 
-## `fetcher.load(href)`
+`fetcher.submit` is a wrapper around a [`useSubmit`][use-submit] call for the fetcher instance, so it also accepts the same options as `useSubmit`.
+
+### `fetcher.load(href, options)`
 
 Loads data from a route loader. While multiple nested routes can match a URL, only the leaf route will be called.
 
@@ -67,6 +97,12 @@ Loads data from a route loader. While multiple nested routes can match a URL, on
 fetcher.load("/some/route");
 fetcher.load("/some/route?foo=bar");
 ```
+
+#### `options.unstable_flushSync`
+
+The `unstable_flushSync` option tells React Router DOM to wrap the initial state update for this `fetcher.load` in a [`ReactDOM.flushSync`][flush-sync] call instead of the default [`React.startTransition`][start-transition]. This allows you to perform synchronous DOM actions immediately after the update is flushed to the DOM.
+
+<docs-warning>`ReactDOM.flushSync` de-optimizes React and can hurt the performance of your app.</docs-warning>
 
 ## Properties
 
@@ -106,7 +142,7 @@ The form method of the submission.
 - [Concurrent Mutations w/ useFetcher][concurrent_mutations_with_use_fetcher]
 - [Optimistic UI][optimistic_ui]
 
-[form_component]: ../components/Form
+[form_component]: ../components/form
 [form_data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [html_form_element]: https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement
 [form_element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form
@@ -117,3 +153,7 @@ The form method of the submission.
 [network_concurrency_management]: ../discussion/concurrency
 [concurrent_mutations_with_use_fetcher]: https://www.youtube.com/watch?v=vTzNpiOk668&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
 [optimistic_ui]: https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6
+[use_fetchers]: ./use-fetchers
+[flush-sync]: https://react.dev/reference/react-dom/flushSync
+[start-transition]: https://react.dev/reference/react/startTransition
+[use-submit]: ./use-submit

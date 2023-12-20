@@ -135,7 +135,7 @@ async function copyTemplateFromLocalFilePath(
   filePath: string,
   destPath: string
 ): Promise<boolean> {
-  if (filePath.endsWith(".tar.gz")) {
+  if (filePath.endsWith(".tar.gz") || filePath.endsWith(".tgz")) {
     await extractLocalTarball(filePath, destPath);
     return false;
   }

@@ -1,5 +1,38 @@
 # `@remix-run/serve`
 
+## 2.4.0
+
+### Patch Changes
+
+- Fix source map loading when file has `?t=timestamp` suffix (rebuilds) ([#8174](https://github.com/remix-run/remix/pull/8174))
+- Updated dependencies:
+  - `@remix-run/node@2.4.0`
+  - `@remix-run/express@2.4.0`
+
+## 2.3.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.3.1`
+  - `@remix-run/node@2.3.1`
+
+## 2.3.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.3.0`
+  - `@remix-run/node@2.3.0`
+
+## 2.2.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.2.0`
+  - `@remix-run/node@2.2.0`
+
 ## 2.1.0
 
 ### Patch Changes

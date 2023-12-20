@@ -11,6 +11,9 @@ This file has a few build and development configuration options, but does not ac
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
+  future: {
+    /* any enabled future flags */
+  },
   ignoredRouteFiles: ["**/.*"],
   publicPath: "/build/",
   routes(defineRoutes) {
@@ -63,6 +66,14 @@ When using this option and targeting non-Node.js server platforms, you may also 
 The path to a directory Remix can use for caching things in development,
 relative to `remix.config.js`. Defaults to `".cache"`.
 
+## future
+
+The `future` config lets you opt-into future breaking changes via [Future Flags][future-flags]. The following future flags currently exist in Remix v2 and will become the default behavior in Remix v3:
+
+- **`v3_fetcherPersist`**: Change fetcher persistence/cleanup behavior in 2 ways ([RFC][fetcherpersist-rfc]):
+  - Fetchers are no longer removed on unmount, and remain exposed via [`useFetchers`][use-fetchers] until they return to an `idle` state
+  - Fetchers that complete while still mounted no longer persist in [`useFetchers`][use-fetchers] since you can access those fetchers via [`useFetcher`][use-fetcher]
+
 ## ignoredRouteFiles
 
 This is an array of globs (via [minimatch][minimatch]) that Remix will match to
@@ -74,6 +85,22 @@ dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
 
 The URL prefix of the browser build with a trailing slash. Defaults to
 `"/build/"`. This is the path the browser will use to find assets.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  publicPath: "/assets/",
+};
+```
+
+If you wish to serve static assets from a separate domain you may also specify an absolute path:
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  publicPath: "https://static.example.com/assets/",
+};
+```
 
 ## postcss
 
@@ -237,12 +264,15 @@ There are a few conventions that Remix uses you should be aware of.
 [dilum_sanjaya]: https://twitter.com/DilumSanjaya
 [an_awesome_visualization]: https://interactive-remix-routing-v2.netlify.app
 [remix_dev]: ../other-api/dev#remix-dev
-[app_directory]: #appDirectory
+[app_directory]: #appdirectory
 [css_side_effect_imports]: ../styling/css-imports
 [postcss]: https://postcss.org
 [tailwind_functions_and_directives]: https://tailwindcss.com/docs/functions-and-directives
 [jspm]: https://github.com/jspm/jspm-core
 [esbuild_plugins_node_modules_polyfill]: https://npm.im/esbuild-plugins-node-modules-polyfill
-[port]: ../other-api/dev#options-1
 [browser-node-builtins-polyfill]: #browsernodebuiltinspolyfill
 [server-node-builtins-polyfill]: #servernodebuiltinspolyfill
+[future-flags]: ../start/future-flags
+[fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
+[use-fetchers]: ../hooks/use-fetchers
+[use-fetcher]: ../hooks/use-fetcher
