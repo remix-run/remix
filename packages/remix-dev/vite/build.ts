@@ -92,19 +92,19 @@ export type ServerBundlesManifest = {
   routes: RouteManifest;
 };
 
-async function getServerBundles({
+async function getServerBuilds({
   routes,
   serverBuildDirectory,
   serverBuildFile,
-  serverBundles: getServerBundles,
+  serverBundles,
   rootDirectory,
   appDirectory,
 }: ResolvedRemixVitePluginConfig): Promise<{
-  serverBundles: ServerBuildConfig[];
+  serverBuilds: ServerBuildConfig[];
   serverBundlesManifest?: ServerBundlesManifest;
 }> {
-  if (!getServerBundles) {
-    return { serverBundles: [{ routes, serverBuildDirectory }] };
+  if (!serverBundles) {
+    return { serverBuilds: [{ routes, serverBuildDirectory }] };
   }
 
   let { normalizePath } = importViteEsmSync();
@@ -126,12 +126,12 @@ async function getServerBundles({
     routes: rootRelativeRoutes,
   };
 
-  let serverBundles = new Map<string, ServerBuildConfig>();
+  let serverBuildConfigByBundleId = new Map<string, ServerBuildConfig>();
 
   await Promise.all(
     getAddressableRoutes(routes).map(async (route) => {
       let branch = getRouteBranch(routes, route.id);
-      let bundleId = await getServerBundles({
+      let bundleId = await serverBundles({
         branch: branch.map((route) =>
           configRouteToBranchRoute({
             ...route,
@@ -143,7 +143,7 @@ async function getServerBundles({
       serverBundlesManifest.routeIdToBundleId[route.id] = bundleId;
 
       let serverBundleDirectory = path.join(serverBuildDirectory, bundleId);
-      let serverBuildConfig = serverBundles.get(bundleId);
+      let serverBuildConfig = serverBuildConfigByBundleId.get(bundleId);
       if (!serverBuildConfig) {
         serverBundlesManifest.serverBundles[bundleId] = {
           id: bundleId,
@@ -155,7 +155,7 @@ async function getServerBundles({
           routes: {},
           serverBuildDirectory: serverBundleDirectory,
         };
-        serverBundles.set(bundleId, serverBuildConfig);
+        serverBuildConfigByBundleId.set(bundleId, serverBuildConfig);
       }
       for (let route of branch) {
         serverBuildConfig.routes[route.id] = route;
@@ -164,7 +164,7 @@ async function getServerBundles({
   );
 
   return {
-    serverBundles: Array.from(serverBundles.values()),
+    serverBuilds: Array.from(serverBuildConfigByBundleId.values()),
     serverBundlesManifest,
   };
 }
@@ -241,11 +241,11 @@ export async function build(
   await viteBuild();
 
   // Then run Vite SSR builds in parallel
-  let { serverBundles, serverBundlesManifest } = await getServerBundles(
+  let { serverBuilds, serverBundlesManifest } = await getServerBuilds(
     pluginConfig
   );
 
-  await Promise.all(serverBundles.map(viteBuild));
+  await Promise.all(serverBuilds.map(viteBuild));
 
   if (serverBundlesManifest) {
     await fse.writeFile(
