@@ -12,7 +12,7 @@ The provided `unstable_serverBundles` function is called for each route in the t
 
 For each route, this function is passed an array of routes leading to and including that route, referred to as the route `branch`. This allows you to create server bundles for different portions of the route tree. For example, you could use this to create a separate server bundle containing all routes within a particular layout route:
 
-```ts filename=vite.config.ts lines=[7-10]
+```ts filename=vite.config.ts lines=[7-15]
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -44,9 +44,9 @@ Each `route` in the `branch` array contains the following properties:
 
 When the build is complete, Remix will generate a `bundles.json` manifest file in your server build directory containing an object with the following properties:
 
-- `serverBundles` — An object mapping bundle IDs to an object containing the bundle's `id` and `file`.
-- `routeIdToServerBundleId` — An object mapping route IDs to server bundle ID.
-- `routes` — A route manifest mapping route IDs to route metadata. This can be used to drive a custom routing layer in front of your Remix request handlers.
+- `serverBundles` — An object that maps bundle IDs to the bundle's `id` and `file`.
+- `routeIdToServerBundleId` — An object that maps route IDs to its server bundle ID.
+- `routes` — A route manifest that maps route IDs to route metadata. This can be used to drive a custom routing layer in front of your Remix request handlers.
 
 [remix-vite]: ./vite.md
 [pathless-layout-route]: ../file-conventions/routes#nested-layouts-without-nested-urls
