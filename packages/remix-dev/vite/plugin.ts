@@ -97,10 +97,22 @@ type ServerBundlesFunction = (args: {
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
   Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides> & {
     /**
-     * TODO: Add descriptions
+     * The path to the server build directory, relative to the project. This
+     * directory should be deployed to your server. Defaults to
+     * `"build/server"`.
      */
     serverBuildDirectory?: string;
+    /**
+     * The file name of the server build output. This file
+     * should end in a `.js` extension and should be deployed to your server.
+     * Defaults to `"index.js"`.
+     */
     serverBuildFile?: string;
+    /**
+     * A function for assigning routes to different server bundles. This
+     * function should return a server bundle ID which will be used as the
+     * bundle's directory name within the server build directory.
+     */
     unstable_serverBundles?: ServerBundlesFunction;
   };
 
@@ -117,9 +129,6 @@ export type ResolvedRemixVitePluginConfig = Pick<
   | "routes"
   | "serverModuleFormat"
 > & {
-  /**
-   * TODO: Add descriptions
-   */
   serverBuildDirectory: string;
   serverBuildFile: string;
   serverBundles?: ServerBundlesFunction;
