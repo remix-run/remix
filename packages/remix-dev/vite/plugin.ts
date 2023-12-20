@@ -32,7 +32,6 @@ import { resolveFileUrl } from "./resolve-file-url";
 import { removeExports } from "./remove-exports";
 import { replaceImportSpecifier } from "./replace-import-specifier";
 import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
-import { ServerMode } from "../config/serverModes";
 
 const supportedRemixConfigKeys = [
   "appDirectory",
