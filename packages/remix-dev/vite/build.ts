@@ -9,6 +9,7 @@ import type {
 } from "./plugin";
 import type { ConfigRoute, RouteManifest } from "../config/routes";
 import invariant from "../invariant";
+import { importViteEsmSync } from "./import-vite-esm-sync";
 
 async function extractConfig({
   configFile,
@@ -79,10 +80,6 @@ function getRouteBranch(routes: RouteManifest, routeId: string) {
   return branch.reverse();
 }
 
-function normalizePath(filePath: string) {
-  return filePath.replace(/\\/g, "/");
-}
-
 export type ServerBundlesManifest = {
   serverBundles: {
     [serverBundleId: string]: {
@@ -108,6 +105,8 @@ async function getServerBundles({
   if (!getServerBundles) {
     return { serverBundles: [{ routes, serverBuildDirectory }] };
   }
+
+  let { normalizePath } = importViteEsmSync();
 
   let resolvedAppDirectory = path.resolve(rootDirectory, appDirectory);
   let rootRelativeRoutes = Object.fromEntries(
