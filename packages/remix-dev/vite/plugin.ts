@@ -900,7 +900,11 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           }
 
           if (cachedPluginConfig.isSpaMode) {
-            await handleSpaMode(serverBuildPath, assetsBuildDirectory);
+            await handleSpaMode(
+              serverBuildPath,
+              assetsBuildDirectory,
+              viteConfig.mode
+            );
           }
         },
       },
@@ -1368,7 +1372,8 @@ async function getRouteMetadata(
 
 async function handleSpaMode(
   serverBuildPath: string,
-  assetsBuildDirectory: string
+  assetsBuildDirectory: string,
+  mode: string
 ) {
   // Create a handler and call it for the `/` path - rendering down to the
   // proper HydrateFallback ... or not!  Maybe they have a static landing page
@@ -1377,7 +1382,7 @@ async function handleSpaMode(
   let { createRequestHandler: createNodeRequestHandler } = await import(
     "@remix-run/node"
   );
-  let handler = createNodeRequestHandler(build, ServerMode.Production);
+  let handler = createNodeRequestHandler(build, mode);
   let response = await handler(new Request("http://localhost/"));
   invariant(response.status === 200, "Error generating the index.html file");
 

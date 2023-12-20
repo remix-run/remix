@@ -481,12 +481,14 @@ export async function resolveConfig(
 
   let isSpaMode = appConfig.ssr === false;
   if (isSpaMode) {
-    // Don't allow the user to provide their own entry.server.tsx - we'll use an
-    // internal renderToString implementation since no streaming is required
-    if (userEntryServerFile) {
-      let file = path.basename(userEntryServerFile);
-      throw new Error(`SPA Mode: ${file} is not permitted in SPA Mode`);
-    }
+    // This is a super-simple default since we don't need streaming in SPA mode.
+    // We can include this in a remix-spa template, but right now `npx remix reveal`
+    // will still expose the streaming template since that command doesn't have
+    // access to the `ssr:false` flag in the vite config (the streaming template
+    // works just fine so maybe instea dof having this we _only have this version
+    // in the template...).  We let users manage an entry.server file in SPA mode
+    // so they can de ide if they want to hydrate the full document or just an
+    // embedded `<div id="app">` or whatever.
     entryServerFile = "entry.server.spa.tsx";
 
     // TODO: Should we check the rest of the server related configs and throw

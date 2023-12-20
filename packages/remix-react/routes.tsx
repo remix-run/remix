@@ -24,6 +24,7 @@ import type { FutureConfig } from "./entry";
 import { prefetchStyleLinks } from "./links";
 import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import { RemixRootDefaultHydrateFallback } from "./fallback";
+import invariant from "./invariant";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;
@@ -79,6 +80,10 @@ export function createServerRoutes(
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModules[route.id];
+    invariant(
+      routeModule,
+      "No `routeModule` available to create server routes"
+    );
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       Component: getRouteModuleComponent(routeModule),
@@ -95,7 +100,7 @@ export function createServerRoutes(
       id: route.id,
       index: route.index,
       path: route.path,
-      handle: routeModules[route.id].handle,
+      handle: routeModule.handle,
       // For partial hydration rendering, we need to indicate when the route
       // has a loader/clientLoader, but it won't ever be called during the static
       // render, so just give it a no-op function so we can render down to the
@@ -205,10 +210,13 @@ export function createClientRoutes(
     async function prefetchStylesAndCallHandler(
       handler: () => Promise<unknown>
     ) {
-      // Only prefetch links if we've been loaded into the cache, route.lazy
-      // will handle initial loads
-      let linkPrefetchPromise = routeModulesCache[route.id]
-        ? prefetchStyleLinks(route, routeModulesCache[route.id])
+      // Only prefetch links if we exist in the routeModulesCache (critical modules
+      // and navigating back to pages previously loaded via route.lazy).  Initial
+      // execution of route.lazy (when the module is not in the cache) will handle
+      // prefetching style links via loadRouteModuleWithBlockingLinks.
+      let cachedModule = routeModulesCache[route.id];
+      let linkPrefetchPromise = cachedModule
+        ? prefetchStyleLinks(route, cachedModule)
         : Promise.resolve();
       try {
         return handler();
@@ -257,6 +265,10 @@ export function createClientRoutes(
       dataRoute.loader = async ({ request, params }: LoaderFunctionArgs) => {
         try {
           let result = await prefetchStylesAndCallHandler(async () => {
+            invariant(
+              routeModule,
+              "No `routeModule` available for critical-route loader"
+            );
             if (!routeModule.clientLoader) {
               if (isSpaMode) return null;
               // Call the server when no client loader exists
@@ -297,6 +309,10 @@ export function createClientRoutes(
 
       dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
+          invariant(
+            routeModule,
+            "No `routeModule` available for critical-route action"
+          );
           if (!routeModule.clientAction) {
             if (isSpaMode) {
               throw noActionDefinedError("clientAction", route.id);

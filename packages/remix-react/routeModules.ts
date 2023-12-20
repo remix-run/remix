@@ -16,7 +16,7 @@ import type { LinkDescriptor } from "./links";
 import type { EntryRoute } from "./routes";
 
 export interface RouteModules {
-  [routeId: string]: RouteModule;
+  [routeId: string]: RouteModule | undefined;
 }
 
 export interface RouteModule {
@@ -169,7 +169,7 @@ export async function loadRouteModule(
   routeModulesCache: RouteModules
 ): Promise<RouteModule> {
   if (route.id in routeModulesCache) {
-    return routeModulesCache[route.id];
+    return routeModulesCache[route.id] as RouteModule;
   }
 
   try {

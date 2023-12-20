@@ -605,11 +605,20 @@ export type ScriptProps = Omit<
  * @see https://remix.run/components/scripts
  */
 export function Scripts(props: ScriptProps) {
-  let { manifest, serverHandoffString, abortDelay, serializeError } =
+  let { manifest, serverHandoffString, abortDelay, serializeError, isSpaMode } =
     useRemixContext();
   let { router, static: isStatic, staticContext } = useDataRouterContext();
-  let { matches } = useDataRouterStateContext();
+  let { matches: dontUseTheseMatches } = useDataRouterStateContext();
   let navigation = useNavigation();
+
+  // In SPA Mode we only want to import root on the critical path, since we
+  // want the generated HTML file to be able to be loaded at non-/ paths as
+  // well.  This lets the router handle initial match loads via lazy().
+  //
+  // TODO: If users only ever intend to serve the `/` path from index.html and
+  // thus they want to include all initial matches here...should we give them
+  // a config to do so?
+  let matches = isSpaMode ? [dontUseTheseMatches[0]] : dontUseTheseMatches;
 
   React.useEffect(() => {
     isHydrated = true;
