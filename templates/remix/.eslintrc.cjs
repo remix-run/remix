@@ -44,6 +44,9 @@ module.exports = {
           { name: "NavLink", linkAttribute: "to" },
         ],
       },
+      "import/resolver": {
+        "typescript": {},
+      }
     },
 
     // Typescript
