@@ -1,5 +1,5 @@
 ---
-"@remix-run/dev": patch
+"@remix-run/dev": minor
 ---
 
 Add `unstable_serverBundles` option to Vite plugin to support splitting server code into multiple request handlers.
