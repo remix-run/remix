@@ -10,7 +10,6 @@ import {
 } from "./plugin";
 import type { ConfigRoute, RouteManifest } from "../config/routes";
 import invariant from "../invariant";
-import { importViteEsmSync } from "./import-vite-esm-sync";
 
 async function extractConfig({
   configFile,
@@ -140,6 +139,11 @@ async function getServerBuilds({
           })
         ),
       });
+      if (typeof bundleId !== "string") {
+        throw new Error(
+          `The "unstable_serverBundles" function must return a string`
+        );
+      }
       serverBundlesManifest.routeIdToBundleId[route.id] = bundleId;
 
       let serverBundleDirectory = path.join(serverBuildDirectory, bundleId);
