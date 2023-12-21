@@ -20,9 +20,7 @@ export default defineConfig({
           (route) => route.id === "routes/_authenticated"
         );
 
-        return isAuthenticatedRoute
-          ? "authenticated"
-          : "unauthenticated";
+        return isAuthenticatedRoute ? "authenticated" : "unauthenticated";
       },
     }),
   ],
