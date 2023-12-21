@@ -10,6 +10,7 @@ import {
 } from "./plugin";
 import type { ConfigRoute, RouteManifest } from "../config/routes";
 import invariant from "../invariant";
+import { preloadViteEsm } from "./import-vite-esm-sync";
 
 async function extractConfig({
   configFile,
@@ -211,6 +212,10 @@ export async function build(
     mode,
   }: ViteBuildOptions
 ) {
+  // Ensure Vite's ESM build is preloaded at the start of the process
+  // so it can be accessed synchronously via `importViteEsmSync`
+  await preloadViteEsm();
+
   let { pluginConfig, viteConfig } = await extractConfig({
     configFile,
     mode,
