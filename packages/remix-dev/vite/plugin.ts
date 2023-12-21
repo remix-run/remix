@@ -743,6 +743,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           ...viteUserConfig,
           mode: viteConfig.mode,
           server: {
+            watch: viteConfig.command === "build" ? null : undefined,
             preTransformRequests: false,
             hmr: false,
           },
