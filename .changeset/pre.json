@@ -20,5 +20,16 @@
     "@remix-run/server-runtime": "2.4.0",
     "@remix-run/testing": "2.4.0"
   },
-  "changesets": []
+  "changesets": [
+    "angry-poets-accept",
+    "big-cooks-confess",
+    "breezy-grapes-roll",
+    "breezy-walls-scream",
+    "create-remix-fetch",
+    "poor-eels-bow",
+    "rude-keys-heal",
+    "server-loader-error",
+    "seven-bees-thank",
+    "sour-snakes-melt"
+  ]
 }
