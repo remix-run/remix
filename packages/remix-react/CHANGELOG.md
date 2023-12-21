@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.4.1-pre.2
+
+### Patch Changes
+
+- [REMOVE] Bunmp to stable RR ([#8348](https://github.com/remix-run/remix/pull/8348))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.4.1-pre.2`
+
 ## 2.4.1-pre.1
 
 ### Patch Changes
