@@ -107,7 +107,7 @@ async function getServerBuilds({
     return { serverBuilds: [{ routes, serverBuildDirectory }] };
   }
 
-  let { normalizePath } = importViteEsmSync();
+  let { normalizePath } = await import("vite");
 
   let resolvedAppDirectory = path.resolve(rootDirectory, appDirectory);
   let rootRelativeRoutes = Object.fromEntries(
