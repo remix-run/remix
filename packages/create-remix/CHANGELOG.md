@@ -1,5 +1,7 @@
 # `create-remix`
 
+## 2.4.1-pre.1
+
 ## 2.4.1-pre.0
 
 ### Patch Changes
