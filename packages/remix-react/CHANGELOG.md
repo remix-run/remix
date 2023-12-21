@@ -1,28 +1,14 @@
 # `@remix-run/react`
 
-## 2.4.1-pre.2
+## 2.4.1
 
 ### Patch Changes
 
-- [REMOVE] Bunmp to stable RR ([#8348](https://github.com/remix-run/remix/pull/8348))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.1-pre.2`
-
-## 2.4.1-pre.1
-
-### Patch Changes
-
-- [REMOVE] Bump router ([#8346](https://github.com/remix-run/remix/pull/8346))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.1-pre.1`
-
-## 2.4.1-pre.0
-
-### Patch Changes
-
+- \[REMOVE] Bunmp to stable RR ([#8348](https://github.com/remix-run/remix/pull/8348))
 - Propagate server `loader` errors through `serverLoader` in hydrating `clientLoader`'s ([#8304](https://github.com/remix-run/remix/pull/8304))
+- \[REMOVE] Bump router ([#8346](https://github.com/remix-run/remix/pull/8346))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.4.1-pre.0`
+  - `@remix-run/server-runtime@2.4.1`
 
 ## 2.4.0
 

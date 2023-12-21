@@ -1,22 +1,6 @@
 # `@remix-run/dev`
 
-## 2.4.1-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.4.1-pre.2`
-  - `@remix-run/server-runtime@2.4.1-pre.2`
-
-## 2.4.1-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.4.1-pre.1`
-  - `@remix-run/server-runtime@2.4.1-pre.1`
-
-## 2.4.1-pre.0
+## 2.4.1
 
 ### Patch Changes
 
@@ -80,11 +64,12 @@
   code is running on the server or client.
 
 - Disable watch mode in Vite child compiler during build ([#8342](https://github.com/remix-run/remix/pull/8342))
+
 - Vite: Show warning when source maps are enabled in production build ([#8222](https://github.com/remix-run/remix/pull/8222))
+
 - Updated dependencies:
-  - `@remix-run/serve@2.4.1-pre.0`
-  - `@remix-run/server-runtime@2.4.1-pre.0`
-  - `@remix-run/node@2.4.1-pre.0`
+  - `@remix-run/server-runtime@2.4.1`
+  - `@remix-run/node@2.4.1`
 
 ## 2.4.0
 
