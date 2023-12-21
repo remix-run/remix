@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.4.1-pre.0
+
+### Patch Changes
+
+- Propagate server `loader` errors through `serverLoader` in hydrating `clientLoader`'s ([#8304](https://github.com/remix-run/remix/pull/8304))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.4.1-pre.0`
+
 ## 2.4.0
 
 ### Minor Changes
