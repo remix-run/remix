@@ -178,10 +178,10 @@ function noActionDefinedError(
   type: "action" | "clientAction",
   routeId: string
 ) {
-  let subject = type === "clientAction" ? "a `clientAction`" : "an `action`";
+  let article = type === "clientAction" ? "a" : "an";
   let msg =
-    `Route "${routeId}" does not have ${subject}, but you are trying to ` +
-    `submit to it. To fix this, please add ${subject} function to the route`;
+    `Route "${routeId}" does not have ${article} ${type}, but you are trying to ` +
+    `submit to it. To fix this, please add ${article} \`${type}\` function to the route`;
   console.error(msg);
   throw new ErrorResponse(405, "Method Not Allowed", new Error(msg), true);
 }
