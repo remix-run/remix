@@ -119,7 +119,7 @@ To add a new release, copy from this template:
 
 ### Patch Changes
 
-- `@remix-run/dev`: Vite - Remove `unstable_viteServerBuildModuleId` in favor of manually referencing virtual module name `"virtual:remix/server-build"`. ([#8264](https://github.com/remix-run/remix/pull/8264))
+- `@remix-run/dev`: Vite - Remove `unstable_viteServerBuildModuleId` in favor of manually referencing virtual module name `"virtual:remix/server-build"` ([#8264](https://github.com/remix-run/remix/pull/8264))
 
   - **This is a breaking change for projects using the unstable Vite plugin with a custom server.**
   - This change was made to avoid issues where `@remix-run/dev` could be inadvertently required in your server's production dependencies.
