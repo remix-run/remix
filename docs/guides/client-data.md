@@ -23,7 +23,7 @@ When using Remix in a [BFF][bff] architecture, it may be advantageous to skip th
 1. Load the data from server `loader` on the document load
 2. Load the data from the `clientLoader` on all subsequent loads
 
-In this scenario, we will _not_ call the `clientLoader` on hydration - and will only call it on subsequent navigations.
+In this scenario, Remix will _not_ call the `clientLoader` on hydration - and will only call it on subsequent navigations.
 
 ```tsx lines=[8,15]
 import type { LoaderFunctionArgs } from "@remix-run/node";
@@ -51,7 +51,7 @@ Sometimes, you may want to leverage "Fullstack State" where some of your data co
 
 1. Load the partial data from server `loader` on the document load
 2. Export a [`HydrateFallback`][hydratefallback] component to render during SSR because we don't yet have a full set of data
-3. Set `clientLoader.hydrate = true` to load the rest of the data on hydration
+3. Set `clientLoader.hydrate = true`, this instructs Remix to call the clientLoader as part of initial document hydration
 4. Combine the server data with the client data in `clientLoader`
 
 ```tsx lines=[8-10,23-24,27,30]
@@ -101,6 +101,8 @@ You may want to mix and match data loading strategies in your application such t
 1. Export a `loader` when you want to use server data
 2. Export `clientLoader` and a `HydrateFallback` when you want to use client data
 
+A route that only depends on a server loader looks like this:
+
 ```tsx filename="app/routes/server-data-route.tsx
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -117,6 +119,8 @@ export default function Component() {
   return <>...</>;
 }
 ```
+
+A route that only depends on a client loader looks like this.
 
 ```tsx filename="app/routes/client-data-route.tsx
 import type { ClientLoaderFunctionArgs } from "@remix-run/react";
@@ -149,7 +153,7 @@ export default function Component() {
 
 ## Client Cache
 
-Remix normally recommends using `Cache-Control` headers for caching of loader data, however you may want to use a more manual in-browser client-side cache (i.e., in-memory cache, `localStorage`). You can leverage a client-side cache to bypass certain calls to the server as follows:
+You can leverage a client-side cache (memory, local storage, etc.) to bypass certain calls to the server as follows:
 
 1. Load the data from server `loader` on the document load
 2. Set `clientLoader.hydrate = true` to prime the cache
