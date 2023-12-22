@@ -44,9 +44,6 @@ module.exports = {
           { name: "NavLink", linkAttribute: "to" },
         ],
       },
-      "import/resolver": {
-        "typescript": {},
-      }
     },
 
     // Typescript
@@ -67,7 +64,6 @@ module.exports = {
       },
       extends: [
         "plugin:@typescript-eslint/recommended",
-        "plugin:import/recommended",
         "plugin:import/typescript",
       ],
     },
