@@ -1,36 +1,13 @@
 # `@remix-run/react`
 
-## 2.4.1-pre.3
-
-### Patch Changes
-
-- Export `Response` helpers (`defer`/`json`/`redirect`/`redirectDocument`) through `@remix-run/react` for use in `clientLoader`/`clientAction` ([#8351](https://github.com/remix-run/remix/pull/8351))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.1-pre.3`
-
-## 2.4.1-pre.2
-
-### Patch Changes
-
-- [REMOVE] Bunmp to stable RR ([#8348](https://github.com/remix-run/remix/pull/8348))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.1-pre.2`
-
-## 2.4.1-pre.1
-
-### Patch Changes
-
-- [REMOVE] Bump router ([#8346](https://github.com/remix-run/remix/pull/8346))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.4.1-pre.1`
-
-## 2.4.1-pre.0
+## 2.4.1
 
 ### Patch Changes
 
 - Propagate server `loader` errors through `serverLoader` in hydrating `clientLoader`'s ([#8304](https://github.com/remix-run/remix/pull/8304))
+- Re-export `Response` helpers (`defer`/`json`/`redirect`/`redirectDocument`) through `@remix-run/react` for use in `clientLoader`/`clientAction` ([#8351](https://github.com/remix-run/remix/pull/8351))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.4.1-pre.0`
+  - `@remix-run/server-runtime@2.4.1`
 
 ## 2.4.0
 

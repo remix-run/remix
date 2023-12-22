@@ -119,7 +119,7 @@ To add a new release, copy from this template:
 
 ### Patch Changes
 
-- `@remix-run/dev`: Vite - Remove `unstable_viteServerBuildModuleId` in favor of manually referencing virtual module name `"virtual:remix/server-build"`. ([#8264](https://github.com/remix-run/remix/pull/8264))
+- `@remix-run/dev`: Vite - Remove `unstable_viteServerBuildModuleId` in favor of manually referencing virtual module name `"virtual:remix/server-build"` ([#8264](https://github.com/remix-run/remix/pull/8264))
 
   - **This is a breaking change for projects using the unstable Vite plugin with a custom server.**
   - This change was made to avoid issues where `@remix-run/dev` could be inadvertently required in your server's production dependencies.
@@ -172,6 +172,7 @@ To add a new release, copy from this template:
 - `@remix-run/dev`: Vite - Disable watch mode in Vite child compiler during build ([#8342](https://github.com/remix-run/remix/pull/8342))
 - `@remix-run/dev`: Vite - Show warning when source maps are enabled in production build ([#8222](https://github.com/remix-run/remix/pull/8222))
 - `@remix-run/react`: Propagate server `loader` errors through `serverLoader` in hydrating `clientLoader`'s ([#8304](https://github.com/remix-run/remix/pull/8304))
+- `@remix-run/react` Re-export `Response` helpers (`defer`/`json`/`redirect`/`redirectDocument`) through `@remix-run/react` for use in `clientLoader`/`clientAction` ([#8351](https://github.com/remix-run/remix/pull/8351))
 - `@remix-run/server-runtime`: Add optional `error` to `ServerRuntimeMetaArgs` type to align with `MetaArgs` ([#8238](https://github.com/remix-run/remix/pull/8238))
 - `create-remix`: Switch to using `@remix-run/web-fetch` instead of `node-fetch` inside the `create-remix` CLI ([#7345](https://github.com/remix-run/remix/pull/7345))
 - `remix-serve`: Use node `fileURLToPath` to convert source map URL to path ([#8321](https://github.com/remix-run/remix/pull/8321))
