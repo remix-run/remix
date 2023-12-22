@@ -4,11 +4,6 @@ title: Vite (Unstable)
 
 # Vite (Unstable)
 
-<docs-warning>
-  Vite support is currently unstable and only intended to gather early feedback.
-  We don't yet recommend using this in production.
-</docs-warning>
-
 [Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we're currently exploring the use of Vite as an alternative compiler to esbuild.
 
 **Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Yet Supported)
@@ -147,24 +142,39 @@ export default defineConfig({
 
 Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
 
-👉 **Replace your `remix.env.d.ts` with a new `env.d.ts` file**
+👉 **Rename `remix.env.d.ts` to `env.d.ts`**
 
-```ts filename=env.d.ts
-/// <reference types="@remix-run/node" />
-/// <reference types="vite/client" />
+```diff nonumber
+-/remix.env.d.ts
++/env.d.ts
 ```
 
-👉 **Replace reference to `remix.env.d.ts` in `tsconfig.json`**
+👉 **Replace `@remix-run/dev` types with `vite/client` in `env.d.ts`**
+
+```diff filename=env.d.ts
+-/// <reference types="@remix-run/dev" />
++/// <reference types="vite/client" />
+/// <reference types="@remix-run/node" />
+```
+
+👉 **Replace reference to `remix.env.d.ts` with `env.d.ts` in `tsconfig.json`**
 
 ```diff filename=tsconfig.json
 - "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
 + "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
 ```
 
+👉 **Ensure `module` and `moduleResolution` fields are set correctly in `tsconfig.json`**
+
+```json filename=tsconfig.json
+"module": "ESNext",
+"moduleResolution": "Bundler",
+```
+
 #### Migrating from Remix App Server
 
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
-It comes built-in with the Remix Vite plugin and will take over when you run `vite dev`.
+It comes built-in with the Remix Vite plugin and will take over when you run `remix vite:dev`.
 
 Unlike `remix-serve`, the Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
 
@@ -175,8 +185,8 @@ You'll also need to update to the new build output paths, which are `build/serve
 ```json filename=package.json lines=[3-4]
 {
   "scripts": {
-    "build": "vite build && vite build --ssr",
-    "dev": "vite dev",
+    "dev": "remix vite:dev",
+    "build": "remix vite:build",
     "start": "remix-serve ./build/server/index.js"
   }
 }
@@ -201,42 +211,35 @@ export default defineConfig({
 If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
 This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
 
+You can then load the virtual module named `"virtual:remix/server-build"` during development to create a Vite-based request handler.
+
 You'll also need to update your server code to reference the new build output paths, which are `build/server` for the server build and `build/client` for client assets.
-
-Remix exposes the server build's module ID so that it can be loaded dynamically in your request handler during development via `vite.ssrLoadModule`.
-
-```ts
-import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
-```
 
 For example, if you were using Express, here's how you could do it.
 
 👉 **Update your `server.mjs` file**
 
-```ts filename=server.mjs lines=[1-4,11-14,18-21,29,36-38]
-import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
+```ts filename=server.mjs lines=[1,8-17,21-24,32,39-44]
 import { createRequestHandler } from "@remix-run/express";
 import { installGlobals } from "@remix-run/node";
 import express from "express";
 
 installGlobals();
 
-const vite =
+const viteDevServer =
   process.env.NODE_ENV === "production"
     ? undefined
-    : await import("vite").then(({ createServer }) =>
-        createServer({
-          server: {
-            middlewareMode: true,
-          },
+    : await import("vite").then((vite) =>
+        vite.createServer({
+          server: { middlewareMode: true },
         })
       );
 
 const app = express();
 
 // handle asset requests
-if (vite) {
-  app.use(vite.middlewares);
+if (viteDevServer) {
+  app.use(viteDevServer.middlewares);
 } else {
   app.use(
     "/assets",
@@ -252,10 +255,10 @@ app.use(express.static("build/client", { maxAge: "1h" }));
 app.all(
   "*",
   createRequestHandler({
-    build: vite
+    build: viteDevServer
       ? () =>
-          vite.ssrLoadModule(
-            unstable_viteServerBuildModuleId
+          viteDevServer.ssrLoadModule(
+            "virtual:remix/server-build"
           )
       : await import("./build/server/index.js"),
   })
@@ -272,8 +275,8 @@ app.listen(port, () =>
 ```json filename=package.json
 {
   "scripts": {
-    "build": "vite build && vite build --ssr",
     "dev": "node ./server.mjs",
+    "build": "remix vite:build",
     "start": "cross-env NODE_ENV=production node ./server.mjs"
   }
 }
@@ -838,11 +841,7 @@ Alternatively, you can use separate Vite config files for each tool.
 For example, to use a Vite config specifically scoped to Remix:
 
 ```shellscript nonumber
-# Development
-vite dev --config vite.config.remix.ts
-
-# Production
-vite build --config vite.config.remix.ts && vite build  --config vite.config.remix.ts --ssr
+remix vite:dev --config vite.config.remix.ts
 ```
 
 ## Acknowledgements

@@ -227,15 +227,11 @@ export function createClientRoutes(
           : routeModule.shouldRevalidate,
       });
 
-      let initialData =
-        initialState &&
-        initialState.loaderData &&
-        initialState.loaderData[route.id];
-
+      let initialData = initialState?.loaderData?.[route.id];
+      let initialError = initialState?.errors?.[route.id];
       let isHydrationRequest =
         needsRevalidation == null &&
-        routeModule.clientLoader != null &&
-        (routeModule.clientLoader.hydrate === true || !route.hasLoader);
+        (routeModule.clientLoader?.hydrate === true || !route.hasLoader);
 
       dataRoute.loader = async ({ request, params }: LoaderFunctionArgs) => {
         try {
@@ -253,8 +249,11 @@ export function createClientRoutes(
                   throw getNoServerHandlerError("loader", route.id);
                 }
 
-                // On the first call, resolve with the pre-loaded server data
+                // On the first call, resolve with the server result
                 if (isHydrationRequest) {
+                  if (initialError !== undefined) {
+                    throw initialError;
+                  }
                   return initialData;
                 }
 

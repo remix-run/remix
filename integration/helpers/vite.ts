@@ -5,13 +5,13 @@ import type { Readable } from "node:stream";
 import url from "node:url";
 import execa from "execa";
 import fse from "fs-extra";
-import resolveBin from "resolve-bin";
 import stripIndent from "strip-indent";
 import waitOn from "wait-on";
 import getPort from "get-port";
 import shell from "shelljs";
 import glob from "glob";
 
+const remixBin = "node_modules/@remix-run/dev/dist/cli.js";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
 export const VITE_CONFIG = async (args: {
@@ -41,26 +41,25 @@ export const EXPRESS_SERVER = (args: {
   loadContext?: Record<string, unknown>;
 }) =>
   String.raw`
-    import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
     import { createRequestHandler } from "@remix-run/express";
     import { installGlobals } from "@remix-run/node";
     import express from "express";
 
     installGlobals();
 
-    let vite =
+    let viteDevServer =
       process.env.NODE_ENV === "production"
         ? undefined
-        : await import("vite").then(({ createServer }) =>
-            createServer({
+        : await import("vite").then((vite) =>
+            vite.createServer({
               server: { middlewareMode: true },
             })
           );
 
     const app = express();
 
-    if (vite) {
-      app.use(vite.middlewares);
+    if (viteDevServer) {
+      app.use(viteDevServer.middlewares);
     } else {
       app.use(
         "/assets",
@@ -72,8 +71,8 @@ export const EXPRESS_SERVER = (args: {
     app.all(
       "*",
       createRequestHandler({
-        build: vite
-          ? () => vite.ssrLoadModule(unstable_viteServerBuildModuleId)
+        build: viteDevServer
+          ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
           : await import("./build/index.js"),
         getLoadContext: () => (${JSON.stringify(args.loadContext ?? {})}),
       })
@@ -127,20 +126,11 @@ const createDev =
 
 export const viteBuild = ({ cwd }: { cwd: string }) => {
   let nodeBin = process.argv[0];
-  let viteBin = resolveBin.sync("vite");
-  let commands = [
-    [viteBin, "build"],
-    [viteBin, "build", "--ssr"],
-  ];
-  let results = [];
-  for (let command of commands) {
-    let result = spawnSync(nodeBin, command, {
-      cwd,
-      env: { ...process.env },
-    });
-    results.push(result);
-  }
-  return results;
+
+  return spawnSync(nodeBin, [remixBin, "vite:build"], {
+    cwd,
+    env: { ...process.env },
+  });
 };
 
 export const viteRemixServe = async ({
@@ -168,7 +158,7 @@ export const viteRemixServe = async ({
   };
 };
 
-export const viteDev = createDev([resolveBin.sync("vite"), "dev"]);
+export const viteDev = createDev([remixBin, "vite:dev"]);
 export const customDev = createDev(["./server.mjs"]);
 
 function node(args: string[], options: { cwd: string }) {

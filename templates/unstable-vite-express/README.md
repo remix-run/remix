@@ -1,32 +1,34 @@
-# templates/unstable-vite-express
+# Welcome to Remix + Vite!
 
-⚠️ Remix support for Vite is unstable and not recommended for production.
+📖 See the [Remix docs](https://remix.run/docs) and the [Remix Vite docs](https://remix.run/docs/en/main/future/vite) for details on supported features.
 
-📖 See the [Remix Vite docs][remix-vite-docs] for details on supported features.
+## Development
 
-## Setup
-
-```shellscript
-npx create-remix@latest --template remix-run/remix/templates/unstable-vite-express
-```
-
-## Run
-
-Spin up the Express server as a dev server:
+Run the Express server with Vite dev middleware:
 
 ```shellscript
 npm run dev
 ```
 
-Or build your app for production and run it:
+## Deployment
 
-```shellscript
+First, build your app for production:
+
+```sh
 npm run build
-npm run start
 ```
 
-## Customize
+Then run the app in production mode:
 
-In this template, we'll use Express but remember that these APIs can be used with _any_ Node-compatible server setup that supports standard middleware.
+```sh
+npm start
+```
 
-[remix-vite-docs]: https://remix.run/docs/en/main/future/vite
+Now you'll need to pick a host to deploy it to.
+
+### DIY
+
+If you're familiar with deploying Express applications you should be right at home. Just make sure to deploy the output of `npm run build`
+
+- `build/server`
+- `build/client`
