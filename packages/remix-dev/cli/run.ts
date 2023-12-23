@@ -202,6 +202,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap);
       break;
     case "vite:build":
+      if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
       await commands.viteBuild(input[1], flags);
       break;
     case "watch":
