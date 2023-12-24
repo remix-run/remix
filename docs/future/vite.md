@@ -787,7 +787,7 @@ Vite supports both ESM and CJS dependencies, but sometimes you might still run i
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
 
-To diagnose if your one of dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
+To diagnose if one of your dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
 
 Finally, you can also explicitly configure which dependencies to bundle into your server bundled
