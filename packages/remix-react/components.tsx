@@ -986,7 +986,7 @@ function dedupe(array: any[]) {
 }
 
 export type UIMatch<D = AppData, H = RouteHandle> = UIMatchRR<
-  SerializeFrom<D>,
+  SerializeFrom<D> | undefined,
   H
 >;
 
