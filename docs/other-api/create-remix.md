@@ -33,11 +33,11 @@ npx create-remix@latest --help
 `create-remix` can also be invoked using various package managers, allowing you to choose between npm, Yarn, pnpm, and Bun for managing the install process.
 
 ```sh
-npm create remix@latest <projectDir>
+npm create-remix@latest <projectDir>
 # or
-yarn create remix <projectDir>
+yarn create-remix <projectDir>
 # or
-pnpm create remix <projectDir>
+pnpm create-remix <projectDir>
 # or
 bunx create-remix <projectDir>
 ```
