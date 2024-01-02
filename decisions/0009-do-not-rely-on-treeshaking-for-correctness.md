@@ -47,7 +47,7 @@ They are the only guaranteed way to exclude code from the client.
 ### An imperfect optimization
 
 As we already discussed, even if treeshaking were perfect, it would still be a bad idea to rely on it to exclude server-only code.
-But treeshaking is a hard problem, especially in a languages as dynamic as JavaScript or TypeScript.
+But treeshaking is a hard problem, especially in a language as dynamic as JavaScript.
 In the real world, treeshaking is not perfect.
 
 That's why treeshaking is designed to be an _optimization_ that slims down your bundle.
