@@ -19,7 +19,7 @@ export default function handleRequest(
   responseHeaders,
   remixContext
 ) {
-  return isbot(request.headers.get("user-agent"))
+  return isBotRequest(request.headers.get("user-agent"))
     ? handleBotRequest(
         request,
         responseStatusCode,
@@ -32,6 +32,25 @@ export default function handleRequest(
         responseHeaders,
         remixContext
       );
+}
+
+// Allow either isbot@3 or isbot@4 - see https://www.npmjs.com/package/isbot
+function isBotRequest(userAgent) {
+  if (!userAgent) {
+    return false;
+  }
+
+  // isbot@3
+  if ("default" in isbot && typeof isbot.default === "function") {
+    return isbot.default(userAgent);
+  }
+
+  // isbot@4
+  if ("isbot" in isbot && typeof isbot.isbot === "function") {
+    return isbot.isbot(userAgent);
+  }
+
+  return false;
 }
 
 function handleBotRequest(
