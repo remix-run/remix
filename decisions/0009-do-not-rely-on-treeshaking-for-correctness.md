@@ -7,7 +7,7 @@ Status: accepted
 ## Context
 
 Remix lets you write code that runs on both the server and the client.
-For example, its common to have server and client code in the same route file.
+For example, it's common to have server and client code in the same route file.
 While blending server and client code is convenient, Remix needs to ensure that server-only code is never shipped to the client.
 This prevents secrets available to the server from leaking into client and also prevents the client from crashing due to code that expects a server environment.
 
