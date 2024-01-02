@@ -71,8 +71,9 @@ Since the compilation is on-demand, Vite only knows the _current_ importer for t
 ### Summary
 
 - Even if treeshaking were perfect, it leaves the door open for human error
-- Always use `.server` module for server-only code especially if it references sensitive data like secrets
-- Treeshaking is an imperfect _optimization_, so it should not be relied on for correctness
+- `.server` modules guarantee that server-only code is excluded from the client
+- Treeshaking is an imperfect _optimization_, so a Remix app should work correctly and exclude server-only code even without treeshaking
+- Vite's architecture makes treeshaking in dev untenable
 
 ## Decision
 
@@ -84,10 +85,10 @@ Instead:
 
 ## Consequences
 
-TODO:
-strict route exports
-cannot mix server and client code in non-route modules
-escape hatch for server-only code `import.meta.env.SSR` or `$server`
+- No reliance on optimizations for correctness
+- Build-time errors instead of runtime errors
+- Errors consistent across dev and prod with Vite
+- Modules cannot mix server-only code and client-safe code
 
 [virtual-modules]: https://github.com/remix-run/remix/blob/71f0e051d895807c349987655325c153903abad8/packages/remix-dev/compiler/js/plugins/routes.ts
 [ast-transforms]: https://github.com/remix-run/remix/pull/5259
