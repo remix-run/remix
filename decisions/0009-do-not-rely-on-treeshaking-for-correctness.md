@@ -52,7 +52,7 @@ In the real world, treeshaking is not perfect.
 
 That's why treeshaking is designed to be an _optimization_ that slims down your bundle.
 Your code should already be correct before treeshaking is applied.
-Bundlers are allowed to make [their own tradeoffs about how much treeshaking][esbuild-minify-syntax] they want to do.
+Bundlers are allowed to make [their own tradeoffs about how much treeshaking][esbuild-minify-considerations] they want to do.
 And that shouldn't [affect Remix's implementation][remix-minify-syntax].
 They are even allowed to do _less_ treeshaking without needing a major version bump.
 
@@ -77,7 +77,7 @@ Since the compilation is on-demand, Vite only knows the _current_ importer for t
 
 ## Decision
 
-Do not rely on treeshaking for correctness.
+Do not rely on implicit, cross-module treeshaking for correctness.
 Instead:
 
 - Forcibly remove server-only route exports and then explicitly run a dead-code elimination pass
@@ -94,5 +94,5 @@ Instead:
 
 [virtual-modules]: https://github.com/remix-run/remix/blob/71f0e051d895807c349987655325c153903abad8/packages/remix-dev/compiler/js/plugins/routes.ts
 [ast-transforms]: https://github.com/remix-run/remix/pull/5259
+[esbuild-minify-considerations]: https://esbuild.github.io/api/#minify-considerations
 [remix-minify-syntax]: https://github.com/remix-run/remix/blob/bf042e7d340b3cbfdaa389c201e1284fb4d03403/packages/remix-dev/compiler/server/compiler.ts#L80-L88
-[esbuild-minify-syntax]: https://github.com/evanw/esbuild/issues/672#issuecomment-1029682369
