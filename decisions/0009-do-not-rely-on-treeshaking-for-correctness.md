@@ -1,4 +1,4 @@
-# Title
+# Do not rely on treeshaking for correctness
 
 Date: 2024-01-02
 
