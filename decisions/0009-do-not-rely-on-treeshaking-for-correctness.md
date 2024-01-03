@@ -88,7 +88,9 @@ Instead:
 - No reliance on optimizations for correctness
 - Build-time errors instead of runtime errors
 - Errors consistent across dev and prod with Vite
-- Modules cannot mix server-only code and client-safe code
+- Exports are assumed to be client-safe unless explicitly marked as server-only
+  - For example, `.server` modules mark all their exports as server-only
+  - Route exports like `loader`, `action`, `headers`, etc. are an exception as they are already known to be server-only
 
 [virtual-modules]: https://github.com/remix-run/remix/blob/71f0e051d895807c349987655325c153903abad8/packages/remix-dev/compiler/js/plugins/routes.ts
 [ast-transforms]: https://github.com/remix-run/remix/pull/5259
