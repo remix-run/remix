@@ -9,7 +9,7 @@ import { PassThrough } from "node:stream";
 import type { AppLoadContext, EntryContext } from "@remix-run/node";
 import { createReadableStreamFromReadable } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
-import isbot from "isbot";
+import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 
 const ABORT_DELAY = 5_000;
@@ -24,7 +24,7 @@ export default function handleRequest(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   loadContext: AppLoadContext
 ) {
-  return isBotRequest(request.headers.get("user-agent"))
+  return isbot(request.headers.get("user-agent") || "")
     ? handleBotRequest(
         request,
         responseStatusCode,
@@ -37,25 +37,6 @@ export default function handleRequest(
         responseHeaders,
         remixContext
       );
-}
-
-// Allow either isbot@3 or isbot@4 - see https://www.npmjs.com/package/isbot
-function isBotRequest(userAgent: string | null) {
-  if (!userAgent) {
-    return false;
-  }
-
-  // isbot@3
-  if ("default" in isbot && typeof isbot.default === "function") {
-    return isbot.default(userAgent);
-  }
-
-  // isbot@4
-  if ("isbot" in isbot && typeof isbot.isbot === "function") {
-    return isbot.isbot(userAgent);
-  }
-
-  return false;
 }
 
 function handleBotRequest(

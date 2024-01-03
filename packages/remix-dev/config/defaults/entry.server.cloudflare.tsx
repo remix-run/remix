@@ -1,6 +1,6 @@
 import type { AppLoadContext, EntryContext } from "@remix-run/cloudflare";
 import { RemixServer } from "@remix-run/react";
-import isbot from "isbot";
+import isbotModule from "isbot";
 import { renderToReadableStream } from "react-dom/server";
 
 export default async function handleRequest(
@@ -41,14 +41,14 @@ function isBotRequest(userAgent: string | null) {
     return false;
   }
 
-  // isbot@3
-  if ("default" in isbot && typeof isbot.default === "function") {
-    return isbot.default(userAgent);
+  // isbot >= 3.8.0, >4
+  if ("isbot" in isbotModule && typeof isbotModule.isbot === "function") {
+    return isbotModule.isbot(userAgent);
   }
 
-  // isbot@4
-  if ("isbot" in isbot && typeof isbot.isbot === "function") {
-    return isbot.isbot(userAgent);
+  // isbot < 3.8.0
+  if ("default" in isbotModule && typeof isbotModule.default === "function") {
+    return isbotModule.default(userAgent);
   }
 
   return false;

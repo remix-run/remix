@@ -6,7 +6,7 @@
 
 import type { AppLoadContext, EntryContext } from "@remix-run/cloudflare";
 import { RemixServer } from "@remix-run/react";
-import isbot from "isbot";
+import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
 
 export default async function handleRequest(
@@ -31,7 +31,7 @@ export default async function handleRequest(
     }
   );
 
-  if (isBotRequest(request.headers.get("user-agent"))) {
+  if (isbot(request.headers.get("user-agent") || "")) {
     await body.allReady;
   }
 
@@ -40,23 +40,4 @@ export default async function handleRequest(
     headers: responseHeaders,
     status: responseStatusCode,
   });
-}
-
-// Allow either isbot@3 or isbot@4 - see https://www.npmjs.com/package/isbot
-function isBotRequest(userAgent: string | null) {
-  if (!userAgent) {
-    return false;
-  }
-
-  // isbot@3
-  if ("default" in isbot && typeof isbot.default === "function") {
-    return isbot.default(userAgent);
-  }
-
-  // isbot@4
-  if ("isbot" in isbot && typeof isbot.isbot === "function") {
-    return isbot.isbot(userAgent);
-  }
-
-  return false;
 }
