@@ -4,17 +4,9 @@ title: Vite (Unstable)
 
 # Vite (Unstable)
 
-[Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we're currently exploring the use of Vite as an alternative compiler to esbuild.
+[Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
 
-**Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Yet Supported)
-
-| Feature                      | Node | Deno | Cloudflare | Notes                                                                 |
-| ---------------------------- | ---- | ---- | ---------- | --------------------------------------------------------------------- |
-| Built-in dev server          | ✅   | ❓   | ⏳         |                                                                       |
-| Other servers (e.g. Express) | ✅   | ❓   | ⏳         |                                                                       |
-| HMR                          | ✅   | ❓   | ⏳         |                                                                       |
-| HDR                          | ✅   | ❓   | ⏳         |                                                                       |
-| MDX routes                   | ✅   | ❓   | ⏳         | [Supported with some deprecations.][supported-with-some-deprecations] |
+<docs-warning>Note that Cloudflare is not yet supported when using Vite.</docs-warning>
 
 ## Getting started
 
@@ -182,7 +174,7 @@ You'll also need to update to the new build output paths, which are `build/serve
 
 👉 **Update your `dev`, `build` and `start` scripts**
 
-```json filename=package.json lines=[3-4]
+```json filename=package.json lines=[3-5]
 {
   "scripts": {
     "dev": "remix vite:dev",
@@ -219,7 +211,7 @@ For example, if you were using Express, here's how you could do it.
 
 👉 **Update your `server.mjs` file**
 
-```ts filename=server.mjs lines=[1,8-17,21-24,32,39-44]
+```ts filename=server.mjs lines=[7-14,18-21,29,36-41]
 import { createRequestHandler } from "@remix-run/express";
 import { installGlobals } from "@remix-run/node";
 import express from "express";
@@ -272,7 +264,7 @@ app.listen(port, () =>
 
 👉 **Update your `build`, `dev`, and `start` scripts**
 
-```json filename=package.json
+```json filename=package.json lines=[3-5]
 {
   "scripts": {
     "dev": "node ./server.mjs",
@@ -776,6 +768,12 @@ export function Hello() {
 
 Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
 
+#### Resources for general debugging
+
+The [Inspect plugin][vite-plugin-inspect] shows you each transformation that Vite performs on your code.
+It can be useful to see which plugin is causing the unexpected behavior.
+Not only that, but it can give you a better mental model for exactly how Remix handles splitting client and server code.
+
 #### HMR
 
 If you are expecting hot updates but getting full page reloads,
@@ -922,3 +920,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [blues-stack]: https://github.com/remix-run/blues-stack
 [global-node-polyfills]: ../other-api/node#polyfills
 [fullstack-components]: https://www.epicweb.dev/full-stack-components
+[vite-plugin-inspect]: https://github.com/antfu/vite-plugin-inspect
