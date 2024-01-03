@@ -27,7 +27,7 @@ and the treeshaking saves you from the tedium of explicitly marking or separatin
 
 ### Human error
 
-However, this is also the main drawback; "server-only" is implicit and must be inferred by through treeshaking.
+However, this is also the main drawback; "server-only" is implicit and must be inferred by thorough treeshaking.
 Even if treeshaking were perfect, this approach still leaves the door open to human error.
 If you or anyone on your team accidentally references server-only code from client code, the bundler will happily include that code in the client.
 You won't get any indication of this at build time, but only at runtime.
