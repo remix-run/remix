@@ -768,6 +768,12 @@ export function Hello() {
 
 Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
 
+#### Resources for general debugging
+
+The [Inspect plugin][vite-plugin-inspect] shows you each transformation that Vite performs on your code.
+It can be useful to see which plugin is causing the unexpected behavior.
+Not only that, but it can give you a better mental model for exactly how Remix handles splitting client and server code.
+
 #### HMR
 
 If you are expecting hot updates but getting full page reloads,
@@ -914,3 +920,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [blues-stack]: https://github.com/remix-run/blues-stack
 [global-node-polyfills]: ../other-api/node#polyfills
 [fullstack-components]: https://www.epicweb.dev/full-stack-components
+[vite-plugin-inspect]: https://github.com/antfu/vite-plugin-inspect
