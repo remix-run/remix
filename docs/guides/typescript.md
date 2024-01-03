@@ -25,7 +25,7 @@ The Remix compiler will not do any type checking (it simply removes the types). 
     "@remix-run/node": "latest",
     "@remix-run/react": "latest",
     "@remix-run/serve": "latest",
-    "isbot": "^3.6.8",
+    "isbot": "^4.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

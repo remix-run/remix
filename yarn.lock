@@ -7560,10 +7560,10 @@ isarray@~1.0.0:
   resolved "https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz"
   integrity sha1-u5NdSFgsuhaMBoNJV6VKPgcSTxE=
 
-isbot@^3.6.8:
-  version "3.6.13"
-  resolved "https://registry.npmjs.org/isbot/-/isbot-3.6.13.tgz#e060f727cb53475a4dab1569321ced0f84633d63"
-  integrity sha512-uoP4uK5Dc2CrabmK+Gue1jTL+scHiCc1c9rblRpJwG8CPxjLIv8jmGyyGRGkbPOweayhkskdZsEQXG6p+QCQrg==
+isbot@^4.1.0:
+  version "4.1.0"
+  resolved "https://registry.npmjs.org/isbot/-/isbot-4.1.0.tgz#e05b0d6534bb61a87bc34ab8cdba0a53f75c6752"
+  integrity sha512-Kz7zk1wc0oC0FYLYtqea1RKdEX4XGlqacPhoaq9HSEQamEXQNJ/MzVzBKAQXDCCHO0h/eo4CdZs9t3Jfbup5Aw==
 
 isexe@^2.0.0:
   version "2.0.0"
