@@ -1277,24 +1277,36 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         // Update the config cache any time there is a file change
         cachedPluginConfig = pluginConfig;
         let route = getRoute(pluginConfig, file);
-        let hotData = { route: null as any };
+
+        type ManifestRoute = Manifest["routes"][string];
+        type HmrEventData = { route: ManifestRoute | null };
+        let hmrEventData: HmrEventData = { route: null };
 
         if (route) {
           // invalidate manifest on route exports change
-          let mod = await server.ssrLoadModule(serverManifestId);
-          let manifest = mod.default as Manifest;
-          let metadata = manifest.routes[route.id];
-          let newMetadata = await getRouteMetadata(
+          let serverManifest = (await server.ssrLoadModule(serverManifestId))
+            .default as Manifest;
+
+          let oldRouteMetadata = serverManifest.routes[route.id];
+          let newRouteMetadata = await getRouteMetadata(
             pluginConfig,
             viteChildCompiler,
             route
           );
-          hotData.route = newMetadata;
+
+          hmrEventData.route = newRouteMetadata;
+
           if (
-            !metadata ||
-            (["hasLoader", "hasAction", "hasErrorBoundary"] as const).some(
-              (key) => metadata[key] !== newMetadata[key]
-            )
+            !oldRouteMetadata ||
+            (
+              [
+                "hasLoader",
+                "hasClientLoader",
+                "hasAction",
+                "hasClientAction",
+                "hasErrorBoundary",
+              ] as const
+            ).some((key) => oldRouteMetadata[key] !== newRouteMetadata[key])
           ) {
             invalidateVirtualModules(server);
           }
@@ -1303,7 +1315,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         server.ws.send({
           type: "custom",
           event: "remix:hmr",
-          data: hotData,
+          data: hmrEventData,
         });
 
         return modules;
