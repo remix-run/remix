@@ -27,6 +27,8 @@ The URL to submit the form data to.
 
 If `undefined`, this defaults to the closest route in context. If a parent route renders a `<Form>` but the URL matches deeper child routes, the form will post to the parent route. Likewise, a form inside the child route will post to the child route. This differs from a native [`<form>`][form_element] that will always point to the full URL.
 
+<docs-info>Please see the [Splat Paths][relativesplatpath] section on the `useResolvedPath` docs for a note on the behavior of the `future.v3_relativeSplatPath` future flag for relative `<Form action>` behavior within splat routes</docs-info>
+
 ### `method`
 
 This determines the [HTTP verb][http_verb] to be used: `DELETE`, `GET`, `PATCH`, `POST`, and `PUT`. The default is `GET`.
@@ -156,3 +158,4 @@ See also:
 [view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API
 [document-start-view-transition]: https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition
 [use-view-transition-state]: ../hooks/use-view-transition-state
+[relativesplatpath]: ../hooks/use-resolved-path#splat-paths

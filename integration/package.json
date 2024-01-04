@@ -21,7 +21,7 @@
     "get-port": "^5.1.1",
     "glob": "8.0.3",
     "globby": "^11.1.0",
-    "isbot": "^3.6.8",
+    "isbot": "^4.1.0",
     "npm-run-all": "^4.1.5",
     "pidtree": "^0.6.0",
     "postcss": "^8.4.19",
@@ -35,6 +35,6 @@
     "tailwindcss": "^3.3.0",
     "type-fest": "^4.0.0",
     "typescript": "^5.1.0",
-    "vite-tsconfig-paths": "^4.2.1"
+    "vite-tsconfig-paths": "^4.2.2"
   }
 }

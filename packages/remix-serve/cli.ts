@@ -18,7 +18,20 @@ import getPort from "get-port";
 
 process.env.NODE_ENV = process.env.NODE_ENV ?? "production";
 
-sourceMapSupport.install();
+sourceMapSupport.install({
+  retrieveSourceMap: function (source) {
+    // get source file with the `file://` prefix
+    let match = source.match(/^file:\/\/(.*)$/);
+    if (match) {
+      let filePath = url.fileURLToPath(source);
+      return {
+        url: source,
+        map: fs.readFileSync(`${filePath}.map`, "utf8"),
+      };
+    }
+    return null;
+  },
+});
 installGlobals();
 
 run();

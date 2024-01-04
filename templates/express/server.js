@@ -9,7 +9,20 @@ import express from "express";
 import morgan from "morgan";
 import sourceMapSupport from "source-map-support";
 
-sourceMapSupport.install();
+sourceMapSupport.install({
+  retrieveSourceMap: function (source) {
+    // get source file with the `file://` prefix
+    const match = source.match(/^file:\/\/(.*)$/);
+    if (match) {
+      const filePath = url.fileURLToPath(source);
+      return {
+        url: source,
+        map: fs.readFileSync(`${filePath}.map`, "utf8"),
+      };
+    }
+    return null;
+  },
+});
 installGlobals();
 
 /** @typedef {import('@remix-run/node').ServerBuild} ServerBuild */

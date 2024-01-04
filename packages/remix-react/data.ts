@@ -43,13 +43,25 @@ export function isDeferredResponse(response: Response): boolean {
   return !!response.headers.get("Content-Type")?.match(/text\/remix-deferred/);
 }
 
-function isResponse(value: any): value is Response {
+export function isResponse(value: any): value is Response {
   return (
     value != null &&
     typeof value.status === "number" &&
     typeof value.statusText === "string" &&
     typeof value.headers === "object" &&
     typeof value.body !== "undefined"
+  );
+}
+
+export function isDeferredData(value: any): value is DeferredData {
+  let deferred: DeferredData = value;
+  return (
+    deferred &&
+    typeof deferred === "object" &&
+    typeof deferred.data === "object" &&
+    typeof deferred.subscribe === "function" &&
+    typeof deferred.cancel === "function" &&
+    typeof deferred.resolveData === "function"
   );
 }
 

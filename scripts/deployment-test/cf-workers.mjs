@@ -2,7 +2,7 @@ import path from "node:path";
 import { sync as spawnSync } from "cross-spawn";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
-import fetch from "node-fetch";
+import { fetch } from "@remix-run/web-fetch";
 import PackageJson from "@npmcli/package-json";
 
 import {
