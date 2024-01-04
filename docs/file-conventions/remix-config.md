@@ -272,7 +272,7 @@ There are a few conventions that Remix uses you should be aware of.
 [esbuild_plugins_node_modules_polyfill]: https://npm.im/esbuild-plugins-node-modules-polyfill
 [browser-node-builtins-polyfill]: #browsernodebuiltinspolyfill
 [server-node-builtins-polyfill]: #servernodebuiltinspolyfill
-[future-flags]: ../start/future-flags.md
+[future-flags]: ../start/future-flags
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
 [use-fetchers]: ../hooks/use-fetchers
 [use-fetcher]: ../hooks/use-fetcher

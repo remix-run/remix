@@ -173,9 +173,13 @@ export async function build(
 }
 
 export async function viteBuild(
-  root: string,
+  root?: string,
   options: ViteBuildOptions = {}
 ): Promise<void> {
+  if (!root) {
+    root = process.env.REMIX_ROOT || process.cwd();
+  }
+
   let { build } = await import("../vite/build");
   await build(root, options);
 }
