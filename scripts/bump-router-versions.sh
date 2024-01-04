@@ -32,7 +32,7 @@ yarn add -E @remix-run/router@${ROUTER_VERSION}
 cd ../..
 
 cd packages/remix-react
-yarn add -E @remix-run/router@${ROUTER_VERSION} react-router-dom@${RR_VERSION}
+yarn add -E @remix-run/router@${ROUTER_VERSION} react-router@${RR_VERSION} react-router-dom@${RR_VERSION}
 cd ../..
 
 cd packages/remix-testing

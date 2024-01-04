@@ -1,5 +1,3 @@
-export type { RemixBrowserProps } from "./browser";
-export { RemixBrowser } from "./browser";
 export type {
   ErrorResponse,
   Fetcher,
@@ -52,7 +50,16 @@ export {
   unstable_usePrompt,
   unstable_useViewTransitionState,
 } from "react-router-dom";
+export {
+  // For use in clientLoader/clientAction
+  defer,
+  json,
+  redirect,
+  redirectDocument,
+} from "@remix-run/server-runtime";
 
+export type { RemixBrowserProps } from "./browser";
+export { RemixBrowser } from "./browser";
 export type {
   AwaitProps,
   RemixNavLinkProps as NavLinkProps,
@@ -78,6 +85,10 @@ export {
 
 export type { HtmlLinkDescriptor } from "./links";
 export type {
+  ClientActionFunction,
+  ClientActionFunctionArgs,
+  ClientLoaderFunction,
+  ClientLoaderFunctionArgs,
   MetaArgs,
   MetaDescriptor,
   MetaFunction,

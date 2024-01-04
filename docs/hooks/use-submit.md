@@ -46,13 +46,22 @@ Can be any of the following:
 ```tsx
 const formData = new FormData();
 formData.append("myKey", "myValue");
-submit(formData);
+submit(formData, { method: "post" });
 ```
 
 **Plain object that will be serialized as `FormData`**
 
 ```tsx
-submit({ myKey: "myValue" });
+submit({ myKey: "myValue" }, { method: "post" });
+```
+
+**Plain object that will be serialized as JSON**
+
+```tsx
+submit(
+  { myKey: "myValue" },
+  { method: "post", encType: "application/json" }
+);
 ```
 
 ### `options`
@@ -61,7 +70,7 @@ Options for the submission, the same as [`<Form>`][form-component] props. All op
 
 - **action**: The href to submit to. Default is the current route path.
 - **method**: The HTTP method to use like POST, default is GET.
-- **encType**: The encoding type to use for the form submission: `application/x-www-form-urlencoded` or `multipart/form-data`. Default is `application/x-www-form-urlencoded`.
+- **encType**: The encoding type to use for the form submission: `application/x-www-form-urlencoded`, `multipart/form-data`, `application/json`, or `text/plain`. Default is `application/x-www-form-urlencoded`.
 - **navigate**: Specify `false` to submit using a fetcher instead of performing a navigation
 - **fetcherKey**: The fetcher key to use when submitting using a fetcher via `navigate: false`
 - **preventScrollReset**: Prevents the scroll position from being reset to the top of the window when the data is submitted. Default is `false`.
@@ -81,6 +90,8 @@ submit(data, {
   relative: "route",
 });
 ```
+
+<docs-info>Please see the [Splat Paths][relativesplatpath] section on the `useResolvedPath` docs for a note on the behavior of the `future.v3_relativeSplatPath` future flag for relative `useSubmit()` behavior within splat routes</docs-info>
 
 ## Additional Resources
 
@@ -102,3 +113,4 @@ submit(data, {
 [start-transition]: https://react.dev/reference/react/startTransition
 [view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API
 [use-view-transition-state]: ../hooks//use-view-transition-state
+[relativesplatpath]: ./use-resolved-path#splat-paths
