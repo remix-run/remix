@@ -1,9 +1,12 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { test } from "@playwright/test";
 import getPort from "get-port";
 
-import { createProject, viteDev, VITE_CONFIG } from "./helpers/vite.js";
+import {
+  createProject,
+  createEditor,
+  viteDev,
+  VITE_CONFIG,
+} from "./helpers/vite.js";
 
 const files = {
   "app/routes/_index.tsx": String.raw`
@@ -61,7 +64,7 @@ test.describe(async () => {
   }) => {
     let pageErrors: Error[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
-    let edit = editor(cwd);
+    let edit = createEditor(cwd);
 
     // wait hydration to ensure initial manifest is loaded
     await page.goto(`http://localhost:${port}/`);
@@ -84,11 +87,3 @@ test.describe(async () => {
     await page.getByText("loaderData = null").click();
   });
 });
-
-const editor =
-  (projectDir: string) =>
-  async (file: string, transform: (contents: string) => string) => {
-    let filepath = path.join(projectDir, file);
-    let contents = await fs.readFile(filepath, "utf8");
-    await fs.writeFile(filepath, transform(contents), "utf8");
-  };
