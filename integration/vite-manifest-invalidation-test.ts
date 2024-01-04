@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import getPort from "get-port";
 
 import {
@@ -20,9 +20,8 @@ const files = {
       }, []);
 
       return (
-        <div id="index">
+        <div>
           <p data-mounted>Mounted: {mounted ? "yes" : "no"}</p>
-          <p data-hmr>HMR updated: 0</p>
           <Link to="/other">/other</Link>
         </div>
       );
@@ -36,7 +35,7 @@ const files = {
     export default function Route() {
       const loaderData = useLoaderData();
       return (
-        <div id="other">loaderData = {JSON.stringify(loaderData)}</div>
+        <div data-loader-data>loaderData = {JSON.stringify(loaderData)}</div>
       );
     }
   `,
@@ -66,24 +65,38 @@ test.describe(async () => {
     page.on("pageerror", (error) => pageErrors.push(error));
     let edit = createEditor(cwd);
 
-    // wait hydration to ensure initial manifest is loaded
-    await page.goto(`http://localhost:${port}/`);
-    await page.getByText("Mounted: yes").click();
+    await page.goto(`http://localhost:${port}`, { waitUntil: "networkidle" });
+    await expect(page.locator("[data-mounted]")).toHaveText("Mounted: yes");
+    expect(pageErrors).toEqual([]);
 
-    // remove loader export in other page should invalidate manifest
-    await edit("app/routes/other.tsx", (contents) =>
-      contents.replace(/export const loader.*/, "")
-    );
+    let originalContents: string;
 
-    // after browser reload, client should be aware of there's no loader
+    // Removing loader export in other page should invalidate manifest
+    await edit("app/routes/other.tsx", (contents) => {
+      originalContents = contents;
+      return contents.replace(/export const loader.*/, "");
+    });
+
+    // After browser reload, client should be aware that there's no loader on the other route
     if (browserName === "webkit") {
-      // force new page instance for webkit.
-      // otherwise browser doesn't seem to fetch new manifest probably due to caching.
+      // Force new page instance for webkit.
+      // Otherwise browser doesn't seem to fetch new manifest probably due to caching.
       page = await context.newPage();
     }
-    await page.goto(`http://localhost:${port}/`);
-    await page.getByText("Mounted: yes").click();
+    await page.goto(`http://localhost:${port}`, { waitUntil: "networkidle" });
+    await expect(page.locator("[data-mounted]")).toHaveText("Mounted: yes");
     await page.getByRole("link", { name: "/other" }).click();
-    await page.getByText("loaderData = null").click();
+    await expect(page.locator("[data-loader-data]")).toHaveText(
+      "loaderData = null"
+    );
+    expect(pageErrors).toEqual([]);
+
+    // Revert route to original state to check HMR works and to ensure the
+    // original file contents were valid
+    await edit("app/routes/other.tsx", () => originalContents);
+    await expect(page.locator("[data-loader-data]")).toHaveText(
+      'loaderData = "hello"'
+    );
+    expect(pageErrors).toEqual([]);
   });
 });
