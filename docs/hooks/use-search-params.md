@@ -29,7 +29,7 @@ The first value returned is a Web [URLSearchParams][url-search-params] object.
 
 ### `setSearchParams(params, navigateOptions)`
 
-The second value returned is a function to set new search params and causes a navigation when called. You can pass an optional second argument with [navigate options][navigateOptions] to configure the navigation.
+The second value returned is a function to set new search params and causes a navigation when called. You can pass an optional second argument with [navigate options][navigateoptions] to configure the navigation.
 
 ```tsx
 <button
@@ -37,7 +37,7 @@ The second value returned is a function to set new search params and causes a na
     const params = new URLSearchParams();
     params.set("someKey", "someValue");
     setSearchParams(params, {
-      preventScrollReset: true
+      preventScrollReset: true,
     });
   }}
 />
@@ -58,7 +58,6 @@ The setter function also supports a function for setting new search params.
 />
 ```
 
-
 [search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URL/searchParams
 [url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
-[navigateOptions]: ./use-navigate#options
+[navigateoptions]: ./use-navigate#options
