@@ -1482,7 +1482,7 @@ async function handleSpaMode(
   // Create a handler and call it for the `/` path - rendering down to the
   // proper HydrateFallback ... or not!  Maybe they have a static landing page
   // generated from routes/_index.tsx.
-  let build = await import(serverBuildPath);
+  let build = await import(`file://${serverBuildPath}`);
   let { createRequestHandler: createNodeRequestHandler } = await import(
     "@remix-run/node"
   );
