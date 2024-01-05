@@ -613,12 +613,8 @@ export function Scripts(props: ScriptProps) {
 
   // Use these `matches` instead :)
   // In SPA Mode we only want to import root on the critical path, since we
-  // want the generated HTML file to be able to be loaded at non-/ paths as
+  // want the generated HTML file to be able to be hydrated at non-/ paths as
   // well.  This lets the router handle initial match loads via lazy().
-  //
-  // TODO: If users only ever intend to serve the `/` path from index.html and
-  // thus they want to include all initial matches here...should we give them
-  // a config to do so?
   let matches = isSpaMode ? [dontUseTheseMatches[0]] : dontUseTheseMatches;
 
   React.useEffect(() => {
