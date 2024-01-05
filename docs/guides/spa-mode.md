@@ -59,7 +59,7 @@ When you build your app in SPA Mode, Remix will call the server handler for the 
 remix vite:build
 ```
 
-To run your SPA, you simply serve your client assets directory (which contains `index.html`) via any HTTP server you wish, for example:
+To run your SPA, you serve your client assets directory via any HTTP server you wish, for example:
 
 ```sh
 npx http-server build/client/
