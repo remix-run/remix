@@ -969,8 +969,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
           if (cachedPluginConfig.isSpaMode) {
             await handleSpaMode(
-              serverBuildDirectory,
-              serverBuildFile,
+              path.join(rootDirectory, serverBuildDirectory, serverBuildFile),
               assetsBuildDirectory,
               viteConfig.mode
             );
@@ -1476,16 +1475,14 @@ async function getRouteMetadata(
 }
 
 async function handleSpaMode(
-  serverBuildDirectory: string,
-  serverBuildFile: string,
+  serverBuildPath: string,
   assetsBuildDirectory: string,
   mode: string
 ) {
   // Create a handler and call it for the `/` path - rendering down to the
   // proper HydrateFallback ... or not!  Maybe they have a static landing page
   // generated from routes/_index.tsx.
-  let serverBuildPath = path.join(serverBuildDirectory, serverBuildFile);
-  let build = await import(serverBuildDirectory);
+  let build = await import(serverBuildPath);
   let { createRequestHandler: createNodeRequestHandler } = await import(
     "@remix-run/node"
   );
