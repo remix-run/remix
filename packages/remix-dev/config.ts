@@ -166,7 +166,7 @@ export interface AppConfig {
    * an `index.html` file with your assets so your application can be deployed
    * as a SPA without server-rendering. Default's to `true`.
    */
-  ssr?: boolean;
+  unstable_ssr?: boolean;
 
   /**
    * Whether to support Tailwind functions and directives in CSS files if
@@ -479,7 +479,7 @@ export async function resolveConfig(
   let pkgJson = await PackageJson.load(rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
-  let isSpaMode = appConfig.ssr === false;
+  let isSpaMode = appConfig.unstable_ssr === false;
   if (isSpaMode) {
     // This is a super-simple default since we don't need streaming in SPA mode.
     // We can include this in a remix-spa template, but right now `npx remix reveal`

@@ -36,7 +36,7 @@ npx http-server build/client/
 Or, if you are serving via an `express` server (although at that point you may want to consider just running Remix in SSR mode 😉):
 
 ```js
-app.get("/assets", express.static("build/client/assets"));
+app.use("/assets", express.static("build/client/assets"));
 app.get("*", (req, res, next) =>
   res.sendFile(path.join(process.cwd(), "build/client/index.html"), next)
 );

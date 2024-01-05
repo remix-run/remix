@@ -41,7 +41,7 @@ const supportedRemixConfigKeys = [
   "publicPath",
   "routes",
   "serverModuleFormat",
-  "ssr",
+  "unstable_ssr",
 ] as const satisfies ReadonlyArray<keyof RemixUserConfig>;
 type SupportedRemixConfigKey = typeof supportedRemixConfigKeys[number];
 type SupportedRemixConfig = Pick<RemixUserConfig, SupportedRemixConfigKey>;
