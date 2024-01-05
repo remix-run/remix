@@ -834,29 +834,30 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           },
         });
 
-        // Invalidate plugin config and virtual module via file watcher
-        let { normalizePath } = importViteEsmSync();
-        viteDevServer.watcher.on(
-          "all",
-          async (event: string, filepath: string) => {
-            if (
-              ((event === "add" || event === "unlink") &&
-                normalizePath(filepath).startsWith(
-                  normalizePath(pluginConfig.appDirectory)
-                )) ||
-              (event === "change" &&
-                viteConfig?.configFile &&
-                normalizePath(filepath) ===
-                  normalizePath(viteConfig.configFile))
-            ) {
-              let lastPluginConfig = pluginConfig;
-              pluginConfig = await resolvePluginConfig();
-              if (!isEqualJson(lastPluginConfig, pluginConfig)) {
-                invalidateVirtualModules(viteDevServer);
-              }
+        // Invalidate virtual modules and update cached plugin config via file watcher
+        viteDevServer.watcher.on("all", async (eventName, filepath) => {
+          let { normalizePath } = importViteEsmSync();
+
+          let appFileAddedOrRemoved =
+            (eventName === "add" || eventName === "unlink") &&
+            normalizePath(filepath).startsWith(
+              normalizePath(pluginConfig.appDirectory)
+            );
+
+          invariant(viteConfig?.configFile);
+          let viteConfigChanged =
+            eventName === "change" &&
+            normalizePath(filepath) === normalizePath(viteConfig.configFile);
+
+          if (appFileAddedOrRemoved || viteConfigChanged) {
+            let lastPluginConfig = pluginConfig;
+            pluginConfig = await resolvePluginConfig();
+
+            if (!isEqualJson(lastPluginConfig, pluginConfig)) {
+              invalidateVirtualModules(viteDevServer);
             }
           }
-        );
+        });
 
         return () => {
           // Let user servers handle SSR requests in middleware mode,
