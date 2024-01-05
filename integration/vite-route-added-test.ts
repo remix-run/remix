@@ -17,9 +17,7 @@ const files = {
       }, []);
 
       return (
-        <div id="index">
-          <p data-mounted>Mounted: {mounted ? "yes" : "no"}</p>
-        </div>
+        <p data-mounted>Mounted: {mounted ? "yes" : "no"}</p>
       );
     }
   `,
@@ -40,21 +38,21 @@ test.describe(async () => {
   });
   test.afterAll(async () => await stop());
 
-  test("Vite / dev / invalidation", async ({ page }) => {
+  test("Vite / dev / route added", async ({ page }) => {
     let pageErrors: Error[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
 
     // wait for hydration to make sure initial virtual modules are loaded
-    await page.goto(`http://localhost:${port}/`);
-    await page.getByText("Mounted: yes").click();
+    await page.goto(`http://localhost:${port}/`, { waitUntil: "networkidle" });
+    await expect(page.locator("[data-mounted]")).toHaveText("Mounted: yes");
 
     // add new route file
     await fs.writeFile(
-      path.join(cwd, "app/routes/other.tsx"),
+      path.join(cwd, "app/routes/new.tsx"),
       String.raw`
         export default function Route() {
           return (
-            <div id="other">new route</div>
+            <div id="new">new route</div>
           );
         }
       `,
@@ -65,7 +63,7 @@ test.describe(async () => {
     // however server can handle new route
     await expect
       .poll(async () => {
-        await page.goto(`http://localhost:${port}/other`);
+        await page.goto(`http://localhost:${port}/new`);
         return page.getByText("new route").isVisible();
       })
       .toBe(true);
