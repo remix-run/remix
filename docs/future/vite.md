@@ -4,17 +4,9 @@ title: Vite (Unstable)
 
 # Vite (Unstable)
 
-[Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we're currently exploring the use of Vite as an alternative compiler to esbuild.
+[Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
 
-**Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Yet Supported)
-
-| Feature                      | Node | Deno | Cloudflare | Notes                                                                 |
-| ---------------------------- | ---- | ---- | ---------- | --------------------------------------------------------------------- |
-| Built-in dev server          | ✅   | ❓   | ⏳         |                                                                       |
-| Other servers (e.g. Express) | ✅   | ❓   | ⏳         |                                                                       |
-| HMR                          | ✅   | ❓   | ⏳         |                                                                       |
-| HDR                          | ✅   | ❓   | ⏳         |                                                                       |
-| MDX routes                   | ✅   | ❓   | ⏳         | [Supported with some deprecations.][supported-with-some-deprecations] |
+<docs-warning>Note that Cloudflare is not yet supported when using Vite.</docs-warning>
 
 ## Getting started
 
@@ -34,15 +26,7 @@ These templates include a `vite.config.ts` file which is where the Remix Vite pl
 
 ## Configuration
 
-The Vite plugin does not use [`remix.config.js`][remix-config]. Instead, the plugin directly accepts the following subset of Remix config options:
-
-- [appDirectory][app-directory]
-- [assetsBuildDirectory][assets-build-directory]
-- [ignoredRouteFiles][ignored-route-files]
-- [publicPath][public-path]
-- [routes][routes]
-- [serverBuildPath][server-build-path]
-- [serverModuleFormat][server-module-format]
+The Vite plugin does not use [`remix.config.js`][remix-config]. Instead, the plugin accepts options directly.
 
 For example, to configure `ignoredRouteFiles`:
 
@@ -61,6 +45,32 @@ export default defineConfig({
 
 All other bundling-related options are now [configured with Vite][vite-config]. This means you have much greater control over the bundling process.
 
+#### Supported Remix config options
+
+The following subset of Remix config options are supported:
+
+- [appDirectory][app-directory]
+- [assetsBuildDirectory][assets-build-directory]
+- [ignoredRouteFiles][ignored-route-files]
+- [publicPath][public-path]
+- [routes][routes]
+- [serverBuildPath][server-build-path]
+- [serverModuleFormat][server-module-format]
+
+The Vite plugin also accepts the following additional options:
+
+#### serverBuildDirectory
+
+The path to the server build directory, relative to the project root. Defaults to `"build/server"`.
+
+#### serverBuildFile
+
+The name of the server file generated in the server build directory. Defaults to `"index.js"`.
+
+#### unstable_serverBundles
+
+A function for assigning addressable routes to [server bundles][server-bundles].
+
 ## New build output paths
 
 There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. During the build, Vite copies files from the `public` directory into `build/client`, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
@@ -74,7 +84,7 @@ This means that the following configuration defaults have been changed:
 
 - [assetsBuildDirectory][assets-build-directory] defaults to `"build/client"` rather than `"public/build"`
 - [publicPath][public-path] defaults to `"/"` rather than `"/build/"`
-- [serverBuildPath][server-build-path] defaults to `"build/server/index.js"` rather than `"build/index.js"`
+- [serverBuildPath][server-build-path] has been split into `serverBuildDirectory` and `serverBuildFile`, with the equivalent default for `serverBuildDirectory` being `"build/server"` rather than `"build"`
 
 ## Additional features & plugins
 
@@ -182,7 +192,7 @@ You'll also need to update to the new build output paths, which are `build/serve
 
 👉 **Update your `dev`, `build` and `start` scripts**
 
-```json filename=package.json lines=[3-4]
+```json filename=package.json lines=[3-5]
 {
   "scripts": {
     "dev": "remix vite:dev",
@@ -219,7 +229,7 @@ For example, if you were using Express, here's how you could do it.
 
 👉 **Update your `server.mjs` file**
 
-```ts filename=server.mjs lines=[1,8-17,21-24,32,39-44]
+```ts filename=server.mjs lines=[7-14,18-21,29,36-41]
 import { createRequestHandler } from "@remix-run/express";
 import { installGlobals } from "@remix-run/node";
 import express from "express";
@@ -272,7 +282,7 @@ app.listen(port, () =>
 
 👉 **Update your `build`, `dev`, and `start` scripts**
 
-```json filename=package.json
+```json filename=package.json lines=[3-5]
 {
   "scripts": {
     "dev": "node ./server.mjs",
@@ -286,7 +296,7 @@ If you prefer, you can instead author your custom server in TypeScript.
 You could then use tools like [`tsx`][tsx] or [`tsm`][tsm] to run your custom server:
 
 ```shellscript nonumber
-tsx ./server.tsx
+tsx ./server.ts
 node --loader tsm ./server.ts
 ```
 
@@ -306,8 +316,8 @@ For example, to update the Dockerfile from the [Blues Stack][blues-stack]:
 ```diff filename=Dockerfile
 -COPY --from=build /myapp/build /myapp/build
 -COPY --from=build /myapp/public /myapp/public
-+COPY --from=build /myapp/server/build /myapp/server/build
-+COPY --from=build /myapp/client/build /myapp/client/build
++COPY --from=build /myapp/build/server /myapp/build/server
++COPY --from=build /myapp/build/client /myapp/build/client
 ```
 
 #### Configure path aliases
@@ -381,20 +391,24 @@ During development, [Vite injects imported CSS files into the page via JavaScrip
 
 This also means that in many cases you won't need the `links` function export anymore.
 
-👉 **Convert CSS imports to side effects**
+Since the order of your CSS is determined by its import order, you'll need to ensure that your CSS imports are in the same order as your `links` function.
+
+👉 **Convert CSS imports into side effects — in the same order they were in your `links` function!**
 
 ```diff filename=app/dashboard/route.tsx
-// No need to export a links function anymore:
 - import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 - import dashboardStyles from "./dashboard.css?url";
+- import sharedStyles from "./shared.css?url";
++ // ⚠️ NOTE: The import order has been updated
++ //   to match the original `links` function!
++ import "./shared.css";
++ import "./dashboard.css";
 
 - export const links: LinksFunction = () => [
+-   { rel: "stylesheet", href: sharedStyles },
 -   { rel: "stylesheet", href: dashboardStyles },
 - ];
-
-// Just import the CSS as a side effect:
-+ import "./dashboard.css";
 ```
 
 <docs-warning>While [Vite supports importing static asset URLs via an explicit `?url` query string][vite-url-imports], which in theory would match the behavior of the existing Remix compiler when used for CSS files, there is a [known Vite issue with `?url` for CSS imports][vite-css-url-issue]. This may be fixed in the future, but in the meantime you should exclusively use side effect imports for CSS.</docs-warning>
@@ -727,6 +741,47 @@ export default function SuperCool() {}
 export const mySuperCoolThing = () => {};
 ```
 
+##### Full Stack components
+
+[Full stack components][fullstack-components] are components that are colocated in the same file as a resource route and exported for use in other routes.
+They access data from a resource route by fetching that route's URL.
+
+Conceptually, it's tempting to think of full stack components as a new concept,
+but as far as Remix is concerned, they are standard React components.
+Looking closer, they only depend on the resource route's URL and the type for the corresponding `loader`.
+That means they are shared components with _zero_ runtime dependencies on code from the resource route.
+Organize them they way you would organize any shared component.
+
+For better intuition, consider a full stack component that needs to fetch data from multiple resource routes.
+It doesn't belong to any particular resource route.
+
+👉 **Move full stack components alongside other shared components**
+
+```ts filename=app/components/hello.tsx
+export function Hello() {
+  /* ... */
+}
+```
+
+👉 **Export the loader's type from the resource route**
+
+```diff filename=app/routes/api/hello.ts
++ export type Loader = typeof loader;
+```
+
+👉 **Replace `typeof loader` with `Loader` type**
+
+```diff filename=app/components/hello.tsx
++ import type { Loader } from "~/routes/api/hello";
+
+export function Hello() {
+  // ...
+-   const data = useFetcher<typeof loader>()
++   const data = useFetcher<Loader>()
+  // ...
+}
+```
+
 ## Troubleshooting
 
 Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
@@ -742,7 +797,7 @@ Vite supports both ESM and CJS dependencies, but sometimes you might still run i
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
 
-You can check [_Are The Types Wrong_][arethetypeswrong] to see if the dependency giving you trouble might be misconfigured.
+To diagnose if your one of dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
 
 Finally, you can also explicitly configure which dependencies to bundle into your server bundled
@@ -870,8 +925,11 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [sveltekit]: https://kit.svelte.dev/
 [modernizing-packages-to-esm]: https://blog.isquaredsoftware.com/2023/08/esm-modernization-lessons/
 [arethetypeswrong]: https://arethetypeswrong.github.io/
+[publint]: https://publint.dev/
 [vite-plugin-cjs-interop]: https://github.com/cyco130/vite-plugin-cjs-interop
 [ssr-no-external]: https://vitejs.dev/config/ssr-options.html#ssr-noexternal
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
 [blues-stack]: https://github.com/remix-run/blues-stack
 [global-node-polyfills]: ../other-api/node#polyfills
+[server-bundles]: ./server-bundles
+[fullstack-components]: https://www.epicweb.dev/full-stack-components
