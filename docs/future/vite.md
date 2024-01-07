@@ -134,6 +134,8 @@ export default defineConfig({
 
 Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
 
+Since the module types provided by `vite/client` are not compatible with the module types implicitly included with `@remix-run/dev`, you'll also need to enable the `skipLibCheck` flag in your TypeScript config. Remix won't require this flag in the future once the Vite plugin is the default compiler.
+
 👉 **Rename `remix.env.d.ts` to `env.d.ts`**
 
 ```diff nonumber
@@ -154,6 +156,12 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 ```diff filename=tsconfig.json
 - "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
 + "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
+```
+
+👉 **Ensure `skipLibCheck` is enabled in `tsconfig.json`**
+
+```json filename=tsconfig.json
+"skipLibCheck": true,
 ```
 
 👉 **Ensure `module` and `moduleResolution` fields are set correctly in `tsconfig.json`**
