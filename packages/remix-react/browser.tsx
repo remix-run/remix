@@ -5,6 +5,7 @@ import {
   type Router,
 } from "@remix-run/router";
 import type { ReactElement } from "react";
+import type { ViteHotContext } from "vite/types/hot.js";
 import * as React from "react";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
 import { matchRoutes, RouterProvider } from "react-router-dom";
@@ -49,7 +50,7 @@ export interface RemixBrowserProps {}
 
 declare global {
   interface ImportMeta {
-    hot: any;
+    readonly hot?: ViteHotContext | undefined;
   }
 }
 
