@@ -11,20 +11,12 @@
     "target": "ES2022",
     "strict": true,
     "allowJs": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
       "~/*": ["./app/*"]
     },
-
-    // The `skipLibCheck` flag is enabled in Remix's Vite templates due to a
-    // clash between the module types from `vite/client` and the old module
-    // types from `@remix-run/dev` which were intended for use with Remix's
-    // esbuild compiler. When `@remix-run/dev` no longer implicitly includes
-    // these module types, the Remix Vite templates will no longer enable this
-    // flag. This will most likely happen in a future major release when the
-    // esbuild compiler is removed in favor of the Vite plugin.
-    "skipLibCheck": true,
 
     // Vite takes care of building everything, not tsc.
     "noEmit": true
