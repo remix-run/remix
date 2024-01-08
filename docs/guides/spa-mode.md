@@ -24,7 +24,7 @@ SPA Mode is basically what you'd get if you had your own [React Router + Vite][r
 
 SPA Mode tells Remix that you do not plan on running a Remix server at runtime and that you wish to generate a static `index.html` file at build time and you will only use [Client Data](https://remix.run/docs/en/main/guides/client-data) APIs for data loading and mutations.
 
-The `index.html` is generated from your root route. You **should** include a `HydrateFallback` component containing the app shell/initial loading state. The initial "render" to generate the `index.html` will not include any routes deeper than root. This ensures that the `index.html` file can be served/hydrated for paths beyond `/` (i.e., `/about`) if you configure your CDN/server to do so.
+The `index.html` is generated from your `root.tsx` route. You **should** include a `HydrateFallback` component in `root.tsx` containing the app shell/initial loading state. The initial "render" to generate the `index.html` will not include any routes deeper than root. This ensures that the `index.html` file can be served/hydrated for paths beyond `/` (i.e., `/about`) if you configure your CDN/server to do so.
 
 ## Usage
 
@@ -81,6 +81,8 @@ app.get("*", (req, res, next) =>
 ## Notes/Caveats
 
 - You cannot use server APIs such as `headers`, `loader`, and `action` -- the build will throw an error if you export them
+
+- You can only export a `HydrateFallback` from your `root.tsx` in SPA mode -- the build will throw an error if you export one from any other routes.
 
 - You cannot call `serverLoader`/`serverAction` from your `clientLoader`/`clientAction` methods since there is no running server -- those will throw a runtime error if called
 

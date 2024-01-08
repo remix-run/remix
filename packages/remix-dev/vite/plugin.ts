@@ -41,7 +41,6 @@ const supportedRemixConfigKeys = [
   "publicPath",
   "routes",
   "serverModuleFormat",
-  "unstable_ssr",
 ] as const satisfies ReadonlyArray<keyof RemixUserConfig>;
 type SupportedRemixConfigKey = typeof supportedRemixConfigKeys[number];
 type SupportedRemixConfig = Pick<RemixUserConfig, SupportedRemixConfigKey>;
@@ -115,6 +114,13 @@ export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
      * bundle's directory name within the server build directory.
      */
     unstable_serverBundles?: ServerBundlesFunction;
+    /**
+     * Enable server-side rendering for your application. Disable to use Remix in
+     * "SPA Mode", which will request the `/` path at build-time and save it as
+     * an `index.html` file with your assets so your application can be deployed
+     * as a SPA without server-rendering. Default's to `true`.
+     */
+    unstable_ssr?: boolean;
   };
 
 export type ResolvedRemixVitePluginConfig = Pick<
@@ -372,6 +378,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         serverBuildDirectory: "build/server",
         serverBuildFile: "index.js",
         publicPath: "/",
+        unstable_ssr: true,
       } as const satisfies Partial<RemixVitePluginOptions>;
 
       let pluginConfig = {
@@ -384,7 +391,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
       let resolvedRemixConfig = await resolveConfig(
         pick(pluginConfig, supportedRemixConfigKeys),
-        { rootDirectory }
+        {
+          rootDirectory,
+          isSpaMode: pluginConfig.unstable_ssr === false,
+        }
       );
 
       // Only select the Remix config options that the Vite plugin uses

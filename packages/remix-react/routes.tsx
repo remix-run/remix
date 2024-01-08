@@ -102,7 +102,9 @@ export function createServerRoutes(
       index: route.index,
       path: route.path,
       handle: routeModule.handle,
-      // For SPA mode, all routes are lazy except root
+      // For SPA mode, all routes are lazy except root.  We don't need a full
+      // implementation here though - just need a `lazy` prop to tell the RR
+      // rendering where to stop
       lazy:
         isSpaMode && route.id !== "root"
           ? () => Promise.resolve({ Component: () => null })

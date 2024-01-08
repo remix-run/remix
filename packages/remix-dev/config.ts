@@ -161,14 +161,6 @@ export interface AppConfig {
   serverPlatform?: ServerPlatform;
 
   /**
-   * Enable server-side rendering for your application. Disable to use Remix in
-   * "SPA Mode", which will request the `/` path at build-time and save it as
-   * an `index.html` file with your assets so your application can be deployed
-   * as a SPA without server-rendering. Default's to `true`.
-   */
-  unstable_ssr?: boolean;
-
-  /**
    * Whether to support Tailwind functions and directives in CSS files if
    * `tailwindcss` is installed. Defaults to `true`.
    */
@@ -424,9 +416,11 @@ export async function resolveConfig(
   {
     rootDirectory,
     serverMode = ServerMode.Production,
+    isSpaMode = false,
   }: {
     rootDirectory: string;
     serverMode?: ServerMode;
+    isSpaMode?: boolean;
   }
 ): Promise<RemixConfig> {
   if (!isValidServerMode(serverMode)) {
@@ -479,7 +473,6 @@ export async function resolveConfig(
   let pkgJson = await PackageJson.load(rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
-  let isSpaMode = appConfig.unstable_ssr === false;
   if (isSpaMode) {
     // This is a super-simple default since we don't need streaming in SPA mode.
     // We can include this in a remix-spa template, but right now `npx remix reveal`
