@@ -183,6 +183,7 @@ export async function loadRouteModule(
     // assets, the manifest path, but not the documents 😬
     if (
       window.__remixContext.isSpaMode &&
+      // @ts-expect-error
       typeof import.meta.hot !== "undefined"
     ) {
       // In SPA Mode (which implies vite) we don't want to perform a hard reload
