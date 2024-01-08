@@ -3,6 +3,7 @@
 import type * as Vite from "vite";
 import { type BinaryLike, createHash } from "node:crypto";
 import * as path from "node:path";
+import * as url from "node:url";
 import * as fse from "fs-extra";
 import babel from "@babel/core";
 import {
@@ -419,7 +420,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         ...resolveServerBuildConfig(),
       };
 
-      // Log warning
+      // Log warning for incompatible vite config flags
       if (isSpaMode && unstable_serverBundles) {
         console.warn(
           colors.yellow(
@@ -1517,7 +1518,7 @@ async function handleSpaMode(
   // proper HydrateFallback ... or not!  Maybe they have a static landing page
   // generated from routes/_index.tsx.
   let serverBuildPath = path.join(serverBuildDirectoryPath, serverBuildFile);
-  let build = await import(`file://${serverBuildPath}`);
+  let build = await import(url.pathToFileURL(serverBuildPath).toString());
   let { createRequestHandler: createHandler } = await import("@remix-run/node");
   let handler = createHandler(build, viteConfig.mode);
   let response = await handler(new Request("http://localhost/"));

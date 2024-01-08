@@ -9,6 +9,9 @@ import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 import { createProject, viteBuild } from "./helpers/vite.js";
 
+// SSR'd useId value we can assert against pre- and post-hydration
+const USE_ID_VALUE = ":R1:";
+
 test.describe("SPA Mode", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
@@ -26,9 +29,11 @@ test.describe("SPA Mode", () => {
           });
         `,
         "app/root.tsx": js`
+          import * as React from "react";
           import { Form, Link, Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
+            let id = React.useId();
             return (
               <html lang="en">
                 <head>
@@ -37,6 +42,7 @@ test.describe("SPA Mode", () => {
                 </head>
                 <body>
                     <h1 data-root>Root</h1>
+                    <pre data-use-id>{id}</pre>
                     <nav>
                       <Link to="/about">/about</Link>
                       <br/>
@@ -66,6 +72,10 @@ test.describe("SPA Mode", () => {
           }
 
           export function HydrateFallback() {
+            const id = React.useId();
+            const [hydrated, setHydrated] = React.useState(false);
+            React.useEffect(() => setHydrated(true), []);
+
             return (
               <html lang="en">
                 <head>
@@ -74,14 +84,16 @@ test.describe("SPA Mode", () => {
                 </head>
                 <body>
                   <h1 data-loading>Loading SPA...</h1>
+                  <pre data-use-id>{id}</pre>
+                  {hydrated ? <h3 data-hydrated>Hydrated</h3> : null}
                   <Scripts />
                 </body>
               </html>
             );
           }
-          `,
+        `,
         "app/routes/_index.tsx": js`
-          import { useState, useEffect } from "react";
+          import * as React  from "react";
           import { useLoaderData } from "@remix-run/react";
 
           export function meta({ data }) {
@@ -90,14 +102,17 @@ test.describe("SPA Mode", () => {
             }];
           }
 
-          export function clientLoader() {
+          export async function clientLoader({ request }) {
+            if (new URL(request.url).searchParams.has('slow')) {
+              await new Promise(r => setTimeout(r, 500));
+            }
             return "Index Loader Data";
           }
 
           export default function Component() {
             let data = useLoaderData();
-            const [mounted, setMounted] = useState(false);
-            useEffect(() => setMounted(true), []);
+            const [mounted, setMounted] = React.useState(false);
+            React.useEffect(() => setMounted(true), []);
 
             return (
               <>
@@ -159,7 +174,7 @@ test.describe("SPA Mode", () => {
             let error = useRouteError();
             return <pre data-error>{error.data}</pre>
           }
-          `,
+        `,
       },
     });
 
@@ -241,6 +256,9 @@ test.describe("SPA Mode", () => {
       expect(await page.locator("[data-loading]").textContent()).toBe(
         "Loading SPA..."
       );
+      expect(await page.locator("[data-use-id]").textContent()).toBe(
+        USE_ID_VALUE
+      );
       expect(await page.locator("title").textContent()).toBe(
         "Index Title: undefined"
       );
@@ -260,6 +278,25 @@ test.describe("SPA Mode", () => {
       );
       expect(await page.locator("title").textContent()).toBe(
         "Index Title: Index Loader Data"
+      );
+    });
+
+    test("hydrates a proper useId value", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/?slow");
+
+      // We should hydrate the same useId value in HydrateFallback that we
+      // rendered on the server above
+      await page.waitForSelector("[data-hydrated]");
+      expect(await page.locator("[data-use-id]").textContent()).toBe(
+        USE_ID_VALUE
+      );
+
+      // Once hydrated, we should get a different useId value from the root component
+      await page.waitForSelector("[data-route]");
+      expect(await page.locator("[data-route]").textContent()).toBe("Index");
+      expect(await page.locator("[data-use-id]").textContent()).not.toBe(
+        USE_ID_VALUE
       );
     });
 

@@ -77,7 +77,8 @@ export function createServerRoutes(
   routesByParentId: Record<
     string,
     Omit<EntryRoute, "children">[]
-  > = groupRoutesByParentId(manifest)
+  > = groupRoutesByParentId(manifest),
+  spaModeLazyPromise = Promise.resolve({ Component: () => null })
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModules[route.id];
@@ -108,9 +109,7 @@ export function createServerRoutes(
       // implementation here though - just need a `lazy` prop to tell the RR
       // rendering where to stop
       lazy:
-        isSpaMode && route.id !== "root"
-          ? () => Promise.resolve({ Component: () => null })
-          : undefined,
+        isSpaMode && route.id !== "root" ? () => spaModeLazyPromise : undefined,
       // For partial hydration rendering, we need to indicate when the route
       // has a loader/clientLoader, but it won't ever be called during the static
       // render, so just give it a no-op function so we can render down to the
@@ -126,7 +125,8 @@ export function createServerRoutes(
       future,
       isSpaMode,
       route.id,
-      routesByParentId
+      routesByParentId,
+      spaModeLazyPromise
     );
     if (children.length > 0) dataRoute.children = children;
     return dataRoute;
