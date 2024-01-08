@@ -103,7 +103,7 @@ You may want to mix and match data loading strategies in your application such t
 
 A route that only depends on a server loader looks like this:
 
-```tsx filename="app/routes/server-data-route.tsx
+```tsx filename=app/routes/server-data-route.tsx
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 
@@ -122,7 +122,7 @@ export default function Component() {
 
 A route that only depends on a client loader looks like this.
 
-```tsx filename="app/routes/client-data-route.tsx
+```tsx filename=app/routes/client-data-route.tsx
 import type { ClientLoaderFunctionArgs } from "@remix-run/react";
 
 export async function clientLoader({
