@@ -88,11 +88,13 @@ export function createServerRoutes(
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       Component: getRouteModuleComponent(routeModule),
-      HydrateFallback: routeModule.HydrateFallback
-        ? routeModule.HydrateFallback
-        : route.id === "root"
-        ? RemixRootDefaultHydrateFallback
-        : undefined,
+      // HydrateFallback can only exist on the root route in SPA mode
+      HydrateFallback:
+        routeModule.HydrateFallback && (!isSpaMode || route.id === "root")
+          ? routeModule.HydrateFallback
+          : route.id === "root"
+          ? RemixRootDefaultHydrateFallback
+          : undefined,
       ErrorBoundary: routeModule.ErrorBoundary
         ? routeModule.ErrorBoundary
         : route.id === "root"
@@ -245,11 +247,13 @@ export function createClientRoutes(
       Object.assign(dataRoute, {
         ...dataRoute,
         Component: getRouteModuleComponent(routeModule),
-        HydrateFallback: routeModule.HydrateFallback
-          ? routeModule.HydrateFallback
-          : route.id === "root"
-          ? RemixRootDefaultHydrateFallback
-          : undefined,
+        // HydrateFallback can only exist on the root route in SPA mode
+        HydrateFallback:
+          routeModule.HydrateFallback && (!isSpaMode || route.id === "root")
+            ? routeModule.HydrateFallback
+            : route.id === "root"
+            ? RemixRootDefaultHydrateFallback
+            : undefined,
         ErrorBoundary: routeModule.ErrorBoundary
           ? routeModule.ErrorBoundary
           : route.id === "root"

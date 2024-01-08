@@ -171,7 +171,7 @@ test.describe("SPA Mode", () => {
   });
 
   test.describe("builds", () => {
-    test("errors on server exports export", async () => {
+    test("errors on server-only exports", async () => {
       let cwd = await createProject({
         "vite.config.ts": js`
           import { defineConfig } from "vite";
@@ -196,7 +196,38 @@ test.describe("SPA Mode", () => {
       let result = viteBuild({ cwd });
       let stderr = result.stderr.toString("utf8");
       expect(stderr).toMatch(
-        "SPA Mode: 3 invalid route exports in `routes/invalid-exports.tsx`:\n  - `headers`\n  - `loader`\n  - `action`"
+        "SPA Mode: 3 invalid route export(s) in `routes/invalid-exports.tsx`: " +
+          "`headers`, `loader`, `action`. See https://remix.run/guides/spa-mode " +
+          "for more information."
+      );
+    });
+
+    test("errors on HydrateFallback export from non-root route", async () => {
+      let cwd = await createProject({
+        "vite.config.ts": js`
+          import { defineConfig } from "vite";
+          import { unstable_vitePlugin as remix } from "@remix-run/dev";
+
+          export default defineConfig({
+            plugins: [remix({ unstable_ssr: false })],
+          });
+        `,
+        "app/routes/invalid-exports.tsx": String.raw`
+          // Invalid exports
+          export function HydrateFallback() {}
+
+          // Valid exports
+          export function clientLoader() {}
+          export function clientAction() {}
+          export default function Component() {}
+        `,
+      });
+      let result = viteBuild({ cwd });
+      let stderr = result.stderr.toString("utf8");
+      expect(stderr).toMatch(
+        "SPA Mode: Invalid `HydrateFallback` export found in `routes/invalid-exports.tsx`. " +
+          "`HydrateFallback` is only permitted on the root route in SPA mode. " +
+          "See https://remix.run/guides/spa-mode for more information."
       );
     });
   });

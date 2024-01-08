@@ -1163,17 +1163,26 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             .map((exp) => exp.n)
             .filter((exp) => SERVER_ONLY_EXPORTS.includes(exp));
           if (serverOnlyExports.length > 0) {
-            let message = [
-              `SPA Mode: ${serverOnlyExports.length} invalid route export${
-                serverOnlyExports.length > 1 ? "s" : ""
-              } in \`${route.file}\`:`,
-              ...serverOnlyExports.map((exp) => `  - \`${exp}\``),
-              "",
-              // TODO: Docs!
-              //"See https://remix.run/docs/en/main/future/vite#strict-route-exports",
-              "",
-            ].join("\n");
+            let str = serverOnlyExports.map((e) => `\`${e}\``).join(", ");
+            let message =
+              `SPA Mode: ${serverOnlyExports.length} invalid route export(s) in ` +
+              `\`${route.file}\`: ${str}. See https://remix.run/guides/spa-mode ` +
+              `for more information.`;
             throw Error(message);
+          }
+
+          if (route.id !== "root") {
+            let hasHydrateFallback = esModuleLexer(code)[1]
+              .map((exp) => exp.n)
+              .some((exp) => exp === "HydrateFallback");
+            if (hasHydrateFallback) {
+              let message =
+                `SPA Mode: Invalid \`HydrateFallback\` export found in ` +
+                `\`${route.file}\`. \`HydrateFallback\` is only permitted on ` +
+                `the root route in SPA mode. See https://remix.run/guides/spa-mode ` +
+                `for more information.`;
+              throw Error(message);
+            }
           }
         }
 

@@ -181,6 +181,17 @@ export async function loadRouteModule(
     // asset we're trying to import! Reload from the server and the user
     // (should) get the new manifest--unless the developer purged the static
     // assets, the manifest path, but not the documents 😬
+    if (
+      window.__remixContext.isSpaMode &&
+      typeof import.meta.hot !== "undefined"
+    ) {
+      // In SPA mode (which implies vite) we don't want to perform a hard reload
+      // on dev-time errors since it's a vite compilation error and a reload is
+      // just going to fail with the same issue.  Let the UI bubble to the error
+      // boundary and let them see the error in the overlay or the dev server log
+      console.error(`Error loading route module \`${route.module}\`:`, error);
+      throw error;
+    }
     window.location.reload();
     return new Promise(() => {
       // check out of this hook cause the DJs never gonna re[s]olve this
