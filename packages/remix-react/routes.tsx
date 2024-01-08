@@ -24,6 +24,7 @@ import type { FutureConfig } from "./entry";
 import { prefetchStyleLinks } from "./links";
 import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import { RemixRootDefaultHydrateFallback } from "./fallback";
+import invariant from "./invariant";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;
@@ -71,22 +72,30 @@ export function createServerRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModules: RouteModules,
   future: FutureConfig,
+  isSpaMode: boolean,
   parentId: string = "",
   routesByParentId: Record<
     string,
     Omit<EntryRoute, "children">[]
-  > = groupRoutesByParentId(manifest)
+  > = groupRoutesByParentId(manifest),
+  spaModeLazyPromise = Promise.resolve({ Component: () => null })
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModules[route.id];
+    invariant(
+      routeModule,
+      "No `routeModule` available to create server routes"
+    );
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       Component: getRouteModuleComponent(routeModule),
-      HydrateFallback: routeModule.HydrateFallback
-        ? routeModule.HydrateFallback
-        : route.id === "root"
-        ? RemixRootDefaultHydrateFallback
-        : undefined,
+      // HydrateFallback can only exist on the root route in SPA Mode
+      HydrateFallback:
+        routeModule.HydrateFallback && (!isSpaMode || route.id === "root")
+          ? routeModule.HydrateFallback
+          : route.id === "root"
+          ? RemixRootDefaultHydrateFallback
+          : undefined,
       ErrorBoundary: routeModule.ErrorBoundary
         ? routeModule.ErrorBoundary
         : route.id === "root"
@@ -95,7 +104,12 @@ export function createServerRoutes(
       id: route.id,
       index: route.index,
       path: route.path,
-      handle: routeModules[route.id].handle,
+      handle: routeModule.handle,
+      // For SPA Mode, all routes are lazy except root.  We don't need a full
+      // implementation here though - just need a `lazy` prop to tell the RR
+      // rendering where to stop
+      lazy:
+        isSpaMode && route.id !== "root" ? () => spaModeLazyPromise : undefined,
       // For partial hydration rendering, we need to indicate when the route
       // has a loader/clientLoader, but it won't ever be called during the static
       // render, so just give it a no-op function so we can render down to the
@@ -109,8 +123,10 @@ export function createServerRoutes(
       manifest,
       routeModules,
       future,
+      isSpaMode,
       route.id,
-      routesByParentId
+      routesByParentId,
+      spaModeLazyPromise
     );
     if (children.length > 0) dataRoute.children = children;
     return dataRoute;
@@ -122,26 +138,56 @@ export function createClientRoutesWithHMRRevalidationOptOut(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
   initialState: HydrationState,
-  future: FutureConfig
+  future: FutureConfig,
+  isSpaMode: boolean
 ) {
   return createClientRoutes(
     manifest,
     routeModulesCache,
     initialState,
     future,
+    isSpaMode,
     "",
     groupRoutesByParentId(manifest),
     needsRevalidation
   );
 }
 
-function getNoServerHandlerError(type: "action" | "loader", routeId: string) {
+function preventInvalidServerHandlerCall(
+  type: "action" | "loader",
+  route: Omit<EntryRoute, "children">,
+  isSpaMode: boolean
+) {
+  if (isSpaMode) {
+    let fn = type === "action" ? "serverAction()" : "serverLoader()";
+    let msg = `You cannot call ${fn} in SPA Mode (routeId: "${route.id}")`;
+    console.error(msg);
+    throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
+  }
+
   let fn = type === "action" ? "serverAction()" : "serverLoader()";
   let msg =
     `You are trying to call ${fn} on a route that does not have a server ` +
-    `${type} (routeId: "${routeId}")`;
+    `${type} (routeId: "${route.id}")`;
+  if (
+    (type === "loader" && !route.hasLoader) ||
+    (type === "action" && !route.hasAction)
+  ) {
+    console.error(msg);
+    throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
+  }
+}
+
+function noActionDefinedError(
+  type: "action" | "clientAction",
+  routeId: string
+) {
+  let article = type === "clientAction" ? "a" : "an";
+  let msg =
+    `Route "${routeId}" does not have ${article} ${type}, but you are trying to ` +
+    `submit to it. To fix this, please add ${article} \`${type}\` function to the route`;
   console.error(msg);
-  throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
+  throw new ErrorResponse(405, "Method Not Allowed", new Error(msg), true);
 }
 
 export function createClientRoutes(
@@ -149,6 +195,7 @@ export function createClientRoutes(
   routeModulesCache: RouteModules,
   initialState: HydrationState,
   future: FutureConfig,
+  isSpaMode: boolean,
   parentId: string = "",
   routesByParentId: Record<
     string,
@@ -166,28 +213,21 @@ export function createClientRoutes(
 
     async function fetchServerAction(request: Request) {
       if (!route.hasAction) {
-        let msg =
-          `Route "${route.id}" does not have an action, but you are trying ` +
-          `to submit to it. To fix this, please add an \`action\` function to the route`;
-        console.error(msg);
-        throw new ErrorResponse(
-          405,
-          "Method Not Allowed",
-          new Error(msg),
-          true
-        );
+        throw noActionDefinedError("action", route.id);
       }
-
       return fetchServerHandler(request, route);
     }
 
     async function prefetchStylesAndCallHandler(
       handler: () => Promise<unknown>
     ) {
-      // Only prefetch links if we've been loaded into the cache, route.lazy
-      // will handle initial loads
-      let linkPrefetchPromise = routeModulesCache[route.id]
-        ? prefetchStyleLinks(route, routeModulesCache[route.id])
+      // Only prefetch links if we exist in the routeModulesCache (critical modules
+      // and navigating back to pages previously loaded via route.lazy).  Initial
+      // execution of route.lazy (when the module is not in the cache) will handle
+      // prefetching style links via loadRouteModuleWithBlockingLinks.
+      let cachedModule = routeModulesCache[route.id];
+      let linkPrefetchPromise = cachedModule
+        ? prefetchStyleLinks(route, cachedModule)
         : Promise.resolve();
       try {
         return handler();
@@ -207,11 +247,13 @@ export function createClientRoutes(
       Object.assign(dataRoute, {
         ...dataRoute,
         Component: getRouteModuleComponent(routeModule),
-        HydrateFallback: routeModule.HydrateFallback
-          ? routeModule.HydrateFallback
-          : route.id === "root"
-          ? RemixRootDefaultHydrateFallback
-          : undefined,
+        // HydrateFallback can only exist on the root route in SPA Mode
+        HydrateFallback:
+          routeModule.HydrateFallback && (!isSpaMode || route.id === "root")
+            ? routeModule.HydrateFallback
+            : route.id === "root"
+            ? RemixRootDefaultHydrateFallback
+            : undefined,
         ErrorBoundary: routeModule.ErrorBoundary
           ? routeModule.ErrorBoundary
           : route.id === "root"
@@ -236,7 +278,12 @@ export function createClientRoutes(
       dataRoute.loader = async ({ request, params }: LoaderFunctionArgs) => {
         try {
           let result = await prefetchStylesAndCallHandler(async () => {
+            invariant(
+              routeModule,
+              "No `routeModule` available for critical-route loader"
+            );
             if (!routeModule.clientLoader) {
+              if (isSpaMode) return null;
               // Call the server when no client loader exists
               return fetchServerLoader(request);
             }
@@ -245,9 +292,7 @@ export function createClientRoutes(
               request,
               params,
               async serverLoader() {
-                if (!route.hasLoader) {
-                  throw getNoServerHandlerError("loader", route.id);
-                }
+                preventInvalidServerHandlerCall("loader", route, isSpaMode);
 
                 // On the first call, resolve with the server result
                 if (isHydrationRequest) {
@@ -273,11 +318,22 @@ export function createClientRoutes(
       };
 
       // Let React Router know whether to run this on hydration
-      dataRoute.loader.hydrate = shouldHydrateRouteLoader(route, routeModule);
+      dataRoute.loader.hydrate = shouldHydrateRouteLoader(
+        route,
+        routeModule,
+        isSpaMode
+      );
 
       dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
         return prefetchStylesAndCallHandler(async () => {
+          invariant(
+            routeModule,
+            "No `routeModule` available for critical-route action"
+          );
           if (!routeModule.clientAction) {
+            if (isSpaMode) {
+              throw noActionDefinedError("clientAction", route.id);
+            }
             return fetchServerAction(request);
           }
 
@@ -285,9 +341,7 @@ export function createClientRoutes(
             request,
             params,
             async serverAction() {
-              if (!route.hasAction) {
-                throw getNoServerHandlerError("action", route.id);
-              }
+              preventInvalidServerHandlerCall("action", route, isSpaMode);
               let result = await fetchServerAction(request);
               let unwrapped = await unwrapServerResponse(result);
               return unwrapped;
@@ -301,11 +355,19 @@ export function createClientRoutes(
       // loader/action as static props on the route
       if (!route.hasClientLoader) {
         dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
-          prefetchStylesAndCallHandler(() => fetchServerLoader(request));
+          prefetchStylesAndCallHandler(() => {
+            if (isSpaMode) return Promise.resolve(null);
+            return fetchServerLoader(request);
+          });
       }
       if (!route.hasClientAction) {
         dataRoute.action = ({ request }: ActionFunctionArgs) =>
-          prefetchStylesAndCallHandler(() => fetchServerAction(request));
+          prefetchStylesAndCallHandler(() => {
+            if (isSpaMode) {
+              throw noActionDefinedError("clientAction", route.id);
+            }
+            return fetchServerAction(request);
+          });
       }
 
       // Load all other modules via route.lazy()
@@ -322,9 +384,7 @@ export function createClientRoutes(
             clientLoader({
               ...args,
               async serverLoader() {
-                if (!route.hasLoader) {
-                  throw getNoServerHandlerError("loader", route.id);
-                }
+                preventInvalidServerHandlerCall("loader", route, isSpaMode);
                 let response = await fetchServerLoader(args.request);
                 let result = await unwrapServerResponse(response);
                 return result;
@@ -338,9 +398,7 @@ export function createClientRoutes(
             clientAction({
               ...args,
               async serverAction() {
-                if (!route.hasAction) {
-                  throw getNoServerHandlerError("action", route.id);
-                }
+                preventInvalidServerHandlerCall("action", route, isSpaMode);
                 let response = await fetchServerAction(args.request);
                 let result = await unwrapServerResponse(response);
                 return result;
@@ -373,6 +431,7 @@ export function createClientRoutes(
       routeModulesCache,
       initialState,
       future,
+      isSpaMode,
       route.id,
       routesByParentId,
       needsRevalidation
@@ -497,10 +556,12 @@ function getRouteModuleComponent(routeModule: RouteModule) {
 
 export function shouldHydrateRouteLoader(
   route: EntryRoute,
-  routeModule: RouteModule
+  routeModule: RouteModule,
+  isSpaMode: boolean
 ) {
   return (
-    routeModule.clientLoader != null &&
-    (routeModule.clientLoader.hydrate === true || route.hasLoader !== true)
+    (isSpaMode && route.id !== "root") ||
+    (routeModule.clientLoader != null &&
+      (routeModule.clientLoader.hydrate === true || route.hasLoader !== true))
   );
 }
