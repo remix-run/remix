@@ -185,7 +185,7 @@ export async function loadRouteModule(
       window.__remixContext.isSpaMode &&
       typeof import.meta.hot !== "undefined"
     ) {
-      // In SPA mode (which implies vite) we don't want to perform a hard reload
+      // In SPA Mode (which implies vite) we don't want to perform a hard reload
       // on dev-time errors since it's a vite compilation error and a reload is
       // just going to fail with the same issue.  Let the UI bubble to the error
       // boundary and let them see the error in the overlay or the dev server log

@@ -474,19 +474,15 @@ export async function resolveConfig(
   let deps = pkgJson.content.dependencies ?? {};
 
   if (isSpaMode) {
-    // This is a super-simple default since we don't need streaming in SPA mode.
+    // This is a super-simple default since we don't need streaming in SPA Mode.
     // We can include this in a remix-spa template, but right now `npx remix reveal`
     // will still expose the streaming template since that command doesn't have
     // access to the `unstable_ssr:false` flag in the vite config (the streaming template
     // works just fine so maybe instea dof having this we _only have this version
-    // in the template...).  We let users manage an entry.server file in SPA mode
+    // in the template...).  We let users manage an entry.server file in SPA Mode
     // so they can de ide if they want to hydrate the full document or just an
     // embedded `<div id="app">` or whatever.
     entryServerFile = "entry.server.spa.tsx";
-
-    // TODO: Should we check the rest of the server related configs and throw
-    // errors if present?  We need to be able to create and run a request handler
-    // to generate index.html, so we need _some_ aspect of "server" available.
   } else if (userEntryServerFile) {
     entryServerFile = userEntryServerFile;
   } else {

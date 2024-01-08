@@ -28,7 +28,7 @@ The `index.html` is generated from your `root.tsx` route. You **should** include
 
 ## Usage
 
-You can opt into SPA mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
+You can opt into SPA Mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
 
 ```js
 // vite.config.ts
@@ -82,7 +82,7 @@ app.get("*", (req, res, next) =>
 
 - You cannot use server APIs such as `headers`, `loader`, and `action` -- the build will throw an error if you export them
 
-- You can only export a `HydrateFallback` from your `root.tsx` in SPA mode -- the build will throw an error if you export one from any other routes.
+- You can only export a `HydrateFallback` from your `root.tsx` in SPA Mode -- the build will throw an error if you export one from any other routes.
 
 - You cannot call `serverLoader`/`serverAction` from your `clientLoader`/`clientAction` methods since there is no running server -- those will throw a runtime error if called
 
@@ -106,7 +106,7 @@ If you are currently using `RouterProvider`, then the best approach is to move y
 Once you've got all your routes living in their own files, you can:
 
 - Move those files over into the Remix `app/` directory
-- Enable SPA mode
+- Enable SPA Mode
 - Rename all `loader`/`action` function to `clientLoader`/`clientAction`
 - Add a `root.tsx` with a `default` export and a `HydrateFallback` - this replaces the `index.html` file from your React Router app
 

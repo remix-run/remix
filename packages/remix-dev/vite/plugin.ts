@@ -389,11 +389,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       let rootDirectory =
         viteUserConfig.root ?? process.env.REMIX_ROOT ?? process.cwd();
 
+      let isSpaMode = pluginConfig.unstable_ssr === false;
+
       let resolvedRemixConfig = await resolveConfig(
         pick(pluginConfig, supportedRemixConfigKeys),
         {
           rootDirectory,
-          isSpaMode: pluginConfig.unstable_ssr === false,
+          isSpaMode,
         }
       );
 
@@ -409,7 +411,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         serverBuildFile,
         unstable_serverBundles,
         serverModuleFormat,
-        isSpaMode,
         relativeAssetsBuildDirectory,
         future,
       } = {
@@ -417,6 +418,18 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         ...resolvedRemixConfig,
         ...resolveServerBuildConfig(),
       };
+
+      // Log warning
+      if (isSpaMode && unstable_serverBundles) {
+        console.warn(
+          colors.yellow(
+            colors.bold("⚠️  SPA Mode: ") +
+              "the `unstable_serverBundles` config is invalid with " +
+              "`unstable_ssr:false` and will be ignored`"
+          )
+        );
+        unstable_serverBundles = undefined;
+      }
 
       return {
         appDirectory,
@@ -979,9 +992,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
           if (cachedPluginConfig.isSpaMode) {
             await handleSpaMode(
-              path.join(rootDirectory, serverBuildDirectory, serverBuildFile),
+              path.join(rootDirectory, serverBuildDirectory),
+              serverBuildFile,
               assetsBuildDirectory,
-              viteConfig.mode
+              viteConfig
             );
           }
         },
@@ -1179,7 +1193,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               let message =
                 `SPA Mode: Invalid \`HydrateFallback\` export found in ` +
                 `\`${route.file}\`. \`HydrateFallback\` is only permitted on ` +
-                `the root route in SPA mode. See https://remix.run/guides/spa-mode ` +
+                `the root route in SPA Mode. See https://remix.run/guides/spa-mode ` +
                 `for more information.`;
               throw Error(message);
             }
@@ -1494,39 +1508,31 @@ async function getRouteMetadata(
 }
 
 async function handleSpaMode(
-  serverBuildPath: string,
+  serverBuildDirectoryPath: string,
+  serverBuildFile: string,
   assetsBuildDirectory: string,
-  mode: string
+  viteConfig: Vite.ResolvedConfig
 ) {
   // Create a handler and call it for the `/` path - rendering down to the
   // proper HydrateFallback ... or not!  Maybe they have a static landing page
   // generated from routes/_index.tsx.
+  let serverBuildPath = path.join(serverBuildDirectoryPath, serverBuildFile);
   let build = await import(`file://${serverBuildPath}`);
-  let { createRequestHandler: createNodeRequestHandler } = await import(
-    "@remix-run/node"
-  );
-  let handler = createNodeRequestHandler(build, mode);
+  let { createRequestHandler: createHandler } = await import("@remix-run/node");
+  let handler = createHandler(build, viteConfig.mode);
   let response = await handler(new Request("http://localhost/"));
   invariant(response.status === 200, "Error generating the index.html file");
 
   // Write out the index.html file for the SPA
-  await fse.writeFile(
-    path.join(assetsBuildDirectory, "index.html"),
-    await response.text()
-  );
-  console.log(
-    colors.green("Remix SPA Mode: index.html has been written to your"),
-    colors.green(
-      colors.bold(path.relative(process.cwd(), assetsBuildDirectory))
-    ),
-    colors.green("directory")
+  let htmlPath = path.join(assetsBuildDirectory, "index.html");
+  await fse.writeFile(htmlPath, await response.text());
+
+  viteConfig.logger.info(
+    "SPA Mode: index.html has been written to your " +
+      colors.bold(path.relative(process.cwd(), assetsBuildDirectory)) +
+      " directory"
   );
 
-  // Cleanup - we no longer need the server build
-  fse.removeSync(serverBuildPath);
-
-  // TODO: Is it safe to remove the build/server/ directory here?
-  // path.dirname(serverBuildPath) feels risky since who knows what else is in
-  // there?  Maybe we only remove it if it's empty (barring the build/server/.vite/ cache
-  // directory)?
+  // Cleanup - we no longer need the server build assets
+  fse.removeSync(serverBuildDirectoryPath);
 }

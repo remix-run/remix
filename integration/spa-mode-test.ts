@@ -226,7 +226,7 @@ test.describe("SPA Mode", () => {
       let stderr = result.stderr.toString("utf8");
       expect(stderr).toMatch(
         "SPA Mode: Invalid `HydrateFallback` export found in `routes/invalid-exports.tsx`. " +
-          "`HydrateFallback` is only permitted on the root route in SPA mode. " +
+          "`HydrateFallback` is only permitted on the root route in SPA Mode. " +
           "See https://remix.run/guides/spa-mode for more information."
       );
     });

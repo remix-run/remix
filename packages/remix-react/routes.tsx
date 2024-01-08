@@ -88,7 +88,7 @@ export function createServerRoutes(
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       Component: getRouteModuleComponent(routeModule),
-      // HydrateFallback can only exist on the root route in SPA mode
+      // HydrateFallback can only exist on the root route in SPA Mode
       HydrateFallback:
         routeModule.HydrateFallback && (!isSpaMode || route.id === "root")
           ? routeModule.HydrateFallback
@@ -104,7 +104,7 @@ export function createServerRoutes(
       index: route.index,
       path: route.path,
       handle: routeModule.handle,
-      // For SPA mode, all routes are lazy except root.  We don't need a full
+      // For SPA Mode, all routes are lazy except root.  We don't need a full
       // implementation here though - just need a `lazy` prop to tell the RR
       // rendering where to stop
       lazy:
@@ -247,7 +247,7 @@ export function createClientRoutes(
       Object.assign(dataRoute, {
         ...dataRoute,
         Component: getRouteModuleComponent(routeModule),
-        // HydrateFallback can only exist on the root route in SPA mode
+        // HydrateFallback can only exist on the root route in SPA Mode
         HydrateFallback:
           routeModule.HydrateFallback && (!isSpaMode || route.id === "root")
             ? routeModule.HydrateFallback

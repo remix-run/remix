@@ -7,7 +7,7 @@
 
 Add unstable support for "SPA Mode"
 
-You can opt into SPA mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
+You can opt into SPA Mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
 
 ```js
 // vite.config.ts
@@ -21,13 +21,13 @@ export default defineConfig({
 });
 ```
 
-Development in SPA mode is just like a normal Remix app, and still uses the Remix dev server for HMR/HDR:
+Development in SPA Mode is just like a normal Remix app, and still uses the Remix dev server for HMR/HDR:
 
 ```sh
 remix vite:dev
 ```
 
-Building in SPA mode will generate an `index.html` file in your client assets directory:
+Building in SPA Mode will generate an `index.html` file in your client assets directory:
 
 ```sh
 remix vite:build
