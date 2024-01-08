@@ -720,7 +720,7 @@ async function updatePackageJSON(ctx: Context) {
 
     for (let dependency in dependencies) {
       let version = dependencies[dependency];
-      if (version === "*") {
+      if (dependency.startsWith("@remix-run") && version === "*") {
         dependencies[dependency] = semver.prerelease(ctx.remixVersion)
           ? // Templates created from prereleases should pin to a specific version
             ctx.remixVersion
