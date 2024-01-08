@@ -22,7 +22,7 @@ SPA Mode is basically what you'd get if you had your own [React Router + Vite][r
 - `<head>` management via Remix [`<Meta>`][meta]/[`<Links>`][links] APIs
   - you don't _have_ to do this if your app doesn't warrant it - you can still just render and hydrate a `<div id="app">` with some minor changes to `root.tsx` and `entry.client.tsx`
 
-SPA Mode tells Remix that you do not plan on running a Remix server at runtime and that you wish to generate a static `index.html` file at build time and you will only use [Client Data](https://remix.run/docs/en/main/guides/client-data) APIs for data loading and mutations.
+SPA Mode tells Remix that you do not plan on running a Remix server at runtime and that you wish to generate a static `index.html` file at build time and you will only use [Client Data][client-data-2] APIs for data loading and mutations.
 
 The `index.html` is generated from your `root.tsx` route. You **should** include a `HydrateFallback` component in `root.tsx` containing the app shell/initial loading state. The initial "render" to generate the `index.html` will not include any routes deeper than root. This ensures that the `index.html` file can be served/hydrated for paths beyond `/` (i.e., `/about`) if you configure your CDN/server to do so.
 
@@ -122,3 +122,4 @@ Once you've got all your routes living in their own files, you can:
 [meta]: ../components/meta
 [links]: ../components/links
 [migrating-rr]: https://remix.run/docs/en/main/guides/migrating-react-router-app
+[client-data-2]: https://remix.run/docs/en/main/guides/client-data
