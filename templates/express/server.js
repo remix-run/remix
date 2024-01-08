@@ -11,14 +11,16 @@ import sourceMapSupport from "source-map-support";
 
 sourceMapSupport.install({
   retrieveSourceMap: function (source) {
-    // get source file with the `file://` prefix
-    const match = source.match(/^file:\/\/(.*)$/);
+    const match = source.startsWith("file://");
     if (match) {
       const filePath = url.fileURLToPath(source);
-      return {
-        url: source,
-        map: fs.readFileSync(`${filePath}.map`, "utf8"),
-      };
+      const sourceMapPath = `${filePath}.map`;
+      if (fs.existsSync(sourceMapPath)) {
+        return {
+          url: source,
+          map: fs.readFileSync(sourceMapPath, "utf8"),
+        };
+      }
     }
     return null;
   },
