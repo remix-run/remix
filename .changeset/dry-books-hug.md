@@ -1,5 +1,5 @@
 ---
-"@remix-run/serve": minor
+"@remix-run/serve": patch
 ---
 
-Allow remix-serve CLI to fallback to default stack trace if source maps are not available
+Don't try to load sourcemaps if they don't exist on disk
