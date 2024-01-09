@@ -38,6 +38,7 @@ export function HydrateFallback() {
       <body>
         <p>Loading...</p>
         <Scripts />
+        <LiveReload />
       </body>
     </html>
   );
