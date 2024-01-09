@@ -30,9 +30,7 @@ Then you can render the `<RemixStub />` component and assert against it:
 
 ```tsx
 render(<RemixStub />);
-await waitFor(() =>
-  screen.findByText("Some rendered text")
-);
+await screen.findByText("Some rendered text");
 ```
 
 ## Example
