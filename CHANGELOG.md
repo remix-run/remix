@@ -78,6 +78,8 @@ To add a new release, copy from this template:
 
 ## v2.X.Y
 
+Date: YYYY-MM-DD
+
 ### What's Changed
 
 #### Big New Feature 1
@@ -116,6 +118,8 @@ To add a new release, copy from this template:
 -->
 
 ## v2.4.1
+
+Date: 2023-12-22
 
 ### Patch Changes
 
@@ -203,6 +207,8 @@ To add a new release, copy from this template:
 **Full Changelog**: [`v2.4.0...v2.4.1`](https://github.com/remix-run/remix/compare/remix@2.4.0...remix@2.4.1)
 
 ## v2.4.0
+
+Date: 2023-12-13
 
 ### What's Changed
 
@@ -364,6 +370,8 @@ Remix now enforces strict route exports, and will will throw an error if you hav
 
 ## v2.3.1
 
+Date: 2023-11-22
+
 ### Patch Changes
 
 - `@remix-run/dev`: Support `nonce` prop on `LiveReload` component in Vite dev ([#8014](https://github.com/remix-run/remix/pull/8014))
@@ -398,6 +406,8 @@ Remix now enforces strict route exports, and will will throw an error if you hav
 **Full Changelog**: [`v2.3.0...v2.3.1`](https://github.com/remix-run/remix/compare/remix@2.3.0...remix@2.3.1)
 
 ## v2.3.0
+
+Date: 2023-11-16
 
 ### What's Changed
 
@@ -477,6 +487,8 @@ function handleClick() {
 **Full Changelog**: [`v2.2.0...v2.3.0`](https://github.com/remix-run/remix/compare/remix@2.2.0...remix@2.3.0)
 
 ## v2.2.0
+
+Date: 2023-10-31
 
 ### What's Changed
 
@@ -570,6 +582,8 @@ Per the same [RFC](https://github.com/remix-run/remix/discussions/7698) as above
 **Full Changelog**: [`v2.1.0...v2.2.0`](https://github.com/remix-run/remix/compare/remix@2.1.0...remix@2.2.0)
 
 ## v2.1.0
+
+Date: 2023-10-16
 
 ### What's Changed
 
@@ -665,6 +679,8 @@ After real-world experience, we're confident in the [`createRemixStub`](https://
 
 ## v2.0.1
 
+Date: 2023-09-21
+
 ### Patch Changes
 
 - Fix types for MDX files when using pnpm ([#7491](https://github.com/remix-run/remix/pull/7491))
@@ -693,6 +709,8 @@ After real-world experience, we're confident in the [`createRemixStub`](https://
 **Full Changelog**: [`v2.0.0...v2.0.1`](https://github.com/remix-run/remix/compare/remix@2.0.0...remix@2.0.1)
 
 ## v2.0.0
+
+Date: 2023-09-15
 
 We're _**so**_ excited to release Remix v2 to you and we really hope this upgrade is one of the smoothest framework upgrades you've ever experienced! That was our primary goal with v2 - something we aimed to achieve through a heavy use of deprecation warnings and [Future Flags](https://remix.run/blog/future-flags) in Remix v1.
 
