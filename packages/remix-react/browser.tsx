@@ -27,6 +27,7 @@ declare global {
     state: HydrationState;
     criticalCss?: string;
     future: FutureConfig;
+    isSpaMode: boolean;
     // The number of active deferred keys rendered on the server
     a?: number;
     dev?: {
@@ -46,12 +47,6 @@ declare global {
 /* eslint-enable prefer-let/prefer-let */
 
 export interface RemixBrowserProps {}
-
-declare global {
-  interface ImportMeta {
-    hot: any;
-  }
-}
 
 let router: Router;
 let routerInitialized = false;
@@ -74,7 +69,9 @@ type CriticalCssReducer = () => typeof window.__remixContext.criticalCss;
 // The critical CSS can only be cleared, so the reducer always returns undefined
 let criticalCssReducer: CriticalCssReducer = () => undefined;
 
+// @ts-expect-error
 if (import.meta && import.meta.hot) {
+  // @ts-expect-error
   import.meta.hot.accept(
     "remix:manifest",
     async ({
@@ -155,7 +152,8 @@ if (import.meta && import.meta.hot) {
         assetsManifest.routes,
         window.__remixRouteModules,
         window.__remixContext.state,
-        window.__remixContext.future
+        window.__remixContext.future,
+        window.__remixContext.isSpaMode
       );
 
       // This is temporary API and will be more granular before release
@@ -198,7 +196,10 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     // towards determining the route matches.
     let initialPathname = window.__remixContext.url;
     let hydratedPathname = window.location.pathname;
-    if (initialPathname !== hydratedPathname) {
+    if (
+      initialPathname !== hydratedPathname &&
+      !window.__remixContext.isSpaMode
+    ) {
       let errorMsg =
         `Initial URL (${initialPathname}) does not match URL at time of hydration ` +
         `(${hydratedPathname}), reloading page...`;
@@ -213,48 +214,56 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       window.__remixManifest.routes,
       window.__remixRouteModules,
       window.__remixContext.state,
-      window.__remixContext.future
+      window.__remixContext.future,
+      window.__remixContext.isSpaMode
     );
 
-    // Create a shallow clone of `loaderData` we can mutate for partial hydration.
-    // When a route exports a `clientLoader` and a `HydrateFallback`, the SSR will
-    // render the fallback so we need the client to do the same for hydration.
-    // The server loader data has already been exposed to these route `clientLoader`'s
-    // in `createClientRoutes` above, so we need to clear out the version we pass to
-    // `createBrowserRouter` so it initializes and runs the client loaders.
-    let hydrationData = {
-      ...window.__remixContext.state,
-      loaderData: { ...window.__remixContext.state.loaderData },
-    };
-    let initialMatches = matchRoutes(routes, window.location);
-    if (initialMatches) {
-      for (let match of initialMatches) {
-        let routeId = match.route.id;
-        let route = window.__remixRouteModules[routeId];
-        let manifestRoute = window.__remixManifest.routes[routeId];
-        // Clear out the loaderData to avoid rendering the route component when the
-        // route opted into clientLoader hydration and either:
-        // * gave us a HydrateFallback
-        // * or doesn't have a server loader and we have no data to render
-        if (
-          route &&
-          shouldHydrateRouteLoader(manifestRoute, route) &&
-          (route.HydrateFallback || !manifestRoute.hasLoader)
-        ) {
-          hydrationData.loaderData[routeId] = undefined;
-        } else if (manifestRoute && !manifestRoute.hasLoader) {
-          // Since every Remix route gets a `loader` on the client side to load
-          // the route JS module, we need to add a `null` value to `loaderData`
-          // for any routes that don't have server loaders so our partial
-          // hydration logic doesn't kick off the route module loaders during
-          // hydration
-          hydrationData.loaderData[routeId] = null;
+    let hydrationData = undefined;
+    if (!window.__remixContext.isSpaMode) {
+      // Create a shallow clone of `loaderData` we can mutate for partial hydration.
+      // When a route exports a `clientLoader` and a `HydrateFallback`, the SSR will
+      // render the fallback so we need the client to do the same for hydration.
+      // The server loader data has already been exposed to these route `clientLoader`'s
+      // in `createClientRoutes` above, so we need to clear out the version we pass to
+      // `createBrowserRouter` so it initializes and runs the client loaders.
+      hydrationData = {
+        ...window.__remixContext.state,
+        loaderData: { ...window.__remixContext.state.loaderData },
+      };
+      let initialMatches = matchRoutes(routes, window.location);
+      if (initialMatches) {
+        for (let match of initialMatches) {
+          let routeId = match.route.id;
+          let route = window.__remixRouteModules[routeId];
+          let manifestRoute = window.__remixManifest.routes[routeId];
+          // Clear out the loaderData to avoid rendering the route component when the
+          // route opted into clientLoader hydration and either:
+          // * gave us a HydrateFallback
+          // * or doesn't have a server loader and we have no data to render
+          if (
+            route &&
+            shouldHydrateRouteLoader(
+              manifestRoute,
+              route,
+              window.__remixContext.isSpaMode
+            ) &&
+            (route.HydrateFallback || !manifestRoute.hasLoader)
+          ) {
+            hydrationData.loaderData[routeId] = undefined;
+          } else if (manifestRoute && !manifestRoute.hasLoader) {
+            // Since every Remix route gets a `loader` on the client side to load
+            // the route JS module, we need to add a `null` value to `loaderData`
+            // for any routes that don't have server loaders so our partial
+            // hydration logic doesn't kick off the route module loaders during
+            // hydration
+            hydrationData.loaderData[routeId] = null;
+          }
         }
       }
-    }
 
-    if (hydrationData && hydrationData.errors) {
-      hydrationData.errors = deserializeErrors(hydrationData.errors);
+      if (hydrationData && hydrationData.errors) {
+        hydrationData.errors = deserializeErrors(hydrationData.errors);
+      }
     }
 
     // We don't use createBrowserRouter here because we need fine-grained control
@@ -336,6 +345,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         routeModules: window.__remixRouteModules,
         future: window.__remixContext.future,
         criticalCss,
+        isSpaMode: window.__remixContext.isSpaMode,
       }}
     >
       <RemixErrorBoundary location={location}>
