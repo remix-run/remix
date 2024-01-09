@@ -48,12 +48,6 @@ declare global {
 
 export interface RemixBrowserProps {}
 
-declare global {
-  interface ImportMeta {
-    hot: any;
-  }
-}
-
 let router: Router;
 let routerInitialized = false;
 let hmrAbortController: AbortController | undefined;
@@ -75,7 +69,9 @@ type CriticalCssReducer = () => typeof window.__remixContext.criticalCss;
 // The critical CSS can only be cleared, so the reducer always returns undefined
 let criticalCssReducer: CriticalCssReducer = () => undefined;
 
+// @ts-expect-error
 if (import.meta && import.meta.hot) {
+  // @ts-expect-error
   import.meta.hot.accept(
     "remix:manifest",
     async ({
