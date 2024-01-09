@@ -81,7 +81,7 @@ export const RemixContext = React.createContext<RemixContextObject | undefined>(
 );
 RemixContext.displayName = "Remix";
 
-function useRemixContext(): RemixContextObject {
+export function useRemixContext(): RemixContextObject {
   let context = React.useContext(RemixContext);
   invariant(context, "You must render this element inside a <Remix> element");
   return context;
