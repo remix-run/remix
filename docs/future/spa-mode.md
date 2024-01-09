@@ -30,17 +30,13 @@ The `index.html` is generated from the `HydrateFallback` component in your `root
 
 ## Usage
 
-### Template
-
 You can get started quickly using the SPA Mode template in the repo:
 
 ```shellscript
 npx create-remix@latest --template remix-run/remix/templates/spa
 ```
 
-### Manual Setup
-
-To manually setup SPA mode in your Remite+Vite app, you can opt-in by setting `unstable_ssr: false` in your Remix Vite plugin config:
+Or, you can manually opt-into SPA mode in your Remix+Vite app by setting `unstable_ssr: false` in your Remix Vite plugin config:
 
 ```js
 // vite.config.ts
