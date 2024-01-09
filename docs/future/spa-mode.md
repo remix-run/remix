@@ -1,8 +1,8 @@
 ---
-title: SPA Mode
+title: SPA Mode (Unstable)
 ---
 
-# SPA Mode
+# SPA Mode (Unstable)
 
 From the beginning, Remix's opinion has always been that you own your server architecture. This is why Remix is built on top of the [Web Fetch API][fetch] and can run on any modern [runtime][runtimes] via built-in (or community-provided) adapters. While we believe that having a server provides the best UX/Performance/SEO/etc. for _most_ apps, it is also undeniable that there exist plenty of valid use cases for a Single Page Application in the real world:
 
@@ -12,6 +12,8 @@ From the beginning, Remix's opinion has always been that you own your server arc
 - "Your boss couldn't care less about the UX ceiling of SPA architecture and won't give your dev teams time/capacity to re-architect things" [- Kent C. Dodds][kent-tweet]
 
 That's why we added support for **SPA Mode** in [2.5.0][2.5.0] (per this [RFC][rfc]), which builds heavily on top of the [Client Data][client-data] APIs.
+
+<docs-info>SPA Mode requires your app to be using Vite and the [Remix Vite Plugin][remix-vite]</docs-info>
 
 ## What is SPA Mode?
 
@@ -80,6 +82,8 @@ app.get("*", (req, res, next) =>
 
 ## Notes/Caveats
 
+- SPA Mode only works when using Vite and the [Remix Vite plugin][remix-vite]
+
 - You cannot use server APIs such as `headers`, `loader`, and `action` -- the build will throw an error if you export them
 
 - You can only export a `HydrateFallback` from your `root.tsx` in SPA Mode -- the build will throw an error if you export one from any other routes.
@@ -111,7 +115,7 @@ Once you've got all your routes living in their own files, you can:
 - Add a `root.tsx` with a `default` export and a `HydrateFallback` - this replaces the `index.html` file from your React Router app
 
 [rfc]: https://github.com/remix-run/remix/discussions/7638
-[client-data]: ./client-data
+[client-data]: ../guides/client-data
 [2.5.0]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#v250
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
 [runtimes]: ../discussion/runtimes
@@ -123,3 +127,4 @@ Once you've got all your routes living in their own files, you can:
 [links]: ../components/links
 [migrating-rr]: https://remix.run/docs/en/main/guides/migrating-react-router-app
 [client-data-2]: https://remix.run/docs/en/main/guides/client-data
+[remix-vite]: ../future/vite.md

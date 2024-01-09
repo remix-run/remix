@@ -37,4 +37,4 @@ To run your SPA, you serve your client assets directory via an HTTP server:
 npx http-server build/client
 ```
 
-For more information, please refer to the [SPA Mode docs][https://reactrouter.com/en/main/guides/spa-mode].
+For more information, please refer to the [SPA Mode docs][https://remix.run/future/spa-mode].
