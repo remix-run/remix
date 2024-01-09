@@ -1,5 +1,14 @@
 # `@remix-run/react`
 
+## 2.5.0-pre.1
+
+### Patch Changes
+
+- - [REMOVE] Error if no `<Scripts>` included in root `<HydrateFallback>` ([#8464](https://github.com/remix-run/remix/pull/8464))
+  - [REMOVE] Don't render SSR scroll restoration script in SPA mode
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.5.0-pre.1`
+
 ## 2.5.0-pre.0
 
 ### Minor Changes
