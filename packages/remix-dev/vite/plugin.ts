@@ -986,7 +986,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             );
           }
 
-          if (cachedPluginConfig.isSpaMode) {
+          if (pluginConfig.isSpaMode) {
             await handleSpaMode(
               path.join(rootDirectory, serverBuildDirectory),
               serverBuildFile,
