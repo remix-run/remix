@@ -20,5 +20,17 @@
     "@remix-run/server-runtime": "2.4.1",
     "@remix-run/testing": "2.4.1"
   },
-  "changesets": []
+  "changesets": [
+    "bright-kiwis-yawn",
+    "dry-books-hug",
+    "fair-bobcats-walk",
+    "five-peaches-attend",
+    "flat-toys-hope",
+    "giant-terms-fry",
+    "isbot-version-four",
+    "large-berries-sin",
+    "ninety-ducks-sin",
+    "spa-mode",
+    "wicked-suits-heal"
+  ]
 }
