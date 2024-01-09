@@ -679,7 +679,7 @@ However, in development, Vite lazily compiles each module on-demand and therefor
 
 If you run into browser errors in development that reference server-only code, be sure to place that [server-only code in a `.server` file][server-only-code].
 
-At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but the mental model is simpler: `.server` is for server-only code, everything else could be on both the client and the server.
+At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but the mental model is simpler: `.server` is for server-only code, everything else could be on both the client and the server. Note that this also includes any custom route exports beyond those defined by the Remix route module API since routes are used on both the client and server.
 
 #### Plugin usage with other Vite-based tools (e.g. Vitest, Storybook)
 
