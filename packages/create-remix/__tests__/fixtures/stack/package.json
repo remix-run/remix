@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@remix-run/react": "*",
-    "not-remix": "*"
+    "not-remix": "*",
+    "remix": "*"
   },
   "devDependencies": {},
   "engines": {

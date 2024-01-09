@@ -989,8 +989,9 @@ describe("create-remix CLI", () => {
 
     expect(dependencies).toMatchObject({
       "@remix-run/react": expect.any(String),
+      remix: expect.any(String),
       "not-remix": "*",
-    })
+    });
   });
 
   describe("when project directory contains files", () => {
