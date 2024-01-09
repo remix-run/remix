@@ -4,14 +4,14 @@ title: SPA Mode (Unstable)
 
 # SPA Mode (Unstable)
 
-From the beginning, Remix's opinion has always been that you own your server architecture. This is why Remix is built on top of the [Web Fetch API][fetch] and can run on any modern [runtime][runtimes] via built-in (or community-provided) adapters. While we believe that having a server provides the best UX/Performance/SEO/etc. for _most_ apps, it is also undeniable that there exist plenty of valid use cases for a Single Page Application in the real world:
+From the beginning, Remix's opinion has always been that you own your server architecture. This is why Remix is built on top of the [Web Fetch API][fetch] and can run on any modern [runtime][runtimes] via built-in or community-provided adapters. While we believe that having a server provides the best UX/Performance/SEO/etc. for _most_ apps, it is also undeniable that there exist plenty of valid use cases for a Single Page Application in the real world:
 
-- You prefer to deploy your app via static files on Github Pages or another CDN
-- You don't want to manage a server, or run a Node.js server
+- You don't want to manage a server and prefer to deploy your app via static files on Github Pages or another CDN
+- You don't want to run a Node.js server
 - You're developing a special type of embedded app that can't be server rendered
 - "Your boss couldn't care less about the UX ceiling of SPA architecture and won't give your dev teams time/capacity to re-architect things" [- Kent C. Dodds][kent-tweet]
 
-That's why we added support for **SPA Mode** in [2.5.0][2.5.0] (per this [RFC][rfc]), which builds heavily on top of the [Client Data][client-data] APIs.
+That's why we added support for **SPA Mode** in [2.5.0][2.5.0] ([RFC][rfc]), which builds heavily on top of the [Client Data][client-data] APIs.
 
 <docs-info>SPA Mode requires your app to be using Vite and the [Remix Vite Plugin][remix-vite]</docs-info>
 
@@ -21,16 +21,26 @@ SPA Mode is basically what you'd get if you had your own [React Router + Vite][r
 
 - File-based routing (or config-based via [`routes()`][routes-config])
 - Automatic route-based code-spitting via [`route.lazy`][route-lazy]
-- `<head>` management via Remix [`<Meta>`][meta]/[`<Links>`][links] APIs
-  - you don't _have_ to do this if your app doesn't warrant it - you can still just render and hydrate a `<div id="app">` with some minor changes to `root.tsx` and `entry.client.tsx`
+- `<Link prefetch>` support to eagerly prefetch route modules
+- `<head>` management via Remix [`<Meta>`][meta]/[`<Links>`][links] APIs if you choose to hydrate the full `document`
 
-SPA Mode tells Remix that you do not plan on running a Remix server at runtime and that you wish to generate a static `index.html` file at build time and you will only use [Client Data][client-data-2] APIs for data loading and mutations.
+SPA Mode tells Remix that you do not plan on running a Remix server at runtime and that you wish to generate a static `index.html` file at build time and you will only use [Client Data][client-data] APIs for data loading and mutations.
 
-The `index.html` is generated from your `root.tsx` route. You **should** include a `HydrateFallback` component in `root.tsx` containing the app shell/initial loading state. The initial "render" to generate the `index.html` will not include any routes deeper than root. This ensures that the `index.html` file can be served/hydrated for paths beyond `/` (i.e., `/about`) if you configure your CDN/server to do so.
+The `index.html` is generated from the `HydrateFallback` component in your `root.tsx` route. The initial "render" to generate the `index.html` will not include any routes deeper than root. This ensures that the `index.html` file can be served/hydrated for paths beyond `/` (i.e., `/about`) if you configure your CDN/server to do so.
 
 ## Usage
 
-You can opt into SPA Mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
+### Template
+
+You can get started quickly using the SPA Mode template in the repo:
+
+```shellscript
+npx create-remix@latest --template remix-run/remix/templates/spa
+```
+
+### Manual Setup
+
+To manually setup SPA mode in your Remite+Vite app, you can opt-in by setting `unstable_ssr: false` in your Remix Vite plugin config:
 
 ```js
 // vite.config.ts
@@ -112,7 +122,7 @@ Once you've got all your routes living in their own files, you can:
 - Move those files over into the Remix `app/` directory
 - Enable SPA Mode
 - Rename all `loader`/`action` function to `clientLoader`/`clientAction`
-- Add a `root.tsx` with a `default` export and a `HydrateFallback` - this replaces the `index.html` file from your React Router app
+- Replace your React Router `index.html` file with an `app/root.tsx` route that exports a `default` component and `HydrateFallback`
 
 [rfc]: https://github.com/remix-run/remix/discussions/7638
 [client-data]: ../guides/client-data
@@ -126,5 +136,4 @@ Once you've got all your routes living in their own files, you can:
 [meta]: ../components/meta
 [links]: ../components/links
 [migrating-rr]: https://remix.run/docs/en/main/guides/migrating-react-router-app
-[client-data-2]: https://remix.run/docs/en/main/guides/client-data
-[remix-vite]: ../future/vite.md
+[remix-vite]: ../future/vite
