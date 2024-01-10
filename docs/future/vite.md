@@ -651,137 +651,6 @@ const posts = import.meta.glob("./posts/*.mdx", {
 });
 ```
 
-#### Strict route exports
-
-With Vite, Remix gets stricter about which exports are allowed from your route modules.
-
-Previously, Remix allowed user-defined exports from routes.
-The Remix compiler would then rely on treeshaking to remove any code only intended for use on the server from the client bundle.
-
-```ts filename=app/routes/super-cool.tsx
-// `loader`: always server-only, remove from client bundle 👍
-export const loader = () => {};
-
-// `default`: always client-safe, keep `default` in client bundle 👍
-export default function SuperCool() {}
-
-// User-defined export
-export const mySuperCoolThing = () => {
-  /*
-  Client-safe or server-only? Depends on what code is in here... 🤷
-  Rely on treeshaking to remove from client bundle if it depends on server-only code.
-  */
-};
-```
-
-In contrast, Vite processes each module in isolation during development, so relying on cross-module treeshaking is not an option.
-For most modules, you should already be using `.server` files or directories to isolate server-only code.
-But routes are a special case since they intentionally blend client and server code.
-Remix knows that exports like `loader`, `action`, `headers`, etc. are server-only, so it can safely remove them from the client bundle.
-But there's no way to know when looking at a single route module in isolation whether user-defined exports are server-only.
-That's why Remix's Vite plugin is stricter about which exports are allowed from your route modules.
-
-```ts filename=app/routes/super-cool.tsx
-export const loader = () => {}; // server-only 👍
-export default function SuperCool() {} // client-safe 👍
-
-// Need to decide whether this is client-safe or server-only without any other information 😬
-export const mySuperCoolThing = () => {};
-```
-
-In fact, we'd rather not rely on treeshaking for correctness at all.
-If tomorrow you or your coworker accidentally imports something you _thought_ was client-safe,
-treeshaking will no longer exclude that from your client bundle and you might end up with server code in your app!
-Treeshaking is designed as a pure optimization, so relying on it for correctness is brittle.
-
-So instead of treeshaking, its better to be explicit about what code is client-safe and what code is server-only.
-For route modules, that means only exporting Remix route exports.
-For anything else, put it in a separate module and use a `.server` file or directory when needed.
-
-Ultimately, Route exports are Remix API.
-Think of a Remix route module like a function and the exports like named arguments to the function.
-
-```ts
-// Not real API, just a mental model
-const route = createRoute({ loader, mySuperCoolThing });
-//                                  ^^^^^^^^^^^^^^^^
-// Object literal may only specify known properties, and 'mySuperCoolThing' does not exist in type 'RemixRoute'
-```
-
-Just like how you shouldn't pass unexpected named arguments to a function, you shouldn't create unexpected exports from a route module.
-The result is that Remix is simpler and more predictable.
-In short, Vite made us eat our veggies, but turns out they were delicious all along!
-
-👉 **Move any user-defined route exports to a separate module**
-
-For example, here's a route with a user-defined export called `mySuperCoolThing`:
-
-```ts filename=app/routes/super-cool.tsx
-// ✅ This is a valid Remix route export, so it's fine
-export const loader = () => {};
-
-// ✅ This is also a valid Remix route export
-export default function SuperCool() {}
-
-// ❌ This isn't a Remix-specific route export, just something I made up
-export const mySuperCoolThing = () => {};
-```
-
-One option is to colocate your route and related utilities in the same directory if your routing convention allows it.
-For example, with the default route convention in v2:
-
-```ts filename=app/routes/super-cool/route.tsx
-export const loader = () => {};
-
-export default function SuperCool() {}
-```
-
-```ts filename=app/routes/super-cool/utils.ts
-// If this was server-only code, I'd rename this file to "utils.server.ts"
-export const mySuperCoolThing = () => {};
-```
-
-##### Full Stack components
-
-[Full stack components][fullstack-components] are components that are colocated in the same file as a resource route and exported for use in other routes.
-They access data from a resource route by fetching that route's URL.
-
-Conceptually, it's tempting to think of full stack components as a new concept,
-but as far as Remix is concerned, they are standard React components.
-Looking closer, they only depend on the resource route's URL and the type for the corresponding `loader`.
-That means they are shared components with _zero_ runtime dependencies on code from the resource route.
-Organize them they way you would organize any shared component.
-
-For better intuition, consider a full stack component that needs to fetch data from multiple resource routes.
-It doesn't belong to any particular resource route.
-
-👉 **Move full stack components alongside other shared components**
-
-```ts filename=app/components/hello.tsx
-export function Hello() {
-  /* ... */
-}
-```
-
-👉 **Export the loader's type from the resource route**
-
-```diff filename=app/routes/api/hello.ts
-+ export type Loader = typeof loader;
-```
-
-👉 **Replace `typeof loader` with `Loader` type**
-
-```diff filename=app/components/hello.tsx
-+ import type { Loader } from "~/routes/api/hello";
-
-export function Hello() {
-  // ...
--   const data = useFetcher<typeof loader>()
-+   const data = useFetcher<Loader>()
-  // ...
-}
-```
-
 ## Troubleshooting
 
 Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
@@ -810,7 +679,7 @@ However, in development, Vite lazily compiles each module on-demand and therefor
 
 If you run into browser errors in development that reference server-only code, be sure to place that [server-only code in a `.server` file][server-only-code].
 
-At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but the mental model is simpler: `.server` is for server-only code, everything else could be on both the client and the server.
+At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but the mental model is simpler: `.server` is for server-only code, everything else could be on both the client and the server. Note that this also includes any custom route exports beyond those defined by the Remix route module API since route modules are used on both the client and server.
 
 #### Plugin usage with other Vite-based tools (e.g. Vitest, Storybook)
 
