@@ -1323,6 +1323,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           );
 
           hmrEventData.route = newRouteMetadata;
+          console.log("[handleHotUpdate]", { file });
 
           if (
             !oldRouteMetadata ||
@@ -1336,7 +1337,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               ] as const
             ).some((key) => oldRouteMetadata[key] !== newRouteMetadata[key])
           ) {
-            console.log("[handleHotUpdate]", { file });
+            console.log("[handleHotUpdate:invalidateVirtualModules]", { file, oldRouteMetadata, newRouteMetadata });
             invalidateVirtualModules(server);
           }
         }
