@@ -1496,33 +1496,45 @@ async function handleSpaMode(
   let { createRequestHandler: createHandler } = await import("@remix-run/node");
   let handler = createHandler(build, viteConfig.mode);
   let response = await handler(new Request("http://localhost/"));
-  let html = await response.text();
+  let text = await response.text();
+
   if (response.status !== 200) {
     throw new Error(
       `SPA Mode: Received a ${response.status} status code from ` +
-        `\`entry.server.tsx\` while generating the \`index.html\` file.\n${html}`
+        `\`entry.server.tsx\` while generating the \`index.html\` file.\n${text}`
     );
   }
 
-  if (
-    !html.includes("window.__remixContext =") ||
-    !html.includes("window.__remixRouteModules =")
+  if (response.headers.get("Content-Type") === "application/javascript") {
+    let jsDir = path.join(assetsBuildDirectory, "assets");
+    let jsPath = path.join(jsDir, "index.js");
+    await fse.writeFile(jsPath, text);
+
+    viteConfig.logger.info(
+      "SPA Mode: index.js has been written to your " +
+        colors.bold(path.relative(process.cwd(), jsDir)) +
+        " directory"
+    );
+  } else if (
+    !text.includes("window.__remixContext =") ||
+    !text.includes("window.__remixRouteModules =")
   ) {
     throw new Error(
       "SPA Mode: Did you forget to include <Scripts/> in your `root.tsx` " +
         "`HydrateFallback` component?  Your `index.html` file cannot hydrate " +
         "into a SPA without `<Scripts />`."
     );
+  } else {
+    // Write out the index.html file for the SPA
+    let htmlPath = path.join(assetsBuildDirectory, "index.html");
+    await fse.writeFile(htmlPath, await response.text());
+
+    viteConfig.logger.info(
+      "SPA Mode: index.html has been written to your " +
+        colors.bold(path.relative(process.cwd(), assetsBuildDirectory)) +
+        " directory"
+    );
   }
-
-  // Write out the index.html file for the SPA
-  await fse.writeFile(path.join(assetsBuildDirectory, "index.html"), html);
-
-  viteConfig.logger.info(
-    "SPA Mode: index.html has been written to your " +
-      colors.bold(path.relative(process.cwd(), assetsBuildDirectory)) +
-      " directory"
-  );
 
   // Cleanup - we no longer need the server build assets
   fse.removeSync(serverBuildDirectoryPath);
