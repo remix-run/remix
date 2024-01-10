@@ -175,6 +175,8 @@ function node(args: string[], options: { cwd: string }) {
     env: process.env,
     stdio: "pipe",
   });
+  proc.stdout?.on("data", data => console.log(String(data)))
+  proc.stderr?.on("data", data => console.log(String(data)))
   return proc;
 }
 

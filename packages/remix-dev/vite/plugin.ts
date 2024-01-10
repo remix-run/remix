@@ -868,6 +868,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             pluginConfig = await resolvePluginConfig();
 
             if (!isEqualJson(lastPluginConfig, pluginConfig)) {
+              console.log("[watcher]", { filepath });
               invalidateVirtualModules(viteDevServer);
             }
           }
@@ -1334,6 +1335,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               ] as const
             ).some((key) => oldRouteMetadata[key] !== newRouteMetadata[key])
           ) {
+            console.log("[handleHotUpdate]", { file });
             invalidateVirtualModules(server);
           }
         }
