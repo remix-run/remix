@@ -56,4 +56,7 @@ jobs:
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        run: "yarn test:integration --project=${{ matrix.browser }}"
+        run: |
+          for ((i=0; i<10; i++)); do
+            yarn test:integration --project=${{ matrix.browser }} integration/vite-hmr-hdr-test.ts
+          done
