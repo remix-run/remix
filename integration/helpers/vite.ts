@@ -112,19 +112,6 @@ export async function createProject(files: Record<string, string> = {}) {
   return projectDir;
 }
 
-type ServerArgs = {
-  cwd: string;
-  port: number;
-};
-
-const createDev =
-  (nodeArgs: string[]) =>
-  async ({ cwd, port }: ServerArgs): Promise<() => Promise<void>> => {
-    let proc = node(nodeArgs, { cwd });
-    await waitForServer(proc, { port });
-    return async () => await kill(proc.pid!);
-  };
-
 export const viteBuild = ({ cwd }: { cwd: string }) => {
   let nodeBin = process.argv[0];
 
@@ -156,16 +143,36 @@ export const viteRemixServe = async ({
       env: { NODE_ENV: "production", PORT: port.toFixed(0) },
     }
   );
-
   await waitForServer(serveProc, { port });
-
-  return () => {
-    serveProc.kill();
-  };
+  return () => serveProc.kill();
 };
+
+type ServerArgs = {
+  cwd: string;
+  port: number;
+};
+
+const createDev =
+  (nodeArgs: string[]) =>
+  async ({ cwd, port }: ServerArgs): Promise<() => Promise<void>> => {
+    let proc = node(nodeArgs, { cwd });
+    await waitForServer(proc, { port });
+    return async () => await kill(proc.pid!);
+  };
 
 export const viteDev = createDev([remixBin, "vite:dev"]);
 export const customDev = createDev(["./server.mjs"]);
+
+export const using = async (
+  cleanup: () => unknown | Promise<unknown>,
+  task: () => unknown | Promise<unknown>
+) => {
+  try {
+    await task();
+  } finally {
+    await cleanup();
+  }
+};
 
 function node(args: string[], options: { cwd: string }) {
   let nodeBin = process.argv[0];
