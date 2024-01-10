@@ -1316,6 +1316,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         let useFastRefresh = !ssr && (isJSX || code.includes(devRuntime));
         if (!useFastRefresh) return;
 
+        if (id.endsWith(CLIENT_ROUTE_QUERY_STRING)) {
+          let pluginConfig =
+            cachedPluginConfig || (await resolvePluginConfig());
+
+          return { code: addRefreshWrapper(pluginConfig, code, id) };
+        }
+
         let result = await babel.transformAsync(code, {
           filename: id,
           sourceFileName: filepath,
@@ -1341,6 +1348,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     {
       name: "remix-hmr-updates",
       async handleHotUpdate({ server, file, modules }) {
+        console.log("hot update", file);
         let pluginConfig = await resolvePluginConfig();
         // Update the config cache any time there is a file change
         cachedPluginConfig = pluginConfig;
