@@ -1348,7 +1348,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     {
       name: "remix-hmr-updates",
       async handleHotUpdate({ server, file, modules }) {
-        console.log("hot update", file);
         let pluginConfig = await resolvePluginConfig();
         // Update the config cache any time there is a file change
         cachedPluginConfig = pluginConfig;
