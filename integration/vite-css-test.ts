@@ -210,7 +210,7 @@ test.describe(() => {
         contents.replace('"sideEffects": false', '"sideEffects": ["*.css.ts"]')
       );
 
-      await viteBuild({ cwd });
+      viteBuild({ cwd });
       stop = await viteRemixServe({ cwd, port });
     });
     test.afterAll(() => stop());
