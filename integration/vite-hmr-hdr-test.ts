@@ -62,7 +62,7 @@ test.describe(async () => {
   });
 });
 
-test.describe.skip(async () => {
+test.describe(async () => {
   let port: number;
   let cwd: string;
   let stop: () => Promise<void>;
