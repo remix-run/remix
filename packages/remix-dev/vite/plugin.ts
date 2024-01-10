@@ -367,9 +367,16 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         unstable_ssr: true,
       } as const satisfies Partial<RemixVitePluginOptions>;
 
+      let extraConfig: Partial<RemixVitePluginOptions> = {};
+      let extraConfigPath = process.env.REMIX_VITE_EXTRA_CONFIG;
+      if (extraConfigPath) {
+        extraConfig = (await import(extraConfigPath)).default;
+      }
+
       let pluginConfig = {
         ...defaults,
         ...options,
+        ...extraConfig,
       };
 
       let rootDirectory =
