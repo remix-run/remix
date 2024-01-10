@@ -864,11 +864,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             normalizePath(filepath) === normalizePath(viteConfig.configFile);
 
           if (appFileAddedOrRemoved || viteConfigChanged) {
+            console.log("[watcher:resolvePluginConfig]", { eventName, filepath });
             let lastPluginConfig = pluginConfig;
             pluginConfig = await resolvePluginConfig();
 
             if (!isEqualJson(lastPluginConfig, pluginConfig)) {
-              console.log("[watcher]", { filepath });
+              console.log("[watcher:invalidateVirtualModules]", { eventName, filepath });
               invalidateVirtualModules(viteDevServer);
             }
           }
