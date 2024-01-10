@@ -34,7 +34,8 @@ export function RemixServer({
   let routes = createServerRoutes(
     manifest.routes,
     routeModules,
-    context.future
+    context.future,
+    context.isSpaMode
   );
 
   // Create a shallow clone of `loaderData` we can mutate for partial hydration.
@@ -55,7 +56,7 @@ export function RemixServer({
     // * or doesn't have a server loader and we have no data to render
     if (
       route &&
-      shouldHydrateRouteLoader(manifestRoute, route) &&
+      shouldHydrateRouteLoader(manifestRoute, route, context.isSpaMode) &&
       (route.HydrateFallback || !manifestRoute.hasLoader)
     ) {
       context.staticHandlerContext.loaderData[routeId] = undefined;
@@ -77,6 +78,7 @@ export function RemixServer({
         criticalCss,
         serverHandoffString,
         future: context.future,
+        isSpaMode: context.isSpaMode,
         serializeError: context.serializeError,
         abortDelay,
       }}

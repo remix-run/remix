@@ -968,6 +968,32 @@ describe("create-remix CLI", () => {
     }
   });
 
+  it("changes star dependencies for only Remix packages", async () => {
+    let projectDir = getProjectDir("local-directory");
+
+    let { status } = await execCreateRemix({
+      args: [
+        projectDir,
+        "--template",
+        path.join(__dirname, "fixtures", "stack"),
+        "--no-git-init",
+        "--no-install",
+      ],
+    });
+
+    expect(status).toBe(0);
+
+    let packageJsonPath = path.join(projectDir, "package.json");
+    let packageJson = JSON.parse(String(fse.readFileSync(packageJsonPath)));
+    let dependencies = packageJson.dependencies;
+
+    expect(dependencies).toMatchObject({
+      "@remix-run/react": expect.any(String),
+      remix: expect.any(String),
+      "not-remix": "*",
+    });
+  });
+
   describe("when project directory contains files", () => {
     describe("interactive shell", () => {
       let interactive = true;
