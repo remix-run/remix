@@ -49,6 +49,7 @@ test.describe(async () => {
 
   test.beforeAll(async () => {
     port = await getPort();
+    console.log("@vite", { port });
     cwd = await createProject({
       "vite.config.js": await VITE_CONFIG({ port }),
       ...files,
@@ -69,6 +70,7 @@ test.describe(async () => {
 
   test.beforeAll(async () => {
     port = await getPort();
+    console.log("@express", { port });
     cwd = await createProject({
       "vite.config.js": await VITE_CONFIG({ port }),
       "server.mjs": EXPRESS_SERVER({ port }),
