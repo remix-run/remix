@@ -98,6 +98,8 @@ async function workflow({
   page.on("pageerror", (error) => pageErrors.push(error));
   let edit = createEditor(cwd);
 
+  console.log("@@\n".repeat(5))
+
   // setup: initial render
   await page.goto(`http://localhost:${port}/`, {
     waitUntil: "networkidle",
@@ -119,6 +121,7 @@ async function workflow({
   expect(pageErrors).toEqual([]);
 
   // route: HMR
+  console.log("@@ edit 1")
   await edit("app/routes/_index.tsx", (contents) =>
     contents
       .replace("HMR updated title: 0", "HMR updated title: 1")
@@ -131,6 +134,7 @@ async function workflow({
   expect(pageErrors).toEqual([]);
 
   // route: add loader
+  console.log("@@ edit 2")
   await edit("app/routes/_index.tsx", (contents) =>
     contents
       .replace(
@@ -178,6 +182,7 @@ async function workflow({
   pageErrors = [];
 
   // route: HDR
+  console.log("@@ edit 3")
   await edit("app/routes/_index.tsx", (contents) =>
     contents.replace("HDR updated: 0", "HDR updated: 1")
   );
@@ -186,6 +191,7 @@ async function workflow({
   await expect(input).toHaveValue("stateful");
 
   // route: HMR + HDR
+  console.log("@@ edit 4")
   await edit("app/routes/_index.tsx", (contents) =>
     contents
       .replace("HMR updated: 1", "HMR updated: 2")
