@@ -294,7 +294,8 @@ const getRouteManifestModuleExports = async (
 const getRouteModuleExports = async (
   viteChildCompiler: Vite.ViteDevServer | null,
   pluginConfig: ResolvedRemixVitePluginConfig,
-  routeFile: string
+  routeFile: string,
+  read?: () => string | Promise<string>
 ): Promise<string[]> => {
   if (!viteChildCompiler) {
     throw new Error("Vite child compiler not found");
@@ -318,7 +319,7 @@ const getRouteModuleExports = async (
 
   let [id, code] = await Promise.all([
     resolveId(),
-    fse.readFile(routePath, "utf-8"),
+    read ? read() : fse.readFile(routePath, "utf-8"),
     // pluginContainer.transform(...) fails if we don't do this first:
     moduleGraph.ensureEntryFromUrl(url, ssr),
   ]);
@@ -1335,7 +1336,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     },
     {
       name: "remix-hmr-updates",
-      async handleHotUpdate({ server, file, modules }) {
+      async handleHotUpdate({ server, file, modules, read }) {
         let route = getRoute(pluginConfig, file);
 
         type ManifestRoute = Manifest["routes"][string];
@@ -1352,7 +1353,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
           let newRouteMetadata = await getRouteMetadata(
             pluginConfig,
             viteChildCompiler,
-            route
+            route,
+            read
           );
 
           hmrEventData.route = newRouteMetadata;
@@ -1470,12 +1472,14 @@ function getRoute(
 async function getRouteMetadata(
   pluginConfig: ResolvedRemixVitePluginConfig,
   viteChildCompiler: Vite.ViteDevServer | null,
-  route: ConfigRoute
+  route: ConfigRoute,
+  read: () => string | Promise<string>
 ) {
   let sourceExports = await getRouteModuleExports(
     viteChildCompiler,
     pluginConfig,
-    route.file
+    route.file,
+    read,
   );
   if (sourceExports.length === 0) {
     console.log("[getRouteMetadata:empty]", route.file);
