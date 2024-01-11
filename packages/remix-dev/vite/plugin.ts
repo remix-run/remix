@@ -295,8 +295,7 @@ const getRouteModuleExports = async (
   viteChildCompiler: Vite.ViteDevServer | null,
   pluginConfig: ResolvedRemixVitePluginConfig,
   routeFile: string,
-  readRouteFile: () => string | Promise<string> = () =>
-    fse.readFile(routeFile, "utf-8")
+  readRouteFile?: () => string | Promise<string>
 ): Promise<string[]> => {
   if (!viteChildCompiler) {
     throw new Error("Vite child compiler not found");
@@ -320,7 +319,7 @@ const getRouteModuleExports = async (
 
   let [id, code] = await Promise.all([
     resolveId(),
-    readRouteFile(),
+    readRouteFile?.() ?? fse.readFile(routePath, "utf-8"),
     // pluginContainer.transform(...) fails if we don't do this first:
     moduleGraph.ensureEntryFromUrl(url, ssr),
   ]);
