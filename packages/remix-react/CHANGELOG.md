@@ -1,23 +1,6 @@
 # `@remix-run/react`
 
-## 2.5.0-pre.2
-
-### Patch Changes
-
-- [REMOVE] Bump router to stable ([#8484](https://github.com/remix-run/remix/pull/8484))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.5.0-pre.2`
-
-## 2.5.0-pre.1
-
-### Patch Changes
-
-- - [REMOVE] Error if no `<Scripts>` included in root `<HydrateFallback>` ([#8464](https://github.com/remix-run/remix/pull/8464))
-  - [REMOVE] Don't render SSR scroll restoration script in SPA mode
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.5.0-pre.1`
-
-## 2.5.0-pre.0
+## 2.5.0
 
 ### Minor Changes
 
@@ -53,13 +36,13 @@
   npx http-server build/client
   ```
 
-  For more information, please refer to the [SPA Mode docs][https://remix.run/future/spa-mode].
+  For more information, please refer to the [SPA Mode docs](https://remix.run/future/spa-mode).
 
 ### Patch Changes
 
 - Vite: Fix type conflict with `import.meta.hot` from the existing Remix compiler ([#8459](https://github.com/remix-run/remix/pull/8459))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.5.0-pre.0`
+  - `@remix-run/server-runtime@2.5.0`
 
 ## 2.4.1
 
