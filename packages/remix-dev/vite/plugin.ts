@@ -812,11 +812,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }
 
         if (id.endsWith(CLIENT_ROUTE_QUERY_STRING)) {
-          invariant(cachedPluginConfig);
           let routeModuleId = id.replace(CLIENT_ROUTE_QUERY_STRING, "");
           let sourceExports = await getRouteModuleExports(
             viteChildCompiler,
-            cachedPluginConfig,
+            pluginConfig,
             routeModuleId
           );
 
@@ -1074,7 +1073,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         }
 
         let vite = importViteEsmSync();
-        let pluginConfig = await resolvePluginConfig();
         let importerShort = vite.normalizePath(
           path.relative(pluginConfig.rootDirectory, importer)
         );
@@ -1312,9 +1310,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         if (!useFastRefresh) return;
 
         if (id.endsWith(CLIENT_ROUTE_QUERY_STRING)) {
-          let pluginConfig =
-            cachedPluginConfig || (await resolvePluginConfig());
-
           return { code: addRefreshWrapper(pluginConfig, code, id) };
         }
 
