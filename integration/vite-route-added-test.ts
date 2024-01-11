@@ -26,7 +26,7 @@ const files = {
 test.describe(async () => {
   let port: number;
   let cwd: string;
-  let stop: () => Promise<void>;
+  let stop: () => void;
 
   test.beforeAll(async () => {
     port = await getPort();
