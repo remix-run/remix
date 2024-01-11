@@ -328,10 +328,6 @@ const getRouteModuleExports = async (
   let [, exports] = esModuleLexer(transformed.code);
   let exportNames = exports.map((e) => e.n);
 
-  if (exportNames.length === 0) {
-    console.log("[getRouteMetadata:empty]", { routeFile, code });
-  }
-
   return exportNames;
 };
 
@@ -1389,7 +1385,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               ] as const
             ).some((key) => oldRouteMetadata[key] !== newRouteMetadata[key])
           ) {
-            console.log("[handleHotUpdate:invalidateVirtualModules]", { file, oldRouteMetadata, newRouteMetadata });
             invalidateVirtualModules(server);
           }
         }
