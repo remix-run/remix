@@ -81,7 +81,7 @@ export const RemixContext = React.createContext<RemixContextObject | undefined>(
 );
 RemixContext.displayName = "Remix";
 
-function useRemixContext(): RemixContextObject {
+export function useRemixContext(): RemixContextObject {
   let context = React.useContext(RemixContext);
   invariant(context, "You must render this element inside a <Remix> element");
   return context;
@@ -605,11 +605,17 @@ export type ScriptProps = Omit<
  * @see https://remix.run/components/scripts
  */
 export function Scripts(props: ScriptProps) {
-  let { manifest, serverHandoffString, abortDelay, serializeError } =
+  let { manifest, serverHandoffString, abortDelay, serializeError, isSpaMode } =
     useRemixContext();
   let { router, static: isStatic, staticContext } = useDataRouterContext();
-  let { matches } = useDataRouterStateContext();
+  let { matches: dontUseTheseMatches } = useDataRouterStateContext();
   let navigation = useNavigation();
+
+  // Use these `matches` instead :)
+  // In SPA Mode we only want to import root on the critical path, since we
+  // want the generated HTML file to be able to be hydrated at non-/ paths as
+  // well.  This lets the router handle initial match loads via lazy().
+  let matches = isSpaMode ? [dontUseTheseMatches[0]] : dontUseTheseMatches;
 
   React.useEffect(() => {
     isHydrated = true;

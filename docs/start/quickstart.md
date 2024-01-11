@@ -19,7 +19,7 @@ cd my-remix-app
 npm init -y
 
 # install runtime dependencies
-npm i @remix-run/node @remix-run/react @remix-run/serve isbot@3 react react-dom
+npm i @remix-run/node @remix-run/react @remix-run/serve isbot@4 react react-dom
 
 # install dev dependencies
 npm i -D @remix-run/dev

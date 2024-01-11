@@ -15,6 +15,7 @@ export interface RemixContextObject {
   criticalCss?: string;
   serverHandoffString?: string;
   future: FutureConfig;
+  isSpaMode: boolean;
   abortDelay?: number;
   serializeError?(error: Error): SerializedError;
 }
