@@ -894,12 +894,10 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             normalizePath(filepath) === normalizePath(viteConfig.configFile);
 
           if (appFileAddedOrRemoved || viteConfigChanged) {
-            console.log("[watcher:resolvePluginConfig]", { eventName, filepath });
             let lastPluginConfig = pluginConfig;
             pluginConfig = await resolvePluginConfig();
 
             if (!isEqualJson(lastPluginConfig, pluginConfig)) {
-              console.log("[watcher:invalidateVirtualModules]", { eventName, filepath });
               invalidateVirtualModules(viteDevServer);
             }
           }
@@ -1344,7 +1342,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         let hmrEventData: HmrEventData = { route: null };
 
         if (route) {
-          console.log("[handleHotUpdate]", { file });
           // invalidate manifest on route exports change
           let serverManifest = (await server.ssrLoadModule(serverManifestId))
             .default as Manifest;
@@ -1371,7 +1368,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               ] as const
             ).some((key) => oldRouteMetadata[key] !== newRouteMetadata[key])
           ) {
-            console.log("[handleHotUpdate:invalidateVirtualModules]", { file, oldRouteMetadata, newRouteMetadata });
             invalidateVirtualModules(server);
           }
         }
@@ -1481,9 +1477,6 @@ async function getRouteMetadata(
     route.file,
     read,
   );
-  if (sourceExports.length === 0) {
-    console.log("[getRouteMetadata:empty]", route.file);
-  }
 
   let info = {
     id: route.id,
