@@ -1,24 +1,6 @@
 # `@remix-run/dev`
 
-## 2.5.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.5.0-pre.2`
-  - `@remix-run/server-runtime@2.5.0-pre.2`
-
-## 2.5.0-pre.1
-
-### Patch Changes
-
-- - [REMOVE] Error if no `<Scripts>` included in root `<HydrateFallback>` ([#8464](https://github.com/remix-run/remix/pull/8464))
-  - [REMOVE] Don't render SSR scroll restoration script in SPA mode
-- Updated dependencies:
-  - `@remix-run/node@2.5.0-pre.1`
-  - `@remix-run/server-runtime@2.5.0-pre.1`
-
-## 2.5.0-pre.0
+## 2.5.0
 
 ### Minor Changes
 
@@ -79,24 +61,30 @@
   npx http-server build/client
   ```
 
-  For more information, please refer to the [SPA Mode docs][https://remix.run/future/spa-mode].
+  For more information, please refer to the \[SPA Mode docs]\[<https://remix.run/future/spa-mode>].
 
 ### Patch Changes
 
 - Vite: Fix HMR issues when altering exports for non-rendered routes ([#8157](https://github.com/remix-run/remix/pull/8157))
+
 - Vite: Default `NODE_ENV` to `"production"` when running `remix vite:build` command ([#8405](https://github.com/remix-run/remix/pull/8405))
+
 - Remove Vite plugin config option `serverBuildPath` in favor of separate `serverBuildDirectory` and `serverBuildFile` options ([#8332](https://github.com/remix-run/remix/pull/8332))
+
 - Vite: Loosen strict route exports restriction, reinstating support for non-Remix route exports ([#8420](https://github.com/remix-run/remix/pull/8420))
+
 - Fix issue with `isbot` v4 released on 1/1/2024 ([#8415](https://github.com/remix-run/remix/pull/8415))
 
   - `remix dev` will now add `"isbot": "^4"` to `package.json` instead of using `latest`
   - Update built-in `entry.server` files to work with both `isbot@3` and `isbot@4` for backwards-compatibility with Remix apps that have pinned `isbot` to v3
   - Templates are updated to use `isbot@4` moving forward via `create-remix`
 
+- - \[REMOVE] Error if no `<Scripts>` included in root `<HydrateFallback>` ([#8464](https://github.com/remix-run/remix/pull/8464))
+  - \[REMOVE] Don't render SSR scroll restoration script in SPA mode
+
 - Updated dependencies:
-  - `@remix-run/serve@2.5.0-pre.0`
-  - `@remix-run/server-runtime@2.5.0-pre.0`
-  - `@remix-run/node@2.5.0-pre.0`
+  - `@remix-run/server-runtime@2.5.0`
+  - `@remix-run/node@2.5.0`
 
 ## 2.4.1
 
