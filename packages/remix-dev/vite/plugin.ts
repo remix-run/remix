@@ -1477,6 +1477,9 @@ async function getRouteMetadata(
     pluginConfig,
     route.file
   );
+  if (sourceExports.length === 0) {
+    console.log("[getRouteMetadata:empty]", route.file);
+  }
 
   let info = {
     id: route.id,
