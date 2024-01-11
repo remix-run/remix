@@ -1,5 +1,11 @@
 # `create-remix`
 
+## 2.5.0
+
+### Patch Changes
+
+- Only update `*` versions for Remix dependencies ([#8458](https://github.com/remix-run/remix/pull/8458))
+
 ## 2.4.1
 
 ### Patch Changes

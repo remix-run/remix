@@ -295,7 +295,7 @@ const getRouteModuleExports = async (
   viteChildCompiler: Vite.ViteDevServer | null,
   pluginConfig: ResolvedRemixVitePluginConfig,
   routeFile: string,
-  read?: () => string | Promise<string>
+  readRouteFile?: () => string | Promise<string>
 ): Promise<string[]> => {
   if (!viteChildCompiler) {
     throw new Error("Vite child compiler not found");
@@ -319,7 +319,7 @@ const getRouteModuleExports = async (
 
   let [id, code] = await Promise.all([
     resolveId(),
-    read ? read() : fse.readFile(routePath, "utf-8"),
+    readRouteFile?.() ?? fse.readFile(routePath, "utf-8"),
     // pluginContainer.transform(...) fails if we don't do this first:
     moduleGraph.ensureEntryFromUrl(url, ssr),
   ]);
@@ -1087,24 +1087,16 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               "",
               `    '${id}' imported by route '${importerShort}'`,
               "",
-              `  The only route exports that can reference server-only modules are:`,
+              `  Remix automatically removes server-code from these exports:`,
               `    ${serverOnlyExports}`,
               "",
               `  But other route exports in '${importerShort}' depend on '${id}'.`,
               "",
-              "  For more see https://remix.run/docs/en/main/discussion/server-vs-client",
+              "  See https://remix.run/docs/en/main/future/vite#splitting-up-client-and-server-code",
               "",
             ].join("\n")
           );
         }
-
-        let importedBy = path.parse(importerShort);
-        let dotServerFile = vite.normalizePath(
-          path.join(
-            importedBy.dir,
-            importedBy.name + ".server" + importedBy.ext
-          )
-        );
 
         throw Error(
           [
@@ -1112,21 +1104,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             "",
             `    '${id}' imported by '${importerShort}'`,
             "",
-
-            `  * If all code in '${importerShort}' is server-only:`,
-            "",
-            `    Rename it to '${dotServerFile}'`,
-            "",
-            `  * Otherwise:`,
-            "",
-            `    - Keep client-safe code in '${importerShort}'`,
-            `    - And move server-only code to a \`.server\` file`,
-            `      e.g. '${dotServerFile}'`,
-            "",
-            "  If you have lots of `.server` files, try using",
-            "  a `.server` directory e.g. 'app/.server'",
-            "",
-            "  For more, see https://remix.run/docs/en/main/future/vite#server-code-not-tree-shaken-in-development",
+            "  See https://remix.run/docs/en/main/future/vite#splitting-up-client-and-server-code",
             "",
           ].join("\n")
         );
@@ -1171,7 +1149,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             let str = serverOnlyExports.map((e) => `\`${e}\``).join(", ");
             let message =
               `SPA Mode: ${serverOnlyExports.length} invalid route export(s) in ` +
-              `\`${route.file}\`: ${str}. See https://remix.run/guides/spa-mode ` +
+              `\`${route.file}\`: ${str}. See https://remix.run/future/spa-mode ` +
               `for more information.`;
             throw Error(message);
           }
@@ -1184,7 +1162,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               let message =
                 `SPA Mode: Invalid \`HydrateFallback\` export found in ` +
                 `\`${route.file}\`. \`HydrateFallback\` is only permitted on ` +
-                `the root route in SPA Mode. See https://remix.run/guides/spa-mode ` +
+                `the root route in SPA Mode. See https://remix.run/future/spa-mode ` +
                 `for more information.`;
               throw Error(message);
             }
@@ -1469,13 +1447,13 @@ async function getRouteMetadata(
   pluginConfig: ResolvedRemixVitePluginConfig,
   viteChildCompiler: Vite.ViteDevServer | null,
   route: ConfigRoute,
-  read: () => string | Promise<string>
+  readRouteFile?: () => string | Promise<string>
 ) {
   let sourceExports = await getRouteModuleExports(
     viteChildCompiler,
     pluginConfig,
     route.file,
-    read,
+    readRouteFile
   );
 
   let info = {
@@ -1518,11 +1496,27 @@ async function handleSpaMode(
   let { createRequestHandler: createHandler } = await import("@remix-run/node");
   let handler = createHandler(build, viteConfig.mode);
   let response = await handler(new Request("http://localhost/"));
-  invariant(response.status === 200, "Error generating the index.html file");
+  let html = await response.text();
+  if (response.status !== 200) {
+    throw new Error(
+      `SPA Mode: Received a ${response.status} status code from ` +
+        `\`entry.server.tsx\` while generating the \`index.html\` file.\n${html}`
+    );
+  }
+
+  if (
+    !html.includes("window.__remixContext =") ||
+    !html.includes("window.__remixRouteModules =")
+  ) {
+    throw new Error(
+      "SPA Mode: Did you forget to include <Scripts/> in your `root.tsx` " +
+        "`HydrateFallback` component?  Your `index.html` file cannot hydrate " +
+        "into a SPA without `<Scripts />`."
+    );
+  }
 
   // Write out the index.html file for the SPA
-  let htmlPath = path.join(assetsBuildDirectory, "index.html");
-  await fse.writeFile(htmlPath, await response.text());
+  await fse.writeFile(path.join(assetsBuildDirectory, "index.html"), html);
 
   viteConfig.logger.info(
     "SPA Mode: index.html has been written to your " +
