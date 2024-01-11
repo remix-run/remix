@@ -152,6 +152,8 @@ export default defineConfig({
 
 Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
 
+Since the module types provided by `vite/client` are not compatible with the module types implicitly included with `@remix-run/dev`, you'll also need to enable the `skipLibCheck` flag in your TypeScript config. Remix won't require this flag in the future once the Vite plugin is the default compiler.
+
 👉 **Rename `remix.env.d.ts` to `env.d.ts`**
 
 ```diff nonumber
@@ -172,6 +174,12 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 ```diff filename=tsconfig.json
 - "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
 + "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
+```
+
+👉 **Ensure `skipLibCheck` is enabled in `tsconfig.json`**
+
+```json filename=tsconfig.json
+"skipLibCheck": true,
 ```
 
 👉 **Ensure `module` and `moduleResolution` fields are set correctly in `tsconfig.json`**
@@ -655,6 +663,12 @@ const posts = import.meta.glob("./posts/*.mdx", {
 
 Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
 
+#### Resources for general debugging
+
+The [Inspect plugin][vite-plugin-inspect] shows you each transformation that Vite performs on your code.
+It can be useful to see which plugin is causing the unexpected behavior.
+Not only that, but it can give you a better mental model for exactly how Remix handles splitting client and server code.
+
 #### HMR
 
 If you are expecting hot updates but getting full page reloads,
@@ -666,7 +680,7 @@ Vite supports both ESM and CJS dependencies, but sometimes you might still run i
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
 
-To diagnose if your one of dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
+To diagnose if one of your dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
 
 Finally, you can also explicitly configure which dependencies to bundle into your server bundled
@@ -802,3 +816,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [global-node-polyfills]: ../other-api/node#polyfills
 [server-bundles]: ./server-bundles
 [fullstack-components]: https://www.epicweb.dev/full-stack-components
+[vite-plugin-inspect]: https://github.com/antfu/vite-plugin-inspect
