@@ -32,6 +32,7 @@ Each adapter has the same API. In the future we may have helpers specific to the
 - [`@vercel/remix`][vercel-remix] - For [Vercel][vercel].
 - [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
 - [`partymix`][partymix] - For [PartyKit][partykit].
+- [`@scandinavianairlines/remix-azure-functions`][remix-azure-functions]: For [Azure Functions][azure-functions] and [Azure Static Web Apps][azure-static-web-apps].
 
 ## Creating an Adapter
 
@@ -152,3 +153,6 @@ addEventListener("fetch", (event) => {
 [vercel]: https://vercel.com
 [partykit]: https://partykit.io
 [partymix]: https://github.com/partykit/partykit/tree/main/packages/partymix
+[remix-azure-functions]: https://github.com/scandinavianairlines/remix-azure-functions
+[azure-functions]: https://azure.microsoft.com/en-us/products/functions/
+[azure-staticwebapps]: https://azure.microsoft.com/en-us/products/app-service/static
