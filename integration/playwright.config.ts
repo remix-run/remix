@@ -13,7 +13,6 @@ const config: PlaywrightTestConfig = {
   },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 3 : 0,
-  repeatEach: process.env.REPEAT_EACH ? Number(process.env.REPEAT_EACH) : undefined,
   reporter: process.env.CI ? "dot" : [["html", { open: "never" }]],
   use: { actionTimeout: 0 },
 
