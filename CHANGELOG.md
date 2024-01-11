@@ -127,7 +127,7 @@ Date: YYYY-MM-DD
 
 ## v2.5.0
 
-Date: 2024-01-10
+Date: 2024-01-11
 
 ### What's Changed
 
@@ -163,7 +163,7 @@ To run your SPA, you serve your client assets directory via an HTTP server:
 npx http-server build/client
 ```
 
-For more information, please refer to the [SPA Mode docs][https://remix.run/future/spa-mode].
+For more information, please refer to the [SPA Mode docs](https://remix.run/future/spa-mode).
 
 #### Server Bundles (unstable)
 
