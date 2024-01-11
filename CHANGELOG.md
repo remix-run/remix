@@ -13,50 +13,58 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.4.1](#v241)
+  - [v2.5.0](#v250)
+    - [What's Changed](#whats-changed)
+      - [SPA Mode (unstable)](#spa-mode-unstable)
+      - [Server Bundles (unstable)](#server-bundles-unstable)
+    - [Minor Changes](#minor-changes)
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
     - [Changes by Package](#changes-by-package)
-  - [v2.4.0](#v240)
-    - [What's Changed](#whats-changed)
-      - [Client Data](#client-data)
-      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
-      - [Vite Updates (Unstable)](#vite-updates-unstable)
-    - [Minor Changes](#minor-changes)
+  - [v2.4.1](#v241)
     - [Patch Changes](#patch-changes-1)
     - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
-  - [v2.3.1](#v231)
+  - [v2.4.0](#v240)
+    - [What's Changed](#whats-changed-1)
+      - [Client Data](#client-data)
+      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
+      - [Vite Updates (Unstable)](#vite-updates-unstable)
+    - [Minor Changes](#minor-changes-1)
     - [Patch Changes](#patch-changes-2)
     - [Updated Dependencies](#updated-dependencies-2)
     - [Changes by Package](#changes-by-package-2)
-  - [v2.3.0](#v230)
-    - [What's Changed](#whats-changed-1)
-      - [Stabilized `useBlocker`](#stabilized-useblocker)
-      - [`unstable_flushSync` API](#unstable_flushsync-api)
-    - [Minor Changes](#minor-changes-1)
+  - [v2.3.1](#v231)
     - [Patch Changes](#patch-changes-3)
     - [Updated Dependencies](#updated-dependencies-3)
     - [Changes by Package](#changes-by-package-3)
-  - [v2.2.0](#v220)
+  - [v2.3.0](#v230)
     - [What's Changed](#whats-changed-2)
-      - [Vite!](#vite)
-      - [New Fetcher APIs](#new-fetcher-apis)
-      - [Persistence Future Flag](#persistence-future-flag)
+      - [Stabilized `useBlocker`](#stabilized-useblocker)
+      - [`unstable_flushSync` API](#unstable_flushsync-api)
     - [Minor Changes](#minor-changes-2)
     - [Patch Changes](#patch-changes-4)
     - [Updated Dependencies](#updated-dependencies-4)
     - [Changes by Package](#changes-by-package-4)
-  - [v2.1.0](#v210)
+  - [v2.2.0](#v220)
     - [What's Changed](#whats-changed-3)
-      - [View Transitions](#view-transitions)
-      - [Stable `createRemixStub`](#stable-createremixstub)
+      - [Vite!](#vite)
+      - [New Fetcher APIs](#new-fetcher-apis)
+      - [Persistence Future Flag](#persistence-future-flag)
     - [Minor Changes](#minor-changes-3)
     - [Patch Changes](#patch-changes-5)
     - [Updated Dependencies](#updated-dependencies-5)
     - [Changes by Package](#changes-by-package-5)
-  - [v2.0.1](#v201)
+  - [v2.1.0](#v210)
+    - [What's Changed](#whats-changed-4)
+      - [View Transitions](#view-transitions)
+      - [Stable `createRemixStub`](#stable-createremixstub)
+    - [Minor Changes](#minor-changes-4)
     - [Patch Changes](#patch-changes-6)
+    - [Updated Dependencies](#updated-dependencies-6)
+    - [Changes by Package](#changes-by-package-6)
+  - [v2.0.1](#v201)
+    - [Patch Changes](#patch-changes-7)
     - [Changes by Package 🔗](#changes-by-package-)
   - [v2.0.0](#v200)
     - [Breaking Changes](#breaking-changes)
@@ -68,8 +76,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
         - [Breaking Type Changes](#breaking-type-changes)
     - [New Features](#new-features)
     - [Other Notable Changes](#other-notable-changes)
-    - [Updated Dependencies](#updated-dependencies-6)
-    - [Changes by Package](#changes-by-package-6)
+    - [Updated Dependencies](#updated-dependencies-7)
+    - [Changes by Package](#changes-by-package-7)
 
 </details>
 
@@ -77,6 +85,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
 To add a new release, copy from this template:
 
 ## v2.X.Y
+
+Date: YYYY-MM-DD
 
 ### What's Changed
 
@@ -115,7 +125,119 @@ To add a new release, copy from this template:
 
 -->
 
+## v2.5.0
+
+Date: 2024-01-11
+
+### What's Changed
+
+#### SPA Mode (unstable)
+
+SPA Mode ([RFC](https://github.com/remix-run/remix/discussions/7638)) allows you to generate your Remix app as a standalone SPA served from a static `index.html` file. You can opt into SPA Mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
+
+```js
+// vite.config.ts
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [remix({ unstable_ssr: false })],
+});
+```
+
+Development in SPA Mode is just like a normal Remix app, and still uses the Remix dev server for HMR/HDR:
+
+```sh
+remix vite:dev
+```
+
+Building in SPA Mode will generate an `index.html` file in your client assets directory:
+
+```sh
+remix vite:build
+```
+
+To run your SPA, you serve your client assets directory via an HTTP server:
+
+```sh
+npx http-server build/client
+```
+
+For more information, please refer to the [SPA Mode docs](https://remix.run/future/spa-mode).
+
+#### Server Bundles (unstable)
+
+This is an advanced feature designed for hosting provider integrations where you may want to split server code into multiple request handlers. When compiling your app into multiple server bundles, there will need to be a custom routing layer in front of your app directing requests to the correct bundle. This feature is currently unstable and only designed to gather early feedback.
+
+You can control the server bundles generated by your Remix Vite build by setting the `unstable_serverBundles` option in your vite config:
+
+```ts
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      unstable_serverBundles: ({ branch }) => {
+        const isAuthenticatedRoute = branch.some(
+          (route) => route.id === "routes/_authenticated"
+        );
+
+        return isAuthenticatedRoute ? "authenticated" : "unauthenticated";
+      },
+    }),
+  ],
+});
+```
+
+### Minor Changes
+
+- Add unstable support for "SPA Mode" ([#8457](https://github.com/remix-run/remix/pull/8457))
+- Add `unstable_serverBundles` option to Vite plugin to support splitting server code into multiple request handlers ([#8332](https://github.com/remix-run/remix/pull/8332))
+
+### Patch Changes
+
+- `create-remix`: Only update `*` versions for Remix dependencies ([#8458](https://github.com/remix-run/remix/pull/8458))
+- `remix-serve`: Don't try to load sourcemaps if they don't exist on disk ([#8446](https://github.com/remix-run/remix/pull/8446))
+- `@remix-run/dev`: Fix issue with `isbot@4` released on 1/1/2024 ([#8415](https://github.com/remix-run/remix/pull/8415))
+  - `remix dev` will now add `"isbot": "^4"` to `package.json` instead of using `latest`
+  - Update built-in `entry.server` files to work with both `isbot@3` and `isbot@4` for backwards-compatibility with Remix apps that have pinned `isbot@3`
+  - Templates are updated to use `isbot@4` moving forward via `create-remix`
+- `@remix-run/dev`: Vite - Fix HMR issues when altering exports for non-rendered routes ([#8157](https://github.com/remix-run/remix/pull/8157))
+- `@remix-run/dev`: Vite - Default `NODE_ENV` to `"production"` when running `remix vite:build` command ([#8405](https://github.com/remix-run/remix/pull/8405))
+- `@remix-run/dev`: Vite - Remove Vite plugin config option `serverBuildPath` in favor of separate `serverBuildDirectory` and `serverBuildFile` options ([#8332](https://github.com/remix-run/remix/pull/8332))
+- `@remix-run/dev`: Vite - Loosen strict route exports restriction, reinstating support for non-Remix route exports ([#8420](https://github.com/remix-run/remix/pull/8420))
+- `@remix-run/react`: Vite - Fix type conflict with `import.meta.hot` from the existing Remix compiler ([#8459](https://github.com/remix-run/remix/pull/8459))
+- `@remix-run/server-runtime`: Updated `cookie` dependency to [`0.6.0`](https://github.com/jshttp/cookie/blob/master/HISTORY.md#060--2023-11-06) to inherit support for the [`Partitioned`](https://developer.mozilla.org/en-US/docs/Web/Privacy/Partitioned_cookies) attribute ([#8375](https://github.com/remix-run/remix/pull/8375))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.21.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.21.2)
+- [`@remix-run/router@1.14.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1142)
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/create-remix/CHANGELOG.md#250)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-architect/CHANGELOG.md#250)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-cloudflare/CHANGELOG.md#250)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-cloudflare-pages/CHANGELOG.md#250)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-cloudflare-workers/CHANGELOG.md#250)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-css-bundle/CHANGELOG.md#250)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-deno/CHANGELOG.md#250)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-dev/CHANGELOG.md#250)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-eslint-config/CHANGELOG.md#250)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-express/CHANGELOG.md#250)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-node/CHANGELOG.md#250)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-react/CHANGELOG.md#250)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-serve/CHANGELOG.md#250)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-server-runtime/CHANGELOG.md#250)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.5.0/packages/remix-testing/CHANGELOG.md#250)
+
+**Full Changelog**: [`v2.4.1...v2.5.0`](https://github.com/remix-run/remix/compare/remix@2.4.1...remix@2.5.0)
+
 ## v2.4.1
+
+Date: 2023-12-22
 
 ### Patch Changes
 
@@ -203,6 +325,8 @@ To add a new release, copy from this template:
 **Full Changelog**: [`v2.4.0...v2.4.1`](https://github.com/remix-run/remix/compare/remix@2.4.0...remix@2.4.1)
 
 ## v2.4.0
+
+Date: 2023-12-13
 
 ### What's Changed
 
@@ -364,6 +488,8 @@ Remix now enforces strict route exports, and will will throw an error if you hav
 
 ## v2.3.1
 
+Date: 2023-11-22
+
 ### Patch Changes
 
 - `@remix-run/dev`: Support `nonce` prop on `LiveReload` component in Vite dev ([#8014](https://github.com/remix-run/remix/pull/8014))
@@ -398,6 +524,8 @@ Remix now enforces strict route exports, and will will throw an error if you hav
 **Full Changelog**: [`v2.3.0...v2.3.1`](https://github.com/remix-run/remix/compare/remix@2.3.0...remix@2.3.1)
 
 ## v2.3.0
+
+Date: 2023-11-16
 
 ### What's Changed
 
@@ -477,6 +605,8 @@ function handleClick() {
 **Full Changelog**: [`v2.2.0...v2.3.0`](https://github.com/remix-run/remix/compare/remix@2.2.0...remix@2.3.0)
 
 ## v2.2.0
+
+Date: 2023-10-31
 
 ### What's Changed
 
@@ -570,6 +700,8 @@ Per the same [RFC](https://github.com/remix-run/remix/discussions/7698) as above
 **Full Changelog**: [`v2.1.0...v2.2.0`](https://github.com/remix-run/remix/compare/remix@2.1.0...remix@2.2.0)
 
 ## v2.1.0
+
+Date: 2023-10-16
 
 ### What's Changed
 
@@ -665,6 +797,8 @@ After real-world experience, we're confident in the [`createRemixStub`](https://
 
 ## v2.0.1
 
+Date: 2023-09-21
+
 ### Patch Changes
 
 - Fix types for MDX files when using pnpm ([#7491](https://github.com/remix-run/remix/pull/7491))
@@ -693,6 +827,8 @@ After real-world experience, we're confident in the [`createRemixStub`](https://
 **Full Changelog**: [`v2.0.0...v2.0.1`](https://github.com/remix-run/remix/compare/remix@2.0.0...remix@2.0.1)
 
 ## v2.0.0
+
+Date: 2023-09-15
 
 We're _**so**_ excited to release Remix v2 to you and we really hope this upgrade is one of the smoothest framework upgrades you've ever experienced! That was our primary goal with v2 - something we aimed to achieve through a heavy use of deprecation warnings and [Future Flags](https://remix.run/blog/future-flags) in Remix v1.
 
