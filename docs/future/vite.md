@@ -722,14 +722,14 @@ with [Vite's `ssr.noExternal` option][ssr-no-external] to emulate the Remix comp
 
 #### Server code errors in browser during development
 
-If you see errors in the browser console during development that point to server code, you likely need to [explicitly isolate server-only code](#splitting-up-client-and-server-code).
+If you see errors in the browser console during development that point to server code, you likely need to [explicitly isolate server-only code][explicitly-isolate-server-only-code].
 For example, if you see something like:
 
 ```shellscript
 ERROR: `process` is undefined
 ```
 
-Then you'll need to track down which module is pulling in dependencies that except server-only globals like `process` and isolate code either in a [separate `.server` module or with `vite-env-only`](#splitting-up-client-and-server-code).
+Then you'll need to track down which module is pulling in dependencies that except server-only globals like `process` and isolate code either in a [separate `.server` module or with `vite-env-only`][explicitly-isolate-server-only-code].
 Since Vite uses Rollup to treeshake your code in production, these errors only occur in development.
 
 #### Plugin usage with other Vite-based tools (e.g. Vitest, Storybook)
@@ -854,3 +854,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-plugin-inspect]: https://github.com/antfu/vite-plugin-inspect
 [server-vs-client]: ../discussion/server-vs-client.md
 [vite-env-only]: https://github.com/pcattori/vite-env-only
+[explicitly-isolate-server-only-code]: #splitting-up-client-and-server-code
