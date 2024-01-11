@@ -7,6 +7,11 @@ export {
 export { defer, json, redirect, redirectDocument } from "./responses";
 export { createRequestHandler } from "./server";
 export {
+  createServerHandoffString as UNSAFE_createServerHandoffString,
+  remixContextJsString as UNSAFE_remixContextJsString,
+  remixEntryJsString as UNSAFE_remixEntryJsString,
+} from "./serverHandoff";
+export {
   createSession,
   createSessionStorageFactory,
   isSession,

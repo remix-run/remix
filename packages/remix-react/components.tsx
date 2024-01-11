@@ -33,9 +33,13 @@ import {
   useHref,
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
+import {
+  UNSAFE_remixContextJsString as remixContextJsString,
+  UNSAFE_remixEntryJsString as remixEntryJsString,
+} from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
-import type { AssetsManifest, EntryContext, RemixContextObject } from "./entry";
+import type { RemixContextObject } from "./entry";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
@@ -594,65 +598,6 @@ export type ScriptProps = Omit<
   | "suppressHydrationWarning"
 >;
 
-function remixContextJsString(handoff: string) {
-  return `window.__remixContext = ${handoff};`;
-}
-
-function remixEntryJsString(
-  manifest: AssetsManifest,
-  matches: AgnosticDataRouteMatch[],
-  handoff?: string
-) {
-  let { routes } = manifest;
-  return [
-    manifest.hmr?.runtime
-      ? `import ${JSON.stringify(manifest.hmr.runtime)};`
-      : "",
-    `import ${JSON.stringify(manifest.url)};`,
-    ...matches.map(
-      ({ route: { id } }, i) =>
-        `import * as route${i} from ${JSON.stringify(routes[id].module)};`
-    ),
-    // If we got a handoff, insert it after the imports (used for SPA mode library mode)
-    handoff ? remixContextJsString(handoff) : "",
-    `window.__remixRouteModules = {${matches
-      .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
-      .join(",")}}`,
-    `import(${JSON.stringify(manifest.entry.module)});`,
-  ]
-    .filter((l) => l)
-    .join("\n");
-}
-
-// This would be a publicly exported utility function that folks could use in
-// their `entry.server.tsx` if they wanted to run Remix SPA Mode as a "Library"
-// where the output should be a JS file, not an HTML file.  This allows for the
-// Remix app to be embedded in HTML not controlled by Remix.  The vite plugin
-// will check the Content-Type on the response from entry.server and write out
-// build/client/assets.index.js if "application/javascript" is returned.
-//
-// When used in this manner:
-//  - `HydrateFallback` _must_ be provided in root, the default implementation
-//     renders a complete document
-//  - `HydrateFallBack` should match the content of `<div id="app">` exactly
-//  - `HydrateFallBack` should not render `<Scripts>`
-//
-// Example entry.server.tsx:
-//   export default function handleRequest(_, __, ___, remixContext) {
-//     let js = UNSAFE_remixSpaModeLibraryJs(remixContext);
-//     return new Response(js, {
-//       headers: { "Content-Type": "application/javascript" },
-//       status: 200,
-//     });
-//   }
-export function UNSAFE_remixSpaModeLibraryJs(ctx: EntryContext) {
-  return remixEntryJsString(
-    ctx.manifest,
-    ctx.staticHandlerContext.matches,
-    ctx.serverHandoffString
-  );
-}
-
 /**
  * Renders the `<script>` tags needed for the initial render. Bundles for
  * additional routes are loaded later as needed.
@@ -838,7 +783,10 @@ export function Scripts(props: ScriptProps) {
 
     let routeModulesScript = !isStatic
       ? " "
-      : remixEntryJsString(manifest, matches);
+      : remixEntryJsString(
+          manifest,
+          matches.map((m) => m.route.id)
+        );
 
     return (
       <>

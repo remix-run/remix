@@ -81,7 +81,6 @@ export {
   useActionData,
   useMatches,
   RemixContext as UNSAFE_RemixContext,
-  UNSAFE_remixSpaModeLibraryJs,
 } from "./components";
 
 export type { HtmlLinkDescriptor } from "./links";
