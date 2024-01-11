@@ -181,6 +181,8 @@ function node(args: string[], options: { cwd: string }) {
     env: process.env,
     stdio: "pipe",
   });
+  proc.stdout?.on("data", data => process.stdout.write(data))
+  proc.stderr?.on("data", data => process.stderr.write(data))
   return proc;
 }
 
