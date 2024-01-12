@@ -695,7 +695,35 @@ Remember that you can always check the [Vite performance docs][vite-perf] for mo
 
 #### Bundle analysis
 
-To visualize and analyze your bundle, you can use the [rollup-plugin-visualizer][rollup-plugin-visualizer] plugin.
+To visualize and analyze your bundle, you can use the [rollup-plugin-visualizer][rollup-plugin-visualizer] plugin:
+
+```ts filename=vite.config.ts
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { visualizer } from "rollup-plugin-visualizer";
+
+export default defineConfig({
+  plugins: [
+    remix(),
+    // `emitFile` is necessary since Remix builds more than one bundle!
+    visualizer({ emitFile: true }),
+  ],
+});
+```
+
+Then when you run `remix vite:build`, it'll generate a `stats.html` file in each of your bundles:
+
+```
+build
+├── client
+│   ├── assets/
+│   ├── favicon.ico
+│   └── stats.html 👈
+└── server
+    ├── index.js
+    └── stats.html 👈
+```
+
+Open up `stats.html` in your browser to analyze your bundle.
 
 ## Troubleshooting
 
