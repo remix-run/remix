@@ -699,7 +699,7 @@ To visualize and analyze your bundle, you can use the [rollup-plugin-visualizer]
 
 ## Troubleshooting
 
-Check the [debugging](#debugging) and [performance](#performance) sections for general troubleshooting tips.
+Check the [debugging][debugging] and [performance][performance] sections for general troubleshooting tips.
 Also, see if anyone else is having a similar problem by looking through the [known issues with the remix vite plugin on github][issues-vite].
 
 #### HMR
@@ -853,3 +853,5 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-perf]: https://vitejs.dev/guide/performance.html
 [node-options]: https://nodejs.org/api/cli.html#node_optionsoptions
 [rollup-plugin-visualizer]: https://github.com/btd/rollup-plugin-visualizer
+[debugging]: #debugging
+[performance]: #performance
