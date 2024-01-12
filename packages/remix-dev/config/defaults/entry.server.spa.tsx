@@ -9,9 +9,9 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  let html = renderToString(
-    <RemixServer context={remixContext} url={request.url} />
-  );
+  let html =
+    "<!DOCTYPE html>\n" +
+    renderToString(<RemixServer context={remixContext} url={request.url} />);
   return new Response(html, {
     headers: { "Content-Type": "text/html" },
     status: responseStatusCode,
