@@ -145,10 +145,10 @@ export type ResolvedRemixVitePluginConfig = Pick<
   | "serverModuleFormat"
 > & {
   isSpaMode: boolean;
+  libraryName: string | undefined;
   serverBuildDirectory: string;
   serverBuildFile: string;
   serverBundles?: ServerBundlesFunction;
-  libraryName: string | undefined;
 };
 
 export type ServerBuildConfig = {

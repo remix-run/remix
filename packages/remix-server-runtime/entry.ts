@@ -28,7 +28,10 @@ export interface AssetsManifest {
   routes: RouteManifest<EntryRoute>;
   url: string;
   version: string;
-  hmrRuntime?: string;
+  hmr?: {
+    timestamp?: number;
+    runtime: string;
+  };
 }
 
 export function createEntryRouteModules(

@@ -40,7 +40,7 @@ export function remixEntryJsString(
 ) {
   let str = JSON.stringify;
   return [
-    manifest.hmrRuntime ? `import ${str(manifest.hmrRuntime)};` : "",
+    manifest.hmr?.runtime ? `import ${str(manifest.hmr?.runtime)};` : "",
     `import ${JSON.stringify(manifest.url)};`,
     ...routeIds.map(
       (id, i) =>
