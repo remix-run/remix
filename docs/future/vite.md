@@ -659,15 +659,48 @@ const posts = import.meta.glob("./posts/*.mdx", {
 });
 ```
 
+## Debugging
+
+You can use the [`NODE_OPTIONS` environment variable][node-options] to start a debugging session:
+
+```shellscript nonumber
+NODE_OPTIONS="--inspect-brk" npm run dev`
+```
+
+Then you can attach a debugger from your browser.
+For example, in Chrome you can open up `chrome://inspect` or click the NodeJS icon in the dev tools to attach the debugger.
+
+#### vite-plugin-inspect
+
+[`vite-plugin-inspect`][vite-plugin-inspect] shows you each how each Vite plugin transforms your code and how long each plugin takes.
+
+## Performance
+
+Remix includes a `--profile` flag for performance profiling.
+
+```shellscript nonumber
+remix vite:build --profile
+```
+
+When running with `--profile`, a `.cpuprofile` file will be generated that can be shared or upload to speedscope.app to for analysis.
+
+You can also profile in dev by pressing `p + enter` while the dev server is running to start a new profiling session or stop the current session.
+If you need to profile dev server startup, you can also use the `--profile` flag to initialize a profiling session on startup:
+
+```shellscript nonumber
+remix vite:dev --profile
+```
+
+Remember that you can always check the [Vite performance docs][vite-perf] for more tips!
+
+#### Bundle analysis
+
+To visualize and analyze your bundle, you can use the [rollup-plugin-visualizer][rollup-plugin-visualizer] plugin.
+
 ## Troubleshooting
 
-Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
-
-#### Resources for general debugging
-
-The [Inspect plugin][vite-plugin-inspect] shows you each transformation that Vite performs on your code.
-It can be useful to see which plugin is causing the unexpected behavior.
-Not only that, but it can give you a better mental model for exactly how Remix handles splitting client and server code.
+Check the [debugging](#debugging) and [performance](#performance) sections for general troubleshooting tips.
+Also, see if anyone else is having a similar problem by looking through the [known issues with the remix vite plugin on github][issues-vite].
 
 #### HMR
 
@@ -817,3 +850,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [server-bundles]: ./server-bundles
 [fullstack-components]: https://www.epicweb.dev/full-stack-components
 [vite-plugin-inspect]: https://github.com/antfu/vite-plugin-inspect
+[vite-perf]: https://vitejs.dev/guide/performance.html
+[node-options]: https://nodejs.org/api/cli.html#node_optionsoptions
+[rollup-plugin-visualizer]: https://github.com/btd/rollup-plugin-visualizer
