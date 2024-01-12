@@ -951,6 +951,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             serverBuildDirectory,
             serverBuildFile,
             rootDirectory,
+            future,
+            isSpaMode,
+            libraryName,
           } = pluginConfig;
 
           let ssrViteManifest = await loadViteManifest(serverBuildDirectory);
@@ -1012,16 +1015,16 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
             );
           }
 
-          if (pluginConfig.isSpaMode) {
+          if (isSpaMode) {
             await handleSpaMode(
               // TODO: Is this readily available anywhere?
               await ssrBuildContext.getManifest(),
-              cachedPluginConfig.future,
+              future,
               path.join(rootDirectory, serverBuildDirectory),
               serverBuildFile,
               assetsBuildDirectory,
               viteConfig,
-              cachedPluginConfig.libraryName
+              libraryName
             );
           }
         },
