@@ -25,26 +25,20 @@ export const start = async (callback?: () => void | Promise<void>) => {
 let profileCount = 0;
 
 export const stop = (log: (message: string) => void): void | Promise<void> => {
-  let session = global.__remix_profile_session;
+  let session = getSession();
   if (!session) return;
   return new Promise((res, rej) => {
-    session!.post("Profiler.stop", (err: any, { profile }: any) => {
-      // Write profile to disk, upload, etc.
-      if (!err) {
-        let outPath = path.resolve(
-          `./remix-profile-${profileCount++}.cpuprofile`
-        );
-        fs.writeFileSync(outPath, JSON.stringify(profile));
-        log(
-          colors.yellow(
-            `CPU profile written to ${colors.white(colors.dim(outPath))}`
-          )
-        );
-        global.__remix_profile_session = undefined;
-        res();
-      } else {
-        rej(err);
-      }
+    session!.post("Profiler.stop", (err, { profile }) => {
+      if (err) return rej(err);
+      let outPath = path.resolve(`./remix-${profileCount++}.cpuprofile`);
+      fs.writeFileSync(outPath, JSON.stringify(profile));
+      log(
+        colors.yellow(
+          `CPU profile written to ${colors.white(colors.dim(outPath))}`
+        )
+      );
+      global.__remix_profile_session = undefined;
+      res();
     });
   });
 };
