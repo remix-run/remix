@@ -201,7 +201,7 @@ interface Context {
 
 async function introStep(ctx: Context) {
   log(
-    `\n${color.bgWhite(` ${color.whiteBright("remix")} `)}  ${color.green(
+    `\n${color.bgWhite(` ${color.black("remix")} `)}  ${color.green(
       color.bold(`v${ctx.remixVersion}`)
     )} ${color.bold("💿 Let's build a better website...")}`
   );
@@ -757,7 +757,7 @@ async function loadingIndicator(args: {
 }
 
 function title(text: string) {
-  return align(color.bgWhite(` ${color.whiteBright(text)} `), "end", 7) + " ";
+  return align(color.bgWhite(` ${color.black(text)} `), "end", 7) + " ";
 }
 
 function printHelp(ctx: Context) {
