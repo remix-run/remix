@@ -1512,9 +1512,13 @@ async function handleSpaMode(
   if (libraryName) {
     let jsDir = path.join(assetsBuildDirectory, "assets");
     let jsPath = path.join(jsDir, libraryName);
+    invariant(manifest.url, "manifest.url required for SPA mode");
     let js = remixEntryJsString(
-      // @ts-expect-error
-      manifest,
+      // This way TS knows the URL is defined
+      {
+        ...manifest,
+        url: manifest.url,
+      },
       ["root"],
       createServerHandoffString({
         state: {},
