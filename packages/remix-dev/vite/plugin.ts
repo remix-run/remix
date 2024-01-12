@@ -122,6 +122,13 @@ export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
      * as a SPA without server-rendering. Default's to `true`.
      */
     unstable_ssr?: boolean;
+    /**
+     * Specify a JS filename to enable "library mode" which will write out a
+     * JS file instead of an `index.html` file so you can embed your Remix SPA
+     * Mode app as a library in an HTML page generated elsewhere.  Requires
+     * `unstable_ssr: false`.
+     */
+    unstable_library?: string;
   };
 
 export type ResolvedRemixVitePluginConfig = Pick<
@@ -132,15 +139,16 @@ export type ResolvedRemixVitePluginConfig = Pick<
   | "entryClientFilePath"
   | "entryServerFilePath"
   | "future"
-  | "isSpaMode"
   | "publicPath"
   | "relativeAssetsBuildDirectory"
   | "routes"
   | "serverModuleFormat"
 > & {
+  isSpaMode: boolean;
   serverBuildDirectory: string;
   serverBuildFile: string;
   serverBundles?: ServerBundlesFunction;
+  libraryName: string | undefined;
 };
 
 export type ServerBuildConfig = {
@@ -449,6 +457,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         isSpaMode,
         relativeAssetsBuildDirectory,
         future,
+        libraryName: pluginConfig.unstable_library,
       };
     };
 
@@ -1011,7 +1020,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
               path.join(rootDirectory, serverBuildDirectory),
               serverBuildFile,
               assetsBuildDirectory,
-              viteConfig
+              viteConfig,
+              cachedPluginConfig.libraryName
             );
           }
         },
@@ -1493,13 +1503,12 @@ async function handleSpaMode(
   serverBuildDirectoryPath: string,
   serverBuildFile: string,
   assetsBuildDirectory: string,
-  viteConfig: Vite.ResolvedConfig
+  viteConfig: Vite.ResolvedConfig,
+  libraryName: string | undefined
 ) {
-  // TODO: Add a plugin config for this...
-  let isLibraryMode = false;
-  if (isLibraryMode) {
+  if (libraryName) {
     let jsDir = path.join(assetsBuildDirectory, "assets");
-    let jsPath = path.join(jsDir, "index.js");
+    let jsPath = path.join(jsDir, libraryName);
     let js = remixEntryJsString(
       // @ts-expect-error
       manifest,
@@ -1514,9 +1523,7 @@ async function handleSpaMode(
     await fse.writeFile(jsPath, js);
 
     viteConfig.logger.info(
-      "SPA Mode: index.js has been written to your " +
-        colors.bold(path.relative(process.cwd(), jsDir)) +
-        " directory"
+      `SPA Mode: created ${colors.bold(path.relative(process.cwd(), jsPath))}`
     );
   } else {
     // Create a handler and call it for the `/` path - rendering down to the
@@ -1554,9 +1561,7 @@ async function handleSpaMode(
     await fse.writeFile(htmlPath, await response.text());
 
     viteConfig.logger.info(
-      "SPA Mode: index.html has been written to your " +
-        colors.bold(path.relative(process.cwd(), assetsBuildDirectory)) +
-        " directory"
+      `SPA Mode: created ${colors.bold(path.relative(process.cwd(), htmlPath))}`
     );
   }
 
