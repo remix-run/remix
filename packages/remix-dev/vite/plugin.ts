@@ -455,9 +455,9 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         serverBundles: unstable_serverBundles,
         serverModuleFormat,
         isSpaMode,
+        libraryName: pluginConfig.unstable_library,
         relativeAssetsBuildDirectory,
         future,
-        libraryName: pluginConfig.unstable_library,
       };
     };
 
@@ -1558,7 +1558,7 @@ async function handleSpaMode(
 
     // Write out the index.html file for the SPA
     let htmlPath = path.join(assetsBuildDirectory, "index.html");
-    await fse.writeFile(htmlPath, await response.text());
+    await fse.writeFile(htmlPath, html);
 
     viteConfig.logger.info(
       `SPA Mode: created ${colors.bold(path.relative(process.cwd(), htmlPath))}`

@@ -29,6 +29,8 @@ export interface FixtureInit {
   config?: Partial<AppConfig>;
   useRemixServe?: boolean;
   compiler?: "remix" | "vite";
+  spaMode?: boolean;
+  library?: string;
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -59,19 +61,28 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
     );
   };
 
-  let isSpaMode =
-    compiler === "vite" &&
-    fse.existsSync(path.join(projectDir, "build/client/index.html"));
+  let isSpaMode = compiler === "vite" && init.spaMode;
 
   if (isSpaMode) {
+    let requestDocument = () => {
+      let html = init.library
+        ? getSpaLibraryModeDocument(init.library)
+        : fse.readFileSync(path.join(projectDir, "build/client/index.html"));
+
+      return new Response(html, {
+        headers: {
+          "Content-Type": "text/html",
+        },
+      });
+    };
+
     return {
       projectDir,
       build: null,
       isSpaMode,
+      library: init.library,
       compiler,
-      requestDocument: () => {
-        throw new Error("Cannot requestDocument in SPA Mode tests");
-      },
+      requestDocument,
       requestData: () => {
         throw new Error("Cannot requestData in SPA Mode tests");
       },
@@ -125,6 +136,7 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
     projectDir,
     build: app,
     isSpaMode,
+    library: undefined,
     compiler,
     requestDocument,
     requestData,
@@ -206,12 +218,14 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
         let port = await getPort();
         let app = express();
         app.use(express.static(path.join(fixture.projectDir, "build/client")));
-        app.get("*", (_, res, next) =>
-          res.sendFile(
-            path.join(process.cwd(), "build/client/index.html"),
-            next
-          )
-        );
+        app.get("*", (_, res, next) => {
+          return fixture.library
+            ? res.send(getSpaLibraryModeDocument(fixture.library))
+            : res.sendFile(
+                path.join(process.cwd(), "build/client/index.html"),
+                next
+              );
+        });
         let server = app.listen(port);
         accept({ stop: server.close.bind(server), port });
       });
@@ -396,4 +410,16 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
       await fse.writeFile(filePath, stripIndent(file));
     })
   );
+}
+
+function getSpaLibraryModeDocument(library: string) {
+  return [
+    `<html>`,
+    `  <head />`,
+    `  <body>`,
+    `    <div id="app" />`,
+    `    <script type="module" src="/assets/${library}"></script>`,
+    `  </body>`,
+    `</html>`,
+  ].join("\n");
 }
