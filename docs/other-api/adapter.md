@@ -32,7 +32,7 @@ Each adapter has the same API. In the future we may have helpers specific to the
 - [`@vercel/remix`][vercel-remix] - For [Vercel][vercel].
 - [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
 - [`partymix`][partymix] - For [PartyKit][partykit].
-- [`@scandinavianairlines/remix-azure-functions`][remix-azure-functions]: For [Azure Functions][azure-functions] and [Azure Static Web Apps][azure-static-web-apps].
+- [`@scandinavianairlines/remix-azure-functions`][remix-azure-functions]: For [Azure Functions][azure-functions] and \[Azure Static Web Apps]\[azure-static-web-apps].
 
 ## Creating an Adapter
 
