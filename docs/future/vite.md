@@ -152,6 +152,8 @@ export default defineConfig({
 
 Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
 
+Since the module types provided by `vite/client` are not compatible with the module types implicitly included with `@remix-run/dev`, you'll also need to enable the `skipLibCheck` flag in your TypeScript config. Remix won't require this flag in the future once the Vite plugin is the default compiler.
+
 👉 **Rename `remix.env.d.ts` to `env.d.ts`**
 
 ```diff nonumber
@@ -172,6 +174,12 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 ```diff filename=tsconfig.json
 - "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
 + "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
+```
+
+👉 **Ensure `skipLibCheck` is enabled in `tsconfig.json`**
+
+```json filename=tsconfig.json
+"skipLibCheck": true,
 ```
 
 👉 **Ensure `module` and `moduleResolution` fields are set correctly in `tsconfig.json`**
@@ -651,9 +659,76 @@ const posts = import.meta.glob("./posts/*.mdx", {
 });
 ```
 
+## Debugging
+
+You can use the [`NODE_OPTIONS` environment variable][node-options] to start a debugging session:
+
+```shellscript nonumber
+NODE_OPTIONS="--inspect-brk" npm run dev`
+```
+
+Then you can attach a debugger from your browser.
+For example, in Chrome you can open up `chrome://inspect` or click the NodeJS icon in the dev tools to attach the debugger.
+
+#### vite-plugin-inspect
+
+[`vite-plugin-inspect`][vite-plugin-inspect] shows you each how each Vite plugin transforms your code and how long each plugin takes.
+
+## Performance
+
+Remix includes a `--profile` flag for performance profiling.
+
+```shellscript nonumber
+remix vite:build --profile
+```
+
+When running with `--profile`, a `.cpuprofile` file will be generated that can be shared or upload to speedscope.app to for analysis.
+
+You can also profile in dev by pressing `p + enter` while the dev server is running to start a new profiling session or stop the current session.
+If you need to profile dev server startup, you can also use the `--profile` flag to initialize a profiling session on startup:
+
+```shellscript nonumber
+remix vite:dev --profile
+```
+
+Remember that you can always check the [Vite performance docs][vite-perf] for more tips!
+
+#### Bundle analysis
+
+To visualize and analyze your bundle, you can use the [rollup-plugin-visualizer][rollup-plugin-visualizer] plugin:
+
+```ts filename=vite.config.ts
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { visualizer } from "rollup-plugin-visualizer";
+
+export default defineConfig({
+  plugins: [
+    remix(),
+    // `emitFile` is necessary since Remix builds more than one bundle!
+    visualizer({ emitFile: true }),
+  ],
+});
+```
+
+Then when you run `remix vite:build`, it'll generate a `stats.html` file in each of your bundles:
+
+```
+build
+├── client
+│   ├── assets/
+│   ├── favicon.ico
+│   └── stats.html 👈
+└── server
+    ├── index.js
+    └── stats.html 👈
+```
+
+Open up `stats.html` in your browser to analyze your bundle.
+
 ## Troubleshooting
 
-Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
+Check the [debugging][debugging] and [performance][performance] sections for general troubleshooting tips.
+Also, see if anyone else is having a similar problem by looking through the [known issues with the remix vite plugin on github][issues-vite].
 
 #### HMR
 
@@ -666,7 +741,7 @@ Vite supports both ESM and CJS dependencies, but sometimes you might still run i
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
 
-To diagnose if your one of dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
+To diagnose if one of your dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
 
 Finally, you can also explicitly configure which dependencies to bundle into your server bundled
@@ -802,3 +877,9 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [global-node-polyfills]: ../other-api/node#polyfills
 [server-bundles]: ./server-bundles
 [fullstack-components]: https://www.epicweb.dev/full-stack-components
+[vite-plugin-inspect]: https://github.com/antfu/vite-plugin-inspect
+[vite-perf]: https://vitejs.dev/guide/performance.html
+[node-options]: https://nodejs.org/api/cli.html#node_optionsoptions
+[rollup-plugin-visualizer]: https://github.com/btd/rollup-plugin-visualizer
+[debugging]: #debugging
+[performance]: #performance

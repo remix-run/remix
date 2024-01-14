@@ -35,6 +35,9 @@ npx create-remix@latest --template remix-run/remix/templates/cloudflare-workers
 npx create-remix@latest --template remix-run/remix/templates/deno
 npx create-remix@latest --template remix-run/remix/templates/express
 npx create-remix@latest --template remix-run/remix/templates/fly
+
+## SPA Mode
+npx create-remix@latest --template remix-run/remix/templates/spa
 ```
 
 ### Third-Party Templates

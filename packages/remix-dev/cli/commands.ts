@@ -6,6 +6,7 @@ import prettyMs from "pretty-ms";
 import PackageJson from "@npmcli/package-json";
 import pc from "picocolors";
 import { pathToFileURL } from "node:url";
+import exitHook from "exit-hook";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -21,6 +22,7 @@ import { transpile as convertFileToJS } from "./useJavascript";
 import type { Options } from "../compiler/options";
 import { createFileWatchCache } from "../compiler/fileWatchCache";
 import { logger } from "../tux";
+import * as profiler from "../vite/profiler";
 
 type InitFlags = {
   deleteScript?: boolean;
@@ -181,7 +183,14 @@ export async function viteBuild(
   }
 
   let { build } = await import("../vite/build");
-  await build(root, options);
+  if (options.profile) {
+    await profiler.start();
+  }
+  try {
+    await build(root, options);
+  } finally {
+    await profiler.stop(logger.info);
+  }
 }
 
 export async function watch(
@@ -229,6 +238,10 @@ export async function dev(
 
 export async function viteDev(root: string, options: ViteDevOptions = {}) {
   let { dev } = await import("../vite/dev");
+  if (options.profile) {
+    await profiler.start();
+  }
+  exitHook(() => profiler.stop(console.info));
   await dev(root, options);
 
   // keep `remix vite-dev` alive by waiting indefinitely
