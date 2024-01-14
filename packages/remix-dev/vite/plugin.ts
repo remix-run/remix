@@ -9,6 +9,7 @@ import babel from "@babel/core";
 import {
   type ServerBuild,
   unstable_setDevServerHooks as setDevServerHooks,
+  createRequestHandler,
 } from "@remix-run/server-runtime";
 import {
   init as initEsModuleLexer,
@@ -27,7 +28,8 @@ import {
 } from "../config";
 import { type Manifest } from "../manifest";
 import invariant from "../invariant";
-import { createRequestHandler } from "./node/adapter";
+import type { NodeRequestHandler } from "./adapter";
+import { fromNodeRequest, toNodeRequest } from "./adapter";
 import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
@@ -120,6 +122,7 @@ type AdapterRemixConfigOverrides = Pick<
 >;
 
 type AdapterConfig = AdapterRemixConfigOverrides & {
+  loadContext?: Record<string, unknown>;
   buildEnd?: BuildEndHook;
 };
 
@@ -925,7 +928,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           );
         }
       },
-      configureServer(viteDevServer) {
+      async configureServer(viteDevServer) {
         setDevServerHooks({
           // Give the request handler access to the critical CSS in dev to avoid a
           // flash of unstyled content since Vite injects CSS file contents via JS
@@ -982,11 +985,17 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   serverBuildId
                 )) as ServerBuild;
 
-                let handle = createRequestHandler(build, {
-                  mode: "development",
-                });
-
-                await handle(req, res);
+                let handler = createRequestHandler(build, "development");
+                let nodeHandler: NodeRequestHandler = async (
+                  nodeReq,
+                  nodeRes
+                ) => {
+                  let req = fromNodeRequest(nodeReq);
+                  let { adapter } = remixConfig;
+                  let res = await handler(req, adapter?.loadContext);
+                  await toNodeRequest(res, nodeRes);
+                };
+                await nodeHandler(req, res);
               } catch (error) {
                 next(error);
               }
