@@ -726,7 +726,7 @@ If you see errors in the browser console during development that point to server
 For example, if you see something like:
 
 ```shellscript
-ERROR: `process` is undefined
+Uncaught ReferenceError: process is not defined
 ```
 
 Then you'll need to track down which module is pulling in dependencies that except server-only globals like `process` and isolate code either in a [separate `.server` module or with `vite-env-only`][explicitly-isolate-server-only-code].
