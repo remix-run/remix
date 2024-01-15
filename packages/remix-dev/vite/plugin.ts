@@ -93,8 +93,39 @@ type ServerBundlesFunction = (args: {
   branch: BranchRoute[];
 }) => string | Promise<string>;
 
+const SUPPORTED_ADAPTER_OPTIONS = [
+  "unstable_serverBundles",
+] as const satisfies ReadonlyArray<keyof RemixVitePluginOptions>;
+type RemixViteAdapterOptions = Pick<
+  RemixVitePluginOptions,
+  typeof SUPPORTED_ADAPTER_OPTIONS[number]
+>;
+
+export type ServerBundlesManifest = {
+  serverBundles: {
+    [serverBundleId: string]: {
+      id: string;
+      file: string;
+    };
+  };
+  routeIdToServerBundleId: Record<string, string>;
+  routes: RouteManifest;
+};
+
+export type RemixVitePluginAdapter = {
+  options?: (
+    options: RemixVitePluginOptions
+  ) => RemixViteAdapterOptions | Promise<RemixViteAdapterOptions>;
+  buildEnd?: BuildEndFunction;
+};
+
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
   Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides> & {
+    /**
+     * An adapter for customizing the dev environment and/or build output to
+     * target different hosting providers.
+     */
+    unstable_adapter?: RemixVitePluginAdapter;
     /**
      * The path to the server build directory, relative to the project. This
      * directory should be deployed to your server. Defaults to
@@ -122,6 +153,16 @@ export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
     unstable_ssr?: boolean;
   };
 
+type BuildEndFunction = (
+  args: Pick<
+    ResolvedRemixVitePluginConfig,
+    | "assetsBuildDirectory"
+    | "isSpaMode"
+    | "serverBuildDirectory"
+    | "serverBuildFile"
+  > & { serverBundlesManifest: ServerBundlesManifest | undefined }
+) => void | Promise<void>;
+
 export type ResolvedRemixVitePluginConfig = Pick<
   ResolvedRemixConfig,
   | "appDirectory"
@@ -139,6 +180,7 @@ export type ResolvedRemixVitePluginConfig = Pick<
   serverBuildDirectory: string;
   serverBuildFile: string;
   serverBundles?: ServerBundlesFunction;
+  buildEnd?: BuildEndFunction;
 };
 
 export type ServerBuildConfig = {
@@ -331,6 +373,49 @@ const getRouteModuleExports = async (
   return exportNames;
 };
 
+function assertUnreachable(x: never): never {
+  throw new Error("Should not have reached here");
+}
+
+const getAdapterOptions = async (
+  options: RemixVitePluginOptions
+): Promise<RemixViteAdapterOptions> => {
+  let resolvedAdapterOptions: RemixViteAdapterOptions = {};
+
+  if (!options.unstable_adapter?.options) {
+    return resolvedAdapterOptions;
+  }
+
+  let adapterOptions = await options.unstable_adapter?.options(options);
+
+  for (let key of Object.keys(adapterOptions) as Array<
+    keyof typeof adapterOptions
+  >) {
+    if (!SUPPORTED_ADAPTER_OPTIONS.includes(key)) {
+      throw new Error(
+        `The "${key}" key is not supported in the return value from Remix adapter's "options" hook`
+      );
+    }
+
+    let value = adapterOptions[key];
+
+    if (value === undefined) {
+      continue;
+    }
+
+    switch (key) {
+      case "unstable_serverBundles": {
+        resolvedAdapterOptions[key] = value;
+        continue;
+      }
+      default:
+        assertUnreachable(key);
+    }
+  }
+
+  return resolvedAdapterOptions;
+};
+
 const getViteMajorVersion = (): number => {
   let vitePkg = require("vite/package.json");
   return parseInt(vitePkg.version.split(".")[0]!);
@@ -353,6 +438,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
 
   let viteChildCompiler: Vite.ViteDevServer | null = null;
   let cachedPluginConfig: ResolvedRemixVitePluginConfig | undefined;
+
+  let resolveAdapterHooks = () => {
+    return {
+      buildEnd: options.unstable_adapter?.buildEnd,
+    };
+  };
 
   let resolveServerBuildConfig = (): ServerBuildConfig | null => {
     if (
@@ -382,6 +473,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       let pluginConfig = {
         ...defaults,
         ...options,
+        ...(await getAdapterOptions(options)),
       };
 
       let rootDirectory =
@@ -411,9 +503,11 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         serverModuleFormat,
         relativeAssetsBuildDirectory,
         future,
+        buildEnd,
       } = {
         ...pluginConfig,
         ...resolvedRemixConfig,
+        ...resolveAdapterHooks(),
         ...resolveServerBuildConfig(),
       };
 
@@ -444,6 +538,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         isSpaMode,
         relativeAssetsBuildDirectory,
         future,
+        buildEnd,
       };
     };
 

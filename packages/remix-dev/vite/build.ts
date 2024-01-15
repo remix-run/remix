@@ -6,6 +6,7 @@ import colors from "picocolors";
 import {
   type ResolvedRemixVitePluginConfig,
   type ServerBuildConfig,
+  type ServerBundlesManifest,
   configRouteToBranchRoute,
 } from "./plugin";
 import type { ConfigRoute, RouteManifest } from "../config/routes";
@@ -82,17 +83,6 @@ function getRouteBranch(routes: RouteManifest, routeId: string) {
 
   return branch.reverse();
 }
-
-export type ServerBundlesManifest = {
-  serverBundles: {
-    [serverBundleId: string]: {
-      id: string;
-      file: string;
-    };
-  };
-  routeIdToServerBundleId: Record<string, string>;
-  routes: RouteManifest;
-};
 
 async function getServerBuilds({
   routes,
@@ -265,4 +255,23 @@ export async function build(
       "utf-8"
     );
   }
+
+  let {
+    isSpaMode,
+    assetsBuildDirectory,
+    serverBuildDirectory,
+    serverBuildFile,
+  } = pluginConfig;
+
+  // Should this already be absolute on the resolved config object?
+  // In the meantime, we make it absolute before passing to adapter hooks
+  serverBuildDirectory = path.resolve(root, serverBuildDirectory);
+
+  await pluginConfig.buildEnd?.({
+    isSpaMode,
+    assetsBuildDirectory,
+    serverBuildDirectory,
+    serverBuildFile,
+    serverBundlesManifest,
+  });
 }
