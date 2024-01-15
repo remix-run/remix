@@ -182,6 +182,21 @@ export default defineConfig({
 });
 ```
 
+Additional dev server options such as changing the default dev port (5173) or automatically opening the app in the browser on server start can be provided using Vite's [server options](https://vitejs.dev/config/server-options.html):
+```ts filename=vite.config.ts lines=[2-5]
+export default defineConfig({
+  server: {
+    port: 3000,
+    open: true,
+  },
+  plugins: [
+    remix({
+      ignoredRouteFiles: ["**/.*"],
+    }),
+  ],
+});
+```
+
 #### TypeScript integration
 
 Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
