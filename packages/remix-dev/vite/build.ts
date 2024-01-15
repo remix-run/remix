@@ -189,6 +189,7 @@ export interface ViteBuildOptions {
   logLevel?: Vite.LogLevel;
   minify?: Vite.BuildOptions["minify"];
   mode?: string;
+  profile?: boolean;
 }
 
 export async function build(
