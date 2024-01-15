@@ -182,6 +182,20 @@ export default defineConfig({
 });
 ```
 
+To change the default Vite dev port (5173) you can provide [`server.port`](https://vitejs.dev/config/server-options.html#server-port) in the config file:
+```ts filename=vite.config.ts lines=[2-4]
+export default defineConfig({
+  server: {
+    port: 3000
+  },
+  plugins: [
+    remix({
+      ignoredRouteFiles: ["**/.*"],
+    }),
+  ],
+});
+```
+
 #### TypeScript integration
 
 Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
