@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test, expect } from "@playwright/test";
+import { normalizePath } from "vite";
 import getPort from "get-port";
 
 import {
@@ -64,17 +65,16 @@ test.describe(async () => {
       fs.readFileSync(path.join(cwd, "BUILD_END_ARGS.json"), "utf8")
     );
 
+    // Before rewriting to relative paths, assert that paths are absolute
     expect(path.isAbsolute(buildEndArgs.serverBuildDirectory)).toBe(true);
     expect(path.isAbsolute(buildEndArgs.assetsBuildDirectory)).toBe(true);
 
-    // Rewrite args to be relative for snapshot
-    buildEndArgs.serverBuildDirectory = path.relative(
-      cwd,
-      buildEndArgs.serverBuildDirectory
+    // Rewrite path args to be relative and normalized for snapshot test
+    buildEndArgs.serverBuildDirectory = normalizePath(
+      path.relative(cwd, buildEndArgs.serverBuildDirectory)
     );
-    buildEndArgs.assetsBuildDirectory = path.relative(
-      cwd,
-      buildEndArgs.assetsBuildDirectory
+    buildEndArgs.assetsBuildDirectory = normalizePath(
+      path.relative(cwd, buildEndArgs.assetsBuildDirectory)
     );
 
     expect(buildEndArgs).toEqual({
