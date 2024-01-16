@@ -1,5 +1,14 @@
 # `create-remix`
 
+## 2.5.1-pre.0
+
+### Patch Changes
+
+- create-remix: high-contrast fg/bg for header colors ([#8503](https://github.com/remix-run/remix/pull/8503))
+
+  `bgWhite` and `whiteBright` are the same color in many terminal colorthemes,
+  which was causing it to render as illegible white-on-white
+
 ## 2.5.0
 
 ### Patch Changes
