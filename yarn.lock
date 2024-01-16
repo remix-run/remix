@@ -2319,11 +2319,6 @@
   resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.14.2.tgz#4d58f59908d9197ba3179310077f25c88e49ed17"
   integrity sha512-ACXpdMM9hmKZww21yEqWwiLws/UPLhNKvimN8RrYSqPSvB3ov7sLvAcfvaxePeLvccTQKGdkDIhLYApZVDFuKg==
 
-"@remix-run/router@1.14.2-pre.0":
-  version "1.14.2-pre.0"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.14.2-pre.0.tgz#eff6ef41bafde5554609587bac233720de4926ff"
-  integrity sha512-STba7nhMo4vwFAM3HEffQ38s0Xy7WBSv/cZw6Y6uynD1gJSwXRhW3jvHVl83ueLbWx+vdUgaNMRof2eJuv/eTg==
-
 "@remix-run/web-blob@^3.1.0":
   version "3.1.0"
   resolved "https://registry.npmjs.org/@remix-run/web-blob/-/web-blob-3.1.0.tgz#e0c669934c1eb6028960047e57a13ed38bbfb434"
