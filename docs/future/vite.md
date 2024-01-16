@@ -774,6 +774,80 @@ For example, to use a Vite config specifically scoped to Remix:
 remix vite:dev --config vite.config.remix.ts
 ```
 
+#### Styles disappearing in development when document remounts
+
+To support lazy-loading and HMR of CSS files during development, Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect.
+
+For example, if your app has the following CSS file:
+
+<!-- prettier-ignore -->
+```css filename=app/styles.css
+* { margin: 0 }
+```
+
+During development (not in production!) this CSS file will be transformed into the following code when imported as a side effect:
+
+<!-- prettier-ignore-start -->
+<!-- eslint-skip -->
+```js
+import {createHotContext as __vite__createHotContext} from "/@vite/client";
+import.meta.hot = __vite__createHotContext("/app/styles.css");
+import {updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle} from "/@vite/client";
+const __vite__id = "/path/to/app/styles.css";
+const __vite__css = "*{margin:0}"
+__vite__updateStyle(__vite__id, __vite__css);
+import.meta.hot.accept();
+import.meta.hot.prune(()=>__vite__removeStyle(__vite__id));
+```
+<!-- prettier-ignore-end -->
+
+However, when React is used to render the entire document (as Remix does) you can run into issues when there are elements in the page that React isn't aware of, like the `style` element injected by the code above.
+
+**Again, it's worth stressing that this issue only happens in development. Production builds won't have this issue since actual CSS files are generated.**
+
+In terms of its impact on styling, when the document is remounted from the root, React removes the existing `head` element and replaces it with an entirely new one. This means that any additional `style` elements that Vite injected will be lost. In Remix, this can happen when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
+
+**This is a known React issue** that is fixed in their [canary release channel][react-canaries] and should be available in a future stable release. If you understand the risks involved, you can choose to adopt a canary version of React by using [package overrides][package-overrides] and pinning to the exact version you'd like to use. For example:
+
+```json filename=package.json
+{
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+    // etc.
+  },
+  "overrides": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  }
+}
+```
+
+For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect even though it's not something Remix provides as a default.
+
+If you'd like a more stable workaround, you can instead avoid providing `ErrorBoundary` and `HydrateFallback` exports from your root route. This ensures that the `head` element is owned by a single React component that never remounts, so Vite's `style` elements are never removed.
+
+Instead, you can export your root route's `ErrorBoundary` and `HydrateFallback` components from a top-level layout route. For example, when using the default route convention, you could add a layout route called `routes/_boundary.tsx`:
+
+```tsx filename=app/routes/_boundary.tsx
+import { Outlet } from "@remix-run/react";
+
+export function ErrorBoundary() {
+  return <p>Oops, something went wrong!</p>;
+}
+
+export function HydrateFallback() {
+  return <p>Loading...</p>;
+}
+
+// Passthrough to matching child route:
+export default function BoundaryRoute() {
+  return <Outlet />;
+}
+```
+
+You would then nest all other routes within this, e.g. `app/routes/about.tsx` would become `app/routes/_boundary.about.tsx`, etc.
+
 ## Acknowledgements
 
 Vite is an amazing project, and we're grateful to the Vite team for their work.
@@ -855,3 +929,8 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [server-vs-client]: ../discussion/server-vs-client.md
 [vite-env-only]: https://github.com/pcattori/vite-env-only
 [explicitly-isolate-server-only-code]: #splitting-up-client-and-server-code
+[route-component]: ../route/component
+[error-boundary]: ../route/error-boundary
+[hydrate-fallback]: ../route/hydrate-fallback
+[react-canaries]: https://react.dev/blog/2023/05/03/react-canaries
+[package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides
