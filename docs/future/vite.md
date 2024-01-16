@@ -788,7 +788,9 @@ For example, if your app has the following CSS file:
 During development (not in production!) this CSS file will be transformed into the following code when imported as a side effect:
 
 <!-- prettier-ignore-start -->
+
 <!-- eslint-skip -->
+
 ```js
 import {createHotContext as __vite__createHotContext} from "/@vite/client";
 import.meta.hot = __vite__createHotContext("/app/styles.css");
@@ -799,6 +801,7 @@ __vite__updateStyle(__vite__id, __vite__css);
 import.meta.hot.accept();
 import.meta.hot.prune(()=>__vite__removeStyle(__vite__id));
 ```
+
 <!-- prettier-ignore-end -->
 
 However, when React is used to render the entire document (as Remix does) you can run into issues when there are elements in the page that React isn't aware of, like the `style` element injected by the code above.
