@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Fix quirks mode warning for SPA template and default server entry
+Automatically prepend `<!DOCTYPE html>` if not present to fix quirks mode warnings for SPA template
