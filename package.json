@@ -54,6 +54,7 @@
     "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\"",
     "postinstall": "patch-package"
   },
+  "packageManager": "yarn@1.22.21",
   "resolutions": {
     "jsdom": "^22.0.0"
   },
