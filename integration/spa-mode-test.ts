@@ -540,7 +540,9 @@ test.describe("SPA Mode", () => {
         },
       });
       let res = await fixture.requestDocument("/");
-      expect(await res.text()).not.toMatch(/<!DOCTYPE html>/);
+      let html = await res.text();
+      expect(html).toMatch(/^<div>/);
+      expect(html).not.toMatch(/<!DOCTYPE html>/);
     });
   });
 });
