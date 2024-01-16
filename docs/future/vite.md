@@ -776,16 +776,41 @@ remix vite:dev --config vite.config.remix.ts
 
 #### Styles disappearing in development when document remounts
 
-To support lazy-loading and HMR of CSS files during development, Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect.
+When React is used to render the entire document (as Remix does) you can run into issues when elements are dynamically injected into the `head` element. If the document is re-mounted, the existing `head` element is removed and replaced with an entirely new one, removing any `style` elements that Vite injects during development.
 
-For example, if your app has the following CSS file:
+This is a known React issue that is fixed in their [canary release channel][react-canaries]. If you understand the risks involved, you can pin your app to a specific [React version][react-versions] and then use [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
+
+```json filename=package.json
+{
+  "dependencies": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  },
+  "overrides": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  }
+}
+```
+
+<docs-info>For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect, even though it's not something Remix provides as a default.</docs-info>
+
+**It's worth stressing that this issue with styles that were injected by Vite only happens in development. Production builds won't have this issue since static CSS files are generated.**
+
+In Remix, this issue can surface when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
+
+It can also happen due to hydration errors since it causes React to re-render the entire page from scratch. Hydration errors can be caused by your app code, but they can also be caused by browser extensions that manipulate the document.
+
+This issue is relevant for Vite consumers because, to support lazy-loading and HMR of static CSS files during development, Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect.
+
+For example, let's assume your app has the following CSS file:
 
 <!-- prettier-ignore -->
 ```css filename=app/styles.css
 * { margin: 0 }
 ```
 
-During development (not in production!) this CSS file will be transformed into the following code when imported as a side effect:
+During development, this CSS file will be transformed into the following JavaScript code when imported as a side effect:
 
 <!-- prettier-ignore-start -->
 
@@ -804,51 +829,7 @@ import.meta.hot.prune(()=>__vite__removeStyle(__vite__id));
 
 <!-- prettier-ignore-end -->
 
-However, when React is used to render the entire document (as Remix does) you can run into issues when there are elements in the page that React isn't aware of, like the `style` element injected by the code above.
-
-**Again, it's worth stressing that this issue only happens in development. Production builds won't have this issue since actual CSS files are generated.**
-
-In terms of its impact on styling, when the document is remounted from the root, React removes the existing `head` element and replaces it with an entirely new one. This means that any additional `style` elements that Vite injected will be lost. In Remix, this can happen when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
-
-**This is a known React issue** that is fixed in their [canary release channel][react-canaries] and should be available in a future stable release. If you understand the risks involved, you can choose to adopt a canary version of React by pinning to the desired version and then using [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
-
-```json filename=package.json
-{
-  "dependencies": {
-    "react": "18.3.0-canary-...",
-    "react-dom": "18.3.0-canary-..."
-  },
-  "overrides": {
-    "react": "18.3.0-canary-...",
-    "react-dom": "18.3.0-canary-..."
-  }
-}
-```
-
-For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect even though it's not something Remix provides as a default.
-
-If you'd like a more stable workaround, you can instead avoid providing `ErrorBoundary` and `HydrateFallback` exports from your root route. This ensures that the `head` element is owned by a single React component that never remounts, so Vite's `style` elements are never removed.
-
-Instead, you can export your root route's `ErrorBoundary` and `HydrateFallback` components from a top-level layout route. For example, when using the default route convention, you could add a layout route called `routes/_boundary.tsx`:
-
-```tsx filename=app/routes/_boundary.tsx
-import { Outlet } from "@remix-run/react";
-
-export function ErrorBoundary() {
-  return <p>Oops, something went wrong!</p>;
-}
-
-export function HydrateFallback() {
-  return <p>Loading...</p>;
-}
-
-// Passthrough to matching child route:
-export default function BoundaryRoute() {
-  return <Outlet />;
-}
-```
-
-You would then nest all other routes within this, e.g. `app/routes/about.tsx` would become `app/routes/_boundary.about.tsx`, etc.
+This transformation is not applied to production code, which is why this styling issue only affects development.
 
 ## Acknowledgements
 
@@ -935,4 +916,5 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [error-boundary]: ../route/error-boundary
 [hydrate-fallback]: ../route/hydrate-fallback
 [react-canaries]: https://react.dev/blog/2023/05/03/react-canaries
+[react-versions]: https://www.npmjs.com/package/react?activeTab=versions
 [package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides
