@@ -20,5 +20,15 @@
     "@remix-run/server-runtime": "2.5.0",
     "@remix-run/testing": "2.5.0"
   },
-  "changesets": []
+  "changesets": [
+    "breezy-cows-battle",
+    "fresh-shoes-drive",
+    "giant-otters-protect",
+    "olive-vans-explain",
+    "polite-weeks-poke",
+    "rich-clouds-fix",
+    "twenty-pandas-attend",
+    "wet-sheep-call",
+    "wild-timers-impress"
+  ]
 }
