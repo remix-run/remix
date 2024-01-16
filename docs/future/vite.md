@@ -810,14 +810,13 @@ However, when React is used to render the entire document (as Remix does) you ca
 
 In terms of its impact on styling, when the document is remounted from the root, React removes the existing `head` element and replaces it with an entirely new one. This means that any additional `style` elements that Vite injected will be lost. In Remix, this can happen when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
 
-**This is a known React issue** that is fixed in their [canary release channel][react-canaries] and should be available in a future stable release. If you understand the risks involved, you can choose to adopt a canary version of React by using [package overrides][package-overrides] and pinning to the exact version you'd like to use. For example:
+**This is a known React issue** that is fixed in their [canary release channel][react-canaries] and should be available in a future stable release. If you understand the risks involved, you can choose to adopt a canary version of React by pinning to the desired version and then using [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
 
 ```json filename=package.json
 {
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-    // etc.
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
   },
   "overrides": {
     "react": "18.3.0-canary-...",
