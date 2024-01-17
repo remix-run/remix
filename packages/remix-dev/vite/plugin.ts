@@ -173,12 +173,12 @@ export type ResolvedRemixVitePluginConfig = Pick<
   | "entryClientFilePath"
   | "entryServerFilePath"
   | "future"
-  | "isSpaMode"
   | "publicPath"
   | "relativeAssetsBuildDirectory"
   | "routes"
   | "serverModuleFormat"
 > & {
+  isSpaMode: boolean;
   serverBuildDirectory: string;
   serverBuildFile: string;
   serverBundles?: ServerBundlesFunction;
