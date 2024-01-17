@@ -16,6 +16,7 @@ import {
 } from "es-module-lexer";
 import jsesc from "jsesc";
 import pick from "lodash/pick";
+import omit from "lodash/omit";
 import colors from "picocolors";
 
 import { type ConfigRoute, type RouteManifest } from "../config/routes";
@@ -112,13 +113,9 @@ type AdapterOverrides = Pick<
   typeof adapterOverrideKeys[number]
 >;
 
-type AdapterConfig = {
+type AdapterConfig = AdapterOverrides & {
   buildEnd?: BuildEndFunction;
 };
-type AdapterConfigKey = keyof AdapterConfig;
-const adapterConfigKeys = Object.keys({
-  buildEnd: null,
-} as const satisfies Record<AdapterConfigKey, null>) as Array<AdapterConfigKey>;
 
 export type RemixVitePluginAdapter = (args: {
   remixConfig: RemixVitePluginOptions;
@@ -419,19 +416,14 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
   };
 
   let resolveAdapter = async () => {
-    let adapter = options.adapter
-      ? await options.adapter({ remixConfig: options })
-      : null;
-    let adapterOverrides: AdapterOverrides = pick(
-      adapter ?? {},
+    let adapter = (await options.adapter?.({ remixConfig: options })) ?? {};
+    let adapterOverrides: AdapterOverrides = pick(adapter, adapterOverrideKeys);
+    let adapterWithoutOverrides: AdapterConfig = omit(
+      adapter,
       adapterOverrideKeys
     );
-    let adapterConfig: AdapterConfig = pick(adapter ?? {}, adapterConfigKeys);
 
-    return {
-      adapterOverrides,
-      adapterConfig,
-    };
+    return { adapterOverrides, adapterWithoutOverrides };
   };
 
   let resolvePluginConfig =
@@ -444,7 +436,8 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         unstable_ssr: true,
       } as const satisfies Partial<RemixVitePluginOptions>;
 
-      let { adapterOverrides, adapterConfig } = await resolveAdapter();
+      let { adapterOverrides, adapterWithoutOverrides } =
+        await resolveAdapter();
 
       let pluginConfig = {
         ...defaults,
@@ -498,7 +491,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       }
 
       return {
-        ...adapterConfig,
+        ...adapterWithoutOverrides,
         appDirectory,
         rootDirectory,
         assetsBuildDirectory,
