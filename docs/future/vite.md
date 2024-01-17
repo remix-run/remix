@@ -808,13 +808,13 @@ This is a known React issue that is fixed in their [canary release channel][reac
 
 <docs-info>For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect, even though it's not something Remix provides as a default.</docs-info>
 
-**It's worth stressing that this issue with styles that were injected by Vite only happens in development. Production builds won't have this issue since static CSS files are generated.**
+It's worth stressing that this issue with styles that were injected by Vite only happens in development. **Production builds won't have this issue** since static CSS files are generated.
 
 In Remix, this issue can surface when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
 
 It can also happen due to hydration errors since it causes React to re-render the entire page from scratch. Hydration errors can be caused by your app code, but they can also be caused by browser extensions that manipulate the document.
 
-This issue is relevant for Vite consumers because, to support lazy-loading and HMR of static CSS files during development, Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect.
+This is relevant for Vite because—during development—Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect. Vite does this to support lazy-loading and HMR of static CSS files.
 
 For example, let's assume your app has the following CSS file:
 
