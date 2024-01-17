@@ -155,15 +155,14 @@ export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
     unstable_ssr?: boolean;
   };
 
-type BuildEndFunction = (
-  args: Pick<
-    ResolvedRemixVitePluginConfig,
-    "assetsBuildDirectory" | "serverBuildDirectory" | "serverBuildFile"
-  > & {
-    serverBundlesManifest: ServerBundlesManifest | undefined;
-    unstable_ssr: boolean;
-  }
-) => void | Promise<void>;
+type BuildEndArgs = Pick<
+  ResolvedRemixVitePluginConfig,
+  "assetsBuildDirectory" | "serverBuildDirectory" | "serverBuildFile"
+> & {
+  serverBundlesManifest: ServerBundlesManifest | undefined;
+  unstable_ssr: boolean;
+};
+type BuildEndFunction = (args: BuildEndArgs) => void | Promise<void>;
 
 export type ResolvedRemixVitePluginConfig = Pick<
   ResolvedRemixConfig,
