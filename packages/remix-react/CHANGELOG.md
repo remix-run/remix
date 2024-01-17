@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.5.1-pre.1
+
+### Patch Changes
+
+- Only use active matches in meta/links in SPA mode ([#8538](https://github.com/remix-run/remix/pull/8538))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.5.1-pre.1`
+
 ## 2.5.1-pre.0
 
 ### Patch Changes
