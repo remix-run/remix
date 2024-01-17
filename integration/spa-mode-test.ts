@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 import {
   createAppFixture,
   createFixture,
+  css,
   js,
 } from "./helpers/create-fixture.js";
 import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
@@ -276,9 +277,32 @@ test.describe("SPA Mode", () => {
               plugins: [remix({ unstable_ssr: false })],
             });
           `,
+          "public/styles-root.css": css`
+            body {
+              background-color: rgba(255, 0, 0, 0.25);
+            }
+          `,
+          "public/styles-index.css": css`
+            body {
+              background-color: rgba(0, 255, 0, 0.25);
+            }
+          `,
           "app/root.tsx": js`
             import * as React from "react";
             import { Form, Link, Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+            export function meta({ data }) {
+              return [{
+                title: "Root Title"
+              }];
+            }
+
+            export function links() {
+              return [{
+                rel: "stylesheet",
+                href: "styles-root.css"
+              }];
+            }
 
             export default function Root() {
               let id = React.useId();
@@ -347,6 +371,13 @@ test.describe("SPA Mode", () => {
             export function meta({ data }) {
               return [{
                 title: "Index Title: " + data
+              }];
+            }
+
+            export function links() {
+              return [{
+                rel: "stylesheet",
+                href: "styles-index.css"
               }];
             }
 
@@ -436,8 +467,27 @@ test.describe("SPA Mode", () => {
     test("renders the root HydrateFallback initially", async ({ page }) => {
       let res = await fixture.requestDocument("/");
       let html = await res.text();
-      expect(html).toMatch("<title>Index Title: undefined</title>");
       expect(html).toMatch('<h1 data-loading="true">Loading SPA...</h1>');
+    });
+
+    test("does not include Meta/Links from routes below the root", async ({
+      page,
+    }) => {
+      let res = await fixture.requestDocument("/");
+      let html = await res.text();
+      expect(html).toMatch("<title>Root Title</title>");
+      expect(html).toMatch('<link rel="stylesheet" href="styles-root.css"/>');
+      expect(html).not.toMatch("Index Title");
+      expect(html).not.toMatch("styles-index.css");
+
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await page.waitForSelector("[data-mounted]");
+      expect(await page.locator('link[href="styles-index.css"]')).toBeDefined();
+      expect(await page.locator("[data-route]").textContent()).toBe("Index");
+      expect(await page.locator("title").textContent()).toBe(
+        "Index Title: Index Loader Data"
+      );
     });
 
     test("hydrates", async ({ page }) => {
