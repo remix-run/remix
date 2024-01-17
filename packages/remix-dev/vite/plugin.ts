@@ -416,7 +416,13 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
   };
 
   let resolveAdapter = async () => {
-    let adapter = (await options.adapter?.({ remixConfig: options })) ?? {};
+    let adapter = options.adapter
+      ? await options.adapter({
+          // We only pass in the plugin options that the user defined. We don't
+          // know the final resolved config until the adapter has been resolved.
+          remixConfig: options,
+        })
+      : {};
     let adapterOverrides: AdapterOverrides = pick(adapter, adapterOverrideKeys);
     let adapterWithoutOverrides: AdapterWithoutOverrides = omit(
       adapter,
