@@ -269,7 +269,11 @@ export async function build(
   serverBuildDirectory = path.resolve(root, serverBuildDirectory);
 
   await pluginConfig.buildEnd?.({
-    isSpaMode,
+    // Since this is public API, these properties need to mirror the options
+    // passed to the Remix plugin. This means we need to translate our internal
+    // names back to their original public counterparts. It's probably worth
+    // aligning these internally so we don't need this translation layer.
+    unstable_ssr: !isSpaMode,
     assetsBuildDirectory,
     serverBuildDirectory,
     serverBuildFile,

@@ -23,20 +23,16 @@ test.describe(async () => {
         port,
         pluginOptions: `
           {
-            unstable_adapter: {
-              async options(options) {
-                return {
-                  unstable_serverBundles(...args) {
-                    // This lets us assert that user options are passed to adapter options hook
-                    return options.unstable_serverBundles?.(...args) + "--adapter-options";
-                  }
-                }
+            adapter: async ({ remixConfig }) => ({
+              unstable_serverBundles(...args) {
+                // This lets us assert that user options are passed to adapter options hook
+                return remixConfig.unstable_serverBundles?.(...args) + "--adapter-options";
               },
               async buildEnd(args) {
                 let fs = await import("node:fs/promises");
                 await fs.writeFile("BUILD_END_ARGS.json", JSON.stringify(args, null, 2), "utf-8");
               }
-            },
+            }),
             
             unstable_serverBundles() {
               return "user-options";
@@ -49,7 +45,7 @@ test.describe(async () => {
   });
   test.afterAll(() => stop());
 
-  test("Vite / adapter / options and buildEnd hooks", async () => {
+  test("Vite / adapter / unstable_serverBundles and buildEnd hooks", async () => {
     let { status } = viteBuild({ cwd });
     expect(status).toBe(0);
 
@@ -79,7 +75,6 @@ test.describe(async () => {
 
     expect(buildEndArgs).toEqual({
       assetsBuildDirectory: "build/client",
-      isSpaMode: false,
       serverBuildDirectory: "build/server",
       serverBuildFile: "index.js",
       serverBundlesManifest: {
@@ -106,6 +101,7 @@ test.describe(async () => {
           },
         },
       },
+      unstable_ssr: true,
     });
   });
 });
