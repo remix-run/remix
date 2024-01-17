@@ -104,21 +104,25 @@ export type ServerBundlesManifest = {
   routes: RouteManifest;
 };
 
-const SUPPORTED_ADAPTER_OPTIONS = [
+const adapterOverrideKeys = [
   "unstable_serverBundles",
 ] as const satisfies ReadonlyArray<keyof RemixVitePluginOptions>;
-type SupportedAdapterOptions = Pick<
+type AdapterOverrides = Pick<
   RemixVitePluginOptions,
-  typeof SUPPORTED_ADAPTER_OPTIONS[number]
+  typeof adapterOverrideKeys[number]
 >;
 
-type AdapterHooks = {
+type AdapterConfig = {
   buildEnd?: BuildEndFunction;
 };
+type AdapterConfigKey = keyof AdapterConfig;
+const adapterConfigKeys = Object.keys({
+  buildEnd: null,
+} as const satisfies Record<AdapterConfigKey, null>) as Array<AdapterConfigKey>;
 
 export type RemixVitePluginAdapter = (args: {
   remixConfig: RemixVitePluginOptions;
-}) => Promise<SupportedAdapterOptions & AdapterHooks>;
+}) => Promise<AdapterOverrides & AdapterConfig>;
 
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
   Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides> & {
@@ -181,8 +185,7 @@ export type ResolvedRemixVitePluginConfig = Pick<
   serverBuildDirectory: string;
   serverBuildFile: string;
   serverBundles?: ServerBundlesFunction;
-  buildEnd?: BuildEndFunction;
-};
+} & AdapterConfig;
 
 export type ServerBuildConfig = {
   routes: RouteManifest;
@@ -415,6 +418,22 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     return { routes, serverBuildDirectory };
   };
 
+  let resolveAdapter = async () => {
+    let adapter = options.adapter
+      ? await options.adapter({ remixConfig: options })
+      : null;
+    let adapterOverrides: AdapterOverrides = pick(
+      adapter ?? {},
+      adapterOverrideKeys
+    );
+    let adapterConfig: AdapterConfig = pick(adapter ?? {}, adapterConfigKeys);
+
+    return {
+      adapterOverrides,
+      adapterConfig,
+    };
+  };
+
   let resolvePluginConfig =
     async (): Promise<ResolvedRemixVitePluginConfig> => {
       let defaults = {
@@ -425,15 +444,12 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         unstable_ssr: true,
       } as const satisfies Partial<RemixVitePluginOptions>;
 
-      let adapter = options.adapter
-        ? await options.adapter({ remixConfig: options })
-        : null;
-      let { buildEnd } = adapter ?? {};
+      let { adapterOverrides, adapterConfig } = await resolveAdapter();
 
       let pluginConfig = {
         ...defaults,
         ...options,
-        ...pick(adapter, SUPPORTED_ADAPTER_OPTIONS),
+        ...adapterOverrides,
       };
 
       let rootDirectory =
@@ -482,6 +498,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
       }
 
       return {
+        ...adapterConfig,
         appDirectory,
         rootDirectory,
         assetsBuildDirectory,
@@ -496,7 +513,6 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         isSpaMode,
         relativeAssetsBuildDirectory,
         future,
-        buildEnd,
       };
     };
 
