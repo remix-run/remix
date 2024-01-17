@@ -61,7 +61,7 @@ The Vite plugin also accepts the following additional options:
 
 #### adapter
 
-A function for adapting the development environment and build output for different hosting providers.
+A function for adapting the build output and/or development environment for different hosting providers.
 
 #### serverBuildDirectory
 

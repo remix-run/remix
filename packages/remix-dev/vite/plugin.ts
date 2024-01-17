@@ -124,8 +124,8 @@ export type RemixVitePluginAdapter = (args: {
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
   Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides> & {
     /**
-     * An adapter for customizing the dev environment and/or build output to
-     * target different hosting providers.
+     * A function for adapting the build output and/or development environment
+     * for different hosting providers.
      */
     adapter?: RemixVitePluginAdapter;
     /**
