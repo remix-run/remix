@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-Only use active matches in meta/links in SPA mode
+Only use active matches in `<Meta>`/`<Links>` in SPA mode

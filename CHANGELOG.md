@@ -137,7 +137,6 @@ Date: 2024-01-17
 
 - `create-remix` - high-contrast fg/bg for header colors ([#8503](https://github.com/remix-run/remix/pull/8503))
   - `bgWhite` and `whiteBright` are the same color in many terminal colorthemes, which was causing it to render as illegible white-on-white
-- `@remix-run/react` - Remove leftover `unstable_` prefix from `Blocker`/`BlockerFunction` types ([#8530](https://github.com/remix-run/remix/pull/8530))
 - `@remix-run/dev` - Add `isSpaMode` to `@remix-run/dev/server-build` virtual module" ([#8492](https://github.com/remix-run/remix/pull/8492))
 - `@remix-run/dev` - SPA Mode: Automatically prepend `<!DOCTYPE html>` if not present to fix quirks mode warnings for SPA template ([#8495](https://github.com/remix-run/remix/pull/8495))
 - `@remix-run/dev` - Vite: Errors for server-only code point to new docs ([#8488](https://github.com/remix-run/remix/pull/8488))
@@ -149,6 +148,8 @@ Date: 2024-01-17
   - If you need to profile dev server startup, run `remix vite:dev --profile` to initialize the dev server with a running profiling session
   - For more, see the new [Vite > Performance](https://remix.run/docs/future/vite#performance) docs
 - `@remix-run/dev` - Vite: Improve performance of dev server requests by invalidating Remix's virtual modules on relevant file changes rather than on every request ([#8164](https://github.com/remix-run/remix/pull/8164))
+- `@remix-run/react` - Remove leftover `unstable_` prefix from `Blocker`/`BlockerFunction` types ([#8530](https://github.com/remix-run/remix/pull/8530))
+- `@remix-run/react` - Only use active matches in `<Meta>`/`<Links>` in SPA mode ([#8538](https://github.com/remix-run/remix/pull/8538))
 
 ### Updated Dependencies
 

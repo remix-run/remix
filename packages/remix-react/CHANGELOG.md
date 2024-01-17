@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Only use active matches in meta/links in SPA mode ([#8538](https://github.com/remix-run/remix/pull/8538))
+- Only use active matches in `<Meta>`/`<Links>` in SPA mode ([#8538](https://github.com/remix-run/remix/pull/8538))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.5.1-pre.1`
 
