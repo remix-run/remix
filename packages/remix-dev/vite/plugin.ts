@@ -120,7 +120,7 @@ type AdapterWithoutOverrides = Omit<AdapterConfig, AdapterOverrideKey>;
 
 export type RemixVitePluginAdapter = (args: {
   remixConfig: RemixVitePluginOptions;
-}) => Promise<AdapterConfig>;
+}) => AdapterConfig | Promise<AdapterConfig>;
 
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
   Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides> & {
