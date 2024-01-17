@@ -17,7 +17,7 @@ test.describe(async () => {
   let stop: () => void;
 
   function pathStartsWithCwd(pathname: string) {
-    return normalizePath(pathname).startsWith(cwd);
+    return normalizePath(pathname).startsWith(normalizePath(cwd));
   }
 
   function pathRelativeToCwd(pathname: string) {
