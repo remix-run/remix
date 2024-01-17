@@ -108,18 +108,19 @@ export type ServerBundlesManifest = {
 const adapterOverrideKeys = [
   "unstable_serverBundles",
 ] as const satisfies ReadonlyArray<keyof RemixVitePluginOptions>;
-type AdapterOverrides = Pick<
-  RemixVitePluginOptions,
-  typeof adapterOverrideKeys[number]
->;
+type AdapterOverrideKey = typeof adapterOverrideKeys[number];
+
+type AdapterOverrides = Pick<RemixVitePluginOptions, AdapterOverrideKey>;
 
 type AdapterConfig = AdapterOverrides & {
   buildEnd?: BuildEndHook;
 };
 
+type AdapterWithoutOverrides = Omit<AdapterConfig, AdapterOverrideKey>;
+
 export type RemixVitePluginAdapter = (args: {
   remixConfig: RemixVitePluginOptions;
-}) => Promise<AdapterOverrides & AdapterConfig>;
+}) => Promise<AdapterConfig>;
 
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
   Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides> & {
@@ -181,7 +182,7 @@ export type ResolvedRemixVitePluginConfig = Pick<
   serverBuildDirectory: string;
   serverBuildFile: string;
   serverBundles?: ServerBundlesFunction;
-} & AdapterConfig;
+} & AdapterWithoutOverrides;
 
 export type ServerBuildConfig = {
   routes: RouteManifest;
@@ -417,7 +418,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
   let resolveAdapter = async () => {
     let adapter = (await options.adapter?.({ remixConfig: options })) ?? {};
     let adapterOverrides: AdapterOverrides = pick(adapter, adapterOverrideKeys);
-    let adapterWithoutOverrides: AdapterConfig = omit(
+    let adapterWithoutOverrides: AdapterWithoutOverrides = omit(
       adapter,
       adapterOverrideKeys
     );
