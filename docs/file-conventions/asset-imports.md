@@ -11,8 +11,7 @@ Any files inside the `app` folder can be imported into your modules. Remix will:
 2. Fingerprint the file for long-term caching
 3. Return the public URL to your module to be used while rendering
 
-It's most common for stylesheets, but can be used for any file type with [a defined loader](https://github.com/remix-run/remix/blob/main/packages/remix-dev/compiler/utils/loaders.ts),
-which includes many data, image, and video, and audio formats.
+It's most common for stylesheets, but can be used for any file type with [a defined loader][remix-loaders].
 
 ```tsx
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
@@ -33,3 +32,5 @@ export default function Page() {
   );
 }
 ```
+
+[remix-loaders]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/compiler/utils/loaders.ts
