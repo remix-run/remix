@@ -228,7 +228,9 @@ Since the module types provided by `vite/client` are not compatible with the mod
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
 It comes built-in with the Remix Vite plugin and will take over when you run `remix vite:dev`.
 
-Unlike `remix-serve`, the Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
+The Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on `remix-serve` to provide them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
+
+The Vite dev server's default port is different to `remix-serve` so you'll need to configure this via Vite's `server.port` option if you'd like to maintain the same port.
 
 You'll also need to update to the new build output paths, which are `build/server` for the server and `build/client` for client assets.
 
@@ -254,6 +256,17 @@ import { defineConfig } from "vite";
 +installGlobals();
 
 export default defineConfig({
+  plugins: [remix()],
+});
+```
+
+👉 **Configure your Vite dev server port (optional)**
+
+```json filename=vite.config.ts lines=[2-4]
+export default defineConfig({
+  server: {
+    port: 3000,
+  },
   plugins: [remix()],
 });
 ```
