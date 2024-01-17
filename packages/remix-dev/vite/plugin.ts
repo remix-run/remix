@@ -114,7 +114,7 @@ type AdapterOverrides = Pick<
 >;
 
 type AdapterConfig = AdapterOverrides & {
-  buildEnd?: BuildEndFunction;
+  buildEnd?: BuildEndHook;
 };
 
 export type RemixVitePluginAdapter = (args: {
@@ -162,7 +162,7 @@ type BuildEndArgs = Pick<
   serverBundlesManifest: ServerBundlesManifest | undefined;
   unstable_ssr: boolean;
 };
-type BuildEndFunction = (args: BuildEndArgs) => void | Promise<void>;
+type BuildEndHook = (args: BuildEndArgs) => void | Promise<void>;
 
 export type ResolvedRemixVitePluginConfig = Pick<
   ResolvedRemixConfig,
