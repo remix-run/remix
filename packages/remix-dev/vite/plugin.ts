@@ -451,6 +451,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
     };
 
   let getServerEntry = async () => {
+    invariant(viteConfig, "viteconfig required to generate the server entry");
     return `
     import * as entryServer from ${JSON.stringify(
       resolveFileUrl(pluginConfig, pluginConfig.entryServerFilePath)
@@ -466,6 +467,7 @@ export const remixVitePlugin: RemixVitePlugin = (options = {}) => {
         )};`;
       })
       .join("\n")}
+      export const mode = ${JSON.stringify(viteConfig.mode)};
       export { default as assets } from ${JSON.stringify(serverManifestId)};
       export const assetsBuildDirectory = ${JSON.stringify(
         pluginConfig.relativeAssetsBuildDirectory
