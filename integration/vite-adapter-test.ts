@@ -16,6 +16,14 @@ test.describe(async () => {
   let cwd: string;
   let stop: () => void;
 
+  function pathStartsWithCwd(pathname: string) {
+    return normalizePath(pathname).startsWith(cwd);
+  }
+
+  function pathRelativeToCwd(pathname: string) {
+    return normalizePath(path.relative(cwd, pathname));
+  }
+
   test.beforeAll(async () => {
     port = await getPort();
     cwd = await createProject({
@@ -61,16 +69,16 @@ test.describe(async () => {
       fs.readFileSync(path.join(cwd, "BUILD_END_ARGS.json"), "utf8")
     );
 
-    // Before rewriting to relative paths, assert that paths are absolute
-    expect(path.isAbsolute(buildEndArgs.serverBuildDirectory)).toBe(true);
-    expect(path.isAbsolute(buildEndArgs.assetsBuildDirectory)).toBe(true);
+    // Before rewriting to relative paths, assert that paths are absolute within cwd
+    expect(pathStartsWithCwd(buildEndArgs.serverBuildDirectory)).toBe(true);
+    expect(pathStartsWithCwd(buildEndArgs.assetsBuildDirectory)).toBe(true);
 
     // Rewrite path args to be relative and normalized for snapshot test
-    buildEndArgs.serverBuildDirectory = normalizePath(
-      path.relative(cwd, buildEndArgs.serverBuildDirectory)
+    buildEndArgs.serverBuildDirectory = pathRelativeToCwd(
+      buildEndArgs.serverBuildDirectory
     );
-    buildEndArgs.assetsBuildDirectory = normalizePath(
-      path.relative(cwd, buildEndArgs.assetsBuildDirectory)
+    buildEndArgs.assetsBuildDirectory = pathRelativeToCwd(
+      buildEndArgs.assetsBuildDirectory
     );
 
     expect(buildEndArgs).toEqual({
