@@ -77,7 +77,7 @@ test.describe(async () => {
       assetsBuildDirectory: "build/client",
       serverBuildDirectory: "build/server",
       serverBuildFile: "index.js",
-      serverBundlesManifest: {
+      unstable_serverBundlesManifest: {
         routeIdToServerBundleId: {
           "routes/_index": "user-options--adapter-options",
         },

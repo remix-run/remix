@@ -160,7 +160,7 @@ type BuildEndArgs = Pick<
   ResolvedRemixVitePluginConfig,
   "assetsBuildDirectory" | "serverBuildDirectory" | "serverBuildFile"
 > & {
-  serverBundlesManifest: ServerBundlesManifest | undefined;
+  unstable_serverBundlesManifest: ServerBundlesManifest | undefined;
   unstable_ssr: boolean;
 };
 type BuildEndHook = (args: BuildEndArgs) => void | Promise<void>;
