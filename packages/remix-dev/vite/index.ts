@@ -4,7 +4,6 @@
 import type { RemixVitePlugin } from "./plugin";
 export type {
   ServerBundlesManifest as Unstable_ServerBundlesManifest,
-  RemixVitePluginOptions as Unstable_RemixVitePluginOptions,
   RemixVitePluginAdapter as Unstable_RemixVitePluginAdapter,
 } from "./plugin";
 
