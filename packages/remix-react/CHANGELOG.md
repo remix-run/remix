@@ -1,28 +1,13 @@
 # `@remix-run/react`
 
-## 2.5.1-pre.2
-
-### Patch Changes
-
-- [REMOVE] Bump router ([#8550](https://github.com/remix-run/remix/pull/8550))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.5.1-pre.2`
-
-## 2.5.1-pre.1
+## 2.5.1
 
 ### Patch Changes
 
 - Only use active matches in `<Meta>`/`<Links>` in SPA mode ([#8538](https://github.com/remix-run/remix/pull/8538))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.5.1-pre.1`
-
-## 2.5.1-pre.0
-
-### Patch Changes
-
 - Remove leftover `unstable_` prefix from `Blocker`/`BlockerFunction` types ([#8530](https://github.com/remix-run/remix/pull/8530))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.5.1-pre.0`
+  - `@remix-run/server-runtime@2.5.1`
 
 ## 2.5.0
 
