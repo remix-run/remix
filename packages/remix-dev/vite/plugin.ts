@@ -112,15 +112,15 @@ type AdapterOverrideKey = typeof adapterOverrideKeys[number];
 
 type AdapterOverrides = Pick<RemixVitePluginOptions, AdapterOverrideKey>;
 
-type AdapterConfig = AdapterOverrides & {
+type Adapter = AdapterOverrides & {
   buildEnd?: BuildEndHook;
 };
 
-type AdapterWithoutOverrides = Omit<AdapterConfig, AdapterOverrideKey>;
+type AdapterWithoutOverrides = Omit<Adapter, AdapterOverrideKey>;
 
-export type RemixVitePluginAdapter = (args: {
+export type VitePluginAdapter = (args: {
   remixConfig: RemixVitePluginOptions;
-}) => AdapterConfig | Promise<AdapterConfig>;
+}) => Adapter | Promise<Adapter>;
 
 export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
   Omit<SupportedRemixConfig, keyof RemixConfigJsdocOverrides> & {
@@ -128,7 +128,7 @@ export type RemixVitePluginOptions = RemixConfigJsdocOverrides &
      * A function for adapting the build output and/or development environment
      * for different hosting providers.
      */
-    adapter?: RemixVitePluginAdapter;
+    adapter?: VitePluginAdapter;
     /**
      * The path to the server build directory, relative to the project. This
      * directory should be deployed to your server. Defaults to

@@ -8,6 +8,6 @@ export type { Manifest as AssetsManifest } from "./manifest";
 export { getDependenciesToBundle } from "./dependencies";
 export type {
   Unstable_ServerBundlesManifest,
-  Unstable_RemixVitePluginAdapter,
+  Unstable_VitePluginAdapter,
 } from "./vite";
 export { unstable_vitePlugin } from "./vite";
