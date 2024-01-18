@@ -28,8 +28,11 @@ import {
 } from "../config";
 import { type Manifest } from "../manifest";
 import invariant from "../invariant";
-import type { NodeRequestHandler } from "./adapter";
-import { fromNodeRequest, toNodeRequest } from "./adapter";
+import {
+  type NodeRequestHandler,
+  fromNodeRequest,
+  toNodeRequest,
+} from "./node-adapter";
 import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
