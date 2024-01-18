@@ -20,7 +20,7 @@ export type DevBindingsOptions = {
   persist?: false | string;
 };
 
-export async function getCloudflareDevBindings(options: DevBindingsOptions) {
+export async function getBindingsProxy(options: DevBindingsOptions) {
   let mf = await instantiateMiniflare(options);
   let bindings = await mf.getBindings();
   return bindings;
