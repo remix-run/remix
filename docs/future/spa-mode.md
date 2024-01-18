@@ -8,6 +8,7 @@ From the beginning, Remix's opinion has always been that you own your server arc
 
 - You don't want to manage a server and prefer to deploy your app via static files on Github Pages or another CDN
 - You don't want to run a Node.js server
+- You want to [migrate a React Router app][migrate-rr] to Remix
 - You're developing a special type of embedded app that can't be server rendered
 - "Your boss couldn't care less about the UX ceiling of SPA architecture and won't give your dev teams time/capacity to re-architect things" [- Kent C. Dodds][kent-tweet]
 
@@ -133,3 +134,4 @@ Once you've got all your routes living in their own files, you can:
 [links]: ../components/links
 [migrating-rr]: https://remix.run/docs/en/main/guides/migrating-react-router-app
 [remix-vite]: ../future/vite
+[migrate-rr]: #migrating-from-react-router
