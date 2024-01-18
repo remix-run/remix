@@ -421,12 +421,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           // know the final resolved config until the adapter has been resolved.
           remixConfig: remixUserConfig,
         })
-      : {};
-    let adapterOverrides: AdapterOverrides = pick(adapter, adapterOverrideKeys);
-    let adapterWithoutOverrides: AdapterWithoutOverrides = omit(
-      adapter,
-      adapterOverrideKeys
-    );
+      : undefined;
+
+    let adapterOverrides: AdapterOverrides | undefined =
+      adapter && pick(adapter, adapterOverrideKeys);
+    let adapterWithoutOverrides: AdapterWithoutOverrides | undefined =
+      adapter && omit(adapter, adapterOverrideKeys);
 
     return { adapterOverrides, adapterWithoutOverrides };
   };
@@ -445,7 +445,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let mergedRemixConfig = {
       ...defaults,
       ...remixUserConfig,
-      ...adapterOverrides,
+      ...(adapterOverrides ?? {}),
     };
 
     let rootDirectory =
