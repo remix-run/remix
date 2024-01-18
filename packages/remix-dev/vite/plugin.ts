@@ -21,8 +21,8 @@ import colors from "picocolors";
 
 import { type ConfigRoute, type RouteManifest } from "../config/routes";
 import {
-  type AppConfig as RemixUserConfig,
-  type RemixConfig as ResolvedRemixConfig,
+  type AppConfig as RemixEsbuildUserConfig,
+  type RemixConfig as ResolvedRemixEsbuildConfig,
   resolveConfig as resolveRemixEsbuildConfig,
 } from "../config";
 import { type Manifest } from "../manifest";
@@ -43,9 +43,9 @@ const supportedRemixEsbuildConfigKeys = [
   "publicPath",
   "routes",
   "serverModuleFormat",
-] as const satisfies ReadonlyArray<keyof RemixUserConfig>;
-type SupportedRemixEsbuildConfig = Pick<
-  RemixUserConfig,
+] as const satisfies ReadonlyArray<keyof RemixEsbuildUserConfig>;
+type SupportedRemixEsbuildUserConfig = Pick<
+  RemixEsbuildUserConfig,
   typeof supportedRemixEsbuildConfigKeys[number]
 >;
 
@@ -66,17 +66,17 @@ const CLIENT_ROUTE_QUERY_STRING = "?client-route";
 
 // We need to provide different JSDoc comments in some cases due to differences
 // between the Remix config and the Vite plugin.
-type RemixEsbuildConfigJsdocOverrides = {
+type RemixEsbuildUserConfigJsdocOverrides = {
   /**
    * The path to the browser build, relative to the project root. Defaults to
    * `"build/client"`.
    */
-  assetsBuildDirectory?: SupportedRemixEsbuildConfig["assetsBuildDirectory"];
+  assetsBuildDirectory?: SupportedRemixEsbuildUserConfig["assetsBuildDirectory"];
   /**
    * The URL prefix of the browser build with a trailing slash. Defaults to
    * `"/"`. This is the path the browser will use to find assets.
    */
-  publicPath?: SupportedRemixEsbuildConfig["publicPath"];
+  publicPath?: SupportedRemixEsbuildUserConfig["publicPath"];
 };
 
 // Only expose a subset of route properties to the "serverBundles" function
@@ -124,8 +124,11 @@ export type VitePluginAdapter = (args: {
   remixConfig: VitePluginConfig;
 }) => Adapter | Promise<Adapter>;
 
-export type VitePluginConfig = RemixEsbuildConfigJsdocOverrides &
-  Omit<SupportedRemixEsbuildConfig, keyof RemixEsbuildConfigJsdocOverrides> & {
+export type VitePluginConfig = RemixEsbuildUserConfigJsdocOverrides &
+  Omit<
+    SupportedRemixEsbuildUserConfig,
+    keyof RemixEsbuildUserConfigJsdocOverrides
+  > & {
     /**
      * A function for adapting the build output and/or development environment
      * for different hosting providers.
@@ -168,7 +171,7 @@ type BuildEndArgs = Pick<
 type BuildEndHook = (args: BuildEndArgs) => void | Promise<void>;
 
 export type ResolvedVitePluginConfig = Pick<
-  ResolvedRemixConfig,
+  ResolvedRemixEsbuildConfig,
   | "appDirectory"
   | "rootDirectory"
   | "assetsBuildDirectory"
