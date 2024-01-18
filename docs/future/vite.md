@@ -59,6 +59,10 @@ The following subset of Remix config options are supported:
 
 The Vite plugin also accepts the following additional options:
 
+#### adapter
+
+A function for adapting the build output and/or development environment for different hosting providers.
+
 #### serverBuildDirectory
 
 The path to the server build directory, relative to the project root. Defaults to `"build/server"`.
