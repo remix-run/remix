@@ -14,8 +14,8 @@ export type {
   ShouldRevalidateFunctionArgs,
   SubmitFunction,
   SubmitOptions,
-  unstable_Blocker,
-  unstable_BlockerFunction,
+  Blocker,
+  BlockerFunction,
 } from "react-router-dom";
 export {
   createPath,

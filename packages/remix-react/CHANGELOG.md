@@ -1,5 +1,14 @@
 # `@remix-run/react`
 
+## 2.5.1
+
+### Patch Changes
+
+- Only use active matches in `<Meta>`/`<Links>` in SPA mode ([#8538](https://github.com/remix-run/remix/pull/8538))
+- Remove leftover `unstable_` prefix from `Blocker`/`BlockerFunction` types ([#8530](https://github.com/remix-run/remix/pull/8530))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.5.1`
+
 ## 2.5.0
 
 ### Minor Changes
