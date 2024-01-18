@@ -131,7 +131,7 @@ Date: YYYY-MM-DD
 
 ## v2.5.1
 
-Date: 2024-01-17
+Date: 2024-01-18
 
 ### Patch Changes
 
