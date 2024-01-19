@@ -7,11 +7,17 @@ order: 1
 
 This guide will get you familiar with the basic plumbing required to run a Remix app as quickly as possible. While there are many starter templates with different runtimes, deploy targets, and databases, we're going to create a bare-bones project from scratch.
 
-When you're ready to get serious about your Remix project, you might consider starting with a community template. They include TypeScript setups, databases, testing harnesses, authentication, and more. You can find a list of community templates on the [Remix Guide Templates][templates] page.
+When you're ready to get serious about your Remix project, you might consider starting with a community template. They include TypeScript setups, databases, testing harnesses, authentication, and more. You can find a list of community templates on the [Remix Resources][templates] page.
 
-If you prefer to initialize a batteries-included Remix project, you can use the [`create-remix` CLI][create-remix]. This guide will explain all of the different pieces the CLI initializes for you.
+If you prefer to initialize a batteries-included Remix project, you can use the [`create-remix` CLI][create-remix]:
+
+```shellscript nonumber
+npx create-remix@latest
+```
 
 ## Installation
+
+This guide will explain everything the CLI does to set up your project, and instead of using the CLI you can follow these steps. If you're just getting started with Remix, we recommend following this guide to understand all of the different pieces that make up a Remix app.
 
 ```shellscript nonumber
 mkdir my-remix-app
@@ -276,6 +282,6 @@ What's next?
 [inspect]: https://nodejs.org/en/docs/guides/debugging-getting-started/
 [tutorial]: ./tutorial
 [remix_config]: ../file-conventions/remix-config
-[templates]: https://remix.guide/templates
+[templates]: /resources?category=templates
 [http-localhost-3000]: http://localhost:3000
 [es-modules]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
