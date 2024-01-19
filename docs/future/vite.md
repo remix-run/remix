@@ -723,11 +723,11 @@ check out our [discussion on Hot Module Replacement][hmr] to learn more about th
 
 #### ESM / CJS
 
-For a walkthrough of fixing an example bug checkout [🎥 How to Fix CJS/ESM Bugs in Remix][how-fix-cjs-esm].
-
 Vite supports both ESM and CJS dependencies, but sometimes you might still run into issues with ESM / CJS interop.
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
+
+For a walkthrough of fixing an example bug, check out [🎥 How to Fix CJS/ESM Bugs in Remix][how-fix-cjs-esm].
 
 To diagnose if one of your dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
