@@ -6,7 +6,12 @@ import tsconfigPaths from "vite-tsconfig-paths";
 // In the future, you'll be able to import the `cloudflare` adapter from `@remix-run/cloudflare`
 import { adapter as cloudflare } from "./.cloudflare";
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
+  ssr: {
+    resolve: {
+      externalConditions: ["workerd", "worker"],
+    },
+  },
   plugins: [
     remix({
       adapter: cloudflare({
@@ -22,4 +27,4 @@ export default defineConfig({
     }),
     tsconfigPaths(),
   ],
-});
+}));
