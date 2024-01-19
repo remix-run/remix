@@ -452,6 +452,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       viteUserConfig.root ?? process.env.REMIX_ROOT ?? process.cwd();
 
     let ssr = resolvedRemixUserConfig.unstable_ssr !== false;
+    let isSpaMode = !ssr;
 
     // Only select the Remix esbuild config options that the Vite plugin uses
     let {
@@ -465,7 +466,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       serverModuleFormat,
     } = await resolveRemixEsbuildConfig(
       pick(resolvedRemixUserConfig, supportedRemixEsbuildConfigKeys),
-      { rootDirectory, isSpaMode: !ssr }
+      { rootDirectory, isSpaMode }
     );
 
     let serverBuildDirectory = path.resolve(
@@ -477,7 +478,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       resolvedRemixUserConfig;
 
     // Log warning for incompatible vite config flags
-    if (serverBundles && !ssr) {
+    if (isSpaMode && serverBundles) {
       console.warn(
         colors.yellow(
           colors.bold("⚠️  SPA Mode: ") +
