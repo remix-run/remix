@@ -788,6 +788,8 @@ Vite supports both ESM and CJS dependencies, but sometimes you might still run i
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
 
+For a walkthrough of fixing an example bug, check out [🎥 How to Fix CJS/ESM Bugs in Remix][how-fix-cjs-esm].
+
 To diagnose if one of your dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
 
@@ -997,3 +999,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [react-canaries]: https://react.dev/blog/2023/05/03/react-canaries
 [react-versions]: https://www.npmjs.com/package/react?activeTab=versions
 [package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides
+[how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
