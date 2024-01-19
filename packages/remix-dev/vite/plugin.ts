@@ -543,7 +543,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         )
       )};
       export const future = ${JSON.stringify(remixConfig.future)};
-      export const isSpaMode = ${remixConfig.ssr === false};
+      export const isSpaMode = ${!remixConfig.ssr};
       export const publicPath = ${JSON.stringify(remixConfig.publicPath)};
       export const entry = { module: entryServer };
       export const routes = {
