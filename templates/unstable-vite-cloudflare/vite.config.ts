@@ -14,16 +14,7 @@ export default defineConfig(({ isSsrBuild }) => ({
   },
   plugins: [
     remix({
-      adapter: cloudflare({
-        bindings: {
-          kvNamespaces: ["MY_KV"],
-          // textBindings: {
-          //   SECRET_KEY: "my-secret-key--from-dev",
-          // },
-          // d1Databases: ["MY_DB"],
-          // r2Buckets: ["MY_BUCKET"],
-        },
-      }),
+      adapter: cloudflare(),
     }),
     tsconfigPaths(),
   ],
