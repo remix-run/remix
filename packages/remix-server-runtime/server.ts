@@ -36,7 +36,7 @@ export type RequestHandler = (
 ) => Promise<Response>;
 
 export type CreateRequestHandlerFunction = (
-  build: ServerBuild | (() => Promise<ServerBuild>),
+  build: ServerBuild | (() => ServerBuild | Promise<ServerBuild>),
   mode?: string
 ) => RequestHandler;
 
