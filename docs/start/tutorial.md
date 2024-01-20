@@ -11,7 +11,11 @@ We'll be building a small, but feature-rich app that lets you keep track of your
 
 👉 **Every time you see this it means you need to do something in the app!**
 
-The rest is just there for your information and deeper understanding. Let's get to it.
+The rest is just there for your information and deeper understanding.   
+
+💡 While following the tutorial, you will get some Typescript errors, but everything is handled and explained in the following paragraphs. So if you hate errors (just like us) and immediately try to fix them, don't lose your time and just read a bit more to make sense of it.
+
+Let's get to it.
 
 ## Setup
 
