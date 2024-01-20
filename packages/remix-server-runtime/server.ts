@@ -81,6 +81,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
   return async function requestHandler(request, loadContext = {}) {
     _build = typeof build === "function" ? await build() : build;
+    mode ??= _build.mode;
     if (typeof build === "function") {
       let derived = derive(_build, mode);
       routes = derived.routes;
