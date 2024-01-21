@@ -23,7 +23,7 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "@remix-run/node"; // or cloudflare/deno
-import { json } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/node
 import { useLoaderData } from "@remix-run/react";
 
 import { getUser, updateUser } from "../user";
