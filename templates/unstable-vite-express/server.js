@@ -15,6 +15,12 @@ const viteDevServer =
         })
       );
 
+const remixHandler = createRequestHandler({
+  build: viteDevServer
+    ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
+    : await import("./build/server/index.js"),
+});
+
 const app = express();
 
 app.use(compression());
@@ -26,7 +32,7 @@ app.disable("x-powered-by");
 if (viteDevServer) {
   app.use(viteDevServer.middlewares);
 } else {
-  // Remix fingerprints its assets so we can cache forever.
+  // Vite fingerprints its assets so we can cache forever.
   app.use(
     "/assets",
     express.static("build/client/assets", { immutable: true, maxAge: "1y" })
@@ -40,14 +46,7 @@ app.use(express.static("build/client", { maxAge: "1h" }));
 app.use(morgan("tiny"));
 
 // handle SSR requests
-app.all(
-  "*",
-  createRequestHandler({
-    build: viteDevServer
-      ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
-      : await import("./build/server/index.js"),
-  })
-);
+app.all("*", remixHandler);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () =>
