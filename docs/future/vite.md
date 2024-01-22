@@ -50,7 +50,6 @@ All other bundling-related options are now [configured with Vite][vite-config]. 
 The following subset of Remix config options are supported:
 
 - [appDirectory][app-directory]
-- [assetsBuildDirectory][assets-build-directory]
 - [ignoredRouteFiles][ignored-route-files]
 - [publicPath][public-path]
 - [routes][routes]
@@ -63,9 +62,13 @@ The Vite plugin also accepts the following additional options:
 
 A function for adapting the build output and/or development environment for different hosting providers.
 
-#### serverBuildDirectory
+#### buildDirectory
 
-The path to the server build directory, relative to the project root. Defaults to `"build/server"`.
+The path to the build directory, relative to the project root. Defaults to `"build"`.
+
+#### manifest
+
+Whether to write a `manifest.json` file to the build directory. Defaults to `false`.
 
 #### serverBuildFile
 
@@ -74,6 +77,8 @@ The name of the server file generated in the server build directory. Defaults to
 #### unstable_serverBundles
 
 A function for assigning addressable routes to [server bundles][server-bundles].
+
+You may also want to enable the `manifest` option since, when server bundles are enabled, it contains mappings between routes and server bundles.
 
 ## Splitting up client and server code
 
@@ -130,18 +135,14 @@ export const PostPreview = ({ title, description }) => {
 
 ## New build output paths
 
-There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. During the build, Vite copies files from the `public` directory into `build/client`, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
+There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. Vite copies files from the `public` directory into the client build directory, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
 
-In order to align the default Remix project structure with the way Vite works, the build output paths have been changed.
+In order to align the default Remix project structure with the way Vite works, the build output paths have been changed. There is now a single `buildDirectory` option that defaults to `"build"`, replacing the separate `assetsBuildDirectory` and `serverBuildDirectory` options. This means that, by default, the server is now compiled into `build/server` and the client is now compiled into `build/client`.
 
-- The server is now compiled into `build/server` by default.
-- The client is now compiled into `build/client` by default.
+This also means that the following configuration defaults have been changed:
 
-This means that the following configuration defaults have been changed:
-
-- [assetsBuildDirectory][assets-build-directory] defaults to `"build/client"` rather than `"public/build"`
 - [publicPath][public-path] defaults to `"/"` rather than `"/build/"`
-- [serverBuildPath][server-build-path] has been split into `serverBuildDirectory` and `serverBuildFile`, with the equivalent default for `serverBuildDirectory` being `"build/server"` rather than `"build"`
+- [serverBuildPath][server-build-path] has been replaced by `serverBuildFile` which defaults to `"index.js"`. This file will be written into the server directory within your configured `buildDirectory`.
 
 ## Additional features & plugins
 
