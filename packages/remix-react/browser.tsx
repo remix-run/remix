@@ -24,7 +24,7 @@ import {
 declare global {
   var __remixContext: {
     url: string;
-    basename: string;
+    basename?: string;
     state: HydrationState;
     criticalCss?: string;
     future: FutureConfig;

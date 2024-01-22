@@ -198,7 +198,9 @@ async function handleDataRequestRR(
       let redirectUrl = headers.get("Location")!;
       headers.set(
         "X-Remix-Redirect",
-        stripBasename(redirectUrl, build.basename) || redirectUrl
+        build.basename
+          ? stripBasename(redirectUrl, build.basename) || redirectUrl
+          : redirectUrl
       );
       headers.set("X-Remix-Status", response.status);
       headers.delete("Location");
