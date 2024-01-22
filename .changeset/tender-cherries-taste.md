@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Add `mode` field into generated serber build for vite
+Vite: Add `mode` field into generated server build
