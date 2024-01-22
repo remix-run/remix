@@ -131,12 +131,14 @@ type AdapterRemixConfigOverrides = Pick<
 type AdapterConfig = AdapterRemixConfigOverrides & {
   loadContext?: Record<string, unknown>;
   buildEnd?: BuildEndHook;
+  vite: Vite.UserConfig;
 };
 
 type Adapter = Omit<AdapterConfig, AdapterRemixConfigOverrideKey>;
 
 export type VitePluginAdapter = (args: {
   remixConfig: VitePluginConfig;
+  viteConfig: Vite.UserConfig;
 }) => AdapterConfig | Promise<AdapterConfig>;
 
 export type VitePluginConfig = RemixEsbuildUserConfigJsdocOverrides &
@@ -454,7 +456,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
   // During dev, this is updated on config file change or route file addition/removal.
   let remixConfig: ResolvedVitePluginConfig;
 
-  let resolvePluginConfig = async (): Promise<ResolvedVitePluginConfig> => {
+  let resolvePluginConfig = async (
+    viteUserConfig: Vite.UserConfig
+  ): Promise<ResolvedVitePluginConfig> => {
     let defaults = {
       buildDirectory: "build",
       manifest: false,
@@ -468,6 +472,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           // We only pass in the plugin config that the user defined. We don't
           // know the final resolved config until the adapter has been resolved.
           remixConfig: remixUserConfig,
+          viteConfig: viteUserConfig,
         })
       : undefined;
     let adapter: Adapter | undefined =
@@ -740,7 +745,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         viteUserConfig = _viteUserConfig;
         viteCommand = viteConfigEnv.command;
 
-        remixConfig = await resolvePluginConfig();
+        remixConfig = await resolvePluginConfig(_viteUserConfig);
         buildContext = resolveBuildContext(viteConfigEnv);
 
         Object.assign(
@@ -755,7 +760,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           )
         );
 
-        return {
+        return vite.mergeConfig(remixConfig.adapter?.vite ?? {}, {
           __remixPluginResolvedConfig: remixConfig,
           appType: "custom",
           experimental: { hmrPartialAccept: true },
@@ -801,13 +806,11 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           ...(viteCommand === "build" && {
             base: remixConfig.publicPath,
             build: {
-              ...viteUserConfig.build,
               ...(!viteConfigEnv.isSsrBuild
                 ? {
                     manifest: true,
                     outDir: getClientBuildDirectory(remixConfig),
                     rollupOptions: {
-                      ...viteUserConfig.build?.rollupOptions,
                       preserveEntrySignatures: "exports-only",
                       input: [
                         remixConfig.entryClientFilePath,
@@ -832,7 +835,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                     manifest: true, // We need the manifest to detect SSR-only assets
                     outDir: getServerBuildDirectory(remixConfig, buildContext),
                     rollupOptions: {
-                      ...viteUserConfig.build?.rollupOptions,
                       preserveEntrySignatures: "exports-only",
                       input: serverBuildId,
                       output: {
@@ -843,7 +845,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   }),
             },
           }),
-        };
+        });
       },
       async configResolved(resolvedViteConfig) {
         await initEsModuleLexer;
@@ -1000,7 +1002,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
           if (appFileAddedOrRemoved || viteConfigChanged) {
             let lastPluginConfig = remixConfig;
-            remixConfig = await resolvePluginConfig();
+            remixConfig = await resolvePluginConfig(viteUserConfig);
 
             if (!isEqualJson(lastPluginConfig, remixConfig)) {
               invalidateVirtualModules(viteDevServer);
