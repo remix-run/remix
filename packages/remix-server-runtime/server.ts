@@ -311,8 +311,10 @@ async function handleDocumentRequestRR(
         errors: serializeErrors(context.errors, serverMode),
       },
       future: build.future,
+      isSpaMode: build.isSpaMode,
     }),
     future: build.future,
+    isSpaMode: build.isSpaMode,
     serializeError: (err) => serializeError(err, serverMode),
   };
 
@@ -352,6 +354,7 @@ async function handleDocumentRequestRR(
           errors: serializeErrors(context.errors, serverMode),
         },
         future: build.future,
+        isSpaMode: build.isSpaMode,
       }),
     };
 

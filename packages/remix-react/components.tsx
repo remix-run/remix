@@ -7,6 +7,7 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
+  RouterState,
   TrackedPromise,
   UIMatch as UIMatchRR,
 } from "@remix-run/router";
@@ -81,7 +82,7 @@ export const RemixContext = React.createContext<RemixContextObject | undefined>(
 );
 RemixContext.displayName = "Remix";
 
-function useRemixContext(): RemixContextObject {
+export function useRemixContext(): RemixContextObject {
   let context = React.useContext(RemixContext);
   invariant(context, "You must render this element inside a <Remix> element");
   return context;
@@ -267,21 +268,38 @@ export function composeEventHandlers<
   };
 }
 
+// Return the matches actively being displayed:
+// - In SPA Mode we only SSR/hydrate the root match, and include all matches
+//   after hydration. This lets the router handle initial match loads via lazy().
+// - When an error boundary is rendered, we slice off matches up to the
+//   boundary for <Links>/<Meta>
+function getActiveMatches(
+  matches: RouterState["matches"],
+  errors: RouterState["errors"],
+  isSpaMode: boolean
+) {
+  if (isSpaMode && !isHydrated) {
+    return [matches[0]];
+  }
+
+  if (errors) {
+    let errorIdx = matches.findIndex((m) => errors[m.route.id]);
+    return matches.slice(0, errorIdx + 1);
+  }
+
+  return matches;
+}
+
 /**
  * Renders the `<link>` tags for the current routes.
  *
  * @see https://remix.run/components/links
  */
 export function Links() {
-  let { manifest, routeModules, criticalCss } = useRemixContext();
+  let { isSpaMode, manifest, routeModules, criticalCss } = useRemixContext();
   let { errors, matches: routerMatches } = useDataRouterStateContext();
 
-  let matches = errors
-    ? routerMatches.slice(
-        0,
-        routerMatches.findIndex((m) => errors![m.route.id]) + 1
-      )
-    : routerMatches;
+  let matches = getActiveMatches(routerMatches, errors, isSpaMode);
 
   let keyedLinks = React.useMemo(
     () => getKeyedLinksForMatches(matches, routeModules, manifest),
@@ -433,7 +451,7 @@ function PrefetchPageLinksImpl({
  * @see https://remix.run/components/meta
  */
 export function Meta() {
-  let { routeModules } = useRemixContext();
+  let { isSpaMode, routeModules } = useRemixContext();
   let {
     errors,
     matches: routerMatches,
@@ -441,12 +459,11 @@ export function Meta() {
   } = useDataRouterStateContext();
   let location = useLocation();
 
-  let _matches: AgnosticDataRouteMatch[] = routerMatches;
+  let _matches = getActiveMatches(routerMatches, errors, isSpaMode);
+
   let error: any = null;
   if (errors) {
-    let errorIdx = routerMatches.findIndex((m) => errors![m.route.id]);
-    _matches = routerMatches.slice(0, errorIdx + 1);
-    error = errors[routerMatches[errorIdx].route.id];
+    error = errors[_matches[_matches.length - 1].route.id];
   }
 
   let meta: MetaDescriptor[] = [];
@@ -605,11 +622,13 @@ export type ScriptProps = Omit<
  * @see https://remix.run/components/scripts
  */
 export function Scripts(props: ScriptProps) {
-  let { manifest, serverHandoffString, abortDelay, serializeError } =
+  let { manifest, serverHandoffString, abortDelay, serializeError, isSpaMode } =
     useRemixContext();
   let { router, static: isStatic, staticContext } = useDataRouterContext();
-  let { matches } = useDataRouterStateContext();
+  let { matches: routerMatches } = useDataRouterStateContext();
   let navigation = useNavigation();
+
+  let matches = getActiveMatches(routerMatches, null, isSpaMode);
 
   React.useEffect(() => {
     isHydrated = true;
@@ -1058,10 +1077,12 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
+        origin = process.env.REMIX_DEV_ORIGIN,
         port,
         timeoutMs = 1000,
         nonce = undefined,
       }: {
+        origin?: string;
         port?: number;
         timeoutMs?: number;
         nonce?: string;
@@ -1074,18 +1095,16 @@ export const LiveReload =
             dangerouslySetInnerHTML={{
               __html: js`
                 function remixLiveReloadConnect(config) {
-                  let REMIX_DEV_ORIGIN = ${JSON.stringify(
-                    process.env.REMIX_DEV_ORIGIN
-                  )};
+                  let LIVE_RELOAD_ORIGIN = ${JSON.stringify(origin)};
                   let protocol =
-                    REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).protocol.replace(/^http/, "ws") :
+                    LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).protocol.replace(/^http/, "ws") :
                     location.protocol === "https:" ? "wss:" : "ws:"; // remove in v2?
-                  let hostname = REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).hostname : location.hostname;
+                  let hostname = LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).hostname : location.hostname;
                   let url = new URL(protocol + "//" + hostname + "/socket");
 
                   url.port =
                     ${port} ||
-                    (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);
+                    (LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).port : 8002);
 
                   let ws = new WebSocket(url.href);
                   ws.onmessage = async (message) => {

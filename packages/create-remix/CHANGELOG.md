@@ -1,5 +1,28 @@
 # `create-remix`
 
+## 2.5.1
+
+### Patch Changes
+
+- high-contrast fg/bg for header colors ([#8503](https://github.com/remix-run/remix/pull/8503))
+  - `bgWhite` and `whiteBright` are the same color in many terminal colorthemes, which was causing it to render as illegible white-on-white
+
+## 2.5.0
+
+### Patch Changes
+
+- Only update `*` versions for Remix dependencies ([#8458](https://github.com/remix-run/remix/pull/8458))
+
+## 2.4.1
+
+### Patch Changes
+
+- Switch to using `@remix-run/web-fetch` instead of `node-fetch` inside the `create-remix` CLI ([#7345](https://github.com/remix-run/remix/pull/7345))
+
+## 2.4.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.4.0.
+
 ## 2.3.1
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.3.1.

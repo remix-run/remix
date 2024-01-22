@@ -217,7 +217,7 @@ export function getKeyedLinksForMatches(
       let route = manifest.routes[match.route.id];
       return [
         route.css ? route.css.map((href) => ({ rel: "stylesheet", href })) : [],
-        module.links?.() || [],
+        module?.links?.() || [],
       ];
     })
     .flat(2);

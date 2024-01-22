@@ -23,6 +23,7 @@ export function createServerHandoffString<T>(serverHandoff: {
   url: string;
   basename?: string;
   future: FutureConfig;
+  isSpaMode: boolean;
 }): string {
   // Uses faster alternative of jsesc to escape data returned from the loaders.
   // This string is inserted directly into the HTML in the `<Scripts>` element.

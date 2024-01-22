@@ -1004,7 +1004,7 @@ When a route has children, and you're at the parent route's path, the `<Outlet>`
 
 👉 **Create an index route for the root route**
 
-```
+```shellscript nonumber
 touch app/routes/_index.tsx
 ```
 

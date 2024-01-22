@@ -1,5 +1,78 @@
 # `@remix-run/testing`
 
+## 2.5.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.5.1`
+  - `@remix-run/node@2.5.1`
+
+## 2.5.0
+
+### Minor Changes
+
+- Add unstable support for "SPA Mode" ([#8457](https://github.com/remix-run/remix/pull/8457))
+
+  You can opt into SPA Mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
+
+  ```js
+  // vite.config.ts
+  import { unstable_vitePlugin as remix } from "@remix-run/dev";
+  import { defineConfig } from "vite";
+
+  export default defineConfig({
+    plugins: [remix({ unstable_ssr: false })],
+  });
+  ```
+
+  Development in SPA Mode is just like a normal Remix app, and still uses the Remix dev server for HMR/HDR:
+
+  ```sh
+  remix vite:dev
+  ```
+
+  Building in SPA Mode will generate an `index.html` file in your client assets directory:
+
+  ```sh
+  remix vite:build
+  ```
+
+  To run your SPA, you serve your client assets directory via an HTTP server:
+
+  ```sh
+  npx http-server build/client
+  ```
+
+  For more information, please refer to the [SPA Mode docs](https://remix.run/future/spa-mode).
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.5.0`
+  - `@remix-run/node@2.5.0`
+
+## 2.4.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.4.1`
+  - `@remix-run/node@2.4.1`
+
+## 2.4.0
+
+### Minor Changes
+
+- Add support for `clientLoader`/`clientAction`/`HydrateFallback` route exports ([RFC](https://github.com/remix-run/remix/discussions/7634)). ([#8173](https://github.com/remix-run/remix/pull/8173))
+- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/release-next/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths). ([#8216](https://github.com/remix-run/remix/pull/8216))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.4.0`
+  - `@remix-run/node@2.4.0`
+
 ## 2.3.1
 
 ### Patch Changes

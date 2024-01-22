@@ -62,6 +62,7 @@ export default function Component() {
 export async function action({
   request,
 }: ActionFunctionArgs) {
+  const formData = await request.formData();
   const user = await getUser(request);
 
   await updateUser(user.id, {
