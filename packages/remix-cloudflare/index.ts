@@ -1,6 +1,8 @@
 import "./globals";
 
 export { createWorkersKVSessionStorage } from "./sessions/workersKVStorage";
+// TODO: bikeshed naming. `vitePluginAdapter`?
+export { adapter } from "./adapter";
 
 export {
   createCookie,
