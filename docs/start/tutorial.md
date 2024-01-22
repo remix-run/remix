@@ -635,7 +635,7 @@ export default function EditContact() {
   const { contact } = useLoaderData<typeof loader>();
 
   return (
-    <Form id="contact-form" method="post">
+    <Form key={contact.id} id="contact-form" method="post">
       <p>
         <span>Name</span>
         <input
@@ -1057,7 +1057,7 @@ export default function EditContact() {
   const navigate = useNavigate();
 
   return (
-    <Form id="contact-form" method="post">
+    <Form key={contact.id} id="contact-form" method="post">
       {/* existing elements */}
       <p>
         <button type="submit">Save</button>
