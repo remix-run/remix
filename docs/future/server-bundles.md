@@ -48,5 +48,5 @@ When the build is complete, Remix will generate a `bundles.json` manifest file i
 - `routeIdToServerBundleId` — An object that maps route IDs to its server bundle ID.
 - `routes` — A route manifest that maps route IDs to route metadata. This can be used to drive a custom routing layer in front of your Remix request handlers.
 
-[remix-vite]: ./vite.md
+[remix-vite]: ./vite
 [pathless-layout-route]: ../file-conventions/routes#nested-layouts-without-nested-urls
