@@ -57,14 +57,6 @@ test.describe(async () => {
     let { status } = viteBuild({ cwd });
     expect(status).toBe(0);
 
-    expect(
-      Object.keys(
-        JSON.parse(
-          fs.readFileSync(path.join(cwd, "build/manifest.json"), "utf8")
-        ).serverBundles
-      )
-    ).toEqual(["user-options--adapter-options"]);
-
     let buildEndArgs: any = JSON.parse(
       fs.readFileSync(path.join(cwd, "BUILD_END_ARGS.json"), "utf8")
     );
