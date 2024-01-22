@@ -176,4 +176,4 @@ Instead we recommend keeping all of your environment variables on the server (al
 [cloudflare-workers]: https://developers.cloudflare.com/workers/platform/environment-variables
 [vercel]: https://vercel.com/docs/environment-variables
 [architect]: https://arc.codes/docs/en/reference/cli/env
-[dev-vars]: https://developers.cloudflare.com/pages/platform/functions/#adding-environment-variables-locally
+[dev-vars]: https://developers.cloudflare.com/pages/functions/bindings/#interact-with-your-environment-variables-locally
