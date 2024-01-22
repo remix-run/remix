@@ -50,7 +50,7 @@ const files = {
 test.describe(() => {
   let port: number;
   let cwd: string;
-  let stop: () => Promise<void>;
+  let stop: () => unknown;
 
   test.beforeAll(async () => {
     port = await getPort();
