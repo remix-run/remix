@@ -54,7 +54,6 @@ The following subset of Remix config options are supported:
 - [ignoredRouteFiles][ignored-route-files]
 - [publicPath][public-path]
 - [routes][routes]
-- [serverBuildPath][server-build-path]
 - [serverModuleFormat][server-module-format]
 
 The Vite plugin also accepts the following additional options:
