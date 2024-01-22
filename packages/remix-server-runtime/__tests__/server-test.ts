@@ -1668,6 +1668,7 @@ describe("shared server runtime", () => {
         },
         "routes/_index": {
           parentId: "root",
+          index: true,
           default: {},
           loader: indexLoader,
         },
@@ -1679,11 +1680,11 @@ describe("shared server runtime", () => {
           throw new Error("thrown");
         }
         calledBefore = true;
-        return ogHandleDocumentRequest.call(null, arguments);
+        return ogHandleDocumentRequest.call(null, ...arguments);
       }) as any;
       let handler = createRequestHandler(build, ServerMode.Development);
 
-      let request = new Request(`${baseUrl}/`, { method: "get" });
+      let request = new Request(`${baseUrl}/404`, { method: "get" });
 
       let result = await handler(request);
       expect(result.status).toBe(500);
@@ -1698,6 +1699,46 @@ describe("shared server runtime", () => {
       expect(context.loaderData).toEqual({});
     });
 
+    test("unwraps responses thrown from handleDocumentRequest", async () => {
+      let rootLoader = jest.fn(() => {
+        return "root";
+      });
+      let indexLoader = jest.fn(() => {
+        return "index";
+      });
+      let build = mockServerBuild({
+        root: {
+          default: {},
+          loader: rootLoader,
+          ErrorBoundary: {},
+        },
+        "routes/_index": {
+          parentId: "root",
+          index: true,
+          default: {},
+          loader: indexLoader,
+        },
+      });
+      let ogHandleDocumentRequest = build.entry.module.default;
+      build.entry.module.default = function (
+        _: Request,
+        responseStatusCode: number
+      ) {
+        if (responseStatusCode === 200) {
+          throw new Response("Uh oh!", {
+            status: 400,
+            statusText: "Bad Request",
+          });
+        }
+        return ogHandleDocumentRequest.call(null, ...arguments);
+      } as any;
+      let handler = createRequestHandler(build, ServerMode.Development);
+
+      let request = new Request(`${baseUrl}/`, { method: "get" });
+
+      let result = await handler(request);
+      expect(result.status).toBe(400);
+    });
     test("returns generic message if handleDocumentRequest throws a second time", async () => {
       let rootLoader = jest.fn(() => {
         return "root";
