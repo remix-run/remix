@@ -171,9 +171,7 @@ export const getStylesForUrl = async (
   config: Pick<
     ResolvedRemixConfig,
     "appDirectory" | "routes" | "rootDirectory" | "entryClientFilePath"
-  > & {
-    basename: string;
-  },
+  > & { basename: string },
   cssModulesManifest: Record<string, string>,
   build: ServerBuild,
   url: string | undefined

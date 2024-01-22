@@ -77,16 +77,6 @@ type RemixEsbuildUserConfigJsdocOverrides = {
    * `"/"`. This is the path the browser will use to find assets.
    */
   publicPath?: SupportedRemixEsbuildUserConfig["publicPath"];
-  /**
-   * The path to the server build file, relative to the project. This file
-   * should end in a `.js` extension and should be deployed to your server.
-   * Defaults to `"build/server/index.js"`.
-   */
-  serverBuildPath?: SupportedRemixConfig["serverBuildPath"];
-  /**
-   * TODO: for now sneak this in as remix vite only option
-   */
-  basename?: string;
 };
 
 // Only expose a subset of route properties to the "serverBundles" function
@@ -149,6 +139,11 @@ export type VitePluginConfig = RemixEsbuildUserConfigJsdocOverrides &
      * for different hosting providers.
      */
     adapter?: VitePluginAdapter;
+    /**
+     * An optional basename to server your Remix app from (same as the React
+     * Router `basename` option).  Defaults to `/`.
+     */
+    basename?: string;
     /**
      * The path to the server build directory, relative to the project. This
      * directory should be deployed to your server. Defaults to
@@ -488,14 +483,19 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let { serverBuildFile, unstable_serverBundles: serverBundles } =
       resolvedRemixUserConfig;
 
-    let basename = resolvedRemixUserConfig.basename ?? "/";
+    let basename = resolvedRemixUserConfig.basename || "/";
     if (viteCommand === "serve" && !viteUserConfig.server?.middlewareMode) {
       // Odd restriction for default vite dev server
       // since Vite requires SSR request URL to be under `base` option (= `publicPath`)
-      invariant(
-        basename.startsWith(publicPath),
-        "'publicPath' must be a prefix of 'basename' for default Vite dev server."
-      );
+      if (!basename.startsWith(publicPath)) {
+        console.warn(
+          colors.yellow(
+            "The `basename` config must begin with `publicPath` for the default " +
+              "Vite dev server - the `basename` config will be ignored"
+          )
+        );
+        basename = "/";
+      }
     }
 
     // Log warning for incompatible vite config flags
@@ -567,13 +567,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           remixConfig.assetsBuildDirectory
         )
       )};
-      ${
-        remixConfig.future
-          ? `export const future = ${JSON.stringify(remixConfig.future)}`
-          : ""
-      };
       export const publicPath = ${JSON.stringify(remixConfig.publicPath)};
       export const basename = ${JSON.stringify(remixConfig.basename)};
+      export const future = ${JSON.stringify(remixConfig.future)};
       export const isSpaMode = ${!remixConfig.ssr};
       export const entry = { module: entryServer };
       export const routes = {

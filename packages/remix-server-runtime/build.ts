@@ -3,6 +3,9 @@ import type { AssetsManifest, EntryContext, FutureConfig } from "./entry";
 import type { ServerRouteManifest } from "./routes";
 import type { AppLoadContext } from "./data";
 
+// NOTE: IF you modify `ServerBuild`, be sure to modify the
+// `remix-dev/server-build.ts` file to reflect the new field as well
+
 /**
  * The output of the compiler for the server build.
  */
@@ -13,8 +16,8 @@ export interface ServerBuild {
   };
   routes: ServerRouteManifest;
   assets: AssetsManifest;
+  basename: string;
   publicPath: string;
-  basename?: string;
   assetsBuildDirectory: string;
   future: FutureConfig;
   isSpaMode: boolean;

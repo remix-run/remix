@@ -38,6 +38,7 @@ function createRequest(
     req.headers.origin && "null" !== req.headers.origin
       ? req.headers.origin
       : `http://${req.headers.host}`;
+  // Use `req.originalUrl` to preserve the basename vite may have stripped from `req.url`
   invariant(req.originalUrl, 'Expected "req.originalUrl" to be defined');
   let url = new URL(req.originalUrl, origin);
 
