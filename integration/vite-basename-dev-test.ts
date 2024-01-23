@@ -61,6 +61,7 @@ test.describe(() => {
         import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
         export default defineConfig({
+          base: "/mybase/",
           server: {
             port: ${port},
             strictPort: true,
@@ -70,7 +71,6 @@ test.describe(() => {
           },
           plugins: [
             remix({
-              basename: "/mybase/",
               publicPath: "/mybase/",
             }),
           ],
