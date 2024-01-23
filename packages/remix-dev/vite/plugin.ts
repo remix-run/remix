@@ -144,11 +144,6 @@ export type VitePluginConfig = RemixEsbuildUserConfigJsdocOverrides &
      */
     adapter?: VitePluginAdapter;
     /**
-     * An optional basename to server your Remix app from (same as the React
-     * Router `basename` option).  Defaults to `/`.
-     */
-    basename?: string;
-    /**
      * The path to the build directory, relative to the project. Defaults to
      * `"build"`.
      */
@@ -199,7 +194,6 @@ export type ResolvedVitePluginConfig = Pick<
   | "serverModuleFormat"
 > & {
   adapter?: Adapter;
-  basename: string;
   buildDirectory: string;
   manifest: boolean;
   serverBuildFile: string;
@@ -503,18 +497,17 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let { serverBuildFile, unstable_serverBundles: serverBundles } =
       resolvedRemixUserConfig;
 
-    let basename = resolvedRemixUserConfig.basename || "/";
-    if (viteCommand === "serve" && !viteUserConfig.server?.middlewareMode) {
-      // Odd restriction for default vite dev server
-      // since Vite requires SSR request URL to be under `base` option (= `publicPath`)
-      if (!basename.startsWith(publicPath)) {
-        console.warn(
-          colors.yellow(
-            "The `basename` config must begin with `publicPath` for the default " +
-              "Vite dev server - the `basename` config will be ignored"
-          )
+    if (
+      viteUserConfig.base &&
+      viteCommand === "serve" &&
+      !viteUserConfig.server?.middlewareMode
+    ) {
+      if (!viteUserConfig.base.startsWith(publicPath)) {
+        throw new Error(
+          "When using the Vite `base` config and the Remix `publicPath`, " +
+            "the `base` config must begin with `publicPath` for the default " +
+            "Vite dev server."
         );
-        basename = "/";
       }
     }
 
@@ -544,7 +537,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let resolvedRemixConfig: ResolvedVitePluginConfig = {
       adapter,
       appDirectory,
-      basename,
       buildDirectory,
       entryClientFilePath,
       entryServerFilePath,
@@ -587,7 +579,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         )
       )};
       export const publicPath = ${JSON.stringify(remixConfig.publicPath)};
-      export const basename = ${JSON.stringify(remixConfig.basename)};
+      export const basename = ${JSON.stringify(viteUserConfig.base)};
       export const future = ${JSON.stringify(remixConfig.future)};
       export const isSpaMode = ${!remixConfig.ssr};
       export const entry = { module: entryServer };
