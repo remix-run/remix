@@ -760,7 +760,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           )
         );
 
-        return vite.mergeConfig(remixConfig.adapter?.vite ?? {}, {
+        let defaults = {
           __remixPluginResolvedConfig: remixConfig,
           appType: "custom",
           experimental: { hmrPartialAccept: true },
@@ -845,7 +845,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   }),
             },
           }),
-        });
+        };
+        return vite.mergeConfig(defaults, remixConfig.adapter?.vite ?? {});
       },
       async configResolved(resolvedViteConfig) {
         await initEsModuleLexer;
