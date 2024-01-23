@@ -4,7 +4,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@playwright/test";
 import getPort from "get-port";
 
-import { createProject, viteDev } from "./helpers/vite.js";
+import { createProject, VITE_CONFIG, viteDev } from "./helpers/vite.js";
 
 const files = {
   "app/routes/_index.tsx": String.raw`
@@ -54,28 +54,12 @@ test.describe(() => {
 
   test.beforeAll(async () => {
     port = await getPort();
-    let hmrPort = await getPort();
     cwd = await createProject({
-      "vite.config.js": String.raw`
-        import { defineConfig } from "vite";
-        import { unstable_vitePlugin as remix } from "@remix-run/dev";
-
-        export default defineConfig({
-          base: "/mybase/",
-          server: {
-            port: ${port},
-            strictPort: true,
-            hmr: {
-              port: ${hmrPort}
-            }
-          },
-          plugins: [
-            remix({
-              publicPath: "/mybase/",
-            }),
-          ],
-        });
-      `,
+      "vite.config.js": await VITE_CONFIG({
+        port,
+        viteOptions: '{ base: "/mybase/" }',
+        pluginOptions: '{ publicPath: "/mybase/" }',
+      }),
       ...files,
     });
     stop = await viteDev({ cwd, port });

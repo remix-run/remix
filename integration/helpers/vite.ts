@@ -15,6 +15,7 @@ const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
 export const VITE_CONFIG = async (args: {
   port: number;
+  viteOptions?: string;
   pluginOptions?: string;
   vitePlugins?: string;
 }) => {
@@ -24,6 +25,7 @@ export const VITE_CONFIG = async (args: {
     import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
     export default defineConfig({
+      ...${args.viteOptions ?? "{}"},
       server: {
         port: ${args.port},
         strictPort: true,
