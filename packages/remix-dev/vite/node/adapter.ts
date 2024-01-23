@@ -32,15 +32,21 @@ function createHeaders(requestHeaders: IncomingHttpHeaders) {
 // Based on `createRemixRequest` in packages/remix-express/server.ts
 function createRequest(
   req: Vite.Connect.IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
+  useOriginalUrl: boolean
 ): Request {
   let origin =
     req.headers.origin && "null" !== req.headers.origin
       ? req.headers.origin
       : `http://${req.headers.host}`;
-  // Use `req.originalUrl` to preserve the basename vite may have stripped from `req.url`
-  invariant(req.originalUrl, 'Expected "req.originalUrl" to be defined');
-  let url = new URL(req.originalUrl, origin);
+  // Use `req.originalUrl` when a basename is present since it will have been
+  // stripped from `url`
+  // TODO (v3): It is probably safe to always use `originalUrl` but it could
+  // technically be considered a breaking change if folks were relying on the
+  // pre-remix-handler mutation of `req.url` so we can do that in v3
+  let path = useOriginalUrl ? req.originalUrl : req.url;
+  invariant(path, "Expected `req.originalUrl`/`req.url` to be defined");
+  let url = new URL(path, origin);
 
   let init: RequestInit = {
     method: req.method,
@@ -90,7 +96,7 @@ export let createRequestHandler = (
 ) => {
   let handler = createBaseRequestHandler(build, mode);
   return async (req: Vite.Connect.IncomingMessage, res: ServerResponse) => {
-    let request = createRequest(req, res);
+    let request = createRequest(req, res, build.basename != null);
     let response = await handler(request, {});
     handleNodeResponse(response, res);
   };
