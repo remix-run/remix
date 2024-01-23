@@ -578,10 +578,10 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           getClientBuildDirectory(remixConfig)
         )
       )};
-      export const publicPath = ${JSON.stringify(remixConfig.publicPath)};
       export const basename = ${JSON.stringify(viteUserConfig.base)};
       export const future = ${JSON.stringify(remixConfig.future)};
       export const isSpaMode = ${!remixConfig.ssr};
+      export const publicPath = ${JSON.stringify(remixConfig.publicPath)};
       export const entry = { module: entryServer };
       export const routes = {
         ${Object.keys(remixConfig.routes)
@@ -807,7 +807,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               "@remix-run/react",
             ],
           },
-          base: remixConfig.publicPath,
+          base: viteUserConfig.base ?? remixConfig.publicPath,
           ...(viteCommand === "build" && {
             build: {
               ...viteUserConfig.build,
