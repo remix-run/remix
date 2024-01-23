@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "remix vite:dev",
     "build": "remix vite:build",
-    "start": "wrangler pages dev ./build/client --kv MY_KV",
+    "start": "wrangler pages dev ./build/client",
     "deploy": "wrangler pages deploy ./build/client",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "typecheck": "tsc"
@@ -36,7 +36,7 @@
     "typescript": "^5.1.6",
     "vite": "^5.0.0",
     "vite-tsconfig-paths": "^4.2.1",
-    "wrangler": "^0.0.0-9f96f28b"
+    "wrangler": "0.0.0-f9de0c56"
   },
   "engines": {
     "node": ">=18.0.0"

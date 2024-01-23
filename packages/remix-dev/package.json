@@ -96,7 +96,8 @@
   "peerDependencies": {
     "@remix-run/serve": "^2.5.1",
     "typescript": "^5.1.0",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "wrangler": "0.0.0-f9de0c56"
   },
   "peerDependenciesMeta": {
     "@remix-run/serve": {
@@ -106,6 +107,9 @@
       "optional": true
     },
     "vite": {
+      "optional": true
+    },
+    "wrangler": {
       "optional": true
     }
   },

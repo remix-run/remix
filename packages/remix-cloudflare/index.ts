@@ -1,7 +1,6 @@
 import "./globals";
 
 export { createWorkersKVSessionStorage } from "./sessions/workersKVStorage";
-export { unstable_vitePluginAdapter } from "./vitePluginAdapter";
 
 export {
   createCookie,

@@ -131,7 +131,7 @@ type AdapterRemixConfigOverrides = Pick<
 type AdapterConfig = AdapterRemixConfigOverrides & {
   loadContext?: Record<string, unknown>;
   buildEnd?: BuildEndHook;
-  vite: Vite.UserConfig;
+  viteConfig: Vite.UserConfig;
 };
 
 type Adapter = Omit<AdapterConfig, AdapterRemixConfigOverrideKey>;
@@ -846,7 +846,10 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             },
           }),
         };
-        return vite.mergeConfig(defaults, remixConfig.adapter?.vite ?? {});
+        return vite.mergeConfig(
+          defaults,
+          remixConfig.adapter?.viteConfig ?? {}
+        );
       },
       async configResolved(resolvedViteConfig) {
         await initEsModuleLexer;
