@@ -367,6 +367,8 @@ There are two APIs we'll be using to load data, [`loader`][loader] and [`useLoad
 
 👉 **Export a `loader` function from `app/root.tsx` and render the data**
 
+<docs-info>The following code has a type error in it, we'll fix it in the next section</docs-info>
+
 ```tsx filename=app/root.tsx lines=[2,12,16,20-23,26,35-58]
 // existing imports
 import { json } from "@remix-run/node";
@@ -468,6 +470,8 @@ These [`params`][params] are passed to the loader with keys that match the dynam
 These params are most often used to find a record by ID. Let's try it out.
 
 👉 **Add a `loader` function to the contact page and access data with `useLoaderData`**
+
+<docs-info>The following code has type errors in it, we'll fix them in the next section</docs-info>
 
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[1-2,5,7-10,13]
 import { json } from "@remix-run/node";
@@ -631,7 +635,7 @@ export default function EditContact() {
   const { contact } = useLoaderData<typeof loader>();
 
   return (
-    <Form id="contact-form" method="post">
+    <Form key={contact.id} id="contact-form" method="post">
       <p>
         <span>Name</span>
         <input
@@ -1053,7 +1057,7 @@ export default function EditContact() {
   const navigate = useNavigate();
 
   return (
-    <Form id="contact-form" method="post">
+    <Form key={contact.id} id="contact-form" method="post">
       {/* existing elements */}
       <p>
         <button type="submit">Save</button>
