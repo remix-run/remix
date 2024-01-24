@@ -4,7 +4,12 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@playwright/test";
 import getPort from "get-port";
 
-import { createProject, VITE_CONFIG, viteDev } from "./helpers/vite.js";
+import {
+  createProject,
+  customDev,
+  VITE_CONFIG,
+  viteDev,
+} from "./helpers/vite.js";
 
 const files = {
   "app/routes/_index.tsx": String.raw`
@@ -67,6 +72,59 @@ test.describe(() => {
   test.afterAll(async () => await stop());
 
   test("Vite / basename / vite dev", async ({ page }) => {
+    await workflow({ page, cwd, port });
+  });
+});
+
+test.describe(async () => {
+  let port: number;
+  let cwd: string;
+  let stop: () => void;
+
+  test.beforeAll(async () => {
+    port = await getPort();
+    cwd = await createProject({
+      "vite.config.js": await VITE_CONFIG({
+        port,
+        viteOptions: '{ base: "/mybase/" }',
+        pluginOptions: '{ publicPath: "/mybase/" }',
+      }),
+      "server.mjs": String.raw`
+        import { createRequestHandler } from "@remix-run/express";
+        import { installGlobals } from "@remix-run/node";
+        import express from "express";
+        installGlobals();
+
+        let viteDevServer =
+          await import("vite").then((vite) =>
+            vite.createServer({
+              server: { middlewareMode: true },
+            })
+          );
+
+        const app = express();
+        app.use("/mybase/", viteDevServer.middlewares);
+        app.all(
+          "/mybase/*",
+          createRequestHandler({
+            build: () => viteDevServer.ssrLoadModule("virtual:remix/server-build"),
+          })
+        );
+        app.get("*", (_req, res) => {
+          res.setHeader("content-type", "text/html")
+          res.end('Remix app is at <a href="/mybase/">/mybase/</a>');
+        });
+
+        const port = ${port};
+        app.listen(port, () => console.log('http://localhost:' + port));
+      `,
+      ...files,
+    });
+    stop = await customDev({ cwd, port });
+  });
+  test.afterAll(() => stop());
+
+  test("Vite / basename / express", async ({ page }) => {
     await workflow({ page, cwd, port });
   });
 });
