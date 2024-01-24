@@ -109,7 +109,7 @@ test.describe(() => {
   test.afterAll(async () => await stop());
 
   test("Vite / basename / vite dev", async ({ page }) => {
-    await workflow({ page, cwd, port });
+    await workflowDev({ page, cwd, port });
   });
 });
 
@@ -134,11 +134,11 @@ test.describe(async () => {
   test.afterAll(() => stop());
 
   test("Vite / basename / express dev", async ({ page }) => {
-    await workflow({ page, cwd, port });
+    await workflowDev({ page, cwd, port });
   });
 });
 
-async function workflow({
+async function workflowDev({
   page,
   cwd,
   port,
@@ -203,7 +203,6 @@ test.describe(() => {
   let cwd: string;
   let stop: () => unknown;
 
-  // TODO: build once and test both remix-serve and custom server
   test.beforeAll(async () => {
     port = await getPort();
     cwd = await createProject({
