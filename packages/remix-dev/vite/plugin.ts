@@ -419,7 +419,7 @@ const getServerBundleBuildConfig = (
   return viteUserConfig.__remixServerBundleBuildConfig as ServerBundleBuildConfig;
 };
 
-let getServerBuildDirectory = (buildContext: BuildContext) =>
+export let getServerBuildDirectory = (buildContext: BuildContext) =>
   path.join(
     buildContext.remixConfig.buildDirectory,
     "server",
@@ -427,9 +427,6 @@ let getServerBuildDirectory = (buildContext: BuildContext) =>
       ? [buildContext.serverBundleId]
       : [])
   );
-
-export let getServerBuildRootDirectory = (buildContext: BuildContext) =>
-  getServerBuildDirectory(buildContext);
 
 let getClientBuildDirectory = (remixConfig: ResolvedVitePluginConfig) =>
   path.join(remixConfig.buildDirectory, "client");

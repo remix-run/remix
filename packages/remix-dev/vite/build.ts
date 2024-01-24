@@ -9,7 +9,7 @@ import {
   type ServerBundleBuildConfig,
   type ServerBundlesBuildManifest,
   configRouteToBranchRoute,
-  getServerBuildRootDirectory,
+  getServerBuildDirectory,
 } from "./plugin";
 import type { ConfigRoute, RouteManifest } from "../config/routes";
 import invariant from "../invariant";
@@ -110,7 +110,7 @@ async function getServerBuilds(buildContext: BuildContext): Promise<{
   // eslint-disable-next-line prefer-let/prefer-let -- Improve type narrowing
   const { routes, serverBuildFile, serverBundles, appDirectory } =
     buildContext.remixConfig;
-  let serverBuildRootDirectory = getServerBuildRootDirectory(buildContext);
+  let serverBuildDirectory = getServerBuildDirectory(buildContext);
   if (!serverBundles) {
     return {
       serverBuilds: [{ ssr: true }],
@@ -160,7 +160,7 @@ async function getServerBuilds(buildContext: BuildContext): Promise<{
 
       let relativeServerBundleDirectory = path.relative(
         rootDirectory,
-        path.join(serverBuildRootDirectory, serverBundleId)
+        path.join(serverBuildDirectory, serverBundleId)
       );
       let serverBuildConfig = serverBundleBuildConfigById.get(serverBundleId);
       if (!serverBuildConfig) {
@@ -198,21 +198,21 @@ async function getServerBuilds(buildContext: BuildContext): Promise<{
   };
 }
 
-async function cleanServerBuildRootDirectory(
+async function cleanServerBuildDirectory(
   viteConfig: Vite.ResolvedConfig,
   buildContext: BuildContext
 ) {
-  let serverBuildRootDirectory = getServerBuildRootDirectory(buildContext);
+  let serverBuildDirectory = getServerBuildDirectory(buildContext);
   let isWithinRoot = () => {
     let relativePath = path.relative(
       buildContext.rootDirectory,
-      serverBuildRootDirectory
+      serverBuildDirectory
     );
     return !relativePath.startsWith("..") && !path.isAbsolute(relativePath);
   };
 
   if (viteConfig.build.emptyOutDir ?? isWithinRoot()) {
-    await fse.remove(serverBuildRootDirectory);
+    await fse.remove(serverBuildDirectory);
   }
 }
 
@@ -273,7 +273,7 @@ export async function build(
   // output directories, we need to clean the root server build directory
   // ourselves rather than relying on Vite to do it, otherwise you can end up
   // with stale server bundle directories in your build output
-  await cleanServerBuildRootDirectory(viteConfig, buildContext);
+  await cleanServerBuildDirectory(viteConfig, buildContext);
 
   // Run the Vite client build first
   await viteBuild({ ssr: false });
