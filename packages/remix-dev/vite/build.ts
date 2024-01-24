@@ -4,9 +4,9 @@ import fse from "fs-extra";
 import colors from "picocolors";
 
 import {
-  type ResolvedVitePluginConfig,
-  type ServerBundleBuildConfig,
+  type BuildContext,
   type BuildManifest,
+  type ServerBundleBuildConfig,
   type ServerBundlesBuildManifest,
   configRouteToBranchRoute,
   getServerBuildRootDirectory,
@@ -38,16 +38,16 @@ async function resolveViteConfig({
   return viteConfig;
 }
 
-async function extractRemixConfig(viteConfig: Vite.ResolvedConfig) {
-  let remixConfig = viteConfig[
-    "__remixPluginResolvedConfig" as keyof typeof viteConfig
-  ] as ResolvedVitePluginConfig | undefined;
-  if (!remixConfig) {
+async function extractRemixBuildContext(viteConfig: Vite.ResolvedConfig) {
+  let buildContext = viteConfig[
+    "__remixPluginBuildContext" as keyof typeof viteConfig
+  ] as BuildContext | undefined;
+  if (!buildContext) {
     console.error(colors.red("Remix Vite plugin not found in Vite config"));
     process.exit(1);
   }
 
-  return remixConfig;
+  return buildContext;
 }
 
 function getAddressableRoutes(routes: RouteManifest): ConfigRoute[] {
@@ -102,19 +102,15 @@ type RemixViteServerBuildArgs = {
 
 type RemixViteBuildArgs = RemixViteClientBuildArgs | RemixViteServerBuildArgs;
 
-async function getServerBuilds(remixConfig: ResolvedVitePluginConfig): Promise<{
+async function getServerBuilds(buildContext: BuildContext): Promise<{
   serverBuilds: RemixViteServerBuildArgs[];
   buildManifest: BuildManifest;
 }> {
+  let { rootDirectory } = buildContext;
   // eslint-disable-next-line prefer-let/prefer-let -- Improve type narrowing
-  const {
-    routes,
-    serverBuildFile,
-    serverBundles,
-    rootDirectory,
-    appDirectory,
-  } = remixConfig;
-  let serverBuildRootDirectory = getServerBuildRootDirectory(remixConfig);
+  const { routes, serverBuildFile, serverBundles, appDirectory } =
+    buildContext.remixConfig;
+  let serverBuildRootDirectory = getServerBuildRootDirectory(buildContext);
   if (!serverBundles) {
     return {
       serverBuilds: [{ ssr: true }],
@@ -204,12 +200,12 @@ async function getServerBuilds(remixConfig: ResolvedVitePluginConfig): Promise<{
 
 async function cleanServerBuildRootDirectory(
   viteConfig: Vite.ResolvedConfig,
-  remixConfig: ResolvedVitePluginConfig
+  buildContext: BuildContext
 ) {
-  let serverBuildRootDirectory = getServerBuildRootDirectory(remixConfig);
+  let serverBuildRootDirectory = getServerBuildRootDirectory(buildContext);
   let isWithinRoot = () => {
     let relativePath = path.relative(
-      remixConfig.rootDirectory,
+      buildContext.rootDirectory,
       serverBuildRootDirectory
     );
     return !relativePath.startsWith("..") && !path.isAbsolute(relativePath);
@@ -250,7 +246,8 @@ export async function build(
   await preloadViteEsm();
 
   let viteConfig = await resolveViteConfig({ configFile, mode, root });
-  let remixConfig = await extractRemixConfig(viteConfig);
+  let buildContext = await extractRemixBuildContext(viteConfig);
+  let { remixConfig } = buildContext;
 
   let vite = await import("vite");
 
@@ -276,19 +273,19 @@ export async function build(
   // output directories, we need to clean the root server build directory
   // ourselves rather than relying on Vite to do it, otherwise you can end up
   // with stale server bundle directories in your build output
-  await cleanServerBuildRootDirectory(viteConfig, remixConfig);
+  await cleanServerBuildRootDirectory(viteConfig, buildContext);
 
   // Run the Vite client build first
   await viteBuild({ ssr: false });
 
   // Then run Vite SSR builds in parallel
-  let { serverBuilds, buildManifest } = await getServerBuilds(remixConfig);
+  let { serverBuilds, buildManifest } = await getServerBuilds(buildContext);
 
   await Promise.all(serverBuilds.map(viteBuild));
 
-  if (remixConfig.manifest) {
+  if (buildContext.remixConfig.manifest) {
     await fse.writeFile(
-      path.join(remixConfig.buildDirectory, "manifest.json"),
+      path.join(buildContext.remixConfig.buildDirectory, "manifest.json"),
       JSON.stringify(buildManifest, null, 2),
       "utf-8"
     );
