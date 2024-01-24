@@ -8,21 +8,16 @@ title: Vite (Unstable)
 
 ## Getting started
 
-To get started with a minimal server, you can use the [`unstable-vite`][template-vite] template:
+We've got a few different Vite-based templates to get you started.
 
 ```shellscript nonumber
+# Minimal server:
 npx create-remix@latest --template remix-run/remix/templates/unstable-vite
-```
 
-If you'd rather customize your server, you can use the [`unstable-vite-express`][template-vite-express] template:
-
-```shellscript nonumber
+# Express:
 npx create-remix@latest --template remix-run/remix/templates/unstable-vite-express
-```
 
-For Cloudflare, you can use the [`unstable-vite-cloudflare`][template-vite-cloudflare] template:
-
-```shellscript nonumber
+# Cloudflare:
 npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
 ```
 
@@ -160,9 +155,7 @@ The use of any such features will render the existing Remix compiler unable to c
 
 <docs-warning>
 
-[Cloudflare Workers are now deprecated][cloudflare-workers-deprecated].
-As a result, the Remix Vite plugin only officially supports Cloudflare Pages.
-Workers sites may continue to work, but we do not test them or make any guarantees.
+The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pages] which is specifically designed for fullstack applications, unlike [Cloudflare Workers Sites][cloudflare-workers-sites]. If you're currently on Cloudflare Workers Sites, refer to the [Cloudflare Pages migration guide][cloudflare-pages-migration-guide].
 
 </docs-warning>
 
@@ -176,7 +169,7 @@ npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloud
 
 👉 **Use the Cloudflare adapter**
 
-```ts filename=vite.config.ts
+```ts filename=vite.config.ts lines=[3,10]
 import {
   unstable_vitePlugin as remix,
   unstable_vitePluginAdapterCloudflare as cloudflare,
@@ -194,15 +187,7 @@ export default defineConfig({
 
 👉 **Configure bindings in `wrangler.toml`**
 
-For example, to configure a KV namespace:
-
-```toml filename=wrangler.toml
-kv-namespaces = [
-  { binding = "MY_KV", id = "MY_KV_ID" },
-]
-```
-
-Checkout the [`wrangler.toml` configuration docs][wrangler-toml-bindings] for all available bindings.
+Check out the [`wrangler.toml` configuration docs][wrangler-toml-bindings] for all available bindings.
 
 👉 **Create a catch-all route for Remix**
 
@@ -237,15 +222,6 @@ You'll also need to tell `wrangler` where to find your client assets.
 remix vite:build
 wrangler pages dev ./build/client
 ```
-
-<docs-info>
-
-If you encounter any errors that include `Your worker created multiple branches of a single stream` while running `wrangler pages dev`,
-these are known issues with `wrangler` and can be safely ignored.
-
-For more information, see [the original issue in `cloudflare/workers-sdk`][cloudflare-request-clone-errors].
-
-</docs-info>
 
 #### Deploy
 
@@ -1020,6 +996,23 @@ export default function BoundaryRoute() {
 
 You would then nest all other routes within this, e.g. `app/routes/about.tsx` would become `app/routes/_boundary.about.tsx`, etc.
 
+#### Wrangler errors in development
+
+When using Cloudflare Pages, you may encounter the following error from `wrangler pages dev`.
+
+```
+Your worker called response.clone(), but did not read the body of both clones.
+This is wasteful, as it forces the system to buffer the entire response body
+in memory, rather than streaming it through. This may cause your worker to be
+unexpectedly terminated for going over the memory limit. If you only meant to
+copy the response headers and metadata (e.g. in order to be able to modify
+them), use `new Response(response.body, response)` instead.
+```
+
+This is a [known issue with Wrangler][cloudflare-request-clone-errors].
+
+</docs-info>
+
 ## Acknowledgements
 
 Vite is an amazing project, and we're grateful to the Vite team for their work.
@@ -1042,8 +1035,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 
 [vite]: https://vitejs.dev
 [supported-with-some-deprecations]: #add-mdx-plugin
-[template-vite]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite
-[template-vite-express]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-express
 [template-vite-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-cloudflare
 [remix-config]: ../file-conventions/remix-config
 [app-directory]: ../file-conventions/remix-config#appdirectory
@@ -1113,6 +1104,8 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [react-canaries]: https://react.dev/blog/2023/05/03/react-canaries
 [package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides
 [wrangler-toml-bindings]: https://developers.cloudflare.com/workers/wrangler/configuration/#bindings
-[cloudflare-workers-deprecated]: https://developers.cloudflare.com/workers/configuration/sites/
+[cloudflare-pages]: https://pages.cloudflare.com
+[cloudflare-workers-sites]: https://developers.cloudflare.com/workers/configuration/sites
+[cloudflare-pages-migration-guide]: https://developers.cloudflare.com/pages/migrations/migrating-from-workers
 [cloudflare-request-clone-errors]: https://github.com/cloudflare/workers-sdk/issues/3259
 [cloudflare-pages-bindings]: https://developers.cloudflare.com/pages/functions/bindings/
