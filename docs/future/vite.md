@@ -20,7 +20,7 @@ If you'd rather customize your server, you can use the [`unstable-vite-express`]
 npx create-remix@latest --template remix-run/remix/templates/unstable-vite-express
 ```
 
-To use Cloudflare, you can use the [`unstable-vite-cloudflare`][template-vite-cloudflare] template:
+For Cloudflare, you can use the [`unstable-vite-cloudflare`][template-vite-cloudflare] template:
 
 ```shellscript nonumber
 npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
