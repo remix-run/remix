@@ -1,10 +1,9 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import type { Page } from "@playwright/test";
 import { test, expect } from "@playwright/test";
 import getPort from "get-port";
 
 import {
+  createEditor,
   createProject,
   customDev,
   VITE_CONFIG,
@@ -140,7 +139,7 @@ async function workflow({
 }) {
   let pageErrors: Error[] = [];
   page.on("pageerror", (error) => pageErrors.push(error));
-  let edit = editor(cwd);
+  let edit = createEditor(cwd);
 
   let requestUrls: string[] = [];
   page.on("request", (request) => {
@@ -188,11 +187,3 @@ async function workflow({
     )
   ).toEqual([]);
 }
-
-const editor =
-  (projectDir: string) =>
-  async (file: string, transform: (contents: string) => string) => {
-    let filepath = path.join(projectDir, file);
-    let contents = await fs.readFile(filepath, "utf8");
-    await fs.writeFile(filepath, transform(contents), "utf8");
-  };
