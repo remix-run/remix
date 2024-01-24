@@ -6,8 +6,6 @@ title: Vite (Unstable)
 
 [Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
 
-<docs-warning>Note that Cloudflare is not yet supported when using Vite.</docs-warning>
-
 ## Getting started
 
 To get started with a minimal server, you can use the [`unstable-vite`][template-vite] template:
@@ -20,6 +18,12 @@ If you'd rather customize your server, you can use the [`unstable-vite-express`]
 
 ```shellscript nonumber
 npx create-remix@latest --template remix-run/remix/templates/unstable-vite-express
+```
+
+To use Cloudflare, you can use the [`unstable-vite-cloudflare`][template-vite-cloudflare] template:
+
+```shellscript nonumber
+npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
 ```
 
 These templates include a `vite.config.ts` file which is where the Remix Vite plugin is configured.
@@ -151,6 +155,106 @@ This means that, for any additional bundling features you'd like to use, you sho
 
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
 The use of any such features will render the existing Remix compiler unable to compile your app, so only use them if you intend to use Vite exclusively from here on out.
+
+## Cloudflare
+
+<docs-warning>
+
+[Cloudflare Workers are now deprecated][cloudflare-workers-deprecated].
+As a result, the Remix Vite plugin only officially supports Cloudflare Pages.
+Workers sites may continue to work, but we do not test them or make any guarantees.
+
+</docs-warning>
+
+To get started with Cloudflare, you can use the [`unstable-vite-cloudflare`][template-vite-cloudflare] template:
+
+```shellscript nonumber
+npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
+```
+
+#### Setup
+
+👉 **Use the Cloudflare adapter**
+
+```ts filename=vite.config.ts
+import {
+  unstable_vitePlugin as remix,
+  unstable_vitePluginAdapterCloudflare as cloudflare,
+} from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      adapter: cloudflare(),
+    }),
+  ],
+});
+```
+
+👉 **Configure bindings in `wrangler.toml`**
+
+For example, to configure a KV namespace:
+
+```toml filename=wrangler.toml
+kv-namespaces = [
+  { binding = "MY_KV", id = "MY_KV_ID" },
+]
+```
+
+Checkout the [`wrangler.toml` configuration docs][wrangler-toml-bindings] for all available bindings.
+
+👉 **Create a catch-all route for Remix**
+
+```ts filename=functions/[[path]].ts
+import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
+
+import * as build from "../build/server";
+
+export const onRequest = createPagesFunctionHandler({
+  build,
+  getLoadContext: (context) => ({ env: context.env }),
+});
+```
+
+#### Development
+
+```shellscript nonumber
+remix vite:dev
+```
+
+In development, Vite will run your server code directly in Node, not Cloudflare's native `workerd` runtime.
+To emulate the Cloudflare environment, the Cloudflare adapter will automatically inject bindings into `context.env` based on your `wrangler.toml` configuration.
+
+Note that the none of you pages functions (`functions/*`) will run in development as those are purely for `wrangler` routing.
+
+#### Preview
+
+Your `functions/[[path]].ts` file should already tell `wrangler` how to delegate requests to Remix on the server via `createPagesFunctionHandler`.
+You'll also need to tell `wrangler` where to find your client assets.
+
+```shellscript nonumber
+remix vite:build
+wrangler pages dev ./build/client
+```
+
+<docs-info>
+
+If you encounter any errors that include `Your worker created multiple branches of a single stream` while running `wrangler pages dev`,
+these are known issues with `wrangler` and can be safely ignored.
+
+For more information, see [the original issue in `cloudflare/workers-sdk`][cloudflare-request-clone-errors].
+
+</docs-info>
+
+#### Deploy
+
+```shellscript
+wrangler pages deploy ./build/client
+```
+
+In production, make sure you setup corresponding namespaces within the Cloudflare dashboard and then create bindings with those namespaces for your pages functions.
+For more information, see the [official docs for Cloudflare Pages bindings][cloudflare-pages-bindings].
 
 ## Migrating
 
@@ -940,6 +1044,7 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [supported-with-some-deprecations]: #add-mdx-plugin
 [template-vite]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite
 [template-vite-express]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-express
+[template-vite-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-cloudflare
 [remix-config]: ../file-conventions/remix-config
 [app-directory]: ../file-conventions/remix-config#appdirectory
 [assets-build-directory]: ../file-conventions/remix-config#assetsbuilddirectory
@@ -1007,3 +1112,7 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [hydrate-fallback]: ../route/hydrate-fallback
 [react-canaries]: https://react.dev/blog/2023/05/03/react-canaries
 [package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides
+[wrangler-toml-bindings]: https://developers.cloudflare.com/workers/wrangler/configuration/#bindings
+[cloudflare-workers-deprecated]: https://developers.cloudflare.com/workers/configuration/sites/
+[cloudflare-request-clone-errors]: https://github.com/cloudflare/workers-sdk/issues/3259
+[cloudflare-pages-bindings]: https://developers.cloudflare.com/pages/functions/bindings/
