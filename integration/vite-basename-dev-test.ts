@@ -7,7 +7,9 @@ import {
   createProject,
   customDev,
   VITE_CONFIG,
+  viteBuild,
   viteDev,
+  viteRemixServe,
 } from "./helpers/vite.js";
 
 const files = {
@@ -51,6 +53,42 @@ const files = {
   `,
 };
 
+const customServerFile = ({ port }: { port: number }) => String.raw`
+  import { createRequestHandler } from "@remix-run/express";
+  import { installGlobals } from "@remix-run/node";
+  import express from "express";
+  installGlobals();
+
+  const viteDevServer =
+    process.env.NODE_ENV === "production"
+      ? undefined
+      : await import("vite").then(({ createServer }) =>
+          createServer({
+            server: {
+              middlewareMode: true,
+            },
+          })
+        );
+
+  const app = express();
+  app.use("/mybase/", viteDevServer?.middlewares || express.static("build/client"));
+  app.all(
+    "/mybase/*",
+    createRequestHandler({
+      build: viteDevServer
+        ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
+        : await import("./build/server/index.js"),
+    })
+  );
+  app.get("*", (_req, res) => {
+    res.setHeader("content-type", "text/html")
+    res.end('Remix app is at <a href="/mybase/">/mybase/</a>');
+  });
+
+  const port = ${port};
+  app.listen(port, () => console.log('http://localhost:' + port));
+`;
+
 test.describe(() => {
   let port: number;
   let cwd: string;
@@ -88,42 +126,14 @@ test.describe(async () => {
         viteOptions: '{ base: "/mybase/" }',
         pluginOptions: '{ publicPath: "/mybase/" }',
       }),
-      "server.mjs": String.raw`
-        import { createRequestHandler } from "@remix-run/express";
-        import { installGlobals } from "@remix-run/node";
-        import express from "express";
-        installGlobals();
-
-        let viteDevServer =
-          await import("vite").then((vite) =>
-            vite.createServer({
-              server: { middlewareMode: true },
-            })
-          );
-
-        const app = express();
-        app.use("/mybase/", viteDevServer.middlewares);
-        app.all(
-          "/mybase/*",
-          createRequestHandler({
-            build: () => viteDevServer.ssrLoadModule("virtual:remix/server-build"),
-          })
-        );
-        app.get("*", (_req, res) => {
-          res.setHeader("content-type", "text/html")
-          res.end('Remix app is at <a href="/mybase/">/mybase/</a>');
-        });
-
-        const port = ${port};
-        app.listen(port, () => console.log('http://localhost:' + port));
-      `,
+      "server.mjs": customServerFile({ port }),
       ...files,
     });
     stop = await customDev({ cwd, port });
   });
   test.afterAll(() => stop());
 
-  test("Vite / basename / express", async ({ page }) => {
+  test("Vite / basename / express dev", async ({ page }) => {
     await workflow({ page, cwd, port });
   });
 });
@@ -173,6 +183,100 @@ async function workflow({
   await expect(hmrStatus).toHaveText("HMR updated: 1");
   await expect(input).toHaveValue("stateful");
   expect(pageErrors).toEqual([]);
+
+  // client side navigation
+  await page.getByRole("link", { name: "other" }).click();
+  await page.waitForURL(`http://localhost:${port}/mybase/other`);
+  await page.getByText("other-loader").click();
+  expect(pageErrors).toEqual([]);
+
+  // verify client requests are all under basename
+  expect(
+    requestUrls.filter(
+      (url) => !url.startsWith(`http://localhost:${port}/mybase/`)
+    )
+  ).toEqual([]);
+}
+
+test.describe(() => {
+  let port: number;
+  let cwd: string;
+  let stop: () => unknown;
+
+  // TODO: build once and test both remix-serve and custom server
+  test.beforeAll(async () => {
+    port = await getPort();
+    cwd = await createProject({
+      "vite.config.js": await VITE_CONFIG({
+        port,
+        viteOptions: '{ base: "/mybase/" }',
+        pluginOptions: '{ publicPath: "/mybase/" }',
+      }),
+      ...files,
+    });
+    viteBuild({ cwd });
+    stop = await viteRemixServe({ cwd, port, base: "/mybase/" });
+  });
+  test.afterAll(() => stop());
+
+  test("Vite / basename / vite build", async ({ page }) => {
+    await workflowBuild({ page, cwd, port });
+  });
+});
+
+test.describe(async () => {
+  let port: number;
+  let cwd: string;
+  let stop: () => void;
+
+  test.beforeAll(async () => {
+    port = await getPort();
+    cwd = await createProject({
+      "vite.config.js": await VITE_CONFIG({
+        port,
+        viteOptions: '{ base: "/mybase/" }',
+        pluginOptions: '{ publicPath: "/mybase/" }',
+      }),
+      "server.mjs": customServerFile({ port }),
+      ...files,
+    });
+    viteBuild({ cwd });
+    stop = await customDev({ cwd, port, env: { NODE_ENV: "production" } });
+  });
+  test.afterAll(() => stop());
+
+  test("Vite / basename / express build", async ({ page }) => {
+    await workflowBuild({ page, cwd, port });
+  });
+});
+
+async function workflowBuild({
+  page,
+  cwd,
+  port,
+}: {
+  page: Page;
+  cwd: string;
+  port: number;
+}) {
+  let pageErrors: Error[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error));
+
+  let requestUrls: string[] = [];
+  page.on("request", (request) => {
+    requestUrls.push(request.url());
+  });
+
+  // setup: initial render
+  await page.goto(`http://localhost:${port}/mybase/`, {
+    waitUntil: "networkidle",
+  });
+  await expect(page.locator("#index [data-title]")).toHaveText("Index");
+
+  // setup: hydration
+  await expect(page.locator("#index [data-mounted]")).toHaveText(
+    "Mounted: yes"
+  );
 
   // client side navigation
   await page.getByRole("link", { name: "other" }).click();

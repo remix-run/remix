@@ -126,10 +126,12 @@ export const viteRemixServe = async ({
   cwd,
   port,
   serverBundle,
+  base,
 }: {
   cwd: string;
   port: number;
   serverBundle?: string;
+  base?: string;
 }) => {
   let nodeBin = process.argv[0];
   let serveProc = spawn(
@@ -144,19 +146,21 @@ export const viteRemixServe = async ({
       env: { NODE_ENV: "production", PORT: port.toFixed(0) },
     }
   );
-  await waitForServer(serveProc, { port });
+  await waitForServer(serveProc, { port, base });
   return () => serveProc.kill();
 };
 
 type ServerArgs = {
   cwd: string;
   port: number;
+  env?: Record<string, string>;
+  base?: string;
 };
 
 const createDev =
   (nodeArgs: string[]) =>
-  async ({ cwd, port }: ServerArgs): Promise<() => unknown> => {
-    let proc = node(nodeArgs, { cwd });
+  async ({ cwd, port, env }: ServerArgs): Promise<() => unknown> => {
+    let proc = node(nodeArgs, { cwd, env });
     await waitForServer(proc, { port });
     return () => proc.kill();
   };
@@ -175,12 +179,15 @@ export const using = async (
   }
 };
 
-function node(args: string[], options: { cwd: string }) {
+function node(args: string[], options: { cwd: string, env?: Record<string, string> }) {
   let nodeBin = process.argv[0];
 
   let proc = spawn(nodeBin, args, {
     cwd: options.cwd,
-    env: process.env,
+    env: {
+      ...process.env,
+      ...options.env
+    },
     stdio: "pipe",
   });
   return proc;
@@ -188,13 +195,13 @@ function node(args: string[], options: { cwd: string }) {
 
 async function waitForServer(
   proc: ChildProcess & { stdout: Readable; stderr: Readable },
-  args: { port: number }
+  args: { port: number, base?: string }
 ) {
   let devStdout = bufferize(proc.stdout);
   let devStderr = bufferize(proc.stderr);
 
   await waitOn({
-    resources: [`http://localhost:${args.port}/`],
+    resources: [`http://localhost:${args.port}${args.base ?? "/"}`],
     timeout: 10000,
   }).catch((err) => {
     let stdout = devStdout();
