@@ -74,7 +74,7 @@ Whether to write a `manifest.json` file to the build directory. Defaults to `fal
 
 The name of the server file generated in the server build directory. Defaults to `"index.js"`.
 
-#### unstable_serverBundles
+#### serverBundles
 
 A function for assigning addressable routes to [server bundles][server-bundles].
 
