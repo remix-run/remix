@@ -4,11 +4,11 @@ title: Server Bundles (Unstable)
 
 # Server Bundles (Unstable)
 
-<docs-warning>This is an advanced feature designed for hosting provider integrations. When compiling your app into multiple server bundles, there will need to be a custom routing layer in front of your app directing requests to the correct bundle. This feature is currently unstable and only designed to gather early feedback.</docs-warning>
+<docs-warning>This is an advanced feature designed for hosting provider integrations. When compiling your app into multiple server bundles, there will need to be a custom routing layer in front of your app directing requests to the correct bundle.</docs-warning>
 
-Remix typically builds your server code into a bundle that exposes a single request handler function. However, there are some scenarios where you might want to split your route tree into multiple server bundles that expose a request handler function for a subset of routes. To provide this level of flexibility, the [Remix Vite plugin][remix-vite] supports an `unstable_serverBundles` option which is a function for assigning routes to different server bundles.
+Remix typically builds your server code into a bundle that exposes a single request handler function. However, there are some scenarios where you might want to split your route tree into multiple server bundles that expose a request handler function for a subset of routes. To provide this level of flexibility, the [Remix Vite plugin][remix-vite] supports an `serverBundles` option which is a function for assigning routes to different server bundles.
 
-The provided `unstable_serverBundles` function is called for each route in the tree (except for routes that aren't addressable, e.g. pathless layout routes) and returns a server bundle ID that you'd like to assign it to. These bundle IDs will be used as directory names in your server build directory.
+The provided `serverBundles` function is called for each route in the tree (except for routes that aren't addressable, e.g. pathless layout routes) and returns a server bundle ID that you'd like to assign it to. These bundle IDs will be used as directory names in your server build directory.
 
 For each route, this function is passed an array of routes leading to and including that route, referred to as the route `branch`. This allows you to create server bundles for different portions of the route tree. For example, you could use this to create a separate server bundle containing all routes within a particular layout route:
 
@@ -19,7 +19,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [
     remix({
-      unstable_serverBundles: ({ branch }) => {
+      serverBundles: ({ branch }) => {
         const isAuthenticatedRoute = branch.some(
           (route) => route.id === "routes/_authenticated"
         );
