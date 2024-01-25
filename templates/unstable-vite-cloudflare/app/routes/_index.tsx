@@ -1,17 +1,9 @@
 import {
   json,
-  type MetaFunction,
   type LoaderFunctionArgs,
   type ActionFunctionArgs,
 } from "@remix-run/cloudflare";
 import { Form, useLoaderData } from "@remix-run/react";
-
-export const meta: MetaFunction = () => {
-  return [
-    { title: "New Remix App" },
-    { name: "description", content: "Welcome to Remix!" },
-  ];
-};
 
 const key = "__my-key__";
 
@@ -41,25 +33,21 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
 export default function Index() {
   const { value } = useLoaderData<typeof loader>();
-
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
+    <div>
       <h1>Welcome to Remix</h1>
-      <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-        Check out the official Remix docs
-      </a>
       {value ? (
         <>
-          <p>The value set for the key is: {value}</p>
+          <p>Value: {value}</p>
           <Form method="DELETE">
-            <button>delete the value</button>
+            <button>Delete</button>
           </Form>
         </>
       ) : (
         <>
-          <p>No value for key</p>
+          <p>No value</p>
           <Form method="POST">
-            <label htmlFor="value">Set a new value for the key: </label>
+            <label htmlFor="value">Set value: </label>
             <input type="text" name="value" id="value" required />
             <br />
             <button>Save</button>

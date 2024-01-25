@@ -9936,10 +9936,10 @@ min-indent@^1.0.0:
   resolved "https://registry.npmjs.org/min-indent/-/min-indent-1.0.1.tgz"
   integrity sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==
 
-miniflare@3.20231218.2:
-  version "3.20231218.2"
-  resolved "https://registry.npmjs.org/miniflare/-/miniflare-3.20231218.2.tgz#301cbf7833b7b962e4eaaf1bf4abe2ad507f3f5e"
-  integrity sha512-rCUI2OjqCf3fZVdmSX4DOZQRzSDvHp/oL2vjER/cvJEdWSYiqRxDp2oO7A7JcEo1/Y+kPa5VQ1pFfdZpjBcpFg==
+miniflare@3.20231218.3:
+  version "3.20231218.3"
+  resolved "https://registry.npmjs.org/miniflare/-/miniflare-3.20231218.3.tgz#31aa7f9165970ae53d3048eeb24ffb13ee84cf1e"
+  integrity sha512-OrPBYWO0WnFv6DrxZ7hF8f5agZ4+xo/2qSLE0wwCJSqlFhr91dfSJautxfCOBD896nAA7Jqr5LBPEnqq3/k/JQ==
   dependencies:
     "@cspotcode/source-map-support" "0.8.1"
     acorn "^8.8.0"
@@ -9948,7 +9948,7 @@ miniflare@3.20231218.2:
     exit-hook "^2.2.1"
     glob-to-regexp "^0.4.1"
     stoppable "^1.1.0"
-    undici "^5.22.1"
+    undici "^5.28.2"
     workerd "1.20231218.0"
     ws "^8.11.0"
     youch "^3.2.2"
@@ -13076,7 +13076,7 @@ unbox-primitive@^1.0.2:
     has-symbols "^1.0.3"
     which-boxed-primitive "^1.0.2"
 
-undici@^5.22.1:
+undici@^5.28.2:
   version "5.28.2"
   resolved "https://registry.npmjs.org/undici/-/undici-5.28.2.tgz#fea200eac65fc7ecaff80a023d1a0543423b4c91"
   integrity sha512-wh1pHJHnUeQV5Xa8/kyQhO7WFa8M34l026L5P/+2TYiakvGy5Rdc8jWZVyG7ieht/0WgJLEd3kcU5gKx+6GC8w==
@@ -13707,10 +13707,10 @@ workerd@1.20231218.0:
     "@cloudflare/workerd-linux-arm64" "1.20231218.0"
     "@cloudflare/workerd-windows-64" "1.20231218.0"
 
-wrangler@0.0.0-f9de0c56:
-  version "0.0.0-f9de0c56"
-  resolved "https://registry.npmjs.org/wrangler/-/wrangler-0.0.0-f9de0c56.tgz#283c64245b97eda982c5b8a7c80dd3668ebc23ca"
-  integrity sha512-J4aS8MHB9/+U7TElUS2yl66VcyXyE3gzPGwx8KEf68QYCWvhfyYJDZXSIn1xOKtNLq7vkRAHH25/H0dANhIkQQ==
+wrangler@^3.24.0:
+  version "3.24.0"
+  resolved "https://registry.npmjs.org/wrangler/-/wrangler-3.24.0.tgz#a8ca60eaec280fecee7293189604a8b75150fa9a"
+  integrity sha512-jEnqpY+9/J4VPjtuEnS2lhCPXkvbDClnMalSWaRxSx+1tiTWMJhMjtK9oyXLdO+ZUf9Q4LvFTYSPm8O1uwmnxQ==
   dependencies:
     "@cloudflare/kv-asset-handler" "^0.2.0"
     "@esbuild-plugins/node-globals-polyfill" "^0.2.3"
@@ -13718,7 +13718,7 @@ wrangler@0.0.0-f9de0c56:
     blake3-wasm "^2.1.5"
     chokidar "^3.5.3"
     esbuild "0.17.19"
-    miniflare "3.20231218.2"
+    miniflare "3.20231218.3"
     nanoid "^3.3.3"
     path-to-regexp "^6.2.0"
     resolve "^1.22.8"
