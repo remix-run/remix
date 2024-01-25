@@ -50,6 +50,7 @@ All other bundling-related options are now [configured with Vite][vite-config]. 
 The following subset of Remix config options are supported:
 
 - [appDirectory][app-directory]
+- [future][future]
 - [ignoredRouteFiles][ignored-route-files]
 - [publicPath][public-path]
 - [routes][routes]
@@ -937,12 +938,11 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 We're definitely late to the Vite party, but we're excited to be here now!
 
 [vite]: https://vitejs.dev
-[supported-with-some-deprecations]: #add-mdx-plugin
 [template-vite]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite
 [template-vite-express]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-express
 [remix-config]: ../file-conventions/remix-config
 [app-directory]: ../file-conventions/remix-config#appdirectory
-[assets-build-directory]: ../file-conventions/remix-config#assetsbuilddirectory
+[future]: ../file-conventions/remix-config#future
 [ignored-route-files]: ../file-conventions/remix-config#ignoredroutefiles
 [public-path]: ../file-conventions/remix-config#publicpath
 [routes]: ../file-conventions/remix-config#routes
