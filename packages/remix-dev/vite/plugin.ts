@@ -9,6 +9,7 @@ import babel from "@babel/core";
 import {
   type ServerBuild,
   unstable_setDevServerHooks as setDevServerHooks,
+  createRequestHandler,
 } from "@remix-run/server-runtime";
 import {
   init as initEsModuleLexer,
@@ -27,7 +28,11 @@ import {
 } from "../config";
 import { type Manifest as BrowserManifest } from "../manifest";
 import invariant from "../invariant";
-import { createRequestHandler } from "./node/adapter";
+import {
+  type NodeRequestHandler,
+  fromNodeRequest,
+  toNodeRequest,
+} from "./node-adapter";
 import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
@@ -124,13 +129,16 @@ type AdapterRemixConfigOverrides = Pick<
 >;
 
 type AdapterConfig = AdapterRemixConfigOverrides & {
+  loadContext?: Record<string, unknown>;
   buildEnd?: BuildEndHook;
+  viteConfig: Vite.UserConfig;
 };
 
 type Adapter = Omit<AdapterConfig, AdapterRemixConfigOverrideKey>;
 
 export type VitePluginAdapter = (args: {
   remixConfig: VitePluginConfig;
+  viteConfig: Vite.UserConfig;
 }) => AdapterConfig | Promise<AdapterConfig>;
 
 export type VitePluginConfig = RemixEsbuildUserConfigJsdocOverrides &
@@ -455,6 +463,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           // We only pass in the plugin config that the user defined. We don't
           // know the final resolved config until the adapter has been resolved.
           remixConfig: remixUserConfig,
+          viteConfig: viteUserConfig,
         })
       : undefined;
     let adapter: Adapter | undefined =
@@ -740,7 +749,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           )
         );
 
-        return {
+        let defaults = {
           __remixPluginContext: ctx,
           appType: "custom",
           experimental: { hmrPartialAccept: true },
@@ -786,13 +795,11 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           ...(viteCommand === "build" && {
             base: ctx.remixConfig.publicPath,
             build: {
-              ...viteUserConfig.build,
               ...(!viteConfigEnv.isSsrBuild
                 ? {
                     manifest: true,
                     outDir: getClientBuildDirectory(ctx.remixConfig),
                     rollupOptions: {
-                      ...viteUserConfig.build?.rollupOptions,
                       preserveEntrySignatures: "exports-only",
                       input: [
                         ctx.entryClientFilePath,
@@ -817,7 +824,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                     manifest: true, // We need the manifest to detect SSR-only assets
                     outDir: getServerBuildDirectory(ctx),
                     rollupOptions: {
-                      ...viteUserConfig.build?.rollupOptions,
                       preserveEntrySignatures: "exports-only",
                       input: serverBuildId,
                       output: {
@@ -829,6 +835,10 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             },
           }),
         };
+        return vite.mergeConfig(
+          defaults,
+          ctx.remixConfig.adapter?.viteConfig ?? {}
+        );
       },
       async configResolved(resolvedViteConfig) {
         await initEsModuleLexer;
@@ -946,7 +956,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           );
         }
       },
-      configureServer(viteDevServer) {
+      async configureServer(viteDevServer) {
         setDevServerHooks({
           // Give the request handler access to the critical CSS in dev to avoid a
           // flash of unstyled content since Vite injects CSS file contents via JS
@@ -1006,11 +1016,17 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   serverBuildId
                 )) as ServerBuild;
 
-                let handle = createRequestHandler(build, {
-                  mode: "development",
-                });
-
-                await handle(req, res);
+                let handler = createRequestHandler(build, "development");
+                let nodeHandler: NodeRequestHandler = async (
+                  nodeReq,
+                  nodeRes
+                ) => {
+                  let req = fromNodeRequest(nodeReq);
+                  let { adapter } = ctx.remixConfig;
+                  let res = await handler(req, adapter?.loadContext);
+                  await toNodeRequest(res, nodeRes);
+                };
+                await nodeHandler(req, res);
               } catch (error) {
                 next(error);
               }
@@ -1457,29 +1473,28 @@ function isEqualJson(v1: unknown, v2: unknown) {
 }
 
 function addRefreshWrapper(
-  pluginConfig: ResolvedVitePluginConfig,
+  remixConfig: ResolvedVitePluginConfig,
   code: string,
   id: string
 ): string {
-  let isRoute =
-    id.endsWith(CLIENT_ROUTE_QUERY_STRING) || getRoute(pluginConfig, id);
-  let acceptExports = isRoute
-    ? [
-        "clientAction",
-        "clientLoader",
-        "handle",
-        "meta",
-        "links",
-        "shouldRevalidate",
-      ]
-    : [];
+  let route = getRoute(remixConfig, id);
+  let acceptExports =
+    route || id.endsWith(CLIENT_ROUTE_QUERY_STRING)
+      ? [
+          "clientAction",
+          "clientLoader",
+          "handle",
+          "meta",
+          "links",
+          "shouldRevalidate",
+        ]
+      : [];
   return (
-    REACT_REFRESH_HEADER.replace("__SOURCE__", JSON.stringify(id)) +
+    REACT_REFRESH_HEADER.replaceAll("__SOURCE__", JSON.stringify(id)) +
     code +
-    REACT_REFRESH_FOOTER.replace("__SOURCE__", JSON.stringify(id)).replace(
-      "__ACCEPT_EXPORTS__",
-      JSON.stringify(acceptExports)
-    )
+    REACT_REFRESH_FOOTER.replaceAll("__SOURCE__", JSON.stringify(id))
+      .replaceAll("__ACCEPT_EXPORTS__", JSON.stringify(acceptExports))
+      .replaceAll("__ROUTE_ID__", JSON.stringify(route?.id))
   );
 }
 
@@ -1513,6 +1528,7 @@ if (import.meta.hot && !inWebWorker && window.__remixLiveReloadEnabled) {
     RefreshRuntime.registerExportsForReactRefresh(__SOURCE__, currentExports);
     import.meta.hot.accept((nextExports) => {
       if (!nextExports) return;
+      __ROUTE_ID__ && window.__remixRouteModuleUpdates.set(__ROUTE_ID__, nextExports);
       const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate(currentExports, nextExports, __ACCEPT_EXPORTS__);
       if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
     });
