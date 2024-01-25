@@ -213,6 +213,7 @@ export type RemixPluginContext = RemixPluginServerContext & {
   entryClientFilePath: string;
   entryServerFilePath: string;
   remixConfig: ResolvedVitePluginConfig;
+  viteManifestEnabled: boolean;
 };
 
 let serverBuildId = VirtualModule.id("server-build");
@@ -546,6 +547,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       rootDirectory,
       entryClientFilePath,
       entryServerFilePath,
+      viteManifestEnabled: viteUserConfig.build?.manifest === true,
       ...serverContext,
     };
   };

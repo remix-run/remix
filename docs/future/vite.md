@@ -68,7 +68,7 @@ The path to the build directory, relative to the project root. Defaults to `"bui
 
 #### manifest
 
-Whether to write a `manifest.json` file to the build directory. Defaults to `false`.
+Whether to write a `.remix/manifest.json` file to the build directory. Defaults to `false`.
 
 #### serverBuildFile
 
