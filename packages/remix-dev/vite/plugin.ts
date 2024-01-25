@@ -1472,11 +1472,11 @@ function addRefreshWrapper(
         ]
       : [];
   return (
-    REACT_REFRESH_HEADER.replace("__SOURCE__", JSON.stringify(id)) +
+    REACT_REFRESH_HEADER.replaceAll("__SOURCE__", JSON.stringify(id)) +
     code +
-    REACT_REFRESH_FOOTER.replace("__SOURCE__", JSON.stringify(id))
-      .replace("__ACCEPT_EXPORTS__", JSON.stringify(acceptExports))
-      .replaceAll("__ROUTE_ID__", JSON.stringify(route && route.id))
+    REACT_REFRESH_FOOTER.replaceAll("__SOURCE__", JSON.stringify(id))
+      .replaceAll("__ACCEPT_EXPORTS__", JSON.stringify(acceptExports))
+      .replaceAll("__ROUTE_ID__", JSON.stringify(route?.id))
   );
 }
 

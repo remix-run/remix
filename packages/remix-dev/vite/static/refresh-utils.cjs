@@ -17,9 +17,10 @@ const enqueueUpdate = debounce(async () => {
 
     for (let route of routeUpdates.values()) {
       manifest.routes[route.id] = route;
-      let imported =
-        window.__remixRouteModuleUpdates.get(route.id) ??
-        (await __hmr_import(route.url + "?t=" + Date.now()));
+      let imported = window.__remixRouteModuleUpdates.get(route.id);
+      if (!imported) {
+        throw Error(`[remix:hmr] No module update found for route ${route.id}`);
+      }
       let routeModule = {
         ...imported,
         // react-refresh takes care of updating these in-place,
