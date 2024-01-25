@@ -314,16 +314,22 @@ export async function build(
 
   let viteManifestPaths = getViteManifestPaths(ctx, serverBuilds);
   for (let { srcPath, destPath } of viteManifestPaths) {
+    let manifestExists = await fse.pathExists(srcPath);
+    if (!manifestExists) continue;
+
+    // Move/delete original Vite manifest file
     if (ctx.viteManifestEnabled) {
       await fse.ensureDir(path.dirname(destPath));
       await fse.move(srcPath, destPath);
-    } else if (await fse.pathExists(srcPath)) {
+    } else {
       await fse.remove(srcPath);
-      // Remove .vite dir if it's now empty
-      let viteDir = path.dirname(srcPath);
-      if ((await fse.readdir(viteDir)).length === 0) {
-        await fse.remove(viteDir);
-      }
+    }
+
+    // Remove .vite dir if it's now empty
+    let viteDir = path.dirname(srcPath);
+    let viteDirFiles = await fse.readdir(viteDir);
+    if (viteDirFiles.length === 0) {
+      await fse.remove(viteDir);
     }
   }
 
