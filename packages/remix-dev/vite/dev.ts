@@ -1,6 +1,9 @@
 import type * as Vite from "vite";
 import colors from "picocolors";
 
+import { preloadViteEsm } from "./import-vite-esm-sync";
+import * as profiler from "./profiler";
+
 export interface ViteDevOptions {
   clearScreen?: boolean;
   config?: string;
@@ -12,6 +15,7 @@ export interface ViteDevOptions {
   open?: boolean | string;
   port?: number;
   strictPort?: boolean;
+  profile?: boolean;
 }
 
 export async function dev(
@@ -29,6 +33,10 @@ export async function dev(
     strictPort,
   }: ViteDevOptions
 ) {
+  // Ensure Vite's ESM build is preloaded at the start of the process
+  // so it can be accessed synchronously via `importViteEsmSync`
+  await preloadViteEsm();
+
   let vite = await import("vite");
   let server = await vite.createServer({
     root,
@@ -47,5 +55,22 @@ export async function dev(
 
   await server.listen();
   server.printUrls();
-  server.bindCLIShortcuts({ print: true });
+
+  let customShortcuts: Vite.CLIShortcut<typeof server>[] = [
+    {
+      key: "p",
+      description: "start/stop the profiler",
+      async action(server) {
+        if (profiler.getSession()) {
+          await profiler.stop(server.config.logger.info);
+        } else {
+          await profiler.start(() => {
+            server.config.logger.info("Profiler started");
+          });
+        }
+      },
+    },
+  ];
+
+  server.bindCLIShortcuts({ print: true, customShortcuts });
 }

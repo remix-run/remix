@@ -4,22 +4,9 @@ title: Vite (Unstable)
 
 # Vite (Unstable)
 
-<docs-warning>
-  Vite support is currently unstable and only intended to gather early feedback.
-  We don't yet recommend using this in production.
-</docs-warning>
+[Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
 
-[Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we're currently exploring the use of Vite as an alternative compiler to esbuild.
-
-**Legend**: ✅ (Tested),❓ (Untested), ⏳ (Not Yet Supported)
-
-| Feature                      | Node | Deno | Cloudflare | Notes                                                                 |
-| ---------------------------- | ---- | ---- | ---------- | --------------------------------------------------------------------- |
-| Built-in dev server          | ✅   | ❓   | ⏳         |                                                                       |
-| Other servers (e.g. Express) | ✅   | ❓   | ⏳         |                                                                       |
-| HMR                          | ✅   | ❓   | ⏳         |                                                                       |
-| HDR                          | ✅   | ❓   | ⏳         |                                                                       |
-| MDX routes                   | ✅   | ❓   | ⏳         | [Supported with some deprecations.][supported-with-some-deprecations] |
+<docs-warning>Note that Cloudflare is not yet supported when using Vite.</docs-warning>
 
 ## Getting started
 
@@ -39,15 +26,7 @@ These templates include a `vite.config.ts` file which is where the Remix Vite pl
 
 ## Configuration
 
-The Vite plugin does not use [`remix.config.js`][remix-config]. Instead, the plugin directly accepts the following subset of Remix config options:
-
-- [appDirectory][app-directory]
-- [assetsBuildDirectory][assets-build-directory]
-- [ignoredRouteFiles][ignored-route-files]
-- [publicPath][public-path]
-- [routes][routes]
-- [serverBuildPath][server-build-path]
-- [serverModuleFormat][server-module-format]
+The Vite plugin does not use [`remix.config.js`][remix-config]. Instead, the plugin accepts options directly.
 
 For example, to configure `ignoredRouteFiles`:
 
@@ -66,20 +45,104 @@ export default defineConfig({
 
 All other bundling-related options are now [configured with Vite][vite-config]. This means you have much greater control over the bundling process.
 
+#### Supported Remix config options
+
+The following subset of Remix config options are supported:
+
+- [appDirectory][app-directory]
+- [ignoredRouteFiles][ignored-route-files]
+- [publicPath][public-path]
+- [routes][routes]
+- [serverBuildPath][server-build-path]
+- [serverModuleFormat][server-module-format]
+
+The Vite plugin also accepts the following additional options:
+
+#### adapter
+
+A function for adapting the build output and/or development environment for different hosting providers.
+
+#### buildDirectory
+
+The path to the build directory, relative to the project root. Defaults to `"build"`.
+
+#### manifest
+
+Whether to write a `manifest.json` file to the build directory. Defaults to `false`.
+
+#### serverBuildFile
+
+The name of the server file generated in the server build directory. Defaults to `"index.js"`.
+
+#### unstable_serverBundles
+
+A function for assigning addressable routes to [server bundles][server-bundles].
+
+You may also want to enable the `manifest` option since, when server bundles are enabled, it contains mappings between routes and server bundles.
+
+## Splitting up client and server code
+
+Remix lets you write code that [runs on both the client and the server][server-vs-client].
+Out-of-the-box, Vite doesn't support mixing server-only code with client-safe code in the same module.
+Remix is able to make an exception for routes because we know which exports are server-only and can remove them from the client.
+
+There are a few ways to isolate server-only code in Remix.
+The simplest approach is to use `.server` modules.
+
+#### `.server` modules
+
+While not strictly necessary, `.server` modules are a good way to explicitly mark entire modules as server-only.
+The build will fail if any code in a `.server` file or `.server` directory accidentally ends up in the client module graph.
+
+```txt
+app
+├── .server 👈 marks all files in this directory as server-only
+│   ├── auth.ts
+│   └── db.ts
+├── cms.server.ts 👈 marks this file as server-only
+├── root.tsx
+└── routes
+    └── _index.tsx
+```
+
+`.server` modules must be within your Remix app directory.
+
+#### `vite-env-only`
+
+If you want to mix server-only code and client-safe code in the same module, you can use [`vite-env-only`][vite-env-only].
+That way you can explicitly mark any expression as server-only so that it gets replaced with `undefined` in the client.
+
+For example, you can wrap exports with `serverOnly$`:
+
+```tsx
+import { serverOnly$ } from "vite-env-only";
+
+import { db } from "~/.server/db";
+
+export const getPosts = serverOnly$(async () => {
+  return db.posts.findMany();
+});
+
+export const PostPreview = ({ title, description }) => {
+  return (
+    <article>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </article>
+  );
+};
+```
+
 ## New build output paths
 
-There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. During the build, Vite copies files from the `public` directory into `build/client`, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
+There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. Vite copies files from the `public` directory into the client build directory, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
 
-In order to align the default Remix project structure with the way Vite works, the build output paths have been changed.
+In order to align the default Remix project structure with the way Vite works, the build output paths have been changed. There is now a single `buildDirectory` option that defaults to `"build"`, replacing the separate `assetsBuildDirectory` and `serverBuildDirectory` options. This means that, by default, the server is now compiled into `build/server` and the client is now compiled into `build/client`.
 
-- The server is now compiled into `build/server` by default.
-- The client is now compiled into `build/client` by default.
+This also means that the following configuration defaults have been changed:
 
-This means that the following configuration defaults have been changed:
-
-- [assetsBuildDirectory][assets-build-directory] defaults to `"build/client"` rather than `"public/build"`
 - [publicPath][public-path] defaults to `"/"` rather than `"/build/"`
-- [serverBuildPath][server-build-path] defaults to `"build/server/index.js"` rather than `"build/index.js"`
+- [serverBuildPath][server-build-path] has been replaced by `serverBuildFile` which defaults to `"index.js"`. This file will be written into the server directory within your configured `buildDirectory`.
 
 ## Additional features & plugins
 
@@ -88,25 +151,6 @@ This means that, for any additional bundling features you'd like to use, you sho
 
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
 The use of any such features will render the existing Remix compiler unable to compile your app, so only use them if you intend to use Vite exclusively from here on out.
-
-#### `.server` directories
-
-In addition to `.server` files, the Remix's Vite plugin also supports `.server` directories.
-Any code in a `.server` directory will be excluded from the client bundle.
-
-```txt
-app
-├── .server 👈 everything in this directory is excluded from the client bundle
-│   ├── auth.ts
-│   └── db.ts
-├── cms.server.ts 👈 everything in this file is excluded from the client bundle
-├── root.tsx
-└── routes
-    └── _index.tsx
-```
-
-`.server` files and directories can be _anywhere_ within your Remix app directory (typically `app/`).
-If you need more control, you can always write your own Vite plugins to exclude other files or directories from any other locations.
 
 ## Migrating
 
@@ -147,18 +191,41 @@ export default defineConfig({
 
 Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
 
-👉 **Replace your `remix.env.d.ts` with a new `env.d.ts` file**
+Since the module types provided by `vite/client` are not compatible with the module types implicitly included with `@remix-run/dev`, you'll also need to enable the `skipLibCheck` flag in your TypeScript config. Remix won't require this flag in the future once the Vite plugin is the default compiler.
 
-```ts filename=env.d.ts
-/// <reference types="@remix-run/node" />
-/// <reference types="vite/client" />
+👉 **Rename `remix.env.d.ts` to `env.d.ts`**
+
+```diff nonumber
+-/remix.env.d.ts
++/env.d.ts
 ```
 
-👉 **Replace reference to `remix.env.d.ts` in `tsconfig.json`**
+👉 **Replace `@remix-run/dev` types with `vite/client` in `env.d.ts`**
+
+```diff filename=env.d.ts
+-/// <reference types="@remix-run/dev" />
++/// <reference types="vite/client" />
+/// <reference types="@remix-run/node" />
+```
+
+👉 **Replace reference to `remix.env.d.ts` with `env.d.ts` in `tsconfig.json`**
 
 ```diff filename=tsconfig.json
 - "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
 + "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
+```
+
+👉 **Ensure `skipLibCheck` is enabled in `tsconfig.json`**
+
+```json filename=tsconfig.json
+"skipLibCheck": true,
+```
+
+👉 **Ensure `module` and `moduleResolution` fields are set correctly in `tsconfig.json`**
+
+```json filename=tsconfig.json
+"module": "ESNext",
+"moduleResolution": "Bundler",
 ```
 
 #### Migrating from Remix App Server
@@ -172,7 +239,7 @@ You'll also need to update to the new build output paths, which are `build/serve
 
 👉 **Update your `dev`, `build` and `start` scripts**
 
-```json filename=package.json lines=[3-4]
+```json filename=package.json lines=[3-5]
 {
   "scripts": {
     "dev": "remix vite:dev",
@@ -201,42 +268,35 @@ export default defineConfig({
 If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
 This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
 
+You can then load the virtual module named `"virtual:remix/server-build"` during development to create a Vite-based request handler.
+
 You'll also need to update your server code to reference the new build output paths, which are `build/server` for the server build and `build/client` for client assets.
-
-Remix exposes the server build's module ID so that it can be loaded dynamically in your request handler during development via `vite.ssrLoadModule`.
-
-```ts
-import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
-```
 
 For example, if you were using Express, here's how you could do it.
 
 👉 **Update your `server.mjs` file**
 
-```ts filename=server.mjs lines=[1,8-17,21-24,32,39-44]
-import { unstable_viteServerBuildModuleId } from "@remix-run/dev";
+```ts filename=server.mjs lines=[7-14,18-21,29,36-41]
 import { createRequestHandler } from "@remix-run/express";
 import { installGlobals } from "@remix-run/node";
 import express from "express";
 
 installGlobals();
 
-const vite =
+const viteDevServer =
   process.env.NODE_ENV === "production"
     ? undefined
-    : await import("vite").then(({ createServer }) =>
-        createServer({
-          server: {
-            middlewareMode: true,
-          },
+    : await import("vite").then((vite) =>
+        vite.createServer({
+          server: { middlewareMode: true },
         })
       );
 
 const app = express();
 
 // handle asset requests
-if (vite) {
-  app.use(vite.middlewares);
+if (viteDevServer) {
+  app.use(viteDevServer.middlewares);
 } else {
   app.use(
     "/assets",
@@ -252,10 +312,10 @@ app.use(express.static("build/client", { maxAge: "1h" }));
 app.all(
   "*",
   createRequestHandler({
-    build: vite
+    build: viteDevServer
       ? () =>
-          vite.ssrLoadModule(
-            unstable_viteServerBuildModuleId
+          viteDevServer.ssrLoadModule(
+            "virtual:remix/server-build"
           )
       : await import("./build/server/index.js"),
   })
@@ -269,7 +329,7 @@ app.listen(port, () =>
 
 👉 **Update your `build`, `dev`, and `start` scripts**
 
-```json filename=package.json
+```json filename=package.json lines=[3-5]
 {
   "scripts": {
     "dev": "node ./server.mjs",
@@ -283,7 +343,7 @@ If you prefer, you can instead author your custom server in TypeScript.
 You could then use tools like [`tsx`][tsx] or [`tsm`][tsm] to run your custom server:
 
 ```shellscript nonumber
-tsx ./server.tsx
+tsx ./server.ts
 node --loader tsm ./server.ts
 ```
 
@@ -303,8 +363,8 @@ For example, to update the Dockerfile from the [Blues Stack][blues-stack]:
 ```diff filename=Dockerfile
 -COPY --from=build /myapp/build /myapp/build
 -COPY --from=build /myapp/public /myapp/public
-+COPY --from=build /myapp/server/build /myapp/server/build
-+COPY --from=build /myapp/client/build /myapp/client/build
++COPY --from=build /myapp/build/server /myapp/build/server
++COPY --from=build /myapp/build/client /myapp/build/client
 ```
 
 #### Configure path aliases
@@ -378,20 +438,24 @@ During development, [Vite injects imported CSS files into the page via JavaScrip
 
 This also means that in many cases you won't need the `links` function export anymore.
 
-👉 **Convert CSS imports to side effects**
+Since the order of your CSS is determined by its import order, you'll need to ensure that your CSS imports are in the same order as your `links` function.
+
+👉 **Convert CSS imports into side effects — in the same order they were in your `links` function!**
 
 ```diff filename=app/dashboard/route.tsx
-// No need to export a links function anymore:
 - import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 - import dashboardStyles from "./dashboard.css?url";
+- import sharedStyles from "./shared.css?url";
++ // ⚠️ NOTE: The import order has been updated
++ //   to match the original `links` function!
++ import "./shared.css";
++ import "./dashboard.css";
 
 - export const links: LinksFunction = () => [
+-   { rel: "stylesheet", href: sharedStyles },
 -   { rel: "stylesheet", href: dashboardStyles },
 - ];
-
-// Just import the CSS as a side effect:
-+ import "./dashboard.css";
 ```
 
 <docs-warning>While [Vite supports importing static asset URLs via an explicit `?url` query string][vite-url-imports], which in theory would match the behavior of the existing Remix compiler when used for CSS files, there is a [known Vite issue with `?url` for CSS imports][vite-css-url-issue]. This may be fixed in the future, but in the meantime you should exclusively use side effect imports for CSS.</docs-warning>
@@ -634,99 +698,76 @@ const posts = import.meta.glob("./posts/*.mdx", {
 });
 ```
 
-#### Strict route exports
+## Debugging
 
-With Vite, Remix gets stricter about which exports are allowed from your route modules.
+You can use the [`NODE_OPTIONS` environment variable][node-options] to start a debugging session:
 
-Previously, Remix allowed user-defined exports from routes.
-The Remix compiler would then rely on treeshaking to remove any code only intended for use on the server from the client bundle.
-
-```ts filename=app/routes/super-cool.tsx
-// `loader`: always server-only, remove from client bundle 👍
-export const loader = () => {};
-
-// `default`: always client-safe, keep `default` in client bundle 👍
-export default function SuperCool() {}
-
-// User-defined export
-export const mySuperCoolThing = () => {
-  /*
-  Client-safe or server-only? Depends on what code is in here... 🤷
-  Rely on treeshaking to remove from client bundle if it depends on server-only code.
-  */
-};
+```shellscript nonumber
+NODE_OPTIONS="--inspect-brk" npm run dev`
 ```
 
-In contrast, Vite processes each module in isolation during development, so relying on cross-module treeshaking is not an option.
-For most modules, you should already be using `.server` files or directories to isolate server-only code.
-But routes are a special case since they intentionally blend client and server code.
-Remix knows that exports like `loader`, `action`, `headers`, etc. are server-only, so it can safely remove them from the client bundle.
-But there's no way to know when looking at a single route module in isolation whether user-defined exports are server-only.
-That's why Remix's Vite plugin is stricter about which exports are allowed from your route modules.
+Then you can attach a debugger from your browser.
+For example, in Chrome you can open up `chrome://inspect` or click the NodeJS icon in the dev tools to attach the debugger.
 
-```ts filename=app/routes/super-cool.tsx
-export const loader = () => {}; // server-only 👍
-export default function SuperCool() {} // client-safe 👍
+#### vite-plugin-inspect
 
-// Need to decide whether this is client-safe or server-only without any other information 😬
-export const mySuperCoolThing = () => {};
+[`vite-plugin-inspect`][vite-plugin-inspect] shows you each how each Vite plugin transforms your code and how long each plugin takes.
+
+## Performance
+
+Remix includes a `--profile` flag for performance profiling.
+
+```shellscript nonumber
+remix vite:build --profile
 ```
 
-In fact, we'd rather not rely on treeshaking for correctness at all.
-If tomorrow you or your coworker accidentally imports something you _thought_ was client-safe,
-treeshaking will no longer exclude that from your client bundle and you might end up with server code in your app!
-Treeshaking is designed as a pure optimization, so relying on it for correctness is brittle.
+When running with `--profile`, a `.cpuprofile` file will be generated that can be shared or upload to speedscope.app to for analysis.
 
-So instead of treeshaking, its better to be explicit about what code is client-safe and what code is server-only.
-For route modules, that means only exporting Remix route exports.
-For anything else, put it in a separate module and use a `.server` file or directory when needed.
+You can also profile in dev by pressing `p + enter` while the dev server is running to start a new profiling session or stop the current session.
+If you need to profile dev server startup, you can also use the `--profile` flag to initialize a profiling session on startup:
 
-Ultimately, Route exports are Remix API.
-Think of a Remix route module like a function and the exports like named arguments to the function.
-
-```ts
-// Not real API, just a mental model
-const route = createRoute({ loader, mySuperCoolThing });
-//                                  ^^^^^^^^^^^^^^^^
-// Object literal may only specify known properties, and 'mySuperCoolThing' does not exist in type 'RemixRoute'
+```shellscript nonumber
+remix vite:dev --profile
 ```
 
-Just like how you shouldn't pass unexpected named arguments to a function, you shouldn't create unexpected exports from a route module.
-The result is that Remix is simpler and more predictable.
-In short, Vite made us eat our veggies, but turns out they were delicious all along!
+Remember that you can always check the [Vite performance docs][vite-perf] for more tips!
 
-👉 **Move any user-defined route exports to a separate module**
+#### Bundle analysis
 
-For example, here's a route with a user-defined export called `mySuperCoolThing`:
+To visualize and analyze your bundle, you can use the [rollup-plugin-visualizer][rollup-plugin-visualizer] plugin:
 
-```ts filename=app/routes/super-cool.tsx
-// ✅ This is a valid Remix route export, so it's fine
-export const loader = () => {};
+```ts filename=vite.config.ts
+import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { visualizer } from "rollup-plugin-visualizer";
 
-// ✅ This is also a valid Remix route export
-export default function SuperCool() {}
-
-// ❌ This isn't a Remix-specific route export, just something I made up
-export const mySuperCoolThing = () => {};
+export default defineConfig({
+  plugins: [
+    remix(),
+    // `emitFile` is necessary since Remix builds more than one bundle!
+    visualizer({ emitFile: true }),
+  ],
+});
 ```
 
-One option is to colocate your route and related utilities in the same directory if your routing convention allows it.
-For example, with the default route convention in v2:
+Then when you run `remix vite:build`, it'll generate a `stats.html` file in each of your bundles:
 
-```ts filename=app/routes/super-cool/route.tsx
-export const loader = () => {};
-
-export default function SuperCool() {}
+```
+build
+├── client
+│   ├── assets/
+│   ├── favicon.ico
+│   └── stats.html 👈
+└── server
+    ├── index.js
+    └── stats.html 👈
 ```
 
-```ts filename=app/routes/super-cool/utils.ts
-// If this was server-only code, I'd rename this file to "utils.server.ts"
-export const mySuperCoolThing = () => {};
-```
+Open up `stats.html` in your browser to analyze your bundle.
 
 ## Troubleshooting
 
-Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
+Check the [debugging][debugging] and [performance][performance] sections for general troubleshooting tips.
+Also, see if anyone else is having a similar problem by looking through the [known issues with the remix vite plugin on github][issues-vite].
 
 #### HMR
 
@@ -739,20 +780,23 @@ Vite supports both ESM and CJS dependencies, but sometimes you might still run i
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
 
-You can check [_Are The Types Wrong_][arethetypeswrong] to see if the dependency giving you trouble might be misconfigured.
+To diagnose if one of your dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
 
 Finally, you can also explicitly configure which dependencies to bundle into your server bundled
 with [Vite's `ssr.noExternal` option][ssr-no-external] to emulate the Remix compiler's [`serverDependenciesToBundle`][server-dependencies-to-bundle] with the Remix Vite plugin.
 
-#### Server code not tree shaken in development
+#### Server code errors in browser during development
 
-In production, Vite tree-shakes server-only code from your client bundle, just like the existing Remix compiler.
-However, in development, Vite lazily compiles each module on-demand and therefore _does not_ tree shake across module boundaries.
+If you see errors in the browser console during development that point to server code, you likely need to [explicitly isolate server-only code][explicitly-isolate-server-only-code].
+For example, if you see something like:
 
-If you run into browser errors in development that reference server-only code, be sure to place that [server-only code in a `.server` file][server-only-code].
+```shellscript
+Uncaught ReferenceError: process is not defined
+```
 
-At first, this might seem like a compromise for DX when compared to the existing Remix compiler, but the mental model is simpler: `.server` is for server-only code, everything else could be on both the client and the server.
+Then you'll need to track down which module is pulling in dependencies that except server-only globals like `process` and isolate code either in a [separate `.server` module or with `vite-env-only`][explicitly-isolate-server-only-code].
+Since Vite uses Rollup to treeshake your code in production, these errors only occur in development.
 
 #### Plugin usage with other Vite-based tools (e.g. Vitest, Storybook)
 
@@ -795,6 +839,82 @@ For example, to use a Vite config specifically scoped to Remix:
 ```shellscript nonumber
 remix vite:dev --config vite.config.remix.ts
 ```
+
+#### Styles disappearing in development when document remounts
+
+To support lazy-loading and HMR of CSS files during development, Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect.
+
+For example, if your app has the following CSS file:
+
+<!-- prettier-ignore -->
+```css filename=app/styles.css
+* { margin: 0 }
+```
+
+During development (not in production!) this CSS file will be transformed into the following code when imported as a side effect:
+
+<!-- prettier-ignore-start -->
+
+<!-- eslint-skip -->
+
+```js
+import {createHotContext as __vite__createHotContext} from "/@vite/client";
+import.meta.hot = __vite__createHotContext("/app/styles.css");
+import {updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle} from "/@vite/client";
+const __vite__id = "/path/to/app/styles.css";
+const __vite__css = "*{margin:0}"
+__vite__updateStyle(__vite__id, __vite__css);
+import.meta.hot.accept();
+import.meta.hot.prune(()=>__vite__removeStyle(__vite__id));
+```
+
+<!-- prettier-ignore-end -->
+
+However, when React is used to render the entire document (as Remix does) you can run into issues when there are elements in the page that React isn't aware of, like the `style` element injected by the code above.
+
+**Again, it's worth stressing that this issue only happens in development. Production builds won't have this issue since actual CSS files are generated.**
+
+In terms of its impact on styling, when the document is remounted from the root, React removes the existing `head` element and replaces it with an entirely new one. This means that any additional `style` elements that Vite injected will be lost. In Remix, this can happen when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
+
+**This is a known React issue** that is fixed in their [canary release channel][react-canaries] and should be available in a future stable release. If you understand the risks involved, you can choose to adopt a canary version of React by pinning to the desired version and then using [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
+
+```json filename=package.json
+{
+  "dependencies": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  },
+  "overrides": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  }
+}
+```
+
+For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect even though it's not something Remix provides as a default.
+
+If you'd like a more stable workaround, you can instead avoid providing `ErrorBoundary` and `HydrateFallback` exports from your root route. This ensures that the `head` element is owned by a single React component that never remounts, so Vite's `style` elements are never removed.
+
+Instead, you can export your root route's `ErrorBoundary` and `HydrateFallback` components from a top-level layout route. For example, when using the default route convention, you could add a layout route called `routes/_boundary.tsx`:
+
+```tsx filename=app/routes/_boundary.tsx
+import { Outlet } from "@remix-run/react";
+
+export function ErrorBoundary() {
+  return <p>Oops, something went wrong!</p>;
+}
+
+export function HydrateFallback() {
+  return <p>Loading...</p>;
+}
+
+// Passthrough to matching child route:
+export default function BoundaryRoute() {
+  return <Outlet />;
+}
+```
+
+You would then nest all other routes within this, e.g. `app/routes/about.tsx` would become `app/routes/_boundary.about.tsx`, etc.
 
 ## Acknowledgements
 
@@ -856,7 +976,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [glob-imports]: https://vitejs.dev/guide/features.html#glob-import
 [issues-vite]: https://github.com/remix-run/remix/labels/vite
 [hmr]: ../discussion/hot-module-replacement
-[server-only-code]: ../guides/gotchas#server-code-in-client-bundles
 [vite-team]: https://vitejs.dev/team
 [consider-using-vite]: https://github.com/remix-run/remix/discussions/2427
 [remix-kit]: https://github.com/jrestall/remix-kit
@@ -867,8 +986,24 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [sveltekit]: https://kit.svelte.dev/
 [modernizing-packages-to-esm]: https://blog.isquaredsoftware.com/2023/08/esm-modernization-lessons/
 [arethetypeswrong]: https://arethetypeswrong.github.io/
+[publint]: https://publint.dev/
 [vite-plugin-cjs-interop]: https://github.com/cyco130/vite-plugin-cjs-interop
 [ssr-no-external]: https://vitejs.dev/config/ssr-options.html#ssr-noexternal
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
 [blues-stack]: https://github.com/remix-run/blues-stack
 [global-node-polyfills]: ../other-api/node#polyfills
+[server-bundles]: ./server-bundles
+[vite-plugin-inspect]: https://github.com/antfu/vite-plugin-inspect
+[vite-perf]: https://vitejs.dev/guide/performance.html
+[node-options]: https://nodejs.org/api/cli.html#node_optionsoptions
+[rollup-plugin-visualizer]: https://github.com/btd/rollup-plugin-visualizer
+[debugging]: #debugging
+[performance]: #performance
+[server-vs-client]: ../discussion/server-vs-client.md
+[vite-env-only]: https://github.com/pcattori/vite-env-only
+[explicitly-isolate-server-only-code]: #splitting-up-client-and-server-code
+[route-component]: ../route/component
+[error-boundary]: ../route/error-boundary
+[hydrate-fallback]: ../route/hydrate-fallback
+[react-canaries]: https://react.dev/blog/2023/05/03/react-canaries
+[package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides

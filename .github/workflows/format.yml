@@ -33,6 +33,9 @@ jobs:
       - name: 🔗 Convert Docs links to references
         run: node scripts/markdown-references.mjs
 
+      - name: 🔃 Sort contributors.yml
+        run: sort --ignore-case --output contributors.yml contributors.yml
+
       - name: 👔 Format
         run: yarn format
 

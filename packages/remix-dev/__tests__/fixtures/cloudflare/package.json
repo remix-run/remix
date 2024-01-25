@@ -13,14 +13,13 @@
     "@remix-run/cloudflare-pages": "*",
     "@remix-run/css-bundle": "*",
     "@remix-run/react": "*",
-    "isbot": "^3.6.8",
+    "isbot": "^4.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230518.0",
     "@remix-run/dev": "*",
-    "@remix-run/eslint-config": "*",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "eslint": "^8.38.0",

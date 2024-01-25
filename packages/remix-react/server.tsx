@@ -8,7 +8,7 @@ import {
 import { RemixContext } from "./components";
 import type { EntryContext } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
-import { createServerRoutes } from "./routes";
+import { createServerRoutes, shouldHydrateRouteLoader } from "./routes";
 
 export interface RemixServerProps {
   context: EntryContext;
@@ -34,7 +34,8 @@ export function RemixServer({
   let routes = createServerRoutes(
     manifest.routes,
     routeModules,
-    context.future
+    context.future,
+    context.isSpaMode
   );
 
   // Create a shallow clone of `loaderData` we can mutate for partial hydration.
@@ -49,17 +50,14 @@ export function RemixServer({
     let routeId = match.route.id;
     let route = routeModules[routeId];
     let manifestRoute = context.manifest.routes[routeId];
+    // Clear out the loaderData to avoid rendering the route component when the
+    // route opted into clientLoader hydration and either:
+    // * gave us a HydrateFallback
+    // * or doesn't have a server loader and we have no data to render
     if (
-      // This route specifically gave us a HydrateFallback
-      (route && route.clientLoader && route.HydrateFallback) ||
-      // This handles routes without a server loader but _with_ a clientLoader
-      // that will automatically opt-into clientLoader.hydrate=true.  The
-      // staticHandler always puts a `null` in loaderData for non-loader routes
-      // for proper serialization but we need to set that back to `undefined`
-      // so _renderMatches will detect a required fallback at this level
-      (manifestRoute &&
-        manifestRoute.hasLoader == false &&
-        context.staticHandlerContext.loaderData[routeId] === null)
+      route &&
+      shouldHydrateRouteLoader(manifestRoute, route, context.isSpaMode) &&
+      (route.HydrateFallback || !manifestRoute.hasLoader)
     ) {
       context.staticHandlerContext.loaderData[routeId] = undefined;
     }
@@ -80,6 +78,7 @@ export function RemixServer({
         criticalCss,
         serverHandoffString,
         future: context.future,
+        isSpaMode: context.isSpaMode,
         serializeError: context.serializeError,
         abortDelay,
       }}
