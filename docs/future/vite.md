@@ -449,7 +449,7 @@ export const onRequest = createPagesFunctionHandler({
 ```
 
 While you'll mostly use Vite during development, you can also use Wrangler to preview and deploy your app.
-To learn more, see [_Cloudflare > Vite & Wrangler_](#vite--wrangler).
+To learn more, see [_Cloudflare > Vite & Wrangler_][cloudflare-vite-and-wrangler].
 
 👉 **Update your `package.json` scripts**
 
@@ -1148,3 +1148,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [cloudflare-workerd]: https://blog.cloudflare.com/workerd-open-source-workers-runtime
 [wrangler-getbindingsproxy]: https://github.com/cloudflare/workers-sdk/pull/4523
 [remix-config-server]: https://remix.run/docs/en/main/file-conventions/remix-config#server
+[cloudflare-vite-and-wrangler]: #vite--wrangler
