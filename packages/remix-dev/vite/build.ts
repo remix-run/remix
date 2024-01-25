@@ -221,14 +221,14 @@ async function cleanBuildDirectory(
   }
 }
 
-function getViteManifestRewrites(
+function getViteManifestPaths(
   ctx: RemixPluginContext,
   serverBuilds: Array<RemixViteServerBuildArgs>
 ) {
   let buildRelative = (pathname: string) =>
     path.resolve(ctx.remixConfig.buildDirectory, pathname);
 
-  let viteManifestRewrites: Array<{ srcPath: string; destPath: string }> = [
+  let viteManifestPaths: Array<{ srcPath: string; destPath: string }> = [
     {
       srcPath: "client/.vite/manifest.json",
       destPath: ".vite/client-manifest.json",
@@ -247,7 +247,7 @@ function getViteManifestRewrites(
     destPath: buildRelative(destPath),
   }));
 
-  return viteManifestRewrites;
+  return viteManifestPaths;
 }
 
 export interface ViteBuildOptions {
@@ -310,17 +310,16 @@ export async function build(
 
   // Then run Vite SSR builds in parallel
   let { serverBuilds, buildManifest } = await getServerBuilds(ctx);
-
   await Promise.all(serverBuilds.map(viteBuild));
 
-  let viteManifestRewrites = getViteManifestRewrites(ctx, serverBuilds);
-  for (let { srcPath, destPath } of viteManifestRewrites) {
+  let viteManifestPaths = getViteManifestPaths(ctx, serverBuilds);
+  for (let { srcPath, destPath } of viteManifestPaths) {
     if (ctx.viteManifestEnabled) {
       await fse.ensureDir(path.dirname(destPath));
       await fse.move(srcPath, destPath);
-    } else {
+    } else if (await fse.pathExists(srcPath)) {
       await fse.remove(srcPath);
-      // Remove .vite dir if empty
+      // Remove .vite dir if it's now empty
       let viteDir = path.dirname(srcPath);
       if ((await fse.readdir(viteDir)).length === 0) {
         await fse.remove(viteDir);
