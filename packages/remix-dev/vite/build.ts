@@ -313,25 +313,27 @@ export async function build(
   await Promise.all(serverBuilds.map(viteBuild));
 
   let viteManifestPaths = getViteManifestPaths(ctx, serverBuilds);
-  for (let { srcPath, destPath } of viteManifestPaths) {
-    let manifestExists = await fse.pathExists(srcPath);
-    if (!manifestExists) continue;
+  await Promise.all(
+    viteManifestPaths.map(async ({ srcPath, destPath }) => {
+      let manifestExists = await fse.pathExists(srcPath);
+      if (!manifestExists) return;
 
-    // Move/delete original Vite manifest file
-    if (ctx.viteManifestEnabled) {
-      await fse.ensureDir(path.dirname(destPath));
-      await fse.move(srcPath, destPath);
-    } else {
-      await fse.remove(srcPath);
-    }
+      // Move/delete original Vite manifest file
+      if (ctx.viteManifestEnabled) {
+        await fse.ensureDir(path.dirname(destPath));
+        await fse.move(srcPath, destPath);
+      } else {
+        await fse.remove(srcPath);
+      }
 
-    // Remove .vite dir if it's now empty
-    let viteDir = path.dirname(srcPath);
-    let viteDirFiles = await fse.readdir(viteDir);
-    if (viteDirFiles.length === 0) {
-      await fse.remove(viteDir);
-    }
-  }
+      // Remove .vite dir if it's now empty
+      let viteDir = path.dirname(srcPath);
+      let viteDirFiles = await fse.readdir(viteDir);
+      if (viteDirFiles.length === 0) {
+        await fse.remove(viteDir);
+      }
+    })
+  );
 
   if (ctx.remixConfig.manifest) {
     await fse.ensureDir(path.join(ctx.remixConfig.buildDirectory, ".remix"));
