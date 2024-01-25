@@ -79,6 +79,68 @@ A function for assigning addressable routes to [server bundles][server-bundles].
 
 You may also want to enable the `manifest` option since, when server bundles are enabled, it contains mappings between routes and server bundles.
 
+## Cloudflare
+
+<docs-warning>
+
+The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pages] which is specifically designed for fullstack applications, unlike [Cloudflare Workers Sites][cloudflare-workers-sites]. If you're currently on Cloudflare Workers Sites, refer to the [Cloudflare Pages migration guide][cloudflare-pages-migration-guide].
+
+</docs-warning>
+
+To get started with Cloudflare, you can use the [`unstable-vite-cloudflare`][template-vite-cloudflare] template:
+
+```shellscript nonumber
+npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
+```
+
+#### Bindings
+
+Bindings for Cloudflare resources can be configured [within `wrangler.toml` for local development][wrangler-toml-bindings] or within the [Cloudflare dashboard for deployments][cloudflare-pages-bindings].
+Then, you can access your bindings via `context.env`.
+For example, with a [KV namespace][cloudflare-kv] bound as `MY_KV`:
+
+```ts filename=app/routes/_index.tsx
+export async function loader({ context }) {
+  const { MY_KV } = context.env;
+  const value = await MY_KV.get("my-key");
+  return json({ value });
+}
+```
+
+#### Vite & Wrangler
+
+There are two ways to run your Cloudflare app locally:
+
+```shellscript nonumber
+# Vite
+remix vite:dev
+
+# Wrangler
+remix vite:build # build app before running wrangler
+wranger pages dev ./build/client
+```
+
+While Vite provides a better development experience, Wrangler provides closer emulation of the Cloudflare environment by running your server code in [Cloudflare's `workerd` runtime][cloudflare-workerd] instead of Node.
+To simulate the Cloudflare environment in Vite, Wrangler provides [Node proxies for resource bindings][wrangler-getbindingsproxy] which are made available by the Remix Cloudflare adapter:
+
+```ts filename=vite.config.ts lines=[3,10]
+import {
+  unstable_vitePlugin as remix,
+  unstable_vitePluginAdapterCloudflare as cloudflare,
+} from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      adapter: cloudflare(),
+    }),
+  ],
+});
+```
+
+<docs-info>Vite will not use your Cloudflare Pages Functions (`functions/*`) in development as those are purely for Wrangler routing.</docs-info>
+
 ## Splitting up client and server code
 
 Remix lets you write code that [runs on both the client and the server][server-vs-client].
@@ -150,87 +212,6 @@ This means that, for any additional bundling features you'd like to use, you sho
 
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
 The use of any such features will render the existing Remix compiler unable to compile your app, so only use them if you intend to use Vite exclusively from here on out.
-
-## Cloudflare
-
-<docs-warning>
-
-The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pages] which is specifically designed for fullstack applications, unlike [Cloudflare Workers Sites][cloudflare-workers-sites]. If you're currently on Cloudflare Workers Sites, refer to the [Cloudflare Pages migration guide][cloudflare-pages-migration-guide].
-
-</docs-warning>
-
-To get started with Cloudflare, you can use the [`unstable-vite-cloudflare`][template-vite-cloudflare] template:
-
-```shellscript nonumber
-npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
-```
-
-#### Setup
-
-👉 **Use the Cloudflare adapter**
-
-```ts filename=vite.config.ts lines=[3,10]
-import {
-  unstable_vitePlugin as remix,
-  unstable_vitePluginAdapterCloudflare as cloudflare,
-} from "@remix-run/dev";
-import { defineConfig } from "vite";
-
-export default defineConfig({
-  plugins: [
-    remix({
-      adapter: cloudflare(),
-    }),
-  ],
-});
-```
-
-👉 **Configure bindings in `wrangler.toml`**
-
-Check out the [`wrangler.toml` configuration docs][wrangler-toml-bindings] for all available bindings.
-
-👉 **Create a catch-all route for Remix**
-
-```ts filename=functions/[[path]].ts
-import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
-
-import * as build from "../build/server";
-
-export const onRequest = createPagesFunctionHandler({
-  build,
-  getLoadContext: (context) => ({ env: context.env }),
-});
-```
-
-#### Development
-
-```shellscript nonumber
-remix vite:dev
-```
-
-In development, Vite will run your server code directly in Node, not Cloudflare's native `workerd` runtime.
-To emulate the Cloudflare environment, the Cloudflare adapter will automatically inject bindings into `context.env` based on your `wrangler.toml` configuration.
-
-Note that the none of you pages functions (`functions/*`) will run in development as those are purely for `wrangler` routing.
-
-#### Preview
-
-Your `functions/[[path]].ts` file should already tell `wrangler` how to delegate requests to Remix on the server via `createPagesFunctionHandler`.
-You'll also need to tell `wrangler` where to find your client assets.
-
-```shellscript nonumber
-remix vite:build
-wrangler pages dev ./build/client
-```
-
-#### Deploy
-
-```shellscript
-wrangler pages deploy ./build/client
-```
-
-In production, make sure you setup corresponding namespaces within the Cloudflare dashboard and then create bindings with those namespaces for your pages functions.
-For more information, see the [official docs for Cloudflare Pages bindings][cloudflare-pages-bindings].
 
 ## Migrating
 
@@ -998,10 +979,10 @@ You would then nest all other routes within this, e.g. `app/routes/about.tsx` wo
 
 #### Wrangler errors in development
 
-When using Cloudflare Pages, you may encounter the following error from `wrangler pages dev`.
+When using Cloudflare Pages, you may encounter the following error from `wrangler pages dev`:
 
-```
-Your worker called response.clone(), but did not read the body of both clones.
+```txt nonumber
+ERROR: Your worker called response.clone(), but did not read the body of both clones.
 This is wasteful, as it forces the system to buffer the entire response body
 in memory, rather than streaming it through. This may cause your worker to be
 unexpectedly terminated for going over the memory limit. If you only meant to
@@ -1109,3 +1090,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [cloudflare-pages-migration-guide]: https://developers.cloudflare.com/pages/migrations/migrating-from-workers
 [cloudflare-request-clone-errors]: https://github.com/cloudflare/workers-sdk/issues/3259
 [cloudflare-pages-bindings]: https://developers.cloudflare.com/pages/functions/bindings/
+[cloudflare-kv]: https://developers.cloudflare.com/pages/functions/bindings/#kv-namespaces
+[cloudflare-workerd]: https://blog.cloudflare.com/workerd-open-source-workers-runtime
+[wrangler-getbindingsproxy]: https://github.com/cloudflare/workers-sdk/pull/4523
