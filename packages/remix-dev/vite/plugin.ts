@@ -1594,7 +1594,7 @@ async function getRouteMetadata(
     index: route.index,
     caseSensitive: route.caseSensitive,
     url: path.posix.join(
-      pluginConfig.publicPath,
+      ctx.remixConfig.publicPath,
       "/" +
         path.relative(
           ctx.rootDirectory,
