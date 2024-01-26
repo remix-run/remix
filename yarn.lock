@@ -2314,10 +2314,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/router@0.0.0-experimental-e7ce8959":
-  version "0.0.0-experimental-e7ce8959"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-0.0.0-experimental-e7ce8959.tgz#9bfd019fcdfd35f1e8ebdbc2b014fcc0475788bb"
-  integrity sha512-UdhEMF1WHVLgawPwhajfim/GLmibxqLXDxfIBRHkd6TrZ3JKXqYLBFtGDO4wA3iEiU1lUZ7FvShUZzlnzrYzBg==
+"@remix-run/router@0.0.0-experimental-c9f8a7b2":
+  version "0.0.0-experimental-c9f8a7b2"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-0.0.0-experimental-c9f8a7b2.tgz#62b3a99be484463cf671086bfacc62ba2e65c584"
+  integrity sha512-B8zLtDP53mneC4ouOZyPSvtNyO7R3ZeV4ELQ7SC2yeoqlkuxOb2jg4HWCpkoSAMyqW9bhKi/KHA6nX4BJJBDBQ==
 
 "@remix-run/web-blob@^3.1.0":
   version "3.1.0"
@@ -11002,20 +11002,20 @@ react-refresh@^0.14.0:
   resolved "https://registry.npmjs.org/react-refresh/-/react-refresh-0.14.0.tgz"
   integrity sha512-wViHqhAd8OHeLS/IRMJjTSDHF3U9eWi62F/MledQGPdJGDhodXJ9PBLNGr6WWL7qlH12Mt3TyTpbS+hGXMjCzQ==
 
-react-router-dom@0.0.0-experimental-e7ce8959:
-  version "0.0.0-experimental-e7ce8959"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-0.0.0-experimental-e7ce8959.tgz#4c585f9d949fa1014ca7ffa0fcf7d6e6fd521567"
-  integrity sha512-ePBIlEH41Tk9+A4c9PmhxSgAc4CbSIkyjpogB55Akoo8s6kjxJm2KIYlw6lKG7eSOjQrGMgn7ruFZB3eC3acEQ==
+react-router-dom@0.0.0-experimental-c9f8a7b2:
+  version "0.0.0-experimental-c9f8a7b2"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-0.0.0-experimental-c9f8a7b2.tgz#2102eb615cfecbab432b0bac5a8ee1e7409393c4"
+  integrity sha512-g1wKTTvBM+WExUiywAd9f9mZipdhtdGRssKqz+tLIMKuWcJ4Y3Z0nXsz1OUZ+QdQr7fNxrsRcEksWo9qbtTlfw==
   dependencies:
-    "@remix-run/router" "0.0.0-experimental-e7ce8959"
-    react-router "0.0.0-experimental-e7ce8959"
+    "@remix-run/router" "0.0.0-experimental-c9f8a7b2"
+    react-router "0.0.0-experimental-c9f8a7b2"
 
-react-router@0.0.0-experimental-e7ce8959:
-  version "0.0.0-experimental-e7ce8959"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-0.0.0-experimental-e7ce8959.tgz#0bc6bce30d95c006ba43bddddff46575d9068cdb"
-  integrity sha512-AhMqeVJodpDXs4agWwmGRXP10U2ihKK1S9dzQVCI9GwCcktM1Bg8pAB/V6RR89ay18kr092zcS0IB+Wg0ySHQQ==
+react-router@0.0.0-experimental-c9f8a7b2:
+  version "0.0.0-experimental-c9f8a7b2"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-0.0.0-experimental-c9f8a7b2.tgz#c3d1553364f7ff5399cac24eaa5c80c69f73e82f"
+  integrity sha512-BWDitTIQpn+aqImg7OpY6He7tzgRgE/O0hR/AR+61GvFGx79vKNJa2QDJBn148e6C3sud5FDtQ4pXfb5+yclvg==
   dependencies:
-    "@remix-run/router" "0.0.0-experimental-e7ce8959"
+    "@remix-run/router" "0.0.0-experimental-c9f8a7b2"
 
 react@^18.2.0:
   version "18.2.0"
