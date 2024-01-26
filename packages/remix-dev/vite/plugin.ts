@@ -37,7 +37,6 @@ import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
 import { removeExports } from "./remove-exports";
-import { replaceImportSpecifier } from "./replace-import-specifier";
 import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
 
 const supportedRemixEsbuildConfigKeys = [
@@ -226,9 +225,7 @@ export type RemixPluginContext = RemixPluginServerContext & {
 let serverBuildId = VirtualModule.id("server-build");
 let serverManifestId = VirtualModule.id("server-manifest");
 let browserManifestId = VirtualModule.id("browser-manifest");
-let remixReactProxyId = VirtualModule.id("remix-react-proxy");
 let hmrRuntimeId = VirtualModule.id("hmr-runtime");
-let injectHmrRuntimeId = VirtualModule.id("inject-hmr-runtime");
 
 const resolveRelativeRouteFilePath = (
   route: ConfigRoute,
@@ -708,9 +705,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     return {
       version: String(Math.random()),
       url: VirtualModule.url(browserManifestId),
-      // hmr: {
-      //   runtime: VirtualModule.url(injectHmrRuntimeId),
-      // },
       entry: {
         module: resolveFileUrl(ctx, ctx.entryClientFilePath),
         imports: [],
@@ -1277,94 +1271,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           code: removeExports(code, SERVER_ONLY_ROUTE_EXPORTS),
           map: null,
         };
-      },
-    },
-    {
-      name: "remix-remix-react-proxy",
-      enforce: "post", // Ensure we're operating on the transformed code to support MDX etc.
-      resolveId(id) {
-        if (id === remixReactProxyId) {
-          return VirtualModule.resolve(remixReactProxyId);
-        }
-      },
-      transform(code, id) {
-        // Don't transform the proxy itself, otherwise it will import itself
-        if (id === VirtualModule.resolve(remixReactProxyId)) {
-          return;
-        }
-
-        let hasLiveReloadHints =
-          (code.includes("LiveReload") || code.includes("DevScripts")) &&
-          code.includes("@remix-run/react");
-
-        // Don't transform files that don't need the proxy
-        if (!hasLiveReloadHints) {
-          return;
-        }
-
-        // Rewrite imports to use the proxy
-        return replaceImportSpecifier({
-          code,
-          specifier: "@remix-run/react",
-          replaceWith: remixReactProxyId,
-        });
-      },
-      load(id) {
-        if (id === VirtualModule.resolve(remixReactProxyId)) {
-          // TODO: ensure react refresh is initialized before `<Scripts />`
-          let preamble = [
-            `import RefreshRuntime from "${VirtualModule.url(hmrRuntimeId)}"`,
-            "RefreshRuntime.injectIntoGlobalHook(window)",
-            "window.$RefreshReg$ = () => {}",
-            "window.$RefreshSig$ = () => (type) => type",
-            "window.__vite_plugin_react_preamble_installed__ = true",
-          ].join("\n");
-          let isDev = viteCommand === "serve";
-          return [
-            'import { createElement } from "react";',
-            'export * from "@remix-run/react";',
-            // `export const LiveReload = ${
-            //   viteCommand !== "serve"
-            // } ? () => null : `,
-            // '({ nonce = undefined }) => createElement("script", {',
-            // "  nonce,",
-            // "  dangerouslySetInnerHTML: { ",
-            // "    __html: `window.__remixLiveReloadEnabled = true`",
-            // "  }",
-            // "});",
-            "export const LiveReload = () => {",
-            "  console.warn('LiveReload is deprecated for Vite');",
-            "  return null;",
-            "}",
-            `export const DevScripts = ${!isDev} ? () => null :`,
-            "  ({ nonce = undefined }) => createElement('script', {",
-            "    nonce,",
-            "    type: 'module',",
-            "    dangerouslySetInnerHTML: { ",
-            `      __html: ${JSON.stringify(preamble)}`,
-            "    }",
-            "});",
-          ].join("\n");
-        }
-      },
-    },
-    {
-      name: "remix-inject-hmr-runtime",
-      enforce: "pre",
-      resolveId(id) {
-        if (id === injectHmrRuntimeId)
-          return VirtualModule.resolve(injectHmrRuntimeId);
-      },
-      async load(id) {
-        if (id !== VirtualModule.resolve(injectHmrRuntimeId)) return;
-
-        return [
-          `import RefreshRuntime from "${hmrRuntimeId}"`,
-          "RefreshRuntime.injectIntoGlobalHook(window)",
-          "window.$RefreshReg$ = () => {}",
-          "window.$RefreshSig$ = () => (type) => type",
-          "window.__vite_plugin_react_preamble_installed__ = true",
-        ].join("\n");
       },
     },
     {

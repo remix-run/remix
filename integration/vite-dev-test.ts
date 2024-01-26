@@ -40,7 +40,7 @@ test.describe("Vite dev", () => {
           });
         `,
         "app/root.tsx": js`
-          import { Links, Meta, Outlet, Scripts, LiveReload } from "@remix-run/react";
+          import { Links, Meta, Outlet, Scripts, DevScripts } from "@remix-run/react";
 
           export default function Root() {
             return (
@@ -48,6 +48,7 @@ test.describe("Vite dev", () => {
                 <head>
                   <Meta />
                   <Links />
+                  <DevScripts nonce="1234" />
                 </head>
                 <body>
                   <div id="content">
@@ -55,7 +56,6 @@ test.describe("Vite dev", () => {
                     <Outlet />
                   </div>
                   <Scripts />
-                  <LiveReload nonce="1234" />
                 </body>
               </html>
             );
@@ -330,7 +330,7 @@ test.describe("Vite dev", () => {
     await expect(hmrStatus).toHaveText("HMR updated: yes");
     await expect(input).toHaveValue("stateful");
 
-    // check LiveReload script has nonce
+    // check DevScripts script has nonce
     await expect(page.locator(`script[nonce="1234"]`)).toBeAttached();
 
     // Ensure no errors after HMR

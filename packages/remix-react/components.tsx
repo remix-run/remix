@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import type {
   FocusEventHandler,
   MouseEventHandler,
@@ -1059,6 +1060,30 @@ export function useFetcher<TData = AppData>(
 ): FetcherWithComponents<SerializeFrom<TData>> {
   return useFetcherRR(opts);
 }
+
+export const DevScripts =
+  process.env.NODE_ENV !== "development"
+    ? () => null
+    : ({ nonce }: { nonce?: string }) => {
+        return (
+          <script
+            nonce={nonce}
+            type="module"
+            async
+            dangerouslySetInnerHTML={{
+              __html: `
+                // import "/@id/__x00__virtual:remix/hmr-preamble"
+                import RefreshRuntime from "/@id/__x00__virtual:remix/hmr-runtime"
+                RefreshRuntime.injectIntoGlobalHook(window)
+                window.$RefreshReg$ = () => {}
+                window.$RefreshSig$ = () => (type) => type
+                window.__vite_plugin_react_preamble_installed__ = true
+              `,
+            }}
+            suppressHydrationWarning
+          />
+        );
+      };
 
 /**
  * This component connects your app to the Remix asset server and

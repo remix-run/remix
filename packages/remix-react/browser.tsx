@@ -69,7 +69,6 @@ type CriticalCssReducer = () => typeof window.__remixContext.criticalCss;
 // The critical CSS can only be cleared, so the reducer always returns undefined
 let criticalCssReducer: CriticalCssReducer = () => undefined;
 
-// @ts-expect-error
 if (import.meta && import.meta.hot) {
   // @ts-expect-error
   import.meta.hot.accept(
