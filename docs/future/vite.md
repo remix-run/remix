@@ -243,6 +243,43 @@ export default defineConfig({
 });
 ```
 
+#### HMR & HDR
+
+The new `<DevScripts/>` component enables development-specific features like HMR and HDR.
+`<DevScripts/>` automatically removes itself in production, just like the old `<LiveReload/>` component.
+But unlike `<LiveReload/>`, it works with Vite's out-of-the-box HMR capabilities.
+
+<docs-info>
+
+The `<DevScripts/>` component should be placed in the `<head/>` of your app so that it
+can be loaded before any other scripts as required by [React Fast Refresh][react-fast-refresh].
+
+</docs-info>
+
+👉 **Replace `<LiveReload/>` with `<DevScripts/>`**
+
+```diff
+  import {
+-   LiveReload,
++   DevScripts,
+    Outlet,
+  }
+
+  export default function App() {
+    return (
+      <html>
+        <head>
++         <DevScripts />
+        </head>
+        <body>
+-         <LiveReload />
+          <Outlet />
+        </body>
+      </html>
+    )
+  }
+```
+
 #### TypeScript integration
 
 Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
@@ -1149,3 +1186,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [wrangler-getbindingsproxy]: https://github.com/cloudflare/workers-sdk/pull/4523
 [remix-config-server]: https://remix.run/docs/en/main/file-conventions/remix-config#server
 [cloudflare-vite-and-wrangler]: #vite--wrangler
+[react-fast-refresh]: https://github.com/facebook/react/issues/16604#issuecomment-528663101
