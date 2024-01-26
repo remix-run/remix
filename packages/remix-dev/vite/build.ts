@@ -4,9 +4,9 @@ import fse from "fs-extra";
 import colors from "picocolors";
 
 import {
-  type ResolvedVitePluginConfig,
-  type ServerBundleBuildConfig,
+  type RemixPluginContext,
   type BuildManifest,
+  type ServerBundleBuildConfig,
   type ServerBundlesBuildManifest,
   configRouteToBranchRoute,
   getServerBuildDirectory,
@@ -15,7 +15,7 @@ import type { ConfigRoute, RouteManifest } from "../config/routes";
 import invariant from "../invariant";
 import { preloadViteEsm } from "./import-vite-esm-sync";
 
-async function extractConfig({
+async function resolveViteConfig({
   configFile,
   mode,
   root,
@@ -35,15 +35,20 @@ async function extractConfig({
     "production" // default NODE_ENV
   );
 
-  let remixConfig = viteConfig[
-    "__remixPluginResolvedConfig" as keyof typeof viteConfig
-  ] as ResolvedVitePluginConfig | undefined;
-  if (!remixConfig) {
+  return viteConfig;
+}
+
+async function extractRemixPluginContext(viteConfig: Vite.ResolvedConfig) {
+  let ctx = viteConfig["__remixPluginContext" as keyof typeof viteConfig] as
+    | RemixPluginContext
+    | undefined;
+
+  if (!ctx) {
     console.error(colors.red("Remix Vite plugin not found in Vite config"));
     process.exit(1);
   }
 
-  return { remixConfig, viteConfig };
+  return ctx;
 }
 
 function getAddressableRoutes(routes: RouteManifest): ConfigRoute[] {
@@ -98,19 +103,15 @@ type RemixViteServerBuildArgs = {
 
 type RemixViteBuildArgs = RemixViteClientBuildArgs | RemixViteServerBuildArgs;
 
-async function getServerBuilds(remixConfig: ResolvedVitePluginConfig): Promise<{
+async function getServerBuilds(ctx: RemixPluginContext): Promise<{
   serverBuilds: RemixViteServerBuildArgs[];
   buildManifest: BuildManifest;
 }> {
+  let { rootDirectory } = ctx;
   // eslint-disable-next-line prefer-let/prefer-let -- Improve type narrowing
-  const {
-    routes,
-    serverBuildFile,
-    serverBundles,
-    rootDirectory,
-    appDirectory,
-  } = remixConfig;
-  let serverBuildDirectory = getServerBuildDirectory(remixConfig);
+  const { routes, serverBuildFile, serverBundles, appDirectory } =
+    ctx.remixConfig;
+  let serverBuildDirectory = getServerBuildDirectory(ctx);
   if (!serverBundles) {
     return {
       serverBuilds: [{ ssr: true }],
@@ -152,8 +153,11 @@ async function getServerBuilds(remixConfig: ResolvedVitePluginConfig): Promise<{
         ),
       });
       if (typeof serverBundleId !== "string") {
+        throw new Error(`The "serverBundles" function must return a string`);
+      }
+      if (!/^[a-zA-Z0-9-_]+$/.test(serverBundleId)) {
         throw new Error(
-          `The "unstable_serverBundles" function must return a string`
+          `The "serverBundles" function must only return strings containing alphanumeric characters, hyphens and underscores.`
         );
       }
       buildManifest.routeIdToServerBundleId[route.id] = serverBundleId;
@@ -200,14 +204,11 @@ async function getServerBuilds(remixConfig: ResolvedVitePluginConfig): Promise<{
 
 async function cleanServerBuildDirectory(
   viteConfig: Vite.ResolvedConfig,
-  remixConfig: ResolvedVitePluginConfig
+  ctx: RemixPluginContext
 ) {
-  let serverBuildDirectory = getServerBuildDirectory(remixConfig);
+  let serverBuildDirectory = getServerBuildDirectory(ctx);
   let isWithinRoot = () => {
-    let relativePath = path.relative(
-      remixConfig.rootDirectory,
-      serverBuildDirectory
-    );
+    let relativePath = path.relative(ctx.rootDirectory, serverBuildDirectory);
     return !relativePath.startsWith("..") && !path.isAbsolute(relativePath);
   };
 
@@ -245,11 +246,9 @@ export async function build(
   // so it can be accessed synchronously via `importViteEsmSync`
   await preloadViteEsm();
 
-  let { remixConfig, viteConfig } = await extractConfig({
-    configFile,
-    mode,
-    root,
-  });
+  let viteConfig = await resolveViteConfig({ configFile, mode, root });
+  let ctx = await extractRemixPluginContext(viteConfig);
+  let { remixConfig } = ctx;
 
   let vite = await import("vite");
 
@@ -275,32 +274,26 @@ export async function build(
   // output directories, we need to clean the root server build directory
   // ourselves rather than relying on Vite to do it, otherwise you can end up
   // with stale server bundle directories in your build output
-  await cleanServerBuildDirectory(viteConfig, remixConfig);
+  await cleanServerBuildDirectory(viteConfig, ctx);
 
   // Run the Vite client build first
   await viteBuild({ ssr: false });
 
   // Then run Vite SSR builds in parallel
-  let { serverBuilds, buildManifest } = await getServerBuilds(remixConfig);
+  let { serverBuilds, buildManifest } = await getServerBuilds(ctx);
 
   await Promise.all(serverBuilds.map(viteBuild));
 
-  if (remixConfig.manifest) {
+  if (ctx.remixConfig.manifest) {
     await fse.writeFile(
-      path.join(remixConfig.buildDirectory, "manifest.json"),
+      path.join(ctx.remixConfig.buildDirectory, "manifest.json"),
       JSON.stringify(buildManifest, null, 2),
       "utf-8"
     );
   }
 
-  let { buildDirectory, serverBuildFile, ssr } = remixConfig;
-
   await remixConfig.adapter?.buildEnd?.({
     buildManifest,
-    remixConfig: {
-      buildDirectory,
-      serverBuildFile,
-      unstable_ssr: ssr,
-    },
+    remixConfig,
   });
 }
