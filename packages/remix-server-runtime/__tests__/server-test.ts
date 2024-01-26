@@ -497,8 +497,9 @@ describe("shared server runtime", () => {
       expect(handleErrorSpy.mock.calls[0][0].message).toBe(
         "This operation was aborted"
       );
-      expect(handleErrorSpy.mock.calls[0][0].request).toBe(
-        "GET http://test.com/resource"
+      expect(handleErrorSpy.mock.calls[0][1].request.method).toBe("GET");
+      expect(handleErrorSpy.mock.calls[0][1].request.url).toBe(
+        "http://test.com/resource"
       );
     });
   });
@@ -988,8 +989,9 @@ describe("shared server runtime", () => {
       expect(handleErrorSpy.mock.calls[0][0].message).toBe(
         "This operation was aborted"
       );
-      expect(handleErrorSpy.mock.calls[0][0].request).toBe(
-        "GET http://test.com/?_data=routes/_index"
+      expect(handleErrorSpy.mock.calls[0][1].request.method).toBe("GET");
+      expect(handleErrorSpy.mock.calls[0][1].request.url).toBe(
+        "http://test.com/?_data=routes/_index"
       );
     });
   });
@@ -2072,8 +2074,9 @@ describe("shared server runtime", () => {
       expect(handleErrorSpy.mock.calls[0][0].message).toBe(
         "This operation was aborted"
       );
-      expect(handleErrorSpy.mock.calls[0][0].request).toBe(
-        "GET http://test.com/"
+      expect(handleErrorSpy.mock.calls[0][1].request.method).toBe("GET");
+      expect(handleErrorSpy.mock.calls[0][1].request.url).toBe(
+        "http://test.com/"
       );
     });
   });
