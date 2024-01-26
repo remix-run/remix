@@ -37,7 +37,6 @@ import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
 import { removeExports } from "./remove-exports";
-import { replaceImportSpecifier } from "./replace-import-specifier";
 import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
 
 const supportedRemixEsbuildConfigKeys = [
@@ -227,7 +226,6 @@ export type RemixPluginContext = RemixPluginSsrBuildContext & {
 let serverBuildId = VirtualModule.id("server-build");
 let serverManifestId = VirtualModule.id("server-manifest");
 let browserManifestId = VirtualModule.id("browser-manifest");
-let remixReactProxyId = VirtualModule.id("remix-react-proxy");
 let hmrRuntimeId = VirtualModule.id("hmr-runtime");
 let injectHmrRuntimeId = VirtualModule.id("inject-hmr-runtime");
 
@@ -1281,54 +1279,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       },
     },
     {
-      name: "remix-remix-react-proxy",
-      enforce: "post", // Ensure we're operating on the transformed code to support MDX etc.
-      resolveId(id) {
-        if (id === remixReactProxyId) {
-          return VirtualModule.resolve(remixReactProxyId);
-        }
-      },
-      transform(code, id) {
-        // Don't transform the proxy itself, otherwise it will import itself
-        if (id === VirtualModule.resolve(remixReactProxyId)) {
-          return;
-        }
-
-        let hasLiveReloadHints =
-          code.includes("LiveReload") && code.includes("@remix-run/react");
-
-        // Don't transform files that don't need the proxy
-        if (!hasLiveReloadHints) {
-          return;
-        }
-
-        // Rewrite imports to use the proxy
-        return replaceImportSpecifier({
-          code,
-          specifier: "@remix-run/react",
-          replaceWith: remixReactProxyId,
-        });
-      },
-      load(id) {
-        if (id === VirtualModule.resolve(remixReactProxyId)) {
-          // TODO: ensure react refresh is initialized before `<Scripts />`
-          return [
-            'import { createElement } from "react";',
-            'export * from "@remix-run/react";',
-            `export const LiveReload = ${
-              viteCommand !== "serve"
-            } ? () => null : `,
-            '({ nonce = undefined }) => createElement("script", {',
-            "  nonce,",
-            "  dangerouslySetInnerHTML: { ",
-            "    __html: `window.__remixLiveReloadEnabled = true`",
-            "  }",
-            "});",
-          ].join("\n");
-        }
-      },
-    },
-    {
       name: "remix-inject-hmr-runtime",
       enforce: "pre",
       resolveId(id) {
@@ -1504,7 +1454,7 @@ const inWebWorker = typeof WorkerGlobalScope !== 'undefined' && self instanceof 
 let prevRefreshReg;
 let prevRefreshSig;
 
-if (import.meta.hot && !inWebWorker && window.__remixLiveReloadEnabled) {
+if (import.meta.hot && !inWebWorker && window.__remixHmrEnabled) {
   if (!window.__vite_plugin_react_preamble_installed__) {
     throw new Error(
       "Remix Vite plugin can't detect preamble. Something is wrong."
@@ -1520,7 +1470,7 @@ if (import.meta.hot && !inWebWorker && window.__remixLiveReloadEnabled) {
 }`.replace(/\n+/g, "");
 
 const REACT_REFRESH_FOOTER = `
-if (import.meta.hot && !inWebWorker && window.__remixLiveReloadEnabled) {
+if (import.meta.hot && !inWebWorker && window.__remixHmrEnabled) {
   window.$RefreshReg$ = prevRefreshReg;
   window.$RefreshSig$ = prevRefreshSig;
   RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {

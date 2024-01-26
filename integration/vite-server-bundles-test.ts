@@ -74,7 +74,7 @@ const TEST_ROUTES = [
 const files = {
   "app/root.tsx": `
     ${ROUTE_FILE_COMMENT}
-    import { Links, Meta, Outlet, Scripts, LiveReload } from "@remix-run/react";
+    import { Links, Meta, Outlet, Scripts, DevScripts } from "@remix-run/react";
 
     export default function Root() {
       return (
@@ -82,11 +82,11 @@ const files = {
           <head>
             <Meta />
             <Links />
+            <DevScripts />
           </head>
           <body>
             <Outlet />
             <Scripts />
-            <LiveReload />
           </body>
         </html>
       );

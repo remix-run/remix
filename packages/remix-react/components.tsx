@@ -1060,6 +1060,18 @@ export function useFetcher<TData = AppData>(
   return useFetcherRR(opts);
 }
 
+export const DevScripts =
+  process.env.NODE_ENV === "production"
+    ? () => null
+    : ({ nonce }: { nonce?: undefined }) => (
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: `window.__remixHmrEnabled = true`,
+          }}
+        />
+      );
+
 /**
  * This component connects your app to the Remix asset server and
  * automatically reloads the page when files change in development.
