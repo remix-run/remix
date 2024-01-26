@@ -726,12 +726,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     return {
       version: String(Math.random()),
       url: path.posix.join(
-        remixConfig.publicPath,
+        ctx.remixConfig.publicPath,
         VirtualModule.url(browserManifestId)
       ),
       hmr: {
         runtime: path.posix.join(
-          remixConfig.publicPath,
+          ctx.remixConfig.publicPath,
           VirtualModule.url(injectHmrRuntimeId)
         ),
       },
@@ -1045,7 +1045,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   nodeReq,
                   nodeRes
                 ) => {
-                  let req = fromNodeRequest(nodeReq);
+                  let req = fromNodeRequest(nodeReq, build.basename != null);
                   let { adapter } = ctx.remixConfig;
                   let res = await handler(req, adapter?.loadContext);
                   await toNodeRequest(res, nodeRes);
