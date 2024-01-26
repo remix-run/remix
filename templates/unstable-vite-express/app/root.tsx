@@ -1,6 +1,6 @@
 import {
+  DevScripts,
   Links,
-  LiveReload,
   Meta,
   Outlet,
   Scripts,
@@ -15,12 +15,12 @@ export default function App() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <DevScripts />
       </head>
       <body>
         <Outlet />
         <ScrollRestoration />
         <Scripts />
-        <LiveReload />
       </body>
     </html>
   );
