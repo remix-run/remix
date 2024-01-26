@@ -1739,6 +1739,7 @@ describe("shared server runtime", () => {
       let result = await handler(request);
       expect(result.status).toBe(400);
     });
+
     test("returns generic message if handleDocumentRequest throws a second time", async () => {
       let rootLoader = jest.fn(() => {
         return "root";
