@@ -6,8 +6,8 @@ import type {
   HeadersFunction,
   LoaderFunction,
 } from "../";
+import type { FutureConfig } from "../entry";
 import type { EntryRoute, ServerRoute, ServerRouteManifest } from "../routes";
-import { FutureConfig } from "../entry";
 
 export function mockServerBuild(
   routes: Record<
