@@ -112,7 +112,7 @@ remix vite:dev
 
 # Wrangler
 remix vite:build # build app before running wrangler
-wranger pages dev ./build/client
+wrangler pages dev ./build/client
 ```
 
 While Vite provides a better development experience, Wrangler provides closer emulation of the Cloudflare environment by running your server code in [Cloudflare's `workerd` runtime][cloudflare-workerd] instead of Node.
