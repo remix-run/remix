@@ -8,14 +8,18 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cl
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export type GetLoadContextFunction<Env = unknown> = (
-  context: Parameters<PagesFunction<Env>>[0]
+export type GetLoadContextFunction<
+  Env = unknown,
+  Params extends string = any,
+  Data extends Record<string, unknown> = Record<string, unknown>
+> = (
+  context: EventContext<Env, Params, Data>
 ) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler<Env = any> = PagesFunction<Env>;
 
 export interface createPagesFunctionHandlerParams<Env = any> {
-  build: ServerBuild;
+  build: ServerBuild | (() => ServerBuild | Promise<ServerBuild>);
   getLoadContext?: GetLoadContextFunction<Env>;
   mode?: string;
 }

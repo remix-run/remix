@@ -20,7 +20,7 @@ test.describe(async () => {
     return normalizePath(pathname).startsWith(normalizePath(cwd));
   }
 
-  function pathRelativeToCwd(pathname: string) {
+  function relativeToCwd(pathname: string) {
     return normalizePath(path.relative(cwd, pathname));
   }
 
@@ -32,17 +32,28 @@ test.describe(async () => {
         pluginOptions: `
           {
             adapter: async ({ remixConfig }) => ({
-              unstable_serverBundles(...args) {
+              serverBundles(...args) {
                 // This lets us assert that user options are passed to adapter options hook
-                return remixConfig.unstable_serverBundles?.(...args) + "--adapter-options";
+                return remixConfig.serverBundles?.(...args) + "--adapter-options";
               },
               async buildEnd(args) {
                 let fs = await import("node:fs/promises");
-                await fs.writeFile("BUILD_END_ARGS.json", JSON.stringify(args, null, 2), "utf-8");
+                await fs.writeFile(
+                  "BUILD_END_ARGS.json",
+                  JSON.stringify(
+                    args,
+                    function replacer(key, value) {
+                      return typeof value === "function"
+                        ? value.toString()
+                        : value;
+                    },
+                    2,
+                  ),
+                  "utf-8");
               }
             }),
             
-            unstable_serverBundles() {
+            serverBundles() {
               return "user-options";
             }
           },
@@ -53,63 +64,62 @@ test.describe(async () => {
   });
   test.afterAll(() => stop());
 
-  test("Vite / adapter / unstable_serverBundles and buildEnd hooks", async () => {
+  test("Vite / adapter / serverBundles and buildEnd hooks", async () => {
     let { status } = viteBuild({ cwd });
     expect(status).toBe(0);
-
-    expect(
-      Object.keys(
-        JSON.parse(
-          fs.readFileSync(path.join(cwd, "build/server/bundles.json"), "utf8")
-        ).serverBundles
-      )
-    ).toEqual(["user-options--adapter-options"]);
 
     let buildEndArgs: any = JSON.parse(
       fs.readFileSync(path.join(cwd, "BUILD_END_ARGS.json"), "utf8")
     );
+    let { remixConfig } = buildEndArgs;
 
     // Before rewriting to relative paths, assert that paths are absolute within cwd
-    expect(pathStartsWithCwd(buildEndArgs.serverBuildDirectory)).toBe(true);
-    expect(pathStartsWithCwd(buildEndArgs.assetsBuildDirectory)).toBe(true);
+    expect(pathStartsWithCwd(remixConfig.buildDirectory)).toBe(true);
 
     // Rewrite path args to be relative and normalized for snapshot test
-    buildEndArgs.serverBuildDirectory = pathRelativeToCwd(
-      buildEndArgs.serverBuildDirectory
-    );
-    buildEndArgs.assetsBuildDirectory = pathRelativeToCwd(
-      buildEndArgs.assetsBuildDirectory
-    );
+    remixConfig.buildDirectory = relativeToCwd(remixConfig.buildDirectory);
 
-    expect(buildEndArgs).toEqual({
-      assetsBuildDirectory: "build/client",
-      serverBuildDirectory: "build/server",
-      serverBuildFile: "index.js",
-      unstable_serverBundlesManifest: {
-        routeIdToServerBundleId: {
-          "routes/_index": "user-options--adapter-options",
+    expect(Object.keys(buildEndArgs)).toEqual(["buildManifest", "remixConfig"]);
+
+    // Smoke test the resolved config
+    expect(Object.keys(buildEndArgs.remixConfig)).toEqual([
+      "adapter",
+      "appDirectory",
+      "buildDirectory",
+      "future",
+      "manifest",
+      "publicPath",
+      "routes",
+      "serverBuildFile",
+      "serverBundles",
+      "serverModuleFormat",
+      "unstable_ssr",
+    ]);
+
+    // Ensure we get a valid build manifest
+    expect(buildEndArgs.buildManifest).toEqual({
+      routeIdToServerBundleId: {
+        "routes/_index": "user-options--adapter-options",
+      },
+      routes: {
+        root: {
+          file: "app/root.tsx",
+          id: "root",
+          path: "",
         },
-        routes: {
-          root: {
-            file: "app/root.tsx",
-            id: "root",
-            path: "",
-          },
-          "routes/_index": {
-            file: "app/routes/_index.tsx",
-            id: "routes/_index",
-            index: true,
-            parentId: "root",
-          },
-        },
-        serverBundles: {
-          "user-options--adapter-options": {
-            file: "build/server/user-options--adapter-options/index.js",
-            id: "user-options--adapter-options",
-          },
+        "routes/_index": {
+          file: "app/routes/_index.tsx",
+          id: "routes/_index",
+          index: true,
+          parentId: "root",
         },
       },
-      unstable_ssr: true,
+      serverBundles: {
+        "user-options--adapter-options": {
+          file: "build/server/user-options--adapter-options/index.js",
+          id: "user-options--adapter-options",
+        },
+      },
     });
   });
 });

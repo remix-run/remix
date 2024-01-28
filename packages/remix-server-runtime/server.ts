@@ -36,7 +36,7 @@ export type RequestHandler = (
 ) => Promise<Response>;
 
 export type CreateRequestHandlerFunction = (
-  build: ServerBuild | (() => Promise<ServerBuild>),
+  build: ServerBuild | (() => ServerBuild | Promise<ServerBuild>),
   mode?: string
 ) => RequestHandler;
 
@@ -46,7 +46,8 @@ function derive(build: ServerBuild, mode?: string) {
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
   let staticHandler = createStaticHandler(dataRoutes, {
     future: {
-      v7_relativeSplatPath: build.future?.v3_relativeSplatPath,
+      v7_relativeSplatPath: build.future?.v3_relativeSplatPath === true,
+      v7_throwAbortReason: build.future?.v3_throwAbortReason === true,
     },
   });
 
@@ -81,6 +82,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
   return async function requestHandler(request, loadContext = {}) {
     _build = typeof build === "function" ? await build() : build;
+    mode ??= _build.mode;
     if (typeof build === "function") {
       let derived = derive(_build, mode);
       routes = derived.routes;
@@ -239,7 +241,9 @@ async function handleDataRequestRR(
     }
 
     let errorInstance =
-      error instanceof Error ? error : new Error("Unexpected Server Error");
+      error instanceof Error || error instanceof DOMException
+        ? error
+        : new Error("Unexpected Server Error");
     handleError(errorInstance);
     return routerJson(serializeError(errorInstance, serverMode), {
       status: 500,

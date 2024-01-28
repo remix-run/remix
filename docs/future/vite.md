@@ -6,20 +6,19 @@ title: Vite (Unstable)
 
 [Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
 
-<docs-warning>Note that Cloudflare is not yet supported when using Vite.</docs-warning>
-
 ## Getting started
 
-To get started with a minimal server, you can use the [`unstable-vite`][template-vite] template:
+We've got a few different Vite-based templates to get you started.
 
 ```shellscript nonumber
+# Minimal server:
 npx create-remix@latest --template remix-run/remix/templates/unstable-vite
-```
 
-If you'd rather customize your server, you can use the [`unstable-vite-express`][template-vite-express] template:
-
-```shellscript nonumber
+# Express:
 npx create-remix@latest --template remix-run/remix/templates/unstable-vite-express
+
+# Cloudflare:
+npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
 ```
 
 These templates include a `vite.config.ts` file which is where the Remix Vite plugin is configured.
@@ -50,7 +49,7 @@ All other bundling-related options are now [configured with Vite][vite-config]. 
 The following subset of Remix config options are supported:
 
 - [appDirectory][app-directory]
-- [assetsBuildDirectory][assets-build-directory]
+- [future][future]
 - [ignoredRouteFiles][ignored-route-files]
 - [publicPath][public-path]
 - [routes][routes]
@@ -63,17 +62,79 @@ The Vite plugin also accepts the following additional options:
 
 A function for adapting the build output and/or development environment for different hosting providers.
 
-#### serverBuildDirectory
+#### buildDirectory
 
-The path to the server build directory, relative to the project root. Defaults to `"build/server"`.
+The path to the build directory, relative to the project root. Defaults to `"build"`.
+
+#### manifest
+
+Whether to write a `manifest.json` file to the build directory. Defaults to `false`.
 
 #### serverBuildFile
 
 The name of the server file generated in the server build directory. Defaults to `"index.js"`.
 
-#### unstable_serverBundles
+#### serverBundles
 
 A function for assigning addressable routes to [server bundles][server-bundles].
+
+You may also want to enable the `manifest` option since, when server bundles are enabled, it contains mappings between routes and server bundles.
+
+## Cloudflare
+
+To get started with Cloudflare, you can use the [`unstable-vite-cloudflare`][template-vite-cloudflare] template:
+
+```shellscript nonumber
+npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
+```
+
+#### Bindings
+
+Bindings for Cloudflare resources can be configured [within `wrangler.toml` for local development][wrangler-toml-bindings] or within the [Cloudflare dashboard for deployments][cloudflare-pages-bindings].
+Then, you can access your bindings via `context.env`.
+For example, with a [KV namespace][cloudflare-kv] bound as `MY_KV`:
+
+```ts filename=app/routes/_index.tsx
+export async function loader({ context }) {
+  const { MY_KV } = context.env;
+  const value = await MY_KV.get("my-key");
+  return json({ value });
+}
+```
+
+#### Vite & Wrangler
+
+There are two ways to run your Cloudflare app locally:
+
+```shellscript nonumber
+# Vite
+remix vite:dev
+
+# Wrangler
+remix vite:build # build app before running wrangler
+wrangler pages dev ./build/client
+```
+
+While Vite provides a better development experience, Wrangler provides closer emulation of the Cloudflare environment by running your server code in [Cloudflare's `workerd` runtime][cloudflare-workerd] instead of Node.
+To simulate the Cloudflare environment in Vite, Wrangler provides [Node proxies for resource bindings][wrangler-getbindingsproxy] which are automatically available when using the Remix Cloudflare adapter:
+
+```ts filename=vite.config.ts lines=[3,10]
+import {
+  unstable_vitePlugin as remix,
+  unstable_vitePluginAdapterCloudflare as cloudflare,
+} from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      adapter: cloudflare(),
+    }),
+  ],
+});
+```
+
+<docs-info>Vite will not use your Cloudflare Pages Functions (`functions/*`) in development as those are purely for Wrangler routing.</docs-info>
 
 ## Splitting up client and server code
 
@@ -130,18 +191,14 @@ export const PostPreview = ({ title, description }) => {
 
 ## New build output paths
 
-There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. During the build, Vite copies files from the `public` directory into `build/client`, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
+There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. Vite copies files from the `public` directory into the client build directory, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
 
-In order to align the default Remix project structure with the way Vite works, the build output paths have been changed.
+In order to align the default Remix project structure with the way Vite works, the build output paths have been changed. There is now a single `buildDirectory` option that defaults to `"build"`, replacing the separate `assetsBuildDirectory` and `serverBuildDirectory` options. This means that, by default, the server is now compiled into `build/server` and the client is now compiled into `build/client`.
 
-- The server is now compiled into `build/server` by default.
-- The client is now compiled into `build/client` by default.
+This also means that the following configuration defaults have been changed:
 
-This means that the following configuration defaults have been changed:
-
-- [assetsBuildDirectory][assets-build-directory] defaults to `"build/client"` rather than `"public/build"`
 - [publicPath][public-path] defaults to `"/"` rather than `"/build/"`
-- [serverBuildPath][server-build-path] has been split into `serverBuildDirectory` and `serverBuildFile`, with the equivalent default for `serverBuildDirectory` being `"build/server"` rather than `"build"`
+- [serverBuildPath][server-build-path] has been replaced by `serverBuildFile` which defaults to `"index.js"`. This file will be written into the server directory within your configured `buildDirectory`.
 
 ## Additional features & plugins
 
@@ -262,7 +319,7 @@ export default defineConfig({
 });
 ```
 
-#### Migrating from a custom server
+#### Migrating a custom server
 
 If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
 This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
@@ -347,6 +404,66 @@ node --loader tsm ./server.ts
 ```
 
 Just remember that there might be some noticeable slowdown for initial server startup if you do this.
+
+#### Migrating Cloudflare Functions
+
+<docs-warning>
+
+The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pages] which is specifically designed for fullstack applications, unlike [Cloudflare Workers Sites][cloudflare-workers-sites]. If you're currently on Cloudflare Workers Sites, refer to the [Cloudflare Pages migration guide][cloudflare-pages-migration-guide].
+
+</docs-warning>
+
+👉 **Add the Cloudflare adapter to your Vite config**
+
+```ts filename=vite.config.ts lines=[3,10]
+import {
+  unstable_vitePlugin as remix,
+  unstable_vitePluginAdapterCloudflare as cloudflare,
+} from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      adapter: cloudflare(),
+    }),
+  ],
+});
+```
+
+Your Cloudflare app may be setting the [the Remix Config `server` field][remix-config-server] to generate a catch-all Cloudflare Function.
+With Vite, this indirection is no longer necessary.
+Instead, you can author a catch-all route directly for Cloudflare, just like how you would for Express or any other custom servers.
+
+👉 **Create a catch-all route for Remix**
+
+```ts filename=functions/[[page]].ts
+import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
+
+// @ts-ignore - the server build file is generated by `remix vite:build`
+import * as build from "../build/server";
+
+export const onRequest = createPagesFunctionHandler({
+  build,
+  getLoadContext: (context) => ({ env: context.env }),
+});
+```
+
+While you'll mostly use Vite during development, you can also use Wrangler to preview and deploy your app.
+To learn more, see [_Cloudflare > Vite & Wrangler_][cloudflare-vite-and-wrangler].
+
+👉 **Update your `package.json` scripts**
+
+```json filename=package.json lines=[3-6]
+{
+  "scripts": {
+    "dev": "remix vite:dev",
+    "build": "remix vite:build",
+    "preview": "wrangler pages dev ./build/client",
+    "deploy": "wrangler pages deploy ./build/client"
+  }
+}
+```
 
 #### Migrate references to build output paths
 
@@ -915,6 +1032,23 @@ export default function BoundaryRoute() {
 
 You would then nest all other routes within this, e.g. `app/routes/about.tsx` would become `app/routes/_boundary.about.tsx`, etc.
 
+#### Wrangler errors in development
+
+When using Cloudflare Pages, you may encounter the following error from `wrangler pages dev`:
+
+```txt nonumber
+ERROR: Your worker called response.clone(), but did not read the body of both clones.
+This is wasteful, as it forces the system to buffer the entire response body
+in memory, rather than streaming it through. This may cause your worker to be
+unexpectedly terminated for going over the memory limit. If you only meant to
+copy the response headers and metadata (e.g. in order to be able to modify
+them), use `new Response(response.body, response)` instead.
+```
+
+This is a [known issue with Wrangler][cloudflare-request-clone-errors].
+
+</docs-info>
+
 ## Acknowledgements
 
 Vite is an amazing project, and we're grateful to the Vite team for their work.
@@ -936,12 +1070,10 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 We're definitely late to the Vite party, but we're excited to be here now!
 
 [vite]: https://vitejs.dev
-[supported-with-some-deprecations]: #add-mdx-plugin
-[template-vite]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite
-[template-vite-express]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-express
+[template-vite-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-cloudflare
 [remix-config]: ../file-conventions/remix-config
 [app-directory]: ../file-conventions/remix-config#appdirectory
-[assets-build-directory]: ../file-conventions/remix-config#assetsbuilddirectory
+[future]: ../file-conventions/remix-config#future
 [ignored-route-files]: ../file-conventions/remix-config#ignoredroutefiles
 [public-path]: ../file-conventions/remix-config#publicpath
 [routes]: ../file-conventions/remix-config#routes
@@ -1006,3 +1138,14 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [hydrate-fallback]: ../route/hydrate-fallback
 [react-canaries]: https://react.dev/blog/2023/05/03/react-canaries
 [package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides
+[wrangler-toml-bindings]: https://developers.cloudflare.com/workers/wrangler/configuration/#bindings
+[cloudflare-pages]: https://pages.cloudflare.com
+[cloudflare-workers-sites]: https://developers.cloudflare.com/workers/configuration/sites
+[cloudflare-pages-migration-guide]: https://developers.cloudflare.com/pages/migrations/migrating-from-workers
+[cloudflare-request-clone-errors]: https://github.com/cloudflare/workers-sdk/issues/3259
+[cloudflare-pages-bindings]: https://developers.cloudflare.com/pages/functions/bindings/
+[cloudflare-kv]: https://developers.cloudflare.com/pages/functions/bindings/#kv-namespaces
+[cloudflare-workerd]: https://blog.cloudflare.com/workerd-open-source-workers-runtime
+[wrangler-getbindingsproxy]: https://github.com/cloudflare/workers-sdk/pull/4523
+[remix-config-server]: https://remix.run/docs/en/main/file-conventions/remix-config#server
+[cloudflare-vite-and-wrangler]: #vite--wrangler

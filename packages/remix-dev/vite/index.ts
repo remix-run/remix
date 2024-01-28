@@ -3,7 +3,7 @@
 // be imported at the top level.
 import type { RemixVitePlugin } from "./plugin";
 export type {
-  ServerBundlesManifest as Unstable_ServerBundlesManifest,
+  BuildManifest as Unstable_BuildManifest,
   VitePluginAdapter as Unstable_VitePluginAdapter,
 } from "./plugin";
 
@@ -12,3 +12,5 @@ export const unstable_vitePlugin: RemixVitePlugin = (...args) => {
   let { remixVitePlugin } = require("./plugin") as typeof import("./plugin");
   return remixVitePlugin(...args);
 };
+
+export { adapter as unstable_vitePluginAdapterCloudflare } from "./adapters/cloudflare";

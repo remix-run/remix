@@ -73,6 +73,8 @@ The `future` config lets you opt-into future breaking changes via [Future Flags]
 - **`v3_fetcherPersist`**: Change fetcher persistence/cleanup behavior in 2 ways ([RFC][fetcherpersist-rfc]):
   - Fetchers are no longer removed on unmount, and remain exposed via [`useFetchers`][use-fetchers] until they return to an `idle` state
   - Fetchers that complete while still mounted no longer persist in [`useFetchers`][use-fetchers] since you can access those fetchers via [`useFetcher`][use-fetcher]
+- **`v3_relativeSplatPath`**: Fixes buggy relative path resolution in splat routes. Please see the [React Router docs][relativesplatpath] for more information.
+- **`v3_throwAbortReason`**: When a server-side request is aborted, Remix will throw the `request.signal.reason` instead of an error such as `new Error("query() call aborted...")`
 
 ## ignoredRouteFiles
 
@@ -276,3 +278,4 @@ There are a few conventions that Remix uses you should be aware of.
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
 [use-fetchers]: ../hooks/use-fetchers
 [use-fetcher]: ../hooks/use-fetcher
+[relativesplatpath]: https://reactrouter.com/en/main/hooks/use-resolved-path#splat-paths
