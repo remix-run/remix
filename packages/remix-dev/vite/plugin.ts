@@ -204,7 +204,7 @@ export type ServerBundleBuildConfig = {
   serverBundleId: string;
 };
 
-type RemixPluginServerContext =
+type RemixPluginSsrBuildContext =
   | {
       isSsrBuild: false;
       getBrowserManifest?: never;
@@ -216,7 +216,7 @@ type RemixPluginServerContext =
       serverBundleId: string | undefined;
     };
 
-export type RemixPluginContext = RemixPluginServerContext & {
+export type RemixPluginContext = RemixPluginSsrBuildContext & {
   rootDirectory: string;
   entryClientFilePath: string;
   entryServerFilePath: string;
@@ -539,7 +539,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       unstable_ssr,
     };
 
-    let serverContext: RemixPluginServerContext =
+    let viteManifestEnabled = viteUserConfig.build?.manifest === true;
+
+    let ssrBuildCtx: RemixPluginSsrBuildContext =
       viteConfigEnv.isSsrBuild && viteCommand === "build"
         ? {
             isSsrBuild: true,
@@ -547,17 +549,15 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             serverBundleId:
               getServerBundleBuildConfig(viteUserConfig)?.serverBundleId,
           }
-        : {
-            isSsrBuild: false,
-          };
+        : { isSsrBuild: false };
 
     ctx = {
       remixConfig,
       rootDirectory,
       entryClientFilePath,
       entryServerFilePath,
-      viteManifestEnabled: viteUserConfig.build?.manifest === true,
-      ...serverContext,
+      viteManifestEnabled,
+      ...ssrBuildCtx,
     };
   };
 
