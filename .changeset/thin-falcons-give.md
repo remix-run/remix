@@ -12,5 +12,5 @@ To explicitly enable generation of Vite manifest files, you must set `build.mani
 export default defineConfig({
   build: { manifest: true },
   // ...
-})
+});
 ```
