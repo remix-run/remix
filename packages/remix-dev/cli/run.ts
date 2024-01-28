@@ -139,6 +139,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             "--open": isBooleanFlag("--open") ? Boolean : String,
             "--strictPort": Boolean,
             "--profile": Boolean,
+            "--sourcemap": isBooleanFlag("--sourcemap") ? Boolean : String,
           }
         : {
             // Non Vite commands
