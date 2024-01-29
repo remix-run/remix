@@ -64,7 +64,16 @@ A function for adapting the build output and/or development environment for diff
 
 #### buildDirectory
 
-The path to the build directory, relative to the project root. Defaults to `"build"`.
+The path to the build directory, relative to the project root. Defaults to
+`"build"`.
+
+#### buildEnd
+
+A function that is called after the full Remix build is complete.
+
+#### loadContext
+
+TODO: Docs for `loadContext` plugin option.
 
 #### manifest
 

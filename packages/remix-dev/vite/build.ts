@@ -344,7 +344,7 @@ export async function build(
     );
   }
 
-  await remixConfig.adapter?.buildEnd?.({
+  await remixConfig.buildEnd?.({
     buildManifest,
     remixConfig,
   });

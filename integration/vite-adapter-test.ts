@@ -38,18 +38,15 @@ test.describe(async () => {
               },
               async buildEnd(args) {
                 let fs = await import("node:fs/promises");
+                let serializeJs = (await import("serialize-javascript")).default;
+                
+                let serializedBuildEndArgs = serializeJs(args, { space: 2, unsafe: true });
+
                 await fs.writeFile(
-                  "BUILD_END_ARGS.json",
-                  JSON.stringify(
-                    args,
-                    function replacer(key, value) {
-                      return typeof value === "function"
-                        ? value.toString()
-                        : value;
-                    },
-                    2,
-                  ),
-                  "utf-8");
+                  "BUILD_END_ARGS.js",
+                  "export default " + serializedBuildEndArgs,
+                  "utf-8"
+                );
               }
             }),
             
@@ -68,9 +65,8 @@ test.describe(async () => {
     let { status } = viteBuild({ cwd });
     expect(status).toBe(0);
 
-    let buildEndArgs: any = JSON.parse(
-      fs.readFileSync(path.join(cwd, "BUILD_END_ARGS.json"), "utf8")
-    );
+    let buildEndArgs: any = (await import(path.join(cwd, "BUILD_END_ARGS.js")))
+      .default;
     let { remixConfig } = buildEndArgs;
 
     // Before rewriting to relative paths, assert that paths are absolute within cwd
@@ -86,7 +82,9 @@ test.describe(async () => {
       "adapter",
       "appDirectory",
       "buildDirectory",
+      "buildEnd",
       "future",
+      "loadContext",
       "manifest",
       "publicPath",
       "routes",

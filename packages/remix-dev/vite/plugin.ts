@@ -116,25 +116,34 @@ export type ServerBundlesBuildManifest = BaseBuildManifest & {
 
 export type BuildManifest = DefaultBuildManifest | ServerBundlesBuildManifest;
 
-const adapterRemixConfigOverrideKeys = [
-  "serverBundles",
+const unsupportedAdapterRemixConfigKeys = [
+  "adapter",
 ] as const satisfies ReadonlyArray<keyof VitePluginConfig>;
 
-type AdapterRemixConfigOverrideKey =
-  typeof adapterRemixConfigOverrideKeys[number];
+type UnsupportedAdapterRemixConfigKey =
+  typeof unsupportedAdapterRemixConfigKeys[number];
 
-type AdapterRemixConfigOverrides = Pick<
+type AdapterRemixConfig = Omit<
   VitePluginConfig,
-  AdapterRemixConfigOverrideKey
+  UnsupportedAdapterRemixConfigKey
 >;
 
-type AdapterConfig = AdapterRemixConfigOverrides & {
-  loadContext?: Record<string, unknown>;
-  buildEnd?: BuildEndHook;
-  viteConfig: Vite.UserConfig;
+type AdapterOnlyConfig = {
+  viteConfig?: Vite.UserConfig;
 };
 
-type Adapter = Omit<AdapterConfig, AdapterRemixConfigOverrideKey>;
+// Ensure the array is exhaustive
+const adapterOnlyConfigKeys = Object.keys({
+  viteConfig: null,
+} satisfies Record<keyof AdapterOnlyConfig, null>) as Array<
+  keyof AdapterOnlyConfig
+>;
+
+type Adapter = {
+  viteConfig?: Vite.UserConfig;
+};
+
+type AdapterConfig = AdapterRemixConfig & AdapterOnlyConfig;
 
 export type VitePluginAdapter = (args: {
   remixConfig: VitePluginConfig;
@@ -157,7 +166,15 @@ export type VitePluginConfig = RemixEsbuildUserConfigJsdocOverrides &
      */
     buildDirectory?: string;
     /**
-     * Whether to write a `"manifest.json"` file to the build directory.
+     * A function that is called after the full Remix build is complete.
+     */
+    buildEnd?: BuildEndHook;
+    /**
+     * TODO: Docs for `loadContext` plugin option
+     */
+    loadContext?: Record<string, unknown>;
+    /**
+     * Whether to write a `"manifest.json"` file to the build directory.`
      * Defaults to `false`.
      */
     manifest?: boolean;
@@ -193,6 +210,8 @@ export type ResolvedVitePluginConfig = Pick<
 > & {
   adapter?: Adapter;
   buildDirectory: string;
+  buildEnd?: BuildEndHook;
+  loadContext?: Record<string, unknown>;
   manifest: boolean;
   serverBuildFile: string;
   serverBundles?: ServerBundlesFunction;
@@ -433,6 +452,76 @@ export let getServerBuildDirectory = (ctx: RemixPluginContext) =>
 let getClientBuildDirectory = (remixConfig: ResolvedVitePluginConfig) =>
   path.join(remixConfig.buildDirectory, "client");
 
+let mergeRemixConfigs = (
+  ...remixConfigs: VitePluginConfig[]
+): VitePluginConfig => {
+  let mergeRemixConfig = (
+    configA: VitePluginConfig,
+    configB: VitePluginConfig
+  ): VitePluginConfig => {
+    let mergeRequired = (key: keyof VitePluginConfig) =>
+      configA[key] !== undefined && configB[key] !== undefined;
+
+    return {
+      ...configA,
+      ...configB,
+      ...(mergeRequired("buildEnd")
+        ? {
+            buildEnd: async (...args) => {
+              await Promise.all([
+                configA.buildEnd?.(...args),
+                configB.buildEnd?.(...args),
+              ]);
+            },
+          }
+        : {}),
+      ...(mergeRequired("future")
+        ? {
+            future: {
+              ...configA.future,
+              ...configB.future,
+            },
+          }
+        : {}),
+      ...(mergeRequired("ignoredRouteFiles")
+        ? {
+            ignoredRouteFiles: Array.from(
+              new Set([
+                ...(configA.ignoredRouteFiles ?? []),
+                ...(configB.ignoredRouteFiles ?? []),
+              ])
+            ),
+          }
+        : {}),
+      ...(mergeRequired("loadContext")
+        ? {
+            loadContext: {
+              ...configA.loadContext,
+              ...configB.loadContext,
+            },
+          }
+        : {}),
+      ...(mergeRequired("serverBundles")
+        ? {
+            routes: async (...args) => {
+              let [routesA, routesB] = await Promise.all([
+                configA.routes?.(...args),
+                configB.routes?.(...args),
+              ]);
+
+              return {
+                ...routesA,
+                ...routesB,
+              };
+            },
+          }
+        : {}),
+    };
+  };
+
+  return remixConfigs.reduce(mergeRemixConfig);
+};
+
 export type RemixVitePlugin = (config?: VitePluginConfig) => Vite.Plugin[];
 export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
   let viteCommand: Vite.ResolvedConfig["command"];
@@ -450,13 +539,23 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
   /** Mutates `ctx` as a side-effect */
   let updateRemixPluginContext = async (): Promise<void> => {
+    type PickPrimitives<T> = {
+      [K in keyof T]: T[K] extends string | number | boolean | symbol | void
+        ? T[K]
+        : never;
+    };
+
+    // Since default values are spread rather than being merged, we use
+    // `PickPrimitives` to ensure that defaults object cannot contain complex
+    // values that need merging. We do this to the improve types on the resolved
+    // config since the defaults can be guaranteed to be present.
     let defaults = {
       buildDirectory: "build",
       manifest: false,
       publicPath: "/",
       serverBuildFile: "index.js",
       unstable_ssr: true,
-    } as const satisfies Partial<VitePluginConfig>;
+    } as const satisfies Partial<PickPrimitives<VitePluginConfig>>;
 
     let adapterConfig = remixUserConfig.adapter
       ? await remixUserConfig.adapter({
@@ -466,21 +565,27 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           viteConfig: viteUserConfig,
         })
       : undefined;
+
     let adapter: Adapter | undefined =
-      adapterConfig && omit(adapterConfig, adapterRemixConfigOverrideKeys);
-    let adapterRemixConfigOverrides: AdapterRemixConfigOverrides | undefined =
-      adapterConfig && pick(adapterConfig, adapterRemixConfigOverrideKeys);
+      adapterConfig && pick(adapterConfig, adapterOnlyConfigKeys);
+
+    let adapterRemixConfig: AdapterRemixConfig = adapterConfig
+      ? omit(adapterConfig, [
+          ...unsupportedAdapterRemixConfigKeys,
+          ...adapterOnlyConfigKeys,
+        ])
+      : {};
 
     let resolvedRemixUserConfig = {
-      ...defaults,
-      ...remixUserConfig,
-      ...(adapterRemixConfigOverrides ?? {}),
-    } satisfies VitePluginConfig;
+      ...defaults, // Primitive default values are spread first to improve types
+      ...mergeRemixConfigs(remixUserConfig, adapterRemixConfig),
+    };
 
     let rootDirectory =
       viteUserConfig.root ?? process.env.REMIX_ROOT ?? process.cwd();
 
-    let { manifest, unstable_ssr } = resolvedRemixUserConfig;
+    let { buildEnd, loadContext, manifest, unstable_ssr } =
+      resolvedRemixUserConfig;
     let isSpaMode = !unstable_ssr;
 
     // Only select the Remix esbuild config options that the Vite plugin uses
@@ -529,7 +634,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       adapter,
       appDirectory,
       buildDirectory,
+      buildEnd,
       future,
+      loadContext,
       manifest,
       publicPath,
       routes,
@@ -1021,8 +1128,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   nodeRes
                 ) => {
                   let req = fromNodeRequest(nodeReq);
-                  let { adapter } = ctx.remixConfig;
-                  let res = await handler(req, adapter?.loadContext);
+                  let { loadContext } = ctx.remixConfig;
+                  let res = await handler(req, loadContext);
                   await toNodeRequest(res, nodeRes);
                 };
                 await nodeHandler(req, res);
