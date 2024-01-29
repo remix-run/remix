@@ -897,7 +897,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
         return {
           __remixPluginContext: ctx,
-          appType: "custom",
+          appType:
+            viteCommand === "serve" &&
+            viteConfigEnv.mode === "production" &&
+            ctx.remixConfig.unstable_ssr === false
+              ? "spa"
+              : "custom",
           optimizeDeps: {
             include: [
               // Pre-bundle React dependencies to avoid React duplicates,
@@ -979,6 +984,14 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                           },
                         },
                       }),
+                },
+              }
+            : viteCommand === "serve" && ctx.remixConfig.unstable_ssr === false
+            ? {
+                base: ctx.remixConfig.publicPath,
+                build: {
+                  manifest: true,
+                  outDir: getClientBuildDirectory(ctx.remixConfig),
                 },
               }
             : undefined),
