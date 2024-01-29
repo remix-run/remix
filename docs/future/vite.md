@@ -661,6 +661,13 @@ If you're using [MDX][mdx], since Vite's plugin API is an extension of the [Roll
 npm install -D @mdx-js/rollup
 ```
 
+<docs-info>
+
+The Remix plugin expects to process JavaScript or TypeScript files, so any transpilation from other languages — like MDX — must be done first.
+In this case, that means putting the MDX plugin _before_ the Remix plugin.
+
+</docs-info>
+
 👉 **Add the MDX Rollup plugin to your Vite config**
 
 ```ts filename=vite.config.ts lines=[1,6]
@@ -669,7 +676,7 @@ import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [remix(), mdx()],
+  plugins: [mdx(), remix()],
 });
 ```
 
@@ -694,13 +701,13 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
-    remix(),
     mdx({
       remarkPlugins: [
         remarkFrontmatter,
         remarkMdxFrontmatter,
       ],
     }),
+    remix(),
   ],
 });
 ```
