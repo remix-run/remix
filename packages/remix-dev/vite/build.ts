@@ -250,6 +250,38 @@ function getViteManifestPaths(
   return viteManifestPaths;
 }
 
+type Sourcemap =
+  | boolean
+  | "inline"
+  | "hidden"
+  | "client"
+  | "client-inline"
+  | "client-hidden"
+  | "server"
+  | "server-inline"
+  | "server-hidden";
+
+function resolveSourcemap(
+  sourcemap: Sourcemap,
+  ssr: boolean
+): boolean | "inline" | "hidden" {
+  if (typeof sourcemap === "boolean") return sourcemap;
+  if (sourcemap.startsWith("client")) {
+    if (ssr) return false;
+    if (sourcemap === "client") return true;
+    if (sourcemap === "client-inline") return "inline";
+    if (sourcemap === "client-hidden") return "hidden";
+  }
+  if (sourcemap.startsWith("server")) {
+    if (!ssr) return false;
+    if (sourcemap === "server") return true;
+    if (sourcemap === "server-inline") return "inline";
+    if (sourcemap === "server-hidden") return "hidden";
+  }
+  console.warn(`Unrecognized sourcemap setting "${sourcemap}"`);
+  return false;
+}
+
 export interface ViteBuildOptions {
   assetsInlineLimit?: number;
   clearScreen?: boolean;
@@ -260,7 +292,16 @@ export interface ViteBuildOptions {
   minify?: Vite.BuildOptions["minify"];
   mode?: string;
   profile?: boolean;
-  sourcemap?: boolean | "inline" | "hidden";
+  sourcemap?:
+    | boolean
+    | "inline"
+    | "hidden"
+    | "client"
+    | "client-inline"
+    | "client-hidden"
+    | "server"
+    | "server-inline"
+    | "server-hidden";
 }
 
 export async function build(
@@ -295,7 +336,13 @@ export async function build(
       root,
       mode,
       configFile,
-      build: { assetsInlineLimit, emptyOutDir, minify, ssr, sourcemap },
+      build: {
+        assetsInlineLimit,
+        emptyOutDir,
+        minify,
+        ssr,
+        sourcemap: resolveSourcemap(sourcemap, ssr),
+      },
       optimizeDeps: { force },
       clearScreen,
       logLevel,
