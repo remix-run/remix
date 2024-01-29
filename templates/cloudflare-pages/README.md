@@ -13,6 +13,10 @@ npm run dev
 
 Open up [http://127.0.0.1:8788](http://127.0.0.1:8788) and you should be ready to go!
 
+### IncomingRequestCfProperties
+
+Cloudflare Pages has access to the same [`IncomingRequestCfProperties`](https://developers.cloudflare.com/workers/runtime-apis/request/#incomingrequestcfproperties) object as Cloudflare Workers. However, in a Remix project (using this template), it is available on the `context` object as `context.cf`, not `request.cf` as per [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/runtime-apis/request/#incomingrequestcfproperties).
+
 ## Deployment
 
 Cloudflare Pages are currently only deployable through their Git provider integrations.
