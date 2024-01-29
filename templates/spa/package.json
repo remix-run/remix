@@ -6,13 +6,12 @@
     "build": "remix vite:build",
     "dev": "remix vite:dev",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
-    "start": "http-server build/client/",
+    "preview": "vite preview",
     "typecheck": "tsc"
   },
   "dependencies": {
     "@remix-run/node": "*",
     "@remix-run/react": "*",
-    "http-server": "^14.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
