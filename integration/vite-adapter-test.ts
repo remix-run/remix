@@ -31,14 +31,12 @@ test.describe(async () => {
         port,
         pluginOptions: `
           {
-            adapter: async ({ remixConfig, merge }) => ({
-              ...remixConfig,
+            adapter: async ({ remixConfig }) => ({
               serverBundles(...args) {
                 // This lets us assert that user options are passed to adapter options hook
                 return remixConfig.serverBundles?.(...args) + "--adapter-options";
               },
               async buildEnd(args) {
-
                 let fs = await import("node:fs/promises");
                 let serializeJs = (await import("serialize-javascript")).default;
                 
