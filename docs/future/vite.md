@@ -71,10 +71,6 @@ The path to the build directory, relative to the project root. Defaults to
 
 A function that is called after the full Remix build is complete.
 
-#### loadContext
-
-TODO: Docs for `loadContext` plugin option.
-
 #### manifest
 
 Whether to write a `.remix/manifest.json` file to the build directory. Defaults to `false`.
