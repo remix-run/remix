@@ -27,12 +27,23 @@ test.describe(async () => {
   test.beforeAll(async () => {
     port = await getPort();
     cwd = await createProject({
+      // These routes are used to smoke test config merging
+      "app/routes/user-ignored-route.tsx": `
+        INVALID SYNTAX THAT BREAKS THE BUILD IF THIS ROUTE IS NOT IGNORED;
+      `,
+      "app/routes/adapter-ignored-route.tsx": `
+        INVALID SYNTAX THAT BREAKS THE BUILD IF THIS ROUTE IS NOT IGNORED;
+      `,
+
       "vite.config.ts": await VITE_CONFIG({
         port,
         pluginOptions: `
           {
             adapter: async ({ remixConfig }) => ({
               remixConfig: {
+                // This config is used to smoke test config merging
+                ignoredRouteFiles: ["**/adapter-ignored-route.tsx"],
+
                 serverBundles() {
                   // Smoke test that the Remix config passed in has default values
                   let hasDefaults = remixConfig.buildDirectory === "build";
@@ -42,7 +53,7 @@ test.describe(async () => {
 
                   // Smoke test that the user config is passed in
                   let { ignoredRouteFiles } = remixConfig;
-                  let serverBundleId = ignoredRouteFiles[ignoredRouteFiles.length - 1];
+                  let serverBundleId = (ignoredRouteFiles[ignoredRouteFiles.length - 1]);
                   if (serverBundleId !== "adapter-server-bundle-id") {
                     throw new Error("Remix config does not have user config");
                   }
@@ -61,9 +72,14 @@ test.describe(async () => {
                 },
               },
             }),
-            
-            // This is a no-op value used by the "serverBundles" function above
-            ignoredRouteFiles: ["adapter-server-bundle-id"],
+
+            ignoredRouteFiles: [
+              // This value is used to smoke test config merging
+              "**/user-ignored-route.tsx",
+              
+              // This is a no-op value used by the "serverBundles" function above
+              "adapter-server-bundle-id"
+            ],
           },
         `,
       }),
