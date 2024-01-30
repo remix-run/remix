@@ -97,12 +97,14 @@ app
 
 `.server` modules must be within your Remix app directory.
 
-#### `vite-env-only`
+#### vite-env-only
 
-If you want to mix server-only code and client-safe code in the same module, you can use [`vite-env-only`][vite-env-only].
-That way you can explicitly mark any expression as server-only so that it gets replaced with `undefined` in the client.
+If you want to mix server-only code and client-safe code in the same module, you
+can use <nobr>[vite-env-only][vite-env-only]</nobr>.
+This Vite plugin allows you to explicitly mark any expression as server-only so that it gets
+replaced with `undefined` in the client.
 
-For example, you can wrap exports with `serverOnly$`:
+For example, once you've added the plugin to your Vite config, you can wrap any server-only exports with `serverOnly$`:
 
 ```tsx
 import { serverOnly$ } from "vite-env-only";
@@ -112,6 +114,21 @@ import { db } from "~/.server/db";
 export const getPosts = serverOnly$(async () => {
   return db.posts.findMany();
 });
+
+export const PostPreview = ({ title, description }) => {
+  return (
+    <article>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </article>
+  );
+};
+```
+
+This example would be compiled into the following code for the client:
+
+```tsx
+export const getPosts = undefined;
 
 export const PostPreview = ({ title, description }) => {
   return (
