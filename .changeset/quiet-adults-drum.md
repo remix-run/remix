@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Vite: Add `buildEnd` hook to plugin options
+Vite: Add `buildEnd` hook
