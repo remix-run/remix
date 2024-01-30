@@ -32,27 +32,38 @@ test.describe(async () => {
         pluginOptions: `
           {
             adapter: async ({ remixConfig }) => ({
-              serverBundles(...args) {
-                // This lets us assert that user options are passed to adapter options hook
-                return remixConfig.serverBundles?.(...args) + "--adapter-options";
-              },
-              async buildEnd(args) {
-                let fs = await import("node:fs/promises");
-                let serializeJs = (await import("serialize-javascript")).default;
-                
-                let serializedBuildEndArgs = serializeJs(args, { space: 2, unsafe: true });
+              remixConfig: {
+                serverBundles() {
+                  // Smoke test that the Remix config passed in has default values
+                  let hasDefaults = remixConfig.buildDirectory === "build";
+                  if (!hasDefaults) {
+                    throw new Error("Remix config does not have default values");
+                  }
 
-                await fs.writeFile(
-                  "BUILD_END_ARGS.js",
-                  "export default " + serializedBuildEndArgs,
-                  "utf-8"
-                );
-              }
+                  // Smoke test that the user config is passed in
+                  let { ignoredRouteFiles } = remixConfig;
+                  let serverBundleId = ignoredRouteFiles[ignoredRouteFiles.length - 1];
+                  if (serverBundleId !== "adapter-server-bundle-id") {
+                    throw new Error("Remix config does not have user config");
+                  }
+
+                  return serverBundleId;
+                },
+                async buildEnd(buildEndArgs) {
+                  let fs = await import("node:fs/promises");
+                  let serializeJs = (await import("serialize-javascript")).default;
+
+                  await fs.writeFile(
+                    "BUILD_END_ARGS.js",
+                    "export default " + serializeJs(buildEndArgs, { space: 2, unsafe: true }),
+                    "utf-8"
+                  );
+                },
+              },
             }),
             
-            serverBundles() {
-              return "user-options";
-            }
+            // This is a no-op value used by the "serverBundles" function above
+            ignoredRouteFiles: ["adapter-server-bundle-id"],
           },
         `,
       }),
@@ -97,7 +108,7 @@ test.describe(async () => {
     // Ensure we get a valid build manifest
     expect(buildEndArgs.buildManifest).toEqual({
       routeIdToServerBundleId: {
-        "routes/_index": "user-options--adapter-options",
+        "routes/_index": "adapter-server-bundle-id",
       },
       routes: {
         root: {
@@ -113,9 +124,9 @@ test.describe(async () => {
         },
       },
       serverBundles: {
-        "user-options--adapter-options": {
-          file: "build/server/user-options--adapter-options/index.js",
-          id: "user-options--adapter-options",
+        "adapter-server-bundle-id": {
+          file: "build/server/adapter-server-bundle-id/index.js",
+          id: "adapter-server-bundle-id",
         },
       },
     });

@@ -17,7 +17,6 @@ import {
 } from "es-module-lexer";
 import jsesc from "jsesc";
 import pick from "lodash/pick";
-import omit from "lodash/omit";
 import colors from "picocolors";
 
 import { type ConfigRoute, type RouteManifest } from "../config/routes";
@@ -123,30 +122,16 @@ const unsupportedAdapterRemixConfigKeys = [
 type UnsupportedAdapterRemixConfigKey =
   typeof unsupportedAdapterRemixConfigKeys[number];
 
-type AdapterRemixConfig = Omit<
-  VitePluginConfig,
-  UnsupportedAdapterRemixConfigKey
->;
-
-type AdapterOnlyConfig = {
+type AdapterConfig = {
+  remixConfig?: Omit<VitePluginConfig, UnsupportedAdapterRemixConfigKey>;
   loadContext?: Record<string, unknown>;
   viteConfig?: Vite.UserConfig;
 };
-
-// Ensure the array is exhaustive
-const adapterOnlyConfigKeys = Object.keys({
-  loadContext: null,
-  viteConfig: null,
-} satisfies Record<keyof AdapterOnlyConfig, null>) as Array<
-  keyof AdapterOnlyConfig
->;
 
 type Adapter = {
   loadContext?: Record<string, unknown>;
   viteConfig?: Vite.UserConfig;
 };
-
-type AdapterConfig = AdapterRemixConfig & AdapterOnlyConfig;
 
 export type VitePluginAdapter = (args: {
   remixConfig: VitePluginConfig;
@@ -549,26 +534,16 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
     let adapterConfig = remixUserConfig.adapter
       ? await remixUserConfig.adapter({
-          // We only pass in the plugin config that the user defined. We don't
-          // know the final resolved config until the adapter has been resolved.
-          remixConfig: remixUserConfig,
+          remixConfig: mergeRemixConfigs([defaults, remixUserConfig]),
           viteConfig: viteUserConfig,
         })
       : undefined;
 
-    let adapter: Adapter | undefined =
-      adapterConfig && pick(adapterConfig, adapterOnlyConfigKeys);
-
-    let adapterRemixConfig: AdapterRemixConfig = adapterConfig
-      ? omit(adapterConfig, [
-          ...unsupportedAdapterRemixConfigKeys,
-          ...adapterOnlyConfigKeys,
-        ])
-      : {};
+    let { remixConfig: adapterRemixConfig, ...adapter } = adapterConfig ?? {};
 
     let resolvedRemixUserConfig = {
       ...defaults, // Primitive default values are spread first to improve types
-      ...mergeRemixConfigs([remixUserConfig, adapterRemixConfig]),
+      ...mergeRemixConfigs([adapterRemixConfig ?? {}, remixUserConfig]),
     };
 
     let rootDirectory =
