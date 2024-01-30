@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import URL from "node:url";
 import { test, expect } from "@playwright/test";
 import { normalizePath } from "vite";
 import getPort from "get-port";
@@ -30,12 +31,14 @@ test.describe(async () => {
         port,
         pluginOptions: `
           {
-            adapter: async ({ remixConfig }) => ({
+            adapter: async ({ remixConfig, merge }) => ({
+              ...remixConfig,
               serverBundles(...args) {
                 // This lets us assert that user options are passed to adapter options hook
                 return remixConfig.serverBundles?.(...args) + "--adapter-options";
               },
               async buildEnd(args) {
+
                 let fs = await import("node:fs/promises");
                 let serializeJs = (await import("serialize-javascript")).default;
                 
@@ -64,8 +67,9 @@ test.describe(async () => {
     let { status } = viteBuild({ cwd });
     expect(status).toBe(0);
 
-    let buildEndArgs: any = (await import(path.join(cwd, "BUILD_END_ARGS.js")))
-      .default;
+    let buildEndArgs: any = (
+      await import(URL.pathToFileURL(path.join(cwd, "BUILD_END_ARGS.js")).href)
+    ).default;
     let { remixConfig } = buildEndArgs;
 
     // Before rewriting to relative paths, assert that paths are absolute within cwd
@@ -83,7 +87,6 @@ test.describe(async () => {
       "buildDirectory",
       "buildEnd",
       "future",
-      "loadContext",
       "manifest",
       "publicPath",
       "routes",
