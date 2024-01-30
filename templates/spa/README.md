@@ -34,7 +34,9 @@ Preview build locally with [vite preview](https://vitejs.dev/guide/cli#vite-prev
 npm run preview
 ```
 
-You can serve this from any server of your choosing. The server should support SPA fallback. For a simple example, you could use [sirv-cli](https://www.npmjs.com/package/sirv-cli):
+You can serve this from any server of your choosing. The server should be configured to serve multiple paths from a single root `/index.html` file (commonly called "SPA fallback"). Other steps may be required if the host doesn't directly support this functionality.
+
+For a simple example, you could use [sirv-cli](https://www.npmjs.com/package/sirv-cli):
 
 ```shellscript
 npx sirv-cli build/client/ --single --ignores "^/assets/"
