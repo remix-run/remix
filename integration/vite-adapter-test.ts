@@ -78,7 +78,7 @@ test.describe(async () => {
               // This value is used to smoke test config merging
               // The extra "*" is working around a minimatch Windows issue
               "**/*user-ignored-route.tsx",
-              
+
               // This is a no-op value used by the "serverBundles" function above
               "adapter-server-bundle-id"
             ],
