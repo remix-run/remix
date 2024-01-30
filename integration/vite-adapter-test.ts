@@ -28,10 +28,10 @@ test.describe(async () => {
     port = await getPort();
     cwd = await createProject({
       // These routes are used to smoke test config merging
-      "app/routes/user-ignored-route.tsx": `
+      "app/routes/invalid-route.user-ignored.tsx": `
         INVALID SYNTAX THAT BREAKS THE BUILD IF THIS ROUTE IS NOT IGNORED;
       `,
-      "app/routes/adapter-ignored-route.tsx": `
+      "app/routes/invalid-route.adapter-ignored.tsx": `
         INVALID SYNTAX THAT BREAKS THE BUILD IF THIS ROUTE IS NOT IGNORED;
       `,
 
@@ -42,8 +42,7 @@ test.describe(async () => {
             adapter: async ({ remixConfig }) => ({
               remixConfig: {
                 // This config is used to smoke test config merging
-                // The extra "*" is working around a minimatch Windows issue
-                ignoredRouteFiles: ["**/*adapter-ignored-route.tsx"],
+                ignoredRouteFiles: ["**/*.adapter-ignored.tsx"],
 
                 serverBundles() {
                   // Smoke test that the Remix config passed in has default values
@@ -76,8 +75,7 @@ test.describe(async () => {
 
             ignoredRouteFiles: [
               // This value is used to smoke test config merging
-              // The extra "*" is working around a minimatch Windows issue
-              "**/*user-ignored-route.tsx",
+              "**/*.user-ignored.tsx",
 
               // This is a no-op value used by the "serverBundles" function above
               "adapter-server-bundle-id"
