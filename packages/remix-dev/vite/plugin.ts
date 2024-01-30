@@ -204,7 +204,7 @@ export type ServerBundleBuildConfig = {
   serverBundleId: string;
 };
 
-type RemixPluginServerContext =
+type RemixPluginSsrBuildContext =
   | {
       isSsrBuild: false;
       getBrowserManifest?: never;
@@ -216,11 +216,12 @@ type RemixPluginServerContext =
       serverBundleId: string | undefined;
     };
 
-export type RemixPluginContext = RemixPluginServerContext & {
+export type RemixPluginContext = RemixPluginSsrBuildContext & {
   rootDirectory: string;
   entryClientFilePath: string;
   entryServerFilePath: string;
   remixConfig: ResolvedVitePluginConfig;
+  viteManifestEnabled: boolean;
 };
 
 let serverBuildId = VirtualModule.id("server-build");
@@ -538,7 +539,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       unstable_ssr,
     };
 
-    let serverContext: RemixPluginServerContext =
+    let viteManifestEnabled = viteUserConfig.build?.manifest === true;
+
+    let ssrBuildCtx: RemixPluginSsrBuildContext =
       viteConfigEnv.isSsrBuild && viteCommand === "build"
         ? {
             isSsrBuild: true,
@@ -546,20 +549,26 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             serverBundleId:
               getServerBundleBuildConfig(viteUserConfig)?.serverBundleId,
           }
-        : {
-            isSsrBuild: false,
-          };
+        : { isSsrBuild: false };
 
     ctx = {
       remixConfig,
       rootDirectory,
       entryClientFilePath,
       entryServerFilePath,
-      ...serverContext,
+      viteManifestEnabled,
+      ...ssrBuildCtx,
     };
   };
 
   let getServerEntry = async () => {
+    invariant(viteConfig, "viteconfig required to generate the server entry");
+
+    // v3 TODO:
+    // - Deprecate `ServerBuild.mode` once we officially stabilize vite and
+    //   mark the old compiler as deprecated
+    // - Remove `ServerBuild.mode` in v3
+
     return `
     import * as entryServer from ${JSON.stringify(
       resolveFileUrl(ctx, ctx.entryServerFilePath)
@@ -575,6 +584,11 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         )};`;
       })
       .join("\n")}
+      /**
+       * \`mode\` is only relevant for the old Remix compiler but
+       * is included here to satisfy the \`ServerBuild\` typings.
+       */
+      export const mode = ${JSON.stringify(viteConfig.mode)};
       export { default as assets } from ${JSON.stringify(serverManifestId)};
       export const assetsBuildDirectory = ${JSON.stringify(
         path.relative(
@@ -1215,7 +1229,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     },
     {
       name: "remix-dot-client",
-      enforce: "post",
       async transform(code, id, options) {
         if (!options?.ssr) return;
         let clientFileRE = /\.client(\.[cm]?[jt]sx?)?$/;
@@ -1237,7 +1250,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     },
     {
       name: "remix-route-exports",
-      enforce: "post", // Ensure we're operating on the transformed code to support MDX etc.
       async transform(code, id, options) {
         if (options?.ssr) return;
 
@@ -1280,7 +1292,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     },
     {
       name: "remix-remix-react-proxy",
-      enforce: "post", // Ensure we're operating on the transformed code to support MDX etc.
       resolveId(id) {
         if (id === remixReactProxyId) {
           return VirtualModule.resolve(remixReactProxyId);
@@ -1375,7 +1386,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     },
     {
       name: "remix-react-refresh-babel",
-      enforce: "post", // jsx and typescript (in ts, jsx, tsx files) are already transpiled by vite
       async transform(code, id, options) {
         if (viteCommand !== "serve") return;
         if (id.includes("/node_modules/")) return;
