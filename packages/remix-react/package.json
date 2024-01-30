@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "2.5.1",
+  "version": "0.0.0-nightly-c372825-20240130",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -17,7 +17,7 @@
   "module": "dist/esm/index.js",
   "dependencies": {
     "@remix-run/router": "0.0.0-experimental-add6f8aa",
-    "@remix-run/server-runtime": "2.5.1",
+    "@remix-run/server-runtime": "0.0.0-nightly-c372825-20240130",
     "react-router": "0.0.0-experimental-add6f8aa",
     "react-router-dom": "0.0.0-experimental-add6f8aa"
   },
