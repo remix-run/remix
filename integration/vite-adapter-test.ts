@@ -11,6 +11,8 @@ import {
   VITE_CONFIG,
 } from "./helpers/vite.js";
 
+const js = String.raw;
+
 test.describe(async () => {
   let port: number;
   let cwd: string;
@@ -29,22 +31,15 @@ test.describe(async () => {
     cwd = await createProject({
       "vite.config.ts": await VITE_CONFIG({
         port,
-        pluginOptions: `
+        pluginOptions: js`
           {
-            adapter: async ({ remixConfig }) => ({
-              remixConfig: {
+            adapter: {
+              remixConfig: async ({ remixConfig }) => ({
                 // Smoke test that adapter config takes lower precedence than user config
                 serverModuleFormat: "cjs",
 
                 serverBundles() {
-                  // Smoke test that the user config is passed in
-                  let { ignoredRouteFiles } = remixConfig;
-                  let serverBundleId = (ignoredRouteFiles[ignoredRouteFiles.length - 1]);
-                  if (serverBundleId !== "adapter-server-bundle-id") {
-                    throw new Error("Remix config does not have user config");
-                  }
-
-                  return serverBundleId;
+                  return "adapter-server-bundle-id";
                 },
 
                 async buildEnd(buildEndArgs) {
@@ -63,16 +58,11 @@ test.describe(async () => {
                     "utf-8"
                   );
                 },
-              },
-            }),
+              }),
+            },
 
             // Smoke test that adapter config takes lower precedence than user config
             serverModuleFormat: "esm",
-
-            ignoredRouteFiles: [
-              // This is a no-op value used by the "serverBundles" function above
-              "adapter-server-bundle-id"
-            ],
           },
         `,
       }),
@@ -82,7 +72,8 @@ test.describe(async () => {
   test.afterAll(() => stop());
 
   test("Vite / adapter / Remix config", async () => {
-    let { status } = viteBuild({ cwd });
+    let { status, stderr } = viteBuild({ cwd });
+    expect(stderr.toString()).toBeFalsy();
     expect(status).toBe(0);
 
     let buildEndArgs: any = (
@@ -103,7 +94,6 @@ test.describe(async () => {
 
     // Smoke test the resolved config
     expect(Object.keys(buildEndArgs.remixConfig)).toEqual([
-      "adapter",
       "appDirectory",
       "buildDirectory",
       "buildEnd",

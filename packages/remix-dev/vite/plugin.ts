@@ -122,21 +122,19 @@ const unsupportedAdapterRemixConfigKeys = [
 type UnsupportedAdapterRemixConfigKey =
   typeof unsupportedAdapterRemixConfigKeys[number];
 
-type AdapterConfig = {
-  remixConfig?: Omit<VitePluginConfig, UnsupportedAdapterRemixConfigKey>;
-  loadContext?: Record<string, unknown>;
-  viteConfig?: Vite.UserConfig;
-};
+type AdapterRemixConfig = Omit<
+  VitePluginConfig,
+  UnsupportedAdapterRemixConfigKey
+>;
 
-type Adapter = {
-  loadContext?: Record<string, unknown>;
-  viteConfig?: Vite.UserConfig;
+export type VitePluginAdapter = {
+  remixConfig?: (args: {
+    remixConfig: VitePluginConfig;
+  }) => AdapterRemixConfig | Promise<AdapterRemixConfig>;
+  remixConfigResolved?: (args: {
+    remixConfig: ResolvedVitePluginConfig;
+  }) => void | Promise<void>;
 };
-
-export type VitePluginAdapter = (args: {
-  remixConfig: VitePluginConfig;
-  viteConfig: Vite.UserConfig;
-}) => AdapterConfig | Promise<AdapterConfig>;
 
 export type VitePluginConfig = RemixEsbuildUserConfigJsdocOverrides &
   Omit<
@@ -192,7 +190,6 @@ export type ResolvedVitePluginConfig = Pick<
   ResolvedRemixEsbuildConfig,
   "appDirectory" | "future" | "publicPath" | "routes" | "serverModuleFormat"
 > & {
-  adapter?: Adapter;
   buildDirectory: string;
   buildEnd?: BuildEndHook;
   manifest: boolean;
@@ -497,6 +494,12 @@ let mergeRemixConfigs = (
   return remixConfigs.reduce(mergeRemixConfig);
 };
 
+let remixDevLoadContext: Record<string, unknown> | undefined;
+
+export let setRemixDevLoadContext = (loadContext: Record<string, unknown>) => {
+  remixDevLoadContext = loadContext;
+};
+
 export type RemixVitePlugin = (config?: VitePluginConfig) => Vite.Plugin[];
 export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
   let viteCommand: Vite.ResolvedConfig["command"];
@@ -532,14 +535,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       unstable_ssr: true,
     } as const satisfies Partial<PickPrimitives<VitePluginConfig>>;
 
-    let adapterConfig = remixUserConfig.adapter
-      ? await remixUserConfig.adapter({
-          remixConfig: mergeRemixConfigs([defaults, remixUserConfig]),
-          viteConfig: viteUserConfig,
-        })
-      : undefined;
-
-    let { remixConfig: adapterRemixConfig, ...adapter } = adapterConfig ?? {};
+    let adapterRemixConfig = await remixUserConfig.adapter?.remixConfig?.({
+      remixConfig: defaults,
+    });
 
     let resolvedRemixUserConfig = {
       ...defaults, // Primitive default values are spread first to improve types
@@ -595,7 +593,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     }
 
     let remixConfig: ResolvedVitePluginConfig = {
-      adapter,
       appDirectory,
       buildDirectory,
       buildEnd,
@@ -831,7 +828,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           )
         );
 
-        let defaults = {
+        return {
           __remixPluginContext: ctx,
           appType: "custom",
           optimizeDeps: {
@@ -916,10 +913,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             },
           }),
         };
-        return vite.mergeConfig(
-          defaults,
-          ctx.remixConfig.adapter?.viteConfig ?? {}
-        );
       },
       async configResolved(resolvedViteConfig) {
         await initEsModuleLexer;
@@ -1103,8 +1096,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   nodeRes
                 ) => {
                   let req = fromNodeRequest(nodeReq);
-                  let { adapter } = ctx.remixConfig;
-                  let res = await handler(req, adapter?.loadContext);
+                  let res = await handler(req, remixDevLoadContext);
                   await toNodeRequest(res, nodeRes);
                 };
                 await nodeHandler(req, res);
