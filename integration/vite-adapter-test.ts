@@ -29,7 +29,7 @@ test.describe(async () => {
     cwd = await createProject({
       // These routes are used to smoke test config merging
       "app/routes/user-ignored-route.tsx": `
-      INVALID SYNTAX THAT BREAKS THE BUILD IF THIS ROUTE IS NOT IGNORED;
+        INVALID SYNTAX THAT BREAKS THE BUILD IF THIS ROUTE IS NOT IGNORED;
       `,
       "app/routes/adapter-ignored-route.tsx": `
         INVALID SYNTAX THAT BREAKS THE BUILD IF THIS ROUTE IS NOT IGNORED;
