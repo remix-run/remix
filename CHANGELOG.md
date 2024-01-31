@@ -14,7 +14,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
 
 - [Remix Releases](#remix-releases)
   - [v2.6.0](#v260)
-    - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
+    - [What's Changed](#whats-changed)
+      - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
     - [Minor Changes](#minor-changes)
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
@@ -24,7 +25,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
     - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
   - [v2.5.0](#v250)
-    - [What's Changed](#whats-changed)
+    - [What's Changed](#whats-changed-1)
       - [SPA Mode (unstable)](#spa-mode-unstable)
       - [Server Bundles (unstable)](#server-bundles-unstable)
     - [Minor Changes](#minor-changes-1)
@@ -36,7 +37,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
     - [Updated Dependencies](#updated-dependencies-3)
     - [Changes by Package](#changes-by-package-3)
   - [v2.4.0](#v240)
-    - [What's Changed](#whats-changed-1)
+    - [What's Changed](#whats-changed-2)
       - [Client Data](#client-data)
       - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
       - [Vite Updates (Unstable)](#vite-updates-unstable)
@@ -49,7 +50,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
     - [Updated Dependencies](#updated-dependencies-5)
     - [Changes by Package](#changes-by-package-5)
   - [v2.3.0](#v230)
-    - [What's Changed](#whats-changed-2)
+    - [What's Changed](#whats-changed-3)
       - [Stabilized `useBlocker`](#stabilized-useblocker)
       - [`unstable_flushSync` API](#unstable_flushsync-api)
     - [Minor Changes](#minor-changes-3)
@@ -57,7 +58,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
     - [Updated Dependencies](#updated-dependencies-6)
     - [Changes by Package](#changes-by-package-6)
   - [v2.2.0](#v220)
-    - [What's Changed](#whats-changed-3)
+    - [What's Changed](#whats-changed-4)
       - [Vite!](#vite)
       - [New Fetcher APIs](#new-fetcher-apis)
       - [Persistence Future Flag](#persistence-future-flag)
@@ -66,7 +67,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
     - [Updated Dependencies](#updated-dependencies-7)
     - [Changes by Package](#changes-by-package-7)
   - [v2.1.0](#v210)
-    - [What's Changed](#whats-changed-4)
+    - [What's Changed](#whats-changed-5)
       - [View Transitions](#view-transitions)
       - [Stable `createRemixStub`](#stable-createremixstub)
     - [Minor Changes](#minor-changes-5)
@@ -139,7 +140,9 @@ Date: YYYY-MM-DD
 
 Date: 2024-01-31
 
-### Unstable Vite Plugin updates
+### What's Changed
+
+#### Unstable Vite Plugin updates
 
 As we continue moving towards stabilizing the Vite plugin, we've introduced a few breaking changes tp the unstable Vite plugin in this release. Please read the `@remix-run/dev` changes below closely and update your app accordingly if you'v opted into using the Vite plugin.
 
