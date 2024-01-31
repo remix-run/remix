@@ -24,7 +24,7 @@ Each adapter has the same API. In the future we may have helpers specific to the
 
 ## Community Adapters
 
-- [`@fastly/remix-server-adapter`][fastly-remix-server-adapter] - For [Fastly Compute@Edge][fastly-compute-at-edge].
+- [`@fastly/remix-server-adapter`][fastly-remix-server-adapter] - For [Fastly Compute][fastly-compute].
 - [`@mcansh/remix-fastify`][remix-fastify] - For [Fastify][fastify].
 - [`@mcansh/remix-raw-http`][remix-raw-http] - For a good old bare bones Node server.
 - [`@netlify/remix-adapter`][netlify-remix-adapter] - For [Netlify][netlify].
@@ -139,7 +139,7 @@ addEventListener("fetch", (event) => {
 
 [web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
 [fastly-remix-server-adapter]: https://github.com/fastly/remix-compute-js/tree/main/packages/remix-server-adapter
-[fastly-compute-at-edge]: https://developer.fastly.com/learning/compute/
+[fastly-compute]: https://developer.fastly.com/learning/compute/
 [remix-google-cloud-functions]: https://github.com/penx/remix-google-cloud-functions
 [google-cloud-functions]: https://cloud.google.com/functions
 [firebase-functions]: https://firebase.google.com/docs/functions

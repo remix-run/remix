@@ -21,7 +21,7 @@ That's why we added support for **SPA Mode** in [2.5.0][2.5.0] ([RFC][rfc]), whi
 SPA Mode is basically what you'd get if you had your own [React Router + Vite][rr-setup] setup using `createBrowserRouter`/`RouterProvider`, but along with some extra Remix goodies:
 
 - File-based routing (or config-based via [`routes()`][routes-config])
-- Automatic route-based code-spitting via [`route.lazy`][route-lazy]
+- Automatic route-based code-splitting via [`route.lazy`][route-lazy]
 - `<Link prefetch>` support to eagerly prefetch route modules
 - `<head>` management via Remix [`<Meta>`][meta]/[`<Links>`][links] APIs if you choose to hydrate the full `document`
 
