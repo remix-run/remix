@@ -126,7 +126,7 @@ To simulate the Cloudflare environment in Vite, Wrangler provides [Node proxies 
 ```ts filename=vite.config.ts lines=[3,10]
 import {
   unstable_vitePlugin as remix,
-  unstable_vitePluginPresetCloudflare as cloudflare,
+  unstable_cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -146,6 +146,34 @@ The Cloudflare team is working to improve their Node proxies to support:
 - [Cache][cloudflare-proxy-caches] (`caches`)
 
 <docs-info>Vite will not use your Cloudflare Pages Functions (`functions/*`) in development as those are purely for Wrangler routing.</docs-info>
+
+#### Augmenting Cloudflare load context in development
+
+The Cloudflare preset accepts a `getRemixDevLoadContext` function that can be used to augment the load context in development:
+
+```ts filename=vite.config.ts lines=[6-8]
+export default defineConfig({
+  plugins: [
+    remix({
+      presets: [
+        cloudflare({
+          getRemixDevLoadContext: (context) => ({
+            ...context,
+            extra: "add on whatever else you want",
+          }),
+        }),
+      ],
+    }),
+  ],
+});
+```
+
+As the name implies, it **only augments the load context within Vite's dev server**, not within Wrangler nor in production.
+This limitation exists because Vite is not yet able to delegate server code execution to other non-Node runtimes like Cloudflare's `workerd` runtime.
+
+To get a consistent load context across Vite, Wrangler, and production you can define a module like `get-load-context.ts` that exports
+shared logic for augmenting the load context.
+Then you can apply the same logic within `getRemixDevLoadContext` and within `functions/[[page]].ts`.
 
 ## Splitting up client and server code
 
@@ -490,7 +518,7 @@ The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pag
 ```ts filename=vite.config.ts lines=[3,8-12,15]
 import {
   unstable_vitePlugin as remix,
-  unstable_vitePluginPresetCloudflare as cloudflare,
+  unstable_cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
