@@ -45,7 +45,7 @@ test.describe(async () => {
               {
                 name: "test-preset",
                 remixConfigResolved: async ({ remixConfig }) => {
-                  if (remixConfig.appDirectory === "INCORRECT_APP_DIR") {
+                  if (remixConfig.appDirectory.includes("INCORRECT_APP_DIR")) {
                     throw new Error("Remix preset config wasn't overridden with user config");
                   }
                 }
