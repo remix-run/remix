@@ -537,6 +537,25 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
   /** Mutates `ctx` as a side-effect */
   let updateRemixPluginContext = async (): Promise<void> => {
+    // Default config values are completely overridden by user/preset config,
+    // not merged. This means that our preset merging pipeline needs to start
+    // with an empty object. Conceptually this means that presets are operating
+    // on the user config object as it would be defined in your Vite config.
+    let accumulatedRemixConfigPresets: VitePluginConfig = {};
+
+    for (let preset of remixUserConfig.presets ?? []) {
+      let { remixConfig: getConfigPreset } = preset;
+      let remixConfigPreset =
+        getConfigPreset &&
+        omit(
+          await getConfigPreset({ remixConfig: accumulatedRemixConfigPresets }),
+          excludedRemixConfigPresetKeys
+        );
+      accumulatedRemixConfigPresets = remixConfigPreset
+        ? mergeRemixConfig(accumulatedRemixConfigPresets, remixConfigPreset)
+        : accumulatedRemixConfigPresets;
+    }
+
     let defaults = {
       buildDirectory: "build",
       manifest: false,
@@ -545,23 +564,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       unstable_ssr: true,
     } as const satisfies Partial<VitePluginConfig>;
 
-    let accumulatedRemixConfigPresets: VitePluginConfig = defaults;
-    for (let preset of remixUserConfig.presets ?? []) {
-      let remixConfigPreset =
-        preset.remixConfig &&
-        omit(
-          await preset.remixConfig?.({
-            remixConfig: accumulatedRemixConfigPresets,
-          }),
-          excludedRemixConfigPresetKeys
-        );
-      accumulatedRemixConfigPresets = remixConfigPreset
-        ? mergeRemixConfig(accumulatedRemixConfigPresets, remixConfigPreset)
-        : accumulatedRemixConfigPresets;
-    }
-
     let resolvedRemixUserConfig = {
-      ...defaults, // Primitive default values are spread first to improve types
+      ...defaults, // Default values should be completely overridden by user/preset config, not merged
       ...mergeRemixConfig(accumulatedRemixConfigPresets, remixUserConfig),
     };
 
