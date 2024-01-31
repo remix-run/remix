@@ -115,22 +115,22 @@ export type ServerBundlesBuildManifest = BaseBuildManifest & {
 
 export type BuildManifest = DefaultBuildManifest | ServerBundlesBuildManifest;
 
-const unsupportedAdapterRemixConfigKeys = [
-  "adapter",
+const unsupportedPresetRemixConfigKeys = [
+  "presets",
 ] as const satisfies ReadonlyArray<keyof VitePluginConfig>;
 
-type UnsupportedAdapterRemixConfigKey =
-  typeof unsupportedAdapterRemixConfigKeys[number];
+type UnsupportedPresetRemixConfigKey =
+  typeof unsupportedPresetRemixConfigKeys[number];
 
-type AdapterRemixConfig = Omit<
+type RemixConfigPreset = Omit<
   VitePluginConfig,
-  UnsupportedAdapterRemixConfigKey
+  UnsupportedPresetRemixConfigKey
 >;
 
-export type VitePluginAdapter = {
+export type VitePluginPreset = {
   remixConfig?: (args: {
     remixConfig: VitePluginConfig;
-  }) => AdapterRemixConfig | Promise<AdapterRemixConfig>;
+  }) => RemixConfigPreset | Promise<RemixConfigPreset>;
   remixConfigResolved?: (args: {
     remixConfig: ResolvedVitePluginConfig;
   }) => void | Promise<void>;
@@ -141,11 +141,6 @@ export type VitePluginConfig = RemixEsbuildUserConfigJsdocOverrides &
     SupportedRemixEsbuildUserConfig,
     keyof RemixEsbuildUserConfigJsdocOverrides
   > & {
-    /**
-     * A function for adapting the build output and/or development environment
-     * for different hosting providers.
-     */
-    adapter?: VitePluginAdapter;
     /**
      * The path to the build directory, relative to the project. Defaults to
      * `"build"`.
@@ -160,6 +155,11 @@ export type VitePluginConfig = RemixEsbuildUserConfigJsdocOverrides &
      * Defaults to `false`.
      */
     manifest?: boolean;
+    /**
+     * An array of Remix config presets to ease integration with other platforms
+     * and tools.
+     */
+    presets?: Array<VitePluginPreset>;
     /**
      * The file name of the server build output. This file
      * should end in a `.js` extension and should be deployed to your server.
@@ -186,17 +186,19 @@ type BuildEndHook = (args: {
   buildManifest: BuildManifest | undefined;
 }) => void | Promise<void>;
 
-export type ResolvedVitePluginConfig = Pick<
-  ResolvedRemixEsbuildConfig,
-  "appDirectory" | "future" | "publicPath" | "routes" | "serverModuleFormat"
-> & {
-  buildDirectory: string;
-  buildEnd?: BuildEndHook;
-  manifest: boolean;
-  serverBuildFile: string;
-  serverBundles?: ServerBundlesFunction;
-  unstable_ssr: boolean;
-};
+export type ResolvedVitePluginConfig = Readonly<
+  Pick<
+    ResolvedRemixEsbuildConfig,
+    "appDirectory" | "future" | "publicPath" | "routes" | "serverModuleFormat"
+  > & {
+    buildDirectory: string;
+    buildEnd?: BuildEndHook;
+    manifest: boolean;
+    serverBuildFile: string;
+    serverBundles?: ServerBundlesFunction;
+    unstable_ssr: boolean;
+  }
+>;
 
 export type ServerBundleBuildConfig = {
   routes: RouteManifest;
@@ -500,6 +502,27 @@ export let setRemixDevLoadContext = (loadContext: Record<string, unknown>) => {
   remixDevLoadContext = loadContext;
 };
 
+// Inlined from https://github.com/jsdf/deep-freeze
+let deepFreeze = (o: any) => {
+  Object.freeze(o);
+  let oIsFunction = typeof o === "function";
+  let hasOwnProp = Object.prototype.hasOwnProperty;
+  Object.getOwnPropertyNames(o).forEach(function (prop) {
+    if (
+      hasOwnProp.call(o, prop) &&
+      (oIsFunction
+        ? prop !== "caller" && prop !== "callee" && prop !== "arguments"
+        : true) &&
+      o[prop] !== null &&
+      (typeof o[prop] === "object" || typeof o[prop] === "function") &&
+      !Object.isFrozen(o[prop])
+    ) {
+      deepFreeze(o[prop]);
+    }
+  });
+  return o;
+};
+
 export type RemixVitePlugin = (config?: VitePluginConfig) => Vite.Plugin[];
 export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
   let viteCommand: Vite.ResolvedConfig["command"];
@@ -535,13 +558,19 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       unstable_ssr: true,
     } as const satisfies Partial<PickPrimitives<VitePluginConfig>>;
 
-    let adapterRemixConfig = await remixUserConfig.adapter?.remixConfig?.({
-      remixConfig: defaults,
-    });
+    let accumulatedRemixConfigPresets: VitePluginConfig = defaults;
+    for (let preset of remixUserConfig.presets ?? []) {
+      let remixConfigPreset = await preset.remixConfig?.({
+        remixConfig: accumulatedRemixConfigPresets,
+      });
+      accumulatedRemixConfigPresets = remixConfigPreset
+        ? mergeRemixConfigs([remixConfigPreset, accumulatedRemixConfigPresets])
+        : accumulatedRemixConfigPresets;
+    }
 
     let resolvedRemixUserConfig = {
       ...defaults, // Primitive default values are spread first to improve types
-      ...mergeRemixConfigs([adapterRemixConfig ?? {}, remixUserConfig]),
+      ...mergeRemixConfigs([accumulatedRemixConfigPresets, remixUserConfig]),
     };
 
     let rootDirectory =
@@ -592,7 +621,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       routes = serverBundleBuildConfig.routes;
     }
 
-    let remixConfig: ResolvedVitePluginConfig = {
+    let remixConfig: ResolvedVitePluginConfig = deepFreeze({
       appDirectory,
       buildDirectory,
       buildEnd,
@@ -604,7 +633,11 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       serverBundles,
       serverModuleFormat,
       unstable_ssr,
-    };
+    });
+
+    for (let preset of remixUserConfig.presets ?? []) {
+      await preset.remixConfigResolved?.({ remixConfig });
+    }
 
     let viteManifestEnabled = viteUserConfig.build?.manifest === true;
 

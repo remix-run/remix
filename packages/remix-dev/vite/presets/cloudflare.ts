@@ -1,6 +1,6 @@
-import { type VitePluginAdapter, setRemixDevLoadContext } from "../plugin";
+import { type VitePluginPreset, setRemixDevLoadContext } from "../plugin";
 
-export const adapter: () => VitePluginAdapter = () => ({
+export const preset: () => VitePluginPreset = () => ({
   remixConfig: async () => {
     let { getBindingsProxy } = await import("wrangler");
     let { bindings } = await getBindingsProxy();
