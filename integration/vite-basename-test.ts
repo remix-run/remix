@@ -100,7 +100,7 @@ test.describe(() => {
       "vite.config.js": await VITE_CONFIG({
         port,
         viteOptions: '{ base: "/mybase/" }',
-        pluginOptions: '{ publicPath: "/mybase/" }',
+        pluginOptions: '{ basename: "/mybase/" }',
       }),
       ...files,
     });
@@ -108,7 +108,7 @@ test.describe(() => {
   });
   test.afterAll(async () => await stop());
 
-  test("Vite / basename / vite dev", async ({ page }) => {
+  test("Vite base / Remix basename / vite dev", async ({ page }) => {
     await workflowDev({ page, cwd, port });
   });
 });
@@ -124,7 +124,7 @@ test.describe(async () => {
       "vite.config.js": await VITE_CONFIG({
         port,
         viteOptions: '{ base: "/mybase/" }',
-        pluginOptions: '{ publicPath: "/mybase/" }',
+        pluginOptions: '{ basename: "/mybase/" }',
       }),
       "server.mjs": customServerFile({ port }),
       ...files,
@@ -133,7 +133,7 @@ test.describe(async () => {
   });
   test.afterAll(() => stop());
 
-  test("Vite / basename / express dev", async ({ page }) => {
+  test("Vite base / Remix basename / express dev", async ({ page }) => {
     await workflowDev({ page, cwd, port });
   });
 });
@@ -209,7 +209,7 @@ test.describe(() => {
       "vite.config.js": await VITE_CONFIG({
         port,
         viteOptions: '{ base: "/mybase/" }',
-        pluginOptions: '{ publicPath: "/mybase/" }',
+        pluginOptions: '{ basename: "/mybase/" }',
       }),
       ...files,
     });
@@ -218,7 +218,7 @@ test.describe(() => {
   });
   test.afterAll(() => stop());
 
-  test("Vite / basename / vite build", async ({ page }) => {
+  test("Vite base / Remix basename / vite build", async ({ page }) => {
     await workflowBuild({ page, cwd, port });
   });
 });
@@ -234,7 +234,7 @@ test.describe(async () => {
       "vite.config.js": await VITE_CONFIG({
         port,
         viteOptions: '{ base: "/mybase/" }',
-        pluginOptions: '{ publicPath: "/mybase/" }',
+        pluginOptions: '{ basename: "/mybase/" }',
       }),
       "server.mjs": customServerFile({ port }),
       ...files,
@@ -244,7 +244,7 @@ test.describe(async () => {
   });
   test.afterAll(() => stop());
 
-  test("Vite / basename / express build", async ({ page }) => {
+  test("Vite base / Remix basename / express build", async ({ page }) => {
     await workflowBuild({ page, cwd, port });
   });
 });
