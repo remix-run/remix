@@ -432,71 +432,65 @@ export let getServerBuildDirectory = (ctx: RemixPluginContext) =>
 let getClientBuildDirectory = (remixConfig: ResolvedVitePluginConfig) =>
   path.join(remixConfig.buildDirectory, "client");
 
-let mergeRemixConfigs = (
-  remixConfigs: VitePluginConfig[]
+let mergeRemixConfig = (
+  configA: VitePluginConfig,
+  configB: VitePluginConfig
 ): VitePluginConfig => {
-  let mergeRemixConfig = (
-    configA: VitePluginConfig,
-    configB: VitePluginConfig
-  ): VitePluginConfig => {
-    let mergeRequired = (key: keyof VitePluginConfig) =>
-      configA[key] !== undefined && configB[key] !== undefined;
+  let mergeRequired = (key: keyof VitePluginConfig) =>
+    configA[key] !== undefined && configB[key] !== undefined;
 
-    return {
-      ...configA,
-      ...configB,
-      ...(mergeRequired("buildEnd")
-        ? {
-            buildEnd: async (...args) => {
-              await Promise.all([
-                configA.buildEnd?.(...args),
-                configB.buildEnd?.(...args),
-              ]);
-            },
-          }
-        : {}),
-      ...(mergeRequired("future")
-        ? {
-            future: {
-              ...configA.future,
-              ...configB.future,
-            },
-          }
-        : {}),
-      ...(mergeRequired("ignoredRouteFiles")
-        ? {
-            ignoredRouteFiles: Array.from(
-              new Set([
-                ...(configA.ignoredRouteFiles ?? []),
-                ...(configB.ignoredRouteFiles ?? []),
-              ])
-            ),
-          }
-        : {}),
-      ...(mergeRequired("presets")
-        ? {
-            presets: [...(configA.presets ?? []), ...(configB.presets ?? [])],
-          }
-        : {}),
-      ...(mergeRequired("routes")
-        ? {
-            routes: async (...args) => {
-              let [routesA, routesB] = await Promise.all([
-                configA.routes?.(...args),
-                configB.routes?.(...args),
-              ]);
+  return {
+    ...configA,
+    ...configB,
+    ...(mergeRequired("buildEnd")
+      ? {
+          buildEnd: async (...args) => {
+            await Promise.all([
+              configA.buildEnd?.(...args),
+              configB.buildEnd?.(...args),
+            ]);
+          },
+        }
+      : {}),
+    ...(mergeRequired("future")
+      ? {
+          future: {
+            ...configA.future,
+            ...configB.future,
+          },
+        }
+      : {}),
+    ...(mergeRequired("ignoredRouteFiles")
+      ? {
+          ignoredRouteFiles: Array.from(
+            new Set([
+              ...(configA.ignoredRouteFiles ?? []),
+              ...(configB.ignoredRouteFiles ?? []),
+            ])
+          ),
+        }
+      : {}),
+    ...(mergeRequired("presets")
+      ? {
+          presets: [...(configA.presets ?? []), ...(configB.presets ?? [])],
+        }
+      : {}),
+    ...(mergeRequired("routes")
+      ? {
+          routes: async (...args) => {
+            let [routesA, routesB] = await Promise.all([
+              configA.routes?.(...args),
+              configB.routes?.(...args),
+            ]);
 
-              return {
-                ...routesA,
-                ...routesB,
-              };
-            },
-          }
-        : {}),
-    };
+            return {
+              ...routesA,
+              ...routesB,
+            };
+          },
+        }
+      : {}),
   };
-
-  return remixConfigs.reduce(mergeRemixConfig);
 };
 
 let remixDevLoadContext: Record<string, unknown> | undefined;
@@ -562,13 +556,13 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           excludedRemixConfigPresetKeys
         );
       accumulatedRemixConfigPresets = remixConfigPreset
-        ? mergeRemixConfigs([remixConfigPreset, accumulatedRemixConfigPresets])
+        ? mergeRemixConfig(accumulatedRemixConfigPresets, remixConfigPreset)
         : accumulatedRemixConfigPresets;
     }
 
     let resolvedRemixUserConfig = {
       ...defaults, // Primitive default values are spread first to improve types
-      ...mergeRemixConfigs([accumulatedRemixConfigPresets, remixUserConfig]),
+      ...mergeRemixConfig(accumulatedRemixConfigPresets, remixUserConfig),
     };
 
     let rootDirectory =
