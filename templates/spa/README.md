@@ -22,7 +22,7 @@ npm run dev
 
 ## Production
 
-When you are ready yo build a production version of your app, `npm run build` will generate your assets and an `index.html` for the SPA.
+When you are ready to build a production version of your app, `npm run build` will generate your assets and an `index.html` for the SPA.
 
 ```shellscript
 npm run build
