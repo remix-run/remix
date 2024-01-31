@@ -1,4 +1,4 @@
-import { type VitePluginPreset, setRemixDevLoadContext } from "../plugin";
+import { type Preset, setRemixDevLoadContext } from "../plugin";
 
 type GetRemixDevLoadContext = (
   loadContext: Record<string, unknown>
@@ -19,7 +19,7 @@ export const preset = (
   options: {
     getRemixDevLoadContext?: GetRemixDevLoadContext;
   } = {}
-): VitePluginPreset => ({
+): Preset => ({
   name: "cloudflare",
   remixConfig: async () => {
     let { getBindingsProxy } = await importWrangler();

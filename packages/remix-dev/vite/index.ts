@@ -4,7 +4,7 @@
 import type { RemixVitePlugin } from "./plugin";
 export type {
   BuildManifest as Unstable_BuildManifest,
-  VitePluginPreset as Unstable_VitePluginPreset,
+  Preset as Unstable_Preset,
 } from "./plugin";
 
 export const unstable_vitePlugin: RemixVitePlugin = (...args) => {
