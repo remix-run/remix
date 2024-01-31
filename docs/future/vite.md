@@ -243,6 +243,36 @@ export default defineConfig({
 });
 ```
 
+#### HMR & HDR
+
+Vite provides a robust client-side runtime for development features like HMR,
+making the `<LiveReload />` component obsolete. When using the Remix Vite plugin in development,
+the `<Scripts />` component will automatically include Vite's client-side runtime and other dev-only scripts.
+
+👉 **Remove `<LiveReload/>`, keep `<Scripts />`**
+
+```diff
+  import {
+-   LiveReload,
+    Outlet,
+    Scripts,
+  }
+
+  export default function App() {
+    return (
+      <html>
+        <head>
+        </head>
+        <body>
+          <Outlet />
+-         <LiveReload />
+          <Scripts />
+        </body>
+      </html>
+    )
+  }
+```
+
 #### TypeScript integration
 
 Vite handles imports for all sorts of different file types, sometimes in ways that differ from the existing Remix compiler, so let's reference Vite's types from `vite/client` instead of the obsolete types from `@remix-run/dev`.
