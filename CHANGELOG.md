@@ -272,6 +272,7 @@ For more information, please refer to the docs at [Future > Vite > Cloudflare](h
   - HMR is already functioning correctly but was incorrectly logging that it "could not fast refresh" on internal client routes
   - Now internal client routes correctly register Remix exports like `meta` for fast refresh, which removes the false alarm.
 - `@remix-run/dev` - Vite: Cloudflare Pages support ([#8531](https://github.com/remix-run/remix/pull/8531))
+- `@remix-run/dev` - Vite: Add `getRemixDevLoadContext` option to Cloudflare preset ([#8649](https://github.com/remix-run/remix/pull/8649))
 - `@remix-run/dev` - Vite: Remove undocumented backwards compatibility layer for Vite v4 ([#8581](https://github.com/remix-run/remix/pull/8581))
 - `@remix-run/dev` - Vite: Add `presets` option to ease integration with different platforms and tools ([#8514](https://github.com/remix-run/remix/pull/8514))
 - `@remix-run/dev` - Vite: Add `buildEnd` hook ([#8620](https://github.com/remix-run/remix/pull/8620))
