@@ -126,9 +126,7 @@ type ExcludedRemixConfigPresetKey =
 type RemixConfigPreset = Omit<VitePluginConfig, ExcludedRemixConfigPresetKey>;
 
 export type VitePluginPreset = {
-  remixConfig?: (args: {
-    remixConfig: VitePluginConfig;
-  }) => RemixConfigPreset | Promise<RemixConfigPreset>;
+  remixConfig?: () => RemixConfigPreset | Promise<RemixConfigPreset>;
   remixConfigResolved?: (args: {
     remixConfig: ResolvedVitePluginConfig;
   }) => void | Promise<void>;
@@ -432,65 +430,69 @@ export let getServerBuildDirectory = (ctx: RemixPluginContext) =>
 let getClientBuildDirectory = (remixConfig: ResolvedVitePluginConfig) =>
   path.join(remixConfig.buildDirectory, "client");
 
-let mergeRemixConfig = (
-  configA: VitePluginConfig,
-  configB: VitePluginConfig
-): VitePluginConfig => {
-  let mergeRequired = (key: keyof VitePluginConfig) =>
-    configA[key] !== undefined && configB[key] !== undefined;
+let mergeRemixConfig = (...configs: VitePluginConfig[]): VitePluginConfig => {
+  let reducer = (
+    configA: VitePluginConfig,
+    configB: VitePluginConfig
+  ): VitePluginConfig => {
+    let mergeRequired = (key: keyof VitePluginConfig) =>
+      configA[key] !== undefined && configB[key] !== undefined;
 
-  return {
-    ...configA,
-    ...configB,
-    ...(mergeRequired("buildEnd")
-      ? {
-          buildEnd: async (...args) => {
-            await Promise.all([
-              configA.buildEnd?.(...args),
-              configB.buildEnd?.(...args),
-            ]);
-          },
-        }
-      : {}),
-    ...(mergeRequired("future")
-      ? {
-          future: {
-            ...configA.future,
-            ...configB.future,
-          },
-        }
-      : {}),
-    ...(mergeRequired("ignoredRouteFiles")
-      ? {
-          ignoredRouteFiles: Array.from(
-            new Set([
-              ...(configA.ignoredRouteFiles ?? []),
-              ...(configB.ignoredRouteFiles ?? []),
-            ])
-          ),
-        }
-      : {}),
-    ...(mergeRequired("presets")
-      ? {
-          presets: [...(configA.presets ?? []), ...(configB.presets ?? [])],
-        }
-      : {}),
-    ...(mergeRequired("routes")
-      ? {
-          routes: async (...args) => {
-            let [routesA, routesB] = await Promise.all([
-              configA.routes?.(...args),
-              configB.routes?.(...args),
-            ]);
+    return {
+      ...configA,
+      ...configB,
+      ...(mergeRequired("buildEnd")
+        ? {
+            buildEnd: async (...args) => {
+              await Promise.all([
+                configA.buildEnd?.(...args),
+                configB.buildEnd?.(...args),
+              ]);
+            },
+          }
+        : {}),
+      ...(mergeRequired("future")
+        ? {
+            future: {
+              ...configA.future,
+              ...configB.future,
+            },
+          }
+        : {}),
+      ...(mergeRequired("ignoredRouteFiles")
+        ? {
+            ignoredRouteFiles: Array.from(
+              new Set([
+                ...(configA.ignoredRouteFiles ?? []),
+                ...(configB.ignoredRouteFiles ?? []),
+              ])
+            ),
+          }
+        : {}),
+      ...(mergeRequired("presets")
+        ? {
+            presets: [...(configA.presets ?? []), ...(configB.presets ?? [])],
+          }
+        : {}),
+      ...(mergeRequired("routes")
+        ? {
+            routes: async (...args) => {
+              let [routesA, routesB] = await Promise.all([
+                configA.routes?.(...args),
+                configB.routes?.(...args),
+              ]);
 
-            return {
-              ...routesA,
-              ...routesB,
-            };
-          },
-        }
-      : {}),
+              return {
+                ...routesA,
+                ...routesB,
+              };
+            },
+          }
+        : {}),
+    };
   };
+
+  return configs.reduce(reducer, {});
 };
 
 let remixDevLoadContext: Record<string, unknown> | undefined;
@@ -537,24 +539,24 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
   /** Mutates `ctx` as a side-effect */
   let updateRemixPluginContext = async (): Promise<void> => {
-    // Default config values are completely overridden by user/preset config,
-    // not merged. This means that our preset merging pipeline needs to start
-    // with an empty object. Conceptually this means that presets are operating
-    // on the user config object as it would be defined in your Vite config.
-    let accumulatedRemixConfigPresets: VitePluginConfig = {};
+    let remixConfigPresets: VitePluginConfig[] = (
+      await Promise.all(
+        (remixUserConfig.presets ?? []).map(async (preset) => {
+          if (!preset.remixConfig) {
+            return null;
+          }
 
-    for (let preset of remixUserConfig.presets ?? []) {
-      let { remixConfig: getConfigPreset } = preset;
-      let remixConfigPreset =
-        getConfigPreset &&
-        omit(
-          await getConfigPreset({ remixConfig: accumulatedRemixConfigPresets }),
-          excludedRemixConfigPresetKeys
-        );
-      accumulatedRemixConfigPresets = remixConfigPreset
-        ? mergeRemixConfig(accumulatedRemixConfigPresets, remixConfigPreset)
-        : accumulatedRemixConfigPresets;
-    }
+          let remixConfigPreset: VitePluginConfig = omit(
+            await preset.remixConfig(),
+            excludedRemixConfigPresetKeys
+          );
+
+          return remixConfigPreset;
+        })
+      )
+    ).filter(function isNotNull<T>(value: T | null): value is T {
+      return value !== null;
+    });
 
     let defaults = {
       buildDirectory: "build",
@@ -566,7 +568,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
     let resolvedRemixUserConfig = {
       ...defaults, // Default values should be completely overridden by user/preset config, not merged
-      ...mergeRemixConfig(accumulatedRemixConfigPresets, remixUserConfig),
+      ...mergeRemixConfig(...remixConfigPresets, remixUserConfig),
     };
 
     let rootDirectory =

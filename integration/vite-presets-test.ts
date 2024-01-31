@@ -35,34 +35,9 @@ test.describe(async () => {
         pluginOptions: js`
           {
             presets: [
-              // Ensure accumulated remixConfig starts as an empty object
-              {
-                remixConfig: async ({ remixConfig }) => {
-                  if (Object.keys(remixConfig).length !== 0) {
-                    throw new Error("Accumulated Remix config did not start as an empty object");
-                  }
-                  return {};
-                },
-              },
-
-              // Ensure Remix config is accumulated across presets
-              {
-                remixConfig: async ({ remixConfig }) => ({
-                  ignoredRouteFiles: ["MOCK_PATTERN"],
-                }),
-              },
-              {
-                remixConfig: async ({ remixConfig }) => {
-                  if (!remixConfig.ignoredRouteFiles.includes("MOCK_PATTERN")) {
-                    throw new Error("Remix config does not have accumulated values");
-                  }
-                  return {};
-                },
-              },
-
               // Ensure preset config takes lower precedence than user config
               {
-                remixConfig: async ({ remixConfig }) => ({
+                remixConfig: async () => ({
                   appDirectory: "INCORRECT_APP_DIR", // This is overridden by the user config further down this file
                 }),
               },
@@ -76,29 +51,14 @@ test.describe(async () => {
 
               // Ensure config presets are merged in the correct order
               {
-                remixConfig: async ({ remixConfig }) => ({
+                remixConfig: async () => ({
                   buildDirectory: "INCORRECT_BUILD_DIR",
                 }),
               },
               {
-                remixConfig: async ({ remixConfig }) => ({
+                remixConfig: async () => ({
                   buildDirectory: "build",
                 }),
-              },
-
-              // Ensure presets can't define more presets
-              {
-                remixConfig: async ({ remixConfig }) => ({
-                  presets: [{}],
-                }),
-              },
-              {
-                remixConfig: async ({ remixConfig }) => {
-                  if (remixConfig.presets) {
-                    throw new Error("Remix preset config should ignore 'presets' key");
-                  }
-                  return {};
-                },
               },
 
               // Ensure remixConfigResolved is called with a frozen Remix config
@@ -119,7 +79,7 @@ test.describe(async () => {
 
               // Ensure presets can set serverBundles option (this is critical for Vercel support)
               {
-                remixConfig: async ({ remixConfig }) => ({
+                remixConfig: async () => ({
                   serverBundles() {
                     return "preset-server-bundle-id";
                   },
@@ -128,7 +88,7 @@ test.describe(async () => {
 
               // Ensure presets can set buildEnd option (this is critical for Vercel support)
               {
-                remixConfig: async ({ remixConfig }) => ({
+                remixConfig: async () => ({
                   async buildEnd(buildEndArgs) {
                     let fs = await import("node:fs/promises");
                     let serializeJs = (await import("serialize-javascript")).default;
