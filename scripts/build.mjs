@@ -22,8 +22,8 @@ exec("yarn", ["rollup", "-c"])
         );
         process.exit(1);
       }
-      console.log(`Local build dir: ${LOCAL_BUILD_DIRECTORY}`);
-      fse.copySync("build", appDir);
+      fse.copySync("build", appDir, { overwrite: true });
+      fse.chmodSync(path.join(appDir, "node_modules/.bin/remix"), 0o755);
     }
   })
   .then(() => publish && exec("node", ["scripts/copy-build-to-dist.mjs"]))
