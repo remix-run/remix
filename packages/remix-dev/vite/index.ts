@@ -13,4 +13,4 @@ export const unstable_vitePlugin: RemixVitePlugin = (...args) => {
   return remixVitePlugin(...args);
 };
 
-export { preset as unstable_vitePluginPresetCloudflare } from "./presets/cloudflare";
+export { preset as unstable_cloudflarePreset } from "./presets/cloudflare";

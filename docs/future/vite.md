@@ -126,7 +126,7 @@ To simulate the Cloudflare environment in Vite, Wrangler provides [Node proxies 
 ```ts filename=vite.config.ts lines=[3,10]
 import {
   unstable_vitePlugin as remix,
-  unstable_vitePluginPresetCloudflare as cloudflare,
+  unstable_cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -518,7 +518,7 @@ The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pag
 ```ts filename=vite.config.ts lines=[3,8-12,15]
 import {
   unstable_vitePlugin as remix,
-  unstable_vitePluginPresetCloudflare as cloudflare,
+  unstable_cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
