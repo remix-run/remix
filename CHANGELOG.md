@@ -144,15 +144,15 @@ Date: 2024-01-31
 
 #### Unstable Vite Plugin updates
 
-As we continue moving towards stabilizing the Vite plugin, we've introduced a few breaking changes tp the unstable Vite plugin in this release. Please read the `@remix-run/dev` changes below closely and update your app accordingly if you'v opted into using the Vite plugin.
+As we continue moving towards stabilizing the Vite plugin, we've introduced a few breaking changes tp the unstable Vite plugin in this release. Please read the `@remix-run/dev` changes below closely and update your app accordingly if you've opted into using the Vite plugin.
 
-We've also removed the `unstable_` prefix from the `serverBundles` option as we're now confident in the API. ([#8596](https://github.com/remix-run/remix/pull/8596))
+We've also removed the `unstable_` prefix from the `serverBundles` option as we're now confident in the API ([#8596](https://github.com/remix-run/remix/pull/8596)).
 
 🎉 And last, but certainly not least - we've added much anticipated Cloudflare support in [#8531](https://github.com/remix-run/remix/pull/8531)! To get started with Cloudflare, you can use the `unstable-vite-cloudflare` template:
 
-    ```shellscript nonumber
-    npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
-    ```
+```shellscript nonumber
+npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
+```
 
 For more information, please refer to the docs at [Future > Vite > Cloudflare](https://remix.run/docs/future/vite#cloudflare) and [Future > Vite > Migrating > Migrating Cloudflare Functions](https://remix.run/docs/future/vite#migrating-cloudflare-functions).
 
