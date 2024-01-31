@@ -20,5 +20,24 @@
     "@remix-run/server-runtime": "2.5.1",
     "@remix-run/testing": "2.5.1"
   },
-  "changesets": []
+  "changesets": [
+    "bright-days-brush",
+    "curly-camels-applaud",
+    "cyan-dingos-care",
+    "fast-dodos-yell",
+    "fluffy-dots-grin",
+    "great-mice-march",
+    "green-baboons-punch",
+    "ninety-baboons-leave",
+    "ninety-turtles-explode",
+    "quiet-adults-drum",
+    "silver-crews-arrive",
+    "tender-cherries-taste",
+    "thin-falcons-give",
+    "thin-rings-eat",
+    "thirty-coins-give",
+    "throw-abort-reason",
+    "two-pumpkins-vanish",
+    "wild-readers-drive"
+  ]
 }
