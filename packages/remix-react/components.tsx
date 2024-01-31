@@ -1084,7 +1084,7 @@ export const LiveReload =
         nonce?: string;
       }) {
         // @ts-expect-error
-        let isViteClient = import.meta.env !== undefined;
+        let isViteClient = import.meta && import.meta.env !== undefined;
         if (isViteClient) {
           console.warn(
             [
@@ -1094,9 +1094,9 @@ export const LiveReload =
               "Then refresh the page to remove lingering scripts from `<LiveReload />`.",
             ].join("\n")
           );
+          return null;
         }
-        // @ts-expect-error
-        origin ??= import.meta.env ? "" : process.env.REMIX_DEV_ORIGIN;
+        origin ??= process.env.REMIX_DEV_ORIGIN;
         let js = String.raw;
         return (
           <script
