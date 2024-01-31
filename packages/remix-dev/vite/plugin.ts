@@ -126,6 +126,7 @@ type ExcludedRemixConfigPresetKey =
 type RemixConfigPreset = Omit<VitePluginConfig, ExcludedRemixConfigPresetKey>;
 
 export type VitePluginPreset = {
+  name: string;
   remixConfig?: () => RemixConfigPreset | Promise<RemixConfigPreset>;
   remixConfigResolved?: (args: {
     remixConfig: ResolvedVitePluginConfig;
@@ -542,6 +543,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let remixConfigPresets: VitePluginConfig[] = (
       await Promise.all(
         (remixUserConfig.presets ?? []).map(async (preset) => {
+          if (!preset.name) {
+            throw new Error(
+              "Remix presets must have a `name` property defined."
+            );
+          }
+
           if (!preset.remixConfig) {
             return null;
           }

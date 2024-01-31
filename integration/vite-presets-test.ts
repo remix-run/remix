@@ -37,11 +37,13 @@ test.describe(async () => {
             presets: [
               // Ensure preset config takes lower precedence than user config
               {
+                name: "test-preset",
                 remixConfig: async () => ({
                   appDirectory: "INCORRECT_APP_DIR", // This is overridden by the user config further down this file
                 }),
               },
               {
+                name: "test-preset",
                 remixConfigResolved: async ({ remixConfig }) => {
                   if (remixConfig.appDirectory === "INCORRECT_APP_DIR") {
                     throw new Error("Remix preset config wasn't overridden with user config");
@@ -51,11 +53,13 @@ test.describe(async () => {
 
               // Ensure config presets are merged in the correct order
               {
+                name: "test-preset",
                 remixConfig: async () => ({
                   buildDirectory: "INCORRECT_BUILD_DIR",
                 }),
               },
               {
+                name: "test-preset",
                 remixConfig: async () => ({
                   buildDirectory: "build",
                 }),
@@ -63,6 +67,7 @@ test.describe(async () => {
 
               // Ensure remixConfigResolved is called with a frozen Remix config
               {
+                name: "test-preset",
                 remixConfigResolved: async ({ remixConfig }) => {
                   let isDeepFrozen = (obj: any) =>
                     Object.isFrozen(obj) &&
@@ -79,6 +84,7 @@ test.describe(async () => {
 
               // Ensure presets can set serverBundles option (this is critical for Vercel support)
               {
+                name: "test-preset",
                 remixConfig: async () => ({
                   serverBundles() {
                     return "preset-server-bundle-id";
@@ -88,6 +94,7 @@ test.describe(async () => {
 
               // Ensure presets can set buildEnd option (this is critical for Vercel support)
               {
+                name: "test-preset",
                 remixConfig: async () => ({
                   async buildEnd(buildEndArgs) {
                     let fs = await import("node:fs/promises");
