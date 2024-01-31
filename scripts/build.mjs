@@ -1,3 +1,5 @@
+import path from "node:path";
+import fse from "fs-extra";
 import { spawn } from "cross-spawn";
 
 const args = process.argv.slice(2);
@@ -6,6 +8,24 @@ const tsc = process.env.CI || args.includes("--tsc") || publish;
 
 exec("yarn", ["rollup", "-c"])
   .then(() => tsc && exec("yarn", ["tsc", "-b"]))
+  .then(() => {
+    let { LOCAL_BUILD_DIRECTORY } = process.env;
+    if (LOCAL_BUILD_DIRECTORY) {
+      let appDir = path.resolve(LOCAL_BUILD_DIRECTORY);
+      try {
+        fse.readdirSync(path.join(appDir, "node_modules"));
+      } catch {
+        console.error(
+          "Oops! You pointed LOCAL_BUILD_DIRECTORY to a directory that " +
+            "does not have a node_modules/ folder. Please `npm install` in that " +
+            "directory and try again."
+        );
+        process.exit(1);
+      }
+      console.log(`Local build dir: ${LOCAL_BUILD_DIRECTORY}`);
+      fse.copySync("build", appDir);
+    }
+  })
   .then(() => publish && exec("node", ["scripts/copy-build-to-dist.mjs"]))
   .then(() => process.exit(0))
   .catch((err) => {

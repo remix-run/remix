@@ -7,23 +7,6 @@ const path = require("node:path");
 
 const REPO_ROOT_DIR = __dirname;
 
-let activeOutputDir = "build";
-if (process.env.LOCAL_BUILD_DIRECTORY) {
-  let appDir = path.resolve(process.env.LOCAL_BUILD_DIRECTORY);
-  try {
-    fse.readdirSync(path.join(appDir, "node_modules"));
-  } catch {
-    console.error(
-      "Oops! You pointed LOCAL_BUILD_DIRECTORY to a directory that " +
-        "does not have a node_modules/ folder. Please `npm install` in that " +
-        "directory and try again."
-    );
-    process.exit(1);
-  }
-  console.log("Writing rollup output to", appDir);
-  activeOutputDir = appDir;
-}
-
 /**
  * @param {string} packageName
  * @param {string} version
@@ -103,25 +86,20 @@ function copyToPlaygrounds() {
   return {
     name: "copy-to-remix-playground",
     async writeBundle(options, bundle) {
-      if (activeOutputDir === "build") {
-        let playgroundsDir = path.join(REPO_ROOT_DIR, "playground");
-        let playgrounds = await fs.promises.readdir(playgroundsDir);
-        let writtenDir = path.join(REPO_ROOT_DIR, options.dir);
-        for (let playground of playgrounds) {
-          let playgroundDir = path.join(playgroundsDir, playground);
-          if (!fse.statSync(playgroundDir).isDirectory()) {
-            continue;
-          }
-          let destDir = writtenDir.replace(
-            path.join(REPO_ROOT_DIR, "build"),
-            playgroundDir
-          );
-          fse.copySync(writtenDir, destDir);
-          await triggerLiveReload(playgroundDir);
+      let playgroundsDir = path.join(REPO_ROOT_DIR, "playground");
+      let playgrounds = await fs.promises.readdir(playgroundsDir);
+      let writtenDir = path.join(REPO_ROOT_DIR, options.dir);
+      for (let playground of playgrounds) {
+        let playgroundDir = path.join(playgroundsDir, playground);
+        if (!fse.statSync(playgroundDir).isDirectory()) {
+          continue;
         }
-      } else {
-        // Otherwise, trigger live reload on our LOCAL_BUILD_DIRECTORY folder
-        await triggerLiveReload(activeOutputDir);
+        let destDir = writtenDir.replace(
+          path.join(REPO_ROOT_DIR, "build"),
+          playgroundDir
+        );
+        fse.copySync(writtenDir, destDir);
+        await triggerLiveReload(playgroundDir);
       }
     },
   };
@@ -208,7 +186,7 @@ function getCliConfig({ packageName, version }) {
  * @param {string} packageName
  */
 function getOutputDir(packageName) {
-  return path.join(activeOutputDir, "node_modules", packageName);
+  return path.join("build", "node_modules", packageName);
 }
 
 /**
