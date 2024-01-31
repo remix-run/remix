@@ -2489,10 +2489,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/router@0.0.0-experimental-add6f8aa":
-  version "0.0.0-experimental-add6f8aa"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-0.0.0-experimental-add6f8aa.tgz#58232edf157a762ac8d9d50c3d1d43e434791ab6"
-  integrity sha512-jVZ8xXRUXu6MoRMVsAZMmlf1ek7kFLgiY/5ZHaBY6VEBLc1J1nNLAtD1LzSJYE7sB1nBoF3ysNWpZ+QfAb3KXA==
+"@remix-run/router@1.15.0-pre.0":
+  version "1.15.0-pre.0"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.15.0-pre.0.tgz#9450042984609bf98833fd63a5f3847c02fd2c62"
+  integrity sha512-029lVlbVKEZkhaW7sMqztGzvlt+o4tVKwKiMLelhc7gGDfzmsbG1vH5B9CBk6mWVfeGWqqqzP221Dv9/1U4/DQ==
 
 "@remix-run/web-blob@^3.1.0":
   version "3.1.0"
@@ -11307,20 +11307,20 @@ react-refresh@^0.14.0:
   resolved "https://registry.npmjs.org/react-refresh/-/react-refresh-0.14.0.tgz"
   integrity sha512-wViHqhAd8OHeLS/IRMJjTSDHF3U9eWi62F/MledQGPdJGDhodXJ9PBLNGr6WWL7qlH12Mt3TyTpbS+hGXMjCzQ==
 
-react-router-dom@0.0.0-experimental-add6f8aa:
-  version "0.0.0-experimental-add6f8aa"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-0.0.0-experimental-add6f8aa.tgz#89d6fb5f8f9bf6c739584866e592f1345dcaa555"
-  integrity sha512-n9uf5z6OHTIiRzs6nQde4reA61dB4YWZQSJI4ouIW0ZUvcnE6nA6zoR9qF7Y/CFR7lJJ/DtTyj5xNY8I04pL6w==
+react-router-dom@6.22.0-pre.0:
+  version "6.22.0-pre.0"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.22.0-pre.0.tgz#721e32bae66798c7f94c7fe181697fe8dbfbc224"
+  integrity sha512-ibpM7O7QiA7GXNANfnjjmboPyc1hdAcbQlu2zQuForkXKZR+L1UTvU7zgc1c7FhidZ5K6QDNfiH/iXYgKAxefw==
   dependencies:
-    "@remix-run/router" "0.0.0-experimental-add6f8aa"
-    react-router "0.0.0-experimental-add6f8aa"
+    "@remix-run/router" "1.15.0-pre.0"
+    react-router "6.22.0-pre.0"
 
-react-router@0.0.0-experimental-add6f8aa:
-  version "0.0.0-experimental-add6f8aa"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-0.0.0-experimental-add6f8aa.tgz#06ed3e248c39cbdd52aef6be9a82fe5ee4067219"
-  integrity sha512-CusUxuUcU3QKX4Di33Tl6DDyQMd02gfNTIBx8fSYKWFoyWeJ/Pf4nF7HkBbQPkBPiTUBgE7MWHynp4JhRzXaYw==
+react-router@6.22.0-pre.0:
+  version "6.22.0-pre.0"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-6.22.0-pre.0.tgz#04a067f2e7f095c1b1c0f5e0d4037f2b64adfc1e"
+  integrity sha512-Hcylu3lT72IN9ceq93qRrBWmDGSHbsbychYIafgUQHk3uoGLwcJoQ0qQFmGgQ8/M+Tt+nXyBkfVRCjGxUYHUVg==
   dependencies:
-    "@remix-run/router" "0.0.0-experimental-add6f8aa"
+    "@remix-run/router" "1.15.0-pre.0"
 
 react@^18.2.0:
   version "18.2.0"
