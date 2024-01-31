@@ -18,6 +18,8 @@ export const VITE_CONFIG = async (args: {
   viteOptions?: string;
   pluginOptions?: string;
   vitePlugins?: string;
+  viteManifest?: boolean;
+  viteSsrResolveExternalConditions?: string[];
 }) => {
   let hmrPort = await getPort();
   return String.raw`
@@ -26,12 +28,22 @@ export const VITE_CONFIG = async (args: {
 
     export default defineConfig({
       ...${args.viteOptions ?? "{}"},
+      ssr: {
+        resolve: {
+          externalConditions: ${JSON.stringify(
+            args.viteSsrResolveExternalConditions ?? []
+          )},
+        },
+      },
       server: {
         port: ${args.port},
         strictPort: true,
         hmr: {
           port: ${hmrPort}
         }
+      },
+      build: {
+        manifest: ${String(args.viteManifest ?? false)},
       },
       plugins: [remix(${args.pluginOptions}),${args.vitePlugins ?? ""}],
     });
@@ -179,14 +191,17 @@ export const using = async (
   }
 };
 
-function node(args: string[], options: { cwd: string, env?: Record<string, string> }) {
+function node(
+  args: string[],
+  options: { cwd: string; env?: Record<string, string> }
+) {
   let nodeBin = process.argv[0];
 
   let proc = spawn(nodeBin, args, {
     cwd: options.cwd,
     env: {
       ...process.env,
-      ...options.env
+      ...options.env,
     },
     stdio: "pipe",
   });
@@ -195,7 +210,7 @@ function node(args: string[], options: { cwd: string, env?: Record<string, strin
 
 async function waitForServer(
   proc: ChildProcess & { stdout: Readable; stderr: Readable },
-  args: { port: number, base?: string }
+  args: { port: number; base?: string }
 ) {
   let devStdout = bufferize(proc.stdout);
   let devStderr = bufferize(proc.stderr);
