@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Vite: Add `adapter` option to support modifying the build output and/or development environment for different hosting providers.
+Vite: Add `presets` option to ease integration with different platforms and tools.

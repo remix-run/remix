@@ -58,17 +58,23 @@ The following subset of Remix config options are supported:
 
 The Vite plugin also accepts the following additional options:
 
-#### adapter
-
-A function for adapting the build output and/or development environment for different hosting providers.
-
 #### buildDirectory
 
-The path to the build directory, relative to the project root. Defaults to `"build"`.
+The path to the build directory, relative to the project root. Defaults to
+`"build"`.
+
+#### buildEnd
+
+A function that is called after the full Remix build is complete.
 
 #### manifest
 
-Whether to write a `.remix/manifest.json` file to the build directory. Defaults to `false`.
+Whether to write a `.remix/manifest.json` file to the build directory. Defaults
+to `false`.
+
+#### presets
+
+An array of Remix config presets to ease integration with different platforms and tools.
 
 #### serverBuildFile
 
@@ -116,19 +122,19 @@ wrangler pages dev ./build/client
 ```
 
 While Vite provides a better development experience, Wrangler provides closer emulation of the Cloudflare environment by running your server code in [Cloudflare's `workerd` runtime][cloudflare-workerd] instead of Node.
-To simulate the Cloudflare environment in Vite, Wrangler provides [Node proxies for resource bindings][wrangler-getbindingsproxy] which are automatically available when using the Remix Cloudflare adapter:
+To simulate the Cloudflare environment in Vite, Wrangler provides [Node proxies for resource bindings][wrangler-getbindingsproxy] which are automatically available when using the Remix Cloudflare preset:
 
 ```ts filename=vite.config.ts lines=[3,10]
 import {
   unstable_vitePlugin as remix,
-  unstable_vitePluginAdapterCloudflare as cloudflare,
+  unstable_vitePluginPresetCloudflare as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
     remix({
-      adapter: cloudflare(),
+      presets: [cloudflare()],
     }),
   ],
 });
@@ -443,19 +449,25 @@ The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pag
 
 </docs-warning>
 
-👉 **Add the Cloudflare adapter to your Vite config**
+👉 **In your Vite config, add `"workerd"` and `"worker"` to Vite's
+`ssr.resolve.externalConditions` option and add the Cloudflare Remix preset**
 
-```ts filename=vite.config.ts lines=[3,10]
+```ts filename=vite.config.ts lines=[3,8-12,15]
 import {
   unstable_vitePlugin as remix,
-  unstable_vitePluginAdapterCloudflare as cloudflare,
+  unstable_vitePluginPresetCloudflare as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  ssr: {
+    resolve: {
+      externalConditions: ["workerd", "worker"],
+    },
+  },
   plugins: [
     remix({
-      adapter: cloudflare(),
+      presets: [cloudflare()],
     }),
   ],
 });
