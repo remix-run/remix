@@ -17,6 +17,7 @@ import {
 } from "es-module-lexer";
 import jsesc from "jsesc";
 import pick from "lodash/pick";
+import omit from "lodash/omit";
 import colors from "picocolors";
 
 import { type ConfigRoute, type RouteManifest } from "../config/routes";
@@ -115,17 +116,14 @@ export type ServerBundlesBuildManifest = BaseBuildManifest & {
 
 export type BuildManifest = DefaultBuildManifest | ServerBundlesBuildManifest;
 
-const unsupportedPresetRemixConfigKeys = [
+const excludedRemixConfigPresetKeys = [
   "presets",
 ] as const satisfies ReadonlyArray<keyof VitePluginConfig>;
 
-type UnsupportedPresetRemixConfigKey =
-  typeof unsupportedPresetRemixConfigKeys[number];
+type ExcludedRemixConfigPresetKey =
+  typeof excludedRemixConfigPresetKeys[number];
 
-type RemixConfigPreset = Omit<
-  VitePluginConfig,
-  UnsupportedPresetRemixConfigKey
->;
+type RemixConfigPreset = Omit<VitePluginConfig, ExcludedRemixConfigPresetKey>;
 
 export type VitePluginPreset = {
   remixConfig?: (args: {
@@ -475,6 +473,11 @@ let mergeRemixConfigs = (
             ),
           }
         : {}),
+      ...(mergeRequired("presets")
+        ? {
+            presets: [...(configA.presets ?? []), ...(configB.presets ?? [])],
+          }
+        : {}),
       ...(mergeRequired("routes")
         ? {
             routes: async (...args) => {
@@ -540,29 +543,24 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
   /** Mutates `ctx` as a side-effect */
   let updateRemixPluginContext = async (): Promise<void> => {
-    type PickPrimitives<T> = {
-      [K in keyof T]: T[K] extends string | number | boolean | symbol | void
-        ? T[K]
-        : never;
-    };
-
-    // Since default values are spread rather than being merged, we use
-    // `PickPrimitives` to ensure that defaults object cannot contain complex
-    // values that need merging. We do this to the improve types on the resolved
-    // config since the defaults can be guaranteed to be present.
     let defaults = {
       buildDirectory: "build",
       manifest: false,
       publicPath: "/",
       serverBuildFile: "index.js",
       unstable_ssr: true,
-    } as const satisfies Partial<PickPrimitives<VitePluginConfig>>;
+    } as const satisfies Partial<VitePluginConfig>;
 
     let accumulatedRemixConfigPresets: VitePluginConfig = defaults;
     for (let preset of remixUserConfig.presets ?? []) {
-      let remixConfigPreset = await preset.remixConfig?.({
-        remixConfig: accumulatedRemixConfigPresets,
-      });
+      let remixConfigPreset =
+        preset.remixConfig &&
+        omit(
+          await preset.remixConfig?.({
+            remixConfig: accumulatedRemixConfigPresets,
+          }),
+          excludedRemixConfigPresetKeys
+        );
       accumulatedRemixConfigPresets = remixConfigPreset
         ? mergeRemixConfigs([remixConfigPreset, accumulatedRemixConfigPresets])
         : accumulatedRemixConfigPresets;

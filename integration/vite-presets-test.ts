@@ -57,6 +57,21 @@ test.describe(async () => {
                 },
               },
               {
+                remixConfig: async ({ remixConfig }) => ({
+                  // No-op preset so we can assert that more presets can't be defined within a preset
+                  presets: [{}],
+                }),
+              },
+              {
+                remixConfig: async ({ remixConfig }) => {
+                  // Smoke test that presets can't define more presets via Remix config
+                  if (remixConfig.presets !== undefined) {
+                    throw new Error("Remix preset config should ignore 'presets' key");
+                  }
+                  return {};
+                },
+              },
+              {
                 remixConfigResolved: async ({ remixConfig }) => {
                   let isDeepFrozen = (obj: any) =>
                     Object.isFrozen(obj) &&
