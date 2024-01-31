@@ -140,6 +140,12 @@ export default defineConfig({
 });
 ```
 
+The Cloudflare team is working to improve their Node proxies to support:
+
+- [Cloudflare request][cloudflare-proxy-cf] (`cf`)
+- [Context][cloudflare-proxy-ctx] (`ctx`)
+- [Cache][cloudflare-proxy-caches] (`caches`)
+
 <docs-info>Vite will not use your Cloudflare Pages Functions (`functions/*`) in development as those are purely for Wrangler routing.</docs-info>
 
 ## Splitting up client and server code
@@ -1195,6 +1201,9 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [cloudflare-pages-bindings]: https://developers.cloudflare.com/pages/functions/bindings/
 [cloudflare-kv]: https://developers.cloudflare.com/pages/functions/bindings/#kv-namespaces
 [cloudflare-workerd]: https://blog.cloudflare.com/workerd-open-source-workers-runtime
-[wrangler-getbindingsproxy]: https://github.com/cloudflare/workers-sdk/pull/4523
+[wrangler-getbindingsproxy]: https://developers.cloudflare.com/workers/wrangler/api/#getbindingsproxy
 [remix-config-server]: https://remix.run/docs/en/main/file-conventions/remix-config#server
 [cloudflare-vite-and-wrangler]: #vite--wrangler
+[cloudflare-proxy-cf]: https://github.com/cloudflare/workers-sdk/issues/4875
+[cloudflare-proxy-ctx]: https://github.com/cloudflare/workers-sdk/issues/4876
+[cloudflare-proxy-caches]: https://github.com/cloudflare/workers-sdk/issues/4879
