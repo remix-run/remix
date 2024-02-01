@@ -9,6 +9,7 @@ import {
   VITE_CONFIG,
   viteBuild,
   viteDev,
+  viteDevCmd,
   viteRemixServe,
 } from "./helpers/vite.js";
 
@@ -53,88 +54,156 @@ const files = {
   `,
 };
 
-const customServerFile = ({ port }: { port: number }) => String.raw`
-  import { createRequestHandler } from "@remix-run/express";
-  import { installGlobals } from "@remix-run/node";
-  import express from "express";
-  installGlobals();
+const customServerFile = ({
+  port,
+  base,
+  basename,
+}: {
+  port: number;
+  base?: string;
+  basename?: string;
+}) => {
+  base = base ?? "/mybase/";
+  basename = basename ?? base;
 
-  const viteDevServer =
-    process.env.NODE_ENV === "production"
-      ? undefined
-      : await import("vite").then(({ createServer }) =>
-          createServer({
-            server: {
-              middlewareMode: true,
-            },
-          })
-        );
+  return String.raw`
+    import { createRequestHandler } from "@remix-run/express";
+    import { installGlobals } from "@remix-run/node";
+    import express from "express";
+    installGlobals();
 
-  const app = express();
-  app.use("/mybase/", viteDevServer?.middlewares || express.static("build/client"));
-  app.all(
-    "/mybase/*",
-    createRequestHandler({
-      build: viteDevServer
-        ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
-        : await import("./build/server/index.js"),
-    })
-  );
-  app.get("*", (_req, res) => {
-    res.setHeader("content-type", "text/html")
-    res.end('Remix app is at <a href="/mybase/">/mybase/</a>');
-  });
+    const viteDevServer =
+      process.env.NODE_ENV === "production"
+        ? undefined
+        : await import("vite").then(({ createServer }) =>
+            createServer({
+              server: {
+                middlewareMode: true,
+              },
+            })
+          );
 
-  const port = ${port};
-  app.listen(port, () => console.log('http://localhost:' + port));
-`;
+    const app = express();
+    app.use("${base}", viteDevServer?.middlewares || express.static("build/client"));
+    app.all(
+      "${basename}*",
+      createRequestHandler({
+        build: viteDevServer
+          ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
+          : await import("./build/server/index.js"),
+      })
+    );
+    app.get("*", (_req, res) => {
+      res.setHeader("content-type", "text/html")
+      res.end('Remix app is at <a href="${basename}">${basename}</a>');
+    });
 
-test.describe(() => {
+    const port = ${port};
+    app.listen(port, () => console.log('http://localhost:' + port));
+  `;
+};
+
+test.describe("Vite base / Remix basename / Vite dev", () => {
   let port: number;
   let cwd: string;
   let stop: () => unknown;
 
-  test.beforeAll(async () => {
+  async function setup({
+    base,
+    basename,
+    startServer,
+  }: {
+    base: string;
+    basename: string;
+    startServer?: boolean;
+  }) {
     port = await getPort();
     cwd = await createProject({
       "vite.config.js": await VITE_CONFIG({
         port,
-        viteOptions: '{ base: "/mybase/" }',
-        pluginOptions: '{ basename: "/mybase/" }',
+        viteOptions: `{ base: "${base}" }`,
+        pluginOptions: `{ basename: "${basename}" }`,
       }),
       ...files,
     });
-    stop = await viteDev({ cwd, port });
-  });
+    if (startServer !== false) {
+      stop = await viteDev({ cwd, port, basename });
+    }
+  }
+
   test.afterAll(async () => await stop());
 
-  test("Vite base / Remix basename / vite dev", async ({ page }) => {
+  test("works when the base and basename are the same", async ({ page }) => {
+    await setup({ base: "/mybase/", basename: "/mybase/" });
     await workflowDev({ page, cwd, port });
+  });
+
+  test("works when the base and basename are different", async ({ page }) => {
+    await setup({ base: "/mybase/", basename: "/mybase/app/" });
+    await workflowDev({ page, cwd, port, basename: "/mybase/app/" });
+  });
+
+  test("errors if basename does not start with base", async ({ page }) => {
+    await setup({
+      base: "/mybase/",
+      basename: "/notmybase/",
+      startServer: false,
+    });
+    let proc = await viteDevCmd({ cwd });
+    expect(proc.stderr.toString()).toMatch(
+      "Error: When using the Remix `basename` and the Vite `base` config, the " +
+        "`basename` config must begin with `base` for the default Vite dev server."
+    );
   });
 });
 
-test.describe(async () => {
+test.describe("Vite base / Remix basename / express dev", async () => {
   let port: number;
   let cwd: string;
   let stop: () => void;
 
-  test.beforeAll(async () => {
+  async function setup({
+    base,
+    basename,
+    startServer,
+  }: {
+    base: string;
+    basename: string;
+    startServer?: boolean;
+  }) {
     port = await getPort();
     cwd = await createProject({
       "vite.config.js": await VITE_CONFIG({
         port,
-        viteOptions: '{ base: "/mybase/" }',
-        pluginOptions: '{ basename: "/mybase/" }',
+        viteOptions: `{ base: "${base}" }`,
+        pluginOptions: `{ basename: "${basename}" }`,
       }),
-      "server.mjs": customServerFile({ port }),
+      "server.mjs": customServerFile({ port, basename }),
       ...files,
     });
-    stop = await customDev({ cwd, port });
-  });
+    if (startServer !== false) {
+      stop = await customDev({ cwd, port, basename });
+    }
+  }
+
   test.afterAll(() => stop());
 
-  test("Vite base / Remix basename / express dev", async ({ page }) => {
+  test("works when base and basename are the same", async ({ page }) => {
+    await setup({ base: "/mybase/", basename: "/mybase/" });
     await workflowDev({ page, cwd, port });
+  });
+
+  test("works when base and basename are different", async ({ page }) => {
+    await setup({ base: "/mybase/", basename: "/mybase/app/" });
+    await workflowDev({ page, cwd, port, basename: "/mybase/app/" });
+  });
+
+  test("works when basename does not start with base", async ({ page }) => {
+    await setup({
+      base: "/mybase/",
+      basename: "/notmybase/",
+    });
+    await workflowDev({ page, cwd, port, basename: "/notmybase/" });
   });
 });
 
@@ -142,11 +211,18 @@ async function workflowDev({
   page,
   cwd,
   port,
+  base,
+  basename,
 }: {
   page: Page;
   cwd: string;
   port: number;
+  base?: string;
+  basename?: string;
 }) {
+  base = base ?? "/mybase/";
+  basename = basename ?? base;
+
   let pageErrors: Error[] = [];
   page.on("pageerror", (error) => pageErrors.push(error));
   let edit = createEditor(cwd);
@@ -156,8 +232,8 @@ async function workflowDev({
     requestUrls.push(request.url());
   });
 
-  // setup: initial render
-  await page.goto(`http://localhost:${port}/mybase/`, {
+  // setup: initial render at basename
+  await page.goto(`http://localhost:${port}${basename}`, {
     waitUntil: "networkidle",
   });
   await expect(page.locator("#index [data-title]")).toHaveText("Index");
@@ -186,78 +262,209 @@ async function workflowDev({
 
   // client side navigation
   await page.getByRole("link", { name: "other" }).click();
-  await page.waitForURL(`http://localhost:${port}/mybase/other`);
+  await page.waitForURL(`http://localhost:${port}${basename}other`);
   await page.getByText("other-loader").click();
   expect(pageErrors).toEqual([]);
 
-  // verify client requests are all under basename
+  let isAssetRequest = (url: string) =>
+    /\.[jt]sx?/.test(url) ||
+    /@id\/__x00__virtual:/.test(url) ||
+    /@vite\/client/.test(url) ||
+    /node_modules\/vite\/dist\/client\/env/.test(url);
+
+  // verify client asset requests are all under base
   expect(
-    requestUrls.filter(
-      (url) => !url.startsWith(`http://localhost:${port}/mybase/`)
-    )
-  ).toEqual([]);
+    requestUrls
+      .filter((url) => isAssetRequest(url))
+      .every((url) => url.startsWith(`http://localhost:${port}${base}`))
+  ).toBe(true);
+
+  // verify client route requests are all under basename
+  expect(
+    requestUrls
+      .filter((url) => !isAssetRequest(url))
+      .every((url) => url.startsWith(`http://localhost:${port}${basename}`))
+  ).toBe(true);
 }
 
-test.describe(() => {
+test.describe("Vite base / Remix basename / vite build", () => {
   let port: number;
   let cwd: string;
   let stop: () => unknown;
 
-  test.beforeAll(async () => {
+  async function setup({
+    base,
+    basename,
+    startServer,
+  }: {
+    base: string;
+    basename: string;
+    startServer?: boolean;
+  }) {
     port = await getPort();
     cwd = await createProject({
       "vite.config.js": await VITE_CONFIG({
         port,
-        viteOptions: '{ base: "/mybase/" }',
-        pluginOptions: '{ basename: "/mybase/" }',
+        viteOptions: `{ base: "${base}" }`,
+        pluginOptions: `{ basename: "${basename}" }`,
       }),
       ...files,
     });
     viteBuild({ cwd });
-    stop = await viteRemixServe({ cwd, port, base: "/mybase/" });
-  });
+    if (startServer !== false) {
+      stop = await viteRemixServe({ cwd, port, basename });
+    }
+  }
+
   test.afterAll(() => stop());
 
-  test("Vite base / Remix basename / vite build", async ({ page }) => {
-    await workflowBuild({ page, cwd, port });
+  test("works when base and basename are the same", async ({ page }) => {
+    await setup({ base: "/mybase/", basename: "/mybase/" });
+    await workflowBuild({ page, port });
+  });
+
+  test("works when base and basename are different", async ({ page }) => {
+    await setup({ base: "/mybase/", basename: "/mybase/app/" });
+    await workflowBuild({ page, port, basename: "/mybase/app/" });
+  });
+
+  test("works when basename does not start with base", async ({ page }) => {
+    await setup({
+      base: "/mybase/",
+      basename: "/notmybase/",
+    });
+    await workflowBuild({ page, port, basename: "/notmybase/" });
   });
 });
 
-test.describe(async () => {
+test.describe("Vite base / Remix basename / express build", async () => {
   let port: number;
   let cwd: string;
   let stop: () => void;
 
-  test.beforeAll(async () => {
+  async function setup({
+    base,
+    basename,
+    startServer,
+  }: {
+    base: string;
+    basename: string;
+    startServer?: boolean;
+  }) {
     port = await getPort();
     cwd = await createProject({
       "vite.config.js": await VITE_CONFIG({
         port,
-        viteOptions: '{ base: "/mybase/" }',
-        pluginOptions: '{ basename: "/mybase/" }',
+        viteOptions: `{ base: "${base}" }`,
+        pluginOptions: `{ basename: "${basename}" }`,
       }),
-      "server.mjs": customServerFile({ port }),
+      "server.mjs": customServerFile({ port, base, basename }),
       ...files,
     });
     viteBuild({ cwd });
-    stop = await customDev({ cwd, port, env: { NODE_ENV: "production" } });
-  });
+    if (startServer !== false) {
+      stop = await customDev({
+        cwd,
+        port,
+        basename,
+        env: { NODE_ENV: "production" },
+      });
+    }
+  }
+
   test.afterAll(() => stop());
 
-  test("Vite base / Remix basename / express build", async ({ page }) => {
-    await workflowBuild({ page, cwd, port });
+  test("works when base and basename are the same", async ({ page }) => {
+    await setup({ base: "/mybase/", basename: "/mybase/" });
+    await workflowBuild({ page, port });
+  });
+
+  test("works when base and basename are different", async ({ page }) => {
+    await setup({ base: "/mybase/", basename: "/mybase/app/" });
+    await workflowBuild({ page, port, basename: "/mybase/app/" });
+  });
+
+  test("works when basename does not start with base", async ({ page }) => {
+    await setup({
+      base: "/mybase/",
+      basename: "/notmybase/",
+    });
+    await workflowBuild({ page, port, basename: "/notmybase/" });
+  });
+
+  test("works when when base is an absolute external URL", async ({ page }) => {
+    port = await getPort();
+    cwd = await createProject({
+      "vite.config.js": await VITE_CONFIG({
+        port,
+        viteOptions: '{ base: "https://cdn.example.com/assets/" }',
+        pluginOptions: '{ basename: "/app/" }',
+      }),
+      // Slim server that only serves basename (route) requests from the remix handler
+      "server.mjs": String.raw`
+        import { createRequestHandler } from "@remix-run/express";
+        import { installGlobals } from "@remix-run/node";
+        import express from "express";
+        installGlobals();
+
+        const app = express();
+        app.all(
+          "/app/*",
+          createRequestHandler({ build: await import("./build/server/index.js") })
+        );
+
+        const port = ${port};
+        app.listen(port, () => console.log('http://localhost:' + port));
+      `,
+      ...files,
+    });
+
+    viteBuild({ cwd });
+    stop = await customDev({
+      cwd,
+      port,
+      basename: "/app/",
+      env: { NODE_ENV: "production" },
+    });
+
+    // Intercept and make all CDN requests 404
+    let requestUrls: string[] = [];
+    await page.route("**/*.js", (route) => {
+      requestUrls.push(route.request().url());
+      route.fulfill({ status: 404 });
+    });
+
+    // setup: initial render
+    await page.goto(`http://localhost:${port}/app/`, {
+      waitUntil: "networkidle",
+    });
+    await expect(page.locator("#index [data-title]")).toHaveText("Index");
+
+    // Can't validate hydration here due to 404s, but we can ensure assets are
+    // attempting to load from the CDN
+    expect(
+      requestUrls.length > 0 &&
+        requestUrls.every((url) =>
+          url.startsWith("https://cdn.example.com/assets/")
+        )
+    ).toBe(true);
   });
 });
 
 async function workflowBuild({
   page,
-  cwd,
   port,
+  base,
+  basename,
 }: {
   page: Page;
-  cwd: string;
   port: number;
+  base?: string;
+  basename?: string;
 }) {
+  base = base ?? "/mybase/";
+  basename = basename ?? base;
+
   let pageErrors: Error[] = [];
   page.on("pageerror", (error) => pageErrors.push(error));
 
@@ -267,7 +474,7 @@ async function workflowBuild({
   });
 
   // setup: initial render
-  await page.goto(`http://localhost:${port}/mybase/`, {
+  await page.goto(`http://localhost:${port}${basename}`, {
     waitUntil: "networkidle",
   });
   await expect(page.locator("#index [data-title]")).toHaveText("Index");
@@ -279,14 +486,23 @@ async function workflowBuild({
 
   // client side navigation
   await page.getByRole("link", { name: "other" }).click();
-  await page.waitForURL(`http://localhost:${port}/mybase/other`);
+  await page.waitForURL(`http://localhost:${port}${basename}other`);
   await page.getByText("other-loader").click();
   expect(pageErrors).toEqual([]);
 
-  // verify client requests are all under basename
+  let isAssetRequest = (url: string) => /\.js/.test(url);
+
+  // verify client asset requests are all under base
   expect(
-    requestUrls.filter(
-      (url) => !url.startsWith(`http://localhost:${port}/mybase/`)
-    )
-  ).toEqual([]);
+    requestUrls
+      .filter((url) => isAssetRequest(url))
+      .every((url) => url.startsWith(`http://localhost:${port}${base}`))
+  ).toBe(true);
+
+  // verify client route requests are all under basename
+  expect(
+    requestUrls
+      .filter((url) => !isAssetRequest(url))
+      .every((url) => url.startsWith(`http://localhost:${port}${basename}`))
+  ).toBe(true);
 }
