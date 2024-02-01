@@ -13,62 +13,69 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.5.1](#v251)
+  - [v2.6.0](#v260)
+    - [What's Changed](#whats-changed)
+      - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
+    - [Minor Changes](#minor-changes)
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
     - [Changes by Package](#changes-by-package)
-  - [v2.5.0](#v250)
-    - [What's Changed](#whats-changed)
-      - [SPA Mode (unstable)](#spa-mode-unstable)
-      - [Server Bundles (unstable)](#server-bundles-unstable)
-    - [Minor Changes](#minor-changes)
+  - [v2.5.1](#v251)
     - [Patch Changes](#patch-changes-1)
     - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
-  - [v2.4.1](#v241)
+  - [v2.5.0](#v250)
+    - [What's Changed](#whats-changed-1)
+      - [SPA Mode (unstable)](#spa-mode-unstable)
+      - [Server Bundles (unstable)](#server-bundles-unstable)
+    - [Minor Changes](#minor-changes-1)
     - [Patch Changes](#patch-changes-2)
     - [Updated Dependencies](#updated-dependencies-2)
     - [Changes by Package](#changes-by-package-2)
-  - [v2.4.0](#v240)
-    - [What's Changed](#whats-changed-1)
-      - [Client Data](#client-data)
-      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
-      - [Vite Updates (Unstable)](#vite-updates-unstable)
-    - [Minor Changes](#minor-changes-1)
+  - [v2.4.1](#v241)
     - [Patch Changes](#patch-changes-3)
     - [Updated Dependencies](#updated-dependencies-3)
     - [Changes by Package](#changes-by-package-3)
-  - [v2.3.1](#v231)
+  - [v2.4.0](#v240)
+    - [What's Changed](#whats-changed-2)
+      - [Client Data](#client-data)
+      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
+      - [Vite Updates (Unstable)](#vite-updates-unstable)
+    - [Minor Changes](#minor-changes-2)
     - [Patch Changes](#patch-changes-4)
     - [Updated Dependencies](#updated-dependencies-4)
     - [Changes by Package](#changes-by-package-4)
-  - [v2.3.0](#v230)
-    - [What's Changed](#whats-changed-2)
-      - [Stabilized `useBlocker`](#stabilized-useblocker)
-      - [`unstable_flushSync` API](#unstable_flushsync-api)
-    - [Minor Changes](#minor-changes-2)
+  - [v2.3.1](#v231)
     - [Patch Changes](#patch-changes-5)
     - [Updated Dependencies](#updated-dependencies-5)
     - [Changes by Package](#changes-by-package-5)
-  - [v2.2.0](#v220)
+  - [v2.3.0](#v230)
     - [What's Changed](#whats-changed-3)
-      - [Vite!](#vite)
-      - [New Fetcher APIs](#new-fetcher-apis)
-      - [Persistence Future Flag](#persistence-future-flag)
+      - [Stabilized `useBlocker`](#stabilized-useblocker)
+      - [`unstable_flushSync` API](#unstable_flushsync-api)
     - [Minor Changes](#minor-changes-3)
     - [Patch Changes](#patch-changes-6)
     - [Updated Dependencies](#updated-dependencies-6)
     - [Changes by Package](#changes-by-package-6)
-  - [v2.1.0](#v210)
+  - [v2.2.0](#v220)
     - [What's Changed](#whats-changed-4)
-      - [View Transitions](#view-transitions)
-      - [Stable `createRemixStub`](#stable-createremixstub)
+      - [Vite!](#vite)
+      - [New Fetcher APIs](#new-fetcher-apis)
+      - [Persistence Future Flag](#persistence-future-flag)
     - [Minor Changes](#minor-changes-4)
     - [Patch Changes](#patch-changes-7)
     - [Updated Dependencies](#updated-dependencies-7)
     - [Changes by Package](#changes-by-package-7)
-  - [v2.0.1](#v201)
+  - [v2.1.0](#v210)
+    - [What's Changed](#whats-changed-5)
+      - [View Transitions](#view-transitions)
+      - [Stable `createRemixStub`](#stable-createremixstub)
+    - [Minor Changes](#minor-changes-5)
     - [Patch Changes](#patch-changes-8)
+    - [Updated Dependencies](#updated-dependencies-8)
+    - [Changes by Package](#changes-by-package-8)
+  - [v2.0.1](#v201)
+    - [Patch Changes](#patch-changes-9)
     - [Changes by Package 🔗](#changes-by-package-)
   - [v2.0.0](#v200)
     - [Breaking Changes](#breaking-changes)
@@ -80,8 +87,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
         - [Breaking Type Changes](#breaking-type-changes)
     - [New Features](#new-features)
     - [Other Notable Changes](#other-notable-changes)
-    - [Updated Dependencies](#updated-dependencies-8)
-    - [Changes by Package](#changes-by-package-8)
+    - [Updated Dependencies](#updated-dependencies-9)
+    - [Changes by Package](#changes-by-package-9)
 
 </details>
 
@@ -128,6 +135,175 @@ Date: YYYY-MM-DD
 **Full Changelog**: [`v2.X.Y...v2.X.Y`](https://github.com/remix-run/remix/compare/remix@2.X.Y...remix@2.X.Y)
 
 -->
+
+## v2.6.0
+
+Date: 2024-02-01
+
+### What's Changed
+
+#### Unstable Vite Plugin updates
+
+As we continue moving towards stabilizing the Vite plugin, we've introduced a few breaking changes tp the unstable Vite plugin in this release. Please read the `@remix-run/dev` changes below closely and update your app accordingly if you've opted into using the Vite plugin.
+
+We've also removed the `unstable_` prefix from the `serverBundles` option as we're now confident in the API ([#8596](https://github.com/remix-run/remix/pull/8596)).
+
+🎉 And last, but certainly not least - we've added much anticipated Cloudflare support in [#8531](https://github.com/remix-run/remix/pull/8531)! To get started with Cloudflare, you can use the `unstable-vite-cloudflare` template:
+
+```shellscript nonumber
+npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
+```
+
+For more information, please refer to the docs at [Future > Vite > Cloudflare](https://remix.run/docs/future/vite#cloudflare) and [Future > Vite > Migrating > Migrating Cloudflare Functions](https://remix.run/docs/future/vite#migrating-cloudflare-functions).
+
+### Minor Changes
+
+- `@remix-run/server-runtime` - Add `future.v3_throwAbortReason` flag to throw `request.signal.reason` when a request is aborted instead of an `Error` such as `new Error("query() call aborted: GET /path")` ([#8251](https://github.com/remix-run/remix/pull/8251))
+
+### Patch Changes
+
+- `@remix-run/server-runtime` - Unwrap thrown `Response`'s from `entry.server` into `ErrorResponse`'s and preserve the status code ([#8577](https://github.com/remix-run/remix/pull/8577))
+- `@remix-run/dev` - Vite: Add `manifest` option to Vite plugin to enable writing a `.remix/manifest.json` file to the build directory ([#8575](https://github.com/remix-run/remix/pull/8575))
+  - ⚠️ **This is a breaking change for consumers of the Vite plugin's "server bundles" feature**
+  - The `build/server/bundles.json` file has been superseded by the more general `build/.remix/manifest.json`
+  - While the old server bundles manifest was always written to disk when generating server bundles, the build manifest file must be explicitly enabled via the `manifest` option
+- `@remix-run/dev` - Vite: Rely on Vite plugin ordering ([#8627](https://github.com/remix-run/remix/pull/8627))
+
+  - ⚠️ **This is a breaking change for projects using the unstable Vite plugin**
+  - The Remix plugin expects to process JavaScript or TypeScript files, so any transpilation from other languages must be done first.
+  - For example, that means putting the MDX plugin _before_ the Remix plugin:
+
+    ```diff
+      import mdx from "@mdx-js/rollup";
+      import { unstable_vitePlugin as remix } from "@remix-run/dev";
+      import { defineConfig } from "vite";
+
+      export default defineConfig({
+        plugins: [
+    +     mdx(),
+          remix()
+    -     mdx(),
+        ],
+      });
+    ```
+
+  - Previously, the Remix plugin misused `enforce: "post"` from Vite's plugin API to ensure that it ran last
+  - However, this caused other unforeseen issues
+  - Instead, we now rely on standard Vite semantics for plugin ordering
+  - The official [Vite React SWC plugin](https://github.com/vitejs/vite-plugin-react-swc/blob/main/src/index.ts#L97-L116) also relies on plugin ordering for MDX
+
+- `@remix-run/dev` - Vite: Remove interop with `<LiveReload />`, rely on `<Scripts />` instead ([#8636](https://github.com/remix-run/remix/pull/8636))
+
+  - ⚠️ **This is a breaking change for projects using the unstable Vite plugin**
+  - Vite provides a robust client-side runtime for development features like HMR, making the `<LiveReload />` component obsolete
+  - In fact, having a separate dev scripts component was causing issues with script execution order
+  - To work around this, the Remix Vite plugin used to override `<LiveReload />` into a bespoke implementation that was compatible with Vite
+  - Instead of all this indirection, now the Remix Vite plugin instructs the `<Scripts />` component to automatically include Vite's client-side runtime and other dev-only scripts
+  - To adopt this change, you can remove the LiveReload component from your `root.tsx` component:
+
+    ```diff
+      import {
+    -   LiveReload,
+        Outlet,
+        Scripts,
+      }
+
+      export default function App() {
+        return (
+          <html>
+            <head>
+            </head>
+            <body>
+              <Outlet />
+              <Scripts />
+    -         <LiveReload />
+            </body>
+          </html>
+        )
+      }
+    ```
+
+- `@remix-run/dev` - Vite: Only write Vite manifest files if `build.manifest` is enabled within the Vite config ([#8599](https://github.com/remix-run/remix/pull/8599))
+
+  - ⚠️ **This is a breaking change for consumers of Vite's `manifest.json` files**
+  - To explicitly enable generation of Vite manifest files, you must set `build.manifest` to `true` in your Vite config:
+
+    ```ts
+    export default defineConfig({
+      build: { manifest: true },
+      // ...
+    });
+    ```
+
+- `@remix-run/dev` - Vite: Add new `buildDirectory` option with a default value of `"build"` ([#8575](https://github.com/remix-run/remix/pull/8575))
+
+  - ⚠️ **This is a breaking change for consumers of the Vite plugin that were using the `assetsBuildDirectory` and `serverBuildDirectory` options**
+  - This replaces the old `assetsBuildDirectory` and `serverBuildDirectory` options which defaulted to `"build/client"` and `"build/server"` respectively
+  - The Remix Vite plugin now builds into a single directory containing `client` and `server` directories
+  - If you've customized your build output directories, you'll need to migrate to the new `buildDirectory` option, e.g.:
+
+    ```diff
+    import { unstable_vitePlugin as remix } from "@remix-run/dev";
+    import { defineConfig } from "vite";
+
+    export default defineConfig({
+      plugins: [
+        remix({
+    -      serverBuildDirectory: "dist/server",
+    -      assetsBuildDirectory: "dist/client",
+    +      buildDirectory: "dist",
+        })
+      ],
+    });
+    ```
+
+- `@remix-run/dev` - Vite: Write Vite manifest files to `build/.vite` directory rather than being nested within `build/client` and `build/server` directories ([#8599](https://github.com/remix-run/remix/pull/8599))
+  - ⚠️ **This is a breaking change for consumers of Vite's `manifest.json` files**
+  - Vite manifest files are now written to the Remix build directory
+  - Since all Vite manifests are now in the same directory, they're no longer named `manifest.json`
+  - Instead, they're named `build/.vite/client-manifest.json` and `build/.vite/server-manifest.json`, or `build/.vite/server-{BUNDLE_ID}-manifest.json` when using server bundles
+- `@remix-run/dev` - Vite: Remove `unstable` prefix from `serverBundles` option ([#8596](https://github.com/remix-run/remix/pull/8596))
+- `@remix-run/dev` - Vite: Add `--sourcemapClient` and `--sourcemapServer` flags to `remix vite:build` ([#8613](https://github.com/remix-run/remix/pull/8613))
+  - `--sourcemapClient`, `--sourcemapClient=inline`, or `--sourcemapClient=hidden`
+  - `--sourcemapServer`, `--sourcemapServer=inline`, or `--sourcemapServer=hidden`
+  - See https://vitejs.dev/config/build-options.html#build-sourcemap
+- `@remix-run/dev` - Vite: Validate IDs returned from the `serverBundles` function to ensure they only contain alphanumeric characters, hyphens and underscores ([#8598](https://github.com/remix-run/remix/pull/8598))
+- `@remix-run/dev` - Vite: Fix "could not fast refresh" false alarm ([#8580](https://github.com/remix-run/remix/pull/8580))
+  - HMR is already functioning correctly but was incorrectly logging that it "could not fast refresh" on internal client routes
+  - Now internal client routes correctly register Remix exports like `meta` for fast refresh, which removes the false alarm.
+- `@remix-run/dev` - Vite: Cloudflare Pages support ([#8531](https://github.com/remix-run/remix/pull/8531))
+- `@remix-run/dev` - Vite: Add `getRemixDevLoadContext` option to Cloudflare preset ([#8649](https://github.com/remix-run/remix/pull/8649))
+- `@remix-run/dev` - Vite: Remove undocumented backwards compatibility layer for Vite v4 ([#8581](https://github.com/remix-run/remix/pull/8581))
+- `@remix-run/dev` - Vite: Add `presets` option to ease integration with different platforms and tools ([#8514](https://github.com/remix-run/remix/pull/8514))
+- `@remix-run/dev` - Vite: Add `buildEnd` hook ([#8620](https://github.com/remix-run/remix/pull/8620))
+- `@remix-run/dev` - Vite: Add `mode` field into generated server build ([#8539](https://github.com/remix-run/remix/pull/8539))
+- `@remix-run/dev` - Vite: Reduce network calls for route modules during HMR ([#8591](https://github.com/remix-run/remix/pull/8591))
+- `@remix-run/dev` - Vite: Export `Unstable_ServerBundlesFunction` and `Unstable_VitePluginConfig` types ([#8654](https://github.com/remix-run/remix/pull/8654))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.22.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.22.0)
+- [`@remix-run/router@1.15.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1150)
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/create-remix/CHANGELOG.md#260)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-architect/CHANGELOG.md#260)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-cloudflare/CHANGELOG.md#260)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-cloudflare-pages/CHANGELOG.md#260)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-cloudflare-workers/CHANGELOG.md#260)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-css-bundle/CHANGELOG.md#260)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-deno/CHANGELOG.md#260)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-dev/CHANGELOG.md#260)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-eslint-config/CHANGELOG.md#260)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-express/CHANGELOG.md#260)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-node/CHANGELOG.md#260)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-react/CHANGELOG.md#260)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-serve/CHANGELOG.md#260)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-server-runtime/CHANGELOG.md#260)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.6.0/packages/remix-testing/CHANGELOG.md#260)
+
+**Full Changelog**: [`v2.5.1...v2.6.0`](https://github.com/remix-run/remix/compare/remix@2.5.1...remix@2.6.0)
 
 ## v2.5.1
 
@@ -293,7 +469,7 @@ Date: 2023-12-22
 
 - `@remix-run/dev`: Vite - Remove `unstable_viteServerBuildModuleId` in favor of manually referencing virtual module name `"virtual:remix/server-build"` ([#8264](https://github.com/remix-run/remix/pull/8264))
 
-  - **This is a breaking change for projects using the unstable Vite plugin with a custom server.**
+  - ⚠️ **This is a breaking change for projects using the unstable Vite plugin with a custom server**
   - This change was made to avoid issues where `@remix-run/dev` could be inadvertently required in your server's production dependencies.
   - Instead, you should manually write the virtual module name `"virtual:remix/server-build"` when calling `ssrLoadModule` in development.
 
@@ -433,7 +609,7 @@ Remix now enforces strict route exports, and will will throw an error if you hav
 - `@remix-run/dev`: Vite: fix access to default `entry.{client,server}.tsx` within `pnpm` workspaces on Windows ([#8057](https://github.com/remix-run/remix/pull/8057))
 - `@remix-run/dev`: Remove `unstable_createViteServer` and `unstable_loadViteServerBuild` which were only minimal wrappers around Vite's `createServer` and `ssrLoadModule` functions when using a custom server ([#8120](https://github.com/remix-run/remix/pull/8120))
 
-  - ⚠️ **This is a breaking change for projects using the unstable Vite plugin with a custom server.**
+  - ⚠️ **This is a breaking change for projects using the unstable Vite plugin with a custom server**
   - Instead, we now provide `unstable_viteServerBuildModuleId` so that custom servers interact with Vite directly rather than via Remix APIs, for example:
 
     ```diff
@@ -488,7 +664,7 @@ Remix now enforces strict route exports, and will will throw an error if you hav
   - Disable `server.preTransformRequests` in Vite child compiler since it's only used to process route modules
 - `@remix-run/dev`: Remove automatic global Node polyfill installation from the built-in Vite dev server and instead allow explicit opt-in ([#8119](https://github.com/remix-run/remix/pull/8119))
 
-  - ⚠️ **This is a breaking change for projects using the unstable Vite plugin without a custom server.**
+  - ⚠️ **This is a breaking change for projects using the unstable Vite plugin without a custom server**
   - If you're not using a custom server, you should call `installGlobals` in your Vite config instead.
 
     ```diff

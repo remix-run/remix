@@ -53,7 +53,6 @@ The following subset of Remix config options are supported:
 - [ignoredRouteFiles][ignored-route-files]
 - [publicPath][public-path]
 - [routes][routes]
-- [serverBuildPath][server-build-path]
 - [serverModuleFormat][server-module-format]
 
 The Vite plugin also accepts the following additional options:
@@ -74,7 +73,8 @@ to `false`.
 
 #### presets
 
-An array of Remix config presets to ease integration with different platforms and tools.
+An array of [presets] to ease integration with
+other tools and hosting providers.
 
 #### serverBuildFile
 
@@ -127,7 +127,7 @@ To simulate the Cloudflare environment in Vite, Wrangler provides [Node proxies 
 ```ts filename=vite.config.ts lines=[3,10]
 import {
   unstable_vitePlugin as remix,
-  unstable_vitePluginPresetCloudflare as cloudflare,
+  unstable_cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -147,6 +147,34 @@ The Cloudflare team is working to improve their Node proxies to support:
 - [Cache][cloudflare-proxy-caches] (`caches`)
 
 <docs-info>Vite will not use your Cloudflare Pages Functions (`functions/*`) in development as those are purely for Wrangler routing.</docs-info>
+
+#### Augmenting Cloudflare load context in development
+
+The Cloudflare preset accepts a `getRemixDevLoadContext` function that can be used to augment the load context in development:
+
+```ts filename=vite.config.ts lines=[6-8]
+export default defineConfig({
+  plugins: [
+    remix({
+      presets: [
+        cloudflare({
+          getRemixDevLoadContext: (context) => ({
+            ...context,
+            extra: "add on whatever else you want",
+          }),
+        }),
+      ],
+    }),
+  ],
+});
+```
+
+As the name implies, it **only augments the load context within Vite's dev server**, not within Wrangler nor in production.
+This limitation exists because Vite is not yet able to delegate server code execution to other non-Node runtimes like Cloudflare's `workerd` runtime.
+
+To get a consistent load context across Vite, Wrangler, and production you can define a module like `get-load-context.ts` that exports
+shared logic for augmenting the load context.
+Then you can apply the same logic within `getRemixDevLoadContext` and within `functions/[[page]].ts`.
 
 ## Splitting up client and server code
 
@@ -175,12 +203,14 @@ app
 
 `.server` modules must be within your Remix app directory.
 
-#### `vite-env-only`
+#### vite-env-only
 
-If you want to mix server-only code and client-safe code in the same module, you can use [`vite-env-only`][vite-env-only].
-That way you can explicitly mark any expression as server-only so that it gets replaced with `undefined` in the client.
+If you want to mix server-only code and client-safe code in the same module, you
+can use <nobr>[vite-env-only][vite-env-only]</nobr>.
+This Vite plugin allows you to explicitly mark any expression as server-only so that it gets
+replaced with `undefined` in the client.
 
-For example, you can wrap exports with `serverOnly$`:
+For example, once you've added the plugin to your Vite config, you can wrap any server-only exports with `serverOnly$`:
 
 ```tsx
 import { serverOnly$ } from "vite-env-only";
@@ -190,6 +220,21 @@ import { db } from "~/.server/db";
 export const getPosts = serverOnly$(async () => {
   return db.posts.findMany();
 });
+
+export const PostPreview = ({ title, description }) => {
+  return (
+    <article>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </article>
+  );
+};
+```
+
+This example would be compiled into the following code for the client:
+
+```tsx
+export const getPosts = undefined;
 
 export const PostPreview = ({ title, description }) => {
   return (
@@ -331,7 +376,9 @@ Since the module types provided by `vite/client` are not compatible with the mod
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
 It comes built-in with the Remix Vite plugin and will take over when you run `remix vite:dev`.
 
-Unlike `remix-serve`, the Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
+The Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on `remix-serve` to provide them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
+
+The Vite dev server's default port is different to `remix-serve` so you'll need to configure this via Vite's `server.port` option if you'd like to maintain the same port.
 
 You'll also need to update to the new build output paths, which are `build/server` for the server and `build/client` for client assets.
 
@@ -357,6 +404,17 @@ import { defineConfig } from "vite";
 +installGlobals();
 
 export default defineConfig({
+  plugins: [remix()],
+});
+```
+
+👉 **Configure your Vite dev server port (optional)**
+
+```js filename=vite.config.ts lines=[2-4]
+export default defineConfig({
+  server: {
+    port: 3000,
+  },
   plugins: [remix()],
 });
 ```
@@ -461,7 +519,7 @@ The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pag
 ```ts filename=vite.config.ts lines=[3,8-12,15]
 import {
   unstable_vitePlugin as remix,
-  unstable_vitePluginPresetCloudflare as cloudflare,
+  unstable_cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -951,6 +1009,8 @@ Vite supports both ESM and CJS dependencies, but sometimes you might still run i
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
 
+For a walkthrough of fixing an example bug, check out [🎥 How to Fix CJS/ESM Bugs in Remix][how-fix-cjs-esm].
+
 To diagnose if one of your dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
 
@@ -1013,16 +1073,41 @@ remix vite:dev --config vite.config.remix.ts
 
 #### Styles disappearing in development when document remounts
 
-To support lazy-loading and HMR of CSS files during development, Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect.
+When React is used to render the entire document (as Remix does) you can run into issues when elements are dynamically injected into the `head` element. If the document is re-mounted, the existing `head` element is removed and replaced with an entirely new one, removing any `style` elements that Vite injects during development.
 
-For example, if your app has the following CSS file:
+This is a known React issue that is fixed in their [canary release channel][react-canaries]. If you understand the risks involved, you can pin your app to a specific [React version][react-versions] and then use [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
+
+```json filename=package.json
+{
+  "dependencies": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  },
+  "overrides": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  }
+}
+```
+
+<docs-info>For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect, even though it's not something Remix provides as a default.</docs-info>
+
+It's worth stressing that this issue with styles that were injected by Vite only happens in development. **Production builds won't have this issue** since static CSS files are generated.
+
+In Remix, this issue can surface when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
+
+It can also happen due to hydration errors since it causes React to re-render the entire page from scratch. Hydration errors can be caused by your app code, but they can also be caused by browser extensions that manipulate the document.
+
+This is relevant for Vite because—during development—Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect. Vite does this to support lazy-loading and HMR of static CSS files.
+
+For example, let's assume your app has the following CSS file:
 
 <!-- prettier-ignore -->
 ```css filename=app/styles.css
 * { margin: 0 }
 ```
 
-During development (not in production!) this CSS file will be transformed into the following code when imported as a side effect:
+During development, this CSS file will be transformed into the following JavaScript code when imported as a side effect:
 
 <!-- prettier-ignore-start -->
 
@@ -1041,51 +1126,7 @@ import.meta.hot.prune(()=>__vite__removeStyle(__vite__id));
 
 <!-- prettier-ignore-end -->
 
-However, when React is used to render the entire document (as Remix does) you can run into issues when there are elements in the page that React isn't aware of, like the `style` element injected by the code above.
-
-**Again, it's worth stressing that this issue only happens in development. Production builds won't have this issue since actual CSS files are generated.**
-
-In terms of its impact on styling, when the document is remounted from the root, React removes the existing `head` element and replaces it with an entirely new one. This means that any additional `style` elements that Vite injected will be lost. In Remix, this can happen when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
-
-**This is a known React issue** that is fixed in their [canary release channel][react-canaries] and should be available in a future stable release. If you understand the risks involved, you can choose to adopt a canary version of React by pinning to the desired version and then using [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
-
-```json filename=package.json
-{
-  "dependencies": {
-    "react": "18.3.0-canary-...",
-    "react-dom": "18.3.0-canary-..."
-  },
-  "overrides": {
-    "react": "18.3.0-canary-...",
-    "react-dom": "18.3.0-canary-..."
-  }
-}
-```
-
-For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect even though it's not something Remix provides as a default.
-
-If you'd like a more stable workaround, you can instead avoid providing `ErrorBoundary` and `HydrateFallback` exports from your root route. This ensures that the `head` element is owned by a single React component that never remounts, so Vite's `style` elements are never removed.
-
-Instead, you can export your root route's `ErrorBoundary` and `HydrateFallback` components from a top-level layout route. For example, when using the default route convention, you could add a layout route called `routes/_boundary.tsx`:
-
-```tsx filename=app/routes/_boundary.tsx
-import { Outlet } from "@remix-run/react";
-
-export function ErrorBoundary() {
-  return <p>Oops, something went wrong!</p>;
-}
-
-export function HydrateFallback() {
-  return <p>Loading...</p>;
-}
-
-// Passthrough to matching child route:
-export default function BoundaryRoute() {
-  return <Outlet />;
-}
-```
-
-You would then nest all other routes within this, e.g. `app/routes/about.tsx` would become `app/routes/_boundary.about.tsx`, etc.
+This transformation is not applied to production code, which is why this styling issue only affects development.
 
 #### Wrangler errors in development
 
@@ -1192,6 +1233,7 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [error-boundary]: ../route/error-boundary
 [hydrate-fallback]: ../route/hydrate-fallback
 [react-canaries]: https://react.dev/blog/2023/05/03/react-canaries
+[react-versions]: https://www.npmjs.com/package/react?activeTab=versions
 [package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides
 [wrangler-toml-bindings]: https://developers.cloudflare.com/workers/wrangler/configuration/#bindings
 [cloudflare-pages]: https://pages.cloudflare.com
@@ -1207,3 +1249,5 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [cloudflare-proxy-cf]: https://github.com/cloudflare/workers-sdk/issues/4875
 [cloudflare-proxy-ctx]: https://github.com/cloudflare/workers-sdk/issues/4876
 [cloudflare-proxy-caches]: https://github.com/cloudflare/workers-sdk/issues/4879
+[how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
+[presets]: ./presets
