@@ -1,33 +1,12 @@
 # `@remix-run/cloudflare-pages`
 
-## 2.6.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.6.0-pre.3`
-
-## 2.6.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.6.0-pre.2`
-
-## 2.6.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.6.0-pre.1`
-
-## 2.6.0-pre.0
+## 2.6.0
 
 ### Patch Changes
 
 - Vite: Cloudflare Pages support ([#8531](https://github.com/remix-run/remix/pull/8531))
 
-  To get started with Cloudflare, you can use the [`unstable-vite-cloudflare`][template-vite-cloudflare] template:
+  To get started with Cloudflare, you can use the \[`unstable-vite-cloudflare`]\[template-vite-cloudflare] template:
 
   ```shellscript nonumber
   npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
@@ -37,7 +16,7 @@
   [Future > Vite > Migrating > Migrating Cloudflare Functions](https://remix.run/docs/en/main/future/vite#migrating-cloudflare-functions).
 
 - Updated dependencies:
-  - `@remix-run/cloudflare@2.6.0-pre.0`
+  - `@remix-run/cloudflare@2.6.0`
 
 ## 2.5.1
 
