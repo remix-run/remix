@@ -1073,7 +1073,7 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
-        origin = process.env.REMIX_DEV_ORIGIN,
+        origin,
         port,
         timeoutMs = 1000,
         nonce = undefined,
@@ -1083,6 +1083,20 @@ export const LiveReload =
         timeoutMs?: number;
         nonce?: string;
       }) {
+        // @ts-expect-error
+        let isViteClient = import.meta && import.meta.env !== undefined;
+        if (isViteClient) {
+          console.warn(
+            [
+              "`<LiveReload />` is obsolete when using Vite and can conflict with Vite's built-in HMR runtime.",
+              "",
+              "Remove `<LiveReload />` from your code and instead only use `<Scripts />`.",
+              "Then refresh the page to remove lingering scripts from `<LiveReload />`.",
+            ].join("\n")
+          );
+          return null;
+        }
+        origin ??= process.env.REMIX_DEV_ORIGIN;
         let js = String.raw;
         return (
           <script

@@ -28,7 +28,7 @@ function createRoute(path: string) {
   return {
     [`app/routes/${path}`]: `
       ${ROUTE_FILE_COMMENT}
-      import { Links, Meta, Outlet, Scripts, LiveReload } from "@remix-run/react";
+      import { Outlet } from "@remix-run/react";
       import { useState, useEffect } from "react";
 
       export default function Route() {
@@ -74,7 +74,7 @@ const TEST_ROUTES = [
 const files = {
   "app/root.tsx": `
     ${ROUTE_FILE_COMMENT}
-    import { Links, Meta, Outlet, Scripts, LiveReload } from "@remix-run/react";
+    import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
     export default function Root() {
       return (
@@ -86,7 +86,6 @@ const files = {
           <body>
             <Outlet />
             <Scripts />
-            <LiveReload />
           </body>
         </html>
       );
@@ -120,8 +119,10 @@ test.describe(() => {
     cwd = await createProject({
       "vite.config.ts": await VITE_CONFIG({
         port: devPort,
+        viteManifest: true,
         pluginOptions: `{
-          unstable_serverBundles: async ({ branch }) => {
+          manifest: true,
+          serverBundles: async ({ branch }) => {
             // Smoke test to ensure we can read the route files via 'route.file'
             await Promise.all(branch.map(async (route) => {
               const fs = await import("node:fs/promises");
@@ -288,12 +289,21 @@ test.describe(() => {
       expect(pageErrors).toEqual([]);
     });
 
-    test("Vite / server bundles / build / manifest", async () => {
-      expect(
-        JSON.parse(
-          fs.readFileSync(path.join(cwd, "build/server/bundles.json"), "utf8")
-        )
-      ).toEqual({
+    test("Vite / server bundles / build / Vite manifests", () => {
+      let viteManifestFiles = fs.readdirSync(path.join(cwd, "build", ".vite"));
+
+      expect(viteManifestFiles).toEqual([
+        "client-manifest.json",
+        "server-bundle-a-manifest.json",
+        "server-bundle-b-manifest.json",
+        "server-bundle-c-manifest.json",
+        "server-root-manifest.json",
+      ]);
+    });
+
+    test("Vite / server bundles / build / Remix manifest", () => {
+      let manifestPath = path.join(cwd, "build", ".remix", "manifest.json");
+      expect(JSON.parse(fs.readFileSync(manifestPath, "utf8"))).toEqual({
         serverBundles: {
           "bundle-c": {
             id: "bundle-c",

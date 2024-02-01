@@ -36,6 +36,7 @@ type Dev = {
 interface FutureConfig {
   v3_fetcherPersist: boolean;
   v3_relativeSplatPath: boolean;
+  v3_throwAbortReason: boolean;
 }
 
 type NodeBuiltinsPolyfillOptions = Pick<
@@ -339,14 +340,6 @@ export interface RemixConfig {
   serverPlatform: ServerPlatform;
 
   /**
-   * Enable SPA Mode.  Default's to `false`.
-   *
-   * This is the inverse of the user-level `unstable_ssr` config and used throughout
-   * the codebase to avoid confusion with Vite's `ssr` config
-   */
-  isSpaMode: boolean;
-
-  /**
    * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
    * Defaults to `true`.
    */
@@ -604,6 +597,7 @@ export async function resolveConfig(
   let future: FutureConfig = {
     v3_fetcherPersist: appConfig.future?.v3_fetcherPersist === true,
     v3_relativeSplatPath: appConfig.future?.v3_relativeSplatPath === true,
+    v3_throwAbortReason: appConfig.future?.v3_throwAbortReason === true,
   };
 
   if (appConfig.future) {
@@ -667,7 +661,6 @@ export async function resolveConfig(
     serverMode,
     serverModuleFormat,
     serverNodeBuiltinsPolyfill,
-    isSpaMode,
     browserNodeBuiltinsPolyfill,
     serverPlatform,
     mdx,

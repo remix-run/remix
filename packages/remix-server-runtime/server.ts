@@ -9,6 +9,7 @@ import {
   isRouteErrorResponse,
   createStaticHandler,
   json as routerJson,
+  UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
 } from "@remix-run/router";
 
 import type { AppLoadContext } from "./data";
@@ -36,7 +37,7 @@ export type RequestHandler = (
 ) => Promise<Response>;
 
 export type CreateRequestHandlerFunction = (
-  build: ServerBuild | (() => Promise<ServerBuild>),
+  build: ServerBuild | (() => ServerBuild | Promise<ServerBuild>),
   mode?: string
 ) => RequestHandler;
 
@@ -46,7 +47,8 @@ function derive(build: ServerBuild, mode?: string) {
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
   let staticHandler = createStaticHandler(dataRoutes, {
     future: {
-      v7_relativeSplatPath: build.future?.v3_relativeSplatPath,
+      v7_relativeSplatPath: build.future?.v3_relativeSplatPath === true,
+      v7_throwAbortReason: build.future?.v3_throwAbortReason === true,
     },
   });
 
@@ -81,6 +83,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
   return async function requestHandler(request, loadContext = {}) {
     _build = typeof build === "function" ? await build() : build;
+    mode ??= _build.mode;
     if (typeof build === "function") {
       let derived = derive(_build, mode);
       routes = derived.routes;
@@ -239,7 +242,9 @@ async function handleDataRequestRR(
     }
 
     let errorInstance =
-      error instanceof Error ? error : new Error("Unexpected Server Error");
+      error instanceof Error || error instanceof DOMException
+        ? error
+        : new Error("Unexpected Server Error");
     handleError(errorInstance);
     return routerJson(serializeError(errorInstance, serverMode), {
       status: 500,
@@ -319,11 +324,41 @@ async function handleDocumentRequestRR(
   } catch (error: unknown) {
     handleError(error);
 
+    let errorForSecondRender = error;
+
+    // If they threw a response, unwrap it into an ErrorResponse like we would
+    // have for a loader/action
+    if (isResponse(error)) {
+      let data;
+      try {
+        let contentType = error.headers.get("Content-Type");
+        // Check between word boundaries instead of startsWith() due to the last
+        // paragraph of https://httpwg.org/specs/rfc9110.html#field.content-type
+        if (contentType && /\bapplication\/json\b/.test(contentType)) {
+          if (error.body == null) {
+            data = null;
+          } else {
+            data = await error.json();
+          }
+        } else {
+          data = await error.text();
+        }
+
+        errorForSecondRender = new ErrorResponseImpl(
+          error.status,
+          error.statusText,
+          data
+        );
+      } catch (e) {
+        // If we can't unwrap the response - just leave it as-is
+      }
+    }
+
     // Get a new StaticHandlerContext that contains the error at the right boundary
     context = getStaticContextFromError(
       staticHandler.dataRoutes,
       context,
-      error
+      errorForSecondRender
     );
 
     // Sanitize errors outside of development environments

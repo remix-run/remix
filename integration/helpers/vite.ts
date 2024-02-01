@@ -17,6 +17,8 @@ export const VITE_CONFIG = async (args: {
   port: number;
   pluginOptions?: string;
   vitePlugins?: string;
+  viteManifest?: boolean;
+  viteSsrResolveExternalConditions?: string[];
 }) => {
   let hmrPort = await getPort();
   return String.raw`
@@ -24,12 +26,22 @@ export const VITE_CONFIG = async (args: {
     import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
     export default defineConfig({
+      ssr: {
+        resolve: {
+          externalConditions: ${JSON.stringify(
+            args.viteSsrResolveExternalConditions ?? []
+          )},
+        },
+      },
       server: {
         port: ${args.port},
         strictPort: true,
         hmr: {
           port: ${hmrPort}
         }
+      },
+      build: {
+        manifest: ${String(args.viteManifest ?? false)},
       },
       plugins: [remix(${args.pluginOptions}),${args.vitePlugins ?? ""}],
     });
