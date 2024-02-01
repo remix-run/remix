@@ -87,12 +87,12 @@ Users are encouraged to primarily use `.server` modules but can always opt for m
 
 #### Typesafety
 
-Since Remix now throws when `.server` imports remain in the built client code, there are no remaining runtime errors to catch with typechecking for module-level separation.
+Since Remix now throws when `.server` imports remain in the built client code, there are no remaining runtime errors to catch with typechecking for module-level separation (Goal 3 ✅).
 For expression-level separation, `vite-env-only` provides optional types (`<T>(_: T) => T | undefined`) which lets TypeScript prevent any runtime errors.
 
 #### Performance
 
-Checking for `.server` modules only requires checking the module's path and does not require AST parsing or transformations, so it's extremely fast.
+Checking for `.server` modules only requires checking the module's path and does not require AST parsing or transformations, so it's extremely fast (Goal 4 ✅).
 `vite-env-only` does require AST parsing and transformations so it will always be slower than `.server` modules.
 
 [^1]: Vite provides a lower-level module graph API, but the module graph is not guaranteed to be complete as it is only populated as modules are requested.
