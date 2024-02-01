@@ -4,7 +4,6 @@
 
 ### Patch Changes
 
-- \[REMOVE] Bump router ([#8664](https://github.com/remix-run/remix/pull/8664))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.6.0`
 
