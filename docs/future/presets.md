@@ -15,7 +15,7 @@ The config returned by each preset is merged in the order they were defined. Any
 
 ## Using a preset
 
-Presets are designed to be published to npm and consumed within your Vite config. For example, Remix ships with a preset for Cloudflare:
+Presets are designed to be published to npm and used within your Vite config. For example, Remix ships with a preset for Cloudflare:
 
 ```ts filename=vite.config.ts lines=[3,10]
 import {
