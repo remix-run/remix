@@ -20,8 +20,8 @@ export default defineConfig({
   plugins: [
     remix({
       serverBundles: ({ branch }) => {
-        const isAuthenticatedRoute = branch.some(
-          (route) => route.id === "routes/_authenticated"
+        const isAuthenticatedRoute = branch.some((route) =>
+          route.id.split("/").includes("_authenticated")
         );
 
         return isAuthenticatedRoute
