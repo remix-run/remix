@@ -2,4 +2,4 @@
 "@remix-run/express": patch
 ---
 
-Vite: update the express adapter to use `req.originalUrl` when a basename is present
+Vite: Update the express adapter to use `req.originalUrl` when an application `basename` is present

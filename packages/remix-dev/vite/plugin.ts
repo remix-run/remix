@@ -925,7 +925,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               "@remix-run/react",
             ],
           },
-          base: viteUserConfig.base ?? ctx.remixConfig.publicPath,
+          base: viteUserConfig.base,
           ...(viteCommand === "build" && {
             build: {
               ...(!viteConfigEnv.isSsrBuild
@@ -1150,7 +1150,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   nodeReq,
                   nodeRes
                 ) => {
-                  let req = fromNodeRequest(nodeReq, build.publicPath != "/");
+                  let req = fromNodeRequest(nodeReq, build.publicPath !== "/");
                   let res = await handler(req, remixDevLoadContext);
                   await toNodeRequest(res, nodeRes);
                 };

@@ -49,8 +49,8 @@ export function createRequestHandler({
     next: express.NextFunction
   ) => {
     try {
-      let { basename } = typeof build === "function" ? await build() : build;
-      let request = createRemixRequest(req, res, basename != null);
+      let { publicPath } = typeof build === "function" ? await build() : build;
+      let request = createRemixRequest(req, res, publicPath !== "/");
       let loadContext = await getLoadContext?.(req, res);
 
       let response = await handleRequest(request, loadContext);
