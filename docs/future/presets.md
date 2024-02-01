@@ -11,7 +11,7 @@ Presets can only do two things:
 - Configure the Remix Vite plugin on your behalf.
 - Validate the resolved config.
 
-The config returned by each preset is merged in the order they were defined before finally merging in any config directly passed to the Remix Vite plugin. This means that user config will always take precedence over any presets.
+The config returned by each preset is merged in the order they were defined. Any config directly passed to the Remix Vite plugin will be merged last. This means that user config will always take precedence over any presets.
 
 ## Using a preset
 
