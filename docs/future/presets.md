@@ -36,7 +36,7 @@ export default defineConfig({
 
 ## Creating a preset
 
-Presets are objects that conform to the following `Unstable_Preset` type:
+Presets conform to the following `Unstable_Preset` type:
 
 ```ts
 type Unstable_Preset = {
