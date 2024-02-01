@@ -138,7 +138,7 @@ Date: YYYY-MM-DD
 
 ## v2.6.0
 
-Date: 2024-01-31
+Date: 2024-02-01
 
 ### What's Changed
 
@@ -162,7 +162,7 @@ For more information, please refer to the docs at [Future > Vite > Cloudflare](h
 
 ### Patch Changes
 
-- `@remix-run/server-runtime` - Unwrap thrown `Response`'s from `entry.server` into `ErrorResponse`s and preserve the status code ([#8577](https://github.com/remix-run/remix/pull/8577))
+- `@remix-run/server-runtime` - Unwrap thrown `Response`'s from `entry.server` into `ErrorResponse`'s and preserve the status code ([#8577](https://github.com/remix-run/remix/pull/8577))
 - `@remix-run/dev` - Vite: Add `manifest` option to Vite plugin to enable writing a `.remix/manifest.json` file to the build directory ([#8575](https://github.com/remix-run/remix/pull/8575))
   - ⚠️ **This is a breaking change for consumers of the Vite plugin's "server bundles" feature**
   - The `build/server/bundles.json` file has been superseded by the more general `build/.remix/manifest.json`
