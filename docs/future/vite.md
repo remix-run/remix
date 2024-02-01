@@ -73,7 +73,8 @@ to `false`.
 
 #### presets
 
-An array of Remix config presets to ease integration with different platforms and tools.
+An array of [presets] to ease integration with
+other tools and hosting providers.
 
 #### serverBuildFile
 
@@ -1249,3 +1250,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [cloudflare-proxy-ctx]: https://github.com/cloudflare/workers-sdk/issues/4876
 [cloudflare-proxy-caches]: https://github.com/cloudflare/workers-sdk/issues/4879
 [how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
+[presets]: ./presets
