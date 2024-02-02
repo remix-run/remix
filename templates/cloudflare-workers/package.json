@@ -33,7 +33,7 @@
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "typescript": "^5.1.6",
-    "wrangler": "3.8.0"
+    "wrangler": "^3.24.0"
   },
   "engines": {
     "node": ">=18.0.0"
