@@ -15,7 +15,7 @@ const importWrangler = async () => {
 /**
  * @param options.getRemixDevLoadContext - Augment the load context.
  */
-export const preset = (
+export const cloudflarePreset = (
   options: {
     getRemixDevLoadContext?: GetRemixDevLoadContext;
   } = {}

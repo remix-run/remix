@@ -22,7 +22,7 @@ test.describe("SPA Mode", () => {
         let cwd = await createProject({
           "vite.config.ts": js`
           import { defineConfig } from "vite";
-          import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
             plugins: [remix({ unstable_ssr: false })],
@@ -53,7 +53,7 @@ test.describe("SPA Mode", () => {
         let cwd = await createProject({
           "vite.config.ts": js`
           import { defineConfig } from "vite";
-          import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
             plugins: [remix({ unstable_ssr: false })],
@@ -82,7 +82,7 @@ test.describe("SPA Mode", () => {
         let cwd = await createProject({
           "vite.config.ts": js`
           import { defineConfig } from "vite";
-          import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
             plugins: [remix({ unstable_ssr: false })],
@@ -154,7 +154,7 @@ test.describe("SPA Mode", () => {
         let cwd = await createProject({
           "vite.config.ts": js`
           import { defineConfig } from "vite";
-          import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
             plugins: [remix({ unstable_ssr: false })],
@@ -183,7 +183,7 @@ test.describe("SPA Mode", () => {
         files: {
           "vite.config.ts": js`
             import { defineConfig } from "vite";
-            import { unstable_vitePlugin as remix } from "@remix-run/dev";
+            import { vitePlugin as remix } from "@remix-run/dev";
 
             export default defineConfig({
               plugins: [remix({ unstable_ssr: false })],
@@ -229,7 +229,7 @@ test.describe("SPA Mode", () => {
         files: {
           "vite.config.ts": js`
             import { defineConfig } from "vite";
-            import { unstable_vitePlugin as remix } from "@remix-run/dev";
+            import { vitePlugin as remix } from "@remix-run/dev";
 
             export default defineConfig({
               plugins: [remix({ unstable_ssr: false })],
@@ -273,7 +273,7 @@ test.describe("SPA Mode", () => {
         files: {
           "vite.config.ts": js`
             import { defineConfig } from "vite";
-            import { unstable_vitePlugin as remix } from "@remix-run/dev";
+            import { vitePlugin as remix } from "@remix-run/dev";
 
             export default defineConfig({
               build: { manifest: true },

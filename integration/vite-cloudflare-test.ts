@@ -54,7 +54,7 @@ test.describe("Vite / cloudflare", async () => {
         viteSsrResolveExternalConditions: ["workerd", "worker"],
         pluginOptions: `{
           presets: [
-            (await import("@remix-run/dev")).unstable_cloudflarePreset({
+            (await import("@remix-run/dev")).cloudflarePreset({
               getRemixDevLoadContext: (ctx) => ({ ...ctx, extra: "stuff" })
             })
           ]
