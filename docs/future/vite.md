@@ -137,6 +137,11 @@ export default defineConfig({
       presets: [cloudflare()],
     }),
   ],
+  ssr: {
+    resolve: {
+      externalConditions: ["workerd", "worker"],
+    },
+  },
 });
 ```
 
@@ -513,10 +518,10 @@ The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pag
 
 </docs-warning>
 
-👉 **In your Vite config, add `"workerd"` and `"worker"` to Vite's
-`ssr.resolve.externalConditions` option and add the Cloudflare Remix preset**
+👉 **In your Vite config, add the Cloudflare Remix preset, and add `"workerd"` and `"worker"` to Vite's
+`ssr.resolve.externalConditions` option.**
 
-```ts filename=vite.config.ts lines=[3,8-12,15]
+```ts filename=vite.config.ts lines=[3,10,13-17]
 import {
   unstable_vitePlugin as remix,
   unstable_cloudflarePreset as cloudflare,
@@ -524,16 +529,16 @@ import {
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  ssr: {
-    resolve: {
-      externalConditions: ["workerd", "worker"],
-    },
-  },
   plugins: [
     remix({
       presets: [cloudflare()],
     }),
   ],
+  ssr: {
+    resolve: {
+      externalConditions: ["workerd", "worker"],
+    },
+  },
 });
 ```
 
@@ -798,7 +803,7 @@ npm install -D remark-frontmatter remark-mdx-frontmatter
 
 👉 **Pass the Remark frontmatter plugins to the MDX Rollup plugin**
 
-```ts filename=vite.config.ts lines=[3-4,10-15]
+```ts filename=vite.config.ts lines=[3-4,9-14]
 import mdx from "@mdx-js/rollup";
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import remarkFrontmatter from "remark-frontmatter";
