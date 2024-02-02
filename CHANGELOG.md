@@ -144,7 +144,7 @@ Date: 2024-02-01
 
 #### Unstable Vite Plugin updates
 
-As we continue moving towards stabilizing the Vite plugin, we've introduced a few breaking changes tp the unstable Vite plugin in this release. Please read the `@remix-run/dev` changes below closely and update your app accordingly if you've opted into using the Vite plugin.
+As we continue moving towards stabilizing the Vite plugin, we've introduced a few breaking changes to the unstable Vite plugin in this release. Please read the `@remix-run/dev` changes below closely and update your app accordingly if you've opted into using the Vite plugin.
 
 We've also removed the `unstable_` prefix from the `serverBundles` option as we're now confident in the API ([#8596](https://github.com/remix-run/remix/pull/8596)).
 
