@@ -803,7 +803,7 @@ npm install -D remark-frontmatter remark-mdx-frontmatter
 
 👉 **Pass the Remark frontmatter plugins to the MDX Rollup plugin**
 
-```ts filename=vite.config.ts lines=[3-4,10-15]
+```ts filename=vite.config.ts lines=[3-4,9-14]
 import mdx from "@mdx-js/rollup";
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import remarkFrontmatter from "remark-frontmatter";
