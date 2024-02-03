@@ -936,7 +936,7 @@ In our case, we add a `"loading"` class to the main part of the app if we're not
 
 If we review code in the contact route, we can find the delete button looks like this:
 
-```tsx filename=src/routes/contact.$contactId.tsx lines=[2]
+```tsx filename=app/routes/contact.$contactId.tsx lines=[2]
 <Form
   action="destroy"
   method="post"
