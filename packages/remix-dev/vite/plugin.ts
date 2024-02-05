@@ -1152,7 +1152,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   nodeReq,
                   nodeRes
                 ) => {
-                  let req = fromNodeRequest(nodeReq, build.publicPath !== "/");
+                  let req = fromNodeRequest(nodeReq);
                   let res = await handler(req, remixDevLoadContext);
                   await toNodeRequest(res, nodeRes);
                 };
