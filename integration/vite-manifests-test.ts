@@ -54,7 +54,6 @@ test.describe(() => {
         import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
         export default {
-          ${await viteConfig.server({ port: await getPort() })}
           build: { manifest: true },
           plugins: [remix({ manifest: true })],
         }
