@@ -80,7 +80,7 @@ export async function loader({
 export default function Component() {
   const user = useLoaderData<typeof loader>();
   return (
-    <Form action="/account">
+    <Form method="post" action="/account">
       <h1>Settings for {user.displayName}</h1>
 
       <input
@@ -124,7 +124,7 @@ export async function loader({
 export default function Component() {
   const user = useLoaderData<typeof loader>();
   return (
-    <Form action="/account">
+    <Form method="post" action="/account">
       <h1>Settings for {user.displayName}</h1>
 
       <input
