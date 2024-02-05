@@ -14,7 +14,7 @@ import {
 } from "./helpers/vite.js";
 
 const VITE_CONFIG = async (port: number) => dedent`
-  ${viteConfig.imports}
+  import { unstable_vitePlugin as remix } from "@remix-run/dev";
   import fs from "node:fs/promises";
   import serializeJs from "serialize-javascript";
 

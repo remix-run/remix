@@ -224,7 +224,7 @@ test.describe("Vite / server-only escape hatch", async () => {
     port = await getPort();
     cwd = await createProject({
       "vite.config.ts": dedent`
-        ${viteConfig.imports}
+        import { unstable_vitePlugin as remix } from "@remix-run/dev";
         import envOnly from "vite-env-only";
         import tsconfigPaths from "vite-tsconfig-paths";
 

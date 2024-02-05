@@ -51,8 +51,10 @@ test.describe("Vite / cloudflare", async () => {
         2
       ),
       "vite.config.ts": dedent`
-        ${viteConfig.imports}
-        import { unstable_cloudflarePreset as cloudflare } from "@remix-run/dev";
+        import {
+          unstable_vitePlugin as remix,
+          unstable_cloudflarePreset as cloudflare,
+        } from "@remix-run/dev";
 
         export default {
           ${await viteConfig.server({ port })}

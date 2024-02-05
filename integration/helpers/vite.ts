@@ -15,9 +15,6 @@ const remixBin = "node_modules/@remix-run/dev/dist/cli.js";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
 export const viteConfig = {
-  imports: dedent`
-    import { unstable_vitePlugin as remix } from "@remix-run/dev";
-  `,
   server: async (args: { port: number }) => {
     let hmrPort = await getPort();
     let text = dedent`
@@ -27,7 +24,7 @@ export const viteConfig = {
   },
   basic: async (args: { port: number }) => {
     return dedent`
-      ${viteConfig.imports}
+      import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
       export default {
         ${await viteConfig.server(args)}

@@ -51,7 +51,7 @@ test.describe(() => {
   test.beforeAll(async () => {
     cwd = await createProject({
       "vite.config.ts": dedent`
-        ${viteConfig.imports}
+        import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
         export default {
           ${await viteConfig.server({ port: await getPort() })}
