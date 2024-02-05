@@ -62,7 +62,7 @@ test.describe(() => {
       ...files,
     });
 
-    await viteBuild({ cwd });
+    viteBuild({ cwd });
   });
 
   test("Vite / manifests enabled / Vite manifests", () => {
@@ -115,8 +115,7 @@ test.describe(() => {
       ...files,
     });
 
-    // TODO
-    await viteBuild({ cwd });
+    viteBuild({ cwd });
   });
 
   test("Vite / manifest disabled / Vite manifests", () => {

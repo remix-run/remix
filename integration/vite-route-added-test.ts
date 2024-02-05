@@ -36,8 +36,7 @@ test.describe(async () => {
     });
     stop = await viteDev({ cwd, port });
   });
-  // TODO
-  test.afterAll(async () => await stop());
+  test.afterAll(() => stop());
 
   test("Vite / dev / route added", async ({ page }) => {
     let pageErrors: Error[] = [];
