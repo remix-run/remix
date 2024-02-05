@@ -9,9 +9,46 @@ import waitOn from "wait-on";
 import getPort from "get-port";
 import shell from "shelljs";
 import glob from "glob";
+import dedent from "dedent";
 
 const remixBin = "node_modules/@remix-run/dev/dist/cli.js";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+
+const indent = (text: string, indentation: number): string => {
+  return text
+    .split("\n")
+    .map((line, i) => (i === 0 ? line : "  ".repeat(indentation) + line))
+    .join("\n");
+};
+
+export const viteConfig = {
+  imports: dedent`
+    import { unstable_vitePlugin as remix } from "@remix-run/dev";
+  `,
+  server: async (args: { port: number }) => {
+    let hmrPort = await getPort();
+    let text = dedent`
+      server: {
+        port: ${args.port},
+        strictPort: true,
+        hmr: {
+          port: ${hmrPort}
+        }
+      },
+    `;
+    return indent(text, 1);
+  },
+  basic: async (args: { port: number }) => {
+    return dedent`
+      ${viteConfig.imports}
+
+      export default {
+        ${await viteConfig.server(args)}
+        plugins: [remix()]
+      }
+    `;
+  },
+};
 
 export const VITE_CONFIG = async (args: {
   port: number;

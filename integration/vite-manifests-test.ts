@@ -3,7 +3,12 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 import getPort from "get-port";
 
-import { createProject, viteBuild, VITE_CONFIG } from "./helpers/vite.js";
+import {
+  createProject,
+  viteBuild,
+  VITE_CONFIG,
+  viteConfig,
+} from "./helpers/vite.js";
 
 function createRoute(path: string) {
   return {
@@ -106,10 +111,11 @@ test.describe(() => {
 
   test.beforeAll(async () => {
     cwd = await createProject({
-      "vite.config.ts": await VITE_CONFIG({ port: await getPort() }),
+      "vite.config.ts": await viteConfig.basic({ port: await getPort() }),
       ...files,
     });
 
+    // TODO
     await viteBuild({ cwd });
   });
 
