@@ -37,32 +37,6 @@ export const viteConfig = {
   },
 };
 
-export const VITE_CONFIG = async (args: {
-  port: number;
-  pluginOptions?: string;
-  viteManifest?: boolean;
-}) => {
-  let hmrPort = await getPort();
-  return String.raw`
-    import { defineConfig } from "vite";
-    import { unstable_vitePlugin as remix } from "@remix-run/dev";
-
-    export default defineConfig({
-      server: {
-        port: ${args.port},
-        strictPort: true,
-        hmr: {
-          port: ${hmrPort}
-        }
-      },
-      build: {
-        manifest: ${String(args.viteManifest ?? false)},
-      },
-      plugins: [remix(${args.pluginOptions})],
-    });
-  `;
-};
-
 export const EXPRESS_SERVER = (args: {
   port: number;
   loadContext?: Record<string, unknown>;

@@ -2,13 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { test, expect } from "@playwright/test";
 import getPort from "get-port";
+import dedent from "dedent";
 
-import {
-  createProject,
-  viteBuild,
-  VITE_CONFIG,
-  viteConfig,
-} from "./helpers/vite.js";
+import { createProject, viteBuild, viteConfig } from "./helpers/vite.js";
 
 function createRoute(path: string) {
   return {
@@ -54,11 +50,15 @@ test.describe(() => {
 
   test.beforeAll(async () => {
     cwd = await createProject({
-      "vite.config.ts": await VITE_CONFIG({
-        port: await getPort(),
-        pluginOptions: "{ manifest: true }",
-        viteManifest: true,
-      }),
+      "vite.config.ts": dedent`
+        ${viteConfig.imports}
+
+        export default {
+          ${await viteConfig.server({ port: await getPort() })}
+          build: { manifest: true },
+          plugins: [remix({ manifest: true })],
+        }
+      `,
       ...files,
     });
 
