@@ -32,26 +32,18 @@ function fromNodeHeaders(nodeHeaders: IncomingHttpHeaders): Headers {
 
 // Based on `createRemixRequest` in packages/remix-express/server.ts
 export function fromNodeRequest(
-  nodeReq: Vite.Connect.IncomingMessage,
-  useOriginalUrl: boolean
+  nodeReq: Vite.Connect.IncomingMessage
 ): Request {
   let origin =
     nodeReq.headers.origin && "null" !== nodeReq.headers.origin
       ? nodeReq.headers.origin
       : `http://${nodeReq.headers.host}`;
-  invariant(nodeReq.url, 'Expected "req.url" to be defined');
-
-  // Use `nodeReq.originalUrl` when a basename is present since it will have been
-  // stripped from `url`
-  // TODO (v3): It is probably safe to always use `originalUrl` but it could
-  // technically be considered a breaking change if folks were relying on the
-  // pre-remix-handler mutation of `req.url` so we can do that in v3
-  let path = useOriginalUrl ? nodeReq.originalUrl : nodeReq.url;
+  // Use `req.originalUrl` so Remix is aware of the full path
   invariant(
-    path,
-    "Expected `nodeReq.originalUrl`/`rnodeReqeq.url` to be defined"
+    nodeReq.originalUrl,
+    "Expected `nodeReq.originalUrl` to be defined"
   );
-  let url = new URL(path, origin);
+  let url = new URL(nodeReq.originalUrl, origin);
   let init: RequestInit = {
     method: nodeReq.method,
     headers: fromNodeHeaders(nodeReq.headers),

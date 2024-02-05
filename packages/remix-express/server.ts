@@ -86,8 +86,7 @@ export function createRemixHeaders(
 
 export function createRemixRequest(
   req: express.Request,
-  res: express.Response,
-  useOriginalUrl: boolean
+  res: express.Response
 ): Request {
   // req.hostname doesn't include port information so grab that from
   // `X-Forwarded-Host` or `Host`
@@ -96,13 +95,8 @@ export function createRemixRequest(
   let port = hostnamePort || hostPort;
   // Use req.hostname here as it respects the "trust proxy" setting
   let resolvedHost = `${req.hostname}${port ? `:${port}` : ""}`;
-  // Use `req.originalUrl` when a basename is present since it will have been
-  // stripped from `url`
-  // TODO (v3): It is probably safe to always use `originalUrl` but it could
-  // technically be considered a breaking change if folks were relying on the
-  // pre-remix-handler mutation of `req.url` so we can do that in v3
-  let path = useOriginalUrl ? req.originalUrl : req.url;
-  let url = new URL(`${req.protocol}://${resolvedHost}${path}`);
+  // Use `req.originalUrl` so Remix is aware of the full path
+  let url = new URL(`${req.protocol}://${resolvedHost}${req.originalUrl}`);
 
   // Abort action/loaders once we can no longer write a response
   let controller = new AbortController();
