@@ -64,7 +64,7 @@ app.all("*", remixHandler);
 
 const port = process.env.PORT || 3000;
 app.listen(port, async () => {
-  console.log(`Express server listening on port ${port}`);
+  console.log(`Express server listening at http://localhost:${port}`);
 
   if (process.env.NODE_ENV === "development") {
     broadcastDevReady(initialBuild);

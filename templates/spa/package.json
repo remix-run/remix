@@ -6,7 +6,7 @@
     "build": "remix vite:build",
     "dev": "remix vite:dev",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
-    "start": "http-server -p 3000 build/client/",
+    "start": "http-server build/client/",
     "typecheck": "tsc"
   },
   "dependencies": {

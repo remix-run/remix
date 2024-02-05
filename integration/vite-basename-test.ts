@@ -6,12 +6,13 @@ import {
   createEditor,
   createProject,
   customDev,
-  VITE_CONFIG,
   viteBuild,
+  viteConfig,
   viteDev,
   viteDevCmd,
   viteRemixServe,
 } from "./helpers/vite.js";
+import { js } from "./helpers/create-fixture.js";
 
 const files = {
   "app/routes/_index.tsx": String.raw`
@@ -53,6 +54,32 @@ const files = {
     }
   `,
 };
+
+async function viteConfigFile({
+  port,
+  base,
+  basename,
+}: {
+  port: number;
+  base?: string;
+  basename?: string;
+}) {
+  return js`
+    import { unstable_vitePlugin as remix } from "@remix-run/dev";
+
+    export default {
+      ${base !== "/" ? 'base: "' + base + '",' : ""}
+      ${await viteConfig.server({ port })}
+      plugins: [
+        ${
+          basename !== "/"
+            ? 'remix({ basename: "' + basename + '" }),'
+            : "remix(),"
+        }
+      ]
+    }
+  `;
+}
 
 const customServerFile = ({
   port,
@@ -119,11 +146,7 @@ test.describe("Vite base / Remix basename / Vite dev", () => {
   }) {
     port = await getPort();
     cwd = await createProject({
-      "vite.config.js": await VITE_CONFIG({
-        port,
-        viteOptions: `{ base: "${base}" }`,
-        pluginOptions: `{ basename: "${basename}" }`,
-      }),
+      "vite.config.js": await viteConfigFile({ port, base, basename }),
       ...files,
     });
     if (startServer !== false) {
@@ -173,11 +196,7 @@ test.describe("Vite base / Remix basename / express dev", async () => {
   }) {
     port = await getPort();
     cwd = await createProject({
-      "vite.config.js": await VITE_CONFIG({
-        port,
-        viteOptions: `{ base: "${base}" }`,
-        pluginOptions: `{ basename: "${basename}" }`,
-      }),
+      "vite.config.js": await viteConfigFile({ port, base, basename }),
       "server.mjs": customServerFile({ port, basename }),
       ...files,
     });
@@ -303,11 +322,7 @@ test.describe("Vite base / Remix basename / vite build", () => {
   }) {
     port = await getPort();
     cwd = await createProject({
-      "vite.config.js": await VITE_CONFIG({
-        port,
-        viteOptions: `{ base: "${base}" }`,
-        pluginOptions: `{ basename: "${basename}" }`,
-      }),
+      "vite.config.js": await viteConfigFile({ port, base, basename }),
       ...files,
     });
     viteBuild({ cwd });
@@ -353,11 +368,7 @@ test.describe("Vite base / Remix basename / express build", async () => {
   }) {
     port = await getPort();
     cwd = await createProject({
-      "vite.config.js": await VITE_CONFIG({
-        port,
-        viteOptions: `{ base: "${base}" }`,
-        pluginOptions: `{ basename: "${basename}" }`,
-      }),
+      "vite.config.js": await viteConfigFile({ port, base, basename }),
       "server.mjs": customServerFile({ port, base, basename }),
       ...files,
     });
@@ -395,10 +406,10 @@ test.describe("Vite base / Remix basename / express build", async () => {
   test("works when when base is an absolute external URL", async ({ page }) => {
     port = await getPort();
     cwd = await createProject({
-      "vite.config.js": await VITE_CONFIG({
+      "vite.config.js": await viteConfigFile({
         port,
-        viteOptions: '{ base: "https://cdn.example.com/assets/" }',
-        pluginOptions: '{ basename: "/app/" }',
+        base: "https://cdn.example.com/assets/",
+        basename: "/app/",
       }),
       // Slim server that only serves basename (route) requests from the remix handler
       "server.mjs": String.raw`

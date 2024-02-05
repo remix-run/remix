@@ -52,7 +52,6 @@ The following subset of Remix config options are supported:
 - [future][future]
 - [ignoredRouteFiles][ignored-route-files]
 - [routes][routes]
-- [serverBuildPath][server-build-path]
 - [serverModuleFormat][server-module-format]
 
 The Vite plugin also accepts the following additional options:
@@ -77,7 +76,7 @@ to `false`.
 
 #### presets
 
-An array of Remix config presets to ease integration with different platforms and tools.
+An array of [presets] to ease integration with other tools and hosting providers.
 
 #### serverBuildFile
 
@@ -130,7 +129,7 @@ To simulate the Cloudflare environment in Vite, Wrangler provides [Node proxies 
 ```ts filename=vite.config.ts lines=[3,10]
 import {
   unstable_vitePlugin as remix,
-  unstable_vitePluginPresetCloudflare as cloudflare,
+  unstable_cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -140,6 +139,11 @@ export default defineConfig({
       presets: [cloudflare()],
     }),
   ],
+  ssr: {
+    resolve: {
+      externalConditions: ["workerd", "worker"],
+    },
+  },
 });
 ```
 
@@ -150,6 +154,34 @@ The Cloudflare team is working to improve their Node proxies to support:
 - [Cache][cloudflare-proxy-caches] (`caches`)
 
 <docs-info>Vite will not use your Cloudflare Pages Functions (`functions/*`) in development as those are purely for Wrangler routing.</docs-info>
+
+#### Augmenting Cloudflare load context in development
+
+The Cloudflare preset accepts a `getRemixDevLoadContext` function that can be used to augment the load context in development:
+
+```ts filename=vite.config.ts lines=[6-8]
+export default defineConfig({
+  plugins: [
+    remix({
+      presets: [
+        cloudflare({
+          getRemixDevLoadContext: (context) => ({
+            ...context,
+            extra: "add on whatever else you want",
+          }),
+        }),
+      ],
+    }),
+  ],
+});
+```
+
+As the name implies, it **only augments the load context within Vite's dev server**, not within Wrangler nor in production.
+This limitation exists because Vite is not yet able to delegate server code execution to other non-Node runtimes like Cloudflare's `workerd` runtime.
+
+To get a consistent load context across Vite, Wrangler, and production you can define a module like `get-load-context.ts` that exports
+shared logic for augmenting the load context.
+Then you can apply the same logic within `getRemixDevLoadContext` and within `functions/[[page]].ts`.
 
 ## Splitting up client and server code
 
@@ -178,12 +210,14 @@ app
 
 `.server` modules must be within your Remix app directory.
 
-#### `vite-env-only`
+#### vite-env-only
 
-If you want to mix server-only code and client-safe code in the same module, you can use [`vite-env-only`][vite-env-only].
-That way you can explicitly mark any expression as server-only so that it gets replaced with `undefined` in the client.
+If you want to mix server-only code and client-safe code in the same module, you
+can use <nobr>[vite-env-only][vite-env-only]</nobr>.
+This Vite plugin allows you to explicitly mark any expression as server-only so that it gets
+replaced with `undefined` in the client.
 
-For example, you can wrap exports with `serverOnly$`:
+For example, once you've added the plugin to your Vite config, you can wrap any server-only exports with `serverOnly$`:
 
 ```tsx
 import { serverOnly$ } from "vite-env-only";
@@ -193,6 +227,21 @@ import { db } from "~/.server/db";
 export const getPosts = serverOnly$(async () => {
   return db.posts.findMany();
 });
+
+export const PostPreview = ({ title, description }) => {
+  return (
+    <article>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </article>
+  );
+};
+```
+
+This example would be compiled into the following code for the client:
+
+```tsx
+export const getPosts = undefined;
 
 export const PostPreview = ({ title, description }) => {
   return (
@@ -335,7 +384,9 @@ Since the module types provided by `vite/client` are not compatible with the mod
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
 It comes built-in with the Remix Vite plugin and will take over when you run `remix vite:dev`.
 
-Unlike `remix-serve`, the Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
+The Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on `remix-serve` to provide them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
+
+The Vite dev server's default port is different to `remix-serve` so you'll need to configure this via Vite's `server.port` option if you'd like to maintain the same port.
 
 You'll also need to update to the new build output paths, which are `build/server` for the server and `build/client` for client assets.
 
@@ -361,6 +412,17 @@ import { defineConfig } from "vite";
 +installGlobals();
 
 export default defineConfig({
+  plugins: [remix()],
+});
+```
+
+👉 **Configure your Vite dev server port (optional)**
+
+```js filename=vite.config.ts lines=[2-4]
+export default defineConfig({
+  server: {
+    port: 3000,
+  },
   plugins: [remix()],
 });
 ```
@@ -459,27 +521,27 @@ The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pag
 
 </docs-warning>
 
-👉 **In your Vite config, add `"workerd"` and `"worker"` to Vite's
-`ssr.resolve.externalConditions` option and add the Cloudflare Remix preset**
+👉 **In your Vite config, add the Cloudflare Remix preset, and add `"workerd"` and `"worker"` to Vite's
+`ssr.resolve.externalConditions` option.**
 
-```ts filename=vite.config.ts lines=[3,8-12,15]
+```ts filename=vite.config.ts lines=[3,10,13-17]
 import {
   unstable_vitePlugin as remix,
-  unstable_vitePluginPresetCloudflare as cloudflare,
+  unstable_cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  ssr: {
-    resolve: {
-      externalConditions: ["workerd", "worker"],
-    },
-  },
   plugins: [
     remix({
       presets: [cloudflare()],
     }),
   ],
+  ssr: {
+    resolve: {
+      externalConditions: ["workerd", "worker"],
+    },
+  },
 });
 ```
 
@@ -598,11 +660,34 @@ If a route's `links` function is only used to wire up `cssBundleHref`, you can r
 - ];
 ```
 
-#### Fix up CSS imports
+#### Add `?url` to regular CSS imports
 
-In Vite, CSS files are typically imported as side effects.
+<docs-warning>
 
-During development, [Vite injects imported CSS files into the page via JavaScript,][vite-css] and the Remix Vite plugin will inline imported CSS alongside your link tags to avoid a flash of unstyled content. In the production build, the Remix Vite plugin will automatically attach CSS files to the relevant routes.
+**This feature is not supported in Vite v5.0.x.**
+
+Vite v5.0.x and earlier has a [known issue with `.css?url` imports][vite-css-url-issue] that causes them to break in production builds. If you'd like to use this feature immediately, support for `.css?url` imports is currently available in the [Vite v5.1.0 beta][vite-5-1-0-beta].
+
+If you'd prefer to avoid running a beta version of Vite, you can either wait for Vite v5.1.0 or [convert your CSS imports to side-effects.][convert-your-css-imports-to-side-effects-2]
+
+</docs-warning>
+
+If you were using [Remix's regular CSS support][regular-css], you'll need to update your CSS import statements to use [Vite's explicit `?url` import syntax.][vite-url-imports]
+
+👉 **Add `?url` to regular CSS imports**
+
+```diff
+-import styles from "~/styles/dashboard.css";
++import styles from "~/styles/dashboard.css?url";
+```
+
+#### Optionally convert regular CSS imports to side-effect imports
+
+<docs-info>Any existing side-effect imports of CSS files in your Remix application will work in Vite without any code changes.</docs-info>
+
+Rather than [migrating regular CSS imports to use Vite's explicit `.css?url` import syntax][migrating-regular-css-imports-to-use-vite-s-explicit-css-url-import-syntax] — which requires either waiting for Vite v5.1.0 or running the [v5.1.0 beta][vite-5-1-0-beta] — you can instead convert them to side-effect imports. You may even find that this approach is more convenient for you.
+
+During development, [Vite injects CSS side-effect imports into the page via JavaScript,][vite-css] and the Remix Vite plugin will inline imported CSS alongside your link tags to avoid a flash of unstyled content. In the production build, the Remix Vite plugin will automatically attach CSS files to the relevant routes.
 
 This also means that in many cases you won't need the `links` function export anymore.
 
@@ -613,10 +698,10 @@ Since the order of your CSS is determined by its import order, you'll need to en
 ```diff filename=app/dashboard/route.tsx
 - import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-- import dashboardStyles from "./dashboard.css?url";
-- import sharedStyles from "./shared.css?url";
-+ // ⚠️ NOTE: The import order has been updated
-+ //   to match the original `links` function!
+- import dashboardStyles from "./dashboard.css";
+- import sharedStyles from "./shared.css";
++ // NOTE: The import order has been updated
++ // to match the original `links` function.
 + import "./shared.css";
 + import "./dashboard.css";
 
@@ -625,8 +710,6 @@ Since the order of your CSS is determined by its import order, you'll need to en
 -   { rel: "stylesheet", href: dashboardStyles },
 - ];
 ```
-
-<docs-warning>While [Vite supports importing static asset URLs via an explicit `?url` query string][vite-url-imports], which in theory would match the behavior of the existing Remix compiler when used for CSS files, there is a [known Vite issue with `?url` for CSS imports][vite-css-url-issue]. This may be fixed in the future, but in the meantime you should exclusively use side effect imports for CSS.</docs-warning>
 
 #### Optionally scope regular CSS
 
@@ -744,7 +827,7 @@ npm install -D remark-frontmatter remark-mdx-frontmatter
 
 👉 **Pass the Remark frontmatter plugins to the MDX Rollup plugin**
 
-```ts filename=vite.config.ts lines=[3-4,10-15]
+```ts filename=vite.config.ts lines=[3-4,9-14]
 import mdx from "@mdx-js/rollup";
 import { unstable_vitePlugin as remix } from "@remix-run/dev";
 import remarkFrontmatter from "remark-frontmatter";
@@ -955,6 +1038,8 @@ Vite supports both ESM and CJS dependencies, but sometimes you might still run i
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
 
+For a walkthrough of fixing an example bug, check out [🎥 How to Fix CJS/ESM Bugs in Remix][how-fix-cjs-esm].
+
 To diagnose if one of your dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
 
@@ -1017,16 +1102,41 @@ remix vite:dev --config vite.config.remix.ts
 
 #### Styles disappearing in development when document remounts
 
-To support lazy-loading and HMR of CSS files during development, Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect.
+When React is used to render the entire document (as Remix does) you can run into issues when elements are dynamically injected into the `head` element. If the document is re-mounted, the existing `head` element is removed and replaced with an entirely new one, removing any `style` elements that Vite injects during development.
 
-For example, if your app has the following CSS file:
+This is a known React issue that is fixed in their [canary release channel][react-canaries]. If you understand the risks involved, you can pin your app to a specific [React version][react-versions] and then use [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
+
+```json filename=package.json
+{
+  "dependencies": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  },
+  "overrides": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  }
+}
+```
+
+<docs-info>For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect, even though it's not something Remix provides as a default.</docs-info>
+
+It's worth stressing that this issue with styles that were injected by Vite only happens in development. **Production builds won't have this issue** since static CSS files are generated.
+
+In Remix, this issue can surface when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
+
+It can also happen due to hydration errors since it causes React to re-render the entire page from scratch. Hydration errors can be caused by your app code, but they can also be caused by browser extensions that manipulate the document.
+
+This is relevant for Vite because—during development—Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect. Vite does this to support lazy-loading and HMR of static CSS files.
+
+For example, let's assume your app has the following CSS file:
 
 <!-- prettier-ignore -->
 ```css filename=app/styles.css
 * { margin: 0 }
 ```
 
-During development (not in production!) this CSS file will be transformed into the following code when imported as a side effect:
+During development, this CSS file will be transformed into the following JavaScript code when imported as a side effect:
 
 <!-- prettier-ignore-start -->
 
@@ -1045,51 +1155,7 @@ import.meta.hot.prune(()=>__vite__removeStyle(__vite__id));
 
 <!-- prettier-ignore-end -->
 
-However, when React is used to render the entire document (as Remix does) you can run into issues when there are elements in the page that React isn't aware of, like the `style` element injected by the code above.
-
-**Again, it's worth stressing that this issue only happens in development. Production builds won't have this issue since actual CSS files are generated.**
-
-In terms of its impact on styling, when the document is remounted from the root, React removes the existing `head` element and replaces it with an entirely new one. This means that any additional `style` elements that Vite injected will be lost. In Remix, this can happen when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
-
-**This is a known React issue** that is fixed in their [canary release channel][react-canaries] and should be available in a future stable release. If you understand the risks involved, you can choose to adopt a canary version of React by pinning to the desired version and then using [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
-
-```json filename=package.json
-{
-  "dependencies": {
-    "react": "18.3.0-canary-...",
-    "react-dom": "18.3.0-canary-..."
-  },
-  "overrides": {
-    "react": "18.3.0-canary-...",
-    "react-dom": "18.3.0-canary-..."
-  }
-}
-```
-
-For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect even though it's not something Remix provides as a default.
-
-If you'd like a more stable workaround, you can instead avoid providing `ErrorBoundary` and `HydrateFallback` exports from your root route. This ensures that the `head` element is owned by a single React component that never remounts, so Vite's `style` elements are never removed.
-
-Instead, you can export your root route's `ErrorBoundary` and `HydrateFallback` components from a top-level layout route. For example, when using the default route convention, you could add a layout route called `routes/_boundary.tsx`:
-
-```tsx filename=app/routes/_boundary.tsx
-import { Outlet } from "@remix-run/react";
-
-export function ErrorBoundary() {
-  return <p>Oops, something went wrong!</p>;
-}
-
-export function HydrateFallback() {
-  return <p>Loading...</p>;
-}
-
-// Passthrough to matching child route:
-export default function BoundaryRoute() {
-  return <Outlet />;
-}
-```
-
-You would then nest all other routes within this, e.g. `app/routes/about.tsx` would become `app/routes/_boundary.about.tsx`, etc.
+This transformation is not applied to production code, which is why this styling issue only affects development.
 
 #### Wrangler errors in development
 
@@ -1196,6 +1262,7 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [error-boundary]: ../route/error-boundary
 [hydrate-fallback]: ../route/hydrate-fallback
 [react-canaries]: https://react.dev/blog/2023/05/03/react-canaries
+[react-versions]: https://www.npmjs.com/package/react?activeTab=versions
 [package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides
 [wrangler-toml-bindings]: https://developers.cloudflare.com/workers/wrangler/configuration/#bindings
 [cloudflare-pages]: https://pages.cloudflare.com
@@ -1213,3 +1280,8 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [cloudflare-proxy-caches]: https://github.com/cloudflare/workers-sdk/issues/4879
 [rr-basename]: https://reactrouter.com/routers/create-browser-router#basename
 [vite-base]: https://vitejs.dev/config/shared-options.html#base
+[how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
+[presets]: ./presets
+[vite-5-1-0-beta]: https://github.com/vitejs/vite/blob/main/packages/vite/CHANGELOG.md#510-beta0-2024-01-15
+[convert-your-css-imports-to-side-effects-2]: #optionally-convert-regular-css-imports-to-side-effect-imports
+[migrating-regular-css-imports-to-use-vite-s-explicit-css-url-import-syntax]: #add-url-to-regular-css-imports

@@ -79,7 +79,7 @@ export const configRouteToBranchRoute = (
   configRoute: ConfigRoute
 ): BranchRoute => pick(configRoute, branchRouteProperties);
 
-type ServerBundlesFunction = (args: {
+export type ServerBundlesFunction = (args: {
   branch: BranchRoute[];
 }) => string | Promise<string>;
 
@@ -113,13 +113,14 @@ type ExcludedRemixConfigPresetKey =
 
 type RemixConfigPreset = Omit<VitePluginConfig, ExcludedRemixConfigPresetKey>;
 
-export type VitePluginPreset = {
+export type Preset = {
   name: string;
   remixConfig?: () => RemixConfigPreset | Promise<RemixConfigPreset>;
   remixConfigResolved?: (args: {
     remixConfig: ResolvedVitePluginConfig;
   }) => void | Promise<void>;
 };
+
 export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
   /**
    * The react router app basename.  Defaults to `"/"`.
@@ -143,7 +144,7 @@ export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
    * An array of Remix config presets to ease integration with other platforms
    * and tools.
    */
-  presets?: Array<VitePluginPreset>;
+  presets?: Array<Preset>;
   /**
    * The file name of the server build output. This file
    * should end in a `.js` extension and should be deployed to your server.
@@ -928,6 +929,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           base: viteUserConfig.base,
           ...(viteCommand === "build" && {
             build: {
+              cssMinify: viteUserConfig.build?.cssMinify ?? true,
               ...(!viteConfigEnv.isSsrBuild
                 ? {
                     manifest: true,

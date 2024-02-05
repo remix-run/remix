@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
 import getPort from "get-port";
+import dedent from "dedent";
 
-import { VITE_CONFIG, createProject, using, viteDev } from "./helpers/vite.js";
+import { viteConfig, createProject, using, viteDev } from "./helpers/vite.js";
 
 test.describe("Vite / cloudflare", async () => {
   let port: number;
@@ -49,11 +50,30 @@ test.describe("Vite / cloudflare", async () => {
         null,
         2
       ),
-      "vite.config.ts": await VITE_CONFIG({
-        port,
-        viteSsrResolveExternalConditions: ["workerd", "worker"],
-        pluginOptions: `{ presets: [(await import("@remix-run/dev")).unstable_vitePluginPresetCloudflare()] }`,
-      }),
+      "vite.config.ts": dedent`
+        import {
+          unstable_vitePlugin as remix,
+          unstable_cloudflarePreset as cloudflare,
+        } from "@remix-run/dev";
+
+        export default {
+          ${await viteConfig.server({ port })}
+          ssr: {
+            resolve: {
+              externalConditions: ["workerd", "worker"],
+            },
+          },
+          plugins: [
+            remix({
+              presets: [
+                cloudflare({
+                  getRemixDevLoadContext: (ctx) => ({ ...ctx, extra: "stuff" })
+                })
+              ]
+            })
+          ],
+        }
+      `,
       "functions/[[page]].ts": `
         import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
 
@@ -83,7 +103,7 @@ test.describe("Vite / cloudflare", async () => {
         export async function loader({ context }: LoaderFunctionArgs) {
           const { MY_KV } = context.env;
           const value = await MY_KV.get(key);
-          return json({ value });
+          return json({ value, extra: context.extra });
         }
 
         export async function action({ request, context }: ActionFunctionArgs) {
@@ -105,10 +125,11 @@ test.describe("Vite / cloudflare", async () => {
         }
 
         export default function Index() {
-          const { value } = useLoaderData<typeof loader>();
+          const { value, extra } = useLoaderData<typeof loader>();
           return (
             <div>
               <h1>Welcome to Remix</h1>
+              <p data-extra>Extra: {extra}</p>
               {value ? (
                 <>
                   <p data-text>Value: {value}</p>
@@ -142,6 +163,7 @@ test.describe("Vite / cloudflare", async () => {
       await page.goto(`http://localhost:${port}/`, {
         waitUntil: "networkidle",
       });
+      await expect(page.locator("[data-extra]")).toHaveText("Extra: stuff");
       await expect(page.locator("[data-text]")).toHaveText("No value");
 
       await page.getByLabel("Set value:").fill("my-value");
