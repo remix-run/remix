@@ -657,11 +657,34 @@ If a route's `links` function is only used to wire up `cssBundleHref`, you can r
 - ];
 ```
 
-#### Fix up CSS imports
+#### Add `?url` to regular CSS imports
 
-In Vite, CSS files are typically imported as side effects.
+<docs-warning>
 
-During development, [Vite injects imported CSS files into the page via JavaScript,][vite-css] and the Remix Vite plugin will inline imported CSS alongside your link tags to avoid a flash of unstyled content. In the production build, the Remix Vite plugin will automatically attach CSS files to the relevant routes.
+**This feature is not supported in Vite v5.0.x.**
+
+Vite v5.0.x and earlier has a [known issue with `.css?url` imports][vite-css-url-issue] that causes them to break in production builds. If you'd like to use this feature immediately, support for `.css?url` imports is currently available in the [Vite v5.1.0 beta][vite-5-1-0-beta].
+
+If you'd prefer to avoid running a beta version of Vite, you can either wait for Vite v5.1.0 or [convert your CSS imports to side-effects.](#optionally-convert-regular-css-imports-to-side-effect-imports)
+
+</docs-warning>
+
+If you were using [Remix's regular CSS support][regular-css], you'll need to update your CSS import statements to use [Vite's explicit `?url` import syntax.][vite-url-imports]
+
+👉 **Add `?url` to regular CSS imports**
+
+```diff
+-import styles from "~/styles/dashboard.css";
++import styles from "~/styles/dashboard.css?url";
+```
+
+#### Optionally convert regular CSS imports to side-effect imports
+
+<docs-info>Any existing side-effect imports of CSS files in your Remix application will work in Vite without any code changes.</docs-info>
+
+Rather than [migrating regular CSS imports to use Vite's explicit `.css?url` import syntax](#add-url-to-regular-css-imports) — which requires either waiting for Vite v5.1.0 or running the [v5.1.0 beta][vite-5-1-0-beta] — you can instead convert them to side-effect imports. You may even find that this approach is more convenient for you.
+
+During development, [Vite injects CSS side-effect imports into the page via JavaScript,][vite-css] and the Remix Vite plugin will inline imported CSS alongside your link tags to avoid a flash of unstyled content. In the production build, the Remix Vite plugin will automatically attach CSS files to the relevant routes.
 
 This also means that in many cases you won't need the `links` function export anymore.
 
@@ -672,10 +695,10 @@ Since the order of your CSS is determined by its import order, you'll need to en
 ```diff filename=app/dashboard/route.tsx
 - import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-- import dashboardStyles from "./dashboard.css?url";
-- import sharedStyles from "./shared.css?url";
-+ // ⚠️ NOTE: The import order has been updated
-+ //   to match the original `links` function!
+- import dashboardStyles from "./dashboard.css";
+- import sharedStyles from "./shared.css";
++ // NOTE: The import order has been updated
++ // to match the original `links` function.
 + import "./shared.css";
 + import "./dashboard.css";
 
@@ -684,8 +707,6 @@ Since the order of your CSS is determined by its import order, you'll need to en
 -   { rel: "stylesheet", href: dashboardStyles },
 - ];
 ```
-
-<docs-warning>While [Vite supports importing static asset URLs via an explicit `?url` query string][vite-url-imports], which in theory would match the behavior of the existing Remix compiler when used for CSS files, there is a [known Vite issue with `?url` for CSS imports][vite-css-url-issue]. This may be fixed in the future, but in the meantime you should exclusively use side effect imports for CSS.</docs-warning>
 
 #### Optionally scope regular CSS
 
@@ -1256,3 +1277,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [cloudflare-proxy-caches]: https://github.com/cloudflare/workers-sdk/issues/4879
 [how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
 [presets]: ./presets
+[vite-5-1-0-beta]: https://github.com/vitejs/vite/blob/main/packages/vite/CHANGELOG.md#510-beta0-2024-01-15
