@@ -40,7 +40,6 @@ export const viteConfig = {
 export const VITE_CONFIG = async (args: {
   port: number;
   pluginOptions?: string;
-  vitePlugins?: string;
   viteManifest?: boolean;
 }) => {
   let hmrPort = await getPort();
@@ -59,7 +58,7 @@ export const VITE_CONFIG = async (args: {
       build: {
         manifest: ${String(args.viteManifest ?? false)},
       },
-      plugins: [remix(${args.pluginOptions}),${args.vitePlugins ?? ""}],
+      plugins: [remix(${args.pluginOptions})],
     });
   `;
 };
