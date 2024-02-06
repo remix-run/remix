@@ -28,6 +28,7 @@ import {
   createDeferredReadableStream,
   isRedirectResponse,
   isResponse,
+  json,
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
@@ -119,7 +120,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     if (url.searchParams.has("_data")) {
       let routeId = url.searchParams.get("_data")!;
 
-      response = await handleDataRequestRR(
+      response = await handleDataRequest(
         serverMode,
         _build,
         staticHandler,
@@ -136,12 +137,30 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           request,
         });
       }
+    } else if (url.pathname.endsWith(".data")) {
+      response = await handleSingleFetchRequest(
+        serverMode,
+        _build,
+        staticHandler,
+        url,
+        loadContext,
+        handleError
+      );
+
+      // TODO:
+      // if (_build.entry.module.handleDataRequest) {
+      //   response = await _build.entry.module.handleDataRequest(response, {
+      //     context: loadContext,
+      //     params: matches?.find((m) => m.route.id == routeId)?.params || {},
+      //     request,
+      //   });
+      // }
     } else if (
       matches &&
       matches[matches.length - 1].route.module.default == null &&
       matches[matches.length - 1].route.module.ErrorBoundary == null
     ) {
-      response = await handleResourceRequestRR(
+      response = await handleResourceRequest(
         serverMode,
         staticHandler,
         matches.slice(-1)[0].route.id,
@@ -155,7 +174,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           ? await getDevServerHooks()?.getCriticalCss?.(_build, url.pathname)
           : undefined;
 
-      response = await handleDocumentRequestRR(
+      response = await handleDocumentRequest(
         serverMode,
         _build,
         staticHandler,
@@ -178,7 +197,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   };
 };
 
-async function handleDataRequestRR(
+async function handleDataRequest(
   serverMode: ServerMode,
   build: ServerBuild,
   staticHandler: StaticHandler,
@@ -265,7 +284,62 @@ async function handleDataRequestRR(
   }
 }
 
-async function handleDocumentRequestRR(
+async function handleSingleFetchRequest(
+  serverMode: ServerMode,
+  build: ServerBuild,
+  staticHandler: StaticHandler,
+  url: URL,
+  loadContext: AppLoadContext,
+  handleError: (err: unknown) => void
+) {
+  let context;
+  try {
+    let handlerUrl = new URL(url);
+    handlerUrl.pathname = handlerUrl.pathname
+      .replace(/\.data$/, "")
+      .replace(/^\/_root$/, "/");
+    context = await staticHandler.query(new Request(handlerUrl), {
+      requestContext: loadContext,
+    });
+  } catch (error: unknown) {
+    handleError(error);
+    return new Response(null, { status: 500 });
+  }
+
+  if (isResponse(context)) {
+    return context;
+  }
+
+  // Sanitize errors outside of development environments
+  if (context.errors) {
+    Object.values(context.errors).forEach((err) => {
+      // @ts-expect-error This is "private" from users but intended for internal use
+      if (!isRouteErrorResponse(err) || err.error) {
+        handleError(err);
+      }
+    });
+    context.errors = sanitizeErrors(context.errors, serverMode);
+  }
+
+  // TODO: Handle deferred
+
+  let headers = getDocumentHeadersRR(build, context);
+
+  // Mark all successful responses with a header so we can identify in-flight
+  // network errors that are missing this header
+  headers.set("X-Remix-Response", "yes");
+
+  return json(
+    {
+      actionData: context.actionData,
+      loaderData: context.loaderData,
+      errors: context.errors,
+    },
+    { headers }
+  );
+}
+
+async function handleDocumentRequest(
   serverMode: ServerMode,
   build: ServerBuild,
   staticHandler: StaticHandler,
@@ -409,7 +483,7 @@ async function handleDocumentRequestRR(
   }
 }
 
-async function handleResourceRequestRR(
+async function handleResourceRequest(
   serverMode: ServerMode,
   staticHandler: StaticHandler,
   routeId: string,
