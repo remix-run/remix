@@ -6,16 +6,10 @@ import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { getBindingsProxy } from "wrangler";
 
-import { getLoadContext } from "./load-context";
-
 export default defineConfig({
   plugins: [
     remix({
-      presets: [
-        cloudflare(getBindingsProxy, {
-          getRemixDevLoadContext: getLoadContext,
-        }),
-      ],
+      presets: [cloudflare(getBindingsProxy)],
     }),
     tsconfigPaths(),
   ],
