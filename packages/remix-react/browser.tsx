@@ -1,17 +1,25 @@
 import type {
+  StaticHandlerContext,
   HydrationState,
   Router,
+  DataStrategyFunction,
 } from "@remix-run/router";
 import { createBrowserHistory, createRouter } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
+import type {
+  DataStrategyFunctionArgs,
+  DataStrategyMatch,
+} from "react-router-dom";
 import { matchRoutes, RouterProvider } from "react-router-dom";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
+import invariant from "./invariant";
+import { prefetchStyleLinks } from "./links";
 import type { RouteModules } from "./routeModules";
 import {
   createClientRoutes,
@@ -277,47 +285,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       },
       hydrationData,
       mapRouteProperties,
-      ...(window.__remixContext.future.unstable_singleFetch
-        ? {
-      async unstable_dataStrategy({ request, matches }) {
-        let routeDeferreds = new Map<
-          string,
-          ReturnType<typeof createDeferred>
-        >();
-
-        let routePromises = matches.map((m) =>
-          m.bikeshed_loadRoute(async () => {
-            let dfd = createDeferred();
-            routeDeferreds.set(m.route.id, dfd);
-            return dfd.promise;
-          })
-        );
-
-        // TODO: action requests
-        // TODO: granular revalidation
-
-        let url = new URL(request.url);
-              url.pathname = `${
-                url.pathname === "/" ? "_root" : url.pathname
-              }.data`;
-        let data = await fetch(url).then((r) => r.json());
-
-        routeDeferreds.forEach((dfd, routeId) => {
-          if (data.loaderData[routeId] !== undefined) {
-            dfd.resolve(data.loaderData[routeId]);
-          } else if (data.errors && data.errors[routeId] !== undefined) {
-            dfd.reject(data.errors[routeId]);
-          } else {
-                  dfd.reject(
-                    new Error(`No response found for routeId "${routeId}"`)
-                  );
-          }
-        });
-
-        return Promise.all(routePromises);
-      },
-          }
-        : {}),
+      unstable_dataStrategy: window.__remixContext.future.unstable_singleFetch
+        ? singleFetchDataStrategy
+        : undefined,
     });
 
     // We can call initialize() immediately if the router doesn't have any
@@ -400,18 +370,86 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   );
 }
 
-export function createDeferred<T = unknown>() {
-  let resolve: (val?: any) => Promise<void>;
-  let reject: (error?: Error) => Promise<void>;
-  let promise = new Promise<T>((res, rej) => {
-    resolve = async (val: T) => res(val);
-    reject = async (error?: Error) => rej(error);
-  });
-  return {
-    promise,
-    //@ts-ignore
-    resolve,
-    //@ts-ignore
-    reject,
-  };
+async function singleFetchDataStrategy({
+  request,
+  matches,
+}: DataStrategyFunctionArgs) {
+  // let routeDeferreds = new Map<string, ReturnType<typeof createDeferred>>();
+
+  // Prefetch styles for matched routes that exist in the routeModulesCache
+  // (critical modules and navigating back to pages previously loaded via
+  // route.lazy).  Initial execution of route.lazy (when the module is not in
+  // the cache) will handle prefetching style links via loadRouteModuleWithBlockingLinks.
+  let stylesPromise = Promise.all(
+    matches.map((m) => {
+      let route = window.__remixManifest.routes[m.route.id];
+      let cachedModule = window.__remixRouteModules[m.route.id];
+      return cachedModule
+        ? prefetchStyleLinks(route, cachedModule)
+        : Promise.resolve();
+    })
+  );
+
+  // TODO: Critical route modules for single fetch
+  // TODO: action requests
+  // TODO: granular revalidation
+  // TODO: Fix issue with auto-revalidating routes on HMR
+  //  - load /
+  //  - navigate to /parent/child
+  //  - trigger HMR
+  //  - back button to /
+  //  - throws a "you returned undefined from a loader" error
+
+  // Create a singular promise for all routes to latch onto for single fetch.
+  // This way we can kick off `clientLoaders` and ensure:
+  // 1. we only call the server if at least one of them calls `serverLoader`
+  // 2. if multiple call` serverLoader` only one fetch call is made
+  let singleFetchPromise: Promise<
+    Pick<StaticHandlerContext, "actionData" | "loaderData" | "errors">
+  >;
+  async function singleFetch(routeId: string) {
+    if (!singleFetchPromise) {
+      let url = new URL(request.url);
+      url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
+      singleFetchPromise = fetch(url).then((r) => r.json());
+    }
+    let data = await singleFetchPromise;
+    if (data.loaderData[routeId] !== undefined) {
+      return data.loaderData[routeId];
+    } else if (data.errors && data.errors[routeId] !== undefined) {
+      throw data.errors[routeId];
+    } else {
+      throw new Error(`No response found for routeId "${routeId}"`);
+    }
+  }
+
+  let routePromise = Promise.all(
+    matches.map((m) =>
+      m.bikeshed_loadRoute((handler) => {
+        let route = window.__remixManifest.routes[m.route.id];
+        let routeModule = window.__remixRouteModules[m.route.id];
+        invariant(
+          routeModule,
+          "Expected a defined routeModule after bikeshed_loadRoute"
+        );
+        if (routeModule.clientLoader) {
+          return routeModule.clientLoader({
+            request,
+            params: m.params,
+            serverLoader: () => singleFetch(m.route.id),
+          });
+        } else if (route.hasLoader) {
+          return singleFetch(m.route.id);
+        } else {
+          // If we make it into the `bikeshed_loadRoute` callback we ought to
+          // have a handler to call so this shouldn't happen but I think some
+          // HMR/HDR scenarios might hit this flow?
+          return Promise.resolve(undefined);
+        }
+      })
+    )
+  );
+
+  let [routeData] = await Promise.all([routePromise, stylesPromise]);
+  return routeData;
 }

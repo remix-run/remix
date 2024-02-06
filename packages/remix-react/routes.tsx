@@ -349,6 +349,31 @@ export function createClientRoutes(
           });
         });
       };
+    } else if (future.unstable_singleFetch) {
+      dataRoute.lazy = async () => {
+        let mod = await loadRouteModuleWithBlockingLinks(
+          route,
+          routeModulesCache
+        );
+
+        return {
+          // We just need booleans here when single fetch is enabled to get them
+          // into `matchesToLoad` - we'll handle the rest of it in `dataStrategy`
+          loader: route.hasLoader || route.hasClientLoader,
+          action: route.hasAction || route.hasClientAction,
+          hasErrorBoundary: mod.ErrorBoundary !== undefined,
+          shouldRevalidate: needsRevalidation
+            ? wrapShouldRevalidateForHdr(
+                route.id,
+                mod.shouldRevalidate,
+                needsRevalidation
+              )
+            : mod.shouldRevalidate,
+          handle: mod.handle,
+          Component: mod.Component,
+          ErrorBoundary: mod.ErrorBoundary,
+        };
+      };
     } else {
       // If the lazy route does not have a client loader/action we want to call
       // the server loader/action in parallel with the module load so we add
