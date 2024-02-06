@@ -20,7 +20,7 @@ export function isNetworkErrorResponse(response: any): response is Response {
   // If we reach the Remix server, we can safely identify response types via the
   // X-Remix-Error/X-Remix-Catch headers.  However, if we never reach the Remix
   // server, and instead receive a 4xx/5xx from somewhere in between (like
-  // Cloudflare), then we get a false negative n the isErrorResponse check and
+  // Cloudflare), then we get a false negative in the isErrorResponse check and
   // we incorrectly assume that the user returns the 4xx/5xx response and
   // consider it successful.  To alleviate this, we add X-Remix-Response to any
   // non-Error/non-Catch responses coming back from the server.  If we don't

@@ -1,6 +1,7 @@
 import {
   createBrowserHistory,
   createRouter,
+  ResultType,
   type HydrationState,
   type Router,
 } from "@remix-run/router";
@@ -278,6 +279,39 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       },
       hydrationData,
       mapRouteProperties,
+      async unstable_dataStrategy({ request, matches }) {
+        let routeDeferreds = new Map<
+          string,
+          ReturnType<typeof createDeferred>
+        >();
+
+        let routePromises = matches.map((m) =>
+          m.bikeshed_loadRoute(async () => {
+            let dfd = createDeferred();
+            routeDeferreds.set(m.route.id, dfd);
+            return dfd.promise;
+          })
+        );
+
+        // TODO: action requests
+        // TODO: granular revalidation
+
+        let url = new URL(request.url);
+        url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
+        let data = await fetch(url).then((r) => r.json());
+
+        routeDeferreds.forEach((dfd, routeId) => {
+          if (data.loaderData[routeId] !== undefined) {
+            dfd.resolve(data.loaderData[routeId]);
+          } else if (data.errors && data.errors[routeId] !== undefined) {
+            dfd.reject(data.errors[routeId]);
+          } else {
+            dfd.reject(new Error(`No response found for routeId "${routeId}"`));
+          }
+        });
+
+        return Promise.all(routePromises);
+      },
     });
 
     // We can call initialize() immediately if the router doesn't have any
@@ -358,4 +392,20 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       </RemixErrorBoundary>
     </RemixContext.Provider>
   );
+}
+
+export function createDeferred<T = unknown>() {
+  let resolve: (val?: any) => Promise<void>;
+  let reject: (error?: Error) => Promise<void>;
+  let promise = new Promise<T>((res, rej) => {
+    resolve = async (val: T) => res(val);
+    reject = async (error?: Error) => rej(error);
+  });
+  return {
+    promise,
+    //@ts-ignore
+    resolve,
+    //@ts-ignore
+    reject,
+  };
 }
