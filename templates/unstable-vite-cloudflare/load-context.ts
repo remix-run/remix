@@ -11,8 +11,7 @@ type Bindings = {
 declare module "@remix-run/cloudflare" {
   interface AppLoadContext {
     env: Bindings;
-
-    extra: string; // Example of augmenting load context
+    // extra: string; // Example of augmenting load context
   }
 }
 
@@ -29,6 +28,6 @@ export const getLoadContext = async (
 ): Promise<AppLoadContext> => {
   return {
     ...context,
-    extra: "stuff", // Example of augmenting load context
+    // extra: "stuff", // Example of augmenting load context
   };
 };
