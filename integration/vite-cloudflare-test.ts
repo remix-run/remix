@@ -71,10 +71,14 @@ const files: Files = async ({ port }) => ({
     }
   `,
   "get-load-context.ts": `
+    import { type KVNamespace } from "@cloudflare/workers-types";
     import { type AppLoadContext } from "@remix-run/cloudflare";
 
     declare module "@remix-run/cloudflare" {
       export interface AppLoadContext {
+        env: {
+          MY_KV: KVNamespace;
+        };
         extra: string;
       }
     }

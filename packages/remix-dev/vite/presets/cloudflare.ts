@@ -1,10 +1,12 @@
+import { type AppLoadContext } from "@remix-run/server-runtime";
+
 import { type Preset, setRemixDevLoadContext } from "../plugin";
 
 type MaybePromise<T> = T | Promise<T>;
 
 type GetRemixDevLoadContext = (args: {
   request: Request;
-  env: Record<string, unknown>;
+  env: AppLoadContext["env"];
 }) => MaybePromise<Record<string, unknown>>;
 
 type GetLoadContext = (
