@@ -49,6 +49,7 @@ const files: Files = async ({ port }) => ({
       unstable_vitePlugin as remix,
       unstable_cloudflarePreset as cloudflare,
     } from "@remix-run/dev";
+    import { getBindingsProxy } from "wrangler";
 
     export default {
       ${await viteConfig.server({ port })}
@@ -60,8 +61,8 @@ const files: Files = async ({ port }) => ({
       plugins: [
         remix({
           presets: [
-            cloudflare({
-              getRemixDevLoadContext: (ctx) => ({ ...ctx, extra: "stuff" })
+            cloudflare(getBindingsProxy, {
+              getRemixDevLoadContext: (ctx) => ({ env2: ctx.env, extra: "stuff" })
             })
           ]
         })
@@ -101,7 +102,7 @@ const files: Files = async ({ port }) => ({
     }
 
     export async function action({ request, context }: ActionFunctionArgs) {
-      const { MY_KV: myKv } = context.env;
+      const { MY_KV: myKv } = context.env2;
 
       if (request.method === "POST") {
         const formData = await request.formData();
