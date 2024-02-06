@@ -167,7 +167,7 @@ test.describe(async () => {
       "serverBuildFile",
       "serverBundles",
       "serverModuleFormat",
-      "unstable_ssr",
+      "ssr",
     ]);
 
     // Ensure we get a valid build manifest

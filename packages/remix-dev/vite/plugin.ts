@@ -163,7 +163,7 @@ export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
    * an `index.html` file with your assets so your application can be deployed
    * as a SPA without server-rendering. Default's to `true`.
    */
-  unstable_ssr?: boolean;
+  ssr?: boolean;
 };
 
 type BuildEndHook = (args: {
@@ -183,7 +183,7 @@ export type ResolvedVitePluginConfig = Readonly<
     publicPath: string; // derived from Vite's `base` config
     serverBuildFile: string;
     serverBundles?: ServerBundlesFunction;
-    unstable_ssr: boolean;
+    ssr: boolean;
   }
 >;
 
@@ -559,7 +559,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       buildDirectory: "build",
       manifest: false,
       serverBuildFile: "index.js",
-      unstable_ssr: true,
+      ssr: true,
     } as const satisfies Partial<VitePluginConfig>;
 
     let resolvedRemixUserConfig = {
@@ -570,9 +570,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let rootDirectory =
       viteUserConfig.root ?? process.env.REMIX_ROOT ?? process.cwd();
 
-    let { basename, buildEnd, manifest, unstable_ssr } =
-      resolvedRemixUserConfig;
-    let isSpaMode = !unstable_ssr;
+    let { basename, buildEnd, manifest, ssr } = resolvedRemixUserConfig;
+    let isSpaMode = !ssr;
 
     // Only select the Remix esbuild config options that the Vite plugin uses
     let {
@@ -615,7 +614,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         colors.yellow(
           colors.bold("⚠️  SPA Mode: ") +
             "the `serverBundles` config is invalid with " +
-            "`unstable_ssr:false` and will be ignored`"
+            "`ssr:false` and will be ignored`"
         )
       );
       serverBundles = undefined;
@@ -642,7 +641,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       serverBuildFile,
       serverBundles,
       serverModuleFormat,
-      unstable_ssr,
+      ssr,
     });
 
     for (let preset of remixUserConfig.presets ?? []) {
@@ -713,7 +712,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       )};
       export const basename = ${JSON.stringify(ctx.remixConfig.basename)};
       export const future = ${JSON.stringify(ctx.remixConfig.future)};
-      export const isSpaMode = ${!ctx.remixConfig.unstable_ssr};
+      export const isSpaMode = ${!ctx.remixConfig.ssr};
       export const publicPath = ${JSON.stringify(ctx.remixConfig.publicPath)};
       export const entry = { module: entryServer };
       export const routes = {
@@ -1258,7 +1257,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             );
           }
 
-          if (!ctx.remixConfig.unstable_ssr) {
+          if (!ctx.remixConfig.ssr) {
             await handleSpaMode(
               serverBuildDirectory,
               ctx.remixConfig.serverBuildFile,
@@ -1397,7 +1396,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         let route = getRoute(ctx.remixConfig, id);
         if (!route) return;
 
-        if (!ctx.remixConfig.unstable_ssr) {
+        if (!ctx.remixConfig.ssr) {
           let serverOnlyExports = esModuleLexer(code)[1]
             .map((exp) => exp.n)
             .filter((exp) => SERVER_ONLY_ROUTE_EXPORTS.includes(exp));

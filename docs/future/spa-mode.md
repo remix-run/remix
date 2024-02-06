@@ -37,7 +37,7 @@ You can get started quickly using the SPA Mode template in the repo:
 npx create-remix@latest --template remix-run/remix/templates/spa
 ```
 
-Or, you can manually opt-into SPA mode in your Remix+Vite app by setting `unstable_ssr: false` in your Remix Vite plugin config:
+Or, you can manually opt-into SPA mode in your Remix+Vite app by setting `ssr: false` in your Remix Vite plugin config:
 
 ```js
 // vite.config.ts
@@ -47,7 +47,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [
     remix({
-      unstable_ssr: false,
+      ssr: false,
     }),
   ],
 });

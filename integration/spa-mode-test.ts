@@ -25,7 +25,7 @@ test.describe("SPA Mode", () => {
           import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix({ unstable_ssr: false })],
+            plugins: [remix({ ssr: false })],
           });
         `,
           "app/routes/invalid-exports.tsx": String.raw`
@@ -56,7 +56,7 @@ test.describe("SPA Mode", () => {
           import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix({ unstable_ssr: false })],
+            plugins: [remix({ ssr: false })],
           });
         `,
           "app/routes/invalid-exports.tsx": String.raw`
@@ -85,7 +85,7 @@ test.describe("SPA Mode", () => {
           import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix({ unstable_ssr: false })],
+            plugins: [remix({ ssr: false })],
           });
         `,
           "app/entry.server.tsx": js`
@@ -157,7 +157,7 @@ test.describe("SPA Mode", () => {
           import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix({ unstable_ssr: false })],
+            plugins: [remix({ ssr: false })],
           });
         `,
           "app/root.tsx": String.raw`
@@ -186,7 +186,7 @@ test.describe("SPA Mode", () => {
             import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
             export default defineConfig({
-              plugins: [remix({ unstable_ssr: false })],
+              plugins: [remix({ ssr: false })],
             });
           `,
           "app/root.tsx": js`
@@ -232,7 +232,7 @@ test.describe("SPA Mode", () => {
             import { unstable_vitePlugin as remix } from "@remix-run/dev";
 
             export default defineConfig({
-              plugins: [remix({ unstable_ssr: false })],
+              plugins: [remix({ ssr: false })],
             });
           `,
           "app/root.tsx": js`
@@ -277,7 +277,7 @@ test.describe("SPA Mode", () => {
 
             export default defineConfig({
               build: { manifest: true },
-              plugins: [remix({ unstable_ssr: false })],
+              plugins: [remix({ ssr: false })],
             });
           `,
           "public/styles-root.css": css`
