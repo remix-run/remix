@@ -189,6 +189,10 @@ type Fixtures = {
     port: number;
     cwd: string;
   }>;
+  customDev: (files: Files) => Promise<{
+    port: number;
+    cwd: string;
+  }>;
   viteRemixServe: (files: Files) => Promise<{
     port: number;
     cwd: string;
@@ -208,6 +212,17 @@ export const test = base.extend<Fixtures>({
       let port = await getPort();
       let cwd = await createProject(await files({ port }));
       stop = await viteDev({ cwd, port });
+      return { port, cwd };
+    });
+    stop?.();
+  },
+  // eslint-disable-next-line no-empty-pattern
+  customDev: async ({}, use) => {
+    let stop: (() => unknown) | undefined;
+    await use(async (files) => {
+      let port = await getPort();
+      let cwd = await createProject(await files({ port }));
+      stop = await customDev({ cwd, port });
       return { port, cwd };
     });
     stop?.();
