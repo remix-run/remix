@@ -1,10 +1,8 @@
-import {
-  createBrowserHistory,
-  createRouter,
-  ResultType,
-  type HydrationState,
-  type Router,
+import type {
+  HydrationState,
+  Router,
 } from "@remix-run/router";
+import { createBrowserHistory, createRouter } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
@@ -279,6 +277,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       },
       hydrationData,
       mapRouteProperties,
+      ...(window.__remixContext.future.unstable_singleFetch
+        ? {
       async unstable_dataStrategy({ request, matches }) {
         let routeDeferreds = new Map<
           string,
@@ -297,7 +297,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         // TODO: granular revalidation
 
         let url = new URL(request.url);
-        url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
+              url.pathname = `${
+                url.pathname === "/" ? "_root" : url.pathname
+              }.data`;
         let data = await fetch(url).then((r) => r.json());
 
         routeDeferreds.forEach((dfd, routeId) => {
@@ -306,12 +308,16 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
           } else if (data.errors && data.errors[routeId] !== undefined) {
             dfd.reject(data.errors[routeId]);
           } else {
-            dfd.reject(new Error(`No response found for routeId "${routeId}"`));
+                  dfd.reject(
+                    new Error(`No response found for routeId "${routeId}"`)
+                  );
           }
         });
 
         return Promise.all(routePromises);
       },
+          }
+        : {}),
     });
 
     // We can call initialize() immediately if the router doesn't have any

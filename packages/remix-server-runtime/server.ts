@@ -18,7 +18,7 @@ import type { HandleErrorFunction, ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryRouteModules } from "./entry";
 import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
-import { getDocumentHeadersRR } from "./headers";
+import { getDocumentHeadersRR as getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import { matchServerRoutes } from "./routeMatching";
@@ -28,7 +28,6 @@ import {
   createDeferredReadableStream,
   isRedirectResponse,
   isResponse,
-  json,
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
@@ -137,7 +136,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           request,
         });
       }
-    } else if (url.pathname.endsWith(".data")) {
+    } else if (
+      _build.future.unstable_singleFetch &&
+      url.pathname.endsWith(".data")
+    ) {
       response = await handleSingleFetchRequest(
         serverMode,
         _build,
@@ -291,7 +293,7 @@ async function handleSingleFetchRequest(
   url: URL,
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void
-) {
+): Promise<Response> {
   let context;
   try {
     let handlerUrl = new URL(url);
@@ -323,18 +325,19 @@ async function handleSingleFetchRequest(
 
   // TODO: Handle deferred
 
-  let headers = getDocumentHeadersRR(build, context);
+  let headers = getDocumentHeaders(build, context);
+  headers.set("Content-Type", "application/json");
 
   // Mark all successful responses with a header so we can identify in-flight
   // network errors that are missing this header
   headers.set("X-Remix-Response", "yes");
 
-  return json(
-    {
+  return new Response(
+    JSON.stringify({
       actionData: context.actionData,
       loaderData: context.loaderData,
       errors: context.errors,
-    },
+    }),
     { headers }
   );
 }
@@ -373,7 +376,7 @@ async function handleDocumentRequest(
     context.errors = sanitizeErrors(context.errors, serverMode);
   }
 
-  let headers = getDocumentHeadersRR(build, context);
+  let headers = getDocumentHeaders(build, context);
 
   let entryContext: EntryContext = {
     manifest: build.assets,

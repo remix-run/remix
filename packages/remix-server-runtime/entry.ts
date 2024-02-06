@@ -19,6 +19,7 @@ export interface FutureConfig {
   v3_fetcherPersist: boolean;
   v3_relativeSplatPath: boolean;
   v3_throwAbortReason: boolean;
+  unstable_singleFetch: boolean;
 }
 
 export interface AssetsManifest {
