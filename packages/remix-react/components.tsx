@@ -337,8 +337,8 @@ export function PrefetchPageLinks({
 }: PrefetchPageDescriptor) {
   let { router } = useDataRouterContext();
   let matches = React.useMemo(
-    () => matchRoutes(router.routes, page),
-    [router.routes, page]
+    () => matchRoutes(router.routes, page, router.basename),
+    [router.routes, page, router.basename]
   );
 
   if (!matches) {
@@ -852,7 +852,11 @@ import(${JSON.stringify(manifest.entry.module)});`;
   let nextMatches = React.useMemo(() => {
     if (navigation.location) {
       // FIXME: can probably use transitionManager `nextMatches`
-      let matches = matchRoutes(router.routes, navigation.location);
+      let matches = matchRoutes(
+        router.routes,
+        navigation.location,
+        router.basename
+      );
       invariant(
         matches,
         `No routes match path "${navigation.location.pathname}"`
@@ -861,7 +865,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     }
 
     return [];
-  }, [navigation.location, router.routes]);
+  }, [navigation.location, router.routes, router.basename]);
 
   let routePreloads = matches
     .concat(nextMatches)

@@ -24,6 +24,7 @@ import {
 declare global {
   var __remixContext: {
     url: string;
+    basename?: string;
     state: HydrationState;
     criticalCss?: string;
     future: FutureConfig;
@@ -267,6 +268,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     router = createRouter({
       routes,
       history: createBrowserHistory(),
+      basename: window.__remixContext.basename,
       future: {
         v7_normalizeFormMethod: true,
         v7_fetcherPersist: window.__remixContext.future.v3_fetcherPersist,
