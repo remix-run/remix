@@ -38,10 +38,6 @@ export const preset = (
           env: bindings,
           request,
         });
-        loadContext.env = {
-          ...bindings,
-          ...(loadContext.env ?? {}),
-        };
         return loadContext;
       };
     }
