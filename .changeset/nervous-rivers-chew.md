@@ -46,5 +46,5 @@ cloudflare(getBindingsProxy, {
 })
 ```
 
-It is also now recommended that you use `load-context.ts` file to define a shared `getLoadContext` function that you can use for both `getRemixDevLoadContext` in `vite.config.ts` as well as within `functions/[[path]].ts`.
+When using `getRemixDevLoadContext`, it's recommended that you create a `load-context.ts` file to define a shared `getLoadContext` function that you can use for both `getRemixDevLoadContext` in `vite.config.ts` as well as within `functions/[[path]].ts`.
 For more, see the _Future > Vite > Cloudflare_ docs.
