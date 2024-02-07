@@ -199,8 +199,8 @@ The Cloudflare preset accepts a `getRemixDevLoadContext` function whose return v
 
 ```ts filename=vite.config.ts lines=[9,16]
 import {
-  unstable_vitePlugin as remix,
-  unstable_cloudflarePreset as cloudflare,
+  vitePlugin as remix,
+  cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
