@@ -625,6 +625,12 @@ export type ScriptProps = Omit<
  */
 export function Scripts(props: ScriptProps) {
   let { devOnly, ...scriptProps } = props;
+  // @ts-expect-error
+  let isViteClient = import.meta && import.meta.env !== undefined;
+  if (devOnly && !isViteClient) {
+    console.warn("`<Scripts />` only supports `devOnly` when using Vite.");
+    devOnly = false;
+  }
 
   let { manifest, serverHandoffString, abortDelay, serializeError, isSpaMode } =
     useRemixContext();
