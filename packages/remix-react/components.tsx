@@ -688,7 +688,7 @@ export function Scripts(props: ScriptProps) {
 
   let deferredScripts: any[] = [];
   let initialScripts = React.useMemo(() => {
-    let contextScript = staticContext
+    let remixContext = staticContext
       ? `window.__remixContext = ${serverHandoffString};`
       : " ";
 
@@ -705,7 +705,7 @@ export function Scripts(props: ScriptProps) {
     //   to resolve or reject the promise created by __remixContext.n.
     // - __remixContext.a is the active number of deferred scripts that should be rendered to match
     //   the SSR tree for hydration on the client.
-    contextScript += !activeDeferreds
+    remixContext += !activeDeferreds
       ? ""
       : [
           "__remixContext.p = function(v,e,p,x) {",
@@ -789,45 +789,38 @@ export function Scripts(props: ScriptProps) {
           ? `__remixContext.a=${deferredScripts.length};`
           : "");
 
-    let routeModulesScript = !isStatic
-      ? " "
-      : `${
-          manifest.hmr?.runtime
-            ? `import ${JSON.stringify(manifest.hmr.runtime)};`
-            : ""
-        }import ${JSON.stringify(manifest.url)};
-${matches
-  .map(
-    (match, index) =>
-      `import * as route${index} from ${JSON.stringify(
-        manifest.routes[match.route.id].module
-      )};`
-  )
-  .join("\n")}
-window.__remixRouteModules = {${matches
+    let script = [
+      remixContext,
+      manifest.hmr?.runtime
+        ? `import ${JSON.stringify(manifest.hmr.runtime)};`
+        : "",
+      `import ${JSON.stringify(manifest.url)};`,
+      matches
+        .map(
+          (match, index) =>
+            `import * as route${index} from ${JSON.stringify(
+              manifest.routes[match.route.id].module
+            )};`
+        )
+        .join("\n"),
+      "window.__remixRouteModules = {" +
+        matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
           )
-          .join(",")}};
-
-import(${JSON.stringify(manifest.entry.module)});`;
+          .join(",") +
+        "};",
+      `import(${JSON.stringify(manifest.entry.module)});`,
+    ].join("\n");
 
     return (
-      <>
-        <script
-          {...props}
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={createHtml(contextScript)}
-          type={undefined}
-        />
-        <script
-          {...props}
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={createHtml(routeModulesScript)}
-          type="module"
-          async
-        />
-      </>
+      <script
+        {...props}
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={createHtml(isStatic ? script : "")}
+        type="module"
+        async
+      />
     );
     // disabled deps array because we are purposefully only rendering this once
     // for hydration, after that we want to just continue rendering the initial
