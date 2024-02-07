@@ -609,7 +609,9 @@ export type ScriptProps = Omit<
   | "noModule"
   | "dangerouslySetInnerHTML"
   | "suppressHydrationWarning"
->;
+> & {
+  devOnly?: boolean;
+};
 
 /**
  * Renders the `<script>` tags needed for the initial render. Bundles for
@@ -622,6 +624,8 @@ export type ScriptProps = Omit<
  * @see https://remix.run/components/scripts
  */
 export function Scripts(props: ScriptProps) {
+  let { devOnly, ...scriptProps } = props;
+
   let { manifest, serverHandoffString, abortDelay, serializeError, isSpaMode } =
     useRemixContext();
   let { router, static: isStatic, staticContext } = useDataRouterContext();
@@ -752,7 +756,7 @@ export function Scripts(props: ScriptProps) {
                       deferredData={deferredData}
                       routeId={routeId}
                       dataKey={key}
-                      scriptProps={props}
+                      scriptProps={scriptProps}
                       serializeData={serializeDataImp}
                       serializeError={serializeErrorImp}
                     />
@@ -789,41 +793,47 @@ export function Scripts(props: ScriptProps) {
           ? `__remixContext.a=${deferredScripts.length};`
           : "");
 
-    let routeModulesScript = !isStatic
-      ? " "
-      : `${
-          manifest.hmr?.runtime
-            ? `import ${JSON.stringify(manifest.hmr.runtime)};`
-            : ""
-        }import ${JSON.stringify(manifest.url)};
-${matches
-  .map(
-    (match, index) =>
-      `import * as route${index} from ${JSON.stringify(
-        manifest.routes[match.route.id].module
-      )};`
-  )
-  .join("\n")}
-window.__remixRouteModules = {${matches
+    let routeModulesScript = [
+      manifest.hmr?.runtime
+        ? `import ${JSON.stringify(manifest.hmr.runtime)};`
+        : "",
+      `import ${JSON.stringify(manifest.url)};`,
+      matches
+        .map(
+          (match, index) =>
+            `import * as route${index} from ${JSON.stringify(
+              manifest.routes[match.route.id].module
+            )};`
+        )
+        .join("\n"),
+      "window.__remixRouteModules = {" +
+        matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
           )
-          .join(",")}};
+          .join(",") +
+        "};",
+      devOnly && process.env.NODE_ENV === "production"
+        ? ""
+        : `import(${JSON.stringify(manifest.entry.module)});`,
+    ].join("\n");
 
-import(${JSON.stringify(manifest.entry.module)});`;
+    if (devOnly && process.env.NODE_ENV === "production") return null;
 
     return (
       <>
         <script
-          {...props}
+          {...scriptProps}
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
           type={undefined}
         />
         <script
-          {...props}
+          {...scriptProps}
           suppressHydrationWarning
-          dangerouslySetInnerHTML={createHtml(routeModulesScript)}
+          dangerouslySetInnerHTML={createHtml(
+            isStatic ? routeModulesScript : ""
+          )}
           type="module"
           async
         />
