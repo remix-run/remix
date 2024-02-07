@@ -63,7 +63,7 @@ The path to the build directory, relative to the project root. Defaults to
 
 #### basename
 
-An optional basename for your route paths, passed through to the React Router [`basename`][rr-basename] option. Please note that this is different from your _asset_ paths - you can configure those via the Vite [`base`][vite-base] flag.
+An optional basename for your route paths, passed through to the [React Router "basename" option][rr-basename]. Please note that this is different from your _asset_ paths. You can can configure the [base public path][vite-public-base-path] for your assets via the [Vite "base" option][vite-base].
 
 #### buildEnd
 
@@ -261,8 +261,7 @@ In order to align the default Remix project structure with the way Vite works, t
 
 This also means that the following configuration defaults have been changed:
 
-- [publicPath][public-path] defaults to `"/"` rather than `"/build/"`
-  - `publicPath` is also no longer something you configure directly, instead it is set internally from the Vite [`base`][vite-base] config value.
+- [publicPath][public-path] has been replaced by [Vite's "base" option][vite-base] which defaults to `"/"` rather than `"/build/"`.
 - [serverBuildPath][server-build-path] has been replaced by `serverBuildFile` which defaults to `"index.js"`. This file will be written into the server directory within your configured `buildDirectory`.
 
 ## Additional features & plugins
@@ -1265,6 +1264,7 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [cloudflare-proxy-ctx]: https://github.com/cloudflare/workers-sdk/issues/4876
 [cloudflare-proxy-caches]: https://github.com/cloudflare/workers-sdk/issues/4879
 [rr-basename]: https://reactrouter.com/routers/create-browser-router#basename
+[vite-public-base-path]: https://vitejs.dev/config/shared-options.html#base
 [vite-base]: https://vitejs.dev/config/shared-options.html#base
 [how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
 [presets]: ./presets
