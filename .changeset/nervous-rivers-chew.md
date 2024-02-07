@@ -40,10 +40,10 @@ Additionally, the `getRemixDevLoadContext` function now provides the request as 
 
 ```ts
 cloudflare(getBindingsProxy, {
-  getRemixDevLoadContext: ({ request, env}) => {
+  getRemixDevLoadContext: ({ request, env }) => {
     // return augmented context here
   },
-})
+});
 ```
 
 When using `getRemixDevLoadContext`, it's recommended that you create a `load-context.ts` file to define a shared `getLoadContext` function that you can use for both `getRemixDevLoadContext` in `vite.config.ts` as well as within `functions/[[path]].ts`.
