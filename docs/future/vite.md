@@ -162,7 +162,7 @@ The Cloudflare team is working to improve their Node proxies to support:
 #### Augmenting Cloudflare load context
 
 If you'd like to add additional properties to the load context,
-you can export a `getLoadContext` function from `load-context` that you can wire up to Vite and Cloudflare Pages:
+you can export a `getLoadContext` function from `load-context.ts` that you can wire up to Vite and Cloudflare Pages:
 
 ```ts filename=load-context.ts lines=[2,14,18-28]
 import { type KVNamespace } from "@cloudflare/workers-types";
