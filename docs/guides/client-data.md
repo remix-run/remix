@@ -135,7 +135,7 @@ export async function clientLoader({
 clientLoader.hydrate = true;
 
 export function HydrateFallback() {
-  return <p>Skeleton rendered during SSR</p>;
+  return <p>Skeleton rendered during SSR</p>; // (2)
 }
 
 export default function Component() {
