@@ -115,7 +115,7 @@ export async function loader({
 }
 
 export default function Component() {
-  const data = useLoaderData(); // server data
+  const data = useLoaderData(); // (1) - server data
   return <>...</>;
 }
 ```
@@ -128,18 +128,19 @@ import type { ClientLoaderFunctionArgs } from "@remix-run/react";
 export async function clientLoader({
   request,
 }: ClientLoaderFunctionArgs) {
-  const clientData = await getClientData(request); // (2)
+  const clientData = await getClientData(request);
   return clientData;
 }
 // Note: you do not have to set this explicitly - it is implied if there is no `loader`
 clientLoader.hydrate = true;
 
+// (2)
 export function HydrateFallback() {
-  return <p>Skeleton rendered during SSR</p>; // (2)
+  return <p>Skeleton rendered during SSR</p>;
 }
 
 export default function Component() {
-  const data = useLoaderData(); // client data
+  const data = useLoaderData(); // (2) - client data
   return <>...</>;
 }
 ```
