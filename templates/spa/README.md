@@ -28,18 +28,24 @@ When you are ready to build a production version of your app, `npm run build` wi
 npm run build
 ```
 
-Preview build locally with [vite preview](https://vitejs.dev/guide/cli#vite-preview) to serve all routes via the single `index.html` file. Do not use this as a production server as it's not designed for it:
+### Preview
+
+You can preview the build locally with [vite preview](https://vitejs.dev/guide/cli#vite-preview) to serve all routes via the single `index.html` file:
 
 ```shellscript
 npm run preview
 ```
 
-You can serve this from any server of your choosing. The server should be configured to serve multiple paths from a single root `/index.html` file (commonly called "SPA fallback"). Other steps may be required if the host doesn't directly support this functionality.
+> ![WARNING] `vite preview` is not designed for use as a production server
+
+### Deployment
+
+You can then serve your app from any HTTP server of your choosing. The server should be configured to serve multiple paths from a single root `/index.html` file (commonly called "SPA fallback"). Other steps may be required if the server doesn't directly support this functionality.
 
 For a simple example, you could use [sirv-cli](https://www.npmjs.com/package/sirv-cli):
 
 ```shellscript
-npx sirv-cli build/client/ --single --ignores "^/assets/"
+npx sirv-cli build/client/ --single
 ```
 
 [remix-vite-docs]: https://remix.run/docs/en/main/future/vite
