@@ -127,16 +127,9 @@ import type { ClientLoaderFunctionArgs } from "@remix-run/react";
 
 export async function clientLoader({
   request,
-  serverLoader,
 }: ClientLoaderFunctionArgs) {
-  const [serverData, clientData] = await Promise.all([
-    serverLoader(),
-    getClientData(request),
-  ]);
-  return {
-    ...serverData, // (4)
-    ...clientData, // (4)
-  };
+  const clientData = await getClientData(request); // (2)
+  return clientData;
 }
 // Note: you do not have to set this explicitly - it is implied if there is no `loader`
 clientLoader.hydrate = true;
