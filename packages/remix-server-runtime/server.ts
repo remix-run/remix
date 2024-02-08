@@ -12,6 +12,7 @@ import {
   stripBasename,
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
 } from "@remix-run/router";
+import { encode } from "turbo-stream";
 
 import type { AppLoadContext } from "./data";
 import type { HandleErrorFunction, ServerBuild } from "./build";
@@ -321,19 +322,38 @@ async function handleSingleFetchRequest(
       }
     });
     context.errors = sanitizeErrors(context.errors, serverMode);
+
+    // TODO: Feels hacky - we need to un-bubble errors here since they'll be
+    // bubbled client side.  Probably better to throw a flag on query() to not
+    // do this in the first place
+    let mostRecentError: [string, unknown] | null = null;
+    for (let match of context.matches) {
+      let routeId = match.route.id;
+      if (context.errors[routeId] !== undefined) {
+        mostRecentError = [routeId, context.errors[routeId]];
+      }
+      if (
+        build.assets.routes[routeId]?.hasLoader &&
+        context.loaderData[routeId] === undefined
+      ) {
+        invariant(mostRecentError, "Expected mostRecentError to be set");
+        context.errors[mostRecentError[0]] = undefined;
+        context.errors[routeId] = mostRecentError[1];
+        mostRecentError = null;
+      }
+    }
   }
 
-  // TODO: Handle deferred
-
   let headers = getDocumentHeaders(build, context);
-  headers.set("Content-Type", "application/json");
-
   // Mark all successful responses with a header so we can identify in-flight
   // network errors that are missing this header
   headers.set("X-Remix-Response", "yes");
+  headers.set("Content-Type", "text/x-turbo");
 
+  // Note: Deferred data is already just Promises on context.loaderData, so we
+  // don't have to mess with context.activeDeferreds or anything :)
   return new Response(
-    JSON.stringify({
+    encode({
       actionData: context.actionData,
       loaderData: context.loaderData,
       errors: context.errors,

@@ -19,7 +19,8 @@
     "@remix-run/router": "0.0.0-experimental-a0888892",
     "@remix-run/server-runtime": "2.6.0",
     "react-router": "0.0.0-experimental-a0888892",
-    "react-router-dom": "0.0.0-experimental-a0888892"
+    "react-router-dom": "0.0.0-experimental-a0888892",
+    "turbo-stream": "^1.2.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.17.0",
