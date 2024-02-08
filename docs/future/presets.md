@@ -17,20 +17,25 @@ The config returned by each preset is merged in the order they were defined. Any
 
 Presets are designed to be published to npm and used within your Vite config. For example, Remix ships with a preset for Cloudflare:
 
-```ts filename=vite.config.ts lines=[3,10]
+```ts filename=vite.config.ts lines=[3,11]
 import {
   unstable_vitePlugin as remix,
   unstable_cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
+import { getBindingsProxy } from "wrangler";
 
 export default defineConfig({
   plugins: [
     remix({
-      presets: [cloudflare()],
+      presets: [cloudflare(getBindingsProxy)],
     }),
   ],
-  // etc.
+  ssr: {
+    resolve: {
+      externalConditions: ["workerd", "worker"],
+    },
+  },
 });
 ```
 

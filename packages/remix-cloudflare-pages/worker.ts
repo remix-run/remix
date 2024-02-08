@@ -26,13 +26,13 @@ export interface createPagesFunctionHandlerParams<Env = any> {
 
 export function createRequestHandler<Env = any>({
   build,
-  getLoadContext,
   mode,
+  getLoadContext = (context) => ({ env: context.env }),
 }: createPagesFunctionHandlerParams<Env>): RequestHandler<Env> {
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (context) => {
-    let loadContext = await getLoadContext?.(context);
+    let loadContext = await getLoadContext(context);
 
     return handleRequest(context.request, loadContext);
   };

@@ -91,13 +91,7 @@ If not, you can follow these steps to integrate your project with `remix dev`:
 
    // ... code for setting up your express app goes here ...
 
-   app.all(
-     "*",
-     createRequestHandler({
-       build,
-       mode: build.mode,
-     })
-   );
+   app.all("*", createRequestHandler({ build }));
 
    const port = 3000;
    app.listen(port, () => {
