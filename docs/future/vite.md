@@ -718,62 +718,26 @@ If a route's `links` function is only used to wire up `cssBundleHref`, you can r
 - ];
 ```
 
-#### Add `?url` to regular CSS imports
+#### Fix up CSS imports referenced in `links`
 
-<docs-warning>
+<docs-info>This is not required for other forms of [CSS bundling][css-bundling], e.g. CSS Modules, CSS side effect imports, Vanilla Extract, etc.</docs-info>
 
-**This feature is not supported in Vite v5.0.x.**
+If you are [referencing CSS in a `links` function][regular-css], you'll need to update the corresponding CSS imports to use [Vite's explicit `?url` import syntax.][vite-url-imports]
 
-Vite v5.0.x and earlier has a [known issue with `.css?url` imports][vite-css-url-issue] that causes them to break in production builds. If you'd like to use this feature immediately, support for `.css?url` imports is currently available in the [Vite v5.1.0 beta][vite-5-1-0-beta].
+👉 **Add `?url` to CSS imports used in `links`**
 
-If you'd prefer to avoid running a beta version of Vite, you can either wait for Vite v5.1.0 or [convert your CSS imports to side-effects.][convert-your-css-imports-to-side-effects]
-
-</docs-warning>
-
-If you were using [Remix's regular CSS support][regular-css], you'll need to update your CSS import statements to use [Vite's explicit `?url` import syntax.][vite-url-imports]
-
-👉 **Add `?url` to regular CSS imports**
+<docs-warning>`.css?url` imports require Vite v5.1 or newer</docs-warning>
 
 ```diff
 -import styles from "~/styles/dashboard.css";
 +import styles from "~/styles/dashboard.css?url";
+
+export const links = () => {
+  return [
+    { rel: "stylesheet", href: styles }
+  ];
+}
 ```
-
-#### Optionally convert regular CSS imports to side-effect imports
-
-<docs-info>Any existing side-effect imports of CSS files in your Remix application will work in Vite without any code changes.</docs-info>
-
-Rather than [migrating regular CSS imports to use Vite's explicit `.css?url` import syntax][add-url-to-regular-css-imports] — which requires either waiting for Vite v5.1.0 or running the [v5.1.0 beta][vite-5-1-0-beta] — you can instead convert them to side-effect imports (e.g. `import "./styles.css"`). You may even find that this approach is more convenient for you.
-
-During development, [Vite injects CSS side-effect imports into the page via JavaScript,][vite-css] and the Remix Vite plugin will inline imported CSS alongside your link tags to avoid a flash of unstyled content. In the production build, the Remix Vite plugin will automatically attach CSS files to the relevant routes.
-
-This also means that in many cases you won't need the `links` function export anymore.
-
-Since the order of your CSS is determined by its import order, you'll need to ensure that your CSS imports are in the same order as your `links` function.
-
-👉 **Convert CSS imports into side effects — in the same order they were in your `links` function!**
-
-```diff filename=app/dashboard/route.tsx
-- import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
-
-- import dashboardStyles from "./dashboard.css";
-- import sharedStyles from "./shared.css";
-
-+ // NOTE: The import order of these
-+ // side-effect imports has been updated
-+ // to match the original `links` function.
-+ import "./shared.css";
-+ import "./dashboard.css";
-
-- export const links: LinksFunction = () => [
--   { rel: "stylesheet", href: sharedStyles },
--   { rel: "stylesheet", href: dashboardStyles },
-- ];
-```
-
-One important caveat to be aware of is that, during development, these styles will no longer be mounted and unmounted automatically when navigating between routes.
-
-As a result, you may be more likely to encounter CSS collisions. If this is a concern, you might also want to consider migrating your regular CSS files to [CSS Modules][vite-css-modules] or using a naming convention that prefixes class names with the corresponding file name.
 
 #### Enable Tailwind via PostCSS
 
@@ -806,7 +770,7 @@ export default {
 
 👉 **Migrate Tailwind CSS import**
 
-If you're importing your Tailwind CSS file using [Remix's regular CSS support][regular-css], you'll need to [migrate your Tailwind CSS import statement.][add-url-to-regular-css-imports]
+If you're [referencing your Tailwind CSS file in a `links` function][regular-css], you'll need to [migrate your Tailwind CSS import statement.][fix-up-css-imports-referenced-in-links]
 
 #### Add Vanilla Extract plugin
 
@@ -1256,15 +1220,11 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [tsm]: https://github.com/lukeed/tsm
 [vite-tsconfig-paths]: https://github.com/aleclarson/vite-tsconfig-paths
 [css-bundling]: ../styling/bundling
-[vite-css]: https://vitejs.dev/guide/features.html#css
 [regular-css]: ../styling/css
-[vite-css-modules]: https://vitejs.dev/guide/features#css-modules
 [vite-url-imports]: https://vitejs.dev/guide/assets.html#explicit-url-imports
-[vite-css-url-issue]: https://github.com/remix-run/remix/issues/7786
 [tailwind]: https://tailwindcss.com
 [postcss]: https://postcss.org
 [tailwind-config-option]: ../file-conventions/remix-config#tailwind
-[convert-your-css-imports-to-side-effects]: #optionally-convert-regular-css-imports-to-side-effect-imports
 [vanilla-extract]: https://vanilla-extract.style
 [vanilla-extract-vite-plugin]: https://vanilla-extract.style/documentation/integrations/vite
 [mdx]: https://mdxjs.com
@@ -1327,6 +1287,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [vite-base]: https://vitejs.dev/config/shared-options.html#base
 [how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
 [presets]: ./presets
-[vite-5-1-0-beta]: https://github.com/vitejs/vite/blob/main/packages/vite/CHANGELOG.md#510-beta0-2024-01-15
-[side-effect-imports]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#import_a_module_for_its_side_effects_only
-[add-url-to-regular-css-imports]: #add-url-to-regular-css-imports
+[fix-up-css-imports-referenced-in-links]: #fix-up-css-imports-referenced-in-links
