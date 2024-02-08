@@ -128,7 +128,7 @@ import type { ClientLoaderFunctionArgs } from "@remix-run/react";
 export async function clientLoader({
   request,
 }: ClientLoaderFunctionArgs) {
-  const clientData = await getClientData(request);
+  const clientData = await getClientData(request); // (2)
   return clientData;
 }
 // Note: you do not have to set this explicitly - it is implied if there is no `loader`
