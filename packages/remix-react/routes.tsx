@@ -9,11 +9,7 @@ import type {
 } from "react-router-dom";
 import { redirect, useRouteError } from "react-router-dom";
 
-import type {
-  LayoutComponent,
-  RouteModule,
-  RouteModules,
-} from "./routeModules";
+import type { RouteModule, RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 import {
   fetchData,
