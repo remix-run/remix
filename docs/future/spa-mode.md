@@ -81,7 +81,7 @@ npx vite preview
 
 #### Deployment
 
-RTo deploy, you can serve your app from any HTTP server of your choosing. The server should be configured to serve multiple paths from a single root `/index.html` file (commonly called "SPA fallback"). Other steps may be required if the server doesn't directly support this functionality.
+To deploy, you can serve your app from any HTTP server of your choosing. The server should be configured to serve multiple paths from a single root `/index.html` file (commonly called "SPA fallback"). Other steps may be required if the server doesn't directly support this functionality.
 
 For a simple example, you could use [sirv-cli][sirv-cli]:
 
