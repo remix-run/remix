@@ -1284,7 +1284,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               serverBuildDirectory,
               ctx.remixConfig.serverBuildFile,
               clientBuildDirectory,
-              viteConfig
+              viteConfig,
+              ctx.remixConfig.basename
             );
           }
         },
@@ -1721,7 +1722,8 @@ async function handleSpaMode(
   serverBuildDirectoryPath: string,
   serverBuildFile: string,
   clientBuildDirectory: string,
-  viteConfig: Vite.ResolvedConfig
+  viteConfig: Vite.ResolvedConfig,
+  basename: string
 ) {
   // Create a handler and call it for the `/` path - rendering down to the
   // proper HydrateFallback ... or not!  Maybe they have a static landing page
@@ -1730,7 +1732,7 @@ async function handleSpaMode(
   let build = await import(url.pathToFileURL(serverBuildPath).toString());
   let { createRequestHandler: createHandler } = await import("@remix-run/node");
   let handler = createHandler(build, viteConfig.mode);
-  let response = await handler(new Request("http://localhost/"));
+  let response = await handler(new Request(`http://localhost${basename}`));
   let html = await response.text();
   if (response.status !== 200) {
     throw new Error(
