@@ -69,10 +69,24 @@ When you build your app in SPA Mode, Remix will call the server handler for the 
 remix vite:build
 ```
 
-To run your SPA, you serve your client assets directory via any HTTP server you wish, for example:
+#### Preview
 
-```sh
-npx http-server build/client/
+You can preview the production build locally with [vite preview][vite-preview]:
+
+```shellscript
+npx vite preview
+```
+
+<docs-warning>`vite preview` is not designed for use as a production server</docs-warning>
+
+#### Deployment
+
+RTo deploy, you can serve your app from any HTTP server of your choosing. The server should be configured to serve multiple paths from a single root `/index.html` file (commonly called "SPA fallback"). Other steps may be required if the server doesn't directly support this functionality.
+
+For a simple example, you could use [sirv-cli][sirv-cli]:
+
+```shellscript
+npx sirv-cli build/client/ --single
 ```
 
 Or, if you are serving via an `express` server (although at that point you may want to consider just running Remix in SSR mode 😉):
@@ -253,3 +267,5 @@ Once you've got all your routes living in their own files, you can:
 [migrate-rr]: #migrating-from-react-router
 [react-lazy]: https://react.dev/reference/react/lazy
 [client-only]: https://github.com/sergiodxa/remix-utils?tab=readme-ov-file#clientonly
+[vite-preview]: https://vitejs.dev/guide/cli#vite-preview
+[sirv-cli]: https://www.npmjs.com/package/sirv-cli
