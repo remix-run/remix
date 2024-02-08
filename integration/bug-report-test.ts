@@ -59,27 +59,39 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/_index.tsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import { LoaderFunction, defer } from "@remix-run/node";
+        import { Await, useLoaderData } from "@remix-run/react";
+        import { Suspense } from "react";
 
-        export function loader() {
-          return json("pizza");
+        function sleep(ms: number) {
+          return new Promise((resolve) => setTimeout(resolve, ms));
         }
 
-        export default function Index() {
-          let data = useLoaderData();
+        export const loader: LoaderFunction = () => {
+          return defer({
+            immediate: "this data is available immediately",
+            deferred: sleep(3000).then(() => "this data is available after 3 seconds"),
+          });
+        };
+
+        export function Deferred() {
+          const { immediate, deferred } = useLoaderData<typeof loader>();
+
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <p>
+                Immediate: <span data-testid="immediate">{immediate}</span>
+              </p>
+              <p>
+                Deferred:
+                <span data-testid="deferred">
+                  <Suspense fallback="...">
+                    <Await resolve={deferred}>{(data) => data}</Await>
+                  </Suspense>
+                </span>
+              </p>
             </div>
-          )
-        }
-      `,
-
-      "app/routes/burgers.tsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+          );
         }
       `,
     },
@@ -102,12 +114,11 @@ test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  expect(await response.text()).toMatch("this data is available immediately");
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  await page.waitForSelector("text=cheeseburger");
+  await page.waitForSelector("this data is available after 3 seconds");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
