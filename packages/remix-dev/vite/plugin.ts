@@ -900,7 +900,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           appType:
             viteCommand === "serve" &&
             viteConfigEnv.mode === "production" &&
-            ctx.remixConfig.unstable_ssr === false
+            ctx.remixConfig.ssr === false
               ? "spa"
               : "custom",
           optimizeDeps: {
@@ -991,7 +991,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             : undefined),
 
           // Vite config options for SPA preview mode
-          ...(viteCommand === "serve" && ctx.remixConfig.unstable_ssr === false
+          ...(viteCommand === "serve" && ctx.remixConfig.ssr === false
             ? {
                 build: {
                   manifest: true,

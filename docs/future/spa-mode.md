@@ -1,8 +1,8 @@
 ---
-title: SPA Mode (Unstable)
+title: SPA Mode
 ---
 
-# SPA Mode (Unstable)
+# SPA Mode
 
 From the beginning, Remix's opinion has always been that you own your server architecture. This is why Remix is built on top of the [Web Fetch API][fetch] and can run on any modern [runtime][runtimes] via built-in or community-provided adapters. While we believe that having a server provides the best UX/Performance/SEO/etc. for _most_ apps, it is also undeniable that there exist plenty of valid use cases for a Single Page Application in the real world:
 
@@ -23,7 +23,7 @@ SPA Mode is basically what you'd get if you had your own [React Router + Vite][r
 - File-based routing (or config-based via [`routes()`][routes-config])
 - Automatic route-based code-splitting via [`route.lazy`][route-lazy]
 - `<Link prefetch>` support to eagerly prefetch route modules
-- `<head>` management via Remix [`<Meta>`][meta]/[`<Links>`][links] APIs if you choose to hydrate the full `document`
+- `<head>` management via Remix [`<Meta>`][meta]/[`<Links>`][links] APIs
 
 SPA Mode tells Remix that you do not plan on running a Remix server at runtime and that you wish to generate a static `index.html` file at build time and you will only use [Client Data][client-data] APIs for data loading and mutations.
 
@@ -86,6 +86,117 @@ app.get("*", (req, res, next) =>
   )
 );
 ```
+
+## Hydrating a div instead of the full document
+
+If you don't want to hydrate the full HTML `document`, you can choose to use SPA mode and only hydrate a sub-section of the document such as `<div id="app">` with a few minor changes.
+
+**1. Add an `index.html` file**
+
+Since Remix won't render the HTML document, you will need to provide that HTML outside of Remix. The easiest way to do this is to just keep an `app/index.html` document with a placeholder you can replace with the Remix rendered HTML at build time to generate the final `index.html`
+
+```html filename=app/index.html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>My Cool App!</title>
+  </head>
+  <body>
+    <div id="app"><!-- Remix-SPA--></div>
+  </body>
+</html>
+```
+
+The `<!-- Remix-SPA-->` HTML comment is what we'll replace with the Remix HTML.
+
+<docs-info>Because whitespace is meaningful in the DOM/VDOM tree - it's important not to include any spaces around it and the surrounding `div`, otherwise you will run into React hydration issues</docs-info>
+
+**2. Update `root.tsx`**
+
+Update your root route to render just the contents of `<div id="app">`:
+
+```tsx filename=app/root.tsx
+export function HydrateFallback() {
+  return (
+    <>
+      <p>Loading...</p>
+      <Scripts />
+    </>
+  );
+}
+
+export default function Component() {
+  return (
+    <>
+      <Outlet />
+      <Scripts />
+    </>
+  );
+}
+```
+
+**3. Update `entry.server.tsx`**
+
+In your `app/entry.server.tsx` file, you'll want to take the Remix-rendered HTML and insert it into your static `app/index.html` file.
+
+```tsx filename=app/entry.server.tsx
+import fs from "node:fs";
+import path from "node:path";
+
+import type { EntryContext } from "@remix-run/node";
+import { RemixServer } from "@remix-run/react";
+import { renderToString } from "react-dom/server";
+
+export default function handleRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  const shellHtml = fs
+    .readFileSync(
+      path.join(process.cwd(), "app/index.html")
+    )
+    .toString();
+
+  const appHtml = renderToString(
+    <RemixServer context={remixContext} url={request.url} />
+  );
+
+  const html = shellHtml.replace(
+    "<!-- Remix-SPA-->",
+    appHtml
+  );
+
+  return new Response(html, {
+    headers: { "Content-Type": "text/html" },
+    status: responseStatusCode,
+  });
+}
+```
+
+<docs-info>You may need to run `npx remix reveal` if you don't currently have an `app/entry.server.tsx` file in your app</docs-info>
+
+**4. Update `entry.client.tsx`**
+
+Update `app/entry.client.tsx` to hydrate the `<div id="app">` instead of the document:
+
+```tsx filename=app/entry.client.tsx
+import { RemixBrowser } from "@remix-run/react";
+import { startTransition, StrictMode } from "react";
+import { hydrateRoot } from "react-dom/client";
+
+startTransition(() => {
+  hydrateRoot(
+    document.querySelector("#app"),
+    <StrictMode>
+      <RemixBrowser />
+    </StrictMode>
+  );
+});
+```
+
+<docs-info>You may need to run `npx remix reveal` if you don't currently have an `app/entry.client.tsx` file in your app</docs-info>
 
 ## Notes/Caveats
 
