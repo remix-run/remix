@@ -2,17 +2,14 @@ import type {
   StaticHandlerContext,
   HydrationState,
   Router,
-  DataStrategyFunction,
 } from "@remix-run/router";
 import { createBrowserHistory, createRouter } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
-import type {
-  DataStrategyFunctionArgs,
-  DataStrategyMatch,
-} from "react-router-dom";
+import type { DataStrategyFunctionArgs } from "react-router-dom";
 import { matchRoutes, RouterProvider } from "react-router-dom";
+import { decode } from "turbo-stream";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
@@ -374,8 +371,6 @@ async function singleFetchDataStrategy({
   request,
   matches,
 }: DataStrategyFunctionArgs) {
-  // let routeDeferreds = new Map<string, ReturnType<typeof createDeferred>>();
-
   // Prefetch styles for matched routes that exist in the routeModulesCache
   // (critical modules and navigating back to pages previously loaded via
   // route.lazy).  Initial execution of route.lazy (when the module is not in
@@ -407,11 +402,23 @@ async function singleFetchDataStrategy({
   let singleFetchPromise: Promise<
     Pick<StaticHandlerContext, "actionData" | "loaderData" | "errors">
   >;
-  async function singleFetch(routeId: string) {
+  let sharedSingleFetch = async (routeId: string) => {
     if (!singleFetchPromise) {
       let url = new URL(request.url);
       url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
-      singleFetchPromise = fetch(url).then((r) => r.json());
+      singleFetchPromise = fetch(url).then(async (res) => {
+        invariant(
+          res.headers.get("Content-Type")?.includes("text/x-turbo"),
+          "Expected a text/x-turbo response"
+        );
+        let decoded = await decode(res.body!);
+        let value = decoded.value as Pick<
+          StaticHandlerContext,
+          "actionData" | "loaderData" | "errors"
+        >;
+
+        return value;
+      });
     }
     let data = await singleFetchPromise;
     if (data.loaderData[routeId] !== undefined) {
@@ -421,7 +428,7 @@ async function singleFetchDataStrategy({
     } else {
       throw new Error(`No response found for routeId "${routeId}"`);
     }
-  }
+  };
 
   let routePromise = Promise.all(
     matches.map((m) =>
@@ -436,10 +443,10 @@ async function singleFetchDataStrategy({
           return routeModule.clientLoader({
             request,
             params: m.params,
-            serverLoader: () => singleFetch(m.route.id),
+            serverLoader: () => sharedSingleFetch(m.route.id),
           });
         } else if (route.hasLoader) {
-          return singleFetch(m.route.id);
+          return sharedSingleFetch(m.route.id);
         } else {
           // If we make it into the `bikeshed_loadRoute` callback we ought to
           // have a handler to call so this shouldn't happen but I think some
