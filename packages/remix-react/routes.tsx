@@ -178,7 +178,7 @@ function preventInvalidServerHandlerCall(
   }
 }
 
-function noActionDefinedError(
+export function noActionDefinedError(
   type: "action" | "clientAction",
   routeId: string
 ) {

@@ -2,6 +2,7 @@ import type {
   UNSAFE_DeferredData as DeferredData,
   ErrorResponse,
   StaticHandler,
+  StaticHandlerContext,
 } from "@remix-run/router";
 import {
   UNSAFE_DEFERRED_SYMBOL as DEFERRED_SYMBOL,
@@ -145,7 +146,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         serverMode,
         _build,
         staticHandler,
-        url,
+        request,
         loadContext,
         handleError
       );
@@ -287,30 +288,153 @@ async function handleDataRequest(
   }
 }
 
+type SingleFetchResult =
+  | { data: unknown }
+  | { error: unknown }
+  | { redirect: string };
+type SingleFetchResults = {
+  action?: SingleFetchResult;
+  loaders:
+    | Record<string, SingleFetchResult>
+    | Promise<Record<string, SingleFetchResult>>;
+};
+
 async function handleSingleFetchRequest(
   serverMode: ServerMode,
   build: ServerBuild,
   staticHandler: StaticHandler,
-  url: URL,
+  request: Request,
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void
 ): Promise<Response> {
-  let context;
-  try {
-    let handlerUrl = new URL(url);
-    handlerUrl.pathname = handlerUrl.pathname
-      .replace(/\.data$/, "")
-      .replace(/^\/_root$/, "/");
-    context = await staticHandler.query(new Request(handlerUrl), {
-      requestContext: loadContext,
-    });
-  } catch (error: unknown) {
-    handleError(error);
-    return new Response(null, { status: 500 });
+  let handlerUrl = new URL(request.url);
+  handlerUrl.pathname = handlerUrl.pathname
+    .replace(/\.data$/, "")
+    .replace(/^\/_root$/, "/");
+
+  if (request.method !== "GET") {
+    let { action, headers } = await singleFetchAction(
+      request,
+      handlerUrl,
+      staticHandler,
+      loadContext,
+      handleError
+    );
+    // Mark all successful responses with a header so we can identify in-flight
+    // network errors that are missing this header
+    headers.set("X-Remix-Response", "yes");
+    headers.set("Content-Type", "text/x-turbo");
+
+    let result: SingleFetchResults = {
+      action,
+      loaders: singleFetchLoaders(
+        handlerUrl,
+        staticHandler,
+        loadContext,
+        handleError,
+        serverMode,
+        build
+      ).then(({ loaders }) => loaders),
+    };
+    // Note: Deferred data is already just Promises on context.loaderData, so we
+    // don't have to mess with context.activeDeferreds or anything :)
+    return new Response(encode(result), { headers });
   }
 
-  if (isResponse(context)) {
-    return context;
+  let { loaders, headers } = await singleFetchLoaders(
+    handlerUrl,
+    staticHandler,
+    loadContext,
+    handleError,
+    serverMode,
+    build
+  );
+
+  // Mark all successful responses with a header so we can identify in-flight
+  // network errors that are missing this header
+  headers.set("X-Remix-Response", "yes");
+  headers.set("Content-Type", "text/x-turbo");
+
+  let result: SingleFetchResults = {
+    loaders,
+  };
+  // Note: Deferred data is already just Promises on context.loaderData, so we
+  // don't have to mess with context.activeDeferreds or anything :)
+  return new Response(encode(result), { headers });
+}
+
+async function singleFetchAction(
+  request: Request,
+  handlerUrl: URL,
+  staticHandler: StaticHandler,
+  loadContext: AppLoadContext,
+  handleError: (err: unknown) => void
+): Promise<{ action: SingleFetchResults["action"]; headers: Headers }> {
+  try {
+    let handlerRequest = new Request(handlerUrl, {
+      method: request.method,
+      body: request.body,
+      headers: request.headers,
+      signal: request.signal,
+      ...(request.body ? { duplex: "half" } : undefined),
+    });
+    let response = await staticHandler.queryRoute(handlerRequest, {
+      requestContext: loadContext,
+      // TODO: Will need to send this in a header or something
+      // routeId:
+    });
+    // callRouteLoader/callRouteAction always return responses
+    invariant(
+      isResponse(response),
+      "Expected a Response to be returned from queryRoute"
+    );
+    if (isRedirectResponse(response)) {
+      return {
+        action: { redirect: response.headers.get("Location")! },
+        headers: response.headers,
+      };
+    }
+    return {
+      action: { data: await unwrapResponse(response) },
+      headers: response.headers,
+    };
+  } catch (error) {
+    handleError(error);
+    return {
+      action: { error },
+      headers: new Headers(),
+    };
+  }
+}
+
+async function singleFetchLoaders(
+  handlerUrl: URL,
+  staticHandler: StaticHandler,
+  loadContext: AppLoadContext,
+  handleError: (err: unknown) => void,
+  serverMode: ServerMode,
+  build: ServerBuild
+): Promise<{ loaders: SingleFetchResults["loaders"]; headers: Headers }> {
+  let context: StaticHandlerContext;
+  try {
+    let handlerRequest = new Request(handlerUrl);
+    let result = await staticHandler.query(handlerRequest, {
+      requestContext: loadContext,
+    });
+    if (isResponse(result)) {
+      // TODO: What's the use-case that lands us here?
+      return {
+        loaders: { root: { redirect: result.headers.get("Location")! } },
+        headers: result.headers,
+      };
+    }
+    context = result;
+  } catch (error: unknown) {
+    handleError(error);
+    return {
+      loaders: { root: { error } },
+      headers: new Headers(),
+    };
   }
 
   // Sanitize errors outside of development environments
@@ -344,22 +468,19 @@ async function handleSingleFetchRequest(
     }
   }
 
-  let headers = getDocumentHeaders(build, context);
-  // Mark all successful responses with a header so we can identify in-flight
-  // network errors that are missing this header
-  headers.set("X-Remix-Response", "yes");
-  headers.set("Content-Type", "text/x-turbo");
-
-  // Note: Deferred data is already just Promises on context.loaderData, so we
-  // don't have to mess with context.activeDeferreds or anything :)
-  return new Response(
-    encode({
-      actionData: context.actionData,
-      loaderData: context.loaderData,
-      errors: context.errors,
-    }),
-    { headers }
-  );
+  return {
+    loaders: context.matches.reduce(
+      (acc, match) =>
+        Object.assign(acc, {
+          [match.route.id]:
+            context.errors?.[match.route.id] !== undefined
+              ? { error: context.errors[match.route.id] }
+              : { data: context.loaderData[match.route.id] },
+        }),
+      {}
+    ),
+    headers: getDocumentHeaders(build, context),
+  };
 }
 
 async function handleDocumentRequest(
@@ -437,21 +558,8 @@ async function handleDocumentRequest(
     // If they threw a response, unwrap it into an ErrorResponse like we would
     // have for a loader/action
     if (isResponse(error)) {
-      let data;
       try {
-        let contentType = error.headers.get("Content-Type");
-        // Check between word boundaries instead of startsWith() due to the last
-        // paragraph of https://httpwg.org/specs/rfc9110.html#field.content-type
-        if (contentType && /\bapplication\/json\b/.test(contentType)) {
-          if (error.body == null) {
-            data = null;
-          } else {
-            data = await error.json();
-          }
-        } else {
-          data = await error.text();
-        }
-
+        let data = await unwrapResponse(error);
         errorForSecondRender = new ErrorResponseImpl(
           error.status,
           error.statusText,
@@ -582,4 +690,15 @@ function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
       "Content-Type": "text/plain",
     },
   });
+}
+
+function unwrapResponse(response: Response) {
+  let contentType = response.headers.get("Content-Type");
+  // Check between word boundaries instead of startsWith() due to the last
+  // paragraph of https://httpwg.org/specs/rfc9110.html#field.content-type
+  return contentType && /\bapplication\/json\b/.test(contentType)
+    ? response.body == null
+      ? null
+      : response.json()
+    : response.text();
 }
