@@ -1,8 +1,9 @@
 import type {
-  StaticHandlerContext,
   HydrationState,
   Router,
+  DataStrategyMatch,
 } from "@remix-run/router";
+import type { SerializeFrom } from "@remix-run/server-runtime";
 import { createBrowserHistory, createRouter } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
@@ -21,6 +22,7 @@ import type { RouteModules } from "./routeModules";
 import {
   createClientRoutes,
   createClientRoutesWithHMRRevalidationOptOut,
+  noActionDefinedError,
   shouldHydrateRouteLoader,
 } from "./routes";
 
@@ -367,10 +369,23 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   );
 }
 
+type SingleFetchResult = { data: unknown } | { error: unknown };
+type SingleFetchResults = {
+  action?: SingleFetchResult;
+  loaders: Record<string, SingleFetchResult>;
+};
+
+// TODO: This is temporary just tio get it woring for one action at a time.
+// We need to extend this via some form of global serverRoundTripId from the
+// router that applies to navigations and fetches
+let revalidationPromise: Promise<SingleFetchResults["loaders"]> | null = null;
+
 async function singleFetchDataStrategy({
   request,
   matches,
 }: DataStrategyFunctionArgs) {
+  // TODO: Do styles load twice on actions?
+
   // Prefetch styles for matched routes that exist in the routeModulesCache
   // (critical modules and navigating back to pages previously loaded via
   // route.lazy).  Initial execution of route.lazy (when the module is not in
@@ -385,8 +400,17 @@ async function singleFetchDataStrategy({
     })
   );
 
+  if (request.method !== "GET") {
+    let routePromise = singleFetchAction(request, matches);
+    let [routeData] = await Promise.all([routePromise, stylesPromise]);
+    return routeData;
+  } else {
+    let routePromise = singleFetchLoaders(request, matches);
+    let [routeData] = await Promise.all([routePromise, stylesPromise]);
+    return routeData;
+  }
+
   // TODO: Critical route modules for single fetch
-  // TODO: action requests
   // TODO: granular revalidation
   // TODO: Fix issue with auto-revalidating routes on HMR
   //  - load /
@@ -394,69 +418,129 @@ async function singleFetchDataStrategy({
   //  - trigger HMR
   //  - back button to /
   //  - throws a "you returned undefined from a loader" error
+}
 
-  // Create a singular promise for all routes to latch onto for single fetch.
-  // This way we can kick off `clientLoaders` and ensure:
-  // 1. we only call the server if at least one of them calls `serverLoader`
-  // 2. if multiple call` serverLoader` only one fetch call is made
-  let singleFetchPromise: Promise<
-    Pick<StaticHandlerContext, "actionData" | "loaderData" | "errors">
-  >;
-  let sharedSingleFetch = async (routeId: string) => {
-    if (!singleFetchPromise) {
-      let url = new URL(request.url);
-      url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
-      singleFetchPromise = fetch(url).then(async (res) => {
-        invariant(
-          res.headers.get("Content-Type")?.includes("text/x-turbo"),
-          "Expected a text/x-turbo response"
-        );
-        let decoded = await decode(res.body!);
-        let value = decoded.value as Pick<
-          StaticHandlerContext,
-          "actionData" | "loaderData" | "errors"
-        >;
+async function makeSingleFetchCall(request: Request) {
+  let url = new URL(request.url);
+  url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
+  let res = await fetch(url, { method: request.method });
+  invariant(
+    res.headers.get("Content-Type")?.includes("text/x-turbo"),
+    "Expected a text/x-turbo response"
+  );
+  let decoded = await decode(res.body!);
+  return decoded.value as SingleFetchResults;
+}
 
-        return value;
-      });
+function singleFetchAction(request: Request, matches: DataStrategyMatch[]) {
+  let singleFetch = async (routeId: string) => {
+    let data = await makeSingleFetchCall(request);
+    if (data.action === undefined) {
+      throw new Error(`No action response found`);
     }
-    let data = await singleFetchPromise;
-    if (data.loaderData[routeId] !== undefined) {
-      return data.loaderData[routeId];
-    } else if (data.errors && data.errors[routeId] !== undefined) {
-      throw data.errors[routeId];
+
+    // Stash off streaming loader data promise for the subsequent router
+    // revalidation loader executions
+    if (data.loaders instanceof Promise) {
+      revalidationPromise = data.loaders;
+    }
+
+    if ("error" in data.action) {
+      throw data.action.error;
+    } else if ("data" in data.action) {
+      return data.action.data;
     } else {
-      throw new Error(`No response found for routeId "${routeId}"`);
+      throw new Error(`No action response found for routeId "${routeId}"`);
     }
   };
 
-  let routePromise = Promise.all(
+  return Promise.all(
     matches.map((m) =>
-      m.bikeshed_loadRoute((handler) => {
+      m.bikeshed_loadRoute(() => {
         let route = window.__remixManifest.routes[m.route.id];
         let routeModule = window.__remixRouteModules[m.route.id];
         invariant(
           routeModule,
           "Expected a defined routeModule after bikeshed_loadRoute"
         );
-        if (routeModule.clientLoader) {
-          return routeModule.clientLoader({
+
+        if (routeModule.clientAction) {
+          return routeModule.clientAction({
             request,
             params: m.params,
-            serverLoader: () => sharedSingleFetch(m.route.id),
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-constraint
+            serverAction: <T extends unknown>() =>
+              singleFetch(m.route.id) as Promise<SerializeFrom<T>>,
           });
-        } else if (route.hasLoader) {
-          return sharedSingleFetch(m.route.id);
+        } else if (route.hasAction) {
+          return singleFetch(m.route.id);
         } else {
-          // If we make it into the `bikeshed_loadRoute` callback we ought to
-          // have a handler to call so this shouldn't happen but I think some
-          // HMR/HDR scenarios might hit this flow?
-          return Promise.resolve(undefined);
+          throw noActionDefinedError("action", m.route.id);
         }
       })
     )
   );
+}
 
-  let [routeData] = await Promise.all([routePromise, stylesPromise]);
-  return routeData;
+function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
+  // Create a singular promise for all routes to latch onto for single fetch.
+  // This way we can kick off `clientLoaders` and ensure:
+  // 1. we only call the server if at least one of them calls `serverLoader`
+  // 2. if multiple call` serverLoader` only one fetch call is made
+  let singleFetchPromise: Promise<SingleFetchResults>;
+  let sharedSingleFetch = async (routeId: string) => {
+    if (!singleFetchPromise) {
+      // If this is a revalidation for a prior action and we already got the data - use it
+      if (revalidationPromise) {
+        singleFetchPromise = revalidationPromise.then((loaders) => ({
+          loaders,
+        }));
+        revalidationPromise = null;
+      } else {
+        singleFetchPromise = makeSingleFetchCall(request);
+      }
+    }
+    let data = await singleFetchPromise;
+    let routeData = data.loaders[routeId];
+    if ("error" in routeData) {
+      throw routeData?.error;
+    } else if ("data" in routeData) {
+      return routeData?.data;
+    } else {
+      throw new Error(`No loader response found for routeId "${routeId}"`);
+    }
+  };
+
+  return Promise.all(
+    matches.map((m) =>
+      m.bikeshed_loadRoute(() => {
+        let route = window.__remixManifest.routes[m.route.id];
+        let routeModule = window.__remixRouteModules[m.route.id];
+        invariant(
+          routeModule,
+          "Expected a defined routeModule after bikeshed_loadRoute"
+        );
+
+        if (routeModule.clientLoader) {
+          return routeModule.clientLoader({
+            request,
+            params: m.params,
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-constraint
+            serverLoader: <T extends unknown>() =>
+              sharedSingleFetch(m.route.id) as Promise<SerializeFrom<T>>,
+          });
+        } else if (route.hasLoader) {
+          return sharedSingleFetch(m.route.id);
+        } else {
+          // TODO: We seem to get here for routes without a loader -
+          // they should get short circuited!
+
+          // If we make it into the `bikeshed_loadRoute` callback we ought to
+          // have a handler to call so this shouldn't happen but I think some
+          // HMR/HDR scenarios might hit this flow?
+          return Promise.resolve(null);
+        }
+      })
+    )
+  );
 }
