@@ -59,6 +59,7 @@ const CLIENT_ROUTE_EXPORTS = [
   "ErrorBoundary",
   "handle",
   "HydrateFallback",
+  "Layout",
   "links",
   "meta",
   "shouldRevalidate",
@@ -897,7 +898,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
         return {
           __remixPluginContext: ctx,
-          appType: "custom",
+          appType:
+            viteCommand === "serve" &&
+            viteConfigEnv.mode === "production" &&
+            ctx.remixConfig.unstable_ssr === false
+              ? "spa"
+              : "custom",
           optimizeDeps: {
             include: [
               // Pre-bundle React dependencies to avoid React duplicates,
@@ -938,48 +944,62 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             ],
           },
           base: viteUserConfig.base,
-          ...(viteCommand === "build" && {
-            build: {
-              cssMinify: viteUserConfig.build?.cssMinify ?? true,
-              ...(!viteConfigEnv.isSsrBuild
-                ? {
-                    manifest: true,
-                    outDir: getClientBuildDirectory(ctx.remixConfig),
-                    rollupOptions: {
-                      preserveEntrySignatures: "exports-only",
-                      input: [
-                        ctx.entryClientFilePath,
-                        ...Object.values(ctx.remixConfig.routes).map(
-                          (route) =>
-                            `${path.resolve(
-                              ctx.remixConfig.appDirectory,
-                              route.file
-                            )}${CLIENT_ROUTE_QUERY_STRING}`
-                        ),
-                      ],
-                    },
-                  }
-                : {
-                    // We move SSR-only assets to client assets. Note that the
-                    // SSR build can also emit code-split JS files (e.g. by
-                    // dynamic import) under the same assets directory
-                    // regardless of "ssrEmitAssets" option, so we also need to
-                    // keep these JS files have to be kept as-is.
-                    ssrEmitAssets: true,
-                    copyPublicDir: false, // Assets in the public directory are only used by the client
-                    manifest: true, // We need the manifest to detect SSR-only assets
-                    outDir: getServerBuildDirectory(ctx),
-                    rollupOptions: {
-                      preserveEntrySignatures: "exports-only",
-                      input: serverBuildId,
-                      output: {
-                        entryFileNames: ctx.remixConfig.serverBuildFile,
-                        format: ctx.remixConfig.serverModuleFormat,
-                      },
-                    },
-                  }),
-            },
-          }),
+
+          // Vite config options for building
+          ...(viteCommand === "build"
+            ? {
+                build: {
+                  cssMinify: viteUserConfig.build?.cssMinify ?? true,
+                  ...(!viteConfigEnv.isSsrBuild
+                    ? {
+                        manifest: true,
+                        outDir: getClientBuildDirectory(ctx.remixConfig),
+                        rollupOptions: {
+                          preserveEntrySignatures: "exports-only",
+                          input: [
+                            ctx.entryClientFilePath,
+                            ...Object.values(ctx.remixConfig.routes).map(
+                              (route) =>
+                                `${path.resolve(
+                                  ctx.remixConfig.appDirectory,
+                                  route.file
+                                )}${CLIENT_ROUTE_QUERY_STRING}`
+                            ),
+                          ],
+                        },
+                      }
+                    : {
+                        // We move SSR-only assets to client assets. Note that the
+                        // SSR build can also emit code-split JS files (e.g. by
+                        // dynamic import) under the same assets directory
+                        // regardless of "ssrEmitAssets" option, so we also need to
+                        // keep these JS files have to be kept as-is.
+                        ssrEmitAssets: true,
+                        copyPublicDir: false, // Assets in the public directory are only used by the client
+                        manifest: true, // We need the manifest to detect SSR-only assets
+                        outDir: getServerBuildDirectory(ctx),
+                        rollupOptions: {
+                          preserveEntrySignatures: "exports-only",
+                          input: serverBuildId,
+                          output: {
+                            entryFileNames: ctx.remixConfig.serverBuildFile,
+                            format: ctx.remixConfig.serverModuleFormat,
+                          },
+                        },
+                      }),
+                },
+              }
+            : undefined),
+
+          // Vite config options for SPA preview mode
+          ...(viteCommand === "serve" && ctx.remixConfig.unstable_ssr === false
+            ? {
+                build: {
+                  manifest: true,
+                  outDir: getClientBuildDirectory(ctx.remixConfig),
+                },
+              }
+            : undefined),
         };
       },
       async configResolved(resolvedViteConfig) {
@@ -1269,7 +1289,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               serverBuildDirectory,
               ctx.remixConfig.serverBuildFile,
               clientBuildDirectory,
-              viteConfig
+              viteConfig,
+              ctx.remixConfig.basename
             );
           }
         },
@@ -1706,7 +1727,8 @@ async function handleSpaMode(
   serverBuildDirectoryPath: string,
   serverBuildFile: string,
   clientBuildDirectory: string,
-  viteConfig: Vite.ResolvedConfig
+  viteConfig: Vite.ResolvedConfig,
+  basename: string
 ) {
   // Create a handler and call it for the `/` path - rendering down to the
   // proper HydrateFallback ... or not!  Maybe they have a static landing page
@@ -1715,7 +1737,7 @@ async function handleSpaMode(
   let build = await import(url.pathToFileURL(serverBuildPath).toString());
   let { createRequestHandler: createHandler } = await import("@remix-run/node");
   let handler = createHandler(build, viteConfig.mode);
-  let response = await handler(new Request("http://localhost/"));
+  let response = await handler(new Request(`http://localhost${basename}`));
   let html = await response.text();
   if (response.status !== 200) {
     throw new Error(
