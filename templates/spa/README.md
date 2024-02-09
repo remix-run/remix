@@ -22,16 +22,20 @@ npm run dev
 
 ## Production
 
-When you are ready yo build a production version of your app, `npm run build` will generate your assets and an `index.html` for the SPA.
+When you are ready to build a production version of your app, `npm run build` will generate your assets and an `index.html` for the SPA.
 
 ```shellscript
 npm run build
 ```
 
-You can serve this from any server of your choosing, for a simple example, you could use [http-server](https://www.npmjs.com/package/http-server):
+### Deployment
+
+You can then serve your app from any HTTP server of your choosing. The server should be configured to serve multiple paths from a single root `/index.html` file (commonly called "SPA fallback"). Other steps may be required if the server doesn't directly support this functionality.
+
+For a simple example, you could use [sirv-cli](https://www.npmjs.com/package/sirv-cli):
 
 ```shellscript
-npx http-server build/client/
+npx sirv-cli build/client/ --single
 ```
 
 [remix-vite-docs]: https://remix.run/docs/en/main/future/vite
