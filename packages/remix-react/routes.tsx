@@ -68,6 +68,60 @@ function groupRoutesByParentId(manifest: RouteManifest<EntryRoute>) {
   return routes;
 }
 
+function getRouteComponents(
+  route: EntryRoute,
+  routeModule: RouteModule,
+  isSpaMode: boolean
+) {
+  let Component = getRouteModuleComponent(routeModule);
+  // HydrateFallback can only exist on the root route in SPA Mode
+  let HydrateFallback =
+    routeModule.HydrateFallback && (!isSpaMode || route.id === "root")
+      ? routeModule.HydrateFallback
+      : route.id === "root"
+      ? RemixRootDefaultHydrateFallback
+      : undefined;
+  let ErrorBoundary = routeModule.ErrorBoundary
+    ? routeModule.ErrorBoundary
+    : route.id === "root"
+    ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
+    : undefined;
+
+  if (route.id === "root" && routeModule.Layout) {
+    return {
+      ...(Component
+        ? {
+            element: React.createElement(
+              routeModule.Layout,
+              null,
+              React.createElement(Component)
+            ),
+          }
+        : { Component }),
+      ...(ErrorBoundary
+        ? {
+            errorElement: React.createElement(
+              routeModule.Layout,
+              null,
+              React.createElement(ErrorBoundary)
+            ),
+          }
+        : { ErrorBoundary }),
+      ...(HydrateFallback
+        ? {
+            hydrateFallbackElement: React.createElement(
+              routeModule.Layout,
+              null,
+              React.createElement(HydrateFallback)
+            ),
+          }
+        : { HydrateFallback }),
+    };
+  }
+
+  return { Component, ErrorBoundary, HydrateFallback };
+}
+
 export function createServerRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModules: RouteModules,
@@ -86,21 +140,10 @@ export function createServerRoutes(
       routeModule,
       "No `routeModule` available to create server routes"
     );
+
     let dataRoute: DataRouteObject = {
+      ...getRouteComponents(route, routeModule, isSpaMode),
       caseSensitive: route.caseSensitive,
-      Component: getRouteModuleComponent(routeModule),
-      // HydrateFallback can only exist on the root route in SPA Mode
-      HydrateFallback:
-        routeModule.HydrateFallback && (!isSpaMode || route.id === "root")
-          ? routeModule.HydrateFallback
-          : route.id === "root"
-          ? RemixRootDefaultHydrateFallback
-          : undefined,
-      ErrorBoundary: routeModule.ErrorBoundary
-        ? routeModule.ErrorBoundary
-        : route.id === "root"
-        ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
-        : undefined,
       id: route.id,
       index: route.index,
       path: route.path,
@@ -246,19 +289,7 @@ export function createClientRoutes(
       // Use critical path modules directly
       Object.assign(dataRoute, {
         ...dataRoute,
-        Component: getRouteModuleComponent(routeModule),
-        // HydrateFallback can only exist on the root route in SPA Mode
-        HydrateFallback:
-          routeModule.HydrateFallback && (!isSpaMode || route.id === "root")
-            ? routeModule.HydrateFallback
-            : route.id === "root"
-            ? RemixRootDefaultHydrateFallback
-            : undefined,
-        ErrorBoundary: routeModule.ErrorBoundary
-          ? routeModule.ErrorBoundary
-          : route.id === "root"
-          ? () => <RemixRootDefaultErrorBoundary error={useRouteError()} />
-          : undefined,
+        ...getRouteComponents(route, routeModule, isSpaMode),
         handle: routeModule.handle,
         shouldRevalidate: needsRevalidation
           ? wrapShouldRevalidateForHdr(
@@ -420,6 +451,8 @@ export function createClientRoutes(
           hasErrorBoundary: lazyRoute.hasErrorBoundary,
           shouldRevalidate: lazyRoute.shouldRevalidate,
           handle: lazyRoute.handle,
+          // No need to wrap these in layout since the root route is never
+          // loaded via route.lazy()
           Component: lazyRoute.Component,
           ErrorBoundary: lazyRoute.ErrorBoundary,
         };

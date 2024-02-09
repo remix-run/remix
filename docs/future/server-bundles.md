@@ -1,8 +1,8 @@
 ---
-title: Server Bundles (Unstable)
+title: Server Bundles
 ---
 
-# Server Bundles (Unstable)
+# Server Bundles
 
 <docs-warning>This is an advanced feature designed for hosting provider integrations. When compiling your app into multiple server bundles, there will need to be a custom routing layer in front of your app directing requests to the correct bundle.</docs-warning>
 
@@ -13,15 +13,15 @@ The provided `serverBundles` function is called for each route in the tree (exce
 For each route, this function is passed an array of routes leading to and including that route, referred to as the route `branch`. This allows you to create server bundles for different portions of the route tree. For example, you could use this to create a separate server bundle containing all routes within a particular layout route:
 
 ```ts filename=vite.config.ts lines=[7-15]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
     remix({
       serverBundles: ({ branch }) => {
-        const isAuthenticatedRoute = branch.some(
-          (route) => route.id === "routes/_authenticated"
+        const isAuthenticatedRoute = branch.some((route) =>
+          route.id.split("/").includes("_authenticated")
         );
 
         return isAuthenticatedRoute
@@ -48,5 +48,5 @@ When the build is complete, Remix will generate a `bundles.json` manifest file i
 - `routeIdToServerBundleId` — An object that maps route IDs to its server bundle ID.
 - `routes` — A route manifest that maps route IDs to route metadata. This can be used to drive a custom routing layer in front of your Remix request handlers.
 
-[remix-vite]: ./vite.md
+[remix-vite]: ./vite
 [pathless-layout-route]: ../file-conventions/routes#nested-layouts-without-nested-urls
