@@ -4,7 +4,11 @@ import type {
   DataStrategyMatch,
 } from "@remix-run/router";
 import type { SerializeFrom } from "@remix-run/server-runtime";
-import { createBrowserHistory, createRouter } from "@remix-run/router";
+import {
+  createBrowserHistory,
+  createRouter,
+  redirect,
+} from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
@@ -369,16 +373,18 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   );
 }
 
-type SingleFetchResult = { data: unknown } | { error: unknown };
+type SingleFetchResult =
+  | { data: unknown }
+  | { error: unknown }
+  | { redirect: string; status: number; revalidate: boolean; reload: boolean };
 type SingleFetchResults = {
-  action?: SingleFetchResult;
-  loaders: Record<string, SingleFetchResult>;
+  [key: string]: SingleFetchResult;
 };
 
-// TODO: This is temporary just tio get it woring for one action at a time.
+// TODO: This is temporary just tio get it working for one action at a time.
 // We need to extend this via some form of global serverRoundTripId from the
 // router that applies to navigations and fetches
-let revalidationPromise: Promise<SingleFetchResults["loaders"]> | null = null;
+//let revalidationPromise: Promise<SingleFetchResults["loaders"]> | null = null;
 
 async function singleFetchDataStrategy({
   request,
@@ -429,29 +435,32 @@ async function makeSingleFetchCall(request: Request) {
     "Expected a text/x-turbo response"
   );
   let decoded = await decode(res.body!);
-  return decoded.value as SingleFetchResults;
+  return decoded.value;
+}
+
+function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
+  if ("error" in result) {
+    throw result.error;
+  } else if ("redirect" in result) {
+    let headers: Record<string, string> = {};
+    if (result.revalidate) {
+      headers["X-Remix-Revalidate"] = "yes";
+    }
+    if (result.reload) {
+      headers["X-Remix-Reload-Document"] = "yes";
+    }
+    return redirect(result.redirect, { status: result.status, headers });
+  } else if ("data" in result) {
+    return result.data;
+  } else {
+    throw new Error(`No action response found for routeId "${routeId}"`);
+  }
 }
 
 function singleFetchAction(request: Request, matches: DataStrategyMatch[]) {
   let singleFetch = async (routeId: string) => {
-    let data = await makeSingleFetchCall(request);
-    if (data.action === undefined) {
-      throw new Error(`No action response found`);
-    }
-
-    // Stash off streaming loader data promise for the subsequent router
-    // revalidation loader executions
-    if (data.loaders instanceof Promise) {
-      revalidationPromise = data.loaders;
-    }
-
-    if ("error" in data.action) {
-      throw data.action.error;
-    } else if ("data" in data.action) {
-      return data.action.data;
-    } else {
-      throw new Error(`No action response found for routeId "${routeId}"`);
-    }
+    let result = (await makeSingleFetchCall(request)) as SingleFetchResult;
+    return unwrapSingleFetchResult(result, routeId);
   };
 
   return Promise.all(
@@ -490,25 +499,15 @@ function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
   let singleFetchPromise: Promise<SingleFetchResults>;
   let sharedSingleFetch = async (routeId: string) => {
     if (!singleFetchPromise) {
-      // If this is a revalidation for a prior action and we already got the data - use it
-      if (revalidationPromise) {
-        singleFetchPromise = revalidationPromise.then((loaders) => ({
-          loaders,
-        }));
-        revalidationPromise = null;
-      } else {
-        singleFetchPromise = makeSingleFetchCall(request);
-      }
+      singleFetchPromise = makeSingleFetchCall(
+        request
+      ) as Promise<SingleFetchResults>;
     }
-    let data = await singleFetchPromise;
-    let routeData = data.loaders[routeId];
-    if ("error" in routeData) {
-      throw routeData?.error;
-    } else if ("data" in routeData) {
-      return routeData?.data;
-    } else {
-      throw new Error(`No loader response found for routeId "${routeId}"`);
+    let results = await singleFetchPromise;
+    if (results[routeId] !== undefined) {
+      return unwrapSingleFetchResult(results[routeId], routeId);
     }
+    return null;
   };
 
   return Promise.all(

@@ -23,8 +23,8 @@ import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
 import { getDocumentHeadersRR as getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
-import { matchServerRoutes } from "./routeMatching";
-import type { ServerRoute } from "./routes";
+import { RouteMatch, matchServerRoutes } from "./routeMatching";
+import type { Route, ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
@@ -142,11 +142,24 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       _build.future.unstable_singleFetch &&
       url.pathname.endsWith(".data")
     ) {
+      let handlerUrl = new URL(request.url);
+      handlerUrl.pathname = handlerUrl.pathname
+        .replace(/\.data$/, "")
+        .replace(/^\/_root$/, "/");
+
+      let matches = matchServerRoutes(
+        routes,
+        handlerUrl.pathname,
+        _build.basename
+      );
+
       response = await handleSingleFetchRequest(
         serverMode,
         _build,
         staticHandler,
+        matches,
         request,
+        handlerUrl,
         loadContext,
         handleError
       );
@@ -291,76 +304,49 @@ async function handleDataRequest(
 type SingleFetchResult =
   | { data: unknown }
   | { error: unknown }
-  | { redirect: string };
+  | { redirect: string; status: number; revalidate: boolean; reload: boolean };
 type SingleFetchResults = {
-  action?: SingleFetchResult;
-  loaders:
-    | Record<string, SingleFetchResult>
-    | Promise<Record<string, SingleFetchResult>>;
+  [key: string]: SingleFetchResult;
 };
 
 async function handleSingleFetchRequest(
   serverMode: ServerMode,
   build: ServerBuild,
   staticHandler: StaticHandler,
+  matches: RouteMatch<ServerRoute>[] | null,
   request: Request,
+  handlerUrl: URL,
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void
 ): Promise<Response> {
-  let handlerUrl = new URL(request.url);
-  handlerUrl.pathname = handlerUrl.pathname
-    .replace(/\.data$/, "")
-    .replace(/^\/_root$/, "/");
-
-  if (request.method !== "GET") {
-    let { action, headers } = await singleFetchAction(
-      request,
-      handlerUrl,
-      staticHandler,
-      loadContext,
-      handleError
-    );
-    // Mark all successful responses with a header so we can identify in-flight
-    // network errors that are missing this header
-    headers.set("X-Remix-Response", "yes");
-    headers.set("Content-Type", "text/x-turbo");
-
-    let result: SingleFetchResults = {
-      action,
-      loaders: singleFetchLoaders(
-        handlerUrl,
-        staticHandler,
-        loadContext,
-        handleError,
-        serverMode,
-        build
-      ).then(({ loaders }) => loaders),
-    };
-    // Note: Deferred data is already just Promises on context.loaderData, so we
-    // don't have to mess with context.activeDeferreds or anything :)
-    return new Response(encode(result), { headers });
-  }
-
-  let { loaders, headers } = await singleFetchLoaders(
-    handlerUrl,
-    staticHandler,
-    loadContext,
-    handleError,
-    serverMode,
-    build
-  );
+  let [result, headers] =
+    request.method !== "GET"
+      ? await singleFetchAction(
+          request,
+          handlerUrl,
+          staticHandler,
+          loadContext,
+          handleError
+        )
+      : await singleFetchLoaders(
+          handlerUrl,
+          staticHandler,
+          matches,
+          loadContext,
+          handleError,
+          serverMode,
+          build
+        );
 
   // Mark all successful responses with a header so we can identify in-flight
   // network errors that are missing this header
-  headers.set("X-Remix-Response", "yes");
-  headers.set("Content-Type", "text/x-turbo");
+  let resultHeaders = new Headers(headers);
+  resultHeaders.set("X-Remix-Response", "yes");
+  resultHeaders.set("Content-Type", "text/x-turbo");
 
-  let result: SingleFetchResults = {
-    loaders,
-  };
-  // Note: Deferred data is already just Promises on context.loaderData, so we
-  // don't have to mess with context.activeDeferreds or anything :)
-  return new Response(encode(result), { headers });
+  // Note: Deferred data is already just Promises, so we don't have to mess
+  // `activeDeferreds` or anything :)
+  return new Response(encode(result), { headers: resultHeaders });
 }
 
 async function singleFetchAction(
@@ -369,7 +355,7 @@ async function singleFetchAction(
   staticHandler: StaticHandler,
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void
-): Promise<{ action: SingleFetchResults["action"]; headers: Headers }> {
+): Promise<[SingleFetchResult, Headers]> {
   try {
     let handlerRequest = new Request(handlerUrl, {
       method: request.method,
@@ -389,32 +375,32 @@ async function singleFetchAction(
       "Expected a Response to be returned from queryRoute"
     );
     if (isRedirectResponse(response)) {
-      return {
-        action: { redirect: response.headers.get("Location")! },
-        headers: response.headers,
-      };
+      return [
+        {
+          redirect: response.headers.get("Location")!,
+          status: response.status,
+          revalidate: response.headers.has("X-Remix-Revalidate"),
+          reload: response.headers.has("X-Remix-Reload-Document"),
+        },
+        response.headers,
+      ];
     }
-    return {
-      action: { data: await unwrapResponse(response) },
-      headers: response.headers,
-    };
+    return [{ data: await unwrapResponse(response) }, response.headers];
   } catch (error) {
     handleError(error);
-    return {
-      action: { error },
-      headers: new Headers(),
-    };
+    return [{ error }, new Headers()];
   }
 }
 
 async function singleFetchLoaders(
   handlerUrl: URL,
   staticHandler: StaticHandler,
+  matches: RouteMatch<ServerRoute>[] | null,
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void,
   serverMode: ServerMode,
   build: ServerBuild
-): Promise<{ loaders: SingleFetchResults["loaders"]; headers: Headers }> {
+): Promise<[SingleFetchResults, Headers]> {
   let context: StaticHandlerContext;
   try {
     let handlerRequest = new Request(handlerUrl);
@@ -422,19 +408,28 @@ async function singleFetchLoaders(
       requestContext: loadContext,
     });
     if (isResponse(result)) {
-      // TODO: What's the use-case that lands us here?
-      return {
-        loaders: { root: { redirect: result.headers.get("Location")! } },
-        headers: result.headers,
-      };
+      // We don't really know which loader this came from, so just stick it at
+      // a known match
+      // TODO: this should take into account the revalidation header
+      console.log(matches);
+      let routeId =
+        matches?.find((m) => m.route.module.loader)?.route.id || "root";
+      return [
+        {
+          [routeId]: {
+            redirect: result.headers.get("Location")!,
+            status: result.status,
+            revalidate: result.headers.has("X-Remix-Revalidate"),
+            reload: result.headers.has("X-Remix-Reload-Document"),
+          },
+        },
+        result.headers,
+      ];
     }
     context = result;
   } catch (error: unknown) {
     handleError(error);
-    return {
-      loaders: { root: { error } },
-      headers: new Headers(),
-    };
+    return [{ root: { error } }, new Headers()];
   }
 
   // Sanitize errors outside of development environments
@@ -468,8 +463,8 @@ async function singleFetchLoaders(
     }
   }
 
-  return {
-    loaders: context.matches.reduce(
+  return [
+    context.matches.reduce(
       (acc, match) =>
         Object.assign(acc, {
           [match.route.id]:
@@ -479,8 +474,8 @@ async function singleFetchLoaders(
         }),
       {}
     ),
-    headers: getDocumentHeaders(build, context),
-  };
+    getDocumentHeaders(build, context),
+  ];
 }
 
 async function handleDocumentRequest(
