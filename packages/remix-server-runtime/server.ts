@@ -411,7 +411,6 @@ async function singleFetchLoaders(
       // We don't really know which loader this came from, so just stick it at
       // a known match
       // TODO: this should take into account the revalidation header
-      console.log(matches);
       let routeId =
         matches?.find((m) => m.route.module.loader)?.route.id || "root";
       return [

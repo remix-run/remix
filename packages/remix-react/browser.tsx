@@ -381,6 +381,8 @@ type SingleFetchResults = {
   [key: string]: SingleFetchResult;
 };
 
+let isRevalidation = false;
+
 // TODO: This is temporary just tio get it working for one action at a time.
 // We need to extend this via some form of global serverRoundTripId from the
 // router that applies to navigations and fetches
@@ -411,13 +413,17 @@ async function singleFetchDataStrategy({
     let [routeData] = await Promise.all([routePromise, stylesPromise]);
     return routeData;
   } else {
-    let routePromise = singleFetchLoaders(request, matches);
+    // Single fetch doesn't need/want naked index queries on action
+    // revalidation requests
+    let routePromise = singleFetchLoaders(stripIndexParam(request), matches);
     let [routeData] = await Promise.all([routePromise, stylesPromise]);
     return routeData;
   }
 
   // TODO: Critical route modules for single fetch
   // TODO: granular revalidation
+  // TODO: Don't revalidate on action 4xx/5xx responses with status codes
+  //       (return or throw)
   // TODO: Fix issue with auto-revalidating routes on HMR
   //  - load /
   //  - navigate to /parent/child
@@ -426,10 +432,23 @@ async function singleFetchDataStrategy({
   //  - throws a "you returned undefined from a loader" error
 }
 
-async function makeSingleFetchCall(request: Request) {
+async function makeSingleFetchCall(
+  request: Request,
+  revalidatingRoutes?: Set<string>
+) {
+  if (revalidatingRoutes) {
+    await new Promise((r) => setTimeout(r, 0));
+  }
   let url = new URL(request.url);
   url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
-  let res = await fetch(url, { method: request.method });
+  let res = await fetch(url, {
+    method: request.method,
+    headers: {
+      ...(revalidatingRoutes
+        ? { "X-Remix-Revalidate": Array.from(revalidatingRoutes).join(",") }
+        : {}),
+    },
+  });
   invariant(
     res.headers.get("Content-Type")?.includes("text/x-turbo"),
     "Expected a text/x-turbo response"
@@ -463,6 +482,8 @@ function singleFetchAction(request: Request, matches: DataStrategyMatch[]) {
     return unwrapSingleFetchResult(result, routeId);
   };
 
+  isRevalidation = true;
+
   return Promise.all(
     matches.map((m) =>
       m.bikeshed_loadRoute(() => {
@@ -492,6 +513,7 @@ function singleFetchAction(request: Request, matches: DataStrategyMatch[]) {
 }
 
 function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
+  let revalidatingRoutes = new Set<string>();
   // Create a singular promise for all routes to latch onto for single fetch.
   // This way we can kick off `clientLoaders` and ensure:
   // 1. we only call the server if at least one of them calls `serverLoader`
@@ -500,8 +522,13 @@ function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
   let sharedSingleFetch = async (routeId: string) => {
     if (!singleFetchPromise) {
       singleFetchPromise = makeSingleFetchCall(
-        request
+        request,
+        isRevalidation ? revalidatingRoutes : undefined
       ) as Promise<SingleFetchResults>;
+      // TODO: Pass this in from dataStrategy
+      // Maybe we can even just throw revalidationRequired or something on
+      // `DataStrategyMatch` and avoid all this await tick() stuff...
+      isRevalidation = false;
     }
     let results = await singleFetchPromise;
     if (results[routeId] !== undefined) {
@@ -513,6 +540,8 @@ function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
   return Promise.all(
     matches.map((m) =>
       m.bikeshed_loadRoute(() => {
+        console.log("Inside loadRoute callback for route ", m.route.id);
+        revalidatingRoutes.add(m.route.id);
         let route = window.__remixManifest.routes[m.route.id];
         let routeModule = window.__remixRouteModules[m.route.id];
         invariant(
@@ -542,4 +571,21 @@ function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
       })
     )
   );
+}
+
+function stripIndexParam(request: Request) {
+  let url = new URL(request.url);
+  let indexValues = url.searchParams.getAll("index");
+  url.searchParams.delete("index");
+  let indexValuesToKeep = [];
+  for (let indexValue of indexValues) {
+    if (indexValue) {
+      indexValuesToKeep.push(indexValue);
+    }
+  }
+  for (let toKeep of indexValuesToKeep) {
+    url.searchParams.append("index", toKeep);
+  }
+
+  return new Request(url.href);
 }
