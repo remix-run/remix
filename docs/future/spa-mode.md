@@ -116,12 +116,12 @@ Since Remix won't render the HTML document, you will need to provide that HTML o
     <title>My Cool App!</title>
   </head>
   <body>
-    <div id="app"><!-- Remix-SPA--></div>
+    <div id="app"><!-- Remix SPA --></div>
   </body>
 </html>
 ```
 
-The `<!-- Remix-SPA-->` HTML comment is what we'll replace with the Remix HTML.
+The `<!-- Remix SPA -->` HTML comment is what we'll replace with the Remix HTML.
 
 <docs-info>Because whitespace is meaningful in the DOM/VDOM tree - it's important not to include any spaces around it and the surrounding `div`, otherwise you will run into React hydration issues</docs-info>
 
@@ -151,7 +151,7 @@ export default function Component() {
 
 **3. Update `entry.server.tsx`**
 
-In your `app/entry.server.tsx` file, you'll want to take the Remix-rendered HTML and insert it into your static `app/index.html` file.
+In your `app/entry.server.tsx` file, you'll want to take the Remix-rendered HTML and insert it into your static `app/index.html` file placeholder. You'll also want to stop pre-pending the `<!DOCTYPE html>` declaration like the default `entry.server.tsx` file does since that should be in your `app/index.html` file).
 
 ```tsx filename=app/entry.server.tsx
 import fs from "node:fs";
@@ -178,7 +178,7 @@ export default function handleRequest(
   );
 
   const html = shellHtml.replace(
-    "<!-- Remix-SPA-->",
+    "<!-- Remix SPA -->",
     appHtml
   );
 
