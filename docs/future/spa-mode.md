@@ -41,7 +41,7 @@ Or, you can manually opt-into SPA mode in your Remix+Vite app by setting `ssr: f
 
 ```js
 // vite.config.ts
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({

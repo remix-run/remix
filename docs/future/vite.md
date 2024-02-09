@@ -1,8 +1,8 @@
 ---
-title: Vite (Unstable)
+title: Vite
 ---
 
-# Vite (Unstable)
+# Vite
 
 [Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
 
@@ -12,13 +12,13 @@ We've got a few different Vite-based templates to get you started.
 
 ```shellscript nonumber
 # Minimal server:
-npx create-remix@latest --template remix-run/remix/templates/unstable-vite
+npx create-remix@latest --template remix-run/remix/templates/vite
 
 # Express:
-npx create-remix@latest --template remix-run/remix/templates/unstable-vite-express
+npx create-remix@latest --template remix-run/remix/templates/vite-express
 
 # Cloudflare:
-npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
+npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
 ```
 
 These templates include a `vite.config.ts` file which is where the Remix Vite plugin is configured.
@@ -30,7 +30,7 @@ The Vite plugin does not use [`remix.config.js`][remix-config]. Instead, the plu
 For example, to configure `ignoredRouteFiles`:
 
 ```ts filename=vite.config.ts lines=[7]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -90,10 +90,10 @@ You may also want to enable the `manifest` option since, when server bundles are
 
 ## Cloudflare
 
-To get started with Cloudflare, you can use the [`unstable-vite-cloudflare`][template-vite-cloudflare] template:
+To get started with Cloudflare, you can use the [`vite-cloudflare`][template-vite-cloudflare] template:
 
 ```shellscript nonumber
-npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
+npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
 ```
 
 There are two ways to run your Cloudflare app locally:
@@ -118,8 +118,8 @@ Remix's Cloudflare preset accepts Wrangler's `getBindingsProxy` function to simu
 
 ```ts filename=vite.config.ts lines=[6,11]
 import {
-  unstable_vitePlugin as remix,
-  unstable_cloudflarePreset as cloudflare,
+  vitePlugin as remix,
+  cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import { getBindingsProxy } from "wrangler";
@@ -199,8 +199,8 @@ The Cloudflare preset accepts a `getRemixDevLoadContext` function whose return v
 
 ```ts filename=vite.config.ts lines=[9,16]
 import {
-  unstable_vitePlugin as remix,
-  unstable_cloudflarePreset as cloudflare,
+  vitePlugin as remix,
+  cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -347,7 +347,7 @@ Remix is now just a Vite plugin, so you'll need to hook it up to Vite.
 👉 **Replace `remix.config.js` with `vite.config.ts` at the root of your Remix app**
 
 ```ts filename=vite.config.ts
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -464,7 +464,7 @@ You'll also need to update to the new build output paths, which are `build/serve
 👉 **Install global Node polyfills in your Vite config**
 
 ```diff filename=vite.config.ts
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 +import { installGlobals } from "@remix-run/node";
 import { defineConfig } from "vite";
 
@@ -584,8 +584,8 @@ The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pag
 
 ```ts filename=vite.config.ts lines=[3,6,11,14-18]
 import {
-  unstable_vitePlugin as remix,
-  unstable_cloudflarePreset as cloudflare,
+  vitePlugin as remix,
+  cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import { getBindingsProxy } from "wrangler";
@@ -670,7 +670,7 @@ npm install -D vite-tsconfig-paths
 👉 **Add `vite-tsconfig-paths` to your Vite config**
 
 ```ts filename=vite.config.ts lines=[3,6]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
@@ -785,7 +785,7 @@ npm install -D @vanilla-extract/vite-plugin
 👉 **Add the Vanilla Extract plugin to your Vite config**
 
 ```ts filename=vite.config.ts lines=[2,6]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import { defineConfig } from "vite";
 
@@ -815,7 +815,7 @@ In this case, that means putting the MDX plugin _before_ the Remix plugin.
 
 ```ts filename=vite.config.ts lines=[1,6]
 import mdx from "@mdx-js/rollup";
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -837,7 +837,7 @@ npm install -D remark-frontmatter remark-mdx-frontmatter
 
 ```ts filename=vite.config.ts lines=[3-4,9-14]
 import mdx from "@mdx-js/rollup";
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { defineConfig } from "vite";
@@ -1003,7 +1003,7 @@ Remember that you can always check the [Vite performance docs][vite-perf] for mo
 To visualize and analyze your bundle, you can use the [rollup-plugin-visualizer][rollup-plugin-visualizer] plugin:
 
 ```ts filename=vite.config.ts
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
@@ -1075,7 +1075,7 @@ We currently recommend excluding the plugin when used with other Vite-based tool
 For Vitest:
 
 ```ts filename=vite.config.ts lines=[7,12-13]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig({
@@ -1091,7 +1091,7 @@ export default defineConfig({
 For Storybook:
 
 ```ts filename=vite.config.ts lines=[7]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 const isStorybook = process.argv[1]?.includes("storybook");
@@ -1203,7 +1203,7 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 We're definitely late to the Vite party, but we're excited to be here now!
 
 [vite]: https://vitejs.dev
-[template-vite-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-cloudflare
+[template-vite-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/vite-cloudflare
 [remix-config]: ../file-conventions/remix-config
 [app-directory]: ../file-conventions/remix-config#appdirectory
 [future]: ../file-conventions/remix-config#future

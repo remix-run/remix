@@ -1,8 +1,8 @@
 ---
-title: Presets (Unstable)
+title: Presets
 ---
 
-# Presets (Unstable)
+# Presets
 
 The [Remix Vite plugin][remix-vite] supports a `presets` option to ease integration with other tools and hosting providers.
 
@@ -19,8 +19,8 @@ Presets are designed to be published to npm and used within your Vite config. Fo
 
 ```ts filename=vite.config.ts lines=[3,11]
 import {
-  unstable_vitePlugin as remix,
-  unstable_cloudflarePreset as cloudflare,
+  vitePlugin as remix,
+  cloudflarePreset as cloudflare,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import { getBindingsProxy } from "wrangler";
@@ -41,10 +41,10 @@ export default defineConfig({
 
 ## Creating a preset
 
-Presets conform to the following `Unstable_Preset` type:
+Presets conform to the following `Preset` type:
 
 ```ts
-type Unstable_Preset = {
+type Preset = {
   name: string;
 
   remixConfig?: () =>
@@ -62,7 +62,7 @@ type Unstable_Preset = {
 As a basic example, let's create a preset that configures a [server bundles function][server-bundles]:
 
 ```ts filename=my-cool-preset.ts
-import type { Unstable_Preset as Preset } from "@remix-run/dev";
+import type { Preset } from "@remix-run/dev";
 
 export function myCoolPreset(): Preset {
   return {
@@ -90,8 +90,8 @@ In our example preset, the `serverBundles` function could be overridden with a d
 
 ```ts filename=my-cool-preset.ts lines=[22-26]
 import type {
-  Unstable_Preset as Preset,
-  Unstable_ServerBundlesFunction as ServerBundlesFunction,
+  Preset,
+  ServerBundlesFunction,
 } from "@remix-run/dev";
 
 const serverBundles: ServerBundlesFunction = ({
