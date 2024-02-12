@@ -205,7 +205,7 @@ export const getStylesForUrl = async ({
     cssModulesManifest,
     files: [
       // Always include the client entry file when crawling the module graph for CSS
-      path.relative(rootDirectory, entryClientFilePath),
+      path.join(rootDirectory, path.relative(rootDirectory, entryClientFilePath)),
       // Then include any styles from the matched routes
       ...documentRouteFiles,
     ],
