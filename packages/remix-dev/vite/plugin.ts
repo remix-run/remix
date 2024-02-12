@@ -2,6 +2,7 @@
 // context but want to use Vite's ESM build to avoid deprecation warnings
 import type * as Vite from "vite";
 import { type BinaryLike, createHash } from "node:crypto";
+import type * as http from "node:http";
 import * as path from "node:path";
 import * as url from "node:url";
 import * as fse from "fs-extra";
@@ -1183,33 +1184,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             }
           }
         });
-
-        return () => {
-          // Let user servers handle SSR requests in middleware mode,
-          // otherwise the Vite plugin will handle the request
-          if (!viteDevServer.config.server.middlewareMode) {
-            viteDevServer.middlewares.use(async (req, res, next) => {
-              try {
-                let build = (await viteDevServer.ssrLoadModule(
-                  serverBuildId
-                )) as ServerBuild;
-
-                let handler = createRequestHandler(build, "development");
-                let nodeHandler: NodeRequestHandler = async (
-                  nodeReq,
-                  nodeRes
-                ) => {
-                  let req = fromNodeRequest(nodeReq);
-                  let res = await handler(req, await remixDevLoadContext(req));
-                  await toNodeRequest(res, nodeRes);
-                };
-                await nodeHandler(req, res);
-              } catch (error) {
-                next(error);
-              }
-            });
-          }
-        };
       },
       writeBundle: {
         // After the SSR build is finished, we inspect the Vite manifest for
@@ -1296,6 +1270,42 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       },
       async buildEnd() {
         await viteChildCompiler?.close();
+      },
+    },
+    {
+      name: "remix-dev-server-middleware",
+      configureServer(viteDevServer) {
+        return () => {
+          // Let user servers handle SSR requests in middleware mode,
+          // otherwise the Vite plugin will handle the request
+          if (!viteDevServer.config.server.middlewareMode) {
+            async function remixDevServerMiddleware(
+              req: Vite.Connect.IncomingMessage,
+              res: http.ServerResponse<http.IncomingMessage>,
+              next: Vite.Connect.NextFunction
+            ) {
+              try {
+                let build = (await viteDevServer.ssrLoadModule(
+                  serverBuildId
+                )) as ServerBuild;
+
+                let handler = createRequestHandler(build, "development");
+                let nodeHandler: NodeRequestHandler = async (
+                  nodeReq,
+                  nodeRes
+                ) => {
+                  let req = fromNodeRequest(nodeReq);
+                  let res = await handler(req, await remixDevLoadContext(req));
+                  await toNodeRequest(res, nodeRes);
+                };
+                await nodeHandler(req, res);
+              } catch (error) {
+                next(error);
+              }
+            }
+            viteDevServer.middlewares.use(remixDevServerMiddleware);
+          }
+        };
       },
     },
     {
