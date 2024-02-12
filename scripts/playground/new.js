@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // this generates a new playground project in the .gitignored playground directory
-// yarn playground:new <?name>
+// pnpm playground:new <?name>
 
 let path = require("node:path");
 let { execSync } = require("node:child_process");
@@ -43,7 +43,7 @@ async function createNewProject(name = `playground-${Date.now()}`) {
   let remixDeps = path.join(__dirname, "../../build/node_modules");
 
   console.log("🏗  Building remix...");
-  execSync(`yarn rollup -c`, { stdio: "inherit" });
+  execSync(`pnpm rollup -c`, { stdio: "inherit" });
 
   console.log("🚚  Copying remix deps...");
   await fse.copy(remixDeps, path.join(projectDir, "node_modules"), {
@@ -64,6 +64,6 @@ async function createNewProject(name = `playground-${Date.now()}`) {
     );
   }
   console.log(
-    `✅  Done! Now in one terminal run \`yarn watch\` in the root of the remix repo and in another cd into ${relativeProjectDir} and run \`npm run dev\` and you should be set.`
+    `✅  Done! Now in one terminal run \`pnpm watch\` in the root of the remix repo and in another cd into ${relativeProjectDir} and run \`npm run dev\` and you should be set.`
   );
 }

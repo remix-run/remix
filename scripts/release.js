@@ -69,7 +69,7 @@ async function run(args) {
     default:
       throw Error(`Invalid argument. Usage:
 
-  $ yarn release [start | bump | finish] [patch | minor | major]`);
+  $ pnpm release [start | bump | finish] [patch | minor | major]`);
   }
 
   if (versionExists(allTags, nextVersion)) {

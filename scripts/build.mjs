@@ -4,8 +4,8 @@ const args = process.argv.slice(2);
 const publish = process.env.CI || args.includes("--publish");
 const tsc = process.env.CI || args.includes("--tsc") || publish;
 
-exec("yarn", ["rollup", "-c"])
-  .then(() => tsc && exec("yarn", ["tsc", "-b"]))
+exec("pnpm", ["rollup", "-c"])
+  .then(() => tsc && exec("pnpm", ["tsc", "-b"]))
   .then(() => publish && exec("node", ["scripts/copy-build-to-dist.mjs"]))
   .then(() => process.exit(0))
   .catch((err) => {

@@ -15,6 +15,8 @@ import { test as base, expect } from "@playwright/test";
 
 const remixBin = "node_modules/@remix-run/dev/dist/cli.js";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+const root = path.resolve(__dirname, "../..");
+const TMP_DIR = path.join(root, ".tmp/integration");
 
 export const viteConfig = {
   server: async (args: { port: number }) => {
@@ -82,7 +84,6 @@ export const EXPRESS_SERVER = (args: {
     app.listen(port, () => console.log('http://localhost:' + port));
   `;
 
-const TMP_DIR = path.join(process.cwd(), ".tmp/integration");
 export async function createProject(files: Record<string, string> = {}) {
   let projectName = `remix-${Math.random().toString(32).slice(2)}`;
   let projectDir = path.join(TMP_DIR, projectName);
@@ -102,11 +103,11 @@ export async function createProject(files: Record<string, string> = {}) {
   );
 
   // node_modules: overwrite with locally built Remix packages
-  await fse.copy(
-    path.join(__dirname, "../../build/node_modules"),
-    path.join(projectDir, "node_modules"),
-    { overwrite: true }
-  );
+  // await fse.copy(
+  //   path.join(__dirname, "../../build/node_modules"),
+  //   path.join(projectDir, "node_modules"),
+  //   { overwrite: true }
+  // );
 
   return projectDir;
 }

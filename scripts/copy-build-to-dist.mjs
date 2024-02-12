@@ -151,7 +151,7 @@ async function getPackageBuildPaths(moduleRootDir) {
     return packageBuilds;
   } catch (_) {
     console.error(
-      "No build files found. Run `yarn build` before running this script."
+      "No build files found. Run `pnpm build` before running this script."
     );
     process.exit(1);
   }

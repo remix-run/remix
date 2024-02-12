@@ -32,34 +32,6 @@ test("builds deterministically under different paths", async () => {
   //  * vanillaExtractPlugin (via app/routes/foo.tsx' .css.ts file import)
   let init: FixtureInit = {
     files: {
-      "package.json": json({
-        name: "remix-template-remix",
-        private: true,
-        sideEffects: false,
-        type: "module",
-        dependencies: {
-          "@remix-run/css-bundle": "0.0.0-local-version",
-          "@remix-run/node": "0.0.0-local-version",
-          "@remix-run/react": "0.0.0-local-version",
-          "@remix-run/serve": "0.0.0-local-version",
-          isbot: "0.0.0-local-version",
-          react: "0.0.0-local-version",
-          "react-dom": "0.0.0-local-version",
-        },
-        devDependencies: {
-          "@remix-run/dev": "0.0.0-local-version",
-          "@types/react": "0.0.0-local-version",
-          "@types/react-dom": "0.0.0-local-version",
-          typescript: "0.0.0-local-version",
-
-          "@vanilla-extract/css": "0.0.0-local-version",
-          "postcss-import": "0.0.0-local-version",
-        },
-        engines: {
-          node: ">=18.0.0",
-        },
-      }),
-
       "postcss.config.js": js`
         export default {
           plugins: {

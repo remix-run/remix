@@ -16,7 +16,7 @@ Promise.all([
 
 /**
  * Consider this scenario:
- * 1. Run `yarn changeset:version` to bump versions
+ * 1. Run `pnpm changeset:version` to bump versions
  * 2. Changesets sees that a package has a minor change
  * 3. Because we release packages in lockstep, all packages get a minor update
  * 4. `@remix-run/dev` has "peerDependencies": { "@remix-run/serve": "1.8.0" }

@@ -18,8 +18,9 @@ import { createRequestHandler as createExpressHandler } from "../../build/node_m
 // @ts-ignore
 import { installGlobals } from "../../build/node_modules/@remix-run/node/dist/index.js";
 
-const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+const root = path.join(__dirname, "../..");
+const TMP_DIR = path.join(root, ".tmp", "integration");
 
 export interface FixtureInit {
   buildStdio?: Writable;
@@ -287,11 +288,11 @@ export async function createFixtureProject(
 
   await fse.ensureDir(projectDir);
   await fse.copy(integrationTemplateDir, projectDir);
-  await fse.copy(
-    path.join(__dirname, "../../build/node_modules"),
-    path.join(projectDir, "node_modules"),
-    { overwrite: true }
-  );
+  // await fse.copy(
+  //   path.join(__dirname, "../../build/node_modules"),
+  //   path.join(projectDir, "node_modules"),
+  //   { overwrite: true }
+  // );
   // let remixDev = path.join(
   //   projectDir,
   //   "node_modules/@remix-run/dev/dist/cli.js"
