@@ -330,6 +330,7 @@ async function handleSingleFetchRequest(
         )
       : await singleFetchLoaders(
           handlerUrl,
+          request.headers.get("X-Remix-Routes"),
           staticHandler,
           matches,
           loadContext,
@@ -394,6 +395,7 @@ async function singleFetchAction(
 
 async function singleFetchLoaders(
   handlerUrl: URL,
+  routesToLoad: string | null,
   staticHandler: StaticHandler,
   matches: RouteMatch<ServerRoute>[] | null,
   loadContext: AppLoadContext,
@@ -404,8 +406,11 @@ async function singleFetchLoaders(
   let context: StaticHandlerContext;
   try {
     let handlerRequest = new Request(handlerUrl);
+    let loadRouteIds = routesToLoad ? routesToLoad.split(",") : undefined;
+
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
+      loadRouteIds,
     });
     if (isResponse(result)) {
       // We don't really know which loader this came from, so just stick it at
@@ -462,19 +467,25 @@ async function singleFetchLoaders(
     }
   }
 
-  return [
-    context.matches.reduce(
-      (acc, match) =>
-        Object.assign(acc, {
-          [match.route.id]:
-            context.errors?.[match.route.id] !== undefined
-              ? { error: context.errors[match.route.id] }
-              : { data: context.loaderData[match.route.id] },
-        }),
-      {}
-    ),
-    getDocumentHeaders(build, context),
-  ];
+  // Aggregate results based on the matches we intended to load since we get
+  // `null` values back in `context.loaderData` for routes we didn't load
+  let results: SingleFetchResults = {};
+  let loadedMatches = routesToLoad
+    ? context.matches.filter(
+        (m) => m.route.loader && routesToLoad.split(",").includes(m.route.id)
+      )
+    : context.matches;
+  loadedMatches.forEach((m) => {
+    let data = context.loaderData?.[m.route.id];
+    let error = context.errors?.[m.route.id];
+    if (error !== undefined) {
+      results[m.route.id] = { error };
+    } else if (data !== undefined) {
+      results[m.route.id] = { data };
+    }
+  });
+
+  return [results, getDocumentHeaders(build, context)];
 }
 
 async function handleDocumentRequest(

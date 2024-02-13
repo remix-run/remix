@@ -26,8 +26,11 @@ import type { RouteModules } from "./routeModules";
 import {
   createClientRoutes,
   createClientRoutesWithHMRRevalidationOptOut,
-  noActionDefinedError,
   shouldHydrateRouteLoader,
+  // TODO: Eventually we should move the single fetch stuff to data.ts and
+  // stop exporting these
+  noActionDefinedError,
+  preventInvalidServerHandlerCall,
 } from "./routes";
 
 /* eslint-disable prefer-let/prefer-let */
@@ -381,13 +384,6 @@ type SingleFetchResults = {
   [key: string]: SingleFetchResult;
 };
 
-let isRevalidation = false;
-
-// TODO: This is temporary just tio get it working for one action at a time.
-// We need to extend this via some form of global serverRoundTripId from the
-// router that applies to navigations and fetches
-//let revalidationPromise: Promise<SingleFetchResults["loaders"]> | null = null;
-
 async function singleFetchDataStrategy({
   request,
   matches,
@@ -408,20 +404,15 @@ async function singleFetchDataStrategy({
     })
   );
 
-  if (request.method !== "GET") {
-    let routePromise = singleFetchAction(request, matches);
-    let [routeData] = await Promise.all([routePromise, stylesPromise]);
-    return routeData;
-  } else {
-    // Single fetch doesn't need/want naked index queries on action
-    // revalidation requests
-    let routePromise = singleFetchLoaders(stripIndexParam(request), matches);
-    let [routeData] = await Promise.all([routePromise, stylesPromise]);
-    return routeData;
-  }
+  let dataPromise =
+    request.method === "GET"
+      ? singleFetchLoaders(request, matches)
+      : singleFetchAction(request, matches);
+
+  let [routeData] = await Promise.all([dataPromise, stylesPromise]);
+  return routeData;
 
   // TODO: Critical route modules for single fetch
-  // TODO: granular revalidation
   // TODO: Don't revalidate on action 4xx/5xx responses with status codes
   //       (return or throw)
   // TODO: Fix issue with auto-revalidating routes on HMR
@@ -432,29 +423,165 @@ async function singleFetchDataStrategy({
   //  - throws a "you returned undefined from a loader" error
 }
 
-async function makeSingleFetchCall(
-  request: Request,
-  revalidatingRoutes?: Set<string>
-) {
-  if (revalidatingRoutes) {
-    await new Promise((r) => setTimeout(r, 0));
-  }
-  let url = new URL(request.url);
-  url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
-  let res = await fetch(url, {
-    method: request.method,
-    headers: {
-      ...(revalidatingRoutes
-        ? { "X-Remix-Revalidate": Array.from(revalidatingRoutes).join(",") }
-        : {}),
-    },
-  });
-  invariant(
-    res.headers.get("Content-Type")?.includes("text/x-turbo"),
-    "Expected a text/x-turbo response"
+function singleFetchAction(request: Request, matches: DataStrategyMatch[]) {
+  let singleFetch = async (routeId: string) => {
+    let res = await fetch(singleFetchUrl(request.url), {
+      method: request.method,
+    });
+    invariant(
+      res.headers.get("Content-Type")?.includes("text/x-turbo"),
+      "Expected a text/x-turbo response"
+    );
+    let decoded = await decode(res.body!);
+    let result = decoded.value as SingleFetchResult;
+    return unwrapSingleFetchResult(result, routeId);
+  };
+
+  return Promise.all(
+    matches.map((m) =>
+      m.bikeshed_loadRoute(() => {
+        let route = window.__remixManifest.routes[m.route.id];
+        let routeModule = window.__remixRouteModules[m.route.id];
+        invariant(
+          routeModule,
+          "Expected a defined routeModule after bikeshed_loadRoute"
+        );
+
+        if (routeModule.clientAction) {
+          return routeModule.clientAction({
+            request,
+            params: m.params,
+            serverAction<T>() {
+              preventInvalidServerHandlerCall(
+                "action",
+                route,
+                window.__remixContext.isSpaMode
+              );
+              return singleFetch(m.route.id) as Promise<SerializeFrom<T>>;
+            },
+          });
+        } else if (route.hasAction) {
+          return singleFetch(m.route.id);
+        } else {
+          throw noActionDefinedError("action", m.route.id);
+        }
+      })
+    )
   );
-  let decoded = await decode(res.body!);
-  return decoded.value;
+}
+
+function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
+  // Create a singular promise for all routes to latch onto for single fetch.
+  // This way we can kick off `clientLoaders` and ensure:
+  // 1. we only call the server if at least one of them calls `serverLoader`
+  // 2. if multiple call` serverLoader` only one fetch call is made
+  let singleFetchPromise: Promise<SingleFetchResults>;
+
+  let makeSingleFetchCall = async () => {
+    // Single fetch doesn't need/want naked index queries on action
+    // revalidation requests
+    let url = singleFetchUrl(stripIndexParam(request.url));
+
+    // Determine which routes we want to load so we can send an X-Remix-Routes header
+    // for fine-grained revalidation if necessary.  If a route has not yet been loaded
+    // via `route.lazy` then we know we want to load it because it's by definition a
+    // net-new route.  If it has been loaded then bikeshed_load will have taken
+    // shouldRevalidate into consideration.
+    //
+    // There is a small edge case that _may_ result in a server loader running
+    // _somewhat_ unintended, but I'm pretty sure it's unavoidable:
+    // - Assume we have 2 routes, parent and child
+    // - Both have clientLoaders and both need to be revalidated
+    // - If neither calls `serverLoader`, we won't make the single fetch call
+    // - We delay the single fetch call until the **first** one calls `serverLoader`
+    // - However, we cannot wait around to know if the other one calls
+    //   `serverLoader`, so we include both of them in the `X-Remix-Routes`
+    //   header
+    // - This means it's technically possible that the second route never calls
+    //   `serverLoader` and we never read the response of that route from the
+    //   single fetch call, and thus executing that loader on the server was
+    //   unnecessary.
+    let matchedIds = genRouteIds(matches.map((m) => m.route.id));
+    let loadIds = genRouteIds(
+      matches.filter((m) => m.bikeshed_load).map((m) => m.route.id)
+    );
+    let headers =
+      matchedIds !== loadIds ? { "X-Remix-Routes": loadIds } : undefined;
+
+    let res = await fetch(url, { headers });
+    invariant(
+      res.body != null &&
+        res.headers.get("Content-Type")?.includes("text/x-turbo"),
+      "Expected a text/x-turbo response"
+    );
+    let decoded = await decode(res.body!);
+    return decoded.value as SingleFetchResults;
+  };
+
+  let singleFetch = async (routeId: string) => {
+    if (!singleFetchPromise) {
+      singleFetchPromise = makeSingleFetchCall();
+    }
+    let results = await singleFetchPromise;
+    if (results[routeId] !== undefined) {
+      return unwrapSingleFetchResult(results[routeId], routeId);
+    }
+    return null;
+  };
+
+  return Promise.all(
+    matches.map((m) =>
+      m.bikeshed_loadRoute(() => {
+        let route = window.__remixManifest.routes[m.route.id];
+        let routeModule = window.__remixRouteModules[m.route.id];
+        invariant(routeModule, "Expected a routeModule in bikeshed_loadRoute");
+
+        if (routeModule.clientLoader) {
+          return routeModule.clientLoader({
+            request,
+            params: m.params,
+            serverLoader<T>() {
+              preventInvalidServerHandlerCall(
+                "loader",
+                route,
+                window.__remixContext.isSpaMode
+              );
+              return singleFetch(m.route.id) as Promise<SerializeFrom<T>>;
+            },
+          });
+        } else if (route.hasLoader) {
+          return singleFetch(m.route.id);
+        } else {
+          // Remix routes without a server loader still have a "loader" on the
+          // client to preload styles, so just return nothing here.
+          return Promise.resolve(null);
+        }
+      })
+    )
+  );
+}
+
+function stripIndexParam(reqUrl: string) {
+  let url = new URL(reqUrl);
+  let indexValues = url.searchParams.getAll("index");
+  url.searchParams.delete("index");
+  let indexValuesToKeep = [];
+  for (let indexValue of indexValues) {
+    if (indexValue) {
+      indexValuesToKeep.push(indexValue);
+    }
+  }
+  for (let toKeep of indexValuesToKeep) {
+    url.searchParams.append("index", toKeep);
+  }
+
+  return url.href;
+}
+
+function singleFetchUrl(reqUrl: string) {
+  let url = new URL(reqUrl);
+  url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
+  return url;
 }
 
 function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
@@ -476,116 +603,8 @@ function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
   }
 }
 
-function singleFetchAction(request: Request, matches: DataStrategyMatch[]) {
-  let singleFetch = async (routeId: string) => {
-    let result = (await makeSingleFetchCall(request)) as SingleFetchResult;
-    return unwrapSingleFetchResult(result, routeId);
-  };
-
-  isRevalidation = true;
-
-  return Promise.all(
-    matches.map((m) =>
-      m.bikeshed_loadRoute(() => {
-        let route = window.__remixManifest.routes[m.route.id];
-        let routeModule = window.__remixRouteModules[m.route.id];
-        invariant(
-          routeModule,
-          "Expected a defined routeModule after bikeshed_loadRoute"
-        );
-
-        if (routeModule.clientAction) {
-          return routeModule.clientAction({
-            request,
-            params: m.params,
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-constraint
-            serverAction: <T extends unknown>() =>
-              singleFetch(m.route.id) as Promise<SerializeFrom<T>>,
-          });
-        } else if (route.hasAction) {
-          return singleFetch(m.route.id);
-        } else {
-          throw noActionDefinedError("action", m.route.id);
-        }
-      })
-    )
-  );
-}
-
-function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
-  let revalidatingRoutes = new Set<string>();
-  // Create a singular promise for all routes to latch onto for single fetch.
-  // This way we can kick off `clientLoaders` and ensure:
-  // 1. we only call the server if at least one of them calls `serverLoader`
-  // 2. if multiple call` serverLoader` only one fetch call is made
-  let singleFetchPromise: Promise<SingleFetchResults>;
-  let sharedSingleFetch = async (routeId: string) => {
-    if (!singleFetchPromise) {
-      singleFetchPromise = makeSingleFetchCall(
-        request,
-        isRevalidation ? revalidatingRoutes : undefined
-      ) as Promise<SingleFetchResults>;
-      // TODO: Pass this in from dataStrategy
-      // Maybe we can even just throw revalidationRequired or something on
-      // `DataStrategyMatch` and avoid all this await tick() stuff...
-      isRevalidation = false;
-    }
-    let results = await singleFetchPromise;
-    if (results[routeId] !== undefined) {
-      return unwrapSingleFetchResult(results[routeId], routeId);
-    }
-    return null;
-  };
-
-  return Promise.all(
-    matches.map((m) =>
-      m.bikeshed_loadRoute(() => {
-        console.log("Inside loadRoute callback for route ", m.route.id);
-        revalidatingRoutes.add(m.route.id);
-        let route = window.__remixManifest.routes[m.route.id];
-        let routeModule = window.__remixRouteModules[m.route.id];
-        invariant(
-          routeModule,
-          "Expected a defined routeModule after bikeshed_loadRoute"
-        );
-
-        if (routeModule.clientLoader) {
-          return routeModule.clientLoader({
-            request,
-            params: m.params,
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-constraint
-            serverLoader: <T extends unknown>() =>
-              sharedSingleFetch(m.route.id) as Promise<SerializeFrom<T>>,
-          });
-        } else if (route.hasLoader) {
-          return sharedSingleFetch(m.route.id);
-        } else {
-          // TODO: We seem to get here for routes without a loader -
-          // they should get short circuited!
-
-          // If we make it into the `bikeshed_loadRoute` callback we ought to
-          // have a handler to call so this shouldn't happen but I think some
-          // HMR/HDR scenarios might hit this flow?
-          return Promise.resolve(null);
-        }
-      })
-    )
-  );
-}
-
-function stripIndexParam(request: Request) {
-  let url = new URL(request.url);
-  let indexValues = url.searchParams.getAll("index");
-  url.searchParams.delete("index");
-  let indexValuesToKeep = [];
-  for (let indexValue of indexValues) {
-    if (indexValue) {
-      indexValuesToKeep.push(indexValue);
-    }
-  }
-  for (let toKeep of indexValuesToKeep) {
-    url.searchParams.append("index", toKeep);
-  }
-
-  return new Request(url.href);
+function genRouteIds(arr: string[]) {
+  return arr
+    .filter((id) => window.__remixManifest.routes[id].hasLoader)
+    .join(",");
 }
