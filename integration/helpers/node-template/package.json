@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@remix-run/css-bundle": "workspace:*",
+    "@remix-run/express": "workspace:*",
     "@remix-run/node": "workspace:*",
     "@remix-run/react": "workspace:*",
     "@remix-run/serve": "workspace:*",
@@ -26,7 +27,9 @@
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "cross-env": "^7.0.3",
+    "getos": "^3.2.1",
     "postcss-import": "^15.1.0",
+    "tailwindcss": "^3.3.0",
     "typescript": "^5.1.0"
   },
   "engines": {
