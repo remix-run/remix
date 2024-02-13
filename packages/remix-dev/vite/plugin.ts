@@ -486,18 +486,6 @@ let mergeRemixConfig = (...configs: VitePluginConfig[]): VitePluginConfig => {
   return configs.reduce(reducer, {});
 };
 
-type MaybePromise<T> = T | Promise<T>;
-
-let remixDevLoadContext: (
-  request: Request
-) => MaybePromise<Record<string, unknown>> = () => ({});
-
-export let setRemixDevLoadContext = (
-  loadContext: (request: Request) => MaybePromise<Record<string, unknown>>
-) => {
-  remixDevLoadContext = loadContext;
-};
-
 // Inlined from https://github.com/jsdf/deep-freeze
 let deepFreeze = (o: any) => {
   Object.freeze(o);
@@ -1200,7 +1188,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   nodeRes
                 ) => {
                   let req = fromNodeRequest(nodeReq);
-                  let res = await handler(req, await remixDevLoadContext(req));
+                  let res = await handler(req);
                   await toNodeRequest(res, nodeRes);
                 };
                 await nodeHandler(req, res);
