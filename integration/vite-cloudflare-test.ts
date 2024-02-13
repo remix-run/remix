@@ -55,11 +55,6 @@ const files: Files = async ({ port }) => ({
 
     export default {
       ${await viteConfig.server({ port })}
-      ssr: {
-        resolve: {
-          externalConditions: ["workerd", "worker"],
-        },
-      },
       plugins: [
         remixCloudflareProxy({ getLoadContext }),
         remix(),

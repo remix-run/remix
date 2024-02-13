@@ -37,6 +37,13 @@ export const cloudflareProxyVitePlugin = <
 ): Plugin => {
   return {
     name: "vite-plugin-remix-cloudflare-proxy",
+    config: () => ({
+      ssr: {
+        resolve: {
+          externalConditions: ["workerd", "worker"],
+        },
+      },
+    }),
     async configureServer(viteDevServer) {
       let cloudflare = await getPlatformProxy<E, Cf>();
       let context = { cloudflare };
