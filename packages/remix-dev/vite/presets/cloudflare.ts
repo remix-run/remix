@@ -2,27 +2,27 @@ import {
   createRequestHandler,
   type AppLoadContext,
 } from "@remix-run/server-runtime";
+import { type PlatformProxy, getPlatformProxy } from "wrangler";
 
 import { type Preset } from "../plugin";
 
 type MaybePromise<T> = T | Promise<T>;
 
+type Env = AppLoadContext["env"];
+
 type GetRemixDevLoadContext = (args: {
   request: Request;
-  env: AppLoadContext["env"];
+  cloudflare: PlatformProxy<Env>;
 }) => MaybePromise<Record<string, unknown>>;
 
 type GetLoadContext = (
   request: Request
 ) => MaybePromise<Record<string, unknown>>;
 
-type GetBindingsProxy = () => Promise<{ bindings: Record<string, unknown> }>;
-
 /**
  * @param options.getRemixDevLoadContext - Augment the load context.
  */
 export const cloudflareProxyPreset = (
-  getBindingsProxy: GetBindingsProxy,
   options: {
     getRemixDevLoadContext?: GetRemixDevLoadContext;
   } = {}
@@ -30,17 +30,17 @@ export const cloudflareProxyPreset = (
   name: "cloudflare-proxy",
   remixConfig: async () => {
     let getLoadContext: GetLoadContext = async () => {
-      let { bindings } = await getBindingsProxy();
-      return { env: bindings };
+      let cloudflare = await getPlatformProxy<Env>();
+      return { cloudflare };
     };
 
     // eslint-disable-next-line prefer-let/prefer-let
     const { getRemixDevLoadContext } = options;
     if (getRemixDevLoadContext) {
       getLoadContext = async (request: Request) => {
-        let { bindings } = await getBindingsProxy();
+        let cloudflare = await getPlatformProxy<Env>();
         let loadContext = await getRemixDevLoadContext({
-          env: bindings,
+          cloudflare,
           request,
         });
         return loadContext;
