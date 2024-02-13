@@ -122,6 +122,11 @@ export type Preset = {
   }) => void | Promise<void>;
 };
 
+type RequestHandler = (request: Request) => Response | Promise<Response>;
+type DevRequestHandler = (args: {
+  loadServerBuild: () => Promise<ServerBuild>;
+}) => RequestHandler | Promise<RequestHandler>;
+
 export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
   /**
    * The react router app basename.  Defaults to `"/"`.
@@ -136,6 +141,11 @@ export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
    * A function that is called after the full Remix build is complete.
    */
   buildEnd?: BuildEndHook;
+  /**
+   * **This is a low-level API meant for runtime preset authors.**
+   * Request handler for Remix routes within the Vite dev server.
+   */
+  devRequestHandler?: DevRequestHandler | false;
   /**
    * Whether to write a `"manifest.json"` file to the build directory.`
    * Defaults to `false`.
@@ -180,6 +190,7 @@ export type ResolvedVitePluginConfig = Readonly<
     basename: string;
     buildDirectory: string;
     buildEnd?: BuildEndHook;
+    devRequestHandler: DevRequestHandler | false;
     manifest: boolean;
     publicPath: string; // derived from Vite's `base` config
     serverBuildFile: string;
@@ -552,6 +563,10 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let defaults = {
       basename: "/",
       buildDirectory: "build",
+      devRequestHandler: async ({ loadServerBuild }) => {
+        let build = await loadServerBuild();
+        return createRequestHandler(build, "development");
+      },
       manifest: false,
       serverBuildFile: "index.js",
       ssr: true,
@@ -565,7 +580,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let rootDirectory =
       viteUserConfig.root ?? process.env.REMIX_ROOT ?? process.cwd();
 
-    let { basename, buildEnd, manifest, ssr } = resolvedRemixUserConfig;
+    let { basename, buildEnd, devRequestHandler, manifest, ssr } =
+      resolvedRemixUserConfig;
     let isSpaMode = !ssr;
 
     // Only select the Remix esbuild config options that the Vite plugin uses
@@ -624,11 +640,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       routes = serverBundleBuildConfig.routes;
     }
 
-    let remixConfig: ResolvedVitePluginConfig = deepFreeze({
+    let remixConfig: ResolvedVitePluginConfig = {
       appDirectory,
       basename,
       buildDirectory,
       buildEnd,
+      devRequestHandler,
       future,
       manifest,
       publicPath,
@@ -637,7 +654,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       serverBundles,
       serverModuleFormat,
       ssr,
-    });
+    };
+    remixConfig = deepFreeze(remixConfig);
 
     for (let preset of remixUserConfig.presets ?? []) {
       await preset.remixConfigResolved?.({ remixConfig });
@@ -1171,6 +1189,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             }
           }
         });
+        if (!ctx.remixConfig.devRequestHandler) return;
+        let { devRequestHandler } = ctx.remixConfig;
 
         return () => {
           // Let user servers handle SSR requests in middleware mode,
@@ -1178,11 +1198,11 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           if (!viteDevServer.config.server.middlewareMode) {
             viteDevServer.middlewares.use(async (req, res, next) => {
               try {
-                let build = (await viteDevServer.ssrLoadModule(
-                  serverBuildId
-                )) as ServerBuild;
-
-                let handler = createRequestHandler(build, "development");
+                let loadServerBuild = async () => {
+                  let build = await viteDevServer.ssrLoadModule(serverBuildId);
+                  return build as ServerBuild;
+                };
+                let handler = await devRequestHandler({ loadServerBuild });
                 let nodeHandler: NodeRequestHandler = async (
                   nodeReq,
                   nodeRes
