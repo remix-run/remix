@@ -1,6 +1,9 @@
-import { type AppLoadContext } from "@remix-run/server-runtime";
+import {
+  createRequestHandler,
+  type AppLoadContext,
+} from "@remix-run/server-runtime";
 
-import { type Preset, setRemixDevLoadContext } from "../plugin";
+import { type Preset } from "../plugin";
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -44,7 +47,14 @@ export const cloudflarePreset = (
       };
     }
 
-    setRemixDevLoadContext(getLoadContext);
-    return {};
+    return {
+      devRequestHandler: async ({ loadServerBuild }) => {
+        let build = await loadServerBuild();
+        let handler = createRequestHandler(build, "development");
+        return async (request: Request): Promise<Response> => {
+          return handler(request, await getLoadContext(request));
+        };
+      },
+    };
   },
 });

@@ -143,6 +143,7 @@ test("Vite / presets", async () => {
     "basename",
     "buildDirectory",
     "buildEnd",
+    "devRequestHandler",
     "future",
     "manifest",
     "publicPath",
