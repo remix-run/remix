@@ -27,11 +27,14 @@ import {
   createClientRoutes,
   createClientRoutesWithHMRRevalidationOptOut,
   shouldHydrateRouteLoader,
-  // TODO: Eventually we should move the single fetch stuff to data.ts and
-  // stop exporting these
+  // TODO: Eventually we should move the single fetch stuff to routes.ts or
+  // data.ts and stop exporting these
   noActionDefinedError,
   preventInvalidServerHandlerCall,
 } from "./routes";
+// TODO: Eventually we should move the single fetch stuff to routes.ts or
+// data.ts and stop exporting these
+import { createRequestInit } from "./data";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -388,8 +391,6 @@ async function singleFetchDataStrategy({
   request,
   matches,
 }: DataStrategyFunctionArgs) {
-  // TODO: Do styles load twice on actions?
-
   // Prefetch styles for matched routes that exist in the routeModulesCache
   // (critical modules and navigating back to pages previously loaded via
   // route.lazy).  Initial execution of route.lazy (when the module is not in
@@ -412,6 +413,7 @@ async function singleFetchDataStrategy({
   let [routeData] = await Promise.all([dataPromise, stylesPromise]);
   return routeData;
 
+  // TODO: Do styles load twice on actions?
   // TODO: Critical route modules for single fetch
   // TODO: Don't revalidate on action 4xx/5xx responses with status codes
   //       (return or throw)
@@ -425,9 +427,8 @@ async function singleFetchDataStrategy({
 
 function singleFetchAction(request: Request, matches: DataStrategyMatch[]) {
   let singleFetch = async (routeId: string) => {
-    let res = await fetch(singleFetchUrl(request.url), {
-      method: request.method,
-    });
+    let init = await createRequestInit(request);
+    let res = await fetch(singleFetchUrl(request.url), init);
     invariant(
       res.headers.get("Content-Type")?.includes("text/x-turbo"),
       "Expected a text/x-turbo response"
