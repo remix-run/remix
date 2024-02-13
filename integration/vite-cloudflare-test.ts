@@ -37,7 +37,7 @@ const files: Files = async ({ port }) => ({
         typescript: "^5.1.6",
         vite: "^5.1.0",
         "vite-tsconfig-paths": "^4.2.1",
-        wrangler: "^3.24.0",
+        wrangler: "^3.28.2",
       },
       engines: {
         node: ">=18.0.0",
@@ -190,5 +190,4 @@ test("vite dev", async ({ page, viteDev }) => {
   await expect(page.locator("[data-text]")).toHaveText("Value: my-value");
 
   expect(page.errors).toEqual([]);
-  expect(1).toBe("chewbacca");
 });

@@ -14,7 +14,19 @@ export type GetLoadContextFunction<
   Data extends Record<string, unknown> = Record<string, unknown>
 > = (args: {
   request: Request;
-  context: { cloudflare: EventContext<Env, Params, Data> };
+  context: {
+    cloudflare: EventContext<Env, Params, Data> & {
+      cf: EventContext<Env, Params, Data>["request"]["cf"];
+      ctx: {
+        waitUntil: EventContext<Env, Params, Data>["waitUntil"];
+        passThroughOnException: EventContext<
+          Env,
+          Params,
+          Data
+        >["passThroughOnException"];
+      };
+    };
+  };
 }) => AppLoadContext | Promise<AppLoadContext>;
 
 export type RequestHandler<Env = any> = PagesFunction<Env>;
@@ -41,7 +53,16 @@ export function createRequestHandler<Env = any>({
   return async (cloudflare) => {
     let loadContext = await getLoadContext({
       request: cloudflare.request,
-      context: { cloudflare },
+      context: {
+        cloudflare: {
+          ...cloudflare,
+          cf: cloudflare.request.cf!,
+          ctx: {
+            waitUntil: cloudflare.waitUntil,
+            passThroughOnException: cloudflare.passThroughOnException,
+          },
+        },
+      },
     });
 
     return handleRequest(cloudflare.request, loadContext);
