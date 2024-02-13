@@ -142,11 +142,6 @@ export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
    */
   buildEnd?: BuildEndHook;
   /**
-   * **This is a low-level API meant for runtime preset authors.**
-   * Request handler for Remix routes within the Vite dev server.
-   */
-  devRequestHandler?: DevRequestHandler | false;
-  /**
    * Whether to write a `"manifest.json"` file to the build directory.`
    * Defaults to `false`.
    */
@@ -175,6 +170,11 @@ export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
    * as a SPA without server-rendering. Default's to `true`.
    */
   ssr?: boolean;
+  /**
+   * **This is a low-level API meant for runtime preset authors.**
+   * Request handler for Remix routes within the Vite dev server.
+   */
+  unstable_devRequestHandler?: DevRequestHandler | false;
 };
 
 type BuildEndHook = (args: {
@@ -190,12 +190,12 @@ export type ResolvedVitePluginConfig = Readonly<
     basename: string;
     buildDirectory: string;
     buildEnd?: BuildEndHook;
-    devRequestHandler: DevRequestHandler | false;
     manifest: boolean;
     publicPath: string; // derived from Vite's `base` config
     serverBuildFile: string;
     serverBundles?: ServerBundlesFunction;
     ssr: boolean;
+    unstable_devRequestHandler: DevRequestHandler | false;
   }
 >;
 
@@ -563,7 +563,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let defaults = {
       basename: "/",
       buildDirectory: "build",
-      devRequestHandler: async ({ loadServerBuild }) => {
+      unstable_devRequestHandler: async ({ loadServerBuild }) => {
         let build = await loadServerBuild();
         return createRequestHandler(build, "development");
       },
@@ -580,7 +580,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let rootDirectory =
       viteUserConfig.root ?? process.env.REMIX_ROOT ?? process.cwd();
 
-    let { basename, buildEnd, devRequestHandler, manifest, ssr } =
+    let { basename, buildEnd, unstable_devRequestHandler, manifest, ssr } =
       resolvedRemixUserConfig;
     let isSpaMode = !ssr;
 
@@ -645,7 +645,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       basename,
       buildDirectory,
       buildEnd,
-      devRequestHandler,
       future,
       manifest,
       publicPath,
@@ -654,6 +653,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       serverBundles,
       serverModuleFormat,
       ssr,
+      unstable_devRequestHandler,
     };
     remixConfig = deepFreeze(remixConfig);
 
@@ -1189,8 +1189,10 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             }
           }
         });
-        if (!ctx.remixConfig.devRequestHandler) return;
-        let { devRequestHandler } = ctx.remixConfig;
+
+        // eslint-disable-next-line prefer-let/prefer-let
+        const devRequestHandler = ctx.remixConfig.unstable_devRequestHandler;
+        if (!devRequestHandler) return;
 
         return () => {
           // Let user servers handle SSR requests in middleware mode,

@@ -13,7 +13,7 @@ import { getLoaderForFile } from "../../utils/loaders";
 /**
  * A plugin responsible for resolving bare module ids based on server target.
  * This includes externalizing for node based platforms, and bundling for single file
- * environments such as cloudflare.
+ * environments such as cloudflareProxy.
  */
 export function serverBareModulesPlugin(ctx: Context): Plugin {
   // Resolve paths according to tsconfig paths property

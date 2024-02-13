@@ -20,7 +20,7 @@ Presets are designed to be published to npm and used within your Vite config. Fo
 ```ts filename=vite.config.ts lines=[3,11]
 import {
   vitePlugin as remix,
-  cloudflarePreset as cloudflare,
+  cloudflareProxyPreset as cloudflareProxy,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import { getBindingsProxy } from "wrangler";
@@ -28,7 +28,7 @@ import { getBindingsProxy } from "wrangler";
 export default defineConfig({
   plugins: [
     remix({
-      presets: [cloudflare(getBindingsProxy)],
+      presets: [cloudflareProxy(getBindingsProxy)],
     }),
   ],
   ssr: {

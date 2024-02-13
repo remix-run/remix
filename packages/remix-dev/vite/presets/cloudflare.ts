@@ -21,13 +21,13 @@ type GetBindingsProxy = () => Promise<{ bindings: Record<string, unknown> }>;
 /**
  * @param options.getRemixDevLoadContext - Augment the load context.
  */
-export const cloudflarePreset = (
+export const cloudflareProxyPreset = (
   getBindingsProxy: GetBindingsProxy,
   options: {
     getRemixDevLoadContext?: GetRemixDevLoadContext;
   } = {}
 ): Preset => ({
-  name: "cloudflare",
+  name: "cloudflare-proxy",
   remixConfig: async () => {
     let getLoadContext: GetLoadContext = async () => {
       let { bindings } = await getBindingsProxy();
@@ -48,7 +48,7 @@ export const cloudflarePreset = (
     }
 
     return {
-      devRequestHandler: async ({ loadServerBuild }) => {
+      unstable_devRequestHandler: async ({ loadServerBuild }) => {
         let build = await loadServerBuild();
         let handler = createRequestHandler(build, "development");
         return async (request: Request): Promise<Response> => {

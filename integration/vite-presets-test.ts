@@ -143,7 +143,6 @@ test("Vite / presets", async () => {
     "basename",
     "buildDirectory",
     "buildEnd",
-    "devRequestHandler",
     "future",
     "manifest",
     "publicPath",
@@ -152,6 +151,7 @@ test("Vite / presets", async () => {
     "serverBundles",
     "serverModuleFormat",
     "ssr",
+    "unstable_devRequestHandler",
   ]);
 
   // Ensure we get a valid build manifest

@@ -47,7 +47,7 @@ const files: Files = async ({ port }) => ({
   "vite.config.ts": dedent`
     import {
       vitePlugin as remix,
-      cloudflarePreset as cloudflare,
+      cloudflareProxyPreset as cloudflareProxy,
     } from "@remix-run/dev";
     import { getBindingsProxy } from "wrangler";
     import { getLoadContext } from "./get-load-context";
@@ -62,7 +62,7 @@ const files: Files = async ({ port }) => ({
       plugins: [
         remix({
           presets: [
-            cloudflare(getBindingsProxy, {
+            cloudflareProxy(getBindingsProxy, {
               getRemixDevLoadContext: getLoadContext,
             })
           ]

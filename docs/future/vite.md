@@ -119,7 +119,7 @@ Remix's Cloudflare preset accepts Wrangler's `getBindingsProxy` function to simu
 ```ts filename=vite.config.ts lines=[6,11]
 import {
   vitePlugin as remix,
-  cloudflarePreset as cloudflare,
+  cloudflareProxyPreset as cloudflareProxy,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import { getBindingsProxy } from "wrangler";
@@ -127,7 +127,7 @@ import { getBindingsProxy } from "wrangler";
 export default defineConfig({
   plugins: [
     remix({
-      presets: [cloudflare(getBindingsProxy)],
+      presets: [cloudflareProxy(getBindingsProxy)],
     }),
   ],
   ssr: {
@@ -200,7 +200,7 @@ The Cloudflare preset accepts a `getRemixDevLoadContext` function whose return v
 ```ts filename=vite.config.ts lines=[9,16]
 import {
   vitePlugin as remix,
-  cloudflarePreset as cloudflare,
+  cloudflareProxyPreset as cloudflareProxy,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -212,7 +212,7 @@ export default defineConfig({
   plugins: [
     remix({
       presets: [
-        cloudflare(getBindingsProxy, {
+        cloudflareProxy(getBindingsProxy, {
           getRemixDevLoadContext: getLoadContext,
         }),
       ],
@@ -585,7 +585,7 @@ The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pag
 ```ts filename=vite.config.ts lines=[3,6,11,14-18]
 import {
   vitePlugin as remix,
-  cloudflarePreset as cloudflare,
+  cloudflareProxyPreset as cloudflareProxy,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import { getBindingsProxy } from "wrangler";
@@ -593,7 +593,7 @@ import { getBindingsProxy } from "wrangler";
 export default defineConfig({
   plugins: [
     remix({
-      presets: [cloudflare(getBindingsProxy)],
+      presets: [cloudflareProxy(getBindingsProxy)],
     }),
   ],
   ssr: {
