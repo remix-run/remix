@@ -211,6 +211,7 @@ export const test = base.extend<Fixtures>({
     await use(async (files) => {
       let port = await getPort();
       let cwd = await createProject(await files({ port }));
+      console.log({ cwd });
       stop = await viteDev({ cwd, port });
       return { port, cwd };
     });

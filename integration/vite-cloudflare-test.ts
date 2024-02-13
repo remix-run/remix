@@ -4,6 +4,8 @@ import dedent from "dedent";
 import type { Files } from "./helpers/vite.js";
 import { test, viteConfig } from "./helpers/vite.js";
 
+// TODO: test wrangler too
+
 const files: Files = async ({ port }) => ({
   "package.json": JSON.stringify(
     {
@@ -47,9 +49,8 @@ const files: Files = async ({ port }) => ({
   "vite.config.ts": dedent`
     import {
       vitePlugin as remix,
-      cloudflarePreset as cloudflare,
+      cloudflareProxyVitePlugin as remixCloudflareProxy,
     } from "@remix-run/dev";
-    import { getBindingsProxy } from "wrangler";
     import { getLoadContext } from "./get-load-context";
 
     export default {
@@ -60,34 +61,37 @@ const files: Files = async ({ port }) => ({
         },
       },
       plugins: [
-        remix({
-          presets: [
-            cloudflare(getBindingsProxy, {
-              getRemixDevLoadContext: getLoadContext,
-            })
-          ]
-        })
+        remixCloudflareProxy({ getLoadContext }),
+        remix(),
       ],
     }
   `,
   "get-load-context.ts": `
     import { type KVNamespace } from "@cloudflare/workers-types";
     import { type AppLoadContext } from "@remix-run/cloudflare";
+    import { type PlatformProxy } from "wrangler";
+
+    type Cloudflare = PlatformProxy<{
+      MY_KV: KVNamespace;
+    }>;
 
     declare module "@remix-run/cloudflare" {
       export interface AppLoadContext {
-        env: {
-          MY_KV: KVNamespace;
-        };
+        cloudflare: Cloudflare;
+        env2: Cloudflare["env"];
         extra: string;
       }
     }
 
-    type Context = { request: Request; env: AppLoadContext["env"] };
-    export const getLoadContext = (context: Context): AppLoadContext => {
+    type GetLoadContext = (args: {
+      request: Request;
+      context: { cloudflare: Cloudflare };
+    }) => AppLoadContext;
+
+    export const getLoadContext: GetLoadContext = ({ context }) => {
       return {
         ...context,
-        env2: context.env,
+        env2: context.cloudflare.env,
         extra: "stuff",
       };
     };
@@ -120,23 +124,23 @@ const files: Files = async ({ port }) => ({
     const key = "__my-key__";
 
     export async function loader({ context }: LoaderFunctionArgs) {
-      const { MY_KV } = context.env;
+      const { MY_KV } = context.cloudflare.env;
       const value = await MY_KV.get(key);
       return json({ value, extra: context.extra });
     }
 
     export async function action({ request, context }: ActionFunctionArgs) {
-      const { MY_KV: myKv } = context.env2;
+      const { MY_KV } = context.env2;
 
       if (request.method === "POST") {
         const formData = await request.formData();
         const value = formData.get("value") as string;
-        await myKv.put(key, value);
+        await MY_KV.put(key, value);
         return null;
       }
 
       if (request.method === "DELETE") {
-        await myKv.delete(key);
+        await MY_KV.delete(key);
         return null;
       }
 
@@ -186,4 +190,5 @@ test("vite dev", async ({ page, viteDev }) => {
   await expect(page.locator("[data-text]")).toHaveText("Value: my-value");
 
   expect(page.errors).toEqual([]);
+  expect(1).toBe("chewbacca");
 });

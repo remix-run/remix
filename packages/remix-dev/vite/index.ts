@@ -16,3 +16,4 @@ export const vitePlugin: RemixVitePlugin = (...args) => {
 };
 
 export { cloudflarePreset } from "./presets/cloudflare";
+export { cloudflareProxyVitePlugin } from "./cloudflare-proxy-plugin";

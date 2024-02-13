@@ -12,9 +12,10 @@ export type GetLoadContextFunction<
   Env = unknown,
   Params extends string = any,
   Data extends Record<string, unknown> = Record<string, unknown>
-> = (
-  context: EventContext<Env, Params, Data>
-) => Promise<AppLoadContext> | AppLoadContext;
+> = (args: {
+  request: Request;
+  context: { cloudflare: EventContext<Env, Params, Data> };
+}) => AppLoadContext | Promise<AppLoadContext>;
 
 export type RequestHandler<Env = any> = PagesFunction<Env>;
 
@@ -27,14 +28,23 @@ export interface createPagesFunctionHandlerParams<Env = any> {
 export function createRequestHandler<Env = any>({
   build,
   mode,
-  getLoadContext = (context) => ({ env: context.env }),
+  getLoadContext = ({ context }) => ({
+    ...context,
+    cloudflare: {
+      ...context.cloudflare,
+      cf: context.cloudflare.request.cf,
+    },
+  }),
 }: createPagesFunctionHandlerParams<Env>): RequestHandler<Env> {
   let handleRequest = createRemixRequestHandler(build, mode);
 
-  return async (context) => {
-    let loadContext = await getLoadContext(context);
+  return async (cloudflare) => {
+    let loadContext = await getLoadContext({
+      request: cloudflare.request,
+      context: { cloudflare },
+    });
 
-    return handleRequest(context.request, loadContext);
+    return handleRequest(cloudflare.request, loadContext);
   };
 }
 
