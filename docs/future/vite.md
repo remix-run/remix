@@ -150,7 +150,21 @@ To configure bindings for Cloudflare resources:
 - For locally development, use [wrangler.toml][wrangler-toml-bindings]
 - For deployments, use the [Cloudflare dashboard][cloudflare-pages-bindings]
 
-// TODO: typegen
+Whenever you change your bindings in `wrangler.toml`, you'll want to regenerate types for those bindings via `wrangler types`.
+The `wrangler types` command generates a TypeScript file that defines the `Env` interface with your bindings in the global scope.
+For example, the [Cloudflare template][template-vite-cloudflare] automatically generates initial types with `postinstall` script and then references those types in `load-context.ts`:
+
+```ts filename=load-context.ts lines=[3]
+import { type PlatformProxy } from "wrangler";
+
+type Cloudflare = Omit<PlatformProxy<Env>, "dispose">;
+
+declare module "@remix-run/cloudflare" {
+  interface AppLoadContext {
+    cloudflare: Cloudflare;
+  }
+}
+```
 
 Then, you can access your bindings via `context.cloudflare.env`.
 For example, with a [KV namespace][cloudflare-kv] bound as `MY_KV`:
@@ -175,8 +189,6 @@ import { type KVNamespace } from "@cloudflare/workers-types";
 import { type AppLoadContext } from "@remix-run/cloudflare";
 import { type PlatformProxy } from "wrangler";
 
-// TODO: generate Env via `wrangler types`
-type Env = { MY_KV: KVNamespace };
 type Cloudflare = Omit<PlatformProxy<Env>, "dispose">;
 
 declare module "@remix-run/cloudflare" {
