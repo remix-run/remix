@@ -1,16 +1,10 @@
 import type { DataStrategyMatch } from "@remix-run/router";
-import type { SerializeFrom } from "@remix-run/server-runtime";
 import { redirect } from "@remix-run/router";
 import type { DataStrategyFunctionArgs } from "react-router-dom";
 import { decode } from "turbo-stream";
 
 import { createRequestInit } from "./data";
 import invariant from "./invariant";
-import { prefetchStyleLinks } from "./links";
-import {
-  noActionDefinedError,
-  preventInvalidServerHandlerCall,
-} from "./routes";
 
 type SingleFetchResult =
   | { data: unknown }
@@ -24,38 +18,12 @@ export async function singleFetchDataStrategy({
   request,
   matches,
 }: DataStrategyFunctionArgs) {
-  // Prefetch styles for matched routes that exist in the routeModulesCache
-  // (critical modules and navigating back to pages previously loaded via
-  // route.lazy).  Initial execution of route.lazy (when the module is not in
-  // the cache) will handle prefetching style links via loadRouteModuleWithBlockingLinks.
-  let stylesPromise = Promise.all(
-    matches.map((m) => {
-      let route = window.__remixManifest.routes[m.route.id];
-      let cachedModule = window.__remixRouteModules[m.route.id];
-      return cachedModule
-        ? prefetchStyleLinks(route, cachedModule)
-        : Promise.resolve();
-    })
-  );
+  return request.method === "GET"
+    ? singleFetchLoaders(request, matches)
+    : singleFetchAction(request, matches);
 
-  let dataPromise =
-    request.method === "GET"
-      ? singleFetchLoaders(request, matches)
-      : singleFetchAction(request, matches);
-
-  let [routeData] = await Promise.all([dataPromise, stylesPromise]);
-  return routeData;
-
-  // TODO: Do styles load twice on actions?
-  // TODO: Critical route modules for single fetch
   // TODO: Don't revalidate on action 4xx/5xx responses with status codes
   //       (return or throw)
-  // TODO: Fix issue with auto-revalidating routes on HMR
-  //  - load /
-  //  - navigate to /parent/child
-  //  - trigger HMR
-  //  - back button to /
-  //  - throws a "you returned undefined from a loader" error
 }
 
 function singleFetchAction(request: Request, matches: DataStrategyMatch[]) {
@@ -73,33 +41,7 @@ function singleFetchAction(request: Request, matches: DataStrategyMatch[]) {
 
   return Promise.all(
     matches.map((m) =>
-      m.bikeshed_loadRoute(() => {
-        let route = window.__remixManifest.routes[m.route.id];
-        let routeModule = window.__remixRouteModules[m.route.id];
-        invariant(
-          routeModule,
-          "Expected a defined routeModule after bikeshed_loadRoute"
-        );
-
-        if (routeModule.clientAction) {
-          return routeModule.clientAction({
-            request,
-            params: m.params,
-            serverAction<T>() {
-              preventInvalidServerHandlerCall(
-                "action",
-                route,
-                window.__remixContext.isSpaMode
-              );
-              return singleFetch(m.route.id) as Promise<SerializeFrom<T>>;
-            },
-          });
-        } else if (route.hasAction) {
-          return singleFetch(m.route.id);
-        } else {
-          throw noActionDefinedError("action", m.route.id);
-        }
-      })
+      m.bikeshed_loadRoute((handler) => handler(() => singleFetch(m.route.id)))
     )
   );
 }
@@ -139,6 +81,9 @@ function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
     let loadIds = genRouteIds(
       matches.filter((m) => m.bikeshed_load).map((m) => m.route.id)
     );
+
+    // TODO: Should we only do this on revalidations?  We don't know here whether this is a new
+    // route load or a revalidation but we could communicate that through to dataStrategy
     let headers =
       matchedIds !== loadIds ? { "X-Remix-Routes": loadIds } : undefined;
 
@@ -163,35 +108,14 @@ function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
     return null;
   };
 
+  // Call the route loaders passing through the singleFetch function that will
+  // be called instead of making a server call
   return Promise.all(
-    matches.map((m) =>
-      m.bikeshed_loadRoute(() => {
-        let route = window.__remixManifest.routes[m.route.id];
-        let routeModule = window.__remixRouteModules[m.route.id];
-        invariant(routeModule, "Expected a routeModule in bikeshed_loadRoute");
-
-        if (routeModule.clientLoader) {
-          return routeModule.clientLoader({
-            request,
-            params: m.params,
-            serverLoader<T>() {
-              preventInvalidServerHandlerCall(
-                "loader",
-                route,
-                window.__remixContext.isSpaMode
-              );
-              return singleFetch(m.route.id) as Promise<SerializeFrom<T>>;
-            },
-          });
-        } else if (route.hasLoader) {
-          return singleFetch(m.route.id);
-        } else {
-          // Remix routes without a server loader still have a "loader" on the
-          // client to preload styles, so just return nothing here.
-          return Promise.resolve(null);
-        }
-      })
-    )
+    matches.map(async (m) => {
+      return m.bikeshed_loadRoute((handler) =>
+        handler(() => singleFetch(m.route.id))
+      );
+    })
   );
 }
 
