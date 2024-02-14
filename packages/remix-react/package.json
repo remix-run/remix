@@ -17,7 +17,7 @@
   "module": "dist/esm/index.js",
   "dependencies": {
     "@remix-run/router": "1.15.0",
-    "@remix-run/server-runtime": "2.6.0",
+    "@remix-run/server-runtime": "workspace:*",
     "react-router": "6.22.0",
     "react-router-dom": "6.22.0"
   },

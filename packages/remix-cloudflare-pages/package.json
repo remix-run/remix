@@ -15,7 +15,7 @@
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
   "dependencies": {
-    "@remix-run/cloudflare": "2.6.0"
+    "@remix-run/cloudflare": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230518.0",

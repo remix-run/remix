@@ -74,6 +74,9 @@
   },
   "devDependencies": {
     "@remix-run/serve": "workspace:*",
+    "@types/babel__core": "^7.20.5",
+    "@types/babel__generator": "^7.6.8",
+    "@types/babel__traverse": "^7.20.5",
     "@types/cacache": "^17.0.0",
     "@types/cross-spawn": "^6.0.2",
     "@types/gunzip-maybe": "^1.4.0",
@@ -83,6 +86,7 @@
     "@types/npmcli__package-json": "^4.0.0",
     "@types/picomatch": "^2.3.0",
     "@types/prettier": "^2.7.3",
+    "@types/set-cookie-parser": "^2.4.1",
     "@types/shelljs": "^0.8.11",
     "@types/tar-fs": "^2.0.1",
     "@types/ws": "^7.4.1",
