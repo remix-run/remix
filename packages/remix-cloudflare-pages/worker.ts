@@ -1,5 +1,6 @@
 import type { AppLoadContext, ServerBuild } from "@remix-run/cloudflare";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cloudflare";
+import { type CacheStorage } from "@cloudflare/workers-types";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -25,6 +26,7 @@ export type GetLoadContextFunction<
           Data
         >["passThroughOnException"];
       };
+      caches: CacheStorage;
     };
   };
 }) => AppLoadContext | Promise<AppLoadContext>;
@@ -61,6 +63,7 @@ export function createRequestHandler<Env = any>({
             waitUntil: cloudflare.waitUntil,
             passThroughOnException: cloudflare.passThroughOnException,
           },
+          caches,
         },
       },
     });

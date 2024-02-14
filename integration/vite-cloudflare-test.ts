@@ -66,9 +66,10 @@ const files: Files = async ({ port }) => ({
     import { type AppLoadContext } from "@remix-run/cloudflare";
     import { type PlatformProxy } from "wrangler";
 
-    type Cloudflare = PlatformProxy<{
+    type Env = {
       MY_KV: KVNamespace;
-    }>;
+    }
+    type Cloudflare = Omit<PlatformProxy<Env>, 'dispose'>;
 
     declare module "@remix-run/cloudflare" {
       export interface AppLoadContext {
