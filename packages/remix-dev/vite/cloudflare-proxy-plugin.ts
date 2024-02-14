@@ -9,11 +9,7 @@ import { type PlatformProxy, getPlatformProxy } from "wrangler";
 // TODO: make wrangler import lazy??
 // TODO: auto-set ssr resolve conditions for workerd
 
-import {
-  fromNodeRequest,
-  toNodeRequest,
-  type NodeRequestHandler,
-} from "./node-adapter";
+import { fromNodeRequest, toNodeRequest } from "./node-adapter";
 
 let serverBuildId = "virtual:remix/server-build";
 
@@ -49,25 +45,19 @@ export const cloudflareProxyVitePlugin = <
       let context = { cloudflare };
       return () => {
         if (!viteDevServer.config.server.middlewareMode) {
-          viteDevServer.middlewares.use(async (req, res, next) => {
+          viteDevServer.middlewares.use(async (nodeReq, nodeRes, next) => {
             try {
               let build = (await viteDevServer.ssrLoadModule(
                 serverBuildId
               )) as ServerBuild;
 
               let handler = createRequestHandler(build, "development");
-              let nodeHandler: NodeRequestHandler = async (
-                nodeReq,
-                nodeRes
-              ) => {
-                let request = fromNodeRequest(nodeReq);
-                let loadContext = options.getLoadContext
-                  ? await options.getLoadContext({ request, context })
-                  : context;
-                let res = await handler(request, loadContext);
-                await toNodeRequest(res, nodeRes);
-              };
-              await nodeHandler(req, res);
+              let req = fromNodeRequest(nodeReq);
+              let loadContext = options.getLoadContext
+                ? await options.getLoadContext({ request: req, context })
+                : context;
+              let res = await handler(req, loadContext);
+              await toNodeRequest(res, nodeRes);
             } catch (error) {
               next(error);
             }
