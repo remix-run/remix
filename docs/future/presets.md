@@ -15,27 +15,20 @@ The config returned by each preset is merged in the order they were defined. Any
 
 ## Using a preset
 
-Presets are designed to be published to npm and used within your Vite config. For example, Remix ships with a preset for Cloudflare:
+Presets are designed to be published to npm and used within your Vite config.
 
 ```ts filename=vite.config.ts lines=[3,11]
-import {
-  vitePlugin as remix,
-  cloudflarePreset as cloudflare,
-} from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
-import { getBindingsProxy } from "wrangler";
+// TODO: better example
+import { somePreset } from "some-preset";
 
 export default defineConfig({
   plugins: [
     remix({
-      presets: [cloudflare(getBindingsProxy)],
+      presets: [somePreset()],
     }),
   ],
-  ssr: {
-    resolve: {
-      externalConditions: ["workerd", "worker"],
-    },
-  },
 });
 ```
 
