@@ -23,8 +23,9 @@ import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
 import { getDocumentHeadersRR as getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
-import { RouteMatch, matchServerRoutes } from "./routeMatching";
-import type { Route, ServerRoute } from "./routes";
+import type { RouteMatch } from "./routeMatching";
+import { matchServerRoutes } from "./routeMatching";
+import type { ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
@@ -105,6 +106,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     let url = new URL(request.url);
 
     let matches = matchServerRoutes(routes, url.pathname, _build.basename);
+    let params = matches && matches.length > 0 ? matches[0].params : {};
     let handleError = (error: unknown) => {
       if (mode === ServerMode.Development) {
         getDevServerHooks()?.processRequestError?.(error);
@@ -112,7 +114,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
       errorHandler(error, {
         context: loadContext,
-        params: matches && matches.length > 0 ? matches[0].params : {},
+        params,
         request,
       });
     };
@@ -134,7 +136,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       if (_build.entry.module.handleDataRequest) {
         response = await _build.entry.module.handleDataRequest(response, {
           context: loadContext,
-          params: matches?.find((m) => m.route.id == routeId)?.params || {},
+          params,
           request,
         });
       }
@@ -164,14 +166,13 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         handleError
       );
 
-      // TODO:
-      // if (_build.entry.module.handleDataRequest) {
-      //   response = await _build.entry.module.handleDataRequest(response, {
-      //     context: loadContext,
-      //     params: matches?.find((m) => m.route.id == routeId)?.params || {},
-      //     request,
-      //   });
-      // }
+      if (_build.entry.module.handleDataRequest) {
+        response = await _build.entry.module.handleDataRequest(response, {
+          context: loadContext,
+          params,
+          request,
+        });
+      }
     } else if (
       matches &&
       matches[matches.length - 1].route.module.default == null &&

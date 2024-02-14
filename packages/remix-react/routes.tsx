@@ -306,7 +306,10 @@ export function createClientRoutes(
         needsRevalidation == null &&
         (routeModule.clientLoader?.hydrate === true || !route.hasLoader);
 
-      dataRoute.loader = async ({ request, params }: LoaderFunctionArgs) => {
+      dataRoute.loader = async (
+        { request, params }: LoaderFunctionArgs,
+        singleFetch?: unknown
+      ) => {
         try {
           let result = await prefetchStylesAndCallHandler(async () => {
             invariant(
@@ -316,6 +319,9 @@ export function createClientRoutes(
             if (!routeModule.clientLoader) {
               if (isSpaMode) return null;
               // Call the server when no client loader exists
+              if (typeof singleFetch === "function") {
+                return singleFetch();
+              }
               return fetchServerLoader(request);
             }
 
@@ -334,6 +340,9 @@ export function createClientRoutes(
                 }
 
                 // Call the server loader for client-side navigations
+                if (typeof singleFetch === "function") {
+                  return singleFetch();
+                }
                 let result = await fetchServerLoader(request);
                 let unwrapped = await unwrapServerResponse(result);
                 return unwrapped;
@@ -355,7 +364,10 @@ export function createClientRoutes(
         isSpaMode
       );
 
-      dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
+      dataRoute.action = (
+        { request, params }: ActionFunctionArgs,
+        singleFetch?: unknown
+      ) => {
         return prefetchStylesAndCallHandler(async () => {
           invariant(
             routeModule,
@@ -364,6 +376,9 @@ export function createClientRoutes(
           if (!routeModule.clientAction) {
             if (isSpaMode) {
               throw noActionDefinedError("clientAction", route.id);
+            }
+            if (typeof singleFetch === "function") {
+              return singleFetch();
             }
             return fetchServerAction(request);
           }
@@ -380,47 +395,34 @@ export function createClientRoutes(
           });
         });
       };
-    } else if (future.unstable_singleFetch) {
-      dataRoute.lazy = async () => {
-        let mod = await loadRouteModuleWithBlockingLinks(
-          route,
-          routeModulesCache
-        );
-
-        return {
-          // We just need booleans here when single fetch is enabled to get them
-          // into `matchesToLoad` - we'll handle the rest of it in `dataStrategy`
-          loader: route.hasLoader || route.hasClientLoader,
-          action: route.hasAction || route.hasClientAction,
-          hasErrorBoundary: mod.ErrorBoundary !== undefined,
-          shouldRevalidate: needsRevalidation
-            ? wrapShouldRevalidateForHdr(
-                route.id,
-                mod.shouldRevalidate,
-                needsRevalidation
-              )
-            : mod.shouldRevalidate,
-          handle: mod.handle,
-          Component: mod.Component,
-          ErrorBoundary: mod.ErrorBoundary,
-        };
-      };
     } else {
       // If the lazy route does not have a client loader/action we want to call
       // the server loader/action in parallel with the module load so we add
       // loader/action as static props on the route
       if (!route.hasClientLoader) {
-        dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
+        dataRoute.loader = (
+          { request }: LoaderFunctionArgs,
+          singleFetch?: unknown
+        ) =>
           prefetchStylesAndCallHandler(() => {
             if (isSpaMode) return Promise.resolve(null);
+            if (typeof singleFetch === "function") {
+              return singleFetch();
+            }
             return fetchServerLoader(request);
           });
       }
       if (!route.hasClientAction) {
-        dataRoute.action = ({ request }: ActionFunctionArgs) =>
+        dataRoute.action = (
+          { request }: ActionFunctionArgs,
+          singleFetch?: unknown
+        ) =>
           prefetchStylesAndCallHandler(() => {
             if (isSpaMode) {
               throw noActionDefinedError("clientAction", route.id);
+            }
+            if (typeof singleFetch === "function") {
+              return singleFetch();
             }
             return fetchServerAction(request);
           });
@@ -436,11 +438,17 @@ export function createClientRoutes(
         let lazyRoute: Partial<DataRouteObject> = { ...mod };
         if (mod.clientLoader) {
           let clientLoader = mod.clientLoader;
-          lazyRoute.loader = (args) =>
+          lazyRoute.loader = (
+            args: LoaderFunctionArgs,
+            singleFetch?: unknown
+          ) =>
             clientLoader({
               ...args,
               async serverLoader() {
                 preventInvalidServerHandlerCall("loader", route, isSpaMode);
+                if (typeof singleFetch === "function") {
+                  return singleFetch();
+                }
                 let response = await fetchServerLoader(args.request);
                 let result = await unwrapServerResponse(response);
                 return result;
@@ -450,11 +458,17 @@ export function createClientRoutes(
 
         if (mod.clientAction) {
           let clientAction = mod.clientAction;
-          lazyRoute.action = (args) =>
+          lazyRoute.action = (
+            args: ActionFunctionArgs,
+            singleFetch?: unknown
+          ) =>
             clientAction({
               ...args,
               async serverAction() {
                 preventInvalidServerHandlerCall("action", route, isSpaMode);
+                if (typeof singleFetch === "function") {
+                  return singleFetch();
+                }
                 let response = await fetchServerAction(args.request);
                 let result = await unwrapServerResponse(response);
                 return result;
