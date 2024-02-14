@@ -206,16 +206,34 @@ export function createClientRoutes(
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModulesCache[route.id];
 
-    async function fetchServerLoader(request: Request) {
+    async function fetchServerLoader(
+      request: Request,
+      unwrap: boolean,
+      singleFetch: unknown
+    ) {
       if (!route.hasLoader) return null;
-      return fetchServerHandler(request, route);
+      if (typeof singleFetch === "function") {
+        let result = await singleFetch();
+        return result;
+      }
+      let result = await fetchServerHandler(request, route);
+      return unwrap ? unwrapServerResponse(result) : result;
     }
 
-    async function fetchServerAction(request: Request) {
+    async function fetchServerAction(
+      request: Request,
+      unwrap: boolean,
+      singleFetch: unknown
+    ) {
       if (!route.hasAction) {
         throw noActionDefinedError("action", route.id);
       }
-      return fetchServerHandler(request, route);
+      if (typeof singleFetch === "function") {
+        let result = await singleFetch();
+        return result;
+      }
+      let result = await fetchServerHandler(request, route);
+      return unwrap ? unwrapServerResponse(result) : result;
     }
 
     async function prefetchStylesAndCallHandler(
@@ -288,10 +306,7 @@ export function createClientRoutes(
             if (!routeModule.clientLoader) {
               if (isSpaMode) return null;
               // Call the server when no client loader exists
-              if (typeof singleFetch === "function") {
-                return singleFetch();
-              }
-              return fetchServerLoader(request);
+              return fetchServerLoader(request, false, singleFetch);
             }
 
             return routeModule.clientLoader({
@@ -309,12 +324,7 @@ export function createClientRoutes(
                 }
 
                 // Call the server loader for client-side navigations
-                if (typeof singleFetch === "function") {
-                  return singleFetch();
-                }
-                let result = await fetchServerLoader(request);
-                let unwrapped = await unwrapServerResponse(result);
-                return unwrapped;
+                return fetchServerLoader(request, true, singleFetch);
               },
             });
           });
@@ -346,10 +356,7 @@ export function createClientRoutes(
             if (isSpaMode) {
               throw noActionDefinedError("clientAction", route.id);
             }
-            if (typeof singleFetch === "function") {
-              return singleFetch();
-            }
-            return fetchServerAction(request);
+            return fetchServerAction(request, false, singleFetch);
           }
 
           return routeModule.clientAction({
@@ -357,9 +364,7 @@ export function createClientRoutes(
             params,
             async serverAction() {
               preventInvalidServerHandlerCall("action", route, isSpaMode);
-              let result = await fetchServerAction(request);
-              let unwrapped = await unwrapServerResponse(result);
-              return unwrapped;
+              return fetchServerAction(request, true, singleFetch);
             },
           });
         });
@@ -375,10 +380,7 @@ export function createClientRoutes(
         ) =>
           prefetchStylesAndCallHandler(() => {
             if (isSpaMode) return Promise.resolve(null);
-            if (typeof singleFetch === "function") {
-              return singleFetch();
-            }
-            return fetchServerLoader(request);
+            return fetchServerLoader(request, false, singleFetch);
           });
       }
       if (!route.hasClientAction) {
@@ -390,10 +392,7 @@ export function createClientRoutes(
             if (isSpaMode) {
               throw noActionDefinedError("clientAction", route.id);
             }
-            if (typeof singleFetch === "function") {
-              return singleFetch();
-            }
-            return fetchServerAction(request);
+            return fetchServerAction(request, false, singleFetch);
           });
       }
 
@@ -415,12 +414,7 @@ export function createClientRoutes(
               ...args,
               async serverLoader() {
                 preventInvalidServerHandlerCall("loader", route, isSpaMode);
-                if (typeof singleFetch === "function") {
-                  return singleFetch();
-                }
-                let response = await fetchServerLoader(args.request);
-                let result = await unwrapServerResponse(response);
-                return result;
+                return fetchServerLoader(args.request, true, singleFetch);
               },
             });
         }
@@ -435,12 +429,7 @@ export function createClientRoutes(
               ...args,
               async serverAction() {
                 preventInvalidServerHandlerCall("action", route, isSpaMode);
-                if (typeof singleFetch === "function") {
-                  return singleFetch();
-                }
-                let response = await fetchServerAction(args.request);
-                let result = await unwrapServerResponse(response);
-                return result;
+                return fetchServerAction(args.request, true, singleFetch);
               },
             });
         }
