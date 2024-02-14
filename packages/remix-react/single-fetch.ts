@@ -1,5 +1,8 @@
-import type { DataStrategyMatch } from "@remix-run/router";
-import { redirect } from "@remix-run/router";
+import type { DataStrategyMatch, ErrorResponse } from "@remix-run/router";
+import {
+  redirect,
+  UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
+} from "@remix-run/router";
 import type { DataStrategyFunctionArgs } from "react-router-dom";
 import { decode } from "turbo-stream";
 
@@ -28,15 +31,10 @@ export async function singleFetchDataStrategy({
 
 function singleFetchAction(request: Request, matches: DataStrategyMatch[]) {
   let singleFetch = async (routeId: string) => {
+    let url = singleFetchUrl(request.url);
     let init = await createRequestInit(request);
-    let res = await fetch(singleFetchUrl(request.url), init);
-    invariant(
-      res.headers.get("Content-Type")?.includes("text/x-turbo"),
-      "Expected a text/x-turbo response"
-    );
-    let decoded = await decode(res.body!);
-    let result = decoded.value as SingleFetchResult;
-    return unwrapSingleFetchResult(result, routeId);
+    let result = await fetchAndDecode(url, init);
+    return unwrapSingleFetchResult(result as SingleFetchResult, routeId);
   };
 
   return Promise.all(
@@ -54,10 +52,6 @@ function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
   let singleFetchPromise: Promise<SingleFetchResults>;
 
   let makeSingleFetchCall = async () => {
-    // Single fetch doesn't need/want naked index queries on action
-    // revalidation requests
-    let url = singleFetchUrl(stripIndexParam(request.url));
-
     // Determine which routes we want to load so we can send an X-Remix-Routes header
     // for fine-grained revalidation if necessary.  If a route has not yet been loaded
     // via `route.lazy` then we know we want to load it because it's by definition a
@@ -82,19 +76,20 @@ function singleFetchLoaders(request: Request, matches: DataStrategyMatch[]) {
       matches.filter((m) => m.bikeshed_load).map((m) => m.route.id)
     );
 
-    // TODO: Should we only do this on revalidations?  We don't know here whether this is a new
-    // route load or a revalidation but we could communicate that through to dataStrategy
-    let headers =
-      matchedIds !== loadIds ? { "X-Remix-Routes": loadIds } : undefined;
+    // Single fetch doesn't need/want naked index queries on action
+    // revalidation requests
+    let url = singleFetchUrl(stripIndexParam(request.url));
 
-    let res = await fetch(url, { headers });
-    invariant(
-      res.body != null &&
-        res.headers.get("Content-Type")?.includes("text/x-turbo"),
-      "Expected a text/x-turbo response"
-    );
-    let decoded = await decode(res.body!);
-    return decoded.value as SingleFetchResults;
+    // TODO: Should we only do this on revalidations?  We don't know here whether
+    // this is a new route load or a revalidation but we could communicate that
+    // through to dataStrategy
+    let init: RequestInit = {
+      ...(matchedIds !== loadIds
+        ? { headers: { "X-Remix-Routes": loadIds } }
+        : null),
+    };
+    let result = await fetchAndDecode(url, init);
+    return result as SingleFetchResults;
   };
 
   let singleFetch = async (routeId: string) => {
@@ -140,6 +135,30 @@ function singleFetchUrl(reqUrl: string) {
   let url = new URL(reqUrl);
   url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
   return url;
+}
+
+async function fetchAndDecode(url: URL, init: RequestInit) {
+  let res = await fetch(url, init);
+  invariant(
+    res.headers.get("Content-Type")?.includes("text/x-turbo"),
+    "Expected a text/x-turbo response"
+  );
+  let decoded = await decode(res.body!, [
+    (type, value) => {
+      if (type === "ErrorResponse") {
+        let errorResponse = value as ErrorResponse;
+        return {
+          value: new ErrorResponseImpl(
+            errorResponse.status,
+            errorResponse.statusText,
+            errorResponse.data,
+            (errorResponse as any).internal === true
+          ),
+        };
+      }
+    },
+  ]);
+  return decoded.value;
 }
 
 function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {

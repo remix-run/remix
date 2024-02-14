@@ -283,7 +283,7 @@ function getActiveMatches(
   }
 
   if (errors) {
-    let errorIdx = matches.findIndex((m) => errors[m.route.id]);
+    let errorIdx = matches.findIndex((m) => errors[m.route.id] !== undefined);
     return matches.slice(0, errorIdx + 1);
   }
 

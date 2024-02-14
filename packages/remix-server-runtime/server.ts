@@ -348,7 +348,16 @@ async function handleSingleFetchRequest(
 
   // Note: Deferred data is already just Promises, so we don't have to mess
   // `activeDeferreds` or anything :)
-  return new Response(encode(result), { headers: resultHeaders });
+  return new Response(
+    encode(result, [
+      (value) => {
+        if (value instanceof ErrorResponseImpl) {
+          return ["ErrorResponse", { ...value }];
+        }
+      },
+    ]),
+    { headers: resultHeaders }
+  );
 }
 
 async function singleFetchAction(
@@ -388,8 +397,9 @@ async function singleFetchAction(
       ];
     }
     return [{ data: await unwrapResponse(response) }, response.headers];
-  } catch (error) {
-    handleError(error);
+  } catch (err) {
+    handleError(err);
+    let error = isResponse(err) ? await unwrapResponse(err) : err;
     return [{ error }, new Headers()];
   }
 }
@@ -458,9 +468,9 @@ async function singleFetchLoaders(
       }
       if (
         build.assets.routes[routeId]?.hasLoader &&
-        context.loaderData[routeId] === undefined
+        context.loaderData[routeId] === undefined &&
+        mostRecentError
       ) {
-        invariant(mostRecentError, "Expected mostRecentError to be set");
         context.errors[mostRecentError[0]] = undefined;
         context.errors[routeId] = mostRecentError[1];
         mostRecentError = null;
