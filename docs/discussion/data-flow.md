@@ -167,7 +167,7 @@ There are various ways to submit a form besides an HTML form element (like in re
 
 ## Before JavaScript Loads
 
-When you send HTML from the server, it's best to have it work even before JavaScript loads. Typical data flows in Remix do this automatically. The flow is the same, but the browser does some of the work. 
+When you send HTML from the server, it's best to have it work even before JavaScript loads. Typical data flows in Remix do this automatically. The flow is the same, but the browser does some of the work.
 
 When the user submits the form before JavaScript loads:
 
