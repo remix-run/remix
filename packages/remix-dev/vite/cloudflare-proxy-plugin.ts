@@ -29,6 +29,8 @@ function importWrangler() {
   }
 }
 
+const NAME = "vite-plugin-remix-cloudflare-proxy";
+
 export const devCloudflareProxyVitePlugin = <Env, Cf extends CfProperties>({
   getLoadContext,
   ...options
@@ -36,7 +38,7 @@ export const devCloudflareProxyVitePlugin = <Env, Cf extends CfProperties>({
   getLoadContext?: GetLoadContext<Env, Cf>;
 } & GetPlatformProxyOptions = {}): Plugin => {
   return {
-    name: "vite-plugin-remix-cloudflare-proxy",
+    name: NAME,
     config: () => ({
       ssr: {
         resolve: {
@@ -44,7 +46,17 @@ export const devCloudflareProxyVitePlugin = <Env, Cf extends CfProperties>({
         },
       },
     }),
-    async configureServer(viteDevServer) {
+    configResolved: (viteConfig) => {
+      let pluginIndex = (name: string) =>
+        viteConfig.plugins.findIndex((plugin) => plugin.name === name);
+      let remixIndex = pluginIndex("remix");
+      if (remixIndex >= 0 && remixIndex < pluginIndex(NAME)) {
+        throw new Error(
+          `The "${NAME}" plugin should be placed before the Remix plugin in your Vite config file`
+        );
+      }
+    },
+    configureServer: async (viteDevServer) => {
       let { getPlatformProxy } = await importWrangler();
       // Do not include `dispose` in Cloudflare context
       let { dispose, ...cloudflare } = await getPlatformProxy<Env, Cf>(options);
