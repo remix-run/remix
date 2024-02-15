@@ -7,29 +7,24 @@ import { type Plugin } from "vite";
 import { type PlatformProxy, getPlatformProxy } from "wrangler";
 
 // TODO: make wrangler import lazy??
-// TODO: auto-set ssr resolve conditions for workerd
 
 import { fromNodeRequest, toNodeRequest } from "./node-adapter";
 
 let serverBuildId = "virtual:remix/server-build";
 
-type Env = Record<string, unknown>;
 type CfProperties = Record<string, unknown>;
 
-type LoadContext<E extends Env, Cf extends CfProperties> = {
-  cloudflare: PlatformProxy<E, Cf>;
+type LoadContext<Env, Cf extends CfProperties> = {
+  cloudflare: PlatformProxy<Env, Cf>;
 };
 
-type GetLoadContext<E extends Env, Cf extends CfProperties> = (args: {
+type GetLoadContext<Env, Cf extends CfProperties> = (args: {
   request: Request;
-  context: LoadContext<E, Cf>;
+  context: LoadContext<Env, Cf>;
 }) => AppLoadContext | Promise<AppLoadContext>;
 
-export const cloudflareProxyVitePlugin = <
-  E extends Env,
-  Cf extends CfProperties
->(
-  options: { getLoadContext?: GetLoadContext<E, Cf> } = {}
+export const cloudflareProxyVitePlugin = <Env, Cf extends CfProperties>(
+  options: { getLoadContext?: GetLoadContext<Env, Cf> } = {}
 ): Plugin => {
   return {
     name: "vite-plugin-remix-cloudflare-proxy",
@@ -41,7 +36,7 @@ export const cloudflareProxyVitePlugin = <
       },
     }),
     async configureServer(viteDevServer) {
-      let cloudflare = await getPlatformProxy<E, Cf>();
+      let cloudflare = await getPlatformProxy<Env, Cf>();
       let context = { cloudflare };
       return () => {
         if (!viteDevServer.config.server.middlewareMode) {
