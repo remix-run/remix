@@ -30,7 +30,7 @@ The Cloudflare preset (`unstable_cloudflarePreset`) as been removed and replaced
 -       externalConditions: ["workerd", "worker"],
 -     },
 -   },
-  }); 
+  });
 ```
 
 `remixCloudflareDevProxy` must come _before_ the `remix` plugin so that it can override Vite's dev server middleware to be compatible with Cloudflare's proxied environment.
