@@ -4,7 +4,7 @@ import {
   type ServerBuild,
 } from "@remix-run/server-runtime";
 import { type Plugin } from "vite";
-import { type PlatformProxy } from "wrangler";
+import { type GetPlatformProxyOptions, type PlatformProxy } from "wrangler";
 
 import { fromNodeRequest, toNodeRequest } from "./node-adapter";
 
@@ -29,9 +29,12 @@ function importWrangler() {
   }
 }
 
-export const devCloudflareProxyVitePlugin = <Env, Cf extends CfProperties>(
-  options: { getLoadContext?: GetLoadContext<Env, Cf> } = {}
-): Plugin => {
+export const devCloudflareProxyVitePlugin = <Env, Cf extends CfProperties>({
+  getLoadContext,
+  ...options
+}: {
+  getLoadContext?: GetLoadContext<Env, Cf>;
+} & GetPlatformProxyOptions = {}): Plugin => {
   return {
     name: "vite-plugin-remix-cloudflare-proxy",
     config: () => ({
@@ -44,7 +47,7 @@ export const devCloudflareProxyVitePlugin = <Env, Cf extends CfProperties>(
     async configureServer(viteDevServer) {
       let { getPlatformProxy } = await importWrangler();
       // Do not include `dispose` in Cloudflare context
-      let { dispose: _, ...cloudflare } = await getPlatformProxy<Env, Cf>();
+      let { dispose, ...cloudflare } = await getPlatformProxy<Env, Cf>(options);
       let context = { cloudflare };
       return () => {
         if (!viteDevServer.config.server.middlewareMode) {
@@ -56,8 +59,8 @@ export const devCloudflareProxyVitePlugin = <Env, Cf extends CfProperties>(
 
               let handler = createRequestHandler(build, "development");
               let req = fromNodeRequest(nodeReq);
-              let loadContext = options.getLoadContext
-                ? await options.getLoadContext({ request: req, context })
+              let loadContext = getLoadContext
+                ? await getLoadContext({ request: req, context })
                 : context;
               let res = await handler(req, loadContext);
               await toNodeRequest(res, nodeRes);
