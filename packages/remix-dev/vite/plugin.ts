@@ -65,7 +65,9 @@ const CLIENT_ROUTE_EXPORTS = [
   "shouldRevalidate",
 ];
 
-const CLIENT_ROUTE_QUERY_STRING = "?client-route";
+// The "=1" suffix ensures client route requests can be processed before hitting
+// the Vite plugin since "?client-route" can be serialized as "?client-route="
+const CLIENT_ROUTE_QUERY_STRING = "?client-route=1";
 
 // Only expose a subset of route properties to the "serverBundles" function
 const branchRouteProperties = [
@@ -246,6 +248,10 @@ const invalidateVirtualModules = (viteDevServer: Vite.ViteDevServer) => {
 const getHash = (source: BinaryLike, maxLength?: number): string => {
   let hash = createHash("sha256").update(source).digest("hex");
   return typeof maxLength === "number" ? hash.slice(0, maxLength) : hash;
+};
+
+const isClientRoute = (id: string): boolean => {
+  return id.endsWith(CLIENT_ROUTE_QUERY_STRING);
 };
 
 const resolveChunk = (
@@ -1090,7 +1096,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           cssModulesManifest[id] = code;
         }
 
-        if (id.endsWith(CLIENT_ROUTE_QUERY_STRING)) {
+        if (isClientRoute(id)) {
           let routeModuleId = id.replace(CLIENT_ROUTE_QUERY_STRING, "");
           let sourceExports = await getRouteModuleExports(
             viteChildCompiler,
@@ -1520,7 +1526,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         let useFastRefresh = !ssr && (isJSX || code.includes(devRuntime));
         if (!useFastRefresh) return;
 
-        if (id.endsWith(CLIENT_ROUTE_QUERY_STRING)) {
+        if (isClientRoute(id)) {
           return { code: addRefreshWrapper(ctx.remixConfig, code, id) };
         }
 
@@ -1607,7 +1613,7 @@ function addRefreshWrapper(
 ): string {
   let route = getRoute(remixConfig, id);
   let acceptExports =
-    route || id.endsWith(CLIENT_ROUTE_QUERY_STRING)
+    route || isClientRoute(id)
       ? [
           "clientAction",
           "clientLoader",

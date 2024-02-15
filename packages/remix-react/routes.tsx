@@ -148,11 +148,11 @@ export function createServerRoutes(
       index: route.index,
       path: route.path,
       handle: routeModule.handle,
-      // For SPA Mode, all routes are lazy except root.  We don't need a full
-      // implementation here though - just need a `lazy` prop to tell the RR
-      // rendering where to stop
-      lazy:
-        isSpaMode && route.id !== "root" ? () => spaModeLazyPromise : undefined,
+      // For SPA Mode, all routes are lazy except root.  However we tell the
+      // router root is also lazy here too since we don't need a full
+      // implementation - we just need a `lazy` prop to tell the RR rendering
+      // where to stop which is always at the root route in SPA mode
+      lazy: isSpaMode ? () => spaModeLazyPromise : undefined,
       // For partial hydration rendering, we need to indicate when the route
       // has a loader/clientLoader, but it won't ever be called during the static
       // render, so just give it a no-op function so we can render down to the
