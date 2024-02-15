@@ -137,34 +137,14 @@ export const loader = ({ context }: LoaderFunctionArgs) => {
 
 Check out [Cloudflare's `getPlatformProxy` docs][wrangler-getplatformproxy-return] for more information on each of these proxies.
 
-<docs-info>
-
-The Cloudflare team is working to improve support for the [caches][cloudflare-proxy-caches] proxy.
-
-</docs-info>
-
 #### Bindings
 
 To configure bindings for Cloudflare resources:
 
-- For locally development, use [wrangler.toml][wrangler-toml-bindings]
+- For local development with Vite or Wrangler, use [wrangler.toml][wrangler-toml-bindings]
 - For deployments, use the [Cloudflare dashboard][cloudflare-pages-bindings]
 
-Whenever you change your bindings in `wrangler.toml`, you'll want to regenerate types for those bindings via `wrangler types`.
-The `wrangler types` command generates a TypeScript file that defines the `Env` interface with your bindings in the global scope.
-For example, the [Cloudflare template][template-vite-cloudflare] automatically generates initial types with `postinstall` script and then references those types in `load-context.ts`:
-
-```ts filename=load-context.ts lines=[3]
-import { type PlatformProxy } from "wrangler";
-
-type Cloudflare = Omit<PlatformProxy<Env>, "dispose">;
-
-declare module "@remix-run/cloudflare" {
-  interface AppLoadContext {
-    cloudflare: Cloudflare;
-  }
-}
-```
+Whenever you change your `wrangler.toml` file, you'll need to run `wrangler types` to regenerate your bindings.
 
 Then, you can access your bindings via `context.cloudflare.env`.
 For example, with a [KV namespace][cloudflare-kv] bound as `MY_KV`:
@@ -182,10 +162,9 @@ export async function loader({
 #### Augmenting Cloudflare load context
 
 If you'd like to add additional properties to the load context,
-you can export a `getLoadContext` function from `load-context.ts` that you can wire up to Vite and Cloudflare Pages:
+you can export a `getLoadContext` function from a shared module that you can wire up to Vite and Cloudflare Pages:
 
-```ts filename=load-context.ts lines=[2,14,18-28]
-import { type KVNamespace } from "@cloudflare/workers-types";
+```ts filename=load-context.ts lines=[2,10,14-27]
 import { type AppLoadContext } from "@remix-run/cloudflare";
 import { type PlatformProxy } from "wrangler";
 
@@ -214,9 +193,9 @@ export const getLoadContext: GetLoadContext = ({
 };
 ```
 
-The Cloudflare Proxy plugin accepts a `getLoadContext` function:
+For local development with Vite, you can then pass this `getLoadContext` function to the Cloudflare Proxy plugin in your Vite config:
 
-```ts filename=vite.config.ts lines=[9,16]
+```ts filename=vite.config.ts lines=[8,12]
 import {
   vitePlugin as remix,
   cloudflareProxyVitePlugin as remixCloudflareProxy,
@@ -234,7 +213,7 @@ export default defineConfig({
 });
 ```
 
-The Remix Cloudflare Proxy plugin's `getLoadContext` **only augments the load context within Vite's dev server**, not within Wrangler nor in Cloudflare Pages deployments.
+<docs-warning>The Cloudflare Proxy plugin's `getLoadContext` **only augments the load context within Vite's dev server**, not within Wrangler nor in Cloudflare Pages deployments.</docs-warning>
 
 To wire up Wrangler and deployments, you'll also need to add `getLoadContext` to `functions/[[path]].ts`:
 
@@ -1288,7 +1267,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [wrangler-getplatformproxy-return]: https://developers.cloudflare.com/workers/wrangler/api/#return-type-1
 [remix-config-server]: https://remix.run/docs/en/main/file-conventions/remix-config#server
 [cloudflare-vite-and-wrangler]: #vite--wrangler
-[cloudflare-proxy-caches]: https://github.com/cloudflare/workers-sdk/issues/4879
 [rr-basename]: https://reactrouter.com/routers/create-browser-router#basename
 [vite-public-base-path]: https://vitejs.dev/config/shared-options.html#base
 [vite-base]: https://vitejs.dev/config/shared-options.html#base
