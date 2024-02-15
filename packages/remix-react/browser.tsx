@@ -15,7 +15,7 @@ import {
   createClientRoutesWithHMRRevalidationOptOut,
   shouldHydrateRouteLoader,
 } from "./routes";
-import { singleFetchDataStrategy } from "./single-fetch";
+import { getSingleFetchDataStrategy } from "./single-fetch";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -276,7 +276,10 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       hydrationData,
       mapRouteProperties,
       unstable_dataStrategy: window.__remixContext.future.unstable_singleFetch
-        ? singleFetchDataStrategy
+        ? getSingleFetchDataStrategy(
+            window.__remixManifest,
+            window.__remixRouteModules
+          )
         : undefined,
     });
 
