@@ -331,7 +331,7 @@ async function handleSingleFetchRequest(
         )
       : await singleFetchLoaders(
           handlerUrl,
-          request.headers.get("X-Remix-Routes"),
+          new URL(request.url).searchParams.get("_routes"),
           staticHandler,
           matches,
           loadContext,
