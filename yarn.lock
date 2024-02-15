@@ -1251,7 +1251,7 @@
     human-id "^1.0.2"
     prettier "^2.7.1"
 
-"@cloudflare/kv-asset-handler@0.3.1":
+"@cloudflare/kv-asset-handler@0.3.1", "@cloudflare/kv-asset-handler@^0.3.0":
   version "0.3.1"
   resolved "https://registry.npmjs.org/@cloudflare/kv-asset-handler/-/kv-asset-handler-0.3.1.tgz#9b86167e58dbc419943c8d3ddcd8e2823f5db300"
   integrity sha512-lKN2XCfKCmpKb86a1tl4GIwsJYDy9TGuwjhDELLmpKygQhw8X2xR4dusgpC5Tg7q1pB96Eb0rBo81kxSILQMwA==
@@ -1264,13 +1264,6 @@
   integrity sha512-FNcunDuTmEfQTLRLtA6zz+buIXUHj1soPvSWzzQFBC+n2lsy+CGf/NIrR3SEPCmsVNQj70/Jx2lViCpq+09YpQ==
   dependencies:
     mime "^2.5.2"
-
-"@cloudflare/kv-asset-handler@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.npmjs.org/@cloudflare/kv-asset-handler/-/kv-asset-handler-0.3.0.tgz#11f0af0749a400ddadcca16dcd6f4696d7036991"
-  integrity sha512-9CB/MKf/wdvbfkUdfrj+OkEwZ5b7rws0eogJ4293h+7b6KX5toPwym+VQKmILafNB9YiehqY0DlNrDcDhdWHSQ==
-  dependencies:
-    mime "^3.0.0"
 
 "@cloudflare/workerd-darwin-64@1.20240129.0":
   version "1.20240129.0"
