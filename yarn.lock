@@ -12937,10 +12937,10 @@ tunnel-agent@^0.6.0:
   dependencies:
     safe-buffer "^5.0.1"
 
-turbo-stream@^1.2.0:
-  version "1.2.0"
-  resolved "https://registry.npmjs.org/turbo-stream/-/turbo-stream-1.2.0.tgz#1388dd457d94970e11832c92475d5264d652049e"
-  integrity sha512-aunXYgJ3hcqutvmtZ/aZWpWsNZGFiMp+Yw29Z6w0jnH69wrCLzsAO6RR6PI6ivY9tq9PdwlyxHY2WBvlYm8jzA==
+turbo-stream@^1.2.1:
+  version "1.2.1"
+  resolved "https://registry.npmjs.org/turbo-stream/-/turbo-stream-1.2.1.tgz#13b0d9b077fb1606d7ec62b458a866c36ff201fb"
+  integrity sha512-8MTM4cWS98lL4Oo5E30opwdfvnGbsPFnErILO3ib71s8a9VLDvPh/seqoBxpCWrCpnEs9O8sILM+SUAemgIMOA==
 
 tweetnacl@^0.14.3, tweetnacl@~0.14.0:
   version "0.14.5"
