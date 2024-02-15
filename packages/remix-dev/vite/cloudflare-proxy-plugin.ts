@@ -13,7 +13,7 @@ let serverBuildId = "virtual:remix/server-build";
 type CfProperties = Record<string, unknown>;
 
 type LoadContext<Env, Cf extends CfProperties> = {
-  cloudflare: PlatformProxy<Env, Cf>;
+  cloudflare: Omit<PlatformProxy<Env, Cf>, "dispose">;
 };
 
 type GetLoadContext<Env, Cf extends CfProperties> = (args: {
@@ -43,7 +43,8 @@ export const cloudflareProxyVitePlugin = <Env, Cf extends CfProperties>(
     }),
     async configureServer(viteDevServer) {
       let { getPlatformProxy } = await importWrangler();
-      let cloudflare = await getPlatformProxy<Env, Cf>();
+      // Do not include `dispose` in Cloudflare context
+      let { dispose: _, ...cloudflare } = await getPlatformProxy<Env, Cf>();
       let context = { cloudflare };
       return () => {
         if (!viteDevServer.config.server.middlewareMode) {
