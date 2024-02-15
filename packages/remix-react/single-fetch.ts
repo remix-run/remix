@@ -74,9 +74,7 @@ export function getSingleFetchDataStrategy(
     // be called instead of making a server call
     return Promise.all(
       matches.map(async (m) => {
-        return m.bikeshed_loadRoute((handler) =>
-          handler(() => singleFetch(m.route.id))
-        );
+        return m.resolve((handler) => handler(() => singleFetch(m.route.id)));
       })
     );
   };
@@ -102,7 +100,7 @@ function stripIndexParam(_url: string) {
 // Determine which routes we want to load so we can add a `?_routes` search param
 // for fine-grained revalidation if necessary.  If a route has not yet been loaded
 // via `route.lazy` then we know we want to load it because it's by definition a
-// net-new route.  If it has been loaded then `bikeshed_load` will have taken
+// net-new route.  If it has been loaded then `shouldLoad` will have taken
 // `shouldRevalidate` into consideration.
 //
 // There is a small edge case that _may_ result in a server loader running
@@ -141,7 +139,7 @@ function addRevalidationParam(
   if (matches.some((m) => routeModules[m.route.id]?.shouldRevalidate)) {
     let matchedIds = genRouteIds(matches.map((m) => m.route.id));
     let loadIds = genRouteIds(
-      matches.filter((m) => m.bikeshed_load).map((m) => m.route.id)
+      matches.filter((m) => m.shouldLoad).map((m) => m.route.id)
     );
     if (matchedIds !== loadIds) {
       url.searchParams.set("_routes", loadIds);
