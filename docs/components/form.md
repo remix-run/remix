@@ -4,7 +4,11 @@ title: Form
 
 # `<Form>`
 
-A progressively enhanced HTML [`<form>`][form_element] wrapper, useful for submissions that should also change the URL or otherwise add an entry to the browser history stack. For forms that shouldn't manipulate the browser history stack, use [`<fetcher.Form>`][fetcher_form].
+A progressively enhanced HTML [`<form>`][form_element] that submits data to actions via `fetch`, activating pending states in `useNavigation` which enables advanced user interfaces beyond a basic HTML form. Because it uses the HTML form API, server rendered pages are interactive at a basic level before JavaScript loads: the browser does a normal document request instead of the Remix browser runtime, and the browser manages pending states like the spinning favicon.
+
+After a form's action completes, all data on the page is automatically revalidated from the server to keep the UI in sync with the data.
+
+Form is most useful for submissions that should also change the URL or otherwise add an entry to the browser history stack. For forms that shouldn't manipulate the browser history stack, use [`<fetcher.Form>`][fetcher_form].
 
 ```tsx
 import { Form } from "@remix-run/react";
