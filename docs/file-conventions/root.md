@@ -123,7 +123,7 @@ export default function App() {
   return <Outlet />;
 }
 
-export default function ErrorBoundary() {
+export function ErrorBoundary() {
   const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
