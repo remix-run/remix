@@ -4,9 +4,7 @@ import {
   type ServerBuild,
 } from "@remix-run/server-runtime";
 import { type Plugin } from "vite";
-import { type PlatformProxy, getPlatformProxy } from "wrangler";
-
-// TODO: make wrangler import lazy??
+import { type PlatformProxy } from "wrangler";
 
 import { fromNodeRequest, toNodeRequest } from "./node-adapter";
 
@@ -23,6 +21,14 @@ type GetLoadContext<Env, Cf extends CfProperties> = (args: {
   context: LoadContext<Env, Cf>;
 }) => AppLoadContext | Promise<AppLoadContext>;
 
+function importWrangler() {
+  try {
+    return import("wrangler");
+  } catch (_) {
+    throw Error("Could not import `wrangler`. Do you have it installed?");
+  }
+}
+
 export const cloudflareProxyVitePlugin = <Env, Cf extends CfProperties>(
   options: { getLoadContext?: GetLoadContext<Env, Cf> } = {}
 ): Plugin => {
@@ -36,6 +42,7 @@ export const cloudflareProxyVitePlugin = <Env, Cf extends CfProperties>(
       },
     }),
     async configureServer(viteDevServer) {
+      let { getPlatformProxy } = await importWrangler();
       let cloudflare = await getPlatformProxy<Env, Cf>();
       let context = { cloudflare };
       return () => {
