@@ -18,17 +18,7 @@ export function RemixRootDefaultHydrateFallback() {
       </head>
       <body>
         <Scripts />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              console.log(
-                "💿 Hey developer 👋. You can provide a way better UX than this " +
-                "when your app is running \`clientLoader\` functions on hydration. " +
-                "Check out https://remix.run/route/hydrate-fallback for more information."
-              );
-            `,
-          }}
-        />{" "}
+        {" "}
       </body>
     </html>
   );

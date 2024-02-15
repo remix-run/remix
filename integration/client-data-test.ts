@@ -534,9 +534,6 @@ test.describe("Client Data", () => {
 
       await app.goto("/parent/child");
       let html = await app.getHtml();
-      expect(html).toMatch(
-        "💿 Hey developer 👋. You can provide a way better UX than this"
-      );
       expect(html).not.toMatch("child-data");
       await page.waitForSelector("#child-data");
       html = await app.getHtml("main");
