@@ -29,7 +29,7 @@ function importWrangler() {
   }
 }
 
-export const cloudflareProxyVitePlugin = <Env, Cf extends CfProperties>(
+export const devCloudflareProxyVitePlugin = <Env, Cf extends CfProperties>(
   options: { getLoadContext?: GetLoadContext<Env, Cf> } = {}
 ): Plugin => {
   return {

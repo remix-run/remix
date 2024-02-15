@@ -117,12 +117,12 @@ Remix's Cloudflare Proxy plugin sets up these proxies for you:
 ```ts filename=vite.config.ts lines=[3,8]
 import {
   vitePlugin as remix,
-  cloudflareProxyVitePlugin as remixCloudflareProxy,
+  devCloudflareProxyVitePlugin as remixDevCloudflareProxy,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [remixCloudflareProxy(), remix()],
+  plugins: [remixDevCloudflareProxy(), remix()],
 });
 ```
 
@@ -198,7 +198,7 @@ For local development with Vite, you can then pass this `getLoadContext` functio
 ```ts filename=vite.config.ts lines=[8,12]
 import {
   vitePlugin as remix,
-  cloudflareProxyVitePlugin as remixCloudflareProxy,
+  devCloudflareProxyVitePlugin as remixDevCloudflareProxy,
 } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -207,7 +207,7 @@ import { getLoadContext } from "./load-context";
 
 export default defineConfig({
   plugins: [
-    remixCloudflareProxy({ getLoadContext }),
+    remixDevCloudflareProxy({ getLoadContext }),
     remix(),
   ],
 });

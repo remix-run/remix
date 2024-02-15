@@ -48,14 +48,14 @@ const files: Files = async ({ port }) => ({
   "vite.config.ts": dedent`
     import {
       vitePlugin as remix,
-      cloudflareProxyVitePlugin as remixCloudflareProxy,
+      devCloudflareProxyVitePlugin as remixDevCloudflareProxy,
     } from "@remix-run/dev";
     import { getLoadContext } from "./load-context";
 
     export default {
       ${await viteConfig.server({ port })}
       plugins: [
-        remixCloudflareProxy({ getLoadContext }),
+        remixDevCloudflareProxy({ getLoadContext }),
         remix(),
       ],
     }

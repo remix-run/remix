@@ -12,4 +12,4 @@ export type {
   ServerBundlesFunction,
   VitePluginConfig,
 } from "./vite";
-export { vitePlugin, cloudflareProxyVitePlugin } from "./vite";
+export { vitePlugin, devCloudflareProxyVitePlugin } from "./vite";
