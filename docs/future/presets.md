@@ -101,8 +101,8 @@ Presets are designed to be published to npm and used within your Vite config.
 
 ```ts filename=vite.config.ts lines=[3,8]
 import { vitePlugin as remix } from "@remix-run/dev";
-import { defineConfig } from "vite";
 import { myCoolPreset } from "remix-preset-cool";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
