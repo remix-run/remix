@@ -31,7 +31,7 @@ function importWrangler() {
 
 const NAME = "vite-plugin-remix-cloudflare-proxy";
 
-export const devCloudflareProxyVitePlugin = <Env, Cf extends CfProperties>({
+export const cloudflareDevProxyVitePlugin = <Env, Cf extends CfProperties>({
   getLoadContext,
   ...options
 }: {
