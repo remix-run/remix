@@ -61,7 +61,6 @@ const files: Files = async ({ port }) => ({
     }
   `,
   "load-context.ts": `
-    import { type KVNamespace } from "@cloudflare/workers-types";
     import { type AppLoadContext } from "@remix-run/cloudflare";
     import { type PlatformProxy } from "wrangler";
 
