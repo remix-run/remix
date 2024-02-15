@@ -158,7 +158,7 @@ export const wranglerPagesDev = async ({
   let nodeBin = process.argv[0];
 
   // grab wrangler bin from remix-run/remix root node_modules since its not copied into integration project's node_modules
-  let wranglerBin = path.resolve("node_modules/.bin/wrangler");
+  let wranglerBin = path.resolve("node_modules/wrangler/bin/wrangler.js");
 
   let proc = spawn(
     nodeBin,
