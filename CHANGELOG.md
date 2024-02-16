@@ -154,7 +154,7 @@ Date: 2024-02-16
 
 #### Stabilized Vite Plugin
 
-We're excited to announce that support for [Vite] is now stable in Remix `2.7.0`! Ever since the [initial unstable release of Remix Vite](https://remix.run/blog/remix-heart-vite), we’ve been hard at work refining and extending it over the past few months with help from all of our early adopters and community contributors. This also means that Vite-only features such as [SPA Mode](https://remix.run/docs/en/main/future/spa-mode), [Server Bundles](https://remix.run/docs/future/server-bundles), and [`basename` support](https://remix.run/docs/en/dev/future/vite#basename) are now officially stable as well 😊.
+We're excited to announce that support for [Vite](https://vitejs.dev/) is now stable in Remix `2.7.0`! Ever since the [initial unstable release of Remix Vite](https://remix.run/blog/remix-heart-vite), we’ve been hard at work refining and extending it over the past few months with help from all of our early adopters and community contributors. This also means that Vite-only features such as [SPA Mode](https://remix.run/docs/en/main/future/spa-mode), [Server Bundles](https://remix.run/docs/future/server-bundles), and [`basename` support](https://remix.run/docs/en/dev/future/vite#basename) are now officially stable as well 😊.
 
 For more information, check out the [blog post](https://remix.run/blog/remix-vite-stable) and the [Vite docs](https://remix.run/docs/en/main/future/vite).
 
