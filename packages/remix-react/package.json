@@ -16,10 +16,10 @@
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
   "dependencies": {
-    "@remix-run/router": "0.0.0-experimental-2272fa73",
+    "@remix-run/router": "0.0.0-experimental-5bedc168",
     "@remix-run/server-runtime": "2.6.0",
-    "react-router": "0.0.0-experimental-2272fa73",
-    "react-router-dom": "0.0.0-experimental-2272fa73",
+    "react-router": "0.0.0-experimental-5bedc168",
+    "react-router-dom": "0.0.0-experimental-5bedc168",
     "turbo-stream": "^1.2.1"
   },
   "devDependencies": {
