@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/testing",
-  "version": "2.6.0",
+  "version": "0.0.0-experimental-d5bed65fd",
   "description": "Testing utilities for Remix apps",
   "homepage": "https://remix.run",
   "bugs": {
@@ -16,8 +16,8 @@
   "typings": "./dist/index.d.ts",
   "module": "./dist/esm/index.js",
   "dependencies": {
-    "@remix-run/node": "2.6.0",
-    "@remix-run/react": "2.6.0",
+    "@remix-run/node": "0.0.0-experimental-d5bed65fd",
+    "@remix-run/react": "0.0.0-experimental-d5bed65fd",
     "@remix-run/router": "0.0.0-experimental-cbcd94b7",
     "react-router-dom": "0.0.0-experimental-cbcd94b7"
   },
