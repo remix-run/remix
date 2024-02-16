@@ -44,13 +44,13 @@ export function getSingleFetchDataStrategy(
       let singleFetchPromise: Promise<SingleFetchResults>;
 
       let makeSingleFetchCall = async () => {
-        // Single fetch doesn't need/want naked index queries on action
-        // revalidation requests
         let url = singleFetchUrl(
           addRevalidationParam(
             manifest,
             routeModules,
             matches,
+            // Single fetch doesn't need/want naked index queries on action
+            // revalidation requests
             stripIndexParam(request.url)
           )
         );
@@ -163,7 +163,7 @@ async function fetchAndDecode(url: URL, init?: RequestInit) {
     "Expected a text/x-turbo response"
   );
   let decoded = await decode(res.body!, [
-    (type, value) => {
+    (type: string, value: unknown) => {
       if (type === "ErrorResponse") {
         let errorResponse = value as ErrorResponse;
         return {
