@@ -749,7 +749,7 @@ Without JavaScript, when a form is submitted, the browser will create [`FormData
 
 Each field in the `form` is accessible with `formData.get(name)`. For example, given the input field from above, you could access the first and last names like this:
 
-```tsx lines=[3,4] nocopy
+```tsx lines=[6,7] nocopy
 export const action = async ({
   params,
   request,
@@ -936,7 +936,7 @@ In our case, we add a `"loading"` class to the main part of the app if we're not
 
 If we review code in the contact route, we can find the delete button looks like this:
 
-```tsx filename=src/routes/contact.$contactId.tsx lines=[2]
+```tsx filename=app/routes/contact.$contactId.tsx lines=[2]
 <Form
   action="destroy"
   method="post"
