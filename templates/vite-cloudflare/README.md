@@ -30,6 +30,10 @@ npm run start
 
 ## Deployment
 
+> [!WARNING]  
+> Cloudflare does _not_ use `wrangler.toml` to configure deployment bindings.
+> You **MUST** [configure deployment bindings manually in the Cloudflare dashboard][bindings].
+
 First, build your app for production:
 
 ```sh
@@ -42,6 +46,4 @@ Then, deploy your app to Cloudflare Pages:
 npm run deploy
 ```
 
-> [!WARNING]  
-> Cloudflare does _not_ use `wrangler.toml` to configure deployment bindings.
-> You **MUST** configure deployment bindings manually in the Cloudflare dashboard.
+[bindings]: https://developers.cloudflare.com/pages/functions/bindings/
