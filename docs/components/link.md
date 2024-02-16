@@ -22,8 +22,8 @@ The most basic usage takes an href string:
 <Link to="/some/path" />
 ```
 
-### `to: Path`
-You can also pass a `Path` value:
+### `to: Partial<Path>`
+You can also pass a `Partial<Path>` value:
 ```tsx
 <Link
   to={{
