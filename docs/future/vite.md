@@ -159,12 +159,12 @@ export async function loader({
 }
 ```
 
-#### Augmenting Cloudflare load context
+#### Augmenting load context
 
 If you'd like to add additional properties to the load context,
-you can export a `getLoadContext` function from a shared module that you can wire up to Vite and Cloudflare Pages:
+you should export a `getLoadContext` function from a shared module so that **load context in Vite, Wrangler, and Cloudflare Pages are all augmented in the same way**:
 
-```ts filename=load-context.ts lines=[2,10,14-27]
+```ts filename=load-context.ts lines=[1,9,13-26]
 import { type AppLoadContext } from "@remix-run/cloudflare";
 import { type PlatformProxy } from "wrangler";
 
@@ -173,13 +173,13 @@ type Cloudflare = Omit<PlatformProxy<Env>, "dispose">;
 declare module "@remix-run/cloudflare" {
   interface AppLoadContext {
     cloudflare: Cloudflare;
-    extra: string;
+    extra: string; // augmented
   }
 }
 
 type GetLoadContext = (args: {
   request: Request;
-  context: { cloudflare: Cloudflare };
+  context: { cloudflare: Cloudflare }; // load context _before_ augmentation
 }) => AppLoadContext;
 
 // Shared implementation compatible with Vite, Wrangler, and Cloudflare Pages
@@ -193,7 +193,9 @@ export const getLoadContext: GetLoadContext = ({
 };
 ```
 
-For local development with Vite, you can then pass this `getLoadContext` function to the Cloudflare Proxy plugin in your Vite config:
+<docs-warning>You must pass in `getLoadContext` to **both** the Cloudflare Proxy plugin and the request handler in `functions/[[path]].ts`, otherwise you'll get inconsistent load context augmentation depending on how you run your app.</docs-warning>
+
+First, pass in `getLoadContext` to the Cloudflare Proxy plugin in your Vite config to augment load context when running Vite:
 
 ```ts filename=vite.config.ts lines=[8,12]
 import {
@@ -213,9 +215,7 @@ export default defineConfig({
 });
 ```
 
-<docs-warning>The Cloudflare Proxy plugin's `getLoadContext` **only augments the load context within Vite's dev server**, not within Wrangler nor in Cloudflare Pages deployments.</docs-warning>
-
-To wire up Wrangler and deployments, you'll also need to add `getLoadContext` to `functions/[[path]].ts`:
+Next, pass in `getLoadContext` to the request handler in your `functions/[[path]].ts` file to augment load context when running Wrangler or when deploying to Cloudflare Pages:
 
 ```ts filename=functions/[[path]].ts lines=[5,9]
 import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
