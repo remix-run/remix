@@ -272,6 +272,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         v7_partialHydration: true,
         v7_prependBasename: true,
         v7_relativeSplatPath: window.__remixContext.future.v3_relativeSplatPath,
+        // Single fetch enables this underlying behavior
+        v7_skipActionErrorRevalidation:
+          window.__remixContext.future.unstable_singleFetch === true,
       },
       hydrationData,
       mapRouteProperties,

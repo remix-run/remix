@@ -303,7 +303,7 @@ async function handleDataRequest(
 }
 
 type SingleFetchResult =
-  | { data: unknown }
+  | { data: unknown; status?: number } // status only included in actions
   | { error: unknown }
   | { redirect: string; status: number; revalidate: boolean; reload: boolean };
 type SingleFetchResults = {
@@ -377,8 +377,6 @@ async function singleFetchAction(
     });
     let response = await staticHandler.queryRoute(handlerRequest, {
       requestContext: loadContext,
-      // TODO: Will need to send this in a header or something
-      // routeId:
     });
     // callRouteLoader/callRouteAction always return responses
     invariant(
@@ -396,10 +394,19 @@ async function singleFetchAction(
         response.headers,
       ];
     }
-    return [{ data: await unwrapResponse(response) }, response.headers];
+    return [
+      { data: await unwrapResponse(response), status: response.status },
+      response.headers,
+    ];
   } catch (err) {
     handleError(err);
-    let error = isResponse(err) ? await unwrapResponse(err) : err;
+    let error = isResponse(err)
+      ? new ErrorResponseImpl(
+          err.status,
+          err.statusText,
+          await unwrapResponse(err)
+        )
+      : err;
     return [{ error }, new Headers()];
   }
 }
@@ -426,9 +433,12 @@ async function singleFetchLoaders(
     if (isResponse(result)) {
       // We don't really know which loader this came from, so just stick it at
       // a known match
-      // TODO: this should take into account the revalidation header
       let routeId =
-        matches?.find((m) => m.route.module.loader)?.route.id || "root";
+        matches?.find((m) =>
+          routesToLoad
+            ? routesToLoad.split(",").includes(m.route.id)
+            : m.route.module.loader
+        )?.route.id || "root";
       return [
         {
           [routeId]: {

@@ -1,5 +1,6 @@
 import type { DataStrategyMatch, ErrorResponse } from "@remix-run/router";
 import {
+  DecodedResponse,
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
   redirect,
 } from "@remix-run/router";
@@ -12,7 +13,7 @@ import invariant from "./invariant";
 import type { RouteModules } from "./routeModules";
 
 type SingleFetchResult =
-  | { data: unknown }
+  | { data: unknown; status?: number } // status only included in actions
   | { error: unknown }
   | { redirect: string; status: number; revalidate: boolean; reload: boolean };
 type SingleFetchResults = {
@@ -192,6 +193,9 @@ function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
     }
     return redirect(result.redirect, { status: result.status, headers });
   } else if ("data" in result) {
+    if (typeof result.status === "number") {
+      return new DecodedResponse(result.status, "", new Headers(), result.data);
+    }
     return result.data;
   } else {
     throw new Error(`No action response found for routeId "${routeId}"`);
