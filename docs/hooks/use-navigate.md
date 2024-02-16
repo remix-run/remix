@@ -42,9 +42,9 @@ navigate("../other/path");
 
 <docs-info>Please see the [Splat Paths][relativesplatpath] section on the `useResolvedPath` docs for a note on the behavior of the `future.v3_relativeSplatPath` future flag for relative `useNavigate()` behavior within splat routes</docs-info>
 
-### `to: To`
+### `to: Partial<Path>`
 
-You can also pass a `To` value:
+You can also pass a `Partial<Path>` value:
 
 ```tsx
 navigate({
