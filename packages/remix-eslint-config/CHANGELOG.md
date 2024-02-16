@@ -1,5 +1,7 @@
 # `@remix-run/eslint-config`
 
+## 2.7.0-pre.1
+
 ## 2.7.0-pre.0
 
 ## 2.6.0
