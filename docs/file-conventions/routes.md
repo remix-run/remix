@@ -250,7 +250,7 @@ Wrapping a route segment in parentheses will make the segment optional.
 | `/categories`              | `app/routes/($lang).categories.tsx` |
 | `/en/categories`           | `app/routes/($lang).categories.tsx` |
 | `/fr/categories`           | `app/routes/($lang).categories.tsx` |
-| `/american-flag-speedo`    | `app/routes/($lang)._index.tsx`     |
+| `/american-flag-speedo`    | `app/routes/($lang).$productId.tsx` |
 | `/en/american-flag-speedo` | `app/routes/($lang).$productId.tsx` |
 | `/fr/american-flag-speedo` | `app/routes/($lang).$productId.tsx` |
 
