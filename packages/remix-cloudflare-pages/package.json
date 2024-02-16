@@ -15,7 +15,7 @@
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
   "scripts": {
-    "build-types": "tsc --build"
+    "tsc": "tsc"
   },
   "dependencies": {
     "@remix-run/cloudflare": "workspace:*"

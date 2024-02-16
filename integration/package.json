@@ -4,7 +4,9 @@
   "private": true,
   "description": "deps needed for integration tests",
   "type": "module",
-  "scripts": {},
+  "scripts": {
+    "tsc": "tsc"
+  },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.3.0",
     "@cloudflare/workers-types": "^4.20230518.0",

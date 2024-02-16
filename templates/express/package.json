@@ -1,4 +1,5 @@
 {
+  "name": "remix-express-app",
   "private": true,
   "sideEffects": false,
   "type": "module",

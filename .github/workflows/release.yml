@@ -33,10 +33,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          cache: "yarn"
+          cache: "pnpm"
 
       - name: 📥 Install deps
-        run: yarn --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 🔐 Setup npm auth
         run: |
@@ -52,10 +52,10 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          version: yarn run changeset:version
+          version: pnpm run changeset:version
           commit: "chore: Update version for release"
           title: "chore: Update version for release"
-          publish: yarn run changeset:release
+          publish: pnpm run changeset:release
           createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

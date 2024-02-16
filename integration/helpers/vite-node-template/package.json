@@ -1,4 +1,5 @@
 {
+  "name": "remix-test-template-vite-node",
   "private": true,
   "sideEffects": false,
   "type": "module",

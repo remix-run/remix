@@ -41,7 +41,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: "yarn"
+          cache: "pnpm"
 
       - name: Disable GitHub Actions Annotations
         run: |
@@ -50,10 +50,10 @@ jobs:
           echo "::remove-matcher owner=eslint-stylish::"
 
       - name: 📥 Install deps
-        run: yarn --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 📥 Install Playwright
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        run: "yarn test:integration --project=${{ matrix.browser }}"
+        run: "pnpm test:integration --project=${{ matrix.browser }}"

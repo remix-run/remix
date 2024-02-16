@@ -18,7 +18,7 @@
     "remix": "dist/cli.js"
   },
   "scripts": {
-    "build-types": "tsc --build"
+    "tsc": "tsc"
   },
   "dependencies": {
     "@babel/core": "^7.21.8",
@@ -79,6 +79,7 @@
     "@remix-run/cloudflare": "workspace:*",
     "@remix-run/deno": "workspace:*",
     "@remix-run/serve": "workspace:*",
+    "@remix-run/testing": "workspace:*",
     "@types/babel__core": "^7.20.5",
     "@types/babel__generator": "^7.6.8",
     "@types/babel__traverse": "^7.20.5",

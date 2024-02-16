@@ -1,4 +1,5 @@
 {
+  "name": "remix-deno-app",
   "private": true,
   "sideEffects": false,
   "scripts": {

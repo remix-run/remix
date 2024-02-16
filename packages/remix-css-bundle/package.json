@@ -16,7 +16,7 @@
   "module": "./dist/esm/index.js",
   "typings": "./dist/index.d.ts",
   "scripts": {
-    "build-types": "tsc --build"
+    "tsc": "tsc"
   },
   "engines": {
     "node": ">=18.0.0"

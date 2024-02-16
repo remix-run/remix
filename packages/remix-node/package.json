@@ -17,7 +17,7 @@
     "./install.js"
   ],
   "scripts": {
-    "build-types": "tsc --build"
+    "tsc": "tsc"
   },
   "dependencies": {
     "@remix-run/server-runtime": "workspace:*",
@@ -30,6 +30,7 @@
     "stream-slice": "^0.1.2"
   },
   "devDependencies": {
+    "@remix-run/node": "workspace:*",
     "@types/cookie-signature": "^1.0.3",
     "@types/source-map-support": "^0.5.4",
     "typescript": "^5.1.6"

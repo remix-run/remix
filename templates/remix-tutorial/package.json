@@ -1,4 +1,5 @@
 {
+  "name": "remix-tutorial-app",
   "private": true,
   "sideEffects": false,
   "scripts": {

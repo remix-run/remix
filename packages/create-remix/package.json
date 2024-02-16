@@ -17,7 +17,7 @@
     "create-remix": "dist/cli.js"
   },
   "scripts": {
-    "build-types": "tsc --build"
+    "tsc": "tsc"
   },
   "dependencies": {
     "@remix-run/web-fetch": "^4.4.2",

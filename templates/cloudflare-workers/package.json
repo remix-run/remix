@@ -1,4 +1,5 @@
 {
+  "name": "remix-cloudflare-workers-app",
   "private": true,
   "sideEffects": false,
   "type": "module",

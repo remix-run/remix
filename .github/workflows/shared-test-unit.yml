@@ -33,7 +33,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: "yarn"
+          cache: "pnpm"
 
       - name: Disable GitHub Actions Annotations
         run: |
@@ -42,11 +42,11 @@ jobs:
           echo "::remove-matcher owner=eslint-stylish::"
 
       - name: 📥 Install deps
-        run: yarn --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       # It's faster to use the built `cli.js` in tests if its available and up-to-date
       - name: 🏗 Build
-        run: yarn build
+        run: pnpm build
 
       - name: 🧪 Run Primary Tests
-        run: "yarn test:primary"
+        run: "pnpm test:primary"

@@ -1,4 +1,5 @@
 {
+  "name": "remix-spa-app",
   "private": true,
   "sideEffects": false,
   "type": "module",
