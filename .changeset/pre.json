@@ -20,5 +20,27 @@
     "@remix-run/server-runtime": "2.6.0",
     "@remix-run/testing": "2.6.0"
   },
-  "changesets": []
+  "changesets": [
+    "brown-rats-flow",
+    "cyan-snails-provide",
+    "eighty-years-accept",
+    "fluffy-peas-promise",
+    "forty-squids-travel",
+    "fresh-knives-deliver",
+    "khaki-starfishes-rest",
+    "nervous-rivers-chew",
+    "nice-jobs-boil",
+    "pink-eggs-drum",
+    "proud-paws-hope",
+    "quiet-cups-attack",
+    "serious-lizards-prove",
+    "shaggy-sheep-cheer",
+    "stabilize-spa-mode",
+    "tender-pens-tan",
+    "three-cars-dream",
+    "vite-deprecate-public-path",
+    "vite-rr-basename",
+    "vite-whatwg-querystring",
+    "wet-bulldogs-appear"
+  ]
 }
