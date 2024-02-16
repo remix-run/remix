@@ -13,69 +13,79 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.6.0](#v260)
+  - [v2.7.0](#v270)
     - [What's Changed](#whats-changed)
-      - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
+      - [Stabilized Vite Plugin](#stabilized-vite-plugin)
+      - [New `Layout` Export](#new-layout-export)
+      - [Basename support](#basename-support)
+      - [Cloudflare Proxy as a Vite Plugin](#cloudflare-proxy-as-a-vite-plugin)
     - [Minor Changes](#minor-changes)
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
     - [Changes by Package](#changes-by-package)
-  - [v2.5.1](#v251)
+  - [v2.6.0](#v260)
+    - [What's Changed](#whats-changed-1)
+      - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
+    - [Minor Changes](#minor-changes-1)
     - [Patch Changes](#patch-changes-1)
     - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
-  - [v2.5.0](#v250)
-    - [What's Changed](#whats-changed-1)
-      - [SPA Mode (unstable)](#spa-mode-unstable)
-      - [Server Bundles (unstable)](#server-bundles-unstable)
-    - [Minor Changes](#minor-changes-1)
+  - [v2.5.1](#v251)
     - [Patch Changes](#patch-changes-2)
     - [Updated Dependencies](#updated-dependencies-2)
     - [Changes by Package](#changes-by-package-2)
-  - [v2.4.1](#v241)
+  - [v2.5.0](#v250)
+    - [What's Changed](#whats-changed-2)
+      - [SPA Mode (unstable)](#spa-mode-unstable)
+      - [Server Bundles (unstable)](#server-bundles-unstable)
+    - [Minor Changes](#minor-changes-2)
     - [Patch Changes](#patch-changes-3)
     - [Updated Dependencies](#updated-dependencies-3)
     - [Changes by Package](#changes-by-package-3)
-  - [v2.4.0](#v240)
-    - [What's Changed](#whats-changed-2)
-      - [Client Data](#client-data)
-      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
-      - [Vite Updates (Unstable)](#vite-updates-unstable)
-    - [Minor Changes](#minor-changes-2)
+  - [v2.4.1](#v241)
     - [Patch Changes](#patch-changes-4)
     - [Updated Dependencies](#updated-dependencies-4)
     - [Changes by Package](#changes-by-package-4)
-  - [v2.3.1](#v231)
+  - [v2.4.0](#v240)
+    - [What's Changed](#whats-changed-3)
+      - [Client Data](#client-data)
+      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
+      - [Vite Updates (Unstable)](#vite-updates-unstable)
+    - [Minor Changes](#minor-changes-3)
     - [Patch Changes](#patch-changes-5)
     - [Updated Dependencies](#updated-dependencies-5)
     - [Changes by Package](#changes-by-package-5)
-  - [v2.3.0](#v230)
-    - [What's Changed](#whats-changed-3)
-      - [Stabilized `useBlocker`](#stabilized-useblocker)
-      - [`unstable_flushSync` API](#unstable_flushsync-api)
-    - [Minor Changes](#minor-changes-3)
+  - [v2.3.1](#v231)
     - [Patch Changes](#patch-changes-6)
     - [Updated Dependencies](#updated-dependencies-6)
     - [Changes by Package](#changes-by-package-6)
-  - [v2.2.0](#v220)
+  - [v2.3.0](#v230)
     - [What's Changed](#whats-changed-4)
-      - [Vite!](#vite)
-      - [New Fetcher APIs](#new-fetcher-apis)
-      - [Persistence Future Flag](#persistence-future-flag)
+      - [Stabilized `useBlocker`](#stabilized-useblocker)
+      - [`unstable_flushSync` API](#unstable_flushsync-api)
     - [Minor Changes](#minor-changes-4)
     - [Patch Changes](#patch-changes-7)
     - [Updated Dependencies](#updated-dependencies-7)
     - [Changes by Package](#changes-by-package-7)
-  - [v2.1.0](#v210)
+  - [v2.2.0](#v220)
     - [What's Changed](#whats-changed-5)
-      - [View Transitions](#view-transitions)
-      - [Stable `createRemixStub`](#stable-createremixstub)
+      - [Vite!](#vite)
+      - [New Fetcher APIs](#new-fetcher-apis)
+      - [Persistence Future Flag](#persistence-future-flag)
     - [Minor Changes](#minor-changes-5)
     - [Patch Changes](#patch-changes-8)
     - [Updated Dependencies](#updated-dependencies-8)
     - [Changes by Package](#changes-by-package-8)
-  - [v2.0.1](#v201)
+  - [v2.1.0](#v210)
+    - [What's Changed](#whats-changed-6)
+      - [View Transitions](#view-transitions)
+      - [Stable `createRemixStub`](#stable-createremixstub)
+    - [Minor Changes](#minor-changes-6)
     - [Patch Changes](#patch-changes-9)
+    - [Updated Dependencies](#updated-dependencies-9)
+    - [Changes by Package](#changes-by-package-9)
+  - [v2.0.1](#v201)
+    - [Patch Changes](#patch-changes-10)
     - [Changes by Package 🔗](#changes-by-package-)
   - [v2.0.0](#v200)
     - [Breaking Changes](#breaking-changes)
@@ -87,8 +97,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
         - [Breaking Type Changes](#breaking-type-changes)
     - [New Features](#new-features)
     - [Other Notable Changes](#other-notable-changes)
-    - [Updated Dependencies](#updated-dependencies-9)
-    - [Changes by Package](#changes-by-package-9)
+    - [Updated Dependencies](#updated-dependencies-10)
+    - [Changes by Package](#changes-by-package-10)
 
 </details>
 
@@ -135,6 +145,169 @@ Date: YYYY-MM-DD
 **Full Changelog**: [`v2.X.Y...v2.X.Y`](https://github.com/remix-run/remix/compare/remix@2.X.Y...remix@2.X.Y)
 
 -->
+
+## v2.7.0
+
+Date: 2024-02-16
+
+### What's Changed
+
+#### Stabilized Vite Plugin
+
+- server bundles and spa mode
+  TODO:
+
+#### New `Layout` Export
+
+TODO:
+
+#### Basename support
+
+TODO:
+
+#### Cloudflare Proxy as a Vite Plugin
+
+**⚠️ This is a breaking change for projects relying on Cloudflare support from the unstable Vite plugin**
+
+The Cloudflare preset (`unstable_cloudflarePreset`) as been removed and replaced with a new Vite plugin:
+
+```diff
+ import {
+    unstable_vitePlugin as remix,
+-   unstable_cloudflarePreset as cloudflare,
++   cloudflareDevProxyVitePlugin as remixCloudflareDevProxy,
+  } from "@remix-run/dev";
+  import { defineConfig } from "vite";
+
+  export default defineConfig({
+    plugins: [
++     remixCloudflareDevProxy(),
++     remix(),
+-     remix({
+-       presets: [cloudflare()],
+-     }),
+    ],
+-   ssr: {
+-     resolve: {
+-       externalConditions: ["workerd", "worker"],
+-     },
+-   },
+  });
+```
+
+A few notes on the new plugin:
+
+- `remixCloudflareDevProxy` must come _before_ the `remix` plugin so that it can override Vite's dev server middleware to be compatible with Cloudflare's proxied environment
+- Because it is a Vite plugin, `remixCloudflareDevProxy` can set `ssr.resolve.externalConditions` to be `workerd`-compatible for you
+- `remixCloudflareDevProxy` accepts a `getLoadContext` function that replaces the old `getRemixDevLoadContext`
+- If you were using a `nightly` version that required `getBindingsProxy` or `getPlatformProxy`, that is no longer required
+- Any options you were passing to `getBindingsProxy` or `getPlatformProxy` should now be passed to `remixCloudflareDevProxy` instead
+- This API also better aligns with future plans to support Cloudflare with a framework-agnostic Vite plugin that makes use of Vite's (experimental) Runtime API.
+
+### Minor Changes
+
+- `@remix-run/react` - Allow an optional `Layout` export from the root route ([#8709](https://github.com/remix-run/remix/pull/8709))
+- `@remix-run/cloudflare-pages` - Make `getLoadContext` optional for Cloudflare Pages ([#8701](https://github.com/remix-run/remix/pull/8701))
+  - Defaults to `(context) => ({ env: context })`, which is what we used to have in all the templates
+  - This gives parity with the Cloudflare preset for the Remix Vite plugin and keeps our templates leaner
+- `@remix-run/dev` - Vite: Cloudflare Proxy as a Vite plugin ([#8749](https://github.com/remix-run/remix/pull/8749))
+  - **⚠️ This is a breaking change for projects relying on Cloudflare support from the unstable Vite plugin**
+- `@remix-run/dev` - Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/en/main/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
+- `@remix-run/dev` - Vite: Stabilize the Remix Vite plugin, Cloudflare preset, and all related types by removing all `unstable_` / `Unstable_` prefixes ([#8713](https://github.com/remix-run/remix/pull/8713))
+  - While this is a breaking change for existing Remix Vite plugin consumers, now that the plugin has stabilized, there will no longer be any breaking changes outside of a major release. Thank you to all of our early adopters and community contributors for helping us get here! 🙏
+- `@remix-run/dev` - Vite: Stabilize "SPA Mode" by renaming the Remix vite plugin config from `unstable_ssr -> ssr` ([#8692](https://github.com/remix-run/remix/pull/8692))
+- `@remix-run/dev` - Vite: Fix issue where client route file requests fail if search params have been parsed and serialized before reaching the Remix Vite plugin ([#8740](https://github.com/remix-run/remix/pull/8740))
+
+### Patch Changes
+
+- `@remix-run/express` - Use `req.originalUrl` instead of `req.url` so that Remix sees the full URL ([#8145](https://github.com/remix-run/remix/pull/8145))
+  - Remix relies on the knowing the full URL to ensure that server and client code can function together, and does not support URL rewriting prior to the Remix handler
+- `@remix-run/react` - Fix a bug with SPA mode when the root route had no children ([#8747](https://github.com/remix-run/remix/pull/8747))
+- `@remix-run/server-runtime` - Add a more specific error if a user returns a `defer` response from a resource route ([#8726](https://github.com/remix-run/remix/pull/8726))
+- `@remix-run/dev` - Always prepend `DOCTYPE` in SPA mode `entry.server.tsx`, can opt out via remix reveal ([#8725](https://github.com/remix-run/remix/pull/8725))
+- `@remix-run/dev` - Fix build issue in SPA mode when using a `basename` ([#8720](https://github.com/remix-run/remix/pull/8720))
+- `@remix-run/dev` - Fix type error in Remix config for synchronous `routes` function ([#8745](https://github.com/remix-run/remix/pull/8745))
+- `@remix-run/dev` - Vite: Validate that the MDX Rollup plugin, if present, is placed before Remix in Vite config ([#8690](https://github.com/remix-run/remix/pull/8690))
+- `@remix-run/dev` - Vite: Require `getBindingsProxy` from Wrangler for Cloudflare preset ([#8688](https://github.com/remix-run/remix/pull/8688))
+
+  - **⚠️ This is a breaking change for projects using the Cloudflare preset for the unstable Vite plugin.**
+  - You must now pass in `getBindingsProxy` from Wrangler:
+
+    ```diff
+      // vite.config.ts
+      import {
+        unstable_vitePlugin as remix,
+        unstable_cloudflarePreset as cloudflare,
+      } from "@remix-run/dev";
+      import { defineConfig } from "vite";
+      import tsconfigPaths from "vite-tsconfig-paths";
+    + import { getBindingsProxy } from "wrangler";
+
+      export default defineConfig({
+        plugins: [
+          remix({
+            presets: [
+    -         cloudflare()
+    +         cloudflare(getBindingsProxy)
+            ],
+          }),
+          tsconfigPaths(),
+        ],
+        ssr: {
+          resolve: {
+            externalConditions: ["workerd", "worker"],
+          },
+        },
+      });
+    ```
+
+  - Additionally, the `getRemixDevLoadContext` function now provides the request as part of the context:
+
+    ```ts
+    cloudflare(getBindingsProxy, {
+      getRemixDevLoadContext: ({ request, env }) => {
+        // return augmented context here
+      },
+    });
+    ```
+
+  - When using `getRemixDevLoadContext`, it's recommended that you create a `load-context.ts` file to define a shared `getLoadContext` function that you can use for both `getRemixDevLoadContext` in `vite.config.ts` as well as within `functions/[[path]].ts`
+  - For more, see the _Future > Vite > Cloudflare_ docs
+
+- `@remix-run/dev` - Vite: Fix issue resolving critical CSS during development when the current working directory differs from the project root ([#8752](https://github.com/remix-run/remix/pull/8752))
+- `@remix-run/dev` - Vite: Require version `5.1.0` to support `.css?url` imports ([#8723](https://github.com/remix-run/remix/pull/8723))
+- `@remix-run/dev` - Vite: Support Vite `5.1.0`'s `.css?url` imports ([#8684](https://github.com/remix-run/remix/pull/8684))
+- `@remix-run/dev` - Vite: Enable use of [`vite preview`](https://main.vitejs.dev/guide/static-deploy.html#deploying-a-static-site) to preview Remix SPA applications ([#8624](https://github.com/remix-run/remix/pull/8624))
+  - In the SPA template, `npm run start` has been renamed to `npm run preview` which uses `vite preview` instead of a standalone HTTP server such as `http-server` or `serv-cli`
+- `@remix-run/dev` - Vite: Remove the ability to pass `publicPath` as an option to the Remix vite plugin ([#8145](https://github.com/remix-run/remix/pull/8145))
+  - **⚠️ This is a breaking change for projects using the unstable Vite plugin with a `publicPath`**
+  - This is already handled in Vite via the [`base`](https://vitejs.dev/guide/build.html#public-base-path) config so we now set the Remix `publicPath` from the Vite `base` config
+- `@remix-run/dev` - Vite: Enable HMR for .md and .mdx files ([#8711](https://github.com/remix-run/remix/pull/8711))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.22.Y`](https://github.com/remix-run/react-router/releases/tag/react-router%406.22.1)
+- [`@remix-run/router@1.15.Y`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1151)
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/create-remix/CHANGELOG.md#270)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-architect/CHANGELOG.md#270)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-cloudflare/CHANGELOG.md#270)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-cloudflare-pages/CHANGELOG.md#270)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-cloudflare-workers/CHANGELOG.md#270)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-css-bundle/CHANGELOG.md#270)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-deno/CHANGELOG.md#270)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-dev/CHANGELOG.md#270)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-eslint-config/CHANGELOG.md#270)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-express/CHANGELOG.md#270)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-node/CHANGELOG.md#270)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-react/CHANGELOG.md#270)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-serve/CHANGELOG.md#270)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-server-runtime/CHANGELOG.md#270)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-testing/CHANGELOG.md#270)
+
+**Full Changelog**: [`v2.6.0...v2.7.0`](https://github.com/remix-run/remix/compare/remix@2.6.0...remix@2.7.0)
 
 ## v2.6.0
 
