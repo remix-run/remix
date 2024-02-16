@@ -154,8 +154,7 @@ Date: 2024-02-16
 
 #### Stabilized Vite Plugin
 
-- server bundles and spa mode
-  TODO:
+TODO: (mention stabilized server bundles and spa mode in this section as well)
 
 #### New `Layout` Export
 
@@ -167,7 +166,7 @@ TODO:
 
 #### Cloudflare Proxy as a Vite Plugin
 
-**⚠️ This is a breaking change for projects relying on Cloudflare support from the unstable Vite plugin**
+⚠️ This is a breaking change for projects relying on Cloudflare support from the unstable Vite plugin
 
 The Cloudflare preset (`unstable_cloudflarePreset`) as been removed and replaced with a new Vite plugin:
 
@@ -282,7 +281,7 @@ A few notes on the new plugin:
 - `@remix-run/dev` - Vite: Remove the ability to pass `publicPath` as an option to the Remix vite plugin ([#8145](https://github.com/remix-run/remix/pull/8145))
   - **⚠️ This is a breaking change for projects using the unstable Vite plugin with a `publicPath`**
   - This is already handled in Vite via the [`base`](https://vitejs.dev/guide/build.html#public-base-path) config so we now set the Remix `publicPath` from the Vite `base` config
-- `@remix-run/dev` - Vite: Enable HMR for .md and .mdx files ([#8711](https://github.com/remix-run/remix/pull/8711))
+- `@remix-run/dev` - Vite: Enable HMR for `.md` and `.mdx` files ([#8711](https://github.com/remix-run/remix/pull/8711))
 
 ### Updated Dependencies
 
