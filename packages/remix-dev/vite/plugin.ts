@@ -48,7 +48,7 @@ const supportedRemixEsbuildConfigKeys = [
 ] as const satisfies ReadonlyArray<keyof RemixEsbuildUserConfig>;
 type SupportedRemixEsbuildUserConfig = Pick<
   RemixEsbuildUserConfig,
-  (typeof supportedRemixEsbuildConfigKeys)[number]
+  typeof supportedRemixEsbuildConfigKeys[number]
 >;
 
 const SERVER_ONLY_ROUTE_EXPORTS = ["loader", "action", "headers"];
@@ -74,7 +74,7 @@ const branchRouteProperties = [
   "file",
   "index",
 ] as const satisfies ReadonlyArray<keyof ConfigRoute>;
-type BranchRoute = Pick<ConfigRoute, (typeof branchRouteProperties)[number]>;
+type BranchRoute = Pick<ConfigRoute, typeof branchRouteProperties[number]>;
 
 export const configRouteToBranchRoute = (
   configRoute: ConfigRoute
@@ -110,7 +110,7 @@ const excludedRemixConfigPresetKeys = [
 ] as const satisfies ReadonlyArray<keyof VitePluginConfig>;
 
 type ExcludedRemixConfigPresetKey =
-  (typeof excludedRemixConfigPresetKeys)[number];
+  typeof excludedRemixConfigPresetKeys[number];
 
 type RemixConfigPreset = Omit<VitePluginConfig, ExcludedRemixConfigPresetKey>;
 
@@ -592,6 +592,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       pick(resolvedRemixUserConfig, supportedRemixEsbuildConfigKeys),
       { rootDirectory, isSpaMode }
     );
+
+    console.log("entryServerFilePath", entryServerFilePath);
 
     let buildDirectory = path.resolve(
       rootDirectory,

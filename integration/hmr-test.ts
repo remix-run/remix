@@ -230,7 +230,7 @@ test("HMR for custom server with broadcast", async ({ page }) => {
   }));
 });
 
-test.only("HMR for custom server with log", async ({ page }) => {
+test("HMR for custom server with log", async ({ page }) => {
   await dev(page, (appPort) => ({
     files: {
       ...files,

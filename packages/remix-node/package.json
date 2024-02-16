@@ -16,6 +16,9 @@
   "sideEffects": [
     "./install.js"
   ],
+  "scripts": {
+    "build-types": "tsc --build"
+  },
   "dependencies": {
     "@remix-run/server-runtime": "workspace:*",
     "@remix-run/web-fetch": "^4.4.2",

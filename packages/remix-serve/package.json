@@ -14,6 +14,9 @@
   "bin": {
     "remix-serve": "dist/cli.js"
   },
+  "scripts": {
+    "build-types": "tsc --build"
+  },
   "dependencies": {
     "@remix-run/express": "workspace:*",
     "@remix-run/node": "workspace:*",

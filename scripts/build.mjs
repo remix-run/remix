@@ -5,7 +5,7 @@ const publish = process.env.CI || args.includes("--publish");
 const tsc = process.env.CI || args.includes("--tsc") || publish;
 
 exec("pnpm", ["rollup", "-c"])
-  .then(() => tsc && exec("pnpm", ["tsc", "-b"]))
+  .then(() => tsc && exec("pnpm", ["run", "--recursive", "build-types"]))
   .then(() => publish && exec("node", ["scripts/copy-build-to-dist.mjs"]))
   .then(() => process.exit(0))
   .catch((err) => {

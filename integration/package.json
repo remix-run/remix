@@ -9,6 +9,8 @@
     "@cloudflare/kv-asset-handler": "^0.3.0",
     "@cloudflare/workers-types": "^4.20230518.0",
     "@playwright/test": "^1.33.0",
+    "@remix-run/dev": "workspace:*",
+    "@types/express": "^4.17.9",
     "@vanilla-extract/css": "^1.10.0",
     "@vanilla-extract/vite-plugin": "^3.9.2",
     "cheerio": "^1.0.0-rc.12",
@@ -36,7 +38,6 @@
     "tailwindcss": "^3.3.0",
     "type-fest": "^4.0.0",
     "typescript": "^5.1.0",
-    "vite-env-only": "^2.0.0",
     "vite-tsconfig-paths": "^4.2.2",
     "wrangler": "^3.24.0"
   }

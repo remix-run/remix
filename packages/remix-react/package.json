@@ -15,6 +15,9 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
+  "scripts": {
+    "build-types": "tsc --build"
+  },
   "dependencies": {
     "@remix-run/router": "1.15.0",
     "@remix-run/server-runtime": "workspace:*",

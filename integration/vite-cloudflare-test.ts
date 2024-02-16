@@ -135,7 +135,7 @@ const files: Files = async ({ port }) => ({
 });
 
 test("vite dev", async ({ page, viteDev }) => {
-  let { port } = await viteDev(files);
+  let { port } = await viteDev(files, "cloudflare");
   await page.goto(`http://localhost:${port}/`, {
     waitUntil: "networkidle",
   });

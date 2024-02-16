@@ -13,6 +13,9 @@
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "scripts": {
+    "build-types": "tsc --build"
+  },
   "dependencies": {
     "@architect/functions": "^5.2.0",
     "@remix-run/node": "workspace:*",

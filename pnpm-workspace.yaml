@@ -19,4 +19,5 @@ packages:
   - "integration/helpers/node-template"
   - "integration/helpers/cf-template"
   - "integration/helpers/deno-template"
-  - "integration/helpers/vite-template"
+  - "integration/helpers/vite-cloudflare-template"
+  - "integration/helpers/vite-node-template"

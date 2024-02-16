@@ -17,6 +17,9 @@
   "bin": {
     "remix": "dist/cli.js"
   },
+  "scripts": {
+    "build-types": "tsc --build"
+  },
   "dependencies": {
     "@babel/core": "^7.21.8",
     "@babel/generator": "^7.21.5",
@@ -73,12 +76,15 @@
     "ws": "^7.4.5"
   },
   "devDependencies": {
+    "@remix-run/cloudflare": "workspace:*",
+    "@remix-run/deno": "workspace:*",
     "@remix-run/serve": "workspace:*",
     "@types/babel__core": "^7.20.5",
     "@types/babel__generator": "^7.6.8",
     "@types/babel__traverse": "^7.20.5",
     "@types/cacache": "^17.0.0",
     "@types/cross-spawn": "^6.0.2",
+    "@types/express": "^4.17.9",
     "@types/gunzip-maybe": "^1.4.0",
     "@types/jsesc": "^3.0.1",
     "@types/lodash.debounce": "^4.0.6",

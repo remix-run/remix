@@ -9,8 +9,6 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@remix-run/cloudflare": "workspace:*",
-    "@remix-run/cloudflare-pages": "workspace:*",
     "@remix-run/express": "workspace:*",
     "@remix-run/node": "workspace:*",
     "@remix-run/react": "workspace:*",
@@ -19,12 +17,11 @@
     "@vanilla-extract/vite-plugin": "^3.9.2",
     "express": "^4.17.1",
     "isbot": "^4.1.0",
-    "miniflare": "^3.20231030.4",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "serialize-javascript": "^6.0.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20230518.0",
     "@remix-run/dev": "workspace:*",
     "@remix-run/eslint-config": "workspace:*",
     "@types/react": "^18.2.20",
@@ -33,6 +30,7 @@
     "node-fetch": "^3.3.2",
     "typescript": "^5.1.6",
     "vite": "5.1.0",
+    "vite-env-only": "^2.0.0",
     "vite-tsconfig-paths": "^4.2.1",
     "wrangler": "^3.24.0"
   },

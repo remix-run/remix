@@ -1,5 +1,4 @@
 {
-  "extends": "../tsconfig.json",
   "include": ["."],
   "exclude": ["./deployment-test", "./playground/template/**/*"],
   "compilerOptions": {
