@@ -209,7 +209,7 @@ test.describe("Vite build", () => {
 
         "app/assets/test.css": ".test{color:red}",
         "app/routes/ssr-only-css-url-files.tsx": js`
-          import cssUrl from "../assets/test.module.css";
+          import cssUrl from "../assets/test.css?url";
           import { useLoaderData } from "@remix-run/react"
 
           export const loader: LoaderFunction = () => {
@@ -324,7 +324,7 @@ test.describe("Vite build", () => {
 
     await page.getByRole("link", { name: "txtUrl" }).click();
     await page.waitForURL("**/assets/test-*.txt");
-    await page.getByText("test").click();
+    await expect(page.getByText("test")).toBeVisible();
   });
 
   test("emits SSR-only .css?url files to the client assets directory", async ({
@@ -335,8 +335,7 @@ test.describe("Vite build", () => {
 
     await page.getByRole("link", { name: "cssUrl" }).click();
     await page.waitForURL("**/assets/test-*.css");
-    await page.getByText(".test{").click();
-    await page.goBack();
+    await expect(page.getByText(".test{")).toBeVisible();
   });
 
   test("supports code-split JS from SSR build", async ({ page }) => {
