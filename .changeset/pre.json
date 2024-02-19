@@ -21,6 +21,7 @@
     "@remix-run/testing": "2.6.0"
   },
   "changesets": [
+    "brave-yaks-vanish",
     "brown-rats-flow",
     "cool-bears-perform",
     "cyan-snails-provide",
@@ -30,11 +31,13 @@
     "fresh-knives-deliver",
     "khaki-starfishes-rest",
     "nice-jobs-boil",
+    "orange-cherries-flow",
     "pink-eggs-drum",
     "proud-paws-hope",
     "quiet-cups-attack",
     "serious-lizards-prove",
     "shaggy-sheep-cheer",
+    "shy-eagles-kiss",
     "stabilize-spa-mode",
     "tender-pens-tan",
     "three-cars-dream",
