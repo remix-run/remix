@@ -1,36 +1,6 @@
 # `@remix-run/react`
 
-## 2.7.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.7.0-pre.4`
-
-## 2.7.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.7.0-pre.3`
-
-## 2.7.0-pre.2
-
-### Patch Changes
-
-- [REMOVE] Bump RR version ([#8774](https://github.com/remix-run/remix/pull/8774))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.7.0-pre.2`
-
-## 2.7.0-pre.1
-
-### Patch Changes
-
-- [REMOVE] Bump router ([#8771](https://github.com/remix-run/remix/pull/8771))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.7.0-pre.1`
-
-## 2.7.0-pre.0
+## 2.7.0
 
 ### Minor Changes
 
@@ -39,9 +9,11 @@
 
 ### Patch Changes
 
+- \[REMOVE] Bump router ([#8771](https://github.com/remix-run/remix/pull/8771))
 - Fix a bug with SPA mode when the root route had no children ([#8747](https://github.com/remix-run/remix/pull/8747))
+- \[REMOVE] Bump RR version ([#8774](https://github.com/remix-run/remix/pull/8774))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.7.0-pre.0`
+  - `@remix-run/server-runtime@2.7.0`
 
 ## 2.6.0
 
