@@ -1,8 +1,8 @@
 ---
-title: SPA Mode (Unstable)
+title: SPA Mode
 ---
 
-# SPA Mode (Unstable)
+# SPA Mode
 
 From the beginning, Remix's opinion has always been that you own your server architecture. This is why Remix is built on top of the [Web Fetch API][fetch] and can run on any modern [runtime][runtimes] via built-in or community-provided adapters. While we believe that having a server provides the best UX/Performance/SEO/etc. for _most_ apps, it is also undeniable that there exist plenty of valid use cases for a Single Page Application in the real world:
 
@@ -21,9 +21,9 @@ That's why we added support for **SPA Mode** in [2.5.0][2.5.0] ([RFC][rfc]), whi
 SPA Mode is basically what you'd get if you had your own [React Router + Vite][rr-setup] setup using `createBrowserRouter`/`RouterProvider`, but along with some extra Remix goodies:
 
 - File-based routing (or config-based via [`routes()`][routes-config])
-- Automatic route-based code-spitting via [`route.lazy`][route-lazy]
+- Automatic route-based code-splitting via [`route.lazy`][route-lazy]
 - `<Link prefetch>` support to eagerly prefetch route modules
-- `<head>` management via Remix [`<Meta>`][meta]/[`<Links>`][links] APIs if you choose to hydrate the full `document`
+- `<head>` management via Remix [`<Meta>`][meta]/[`<Links>`][links] APIs
 
 SPA Mode tells Remix that you do not plan on running a Remix server at runtime and that you wish to generate a static `index.html` file at build time and you will only use [Client Data][client-data] APIs for data loading and mutations.
 
@@ -37,17 +37,17 @@ You can get started quickly using the SPA Mode template in the repo:
 npx create-remix@latest --template remix-run/remix/templates/spa
 ```
 
-Or, you can manually opt-into SPA mode in your Remix+Vite app by setting `unstable_ssr: false` in your Remix Vite plugin config:
+Or, you can manually opt-into SPA mode in your Remix+Vite app by setting `ssr: false` in your Remix Vite plugin config:
 
 ```js
 // vite.config.ts
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
     remix({
-      unstable_ssr: false,
+      ssr: false,
     }),
   ],
 });
@@ -69,10 +69,24 @@ When you build your app in SPA Mode, Remix will call the server handler for the 
 remix vite:build
 ```
 
-To run your SPA, you serve your client assets directory via any HTTP server you wish, for example:
+#### Preview
 
-```sh
-npx http-server build/client/
+You can preview the production build locally with [vite preview][vite-preview]:
+
+```shellscript
+npx vite preview
+```
+
+<docs-warning>`vite preview` is not designed for use as a production server</docs-warning>
+
+#### Deployment
+
+To deploy, you can serve your app from any HTTP server of your choosing. The server should be configured to serve multiple paths from a single root `/index.html` file (commonly called "SPA fallback"). Other steps may be required if the server doesn't directly support this functionality.
+
+For a simple example, you could use [sirv-cli][sirv-cli]:
+
+```shellscript
+npx sirv-cli build/client/ --single
 ```
 
 Or, if you are serving via an `express` server (although at that point you may want to consider just running Remix in SSR mode 😉):
@@ -87,6 +101,117 @@ app.get("*", (req, res, next) =>
 );
 ```
 
+## Hydrating a div instead of the full document
+
+If you don't want to hydrate the full HTML `document`, you can choose to use SPA mode and only hydrate a sub-section of the document such as `<div id="app">` with a few minor changes.
+
+**1. Add an `index.html` file**
+
+Since Remix won't render the HTML document, you will need to provide that HTML outside of Remix. The easiest way to do this is to just keep an `app/index.html` document with a placeholder you can replace with the Remix rendered HTML at build time to generate the final `index.html`
+
+```html filename=app/index.html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>My Cool App!</title>
+  </head>
+  <body>
+    <div id="app"><!-- Remix SPA --></div>
+  </body>
+</html>
+```
+
+The `<!-- Remix SPA -->` HTML comment is what we'll replace with the Remix HTML.
+
+<docs-info>Because whitespace is meaningful in the DOM/VDOM tree - it's important not to include any spaces around it and the surrounding `div`, otherwise you will run into React hydration issues</docs-info>
+
+**2. Update `root.tsx`**
+
+Update your root route to render just the contents of `<div id="app">`:
+
+```tsx filename=app/root.tsx
+export function HydrateFallback() {
+  return (
+    <>
+      <p>Loading...</p>
+      <Scripts />
+    </>
+  );
+}
+
+export default function Component() {
+  return (
+    <>
+      <Outlet />
+      <Scripts />
+    </>
+  );
+}
+```
+
+**3. Update `entry.server.tsx`**
+
+In your `app/entry.server.tsx` file, you'll want to take the Remix-rendered HTML and insert it into your static `app/index.html` file placeholder. You'll also want to stop pre-pending the `<!DOCTYPE html>` declaration like the default `entry.server.tsx` file does since that should be in your `app/index.html` file).
+
+```tsx filename=app/entry.server.tsx
+import fs from "node:fs";
+import path from "node:path";
+
+import type { EntryContext } from "@remix-run/node";
+import { RemixServer } from "@remix-run/react";
+import { renderToString } from "react-dom/server";
+
+export default function handleRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  const shellHtml = fs
+    .readFileSync(
+      path.join(process.cwd(), "app/index.html")
+    )
+    .toString();
+
+  const appHtml = renderToString(
+    <RemixServer context={remixContext} url={request.url} />
+  );
+
+  const html = shellHtml.replace(
+    "<!-- Remix SPA -->",
+    appHtml
+  );
+
+  return new Response(html, {
+    headers: { "Content-Type": "text/html" },
+    status: responseStatusCode,
+  });
+}
+```
+
+<docs-info>You may need to run `npx remix reveal` if you don't currently have an `app/entry.server.tsx` file in your app</docs-info>
+
+**4. Update `entry.client.tsx`**
+
+Update `app/entry.client.tsx` to hydrate the `<div id="app">` instead of the document:
+
+```tsx filename=app/entry.client.tsx
+import { RemixBrowser } from "@remix-run/react";
+import { startTransition, StrictMode } from "react";
+import { hydrateRoot } from "react-dom/client";
+
+startTransition(() => {
+  hydrateRoot(
+    document.querySelector("#app"),
+    <StrictMode>
+      <RemixBrowser />
+    </StrictMode>
+  );
+});
+```
+
+<docs-info>You may need to run `npx remix reveal` if you don't currently have an `app/entry.client.tsx` file in your app</docs-info>
+
 ## Notes/Caveats
 
 - SPA Mode only works when using Vite and the [Remix Vite plugin][remix-vite]
@@ -96,6 +221,11 @@ app.get("*", (req, res, next) =>
 - You can only export a `HydrateFallback` from your `root.tsx` in SPA Mode -- the build will throw an error if you export one from any other routes.
 
 - You cannot call `serverLoader`/`serverAction` from your `clientLoader`/`clientAction` methods since there is no running server -- those will throw a runtime error if called
+
+- It's important to note that Remix SPA mode generates your `index.html` file by performing a "pre-render" of your root route on the server during the build
+  - This means that while you're creating a SPA, you still have a "server build" and "server render" step, so you do need to be careful about using dependencies that reference client-only aspects such as `document`, `window`, `localStorage`, etc.
+  - Generally speaking, the way to resolve these issues is to import any browser-only libraries from `entry.client.tsx` so they don't end up in the server build
+  - Otherwise, you can generally solve these by using [`React.lazy`][react-lazy] or the [`<ClientOnly>`][client-only] component from `remix-utils`.
 
 ## Migrating from React Router
 
@@ -135,3 +265,7 @@ Once you've got all your routes living in their own files, you can:
 [migrating-rr]: https://remix.run/docs/en/main/guides/migrating-react-router-app
 [remix-vite]: ../future/vite
 [migrate-rr]: #migrating-from-react-router
+[react-lazy]: https://react.dev/reference/react/lazy
+[client-only]: https://github.com/sergiodxa/remix-utils?tab=readme-ov-file#clientonly
+[vite-preview]: https://vitejs.dev/guide/cli#vite-preview
+[sirv-cli]: https://www.npmjs.com/package/sirv-cli

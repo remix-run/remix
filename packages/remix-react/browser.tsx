@@ -24,6 +24,7 @@ import {
 declare global {
   var __remixContext: {
     url: string;
+    basename?: string;
     state: HydrationState;
     criticalCss?: string;
     future: FutureConfig;
@@ -39,7 +40,7 @@ declare global {
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
   var __remixRevalidation: number | undefined;
-  var __remixClearCriticalCss: () => void;
+  var __remixClearCriticalCss: (() => void) | undefined;
   var $RefreshRuntime$: {
     performReactRefresh: () => void;
   };
@@ -64,10 +65,6 @@ let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
   // in the console. The promise is never rejected.
   return undefined;
 });
-
-type CriticalCssReducer = () => typeof window.__remixContext.criticalCss;
-// The critical CSS can only be cleared, so the reducer always returns undefined
-let criticalCssReducer: CriticalCssReducer = () => undefined;
 
 // @ts-expect-error
 if (import.meta && import.meta.hot) {
@@ -271,6 +268,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     router = createRouter({
       routes,
       history: createBrowserHistory(),
+      basename: window.__remixContext.basename,
       future: {
         v7_normalizeFormMethod: true,
         v7_fetcherPersist: window.__remixContext.future.v3_fetcherPersist,
@@ -303,11 +301,14 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // removed from a component, but the styles will still be present in the
   // server HTML. This allows our HMR logic to clear the critical CSS state.
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  let [criticalCss, clearCriticalCss] = React.useReducer(
-    criticalCssReducer,
-    window.__remixContext.criticalCss
+  let [criticalCss, setCriticalCss] = React.useState(
+    process.env.NODE_ENV === "development"
+      ? window.__remixContext.criticalCss
+      : undefined
   );
-  window.__remixClearCriticalCss = clearCriticalCss;
+  if (process.env.NODE_ENV === "development") {
+    window.__remixClearCriticalCss = () => setCriticalCss(undefined);
+  }
 
   // This is due to the short circuit return above when the pathname doesn't
   // match and we force a hard reload.  This is an exceptional scenario in which

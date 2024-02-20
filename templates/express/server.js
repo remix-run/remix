@@ -36,10 +36,7 @@ const initialBuild = await reimportServer();
 const remixHandler =
   process.env.NODE_ENV === "development"
     ? await createDevRequestHandler(initialBuild)
-    : createRequestHandler({
-        build: initialBuild,
-        mode: initialBuild.mode,
-      });
+    : createRequestHandler({ build: initialBuild });
 
 const app = express();
 
@@ -64,7 +61,7 @@ app.all("*", remixHandler);
 
 const port = process.env.PORT || 3000;
 app.listen(port, async () => {
-  console.log(`Express server listening on port ${port}`);
+  console.log(`Express server listening at http://localhost:${port}`);
 
   if (process.env.NODE_ENV === "development") {
     broadcastDevReady(initialBuild);

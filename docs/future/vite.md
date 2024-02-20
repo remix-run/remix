@@ -1,25 +1,24 @@
 ---
-title: Vite (Unstable)
+title: Vite
 ---
 
-# Vite (Unstable)
+# Vite
 
 [Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
 
-<docs-warning>Note that Cloudflare is not yet supported when using Vite.</docs-warning>
-
 ## Getting started
 
-To get started with a minimal server, you can use the [`unstable-vite`][template-vite] template:
+We've got a few different Vite-based templates to get you started.
 
 ```shellscript nonumber
-npx create-remix@latest --template remix-run/remix/templates/unstable-vite
-```
+# Minimal server:
+npx create-remix@latest --template remix-run/remix/templates/vite
 
-If you'd rather customize your server, you can use the [`unstable-vite-express`][template-vite-express] template:
+# Express:
+npx create-remix@latest --template remix-run/remix/templates/vite-express
 
-```shellscript nonumber
-npx create-remix@latest --template remix-run/remix/templates/unstable-vite-express
+# Cloudflare:
+npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
 ```
 
 These templates include a `vite.config.ts` file which is where the Remix Vite plugin is configured.
@@ -31,13 +30,13 @@ The Vite plugin does not use [`remix.config.js`][remix-config]. Instead, the plu
 For example, to configure `ignoredRouteFiles`:
 
 ```ts filename=vite.config.ts lines=[7]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
     remix({
-      ignoredRouteFiles: ["**/.*"],
+      ignoredRouteFiles: ["**/*.css"],
     }),
   ],
 });
@@ -50,26 +49,186 @@ All other bundling-related options are now [configured with Vite][vite-config]. 
 The following subset of Remix config options are supported:
 
 - [appDirectory][app-directory]
-- [assetsBuildDirectory][assets-build-directory]
+- [future][future]
 - [ignoredRouteFiles][ignored-route-files]
-- [publicPath][public-path]
 - [routes][routes]
-- [serverBuildPath][server-build-path]
 - [serverModuleFormat][server-module-format]
 
 The Vite plugin also accepts the following additional options:
 
-#### serverBuildDirectory
+#### buildDirectory
 
-The path to the server build directory, relative to the project root. Defaults to `"build/server"`.
+The path to the build directory, relative to the project root. Defaults to
+`"build"`.
+
+#### basename
+
+An optional basename for your route paths, passed through to the [React Router "basename" option][rr-basename]. Please note that this is different from your _asset_ paths. You can can configure the [base public path][vite-public-base-path] for your assets via the [Vite "base" option][vite-base].
+
+#### buildEnd
+
+A function that is called after the full Remix build is complete.
+
+#### manifest
+
+Whether to write a `.remix/manifest.json` file to the build directory. Defaults
+to `false`.
+
+#### presets
+
+An array of [presets] to ease integration with other tools and hosting providers.
 
 #### serverBuildFile
 
 The name of the server file generated in the server build directory. Defaults to `"index.js"`.
 
-#### unstable_serverBundles
+#### serverBundles
 
 A function for assigning addressable routes to [server bundles][server-bundles].
+
+You may also want to enable the `manifest` option since, when server bundles are enabled, it contains mappings between routes and server bundles.
+
+## Cloudflare
+
+To get started with Cloudflare, you can use the [`vite-cloudflare`][template-vite-cloudflare] template:
+
+```shellscript nonumber
+npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
+```
+
+There are two ways to run your Cloudflare app locally:
+
+```shellscript nonumber
+# Vite
+remix vite:dev
+
+# Wrangler
+remix vite:build # build app before running wrangler
+wrangler pages dev ./build/client
+```
+
+While Vite provides a better development experience, Wrangler provides closer emulation of the Cloudflare environment by running your server code in [Cloudflare's `workerd` runtime][cloudflare-workerd] instead of Node.
+
+#### Cloudflare Proxy
+
+To simulate the Cloudflare environment in Vite, Wrangler provides [Node proxies to local `workerd` bindings][wrangler-getplatformproxy].
+Remix's Cloudflare Proxy plugin sets up these proxies for you:
+
+```ts filename=vite.config.ts lines=[3,8]
+import {
+  vitePlugin as remix,
+  cloudflareDevProxyVitePlugin as remixCloudflareDevProxy,
+} from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [remixCloudflareDevProxy(), remix()],
+});
+```
+
+The proxies are then available within `context.cloudflare` in your `loader` or `action` functions:
+
+```ts
+export const loader = ({ context }: LoaderFunctionArgs) => {
+  const { env, cf, ctx } = context.cloudflare;
+  // ... more loader code here...
+};
+```
+
+Check out [Cloudflare's `getPlatformProxy` docs][wrangler-getplatformproxy-return] for more information on each of these proxies.
+
+#### Bindings
+
+To configure bindings for Cloudflare resources:
+
+- For local development with Vite or Wrangler, use [wrangler.toml][wrangler-toml-bindings]
+- For deployments, use the [Cloudflare dashboard][cloudflare-pages-bindings]
+
+Whenever you change your `wrangler.toml` file, you'll need to run `wrangler types` to regenerate your bindings.
+
+Then, you can access your bindings via `context.cloudflare.env`.
+For example, with a [KV namespace][cloudflare-kv] bound as `MY_KV`:
+
+```ts filename=app/routes/_index.tsx
+export async function loader({
+  context,
+}: LoaderFunctionArgs) {
+  const { MY_KV } = context.cloudflare.env;
+  const value = await MY_KV.get("my-key");
+  return json({ value });
+}
+```
+
+#### Augmenting load context
+
+If you'd like to add additional properties to the load context,
+you should export a `getLoadContext` function from a shared module so that **load context in Vite, Wrangler, and Cloudflare Pages are all augmented in the same way**:
+
+```ts filename=load-context.ts lines=[1,9,13-26]
+import { type AppLoadContext } from "@remix-run/cloudflare";
+import { type PlatformProxy } from "wrangler";
+
+type Cloudflare = Omit<PlatformProxy<Env>, "dispose">;
+
+declare module "@remix-run/cloudflare" {
+  interface AppLoadContext {
+    cloudflare: Cloudflare;
+    extra: string; // augmented
+  }
+}
+
+type GetLoadContext = (args: {
+  request: Request;
+  context: { cloudflare: Cloudflare }; // load context _before_ augmentation
+}) => AppLoadContext;
+
+// Shared implementation compatible with Vite, Wrangler, and Cloudflare Pages
+export const getLoadContext: GetLoadContext = ({
+  context,
+}) => {
+  return {
+    ...context,
+    extra: "stuff",
+  };
+};
+```
+
+<docs-warning>You must pass in `getLoadContext` to **both** the Cloudflare Proxy plugin and the request handler in `functions/[[path]].ts`, otherwise you'll get inconsistent load context augmentation depending on how you run your app.</docs-warning>
+
+First, pass in `getLoadContext` to the Cloudflare Proxy plugin in your Vite config to augment load context when running Vite:
+
+```ts filename=vite.config.ts lines=[8,12]
+import {
+  vitePlugin as remix,
+  cloudflareDevProxyVitePlugin as remixCloudflareDevProxy,
+} from "@remix-run/dev";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+
+import { getLoadContext } from "./load-context";
+
+export default defineConfig({
+  plugins: [
+    remixCloudflareDevProxy({ getLoadContext }),
+    remix(),
+  ],
+});
+```
+
+Next, pass in `getLoadContext` to the request handler in your `functions/[[path]].ts` file to augment load context when running Wrangler or when deploying to Cloudflare Pages:
+
+```ts filename=functions/[[path]].ts lines=[5,9]
+import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
+
+// @ts-ignore - the server build file is generated by `remix vite:build`
+import * as build from "../build/server";
+import { getLoadContext } from "../load-context";
+
+export const onRequest = createPagesFunctionHandler({
+  build,
+  getLoadContext,
+});
+```
 
 ## Splitting up client and server code
 
@@ -98,12 +257,14 @@ app
 
 `.server` modules must be within your Remix app directory.
 
-#### `vite-env-only`
+#### vite-env-only
 
-If you want to mix server-only code and client-safe code in the same module, you can use [`vite-env-only`][vite-env-only].
-That way you can explicitly mark any expression as server-only so that it gets replaced with `undefined` in the client.
+If you want to mix server-only code and client-safe code in the same module, you
+can use <nobr>[vite-env-only][vite-env-only]</nobr>.
+This Vite plugin allows you to explicitly mark any expression as server-only so that it gets
+replaced with `undefined` in the client.
 
-For example, you can wrap exports with `serverOnly$`:
+For example, once you've added the plugin to your Vite config, you can wrap any server-only exports with `serverOnly$`:
 
 ```tsx
 import { serverOnly$ } from "vite-env-only";
@@ -124,20 +285,31 @@ export const PostPreview = ({ title, description }) => {
 };
 ```
 
+This example would be compiled into the following code for the client:
+
+```tsx
+export const getPosts = undefined;
+
+export const PostPreview = ({ title, description }) => {
+  return (
+    <article>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </article>
+  );
+};
+```
+
 ## New build output paths
 
-There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. During the build, Vite copies files from the `public` directory into `build/client`, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
+There is a notable difference with the way Vite manages the `public` directory compared to the existing Remix compiler. Vite copies files from the `public` directory into the client build directory, whereas the Remix compiler left the `public` directory untouched and used a subdirectory (`public/build`) as the client build directory.
 
-In order to align the default Remix project structure with the way Vite works, the build output paths have been changed.
+In order to align the default Remix project structure with the way Vite works, the build output paths have been changed. There is now a single `buildDirectory` option that defaults to `"build"`, replacing the separate `assetsBuildDirectory` and `serverBuildDirectory` options. This means that, by default, the server is now compiled into `build/server` and the client is now compiled into `build/client`.
 
-- The server is now compiled into `build/server` by default.
-- The client is now compiled into `build/client` by default.
+This also means that the following configuration defaults have been changed:
 
-This means that the following configuration defaults have been changed:
-
-- [assetsBuildDirectory][assets-build-directory] defaults to `"build/client"` rather than `"public/build"`
-- [publicPath][public-path] defaults to `"/"` rather than `"/build/"`
-- [serverBuildPath][server-build-path] has been split into `serverBuildDirectory` and `serverBuildFile`, with the equivalent default for `serverBuildDirectory` being `"build/server"` rather than `"build"`
+- [publicPath][public-path] has been replaced by [Vite's "base" option][vite-base] which defaults to `"/"` rather than `"/build/"`.
+- [serverBuildPath][server-build-path] has been replaced by `serverBuildFile` which defaults to `"index.js"`. This file will be written into the server directory within your configured `buildDirectory`.
 
 ## Additional features & plugins
 
@@ -162,7 +334,7 @@ Remix is now just a Vite plugin, so you'll need to hook it up to Vite.
 👉 **Replace `remix.config.js` with `vite.config.ts` at the root of your Remix app**
 
 ```ts filename=vite.config.ts
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -176,10 +348,40 @@ The subset of [supported Remix config options][supported-remix-config-options] s
 export default defineConfig({
   plugins: [
     remix({
-      ignoredRouteFiles: ["**/.*"],
+      ignoredRouteFiles: ["**/*.css"],
     }),
   ],
 });
+```
+
+#### HMR & HDR
+
+Vite provides a robust client-side runtime for development features like HMR,
+making the `<LiveReload />` component obsolete. When using the Remix Vite plugin in development,
+the `<Scripts />` component will automatically include Vite's client-side runtime and other dev-only scripts.
+
+👉 **Remove `<LiveReload/>`, keep `<Scripts />`**
+
+```diff
+  import {
+-   LiveReload,
+    Outlet,
+    Scripts,
+  }
+
+  export default function App() {
+    return (
+      <html>
+        <head>
+        </head>
+        <body>
+          <Outlet />
+-         <LiveReload />
+          <Scripts />
+        </body>
+      </html>
+    )
+  }
 ```
 
 #### TypeScript integration
@@ -228,7 +430,9 @@ Since the module types provided by `vite/client` are not compatible with the mod
 If you were using `remix-serve` in development (or `remix dev` without the `-c` flag), you'll need to switch to the new minimal dev server.
 It comes built-in with the Remix Vite plugin and will take over when you run `remix vite:dev`.
 
-Unlike `remix-serve`, the Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
+The Remix Vite plugin doesn't install any [global Node polyfills][global-node-polyfills] so you'll need to install them yourself if you were relying on `remix-serve` to provide them. The easiest way to do this is by calling `installGlobals` at the top of your Vite config.
+
+The Vite dev server's default port is different to `remix-serve` so you'll need to configure this via Vite's `server.port` option if you'd like to maintain the same port.
 
 You'll also need to update to the new build output paths, which are `build/server` for the server and `build/client` for client assets.
 
@@ -247,7 +451,7 @@ You'll also need to update to the new build output paths, which are `build/serve
 👉 **Install global Node polyfills in your Vite config**
 
 ```diff filename=vite.config.ts
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 +import { installGlobals } from "@remix-run/node";
 import { defineConfig } from "vite";
 
@@ -258,7 +462,18 @@ export default defineConfig({
 });
 ```
 
-#### Migrating from a custom server
+👉 **Configure your Vite dev server port (optional)**
+
+```js filename=vite.config.ts lines=[2-4]
+export default defineConfig({
+  server: {
+    port: 3000,
+  },
+  plugins: [remix()],
+});
+```
+
+#### Migrating a custom server
 
 If you were using a custom server in development, you'll need to edit your custom server to use Vite's `connect` middleware.
 This will delegate asset requests and initial render requests to Vite during development, letting you benefit from Vite's excellent DX even with a custom server.
@@ -344,6 +559,71 @@ node --loader tsm ./server.ts
 
 Just remember that there might be some noticeable slowdown for initial server startup if you do this.
 
+#### Migrating Cloudflare Functions
+
+<docs-warning>
+
+The Remix Vite plugin only officially supports [Cloudflare Pages][cloudflare-pages] which is specifically designed for fullstack applications, unlike [Cloudflare Workers Sites][cloudflare-workers-sites]. If you're currently on Cloudflare Workers Sites, refer to the [Cloudflare Pages migration guide][cloudflare-pages-migration-guide].
+
+</docs-warning>
+
+👉 **Setup the Cloudflare Remix preset, then add `"workerd"` and `"worker"` conditions**
+
+```ts filename=vite.config.ts lines=[3,6,11,14-18]
+import {
+  vitePlugin as remix,
+  cloudflarePreset as cloudflare,
+} from "@remix-run/dev";
+import { defineConfig } from "vite";
+import { getBindingsProxy } from "wrangler";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      presets: [cloudflare(getBindingsProxy)],
+    }),
+  ],
+  ssr: {
+    resolve: {
+      externalConditions: ["workerd", "worker"],
+    },
+  },
+});
+```
+
+Your Cloudflare app may be setting the [the Remix Config `server` field][remix-config-server] to generate a catch-all Cloudflare Function.
+With Vite, this indirection is no longer necessary.
+Instead, you can author a catch-all route directly for Cloudflare, just like how you would for Express or any other custom servers.
+
+👉 **Create a catch-all route for Remix**
+
+```ts filename=functions/[[page]].ts
+import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
+
+// @ts-ignore - the server build file is generated by `remix vite:build`
+import * as build from "../build/server";
+
+export const onRequest = createPagesFunctionHandler({
+  build,
+});
+```
+
+While you'll mostly use Vite during development, you can also use Wrangler to preview and deploy your app.
+To learn more, see [_Cloudflare > Vite & Wrangler_][cloudflare-vite-and-wrangler].
+
+👉 **Update your `package.json` scripts**
+
+```json filename=package.json lines=[3-6]
+{
+  "scripts": {
+    "dev": "remix vite:dev",
+    "build": "remix vite:build",
+    "preview": "wrangler pages dev ./build/client",
+    "deploy": "wrangler pages deploy ./build/client"
+  }
+}
+```
+
 #### Migrate references to build output paths
 
 When using the existing Remix compiler's default options, the server was compiled into `build` and the client was compiled into `public/build`. Due to differences with the way Vite typically works with its `public` directory compared to the existing Remix compiler, these output paths have changed.
@@ -377,7 +657,7 @@ npm install -D vite-tsconfig-paths
 👉 **Add `vite-tsconfig-paths` to your Vite config**
 
 ```ts filename=vite.config.ts lines=[3,6]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
@@ -425,41 +705,26 @@ If a route's `links` function is only used to wire up `cssBundleHref`, you can r
 - ];
 ```
 
-#### Fix up CSS imports
+#### Fix up CSS imports referenced in `links`
 
-In Vite, CSS files are typically imported as side effects.
+<docs-info>This is not required for other forms of [CSS bundling][css-bundling], e.g. CSS Modules, CSS side effect imports, Vanilla Extract, etc.</docs-info>
 
-During development, [Vite injects imported CSS files into the page via JavaScript,][vite-css] and the Remix Vite plugin will inline imported CSS alongside your link tags to avoid a flash of unstyled content. In the production build, the Remix Vite plugin will automatically attach CSS files to the relevant routes.
+If you are [referencing CSS in a `links` function][regular-css], you'll need to update the corresponding CSS imports to use [Vite's explicit `?url` import syntax.][vite-url-imports]
 
-This also means that in many cases you won't need the `links` function export anymore.
+👉 **Add `?url` to CSS imports used in `links`**
 
-Since the order of your CSS is determined by its import order, you'll need to ensure that your CSS imports are in the same order as your `links` function.
+<docs-warning>`.css?url` imports require Vite v5.1 or newer</docs-warning>
 
-👉 **Convert CSS imports into side effects — in the same order they were in your `links` function!**
+```diff
+-import styles from "~/styles/dashboard.css";
++import styles from "~/styles/dashboard.css?url";
 
-```diff filename=app/dashboard/route.tsx
-- import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
-
-- import dashboardStyles from "./dashboard.css?url";
-- import sharedStyles from "./shared.css?url";
-+ // ⚠️ NOTE: The import order has been updated
-+ //   to match the original `links` function!
-+ import "./shared.css";
-+ import "./dashboard.css";
-
-- export const links: LinksFunction = () => [
--   { rel: "stylesheet", href: sharedStyles },
--   { rel: "stylesheet", href: dashboardStyles },
-- ];
+export const links = () => {
+  return [
+    { rel: "stylesheet", href: styles }
+  ];
+}
 ```
-
-<docs-warning>While [Vite supports importing static asset URLs via an explicit `?url` query string][vite-url-imports], which in theory would match the behavior of the existing Remix compiler when used for CSS files, there is a [known Vite issue with `?url` for CSS imports][vite-css-url-issue]. This may be fixed in the future, but in the meantime you should exclusively use side effect imports for CSS.</docs-warning>
-
-#### Optionally scope regular CSS
-
-If you were using [Remix's regular CSS support][regular-css], one important caveat to be aware of is that these styles will no longer be mounted and unmounted automatically when navigating between routes during development.
-
-As a result, you may be more likely to encounter CSS collisions. If this is a concern, you might want to consider migrating your regular CSS files to [CSS Modules][vite-css-modules] or using a naming convention that prefixes class names with the corresponding file name.
 
 #### Enable Tailwind via PostCSS
 
@@ -490,23 +755,9 @@ export default {
 };
 ```
 
-👉 **Convert Tailwind CSS import to a side effect**
+👉 **Migrate Tailwind CSS import**
 
-If you haven't already, be sure to [convert your CSS imports to side effects.][convert-your-css-imports-to-side-effects]
-
-```diff filename=app/dashboard/route.tsx
-// Don't export as a link descriptor:
-- import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
-
-- import tailwind from "./tailwind.css";
-
-- export const links: LinksFunction = () => [
--   { rel: "stylesheet", href: tailwind },
-- ];
-
-// Import as a side effect instead:
-+ import "./tailwind.css";
-```
+If you're [referencing your Tailwind CSS file in a `links` function][regular-css], you'll need to [migrate your Tailwind CSS import statement.][fix-up-css-imports-referenced-in-links]
 
 #### Add Vanilla Extract plugin
 
@@ -521,7 +772,7 @@ npm install -D @vanilla-extract/vite-plugin
 👉 **Add the Vanilla Extract plugin to your Vite config**
 
 ```ts filename=vite.config.ts lines=[2,6]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import { defineConfig } from "vite";
 
@@ -540,15 +791,22 @@ If you're using [MDX][mdx], since Vite's plugin API is an extension of the [Roll
 npm install -D @mdx-js/rollup
 ```
 
+<docs-info>
+
+The Remix plugin expects to process JavaScript or TypeScript files, so any transpilation from other languages — like MDX — must be done first.
+In this case, that means putting the MDX plugin _before_ the Remix plugin.
+
+</docs-info>
+
 👉 **Add the MDX Rollup plugin to your Vite config**
 
 ```ts filename=vite.config.ts lines=[1,6]
 import mdx from "@mdx-js/rollup";
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [remix(), mdx()],
+  plugins: [mdx(), remix()],
 });
 ```
 
@@ -564,22 +822,22 @@ npm install -D remark-frontmatter remark-mdx-frontmatter
 
 👉 **Pass the Remark frontmatter plugins to the MDX Rollup plugin**
 
-```ts filename=vite.config.ts lines=[3-4,10-15]
+```ts filename=vite.config.ts lines=[3-4,9-14]
 import mdx from "@mdx-js/rollup";
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
-    remix(),
     mdx({
       remarkPlugins: [
         remarkFrontmatter,
         remarkMdxFrontmatter,
       ],
     }),
+    remix(),
   ],
 });
 ```
@@ -693,15 +951,76 @@ const posts = import.meta.glob("./posts/*.mdx", {
 });
 ```
 
+## Debugging
+
+You can use the [`NODE_OPTIONS` environment variable][node-options] to start a debugging session:
+
+```shellscript nonumber
+NODE_OPTIONS="--inspect-brk" npm run dev
+```
+
+Then you can attach a debugger from your browser.
+For example, in Chrome you can open up `chrome://inspect` or click the NodeJS icon in the dev tools to attach the debugger.
+
+#### vite-plugin-inspect
+
+[`vite-plugin-inspect`][vite-plugin-inspect] shows you each how each Vite plugin transforms your code and how long each plugin takes.
+
+## Performance
+
+Remix includes a `--profile` flag for performance profiling.
+
+```shellscript nonumber
+remix vite:build --profile
+```
+
+When running with `--profile`, a `.cpuprofile` file will be generated that can be shared or upload to speedscope.app to for analysis.
+
+You can also profile in dev by pressing `p + enter` while the dev server is running to start a new profiling session or stop the current session.
+If you need to profile dev server startup, you can also use the `--profile` flag to initialize a profiling session on startup:
+
+```shellscript nonumber
+remix vite:dev --profile
+```
+
+Remember that you can always check the [Vite performance docs][vite-perf] for more tips!
+
+#### Bundle analysis
+
+To visualize and analyze your bundle, you can use the [rollup-plugin-visualizer][rollup-plugin-visualizer] plugin:
+
+```ts filename=vite.config.ts
+import { vitePlugin as remix } from "@remix-run/dev";
+import { visualizer } from "rollup-plugin-visualizer";
+
+export default defineConfig({
+  plugins: [
+    remix(),
+    // `emitFile` is necessary since Remix builds more than one bundle!
+    visualizer({ emitFile: true }),
+  ],
+});
+```
+
+Then when you run `remix vite:build`, it'll generate a `stats.html` file in each of your bundles:
+
+```
+build
+├── client
+│   ├── assets/
+│   ├── favicon.ico
+│   └── stats.html 👈
+└── server
+    ├── index.js
+    └── stats.html 👈
+```
+
+Open up `stats.html` in your browser to analyze your bundle.
+
 ## Troubleshooting
 
-Check out the [known issues with the Remix Vite plugin on GitHub][issues-vite] before filing a new bug report!
-
-#### Resources for general debugging
-
-The [Inspect plugin][vite-plugin-inspect] shows you each transformation that Vite performs on your code.
-It can be useful to see which plugin is causing the unexpected behavior.
-Not only that, but it can give you a better mental model for exactly how Remix handles splitting client and server code.
+Check the [debugging][debugging] and [performance][performance] sections for general troubleshooting tips.
+Also, see if anyone else is having a similar problem by looking through the [known issues with the remix vite plugin on github][issues-vite].
 
 #### HMR
 
@@ -713,6 +1032,8 @@ check out our [discussion on Hot Module Replacement][hmr] to learn more about th
 Vite supports both ESM and CJS dependencies, but sometimes you might still run into issues with ESM / CJS interop.
 Usually, this is because a dependency is not properly configured to support ESM.
 And we don't blame them, its [really tricky to support both ESM and CJS properly][modernizing-packages-to-esm].
+
+For a walkthrough of fixing an example bug, check out [🎥 How to Fix CJS/ESM Bugs in Remix][how-fix-cjs-esm].
 
 To diagnose if one of your dependencies is misconfigured, check [publint][publint] or [_Are The Types Wrong_][arethetypeswrong].
 Additionally, you can use the [vite-plugin-cjs-interop plugin][vite-plugin-cjs-interop] smooth over issues with `default` exports for external CJS dependencies.
@@ -726,7 +1047,7 @@ If you see errors in the browser console during development that point to server
 For example, if you see something like:
 
 ```shellscript
-ERROR: `process` is undefined
+Uncaught ReferenceError: process is not defined
 ```
 
 Then you'll need to track down which module is pulling in dependencies that except server-only globals like `process` and isolate code either in a [separate `.server` module or with `vite-env-only`][explicitly-isolate-server-only-code].
@@ -741,7 +1062,7 @@ We currently recommend excluding the plugin when used with other Vite-based tool
 For Vitest:
 
 ```ts filename=vite.config.ts lines=[7,12-13]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig({
@@ -757,7 +1078,7 @@ export default defineConfig({
 For Storybook:
 
 ```ts filename=vite.config.ts lines=[7]
-import { unstable_vitePlugin as remix } from "@remix-run/dev";
+import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
 const isStorybook = process.argv[1]?.includes("storybook");
@@ -773,6 +1094,80 @@ For example, to use a Vite config specifically scoped to Remix:
 ```shellscript nonumber
 remix vite:dev --config vite.config.remix.ts
 ```
+
+#### Styles disappearing in development when document remounts
+
+When React is used to render the entire document (as Remix does) you can run into issues when elements are dynamically injected into the `head` element. If the document is re-mounted, the existing `head` element is removed and replaced with an entirely new one, removing any `style` elements that Vite injects during development.
+
+This is a known React issue that is fixed in their [canary release channel][react-canaries]. If you understand the risks involved, you can pin your app to a specific [React version][react-versions] and then use [package overrides][package-overrides] to ensure this is the only version of React used throughout your project. For example:
+
+```json filename=package.json
+{
+  "dependencies": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  },
+  "overrides": {
+    "react": "18.3.0-canary-...",
+    "react-dom": "18.3.0-canary-..."
+  }
+}
+```
+
+<docs-info>For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect, even though it's not something Remix provides as a default.</docs-info>
+
+It's worth stressing that this issue with styles that were injected by Vite only happens in development. **Production builds won't have this issue** since static CSS files are generated.
+
+In Remix, this issue can surface when rendering alternates between your [root route's default component export][route-component] and its [ErrorBoundary][error-boundary] and/or [HydrateFallback][hydrate-fallback] exports since this results in a new document-level component being mounted.
+
+It can also happen due to hydration errors since it causes React to re-render the entire page from scratch. Hydration errors can be caused by your app code, but they can also be caused by browser extensions that manipulate the document.
+
+This is relevant for Vite because—during development—Vite transforms CSS imports into JS files that inject their styles into the document as a side-effect. Vite does this to support lazy-loading and HMR of static CSS files.
+
+For example, let's assume your app has the following CSS file:
+
+<!-- prettier-ignore -->
+```css filename=app/styles.css
+* { margin: 0 }
+```
+
+During development, this CSS file will be transformed into the following JavaScript code when imported as a side effect:
+
+<!-- prettier-ignore-start -->
+
+<!-- eslint-skip -->
+
+```js
+import {createHotContext as __vite__createHotContext} from "/@vite/client";
+import.meta.hot = __vite__createHotContext("/app/styles.css");
+import {updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle} from "/@vite/client";
+const __vite__id = "/path/to/app/styles.css";
+const __vite__css = "*{margin:0}"
+__vite__updateStyle(__vite__id, __vite__css);
+import.meta.hot.accept();
+import.meta.hot.prune(()=>__vite__removeStyle(__vite__id));
+```
+
+<!-- prettier-ignore-end -->
+
+This transformation is not applied to production code, which is why this styling issue only affects development.
+
+#### Wrangler errors in development
+
+When using Cloudflare Pages, you may encounter the following error from `wrangler pages dev`:
+
+```txt nonumber
+ERROR: Your worker called response.clone(), but did not read the body of both clones.
+This is wasteful, as it forces the system to buffer the entire response body
+in memory, rather than streaming it through. This may cause your worker to be
+unexpectedly terminated for going over the memory limit. If you only meant to
+copy the response headers and metadata (e.g. in order to be able to modify
+them), use `new Response(response.body, response)` instead.
+```
+
+This is a [known issue with Wrangler][cloudflare-request-clone-errors].
+
+</docs-info>
 
 ## Acknowledgements
 
@@ -795,12 +1190,10 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 We're definitely late to the Vite party, but we're excited to be here now!
 
 [vite]: https://vitejs.dev
-[supported-with-some-deprecations]: #add-mdx-plugin
-[template-vite]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite
-[template-vite-express]: https://github.com/remix-run/remix/tree/main/templates/unstable-vite-express
+[template-vite-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/vite-cloudflare
 [remix-config]: ../file-conventions/remix-config
 [app-directory]: ../file-conventions/remix-config#appdirectory
-[assets-build-directory]: ../file-conventions/remix-config#assetsbuilddirectory
+[future]: ../file-conventions/remix-config#future
 [ignored-route-files]: ../file-conventions/remix-config#ignoredroutefiles
 [public-path]: ../file-conventions/remix-config#publicpath
 [routes]: ../file-conventions/remix-config#routes
@@ -814,15 +1207,11 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [tsm]: https://github.com/lukeed/tsm
 [vite-tsconfig-paths]: https://github.com/aleclarson/vite-tsconfig-paths
 [css-bundling]: ../styling/bundling
-[vite-css]: https://vitejs.dev/guide/features.html#css
 [regular-css]: ../styling/css
-[vite-css-modules]: https://vitejs.dev/guide/features#css-modules
 [vite-url-imports]: https://vitejs.dev/guide/assets.html#explicit-url-imports
-[vite-css-url-issue]: https://github.com/remix-run/remix/issues/7786
 [tailwind]: https://tailwindcss.com
 [postcss]: https://postcss.org
 [tailwind-config-option]: ../file-conventions/remix-config#tailwind
-[convert-your-css-imports-to-side-effects]: #fix-up-css-imports
 [vanilla-extract]: https://vanilla-extract.style
 [vanilla-extract-vite-plugin]: https://vanilla-extract.style/documentation/integrations/vite
 [mdx]: https://mdxjs.com
@@ -852,6 +1241,35 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [global-node-polyfills]: ../other-api/node#polyfills
 [server-bundles]: ./server-bundles
 [vite-plugin-inspect]: https://github.com/antfu/vite-plugin-inspect
+[vite-perf]: https://vitejs.dev/guide/performance.html
+[node-options]: https://nodejs.org/api/cli.html#node_optionsoptions
+[rollup-plugin-visualizer]: https://github.com/btd/rollup-plugin-visualizer
+[debugging]: #debugging
+[performance]: #performance
 [server-vs-client]: ../discussion/server-vs-client.md
 [vite-env-only]: https://github.com/pcattori/vite-env-only
 [explicitly-isolate-server-only-code]: #splitting-up-client-and-server-code
+[route-component]: ../route/component
+[error-boundary]: ../route/error-boundary
+[hydrate-fallback]: ../route/hydrate-fallback
+[react-canaries]: https://react.dev/blog/2023/05/03/react-canaries
+[react-versions]: https://www.npmjs.com/package/react?activeTab=versions
+[package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides
+[wrangler-toml-bindings]: https://developers.cloudflare.com/workers/wrangler/configuration/#bindings
+[cloudflare-pages]: https://pages.cloudflare.com
+[cloudflare-workers-sites]: https://developers.cloudflare.com/workers/configuration/sites
+[cloudflare-pages-migration-guide]: https://developers.cloudflare.com/pages/migrations/migrating-from-workers
+[cloudflare-request-clone-errors]: https://github.com/cloudflare/workers-sdk/issues/3259
+[cloudflare-pages-bindings]: https://developers.cloudflare.com/pages/functions/bindings/
+[cloudflare-kv]: https://developers.cloudflare.com/pages/functions/bindings/#kv-namespaces
+[cloudflare-workerd]: https://blog.cloudflare.com/workerd-open-source-workers-runtime
+[wrangler-getplatformproxy]: https://developers.cloudflare.com/workers/wrangler/api/#getplatformproxy
+[wrangler-getplatformproxy-return]: https://developers.cloudflare.com/workers/wrangler/api/#return-type-1
+[remix-config-server]: https://remix.run/docs/en/main/file-conventions/remix-config#server
+[cloudflare-vite-and-wrangler]: #vite--wrangler
+[rr-basename]: https://reactrouter.com/routers/create-browser-router#basename
+[vite-public-base-path]: https://vitejs.dev/config/shared-options.html#base
+[vite-base]: https://vitejs.dev/config/shared-options.html#base
+[how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
+[presets]: ./presets
+[fix-up-css-imports-referenced-in-links]: #fix-up-css-imports-referenced-in-links

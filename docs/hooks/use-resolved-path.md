@@ -22,7 +22,7 @@ This is useful when building links from relative values and used internally for 
 
 ## Splat Paths
 
-The original logic for React Router's `useResolvedPath` hook behaved differently for splat paths which in hindsight was incorrect/buggy behavior. Please see the [React Router Docs][rr-use-resolved-path-splat] for a longer explanation but this was determined to be a "breaking bug fix" and thus was fixed behind a future flag in React Router and exposed up through Remix's future flags. This will become the default behavior in Remix v3, so it is recommended to update your applications at your convenience to be better prepared for the eventual v3 upgrade.
+The original logic for React Router's `useResolvedPath` hook behaved differently for splat paths which in hindsight was incorrect/buggy behavior. Please see the [React Router Docs][rr-use-resolved-path-splat] for a longer explanation but this was determined to be a "breaking bug fix" and was fixed behind a future flag in React Router and exposed up through a [`v3_relativeSplatPath`][remix-config-future] Future Flag in Remix. This will become the default behavior in Remix v3, so it is recommended to update your applications at your convenience to be better prepared for the eventual v3 upgrade.
 
 It should be noted that this is the foundation for all relative routing in Remix, so this applies to the following relative path code flows as well:
 
@@ -48,3 +48,4 @@ When you enable the flag, this "bug" is fixed so that path resolution is consist
 [nav-link-component]: ../components/nav-link
 [rr-resolve-path]: https://reactrouter.com/utils/resolve-path
 [rr-use-resolved-path-splat]: https://reactrouter.com/hooks/use-resolved-path#splat-paths
+[remix-config-future]: https://remix.run/docs/en/main/file-conventions/remix-config#future

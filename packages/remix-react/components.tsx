@@ -7,6 +7,7 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
+  RouterState,
   TrackedPromise,
   UIMatch as UIMatchRR,
 } from "@remix-run/router";
@@ -267,21 +268,38 @@ export function composeEventHandlers<
   };
 }
 
+// Return the matches actively being displayed:
+// - In SPA Mode we only SSR/hydrate the root match, and include all matches
+//   after hydration. This lets the router handle initial match loads via lazy().
+// - When an error boundary is rendered, we slice off matches up to the
+//   boundary for <Links>/<Meta>
+function getActiveMatches(
+  matches: RouterState["matches"],
+  errors: RouterState["errors"],
+  isSpaMode: boolean
+) {
+  if (isSpaMode && !isHydrated) {
+    return [matches[0]];
+  }
+
+  if (errors) {
+    let errorIdx = matches.findIndex((m) => errors[m.route.id]);
+    return matches.slice(0, errorIdx + 1);
+  }
+
+  return matches;
+}
+
 /**
  * Renders the `<link>` tags for the current routes.
  *
  * @see https://remix.run/components/links
  */
 export function Links() {
-  let { manifest, routeModules, criticalCss } = useRemixContext();
+  let { isSpaMode, manifest, routeModules, criticalCss } = useRemixContext();
   let { errors, matches: routerMatches } = useDataRouterStateContext();
 
-  let matches = errors
-    ? routerMatches.slice(
-        0,
-        routerMatches.findIndex((m) => errors![m.route.id]) + 1
-      )
-    : routerMatches;
+  let matches = getActiveMatches(routerMatches, errors, isSpaMode);
 
   let keyedLinks = React.useMemo(
     () => getKeyedLinksForMatches(matches, routeModules, manifest),
@@ -319,8 +337,8 @@ export function PrefetchPageLinks({
 }: PrefetchPageDescriptor) {
   let { router } = useDataRouterContext();
   let matches = React.useMemo(
-    () => matchRoutes(router.routes, page),
-    [router.routes, page]
+    () => matchRoutes(router.routes, page, router.basename),
+    [router.routes, page, router.basename]
   );
 
   if (!matches) {
@@ -433,7 +451,7 @@ function PrefetchPageLinksImpl({
  * @see https://remix.run/components/meta
  */
 export function Meta() {
-  let { routeModules } = useRemixContext();
+  let { isSpaMode, routeModules } = useRemixContext();
   let {
     errors,
     matches: routerMatches,
@@ -441,12 +459,11 @@ export function Meta() {
   } = useDataRouterStateContext();
   let location = useLocation();
 
-  let _matches: AgnosticDataRouteMatch[] = routerMatches;
+  let _matches = getActiveMatches(routerMatches, errors, isSpaMode);
+
   let error: any = null;
   if (errors) {
-    let errorIdx = routerMatches.findIndex((m) => errors![m.route.id]);
-    _matches = routerMatches.slice(0, errorIdx + 1);
-    error = errors[routerMatches[errorIdx].route.id];
+    error = errors[_matches[_matches.length - 1].route.id];
   }
 
   let meta: MetaDescriptor[] = [];
@@ -608,14 +625,10 @@ export function Scripts(props: ScriptProps) {
   let { manifest, serverHandoffString, abortDelay, serializeError, isSpaMode } =
     useRemixContext();
   let { router, static: isStatic, staticContext } = useDataRouterContext();
-  let { matches: dontUseTheseMatches } = useDataRouterStateContext();
+  let { matches: routerMatches } = useDataRouterStateContext();
   let navigation = useNavigation();
 
-  // Use these `matches` instead :)
-  // In SPA Mode we only want to import root on the critical path, since we
-  // want the generated HTML file to be able to be hydrated at non-/ paths as
-  // well.  This lets the router handle initial match loads via lazy().
-  let matches = isSpaMode ? [dontUseTheseMatches[0]] : dontUseTheseMatches;
+  let matches = getActiveMatches(routerMatches, null, isSpaMode);
 
   React.useEffect(() => {
     isHydrated = true;
@@ -839,7 +852,11 @@ import(${JSON.stringify(manifest.entry.module)});`;
   let nextMatches = React.useMemo(() => {
     if (navigation.location) {
       // FIXME: can probably use transitionManager `nextMatches`
-      let matches = matchRoutes(router.routes, navigation.location);
+      let matches = matchRoutes(
+        router.routes,
+        navigation.location,
+        router.basename
+      );
       invariant(
         matches,
         `No routes match path "${navigation.location.pathname}"`
@@ -848,7 +865,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     }
 
     return [];
-  }, [navigation.location, router.routes]);
+  }, [navigation.location, router.routes, router.basename]);
 
   let routePreloads = matches
     .concat(nextMatches)
@@ -1060,7 +1077,7 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
-        origin = process.env.REMIX_DEV_ORIGIN,
+        origin,
         port,
         timeoutMs = 1000,
         nonce = undefined,
@@ -1070,6 +1087,20 @@ export const LiveReload =
         timeoutMs?: number;
         nonce?: string;
       }) {
+        // @ts-expect-error
+        let isViteClient = import.meta && import.meta.env !== undefined;
+        if (isViteClient) {
+          console.warn(
+            [
+              "`<LiveReload />` is obsolete when using Vite and can conflict with Vite's built-in HMR runtime.",
+              "",
+              "Remove `<LiveReload />` from your code and instead only use `<Scripts />`.",
+              "Then refresh the page to remove lingering scripts from `<LiveReload />`.",
+            ].join("\n")
+          );
+          return null;
+        }
+        origin ??= process.env.REMIX_DEV_ORIGIN;
         let js = String.raw;
         return (
           <script
