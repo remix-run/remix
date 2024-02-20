@@ -168,12 +168,12 @@ You can now export an optional `Layout` component from your root route which wil
 
 React Router has long supported a [`basename`](https://reactrouter.com/en/main/routers/create-browser-router#basename) config that allows you to serve your app within a subpath such as `http://localhost/myapp/*` without having to include the `/myapp` segment in all of your route paths. This was originally omitted from Remix because v1 nested folders file-convention made it pretty easy to put your route files in a `routes/myapp/` folder, giving you the same functionality. There has also been an [open proposal from the community](https://github.com/remix-run/remix/discussions/2891) to add this functionality.
 
-2 things have since changed that made us reconsider the lack of `basename` support:
+Two things have since changed that made us reconsider the lack of `basename` support:
 
 - We switched to a flat-file based convention in v2, and it gets far less ergonomic to have to prefix all of your route files with `myapp.` compared to the nested folder convention
 - We moved to Vite which has it's own `base` config which is often (and easily) confused with the concept of a React Router `basename` (when in reality it's more aligned with the old Remix `publicPath` config)
 
-In `2.7.0` we've added support for a `basename` in the Vite plugin config. for more information, please check out the [`basename` docs](https://remix.run/docs/en/dev/future/vite#basename).
+In `2.7.0` we've added support for a `basename` in the Vite plugin config. For more information, please check out the [`basename` docs](https://remix.run/docs/en/dev/future/vite#basename).
 
 _Note: This is a Vite-only feature and is not available via the `esbuild` compiler._
 
