@@ -14,17 +14,18 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "dependencies": {
-    "@architect/functions": "^5.2.0",
     "@remix-run/node": "2.6.0",
-    "@types/aws-lambda": "^8.10.82"
+    "@types/aws-lambda": "^8.10.134"
   },
   "devDependencies": {
+    "@architect/functions": "^8.0.4",
     "@types/lambda-tester": "^3.6.1",
     "@types/node": "^18.17.1",
     "lambda-tester": "^4.0.1",
     "typescript": "^5.1.0"
   },
   "peerDependencies": {
+    "@architect/functions": "^5 || ^6 || ^7 || ^8",
     "typescript": "^5.1.0"
   },
   "peerDependenciesMeta": {

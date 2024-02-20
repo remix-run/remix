@@ -15,18 +15,57 @@
     "@jridgewell/gen-mapping" "^0.1.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@architect/functions@^5.2.0":
-  version "5.3.3"
-  resolved "https://registry.npmjs.org/@architect/functions/-/functions-5.3.3.tgz"
-  integrity sha512-q9ePtpw7SIl14B0KFIJGm4StL6jOWWYgGpD1HR7zkTKKiUIL/W0tkrAZnBhU8WPXRHPmpf5BcEjIXHQKyvz9Hg==
+"@architect/functions@^8.0.4":
+  version "8.0.4"
+  resolved "https://registry.npmjs.org/@architect/functions/-/functions-8.0.4.tgz#f4b4b41fc137cb8d7de0e42231d400b1b8a80c49"
+  integrity sha512-xdzNmNO3kvzo/scceWR9xmWEMwtY++Uj8fQ2Qk9VLfHgZmsMcfK1H7fumyUJwA537zj0W0gt2KpWIhc4YjOcQA==
   dependencies:
-    cookie "^0.5.0"
-    cookie-signature "^1.2.0"
+    "@aws-lite/apigatewaymanagementapi" "^0.0.8"
+    "@aws-lite/client" "^0.17.2"
+    "@aws-lite/dynamodb" "^0.3.4"
+    "@aws-lite/sns" "^0.0.5"
+    "@aws-lite/sqs" "^0.2.1"
+    "@aws-lite/ssm" "^0.2.3"
+    cookie "^0.6.0"
+    cookie-signature "^1.2.1"
     csrf "^3.1.0"
     node-webtokens "^1.0.4"
     run-parallel "^1.2.0"
     run-waterfall "^1.1.7"
     uid-safe "^2.1.5"
+
+"@aws-lite/apigatewaymanagementapi@^0.0.8":
+  version "0.0.8"
+  resolved "https://registry.npmjs.org/@aws-lite/apigatewaymanagementapi/-/apigatewaymanagementapi-0.0.8.tgz#51ffaea3c783ae31ab1b7b8f16cae5a533b19b32"
+  integrity sha512-uAb9G/XlmhvUAFT9iZukqXP6rGAQTOVIcG/3h8nB9E9Y/S0nzIqpszrhMnan+qT7hpCOe3Lz8OLcKsyopgD7wg==
+
+"@aws-lite/client@^0.17.2":
+  version "0.17.2"
+  resolved "https://registry.npmjs.org/@aws-lite/client/-/client-0.17.2.tgz#d59978f6349c70a7e0b56ebef8f6db2652b591fa"
+  integrity sha512-Ma2IEVaDcG/tdeSFUJRhDvvSBt/YgErxEmmUZP3h7OXypP7He73mOEF5ckTfgX2a5evuXAHKNeAu52kYazniQQ==
+  dependencies:
+    aws4 "^1.12.0"
+    ini "^4.1.1"
+
+"@aws-lite/dynamodb@^0.3.4":
+  version "0.3.4"
+  resolved "https://registry.npmjs.org/@aws-lite/dynamodb/-/dynamodb-0.3.4.tgz#57d0ee5601ccf8d18656d56f68f559812ad5d21a"
+  integrity sha512-G+1jSGtRNE6Z5A1YFaqBeRHkF666EndAGc2/hiCYj+YvaBGwBZqeCL8azwRSsnkAPHGGvk07CthQxOwvPK/QJw==
+
+"@aws-lite/sns@^0.0.5":
+  version "0.0.5"
+  resolved "https://registry.npmjs.org/@aws-lite/sns/-/sns-0.0.5.tgz#1c91eda8f88721f8bb563ae4815512922682ebe7"
+  integrity sha512-FenUquLYMKfv2zkXetaJOekV2O8yKxqKEPvwtDszHHu1YzhxMtJO7wLpiamvcHwZbZQtL1lG7Fwffoptg/mBpA==
+
+"@aws-lite/sqs@^0.2.1":
+  version "0.2.1"
+  resolved "https://registry.npmjs.org/@aws-lite/sqs/-/sqs-0.2.1.tgz#99f8d7e904d25fa38c54a9942bc118efb6db078c"
+  integrity sha512-pez5KoAUQBGR+lwojUH9R25LRClm17J8grF+oLFtEBQAk+pfgyl6UimsjJcDzMP+rujoFDEB+f1peaBtN6ixFQ==
+
+"@aws-lite/ssm@^0.2.3":
+  version "0.2.3"
+  resolved "https://registry.npmjs.org/@aws-lite/ssm/-/ssm-0.2.3.tgz#b19cb3bb05f5521e879a642c19c90dace175ac2c"
+  integrity sha512-pywo0EBU6LnLWicXHlWX7dSz3odJN7hK3pgtudSs5XFGONrcVKy4k0Zc+x85fixIf3/ZZAdB66ctT3D5li3Xpw==
 
 "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.10.4", "@babel/code-frame@^7.12.13", "@babel/code-frame@^7.22.13", "@babel/code-frame@^7.23.5":
   version "7.23.5"
@@ -2780,10 +2819,15 @@
   resolved "https://registry.npmjs.org/@types/aria-query/-/aria-query-4.2.2.tgz"
   integrity sha512-HnYpAE1Y6kRyKM/XkEuiRQhTHvkzMBurTHnpFLYLBGPIylZNPs9jJcuOOYWxPLJCSEtmZT0Y8rHDokKN7rRTig==
 
-"@types/aws-lambda@*", "@types/aws-lambda@^8.10.82":
+"@types/aws-lambda@*":
   version "8.10.83"
   resolved "https://registry.npmjs.org/@types/aws-lambda/-/aws-lambda-8.10.83.tgz"
   integrity sha512-7YsLv/B8rF7K7jYAGmYBxLq3QU+hQV7qNJBMcSCmJCTcXuzoTKGBX8d4v9CsVs0SOKBSAErXG7rtk8jVxiP30g==
+
+"@types/aws-lambda@^8.10.134":
+  version "8.10.134"
+  resolved "https://registry.npmjs.org/@types/aws-lambda/-/aws-lambda-8.10.134.tgz#8f65d86736839889194f7892b7bec6b8a7ec6fc3"
+  integrity sha512-cfv422ivDMO+EeA3N4YcshbTHBL+5lLXe+Uz+4HXvIcsCuWvqNFpOs28ZprL8NA3qRCzt95ETiNAJDn4IcC/PA==
 
 "@types/babel__core@^7.1.14":
   version "7.1.18"
@@ -4112,6 +4156,11 @@ aws-sign2@~0.7.0:
   resolved "https://registry.npmjs.org/aws-sign2/-/aws-sign2-0.7.0.tgz"
   integrity sha1-tG6JCTSpWR8tL2+G1+ap8bP+dqg=
 
+aws4@^1.12.0:
+  version "1.12.0"
+  resolved "https://registry.npmjs.org/aws4/-/aws4-1.12.0.tgz#ce1c9d143389679e253b314241ea9aa5cec980d3"
+  integrity sha512-NmWvPnx0F1SfrQbYwOi7OeaNGokp9XhzNioJ/CSBs8Qa4vxug81mhJEAVZwxXuBmYB5KDRfMq/F3RR0BIU7sWg==
+
 aws4@^1.8.0:
   version "1.11.0"
   resolved "https://registry.npmjs.org/aws4/-/aws4-1.11.0.tgz"
@@ -4920,10 +4969,15 @@ cookie-signature@1.0.6:
   resolved "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.0.6.tgz"
   integrity sha1-4wOogrNCzD7oylE6eZmXNNqzriw=
 
-cookie-signature@^1.1.0, cookie-signature@^1.2.0:
+cookie-signature@^1.1.0:
   version "1.2.0"
   resolved "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.2.0.tgz"
   integrity sha512-R0BOPfLGTitaKhgKROKZQN6iyq2iDQcH1DOF8nJoaWapguX5bC2w+Q/I9NmmM5lfcvEarnLZr+cCvmEYYSXvYA==
+
+cookie-signature@^1.2.1:
+  version "1.2.1"
+  resolved "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.2.1.tgz#790dea2cce64638c7ae04d9fabed193bd7ccf3b4"
+  integrity sha512-78KWk9T26NhzXtuL26cIJ8/qNHANyJ/ZYrmEXFzUmhZdjpBv+DlWlOANRTGBt48YcyslsLrj0bMLFTmXvLRCOw==
 
 cookie@0.4.2, cookie@^0.4.2:
   version "0.4.2"
@@ -7312,6 +7366,11 @@ ini@2.0.0:
   version "2.0.0"
   resolved "https://registry.npmjs.org/ini/-/ini-2.0.0.tgz"
   integrity sha512-7PnF4oN3CvZF23ADhA5wRaYEQpJ8qygSkbtTXWBeXWXmEVRXK+1ITciHWwHhsjv1TmW0MgacIv6hEi5pX5NQdA==
+
+ini@^4.1.1:
+  version "4.1.1"
+  resolved "https://registry.npmjs.org/ini/-/ini-4.1.1.tgz#d95b3d843b1e906e56d6747d5447904ff50ce7a1"
+  integrity sha512-QQnnxNyfvmHFIsj7gkPcYymR8Jdw/o7mp5ZFihxn6h8Ci6fh3Dx4E1gPjpQEpIuPo9XVNY/ZUwh4BPMjGyL01g==
 
 inline-style-parser@0.1.1:
   version "0.1.1"
