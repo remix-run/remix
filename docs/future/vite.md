@@ -36,7 +36,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [
     remix({
-      ignoredRouteFiles: ["**/.*"],
+      ignoredRouteFiles: ["**/*.css"],
     }),
   ],
 });
@@ -348,7 +348,7 @@ The subset of [supported Remix config options][supported-remix-config-options] s
 export default defineConfig({
   plugins: [
     remix({
-      ignoredRouteFiles: ["**/.*"],
+      ignoredRouteFiles: ["**/*.css"],
     }),
   ],
 });

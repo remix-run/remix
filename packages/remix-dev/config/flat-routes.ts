@@ -77,7 +77,7 @@ export function flatRoutes(
   ignoredFilePatterns: string[] = [],
   prefix = "routes"
 ) {
-  let ignoredFileRegex = ignoredFilePatterns
+  let ignoredFileRegex = Array.from(new Set(["**/.*", ...ignoredFilePatterns]))
     .map((re) => makeRe(re))
     .filter((re: any): re is RegExp => !!re);
   let routesDir = path.join(appDirectory, prefix);
