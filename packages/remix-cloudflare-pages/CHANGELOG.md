@@ -1,34 +1,6 @@
 # `@remix-run/cloudflare-pages`
 
-## 2.7.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.7.0-pre.4`
-
-## 2.7.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.7.0-pre.3`
-
-## 2.7.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.7.0-pre.2`
-
-## 2.7.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/cloudflare@2.7.0-pre.1`
-
-## 2.7.0-pre.0
+## 2.7.0
 
 ### Minor Changes
 
@@ -80,7 +52,7 @@
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/cloudflare@2.7.0-pre.0`
+  - `@remix-run/cloudflare@2.7.0`
 
 ## 2.6.0
 
