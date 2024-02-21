@@ -774,6 +774,11 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     return new Set([...cssUrlPaths, ...chunkAssetPaths]);
   };
 
+  let getClientBuildAssetsDirectory = () => {
+    invariant(viteConfig);
+    return viteConfig.build.assetsDir;
+  };
+
   let createBrowserManifestForBuild = async (): Promise<BrowserManifest> => {
     let viteManifest = await loadViteManifest(
       getClientBuildDirectory(ctx.remixConfig)
@@ -819,10 +824,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         ),
       };
     }
-
     let fingerprintedValues = { entry, routes };
     let version = getHash(JSON.stringify(fingerprintedValues), 8);
-    let manifestPath = `assets/manifest-${version}.js`;
+    let manifestPath = path.join(
+      getClientBuildAssetsDirectory(),
+      `manifest-${version}.js`
+    );
     let url = `${ctx.remixConfig.publicPath}${manifestPath}`;
     let nonFingerprintedValues = { url, version };
 
