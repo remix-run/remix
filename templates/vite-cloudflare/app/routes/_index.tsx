@@ -8,13 +8,13 @@ import { Form, useLoaderData } from "@remix-run/react";
 const key = "__my-key__";
 
 export async function loader({ context }: LoaderFunctionArgs) {
-  const { MY_KV } = context.env;
+  const { MY_KV } = context.cloudflare.env;
   const value = await MY_KV.get(key);
   return json({ value });
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
-  const { MY_KV: myKv } = context.env;
+  const { MY_KV: myKv } = context.cloudflare.env;
 
   if (request.method === "POST") {
     const formData = await request.formData();

@@ -14,7 +14,7 @@ These new exports are a bit of a sharp knife and are not recommended as your _pr
 - **Client Cache:** Cache server loader data in the client and avoid some server calls
 - **Migration:** Ease your migration from React Router -> Remix SPA -> Remix SSR (once Remix supports [SPA Mode][rfc-spa])
 
-Please use these new exports with caution! If you're not careful - it's easy to get your UI out of sync. Remix out of the box tries _very_ hard to ensure that this doesn't happen - but once you take control over your own client-side cache, and potentially prevent Remix from performing it's normal server `fetch` calls - then Remix can no longer guarantee your UI remains in sync.
+Please use these new exports with caution! If you're not careful - it's easy to get your UI out of sync. Remix out of the box tries _very_ hard to ensure that this doesn't happen - but once you take control over your own client-side cache, and potentially prevent Remix from performing its normal server `fetch` calls - then Remix can no longer guarantee your UI remains in sync.
 
 ## Skip the Hop
 
@@ -115,7 +115,7 @@ export async function loader({
 }
 
 export default function Component() {
-  const data = useLoaderData(); // server data
+  const data = useLoaderData(); // (1) - server data
   return <>...</>;
 }
 ```
@@ -127,26 +127,20 @@ import type { ClientLoaderFunctionArgs } from "@remix-run/react";
 
 export async function clientLoader({
   request,
-  serverLoader,
 }: ClientLoaderFunctionArgs) {
-  const [serverData, clientData] = await Promise.all([
-    serverLoader(),
-    getClientData(request),
-  ]);
-  return {
-    ...serverData, // (4)
-    ...clientData, // (4)
-  };
+  const clientData = await getClientData(request);
+  return clientData;
 }
 // Note: you do not have to set this explicitly - it is implied if there is no `loader`
 clientLoader.hydrate = true;
 
+// (2)
 export function HydrateFallback() {
-  return <p>Skeleton rendered during SSR</p>; // (2)
+  return <p>Skeleton rendered during SSR</p>;
 }
 
 export default function Component() {
-  const data = useLoaderData(); // client data
+  const data = useLoaderData(); // (2) - client data
   return <>...</>;
 }
 ```

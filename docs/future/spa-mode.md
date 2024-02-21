@@ -222,7 +222,7 @@ startTransition(() => {
 
 - You cannot call `serverLoader`/`serverAction` from your `clientLoader`/`clientAction` methods since there is no running server -- those will throw a runtime error if called
 
-- It's important to not that Remix SPA mode generates your `index.html` file by performing a "pre-render" of your root route on the server during the build
+- It's important to note that Remix SPA mode generates your `index.html` file by performing a "pre-render" of your root route on the server during the build
   - This means that while you're creating a SPA, you still have a "server build" and "server render" step, so you do need to be careful about using dependencies that reference client-only aspects such as `document`, `window`, `localStorage`, etc.
   - Generally speaking, the way to resolve these issues is to import any browser-only libraries from `entry.client.tsx` so they don't end up in the server build
   - Otherwise, you can generally solve these by using [`React.lazy`][react-lazy] or the [`<ClientOnly>`][client-only] component from `remix-utils`.

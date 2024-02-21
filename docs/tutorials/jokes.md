@@ -4907,7 +4907,7 @@ export function ErrorBoundary() {
 
 Meta tags are useful for SEO and social media. The tricky bit is that often the part of the code that has access to the data you need is in components that request/use the data.
 
-This is why Remix has the [`meta`][meta] export. Why don't you go through and add a useful few meta tags to the following routes:
+This is why Remix has the [`meta`][meta] export. Why don't you go through and add a few useful meta tags to the following routes:
 
 - `app/routes/login.tsx`
 - `app/routes/jokes.$jokeId.tsx` - (this one you can reference the joke's name in the title which is fun)

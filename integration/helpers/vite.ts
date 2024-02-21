@@ -117,12 +117,21 @@ export async function createProject(
   return projectDir;
 }
 
-export const viteBuild = ({ cwd }: { cwd: string }) => {
+export const viteBuild = ({
+  cwd,
+  env = {},
+}: {
+  cwd: string;
+  env?: Record<string, string>;
+}) => {
   let nodeBin = process.argv[0];
 
   return spawnSync(nodeBin, [remixBin, "vite:build"], {
     cwd,
-    env: { ...process.env },
+    env: {
+      ...process.env,
+      ...env,
+    },
   });
 };
 
@@ -152,6 +161,31 @@ export const viteRemixServe = async ({
   );
   await waitForServer(serveProc, { port, basename });
   return () => serveProc.kill();
+};
+
+export const wranglerPagesDev = async ({
+  cwd,
+  port,
+}: {
+  cwd: string;
+  port: number;
+}) => {
+  let nodeBin = process.argv[0];
+
+  // grab wrangler bin from remix-run/remix root node_modules since its not copied into integration project's node_modules
+  let wranglerBin = path.resolve("node_modules/wrangler/bin/wrangler.js");
+
+  let proc = spawn(
+    nodeBin,
+    [wranglerBin, "pages", "dev", "./build/client", "--port", String(port)],
+    {
+      cwd,
+      stdio: "pipe",
+      env: { NODE_ENV: "production" },
+    }
+  );
+  await waitForServer(proc, { port });
+  return () => proc.kill();
 };
 
 type ServerArgs = {
@@ -206,6 +240,10 @@ type Fixtures = {
     port: number;
     cwd: string;
   }>;
+  wranglerPagesDev: (files: Files) => Promise<{
+    port: number;
+    cwd: string;
+  }>;
 };
 
 export const test = base.extend<Fixtures>({
@@ -245,6 +283,19 @@ export const test = base.extend<Fixtures>({
       let { status } = viteBuild({ cwd });
       expect(status).toBe(0);
       stop = await viteRemixServe({ cwd, port });
+      return { port, cwd };
+    });
+    stop?.();
+  },
+  // eslint-disable-next-line no-empty-pattern
+  wranglerPagesDev: async ({}, use) => {
+    let stop: (() => unknown) | undefined;
+    await use(async (files) => {
+      let port = await getPort();
+      let cwd = await createProject(await files({ port }));
+      let { status } = viteBuild({ cwd });
+      expect(status).toBe(0);
+      stop = await wranglerPagesDev({ cwd, port });
       return { port, cwd };
     });
     stop?.();

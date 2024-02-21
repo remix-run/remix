@@ -16,6 +16,28 @@ import { Link } from "@remix-run/react";
 
 ## Props
 
+### `to: string`
+
+The most basic usage takes an href string:
+
+```tsx
+<Link to="/some/path" />
+```
+
+### `to: Partial<Path>`
+
+You can also pass a `Partial<Path>` value:
+
+```tsx
+<Link
+  to={{
+    pathname: "/some/path",
+    search: "?query=string",
+    hash: "#hash",
+  }}
+/>
+```
+
 ### `prefetch`
 
 Defines the data and module prefetching behavior for the link.
