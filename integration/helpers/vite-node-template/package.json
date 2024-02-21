@@ -1,5 +1,6 @@
 {
   "name": "remix-test-template-vite-node",
+  "version": "0.0.0",
   "private": true,
   "sideEffects": false,
   "type": "module",
