@@ -80,3 +80,4 @@ export type {
   UploadHandler,
   UploadHandlerPart,
 } from "./reexport";
+export { getServerBuild } from "./reexport";

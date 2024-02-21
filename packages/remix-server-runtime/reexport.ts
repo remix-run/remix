@@ -7,6 +7,7 @@ export type {
   ServerBuild,
   ServerEntryModule,
 } from "./build";
+export { getServerBuild } from "./build";
 
 export type { UploadHandlerPart, UploadHandler } from "./formData";
 export type {

@@ -95,7 +95,7 @@ const customServerFile = ({
 
   return String.raw`
     import { createRequestHandler } from "@remix-run/express";
-    import { installGlobals } from "@remix-run/node";
+    import { installGlobals, getServerBuild } from "@remix-run/node";
     import express from "express";
     installGlobals();
 
@@ -115,9 +115,7 @@ const customServerFile = ({
     app.all(
       "${basename}*",
       createRequestHandler({
-        build: viteDevServer
-          ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
-          : await import("./build/server/index.js"),
+        build: await getServerBuild("./build/server/index.js", viteDevServer),
       })
     );
     app.get("*", (_req, res) => {

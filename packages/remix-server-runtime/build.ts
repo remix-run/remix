@@ -1,7 +1,40 @@
+import type { ViteDevServer } from "vite";
+import path from "pathe";
+
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "./routeModules";
 import type { AssetsManifest, EntryContext, FutureConfig } from "./entry";
 import type { ServerRouteManifest } from "./routes";
 import type { AppLoadContext } from "./data";
+
+export async function getServerBuild(
+  buildPath: string,
+  {
+    viteDevServer,
+  }: {
+    viteDevServer?: ViteDevServer;
+  } = {}
+): Promise<ServerBuild | (() => Promise<ServerBuild>)> {
+  if (viteDevServer) {
+    return () =>
+      viteDevServer.ssrLoadModule(
+        "virtual:remix/server-build"
+      ) as Promise<ServerBuild>;
+  }
+
+  if (!path.isAbsolute(buildPath)) {
+    throw new Error(
+      `Server build path must be absolute, but received relative path: ${buildPath}`
+    );
+  }
+
+  // Convert file path meant for `import` to URL for Windows compatibility
+  let buildURL = "file:///" + encodeURI(buildPath);
+  return import(buildURL).catch(() => {
+    throw Error(
+      `Could not import server build from '${buildPath}'. Did you forget to run 'remix vite:build' first?`
+    );
+  });
+}
 
 // NOTE: IF you modify `ServerBuild`, be sure to modify the
 // `remix-dev/server-build.ts` file to reflect the new field as well

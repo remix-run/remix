@@ -5,6 +5,7 @@
     "lib": ["ES2022"],
     "target": "ES2022",
     "composite": true,
+    "module": "ESNext",
 
     "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
