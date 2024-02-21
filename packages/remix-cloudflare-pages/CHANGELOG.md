@@ -1,5 +1,16 @@
 # `@remix-run/cloudflare-pages`
 
+## 2.7.1
+
+### Patch Changes
+
+- Fix breaking change for `@remix-run/cloudflare-pages` ([#8819](https://github.com/remix-run/remix/pull/8819))
+
+  Restore Cloudflare event context fields in `getLoadContext` argument for backwards compatibility.
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@2.7.1`
+
 ## 2.7.0
 
 ### Minor Changes
