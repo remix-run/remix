@@ -1,5 +1,5 @@
 {
-  "name": "remix-test-template-node",
+  "name": "integration-node-template",
   "version": "0.0.0",
   "private": true,
   "sideEffects": false,

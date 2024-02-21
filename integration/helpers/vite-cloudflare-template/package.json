@@ -1,5 +1,5 @@
 {
-  "name": "remix-test-template-vite-cloudflare",
+  "name": "integration-vite-cloudflare-template",
   "version": "0.0.0",
   "private": true,
   "sideEffects": false,
