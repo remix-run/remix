@@ -10,7 +10,7 @@ import serializeJavaScript from "serialize-javascript";
 import { sync as spawnSync, spawn } from "cross-spawn";
 import type { JsonObject } from "type-fest";
 import type { AppConfig } from "@remix-run/dev";
-import { ServerMode } from "@remix-run/server-runtime/mode";
+import { ServerMode } from "@remix-run/server-runtime/dist/mode.js";
 import type { ServerBuild } from "@remix-run/server-runtime";
 import { createRequestHandler } from "@remix-run/server-runtime";
 import { createRequestHandler as createExpressHandler } from "@remix-run/express";
