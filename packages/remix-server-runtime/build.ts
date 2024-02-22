@@ -8,18 +8,19 @@ import type { AppLoadContext } from "./data";
 
 export async function getServerBuild(
   buildPath: string,
-  {
-    viteDevServer,
-  }: {
+  options: {
     viteDevServer?: ViteDevServer;
   } = {}
 ): Promise<ServerBuild | (() => Promise<ServerBuild>)> {
+  // eslint-disable-next-line prefer-let/prefer-let
+  const { viteDevServer } = options;
   if (viteDevServer) {
     return () =>
       viteDevServer.ssrLoadModule(
         "virtual:remix/server-build"
       ) as Promise<ServerBuild>;
   }
+  console.log({ buildPath, options });
 
   if (!path.isAbsolute(buildPath)) {
     throw new Error(
@@ -28,7 +29,9 @@ export async function getServerBuild(
   }
 
   // Convert file path meant for `import` to URL for Windows compatibility
-  let buildURL = "file:///" + encodeURI(buildPath);
+  let buildURL =
+    "file://" + (buildPath.startsWith("/") ? "" : "/") + encodeURI(buildPath);
+  console.log({ buildURL });
   return import(buildURL).catch(() => {
     throw Error(
       `Could not import server build from '${buildPath}'. Did you forget to run 'remix vite:build' first?`

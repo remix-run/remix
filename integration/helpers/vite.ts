@@ -41,6 +41,7 @@ export const EXPRESS_SERVER = (args: {
   loadContext?: Record<string, unknown>;
 }) =>
   String.raw`
+    import path from "node:path";
     import { createRequestHandler } from "@remix-run/express";
     import { installGlobals, getServerBuild } from "@remix-run/node";
     import express from "express";
@@ -68,10 +69,12 @@ export const EXPRESS_SERVER = (args: {
     }
     app.use(express.static("build/client", { maxAge: "1h" }));
 
+    const buildPath = path.resolve("./build/server/index.js");
+    const build = await getServerBuild(buildPath, { viteDevServer });
     app.all(
       "*",
       createRequestHandler({
-        build: await getServerBuild("./build/server/index.js", viteDevServer),
+        build,
         getLoadContext: () => (${JSON.stringify(args.loadContext ?? {})}),
       })
     );
