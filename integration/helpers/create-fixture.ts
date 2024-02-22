@@ -288,11 +288,6 @@ export async function createFixtureProject(
 
   await fse.ensureDir(projectDir);
   await fse.copy(integrationTemplateDir, projectDir);
-  // await fse.copy(
-  //   path.join(__dirname, "../../build/node_modules"),
-  //   path.join(projectDir, "node_modules"),
-  //   { overwrite: true }
-  // );
   // let remixDev = path.join(
   //   projectDir,
   //   "node_modules/@remix-run/dev/dist/cli.js"

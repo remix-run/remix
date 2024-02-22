@@ -12,6 +12,8 @@ repository that you should be aware of:
 
 ## Workflow
 
+We currently use [pnpm](https://pnpm.io) to develop Remix.
+
 ```bash
 # install everything
 pnpm install

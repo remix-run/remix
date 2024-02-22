@@ -1,5 +1,4 @@
 {
-  "name": "remix-fly-app",
   "private": true,
   "type": "module",
   "sideEffects": false,

@@ -1,5 +1,4 @@
 {
-  "name": "remix-vite-express-app",
   "private": true,
   "sideEffects": false,
   "type": "module",

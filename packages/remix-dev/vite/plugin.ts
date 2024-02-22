@@ -604,8 +604,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       { rootDirectory, isSpaMode }
     );
 
-    console.log("entryServerFilePath", entryServerFilePath);
-
     let buildDirectory = path.resolve(
       rootDirectory,
       resolvedRemixUserConfig.buildDirectory

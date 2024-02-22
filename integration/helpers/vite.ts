@@ -107,13 +107,6 @@ export async function createProject(
     })
   );
 
-  // node_modules: overwrite with locally built Remix packages
-  // await fse.copy(
-  //   path.join(__dirname, "../../build/node_modules"),
-  //   path.join(projectDir, "node_modules"),
-  //   { overwrite: true }
-  // );
-
   return projectDir;
 }
 

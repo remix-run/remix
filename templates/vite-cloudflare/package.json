@@ -1,5 +1,4 @@
 {
-  "name": "remix-cloudflare-app",
   "private": true,
   "sideEffects": false,
   "type": "module",

@@ -1,5 +1,4 @@
 {
-  "name": "remix-arc-app",
   "private": true,
   "sideEffects": false,
   "type": "module",

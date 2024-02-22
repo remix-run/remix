@@ -1,4 +1,4 @@
-name: ⚙️ Deduplicate deps
+name: ⚙️ Deduplicate lock file
 
 on:
   push:
