@@ -1069,7 +1069,7 @@ We currently recommend excluding the plugin when used with other Vite-based tool
 
 For Vitest:
 
-```ts filename=vite.config.ts lines=[7,12-13]
+```ts filename=vite.config.ts lines=[5]
 import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig, loadEnv } from "vite";
 
