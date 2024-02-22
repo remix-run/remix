@@ -91,6 +91,9 @@ importers:
       '@testing-library/user-event':
         specifier: ^14.5.1
         version: 14.5.1(@testing-library/dom@9.3.4)
+      '@types/chalk':
+        specifier: ^2.2.0
+        version: 2.2.0
       '@types/cheerio':
         specifier: ^0.22.22
         version: 0.22.30
@@ -244,6 +247,9 @@ importers:
       to-vfile:
         specifier: 7.2.3
         version: 7.2.3
+      type-fest:
+        specifier: ^4.0.0
+        version: 4.10.2
       typescript:
         specifier: 5.1.6
         version: 5.1.6
@@ -4605,6 +4611,13 @@ packages:
     dependencies:
       '@types/node': 18.17.1
     dev: true
+
+  /@types/chalk@2.2.0:
+    resolution: {integrity: sha512-1zzPV9FDe1I/WHhRkf9SNgqtRJWZqrBWgu7JGveuHmmyR9CnAPCie2N/x+iHrgnpYBIcCJWHBoMRv2TRWktsvw==}
+    deprecated: This is a stub types definition for chalk (https://github.com/chalk/chalk). chalk provides its own type definitions, so you don't need @types/chalk installed!
+    dependencies:
+      chalk: 4.1.2
+    dev: false
 
   /@types/cheerio@0.22.30:
     resolution: {integrity: sha512-t7ZVArWZlq3dFa9Yt33qFBQIK4CQd1Q3UJp0V+UhP6vgLWLM6Qug7vZuRSGXg45zXeB1Fm5X2vmBkEX58LV2Tw==}
