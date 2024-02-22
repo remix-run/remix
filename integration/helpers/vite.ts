@@ -182,6 +182,41 @@ export const wranglerPagesDev = async ({
   return () => proc.kill();
 };
 
+export const wranglerDev = async ({
+  cwd,
+  port,
+  config,
+}: {
+  cwd: string;
+  port: number;
+  config?: string;
+}) => {
+  let nodeBin = process.argv[0];
+
+  // grab wrangler bin from remix-run/remix root node_modules since its not copied into integration project's node_modules
+  let wranglerBin = path.resolve("node_modules/wrangler/bin/wrangler.js");
+
+  let proc = spawn(
+    nodeBin,
+    [
+      wranglerBin,
+      "dev",
+      "--config",
+      config || "wrangler.toml",
+      "--port",
+      String(port),
+    ],
+    {
+      cwd,
+      stdio: "pipe",
+      env: { NODE_ENV: "development" },
+    }
+  );
+  await waitForServer(proc, { port });
+
+  return () => proc.kill();
+};
+
 type ServerArgs = {
   cwd: string;
   port: number;
@@ -223,6 +258,13 @@ type Fixtures = {
     port: number;
     cwd: string;
   }>;
+  viteDevWaitOnWranglerService: (
+    files: Files,
+    serviceConfig?: string
+  ) => Promise<{
+    port: number;
+    cwd: string;
+  }>;
   customDev: (files: Files) => Promise<{
     port: number;
     cwd: string;
@@ -232,6 +274,13 @@ type Fixtures = {
     cwd: string;
   }>;
   wranglerPagesDev: (files: Files) => Promise<{
+    port: number;
+    cwd: string;
+  }>;
+  wranglerPagesDevWaitOnWranglerService: (
+    files: Files,
+    serviceConfig?: string
+  ) => Promise<{
     port: number;
     cwd: string;
   }>;
@@ -253,6 +302,24 @@ export const test = base.extend<Fixtures>({
       return { port, cwd };
     });
     stop?.();
+  },
+  // eslint-disable-next-line no-empty-pattern
+  viteDevWaitOnWranglerService: async ({}, use) => {
+    let stopVite: (() => unknown) | undefined;
+    let stopWrangler: (() => unknown) | undefined;
+    await use(async (files, serviceConfig) => {
+      let port = await getPort();
+      let cwd = await createProject(await files({ port }));
+      stopWrangler = await wranglerDev({
+        cwd,
+        port: await getPort(),
+        config: serviceConfig,
+      });
+      stopVite = await viteDev({ cwd, port });
+      return { port, cwd };
+    });
+    stopVite?.();
+    stopWrangler?.();
   },
   // eslint-disable-next-line no-empty-pattern
   customDev: async ({}, use) => {
@@ -290,6 +357,26 @@ export const test = base.extend<Fixtures>({
       return { port, cwd };
     });
     stop?.();
+  },
+  // eslint-disable-next-line no-empty-pattern
+  wranglerPagesDevWaitOnWranglerService: async ({}, use) => {
+    let stopWrangler: (() => unknown) | undefined;
+    let stopWranglerPages: (() => unknown) | undefined;
+    await use(async (files, serviceConfig) => {
+      let port = await getPort();
+      let cwd = await createProject(await files({ port }));
+      let { status } = viteBuild({ cwd });
+      expect(status).toBe(0);
+      stopWrangler = await wranglerDev({
+        cwd,
+        port: await getPort(),
+        config: serviceConfig,
+      });
+      stopWranglerPages = await wranglerPagesDev({ cwd, port });
+      return { port, cwd };
+    });
+    stopWranglerPages?.();
+    stopWrangler?.();
   },
 });
 
