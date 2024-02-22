@@ -164,7 +164,7 @@ export async function loader({
 If you'd like to add additional properties to the load context,
 you should export a `getLoadContext` function from a shared module so that **load context in Vite, Wrangler, and Cloudflare Pages are all augmented in the same way**:
 
-```ts filename=load-context.ts lines=[1,9,13-26]
+```ts filename=load-context.ts lines=[1,4-9,20-33]
 import { type AppLoadContext } from "@remix-run/cloudflare";
 import { type PlatformProxy } from "wrangler";
 
@@ -173,7 +173,6 @@ import { type PlatformProxy } from "wrangler";
 // into the global `Env` interface.
 // Need this empty interface so that typechecking passes
 // even if no `wrangler.toml` exists.
-
 interface Env {}
 
 type Cloudflare = Omit<PlatformProxy<Env>, "dispose">;
