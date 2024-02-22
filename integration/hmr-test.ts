@@ -208,10 +208,13 @@ let customServer = (options: { appPort: number; devReady: string }) => {
 
 let HMR_TIMEOUT_MS = 30_000;
 
+let remix = "node ./node_modules/@remix-run/dev/dist/cli.js";
+let serve = "node ./node_modules/@remix-run/serve/dist/cli.js";
+
 test("HMR for remix-serve", async ({ page }) => {
   await dev(page, (appPort) => ({
     files,
-    devScript: `cross-env PORT=${appPort} remix dev -c "remix-serve ./build/index.js"`,
+    devScript: `cross-env PORT=${appPort} ${remix} dev -c "${serve} ./build/index.js"`,
     appReadyPattern: /\[remix-serve\] /,
   }));
 });
