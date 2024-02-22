@@ -6,7 +6,7 @@ const tsc = process.env.CI || args.includes("--tsc") || publish;
 
 exec("pnpm", ["rollup", "-c"])
   .then(() => tsc && exec("pnpm", ["--recursive", "tsc", "-b"]))
-  .then(() => publish && exec("node", ["scripts/copy-build-to-dist.mjs"]))
+  .then(() => exec("node", ["scripts/copy-build-to-dist.mjs"]))
   .then(() => process.exit(0))
   .catch((err) => {
     console.error(err);
