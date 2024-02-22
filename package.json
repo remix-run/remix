@@ -32,8 +32,7 @@
     "changeset:release": "pnpm build --tsc --publish && changeset publish",
     "version": "node ./scripts/version.js",
     "version:experimental": "node ./scripts/version.js experimental",
-    "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\"",
-    "postinstall": "patch-package"
+    "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\""
   },
   "packageManager": "pnpm@8.10.5",
   "resolutions": {
@@ -102,7 +101,6 @@
     "lodash": "^4.17.21",
     "mime": "^3.0.0",
     "npm-run-all": "^4.1.5",
-    "patch-package": "^6.5.0",
     "prettier": "^2.7.1",
     "prompt-confirm": "^2.0.4",
     "react": "^18.2.0",
@@ -126,5 +124,10 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@changesets/assemble-release-plan@5.2.2": "patches/@changesets__assemble-release-plan@5.2.2.patch"
+    }
   }
 }
