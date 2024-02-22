@@ -2,7 +2,7 @@ import * as React from "react";
 import type { Location } from "@remix-run/router";
 import { isRouteErrorResponse } from "react-router-dom";
 
-import { useRemixContext } from "./components"
+import { useRemixContext } from "./components";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;
@@ -148,9 +148,7 @@ function BoundaryShell({
         />
         <title>{title}</title>
       </head>
-      <body>
-        {contents}
-      </body>
+      <body>{contents}</body>
     </html>
   );
 }
