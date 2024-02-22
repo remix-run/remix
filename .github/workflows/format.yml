@@ -21,6 +21,9 @@ jobs:
         with:
           token: ${{ secrets.FORMAT_PAT }}
 
+      - name: 🟧 Setup pnpm
+        uses: pnpm/action-setup@v3.0.0
+
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:

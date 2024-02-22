@@ -29,6 +29,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 🟧 Setup pnpm
+        uses: pnpm/action-setup@v3.0.0
+
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:
@@ -71,6 +74,9 @@ jobs:
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
+
+      - name: 🟧 Setup pnpm
+        uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
