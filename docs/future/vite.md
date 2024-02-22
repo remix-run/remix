@@ -173,7 +173,7 @@ import { type PlatformProxy } from "wrangler";
 // into the global `Env` interface.
 // Need this empty interface so that typechecking passes
 // even if no `wrangler.toml` exists.
- 
+
 interface Env {}
 
 type Cloudflare = Omit<PlatformProxy<Env>, "dispose">;
