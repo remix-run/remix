@@ -133,7 +133,7 @@ const files: Files = async ({ port }) => ({
 });
 
 test("vite dev", async ({ page, viteDev }) => {
-  let { port } = await viteDev(files, "cloudflare");
+  let { port } = await viteDev(files, "vite-cloudflare-template");
   await workflow({ page, port });
 });
 

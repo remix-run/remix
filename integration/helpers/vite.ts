@@ -84,18 +84,18 @@ export const EXPRESS_SERVER = (args: {
     app.listen(port, () => console.log('http://localhost:' + port));
   `;
 
-type Platform = "node" | "cloudflare";
+type TemplateName = "vite-node-template" | "vite-cloudflare-template";
 
 export async function createProject(
   files: Record<string, string> = {},
-  platform: Platform = "node"
+  templateName: TemplateName = "vite-node-template"
 ) {
   let projectName = `remix-${Math.random().toString(32).slice(2)}`;
   let projectDir = path.join(TMP_DIR, projectName);
   await fse.ensureDir(projectDir);
 
   // base template
-  let templateDir = path.resolve(__dirname, `vite-${platform}-template`);
+  let templateDir = path.resolve(__dirname, templateName);
   await fse.copy(templateDir, projectDir, { errorOnExist: true });
 
   // user-defined files
@@ -220,7 +220,7 @@ type Fixtures = {
   page: Page;
   viteDev: (
     files: Files,
-    platform?: Platform
+    templateName?: TemplateName
   ) => Promise<{
     port: number;
     cwd: string;
@@ -248,9 +248,9 @@ export const test = base.extend<Fixtures>({
   // eslint-disable-next-line no-empty-pattern
   viteDev: async ({}, use) => {
     let stop: (() => unknown) | undefined;
-    await use(async (files, platform) => {
+    await use(async (files, template) => {
       let port = await getPort();
-      let cwd = await createProject(await files({ port }), platform);
+      let cwd = await createProject(await files({ port }), template);
       stop = await viteDev({ cwd, port });
       return { port, cwd };
     });
@@ -285,7 +285,10 @@ export const test = base.extend<Fixtures>({
     let stop: (() => unknown) | undefined;
     await use(async (files) => {
       let port = await getPort();
-      let cwd = await createProject(await files({ port }));
+      let cwd = await createProject(
+        await files({ port }),
+        "vite-cloudflare-template"
+      );
       let { status } = viteBuild({ cwd });
       expect(status).toBe(0);
       stop = await wranglerPagesDev({ cwd, port });
