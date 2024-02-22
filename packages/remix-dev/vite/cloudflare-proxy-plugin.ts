@@ -1,10 +1,10 @@
-import { Server } from "node:http";
-
+import type { WebSocket as DoWebSocket } from "@cloudflare/workers-types";
 import { createRequestHandler } from "@remix-run/server-runtime";
 import {
   type AppLoadContext,
   type ServerBuild,
 } from "@remix-run/server-runtime";
+import { Server } from "node:http";
 import { type Connect, type Plugin } from "vite";
 import { type GetPlatformProxyOptions, type PlatformProxy } from "wrangler";
 import { Server as WebSocketServer } from "ws";
@@ -95,7 +95,7 @@ export const cloudflareDevProxyVitePlugin = <Env, Cf extends CfProperties>({
           let request = fromNodeRequest(nodeReq);
           let response = (await handler(request, loadContext)) as unknown as {
             status: number;
-            webSocket?: import("@cloudflare/workers-types").WebSocket;
+            webSocket?: DoWebSocket;
           };
 
           if (response.status !== 101 || response.webSocket === undefined) {
