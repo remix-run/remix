@@ -14,7 +14,7 @@ These new exports are a bit of a sharp knife and are not recommended as your _pr
 - **Client Cache:** Cache server loader data in the client and avoid some server calls
 - **Migration:** Ease your migration from React Router -> Remix SPA -> Remix SSR (once Remix supports [SPA Mode][rfc-spa])
 
-Please use these new exports with caution! If you're not careful - it's easy to get your UI out of sync. Remix out of the box tries _very_ hard to ensure that this doesn't happen - but once you take control over your own client-side cache, and potentially prevent Remix from performing it's normal server `fetch` calls - then Remix can no longer guarantee your UI remains in sync.
+Please use these new exports with caution! If you're not careful - it's easy to get your UI out of sync. Remix out of the box tries _very_ hard to ensure that this doesn't happen - but once you take control over your own client-side cache, and potentially prevent Remix from performing its normal server `fetch` calls - then Remix can no longer guarantee your UI remains in sync.
 
 ## Skip the Hop
 
