@@ -146,6 +146,14 @@ Date: YYYY-MM-DD
 
 -->
 
+## 2.7.2
+
+Date: 2024-02-21
+
+### Patch Changes
+
+- Vite: Fix error when building projects with `.css?url` imports ([#8829](https://github.com/remix-run/remix/pull/8829))
+
 ## 2.7.1
 
 Date: 2024-02-20
