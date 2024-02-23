@@ -176,7 +176,7 @@ export async function action({
 
 Using the same input name and `formData.getAll()` covers most cases for wanting to submit structured data in your forms.
 
-If you still want to submit nested structures as well, you can use non-standard form-field naming conventions and the [`query-string`][query_string] package from npm:
+If you still want to submit nested structures as well, you can use non-standard form-field naming conventions and the [`qs`][qs] package from npm:
 
 ```tsx
 <>
@@ -191,7 +191,7 @@ If you still want to submit nested structures as well, you can use non-standard 
 And then in your action:
 
 ```tsx
-import queryString from "query-string";
+import queryString from "qs";
 
 // in your action:
 export async function action({
@@ -230,6 +230,6 @@ export async function action({
 Again, `formData.getAll()` is often all you need, we encourage you to give it a shot!
 
 [form_data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
-[query_string]: https://npm.im/query-string
+[qs]: https://www.npmjs.com/package/qs
 [ramda]: https://npm.im/ramda
 [watch_on_youtube]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix
