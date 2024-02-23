@@ -228,7 +228,7 @@ test("HMR for custom server with broadcast", async ({ page }) => {
         devReady: "broadcastDevReady",
       }),
     },
-    devScript: 'remix dev -c "node ./server.js"',
+    devScript: `${remix} dev -c "node ./server.js"`,
     appReadyPattern: /✅ app ready: /,
   }));
 });
@@ -242,7 +242,7 @@ test("HMR for custom server with log", async ({ page }) => {
         devReady: "logDevReady",
       }),
     },
-    devScript: 'remix dev -c "node ./server.js"',
+    devScript: `${remix} dev -c "node ./server.js"`,
     appReadyPattern: /✅ app ready: /,
   }));
 });
