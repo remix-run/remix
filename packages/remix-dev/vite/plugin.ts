@@ -200,7 +200,7 @@ export type ServerBundleBuildConfig = {
 type RemixPluginSsrBuildContext =
   | {
       isSsrBuild: false;
-      generateRemixManifests?: never;
+      getRemixServerManifest?: never;
       serverBundleBuildConfig?: never;
     }
   | {
