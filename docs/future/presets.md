@@ -1,8 +1,8 @@
 ---
-title: Presets (Unstable)
+title: Presets
 ---
 
-# Presets (Unstable)
+# Presets
 
 The [Remix Vite plugin][remix-vite] supports a `presets` option to ease integration with other tools and hosting providers.
 
@@ -13,38 +13,17 @@ Presets can only do two things:
 
 The config returned by each preset is merged in the order they were defined. Any config directly passed to the Remix Vite plugin will be merged last. This means that user config will always take precedence over any presets.
 
-## Using a preset
-
-Presets are designed to be published to npm and used within your Vite config. For example, Remix ships with a preset for Cloudflare:
-
-```ts filename=vite.config.ts lines=[3,10]
-import {
-  unstable_vitePlugin as remix,
-  unstable_cloudflarePreset as cloudflare,
-} from "@remix-run/dev";
-import { defineConfig } from "vite";
-
-export default defineConfig({
-  plugins: [
-    remix({
-      presets: [cloudflare()],
-    }),
-  ],
-  // etc.
-});
-```
-
 ## Creating a preset
 
-Presets conform to the following `Unstable_Preset` type:
+Presets conform to the following `Preset` type:
 
 ```ts
-type Unstable_Preset = {
+type Preset = {
   name: string;
 
-  remixConfig?: () =>
-    | RemixConfigPreset
-    | Promise<RemixConfigPreset>;
+  remixConfig?: (args: {
+    remixUserConfig: VitePluginConfig;
+  }) => RemixConfigPreset | Promise<RemixConfigPreset>;
 
   remixConfigResolved?: (args: {
     remixConfig: ResolvedVitePluginConfig;
@@ -57,7 +36,7 @@ type Unstable_Preset = {
 As a basic example, let's create a preset that configures a [server bundles function][server-bundles]:
 
 ```ts filename=my-cool-preset.ts
-import type { Unstable_Preset as Preset } from "@remix-run/dev";
+import type { Preset } from "@remix-run/dev";
 
 export function myCoolPreset(): Preset {
   return {
@@ -85,8 +64,8 @@ In our example preset, the `serverBundles` function could be overridden with a d
 
 ```ts filename=my-cool-preset.ts lines=[22-26]
 import type {
-  Unstable_Preset as Preset,
-  Unstable_ServerBundlesFunction as ServerBundlesFunction,
+  Preset,
+  ServerBundlesFunction,
 } from "@remix-run/dev";
 
 const serverBundles: ServerBundlesFunction = ({
@@ -115,6 +94,24 @@ export function myCoolPreset(): Preset {
 ```
 
 The `remixConfigResolved` hook should only be used in cases where it would be an error to merge or override your preset's config.
+
+## Using a preset
+
+Presets are designed to be published to npm and used within your Vite config.
+
+```ts filename=vite.config.ts lines=[3,8]
+import { vitePlugin as remix } from "@remix-run/dev";
+import { myCoolPreset } from "remix-preset-cool";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      presets: [myCoolPreset()],
+    }),
+  ],
+});
+```
 
 [remix-vite]: ./vite
 [server-bundles]: ./server-bundles

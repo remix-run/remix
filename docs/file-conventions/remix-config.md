@@ -14,7 +14,7 @@ module.exports = {
   future: {
     /* any enabled future flags */
   },
-  ignoredRouteFiles: ["**/.*"],
+  ignoredRouteFiles: ["**/*.css"],
   publicPath: "/build/",
   routes(defineRoutes) {
     return defineRoutes((route) => {
@@ -84,7 +84,7 @@ The `future` config lets you opt-into future breaking changes via [Future Flags]
 This is an array of globs (via [minimatch][minimatch]) that Remix will match to
 files while reading your `app/routes` directory. If a file matches, it will be
 ignored rather than treated like a route module. This is useful for ignoring
-dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
+CSS/test files you wish to colocate.
 
 ## publicPath
 
@@ -181,7 +181,7 @@ module.exports = {
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
   serverBuildPath: "build/index.js",
-  ignoredRouteFiles: ["**/.*"],
+  ignoredRouteFiles: ["**/*.css"],
   serverDependenciesToBundle: [
     /^rehype.*/,
     /^remark.*/,

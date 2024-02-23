@@ -36,10 +36,7 @@ const initialBuild = await reimportServer();
 const remixHandler =
   process.env.NODE_ENV === "development"
     ? await createDevRequestHandler(initialBuild)
-    : createRequestHandler({
-        build: initialBuild,
-        mode: initialBuild.mode,
-      });
+    : createRequestHandler({ build: initialBuild });
 
 const app = express();
 

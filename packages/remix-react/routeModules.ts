@@ -24,6 +24,7 @@ export interface RouteModule {
   clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: ErrorBoundaryComponent;
   HydrateFallback?: HydrateFallbackComponent;
+  Layout?: LayoutComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
@@ -71,6 +72,13 @@ export type ErrorBoundaryComponent = ComponentType;
  * when client loaders are present
  */
 export type HydrateFallbackComponent = ComponentType;
+
+/**
+ * Optional, root-only `<Route Layout>` component to wrap the root content in.
+ * Useful for defining the <html>/<head>/<body> document shell shared by the
+ * Component, HydrateFallback, and ErrorBoundary
+ */
+export type LayoutComponent = ComponentType;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of
