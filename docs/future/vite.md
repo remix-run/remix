@@ -230,6 +230,84 @@ export const onRequest = createPagesFunctionHandler({
 });
 ```
 
+#### Durable Objects
+
+<docs-warning>
+Currently, Remix Cloudflare Plugin does not support Cloudflare Pages Functions advanced mode. Therefore, to use a Durable Object you need a separate Cloudflare Workers that export the Durable Object class and adjust your `wrangler.toml` accordingly.
+</docs-warning>
+
+<docs-info>
+Cloudflare Workers supports WebSocket connection via Durable Object binding which is also supported by Remix Cloudflare Plugin via a WebSocket proxy.
+<docs-info>
+
+First, create a Cloudflare Workers script that exports a Durable Objects:
+
+```ts filename=durable-objects.ts
+export default {
+  async fetch() {},
+};
+
+export class MyDo {
+  #state;
+  #env;
+  constructor(state: DurableObjectState, env: Env) {
+    this.#state = state;
+    this.#env = env;
+  }
+
+  async fetch(request: Request) {}
+}
+```
+
+Next, create another wrangler.toml for that script:
+
+```toml filename=wrangler.durable-objects.toml
+name = "durable-objects"
+main = "durable-objects.ts"
+
+[[durable_objects.bindings]]
+name = "MyDo"
+class_name = "MyDo"
+script_name = "durable-objects"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["MyDo"]
+```
+
+And adjust your main wrangler.toml to bind the Durable Objects.
+
+```toml filename=wrangler.toml
+[[durable_objects.bindings]]
+name = "MyDo"
+class_name = "MyDo"
+script_name = "durable-objects"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["MyDo"]
+```
+
+Next, add a package.json script to run the Cloudflare Workers script:
+
+```json filename=package.json
+
+```
+
+To start a Vite dev server, start the Cloudflare Workers script first:
+
+```bash
+npm run dev:durable-objects
+```
+
+Next, start the dev server in separate terminal pane or window:
+
+```bash
+npm run dev
+```
+
+The `durable-objects.ts` script is a dependency of your main app. So, make sure it is already deployed before you deploy the main app.
+
 ## Splitting up client and server code
 
 Remix lets you write code that [runs on both the client and the server][server-vs-client].
