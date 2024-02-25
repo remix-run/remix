@@ -2,6 +2,8 @@ import * as React from "react";
 import type { Location } from "@remix-run/router";
 import { isRouteErrorResponse } from "react-router-dom";
 
+import { useRemixContext } from "./components";
+
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;
   error?: Error;
@@ -67,9 +69,11 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
   if (isRouteErrorResponse(error)) {
     return (
       <BoundaryShell title="Unhandled Thrown Response!">
-        <h1 style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-          {error.status} {error.statusText}
-        </h1>
+        <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
+          <h1 style={{ fontSize: "24px" }}>
+            {error.status} {error.statusText}
+          </h1>
+        </main>
       </BoundaryShell>
     );
   }
@@ -113,6 +117,27 @@ function BoundaryShell({
   title: string;
   children: React.ReactNode;
 }) {
+  let { routeModules } = useRemixContext();
+
+  let contents = (
+    <>
+      {children}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+              console.log(
+                "💿 Hey developer 👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
+              );
+            `,
+        }}
+      />
+    </>
+  );
+
+  if (routeModules.root?.Layout) {
+    return contents;
+  }
+
   return (
     <html lang="en">
       <head>
@@ -123,18 +148,7 @@ function BoundaryShell({
         />
         <title>{title}</title>
       </head>
-      <body>
-        {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              console.log(
-                "💿 Hey developer 👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
-              );
-            `,
-          }}
-        />
-      </body>
+      <body>{contents}</body>
     </html>
   );
 }
