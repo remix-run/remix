@@ -69,11 +69,9 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
   if (isRouteErrorResponse(error)) {
     return (
       <BoundaryShell title="Unhandled Thrown Response!">
-        <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-          <h1 style={{ fontSize: "24px" }}>
-            {error.status} {error.statusText}
-          </h1>
-        </main>
+        <h1 style={{ fontSize: "24px" }}>
+          {error.status} {error.statusText}
+        </h1>
       </BoundaryShell>
     );
   }
@@ -93,29 +91,27 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
 
   return (
     <BoundaryShell title="Application Error!">
-      <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-        <h1 style={{ fontSize: "24px" }}>Application Error</h1>
-        <pre
-          style={{
-            padding: "2rem",
-            background: "hsla(10, 50%, 50%, 0.1)",
-            color: "red",
-            overflow: "auto",
-          }}
-        >
-          {errorInstance.stack}
-        </pre>
-      </main>
+      <h1 style={{ fontSize: "24px" }}>Application Error</h1>
+      <pre
+        style={{
+          padding: "2rem",
+          background: "hsla(10, 50%, 50%, 0.1)",
+          color: "red",
+          overflow: "auto",
+        }}
+      >
+        {errorInstance.stack}
+      </pre>
     </BoundaryShell>
   );
 }
 
-function BoundaryShell({
+export function BoundaryShell({
   title,
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: React.ReactNode | React.ReactNode[];
 }) {
   let { routeModules } = useRemixContext();
 
@@ -148,7 +144,11 @@ function BoundaryShell({
         />
         <title>{title}</title>
       </head>
-      <body>{contents}</body>
+      <body>
+        <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
+          {contents}
+        </main>
+      </body>
     </html>
   );
 }
