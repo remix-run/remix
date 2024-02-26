@@ -108,8 +108,14 @@ declare global {
         return { loader: "ts", contents, resolveDir: config.appDirectory };
       });
 
+      let remixReactPath = require.resolve(
+        "@remix-run/react/dist/esm/browser.js",
+        { paths: [config.rootDirectory] }
+      );
+
       build.onLoad({ filter: /.*/, namespace: "file" }, async (args) => {
         if (
+          args.path !== remixReactPath &&
           !args.path.match(
             /@remix-run[/\\]react[/\\]dist[/\\]esm[/\\]browser.js$/
           ) &&
