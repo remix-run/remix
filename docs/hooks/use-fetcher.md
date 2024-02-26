@@ -70,7 +70,7 @@ The `formData` can be multiple types:
 
 - [`FormData`][form_data] - A `FormData` instance.
 - [`HTMLFormElement`][html_form_element] - A [`<form>`][form_element] DOM element.
-- `Object` - An object of key/value pairs that will be converted to a `FormData` instance. It can be any JSON data if the option `encType: "application/json"` is used. See [`useSubmit`][use-submit] for more details.
+- `Object` - An object of key/value pairs that will be converted to a `FormData` instance by default.  You can pass a more complex object and serialize it as JSON by specifying `encType: "application/json"`. See [`useSubmit`][use-submit] for more details.
 
 If the method is `GET`, then the route [`loader`][loader] is being called and with the `formData` serialized to the url as [`URLSearchParams`][url_search_params]. If `DELETE`, `PATCH`, `POST`, or `PUT`, then the route [`action`][action] is being called with `formData` as the body.
 
