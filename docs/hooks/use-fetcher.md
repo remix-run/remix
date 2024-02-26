@@ -76,7 +76,7 @@ If the method is `GET`, then the route [`loader`][loader] is being called and wi
 
 ```tsx
 // Submit a FormData instance (GET request)
-let formData = new FormData();
+const formData = new FormData();
 fetcher.submit(formData);
 
 // Submit the HTML form element
@@ -92,16 +92,16 @@ fetcher.submit(
 
 // Submit raw JSON
 fetcher.submit(
-  { 
-    deeply: { 
-      nested: { 
-        json: "values"
-      }
-    }
+  {
+    deeply: {
+      nested: {
+        json: "values",
+      },
+    },
   },
-  { 
-    method: "POST", 
-    encType: "application/json"
+  {
+    method: "POST",
+    encType: "application/json",
   }
 );
 ```
