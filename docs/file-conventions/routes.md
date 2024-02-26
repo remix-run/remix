@@ -333,7 +333,7 @@ app/
 │   │   └── scroll-experience.tsx
 │   ├── _landing.about/
 │   │   ├── employee-profile-card.tsx
-│   │   ├── get-employee-data.server.tsx
+│   │   ├── get-employee-data.server.ts
 │   │   ├── route.tsx
 │   │   └── team-photo.jpg
 │   ├── _landing/
@@ -344,7 +344,7 @@ app/
 │   │   ├── route.tsx
 │   │   └── stats.tsx
 │   ├── app.projects/
-│   │   ├── get-projects.server.tsx
+│   │   ├── get-projects.server.ts
 │   │   ├── project-buttons.tsx
 │   │   ├── project-card.tsx
 │   │   └── route.tsx
@@ -355,7 +355,7 @@ app/
 │   ├── app_.projects.$id.roadmap/
 │   │   ├── chart.tsx
 │   │   ├── route.tsx
-│   │   └── update-timeline.server.tsx
+│   │   └── update-timeline.server.ts
 │   └── contact-us.tsx
 └── root.tsx
 ```
