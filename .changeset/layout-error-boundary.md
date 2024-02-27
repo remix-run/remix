@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-account for presence of Layout in default error boundary
+Fix the default root `ErrorBoundary` component so it leverages the user-provided `Layout` component
