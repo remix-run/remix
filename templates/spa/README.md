@@ -1,10 +1,6 @@
 # templates/spa
 
-This template leverages [Remix SPA Mode](https://remix.run/docs/en/main/future/spa-mode) to build your app as a Single-Page Application using [Client Data](https://remix.run/docs/en/main/guides/client-data) for all of you data loads and mutations.
-
-⚠️ This is built on top of the Remix Vite template. Remix support for Vite is currently unstable and not recommended for production.
-
-📖 See the [Remix Vite docs][remix-vite-docs] for details on supported features.
+This template leverages [Remix SPA Mode](https://remix.run/docs/en/main/future/spa-mode) and the [Remix Vite Plugin](https://remix.run/docs/en/main/future/vite) to build your app as a Single-Page Application using [Client Data](https://remix.run/docs/en/main/guides/client-data) for all of your data loads and mutations.
 
 ## Setup
 
@@ -36,7 +32,9 @@ You can preview the build locally with [vite preview](https://vitejs.dev/guide/c
 npm run preview
 ```
 
-> ![WARNING] `vite preview` is not designed for use as a production server
+> [!IMPORTANT]
+>
+> `vite preview` is not designed for use as a production server
 
 ### Deployment
 
@@ -47,5 +45,3 @@ For a simple example, you could use [sirv-cli](https://www.npmjs.com/package/sir
 ```shellscript
 npx sirv-cli build/client/ --single
 ```
-
-[remix-vite-docs]: https://remix.run/docs/en/main/future/vite
