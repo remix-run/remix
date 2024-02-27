@@ -2,7 +2,7 @@ import * as React from "react";
 import type { Location } from "@remix-run/router";
 import { isRouteErrorResponse } from "react-router-dom";
 
-import { useRemixContext } from "./components";
+import { Scripts, useRemixContext } from "./components";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;
@@ -66,12 +66,25 @@ export class RemixErrorBoundary extends React.Component<
 export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
   console.error(error);
 
+  let heyDeveloper = (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+        console.log(
+          "💿 Hey developer 👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
+        );
+      `,
+      }}
+    />
+  );
+
   if (isRouteErrorResponse(error)) {
     return (
       <BoundaryShell title="Unhandled Thrown Response!">
         <h1 style={{ fontSize: "24px" }}>
           {error.status} {error.statusText}
         </h1>
+        {heyDeveloper}
       </BoundaryShell>
     );
   }
@@ -102,36 +115,24 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
       >
         {errorInstance.stack}
       </pre>
+      {heyDeveloper}
     </BoundaryShell>
   );
 }
 
 export function BoundaryShell({
   title,
+  renderScripts,
   children,
 }: {
   title: string;
+  renderScripts?: boolean;
   children: React.ReactNode | React.ReactNode[];
 }) {
   let { routeModules } = useRemixContext();
 
-  let contents = (
-    <>
-      {children}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-              console.log(
-                "💿 Hey developer 👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
-              );
-            `,
-        }}
-      />
-    </>
-  );
-
   if (routeModules.root?.Layout) {
-    return contents;
+    return children;
   }
 
   return (
@@ -146,7 +147,8 @@ export function BoundaryShell({
       </head>
       <body>
         <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-          {contents}
+          {children}
+          {renderScripts ? <Scripts /> : null}
         </main>
       </body>
     </html>
