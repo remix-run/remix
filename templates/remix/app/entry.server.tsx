@@ -3,6 +3,7 @@
  * You are free to delete this file if you'd like to, but if you ever want it revealed again, you can run `npx remix reveal` ✨
  * For more information, see https://remix.run/file-conventions/entry.server
  */
+
 import { PassThrough } from "node:stream";
 
 import type { AppLoadContext, EntryContext } from "@remix-run/node";
@@ -23,12 +24,27 @@ export default function handleRequest(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   loadContext: AppLoadContext
 ) {
-  const isBot = isbot(request.headers.get("user-agent") || "");
+  return isbot(request.headers.get("user-agent") || "")
+    ? handleBotRequest(
+        request,
+        responseStatusCode,
+        responseHeaders,
+        remixContext
+      )
+    : handleBrowserRequest(
+        request,
+        responseStatusCode,
+        responseHeaders,
+        remixContext
+      );
+}
 
-  let status = responseStatusCode;
-  const headers = new Headers(responseHeaders);
-  headers.set("Content-Type", "text/html; charset=utf-8");
-
+function handleBotRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
   return new Promise((resolve, reject) => {
     let shellRendered = false;
     const { pipe, abort } = renderToPipeableStream(
@@ -39,38 +55,76 @@ export default function handleRequest(
       />,
       {
         onAllReady() {
-          if (!isBot) return;
-
-          resolve(
-            new Response(
-              createReadableStreamFromReadable(pipe(new PassThrough())),
-              {
-                headers,
-                status,
-              }
-            )
-          );
-        },
-        onShellReady() {
           shellRendered = true;
+          const body = new PassThrough();
+          const stream = createReadableStreamFromReadable(body);
 
-          if (isBot) return;
+          responseHeaders.set("Content-Type", "text/html");
 
           resolve(
-            new Response(
-              createReadableStreamFromReadable(pipe(new PassThrough())),
-              {
-                headers,
-                status,
-              }
-            )
+            new Response(stream, {
+              headers: responseHeaders,
+              status: responseStatusCode,
+            })
           );
+
+          pipe(body);
         },
         onShellError(error: unknown) {
           reject(error);
         },
         onError(error: unknown) {
-          status = 500;
+          responseStatusCode = 500;
+          // Log streaming rendering errors from inside the shell.  Don't log
+          // errors encountered during initial shell rendering since they'll
+          // reject and get logged in handleDocumentRequest.
+          if (shellRendered) {
+            console.error(error);
+          }
+        },
+      }
+    );
+
+    setTimeout(abort, ABORT_DELAY);
+  });
+}
+
+function handleBrowserRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  return new Promise((resolve, reject) => {
+    let shellRendered = false;
+    const { pipe, abort } = renderToPipeableStream(
+      <RemixServer
+        context={remixContext}
+        url={request.url}
+        abortDelay={ABORT_DELAY}
+      />,
+      {
+        onShellReady() {
+          shellRendered = true;
+          const body = new PassThrough();
+          const stream = createReadableStreamFromReadable(body);
+
+          responseHeaders.set("Content-Type", "text/html");
+
+          resolve(
+            new Response(stream, {
+              headers: responseHeaders,
+              status: responseStatusCode,
+            })
+          );
+
+          pipe(body);
+        },
+        onShellError(error: unknown) {
+          reject(error);
+        },
+        onError(error: unknown) {
+          responseStatusCode = 500;
           // Log streaming rendering errors from inside the shell.  Don't log
           // errors encountered during initial shell rendering since they'll
           // reject and get logged in handleDocumentRequest.

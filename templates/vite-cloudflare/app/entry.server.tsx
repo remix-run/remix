@@ -19,35 +19,25 @@ export default async function handleRequest(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   loadContext: AppLoadContext
 ) {
-  let status = responseStatusCode;
-  const headers = new Headers(responseHeaders);
-  headers.set("Content-Type", "text/html; charset=utf-8");
-  headers.set("Transfer-Encoding", "chunked");
-
-  let shellRendered = false;
   const body = await renderToReadableStream(
     <RemixServer context={remixContext} url={request.url} />,
     {
       signal: request.signal,
       onError(error: unknown) {
-        status = 500;
-        // Log streaming rendering errors from inside the shell.  Don't log
-        // errors encountered during initial shell rendering since they'll
-        // reject and get logged in handleDocumentRequest.
-        if (shellRendered) {
-          console.error(error);
-        }
+        // Log streaming rendering errors from inside the shell
+        console.error(error);
+        responseStatusCode = 500;
       },
     }
   );
-  shellRendered = true;
 
   if (isbot(request.headers.get("user-agent") || "")) {
     await body.allReady;
   }
 
+  responseHeaders.set("Content-Type", "text/html");
   return new Response(body, {
-    headers,
-    status,
+    headers: responseHeaders,
+    status: responseStatusCode,
   });
 }
