@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.8.0-pre.1
+
+### Patch Changes
+
+- [REMOVE] Fix issue with hydrate fallback boundary shell usage ([#8906](https://github.com/remix-run/remix/pull/8906))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.0-pre.1`
+
 ## 2.8.0-pre.0
 
 ### Patch Changes
