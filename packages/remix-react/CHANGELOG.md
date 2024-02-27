@@ -1,5 +1,14 @@
 # `@remix-run/react`
 
+## 2.8.0-pre.0
+
+### Patch Changes
+
+- Fix the default root `ErrorBoundary` component so it leverages the user-provided `Layout` component ([#8859](https://github.com/remix-run/remix/pull/8859))
+- Fix the default root `HydrateFallback` component so it leverages any user-provided `Layout` component ([#8892](https://github.com/remix-run/remix/pull/8892))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.0-pre.0`
+
 ## 2.7.2
 
 ### Patch Changes
