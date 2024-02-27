@@ -951,6 +951,27 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           )
         );
 
+        let baseRollupOptions = {
+          // Silence Rollup "use client" warnings
+          // Adapted from https://github.com/vitejs/vite-plugin-react/pull/144
+          onwarn(warning, defaultHandler) {
+            if (
+              warning.code === "MODULE_LEVEL_DIRECTIVE" &&
+              warning.message.includes("use client")
+            ) {
+              return;
+            }
+            if (viteUserConfig.build?.rollupOptions?.onwarn) {
+              viteUserConfig.build.rollupOptions.onwarn(
+                warning,
+                defaultHandler
+              );
+            } else {
+              defaultHandler(warning);
+            }
+          },
+        } satisfies Vite.BuildOptions["rollupOptions"];
+
         return {
           __remixPluginContext: ctx,
           appType:
@@ -1010,6 +1031,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                         manifest: true,
                         outDir: getClientBuildDirectory(ctx.remixConfig),
                         rollupOptions: {
+                          ...baseRollupOptions,
                           preserveEntrySignatures: "exports-only",
                           input: [
                             ctx.entryClientFilePath,
@@ -1034,6 +1056,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                         manifest: true, // We need the manifest to detect SSR-only assets
                         outDir: getServerBuildDirectory(ctx),
                         rollupOptions: {
+                          ...baseRollupOptions,
                           preserveEntrySignatures: "exports-only",
                           input: serverBuildId,
                           output: {
