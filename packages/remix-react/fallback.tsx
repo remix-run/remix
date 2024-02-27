@@ -1,6 +1,5 @@
 import * as React from "react";
 
-import { Scripts } from "./components";
 import { BoundaryShell } from "./errorBoundaries";
 
 // If the user sets `clientLoader.hydrate=true` somewhere but does not
@@ -9,8 +8,7 @@ import { BoundaryShell } from "./errorBoundaries";
 // `clientLoader` functions
 export function RemixRootDefaultHydrateFallback() {
   return (
-    <BoundaryShell title="Loading...">
-      <Scripts />
+    <BoundaryShell title="Loading..." renderScripts>
       <script
         dangerouslySetInnerHTML={{
           __html: `
