@@ -101,7 +101,7 @@ Your job is to do whatever you need with the `data` and return a value that's a 
 
 We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
 
-```tsx filename=file-upload-handler.server.tsx
+```ts filename=file-upload-handler.server.ts
 import type { UploadHandler } from "@remix-run/node"; // or cloudflare/deno
 import { unstable_createFileUploadHandler } from "@remix-run/node"; // or cloudflare/deno
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";

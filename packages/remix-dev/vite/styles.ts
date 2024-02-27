@@ -37,7 +37,9 @@ const getStylesForFiles = async ({
 
   try {
     for (let file of files) {
-      let normalizedPath = path.resolve(file).replace(/\\/g, "/");
+      let normalizedPath = path
+        .resolve(rootDirectory, file)
+        .replace(/\\/g, "/");
       let node = await viteDevServer.moduleGraph.getModuleById(normalizedPath);
 
       // If the module is only present in the client module graph, the module
@@ -195,7 +197,7 @@ export const getStylesForUrl = async ({
   let routes = createRoutes(build.routes);
   let appPath = path.relative(process.cwd(), remixConfig.appDirectory);
   let documentRouteFiles =
-    matchRoutes(routes, url)?.map((match) =>
+    matchRoutes(routes, url, build.basename)?.map((match) =>
       path.join(appPath, remixConfig.routes[match.route.id].file)
     ) ?? [];
 

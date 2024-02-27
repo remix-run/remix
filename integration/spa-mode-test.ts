@@ -22,10 +22,10 @@ test.describe("SPA Mode", () => {
         let cwd = await createProject({
           "vite.config.ts": js`
           import { defineConfig } from "vite";
-          import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix({ unstable_ssr: false })],
+            plugins: [remix({ ssr: false })],
           });
         `,
           "app/routes/invalid-exports.tsx": String.raw`
@@ -53,10 +53,10 @@ test.describe("SPA Mode", () => {
         let cwd = await createProject({
           "vite.config.ts": js`
           import { defineConfig } from "vite";
-          import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix({ unstable_ssr: false })],
+            plugins: [remix({ ssr: false })],
           });
         `,
           "app/routes/invalid-exports.tsx": String.raw`
@@ -82,10 +82,10 @@ test.describe("SPA Mode", () => {
         let cwd = await createProject({
           "vite.config.ts": js`
           import { defineConfig } from "vite";
-          import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix({ unstable_ssr: false })],
+            plugins: [remix({ ssr: false })],
           });
         `,
           "app/entry.server.tsx": js`
@@ -154,10 +154,10 @@ test.describe("SPA Mode", () => {
         let cwd = await createProject({
           "vite.config.ts": js`
           import { defineConfig } from "vite";
-          import { unstable_vitePlugin as remix } from "@remix-run/dev";
+          import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix({ unstable_ssr: false })],
+            plugins: [remix({ ssr: false })],
           });
         `,
           "app/root.tsx": String.raw`
@@ -176,17 +176,17 @@ test.describe("SPA Mode", () => {
       });
     });
 
-    test("prepends DOCTYPE to <html> documents if not present", async () => {
+    test("prepends DOCTYPE to HTML in the default entry.server.tsx", async () => {
       let fixture = await createFixture({
         compiler: "vite",
         spaMode: true,
         files: {
           "vite.config.ts": js`
             import { defineConfig } from "vite";
-            import { unstable_vitePlugin as remix } from "@remix-run/dev";
+            import { vitePlugin as remix } from "@remix-run/dev";
 
             export default defineConfig({
-              plugins: [remix({ unstable_ssr: false })],
+              plugins: [remix({ ssr: false })],
             });
           `,
           "app/root.tsx": js`
@@ -222,17 +222,20 @@ test.describe("SPA Mode", () => {
       expect(await res.text()).toMatch(/^<!DOCTYPE html>\n<html lang="en">/);
     });
 
-    test("does not prepend DOCTYPE if user is not hydrating the document", async () => {
-      let fixture = await createFixture({
+    test("works when combined with a basename", async ({ page }) => {
+      fixture = await createFixture({
         compiler: "vite",
         spaMode: true,
         files: {
           "vite.config.ts": js`
             import { defineConfig } from "vite";
-            import { unstable_vitePlugin as remix } from "@remix-run/dev";
+            import { vitePlugin as remix } from "@remix-run/dev";
 
             export default defineConfig({
-              plugins: [remix({ unstable_ssr: false })],
+              plugins: [remix({
+                basename: "/base/",
+                ssr: false
+              })],
             });
           `,
           "app/root.tsx": js`
@@ -240,28 +243,277 @@ test.describe("SPA Mode", () => {
 
             export default function Root() {
               return (
-                <div>
-                  <h1 data-root>Root</h1>
-                  <Scripts />
-                </div>
+                <html lang="en">
+                  <head></head>
+                  <body>
+                    <h1 data-root>Root</h1>
+                    <Outlet />
+                    <Scripts />
+                  </body>
+                </html>
               );
             }
 
             export function HydrateFallback() {
               return (
-                <div>
-                  <h1>Loading SPA...</h1>
-                  <Scripts />
-                </div>
+                <html lang="en">
+                  <head></head>
+                  <body>
+                    <h1 data-loading>Loading SPA...</h1>
+                    <Scripts />
+                  </body>
+                </html>
+              );
+            }
+          `,
+          "app/routes/_index.tsx": js`
+            import * as React  from "react";
+            import { useLoaderData } from "@remix-run/react";
+
+            export async function clientLoader({ request }) {
+              return "Index Loader Data";
+            }
+
+            export default function Component() {
+              let data = useLoaderData();
+              const [mounted, setMounted] = React.useState(false);
+              React.useEffect(() => setMounted(true), []);
+
+              return (
+                <>
+                  <h2 data-route>Index</h2>
+                  <p data-loader-data>{data}</p>
+                  {!mounted ? <h3>Unmounted</h3> : <h3 data-mounted>Mounted</h3>}
+                </>
               );
             }
           `,
         },
       });
+      appFixture = await createAppFixture(fixture);
+
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/base/");
+      await page.waitForSelector("[data-mounted]");
+      expect(await page.locator("[data-route]").textContent()).toBe("Index");
+      expect(await page.locator("[data-loader-data]").textContent()).toBe(
+        "Index Loader Data"
+      );
+    });
+
+    test("can be used to hydrate only a div", async ({ page }) => {
+      fixture = await createFixture({
+        compiler: "vite",
+        spaMode: true,
+        files: {
+          "vite.config.ts": js`
+            import { defineConfig } from "vite";
+            import { vitePlugin as remix } from "@remix-run/dev";
+
+            export default defineConfig({
+              plugins: [remix({ ssr: false })],
+            });
+          `,
+          "app/index.html": String.raw`
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <title>Not from Remix!</title>
+              </head>
+              <body>
+                <div id="app"><!-- Remix SPA --></div>
+              </body>
+            </html>
+          `,
+          "app/entry.client.tsx": js`
+            import { RemixBrowser } from "@remix-run/react";
+            import { startTransition, StrictMode } from "react";
+            import { hydrateRoot } from "react-dom/client";
+
+            startTransition(() => {
+              hydrateRoot(
+                document.querySelector("#app"),
+                <StrictMode>
+                  <RemixBrowser />
+                </StrictMode>
+              );
+            });
+          `,
+          "app/entry.server.tsx": js`
+            import fs from "node:fs";
+            import path from "node:path";
+
+            import type { EntryContext } from "@remix-run/node";
+            import { RemixServer } from "@remix-run/react";
+            import { renderToString } from "react-dom/server";
+
+            export default function handleRequest(
+              request: Request,
+              responseStatusCode: number,
+              responseHeaders: Headers,
+              remixContext: EntryContext
+            ) {
+              const shellHtml = fs
+                .readFileSync(
+                  path.join(process.cwd(), "app/index.html")
+                )
+                .toString();
+
+              const appHtml = renderToString(
+                <RemixServer context={remixContext} url={request.url} />
+              );
+
+              const html = shellHtml.replace(
+                "<!-- Remix SPA -->",
+                appHtml
+              );
+
+              return new Response(html, {
+                headers: { "Content-Type": "text/html" },
+                status: responseStatusCode,
+              });
+            }
+          `,
+          "app/root.tsx": js`
+            import { Outlet, Scripts } from "@remix-run/react";
+
+            export default function Root() {
+              return (
+                <>
+                  <h1 data-root>Root</h1>
+                  <Outlet />
+                  <Scripts />
+                </>
+              );
+            }
+
+            export function HydrateFallback() {
+              return (
+                <>
+                  <h1 data-loading>Loading SPA...</h1>
+                  <Scripts />
+                </>
+              );
+            }
+          `,
+          "app/routes/_index.tsx": js`
+            import * as React  from "react";
+            import { useLoaderData } from "@remix-run/react";
+
+            export async function clientLoader({ request }) {
+              return "Index Loader Data";
+            }
+
+            export default function Component() {
+              let data = useLoaderData();
+              const [mounted, setMounted] = React.useState(false);
+              React.useEffect(() => setMounted(true), []);
+
+              return (
+                <>
+                  <h2 data-route>Index</h2>
+                  <p data-loader-data>{data}</p>
+                  {!mounted ? <h3>Unmounted</h3> : <h3 data-mounted>Mounted</h3>}
+                </>
+              );
+            }
+          `,
+        },
+      });
+      appFixture = await createAppFixture(fixture);
+
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      expect(await page.locator("title").textContent()).toBe("Not from Remix!");
+      await page.waitForSelector("[data-mounted]");
+      expect(await page.locator("[data-route]").textContent()).toBe("Index");
+      expect(await page.locator("[data-loader-data]").textContent()).toBe(
+        "Index Loader Data"
+      );
+    });
+
+    test("works for migration apps with only a root route and no loader", async ({
+      page,
+    }) => {
+      fixture = await createFixture({
+        compiler: "vite",
+        spaMode: true,
+        files: {
+          "vite.config.ts": js`
+            import { defineConfig } from "vite";
+            import { vitePlugin as remix } from "@remix-run/dev";
+
+            export default defineConfig({
+              plugins: [remix({
+                // We don't want to pick up the app/routes/_index.tsx file from
+                // the template and instead want to use only the src/root.tsx
+                // file below
+                appDirectory: "src",
+                ssr: false,
+              })],
+            });
+          `,
+          "src/root.tsx": js`
+            import {
+              Meta,
+              Links,
+              Outlet,
+              Routes,
+              Route,
+              Scripts,
+              ScrollRestoration,
+            } from "@remix-run/react";
+
+            export function Layout({ children }: { children: React.ReactNode }) {
+              return (
+                <html>
+                  <head>
+                    <Meta />
+                    <Links />
+                  </head>
+                  <body>
+                    {children}
+                    <ScrollRestoration />
+                    <Scripts />
+                  </body>
+                </html>
+              );
+            }
+
+            export default function Root() {
+              return (
+                <>
+                  <h1 data-root>Root</h1>
+                  <Routes>
+                    <Route path="/" element={<h2 data-index>Index</h2>} />
+                  </Routes>
+                </>
+              );
+            }
+
+            export function HydrateFallback() {
+              return <h1 data-loading>Loading SPA...</h1>;
+            }
+          `,
+        },
+      });
+      appFixture = await createAppFixture(fixture);
+
       let res = await fixture.requestDocument("/");
       let html = await res.text();
-      expect(html).toMatch(/^<div>/);
-      expect(html).not.toMatch(/<!DOCTYPE html>/);
+      expect(html).toMatch('<h1 data-loading="true">Loading SPA...</h1>');
+
+      let logs: string[] = [];
+      page.on("console", (msg) => logs.push(msg.text()));
+
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await page.waitForSelector("[data-root]");
+      expect(await page.locator("[data-root]").textContent()).toBe("Root");
+      expect(await page.locator("[data-index]").textContent()).toBe("Index");
+
+      // Hydrates without issues
+      expect(logs).toEqual([]);
     });
   });
 
@@ -273,11 +525,11 @@ test.describe("SPA Mode", () => {
         files: {
           "vite.config.ts": js`
             import { defineConfig } from "vite";
-            import { unstable_vitePlugin as remix } from "@remix-run/dev";
+            import { vitePlugin as remix } from "@remix-run/dev";
 
             export default defineConfig({
               build: { manifest: true },
-              plugins: [remix({ unstable_ssr: false })],
+              plugins: [remix({ ssr: false })],
             });
           `,
           "public/styles-root.css": css`

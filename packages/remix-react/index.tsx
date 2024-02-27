@@ -26,6 +26,8 @@ export {
   resolvePath,
   Form,
   Outlet,
+  Route,
+  Routes,
   useAsyncError,
   useAsyncValue,
   isRouteErrorResponse,

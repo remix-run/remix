@@ -3,9 +3,9 @@
 
 
 "@adobe/css-tools@^4.0.1":
-  version "4.3.1"
-  resolved "https://registry.npmjs.org/@adobe/css-tools/-/css-tools-4.3.1.tgz#abfccb8ca78075a2b6187345c26243c1a0842f28"
-  integrity sha512-/62yikz7NLScCGAAST5SHdnjaDJQBDq0M2muyRTpf2VQhw6StBg2ALiu73zSJQ4fMVLA+0uBhBHAle7Wg+2kSg==
+  version "4.3.3"
+  resolved "https://registry.npmjs.org/@adobe/css-tools/-/css-tools-4.3.3.tgz#90749bde8b89cd41764224f5aac29cd4138f75ff"
+  integrity sha512-rE0Pygv0sEZ4vBWHlAgJLGDU7Pm8xoO6p3wsEceb7GYAjScrOHpEo8KK/eVkAcnSM+slAEtXjA2JpdjLp4fJQQ==
 
 "@ampproject/remapping@^2.2.0":
   version "2.2.0"
@@ -1251,6 +1251,13 @@
     human-id "^1.0.2"
     prettier "^2.7.1"
 
+"@cloudflare/kv-asset-handler@0.3.1", "@cloudflare/kv-asset-handler@^0.3.0":
+  version "0.3.1"
+  resolved "https://registry.npmjs.org/@cloudflare/kv-asset-handler/-/kv-asset-handler-0.3.1.tgz#9b86167e58dbc419943c8d3ddcd8e2823f5db300"
+  integrity sha512-lKN2XCfKCmpKb86a1tl4GIwsJYDy9TGuwjhDELLmpKygQhw8X2xR4dusgpC5Tg7q1pB96Eb0rBo81kxSILQMwA==
+  dependencies:
+    mime "^3.0.0"
+
 "@cloudflare/kv-asset-handler@^0.1.3":
   version "0.1.3"
   resolved "https://registry.npmjs.org/@cloudflare/kv-asset-handler/-/kv-asset-handler-0.1.3.tgz"
@@ -1258,44 +1265,30 @@
   dependencies:
     mime "^2.5.2"
 
-"@cloudflare/kv-asset-handler@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.npmjs.org/@cloudflare/kv-asset-handler/-/kv-asset-handler-0.2.0.tgz#c9959bbd7a1c40bd7c674adae98aa8c8d0e5ca68"
-  integrity sha512-MVbXLbTcAotOPUj0pAMhVtJ+3/kFkwJqc5qNOleOZTv6QkZZABDMS21dSrSlVswEHwrpWC03e4fWytjqKvuE2A==
-  dependencies:
-    mime "^3.0.0"
+"@cloudflare/workerd-darwin-64@1.20240129.0":
+  version "1.20240129.0"
+  resolved "https://registry.npmjs.org/@cloudflare/workerd-darwin-64/-/workerd-darwin-64-1.20240129.0.tgz#b6db9c944fcb1a49b15be646383c937ffa175978"
+  integrity sha512-DfVVB5IsQLVcWPJwV019vY3nEtU88c2Qu2ST5SQxqcGivZ52imagLRK0RHCIP8PK4piSiq90qUC6ybppUsw8eg==
 
-"@cloudflare/kv-asset-handler@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.npmjs.org/@cloudflare/kv-asset-handler/-/kv-asset-handler-0.3.0.tgz#11f0af0749a400ddadcca16dcd6f4696d7036991"
-  integrity sha512-9CB/MKf/wdvbfkUdfrj+OkEwZ5b7rws0eogJ4293h+7b6KX5toPwym+VQKmILafNB9YiehqY0DlNrDcDhdWHSQ==
-  dependencies:
-    mime "^3.0.0"
+"@cloudflare/workerd-darwin-arm64@1.20240129.0":
+  version "1.20240129.0"
+  resolved "https://registry.npmjs.org/@cloudflare/workerd-darwin-arm64/-/workerd-darwin-arm64-1.20240129.0.tgz#1e217bae20c8407ed0225b3eb60b6b2c4ab1a5ed"
+  integrity sha512-t0q8ABkmumG1zRM/MZ/vIv/Ysx0vTAXnQAPy/JW5aeQi/tqrypXkO9/NhPc0jbF/g/hIPrWEqpDgEp3CB7Da7Q==
 
-"@cloudflare/workerd-darwin-64@1.20231218.0":
-  version "1.20231218.0"
-  resolved "https://registry.npmjs.org/@cloudflare/workerd-darwin-64/-/workerd-darwin-64-1.20231218.0.tgz#e887296a6bfa707b2e02dbf5168582cd3afb800c"
-  integrity sha512-547gOmTIVmRdDy7HNAGJUPELa+fSDm2Y0OCxqAtQOz0GLTDu1vX61xYmsb2rn91+v3xW6eMttEIpbYokKjtfJA==
+"@cloudflare/workerd-linux-64@1.20240129.0":
+  version "1.20240129.0"
+  resolved "https://registry.npmjs.org/@cloudflare/workerd-linux-64/-/workerd-linux-64-1.20240129.0.tgz#d0e46297c79982b47495cbfb73623d621aa49335"
+  integrity sha512-sFV1uobHgDI+6CKBS/ZshQvOvajgwl6BtiYaH4PSFSpvXTmRx+A9bcug+6BnD+V4WgwxTiEO2iR97E1XuwDAVw==
 
-"@cloudflare/workerd-darwin-arm64@1.20231218.0":
-  version "1.20231218.0"
-  resolved "https://registry.npmjs.org/@cloudflare/workerd-darwin-arm64/-/workerd-darwin-arm64-1.20231218.0.tgz#9346de61b74324b09e3ef83e1666ffc84f1c4559"
-  integrity sha512-b39qrU1bKolCfmKFDAnX4vXcqzISkEUVE/V8sMBsFzxrIpNAbcUHBZAQPYmS/OHIGB94KjOVokvDi7J6UNurPw==
+"@cloudflare/workerd-linux-arm64@1.20240129.0":
+  version "1.20240129.0"
+  resolved "https://registry.npmjs.org/@cloudflare/workerd-linux-arm64/-/workerd-linux-arm64-1.20240129.0.tgz#e5d02fafcad1536e0515ee5feb2e713e487b1f2a"
+  integrity sha512-O7q7htHaFRp8PgTqNJx1/fYc3+LnvAo6kWWB9a14C5OWak6AAZk42PNpKPx+DXTmGvI+8S1+futBGUeJ8NPDXg==
 
-"@cloudflare/workerd-linux-64@1.20231218.0":
-  version "1.20231218.0"
-  resolved "https://registry.npmjs.org/@cloudflare/workerd-linux-64/-/workerd-linux-64-1.20231218.0.tgz#7d21aaa0b4a97f9d7769fa6af2e484538f7e3713"
-  integrity sha512-dMUF1wA+0mybm6hHNOCgY/WMNMwomPPs4I7vvYCgwHSkch0Q2Wb7TnxQZSt8d1PK/myibaBwadrlIxpjxmpz3w==
-
-"@cloudflare/workerd-linux-arm64@1.20231218.0":
-  version "1.20231218.0"
-  resolved "https://registry.npmjs.org/@cloudflare/workerd-linux-arm64/-/workerd-linux-arm64-1.20231218.0.tgz#e8280275379aca868886db7d2491517be3f473f4"
-  integrity sha512-2s5uc8IHt0QmWyKxAr1Fy+4b8Xy0b/oUtlPnm5MrKi2gDRlZzR7JvxENPJCpCnYENydS8lzvkMiAFECPBccmyQ==
-
-"@cloudflare/workerd-windows-64@1.20231218.0":
-  version "1.20231218.0"
-  resolved "https://registry.npmjs.org/@cloudflare/workerd-windows-64/-/workerd-windows-64-1.20231218.0.tgz#85fc18f18f7c6593b427c58bf58224850f706d20"
-  integrity sha512-oN5hz6TXUDB5YKUN5N3QWAv6cYz9JjTZ9g16HVyoegVFEL6/zXU3tV19MBX2IvlE11ab/mRogEv9KXVIrHfKmA==
+"@cloudflare/workerd-windows-64@1.20240129.0":
+  version "1.20240129.0"
+  resolved "https://registry.npmjs.org/@cloudflare/workerd-windows-64/-/workerd-windows-64-1.20240129.0.tgz#99f456b636413e66d860deb2b803d04cc5b47d75"
+  integrity sha512-YqGno0XSqqqkDmNoGEX6M8kJlI2lEfWntbTPVtHaZlaXVR9sWfoD7TEno0NKC95cXFz+ioyFLbgbOdnfWwmVAA==
 
 "@cloudflare/workers-types@^4.20230518.0":
   version "4.20230628.0"
@@ -2489,10 +2482,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/router@1.15.0":
-  version "1.15.0"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.15.0.tgz#461a952c2872dd82c8b2e9b74c4dfaff569123e2"
-  integrity sha512-HOil5aFtme37dVQTB6M34G95kPM3MMuqSmIRVCC52eKV+Y/tGSqw9P3rWhlAx6A+mz+MoX+XxsGsNJbaI5qCgQ==
+"@remix-run/router@1.15.1":
+  version "1.15.1"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.15.1.tgz#221fd31a65186b9bc027b74573485fb3226dff7f"
+  integrity sha512-zcU0gM3z+3iqj8UX45AmWY810l3oUmXM7uH4dt5xtzvMhRtYVhKGOmgOd1877dOPPepfCjUv57w+syamWIYe7w==
 
 "@remix-run/web-blob@^3.1.0":
   version "3.1.0"
@@ -6520,9 +6513,9 @@ flatted@^3.1.0:
   integrity sha512-JaTY/wtrcSyvXJl4IMFHPKyFur1sE9AUqc0QnhOaJ0CxHtAoIV8pYDzeEfAaNEtGkOfq4gr3LBFmdXW5mOQFnA==
 
 follow-redirects@^1.14.9:
-  version "1.15.3"
-  resolved "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.15.3.tgz#fe2f3ef2690afce7e82ed0b44db08165b207123a"
-  integrity sha512-1VzOtuEM8pC9SFU1E+8KfTjZyMztRsgEfwQl44z8A25uy13jSzTj6dyK2Df52iV0vgHCfBwLhDWevLn95w5v6Q==
+  version "1.15.5"
+  resolved "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.15.5.tgz#54d4d6d062c0fa7d9d17feb008461550e3ba8020"
+  integrity sha512-vSFWUON1B+yAw1VN4xMfxgn5fTUiaOzAJCKBwIIgT/+7CuGy9+r+5gITvP62j3RmaD5Ph65UaERdOSRGUzZtgw==
 
 for-each@^0.3.3:
   version "0.3.3"
@@ -7353,14 +7346,14 @@ interpret@^1.0.0:
   integrity sha512-agE4QfB2Lkp9uICn7BAqoscw4SZP9kTE2hxiFI3jBPmXJfdqiahTbUuKGsMoN2GtqL9AxhYioAcVvgsb1HvRbA==
 
 ip@^1.1.8:
-  version "1.1.8"
-  resolved "https://registry.npmjs.org/ip/-/ip-1.1.8.tgz#ae05948f6b075435ed3307acce04629da8cdbf48"
-  integrity sha512-PuExPYUiu6qMBQb4l06ecm6T6ujzhmh+MeJcW9wa89PoAz5pvd4zPgN5WJV104mb6S2T1AwNIAaB70JNrLQWhg==
+  version "1.1.9"
+  resolved "https://registry.npmjs.org/ip/-/ip-1.1.9.tgz#8dfbcc99a754d07f425310b86a99546b1151e396"
+  integrity sha512-cyRxvOEpNHNtchU3Ln9KC/auJgup87llfQpQ+t5ghoC/UhL16SWzbueiCsdTnWmqAWl7LadfuwhlqmtOaqMHdQ==
 
 ip@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.npmjs.org/ip/-/ip-2.0.0.tgz"
-  integrity sha512-WKa+XuLG1A1R0UWhl2+1XQSi+fZWMsYKffMZTTYsiZaUD8k2yDAj5atimTUD2TZkyCkNEeYE5NhFZmupOGtjYQ==
+  version "2.0.1"
+  resolved "https://registry.npmjs.org/ip/-/ip-2.0.1.tgz#e8f3595d33a3ea66490204234b77636965307105"
+  integrity sha512-lJUL9imLTNi1ZfXT+DU6rBBdbiKGBuay9B6xGSPVjUeQwaH1RIGqef8RZkUtHioLmSNpPR5M4HVKJGm1j8FWVQ==
 
 ipaddr.js@1.9.1:
   version "1.9.1"
@@ -9924,10 +9917,10 @@ min-indent@^1.0.0:
   resolved "https://registry.npmjs.org/min-indent/-/min-indent-1.0.1.tgz"
   integrity sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==
 
-miniflare@3.20231218.3:
-  version "3.20231218.3"
-  resolved "https://registry.npmjs.org/miniflare/-/miniflare-3.20231218.3.tgz#31aa7f9165970ae53d3048eeb24ffb13ee84cf1e"
-  integrity sha512-OrPBYWO0WnFv6DrxZ7hF8f5agZ4+xo/2qSLE0wwCJSqlFhr91dfSJautxfCOBD896nAA7Jqr5LBPEnqq3/k/JQ==
+miniflare@3.20240129.2:
+  version "3.20240129.2"
+  resolved "https://registry.npmjs.org/miniflare/-/miniflare-3.20240129.2.tgz#9fdfe5f4f2ade629996f2f7788a1500f765bcf67"
+  integrity sha512-BPUg8HsPmWQlRFUeiQk274i8M9L0gOvzbkjryuTvCX+M53EwBpP0gM2wyrRr/HokQoJcxWGh3InBu6L8+0bbPw==
   dependencies:
     "@cspotcode/source-map-support" "0.8.1"
     acorn "^8.8.0"
@@ -9937,7 +9930,7 @@ miniflare@3.20231218.3:
     glob-to-regexp "^0.4.1"
     stoppable "^1.1.0"
     undici "^5.28.2"
-    workerd "1.20231218.0"
+    workerd "1.20240129.0"
     ws "^8.11.0"
     youch "^3.2.2"
     zod "^3.20.6"
@@ -10158,7 +10151,7 @@ mz@^2.7.0:
     object-assign "^4.0.1"
     thenify-all "^1.0.0"
 
-nanoid@^3.3.3, nanoid@^3.3.6:
+nanoid@^3.3.3, nanoid@^3.3.7:
   version "3.3.7"
   resolved "https://registry.npmjs.org/nanoid/-/nanoid-3.3.7.tgz#d0c301a691bc8d54efa0a2226ccf3fe2fd656bd8"
   integrity sha512-eSRppjcPIatRIMC1U6UngP8XFcz8MQWGQdt1MTBQ7NaAmvXDfvNxbvWV3x2y6CdEUciCSsDHDQZbhYaB8QEo2g==
@@ -10955,12 +10948,12 @@ postcss-value-parser@^4.0.0, postcss-value-parser@^4.1.0, postcss-value-parser@^
   resolved "https://registry.npmjs.org/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz"
   integrity sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==
 
-postcss@^8.0.9, postcss@^8.3.6, postcss@^8.4.19, postcss@^8.4.27, postcss@^8.4.31:
-  version "8.4.31"
-  resolved "https://registry.npmjs.org/postcss/-/postcss-8.4.31.tgz#92b451050a9f914da6755af352bdc0192508656d"
-  integrity sha512-PS08Iboia9mts/2ygV3eLpY5ghnUcfLV/EXTOW1E2qYxJKGGBUtNjN76FYHnMs36RmARn41bC0AZmn+rR0OVpQ==
+postcss@^8.0.9, postcss@^8.3.6, postcss@^8.4.19, postcss@^8.4.27, postcss@^8.4.35:
+  version "8.4.35"
+  resolved "https://registry.npmjs.org/postcss/-/postcss-8.4.35.tgz#60997775689ce09011edf083a549cea44aabe2f7"
+  integrity sha512-u5U8qYpBCpN13BsiEB0CbR1Hhh4Gc0zLFuedrHJKMctHCHAGrMdG0PRM/KErzAL3CU6/eckEtmHNB3x6e3c0vA==
   dependencies:
-    nanoid "^3.3.6"
+    nanoid "^3.3.7"
     picocolors "^1.0.0"
     source-map-js "^1.0.2"
 
@@ -11307,20 +11300,20 @@ react-refresh@^0.14.0:
   resolved "https://registry.npmjs.org/react-refresh/-/react-refresh-0.14.0.tgz"
   integrity sha512-wViHqhAd8OHeLS/IRMJjTSDHF3U9eWi62F/MledQGPdJGDhodXJ9PBLNGr6WWL7qlH12Mt3TyTpbS+hGXMjCzQ==
 
-react-router-dom@6.22.0:
-  version "6.22.0"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.22.0.tgz#177c8bd27146decbb991eafb5df159f7a9f70035"
-  integrity sha512-z2w+M4tH5wlcLmH3BMMOMdrtrJ9T3oJJNsAlBJbwk+8Syxd5WFJ7J5dxMEW0/GEXD1BBis4uXRrNIz3mORr0ag==
+react-router-dom@6.22.1:
+  version "6.22.1"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.22.1.tgz#cfa109d4b6b0a4d00bac179bc0ad2a6469455282"
+  integrity sha512-iwMyyyrbL7zkKY7MRjOVRy+TMnS/OPusaFVxM2P11x9dzSzGmLsebkCvYirGq0DWB9K9hOspHYYtDz33gE5Duw==
   dependencies:
-    "@remix-run/router" "1.15.0"
-    react-router "6.22.0"
+    "@remix-run/router" "1.15.1"
+    react-router "6.22.1"
 
-react-router@6.22.0:
-  version "6.22.0"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-6.22.0.tgz#a22b44851a79dafc6b944cb418db3e80622b9be1"
-  integrity sha512-q2yemJeg6gw/YixRlRnVx6IRJWZD6fonnfZhN1JIOhV2iJCPeRNSH3V1ISwHf+JWcESzLC3BOLD1T07tmO5dmg==
+react-router@6.22.1:
+  version "6.22.1"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-6.22.1.tgz#a5ff849bfe709438f7e139421bb28138209662c7"
+  integrity sha512-0pdoRGwLtemnJqn1K0XHUbnKiX0S4X8CgvVVmHGOWmofESj31msHo/1YiqcJWK7Wxfq2a4uvvtS01KAQyWK/CQ==
   dependencies:
-    "@remix-run/router" "1.15.0"
+    "@remix-run/router" "1.15.1"
 
 react@^18.2.0:
   version "18.2.0"
@@ -11968,9 +11961,9 @@ set-getter@^0.1.0:
     to-object-path "^0.3.0"
 
 set-value@^3.0.0:
-  version "3.0.2"
-  resolved "https://registry.npmjs.org/set-value/-/set-value-3.0.2.tgz"
-  integrity sha512-npjkVoz+ank0zjlV9F47Fdbjfj/PfXyVhZvGALWsyIYU/qrMzpi6avjKW3/7KeSU2Df3I46BrN1xOI1+6vW0hA==
+  version "3.0.3"
+  resolved "https://registry.npmjs.org/set-value/-/set-value-3.0.3.tgz#178e190d29cec6c086167222177b2fcb92f7ad56"
+  integrity sha512-Xsn/XSatoVOGBbp5hs3UylFDs5Bi9i+ArpVJKdHPniZHoEgRniXTqHWrWrGQ0PbEClVT6WtfnBwR8CAHC9sveg==
   dependencies:
     is-plain-object "^2.0.4"
 
@@ -13051,9 +13044,9 @@ unbox-primitive@^1.0.2:
     which-boxed-primitive "^1.0.2"
 
 undici@^5.28.2:
-  version "5.28.2"
-  resolved "https://registry.npmjs.org/undici/-/undici-5.28.2.tgz#fea200eac65fc7ecaff80a023d1a0543423b4c91"
-  integrity sha512-wh1pHJHnUeQV5Xa8/kyQhO7WFa8M34l026L5P/+2TYiakvGy5Rdc8jWZVyG7ieht/0WgJLEd3kcU5gKx+6GC8w==
+  version "5.28.3"
+  resolved "https://registry.npmjs.org/undici/-/undici-5.28.3.tgz#a731e0eff2c3fcfd41c1169a869062be222d1e5b"
+  integrity sha512-3ItfzbrhDlINjaP0duwnNsKpDQk3acHI3gVJ1z4fmwMK31k5G9OVIAMLSIaP6w4FaGkaAkN6zaQO9LUvZ1t7VA==
   dependencies:
     "@fastify/busboy" "^2.0.0"
 
@@ -13479,6 +13472,17 @@ vite-tsconfig-paths@^4.2.2:
     globrex "^0.1.2"
     tsconfck "^2.1.0"
 
+vite@5.1.3:
+  version "5.1.3"
+  resolved "https://registry.npmjs.org/vite/-/vite-5.1.3.tgz#dd072653a80225702265550a4700561740dfde55"
+  integrity sha512-UfmUD36DKkqhi/F75RrxvPpry+9+tTkrXfMNZD+SboZqBCMsxKtO52XeGzzuh7ioz+Eo/SYDBbdb0Z7vgcDJew==
+  dependencies:
+    esbuild "^0.19.3"
+    postcss "^8.4.35"
+    rollup "^4.2.0"
+  optionalDependencies:
+    fsevents "~2.3.3"
+
 "vite@^3.0.0 || ^4.0.0", vite@^4.1.4:
   version "4.4.10"
   resolved "https://registry.npmjs.org/vite/-/vite-4.4.10.tgz#3794639cc433f7cb33ad286930bf0378c86261c8"
@@ -13489,17 +13493,6 @@ vite-tsconfig-paths@^4.2.2:
     rollup "^3.27.1"
   optionalDependencies:
     fsevents "~2.3.2"
-
-vite@^5.0.0:
-  version "5.0.0"
-  resolved "https://registry.npmjs.org/vite/-/vite-5.0.0.tgz#3bfb65acda2a97127e4fa240156664a1f234ce08"
-  integrity sha512-ESJVM59mdyGpsiNAeHQOR/0fqNoOyWPYesFto8FFZugfmhdHx8Fzd8sF3Q/xkVhZsyOxHfdM7ieiVAorI9RjFw==
-  dependencies:
-    esbuild "^0.19.3"
-    postcss "^8.4.31"
-    rollup "^4.2.0"
-  optionalDependencies:
-    fsevents "~2.3.3"
 
 w3c-xmlserializer@^4.0.0:
   version "4.0.0"
@@ -13670,29 +13663,29 @@ word-wrap@^1.2.3:
   resolved "https://registry.npmjs.org/word-wrap/-/word-wrap-1.2.5.tgz#d2c45c6dd4fbce621a66f136cbe328afd0410b34"
   integrity sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==
 
-workerd@1.20231218.0:
-  version "1.20231218.0"
-  resolved "https://registry.npmjs.org/workerd/-/workerd-1.20231218.0.tgz#a00403af346f654c1d73f4805c07b9ef3a6d2142"
-  integrity sha512-AGIsDvqCrcwhoA9kb1hxOhVAe53/xJeaGZxL4FbYI9FvO17DZwrnqGq+6eqItJ6Cfw1ZLmf3BM+QdMWaL2bFWQ==
+workerd@1.20240129.0:
+  version "1.20240129.0"
+  resolved "https://registry.npmjs.org/workerd/-/workerd-1.20240129.0.tgz#123a84331ec18a1af7172fcd7b764070cfb951a9"
+  integrity sha512-t4pnsmjjk/u+GdVDgH2M1AFmJaBUABshYK/vT/HNrAXsHSwN6VR8Yqw0JQ845OokO34VLkuUtYQYyxHHKpdtsw==
   optionalDependencies:
-    "@cloudflare/workerd-darwin-64" "1.20231218.0"
-    "@cloudflare/workerd-darwin-arm64" "1.20231218.0"
-    "@cloudflare/workerd-linux-64" "1.20231218.0"
-    "@cloudflare/workerd-linux-arm64" "1.20231218.0"
-    "@cloudflare/workerd-windows-64" "1.20231218.0"
+    "@cloudflare/workerd-darwin-64" "1.20240129.0"
+    "@cloudflare/workerd-darwin-arm64" "1.20240129.0"
+    "@cloudflare/workerd-linux-64" "1.20240129.0"
+    "@cloudflare/workerd-linux-arm64" "1.20240129.0"
+    "@cloudflare/workerd-windows-64" "1.20240129.0"
 
-wrangler@^3.24.0:
-  version "3.24.0"
-  resolved "https://registry.npmjs.org/wrangler/-/wrangler-3.24.0.tgz#a8ca60eaec280fecee7293189604a8b75150fa9a"
-  integrity sha512-jEnqpY+9/J4VPjtuEnS2lhCPXkvbDClnMalSWaRxSx+1tiTWMJhMjtK9oyXLdO+ZUf9Q4LvFTYSPm8O1uwmnxQ==
+wrangler@^3.28.2:
+  version "3.28.2"
+  resolved "https://registry.npmjs.org/wrangler/-/wrangler-3.28.2.tgz#32a16dc150e31e9eb3f9f8076a8a71db9c8202e4"
+  integrity sha512-hlD4f2avBZuR1+qo9Um6D1prdWrSRtGTo9h6o/AKce+bHQEJWoJgJKHeLmrpZlLtHg/gGR1Xa1xzrexhuIzeJw==
   dependencies:
-    "@cloudflare/kv-asset-handler" "^0.2.0"
+    "@cloudflare/kv-asset-handler" "0.3.1"
     "@esbuild-plugins/node-globals-polyfill" "^0.2.3"
     "@esbuild-plugins/node-modules-polyfill" "^0.2.2"
     blake3-wasm "^2.1.5"
     chokidar "^3.5.3"
     esbuild "0.17.19"
-    miniflare "3.20231218.3"
+    miniflare "3.20240129.2"
     nanoid "^3.3.3"
     path-to-regexp "^6.2.0"
     resolve "^1.22.8"
