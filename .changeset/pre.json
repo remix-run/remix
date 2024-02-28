@@ -21,6 +21,7 @@
     "@remix-run/testing": "2.7.2"
   },
   "changesets": [
+    "cyan-seahorses-lie",
     "few-rice-join",
     "layout-error-boundary",
     "layout-hydrate-fallback",
