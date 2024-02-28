@@ -30,7 +30,7 @@ let nonReExportedKeys = new Set([
 // `export * from react-router-dom`.  Most of the differences are Remix-specific
 // type safety, plus Link/NavLink have wrappers to support prefetching
 let modifiedExports = new Set([
-  "Await",
+  "Await", // types
   "Link", // remix-specific prefetching loigc
   "NavLink", // remix-specific prefetching loigc
   "ScrollRestoration", // remix-specific SSR restoration logic
