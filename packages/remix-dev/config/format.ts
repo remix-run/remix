@@ -5,10 +5,6 @@ export enum RoutesFormat {
   jsx = "jsx",
 }
 
-export function isRoutesFormat(format: any): format is RoutesFormat {
-  return format === RoutesFormat.json || format === RoutesFormat.jsx;
-}
-
 export function formatRoutes(
   routeManifest: RouteManifest,
   format: RoutesFormat

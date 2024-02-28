@@ -98,9 +98,7 @@ export async function routes(
     // v3 TODO: Remove this and require the presence of a Vite config
     (await readConfig(remixRoot)).routes;
 
-  let formatArg = flags.json ? "json" : "jsx";
-  let format = isRoutesFormat(formatArg) ? formatArg : RoutesFormat.jsx;
-
+  let format = flags.json ? RoutesFormat.json : RoutesFormat.jsx;
   console.log(formatRoutes(routes, format));
 }
 
