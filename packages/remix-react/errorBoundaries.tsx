@@ -2,6 +2,8 @@ import * as React from "react";
 import type { Location } from "@remix-run/router";
 import { isRouteErrorResponse } from "react-router-dom";
 
+import { Scripts, useRemixContext } from "./components";
+
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;
   error?: Error;
@@ -64,12 +66,25 @@ export class RemixErrorBoundary extends React.Component<
 export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
   console.error(error);
 
+  let heyDeveloper = (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+        console.log(
+          "💿 Hey developer 👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
+        );
+      `,
+      }}
+    />
+  );
+
   if (isRouteErrorResponse(error)) {
     return (
       <BoundaryShell title="Unhandled Thrown Response!">
-        <h1 style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
+        <h1 style={{ fontSize: "24px" }}>
           {error.status} {error.statusText}
         </h1>
+        {heyDeveloper}
       </BoundaryShell>
     );
   }
@@ -89,30 +104,37 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
 
   return (
     <BoundaryShell title="Application Error!">
-      <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-        <h1 style={{ fontSize: "24px" }}>Application Error</h1>
-        <pre
-          style={{
-            padding: "2rem",
-            background: "hsla(10, 50%, 50%, 0.1)",
-            color: "red",
-            overflow: "auto",
-          }}
-        >
-          {errorInstance.stack}
-        </pre>
-      </main>
+      <h1 style={{ fontSize: "24px" }}>Application Error</h1>
+      <pre
+        style={{
+          padding: "2rem",
+          background: "hsla(10, 50%, 50%, 0.1)",
+          color: "red",
+          overflow: "auto",
+        }}
+      >
+        {errorInstance.stack}
+      </pre>
+      {heyDeveloper}
     </BoundaryShell>
   );
 }
 
-function BoundaryShell({
+export function BoundaryShell({
   title,
+  renderScripts,
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  renderScripts?: boolean;
+  children: React.ReactNode | React.ReactNode[];
 }) {
+  let { routeModules } = useRemixContext();
+
+  if (routeModules.root?.Layout) {
+    return children;
+  }
+
   return (
     <html lang="en">
       <head>
@@ -124,16 +146,10 @@ function BoundaryShell({
         <title>{title}</title>
       </head>
       <body>
-        {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              console.log(
-                "💿 Hey developer 👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
-              );
-            `,
-          }}
-        />
+        <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
+          {children}
+          {renderScripts ? <Scripts /> : null}
+        </main>
       </body>
     </html>
   );
