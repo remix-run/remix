@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.8.0-pre.2
+
+### Patch Changes
+
+- Ensure `@remix-run/react` re-exports everything from `react-router-dom` for SPA mode ([#8929](https://github.com/remix-run/remix/pull/8929))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.0-pre.2`
+
 ## 2.8.0-pre.1
 
 ### Patch Changes
