@@ -157,7 +157,7 @@ Date: YYYY-MM-DD
 
 ## v2.8.0
 
-Date: 2024-02-27
+Date: 2024-02-28
 
 ### Minor Changes
 

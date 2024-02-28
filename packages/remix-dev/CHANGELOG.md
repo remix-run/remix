@@ -8,7 +8,7 @@
 
 ### Patch Changes
 
-- fix: mark Layout as browser safe route export ([#8842](https://github.com/remix-run/remix/pull/8842))
+- Mark `Layout` as browser safe route export in `esbuild` compiler ([#8842](https://github.com/remix-run/remix/pull/8842))
 - Vite: Silence build warnings when dependencies include "use client" directives ([#8897](https://github.com/remix-run/remix/pull/8897))
 - Vite: Fix `serverBundles` issue where multiple browser manifests are generated ([#8864](https://github.com/remix-run/remix/pull/8864))
 - Support custom Vite `build.assetsDir` option ([#8843](https://github.com/remix-run/remix/pull/8843))

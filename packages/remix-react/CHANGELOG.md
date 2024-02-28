@@ -4,8 +4,6 @@
 
 ### Patch Changes
 
-- \[REMOVE] Bump router ([#8936](https://github.com/remix-run/remix/pull/8936))
-- \[REMOVE] Fix issue with hydrate fallback boundary shell usage ([#8906](https://github.com/remix-run/remix/pull/8906))
 - Fix the default root `ErrorBoundary` component so it leverages the user-provided `Layout` component ([#8859](https://github.com/remix-run/remix/pull/8859))
 - Fix the default root `HydrateFallback` component so it leverages any user-provided `Layout` component ([#8892](https://github.com/remix-run/remix/pull/8892))
 - Ensure `@remix-run/react` re-exports everything from `react-router-dom` for SPA mode ([#8929](https://github.com/remix-run/remix/pull/8929))
@@ -35,9 +33,7 @@
 
 ### Patch Changes
 
-- \[REMOVE] Bump router ([#8771](https://github.com/remix-run/remix/pull/8771))
 - Fix a bug with SPA mode when the root route had no children ([#8747](https://github.com/remix-run/remix/pull/8747))
-- \[REMOVE] Bump RR version ([#8774](https://github.com/remix-run/remix/pull/8774))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.7.0`
 
