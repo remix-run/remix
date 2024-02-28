@@ -1,30 +1,6 @@
 # `@remix-run/dev`
 
-## 2.8.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.8.0-pre.3`
-  - `@remix-run/server-runtime@2.8.0-pre.3`
-
-## 2.8.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.8.0-pre.2`
-  - `@remix-run/server-runtime@2.8.0-pre.2`
-
-## 2.8.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.8.0-pre.1`
-  - `@remix-run/server-runtime@2.8.0-pre.1`
-
-## 2.8.0-pre.0
+## 2.8.0
 
 ### Minor Changes
 
@@ -37,9 +13,8 @@
 - Vite: Fix `serverBundles` issue where multiple browser manifests are generated ([#8864](https://github.com/remix-run/remix/pull/8864))
 - Support custom Vite `build.assetsDir` option ([#8843](https://github.com/remix-run/remix/pull/8843))
 - Updated dependencies:
-  - `@remix-run/node@2.8.0-pre.0`
-  - `@remix-run/serve@2.8.0-pre.0`
-  - `@remix-run/server-runtime@2.8.0-pre.0`
+  - `@remix-run/node@2.8.0`
+  - `@remix-run/server-runtime@2.8.0`
 
 ## 2.7.2
 
