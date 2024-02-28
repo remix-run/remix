@@ -3,7 +3,6 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "postinstall": "npm run typegen",
     "dev": "remix vite:dev",
     "build": "remix vite:build",
     "start": "wrangler pages dev ./build/client",
