@@ -1,18 +1,15 @@
 import type { RouteManifest } from "./routes";
 
-export enum RoutesFormat {
-  json = "json",
-  jsx = "jsx",
-}
+export type RoutesFormat = "json" | "jsx";
 
 export function formatRoutes(
   routeManifest: RouteManifest,
   format: RoutesFormat
 ) {
   switch (format) {
-    case RoutesFormat.json:
+    case "json":
       return formatRoutesAsJson(routeManifest);
-    case RoutesFormat.jsx:
+    case "jsx":
       return formatRoutesAsJsx(routeManifest);
   }
 }

@@ -15,7 +15,7 @@ import type { RemixConfig } from "../config";
 import type { ViteDevOptions } from "../vite/dev";
 import type { ViteBuildOptions } from "../vite/build";
 import { readConfig } from "../config";
-import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
+import { formatRoutes, type RoutesFormat } from "../config/format";
 import { loadVitePluginContext } from "../vite/plugin";
 import { detectPackageManager } from "./detectPackageManager";
 import { transpile as convertFileToJS } from "./useJavascript";
@@ -98,7 +98,7 @@ export async function routes(
     // v3 TODO: Remove this and require the presence of a Vite config
     (await readConfig(remixRoot)).routes;
 
-  let format = flags.json ? RoutesFormat.json : RoutesFormat.jsx;
+  let format: RoutesFormat = flags.json ? "json" : "jsx";
   console.log(formatRoutes(routes, format));
 }
 
