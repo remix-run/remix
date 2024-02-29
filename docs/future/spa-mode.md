@@ -223,9 +223,13 @@ startTransition(() => {
 - You cannot call `serverLoader`/`serverAction` from your `clientLoader`/`clientAction` methods since there is no running server -- those will throw a runtime error if called
 
 - It's important to note that Remix SPA mode generates your `index.html` file by performing a "pre-render" of your root route on the server during the build
+
   - This means that while you're creating a SPA, you still have a "server build" and "server render" step, so you do need to be careful about using dependencies that reference client-only aspects such as `document`, `window`, `localStorage`, etc.
   - Generally speaking, the way to resolve these issues is to import any browser-only libraries from `entry.client.tsx` so they don't end up in the server build
-  - Otherwise, you can generally solve these by using [`React.lazy`][react-lazy] or the [`<ClientOnly>`][client-only] component from `remix-utils`.
+  - Otherwise, you can generally solve these by using [`React.lazy`][react-lazy] or the [`<ClientOnly>`][client-only] component from `remix-utils`
+
+- The [SPA Mode template][spa-mode-template] enables the Vite [ssr.noExternal][vite-ssr-noexternal] option by default to automatically bundle all of your dependencies during the server build to avoid most ESM/CJS issues
+  - This may slow down your build a bit — if so, you can try removing this option, or switching to a more targeted array containing the specific dependencies you wish to bundle
 
 ## Migrating from React Router
 
@@ -269,3 +273,5 @@ Once you've got all your routes living in their own files, you can:
 [client-only]: https://github.com/sergiodxa/remix-utils?tab=readme-ov-file#clientonly
 [vite-preview]: https://vitejs.dev/guide/cli#vite-preview
 [sirv-cli]: https://www.npmjs.com/package/sirv-cli
+[spa-mode-template]: https://github.com/remix-run/remix/tree/main/templates/spa
+[vite-ssr-noexternal]: https://vitejs.dev/config/ssr-options#ssr-noexternal
