@@ -9,7 +9,6 @@ import { decode } from "turbo-stream";
 
 import { createRequestInit } from "./data";
 import type { AssetsManifest } from "./entry";
-import invariant from "./invariant";
 import type { RouteModules } from "./routeModules";
 
 // IMPORTANT! Keep in sync with the types in @remix-run/server-runtime
