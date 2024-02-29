@@ -228,8 +228,8 @@ startTransition(() => {
   - Generally speaking, the way to resolve these issues is to import any browser-only libraries from `entry.client.tsx` so they don't end up in the server build
   - Otherwise, you can generally solve these by using [`React.lazy`][react-lazy] or the [`<ClientOnly>`][client-only] component from `remix-utils`
 
-- The [SPA Mode template][spa-mode-template] includes the Vite [ssr.noExternal][vite-ssr-noexternal] config by default to automatically bundle all of your dependencies during the server build to avoid most ESM/CJS issues
-  - This may slow down your build a bit -- if so, you can try removing this config, or switching to a more targeted array config of the targeted dependencies you wish to bundle
+- The [SPA Mode template][spa-mode-template] enables the Vite [ssr.noExternal][vite-ssr-noexternal] option by default to automatically bundle all of your dependencies during the server build to avoid most ESM/CJS issues
+  - This may slow down your build a bit — if so, you can try removing this option, or switching to a more targeted array containing the specific dependencies you wish to bundle
 
 ## Migrating from React Router
 
