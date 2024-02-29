@@ -156,7 +156,16 @@ export class PlaywrightFixture {
    * were called (or not).
    */
   collectDataResponses() {
-    return collectDataResponses(this.page);
+    return this.collectResponses((url) => url.searchParams.has("_data"));
+  }
+
+  /**
+   * Collects single fetch data responses from the network, usually after a
+   * link click or form submission. This is useful for asserting that specific
+   * loaders were called (or not).
+   */
+  collectSingleFetchResponses() {
+    return this.collectResponses((url) => url.pathname.endsWith(".data"));
   }
 
   /**
@@ -164,8 +173,16 @@ export class PlaywrightFixture {
    * form submission. A filter can be provided to only collect responses
    * that meet a certain criteria.
    */
-  collectResponses(filter?: UrlFilter) {
-    return collectResponses(this.page, filter);
+  collectResponses(filter?: (url: URL) => boolean) {
+    let responses: Response[] = [];
+
+    this.page.on("response", (res) => {
+      if (!filter || filter(new URL(res.url()))) {
+        responses.push(res);
+      }
+    });
+
+    return responses;
   }
 
   /**
@@ -327,22 +344,4 @@ async function doAndWait(
   }
 
   return result;
-}
-
-type UrlFilter = (url: URL) => boolean;
-
-function collectResponses(page: Page, filter?: UrlFilter): Response[] {
-  let responses: Response[] = [];
-
-  page.on("response", (res) => {
-    if (!filter || filter(new URL(res.url()))) {
-      responses.push(res);
-    }
-  });
-
-  return responses;
-}
-
-function collectDataResponses(page: Page) {
-  return collectResponses(page, (url) => url.searchParams.has("_data"));
 }
