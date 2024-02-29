@@ -14,9 +14,12 @@ let nonReExportedKeys = new Set([
   "createHashRouter",
   "createMemoryRouter",
   // Don't re-export unsafe APIs
+  "unstable_DecodedResponse",
   "unstable_HistoryRouter",
+  "unstable_isDecodedResponse",
   "UNSAFE_DataRouterContext",
   "UNSAFE_DataRouterStateContext",
+  "UNSAFE_ErrorResponseImpl",
   "UNSAFE_FetchersContext",
   "UNSAFE_LocationContext",
   "UNSAFE_NavigationContext",
