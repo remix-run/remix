@@ -6,11 +6,56 @@ title: Tailwind
 
 Perhaps the most popular way to style a Remix application in the community is to use [Tailwind CSS][tailwind].
 
-Remix supports tailwind automatically if `tailwind.config.js` is present in the root of your project. You can disable it in [Remix Config][remix_config]
-
 Tailwind has the benefits of inline-style co-location for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out to a reasonable size, even for large applications. Load that file into the `app/root.tsx` links and be done with it.
 
 If you don't have any CSS opinions, this is a great approach.
+
+## Remix with Vite
+
+To use Tailwind with Vite, first install tailwindcss and its peer dependencies：
+
+```shellscript nonumber
+npm install -D tailwindcss postcss autoprefixer
+```
+
+Then generate your tailwind.config.ts and postcss.config.js files:
+
+```shellscript nonumber
+npx tailwindcss init --ts
+```
+
+Now we can tell it which files to generate classes from:
+
+```ts filename=tailwind.config.ts lines=[4]
+import type { Config } from "tailwindcss";
+
+export default {
+  content: ["./app/**/*.{js,jsx,ts,tsx}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+} satisfies Config;
+```
+
+Then include the `@tailwind` directives in your CSS. For example, you could create a `tailwind.css` file at the root of your app:
+
+```css filename=app/tailwind.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+Then directly import `tailwind.css` to your root route:
+
+```tsx filename=app/root.tsx lines=[2]
+import { ... } from "@remix-run/react";
+import "./tailwind.css";
+```
+
+## Remix without Vite
+
+Remix supports tailwind automatically if `tailwind.config.js` is present in the root of your project. You can disable it in [Remix Config][remix_config]
 
 To use Tailwind, first install it as a dev dependency:
 
@@ -66,7 +111,7 @@ Tailwind doesn't compile CSS for older browsers by default, so if you'd like to 
 
 If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension][tailwind-intelli-sense-extension] for the best developer experience.
 
-## Avoiding Tailwind's `@import` syntax
+### Avoiding Tailwind's `@import` syntax
 
 It's recommended that you avoid Tailwind's `@import` syntax (e.g. `@import 'tailwindcss/base'`) in favor of Tailwind directives (e.g. `@tailwind base`).
 
