@@ -1,6 +1,9 @@
 import * as React from "react";
 import type { HydrationState } from "@remix-run/router";
-import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
+import {
+  UNSAFE_ErrorResponseImpl as ErrorResponse,
+  unstable_isDecodedResponse as isDecodedResponse,
+} from "@remix-run/router";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -249,18 +252,36 @@ export function createClientRoutes(
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModulesCache[route.id];
 
+    // Fetch data from the server either via single fetch or the standard `?_data`
+    // request.  Unwrap it when called via `serverLoader`/`serverAction` in a
+    // client handler, otherwise return the raw response for the router to unwrap
+    async function fetchServerHandlerAndMaybeUnwrap(
+      request: Request,
+      unwrap: boolean,
+      singleFetch: unknown
+    ) {
+      if (typeof singleFetch === "function") {
+        let result = await singleFetch();
+        if (unwrap && isDecodedResponse(result)) {
+          return result.data;
+        }
+        return result;
+      }
+
+      let result = await fetchServerHandler(request, route);
+      if (unwrap) {
+        return unwrapServerResponse(result);
+      }
+      return result;
+    }
+
     async function fetchServerLoader(
       request: Request,
       unwrap: boolean,
       singleFetch: unknown
     ) {
       if (!route.hasLoader) return null;
-      if (typeof singleFetch === "function") {
-        let result = await singleFetch();
-        return result;
-      }
-      let result = await fetchServerHandler(request, route);
-      return unwrap ? unwrapServerResponse(result) : result;
+      return fetchServerHandlerAndMaybeUnwrap(request, unwrap, singleFetch);
     }
 
     async function fetchServerAction(
@@ -271,12 +292,7 @@ export function createClientRoutes(
       if (!route.hasAction) {
         throw noActionDefinedError("action", route.id);
       }
-      if (typeof singleFetch === "function") {
-        let result = await singleFetch();
-        return result;
-      }
-      let result = await fetchServerHandler(request, route);
-      return unwrap ? unwrapServerResponse(result) : result;
+      return fetchServerHandlerAndMaybeUnwrap(request, unwrap, singleFetch);
     }
 
     async function prefetchStylesAndCallHandler(

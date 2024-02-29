@@ -302,6 +302,7 @@ async function handleDataRequest(
   }
 }
 
+// IMPORTANT! Keep in sync with the types in @remix-run/react
 type SingleFetchResult =
   | { data: unknown; status?: number } // status only included in actions
   | { error: unknown }

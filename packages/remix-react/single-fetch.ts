@@ -1,6 +1,6 @@
 import type { DataStrategyMatch, ErrorResponse } from "@remix-run/router";
 import {
-  DecodedResponse,
+  unstable_DecodedResponse,
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
   redirect,
 } from "@remix-run/router";
@@ -12,6 +12,7 @@ import type { AssetsManifest } from "./entry";
 import invariant from "./invariant";
 import type { RouteModules } from "./routeModules";
 
+// IMPORTANT! Keep in sync with the types in @remix-run/server-runtime
 type SingleFetchResult =
   | { data: unknown; status?: number } // status only included in actions
   | { error: unknown }
@@ -158,26 +159,29 @@ function singleFetchUrl(reqUrl: string) {
 
 async function fetchAndDecode(url: URL, init?: RequestInit) {
   let res = await fetch(url, init);
-  invariant(
-    res.headers.get("Content-Type")?.includes("text/x-turbo"),
-    "Expected a text/x-turbo response"
-  );
-  let decoded = await decode(res.body!, [
-    (type: string, value: unknown) => {
-      if (type === "ErrorResponse") {
-        let errorResponse = value as ErrorResponse;
-        return {
-          value: new ErrorResponseImpl(
-            errorResponse.status,
-            errorResponse.statusText,
-            errorResponse.data,
-            (errorResponse as any).internal === true
-          ),
-        };
-      }
-    },
-  ]);
-  return decoded.value;
+  if (res.headers.get("Content-Type")?.includes("text/x-turbo")) {
+    let decoded = await decode(res.body!, [
+      (type: string, value: unknown) => {
+        if (type === "ErrorResponse") {
+          let errorResponse = value as ErrorResponse;
+          return {
+            value: new ErrorResponseImpl(
+              errorResponse.status,
+              errorResponse.statusText,
+              errorResponse.data,
+              (errorResponse as any).internal === true
+            ),
+          };
+        }
+      },
+    ]);
+    return decoded.value;
+  }
+
+  // If we didn't get back a turbo-stream response, then we never reached the
+  // Remix server and likely this is a network error - just expose up the
+  // response body as an Error
+  throw new Error(await res.text());
 }
 
 function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
@@ -194,7 +198,12 @@ function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
     return redirect(result.redirect, { status: result.status, headers });
   } else if ("data" in result) {
     if (typeof result.status === "number") {
-      return new DecodedResponse(result.status, "", new Headers(), result.data);
+      return new unstable_DecodedResponse(
+        result.status,
+        "",
+        new Headers(),
+        result.data
+      );
     }
     return result.data;
   } else {
