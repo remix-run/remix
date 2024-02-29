@@ -74,7 +74,7 @@ module.exports = {
 
     // Node
     {
-      files: [".eslintrc.js", "plugin-remix.js"],
+      files: [".eslintrc.cjs", "plugin-remix.js"],
       env: {
         node: true,
       },

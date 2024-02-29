@@ -7,3 +7,4 @@ node_modules
 /functions/version.txt
 /public/build
 .dev.vars
+.wrangler

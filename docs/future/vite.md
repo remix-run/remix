@@ -36,7 +36,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [
     remix({
-      ignoredRouteFiles: ["**/.*"],
+      ignoredRouteFiles: ["**/*.css"],
     }),
   ],
 });
@@ -164,9 +164,16 @@ export async function loader({
 If you'd like to add additional properties to the load context,
 you should export a `getLoadContext` function from a shared module so that **load context in Vite, Wrangler, and Cloudflare Pages are all augmented in the same way**:
 
-```ts filename=load-context.ts lines=[1,9,13-26]
+```ts filename=load-context.ts lines=[1,4-9,20-33]
 import { type AppLoadContext } from "@remix-run/cloudflare";
 import { type PlatformProxy } from "wrangler";
+
+// When using `wrangler.toml` to configure bindings,
+// `wrangler types` will generate types for those bindings
+// into the global `Env` interface.
+// Need this empty interface so that typechecking passes
+// even if no `wrangler.toml` exists.
+interface Env {}
 
 type Cloudflare = Omit<PlatformProxy<Env>, "dispose">;
 
@@ -348,7 +355,7 @@ The subset of [supported Remix config options][supported-remix-config-options] s
 export default defineConfig({
   plugins: [
     remix({
-      ignoredRouteFiles: ["**/.*"],
+      ignoredRouteFiles: ["**/*.css"],
     }),
   ],
 });
@@ -1061,7 +1068,7 @@ We currently recommend excluding the plugin when used with other Vite-based tool
 
 For Vitest:
 
-```ts filename=vite.config.ts lines=[7,12-13]
+```ts filename=vite.config.ts lines=[5]
 import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig, loadEnv } from "vite";
 

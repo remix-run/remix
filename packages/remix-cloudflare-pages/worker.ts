@@ -14,6 +14,25 @@ export type GetLoadContextFunction<
   Params extends string = any,
   Data extends Record<string, unknown> = Record<string, unknown>
 > = (args: {
+  /** @deprecated use `context.cloudflare.env` instead */
+  env: EventContext<Env, Params, Data>["env"];
+  /** @deprecated use `context.cloudflare.functionPath` instead */
+  functionPath: EventContext<Env, Params, Data>["functionPath"];
+  /** @deprecated use `context.cloudflare.waitUntil` instead */
+  waitUntil: EventContext<Env, Params, Data>["waitUntil"];
+  /** @deprecated use `context.cloudflare.passThroughOnException` instead */
+  passThroughOnException: EventContext<
+    Env,
+    Params,
+    Data
+  >["passThroughOnException"];
+  /** @deprecated use `context.cloudflare.next` instead */
+  next: EventContext<Env, Params, Data>["next"];
+  /** @deprecated use `context.cloudflare.params` instead */
+  params: EventContext<Env, Params, Data>["params"];
+  /** @deprecated use `context.cloudflare.data` instead */
+  data: EventContext<Env, Params, Data>["data"];
+
   request: Request;
   context: {
     cloudflare: EventContext<Env, Params, Data> & {
@@ -54,6 +73,7 @@ export function createRequestHandler<Env = any>({
 
   return async (cloudflare) => {
     let loadContext = await getLoadContext({
+      ...cloudflare, // Backcompat, remove in v3
       request: cloudflare.request,
       context: {
         cloudflare: {

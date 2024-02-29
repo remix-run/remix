@@ -21,9 +21,9 @@ Presets conform to the following `Preset` type:
 type Preset = {
   name: string;
 
-  remixConfig?: () =>
-    | RemixConfigPreset
-    | Promise<RemixConfigPreset>;
+  remixConfig?: (args: {
+    remixUserConfig: VitePluginConfig;
+  }) => RemixConfigPreset | Promise<RemixConfigPreset>;
 
   remixConfigResolved?: (args: {
     remixConfig: ResolvedVitePluginConfig;
