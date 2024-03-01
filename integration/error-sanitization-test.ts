@@ -263,12 +263,9 @@ test.describe("Error Sanitization", () => {
     });
 
     test("sanitizes loader errors in resource requests", async () => {
-      let response = await fixture.requestData(
-        "/resource?loader",
-        "routes/resource"
-      );
+      let response = await fixture.requestResource("/resource?loader");
       let text = await response.text();
-      expect(text).toBe('{"message":"Unexpected Server Error"}');
+      expect(text).toBe("Unexpected Server Error");
       expect(errorLogs.length).toBe(1);
       expect(errorLogs[0][0].message).toMatch("Loader Error");
       expect(errorLogs[0][0].stack).toMatch(" at ");
@@ -418,14 +415,9 @@ test.describe("Error Sanitization", () => {
     });
 
     test("does not sanitize loader errors in resource requests", async () => {
-      let response = await fixture.requestData(
-        "/resource?loader",
-        "routes/resource"
-      );
+      let response = await fixture.requestResource("/resource?loader");
       let text = await response.text();
-      expect(text).toMatch(
-        '{"message":"Loader Error","stack":"Error: Loader Error'
-      );
+      expect(text).toBe("Unexpected Server Error\n\nError: Loader Error");
       expect(errorLogs.length).toBe(1);
       expect(errorLogs[0][0].message).toMatch("Loader Error");
       expect(errorLogs[0][0].stack).toMatch(" at ");
@@ -628,15 +620,12 @@ test.describe("Error Sanitization", () => {
     });
 
     test("sanitizes loader errors in resource requests", async () => {
-      let response = await fixture.requestData(
-        "/resource?loader",
-        "routes/resource"
-      );
+      let response = await fixture.requestResource("/resource?loader");
       let text = await response.text();
-      expect(text).toBe('{"message":"Unexpected Server Error"}');
+      expect(text).toBe("Unexpected Server Error");
       expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
       expect(errorLogs[1][0]).toEqual(
-        "  Request: GET test://test/resource?loader=&_data=routes%2Fresource"
+        "  Request: GET test://test/resource?loader"
       );
       expect(errorLogs[2][0]).toEqual("  Error: Loader Error");
       expect(errorLogs[3][0]).toMatch(" at ");
@@ -709,10 +698,12 @@ test.describe("single fetch", () => {
         expect(html).toMatch("Index Error");
         expect(html).not.toMatch("LOADER");
         expect(html).toMatch("MESSAGE:Unexpected Server Error");
+        // This is the turbo-stream encoding - the fact that stack goes right
+        // into __type means it has no value
         expect(html).toMatch(
-          '{"routes/_index":{"message":"Unexpected Server Error","__type":"Error"}}'
+          '\\"message\\",\\"Unexpected Server Error\\",\\"stack\\",\\"__type\\",\\"Error\\"'
         );
-        expect(html).not.toMatch(/stack/i);
+        expect(html).not.toMatch(/ at /i);
         expect(errorLogs.length).toBe(1);
         expect(errorLogs[0][0].message).toMatch("Loader Error");
         expect(errorLogs[0][0].stack).toMatch(" at ");
@@ -723,10 +714,12 @@ test.describe("single fetch", () => {
         let html = await response.text();
         expect(html).toMatch("Index Error");
         expect(html).toMatch("MESSAGE:Unexpected Server Error");
+        // This is the turbo-stream encoding - the fact that stack goes right
+        // into __type means it has no value
         expect(html).toMatch(
-          '{"routes/_index":{"message":"Unexpected Server Error","__type":"Error"}}'
+          '\\"message\\",\\"Unexpected Server Error\\",\\"stack\\",\\"__type\\",\\"Error\\"'
         );
-        expect(html).not.toMatch(/stack/i);
+        expect(html).not.toMatch(/ at /i);
         expect(errorLogs.length).toBe(1);
         expect(errorLogs[0][0].message).toMatch("Render Error");
         expect(errorLogs[0][0].stack).toMatch(" at ");
@@ -758,61 +751,69 @@ test.describe("single fetch", () => {
       });
 
       test("returns data without errors", async () => {
-        let response = await fixture.requestData("/", "routes/_index");
-        let text = await response.text();
-        expect(text).toMatch("LOADER");
-        expect(text).not.toMatch("MESSAGE:");
-        expect(text).not.toMatch(/stack/i);
+        let data = await fixture.requestSingleFetchData("/_root.data");
+        expect(data).toEqual({
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            data: "LOADER",
+          },
+        });
       });
 
       test("sanitizes loader errors in data requests", async () => {
-        let response = await fixture.requestData("/?loader", "routes/_index");
-        let text = await response.text();
-        expect(text).toBe('{"message":"Unexpected Server Error"}');
+        let data = await fixture.requestSingleFetchData("/_root.data?loader");
+        expect(data).toEqual({
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            error: new Error("Unexpected Server Error"),
+          },
+        });
         expect(errorLogs.length).toBe(1);
         expect(errorLogs[0][0].message).toMatch("Loader Error");
         expect(errorLogs[0][0].stack).toMatch(" at ");
       });
 
       test("returns deferred data without errors", async () => {
-        let response = await fixture.requestData("/defer", "routes/defer");
-        let text = await response.text();
-        expect(text).toMatch("RESOLVED");
-        expect(text).not.toMatch("REJECTED");
-        expect(text).not.toMatch(/stack/i);
+        let data = await fixture.requestSingleFetchData("/defer.data");
+        // @ts-expect-error
+        expect(await data["routes/defer"].data.lazy).toEqual("RESOLVED");
       });
 
       test("sanitizes loader errors in deferred data requests", async () => {
-        let response = await fixture.requestData(
-          "/defer?loader",
-          "routes/defer"
-        );
-        let text = await response.text();
-        expect(text).toBe(
-          '{"lazy":"__deferred_promise:lazy"}\n\n' +
-            'error:{"lazy":{"message":"Unexpected Server Error"}}\n\n'
-        );
+        let data = await fixture.requestSingleFetchData("/defer.data?loader");
+        try {
+          // @ts-expect-error
+          await data["routes/defer"].data.lazy;
+          expect(true).toBe(false);
+        } catch (e) {
+          // TODO: This test is currently failing - we need to be sanitizing
+          // rejected errors via a turbo-stream plugin
+          expect((e as Error).message).toBe("Unexpected Server Error");
+          expect((e as Error).stack).toBeUndefined();
+        }
         // defer errors are not logged to the server console since the request
         // has "succeeded"
         expect(errorLogs.length).toBe(0);
       });
 
       test("sanitizes loader errors in resource requests", async () => {
-        let response = await fixture.requestData(
-          "/resource?loader",
-          "routes/resource"
-        );
+        let response = await fixture.requestResource("/resource?loader");
         let text = await response.text();
-        expect(text).toBe('{"message":"Unexpected Server Error"}');
+        expect(text).toBe("Unexpected Server Error");
         expect(errorLogs.length).toBe(1);
         expect(errorLogs[0][0].message).toMatch("Loader Error");
         expect(errorLogs[0][0].stack).toMatch(" at ");
       });
 
       test("sanitizes mismatched route errors in data requests", async () => {
-        let response = await fixture.requestData("/", "not-a-route");
-        let text = await response.text();
-        expect(text).toBe('{"message":"Unexpected Server Error"}');
+        let data = await fixture.requestSingleFetchData("/not-a-route.data");
+        // TODO: This test is currently failing - we need to send back a
+        // turbo-stream encoded 404 error for these cases
+        expect(data).toEqual({ message: "Unexpected Server Error" });
         expect(errorLogs.length).toBe(1);
         expect(errorLogs[0][0].message).toMatch(
           'Route "not-a-route" does not match URL "/"'
@@ -877,9 +878,6 @@ test.describe("single fetch", () => {
         expect(html).not.toMatch("LOADER");
         expect(html).toMatch("<p>MESSAGE:Loader Error");
         expect(html).toMatch("<p>STACK:Error: Loader Error");
-        expect(html).toMatch(
-          'errors":{"routes/_index":{"message":"Loader Error","stack":"Error: Loader Error\\n'
-        );
         expect(errorLogs.length).toBe(1);
         expect(errorLogs[0][0].message).toMatch("Loader Error");
         expect(errorLogs[0][0].stack).toMatch(" at ");
@@ -891,9 +889,6 @@ test.describe("single fetch", () => {
         expect(html).toMatch("Index Error");
         expect(html).toMatch("<p>MESSAGE:Render Error");
         expect(html).toMatch("<p>STACK:Error: Render Error");
-        expect(html).toMatch(
-          'errors":{"routes/_index":{"message":"Render Error","stack":"Error: Render Error\\n'
-        );
         expect(errorLogs.length).toBe(1);
         expect(errorLogs[0][0].message).toMatch("Render Error");
         expect(errorLogs[0][0].stack).toMatch(" at ");
@@ -922,64 +917,68 @@ test.describe("single fetch", () => {
       });
 
       test("returns data without errors", async () => {
-        let response = await fixture.requestData("/", "routes/_index");
-        let text = await response.text();
-        expect(text).toMatch("LOADER");
-        expect(text).not.toMatch("MESSAGE:");
-        expect(text).not.toMatch(/stack/i);
+        let data = await fixture.requestSingleFetchData("/_root.data");
+        expect(data).toEqual({
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            data: "LOADER",
+          },
+        });
       });
 
       test("does not sanitize loader errors in data requests", async () => {
-        let response = await fixture.requestData("/?loader", "routes/_index");
-        let text = await response.text();
-        expect(text).toMatch(
-          '{"message":"Loader Error","stack":"Error: Loader Error'
-        );
+        let data = await fixture.requestSingleFetchData("/_root.data?loader");
+        expect(data).toEqual({
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            error: new Error("Loader Error"),
+          },
+        });
         expect(errorLogs.length).toBe(1);
         expect(errorLogs[0][0].message).toMatch("Loader Error");
         expect(errorLogs[0][0].stack).toMatch(" at ");
       });
 
       test("returns deferred data without errors", async () => {
-        let response = await fixture.requestData("/defer", "routes/defer");
-        let text = await response.text();
-        expect(text).toMatch("RESOLVED");
-        expect(text).not.toMatch("REJECTED");
-        expect(text).not.toMatch(/stack/i);
+        let data = await fixture.requestSingleFetchData("/defer.data");
+        // @ts-expect-error
+        expect(await data["routes/defer"].data.lazy).toEqual("RESOLVED");
       });
 
       test("does not sanitize loader errors in deferred data requests", async () => {
-        let response = await fixture.requestData(
-          "/defer?loader",
-          "routes/defer"
-        );
-        let text = await response.text();
-        expect(text).toMatch(
-          'error:{"lazy":{"message":"REJECTED","stack":"Error: REJECTED'
-        );
+        let data = await fixture.requestSingleFetchData("/defer.data?loader");
+        try {
+          // @ts-expect-error
+          await data["routes/defer"].data.lazy;
+          expect(true).toBe(false);
+        } catch (e) {
+          // TODO: This test is currently failing - we need to proxy through
+          // stack values
+          expect((e as Error).message).toBe("REJECTED");
+          expect((e as Error).stack).not.toBeUndefined();
+        }
+
         // defer errors are not logged to the server console since the request
         // has "succeeded"
         expect(errorLogs.length).toBe(0);
       });
 
       test("does not sanitize loader errors in resource requests", async () => {
-        let response = await fixture.requestData(
-          "/resource?loader",
-          "routes/resource"
-        );
+        let response = await fixture.requestResource("/resource?loader");
         let text = await response.text();
-        expect(text).toMatch(
-          '{"message":"Loader Error","stack":"Error: Loader Error'
-        );
+        expect(text).toBe("Unexpected Server Error\n\nError: Loader Error");
         expect(errorLogs.length).toBe(1);
         expect(errorLogs[0][0].message).toMatch("Loader Error");
         expect(errorLogs[0][0].stack).toMatch(" at ");
       });
 
       test("sanitizes mismatched route errors in data requests", async () => {
-        let response = await fixture.requestData("/", "not-a-route");
-        let text = await response.text();
-        expect(text).toMatch(
+        let data = await fixture.requestSingleFetchData("/not-a-route.data");
+        expect(data).toEqual(
           '{"message":"Route \\"not-a-route\\" does not match URL \\"/\\"","stack":"Error: Route \\"not-a-route\\" does not match URL \\"/\\"'
         );
         expect(errorLogs.length).toBe(1);
@@ -1025,25 +1024,61 @@ test.describe("single fetch", () => {
             },
             files: {
               "app/entry.server.tsx": js`
-                import type { EntryContext } from "@remix-run/node";
+                import { PassThrough } from "node:stream";
+
+                import { createReadableStreamFromReadable } from "@remix-run/node";
                 import { RemixServer, isRouteErrorResponse } from "@remix-run/react";
-                import { renderToString } from "react-dom/server";
+                import { renderToPipeableStream } from "react-dom/server";
+
+                const ABORT_DELAY = 5_000;
 
                 export default function handleRequest(
-                  request: Request,
-                  responseStatusCode: number,
-                  responseHeaders: Headers,
-                  remixContext: EntryContext
+                  request,
+                  responseStatusCode,
+                  responseHeaders,
+                  remixContext
                 ) {
-                  let markup = renderToString(
-                    <RemixServer context={remixContext} url={request.url} />
-                  );
+                  return new Promise((resolve, reject) => {
+                    let shellRendered = false;
+                    const { pipe, abort } = renderToPipeableStream(
+                      <RemixServer
+                        context={remixContext}
+                        url={request.url}
+                        abortDelay={ABORT_DELAY}
+                      />,
+                      {
+                        onShellReady() {
+                          shellRendered = true;
+                          const body = new PassThrough();
+                          const stream = createReadableStreamFromReadable(body);
 
-                  responseHeaders.set("Content-Type", "text/html");
+                          responseHeaders.set("Content-Type", "text/html");
 
-                  return new Response("<!DOCTYPE html>" + markup, {
-                    status: responseStatusCode,
-                    headers: responseHeaders,
+                          resolve(
+                            new Response(stream, {
+                              headers: responseHeaders,
+                              status: responseStatusCode,
+                            })
+                          );
+
+                          pipe(body);
+                        },
+                        onShellError(error) {
+                          reject(error);
+                        },
+                        onError(error) {
+                          responseStatusCode = 500;
+                          // Log streaming rendering errors from inside the shell.  Don't log
+                          // errors encountered during initial shell rendering since they'll
+                          // reject and get logged in handleDocumentRequest.
+                          if (shellRendered) {
+                            console.error(error);
+                          }
+                        },
+                      }
+                    );
+
+                    setTimeout(abort, ABORT_DELAY);
                   });
                 }
 
@@ -1087,10 +1122,12 @@ test.describe("single fetch", () => {
         expect(html).toMatch("Index Error");
         expect(html).not.toMatch("LOADER");
         expect(html).toMatch("MESSAGE:Unexpected Server Error");
+        // This is the turbo-stream encoding - the fact that stack goes right
+        // into __type means it has no value
         expect(html).toMatch(
-          '{"routes/_index":{"message":"Unexpected Server Error","__type":"Error"}}'
+          '\\"message\\",\\"Unexpected Server Error\\",\\"stack\\",\\"__type\\",\\"Error\\"'
         );
-        expect(html).not.toMatch(/stack/i);
+        expect(html).not.toMatch(/ at /i);
         expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
         expect(errorLogs[1][0]).toEqual("  Request: GET test://test/?loader");
         expect(errorLogs[2][0]).toEqual("  Error: Loader Error");
@@ -1103,10 +1140,12 @@ test.describe("single fetch", () => {
         let html = await response.text();
         expect(html).toMatch("Index Error");
         expect(html).toMatch("MESSAGE:Unexpected Server Error");
+        // This is the turbo-stream encoding - the fact that stack goes right
+        // into __type means it has no value
         expect(html).toMatch(
-          '{"routes/_index":{"message":"Unexpected Server Error","__type":"Error"}}'
+          '\\"message\\",\\"Unexpected Server Error\\",\\"stack\\",\\"__type\\",\\"Error\\"'
         );
-        expect(html).not.toMatch(/stack/i);
+        expect(html).not.toMatch(/ at /i);
         expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
         expect(errorLogs[1][0]).toEqual("  Request: GET test://test/?render");
         expect(errorLogs[2][0]).toEqual("  Error: Render Error");
@@ -1140,20 +1179,26 @@ test.describe("single fetch", () => {
       });
 
       test("returns data without errors", async () => {
-        let response = await fixture.requestData("/", "routes/_index");
-        let text = await response.text();
-        expect(text).toMatch("LOADER");
-        expect(text).not.toMatch("MESSAGE:");
-        expect(text).not.toMatch(/stack/i);
+        let data = await fixture.requestSingleFetchData("/_root.data");
+        expect(data).toEqual({
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            data: "LOADER",
+          },
+        });
       });
 
       test("sanitizes loader errors in data requests", async () => {
-        let response = await fixture.requestData("/?loader", "routes/_index");
-        let text = await response.text();
-        expect(text).toBe('{"message":"Unexpected Server Error"}');
+        let data = await fixture.requestSingleFetchData("/_root.data?loader");
+        expect(data).toEqual({
+          root: { data: null },
+          "routes/_index": { error: new Error("Unexpected Server Error") },
+        });
         expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
         expect(errorLogs[1][0]).toEqual(
-          "  Request: GET test://test/?loader=&_data=routes%2F_index"
+          "  Request: GET test://test/_root.data?loader"
         );
         expect(errorLogs[2][0]).toEqual("  Error: Loader Error");
         expect(errorLogs[3][0]).toMatch(" at ");
@@ -1161,38 +1206,35 @@ test.describe("single fetch", () => {
       });
 
       test("returns deferred data without errors", async () => {
-        let response = await fixture.requestData("/defer", "routes/defer");
-        let text = await response.text();
-        expect(text).toMatch("RESOLVED");
-        expect(text).not.toMatch("REJECTED");
-        expect(text).not.toMatch(/stack/i);
+        let data = await fixture.requestSingleFetchData("/defer.data");
+        // @ts-expect-error
+        expect(await data["routes/defer"].data.lazy).toBe("RESOLVED");
       });
 
       test("sanitizes loader errors in deferred data requests", async () => {
-        let response = await fixture.requestData(
-          "/defer?loader",
-          "routes/defer"
-        );
-        let text = await response.text();
-        expect(text).toBe(
-          '{"lazy":"__deferred_promise:lazy"}\n\n' +
-            'error:{"lazy":{"message":"Unexpected Server Error"}}\n\n'
-        );
+        let data = await fixture.requestSingleFetchData("/defer.data?loader");
+        try {
+          // @ts-expect-error
+          await data["routes/defer"].data.lazy;
+          expect(true).toBe(false);
+        } catch (e) {
+          // TODO: This test is currently failing - we need to proxy through
+          // stack values
+          expect((e as Error).message).toBe("REJECTED");
+          expect((e as Error).stack).toBeUndefined();
+        }
         // defer errors are not logged to the server console since the request
         // has "succeeded"
         expect(errorLogs.length).toBe(0);
       });
 
       test("sanitizes loader errors in resource requests", async () => {
-        let response = await fixture.requestData(
-          "/resource?loader",
-          "routes/resource"
-        );
+        let response = await fixture.requestResource("/resource?loader");
         let text = await response.text();
-        expect(text).toBe('{"message":"Unexpected Server Error"}');
+        expect(text).toBe("Unexpected Server Error");
         expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
         expect(errorLogs[1][0]).toEqual(
-          "  Request: GET test://test/resource?loader=&_data=routes%2Fresource"
+          "  Request: GET test://test/resource?loader"
         );
         expect(errorLogs[2][0]).toEqual("  Error: Loader Error");
         expect(errorLogs[3][0]).toMatch(" at ");
@@ -1200,9 +1242,8 @@ test.describe("single fetch", () => {
       });
 
       test("sanitizes mismatched route errors in data requests", async () => {
-        let response = await fixture.requestData("/", "not-a-route");
-        let text = await response.text();
-        expect(text).toBe('{"message":"Unexpected Server Error"}');
+        let data = await fixture.requestSingleFetchData("/not-a-route.data");
+        expect(data).toEqual('{"message":"Unexpected Server Error"}');
         expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
         expect(errorLogs[1][0]).toEqual(
           "  Request: GET test://test/?_data=not-a-route"

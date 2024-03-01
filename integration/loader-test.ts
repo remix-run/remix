@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { decode } from "turbo-stream";
 
 import {
   createAppFixture,
@@ -192,18 +193,16 @@ test.describe("single fetch", () => {
       });
     });
 
-    test("returns responses for a specific route", async () => {
-      let [root, index] = await Promise.all([
-        fixture.requestData("/", "root"),
-        fixture.requestData("/", "routes/_index"),
-      ]);
+    test("returns responses for single fetch routes", async () => {
+      let root = await fixture.requestSingleFetchData("/_root.data");
 
-      expect(root.headers.get("Content-Type")).toBe(
-        "application/json; charset=utf-8"
-      );
+      expect(root.headers.get("Content-Type")).toBe("text/x-turbo");
 
-      expect(await root.json()).toBe(ROOT_DATA);
-      expect(await index.json()).toBe(INDEX_DATA);
+      let val = await decode(root.body!);
+      expect(val.value).toEqual({
+        root: { data: ROOT_DATA },
+        "routes/_index": { data: INDEX_DATA },
+      });
     });
   });
 

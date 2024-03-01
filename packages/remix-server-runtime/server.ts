@@ -121,6 +121,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     let response: Response;
     if (url.searchParams.has("_data")) {
+      invariant(
+        !_build.future.unstable_singleFetch,
+        "Single fetch-enabled apps should not be making ?_data requests"
+      );
       let routeId = url.searchParams.get("_data")!;
 
       response = await handleDataRequest(
@@ -379,30 +383,32 @@ async function singleFetchAction(
       signal: request.signal,
       ...(request.body ? { duplex: "half" } : undefined),
     });
-    let response = await staticHandler.queryRoute(handlerRequest, {
+    let result = await staticHandler.queryRoute(handlerRequest, {
       requestContext: loadContext,
     });
-    // callRouteLoader/callRouteAction always return responses
-    invariant(
-      isResponse(response),
-      "Expected a Response to be returned from queryRoute"
-    );
-    if (isRedirectResponse(response)) {
+
+    // Unlike `handleDataRequest`, when singleFetch is enabled, queryRoute does
+    // let non-Response return values through
+    if (!isResponse(result)) {
+      return [{ data: result }, new Headers(), 200];
+    }
+
+    if (isRedirectResponse(result)) {
       return [
         {
-          redirect: response.headers.get("Location")!,
-          status: response.status,
-          revalidate: response.headers.has("X-Remix-Revalidate"),
-          reload: response.headers.has("X-Remix-Reload-Document"),
+          redirect: result.headers.get("Location")!,
+          status: result.status,
+          revalidate: result.headers.has("X-Remix-Revalidate"),
+          reload: result.headers.has("X-Remix-Reload-Document"),
         },
-        response.headers,
+        result.headers,
         200, // Don't trigger a redirect on the `fetch`
       ];
     }
     return [
-      { data: await unwrapResponse(response) },
-      response.headers,
-      response.status,
+      { data: await unwrapResponse(result) },
+      result.headers,
+      result.status,
     ];
   } catch (err) {
     handleError(err);
