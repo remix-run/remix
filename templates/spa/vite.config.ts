@@ -9,14 +9,6 @@ export default defineConfig({
     }),
     tsconfigPaths(),
   ],
-  ssr: {
-    // Bundle all dependencies during the server build by default to avoid most
-    // ESM/CJS issues.  This may slow down your build a bit -- if so, you can
-    // try removing this option, or switching to a more targeted array
-    // containing the specific dependencies you wish to bundle. See more:
-    // https://vitejs.dev/config/ssr-options#ssr-noexternal
-    noExternal: true,
-  },
   server: {
     fs: {
       // Restrict files that could be served by Vite's dev server.  Accessing
