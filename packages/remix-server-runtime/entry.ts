@@ -9,6 +9,8 @@ export interface EntryContext {
   routeModules: RouteModules<EntryRouteModule>;
   criticalCss?: string;
   serverHandoffString?: string;
+  serverHandoffStream?: ReadableStream<Uint8Array>;
+  renderMeta?: { didRenderScripts: boolean };
   staticHandlerContext: StaticHandlerContext;
   future: FutureConfig;
   isSpaMode: boolean;

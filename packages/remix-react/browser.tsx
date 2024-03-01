@@ -4,9 +4,10 @@ import type { ReactElement } from "react";
 import * as React from "react";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
 import { matchRoutes, RouterProvider } from "react-router-dom";
+import { decode } from "turbo-stream";
 
 import { RemixContext } from "./components";
-import type { EntryContext, FutureConfig } from "./entry";
+import type { AssetsManifest, FutureConfig } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
@@ -16,6 +17,7 @@ import {
   shouldHydrateRouteLoader,
 } from "./routes";
 import { getSingleFetchDataStrategy } from "./single-fetch";
+import invariant from "./invariant";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -26,6 +28,8 @@ declare global {
     criticalCss?: string;
     future: FutureConfig;
     isSpaMode: boolean;
+    stream: ReadableStream<Uint8Array> | undefined;
+    streamController: ReadableStreamDefaultController<Uint8Array>;
     // The number of active deferred keys rendered on the server
     a?: number;
     dev?: {
@@ -35,7 +39,7 @@ declare global {
   };
   var __remixRouter: Router;
   var __remixRouteModules: RouteModules;
-  var __remixManifest: EntryContext["manifest"];
+  var __remixManifest: AssetsManifest;
   var __remixRevalidation: number | undefined;
   var __remixClearCriticalCss: (() => void) | undefined;
   var $RefreshRuntime$: {
@@ -46,6 +50,12 @@ declare global {
 
 export interface RemixBrowserProps {}
 
+let stateDecodingPromise:
+  | (Promise<void> & {
+      value?: unknown;
+      error?: unknown;
+    })
+  | undefined;
 let router: Router;
 let routerInitialized = false;
 let hmrAbortController: AbortController | undefined;
@@ -72,7 +82,7 @@ if (import.meta && import.meta.hot) {
       assetsManifest,
       needsRevalidation,
     }: {
-      assetsManifest: EntryContext["manifest"];
+      assetsManifest: AssetsManifest;
       needsRevalidation: Set<string>;
     }) => {
       let router = await hmrRouterReadyPromise;
@@ -202,6 +212,31 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       // Get out of here so the reload can happen - don't create the router
       // since it'll then kick off unnecessary route.lazy() loads
       return <></>;
+    }
+
+    // When single fetch is enabled, we need to suspend until the initial state
+    // snapshot is decoded into window.__remixContext.state
+    if (window.__remixContext.future.unstable_singleFetch) {
+      if (!stateDecodingPromise) {
+        let stream = window.__remixContext.stream;
+        invariant(stream, "No stream found for single fetch decoding");
+        window.__remixContext.stream = undefined;
+        stateDecodingPromise = decode(stream)
+          .then((value) => {
+            window.__remixContext.state =
+              value.value as typeof window.__remixContext.state;
+            stateDecodingPromise!.value = true;
+          })
+          .catch((e) => {
+            stateDecodingPromise!.error = e;
+          });
+      }
+      if (stateDecodingPromise.error) {
+        throw stateDecodingPromise.error;
+      }
+      if (!stateDecodingPromise.value) {
+        throw stateDecodingPromise;
+      }
     }
 
     let routes = createClientRoutes(

@@ -71,25 +71,124 @@ export function RemixServer({
   });
 
   return (
-    <RemixContext.Provider
-      value={{
-        manifest,
-        routeModules,
-        criticalCss,
-        serverHandoffString,
-        future: context.future,
-        isSpaMode: context.isSpaMode,
-        serializeError: context.serializeError,
-        abortDelay,
-      }}
-    >
-      <RemixErrorBoundary location={router.state.location}>
-        <StaticRouterProvider
-          router={router}
-          context={context.staticHandlerContext}
-          hydrate={false}
-        />
-      </RemixErrorBoundary>
-    </RemixContext.Provider>
+    <>
+      <RemixContext.Provider
+        value={{
+          manifest,
+          routeModules,
+          criticalCss,
+          serverHandoffString,
+          future: context.future,
+          isSpaMode: context.isSpaMode,
+          serializeError: context.serializeError,
+          abortDelay,
+          renderMeta: context.renderMeta,
+        }}
+      >
+        <RemixErrorBoundary location={router.state.location}>
+          <StaticRouterProvider
+            router={router}
+            context={context.staticHandlerContext}
+            hydrate={false}
+          />
+        </RemixErrorBoundary>
+      </RemixContext.Provider>
+      {context.future.unstable_singleFetch && context.serverHandoffStream ? (
+        <React.Suspense>
+          <StreamTransfer
+            context={context}
+            identifier={0}
+            reader={context.serverHandoffStream.getReader()}
+            textDecoder={new TextDecoder()}
+          />
+        </React.Suspense>
+      ) : null}
+    </>
   );
+}
+
+export interface StreamTransferProps {
+  context: EntryContext;
+  identifier: number;
+  reader: ReadableStreamDefaultReader<Uint8Array>;
+  textDecoder: TextDecoder;
+}
+
+// StreamTransfer recursively renders down chunks of the `serverHandoffStream`
+// into the client-side `streamController`
+function StreamTransfer({
+  context,
+  identifier,
+  reader,
+  textDecoder,
+}: StreamTransferProps) {
+  // If the user didn't render the <Scripts> component then we don't have to
+  // bother streaming anything in
+  if (!context.renderMeta?.didRenderScripts) {
+    return null;
+  }
+
+  if (!context.renderMeta.streamCache) {
+    context.renderMeta.streamCache = {};
+  }
+  let { streamCache } = context.renderMeta;
+  let promise = streamCache[identifier];
+  if (!promise) {
+    promise = streamCache[identifier] = reader
+      .read()
+      .then((result) => {
+        streamCache[identifier].result = {
+          done: result.done,
+          value: textDecoder.decode(result.value, { stream: true }),
+        };
+      })
+      .catch((e) => {
+        streamCache[identifier].error = e;
+      });
+  }
+
+  if (promise.error) {
+    throw promise.error;
+  }
+  if (promise.result === undefined) {
+    throw promise;
+  }
+
+  let { done, value } = promise.result;
+  let scriptTag = value ? (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `window.__remixContext.streamController.enqueue(${JSON.stringify(
+          value
+        )});`,
+      }}
+    />
+  ) : null;
+
+  if (done) {
+    return (
+      <>
+        {scriptTag}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__remixContext.streamController.close();`,
+          }}
+        />
+      </>
+    );
+  } else {
+    return (
+      <>
+        {scriptTag}
+        <React.Suspense>
+          <StreamTransfer
+            context={context}
+            identifier={identifier + 1}
+            reader={reader}
+            textDecoder={textDecoder}
+          />
+        </React.Suspense>
+      </>
+    );
+  }
 }

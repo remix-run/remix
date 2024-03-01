@@ -555,6 +555,14 @@ async function handleDocumentRequest(
 
   let headers = getDocumentHeaders(build, context);
 
+  // Server UI state to send to the client.
+  // - When single fetch is enabled, this is streamed down via `serverHandoffStream`
+  // - Otherwise it's stringified into `serverHandoffString`
+  let state = {
+    loaderData: context.loaderData,
+    actionData: context.actionData,
+    errors: serializeErrors(context.errors, serverMode),
+  };
   let entryContext: EntryContext = {
     manifest: build.assets,
     routeModules: createEntryRouteModules(build.routes),
@@ -564,14 +572,16 @@ async function handleDocumentRequest(
       url: context.location.pathname,
       basename: build.basename,
       criticalCss,
-      state: {
-        loaderData: context.loaderData,
-        actionData: context.actionData,
-        errors: serializeErrors(context.errors, serverMode),
-      },
       future: build.future,
       isSpaMode: build.isSpaMode,
+      ...(!build.future.unstable_singleFetch ? { state } : null),
     }),
+    ...(build.future.unstable_singleFetch
+      ? {
+          serverHandoffStream: encode(state),
+          renderMeta: { didRenderScripts: false },
+        }
+      : null),
     future: build.future,
     isSpaMode: build.isSpaMode,
     serializeError: (err) => serializeError(err, serverMode),
@@ -618,21 +628,31 @@ async function handleDocumentRequest(
       context.errors = sanitizeErrors(context.errors, serverMode);
     }
 
-    // Update entryContext for the second render pass
+    // Get a new entryContext for the second render pass
+    // Server UI state to send to the client.
+    // - When single fetch is enabled, this is streamed down via `serverHandoffStream`
+    // - Otherwise it's stringified into `serverHandoffString`
+    let state = {
+      loaderData: context.loaderData,
+      actionData: context.actionData,
+      errors: serializeErrors(context.errors, serverMode),
+    };
     entryContext = {
       ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString({
         url: context.location.pathname,
         basename: build.basename,
-        state: {
-          loaderData: context.loaderData,
-          actionData: context.actionData,
-          errors: serializeErrors(context.errors, serverMode),
-        },
         future: build.future,
         isSpaMode: build.isSpaMode,
+        ...(!build.future.unstable_singleFetch ? { state } : null),
       }),
+      ...(build.future.unstable_singleFetch
+        ? {
+            serverHandoffStream: encode(state),
+            renderMeta: { didRenderScripts: false },
+          }
+        : null),
     };
 
     try {

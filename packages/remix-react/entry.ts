@@ -18,12 +18,26 @@ export interface RemixContextObject {
   isSpaMode: boolean;
   abortDelay?: number;
   serializeError?(error: Error): SerializedError;
+  renderMeta?: {
+    didRenderScripts: boolean;
+    streamCache: Record<
+      number,
+      Promise<void> & {
+        result?: {
+          done: boolean;
+          value: string;
+        };
+        error?: unknown;
+      }
+    >;
+  };
 }
 
 // Additional React-Router information needed at runtime, but not hydrated
 // through RemixContext
 export interface EntryContext extends RemixContextObject {
   staticHandlerContext: StaticHandlerContext;
+  serverHandoffStream?: ReadableStream<Uint8Array>;
 }
 
 export interface FutureConfig {

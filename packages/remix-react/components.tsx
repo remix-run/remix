@@ -622,11 +622,24 @@ export type ScriptProps = Omit<
  * @see https://remix.run/components/scripts
  */
 export function Scripts(props: ScriptProps) {
-  let { manifest, serverHandoffString, abortDelay, serializeError, isSpaMode } =
-    useRemixContext();
+  let {
+    manifest,
+    serverHandoffString,
+    abortDelay,
+    serializeError,
+    isSpaMode,
+    future,
+    renderMeta,
+  } = useRemixContext();
   let { router, static: isStatic, staticContext } = useDataRouterContext();
   let { matches: routerMatches } = useDataRouterStateContext();
   let navigation = useNavigation();
+
+  // Let <RemixServer> know that we hydrated and we should render the single
+  // fetch streaming scripts
+  if (renderMeta) {
+    renderMeta.didRenderScripts = true;
+  }
 
   let matches = getActiveMatches(routerMatches, null, isSpaMode);
 
@@ -688,8 +701,17 @@ export function Scripts(props: ScriptProps) {
 
   let deferredScripts: any[] = [];
   let initialScripts = React.useMemo(() => {
+    let streamScript = future.unstable_singleFetch
+      ? // prettier-ignore
+        "window.__remixContext.stream = new ReadableStream({" +
+          "start(controller){" +
+            "window.__remixContext.streamController = controller;" +
+          "}" +
+        "}).pipeThrough(new TextEncoderStream());"
+      : "";
+
     let contextScript = staticContext
-      ? `window.__remixContext = ${serverHandoffString};`
+      ? `window.__remixContext = ${serverHandoffString};${streamScript}`
       : " ";
 
     let activeDeferreds = staticContext?.activeDeferreds;
