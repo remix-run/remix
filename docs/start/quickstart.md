@@ -178,7 +178,7 @@ First add a dev command in `package.json` that will run `remix dev`:
 }
 ```
 
-This will start the Remix development server which will watch your files for changes and rebuild your app. The `-c` flag tell it how to start your actual application server.
+This will start the Remix development server which will watch your files for changes and rebuild your app. The `-c` flag tells it how to start your actual application server.
 
 When files change, Remix will restart your server for you, but because you own your server, you also have to tell Remix when it has restarted so Remix can safely send the hot updates to the browser.
 
