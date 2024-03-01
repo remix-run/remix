@@ -228,8 +228,7 @@ startTransition(() => {
   - Generally speaking, the way to resolve these issues is to import any browser-only libraries from `entry.client.tsx` so they don't end up in the server build
   - Otherwise, you can generally solve these by using [`React.lazy`][react-lazy] or the [`<ClientOnly>`][client-only] component from `remix-utils`
 
-- The [SPA Mode template][spa-mode-template] enables the Vite [ssr.noExternal][vite-ssr-noexternal] option by default to automatically bundle all of your dependencies during the server build to avoid most ESM/CJS issues
-  - This may slow down your build a bit — if so, you can try removing this option, or switching to a more targeted array containing the specific dependencies you wish to bundle
+- If you are running into ESM/CJS issues with your app dependencies you may need to set the Vite [ssr.external][vite-ssr-external] and/or [ssr.noExternal][vite-ssr-noexternal] options in your config to exclude or include certain dependencies in your server bundle.
 
 ## Migrating from React Router
 
@@ -273,5 +272,5 @@ Once you've got all your routes living in their own files, you can:
 [client-only]: https://github.com/sergiodxa/remix-utils?tab=readme-ov-file#clientonly
 [vite-preview]: https://vitejs.dev/guide/cli#vite-preview
 [sirv-cli]: https://www.npmjs.com/package/sirv-cli
-[spa-mode-template]: https://github.com/remix-run/remix/tree/main/templates/spa
 [vite-ssr-noexternal]: https://vitejs.dev/config/ssr-options#ssr-noexternal
+[vite-ssr-external]: https://vitejs.dev/config/ssr-options#ssr-external
