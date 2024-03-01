@@ -304,7 +304,7 @@ async function handleDataRequest(
 
 // IMPORTANT! Keep in sync with the types in @remix-run/react
 type SingleFetchResult =
-  | { data: unknown; status?: number } // status only included in actions
+  | { data: unknown }
   | { error: unknown }
   | { redirect: string; status: number; revalidate: boolean; reload: boolean };
 type SingleFetchResults = {
@@ -321,7 +321,7 @@ async function handleSingleFetchRequest(
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void
 ): Promise<Response> {
-  let [result, headers] =
+  let [result, headers, actionStatus] =
     request.method !== "GET"
       ? await singleFetchAction(
           request,
@@ -357,7 +357,10 @@ async function handleSingleFetchRequest(
         }
       },
     ]),
-    { headers: resultHeaders }
+    {
+      status: actionStatus || 200,
+      headers: resultHeaders,
+    }
   );
 }
 
@@ -367,7 +370,7 @@ async function singleFetchAction(
   staticHandler: StaticHandler,
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void
-): Promise<[SingleFetchResult, Headers]> {
+): Promise<[SingleFetchResult, Headers, number]> {
   try {
     let handlerRequest = new Request(handlerUrl, {
       method: request.method,
@@ -393,11 +396,13 @@ async function singleFetchAction(
           reload: response.headers.has("X-Remix-Reload-Document"),
         },
         response.headers,
+        200, // Don't trigger a redirect on the `fetch`
       ];
     }
     return [
-      { data: await unwrapResponse(response), status: response.status },
+      { data: await unwrapResponse(response) },
       response.headers,
+      response.status,
     ];
   } catch (err) {
     handleError(err);
@@ -408,7 +413,11 @@ async function singleFetchAction(
           await unwrapResponse(err)
         )
       : err;
-    return [{ error }, new Headers()];
+    return [
+      { error },
+      new Headers(),
+      isRouteErrorResponse(error) ? error.status : 500,
+    ];
   }
 }
 

@@ -1,6 +1,10 @@
-import type { DataStrategyMatch, ErrorResponse } from "@remix-run/router";
+import type {
+  DataStrategyFunction,
+  DataStrategyMatch,
+  ErrorResponse,
+  unstable_HandlerResult as HandlerResult,
+} from "@remix-run/router";
 import {
-  unstable_DecodedResponse,
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
   redirect,
 } from "@remix-run/router";
@@ -13,7 +17,7 @@ import type { RouteModules } from "./routeModules";
 
 // IMPORTANT! Keep in sync with the types in @remix-run/server-runtime
 type SingleFetchResult =
-  | { data: unknown; status?: number } // status only included in actions
+  | { data: unknown }
   | { error: unknown }
   | { redirect: string; status: number; revalidate: boolean; reload: boolean };
 type SingleFetchResults = {
@@ -23,17 +27,19 @@ type SingleFetchResults = {
 export function getSingleFetchDataStrategy(
   manifest: AssetsManifest,
   routeModules: RouteModules
-) {
+): DataStrategyFunction {
   return async ({ request, matches }: DataStrategyFunctionArgs) => {
     // This function is the way for a loader/action to "talk" to the server
     let singleFetch: (routeId: string) => Promise<unknown>;
+    let actionStatus: number | undefined;
     if (request.method !== "GET") {
       // Actions are simple since they're singular - just hit the server
       singleFetch = async (routeId) => {
         let url = singleFetchUrl(request.url);
         let init = await createRequestInit(request);
-        let result = await fetchAndDecode(url, init);
-        return unwrapSingleFetchResult(result as SingleFetchResult, routeId);
+        let { data, status } = await fetchAndDecode(url, init);
+        actionStatus = status;
+        return unwrapSingleFetchResult(data as SingleFetchResult, routeId);
       };
     } else {
       // Loaders are trickier since we only want to hit the server once, so we
@@ -55,8 +61,8 @@ export function getSingleFetchDataStrategy(
           )
         );
 
-        let result = await fetchAndDecode(url);
-        return result as SingleFetchResults;
+        let { data } = await fetchAndDecode(url);
+        return data as SingleFetchResults;
       };
 
       singleFetch = async (routeId) => {
@@ -64,19 +70,31 @@ export function getSingleFetchDataStrategy(
           singleFetchPromise = makeSingleFetchCall();
         }
         let results = await singleFetchPromise;
-        if (results[routeId] !== undefined) {
-          return unwrapSingleFetchResult(results[routeId], routeId);
-        }
-        return null;
+        return results[routeId] !== undefined
+          ? unwrapSingleFetchResult(results[routeId], routeId)
+          : null;
       };
     }
 
     // Call the route handlers passing through the `singleFetch` function that will
     // be called instead of making a server call
     return Promise.all(
-      matches.map(async (m) => {
-        return m.resolve((handler) => handler(() => singleFetch(m.route.id)));
-      })
+      matches.map(async (m) =>
+        m.resolve(async (handler): Promise<HandlerResult> => {
+          try {
+            return {
+              type: "data",
+              result: await handler(() => singleFetch(m.route.id)),
+              status: actionStatus,
+            };
+          } catch (e) {
+            return {
+              type: "error",
+              result: e,
+            };
+          }
+        })
+      )
     );
   };
 }
@@ -174,7 +192,7 @@ async function fetchAndDecode(url: URL, init?: RequestInit) {
         }
       },
     ]);
-    return decoded.value;
+    return { status: res.status, data: decoded.value };
   }
 
   // If we didn't get back a turbo-stream response, then we never reached the
@@ -196,14 +214,6 @@ function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
     }
     return redirect(result.redirect, { status: result.status, headers });
   } else if ("data" in result) {
-    if (typeof result.status === "number") {
-      return new unstable_DecodedResponse(
-        result.status,
-        "",
-        new Headers(),
-        result.data
-      );
-    }
     return result.data;
   } else {
     throw new Error(`No action response found for routeId "${routeId}"`);

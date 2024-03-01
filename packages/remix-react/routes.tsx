@@ -1,9 +1,6 @@
 import * as React from "react";
 import type { HydrationState } from "@remix-run/router";
-import {
-  UNSAFE_ErrorResponseImpl as ErrorResponse,
-  unstable_isDecodedResponse as isDecodedResponse,
-} from "@remix-run/router";
+import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -262,29 +259,22 @@ export function createClientRoutes(
     ) {
       if (typeof singleFetch === "function") {
         let result = await singleFetch();
-        if (unwrap && isDecodedResponse(result)) {
-          return result.data;
-        }
         return result;
       }
-
       let result = await fetchServerHandler(request, route);
-      if (unwrap) {
-        return unwrapServerResponse(result);
-      }
-      return result;
+      return unwrap ? unwrapServerResponse(result) : result;
     }
 
-    async function fetchServerLoader(
+    function fetchServerLoader(
       request: Request,
       unwrap: boolean,
       singleFetch: unknown
     ) {
-      if (!route.hasLoader) return null;
+      if (!route.hasLoader) return Promise.resolve(null);
       return fetchServerHandlerAndMaybeUnwrap(request, unwrap, singleFetch);
     }
 
-    async function fetchServerAction(
+    function fetchServerAction(
       request: Request,
       unwrap: boolean,
       singleFetch: unknown

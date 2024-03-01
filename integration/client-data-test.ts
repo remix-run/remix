@@ -2224,9 +2224,7 @@ test.describe("single fetch", () => {
                 childClientLoaderHydrate: false,
                 childAdditions: js`
                 export async function clientAction({ serverAction }) {
-                  debugger;
                   let data = await serverAction();
-                  debugger;
                   return {
                     message: data.message + " (mutated by client)"
                   }
