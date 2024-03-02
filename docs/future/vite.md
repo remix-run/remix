@@ -6,6 +6,8 @@ title: Vite
 
 [Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
 
+The Vite plugin was stabilized as of Remix 2.7.0.
+
 ## Getting started
 
 We've got a few different Vite-based templates to get you started.
@@ -337,6 +339,8 @@ npm install -D vite
 ```
 
 Remix is now just a Vite plugin, so you'll need to hook it up to Vite.
+
+**Note**: Remix requires a minimum Vite version of 5.0.0 to work properly.
 
 👉 **Replace `remix.config.js` with `vite.config.ts` at the root of your Remix app**
 
