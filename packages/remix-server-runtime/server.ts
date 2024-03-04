@@ -19,7 +19,12 @@ import type { AppLoadContext } from "./data";
 import type { HandleErrorFunction, ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryRouteModules } from "./entry";
-import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
+import {
+  sanitizeError,
+  sanitizeErrors,
+  serializeError,
+  serializeErrors,
+} from "./errors";
 import { getDocumentHeadersRR as getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
@@ -34,6 +39,7 @@ import {
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
+import { head } from "lodash";
 
 export type RequestHandler = (
   request: Request,
@@ -118,6 +124,8 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         request,
       });
     };
+
+    debugger;
 
     let response: Response;
     if (url.searchParams.has("_data")) {
@@ -286,9 +294,7 @@ async function handleDataRequest(
     }
 
     if (isRouteErrorResponse(error)) {
-      if (error) {
-        handleError(error);
-      }
+      handleError(error);
       return errorResponseToJson(error, serverMode);
     }
 
@@ -325,7 +331,7 @@ async function handleSingleFetchRequest(
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void
 ): Promise<Response> {
-  let [result, headers, actionStatus] =
+  let [result, headers, status] =
     request.method !== "GET"
       ? await singleFetchAction(
           request,
@@ -353,19 +359,10 @@ async function handleSingleFetchRequest(
 
   // Note: Deferred data is already just Promises, so we don't have to mess
   // `activeDeferreds` or anything :)
-  return new Response(
-    encode(result, [
-      (value) => {
-        if (value instanceof ErrorResponseImpl) {
-          return ["ErrorResponse", { ...value }];
-        }
-      },
-    ]),
-    {
-      status: actionStatus || 200,
-      headers: resultHeaders,
-    }
-  );
+  return new Response(encodeViaTurboStream(result, serverMode), {
+    status: status || 200,
+    headers: resultHeaders,
+  });
 }
 
 async function singleFetchAction(
@@ -411,19 +408,26 @@ async function singleFetchAction(
       result.status,
     ];
   } catch (err) {
-    handleError(err);
-    let error = isResponse(err)
-      ? new ErrorResponseImpl(
-          err.status,
-          err.statusText,
-          await unwrapResponse(err)
-        )
-      : err;
-    return [
-      { error },
-      new Headers(),
-      isRouteErrorResponse(error) ? error.status : 500,
-    ];
+    let status = 500;
+    let headers = new Headers();
+    let error;
+
+    if (isResponse(err)) {
+      status = err.status;
+      error = new ErrorResponseImpl(
+        err.status,
+        err.statusText,
+        await unwrapResponse(err)
+      );
+    } else {
+      if (isRouteErrorResponse(err)) {
+        status = err.status;
+      }
+      error = err;
+      handleError(error);
+    }
+
+    return [{ error }, headers, status];
   }
 }
 
@@ -436,7 +440,7 @@ async function singleFetchLoaders(
   handleError: (err: unknown) => void,
   serverMode: ServerMode,
   build: ServerBuild
-): Promise<[SingleFetchResults, Headers]> {
+): Promise<[SingleFetchResults, Headers, status]> {
   let context: StaticHandlerContext;
   try {
     let handlerRequest = new Request(handlerUrl);
@@ -465,12 +469,13 @@ async function singleFetchLoaders(
           },
         },
         result.headers,
+        result.status,
       ];
     }
     context = result;
   } catch (error: unknown) {
     handleError(error);
-    return [{ root: { error } }, new Headers()];
+    return [{ root: { error } }, new Headers(), 500];
   }
 
   // Sanitize errors outside of development environments
@@ -522,7 +527,7 @@ async function singleFetchLoaders(
     }
   });
 
-  return [results, getDocumentHeaders(build, context)];
+  return [results, getDocumentHeaders(build, context), context.statusCode];
 }
 
 async function handleDocumentRequest(
@@ -584,7 +589,7 @@ async function handleDocumentRequest(
     }),
     ...(build.future.unstable_singleFetch
       ? {
-          serverHandoffStream: encode(state),
+          serverHandoffStream: encodeViaTurboStream(state, serverMode),
           renderMeta: { didRenderScripts: false },
         }
       : null),
@@ -655,7 +660,7 @@ async function handleDocumentRequest(
       }),
       ...(build.future.unstable_singleFetch
         ? {
-            serverHandoffStream: encode(state),
+            serverHandoffStream: encodeViaTurboStream(state, serverMode),
             renderMeta: { didRenderScripts: false },
           }
         : null),
@@ -692,12 +697,15 @@ async function handleResourceRequest(
       routeId,
       requestContext: loadContext,
     });
-    invariant(
-      !(DEFERRED_SYMBOL in response),
-      `You cannot return a \`defer()\` response from a Resource Route.  Did you ` +
-        `forget to export a default UI component from the "${routeId}" route?`
-    );
-    // callRouteLoader/callRouteAction always return responses
+    if (typeof response === "object") {
+      invariant(
+        !(DEFERRED_SYMBOL in response),
+        `You cannot return a \`defer()\` response from a Resource Route.  Did you ` +
+          `forget to export a default UI component from the "${routeId}" route?`
+      );
+    }
+    // callRouteLoader/callRouteAction always return responses (w/o single fetch).
+    // With single fetch, users should always be Responses from resource routes
     invariant(
       isResponse(response),
       "Expected a Response to be returned from queryRoute"
@@ -768,4 +776,25 @@ function unwrapResponse(response: Response) {
       ? null
       : response.json()
     : response.text();
+}
+
+// Note: If you change this function please change the corresponding
+// decodeViaTurboStream function in server-runtime
+function encodeViaTurboStream(data: any, serverMode: ServerMode) {
+  return encode(data, [
+    (value) => {
+      // Even though we sanitized errors on context.errors prior to responding,
+      // we still need to handle this for any deferred data that rejects with an
+      // Error - as those will not be sanitized yet
+      if (value instanceof Error && serverMode === ServerMode.Production) {
+        let { message, stack, name } = sanitizeError(value, serverMode);
+        return ["SanitizedError", { message, stack, name }];
+      }
+
+      if (value instanceof ErrorResponseImpl) {
+        let { data, status, statusText } = value;
+        return ["ErrorResponse", { data, status, statusText }];
+      }
+    },
+  ]);
 }

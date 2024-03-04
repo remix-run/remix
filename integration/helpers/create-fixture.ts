@@ -18,6 +18,7 @@ import { createRequestHandler } from "../../build/node_modules/@remix-run/server
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express/dist/index.js";
 // @ts-ignore
 import { installGlobals } from "../../build/node_modules/@remix-run/node/dist/index.js";
+import { decodeViaTurboStream } from "../../build/node_modules/@remix-run/react/dist/single-fetch.js";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
@@ -137,8 +138,13 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
     let url = new URL(href, "test://test");
     let request = new Request(url.toString(), init);
     let response = await handler(request);
-    let decoded = await decode(response.body!);
-    return decoded.value;
+    let decoded = await decodeViaTurboStream(response.body!, global);
+    return {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+      data: decoded.value,
+    };
   };
 
   let postDocument = async (href: string, data: URLSearchParams | FormData) => {

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { UNSAFE_ErrorResponseImpl as ErrorResponseImpl } from "@remix-run/router";
 
 import { ServerMode } from "../build/node_modules/@remix-run/server-runtime/dist/mode.js";
 import type { Fixture } from "./helpers/create-fixture.js";
@@ -271,6 +272,11 @@ test.describe("Error Sanitization", () => {
       expect(errorLogs[0][0].stack).toMatch(" at ");
     });
 
+    // Note: This is currently inconsistent with document requests - we do not
+    // serialize ErrorResponse as Errors in document requests and we do send the
+    // data (i.e., Route "not-a-route" does not match URL "/").  Probably no
+    // real need to align those now with data requests on the way out - we
+    // have aligned them in single fetch
     test("sanitizes mismatched route errors in data requests", async () => {
       let response = await fixture.requestData("/", "not-a-route");
       let text = await response.text();
@@ -423,7 +429,7 @@ test.describe("Error Sanitization", () => {
       expect(errorLogs[0][0].stack).toMatch(" at ");
     });
 
-    test("sanitizes mismatched route errors in data requests", async () => {
+    test("does not sanitize mismatched route errors in data requests", async () => {
       let response = await fixture.requestData("/", "not-a-route");
       let text = await response.text();
       expect(text).toMatch(
@@ -751,7 +757,7 @@ test.describe("single fetch", () => {
       });
 
       test("returns data without errors", async () => {
-        let data = await fixture.requestSingleFetchData("/_root.data");
+        let { data } = await fixture.requestSingleFetchData("/_root.data");
         expect(data).toEqual({
           root: {
             data: null,
@@ -763,7 +769,9 @@ test.describe("single fetch", () => {
       });
 
       test("sanitizes loader errors in data requests", async () => {
-        let data = await fixture.requestSingleFetchData("/_root.data?loader");
+        let { data } = await fixture.requestSingleFetchData(
+          "/_root.data?loader"
+        );
         expect(data).toEqual({
           root: {
             data: null,
@@ -778,20 +786,20 @@ test.describe("single fetch", () => {
       });
 
       test("returns deferred data without errors", async () => {
-        let data = await fixture.requestSingleFetchData("/defer.data");
+        let { data } = await fixture.requestSingleFetchData("/defer.data");
         // @ts-expect-error
         expect(await data["routes/defer"].data.lazy).toEqual("RESOLVED");
       });
 
       test("sanitizes loader errors in deferred data requests", async () => {
-        let data = await fixture.requestSingleFetchData("/defer.data?loader");
+        let { data } = await fixture.requestSingleFetchData(
+          "/defer.data?loader"
+        );
         try {
           // @ts-expect-error
           await data["routes/defer"].data.lazy;
           expect(true).toBe(false);
         } catch (e) {
-          // TODO: This test is currently failing - we need to be sanitizing
-          // rejected errors via a turbo-stream plugin
           expect((e as Error).message).toBe("Unexpected Server Error");
           expect((e as Error).stack).toBeUndefined();
         }
@@ -809,16 +817,22 @@ test.describe("single fetch", () => {
         expect(errorLogs[0][0].stack).toMatch(" at ");
       });
 
-      test("sanitizes mismatched route errors in data requests", async () => {
-        let data = await fixture.requestSingleFetchData("/not-a-route.data");
-        // TODO: This test is currently failing - we need to send back a
-        // turbo-stream encoded 404 error for these cases
-        expect(data).toEqual({ message: "Unexpected Server Error" });
-        expect(errorLogs.length).toBe(1);
-        expect(errorLogs[0][0].message).toMatch(
-          'Route "not-a-route" does not match URL "/"'
+      test("does not sanitize mismatched route errors in data requests", async () => {
+        let { data } = await fixture.requestSingleFetchData(
+          "/not-a-route.data"
         );
-        expect(errorLogs[0][0].stack).toMatch(" at ");
+        expect(data).toEqual({
+          root: {
+            error: new ErrorResponseImpl(
+              404,
+              "Not Found",
+              'Error: No route matches URL "/not-a-route"'
+            ),
+          },
+        });
+        expect(errorLogs).toEqual([
+          [new Error('No route matches URL "/not-a-route"')],
+        ]);
       });
 
       test("does not support hydration of Error subclasses", async ({
@@ -917,7 +931,7 @@ test.describe("single fetch", () => {
       });
 
       test("returns data without errors", async () => {
-        let data = await fixture.requestSingleFetchData("/_root.data");
+        let { data } = await fixture.requestSingleFetchData("/_root.data");
         expect(data).toEqual({
           root: {
             data: null,
@@ -929,7 +943,9 @@ test.describe("single fetch", () => {
       });
 
       test("does not sanitize loader errors in data requests", async () => {
-        let data = await fixture.requestSingleFetchData("/_root.data?loader");
+        let { data } = await fixture.requestSingleFetchData(
+          "/_root.data?loader"
+        );
         expect(data).toEqual({
           root: {
             data: null,
@@ -944,20 +960,20 @@ test.describe("single fetch", () => {
       });
 
       test("returns deferred data without errors", async () => {
-        let data = await fixture.requestSingleFetchData("/defer.data");
+        let { data } = await fixture.requestSingleFetchData("/defer.data");
         // @ts-expect-error
         expect(await data["routes/defer"].data.lazy).toEqual("RESOLVED");
       });
 
       test("does not sanitize loader errors in deferred data requests", async () => {
-        let data = await fixture.requestSingleFetchData("/defer.data?loader");
+        let { data } = await fixture.requestSingleFetchData(
+          "/defer.data?loader"
+        );
         try {
           // @ts-expect-error
           await data["routes/defer"].data.lazy;
           expect(true).toBe(false);
         } catch (e) {
-          // TODO: This test is currently failing - we need to proxy through
-          // stack values
           expect((e as Error).message).toBe("REJECTED");
           expect((e as Error).stack).not.toBeUndefined();
         }
@@ -976,16 +992,22 @@ test.describe("single fetch", () => {
         expect(errorLogs[0][0].stack).toMatch(" at ");
       });
 
-      test("sanitizes mismatched route errors in data requests", async () => {
-        let data = await fixture.requestSingleFetchData("/not-a-route.data");
-        expect(data).toEqual(
-          '{"message":"Route \\"not-a-route\\" does not match URL \\"/\\"","stack":"Error: Route \\"not-a-route\\" does not match URL \\"/\\"'
+      test("does not sanitize mismatched route errors in data requests", async () => {
+        let { data } = await fixture.requestSingleFetchData(
+          "/not-a-route.data"
         );
-        expect(errorLogs.length).toBe(1);
-        expect(errorLogs[0][0].message).toMatch(
-          'Route "not-a-route" does not match URL "/"'
-        );
-        expect(errorLogs[0][0].stack).toMatch(" at ");
+        expect(data).toEqual({
+          root: {
+            error: new ErrorResponseImpl(
+              404,
+              "Not Found",
+              'Error: No route matches URL "/not-a-route"'
+            ),
+          },
+        });
+        expect(errorLogs).toEqual([
+          [new Error('No route matches URL "/not-a-route"')],
+        ]);
       });
 
       test("supports hydration of Error subclasses", async ({ page }) => {
@@ -1179,7 +1201,7 @@ test.describe("single fetch", () => {
       });
 
       test("returns data without errors", async () => {
-        let data = await fixture.requestSingleFetchData("/_root.data");
+        let { data } = await fixture.requestSingleFetchData("/_root.data");
         expect(data).toEqual({
           root: {
             data: null,
@@ -1191,7 +1213,9 @@ test.describe("single fetch", () => {
       });
 
       test("sanitizes loader errors in data requests", async () => {
-        let data = await fixture.requestSingleFetchData("/_root.data?loader");
+        let { data } = await fixture.requestSingleFetchData(
+          "/_root.data?loader"
+        );
         expect(data).toEqual({
           root: { data: null },
           "routes/_index": { error: new Error("Unexpected Server Error") },
@@ -1206,21 +1230,21 @@ test.describe("single fetch", () => {
       });
 
       test("returns deferred data without errors", async () => {
-        let data = await fixture.requestSingleFetchData("/defer.data");
+        let { data } = await fixture.requestSingleFetchData("/defer.data");
         // @ts-expect-error
         expect(await data["routes/defer"].data.lazy).toBe("RESOLVED");
       });
 
       test("sanitizes loader errors in deferred data requests", async () => {
-        let data = await fixture.requestSingleFetchData("/defer.data?loader");
+        let { data } = await fixture.requestSingleFetchData(
+          "/defer.data?loader"
+        );
         try {
           // @ts-expect-error
           await data["routes/defer"].data.lazy;
           expect(true).toBe(false);
         } catch (e) {
-          // TODO: This test is currently failing - we need to proxy through
-          // stack values
-          expect((e as Error).message).toBe("REJECTED");
+          expect((e as Error).message).toBe("Unexpected Server Error");
           expect((e as Error).stack).toBeUndefined();
         }
         // defer errors are not logged to the server console since the request
@@ -1233,6 +1257,7 @@ test.describe("single fetch", () => {
         let text = await response.text();
         expect(text).toBe("Unexpected Server Error");
         expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
+        expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
         expect(errorLogs[1][0]).toEqual(
           "  Request: GET test://test/resource?loader"
         );
@@ -1241,16 +1266,26 @@ test.describe("single fetch", () => {
         expect(errorLogs.length).toBe(4);
       });
 
-      test("sanitizes mismatched route errors in data requests", async () => {
-        let data = await fixture.requestSingleFetchData("/not-a-route.data");
-        expect(data).toEqual('{"message":"Unexpected Server Error"}');
+      test("does not sanitize mismatched route errors in data requests", async () => {
+        let { data } = await fixture.requestSingleFetchData(
+          "/not-a-route.data"
+        );
+        expect(data).toEqual({
+          root: {
+            error: new ErrorResponseImpl(
+              404,
+              "Not Found",
+              'Error: No route matches URL "/not-a-route"'
+            ),
+          },
+        });
         expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
         expect(errorLogs[1][0]).toEqual(
-          "  Request: GET test://test/?_data=not-a-route"
+          "  Request: GET test://test/not-a-route.data"
         );
-        expect(errorLogs[2][0]).toEqual("  Status: 403 Forbidden");
+        expect(errorLogs[2][0]).toEqual("  Status: 404 Not Found");
         expect(errorLogs[3][0]).toEqual(
-          '  Error: Route "not-a-route" does not match URL "/"'
+          '  Error: No route matches URL "/not-a-route"'
         );
         expect(errorLogs[4][0]).toMatch(" at ");
         expect(errorLogs.length).toBe(5);

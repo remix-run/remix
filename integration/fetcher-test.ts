@@ -553,7 +553,7 @@ test.describe("single fetch", () => {
           "app/routes/resource-route-action-only.ts": js`
             import { json } from "@remix-run/node";
             export function action() {
-              return json("${CHEESESTEAK}");
+              return new Response("${CHEESESTEAK}");
             }
           `,
 
@@ -581,10 +581,10 @@ test.describe("single fetch", () => {
 
           "app/routes/resource-route.tsx": js`
             export function loader() {
-              return "${LUNCH}";
+              return new Response("${LUNCH}");
             }
             export function action() {
-              return "${CHEESESTEAK}";
+              return new Response("${CHEESESTEAK}");
             }
           `,
 
@@ -621,11 +621,11 @@ test.describe("single fetch", () => {
             import { Outlet } from "@remix-run/react";
 
             export function action() {
-              return "${PARENT_LAYOUT_ACTION}";
+              return new Response("${PARENT_LAYOUT_ACTION}");
             };
 
             export function loader() {
-              return "${PARENT_LAYOUT_LOADER}";
+              return new Response("${PARENT_LAYOUT_LOADER}");
             };
 
             export default function Parent() {
@@ -637,11 +637,11 @@ test.describe("single fetch", () => {
             import { useFetcher } from "@remix-run/react";
 
             export function action() {
-              return "${PARENT_INDEX_ACTION}";
+              return new Response("${PARENT_INDEX_ACTION}");
             };
 
             export function loader() {
-              return "${PARENT_INDEX_LOADER}";
+              return new Response("${PARENT_INDEX_LOADER}");
             };
 
             export default function ParentIndex() {

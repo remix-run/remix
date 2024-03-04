@@ -411,7 +411,6 @@ test.describe("single fetch", () => {
         // Cause a ?_data request to trigger an HTTP error that never reaches the
         // Remix server, and ensure we properly handle it at the ErrorBoundary
         await page.route(/\/parent\/child-with-boundary\.data$/, (route) => {
-          console.log("fulfilling!");
           route.fulfill({ status: 500, body: "CDN Error!" });
         });
         let app = new PlaywrightFixture(appFixture, page);

@@ -16,7 +16,10 @@ import {
   createClientRoutesWithHMRRevalidationOptOut,
   shouldHydrateRouteLoader,
 } from "./routes";
-import { getSingleFetchDataStrategy } from "./single-fetch";
+import {
+  decodeViaTurboStream,
+  getSingleFetchDataStrategy,
+} from "./single-fetch";
 import invariant from "./invariant";
 
 /* eslint-disable prefer-let/prefer-let */
@@ -221,7 +224,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         let stream = window.__remixContext.stream;
         invariant(stream, "No stream found for single fetch decoding");
         window.__remixContext.stream = undefined;
-        stateDecodingPromise = decode(stream)
+        stateDecodingPromise = decodeViaTurboStream(stream, window)
           .then((value) => {
             window.__remixContext.state =
               value.value as typeof window.__remixContext.state;
