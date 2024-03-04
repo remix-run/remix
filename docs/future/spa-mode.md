@@ -222,13 +222,41 @@ startTransition(() => {
 
 - You cannot call `serverLoader`/`serverAction` from your `clientLoader`/`clientAction` methods since there is no running server -- those will throw a runtime error if called
 
-- It's important to note that Remix SPA mode generates your `index.html` file by performing a "pre-render" of your root route on the server during the build
+### Server Build
 
-  - This means that while you're creating a SPA, you still have a "server build" and "server render" step, so you do need to be careful about using dependencies that reference client-only aspects such as `document`, `window`, `localStorage`, etc.
-  - Generally speaking, the way to resolve these issues is to import any browser-only libraries from `entry.client.tsx` so they don't end up in the server build
-  - Otherwise, you can generally solve these by using [`React.lazy`][react-lazy] or the [`<ClientOnly>`][client-only] component from `remix-utils`
+It's important to note that Remix SPA mode generates your `index.html` file by performing a "pre-render" of your root route on the server during the build
 
-- If you are running into ESM/CJS issues with your app dependencies you may need to set the Vite [ssr.external][vite-ssr-external] and/or [ssr.noExternal][vite-ssr-noexternal] options in your config to exclude or include certain dependencies in your server bundle.
+- This means that while you're creating a SPA, you still have a "server build" and "server render" step, so you do need to be careful about using dependencies that reference client-only aspects such as `document`, `window`, `localStorage`, etc.
+- Generally speaking, the way to resolve these issues is to import any browser-only libraries from `entry.client.tsx` so they don't end up in the server build
+- Otherwise, you can generally solve these by using [`React.lazy`][react-lazy] or the [`<ClientOnly>`][client-only] component from `remix-utils`
+
+### CJS/ESM Dependency Issues
+
+If you are running into ESM/CJS issues with your app dependencies you may need to play with the Vite [ssr.noExternal][vite-ssr-noexternal] option to include certain dependencies in your server bundle:
+
+```ts filename=vite.config.ts lines=[12-15]
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      ssr: false,
+    }),
+    tsconfigPaths(),
+  ],
+  ssr: {
+    // Bundle `problematic-dependency` into the server build
+    noExternal: ["problematic-dependency"],
+  },
+  // ...
+});
+```
+
+These issues are usually due to dependencies whose published code is incorrectly-configured for CJS/ESM. By including the specific dependency in `ssr.noExternal`, Vite will bundle the dependency into the server build and can help avoid runtime import issues when running your server.
+
+If you have the opposite use-case and you specifically want to keep dependencies external to the bundle, you can use the opposite [`ssr.external`][vite-ssr-external] option.
 
 ## Migrating from React Router
 
