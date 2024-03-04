@@ -194,12 +194,8 @@ test.describe("single fetch", () => {
     });
 
     test("returns responses for single fetch routes", async () => {
-      let root = await fixture.requestSingleFetchData("/_root.data");
-
-      expect(root.headers.get("Content-Type")).toBe("text/x-turbo");
-
-      let val = await decode(root.body!);
-      expect(val.value).toEqual({
+      let { data } = await fixture.requestSingleFetchData("/_root.data");
+      expect(data).toEqual({
         root: { data: ROOT_DATA },
         "routes/_index": { data: INDEX_DATA },
       });

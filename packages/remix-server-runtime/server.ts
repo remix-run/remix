@@ -2,7 +2,6 @@ import type {
   UNSAFE_DeferredData as DeferredData,
   ErrorResponse,
   StaticHandler,
-  StaticHandlerContext,
 } from "@remix-run/router";
 import {
   UNSAFE_DEFERRED_SYMBOL as DEFERRED_SYMBOL,
@@ -39,7 +38,6 @@ import {
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
-import { head } from "lodash";
 
 export type RequestHandler = (
   request: Request,
@@ -124,8 +122,6 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         request,
       });
     };
-
-    debugger;
 
     let response: Response;
     if (url.searchParams.has("_data")) {
@@ -341,8 +337,8 @@ async function handleSingleFetchRequest(
           handleError
         )
       : await singleFetchLoaders(
+          request,
           handlerUrl,
-          new URL(request.url).searchParams.get("_routes"),
           staticHandler,
           matches,
           loadContext,
@@ -392,12 +388,7 @@ async function singleFetchAction(
 
     if (isRedirectResponse(result)) {
       return [
-        {
-          redirect: result.headers.get("Location")!,
-          status: result.status,
-          revalidate: result.headers.has("X-Remix-Revalidate"),
-          reload: result.headers.has("X-Remix-Reload-Document"),
-        },
+        getSingleFetchRedirect(result),
         result.headers,
         200, // Don't trigger a redirect on the `fetch`
       ];
@@ -432,102 +423,107 @@ async function singleFetchAction(
 }
 
 async function singleFetchLoaders(
+  request: Request,
   handlerUrl: URL,
-  routesToLoad: string | null,
   staticHandler: StaticHandler,
   matches: RouteMatch<ServerRoute>[] | null,
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void,
   serverMode: ServerMode,
   build: ServerBuild
-): Promise<[SingleFetchResults, Headers, status]> {
-  let context: StaticHandlerContext;
+): Promise<[SingleFetchResults, Headers, number]> {
   try {
-    let handlerRequest = new Request(handlerUrl);
-    let loadRouteIds = routesToLoad ? routesToLoad.split(",") : undefined;
+    let handlerRequest = new Request(handlerUrl, {
+      headers: request.headers,
+      signal: request.signal,
+    });
+    let loadRouteIds =
+      new URL(request.url).searchParams.get("_routes")?.split(",") || undefined;
 
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       loadRouteIds,
     });
     if (isResponse(result)) {
-      // We don't really know which loader this came from, so just stick it at
-      // a known match
-      let routeId =
-        matches?.find((m) =>
-          routesToLoad
-            ? routesToLoad.split(",").includes(m.route.id)
-            : m.route.module.loader
-        )?.route.id || "root";
+      let redirect = getSingleFetchRedirect(result);
+
+      // We don't really know which loader this came from, include for all routes
+      // TODO: This feels like a hack - change internal query behavior here?
+      let results = loadRouteIds
+        ? loadRouteIds.reduce(
+            (acc, routeId) => Object.assign(acc, { [routeId]: redirect }),
+            {}
+          )
+        : matches!
+            .filter((m) => m.route.module.loader)
+            .reduce(
+              (acc, m) => Object.assign(acc, { [m.route.id]: redirect }),
+              {}
+            );
+
       return [
-        {
-          [routeId]: {
-            redirect: result.headers.get("Location")!,
-            status: result.status,
-            revalidate: result.headers.has("X-Remix-Revalidate"),
-            reload: result.headers.has("X-Remix-Reload-Document"),
-          },
-        },
+        results,
         result.headers,
-        result.status,
+        200, // Don't want the `fetch` call to follow the redirect
       ];
     }
-    context = result;
+
+    let context = result;
+
+    // Sanitize errors outside of development environments
+    if (context.errors) {
+      Object.values(context.errors).forEach((err) => {
+        // @ts-expect-error This is "private" from users but intended for internal use
+        if (!isRouteErrorResponse(err) || err.error) {
+          handleError(err);
+        }
+      });
+      context.errors = sanitizeErrors(context.errors, serverMode);
+
+      // TODO: Feels hacky - we need to un-bubble errors here since they'll be
+      // bubbled client side.  Probably better to throw a flag on query() to not
+      // do this in the first place
+      let mostRecentError: [string, unknown] | null = null;
+      for (let match of context.matches) {
+        let routeId = match.route.id;
+        if (context.errors[routeId] !== undefined) {
+          mostRecentError = [routeId, context.errors[routeId]];
+        }
+        if (
+          build.assets.routes[routeId]?.hasLoader &&
+          context.loaderData[routeId] === undefined &&
+          mostRecentError
+        ) {
+          context.errors[mostRecentError[0]] = undefined;
+          context.errors[routeId] = mostRecentError[1];
+          mostRecentError = null;
+        }
+      }
+    }
+
+    // Aggregate results based on the matches we intended to load since we get
+    // `null` values back in `context.loaderData` for routes we didn't load
+    let results: SingleFetchResults = {};
+    let loadedMatches = loadRouteIds
+      ? context.matches.filter(
+          (m) => m.route.loader && loadRouteIds!.includes(m.route.id)
+        )
+      : context.matches;
+    loadedMatches.forEach((m) => {
+      let data = context.loaderData?.[m.route.id];
+      let error = context.errors?.[m.route.id];
+      if (error !== undefined) {
+        results[m.route.id] = { error };
+      } else if (data !== undefined) {
+        results[m.route.id] = { data };
+      }
+    });
+
+    return [results, getDocumentHeaders(build, context), context.statusCode];
   } catch (error: unknown) {
     handleError(error);
     return [{ root: { error } }, new Headers(), 500];
   }
-
-  // Sanitize errors outside of development environments
-  if (context.errors) {
-    Object.values(context.errors).forEach((err) => {
-      // @ts-expect-error This is "private" from users but intended for internal use
-      if (!isRouteErrorResponse(err) || err.error) {
-        handleError(err);
-      }
-    });
-    context.errors = sanitizeErrors(context.errors, serverMode);
-
-    // TODO: Feels hacky - we need to un-bubble errors here since they'll be
-    // bubbled client side.  Probably better to throw a flag on query() to not
-    // do this in the first place
-    let mostRecentError: [string, unknown] | null = null;
-    for (let match of context.matches) {
-      let routeId = match.route.id;
-      if (context.errors[routeId] !== undefined) {
-        mostRecentError = [routeId, context.errors[routeId]];
-      }
-      if (
-        build.assets.routes[routeId]?.hasLoader &&
-        context.loaderData[routeId] === undefined &&
-        mostRecentError
-      ) {
-        context.errors[mostRecentError[0]] = undefined;
-        context.errors[routeId] = mostRecentError[1];
-        mostRecentError = null;
-      }
-    }
-  }
-
-  // Aggregate results based on the matches we intended to load since we get
-  // `null` values back in `context.loaderData` for routes we didn't load
-  let results: SingleFetchResults = {};
-  let loadedMatches = routesToLoad
-    ? context.matches.filter(
-        (m) => m.route.loader && routesToLoad.split(",").includes(m.route.id)
-      )
-    : context.matches;
-  loadedMatches.forEach((m) => {
-    let data = context.loaderData?.[m.route.id];
-    let error = context.errors?.[m.route.id];
-    if (error !== undefined) {
-      results[m.route.id] = { error };
-    } else if (data !== undefined) {
-      results[m.route.id] = { data };
-    }
-  });
-
-  return [results, getDocumentHeaders(build, context), context.statusCode];
 }
 
 async function handleDocumentRequest(
@@ -776,6 +772,20 @@ function unwrapResponse(response: Response) {
       ? null
       : response.json()
     : response.text();
+}
+
+function getSingleFetchRedirect(response: Response): SingleFetchResult {
+  return {
+    redirect: response.headers.get("Location")!,
+    status: response.status,
+    revalidate:
+      // TODO: I think we can get rid of X-Remix-Revalidate here and only look at
+      // Set-Cookie??  We send back the revalidation info in the SingleFetchResult
+      // `revalidate` boolean and then convert it to the header client side
+      response.headers.has("X-Remix-Revalidate") ||
+      response.headers.has("Set-Cookie"),
+    reload: response.headers.has("X-Remix-Reload-Document"),
+  };
 }
 
 // Note: If you change this function please change the corresponding
