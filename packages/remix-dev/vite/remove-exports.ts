@@ -1,5 +1,7 @@
 // Adapted from https://github.com/egoist/babel-plugin-eliminator/blob/d29859396b7708b7f7abbacdd951cbbc80902f00/src/index.ts
 // Which was originally adapted from https://github.com/vercel/next.js/blob/574fe0b582d5cc1b13663121fd47a3d82deaaa17/packages/next/build/babel/plugins/next-ssg-transform.ts
+import type { GeneratorOptions } from "@babel/generator";
+
 import {
   type BabelTypes,
   type NodePath,
@@ -63,7 +65,8 @@ function isIdentifierReferenced(
 
 export const removeExports = (source: string, exportsToRemove: string[]) => {
   let document = parse(source, { sourceType: "module" });
-  let generateCode = () => generate(document).code;
+  let generateCodeAndSourceMaps = (opts: Partial<GeneratorOptions>) =>
+    generate(document, { ...opts, sourceMaps: true });
 
   let referencedIdentifiers = new Set<NodePath<BabelTypes.Identifier>>();
   let removedExports = new Set<string>();
@@ -213,7 +216,7 @@ export const removeExports = (source: string, exportsToRemove: string[]) => {
   if (removedExports.size === 0) {
     // No server-specific exports found so there's
     // no need to remove unused references
-    return generateCode();
+    return generateCodeAndSourceMaps;
   }
 
   let referencesRemovedInThisPass: number;
@@ -359,5 +362,5 @@ export const removeExports = (source: string, exportsToRemove: string[]) => {
     });
   } while (referencesRemovedInThisPass);
 
-  return generateCode();
+  return generateCodeAndSourceMaps;
 };

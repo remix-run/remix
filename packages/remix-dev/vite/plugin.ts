@@ -1602,9 +1602,19 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           }
         }
 
+        let [filepath] = id.split("?");
+
+        let removedExports = removeExports(
+          code,
+          SERVER_ONLY_ROUTE_EXPORTS
+        )({
+          filename: id,
+          sourceFileName: filepath,
+        });
+
         return {
-          code: removeExports(code, SERVER_ONLY_ROUTE_EXPORTS),
-          map: null,
+          code: removedExports.code,
+          map: removedExports.map,
         };
       },
     },
