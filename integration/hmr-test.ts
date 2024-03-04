@@ -214,7 +214,7 @@ let serve = "node ./node_modules/@remix-run/serve/dist/cli.js";
 test("HMR for remix-serve", async ({ page }) => {
   await dev(page, (appPort) => ({
     files,
-    devScript: `cross-env PORT=${appPort} ${remix} dev -c "${serve} ./build/index.js"`,
+    devScript: `cross-env PORT=${appPort} ${remix} dev --manual -c "${serve} ./build/index.js"`,
     appReadyPattern: /\[remix-serve\] /,
   }));
 });
