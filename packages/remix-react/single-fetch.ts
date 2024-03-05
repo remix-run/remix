@@ -1,6 +1,5 @@
 import type {
   DataStrategyFunction,
-  DataStrategyMatch,
   ErrorResponse,
   unstable_HandlerResult as HandlerResult,
 } from "@remix-run/router";
@@ -8,7 +7,10 @@ import {
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
   redirect,
 } from "@remix-run/router";
-import type { DataStrategyFunctionArgs } from "react-router-dom";
+import type {
+  DataRouteObject,
+  DataStrategyFunctionArgs,
+} from "react-router-dom";
 import { decode } from "turbo-stream";
 
 import { createRequestInit } from "./data";
@@ -51,15 +53,14 @@ export function getSingleFetchDataStrategy(
       let singleFetchPromise: Promise<SingleFetchResults>;
 
       let makeSingleFetchCall = async () => {
-        let url = singleFetchUrl(
-          addRevalidationParam(
-            manifest,
-            routeModules,
-            matches,
-            // Single fetch doesn't need/want naked index queries on action
-            // revalidation requests
-            stripIndexParam(request.url)
-          )
+        let url = addRevalidationParam(
+          manifest,
+          routeModules,
+          matches.map((m) => m.route),
+          matches.filter((m) => m.shouldLoad).map((m) => m.route),
+          // Single fetch doesn't need/want naked index queries on action
+          // revalidation requests
+          stripIndexParam(singleFetchUrl(request.url))
         );
 
         let { data } = await fetchAndDecode(url);
@@ -100,8 +101,7 @@ export function getSingleFetchDataStrategy(
   };
 }
 
-function stripIndexParam(_url: string) {
-  let url = new URL(_url);
+function stripIndexParam(url: URL) {
   let indexValues = url.searchParams.getAll("index");
   url.searchParams.delete("index");
   let indexValuesToKeep = [];
@@ -114,7 +114,7 @@ function stripIndexParam(_url: string) {
     url.searchParams.append("index", toKeep);
   }
 
-  return url.href;
+  return url;
 }
 
 // Determine which routes we want to load so we can add a `?_routes` search param
@@ -136,13 +136,13 @@ function stripIndexParam(_url: string) {
 //   `serverLoader` and we never read the response of that route from the
 //   single fetch call, and thus executing that `loader` on the server was
 //   unnecessary.
-function addRevalidationParam(
+export function addRevalidationParam(
   manifest: AssetsManifest,
   routeModules: RouteModules,
-  matches: DataStrategyMatch[],
-  _url: string
+  matchedRoutes: DataRouteObject[],
+  loadRoutes: DataRouteObject[],
+  url: URL
 ) {
-  let url = new URL(_url);
   let genRouteIds = (arr: string[]) =>
     arr.filter((id) => manifest.routes[id].hasLoader).join(",");
 
@@ -156,21 +156,26 @@ function addRevalidationParam(
   // TODO: We probably can get rid of that wrapper once we're strictly on on
   // single-fetch in v3 and just leverage a needsRevalidation data structure here
   // to determine what to fetch
-  if (matches.some((m) => routeModules[m.route.id]?.shouldRevalidate)) {
-    let matchedIds = genRouteIds(matches.map((m) => m.route.id));
-    let loadIds = genRouteIds(
-      matches.filter((m) => m.shouldLoad).map((m) => m.route.id)
-    );
+  if (matchedRoutes.some((r) => routeModules[r.id]?.shouldRevalidate)) {
+    let matchedIds = genRouteIds(matchedRoutes.map((r) => r.id));
+    let loadIds = genRouteIds(loadRoutes.map((r) => r.id));
     if (matchedIds !== loadIds) {
       url.searchParams.set("_routes", loadIds);
     }
   }
-
-  return url.href;
+  return url;
 }
 
-function singleFetchUrl(reqUrl: string) {
-  let url = new URL(reqUrl);
+export function singleFetchUrl(reqUrl: URL | string) {
+  let url =
+    typeof reqUrl === "string"
+      ? new URL(
+          reqUrl,
+          typeof window !== "undefined"
+            ? window.location.origin
+            : "http://localhost"
+        )
+      : reqUrl;
   url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
   return url;
 }

@@ -55,6 +55,7 @@ import type {
   MetaMatches,
   RouteHandle,
 } from "./routeModules";
+import { addRevalidationParam, singleFetchUrl } from "./single-fetch";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -385,7 +386,7 @@ function PrefetchPageLinksImpl({
   matches: AgnosticDataRouteMatch[];
 }) {
   let location = useLocation();
-  let { manifest } = useRemixContext();
+  let { future, manifest, routeModules } = useRemixContext();
   let { matches } = useDataRouterStateContext();
 
   let newMatchesForData = React.useMemo(
@@ -428,11 +429,39 @@ function PrefetchPageLinksImpl({
   // just the manifest like the other links in here.
   let keyedPrefetchLinks = useKeyedPrefetchLinks(newMatchesForAssets);
 
+  let singleFetchHref: string | undefined;
+  if (future.unstable_singleFetch && newMatchesForData.length > 0) {
+    let url = addRevalidationParam(
+      manifest,
+      routeModules,
+      matches.map((m) => m.route),
+      newMatchesForData.map((m) => m.route),
+      singleFetchUrl(page)
+    );
+    singleFetchHref = url.pathname + url.search;
+  }
+
   return (
     <>
-      {dataHrefs.map((href) => (
-        <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
-      ))}
+      {singleFetchHref ? (
+        <link
+          key={singleFetchHref}
+          rel="prefetch"
+          as="fetch"
+          href={singleFetchHref}
+          {...linkProps}
+        />
+      ) : (
+        dataHrefs.map((href) => (
+          <link
+            key={href}
+            rel="prefetch"
+            as="fetch"
+            href={href}
+            {...linkProps}
+          />
+        ))
+      )}
       {moduleHrefs.map((href) => (
         <link key={href} rel="modulepreload" href={href} {...linkProps} />
       ))}
