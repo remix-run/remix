@@ -11,16 +11,16 @@
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.3.0",
-    "@remix-run/cloudflare": "workspace:^",
-    "@remix-run/css-bundle": "workspace:^",
-    "@remix-run/react": "workspace:^",
+    "@remix-run/cloudflare": "workspace:*",
+    "@remix-run/css-bundle": "workspace:*",
+    "@remix-run/react": "workspace:*",
     "isbot": "^4.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230518.0",
-    "@remix-run/dev": "workspace:^",
+    "@remix-run/dev": "workspace:*",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "typescript": "^5.1.0",

@@ -18,7 +18,7 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "@remix-run/cloudflare": "workspace:^"
+    "@remix-run/cloudflare": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230518.0",

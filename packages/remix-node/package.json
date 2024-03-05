@@ -20,7 +20,7 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "@remix-run/server-runtime": "workspace:^",
+    "@remix-run/server-runtime": "workspace:*",
     "@remix-run/web-fetch": "^4.4.2",
     "@remix-run/web-file": "^3.1.0",
     "@remix-run/web-stream": "^1.1.0",
@@ -30,7 +30,7 @@
     "stream-slice": "^0.1.2"
   },
   "devDependencies": {
-    "@remix-run/node": "workspace:^",
+    "@remix-run/node": "workspace:*",
     "@types/cookie-signature": "^1.0.3",
     "@types/source-map-support": "^0.5.4",
     "typescript": "^5.1.6"

@@ -65,28 +65,28 @@ importers:
         specifier: ^1.33.0
         version: 1.41.2
       '@remix-run/architect':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:packages/remix-architect
       '@remix-run/changelog-github':
         specifier: ^0.0.5
         version: 0.0.5
       '@remix-run/cloudflare':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:packages/remix-cloudflare
       '@remix-run/cloudflare-pages':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:packages/remix-cloudflare-pages
       '@remix-run/css-bundle':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:packages/remix-css-bundle
       '@remix-run/dev':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:packages/remix-dev
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:packages/remix-node
       '@remix-run/react':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:packages/remix-react
       '@remix-run/web-fetch':
         specifier: ^4.4.2
@@ -314,16 +314,16 @@ importers:
         specifier: ^1.33.0
         version: 1.41.2
       '@remix-run/dev':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../packages/remix-dev
       '@remix-run/express':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../packages/remix-express
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../packages/remix-node
       '@remix-run/server-runtime':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../packages/remix-server-runtime
       '@types/express':
         specifier: ^4.17.9
@@ -422,13 +422,13 @@ importers:
         specifier: ^0.3.0
         version: 0.3.1
       '@remix-run/cloudflare':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-cloudflare
       '@remix-run/css-bundle':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-css-bundle
       '@remix-run/react':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-react
       isbot:
         specifier: ^4.1.0
@@ -444,7 +444,7 @@ importers:
         specifier: ^4.20230518.0
         version: 4.20240208.0
       '@remix-run/dev':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-dev
       '@types/react':
         specifier: ^18.2.0
@@ -462,13 +462,13 @@ importers:
   integration/helpers/deno-template:
     dependencies:
       '@remix-run/css-bundle':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-css-bundle
       '@remix-run/deno':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-deno
       '@remix-run/react':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-react
       isbot:
         specifier: ^4.1.0
@@ -481,7 +481,7 @@ importers:
         version: 18.2.0(react@18.2.0)
     devDependencies:
       '@remix-run/dev':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-dev
       cross-env:
         specifier: ^7.0.3
@@ -493,22 +493,22 @@ importers:
   integration/helpers/node-template:
     dependencies:
       '@remix-run/css-bundle':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-css-bundle
       '@remix-run/express':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-express
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-node
       '@remix-run/react':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-react
       '@remix-run/serve':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-serve
       '@remix-run/server-runtime':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-server-runtime
       express:
         specifier: ^4.17.1
@@ -524,7 +524,7 @@ importers:
         version: 18.2.0(react@18.2.0)
     devDependencies:
       '@remix-run/dev':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-dev
       '@types/react':
         specifier: ^18.2.20
@@ -582,10 +582,10 @@ importers:
         specifier: ^4.20230518.0
         version: 4.20240208.0
       '@remix-run/dev':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-dev
       '@remix-run/eslint-config':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-eslint-config
       '@types/react':
         specifier: ^18.2.20
@@ -609,16 +609,16 @@ importers:
   integration/helpers/vite-node-template:
     dependencies:
       '@remix-run/express':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-express
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-node
       '@remix-run/react':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-react
       '@remix-run/serve':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-serve
       '@vanilla-extract/css':
         specifier: ^1.10.0
@@ -643,10 +643,10 @@ importers:
         version: 6.0.2
     devDependencies:
       '@remix-run/dev':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-dev
       '@remix-run/eslint-config':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../../packages/remix-eslint-config
       '@types/react':
         specifier: ^18.2.20
@@ -754,7 +754,7 @@ importers:
         specifier: ^5.2.0
         version: 5.4.1
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-node
       '@types/aws-lambda':
         specifier: ^8.10.82
@@ -779,7 +779,7 @@ importers:
         specifier: ^0.1.3
         version: 0.1.3
       '@remix-run/server-runtime':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-server-runtime
     devDependencies:
       '@cloudflare/workers-types':
@@ -792,7 +792,7 @@ importers:
   packages/remix-cloudflare-pages:
     dependencies:
       '@remix-run/cloudflare':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-cloudflare
     devDependencies:
       '@cloudflare/workers-types':
@@ -814,7 +814,7 @@ importers:
         specifier: ^0.1.3
         version: 0.1.3
       '@remix-run/cloudflare':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-cloudflare
     devDependencies:
       '@cloudflare/workers-types':
@@ -832,7 +832,7 @@ importers:
   packages/remix-deno:
     dependencies:
       '@remix-run/server-runtime':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-server-runtime
       mime:
         specifier: ^3.0.0
@@ -874,7 +874,7 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-node
       '@remix-run/react':
         specifier: ^2.8.0
@@ -883,7 +883,7 @@ importers:
         specifier: 1.15.2
         version: 1.15.2
       '@remix-run/server-runtime':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-server-runtime
       '@types/mdx':
         specifier: ^2.0.5
@@ -1010,16 +1010,16 @@ importers:
         version: 7.5.9
     devDependencies:
       '@remix-run/cloudflare':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-cloudflare
       '@remix-run/deno':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-deno
       '@remix-run/serve':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-serve
       '@remix-run/testing':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-testing
       '@types/babel__core':
         specifier: ^7.20.5
@@ -1164,7 +1164,7 @@ importers:
   packages/remix-express:
     dependencies:
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-node
     devDependencies:
       '@types/express':
@@ -1192,7 +1192,7 @@ importers:
   packages/remix-node:
     dependencies:
       '@remix-run/server-runtime':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-server-runtime
       '@remix-run/web-fetch':
         specifier: ^4.4.2
@@ -1217,7 +1217,7 @@ importers:
         version: 0.1.2
     devDependencies:
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: 'link:'
       '@types/cookie-signature':
         specifier: ^1.0.3
@@ -1235,7 +1235,7 @@ importers:
         specifier: 1.15.2
         version: 1.15.2
       '@remix-run/server-runtime':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-server-runtime
       react-router:
         specifier: 6.22.2
@@ -1245,13 +1245,13 @@ importers:
         version: 6.22.2(react-dom@18.2.0)(react@18.2.0)
     devDependencies:
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-node
       '@remix-run/react':
-        specifier: workspace:^
+        specifier: workspace:*
         version: 'link:'
       '@remix-run/testing':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-testing
       '@testing-library/jest-dom':
         specifier: ^5.17.0
@@ -1278,10 +1278,10 @@ importers:
   packages/remix-serve:
     dependencies:
       '@remix-run/express':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-express
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-node
       chokidar:
         specifier: ^3.5.3
@@ -1337,7 +1337,7 @@ importers:
         version: 0.7.3
     devDependencies:
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-node
       '@types/set-cookie-parser':
         specifier: ^2.4.1
@@ -1349,10 +1349,10 @@ importers:
   packages/remix-testing:
     dependencies:
       '@remix-run/node':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-node
       '@remix-run/react':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-react
       '@remix-run/router':
         specifier: 1.15.2
@@ -1362,10 +1362,10 @@ importers:
         version: 6.22.2(react-dom@18.2.0)(react@18.2.0)
     devDependencies:
       '@remix-run/server-runtime':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../remix-server-runtime
       '@remix-run/testing':
-        specifier: workspace:^
+        specifier: workspace:*
         version: 'link:'
       '@types/node':
         specifier: ^18.17.1

@@ -18,8 +18,8 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "@remix-run/express": "workspace:^",
-    "@remix-run/node": "workspace:^",
+    "@remix-run/express": "workspace:*",
+    "@remix-run/node": "workspace:*",
     "chokidar": "^3.5.3",
     "compression": "^1.7.4",
     "express": "^4.17.1",
