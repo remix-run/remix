@@ -25,6 +25,7 @@ import {
   type AppConfig as RemixEsbuildUserConfig,
   type RemixConfig as ResolvedRemixEsbuildConfig,
   resolveConfig as resolveRemixEsbuildConfig,
+  findConfig,
 } from "../config";
 import { type Manifest as RemixManifest } from "../manifest";
 import invariant from "../invariant";
@@ -38,6 +39,70 @@ import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
 import { removeExports } from "./remove-exports";
 import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
+
+export async function resolveViteConfig({
+  configFile,
+  mode,
+  root,
+}: {
+  configFile?: string;
+  mode?: string;
+  root: string;
+}) {
+  let vite = await import("vite");
+
+  let viteConfig = await vite.resolveConfig(
+    { mode, configFile, root },
+    "build", // command
+    "production", // default mode
+    "production" // default NODE_ENV
+  );
+
+  if (typeof viteConfig.build.manifest === "string") {
+    throw new Error("Custom Vite manifest paths are not supported");
+  }
+
+  return viteConfig;
+}
+
+export async function extractRemixPluginContext(
+  viteConfig: Vite.ResolvedConfig
+) {
+  return viteConfig["__remixPluginContext" as keyof typeof viteConfig] as
+    | RemixPluginContext
+    | undefined;
+}
+
+export async function loadVitePluginContext({
+  configFile,
+  root,
+}: {
+  configFile?: string;
+  root?: string;
+}) {
+  if (!root) {
+    root = process.env.REMIX_ROOT || process.cwd();
+  }
+
+  configFile =
+    configFile ??
+    findConfig(root, "vite.config", [
+      ".ts",
+      ".cts",
+      ".mts",
+      ".js",
+      ".cjs",
+      ".mjs",
+    ]);
+
+  // V3 TODO: Vite config should not be optional
+  if (!configFile) {
+    return;
+  }
+
+  let viteConfig = await resolveViteConfig({ configFile, root });
+  return await extractRemixPluginContext(viteConfig);
+}
 
 const supportedRemixEsbuildConfigKeys = [
   "appDirectory",
@@ -172,8 +237,9 @@ export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
 };
 
 type BuildEndHook = (args: {
-  remixConfig: ResolvedVitePluginConfig;
   buildManifest: BuildManifest | undefined;
+  remixConfig: ResolvedVitePluginConfig;
+  viteConfig: Vite.ResolvedConfig;
 }) => void | Promise<void>;
 
 export type ResolvedVitePluginConfig = Readonly<
@@ -281,7 +347,7 @@ const resolveChunk = (
   return entryChunk;
 };
 
-const resolveBuildAssetPaths = (
+const getRemixManifestBuildAssets = (
   ctx: RemixPluginContext,
   viteManifest: Vite.Manifest,
   entryFilePath: string,
@@ -300,7 +366,7 @@ const resolveBuildAssetPaths = (
   ]);
 
   return {
-    module: `${ctx.remixConfig.publicPath}${entryChunk.file}${CLIENT_ROUTE_QUERY_STRING}`,
+    module: `${ctx.remixConfig.publicPath}${entryChunk.file}`,
     imports:
       dedupe(chunks.flatMap((e) => e.imports ?? [])).map((imported) => {
         return `${ctx.remixConfig.publicPath}${viteManifest[imported].file}`;
@@ -430,6 +496,12 @@ export let getServerBuildDirectory = (ctx: RemixPluginContext) =>
 
 let getClientBuildDirectory = (remixConfig: ResolvedVitePluginConfig) =>
   path.join(remixConfig.buildDirectory, "client");
+
+let defaultEntriesDir = path.resolve(__dirname, "..", "config", "defaults");
+let defaultEntries = fse
+  .readdirSync(defaultEntriesDir)
+  .map((filename) => path.join(defaultEntriesDir, filename));
+invariant(defaultEntries.length > 0, "No default entries found");
 
 let mergeRemixConfig = (...configs: VitePluginConfig[]): VitePluginConfig => {
   let reducer = (
@@ -784,7 +856,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       getClientBuildDirectory(ctx.remixConfig)
     );
 
-    let entry = resolveBuildAssetPaths(
+    let entry = getRemixManifestBuildAssets(
       ctx,
       viteManifest,
       ctx.entryClientFilePath
@@ -814,7 +886,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         hasClientAction: sourceExports.includes("clientAction"),
         hasClientLoader: sourceExports.includes("clientLoader"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
-        ...resolveBuildAssetPaths(
+        ...getRemixManifestBuildAssets(
           ctx,
           viteManifest,
           routeFilePath,
@@ -951,6 +1023,27 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           )
         );
 
+        let baseRollupOptions = {
+          // Silence Rollup "use client" warnings
+          // Adapted from https://github.com/vitejs/vite-plugin-react/pull/144
+          onwarn(warning, defaultHandler) {
+            if (
+              warning.code === "MODULE_LEVEL_DIRECTIVE" &&
+              warning.message.includes("use client")
+            ) {
+              return;
+            }
+            if (viteUserConfig.build?.rollupOptions?.onwarn) {
+              viteUserConfig.build.rollupOptions.onwarn(
+                warning,
+                defaultHandler
+              );
+            } else {
+              defaultHandler(warning);
+            }
+          },
+        } satisfies Vite.BuildOptions["rollupOptions"];
+
         return {
           __remixPluginContext: ctx,
           appType:
@@ -1017,6 +1110,15 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           },
           base: viteUserConfig.base,
 
+          // When consumer provides an allow list for files that can be read by
+          // the server, ensure that Remix's default entry files are included.
+          // If we don't do this and a default entry file is used, the server
+          // will throw an error that the file is not allowed to be read.
+          // https://vitejs.dev/config/server-options#server-fs-allow
+          server: viteUserConfig.server?.fs?.allow
+            ? { fs: { allow: defaultEntries } }
+            : undefined,
+
           // Vite config options for building
           ...(viteCommand === "build"
             ? {
@@ -1027,6 +1129,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                         manifest: true,
                         outDir: getClientBuildDirectory(ctx.remixConfig),
                         rollupOptions: {
+                          ...baseRollupOptions,
                           preserveEntrySignatures: "exports-only",
                           input: [
                             ctx.entryClientFilePath,
@@ -1051,6 +1154,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                         manifest: true, // We need the manifest to detect SSR-only assets
                         outDir: getServerBuildDirectory(ctx),
                         rollupOptions: {
+                          ...baseRollupOptions,
                           preserveEntrySignatures: "exports-only",
                           input: serverBuildId,
                           output: {

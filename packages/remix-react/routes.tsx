@@ -91,28 +91,28 @@ function getRouteComponents(
     return {
       ...(Component
         ? {
-            element: React.createElement(
-              routeModule.Layout,
-              null,
-              React.createElement(Component)
+            element: (
+              <routeModule.Layout>
+                <Component />
+              </routeModule.Layout>
             ),
           }
         : { Component }),
       ...(ErrorBoundary
         ? {
-            errorElement: React.createElement(
-              routeModule.Layout,
-              null,
-              React.createElement(ErrorBoundary)
+            errorElement: (
+              <routeModule.Layout>
+                <ErrorBoundary />
+              </routeModule.Layout>
             ),
           }
         : { ErrorBoundary }),
       ...(HydrateFallback
         ? {
-            hydrateFallbackElement: React.createElement(
-              routeModule.Layout,
-              null,
-              React.createElement(HydrateFallback)
+            hydrateFallbackElement: (
+              <routeModule.Layout>
+                <HydrateFallback />
+              </routeModule.Layout>
             ),
           }
         : { HydrateFallback }),

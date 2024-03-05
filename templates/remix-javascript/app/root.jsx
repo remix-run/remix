@@ -12,8 +12,7 @@ export const links = () => [
   ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
 ];
 
-// eslint-disable-next-line react/prop-types
-export function Layout({ children }) {
+export default function App() {
   return (
     <html lang="en">
       <head>
@@ -23,15 +22,11 @@ export function Layout({ children }) {
         <Links />
       </head>
       <body>
-        {children}
+        <Outlet />
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
       </body>
     </html>
   );
-}
-
-export default function App() {
-  return <Outlet />;
 }
