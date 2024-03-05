@@ -20,5 +20,13 @@
     "@remix-run/server-runtime": "2.8.0",
     "@remix-run/testing": "2.8.0"
   },
-  "changesets": []
+  "changesets": [
+    "curly-apples-exercise",
+    "grumpy-beers-sneeze",
+    "little-turtles-applaud",
+    "loud-games-reply",
+    "sour-houses-fly",
+    "tall-frogs-visit",
+    "tasty-stingrays-work"
+  ]
 }
