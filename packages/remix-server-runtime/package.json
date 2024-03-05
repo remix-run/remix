@@ -27,7 +27,6 @@
     "source-map": "^0.7.3"
   },
   "devDependencies": {
-    "@remix-run/node": "workspace:*",
     "@types/set-cookie-parser": "^2.4.1",
     "typescript": "^5.1.6"
   },

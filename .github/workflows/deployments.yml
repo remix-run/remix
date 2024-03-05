@@ -35,7 +35,7 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🟧 Setup pnpm
+      - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node
@@ -72,7 +72,7 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🟧 Setup pnpm
+      - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node
@@ -110,7 +110,7 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🟧 Setup pnpm
+      - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node
@@ -149,7 +149,7 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🟧 Setup pnpm
+      - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node
@@ -191,7 +191,7 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🟧 Setup pnpm
+      - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node

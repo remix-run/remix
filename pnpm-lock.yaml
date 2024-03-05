@@ -88,6 +88,9 @@ importers:
       '@remix-run/react':
         specifier: workspace:*
         version: link:packages/remix-react
+      '@remix-run/testing':
+        specifier: workspace:*
+        version: link:packages/remix-testing
       '@remix-run/web-fetch':
         specifier: ^4.4.2
         version: 4.4.2
@@ -1216,9 +1219,6 @@ importers:
         specifier: ^0.1.2
         version: 0.1.2
     devDependencies:
-      '@remix-run/node':
-        specifier: workspace:*
-        version: 'link:'
       '@types/cookie-signature':
         specifier: ^1.0.3
         version: 1.1.2
@@ -1250,9 +1250,6 @@ importers:
       '@remix-run/react':
         specifier: workspace:*
         version: 'link:'
-      '@remix-run/testing':
-        specifier: workspace:*
-        version: link:../remix-testing
       '@testing-library/jest-dom':
         specifier: ^5.17.0
         version: 5.17.0
@@ -1336,9 +1333,6 @@ importers:
         specifier: ^0.7.3
         version: 0.7.3
     devDependencies:
-      '@remix-run/node':
-        specifier: workspace:*
-        version: link:../remix-node
       '@types/set-cookie-parser':
         specifier: ^2.4.1
         version: 2.4.7

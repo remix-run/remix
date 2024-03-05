@@ -64,6 +64,7 @@
     "@remix-run/node": "workspace:*",
     "@remix-run/web-fetch": "^4.4.2",
     "@remix-run/react": "workspace:*",
+    "@remix-run/testing": "workspace:*",
     "@rollup/plugin-babel": "^5.2.2",
     "@rollup/plugin-json": "^5.0.0",
     "@rollup/plugin-node-resolve": "^11.0.1",

@@ -27,7 +27,6 @@
   "devDependencies": {
     "@remix-run/node": "workspace:*",
     "@remix-run/react": "workspace:*",
-    "@remix-run/testing": "workspace:*",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.3.0",
     "@types/react": "^18.2.20",
