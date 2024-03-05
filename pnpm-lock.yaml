@@ -609,7 +609,7 @@ importers:
         specifier: ^3.24.0
         version: 3.28.2(@cloudflare/workers-types@4.20240208.0)
 
-  integration/helpers/vite-node-template:
+  integration/helpers/vite-template:
     dependencies:
       '@remix-run/express':
         specifier: workspace:*

@@ -90,11 +90,11 @@ export const EXPRESS_SERVER = (args: {
     app.listen(port, () => console.log('http://localhost:' + port));
   `;
 
-type TemplateName = "vite-node-template" | "vite-cloudflare-template";
+type TemplateName = "vite-template" | "vite-cloudflare-template";
 
 export async function createProject(
   files: Record<string, string> = {},
-  templateName: TemplateName = "vite-node-template"
+  templateName: TemplateName = "vite-template"
 ) {
   let projectName = `remix-${Math.random().toString(32).slice(2)}`;
   let projectDir = path.join(TMP_DIR, projectName);

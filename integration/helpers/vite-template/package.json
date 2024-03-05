@@ -1,5 +1,5 @@
 {
-  "name": "integration-vite-node-template",
+  "name": "integration-vite-template",
   "version": "0.0.0",
   "private": true,
   "sideEffects": false,
