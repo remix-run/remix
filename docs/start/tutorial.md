@@ -749,7 +749,7 @@ Without JavaScript, when a form is submitted, the browser will create [`FormData
 
 Each field in the `form` is accessible with `formData.get(name)`. For example, given the input field from above, you could access the first and last names like this:
 
-```tsx lines=[6,7] nocopy
+```tsx filename=app/routes/contacts.$contactId_.edit.tsx lines=[6,7] nocopy
 export const action = async ({
   params,
   request,
@@ -763,7 +763,7 @@ export const action = async ({
 
 Since we have a handful of form fields, we used [`Object.fromEntries`][object-from-entries] to collect them all into an object, which is exactly what our `updateContact` function wants.
 
-```tsx nocopy
+```tsx filename=app/routes/contacts.$contactId_.edit.tsx nocopy
 const updates = Object.fromEntries(formData);
 updates.first; // "Some"
 updates.last; // "Name"
