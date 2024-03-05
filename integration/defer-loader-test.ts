@@ -113,57 +113,57 @@ test.describe("single fetch", () => {
         },
         files: {
           "app/routes/_index.tsx": js`
-          import { useLoaderData, Link } from "@remix-run/react";
-          export default function Index() {
-            return (
-              <div>
-                <Link to="/redirect">Redirect</Link>
-                <Link to="/direct-promise-access">Direct Promise Access</Link>
-              </div>
-            )
-          }
-        `,
+            import { useLoaderData, Link } from "@remix-run/react";
+            export default function Index() {
+              return (
+                <div>
+                  <Link to="/redirect">Redirect</Link>
+                  <Link to="/direct-promise-access">Direct Promise Access</Link>
+                </div>
+              )
+            }
+          `,
 
           "app/routes/redirect.tsx": js`
-          import { defer } from "@remix-run/node";
-          export function loader() {
-            return defer({food: "pizza"}, { status: 301, headers: { Location: "/?redirected" } });
-          }
-          export default function Redirect() {return null;}
-        `,
+            import { defer } from "@remix-run/node";
+            export function loader() {
+              return defer({food: "pizza"}, { status: 301, headers: { Location: "/?redirected" } });
+            }
+            export default function Redirect() {return null;}
+          `,
 
           "app/routes/direct-promise-access.tsx": js`
-          import * as React from "react";
-          import { defer } from "@remix-run/node";
-          import { useLoaderData, Link, Await } from "@remix-run/react";
-          export function loader() {
-            return defer({
-              bar: new Promise(async (resolve, reject) => {
-                resolve("hamburger");
-              }),
-            });
-          }
-          let count = 0;
-          export default function Index() {
-            let {bar} = useLoaderData();
-            React.useEffect(() => {
-              let aborted = false;
-              bar.then((data) => {
-                if (aborted) return;
-                document.getElementById("content").innerHTML = data + " " + (++count);
-                document.getElementById("content").setAttribute("data-done", "");
+            import * as React from "react";
+            import { defer } from "@remix-run/node";
+            import { useLoaderData, Link, Await } from "@remix-run/react";
+            export function loader() {
+              return defer({
+                bar: new Promise(async (resolve, reject) => {
+                  resolve("hamburger");
+                }),
               });
-              return () => {
-                aborted = true;
-              };
-            }, [bar]);
-            return (
-              <div id="content">
-                Waiting for client hydration....
-              </div>
-            )
-          }
-        `,
+            }
+            let count = 0;
+            export default function Index() {
+              let {bar} = useLoaderData();
+              React.useEffect(() => {
+                let aborted = false;
+                bar.then((data) => {
+                  if (aborted) return;
+                  document.getElementById("content").innerHTML = data + " " + (++count);
+                  document.getElementById("content").setAttribute("data-done", "");
+                });
+                return () => {
+                  aborted = true;
+                };
+              }, [bar]);
+              return (
+                <div id="content">
+                  Waiting for client hydration....
+                </div>
+              )
+            }
+          `,
         },
       });
 

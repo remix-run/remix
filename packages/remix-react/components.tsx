@@ -743,7 +743,11 @@ export function Scripts(props: ScriptProps) {
       ? `window.__remixContext = ${serverHandoffString};${streamScript}`
       : " ";
 
-    let activeDeferreds = staticContext?.activeDeferreds;
+    // When single fetch is enabled, deferred is handled by turbo-stream
+    let activeDeferreds = future.unstable_singleFetch
+      ? undefined
+      : staticContext?.activeDeferreds;
+
     // This sets up the __remixContext with utility functions used by the
     // deferred scripts.
     // - __remixContext.p is a function that takes a resolved value or error and returns a promise.

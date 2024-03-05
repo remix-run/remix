@@ -414,7 +414,6 @@ test.describe("single fetch", () => {
           route.fulfill({ status: 500, body: "CDN Error!" });
         });
         let app = new PlaywrightFixture(appFixture, page);
-        // await app.poke(120000, "/parent");
         await app.goto("/parent");
         await app.clickLink("/parent/child-with-boundary");
         await waitForAndAssert(page, app, "#child-error", "CDN Error!");

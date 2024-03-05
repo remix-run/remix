@@ -1878,14 +1878,19 @@ test.describe("single fetch", () => {
       appFixture.close();
     });
 
+    function counterHtml(id: string, val: number) {
+      return `<p id="count-${id}">${val}</p>`;
+    }
+
     test("works with critical JSON like data", async ({ page }) => {
       let response = await fixture.requestDocument("/");
       let html = await response.text();
       let criticalHTML = html.slice(0, html.indexOf("</html>") + 7);
-      expect(criticalHTML).toContain(ROOT_ID);
-      expect(criticalHTML).toContain(INDEX_ID);
+      expect(criticalHTML).toContain(counterHtml(ROOT_ID, 0));
+      expect(criticalHTML).toContain(counterHtml(INDEX_ID, 0));
       let deferredHTML = html.slice(html.indexOf("</html>") + 7);
-      expect(deferredHTML).toBe("");
+      expect(deferredHTML).not.toBe("");
+      expect(deferredHTML).not.toContain('<p id="count-');
 
       let app = new PlaywrightFixture(appFixture, page);
       let assertConsole = monitorConsole(page);
@@ -1905,12 +1910,13 @@ test.describe("single fetch", () => {
       );
       let html = await response.text();
       let criticalHTML = html.slice(0, html.indexOf("</html>") + 7);
-      expect(criticalHTML).toContain(ROOT_ID);
-      expect(criticalHTML).toContain(DEFERRED_ID);
+      expect(criticalHTML).toContain(counterHtml(ROOT_ID, 0));
+      expect(criticalHTML).toContain(counterHtml(DEFERRED_ID, 0));
       expect(criticalHTML).not.toContain(FALLBACK_ID);
-      expect(criticalHTML).toContain(RESOLVED_DEFERRED_ID);
+      expect(criticalHTML).toContain(counterHtml(RESOLVED_DEFERRED_ID, 0));
       let deferredHTML = html.slice(html.indexOf("</html>") + 7);
-      expect(deferredHTML).toBe("");
+      expect(deferredHTML).not.toBe("");
+      expect(deferredHTML).not.toContain('<p id="count-');
 
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/deferred-noscript-resolved");
@@ -1925,12 +1931,12 @@ test.describe("single fetch", () => {
       );
       let html = await response.text();
       let criticalHTML = html.slice(0, html.indexOf("</html>") + 7);
-      expect(criticalHTML).toContain(ROOT_ID);
-      expect(criticalHTML).toContain(DEFERRED_ID);
-      expect(criticalHTML).toContain(FALLBACK_ID);
+      expect(criticalHTML).toContain(counterHtml(ROOT_ID, 0));
+      expect(criticalHTML).toContain(counterHtml(DEFERRED_ID, 0));
+      expect(criticalHTML).toContain(`<div id="${FALLBACK_ID}">`);
       expect(criticalHTML).not.toContain(RESOLVED_DEFERRED_ID);
       let deferredHTML = html.slice(html.indexOf("</html>") + 7);
-      expect(deferredHTML).toContain(RESOLVED_DEFERRED_ID);
+      expect(deferredHTML).toContain(counterHtml(RESOLVED_DEFERRED_ID, 0));
 
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/deferred-noscript-unresolved");
@@ -1945,12 +1951,13 @@ test.describe("single fetch", () => {
       let response = await fixture.requestDocument("/deferred-script-resolved");
       let html = await response.text();
       let criticalHTML = html.slice(0, html.indexOf("</html>") + 7);
-      expect(criticalHTML).toContain(ROOT_ID);
-      expect(criticalHTML).toContain(DEFERRED_ID);
+      expect(criticalHTML).toContain(counterHtml(ROOT_ID, 0));
+      expect(criticalHTML).toContain(counterHtml(DEFERRED_ID, 0));
       expect(criticalHTML).not.toContain(FALLBACK_ID);
-      expect(criticalHTML).toContain(RESOLVED_DEFERRED_ID);
+      expect(criticalHTML).toContain(counterHtml(RESOLVED_DEFERRED_ID, 0));
       let deferredHTML = html.slice(html.indexOf("</html>") + 7);
-      expect(deferredHTML).toBe("");
+      expect(deferredHTML).not.toBe("");
+      expect(deferredHTML).not.toContain('<p id="count-');
 
       let app = new PlaywrightFixture(appFixture, page);
       let assertConsole = monitorConsole(page);
@@ -1974,12 +1981,12 @@ test.describe("single fetch", () => {
       );
       let html = await response.text();
       let criticalHTML = html.slice(0, html.indexOf("</html>") + 7);
-      expect(criticalHTML).toContain(ROOT_ID);
-      expect(criticalHTML).toContain(DEFERRED_ID);
-      expect(criticalHTML).toContain(FALLBACK_ID);
+      expect(criticalHTML).toContain(counterHtml(ROOT_ID, 0));
+      expect(criticalHTML).toContain(counterHtml(DEFERRED_ID, 0));
+      expect(criticalHTML).toContain(`<div id="${FALLBACK_ID}">`);
       expect(criticalHTML).not.toContain(RESOLVED_DEFERRED_ID);
       let deferredHTML = html.slice(html.indexOf("</html>") + 7);
-      expect(deferredHTML).toContain(RESOLVED_DEFERRED_ID);
+      expect(deferredHTML).toContain(counterHtml(RESOLVED_DEFERRED_ID, 0));
 
       let app = new PlaywrightFixture(appFixture, page);
       let assertConsole = monitorConsole(page);
@@ -2001,12 +2008,13 @@ test.describe("single fetch", () => {
       let response = await fixture.requestDocument("/deferred-script-rejected");
       let html = await response.text();
       let criticalHTML = html.slice(0, html.indexOf("</html>") + 7);
-      expect(criticalHTML).toContain(ROOT_ID);
-      expect(criticalHTML).toContain(DEFERRED_ID);
+      expect(criticalHTML).toContain(counterHtml(ROOT_ID, 0));
+      expect(criticalHTML).toContain(counterHtml(DEFERRED_ID, 0));
       expect(criticalHTML).not.toContain(FALLBACK_ID);
-      expect(criticalHTML).toContain(ERROR_ID);
+      expect(criticalHTML).toContain(counterHtml(ERROR_ID, 0));
       let deferredHTML = html.slice(html.indexOf("</html>") + 7);
-      expect(deferredHTML).toBe("");
+      expect(deferredHTML).not.toBe("");
+      expect(deferredHTML).not.toContain('<p id="count-');
 
       let app = new PlaywrightFixture(appFixture, page);
       let assertConsole = monitorConsole(page);
@@ -2030,12 +2038,12 @@ test.describe("single fetch", () => {
       );
       let html = await response.text();
       let criticalHTML = html.slice(0, html.indexOf("</html>") + 7);
-      expect(criticalHTML).toContain(ROOT_ID);
-      expect(criticalHTML).toContain(DEFERRED_ID);
-      expect(criticalHTML).toContain(FALLBACK_ID);
+      expect(criticalHTML).toContain(counterHtml(ROOT_ID, 0));
+      expect(criticalHTML).toContain(counterHtml(DEFERRED_ID, 0));
+      expect(criticalHTML).toContain(`<div id="${FALLBACK_ID}">`);
       expect(criticalHTML).not.toContain(ERROR_ID);
       let deferredHTML = html.slice(html.indexOf("</html>") + 7);
-      expect(deferredHTML).toContain(ERROR_ID);
+      expect(deferredHTML).toContain(counterHtml(ERROR_ID, 0));
 
       let app = new PlaywrightFixture(appFixture, page);
       let assertConsole = monitorConsole(page);
@@ -2259,7 +2267,7 @@ test.describe("single fetch", () => {
     });
 
     test("returns headers on data requests", async ({ page }) => {
-      let response = await fixture.requestData("/headers", "routes/headers");
+      let response = await fixture.requestSingleFetchData("/headers.data");
       expect(response.headers.get("x-custom-header")).toEqual(
         "value from loader"
       );
