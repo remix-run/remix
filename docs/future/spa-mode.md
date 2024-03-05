@@ -58,7 +58,7 @@ export default defineConfig({
 In SPA Mode, you develop the same way you would for a traditional Remix SSR app, and you actually use a running Remix dev server in order to enable HMR/HDR:
 
 ```sh
-npm run dev
+npx remix vite:dev
 ```
 
 ### Production
@@ -66,7 +66,7 @@ npm run dev
 When you build your app in SPA Mode, Remix will call the server handler for the `/` route and save the rendered HTML in an `index.html` file alongside your client side assets (by default `build/client/index.html`).
 
 ```sh
-npm run build
+npx remix vite:build
 ```
 
 #### Preview
