@@ -4,7 +4,6 @@ import type { ReactElement } from "react";
 import * as React from "react";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
 import { matchRoutes, RouterProvider } from "react-router-dom";
-import { decode } from "turbo-stream";
 
 import { RemixContext } from "./components";
 import type { AssetsManifest, FutureConfig } from "./entry";

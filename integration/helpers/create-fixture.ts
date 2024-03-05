@@ -8,7 +8,6 @@ import dedent from "dedent";
 import stripIndent from "strip-indent";
 import serializeJavaScript from "serialize-javascript";
 import { sync as spawnSync, spawn } from "cross-spawn";
-import { decode } from "turbo-stream";
 import type { JsonObject } from "type-fest";
 import type { AppConfig } from "@remix-run/dev";
 
