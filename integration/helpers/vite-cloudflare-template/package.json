@@ -5,8 +5,8 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "remix vite:dev",
-    "build": "remix vite:build",
+    "dev": "node ./node_modules/@remix-run/dev/dist/cli.js vite:dev",
+    "build": "node ./node_modules/@remix-run/dev/dist/cli.js vite:build",
     "start": "wrangler pages dev ./build/client",
     "typecheck": "tsc"
   },
