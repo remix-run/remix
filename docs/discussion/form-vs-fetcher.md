@@ -183,10 +183,7 @@ const RecipeListItem: FunctionComponent<{
     <li>
       <h2>{recipe.title}</h2>
       <fetcher.Form method="post">
-        <button
-          disabled={isDeleting}
-          type="submit"
-        >
+        <button disabled={isDeleting} type="submit">
           {isDeleting ? "Deleting..." : "Delete"}
         </button>
       </fetcher.Form>
