@@ -16,6 +16,9 @@
   "bin": {
     "create-remix": "dist/cli.js"
   },
+  "scripts": {
+    "tsc": "tsc"
+  },
   "dependencies": {
     "@remix-run/web-fetch": "^4.4.2",
     "arg": "^5.0.1",

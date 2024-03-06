@@ -13,9 +13,12 @@
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "scripts": {
+    "tsc": "tsc"
+  },
   "dependencies": {
     "@architect/functions": "^5.2.0",
-    "@remix-run/node": "2.8.0",
+    "@remix-run/node": "workspace:*",
     "@types/aws-lambda": "^8.10.82"
   },
   "devDependencies": {
