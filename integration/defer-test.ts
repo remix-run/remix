@@ -2301,14 +2301,16 @@ test.describe("single fetch", () => {
             import { isbot } from "isbot";
             import { renderToPipeableStream } from "react-dom/server";
 
-            const ABORT_DELAY = 1;
+            // Exported for use by the server runtime so we can abort the
+            // turbo-stream encode() call
+            export const streamTimeout = 250;
 
             export default function handleRequest(
               request: Request,
               responseStatusCode: number,
               responseHeaders: Headers,
               remixContext: EntryContext,
-              loadContext: AppLoadContext
+              loadContext: AppLoadContext,
             ) {
               return isbot(request.headers.get("user-agent") || "")
                 ? handleBotRequest(
@@ -2335,11 +2337,7 @@ test.describe("single fetch", () => {
                 let didError = false;
 
                 let { pipe, abort } = renderToPipeableStream(
-                  <RemixServer
-                    context={remixContext}
-                    url={request.url}
-                    abortDelay={ABORT_DELAY}
-                  />,
+                  <RemixServer context={remixContext} url={request.url} />,
                   {
                     onAllReady() {
                       let body = new PassThrough();
@@ -2367,7 +2365,7 @@ test.describe("single fetch", () => {
                   }
                 );
 
-                setTimeout(abort, ABORT_DELAY);
+                setTimeout(abort, streamTimeout);
               });
             }
 
@@ -2381,11 +2379,7 @@ test.describe("single fetch", () => {
                 let didError = false;
 
                 let { pipe, abort } = renderToPipeableStream(
-                  <RemixServer
-                    context={remixContext}
-                    url={request.url}
-                    abortDelay={ABORT_DELAY}
-                  />,
+                  <RemixServer context={remixContext} url={request.url} />,
                   {
                     onShellReady() {
                       let body = new PassThrough();
@@ -2413,7 +2407,7 @@ test.describe("single fetch", () => {
                   }
                 );
 
-                setTimeout(abort, ABORT_DELAY);
+                setTimeout(abort, streamTimeout);
               });
             }
           `,

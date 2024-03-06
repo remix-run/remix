@@ -383,22 +383,31 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // Then we need a stateful location here so the user can back-button navigate
   // out of there
   return (
-    <RemixContext.Provider
-      value={{
-        manifest: window.__remixManifest,
-        routeModules: window.__remixRouteModules,
-        future: window.__remixContext.future,
-        criticalCss,
-        isSpaMode: window.__remixContext.isSpaMode,
-      }}
-    >
-      <RemixErrorBoundary location={location}>
-        <RouterProvider
-          router={router}
-          fallbackElement={null}
-          future={{ v7_startTransition: true }}
-        />
-      </RemixErrorBoundary>
-    </RemixContext.Provider>
+    // This fragment is important to ensure we match the <RemixServer> JSX
+    // structure so that useId values hydrate correctly
+    <>
+      <RemixContext.Provider
+        value={{
+          manifest: window.__remixManifest,
+          routeModules: window.__remixRouteModules,
+          future: window.__remixContext.future,
+          criticalCss,
+          isSpaMode: window.__remixContext.isSpaMode,
+        }}
+      >
+        <RemixErrorBoundary location={location}>
+          <RouterProvider
+            router={router}
+            fallbackElement={null}
+            future={{ v7_startTransition: true }}
+          />
+        </RemixErrorBoundary>
+      </RemixContext.Provider>
+      {/*
+        This fragment is important to ensure we match the <RemixServer> JSX
+        structure so that useId values hydrate correctly
+      */}
+      {window.__remixContext.future.unstable_singleFetch ? <></> : null}
+    </>
   );
 }

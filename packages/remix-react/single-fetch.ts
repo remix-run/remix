@@ -200,35 +200,37 @@ export function decodeViaTurboStream(
   body: ReadableStream<Uint8Array>,
   global: Window | typeof globalThis
 ) {
-  return decode(body, [
-    (type: string, value: unknown) => {
-      // Decode Errors back into Error instances using the right type and with
-      // the right (potentially undefined) stacktrace
-      if (type === "SanitizedError") {
-        let { message, stack, name } = value as {
-          message: string;
-          stack?: string;
-          name: string;
-        };
-        let Constructor = Error;
-        // @ts-expect-error
-        if (name && name in global && typeof global[name] === "function") {
+  return decode(body, {
+    plugins: [
+      (type: string, value: unknown) => {
+        // Decode Errors back into Error instances using the right type and with
+        // the right (potentially undefined) stacktrace
+        if (type === "SanitizedError") {
+          let { message, stack, name } = value as {
+            message: string;
+            stack?: string;
+            name: string;
+          };
+          let Constructor = Error;
           // @ts-expect-error
-          Constructor = global[name];
+          if (name && name in global && typeof global[name] === "function") {
+            // @ts-expect-error
+            Constructor = global[name];
+          }
+          let error = new Constructor(message);
+          error.stack = stack;
+          return { value: error };
         }
-        let error = new Constructor(message);
-        error.stack = stack;
-        return { value: error };
-      }
 
-      if (type === "ErrorResponse") {
-        let { data, status, statusText } = value as ErrorResponse;
-        return {
-          value: new ErrorResponseImpl(status, statusText, data),
-        };
-      }
-    },
-  ]);
+        if (type === "ErrorResponse") {
+          let { data, status, statusText } = value as ErrorResponse;
+          return {
+            value: new ErrorResponseImpl(status, statusText, data),
+          };
+        }
+      },
+    ],
+  });
 }
 
 function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {

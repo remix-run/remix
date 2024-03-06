@@ -747,10 +747,11 @@ test.describe("single fetch", () => {
         let html = await response.text();
         expect(html).toMatch("Defer Error");
         expect(html).not.toMatch("RESOLVED");
-        expect(html).toMatch('{"message":"Unexpected Server Error"}');
-        // Defer errors are not not part of the JSON blob but rather rejected
-        // against a pending promise and therefore are inlined JS.
-        expect(html).toMatch("x.stack=undefined;");
+        // This is the turbo-stream encoding - the fact that stack goes right
+        // into __type means it has no value
+        expect(html).toMatch(
+          '\\"message\\",\\"Unexpected Server Error\\",\\"stack\\",\\"name\\",\\"Error\\"'
+        );
         // defer errors are not logged to the server console since the request
         // has "succeeded"
         expect(errorLogs.length).toBe(0);
@@ -922,9 +923,12 @@ test.describe("single fetch", () => {
         let html = await response.text();
         expect(html).toMatch("Defer Error");
         expect(html).not.toMatch("RESOLVED");
-        // Defer errors are not not part of the JSON blob but rather rejected
-        // against a pending promise and therefore are inlined JS.
-        expect(html).toMatch("x.stack=e.stack;");
+        // This is the turbo-stream encoding - the fact that stack goes right
+        // into __type means it has no value
+        expect(html).toMatch(
+          '\\"message\\",\\"REJECTED\\",\\"stack\\",\\"Error: REJECTED\\\\n    at '
+        );
+        expect(html).toMatch(')\\",\\"name\\",\\"Error\\"');
         // defer errors are not logged to the server console since the request
         // has "succeeded"
         expect(errorLogs.length).toBe(0);
@@ -1191,10 +1195,11 @@ test.describe("single fetch", () => {
         let html = await response.text();
         expect(html).toMatch("Defer Error");
         expect(html).not.toMatch("RESOLVED");
-        expect(html).toMatch('{"message":"Unexpected Server Error"}');
-        // Defer errors are not not part of the JSON blob but rather rejected
-        // against a pending promise and therefore are inlined JS.
-        expect(html).toMatch("x.stack=undefined;");
+        // This is the turbo-stream encoding - the fact that stack goes right
+        // into __type means it has no value
+        expect(html).toMatch(
+          '\\"message\\",\\"Unexpected Server Error\\",\\"stack\\",\\"name\\",\\"Error\\"'
+        );
         // defer errors are not logged to the server console since the request
         // has "succeeded"
         expect(errorLogs.length).toBe(0);

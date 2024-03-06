@@ -355,10 +355,18 @@ async function handleSingleFetchRequest(
 
   // Note: Deferred data is already just Promises, so we don't have to mess
   // `activeDeferreds` or anything :)
-  return new Response(encodeViaTurboStream(result, serverMode), {
-    status: status || 200,
-    headers: resultHeaders,
-  });
+  return new Response(
+    encodeViaTurboStream(
+      result,
+      request.signal,
+      build.entry.module.streamTimeout,
+      serverMode
+    ),
+    {
+      status: status || 200,
+      headers: resultHeaders,
+    }
+  );
 }
 
 async function singleFetchAction(
@@ -585,7 +593,12 @@ async function handleDocumentRequest(
     }),
     ...(build.future.unstable_singleFetch
       ? {
-          serverHandoffStream: encodeViaTurboStream(state, serverMode),
+          serverHandoffStream: encodeViaTurboStream(
+            state,
+            request.signal,
+            build.entry.module.streamTimeout,
+            serverMode
+          ),
           renderMeta: { didRenderScripts: false },
         }
       : null),
@@ -656,7 +669,12 @@ async function handleDocumentRequest(
       }),
       ...(build.future.unstable_singleFetch
         ? {
-            serverHandoffStream: encodeViaTurboStream(state, serverMode),
+            serverHandoffStream: encodeViaTurboStream(
+              state,
+              request.signal,
+              build.entry.module.streamTimeout,
+              serverMode
+            ),
             renderMeta: { didRenderScripts: false },
           }
         : null),
@@ -790,21 +808,42 @@ function getSingleFetchRedirect(response: Response): SingleFetchResult {
 
 // Note: If you change this function please change the corresponding
 // decodeViaTurboStream function in server-runtime
-function encodeViaTurboStream(data: any, serverMode: ServerMode) {
-  return encode(data, [
-    (value) => {
-      // Even though we sanitized errors on context.errors prior to responding,
-      // we still need to handle this for any deferred data that rejects with an
-      // Error - as those will not be sanitized yet
-      if (value instanceof Error && serverMode === ServerMode.Production) {
-        let { message, stack, name } = sanitizeError(value, serverMode);
-        return ["SanitizedError", { message, stack, name }];
-      }
+function encodeViaTurboStream(
+  data: any,
+  requestSignal: AbortSignal,
+  streamTimeout: number | undefined,
+  serverMode: ServerMode
+) {
+  // FIXME: This "minus 50" logic is a hack - wqe will need to coordinate the
+  // aborting of this encode() with the aborting of the react renderToPipeableStream.
+  // Need to abort this, but then give React enough time to flush down any final chunks
+  let controller = new AbortController();
+  let timeoutId = setTimeout(
+    () => controller.abort(new Error("Server Timeout")),
+    typeof streamTimeout === "number" ? Math.max(streamTimeout - 50, 1) : 5000
+  );
+  requestSignal.addEventListener("abort", () => clearTimeout(timeoutId));
 
-      if (value instanceof ErrorResponseImpl) {
-        let { data, status, statusText } = value;
-        return ["ErrorResponse", { data, status, statusText }];
-      }
-    },
-  ]);
+  return encode(data, {
+    signal: controller.signal,
+    plugins: [
+      (value) => {
+        // Even though we sanitized errors on context.errors prior to responding,
+        // we still need to handle this for any deferred data that rejects with an
+        // Error - as those will not be sanitized yet
+        if (value instanceof Error) {
+          let { message, stack, name } =
+            serverMode === ServerMode.Production
+              ? sanitizeError(value, serverMode)
+              : value;
+          return ["SanitizedError", { message, stack, name }];
+        }
+
+        if (value instanceof ErrorResponseImpl) {
+          let { data, status, statusText } = value;
+          return ["ErrorResponse", { data, status, statusText }];
+        }
+      },
+    ],
+  });
 }
