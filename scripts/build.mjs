@@ -1,11 +1,10 @@
 import { spawn } from "cross-spawn";
 
 const args = process.argv.slice(2);
-const publish = process.env.CI || args.includes("--publish");
-const tsc = process.env.CI || args.includes("--tsc") || publish;
+const tsc = process.env.CI || args.includes("--tsc");
 
 exec("pnpm", ["rollup", "-c"])
-  .then(() => exec("pnpm", ["--recursive", "tsc", "-b"]))
+  .then(() => tsc && exec("pnpm", ["--recursive", "tsc", "-b"]))
   .then(() =>
     exec("node", ["scripts/copy-build-to-dist.mjs", ...(tsc ? ["--tsc"] : [])])
   )
