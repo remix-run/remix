@@ -5,10 +5,10 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "build": "pnpm remix build",
+    "build": "pnpm exec remix build",
     "dev": "pnpm run \"/^dev:.*/\"",
     "dev:deno": "NODE_ENV=development deno run --unstable --watch --allow-net --allow-read --allow-env ./build/index.js",
-    "dev:remix": "pnpm remix watch",
+    "dev:remix": "pnpm exec remix watch",
     "start": "NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env ./build/index.js"
   },
   "dependencies": {

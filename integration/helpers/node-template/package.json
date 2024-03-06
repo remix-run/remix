@@ -5,9 +5,9 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "build": "pnpm remix build",
-    "dev": "pnpm remix dev",
-    "start": "pnpm remix-serve ./build/index.js"
+    "build": "pnpm exec remix build",
+    "dev": "pnpm exec remix dev",
+    "start": "pnpm exec remix-serve ./build/index.js"
   },
   "dependencies": {
     "@remix-run/css-bundle": "workspace:*",

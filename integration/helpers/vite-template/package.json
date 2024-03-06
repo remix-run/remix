@@ -5,9 +5,9 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "pnpm remix vite:dev",
-    "build": "pnpm remix vite:build",
-    "start": "pnpm remix-server ./build/server/index.js",
+    "dev": "pnpm exec remix vite:dev",
+    "build": "pnpm exec remix vite:build",
+    "start": "pnpm exec remix-serve ./build/server/index.js",
     "typecheck": "tsc"
   },
   "dependencies": {

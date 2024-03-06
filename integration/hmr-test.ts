@@ -211,7 +211,7 @@ let HMR_TIMEOUT_MS = 30_000;
 test("HMR for remix-serve", async ({ page }) => {
   await dev(page, (appPort) => ({
     files,
-    devScript: `PORT=${appPort} pnpm remix dev --manual -c "pnpm remix-serve ./build/index.js"`,
+    devScript: `PORT=${appPort} pnpm exec remix dev --manual -c "pnpm exec remix-serve ./build/index.js"`,
     appReadyPattern: /\[remix-serve\] /,
   }));
 });
@@ -225,7 +225,7 @@ test("HMR for custom server with broadcast", async ({ page }) => {
         devReady: "broadcastDevReady",
       }),
     },
-    devScript: `pnpm remix dev -c "node ./server.js"`,
+    devScript: `pnpm exec remix dev -c "node ./server.js"`,
     appReadyPattern: /✅ app ready: /,
   }));
 });
@@ -239,7 +239,7 @@ test("HMR for custom server with log", async ({ page }) => {
         devReady: "logDevReady",
       }),
     },
-    devScript: `pnpm remix dev -c "node ./server.js"`,
+    devScript: `pnpm exec remix dev -c "node ./server.js"`,
     appReadyPattern: /✅ app ready: /,
   }));
 });

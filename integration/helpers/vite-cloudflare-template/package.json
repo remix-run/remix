@@ -5,8 +5,8 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "pnpm remix vite:dev",
-    "build": "pnpm remix vite:build",
+    "dev": "pnpm exec remix vite:dev",
+    "build": "pnpm exec remix vite:build",
     "start": "wrangler pages dev ./build/client",
     "typecheck": "tsc"
   },

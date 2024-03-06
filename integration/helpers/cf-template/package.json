@@ -5,8 +5,8 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "build": "pnpm remix build",
-    "dev": "pnpm remix dev --manual -c \"npm start\"",
+    "build": "pnpm exec remix build",
+    "dev": "pnpm exec remix dev --manual -c \"npm start\"",
     "start": "wrangler dev ./build/index.js"
   },
   "dependencies": {
