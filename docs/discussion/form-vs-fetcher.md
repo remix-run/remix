@@ -149,7 +149,7 @@ export async function loader({
   });
 }
 
-export function Recipes() {
+export default function Recipes() {
   const { recipes } = useLoaderData<typeof loader>();
   return (
     <ul>
@@ -185,7 +185,6 @@ const RecipeListItem: FunctionComponent<{
       <fetcher.Form method="post">
         <button
           disabled={isDeleting}
-          onClick={handleDelete}
           type="submit"
         >
           {isDeleting ? "Deleting..." : "Delete"}
