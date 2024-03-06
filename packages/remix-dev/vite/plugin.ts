@@ -347,7 +347,7 @@ const resolveChunk = (
   return entryChunk;
 };
 
-const resolveBuildAssetPaths = (
+const getRemixManifestBuildAssets = (
   ctx: RemixPluginContext,
   viteManifest: Vite.Manifest,
   entryFilePath: string,
@@ -366,7 +366,7 @@ const resolveBuildAssetPaths = (
   ]);
 
   return {
-    module: `${ctx.remixConfig.publicPath}${entryChunk.file}${CLIENT_ROUTE_QUERY_STRING}`,
+    module: `${ctx.remixConfig.publicPath}${entryChunk.file}`,
     imports:
       dedupe(chunks.flatMap((e) => e.imports ?? [])).map((imported) => {
         return `${ctx.remixConfig.publicPath}${viteManifest[imported].file}`;
@@ -496,6 +496,12 @@ export let getServerBuildDirectory = (ctx: RemixPluginContext) =>
 
 let getClientBuildDirectory = (remixConfig: ResolvedVitePluginConfig) =>
   path.join(remixConfig.buildDirectory, "client");
+
+let defaultEntriesDir = path.resolve(__dirname, "..", "config", "defaults");
+let defaultEntries = fse
+  .readdirSync(defaultEntriesDir)
+  .map((filename) => path.join(defaultEntriesDir, filename));
+invariant(defaultEntries.length > 0, "No default entries found");
 
 let mergeRemixConfig = (...configs: VitePluginConfig[]): VitePluginConfig => {
   let reducer = (
@@ -850,7 +856,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       getClientBuildDirectory(ctx.remixConfig)
     );
 
-    let entry = resolveBuildAssetPaths(
+    let entry = getRemixManifestBuildAssets(
       ctx,
       viteManifest,
       ctx.entryClientFilePath
@@ -880,7 +886,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         hasClientAction: sourceExports.includes("clientAction"),
         hasClientLoader: sourceExports.includes("clientLoader"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
-        ...resolveBuildAssetPaths(
+        ...getRemixManifestBuildAssets(
           ctx,
           viteManifest,
           routeFilePath,
@@ -1046,6 +1052,27 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             ctx.remixConfig.ssr === false
               ? "spa"
               : "custom",
+
+          ssr: {
+            external: [
+              // This is only necessary for development within the Remix repo
+              // because these packages are symlinked and Vite treats them as
+              // internal source code. For consumers this is a no-op.
+              "@remix-run/architect",
+              "@remix-run/cloudflare-pages",
+              "@remix-run/cloudflare-workers",
+              "@remix-run/cloudflare",
+              "@remix-run/css-bundle",
+              "@remix-run/deno",
+              "@remix-run/dev",
+              "@remix-run/express",
+              "@remix-run/netlify",
+              "@remix-run/node",
+              "@remix-run/react",
+              "@remix-run/serve",
+              "@remix-run/server-runtime",
+            ],
+          },
           optimizeDeps: {
             include: [
               // Pre-bundle React dependencies to avoid React duplicates,
@@ -1086,6 +1113,15 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             ],
           },
           base: viteUserConfig.base,
+
+          // When consumer provides an allow list for files that can be read by
+          // the server, ensure that Remix's default entry files are included.
+          // If we don't do this and a default entry file is used, the server
+          // will throw an error that the file is not allowed to be read.
+          // https://vitejs.dev/config/server-options#server-fs-allow
+          server: viteUserConfig.server?.fs?.allow
+            ? { fs: { allow: defaultEntries } }
+            : undefined,
 
           // Vite config options for building
           ...(viteCommand === "build"

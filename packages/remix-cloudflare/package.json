@@ -13,9 +13,12 @@
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "scripts": {
+    "tsc": "tsc"
+  },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.1.3",
-    "@remix-run/server-runtime": "2.8.0"
+    "@remix-run/server-runtime": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230518.0",

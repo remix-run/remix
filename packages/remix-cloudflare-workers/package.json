@@ -14,12 +14,16 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
+  "scripts": {
+    "tsc": "tsc"
+  },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.1.3",
-    "@remix-run/cloudflare": "2.8.0"
+    "@remix-run/cloudflare": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230518.0",
+    "@types/node": "^18.17.1",
     "typescript": "^5.1.6"
   },
   "peerDependencies": {

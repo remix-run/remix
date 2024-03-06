@@ -18,7 +18,7 @@ fi
 set -x
 
 cd packages/remix-node
-yarn add @remix-run/web-fetch@${VERSION} @remix-run/web-file@${VERSION} @remix-run/web-stream@${VERSION}
+pnpm add @remix-run/web-fetch@${VERSION} @remix-run/web-file@${VERSION} @remix-run/web-stream@${VERSION}
 cd ../..
 
 set +x

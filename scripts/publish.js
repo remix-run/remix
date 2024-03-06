@@ -15,7 +15,7 @@ function getTaggedVersion() {
  * @param {string} tag
  */
 function publish(dir, tag) {
-  execSync(`npm publish --access public --tag ${tag} ${dir}`, {
+  execSync(`pnpm publish ${dir} --access public --tag ${tag}`, {
     stdio: "inherit",
   });
 }

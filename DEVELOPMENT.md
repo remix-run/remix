@@ -10,25 +10,23 @@ repository that you should be aware of:
   `main` they are merged into this branch. Feature branches are based on this
   branch and are merged in as they are completed.
 
-We currently use `yarn` ([version 1](https://classic.yarnpkg.com/lang/en/)) to
-develop Remix. But don't get too attached to it. We'll be migrating to npm 7
-soon.
-
 ## Workflow
+
+We currently use [pnpm](https://pnpm.io) to develop Remix.
 
 ```bash
 # install everything
-yarn install
+pnpm install
 
 # run the build
-yarn build
+pnpm build
 
 # run the tests
-yarn test
+pnpm test
 # run the tests for a specific package
-yarn test react
+pnpm test react
 # run the tests in watch mode
-yarn test react --watch
+pnpm test react --watch
 ```
 
 ## Releases
@@ -50,7 +48,7 @@ Changesets will do most of the heavy lifting for our releases. When changes are 
 ### Starting a new pre-release
 
 - Ensure you are on the new `release-*` branch
-- Enter Changesets pre-release mode using the `pre` tag: `yarn changeset pre enter pre`
+- Enter Changesets pre-release mode using the `pre` tag: `pnpm changeset pre enter pre`
 - Commit the change and push the `release-*` branch to GitHub
 - Wait for the release workflow to finish - the Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs
 - Review the updated `CHANGELOG` files and make any adjustments necessary, then merge the PR into the `release-*` branch
@@ -66,7 +64,7 @@ Changesets will do most of the heavy lifting for our releases. When changes are 
 You may need to make changes to a pre-release prior to publishing a final stable release. To do so:
 
 - Make whatever changes you need
-- Create a new changeset: `yarn changeset`
+- Create a new changeset: `pnpm changeset`
   - **IMPORTANT:** This is required even if you ultimately don't want to include these changes in the logs
   - Remember, changelogs can be edited prior to publishing, but the Changeset version script needs to see new changesets in order to create a new version
 - Commit the changesets and push the the `release-*` branch to GitHub
@@ -77,7 +75,7 @@ You may need to make changes to a pre-release prior to publishing a final stable
 
 ### Publishing the stable release
 
-- Exit Changesets pre-release mode: `yarn changeset pre exit`
+- Exit Changesets pre-release mode: `pnpm changeset pre exit`
 - Commit the edited `pre.json` file along with any unpublished changesets, and push the `release-*` branch to GitHub
 - Wait for the release workflow to finish - the Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs for the stable release
 - Review the updated `CHANGELOG` files and make any adjustments necessary
@@ -106,7 +104,7 @@ Experimental releases do not need to be branched off of `dev`. Experimental rele
 
 - Create a new branch for the release: `git checkout -b release-experimental`
 - Make whatever changes you need and commit them: `git add . && git commit "experimental changes!"`
-- Update version numbers and create a release tag: `yarn version:experimental`
+- Update version numbers and create a release tag: `pnpm version:experimental`
 - Push to GitHub: `git push origin --follow-tags`
 - Create a new release for the tag on GitHub to trigger the CI workflow that will publish the release to npm
   - Make sure you check the "prerelease" checkbox so it is not mistaken for a stable release
@@ -122,7 +120,7 @@ This repository supports handful of environment variables to streamline the loca
 By default, the Remix `rollup` build will strip any `console.debug` calls to avoid cluttering up the console during application usage. These `console.debug` statements can be preserved by setting `REMIX_DEBUG=true` during your local build.
 
 ```sh
-REMIX_DEBUG=true yarn watch
+REMIX_DEBUG=true pnpm watch
 ```
 
 **`LOCAL_BUILD_DIRECTORY`**
@@ -136,7 +134,7 @@ cd my-remix-app
 npm run dev
 
 # Tab 2 - remix repository
-LOCAL_BUILD_DIRECTORY=../my-remix-app yarn watch
+LOCAL_BUILD_DIRECTORY=../my-remix-app pnpm watch
 ```
 
 Now - any time you make changes in the Remix repository, they will be written out to the appropriate locations in `../my-remix-app/node_modules` and you can restart the `npm run dev` command to pick them up 🎉.
