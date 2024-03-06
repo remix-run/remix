@@ -196,7 +196,7 @@ export function createClientRoutesWithHMRRevalidationOptOut(
   );
 }
 
-export function preventInvalidServerHandlerCall(
+function preventInvalidServerHandlerCall(
   type: "action" | "loader",
   route: Omit<EntryRoute, "children">,
   isSpaMode: boolean
@@ -221,7 +221,7 @@ export function preventInvalidServerHandlerCall(
   }
 }
 
-export function noActionDefinedError(
+function noActionDefinedError(
   type: "action" | "clientAction",
   routeId: string
 ) {

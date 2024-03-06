@@ -1,3 +1,4 @@
+import * as React from "react";
 import type {
   DataStrategyFunction,
   ErrorResponse,
@@ -14,7 +15,7 @@ import type {
 import { decode } from "turbo-stream";
 
 import { createRequestInit } from "./data";
-import type { AssetsManifest } from "./entry";
+import type { AssetsManifest, EntryContext } from "./entry";
 import type { RouteModules } from "./routeModules";
 import invariant from "./invariant";
 
@@ -26,6 +27,92 @@ type SingleFetchResult =
 type SingleFetchResults = {
   [key: string]: SingleFetchResult;
 };
+
+interface StreamTransferProps {
+  context: EntryContext;
+  identifier: number;
+  reader: ReadableStreamDefaultReader<Uint8Array>;
+  textDecoder: TextDecoder;
+}
+
+// StreamTransfer recursively renders down chunks of the `serverHandoffStream`
+// into the client-side `streamController`
+export function StreamTransfer({
+  context,
+  identifier,
+  reader,
+  textDecoder,
+}: StreamTransferProps) {
+  // If the user didn't render the <Scripts> component then we don't have to
+  // bother streaming anything in
+  if (!context.renderMeta?.didRenderScripts) {
+    return null;
+  }
+
+  if (!context.renderMeta.streamCache) {
+    context.renderMeta.streamCache = {};
+  }
+  let { streamCache } = context.renderMeta;
+  let promise = streamCache[identifier];
+  if (!promise) {
+    promise = streamCache[identifier] = reader
+      .read()
+      .then((result) => {
+        streamCache[identifier].result = {
+          done: result.done,
+          value: textDecoder.decode(result.value, { stream: true }),
+        };
+      })
+      .catch((e) => {
+        streamCache[identifier].error = e;
+      });
+  }
+
+  if (promise.error) {
+    throw promise.error;
+  }
+  if (promise.result === undefined) {
+    throw promise;
+  }
+
+  let { done, value } = promise.result;
+  let scriptTag = value ? (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `window.__remixContext.streamController.enqueue(${JSON.stringify(
+          value
+        )});`,
+      }}
+    />
+  ) : null;
+
+  if (done) {
+    return (
+      <>
+        {scriptTag}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__remixContext.streamController.close();`,
+          }}
+        />
+      </>
+    );
+  } else {
+    return (
+      <>
+        {scriptTag}
+        <React.Suspense>
+          <StreamTransfer
+            context={context}
+            identifier={identifier + 1}
+            reader={reader}
+            textDecoder={textDecoder}
+          />
+        </React.Suspense>
+      </>
+    );
+  }
+}
 
 export function getSingleFetchDataStrategy(
   manifest: AssetsManifest,
