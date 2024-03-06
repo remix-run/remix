@@ -7,9 +7,9 @@
   "scripts": {
     "build": "remix build",
     "dev": "npm-run-all build --parallel \"dev:*\"",
-    "dev:deno": "cross-env NODE_ENV=development deno run --unstable --watch --allow-net --allow-read --allow-env ./build/index.js",
+    "dev:deno": "NODE_ENV=development deno run --unstable --watch --allow-net --allow-read --allow-env ./build/index.js",
     "dev:remix": "remix watch",
-    "start": "cross-env NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env ./build/index.js"
+    "start": "NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env ./build/index.js"
   },
   "dependencies": {
     "@remix-run/css-bundle": "workspace:*",
@@ -21,7 +21,6 @@
   },
   "devDependencies": {
     "@remix-run/dev": "workspace:*",
-    "cross-env": "^7.0.3",
     "npm-run-all": "^4.1.5"
   },
   "engines": {

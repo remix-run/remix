@@ -214,7 +214,7 @@ let serve = "node ./node_modules/@remix-run/serve/dist/cli.js";
 test("HMR for remix-serve", async ({ page }) => {
   await dev(page, (appPort) => ({
     files,
-    devScript: `cross-env PORT=${appPort} ${remix} dev --manual -c "${serve} ./build/index.js"`,
+    devScript: `PORT=${appPort} ${remix} dev --manual -c "${serve} ./build/index.js"`,
     appReadyPattern: /\[remix-serve\] /,
   }));
 });
@@ -292,7 +292,7 @@ async function dev(
     JSON.stringify(pkgJson, null, 2)
   );
 
-  let devProc = execa("npm", ["run", "dev"], { cwd: projectDir });
+  let devProc = execa("pnpm", ["run", "dev"], { cwd: projectDir });
   let devStdout = bufferize(devProc.stdout!);
   let devStderr = bufferize(devProc.stderr!);
 

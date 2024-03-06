@@ -229,9 +229,6 @@ importers:
       mime:
         specifier: ^3.0.0
         version: 3.0.0
-      npm-run-all:
-        specifier: ^4.1.5
-        version: 4.1.5
       prettier:
         specifier: ^2.7.1
         version: 2.8.1
@@ -340,9 +337,6 @@ importers:
       cheerio:
         specifier: ^1.0.0-rc.12
         version: 1.0.0-rc.12
-      cross-env:
-        specifier: ^7.0.3
-        version: 7.0.3
       cross-spawn:
         specifier: ^7.0.3
         version: 7.0.3
@@ -486,9 +480,6 @@ importers:
       '@remix-run/dev':
         specifier: workspace:*
         version: link:../../../packages/remix-dev
-      cross-env:
-        specifier: ^7.0.3
-        version: 7.0.3
       npm-run-all:
         specifier: ^4.1.5
         version: 4.1.5
@@ -541,9 +532,6 @@ importers:
       '@vanilla-extract/vite-plugin':
         specifier: ^3.9.2
         version: 3.9.5(vite@5.1.3)
-      cross-env:
-        specifier: ^7.0.3
-        version: 7.0.3
       getos:
         specifier: ^3.2.1
         version: 3.2.1
@@ -6628,13 +6616,6 @@ packages:
   /core-util-is@1.0.2:
     resolution: {integrity: sha512-3lqz5YjWTYnW6dlDa5TLaTCcShfar1e40rmcJVwCBJC6mWlFuj0eCHIElmG1g5kyuJ/GD+8Wn4FFCcz4gJPfaQ==}
     dev: false
-
-  /cross-env@7.0.3:
-    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
-    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
-    hasBin: true
-    dependencies:
-      cross-spawn: 7.0.3
 
   /cross-spawn@5.1.0:
     resolution: {integrity: sha512-pTgQJ5KC0d2hcY8eyL1IzlBPYjTkyH72XRZPnLyKus2mBfNjQs3klqbJU2VILqZryAZUt9JOb3h/mWMy23/f5A==}
