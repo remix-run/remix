@@ -12,7 +12,7 @@ import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 import { createProject, viteBuild } from "./helpers/vite.js";
 
-test.describe("SPA Mode", () => {
+test.describe("SPA Mode - test!", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
 
