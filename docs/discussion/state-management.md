@@ -72,51 +72,10 @@ export function List() {
 }
 ```
 
-Now consider you want the URL to update when the user changes the view. Note the state synchronization:
-
-```tsx bad lines=[10,19,27]
-import {
-  useNavigate,
-  useSearchParams,
-} from "@remix-run/react";
-
-export function List() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [view, setView] = React.useState(
-    searchParams.get("view") || "list"
-  );
-
-  return (
-    <div>
-      <div>
-        <button
-          onClick={() => {
-            setView("list");
-            navigate(`?view=list`);
-          }}
-        >
-          View as List
-        </button>
-        <button
-          onClick={() => {
-            setView("details");
-            navigate(`?view=details`);
-          }}
-        >
-          View with Details
-        </button>
-      </div>
-      {view === "list" ? <ListView /> : <DetailView />}
-    </div>
-  );
-}
-```
-
-Instead of synchronizing state, you can simply read and set the state in the URL directly with boring old HTML forms.
+Instead of using state, you could just use links and search parameters.
 
 ```tsx good lines=[5,9-16]
-import { Form, useSearchParams } from "@remix-run/react";
+import { Link, useSearchParams } from "@remix-run/react";
 
 export function List() {
   const [searchParams] = useSearchParams();
@@ -124,14 +83,14 @@ export function List() {
 
   return (
     <div>
-      <Form>
-        <button name="view" value="list">
+      <div>
+        <Link to="?view=list">
           View as List
-        </button>
-        <button name="view" value="details">
+        </Link>
+        <Link to="?view=details">
           View with Details
         </button>
-      </Form>
+      </div>
       {view === "list" ? <ListView /> : <DetailView />}
     </div>
   );
