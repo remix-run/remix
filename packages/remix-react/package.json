@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "2.8.1-pre.1",
+  "version": "2.8.1",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -17,7 +17,7 @@
   "module": "dist/esm/index.js",
   "dependencies": {
     "@remix-run/router": "1.15.3",
-    "@remix-run/server-runtime": "2.8.1-pre.1",
+    "@remix-run/server-runtime": "2.8.1",
     "react-router": "6.22.3",
     "react-router-dom": "6.22.3"
   },

@@ -1,20 +1,14 @@
 # `@remix-run/react`
 
-## 2.8.1-pre.1
+## 2.8.1
 
 ### Patch Changes
 
-- [REMOVE] Lock into router stable ([#9010](https://github.com/remix-run/remix/pull/9010))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.8.1-pre.1`
-
-## 2.8.1-pre.0
-
-### Patch Changes
-
+- \[REMOVE] Lock into router stable ([#9010](https://github.com/remix-run/remix/pull/9010))
 - Strengthen the internal `LayoutComponent` type to accept limited children ([#8910](https://github.com/remix-run/remix/pull/8910))
+- \[REMOVE] Bump router ([#8984](https://github.com/remix-run/remix/pull/8984))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.8.1-pre.0`
+  - `@remix-run/server-runtime@2.8.1`
 
 ## 2.8.0
 
