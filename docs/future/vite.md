@@ -1082,23 +1082,6 @@ export default defineConfig({
 });
 ```
 
-Your setup might also need to reinstantiate the react plugin for testing like this:
-
-```ts filename=vite.config.ts lines=[6]
-import { vitePlugin as remix } from "@remix-run/dev";
-import { defineConfig, loadEnv } from "vite";
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [!process.env.VITEST ? remix() : react()],
-  test: {
-    environment: "happy-dom",
-    // Additionally, this is to load ".env.test" during vitest
-    env: loadEnv("test", process.cwd(), ""),
-  },
-});
-```
-
 For Storybook:
 
 ```ts filename=vite.config.ts lines=[7]
@@ -1117,6 +1100,23 @@ For example, to use a Vite config specifically scoped to Remix:
 
 ```shellscript nonumber
 remix vite:dev --config vite.config.remix.ts
+```
+
+When not providing the Remix Vite plugin, your setup might also need to provide `@vitejs/plugin-react`. For example, when using Vitest:
+
+```ts filename=vite.config.ts lines=[2,6]
+import { vitePlugin as remix } from "@remix-run/dev";
+import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv } from "vite";
+
+export default defineConfig({
+  plugins: [!process.env.VITEST ? remix() : react()],
+  test: {
+    environment: "happy-dom",
+    // Additionally, this is to load ".env.test" during vitest
+    env: loadEnv("test", process.cwd(), ""),
+  },
+});
 ```
 
 #### Styles disappearing in development when document remounts
