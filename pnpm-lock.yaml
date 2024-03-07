@@ -868,7 +868,7 @@ importers:
         specifier: workspace:*
         version: link:../remix-node
       '@remix-run/react':
-        specifier: ^2.8.0
+        specifier: ^2.8.1
         version: link:../remix-react
       '@remix-run/router':
         specifier: 0.0.0-experimental-71108452
