@@ -56,7 +56,10 @@ jobs:
           cache: "pnpm"
 
       - name: 📥 Install deps
-        run: pnpm install --frozen-lockfile
+        # Don't use frozen lockfile for experimental releases since we will have
+        # just changed versions in package.json and they'll be out of date in
+        # pnpm-lock.yaml so installing with a frozen lockfile will fail
+        run: pnpm install --no-frozen-lockfile
 
       - name: 🏗 Build
         run: pnpm build
