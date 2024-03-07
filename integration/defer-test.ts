@@ -793,7 +793,7 @@ test.describe("non-aborted", () => {
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
     let assertConsole = monitorConsole(page);
-    app.goto("/deferred-manual-resolve");
+    app.goto("/deferred-manual-resolve", false);
 
     await page.waitForSelector(`#${ROOT_ID}`);
     await page.waitForSelector(`#${DEFERRED_ID}`);
@@ -825,7 +825,7 @@ test.describe("non-aborted", () => {
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
     let assertConsole = monitorConsole(page);
-    await app.goto("/deferred-manual-resolve");
+    await app.goto("/deferred-manual-resolve", false);
 
     await page.waitForSelector(`#${ROOT_ID}`);
     await page.waitForSelector(`#${DEFERRED_ID}`);
@@ -2090,7 +2090,7 @@ test.describe("single fetch", () => {
     }) => {
       let app = new PlaywrightFixture(appFixture, page);
       let assertConsole = monitorConsole(page);
-      app.goto("/deferred-manual-resolve");
+      app.goto("/deferred-manual-resolve", false);
 
       await page.waitForSelector(`#${ROOT_ID}`);
       await page.waitForSelector(`#${DEFERRED_ID}`);
@@ -2122,7 +2122,7 @@ test.describe("single fetch", () => {
     }) => {
       let app = new PlaywrightFixture(appFixture, page);
       let assertConsole = monitorConsole(page);
-      await app.goto("/deferred-manual-resolve");
+      await app.goto("/deferred-manual-resolve", false);
 
       await page.waitForSelector(`#${ROOT_ID}`);
       await page.waitForSelector(`#${DEFERRED_ID}`);

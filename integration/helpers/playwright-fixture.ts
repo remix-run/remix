@@ -19,12 +19,21 @@ export class PlaywrightFixture {
    * Visits the href with a document request.
    *
    * @param href The href you want to visit
-   * @param waitForHydration Will wait for the network to be idle, so
-   * everything should be loaded and ready to go
+   * @param waitForHydration Wait for the page to full load/hydrate?
+   *  - `undefined` to wait for the document `load` event
+   *  - `true` wait for the network to be idle, so everything should be loaded
+   *    and ready to go
+   *  - `false` to wait only until the initial doc to be returned and the document
+   *    to start loading (mostly useful for testing deferred responses)
    */
-  async goto(href: string, waitForHydration?: true): Promise<Response> {
+  async goto(href: string, waitForHydration?: boolean): Promise<Response> {
     let response = await this.page.goto(this.app.serverUrl + href, {
-      waitUntil: waitForHydration ? "networkidle" : undefined,
+      waitUntil:
+        waitForHydration === true
+          ? "networkidle"
+          : waitForHydration === false
+          ? "commit"
+          : "load",
     });
     if (response == null)
       throw new Error(
