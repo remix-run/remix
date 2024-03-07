@@ -1102,6 +1102,23 @@ For example, to use a Vite config specifically scoped to Remix:
 remix vite:dev --config vite.config.remix.ts
 ```
 
+When not providing the Remix Vite plugin, your setup might also need to provide [Vite Plugin React][vite-plugin-react]. For example, when using Vitest:
+
+```ts filename=vite.config.ts lines=[2,6]
+import { vitePlugin as remix } from "@remix-run/dev";
+import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv } from "vite";
+
+export default defineConfig({
+  plugins: [!process.env.VITEST ? remix() : react()],
+  test: {
+    environment: "happy-dom",
+    // Additionally, this is to load ".env.test" during vitest
+    env: loadEnv("test", process.cwd(), ""),
+  },
+});
+```
+
 #### Styles disappearing in development when document remounts
 
 When React is used to render the entire document (as Remix does) you can run into issues when elements are dynamically injected into the `head` element. If the document is re-mounted, the existing `head` element is removed and replaced with an entirely new one, removing any `style` elements that Vite injects during development.
@@ -1280,3 +1297,4 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
 [presets]: ./presets
 [fix-up-css-imports-referenced-in-links]: #fix-up-css-imports-referenced-in-links
+[vite-plugin-react]: https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react
