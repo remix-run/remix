@@ -10,12 +10,23 @@ function getTaggedVersion() {
   return output.replace(/^v/g, "");
 }
 
+function getBranchName() {
+  let output = execSync("git rev-parse --abbrev-ref HEAD").toString().trim();
+  return output.replace(/^v/g, "");
+}
+
 /**
  * @param {string} dir
  * @param {string} tag
  */
 function publish(dir, tag) {
-  execSync(`pnpm publish ${dir} --access public --tag ${tag}`, {
+  let args = ["--access public", `--tag ${tag}`];
+  if (tag === "experimental") {
+    args.push(`--publish-branch ${getBranchName()}`);
+  } else {
+    args.push("--publish-branch release-next");
+  }
+  execSync(`pnpm publish ${dir} ${args.join(" ")}`, {
     stdio: "inherit",
   });
 }
