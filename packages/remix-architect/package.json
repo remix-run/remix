@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/architect",
-  "version": "0.0.0-experimental-9bc58cee4",
+  "version": "0.0.0-experimental-91015507f",
   "description": "Architect server request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@architect/functions": "^5.2.0",
-    "@remix-run/node": "0.0.0-experimental-9bc58cee4",
+    "@remix-run/node": "0.0.0-experimental-91015507f",
     "@types/aws-lambda": "^8.10.82"
   },
   "devDependencies": {
