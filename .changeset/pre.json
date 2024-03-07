@@ -21,6 +21,7 @@
     "@remix-run/testing": "2.8.0"
   },
   "changesets": [
+    "chilly-planets-visit",
     "curly-apples-exercise",
     "grumpy-beers-sneeze",
     "little-turtles-applaud",

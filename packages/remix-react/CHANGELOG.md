@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.8.1-pre.1
+
+### Patch Changes
+
+- [REMOVE] Lock into router stable ([#9010](https://github.com/remix-run/remix/pull/9010))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.1-pre.1`
+
 ## 2.8.1-pre.0
 
 ### Patch Changes
