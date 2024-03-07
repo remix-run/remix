@@ -161,7 +161,7 @@ Date: YYYY-MM-DD
 
 ## v2.8.1
 
-Date: 2024-03-06
+Date: 2024-03-07
 
 ### Patch Changes
 
