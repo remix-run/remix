@@ -1082,6 +1082,23 @@ export default defineConfig({
 });
 ```
 
+Your setup might also need to reinstantiate the react plugin for testing like this:
+
+```ts filename=vite.config.ts lines=[6]
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig, loadEnv } from "vite";
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [!process.env.VITEST ? remix() : react()],
+  test: {
+    environment: "happy-dom",
+    // Additionally, this is to load ".env.test" during vitest
+    env: loadEnv("test", process.cwd(), ""),
+  },
+});
+```
+
 For Storybook:
 
 ```ts filename=vite.config.ts lines=[7]
