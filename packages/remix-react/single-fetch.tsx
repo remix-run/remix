@@ -170,18 +170,11 @@ export function getSingleFetchDataStrategy(
     return Promise.all(
       matches.map(async (m) =>
         m.resolve(async (handler): Promise<HandlerResult> => {
-          try {
-            return {
-              type: "data",
-              result: await handler(() => singleFetch(m.route.id)),
-              status: actionStatus,
-            };
-          } catch (e) {
-            return {
-              type: "error",
-              result: e,
-            };
-          }
+          return {
+            type: "data",
+            result: await handler(() => singleFetch(m.route.id)),
+            status: actionStatus,
+          };
         })
       )
     );
@@ -256,12 +249,7 @@ export function addRevalidationParam(
 export function singleFetchUrl(reqUrl: URL | string) {
   let url =
     typeof reqUrl === "string"
-      ? new URL(
-          reqUrl,
-          typeof window !== "undefined"
-            ? window.location.origin
-            : "http://localhost"
-        )
+      ? new URL(reqUrl, window.location.origin)
       : reqUrl;
   url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
   return url;
@@ -289,15 +277,15 @@ export function decodeViaTurboStream(
 ) {
   return decode(body, {
     plugins: [
-      (type: string, value: unknown) => {
+      (type: string, ...rest: unknown[]) => {
         // Decode Errors back into Error instances using the right type and with
         // the right (potentially undefined) stacktrace
         if (type === "SanitizedError") {
-          let { message, stack, name } = value as {
-            message: string;
-            stack?: string;
-            name: string;
-          };
+          let [name, message, stack] = rest as [
+            string,
+            string,
+            string | undefined
+          ];
           let Constructor = Error;
           // @ts-expect-error
           if (name && name in global && typeof global[name] === "function") {
@@ -310,7 +298,11 @@ export function decodeViaTurboStream(
         }
 
         if (type === "ErrorResponse") {
-          let { data, status, statusText } = value as ErrorResponse;
+          let [data, status, statusText] = rest as [
+            unknown,
+            number,
+            string | undefined
+          ];
           return {
             value: new ErrorResponseImpl(status, statusText, data),
           };
@@ -335,6 +327,6 @@ function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
   } else if ("data" in result) {
     return result.data;
   } else {
-    throw new Error(`No action response found for routeId "${routeId}"`);
+    throw new Error(`No response found for routeId "${routeId}"`);
   }
 }

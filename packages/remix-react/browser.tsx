@@ -219,6 +219,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     // When single fetch is enabled, we need to suspend until the initial state
     // snapshot is decoded into window.__remixContext.state
     if (window.__remixContext.future.unstable_singleFetch) {
+      // Note: `stateDecodingPromise` is not coupled to `router` - we'll reach this
+      // code potentially many times waiting for our state to arrive, but we'll
+      // then only get past here and create the `router` one time
       if (!stateDecodingPromise) {
         let stream = window.__remixContext.stream;
         invariant(stream, "No stream found for single fetch decoding");

@@ -125,10 +125,14 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     let response: Response;
     if (url.searchParams.has("_data")) {
-      invariant(
-        !_build.future.unstable_singleFetch,
-        "Single fetch-enabled apps should not be making ?_data requests"
-      );
+      if (_build.future.unstable_singleFetch) {
+        handleError(
+          new Error(
+            "Warning: Single fetch-enabled apps should not be making ?_data requests, " +
+              "this is likely to break in the future"
+          )
+        );
+      }
       let routeId = url.searchParams.get("_data")!;
 
       response = await handleDataRequest(
@@ -797,9 +801,13 @@ function getSingleFetchRedirect(response: Response): SingleFetchResult {
     redirect: response.headers.get("Location")!,
     status: response.status,
     revalidate:
-      // TODO: I think we can get rid of X-Remix-Revalidate here and only look at
-      // Set-Cookie??  We send back the revalidation info in the SingleFetchResult
-      // `revalidate` boolean and then convert it to the header client side
+      // Technically X-Remix-Revalidate isn't needed here - that was an implementation
+      // detail of ?_data requests as our way to tell the front end to revalidate when
+      // we didn't have a response body to include that information in.
+      // With single fetch, we tell the front end via this revalidate boolean field.
+      // However, we're respecting it for now because it may be something folks have
+      // used in their own responses
+      // TODO(v3): Consider removing or making this official public API
       response.headers.has("X-Remix-Revalidate") ||
       response.headers.has("Set-Cookie"),
     reload: response.headers.has("X-Remix-Reload-Document"),
@@ -814,13 +822,16 @@ function encodeViaTurboStream(
   streamTimeout: number | undefined,
   serverMode: ServerMode
 ) {
-  // FIXME: This "minus 50" logic is a hack - wqe will need to coordinate the
-  // aborting of this encode() with the aborting of the react renderToPipeableStream.
-  // Need to abort this, but then give React enough time to flush down any final chunks
   let controller = new AbortController();
+  // How long are we willing to wait for all of the promises in `data` to resolve
+  // before timing out?  We default this to 50ms shorter than the default value for
+  // `ABORT_DELAY` in our built-in `entry.server.tsx` so that once we reject we
+  // have time to flush the rejections down through React's rendering stream before `
+  // we call abort() on that.  If the user provides their own it's up to them to
+  // decouple the aborting of the stream from the aborting of React's renderToPipeableStream
   let timeoutId = setTimeout(
     () => controller.abort(new Error("Server Timeout")),
-    typeof streamTimeout === "number" ? Math.max(streamTimeout - 50, 1) : 5000
+    typeof streamTimeout === "number" ? streamTimeout : 4950
   );
   requestSignal.addEventListener("abort", () => clearTimeout(timeoutId));
 
@@ -832,16 +843,16 @@ function encodeViaTurboStream(
         // we still need to handle this for any deferred data that rejects with an
         // Error - as those will not be sanitized yet
         if (value instanceof Error) {
-          let { message, stack, name } =
+          let { name, message, stack } =
             serverMode === ServerMode.Production
               ? sanitizeError(value, serverMode)
               : value;
-          return ["SanitizedError", { message, stack, name }];
+          return ["SanitizedError", name, message, stack];
         }
 
         if (value instanceof ErrorResponseImpl) {
           let { data, status, statusText } = value;
-          return ["ErrorResponse", { data, status, statusText }];
+          return ["ErrorResponse", data, status, statusText];
         }
       },
     ],
