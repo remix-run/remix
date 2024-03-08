@@ -130,6 +130,8 @@ export const viteBuild = ({
     env: {
       ...process.env,
       ...env,
+      FORCE_COLOR: undefined,
+      NO_COLOR: "1",
     },
   });
 };
