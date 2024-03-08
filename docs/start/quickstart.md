@@ -112,12 +112,12 @@ Now you can run your app with `remix-serve`:
 
 ```shellscript nonumber
 # note the dash!
-npx remix-serve build/index.js
+npx remix-serve build/server/index.js
 ```
 
 You should be able to open up [http://localhost:3000][http-localhost-3000] and see the "hello world" page.
 
-Aside from the Vite config and the unholy amount of code in `node_modules`, our Remix app is just one file:
+Aside from the unholy amount of code in `node_modules`, our Remix app is just one file:
 
 ```
 ├── app/
