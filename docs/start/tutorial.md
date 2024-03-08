@@ -119,7 +119,7 @@ export default function App() {
 
 While there are multiple ways to style your Remix app, we're going to use a plain stylesheet that's already been written to keep things focused on Remix.
 
-You can import CSS files directly into JavaScript modules. The compiler will fingerprint the asset, save it to your [`assetsBuildDirectory`][assets-build-directory], and provide your module with the publicly accessible href.
+You can import CSS files directly into JavaScript modules. Vite will fingerprint the asset, save it to your build's client directory, and provide your module with the publicly accessible href.
 
 👉 **Import the app styles**
 
@@ -127,7 +127,7 @@ You can import CSS files directly into JavaScript modules. The compiler will fin
 import type { LinksFunction } from "@remix-run/node";
 // existing imports
 
-import appStylesHref from "./app.css";
+import appStylesHref from "./app.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: appStylesHref },

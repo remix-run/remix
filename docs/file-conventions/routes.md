@@ -4,7 +4,7 @@ title: Route File Naming
 
 # Route File Naming
 
-While you can configure routes in [`remix.config.js`][remix_config], most routes are created with this file system convention. Add a file, get a route.
+While you can configure routes via [the "routes" plugin option][routes_config], most routes are created with this file system convention. Add a file, get a route.
 
 Please note that you can use either `.js`, `.jsx`, `.ts` or `.tsx` file extensions. We'll stick with `.tsx` in the examples to avoid duplication.
 
@@ -381,7 +381,7 @@ Our general recommendation for scale is to make every route a folder and put the
 
 ## More Flexibility
 
-While we like this file convention, we recognize that at a certain scale many organizations won't like it. You can always define your routes programmatically in [`remix.config.js`][remix_config].
+While we like this file convention, we recognize that at a certain scale many organizations won't like it. You can always define your routes programmatically in [`vite.config.ts`][routes_config].
 
 There's also the [`remix-flat-routes`][flat_routes] third-party package with configurable options beyond the defaults in Remix.
 
@@ -393,7 +393,7 @@ There's also the [`remix-flat-routes`][flat_routes] third-party package with con
 [index_route]: ../discussion/routes#index-routes
 [nested_routing]: ../discussion/routes#what-is-nested-routing
 [nested_routes]: #nested-routes
-[remix_config]: ./remix-config#routes
+[routes_config]: ./vite-config#routes
 [dot_delimiters]: #dot-delimiters
 [dynamic_segments]: #dynamic-segments
 [flat_routes]: https://github.com/kiliman/remix-flat-routes

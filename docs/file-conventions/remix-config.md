@@ -1,8 +1,11 @@
 ---
 title: remix.config.js
+hidden: true
 ---
 
 # remix.config.js
+
+<docs-warning>`remix.config.js` is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. When using [Remix Vite][remix-vite], this file should not be present in your project. Instead, Remix configuration should be provided to the Remix plugin in your [Vite config][vite-config].</docs-warning>
 
 This file has a few build and development configuration options, but does not actually run on your server.
 
@@ -282,3 +285,6 @@ There are a few conventions that Remix uses you should be aware of.
 [use-fetchers]: ../hooks/use-fetchers
 [use-fetcher]: ../hooks/use-fetcher
 [relativesplatpath]: https://reactrouter.com/en/main/hooks/use-resolved-path#splat-paths
+[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../future/vite
+[vite-config]: ./vite-configuration
