@@ -331,7 +331,7 @@ async function handleSingleFetchRequest(
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void
 ): Promise<Response> {
-  let [result, headers, status] =
+  let { result, headers, status } =
     request.method !== "GET"
       ? await singleFetchAction(
           request,
@@ -379,7 +379,7 @@ async function singleFetchAction(
   staticHandler: StaticHandler,
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void
-): Promise<[SingleFetchResult, Headers, number]> {
+): Promise<{ result: SingleFetchResult; headers: Headers; status: number }> {
   try {
     let handlerRequest = new Request(handlerUrl, {
       method: request.method,
@@ -395,41 +395,41 @@ async function singleFetchAction(
     // Unlike `handleDataRequest`, when singleFetch is enabled, queryRoute does
     // let non-Response return values through
     if (!isResponse(result)) {
-      return [{ data: result }, new Headers(), 200];
+      return { result: { data: result }, headers: new Headers(), status: 200 };
     }
 
     if (isRedirectResponse(result)) {
-      return [
-        getSingleFetchRedirect(result),
-        result.headers,
-        200, // Don't trigger a redirect on the `fetch`
-      ];
+      return {
+        result: getSingleFetchRedirect(result),
+        headers: result.headers,
+        status: 200, // Don't trigger a redirect on the `fetch`
+      };
     }
-    return [
-      { data: await unwrapResponse(result) },
-      result.headers,
-      result.status,
-    ];
+    return {
+      result: { data: await unwrapResponse(result) },
+      headers: result.headers,
+      status: result.status,
+    };
   } catch (error) {
     if (isResponse(error)) {
-      return [
-        {
+      return {
+        result: {
           error: new ErrorResponseImpl(
             error.status,
             error.statusText,
             await unwrapResponse(error)
           ),
         },
-        error.headers,
-        error.status,
-      ];
+        headers: error.headers,
+        status: error.status,
+      };
     } else {
       handleError(error);
-      return [
-        { error },
-        new Headers(),
-        isRouteErrorResponse(error) ? error.status : 500,
-      ];
+      return {
+        result: { error },
+        headers: new Headers(),
+        status: isRouteErrorResponse(error) ? error.status : 500,
+      };
     }
   }
 }
@@ -443,7 +443,7 @@ async function singleFetchLoaders(
   handleError: (err: unknown) => void,
   serverMode: ServerMode,
   build: ServerBuild
-): Promise<[SingleFetchResults, Headers, number]> {
+): Promise<{ result: SingleFetchResults; headers: Headers; status: number }> {
   try {
     let handlerRequest = new Request(handlerUrl, {
       headers: request.headers,
@@ -474,11 +474,11 @@ async function singleFetchLoaders(
               {}
             );
 
-      return [
-        results,
-        result.headers,
-        200, // Don't want the `fetch` call to follow the redirect
-      ];
+      return {
+        result: results,
+        headers: result.headers,
+        status: 200, // Don't want the `fetch` call to follow the redirect
+      };
     }
 
     let context = result;
@@ -512,10 +512,18 @@ async function singleFetchLoaders(
       }
     });
 
-    return [results, getDocumentHeaders(build, context), context.statusCode];
+    return {
+      result: results,
+      headers: getDocumentHeaders(build, context),
+      status: context.statusCode,
+    };
   } catch (error: unknown) {
     handleError(error);
-    return [{ root: { error } }, new Headers(), 500];
+    return {
+      result: { root: { error } },
+      headers: new Headers(),
+      status: 500,
+    };
   }
 }
 
