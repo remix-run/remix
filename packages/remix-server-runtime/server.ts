@@ -312,13 +312,22 @@ async function handleDataRequest(
   }
 }
 
-// IMPORTANT! Keep in sync with the types in @remix-run/react
-type SingleFetchResult =
+export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
+
+type SingleFetchRedirectResult = {
+  redirect: string;
+  status: number;
+  revalidate: boolean;
+  reload: boolean;
+};
+export type SingleFetchResult =
   | { data: unknown }
   | { error: unknown }
-  | { redirect: string; status: number; revalidate: boolean; reload: boolean };
-type SingleFetchResults = {
+  | SingleFetchRedirectResult;
+
+export type SingleFetchResults = {
   [key: string]: SingleFetchResult;
+  [SingleFetchRedirectSymbol]?: SingleFetchRedirectResult;
 };
 
 async function handleSingleFetchRequest(
@@ -458,24 +467,10 @@ async function singleFetchLoaders(
       skipLoaderErrorBubbling: true,
     });
     if (isResponse(result)) {
-      let redirect = getSingleFetchRedirect(result);
-
-      // We don't really know which loader this came from, include for all routes
-      // TODO: This feels like a hack - change internal query behavior here?
-      let results = loadRouteIds
-        ? loadRouteIds.reduce(
-            (acc, routeId) => Object.assign(acc, { [routeId]: redirect }),
-            {}
-          )
-        : matches!
-            .filter((m) => m.route.module.loader)
-            .reduce(
-              (acc, m) => Object.assign(acc, { [m.route.id]: redirect }),
-              {}
-            );
-
       return {
-        result: results,
+        result: {
+          [SingleFetchRedirectSymbol]: getSingleFetchRedirect(result),
+        },
         headers: result.headers,
         status: 200, // Don't want the `fetch` call to follow the redirect
       };
@@ -785,7 +780,7 @@ function unwrapResponse(response: Response) {
     : response.text();
 }
 
-function getSingleFetchRedirect(response: Response): SingleFetchResult {
+function getSingleFetchRedirect(response: Response): SingleFetchRedirectResult {
   return {
     redirect: response.headers.get("Location")!,
     status: response.status,
@@ -842,6 +837,14 @@ function encodeViaTurboStream(
         if (value instanceof ErrorResponseImpl) {
           let { data, status, statusText } = value;
           return ["ErrorResponse", data, status, statusText];
+        }
+
+        if (
+          value &&
+          typeof value === "object" &&
+          SingleFetchRedirectSymbol in value
+        ) {
+          return ["SingleFetchRedirect", value[SingleFetchRedirectSymbol]];
         }
       },
     ],
