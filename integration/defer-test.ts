@@ -2304,7 +2304,6 @@ test.describe("single fetch", () => {
             // Exported for use by the server runtime so we can abort the
             // turbo-stream encode() call
             export const streamTimeout = 250;
-            const renderTimeout = streamTimeout + 250;
 
             export default function handleRequest(
               request: Request,
@@ -2366,7 +2365,7 @@ test.describe("single fetch", () => {
                   }
                 );
 
-                setTimeout(abort, renderTimeout);
+                setTimeout(abort, streamTimeout);
               });
             }
 
@@ -2408,7 +2407,7 @@ test.describe("single fetch", () => {
                   }
                 );
 
-                setTimeout(abort, renderTimeout);
+                setTimeout(abort, streamTimeout);
               });
             }
           `,

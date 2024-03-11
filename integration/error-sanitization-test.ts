@@ -757,13 +757,11 @@ test.describe("single fetch", () => {
       test("returns data without errors", async () => {
         let { data } = await fixture.requestSingleFetchData("/_root.data");
         expect(data).toEqual({
-          results: {
-            root: {
-              data: null,
-            },
-            "routes/_index": {
-              data: "LOADER",
-            },
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            data: "LOADER",
           },
         });
       });
@@ -773,13 +771,11 @@ test.describe("single fetch", () => {
           "/_root.data?loader"
         );
         expect(data).toEqual({
-          results: {
-            root: {
-              data: null,
-            },
-            "routes/_index": {
-              error: new Error("Unexpected Server Error"),
-            },
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            error: new Error("Unexpected Server Error"),
           },
         });
         expect(errorLogs.length).toBe(1);
@@ -790,9 +786,7 @@ test.describe("single fetch", () => {
       test("returns deferred data without errors", async () => {
         let { data } = await fixture.requestSingleFetchData("/defer.data");
         // @ts-expect-error
-        expect(await data.results["routes/defer"].data.lazy).toEqual(
-          "RESOLVED"
-        );
+        expect(await data["routes/defer"].data.lazy).toEqual("RESOLVED");
       });
 
       test("sanitizes loader errors in deferred data requests", async () => {
@@ -801,7 +795,7 @@ test.describe("single fetch", () => {
         );
         try {
           // @ts-expect-error
-          await data.results["routes/defer"].data.lazy;
+          await data["routes/defer"].data.lazy;
           expect(true).toBe(false);
         } catch (e) {
           expect((e as Error).message).toBe("Unexpected Server Error");
@@ -826,14 +820,12 @@ test.describe("single fetch", () => {
           "/not-a-route.data"
         );
         expect(data).toEqual({
-          results: {
-            root: {
-              error: new ErrorResponseImpl(
-                404,
-                "Not Found",
-                'Error: No route matches URL "/not-a-route"'
-              ),
-            },
+          root: {
+            error: new ErrorResponseImpl(
+              404,
+              "Not Found",
+              'Error: No route matches URL "/not-a-route"'
+            ),
           },
         });
         expect(errorLogs).toEqual([
@@ -938,13 +930,11 @@ test.describe("single fetch", () => {
       test("returns data without errors", async () => {
         let { data } = await fixture.requestSingleFetchData("/_root.data");
         expect(data).toEqual({
-          results: {
-            root: {
-              data: null,
-            },
-            "routes/_index": {
-              data: "LOADER",
-            },
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            data: "LOADER",
           },
         });
       });
@@ -954,13 +944,11 @@ test.describe("single fetch", () => {
           "/_root.data?loader"
         );
         expect(data).toEqual({
-          results: {
-            root: {
-              data: null,
-            },
-            "routes/_index": {
-              error: new Error("Loader Error"),
-            },
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            error: new Error("Loader Error"),
           },
         });
         expect(errorLogs.length).toBe(1);
@@ -971,9 +959,7 @@ test.describe("single fetch", () => {
       test("returns deferred data without errors", async () => {
         let { data } = await fixture.requestSingleFetchData("/defer.data");
         // @ts-expect-error
-        expect(await data.results["routes/defer"].data.lazy).toEqual(
-          "RESOLVED"
-        );
+        expect(await data["routes/defer"].data.lazy).toEqual("RESOLVED");
       });
 
       test("does not sanitize loader errors in deferred data requests", async () => {
@@ -982,7 +968,7 @@ test.describe("single fetch", () => {
         );
         try {
           // @ts-expect-error
-          await data.results["routes/defer"].data.lazy;
+          await data["routes/defer"].data.lazy;
           expect(true).toBe(false);
         } catch (e) {
           expect((e as Error).message).toBe("REJECTED");
@@ -1008,14 +994,12 @@ test.describe("single fetch", () => {
           "/not-a-route.data"
         );
         expect(data).toEqual({
-          results: {
-            root: {
-              error: new ErrorResponseImpl(
-                404,
-                "Not Found",
-                'Error: No route matches URL "/not-a-route"'
-              ),
-            },
+          root: {
+            error: new ErrorResponseImpl(
+              404,
+              "Not Found",
+              'Error: No route matches URL "/not-a-route"'
+            ),
           },
         });
         expect(errorLogs).toEqual([
@@ -1214,13 +1198,11 @@ test.describe("single fetch", () => {
       test("returns data without errors", async () => {
         let { data } = await fixture.requestSingleFetchData("/_root.data");
         expect(data).toEqual({
-          results: {
-            root: {
-              data: null,
-            },
-            "routes/_index": {
-              data: "LOADER",
-            },
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            data: "LOADER",
           },
         });
       });
@@ -1230,10 +1212,8 @@ test.describe("single fetch", () => {
           "/_root.data?loader"
         );
         expect(data).toEqual({
-          results: {
-            root: { data: null },
-            "routes/_index": { error: new Error("Unexpected Server Error") },
-          },
+          root: { data: null },
+          "routes/_index": { error: new Error("Unexpected Server Error") },
         });
         expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");
         expect(errorLogs[1][0]).toEqual(
@@ -1247,7 +1227,7 @@ test.describe("single fetch", () => {
       test("returns deferred data without errors", async () => {
         let { data } = await fixture.requestSingleFetchData("/defer.data");
         // @ts-expect-error
-        expect(await data.results["routes/defer"].data.lazy).toBe("RESOLVED");
+        expect(await data["routes/defer"].data.lazy).toBe("RESOLVED");
       });
 
       test("sanitizes loader errors in deferred data requests", async () => {
@@ -1256,7 +1236,7 @@ test.describe("single fetch", () => {
         );
         try {
           // @ts-expect-error
-          await data.results["routes/defer"].data.lazy;
+          await data["routes/defer"].data.lazy;
           expect(true).toBe(false);
         } catch (e) {
           expect((e as Error).message).toBe("Unexpected Server Error");
@@ -1286,14 +1266,12 @@ test.describe("single fetch", () => {
           "/not-a-route.data"
         );
         expect(data).toEqual({
-          results: {
-            root: {
-              error: new ErrorResponseImpl(
-                404,
-                "Not Found",
-                'Error: No route matches URL "/not-a-route"'
-              ),
-            },
+          root: {
+            error: new ErrorResponseImpl(
+              404,
+              "Not Found",
+              'Error: No route matches URL "/not-a-route"'
+            ),
           },
         });
         expect(errorLogs[0][0]).toEqual("App Specific Error Logging:");

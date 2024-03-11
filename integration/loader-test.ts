@@ -195,10 +195,8 @@ test.describe("single fetch", () => {
     test("returns responses for single fetch routes", async () => {
       let { data } = await fixture.requestSingleFetchData("/_root.data");
       expect(data).toEqual({
-        results: {
-          root: { data: ROOT_DATA },
-          "routes/_index": { data: INDEX_DATA },
-        },
+        root: { data: ROOT_DATA },
+        "routes/_index": { data: INDEX_DATA },
       });
     });
   });

@@ -831,15 +831,13 @@ test.describe("Client Data", () => {
       );
       let app = new PlaywrightFixture(appFixture, page);
 
-      await app.goto("/parent/child", false);
+      await app.goto("/parent/child");
       let html = await app.getHtml("main");
       expect(html).toMatch("Parent Server Loader</p>");
       expect(html).toMatch("Child Server Error");
       expect(html).not.toMatch("Should not see me");
       // Ensure we hydrate and remain on the boundary
-      await page.waitForSelector(
-        ":has-text('Parent Server Loader (mutated by client)')"
-      );
+      await new Promise((r) => setTimeout(r, 100));
       html = await app.getHtml("main");
       expect(html).toMatch("Parent Server Loader (mutated by client)</p>");
       expect(html).toMatch("Child Server Error");
