@@ -1,8 +1,6 @@
 import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 
-import type { Cookie, CookieOptions, CreateCookieFunction } from "./cookies";
-import { isCookie } from "./cookies";
-import { warnOnce } from "./warnings";
+import type { Cookie, CookieOptions } from "./cookies";
 
 /**
  * An object of name/value pairs to be used in the session.
@@ -251,64 +249,3 @@ export type CreateSessionStorageFunction = <
 >(
   strategy: SessionIdStorageStrategy<Data, FlashData>
 ) => SessionStorage<Data, FlashData>;
-
-/**
- * Creates a SessionStorage object using a SessionIdStorageStrategy.
- *
- * Note: This is a low-level API that should only be used if none of the
- * existing session storage options meet your requirements.
- *
- * @see https://remix.run/utils/sessions#createsessionstorage
- */
-export const createSessionStorageFactory =
-  (createCookie: CreateCookieFunction): CreateSessionStorageFunction =>
-  ({ cookie: cookieArg, createData, readData, updateData, deleteData }) => {
-    let cookie = isCookie(cookieArg)
-      ? cookieArg
-      : createCookie(cookieArg?.name || "__session", cookieArg);
-
-    warnOnceAboutSigningSessionCookie(cookie);
-
-    return {
-      async getSession(cookieHeader, options) {
-        let id = cookieHeader && (await cookie.parse(cookieHeader, options));
-        let data = id && (await readData(id));
-        return createSession(data || {}, id || "");
-      },
-      async commitSession(session, options) {
-        let { id, data } = session;
-        let expires =
-          options?.maxAge != null
-            ? new Date(Date.now() + options.maxAge * 1000)
-            : options?.expires != null
-            ? options.expires
-            : cookie.expires;
-
-        if (id) {
-          await updateData(id, data, expires);
-        } else {
-          id = await createData(data, expires);
-        }
-
-        return cookie.serialize(id, options);
-      },
-      async destroySession(session, options) {
-        await deleteData(session.id);
-        return cookie.serialize("", {
-          ...options,
-          maxAge: undefined,
-          expires: new Date(0),
-        });
-      },
-    };
-  };
-
-export function warnOnceAboutSigningSessionCookie(cookie: Cookie) {
-  warnOnce(
-    cookie.isSigned,
-    `The "${cookie.name}" cookie is not signed, but session cookies should be ` +
-      `signed to prevent tampering on the client before they are sent back to the ` +
-      `server. See https://remix.run/utils/cookies#signing-cookies ` +
-      `for more information.`
-  );
-}
