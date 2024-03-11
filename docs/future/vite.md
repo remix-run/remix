@@ -1094,7 +1094,7 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 [template-vite-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/vite-cloudflare
 [public-path]: ../file-conventions/remix-config#publicpath
 [server-build-path]: ../file-conventions/remix-config#serverbuildpath
-[vite-config]: ../file-conventions/vite-config.md
+[vite-config]: ../file-conventions/vite-config
 [vite-plugins]: https://vitejs.dev/plugins
 [vite-features]: https://vitejs.dev/guide/features
 [supported-remix-config-options]: #configuration
