@@ -1,7 +1,6 @@
 import * as React from "react";
 import type {
-  DataStrategyFunction,
-  ErrorResponse,
+  unstable_DataStrategyFunction as DataStrategyFunction,
   unstable_HandlerResult as HandlerResult,
 } from "@remix-run/router";
 import {
@@ -10,7 +9,7 @@ import {
 } from "@remix-run/router";
 import type {
   DataRouteObject,
-  DataStrategyFunctionArgs,
+  unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
 } from "react-router-dom";
 import { decode } from "turbo-stream";
 

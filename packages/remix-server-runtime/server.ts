@@ -410,27 +410,27 @@ async function singleFetchAction(
       result.headers,
       result.status,
     ];
-  } catch (err) {
-    let status = 500;
-    let headers = new Headers();
-    let error;
-
-    if (isResponse(err)) {
-      status = err.status;
-      error = new ErrorResponseImpl(
-        err.status,
-        err.statusText,
-        await unwrapResponse(err)
-      );
+  } catch (error) {
+    if (isResponse(error)) {
+      return [
+        {
+          error: new ErrorResponseImpl(
+            error.status,
+            error.statusText,
+            await unwrapResponse(error)
+          ),
+        },
+        error.headers,
+        error.status,
+      ];
     } else {
-      if (isRouteErrorResponse(err)) {
-        status = err.status;
-      }
-      error = err;
       handleError(error);
+      return [
+        { error },
+        new Headers(),
+        isRouteErrorResponse(error) ? error.status : 500,
+      ];
     }
-
-    return [{ error }, headers, status];
   }
 }
 
@@ -455,6 +455,7 @@ async function singleFetchLoaders(
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       loadRouteIds,
+      skipLoaderErrorBubbling: true,
     });
     if (isResponse(result)) {
       let redirect = getSingleFetchRedirect(result);
@@ -491,26 +492,6 @@ async function singleFetchLoaders(
         }
       });
       context.errors = sanitizeErrors(context.errors, serverMode);
-
-      // TODO: Feels hacky - we need to un-bubble errors here since they'll be
-      // bubbled client side.  Probably better to throw a flag on query() to not
-      // do this in the first place
-      let mostRecentError: [string, unknown] | null = null;
-      for (let match of context.matches) {
-        let routeId = match.route.id;
-        if (context.errors[routeId] !== undefined) {
-          mostRecentError = [routeId, context.errors[routeId]];
-        }
-        if (
-          build.assets.routes[routeId]?.hasLoader &&
-          context.loaderData[routeId] === undefined &&
-          mostRecentError
-        ) {
-          context.errors[mostRecentError[0]] = undefined;
-          context.errors[routeId] = mostRecentError[1];
-          mostRecentError = null;
-        }
-      }
     }
 
     // Aggregate results based on the matches we intended to load since we get

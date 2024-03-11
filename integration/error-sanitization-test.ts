@@ -747,11 +747,8 @@ test.describe("single fetch", () => {
         let html = await response.text();
         expect(html).toMatch("Defer Error");
         expect(html).not.toMatch("RESOLVED");
-        // This is the turbo-stream encoding - the fact that stack goes right
-        // into __type means it has no value
-        expect(html).toMatch(
-          '\\"message\\",\\"Unexpected Server Error\\",\\"stack\\",\\"name\\",\\"Error\\"'
-        );
+        expect(html).toMatch("Unexpected Server Error");
+        expect(html).not.toMatch("stack");
         // defer errors are not logged to the server console since the request
         // has "succeeded"
         expect(errorLogs.length).toBe(0);
@@ -923,12 +920,8 @@ test.describe("single fetch", () => {
         let html = await response.text();
         expect(html).toMatch("Defer Error");
         expect(html).not.toMatch("RESOLVED");
-        // This is the turbo-stream encoding - the fact that stack goes right
-        // into __type means it has no value
-        expect(html).toMatch(
-          '\\"message\\",\\"REJECTED\\",\\"stack\\",\\"Error: REJECTED\\\\n    at '
-        );
-        expect(html).toMatch(')\\",\\"name\\",\\"Error\\"');
+        expect(html).toMatch("<p>REJECTED</p>");
+        expect(html).toMatch("Error: REJECTED\\\\n    at ");
         // defer errors are not logged to the server console since the request
         // has "succeeded"
         expect(errorLogs.length).toBe(0);
@@ -1195,11 +1188,8 @@ test.describe("single fetch", () => {
         let html = await response.text();
         expect(html).toMatch("Defer Error");
         expect(html).not.toMatch("RESOLVED");
-        // This is the turbo-stream encoding - the fact that stack goes right
-        // into __type means it has no value
-        expect(html).toMatch(
-          '\\"message\\",\\"Unexpected Server Error\\",\\"stack\\",\\"name\\",\\"Error\\"'
-        );
+        expect(html).toMatch("Unexpected Server Error");
+        expect(html).not.toMatch("stack");
         // defer errors are not logged to the server console since the request
         // has "succeeded"
         expect(errorLogs.length).toBe(0);
