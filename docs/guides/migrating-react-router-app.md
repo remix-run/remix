@@ -7,6 +7,8 @@ description: Migrating your React Router app to Remix can be done all at once or
 
 # Migrating your React Router App to Remix
 
+<docs-warning>This guide currently assumes you are using the [Classic Remix Compiler][classic-remix-compiler] rather than [Remix Vite][remix-vite].</docs-warning>
+
 Millions of React applications deployed worldwide are powered by [React Router][react-router]. Chances are you've shipped a few of them! Because Remix is built on top of React Router, we have worked to make migration an easy process you can work through iteratively to avoid huge refactors.
 
 If you aren't already using React Router, we think there are several compelling reasons to reconsider! History management, dynamic path matching, nested routing, and much more. Take a look at the [React Router docs][react-router-docs] and see all what we have to offer.
@@ -725,3 +727,5 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [css-side-effect-imports]: ./styling#css-side-effect-imports
 [css-bundling]: ./styling#css-bundling
 [open-graph-protocol]: https://ogp.me
+[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../future/vite

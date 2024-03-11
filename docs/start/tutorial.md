@@ -36,7 +36,7 @@ npm install
 npm run dev
 ```
 
-You should be able to open up [http://localhost:3000][http-localhost-3000] and see an unstyled screen that looks like this:
+You should be able to open up [http://localhost:5173][http-localhost-5173] and see an unstyled screen that looks like this:
 
 <img class="tutorial" src="/docs-images/contacts/03.webp" />
 
@@ -52,7 +52,6 @@ Note the file at `app/root.tsx`. This is what we call the "Root Route". It's the
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   Scripts,
   ScrollRestoration,
@@ -106,7 +105,6 @@ export default function App() {
 
         <ScrollRestoration />
         <Scripts />
-        <LiveReload />
       </body>
     </html>
   );
@@ -119,7 +117,7 @@ export default function App() {
 
 While there are multiple ways to style your Remix app, we're going to use a plain stylesheet that's already been written to keep things focused on Remix.
 
-You can import CSS files directly into JavaScript modules. The compiler will fingerprint the asset, save it to your [`assetsBuildDirectory`][assets-build-directory], and provide your module with the publicly accessible href.
+You can import CSS files directly into JavaScript modules. Vite will fingerprint the asset, save it to your build's client directory, and provide your module with the publicly accessible href.
 
 👉 **Import the app styles**
 
@@ -127,7 +125,7 @@ You can import CSS files directly into JavaScript modules. The compiler will fin
 import type { LinksFunction } from "@remix-run/node";
 // existing imports
 
-import appStylesHref from "./app.css";
+import appStylesHref from "./app.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: appStylesHref },
@@ -268,12 +266,11 @@ Since Remix is built on top of React Router, it supports nested routing. In orde
 
 👉 **Render an [`<Outlet />`][outlet-component]**
 
-```tsx filename=app/root.tsx lines=[7,20-22]
+```tsx filename=app/root.tsx lines=[6,19-21]
 // existing imports
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   Outlet,
   Scripts,
@@ -310,13 +307,12 @@ Client side routing allows our app to update the URL without requesting another 
 
 👉 **Change the sidebar `<a href>` to `<Link to>`**
 
-```tsx filename=app/root.tsx lines=[4,25,28]
+```tsx filename=app/root.tsx lines=[4,24,27]
 // existing imports
 import {
   Form,
   Link,
   Links,
-  LiveReload,
   Meta,
   Outlet,
   Scripts,
@@ -369,14 +365,13 @@ There are two APIs we'll be using to load data, [`loader`][loader] and [`useLoad
 
 <docs-info>The following code has a type error in it, we'll fix it in the next section</docs-info>
 
-```tsx filename=app/root.tsx lines=[2,12,16,20-23,26,35-58]
+```tsx filename=app/root.tsx lines=[2,11,15,19-22,25,34-57]
 // existing imports
 import { json } from "@remix-run/node";
 import {
   Form,
   Link,
   Links,
-  LiveReload,
   Meta,
   Outlet,
   Scripts,
@@ -821,12 +816,11 @@ Now that we have a bunch of records, it's not clear which one we're looking at i
 
 👉 **Replace `<Link>` with `<NavLink>` in the sidebar**
 
-```tsx filename=app/root.tsx lines=[7,28-37,39]
+```tsx filename=app/root.tsx lines=[6,27-36,38]
 // existing imports
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   NavLink,
   Outlet,
@@ -885,12 +879,11 @@ Remix is managing all the state behind the scenes and reveals the pieces you nee
 
 👉 **Use `useNavigation` to add global pending UI**
 
-```tsx filename=app/root.tsx lines=[12,19,27-29]
+```tsx filename=app/root.tsx lines=[11,18,26-28]
 // existing imports
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   NavLink,
   Outlet,
@@ -1089,7 +1082,7 @@ Let's see what happens when we submit the search form:
 Note the browser's URL now contains your query in the URL as [`URLSearchParams`][url-search-params]:
 
 ```
-http://localhost:3000/?q=ryan
+http://localhost:5173/?q=ryan
 ```
 
 Since it's not `<Form method="post">`, Remix emulates the browser by serializing the [`FormData`][form-data] into the [`URLSearchParams`][url-search-params] instead of the request body.
@@ -1279,12 +1272,11 @@ We've got a product decision to make here. Sometimes you want the user to submit
 
 We've seen `useNavigate` already, we'll use its cousin, [`useSubmit`][use-submit], for this.
 
-```tsx filename=app/root.tsx lines=[13,20,33-35]
+```tsx filename=app/root.tsx lines=[12,19,32-34]
 // existing imports
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   NavLink,
   Outlet,
@@ -1645,5 +1637,5 @@ That's it! Thanks for giving Remix a shot. We hope this tutorial gives you a sol
 [links]: ../route/links
 [routes-file-conventions]: ../file-conventions/routes
 [quickstart]: ./quickstart
-[http-localhost-3000]: http://localhost:3000
+[http-localhost-5173]: http://localhost:5173
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/fetch

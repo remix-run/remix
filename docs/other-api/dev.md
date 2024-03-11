@@ -14,15 +14,62 @@ To get a full list of available commands and flags, run:
 npx @remix-run/dev -h
 ```
 
-## `remix build`
+## `remix vite:build`
 
-Builds your app for production. This command will set `process.env.NODE_ENV` to `production` and minify the output for deployment.
+Builds your app for production with [Remix Vite][remix-vite]. This command will set `process.env.NODE_ENV` to `production` and minify the output for deployment.
+
+```shellscript nonumber
+remix vite:build
+```
+
+| Flag                  | Description                                             | Type                                                | Default     |
+| --------------------- | ------------------------------------------------------- | --------------------------------------------------- | ----------- |
+| `--assetsInlineLimit` | Static asset base64 inline threshold in bytes           | `number`                                            | `4096`      |
+| `--clearScreen`       | Allow/disable clear screen when logging                 | `boolean`                                           |             |
+| `--config`, `-c`      | Use specified config file                               | `string`                                            |             |
+| `--emptyOutDir`       | Force empty outDir when it's outside of root            | `boolean`                                           |             |
+| `--logLevel`, `-l`    | Use specified log level                                 | `"info" \| "warn" \| "error" \| "silent" \| string` |             |
+| `--minify`            | Enable/disable minification, or specify minifier to use | `boolean \| "terser" \| "esbuild"`                  | `"esbuild"` |
+| `--mode`, `-m`        | Set env mode                                            | `string`                                            |             |
+| `--profile`           | Start built-in Node.js inspector                        |                                                     |             |
+| `--sourcemapClient`   | Output source maps for client build                     | `boolean \| "inline" \| "hidden"`                   | `false`     |
+| `--sourcemapServer`   | Output source maps for server build                     | `boolean \| "inline" \| "hidden"`                   | `false`     |
+
+## `remix vite:dev`
+
+Runs your app in development mode with [Remix Vite][remix-vite].
+
+```shellscript nonumber
+remix vite:dev
+```
+
+| Flag               | Description                                           | Type                                                | Default |
+| ------------------ | ----------------------------------------------------- | --------------------------------------------------- | ------- |
+| `--clearScreen`    | Allow/disable clear screen when logging               | `boolean`                                           |         |
+| `--config`, `-c`   | Use specified config file                             | `string`                                            |         |
+| `--cors`           | Enable CORS                                           | `boolean`                                           |         |
+| `--force`          | Force the optimizer to ignore the cache and re-bundle | `boolean`                                           |         |
+| `--host`           | Specify hostname                                      | `string`                                            |         |
+| `--logLevel`, `-l` | Use specified log level                               | `"info" \| "warn" \| "error" \| "silent" \| string` |         |
+| `--mode`, `-m`     | Set env mode                                          | `string`                                            |         |
+| `--open`           | Open browser on startup                               | `boolean \| string`                                 |         |
+| `--port`           | Specify port                                          | `number`                                            |         |
+| `--profile`        | Start built-in Node.js inspector                      |                                                     |         |
+| `--strictPort`     | Exit if specified port is already in use              | `boolean`                                           |         |
+
+## Classic Remix Compiler Commands
+
+<docs-warning>This documentation is only relevant when using the [Classic Remix Compiler][classic-remix-compiler].</docs-warning>
+
+### `remix build`
+
+Builds your app for production with the [Classic Remix Compiler][classic-remix-compiler]. This command will set `process.env.NODE_ENV` to `production` and minify the output for deployment.
 
 ```shellscript nonumber
 remix build
 ```
 
-### Options
+#### Options
 
 | Option                                   | flag          | config | default |
 | ---------------------------------------- | ------------- | ------ | ------- |
@@ -30,7 +77,7 @@ remix build
 
 ## `remix dev`
 
-Runs the Remix compiler in watch mode and spins up your app server.
+Runs the [Classic Remix Compiler][classic-remix-compiler] in watch mode and spins up your app server.
 
 The Remix compiler will:
 
@@ -61,7 +108,7 @@ To learn more about how HMR and HDR work together, check out [Pedro's talk at Re
 
 </docs-info>
 
-### With custom app server
+#### With custom app server
 
 If you used a template to get started, hopefully it's already integrated with `remix dev` out-of-the-box.
 If not, you can follow these steps to integrate your project with `remix dev`:
@@ -112,7 +159,7 @@ If not, you can follow these steps to integrate your project with `remix dev`:
 
    </docs-info>
 
-### Options
+#### Options
 
 Options priority order is: 1. flags, 2. config, 3. defaults.
 
@@ -138,7 +185,7 @@ module.exports = {
 };
 ```
 
-### Setting a custom port
+#### Setting a custom port
 
 The `remix dev --port` option sets the internal port used for hot updates.
 **It does not affect the port your app runs on.**
@@ -155,7 +202,7 @@ remix dev -c "remix-serve --port 8000 ./build/index.js"
 In contrast, the `remix dev --port` option is an escape-hatch for users who need fine-grain control of network ports.
 Most users, should not need to use `remix dev --port`.
 
-### Manual mode
+#### Manual mode
 
 By default, `remix dev` will restart your app server whenever a rebuild occurs.
 If you'd like to keep your app server running without restarts across rebuilds, check out our [guide for manual mode][manual_mode].
@@ -165,14 +212,14 @@ You can see if app server restarts are a bottleneck for your project by comparin
 - `rebuilt (Xms)` 👉 the Remix compiler took `X` milliseconds to rebuild your app
 - `app server ready (Yms)` 👉 Remix restarted your app server, and it took `Y` milliseconds to start with the new code changes
 
-### Pick up changes from other packages
+#### Pick up changes from other packages
 
 If you are using a monorepo, you might want Remix to perform hot updates not only when your app code changes, but whenever you change code in any of your apps dependencies.
 
 For example, you could have a UI library package (`packages/ui`) that is used within your Remix app (`packages/app`).
 To pick up changes in `packages/ui`, you can configure [watchPaths][watch_paths] to include your packages.
 
-### How to set up MSW
+#### How to set up MSW
 
 To use [Mock Service Worker][msw] in development, you'll need to:
 
@@ -218,7 +265,7 @@ export const server = setupServer(
 );
 ```
 
-### How to integrate with a reverse proxy
+#### How to integrate with a reverse proxy
 
 Let's say you have the app server and Remix compiler both running on the same machine:
 
@@ -243,9 +290,9 @@ Now, hot updates will be sent correctly to the proxy:
 
 - Hot updates 👉 `https://myhost` / `wss://myhost` ✅
 
-### Performance tuning and debugging
+#### Performance tuning and debugging
 
-#### Path imports
+##### Path imports
 
 Currently, when Remix rebuilds your app, the compiler has to process your app code along with any of its dependencies.
 The compiler tree-shakes unused code from app so that you don't ship any unused code to browser and so that you keep your server as slim as possible.
@@ -263,19 +310,19 @@ For example, if you are using a library like Material UI or AntD you can likely 
 In the future, Remix could pre-bundle dependencies in development to avoid this problem entirely.
 But today, you can help the compiler out by using path imports.
 
-#### Debugging bundles
+##### Debugging bundles
 
 Depending on your app and dependencies, you might be processing much more code than your app needs.
 Check out our [bundle analysis guide][bundle_analysis] for more details.
 
-### Troubleshooting
+#### Troubleshooting
 
-#### HMR
+##### HMR
 
 If you are expecting hot updates but getting full page reloads,
 check out our [discussion on Hot Module Replacement][hmr] to learn more about the limitations of React Fast Refresh and workarounds for common issues.
 
-#### HDR: every code change triggers HDR
+##### HDR: every code change triggers HDR
 
 Hot Data Revalidation detects loader changes by trying to bundle each loader and then fingerprinting the content for each.
 It relies on tree shaking to determine whether your changes affect each loader or not.
@@ -288,7 +335,7 @@ To ensure that tree shaking can reliably detect changes to loaders, make sure yo
 }
 ```
 
-#### HDR: harmless console errors when loader data is removed
+##### HDR: harmless console errors when loader data is removed
 
 When you delete a loader or remove some of the data being returned by that loader, your app should be hot updated correctly.
 But you may notice console errors logged in your browser.
@@ -300,7 +347,7 @@ But intermediate renders can sometimes use new loader data with old React compon
 We are continuing to investigate the underlying race condition to see if we can smooth that over.
 In the meantime, if those console errors bother you, you can refresh the page whenever they occur.
 
-#### HDR: performance
+##### HDR: performance
 
 When the Remix compiler builds (and rebuilds) your app, you may notice a slight slowdown as the compiler needs to crawl the dependencies for each loader.
 That way Remix can detect loader changes on rebuilds.
@@ -322,3 +369,5 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [bundle_analysis]: ../guides/performance
 [manual_mode]: ../guides/manual-mode
 [hmr]: ../discussion/hot-module-replacement
+[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite

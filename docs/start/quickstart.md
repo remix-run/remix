@@ -12,7 +12,7 @@ When you're ready to get serious about your Remix project, you might consider st
 If you prefer to initialize a batteries-included Remix project, you can use the [`create-remix` CLI][create-remix]:
 
 ```shellscript nonumber
-npx create-remix@latest
+npx create-remix@latest --template remix-run/remix/templates/vite
 ```
 
 ## Installation
@@ -28,7 +28,24 @@ npm init -y
 npm i @remix-run/node @remix-run/react @remix-run/serve isbot@4 react react-dom
 
 # install dev dependencies
-npm i -D @remix-run/dev
+npm i -D @remix-run/dev vite
+```
+
+## Vite Config
+
+```shellscript nonumber
+touch vite.config.js
+```
+
+Since Remix uses [Vite], you'll need to provide a [Vite config][vite-config] with the Remix Vite plugin. Here's the basic configuration you'll need:
+
+```js filename=vite.config.js
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [remix()],
+});
 ```
 
 ## The Root Route
@@ -75,10 +92,10 @@ export default function App() {
 First build the app for production:
 
 ```shellscript nonumber
-npx remix build
+npx remix vite:build
 ```
 
-You should now see a `build/` folder (the server version of your app) and `public/build` folder (the browser version) with some build artifacts in them. (This is all [configurable][remix_config].)
+You should now see a `build` folder containing a `server` folder (the server version of your app) and a `client` folder (the browser version) with some build artifacts in them. (This is all [configurable][remix_config].)
 
 👉 **Run the app with `remix-serve`**
 
@@ -95,7 +112,7 @@ Now you can run your app with `remix-serve`:
 
 ```shellscript nonumber
 # note the dash!
-npx remix-serve build/index.js
+npx remix-serve build/server/index.js
 ```
 
 You should be able to open up [http://localhost:3000][http-localhost-3000] and see the "hello world" page.
@@ -106,20 +123,21 @@ Aside from the unholy amount of code in `node_modules`, our Remix app is just on
 ├── app/
 │   └── root.jsx
 └── package.json
+└── vite.config.js
 ```
 
 ## Bring Your Own Server
 
-The `build/` directory created by `remix build` is just a module that you run inside a server like Express, Cloudflare Workers, Netlify, Vercel, Fastly, AWS, Deno, Azure, Fastify, Firebase, ... anywhere.
+The `build/server` directory created by `remix vite:build` is just a module that you run inside a server like Express, Cloudflare Workers, Netlify, Vercel, Fastly, AWS, Deno, Azure, Fastify, Firebase, ... anywhere.
 
 If you don't care to set up your own server, you can use `remix-serve`. It's a simple express-based server maintained by the Remix team. However, Remix is specifically designed to run in _any_ JavaScript environment so that you own your stack. It is expected many —if not most— production apps will have their own server. You can read more about this in [Runtimes, Adapters, and Stacks][runtimes].
 
 Just for kicks, let's stop using `remix-serve` and use express instead.
 
-👉 **Install Express and the Remix Express adapter**
+👉 **Install Express, the Remix Express adapter, and [cross-env] for running in production mode**
 
 ```shellscript nonumber
-npm i express @remix-run/express
+npm i express @remix-run/express cross-env
 
 # not going to use this anymore
 npm uninstall @remix-run/serve
@@ -128,18 +146,18 @@ npm uninstall @remix-run/serve
 👉 **Create an Express server**
 
 ```shellscript nonumber
-touch server.mjs
+touch server.js
 ```
 
-```js filename=server.mjs
+```js filename=server.js
 import { createRequestHandler } from "@remix-run/express";
 import express from "express";
 
-// notice that the result of `remix build` is "just a module"
-import * as build from "./build/index.js";
+// notice that the result of `remix vite:build` is "just a module"
+import * as build from "./build/server/index.js";
 
 const app = express();
-app.use(express.static("public"));
+app.use(express.static("build/client"));
 
 // and your app is "just a request handler"
 app.all("*", createRequestHandler({ build }));
@@ -152,92 +170,69 @@ app.listen(3000, () => {
 👉 **Run your app with express**
 
 ```shellscript nonumber
-node server.mjs
+node server.js
 ```
 
 Now that you own your server, you can debug your app with whatever tooling your server has. For example, you can inspect your app with chrome devtools with the [Node.js inspect flag][inspect]:
 
 ```shellscript nonumber
-node --inspect server.mjs
+node --inspect server.js
 ```
 
 ## Development Workflow
 
-Instead of stopping, rebuilding, and starting your server all the time, you can run Remix in development. This enables instant feedback to changes in your app with React Refresh (Hot Module Replacement) and Remix Hot Data Revalidation.
+Instead of stopping, rebuilding, and starting your server all the time, you can run Remix in development using [Vite in middleware mode][vite-middleware]. This enables instant feedback to changes in your app with React Refresh (Hot Module Replacement) and Remix Hot Data Revalidation.
 
-First add a dev command in `package.json` that will run `remix dev`:
+First, as a convenience, add `dev` and `start` commands in `package.json` that will run your server in development and production modes respectively:
 
 👉 **Add a "scripts" entry to `package.json`**
 
 ```jsonc filename=package.json lines=[2-4] nocopy
 {
   "scripts": {
-    "dev": "remix dev -c \"node server.mjs\""
+    "dev": "node ./server.js",
+    "start": "cross-env NODE_ENV=production node ./server.js"
   }
   // ...
 }
 ```
 
-This will start the Remix development server which will watch your files for changes and rebuild your app. The `-c` flag tells it how to start your actual application server.
+👉 **Add Vite development middleware to your server**
 
-When files change, Remix will restart your server for you, but because you own your server, you also have to tell Remix when it has restarted so Remix can safely send the hot updates to the browser.
+Vite middleware not applied if `process.env.NODE_ENV` is set to `"production"`, in which case you'll still be running the regular build output as you did earlier.
 
-👉 **Add `broadcastDevReady` to your server**
-
-```js filename=server.mjs lines=[2,15-17]
+```js filename=server.js lines=[4-11,14-18,20-25]
 import { createRequestHandler } from "@remix-run/express";
-import { broadcastDevReady } from "@remix-run/node";
 import express from "express";
 
-// notice that the result of `remix build` is "just a module"
-import * as build from "./build/index.js";
+const viteDevServer =
+  process.env.NODE_ENV === "production"
+    ? null
+    : await import("vite").then((vite) =>
+        vite.createServer({
+          server: { middlewareMode: true },
+        })
+      );
 
 const app = express();
-app.use(express.static("public"));
+app.use(
+  viteDevServer
+    ? viteDevServer.middlewares
+    : express.static("build/client")
+);
 
-// and your app is "just a request handler"
+const build = viteDevServer
+  ? () =>
+      viteDevServer.ssrLoadModule(
+        "virtual:remix/server-build"
+      )
+  : await import("./build/server/index.js");
+
 app.all("*", createRequestHandler({ build }));
 
 app.listen(3000, () => {
-  if (process.env.NODE_ENV === "development") {
-    broadcastDevReady(build);
-  }
   console.log("App listening on http://localhost:3000");
 });
-```
-
-And finally, let's connect your UI in the browser to receive those broadcasts:
-
-```jsx filename=app/root.jsx lines=[3,25]
-import {
-  Links,
-  LiveReload,
-  Meta,
-  Outlet,
-  Scripts,
-} from "@remix-run/react";
-
-export default function App() {
-  return (
-    <html>
-      <head>
-        <link
-          rel="icon"
-          href="data:image/x-icon;base64,AA"
-        />
-        <Meta />
-        <Links />
-      </head>
-      <body>
-        <h1>Hello world!</h1>
-        <Outlet />
-
-        <Scripts />
-        <LiveReload />
-      </body>
-    </html>
-  );
-}
 ```
 
 👉 **Start the dev server**
@@ -265,7 +260,7 @@ Entry file entry.server created at app/entry.server.tsx.
 
 Congrats, you can add Remix to your resume! Summing things up, we've learned:
 
-- `remix build` and `remix dev` compile your app into two things:
+- Remix compiles your app into two things:
   - A request handler that you add to your own JavaScript server
   - A pile of static assets in your public directory for the browser
 - You can bring your own server with adapters to deploy anywhere
@@ -285,3 +280,7 @@ What's next?
 [templates]: /resources?category=templates
 [http-localhost-3000]: http://localhost:3000
 [es-modules]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
+[vite]: https://vitejs.dev
+[vite-config]: https://vitejs.dev/config
+[vite-middleware]: https://vitejs.dev/guide/ssr#setting-up-the-dev-server
+[cross-env]: https://www.npmjs.com/package/cross-env
