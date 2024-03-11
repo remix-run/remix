@@ -323,8 +323,8 @@ importers:
         specifier: workspace:*
         version: link:../packages/remix-node
       '@remix-run/router':
-        specifier: 0.0.0-experimental-71108452
-        version: 0.0.0-experimental-71108452
+        specifier: 0.0.0-experimental-c7dd3d3a
+        version: 0.0.0-experimental-c7dd3d3a
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../packages/remix-server-runtime
@@ -4200,11 +4200,6 @@ packages:
       dotenv: 8.6.0
     transitivePeerDependencies:
       - encoding
-    dev: false
-
-  /@remix-run/router@0.0.0-experimental-71108452:
-    resolution: {integrity: sha512-U+HfaoXuYYPHKKV/K32w3C+SuDWD+MNPlE6slXfK+sLW3g0AXSSxn7FlOdsvnHr79iEZ792L0+sItmN+DTFn3g==}
-    engines: {node: '>=14.0.0'}
     dev: false
 
   /@remix-run/router@0.0.0-experimental-c7dd3d3a:
