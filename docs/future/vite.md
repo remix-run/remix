@@ -1094,7 +1094,7 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 [template-vite-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/vite-cloudflare
 [public-path]: ../file-conventions/remix-config#publicpath
 [server-build-path]: ../file-conventions/remix-config#serverbuildpath
-[vite-config]: ../file-conventions/vite-config.md
+[vite-config]: ../file-conventions/vite-config
 [vite-plugins]: https://vitejs.dev/plugins
 [vite-features]: https://vitejs.dev/guide/features
 [supported-remix-config-options]: #configuration
@@ -1141,7 +1141,6 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 [rollup-plugin-visualizer]: https://github.com/btd/rollup-plugin-visualizer
 [debugging]: #debugging
 [performance]: #performance
-[server-vs-client]: ../discussion/server-vs-client.md
 [vite-env-only]: https://github.com/pcattori/vite-env-only
 [explicitly-isolate-server-only-code]: #splitting-up-client-and-server-code
 [route-component]: ../route/component
@@ -1169,4 +1168,4 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 [presets]: ./presets
 [fix-up-css-imports-referenced-in-links]: #fix-up-css-imports-referenced-in-links
 [vite-plugin-react]: https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react
-[splitting-up-client-and-server-code]: ../discussion/server-vs-client.md
+[splitting-up-client-and-server-code]: ../discussion/server-vs-client
