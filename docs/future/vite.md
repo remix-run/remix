@@ -1141,7 +1141,6 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 [rollup-plugin-visualizer]: https://github.com/btd/rollup-plugin-visualizer
 [debugging]: #debugging
 [performance]: #performance
-[server-vs-client]: ../discussion/server-vs-client.md
 [vite-env-only]: https://github.com/pcattori/vite-env-only
 [explicitly-isolate-server-only-code]: #splitting-up-client-and-server-code
 [route-component]: ../route/component
@@ -1169,4 +1168,4 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 [presets]: ./presets
 [fix-up-css-imports-referenced-in-links]: #fix-up-css-imports-referenced-in-links
 [vite-plugin-react]: https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react
-[splitting-up-client-and-server-code]: ../discussion/server-vs-client.md
+[splitting-up-client-and-server-code]: ../discussion/server-vs-client
