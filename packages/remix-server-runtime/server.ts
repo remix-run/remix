@@ -312,14 +312,23 @@ async function handleDataRequest(
   }
 }
 
-// IMPORTANT! Keep in sync with the types in @remix-run/react
-type SingleFetchResult =
+type SingleFetchRedirectResult = {
+  redirect: string;
+  status: number;
+  revalidate: boolean;
+  reload: boolean;
+};
+export type SingleFetchResult =
   | { data: unknown }
   | { error: unknown }
-  | { redirect: string; status: number; revalidate: boolean; reload: boolean };
-type SingleFetchResults = {
-  [key: string]: SingleFetchResult;
+  | SingleFetchRedirectResult;
+
+export type SingleFetchDataResults = {
+  results: { [key: string]: SingleFetchResult };
 };
+export type SingleFetchResults =
+  | SingleFetchDataResults
+  | SingleFetchRedirectResult;
 
 async function handleSingleFetchRequest(
   serverMode: ServerMode,
@@ -344,7 +353,6 @@ async function handleSingleFetchRequest(
           request,
           handlerUrl,
           staticHandler,
-          matches,
           loadContext,
           handleError,
           serverMode,
@@ -438,7 +446,6 @@ async function singleFetchLoaders(
   request: Request,
   handlerUrl: URL,
   staticHandler: StaticHandler,
-  matches: RouteMatch<ServerRoute>[] | null,
   loadContext: AppLoadContext,
   handleError: (err: unknown) => void,
   serverMode: ServerMode,
@@ -458,24 +465,8 @@ async function singleFetchLoaders(
       skipLoaderErrorBubbling: true,
     });
     if (isResponse(result)) {
-      let redirect = getSingleFetchRedirect(result);
-
-      // We don't really know which loader this came from, include for all routes
-      // TODO: This feels like a hack - change internal query behavior here?
-      let results = loadRouteIds
-        ? loadRouteIds.reduce(
-            (acc, routeId) => Object.assign(acc, { [routeId]: redirect }),
-            {}
-          )
-        : matches!
-            .filter((m) => m.route.module.loader)
-            .reduce(
-              (acc, m) => Object.assign(acc, { [m.route.id]: redirect }),
-              {}
-            );
-
       return {
-        result: results,
+        result: getSingleFetchRedirect(result),
         headers: result.headers,
         status: 200, // Don't want the `fetch` call to follow the redirect
       };
@@ -496,7 +487,7 @@ async function singleFetchLoaders(
 
     // Aggregate results based on the matches we intended to load since we get
     // `null` values back in `context.loaderData` for routes we didn't load
-    let results: SingleFetchResults = {};
+    let results: SingleFetchDataResults = { results: {} };
     let loadedMatches = loadRouteIds
       ? context.matches.filter(
           (m) => m.route.loader && loadRouteIds!.includes(m.route.id)
@@ -506,9 +497,9 @@ async function singleFetchLoaders(
       let data = context.loaderData?.[m.route.id];
       let error = context.errors?.[m.route.id];
       if (error !== undefined) {
-        results[m.route.id] = { error };
+        results.results[m.route.id] = { error };
       } else if (data !== undefined) {
-        results[m.route.id] = { data };
+        results.results[m.route.id] = { data };
       }
     });
 
@@ -520,7 +511,7 @@ async function singleFetchLoaders(
   } catch (error: unknown) {
     handleError(error);
     return {
-      result: { root: { error } },
+      result: { results: { root: { error } } },
       headers: new Headers(),
       status: 500,
     };
@@ -785,7 +776,7 @@ function unwrapResponse(response: Response) {
     : response.text();
 }
 
-function getSingleFetchRedirect(response: Response): SingleFetchResult {
+function getSingleFetchRedirect(response: Response): SingleFetchRedirectResult {
   return {
     redirect: response.headers.get("Location")!,
     status: response.status,

@@ -8,6 +8,10 @@ import {
   redirect,
 } from "@remix-run/router";
 import type {
+  UNSAFE_SingleFetchResult as SingleFetchResult,
+  UNSAFE_SingleFetchResults as SingleFetchResults,
+} from "@remix-run/server-runtime";
+import type {
   DataRouteObject,
   unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
 } from "react-router-dom";
@@ -17,15 +21,6 @@ import { createRequestInit } from "./data";
 import type { AssetsManifest, EntryContext } from "./entry";
 import type { RouteModules } from "./routeModules";
 import invariant from "./invariant";
-
-// IMPORTANT! Keep in sync with the types in @remix-run/server-runtime
-type SingleFetchResult =
-  | { data: unknown }
-  | { error: unknown }
-  | { redirect: string; status: number; revalidate: boolean; reload: boolean };
-type SingleFetchResults = {
-  [key: string]: SingleFetchResult;
-};
 
 interface StreamTransferProps {
   context: EntryContext;
@@ -158,9 +153,13 @@ export function getSingleFetchDataStrategy(
           singleFetchPromise = makeSingleFetchCall();
         }
         let results = await singleFetchPromise;
-        return results[routeId] !== undefined
-          ? unwrapSingleFetchResult(results[routeId], routeId)
-          : null;
+        if ("redirect" in results) {
+          return unwrapSingleFetchResult(results, routeId);
+        } else {
+          return results.results[routeId] !== undefined
+            ? unwrapSingleFetchResult(results.results[routeId], routeId)
+            : null;
+        }
       };
     }
 

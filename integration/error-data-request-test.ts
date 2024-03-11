@@ -292,11 +292,13 @@ test.describe("single fetch", () => {
       expect(status).toBe(200);
       expect(headers.has("X-Remix-Error")).toBe(false);
       expect(data).toEqual({
-        root: {
-          data: null,
-        },
-        "routes/_index": {
-          data: null,
+        results: {
+          root: {
+            data: null,
+          },
+          "routes/_index": {
+            data: null,
+          },
         },
       });
     });
@@ -339,12 +341,14 @@ test.describe("single fetch", () => {
       expect(status).toBe(404);
       expect(headers.has("X-Remix-Error")).toBe(false);
       expect(data).toEqual({
-        root: {
-          error: new ErrorResponseImpl(
-            404,
-            "Not Found",
-            'Error: No route matches URL "/i/match/nothing"'
-          ),
+        results: {
+          root: {
+            error: new ErrorResponseImpl(
+              404,
+              "Not Found",
+              'Error: No route matches URL "/i/match/nothing"'
+            ),
+          },
         },
       });
       assertLoggedErrorInstance('No route matches URL "/i/match/nothing"');
