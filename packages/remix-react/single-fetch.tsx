@@ -40,7 +40,7 @@ export function StreamTransfer({
 }: StreamTransferProps) {
   // If the user didn't render the <Scripts> component then we don't have to
   // bother streaming anything in
-  if (!context.renderMeta?.didRenderScripts) {
+  if (!context.renderMeta || !context.renderMeta.didRenderScripts) {
     return null;
   }
 

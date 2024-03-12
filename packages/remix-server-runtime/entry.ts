@@ -10,7 +10,19 @@ export interface EntryContext {
   criticalCss?: string;
   serverHandoffString?: string;
   serverHandoffStream?: ReadableStream<Uint8Array>;
-  renderMeta?: { didRenderScripts: boolean };
+  renderMeta?: {
+    didRenderScripts?: boolean;
+    streamCache?: Record<
+      number,
+      Promise<void> & {
+        result?: {
+          done: boolean;
+          value: string;
+        };
+        error?: unknown;
+      }
+    >;
+  };
   staticHandlerContext: StaticHandlerContext;
   future: FutureConfig;
   isSpaMode: boolean;

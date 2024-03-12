@@ -587,7 +587,7 @@ async function handleDocumentRequest(
             build.entry.module.streamTimeout,
             serverMode
           ),
-          renderMeta: { didRenderScripts: false },
+          renderMeta: {},
         }
       : null),
     future: build.future,
@@ -663,7 +663,7 @@ async function handleDocumentRequest(
               build.entry.module.streamTimeout,
               serverMode
             ),
-            renderMeta: { didRenderScripts: false },
+            renderMeta: {},
           }
         : null),
     };

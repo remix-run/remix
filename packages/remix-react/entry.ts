@@ -19,8 +19,8 @@ export interface RemixContextObject {
   abortDelay?: number;
   serializeError?(error: Error): SerializedError;
   renderMeta?: {
-    didRenderScripts: boolean;
-    streamCache: Record<
+    didRenderScripts?: boolean;
+    streamCache?: Record<
       number,
       Promise<void> & {
         result?: {
