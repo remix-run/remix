@@ -199,7 +199,7 @@ This also means that the following configuration defaults have been changed:
 - [publicPath][public-path] has been replaced by [Vite's "base" option][vite-base] which defaults to `"/"` rather than `"/build/"`.
 - [serverBuildPath][server-build-path] has been replaced by `serverBuildFile` which defaults to `"index.js"`. This file will be written into the server directory within your configured `buildDirectory`.
 
-One of the reasons that Remix is moving to Vite is, so you have less to learn when adopting Remix.
+One of the reasons that Remix is moving to Vite is so you have less to learn when adopting Remix.
 This means that, for any additional bundling features you'd like to use, you should reference [Vite documentation][vite] and the [Vite plugin community][vite-plugins] rather than the Remix documentation.
 
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
