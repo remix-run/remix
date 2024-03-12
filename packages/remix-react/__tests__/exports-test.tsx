@@ -17,6 +17,7 @@ let nonReExportedKeys = new Set([
   "unstable_HistoryRouter",
   "UNSAFE_DataRouterContext",
   "UNSAFE_DataRouterStateContext",
+  "UNSAFE_ErrorResponseImpl",
   "UNSAFE_FetchersContext",
   "UNSAFE_LocationContext",
   "UNSAFE_NavigationContext",

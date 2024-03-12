@@ -1,16 +1,12 @@
-import {
-  createBrowserHistory,
-  createRouter,
-  type HydrationState,
-  type Router,
-} from "@remix-run/router";
+import type { HydrationState, Router } from "@remix-run/router";
+import { createBrowserHistory, createRouter } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
 import { matchRoutes, RouterProvider } from "react-router-dom";
 
 import { RemixContext } from "./components";
-import type { EntryContext, FutureConfig } from "./entry";
+import type { AssetsManifest, FutureConfig } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
@@ -19,6 +15,11 @@ import {
   createClientRoutesWithHMRRevalidationOptOut,
   shouldHydrateRouteLoader,
 } from "./routes";
+import {
+  decodeViaTurboStream,
+  getSingleFetchDataStrategy,
+} from "./single-fetch";
+import invariant from "./invariant";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -29,6 +30,8 @@ declare global {
     criticalCss?: string;
     future: FutureConfig;
     isSpaMode: boolean;
+    stream: ReadableStream<Uint8Array> | undefined;
+    streamController: ReadableStreamDefaultController<Uint8Array>;
     // The number of active deferred keys rendered on the server
     a?: number;
     dev?: {
@@ -38,7 +41,7 @@ declare global {
   };
   var __remixRouter: Router;
   var __remixRouteModules: RouteModules;
-  var __remixManifest: EntryContext["manifest"];
+  var __remixManifest: AssetsManifest;
   var __remixRevalidation: number | undefined;
   var __remixClearCriticalCss: (() => void) | undefined;
   var $RefreshRuntime$: {
@@ -49,6 +52,12 @@ declare global {
 
 export interface RemixBrowserProps {}
 
+let stateDecodingPromise:
+  | (Promise<void> & {
+      value?: unknown;
+      error?: unknown;
+    })
+  | undefined;
 let router: Router;
 let routerInitialized = false;
 let hmrAbortController: AbortController | undefined;
@@ -75,7 +84,7 @@ if (import.meta && import.meta.hot) {
       assetsManifest,
       needsRevalidation,
     }: {
-      assetsManifest: EntryContext["manifest"];
+      assetsManifest: AssetsManifest;
       needsRevalidation: Set<string>;
     }) => {
       let router = await hmrRouterReadyPromise;
@@ -207,6 +216,34 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       return <></>;
     }
 
+    // When single fetch is enabled, we need to suspend until the initial state
+    // snapshot is decoded into window.__remixContext.state
+    if (window.__remixContext.future.unstable_singleFetch) {
+      // Note: `stateDecodingPromise` is not coupled to `router` - we'll reach this
+      // code potentially many times waiting for our state to arrive, but we'll
+      // then only get past here and create the `router` one time
+      if (!stateDecodingPromise) {
+        let stream = window.__remixContext.stream;
+        invariant(stream, "No stream found for single fetch decoding");
+        window.__remixContext.stream = undefined;
+        stateDecodingPromise = decodeViaTurboStream(stream, window)
+          .then((value) => {
+            window.__remixContext.state =
+              value.value as typeof window.__remixContext.state;
+            stateDecodingPromise!.value = true;
+          })
+          .catch((e) => {
+            stateDecodingPromise!.error = e;
+          });
+      }
+      if (stateDecodingPromise.error) {
+        throw stateDecodingPromise.error;
+      }
+      if (!stateDecodingPromise.value) {
+        throw stateDecodingPromise;
+      }
+    }
+
     let routes = createClientRoutes(
       window.__remixManifest.routes,
       window.__remixRouteModules,
@@ -275,9 +312,18 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         v7_partialHydration: true,
         v7_prependBasename: true,
         v7_relativeSplatPath: window.__remixContext.future.v3_relativeSplatPath,
+        // Single fetch enables this underlying behavior
+        unstable_skipActionErrorRevalidation:
+          window.__remixContext.future.unstable_singleFetch === true,
       },
       hydrationData,
       mapRouteProperties,
+      unstable_dataStrategy: window.__remixContext.future.unstable_singleFetch
+        ? getSingleFetchDataStrategy(
+            window.__remixManifest,
+            window.__remixRouteModules
+          )
+        : undefined,
     });
 
     // We can call initialize() immediately if the router doesn't have any
@@ -340,22 +386,31 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // Then we need a stateful location here so the user can back-button navigate
   // out of there
   return (
-    <RemixContext.Provider
-      value={{
-        manifest: window.__remixManifest,
-        routeModules: window.__remixRouteModules,
-        future: window.__remixContext.future,
-        criticalCss,
-        isSpaMode: window.__remixContext.isSpaMode,
-      }}
-    >
-      <RemixErrorBoundary location={location}>
-        <RouterProvider
-          router={router}
-          fallbackElement={null}
-          future={{ v7_startTransition: true }}
-        />
-      </RemixErrorBoundary>
-    </RemixContext.Provider>
+    // This fragment is important to ensure we match the <RemixServer> JSX
+    // structure so that useId values hydrate correctly
+    <>
+      <RemixContext.Provider
+        value={{
+          manifest: window.__remixManifest,
+          routeModules: window.__remixRouteModules,
+          future: window.__remixContext.future,
+          criticalCss,
+          isSpaMode: window.__remixContext.isSpaMode,
+        }}
+      >
+        <RemixErrorBoundary location={location}>
+          <RouterProvider
+            router={router}
+            fallbackElement={null}
+            future={{ v7_startTransition: true }}
+          />
+        </RemixErrorBoundary>
+      </RemixContext.Provider>
+      {/*
+        This fragment is important to ensure we match the <RemixServer> JSX
+        structure so that useId values hydrate correctly
+      */}
+      {window.__remixContext.future.unstable_singleFetch ? <></> : null}
+    </>
   );
 }

@@ -322,6 +322,9 @@ importers:
       '@remix-run/node':
         specifier: workspace:*
         version: link:../packages/remix-node
+      '@remix-run/router':
+        specifier: 0.0.0-experimental-c7dd3d3a
+        version: 0.0.0-experimental-c7dd3d3a
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../packages/remix-server-runtime
@@ -868,8 +871,8 @@ importers:
         specifier: ^2.8.1
         version: link:../remix-react
       '@remix-run/router':
-        specifier: 1.15.3
-        version: 1.15.3
+        specifier: 0.0.0-experimental-c7dd3d3a
+        version: 0.0.0-experimental-c7dd3d3a
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
@@ -1217,17 +1220,20 @@ importers:
   packages/remix-react:
     dependencies:
       '@remix-run/router':
-        specifier: 1.15.3
-        version: 1.15.3
+        specifier: 0.0.0-experimental-c7dd3d3a
+        version: 0.0.0-experimental-c7dd3d3a
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
       react-router:
-        specifier: 6.22.3
-        version: 6.22.3(react@18.2.0)
+        specifier: 0.0.0-experimental-c7dd3d3a
+        version: 0.0.0-experimental-c7dd3d3a(react@18.2.0)
       react-router-dom:
-        specifier: 6.22.3
-        version: 6.22.3(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.0-experimental-c7dd3d3a
+        version: 0.0.0-experimental-c7dd3d3a(react-dom@18.2.0)(react@18.2.0)
+      turbo-stream:
+        specifier: ^2.0.0
+        version: 2.0.0
     devDependencies:
       '@remix-run/node':
         specifier: workspace:*
@@ -1300,8 +1306,8 @@ importers:
   packages/remix-server-runtime:
     dependencies:
       '@remix-run/router':
-        specifier: 1.15.3
-        version: 1.15.3
+        specifier: 0.0.0-experimental-c7dd3d3a
+        version: 0.0.0-experimental-c7dd3d3a
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -1317,6 +1323,9 @@ importers:
       source-map:
         specifier: ^0.7.3
         version: 0.7.3
+      turbo-stream:
+        specifier: ^2.0.0
+        version: 2.0.0
     devDependencies:
       '@types/set-cookie-parser':
         specifier: ^2.4.1
@@ -1334,11 +1343,11 @@ importers:
         specifier: workspace:*
         version: link:../remix-react
       '@remix-run/router':
-        specifier: 1.15.3
-        version: 1.15.3
+        specifier: 0.0.0-experimental-c7dd3d3a
+        version: 0.0.0-experimental-c7dd3d3a
       react-router-dom:
-        specifier: 6.22.3
-        version: 6.22.3(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.0-experimental-c7dd3d3a
+        version: 0.0.0-experimental-c7dd3d3a(react-dom@18.2.0)(react@18.2.0)
     devDependencies:
       '@remix-run/server-runtime':
         specifier: workspace:*
@@ -4193,8 +4202,8 @@ packages:
       - encoding
     dev: false
 
-  /@remix-run/router@1.15.3:
-    resolution: {integrity: sha512-Oy8rmScVrVxWZVOpEF57ovlnhpZ8CCPlnIIumVcV9nFdiSIrus99+Lw78ekXyGvVDlIsFJbSfmSovJUhCWYV3w==}
+  /@remix-run/router@0.0.0-experimental-c7dd3d3a:
+    resolution: {integrity: sha512-reXnySaRGlEl6cOgF7fSQvIRzyRFUjGsez0kHQk0ok6Z3Y7n1PVTCKNhooSfOI1hBOi0c9cIMurhoTgjYXyxHw==}
     engines: {node: '>=14.0.0'}
     dev: false
 
@@ -12784,26 +12793,26 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /react-router-dom@6.22.3(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-7ZILI7HjcE+p31oQvwbokjk6OA/bnFxrhJ19n82Ex9Ph8fNAq+Hm/7KchpMGlTgWhUxRHMMCut+vEtNpWpowKw==}
+  /react-router-dom@0.0.0-experimental-c7dd3d3a(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-pp1l8sk4Rc9vLucHgHU4B2LUL/4e6iwD7ipDGgfc9a08eNVowxaDJXkbtyYE10lpjaZZkXF1DFkdHfGrKeXWQw==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
     dependencies:
-      '@remix-run/router': 1.15.3
+      '@remix-run/router': 0.0.0-experimental-c7dd3d3a
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      react-router: 6.22.3(react@18.2.0)
+      react-router: 0.0.0-experimental-c7dd3d3a(react@18.2.0)
     dev: false
 
-  /react-router@6.22.3(react@18.2.0):
-    resolution: {integrity: sha512-dr2eb3Mj5zK2YISHK++foM9w4eBnO23eKnZEDs7c880P6oKbrjz/Svg9+nxqtHQK+oMW4OtjZca0RqPglXxguQ==}
+  /react-router@0.0.0-experimental-c7dd3d3a(react@18.2.0):
+    resolution: {integrity: sha512-biSo7Pmedzrm9DXjC3ScIwCWVt3qVAutf51hJ/POxfcRYvhgi9ENNGHLjpqabBH4oI5IwI53Vh0w7pKOdadC9A==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
     dependencies:
-      '@remix-run/router': 1.15.3
+      '@remix-run/router': 0.0.0-experimental-c7dd3d3a
       react: 18.2.0
     dev: false
 
@@ -14311,6 +14320,10 @@ packages:
     resolution: {integrity: sha512-McnNiV1l8RYeY8tBgEpuodCC1mLUdbSN+CYBL7kJsJNInOP8UjDDEwdk6Mw60vdLLrr5NHKZhMAOSrR2NZuQ+w==}
     dependencies:
       safe-buffer: 5.2.1
+    dev: false
+
+  /turbo-stream@2.0.0:
+    resolution: {integrity: sha512-h0dfgRJAoiEh2hdFCoEuOSApsUfnw87gmNuziVS/mYycuBSCTeqpdanypMlHci6CvZibF7b9kvSpbeC7/r2/KA==}
     dev: false
 
   /tweetnacl@0.14.5:

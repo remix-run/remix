@@ -39,6 +39,10 @@ cd packages/remix-testing
 pnpm add -E @remix-run/router@${ROUTER_VERSION} react-router-dom@${RR_VERSION}
 cd ../..
 
+cd integration
+pnpm add -E @remix-run/router@${ROUTER_VERSION}
+cd ../..
+
 # Because deplicates...
 pnpm dedupe && rm -rf ./node_modules && pnpm install
 
