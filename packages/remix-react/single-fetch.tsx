@@ -113,6 +113,9 @@ export function getSingleFetchDataStrategy(
   manifest: AssetsManifest,
   routeModules: RouteModules
 ): DataStrategyFunction {
+  let genRouteIds = (arr: string[]) =>
+    arr.filter((id) => manifest.routes[id].hasLoader).join(",");
+
   return async ({ request, matches }: DataStrategyFunctionArgs) => {
     // This function is the way for a loader/action to "talk" to the server
     let singleFetch: (routeId: string) => Promise<unknown>;
@@ -134,26 +137,57 @@ export function getSingleFetchDataStrategy(
       // 2. if multiple call `serverLoader` only one fetch call is made
       let singleFetchPromise: Promise<SingleFetchResults>;
 
-      let makeSingleFetchCall = async () => {
-        let url = addRevalidationParam(
-          manifest,
-          routeModules,
-          matches.map((m) => m.route),
-          matches.filter((m) => m.shouldLoad).map((m) => m.route),
-          // Single fetch doesn't need/want naked index queries on action
-          // revalidation requests
-          stripIndexParam(singleFetchUrl(request.url))
-        );
-
+      let makeSingleFetchCall = async (url: URL) => {
         let { data } = await fetchAndDecode(url);
         return data as SingleFetchResults;
       };
 
+      let matchesHaveClientLoaders = matches.some(
+        (m) => m.shouldLoad && manifest.routes[m.route.id].hasClientLoader
+      );
+
+      // TODO: Need to fix prefetching to take this logic into account
+
       singleFetch = async (routeId) => {
-        if (!singleFetchPromise) {
-          singleFetchPromise = makeSingleFetchCall();
+        let results: SingleFetchResults;
+        if (manifest.routes[routeId].hasClientLoader) {
+          // When a route has a client loader, we make it's own call for just
+          // it's server loader data
+          let url = stripIndexParam(singleFetchUrl(request.url));
+          url.searchParams.set("_routes", routeId);
+          results = await makeSingleFetchCall(url);
+        } else {
+          // Otherwise we let multiple routes hook onto the same promise
+          if (!singleFetchPromise) {
+            let url = stripIndexParam(singleFetchUrl(request.url));
+            if (matchesHaveClientLoaders) {
+              // If client loaders are present for this navigation, we only want
+              // the "single fetch" call to ask for the routes without clientLoaders
+              let loadIds = genRouteIds(
+                matches
+                  .filter(
+                    (m) =>
+                      m.shouldLoad &&
+                      !manifest.routes[m.route.id].hasClientLoader
+                  )
+                  .map((m) => m.route.id)
+              );
+              url.searchParams.set("_routes", loadIds);
+            } else {
+              // Otherwise we use the "normal" approach and only add the param if
+              // using shouldRevalidate for fine-grained revalidation
+              url = addRevalidationParam(
+                manifest,
+                routeModules,
+                matches.map((m) => m.route),
+                matches.filter((m) => m.shouldLoad).map((m) => m.route),
+                url
+              );
+            }
+            singleFetchPromise = makeSingleFetchCall(url);
+          }
+          results = await singleFetchPromise;
         }
-        let results = await singleFetchPromise;
         let redirect = results[SingleFetchRedirectSymbol];
         if (redirect) {
           return unwrapSingleFetchResult(redirect, routeId);
