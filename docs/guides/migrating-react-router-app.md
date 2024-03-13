@@ -703,7 +703,7 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [loader-data]: ../route/loader
 [client-only-component]: https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx
 [remix-utils]: https://www.npmjs.com/package/remix-utils
-[examples-repository]: https://github.com/remix-run/examples/blob/main/client-only-components/app/routes/index.tsx
+[examples-repository]: https://github.com/remix-run/examples/blob/main/client-only-components/app/routes/_index.tsx
 [react-lazy]: https://reactjs.org/docs/code-splitting.html#reactlazy
 [react-suspense]: https://reactjs.org/docs/react-api.html#reactsuspense
 [client-only-approach]: #client-only-components
