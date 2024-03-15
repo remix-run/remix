@@ -533,6 +533,11 @@ async function handleDocumentRequest(
 ) {
   let context;
   try {
+    if (build.isSpaMode) {
+      let url = new URL(request.url);
+      url.pathname = "/";
+      request = new Request(url);
+    }
     context = await staticHandler.query(request, {
       requestContext: loadContext,
     });

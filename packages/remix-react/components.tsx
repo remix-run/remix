@@ -926,7 +926,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     .concat(nextMatches)
     .map((match) => {
       let route = manifest.routes[match.route.id];
-      return (route.imports || []).concat([route.module]);
+      return route.module ? (route.imports || []).concat([route.module]) : [];
     })
     .flat(1);
 

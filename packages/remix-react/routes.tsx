@@ -48,7 +48,7 @@ export interface EntryRoute extends Route {
   hasErrorBoundary: boolean;
   imports?: string[];
   css?: string[];
-  module: string;
+  module?: string;
   parentId?: string;
 }
 
