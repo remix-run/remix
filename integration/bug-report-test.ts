@@ -59,28 +59,36 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/_index.tsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
-
-        export function loader() {
-          return json("pizza");
-        }
+        import { myModule } from "my-module";
 
         export default function Index() {
-          let data = useLoaderData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              {myModule}
             </div>
           )
         }
       `,
 
-      "app/routes/burgers.tsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+      // NOTE: If "type": "module", is added, this test passes
+      "node_modules/my-module/package.json": `
+        {
+          "name": "my-module",
+          "version": "1.0.0",
+          "main": "main.js",
+          "exports": {
+            ".": {
+              "require": "./main.js",
+              "import": "./main.esm.js"
+            }
+          }
         }
+      `,
+      "node_modules/my-module/main.esm.js": js`
+        export const myModule = "hello from esm";
+      `,
+      "node_modules/my-module/main.js": js`
+        exports.myModule = "hello from cjs";
       `,
     },
   });
@@ -98,16 +106,16 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("Can be built and works", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  expect(await response.text()).toMatch("hello from esm");
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  await page.waitForSelector("text=cheeseburger");
+  // await app.clickLink("/burgers");
+  // await page.waitForSelector("text=cheeseburger");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
