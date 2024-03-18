@@ -113,9 +113,6 @@ export function getSingleFetchDataStrategy(
   manifest: AssetsManifest,
   routeModules: RouteModules
 ): DataStrategyFunction {
-  let genRouteIds = (arr: string[]) =>
-    arr.filter((id) => manifest.routes[id].hasLoader).join(",");
-
   return async ({ request, matches }: DataStrategyFunctionArgs) => {
     // This function is the way for a loader/action to "talk" to the server
     let singleFetch: (routeId: string) => Promise<unknown>;
