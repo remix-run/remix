@@ -586,6 +586,253 @@ test.describe("SPA Mode", () => {
       expect(html.match(/window.__remixContext =/g)?.length).toBe(1);
       expect(html.match(/💿 Hey developer 👋/g)?.length).toBe(1);
     });
+
+    test.describe("<RemixBrowser routes> prop", () => {
+      test("Allows users to provide client-side-only routes via RemixBrowser", async ({
+        page,
+      }) => {
+        fixture = await createFixture({
+          compiler: "vite",
+          spaMode: true,
+          files: {
+            "vite.config.ts": js`
+              import { defineConfig } from "vite";
+              import { vitePlugin as remix } from "@remix-run/dev";
+
+              export default defineConfig({
+                plugins: [remix({
+                  // We don't want to pick up the app/routes/_index.tsx file from
+                  // the template and instead want to use only the src/root.tsx
+                  // file below
+                  appDirectory: "src",
+                  ssr: false,
+                })],
+              });
+            `,
+            "src/root.tsx": js`
+              import {
+                Meta,
+                Links,
+                Outlet,
+                Routes,
+                Route,
+                Scripts,
+                ScrollRestoration,
+              } from "@remix-run/react";
+
+              export function Layout({ children }: { children: React.ReactNode }) {
+                return (
+                  <html>
+                    <head>
+                      <Meta />
+                      <Links />
+                    </head>
+                    <body>
+                      {children}
+                      <ScrollRestoration />
+                      <Scripts />
+                    </body>
+                  </html>
+                );
+              }
+
+              export default function Root() {
+                return <Outlet />;
+              }
+            `,
+            "src/entry.client.tsx": js`
+              import { Link, RemixBrowser, Outlet, useLoaderData } from "@remix-run/react";
+              import { startTransition, StrictMode } from "react";
+              import { hydrateRoot } from "react-dom/client";
+
+              const routes = [{
+                index: true,
+                loader() {
+                  return "Index Loader";
+                },
+                Component() {
+                  let data = useLoaderData();
+                  return (
+                    <>
+                      <Link to="/parent/child">Go to /parent/child</Link>
+                      <p id="index-data">{data}</p>
+                    </>
+                  );
+                },
+              }, {
+                path: '/parent',
+                loader() {
+                  return "Parent Loader";
+                },
+                Component() {
+                  let data = useLoaderData();
+                  return (
+                    <>
+                      <p id="parent-data">{data}</p>
+                      <Outlet />
+                    </>
+                  );
+                },
+                children: [{
+                  path: 'child',
+                  loader() {
+                    return "Child Loader";
+                  },
+                  Component() {
+                    let data = useLoaderData();
+                    return <p id="child-data">{data}</p>;
+                  },
+                }]
+              }];
+
+              startTransition(() => {
+                hydrateRoot(
+                  document,
+                  <StrictMode>
+                    <RemixBrowser routes={routes} />
+                  </StrictMode>
+                );
+              });
+            `,
+          },
+        });
+        appFixture = await createAppFixture(fixture);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/");
+        await page.waitForSelector("#index-data");
+        expect(await app.getHtml("#index-data")).toContain("Index Loader");
+
+        await app.clickLink("/parent/child");
+        await page.waitForSelector("#child-data");
+        expect(await app.getHtml("#parent-data")).toContain("Parent Loader");
+        expect(await app.getHtml("#child-data")).toContain("Child Loader");
+
+        let app2 = new PlaywrightFixture(appFixture, page);
+        await app2.goto("/parent/child");
+        await page.waitForSelector("#child-data");
+        expect(await app2.getHtml("#parent-data")).toContain("Parent Loader");
+        expect(await app2.getHtml("#child-data")).toContain("Child Loader");
+      });
+
+      test("Allows users to combine file routes with RemixBrowser routes", async ({
+        page,
+      }) => {
+        fixture = await createFixture({
+          compiler: "vite",
+          spaMode: true,
+          files: {
+            "vite.config.ts": js`
+              import { defineConfig } from "vite";
+              import { vitePlugin as remix } from "@remix-run/dev";
+
+              export default defineConfig({
+                plugins: [remix({
+                  ssr: false,
+                })],
+              });
+            `,
+            "app/root.tsx": js`
+              import {
+                Meta,
+                Links,
+                Outlet,
+                Routes,
+                Route,
+                Scripts,
+                ScrollRestoration,
+              } from "@remix-run/react";
+
+              export function Layout({ children }: { children: React.ReactNode }) {
+                return (
+                  <html>
+                    <head>
+                      <Meta />
+                      <Links />
+                    </head>
+                    <body>
+                      {children}
+                      <ScrollRestoration />
+                      <Scripts />
+                    </body>
+                  </html>
+                );
+              }
+
+              export default function Root() {
+                return <Outlet />;
+              }
+            `,
+            "app/entry.client.tsx": js`
+              import { Link, RemixBrowser, Outlet, useLoaderData } from "@remix-run/react";
+              import { startTransition, StrictMode } from "react";
+              import { hydrateRoot } from "react-dom/client";
+
+              const routes = [{
+                path: '/parent',
+                loader() {
+                  return "Parent Loader";
+                },
+                Component() {
+                  let data = useLoaderData();
+                  return (
+                    <>
+                      <p id="parent-data">{data}</p>
+                      <Outlet />
+                    </>
+                  );
+                },
+                children: [{
+                  path: 'child',
+                  loader() {
+                    return "Child Loader";
+                  },
+                  Component() {
+                    let data = useLoaderData();
+                    return <p id="child-data">{data}</p>;
+                  },
+                }]
+              }];
+
+              startTransition(() => {
+                hydrateRoot(
+                  document,
+                  <StrictMode>
+                    <RemixBrowser routes={routes} />
+                  </StrictMode>
+                );
+              });
+            `,
+            "app/routes/_index.tsx": js`
+              import { Link, useLoaderData } from "@remix-run/react";
+
+              export function clientLoader() {
+                return "Index Loader";
+              }
+
+              export default function Component() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <Link to="/parent/child">Go to /parent/child</Link>
+                    <p id="index-data">{data}</p>
+                  </>
+                );
+              }
+            `,
+          },
+        });
+        appFixture = await createAppFixture(fixture);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/");
+        await page.waitForSelector("#index-data");
+        expect(await app.getHtml("#index-data")).toContain("Index Loader");
+
+        await app.clickLink("/parent/child");
+        await page.waitForSelector("#child-data");
+        expect(await app.getHtml("#parent-data")).toContain("Parent Loader");
+        expect(await app.getHtml("#child-data")).toContain("Child Loader");
+      });
+    });
   });
 
   test.describe("normal apps", () => {

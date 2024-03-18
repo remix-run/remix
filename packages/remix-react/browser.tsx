@@ -260,13 +260,19 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
     );
 
     if (props.routes) {
-      let loader: LoaderFunction = () => null;
-      loader.hydrate = true;
+      let rootRoute = routes[0];
+      if (!rootRoute.children) {
+        rootRoute.children = [];
+      }
+      // If a route doesn't have a loader, add a dummy hydrating loader to stop
+      // rendering at that level for hydration
+      let hydratingLoader: LoaderFunction = () => null;
+      hydratingLoader.hydrate = true;
       for (let route of props.routes) {
         if (!route.loader) {
-          route = { ...route, loader };
+          route = { ...route, loader: hydratingLoader };
         }
-        routes[0].children?.push(route);
+        rootRoute.children.push(route);
       }
     }
 
@@ -344,10 +350,11 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
         : undefined,
     });
 
-    let rootRoute = router.routes[0];
-    if (rootRoute?.children) {
-      rootRoute.children.forEach((route) =>
-        addPropRouteToManifest(route as DataRouteObject, rootRoute.id)
+    // Do this after creating the router so ID's have been added to the routes that we an use as keys in the manifest
+    if (props.routes) {
+      let rootDataRoute = router.routes[0];
+      rootDataRoute.children?.forEach((route) =>
+        addPropRoutesToRemix(route as DataRouteObject, rootDataRoute.id)
       );
     }
 
@@ -440,7 +447,7 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
   );
 }
 
-function addPropRouteToManifest(route: DataRouteObject, parentId: string) {
+function addPropRoutesToRemix(route: DataRouteObject, parentId: string) {
   if (!window.__remixManifest.routes[route.id]) {
     window.__remixManifest.routes[route.id] = {
       index: route.index,
@@ -468,7 +475,7 @@ function addPropRouteToManifest(route: DataRouteObject, parentId: string) {
   }
   if (route.children) {
     for (let child of route.children) {
-      addPropRouteToManifest(child, route.id);
+      addPropRoutesToRemix(child, route.id);
     }
   }
 }
