@@ -434,7 +434,7 @@ function PrefetchPageLinksImpl({
     let url = addRevalidationParam(
       manifest,
       routeModules,
-      matches.map((m) => m.route),
+      nextMatches.map((m) => m.route),
       newMatchesForData.map((m) => m.route),
       singleFetchUrl(page)
     );

@@ -137,17 +137,6 @@ export function getSingleFetchDataStrategy(
       // 2. if multiple call `serverLoader` only one fetch call is made
       let singleFetchPromise: Promise<SingleFetchResults>;
 
-      let makeSingleFetchCall = async (url: URL) => {
-        let { data } = await fetchAndDecode(url);
-        return data as SingleFetchResults;
-      };
-
-      let matchesHaveClientLoaders = matches.some(
-        (m) => m.shouldLoad && manifest.routes[m.route.id].hasClientLoader
-      );
-
-      // TODO: Need to fix prefetching to take this logic into account
-
       singleFetch = async (routeId) => {
         let results: SingleFetchResults;
         if (manifest.routes[routeId].hasClientLoader) {
@@ -155,36 +144,21 @@ export function getSingleFetchDataStrategy(
           // it's server loader data
           let url = stripIndexParam(singleFetchUrl(request.url));
           url.searchParams.set("_routes", routeId);
-          results = await makeSingleFetchCall(url);
+          let { data } = await fetchAndDecode(url);
+          results = data as SingleFetchResults;
         } else {
           // Otherwise we let multiple routes hook onto the same promise
           if (!singleFetchPromise) {
-            let url = stripIndexParam(singleFetchUrl(request.url));
-            if (matchesHaveClientLoaders) {
-              // If client loaders are present for this navigation, we only want
-              // the "single fetch" call to ask for the routes without clientLoaders
-              let loadIds = genRouteIds(
-                matches
-                  .filter(
-                    (m) =>
-                      m.shouldLoad &&
-                      !manifest.routes[m.route.id].hasClientLoader
-                  )
-                  .map((m) => m.route.id)
-              );
-              url.searchParams.set("_routes", loadIds);
-            } else {
-              // Otherwise we use the "normal" approach and only add the param if
-              // using shouldRevalidate for fine-grained revalidation
-              url = addRevalidationParam(
-                manifest,
-                routeModules,
-                matches.map((m) => m.route),
-                matches.filter((m) => m.shouldLoad).map((m) => m.route),
-                url
-              );
-            }
-            singleFetchPromise = makeSingleFetchCall(url);
+            let url = addRevalidationParam(
+              manifest,
+              routeModules,
+              matches.map((m) => m.route),
+              matches.filter((m) => m.shouldLoad).map((m) => m.route),
+              stripIndexParam(singleFetchUrl(request.url))
+            );
+            singleFetchPromise = fetchAndDecode(url).then(
+              ({ data }) => data as SingleFetchResults
+            );
           }
           results = await singleFetchPromise;
         }
@@ -232,24 +206,18 @@ function stripIndexParam(url: URL) {
 }
 
 // Determine which routes we want to load so we can add a `?_routes` search param
-// for fine-grained revalidation if necessary.  If a route has not yet been loaded
-// via `route.lazy` then we know we want to load it because it's by definition a
-// net-new route.  If it has been loaded then `shouldLoad` will have taken
-// `shouldRevalidate` into consideration.
+// for fine-grained revalidation if necessary. There's some nuance to this decision:
 //
-// There is a small edge case that _may_ result in a server loader running
-// _somewhat_ unintended, but it's unavoidable:
-// - Assume we have 2 routes, parent and child
-// - Both have `clientLoader`'s and both need to be revalidated
-// - If neither calls `serverLoader`, we won't make the single fetch call
-// - We delay the single fetch call until the **first** one calls `serverLoader`
-// - However, we cannot wait around to know if the other one calls
-//   `serverLoader`, so we include both of them in the `X-Remix-Routes`
-//   header
-// - This means it's technically possible that the second route never calls
-//   `serverLoader` and we never read the response of that route from the
-//   single fetch call, and thus executing that `loader` on the server was
-//   unnecessary.
+//  - The presence of `shouldRevalidate` and `clientLoader` functions are the only
+//    way to trigger fine-grained single fetch loader calls.  without either of
+//    these on the route matches we just always ask for the full `.data` request.
+//  - If any routes have a `shouldRevalidate` or `clientLoader` then we do a
+//    comparison of the routes we matched and the routes we're aiming to load
+//  - If they don't match up, then we add the `_routes` param or fine-grained
+//    loading
+//  - This is used by the single fetch implementation above and by the
+//    `<PrefetchPageLinksImpl>` component so we can prefetch routes using the
+//    same logic
 export function addRevalidationParam(
   manifest: AssetsManifest,
   routeModules: RouteModules,
@@ -260,22 +228,29 @@ export function addRevalidationParam(
   let genRouteIds = (arr: string[]) =>
     arr.filter((id) => manifest.routes[id].hasLoader).join(",");
 
-  // By default, we don't include this param and run all matched loaders on the
-  // server.  If _any_ of our matches include a `shouldRevalidate` function _and_
-  // we've determined that the routes we need to load and the matches are
-  // different, then we send the header since they've opted-into fine-grained
-  // caching.  We look at the `routeModules` here instead of the matches since
-  // HDR adds a wrapper for `shouldRevalidate` even if the route didn't have one
+  // Look at the `routeModules` for `shouldRevalidate` here instead of the manifest
+  // since HDR adds a wrapper for `shouldRevalidate` even if the route didn't have one
   // initially.
   // TODO: We probably can get rid of that wrapper once we're strictly on on
   // single-fetch in v3 and just leverage a needsRevalidation data structure here
   // to determine what to fetch
-  if (matchedRoutes.some((r) => routeModules[r.id]?.shouldRevalidate)) {
-    let matchedIds = genRouteIds(matchedRoutes.map((r) => r.id));
-    let loadIds = genRouteIds(loadRoutes.map((r) => r.id));
-    if (matchedIds !== loadIds) {
-      url.searchParams.set("_routes", loadIds);
-    }
+  let needsParam = matchedRoutes.some(
+    (r) =>
+      routeModules[r.id]?.shouldRevalidate ||
+      manifest.routes[r.id]?.hasClientLoader
+  );
+  if (!needsParam) {
+    return url;
+  }
+
+  let matchedIds = genRouteIds(matchedRoutes.map((r) => r.id));
+  let loadIds = genRouteIds(
+    loadRoutes
+      .filter((r) => !manifest.routes[r.id]?.hasClientLoader)
+      .map((r) => r.id)
+  );
+  if (matchedIds !== loadIds) {
+    url.searchParams.set("_routes", loadIds);
   }
   return url;
 }
