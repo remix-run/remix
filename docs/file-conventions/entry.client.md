@@ -28,4 +28,53 @@ startTransition(() => {
 
 This is the first piece of code that runs in the browser. You can initialize client side libraries, add client only providers, etc.
 
+## `RemixBrowser`
+
+The `RemixBrowser` component is the top-level component of your Remix application - and will render from the [root component][root] down for the matched routes.
+
+### `routes` prop
+
+`RemixBrowser` accepts a single optional `routes` prop that can be used with [Remix SPA Mode][spa-mode] if you have not yet moved your routes to use the [file-based routing convention][file-based-routing] or the [`routes`][routes] config. The routes passed via this prop will be appended as additional children of your root route.
+
+<docs-warn>If any collisions are detected from routes on the file system then a warning will be logged and the routes prop will be ignored.</docs-warn>
+
+```tsx filename=entry.client.stsx
+import { RemixBrowser } from "@remix-run/react";
+import { startTransition, StrictMode } from "react";
+import { hydrateRoot } from "react-dom/client";
+
+const routes = [
+  {
+    index: true,
+    loader: indexLoader,
+    Component: Index,
+  },
+  {
+    path: "/parent",
+    loader: parentLoader,
+    Component: Parent,
+    children: [
+      {
+        path: "child",
+        loader: childLoader,
+        Component: Child,
+      },
+    ],
+  },
+];
+
+startTransition(() => {
+  hydrateRoot(
+    document,
+    <StrictMode>
+      <RemixBrowser routes={routes} />
+    </StrictMode>
+  );
+});
+```
+
+[root]: ./root
 [server_entry_module]: ./entry.server
+[spa-mode]: ../future/spa-mode
+[file-based-routing]: ./routes
+[routes]: ./vite-config#routes

@@ -832,6 +832,197 @@ test.describe("SPA Mode", () => {
         expect(await app.getHtml("#parent-data")).toContain("Parent Loader");
         expect(await app.getHtml("#child-data")).toContain("Child Loader");
       });
+
+      test("Throws an error if users provide duplicate index routes", async ({
+        page,
+      }) => {
+        fixture = await createFixture({
+          compiler: "vite",
+          spaMode: true,
+          files: {
+            "vite.config.ts": js`
+              import { defineConfig } from "vite";
+              import { vitePlugin as remix } from "@remix-run/dev";
+
+              export default defineConfig({
+                plugins: [remix({
+                  ssr: false,
+                })],
+              });
+            `,
+            "app/root.tsx": js`
+              import {
+                Meta,
+                Links,
+                Outlet,
+                Routes,
+                Route,
+                Scripts,
+                ScrollRestoration,
+              } from "@remix-run/react";
+
+              export function Layout({ children }: { children: React.ReactNode }) {
+                return (
+                  <html>
+                    <head>
+                      <Meta />
+                      <Links />
+                    </head>
+                    <body>
+                      {children}
+                      <ScrollRestoration />
+                      <Scripts />
+                    </body>
+                  </html>
+                );
+              }
+
+              export default function Root() {
+                return <Outlet />;
+              }
+
+              export function HydrateFallback() {
+                return <p>Loading...</p>;
+              }
+            `,
+            "app/entry.client.tsx": js`
+              import { Link, RemixBrowser, Outlet, useLoaderData } from "@remix-run/react";
+              import { startTransition, StrictMode } from "react";
+              import { hydrateRoot } from "react-dom/client";
+
+              const routes = [{
+                index: true,
+                Component() {
+                  return <h1>Index from prop</h1>;
+                },
+              }];
+
+              startTransition(() => {
+                hydrateRoot(
+                  document,
+                  <StrictMode>
+                    <RemixBrowser routes={routes} />
+                  </StrictMode>
+                );
+              });
+            `,
+            "app/routes/_index.tsx": js`
+              import { Link, useLoaderData } from "@remix-run/react";
+
+              export default function Component() {
+                return <h1>Index from file</h1>
+              }
+            `,
+          },
+        });
+        let logs: string[] = [];
+        page.on("console", (msg) => logs.push(msg.text()));
+
+        appFixture = await createAppFixture(fixture);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/", true);
+        await new Promise((r) => setTimeout(r, 100));
+        expect(logs).toEqual([
+          "Cannot add a duplicate child index route to the root route via the `RemixBrowser` `routes` prop.  The `routes` prop will be ignored.",
+        ]);
+      });
+
+      test("Throws an error if users provide duplicate path routes", async ({
+        page,
+      }) => {
+        fixture = await createFixture({
+          compiler: "vite",
+          spaMode: true,
+          files: {
+            "vite.config.ts": js`
+              import { defineConfig } from "vite";
+              import { vitePlugin as remix } from "@remix-run/dev";
+
+              export default defineConfig({
+                plugins: [remix({
+                  ssr: false,
+                })],
+              });
+            `,
+            "app/root.tsx": js`
+              import {
+                Meta,
+                Links,
+                Outlet,
+                Routes,
+                Route,
+                Scripts,
+                ScrollRestoration,
+              } from "@remix-run/react";
+
+              export function Layout({ children }: { children: React.ReactNode }) {
+                return (
+                  <html>
+                    <head>
+                      <Meta />
+                      <Links />
+                    </head>
+                    <body>
+                      {children}
+                      <ScrollRestoration />
+                      <Scripts />
+                    </body>
+                  </html>
+                );
+              }
+
+              export default function Root() {
+                return <Outlet />;
+              }
+
+              export function HydrateFallback() {
+                return <p>Loading...</p>;
+              }
+            `,
+            "app/entry.client.tsx": js`
+              import { RemixBrowser } from "@remix-run/react";
+              import { startTransition, StrictMode } from "react";
+              import { hydrateRoot } from "react-dom/client";
+
+              const routes = [{
+                path: '/path',
+                Component() {
+                  return <h1>Path from prop</h1>;
+                },
+              }];
+
+              startTransition(() => {
+                hydrateRoot(
+                  document,
+                  <StrictMode>
+                    <RemixBrowser routes={routes} />
+                  </StrictMode>
+                );
+              });
+            `,
+            "app/routes/_index.tsx": js`
+              export default function Component() {
+                return <h1>Index</h1>
+              }
+            `,
+            "app/routes/path.tsx": js`
+              export default function Component() {
+                return <h1>Path from file</h1>
+              }
+            `,
+          },
+        });
+        let logs: string[] = [];
+        page.on("console", (msg) => logs.push(msg.text()));
+
+        appFixture = await createAppFixture(fixture);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/", true);
+        await new Promise((r) => setTimeout(r, 100));
+        expect(logs).toEqual([
+          "Cannot add a duplicate child route with path `/path` to the root route via the `RemixBrowser` `routes` prop.  The `routes` prop will be ignored.",
+        ]);
+      });
     });
   });
 

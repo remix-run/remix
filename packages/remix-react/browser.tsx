@@ -259,20 +259,52 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
       window.__remixContext.isSpaMode
     );
 
+    let foundRoutesPropCollision = false;
     if (props.routes) {
       let rootRoute = routes[0];
       if (!rootRoute.children) {
         rootRoute.children = [];
       }
-      // If a route doesn't have a loader, add a dummy hydrating loader to stop
-      // rendering at that level for hydration
-      let hydratingLoader: LoaderFunction = () => null;
-      hydratingLoader.hydrate = true;
-      for (let route of props.routes) {
-        if (!route.loader) {
-          route = { ...route, loader: hydratingLoader };
+      let existingRootChildren = new Set();
+      for (let child of rootRoute.children) {
+        if (child.index) {
+          existingRootChildren.add("_index");
+        } else if (child.path) {
+          existingRootChildren.add(child.path);
         }
-        rootRoute.children.push(route);
+      }
+      for (let route of props.routes) {
+        if (route.index && existingRootChildren.has("_index")) {
+          foundRoutesPropCollision = true;
+          console.warn(
+            `Cannot add a duplicate child index route to the root route via ` +
+              `the \`RemixBrowser\` \`routes\` prop.  The \`routes\` prop ` +
+              `will be ignored.`
+          );
+        } else if (
+          route.path &&
+          existingRootChildren.has(route.path.replace(/^\//, ""))
+        ) {
+          foundRoutesPropCollision = true;
+          console.warn(
+            `Cannot add a duplicate child route with path \`${route.path}\` to ` +
+              `the root route via the \`RemixBrowser\` \`routes\` prop.  The ` +
+              `\`routes\` prop will be ignored.`
+          );
+        }
+      }
+
+      if (!foundRoutesPropCollision) {
+        // If a route doesn't have a loader, add a dummy hydrating loader to stop
+        // rendering at that level for hydration
+        let hydratingLoader: LoaderFunction = () => null;
+        hydratingLoader.hydrate = true;
+        for (let route of props.routes) {
+          if (!route.loader) {
+            route = { ...route, loader: hydratingLoader };
+          }
+          rootRoute.children.push(route);
+        }
       }
     }
 
@@ -351,7 +383,7 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
     });
 
     // Do this after creating the router so ID's have been added to the routes that we an use as keys in the manifest
-    if (props.routes) {
+    if (props.routes && !foundRoutesPropCollision) {
       let rootDataRoute = router.routes[0];
       rootDataRoute.children?.forEach((route) =>
         addPropRoutesToRemix(route as DataRouteObject, rootDataRoute.id)
