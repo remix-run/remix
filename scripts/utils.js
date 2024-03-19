@@ -191,18 +191,12 @@ const updateDenoImportMap = async (importMapPath, nextVersion) => {
 /**
  * @param {string} nextVersion
  */
-async function incrementRemixVersion(nextVersion, syncLockFile = false) {
+async function incrementRemixVersion(nextVersion) {
   // Update version numbers in package.json for all packages
   await updateRemixVersion("remix", nextVersion);
   await updateRemixVersion("create-remix", nextVersion);
   for (let name of remixPackages.all) {
     await updateRemixVersion(`remix-${name}`, nextVersion);
-  }
-
-  // Sync up the pnpm-lock.yaml file with the new experimental version
-  if (syncLockFile) {
-    console.log(chalk.green("  Syncing pnpm lockfile..."));
-    execSync("pnpm install --no-frozen-lockfile");
   }
 
   // Update version numbers in Deno's import maps
