@@ -36,7 +36,11 @@ The `RemixBrowser` component is the top-level component of your Remix applicatio
 
 `RemixBrowser` accepts a single optional `routes` prop that can be used with [Remix SPA Mode][spa-mode] if you have not yet moved your routes to use the [file-based routing convention][file-based-routing] or the [`routes`][routes] config. The routes passed via this prop will be appended as additional children of your root route.
 
-<docs-warn>If any collisions are detected from routes on the file system then a warning will be logged and the routes prop will be ignored.</docs-warn>
+Routes defined this way are strictly client-side, so your `loader`/`action` will be internally converted to Remix `clientLoader`/`clientAction`'s.
+
+<docs-info>This is not intended to be used as a primary method of definin routes, and is intended to be used as a migration path from a React Router `RouterProvider` application.</docs-info>
+
+<docs-warn>If any collisions are detected from routes on the file system then a warning will be logged and the `routes` prop will be ignored.</docs-warn>
 
 ```tsx filename=entry.client.stsx
 import { RemixBrowser } from "@remix-run/react";
