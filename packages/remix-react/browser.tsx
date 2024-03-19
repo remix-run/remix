@@ -259,19 +259,20 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
       window.__remixContext.isSpaMode
     );
 
-    let foundRoutesPropCollision = false;
+    let propRoutesError: unknown;
     if (props.routes && props.routes.length > 0) {
       let rootRoute = routes[0];
       if (!rootRoute.children) {
         rootRoute.children = [];
       }
 
-      foundRoutesPropCollision = checkForRoutesCollision(
-        props.routes,
-        rootRoute.children
-      );
+      try {
+        validatePropRoutes(
+          props.routes,
+          rootRoute.children,
+          window.__remixContext.isSpaMode
+        );
 
-      if (!foundRoutesPropCollision) {
         // If a route doesn't have a loader, add a dummy hydrating loader to stop
         // rendering at that level for hydration
         let hydratingLoader: LoaderFunction = () => null;
@@ -282,6 +283,8 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
           }
           rootRoute.children.push(route);
         }
+      } catch (e) {
+        propRoutesError = e;
       }
     }
 
@@ -362,11 +365,15 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
     // Do this after creating the router so ID's have been added to the routes
     // that we can use as keys in the manifest. `router.routes` will contain the
     // route IDs, `props.routes` may not.
-    if (props.routes && !foundRoutesPropCollision) {
-      let rootDataRoute = router.routes[0];
-      rootDataRoute.children?.forEach((route) =>
-        addPropRoutesToRemix(route as DataRouteObject, rootDataRoute.id)
-      );
+    if (props.routes) {
+      if (propRoutesError) {
+        console.warn(propRoutesError);
+      } else {
+        let rootDataRoute = router.routes[0];
+        rootDataRoute.children?.forEach((route) =>
+          addPropRoutesToRemix(route as DataRouteObject, rootDataRoute.id)
+        );
+      }
     }
 
     // We can call initialize() immediately if the router doesn't have any
@@ -491,11 +498,17 @@ function addPropRoutesToRemix(route: DataRouteObject, parentId: string) {
   }
 }
 
-function checkForRoutesCollision(
+function validatePropRoutes(
   propRoutes: DataRouteObject[],
-  rootChildren: DataRouteObject[]
+  rootChildren: DataRouteObject[],
+  isSpaMode: boolean
 ) {
-  let foundRoutesPropCollision = false;
+  if (!isSpaMode) {
+    throw new Error(
+      `The <RemixBrowser routes> prop is only usable in SPA Mode.`
+    );
+  }
+
   let existingRootChildren = new Set();
   for (let child of rootChildren) {
     if (child.index) {
@@ -504,25 +517,22 @@ function checkForRoutesCollision(
       existingRootChildren.add(child.path);
     }
   }
+
   for (let route of propRoutes) {
     if (route.index && existingRootChildren.has("_index")) {
-      foundRoutesPropCollision = true;
-      console.warn(
+      throw new Error(
         `Cannot add a duplicate child index route to the root route via ` +
           `the \`RemixBrowser\` \`routes\` prop.  The \`routes\` prop ` +
           `will be ignored.`
       );
-    } else if (
-      route.path &&
-      existingRootChildren.has(route.path.replace(/^\//, ""))
-    ) {
-      foundRoutesPropCollision = true;
-      console.warn(
+    }
+
+    if (route.path && existingRootChildren.has(route.path.replace(/^\//, ""))) {
+      throw new Error(
         `Cannot add a duplicate child route with path \`${route.path}\` to ` +
           `the root route via the \`RemixBrowser\` \`routes\` prop.  The ` +
           `\`routes\` prop will be ignored.`
       );
     }
   }
-  return foundRoutesPropCollision;
 }

@@ -921,9 +921,10 @@ test.describe("SPA Mode", () => {
         appFixture = await createAppFixture(fixture);
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/", true);
-        await new Promise((r) => setTimeout(r, 100));
         expect(logs).toEqual([
-          "Cannot add a duplicate child index route to the root route via the `RemixBrowser` `routes` prop.  The `routes` prop will be ignored.",
+          expect.stringContaining(
+            "Error: Cannot add a duplicate child index route to the root route via the `RemixBrowser` `routes` prop.  The `routes` prop will be ignored."
+          ),
         ]);
       });
 
@@ -1018,9 +1019,10 @@ test.describe("SPA Mode", () => {
         appFixture = await createAppFixture(fixture);
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/", true);
-        await new Promise((r) => setTimeout(r, 100));
         expect(logs).toEqual([
-          "Cannot add a duplicate child route with path `/path` to the root route via the `RemixBrowser` `routes` prop.  The `routes` prop will be ignored.",
+          expect.stringContaining(
+            "Error: Cannot add a duplicate child route with path `/path` to the root route via the `RemixBrowser` `routes` prop.  The `routes` prop will be ignored."
+          ),
         ]);
       });
     });
