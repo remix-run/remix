@@ -113,77 +113,89 @@ export function getSingleFetchDataStrategy(
   manifest: AssetsManifest,
   routeModules: RouteModules
 ): DataStrategyFunction {
-  return async ({ request, matches }: DataStrategyFunctionArgs) => {
-    // This function is the way for a loader/action to "talk" to the server
-    let singleFetch: (routeId: string) => Promise<unknown>;
-    let actionStatus: number | undefined;
-    if (request.method !== "GET") {
-      // Actions are simple since they're singular - just hit the server
-      singleFetch = async (routeId) => {
-        let url = singleFetchUrl(request.url);
-        let init = await createRequestInit(request);
-        let { data, status } = await fetchAndDecode(url, init);
-        actionStatus = status;
-        return unwrapSingleFetchResult(data as SingleFetchResult, routeId);
-      };
-    } else {
-      // Loaders are trickier since we only want to hit the server once, so we
-      // create a singular promise for all routes to latch onto. This way we can
-      // kick off any existing `clientLoaders` and ensure:
-      // 1. we only call the server if at least one of them calls `serverLoader`
-      // 2. if multiple call `serverLoader` only one fetch call is made
-      let singleFetchPromise: Promise<SingleFetchResults>;
+  return async ({ request, matches }) =>
+    request.method !== "GET"
+      ? singleFetchActionStrategy(request, matches)
+      : singleFetchLoaderStrategy(manifest, routeModules, request, matches);
+}
 
-      singleFetch = async (routeId) => {
-        let results: SingleFetchResults;
-        if (manifest.routes[routeId].hasClientLoader) {
-          // When a route has a client loader, we make it's own call for just
-          // it's server loader data
-          let url = stripIndexParam(singleFetchUrl(request.url));
-          url.searchParams.set("_routes", routeId);
-          let { data } = await fetchAndDecode(url);
-          results = data as SingleFetchResults;
-        } else {
-          // Otherwise we let multiple routes hook onto the same promise
-          if (!singleFetchPromise) {
-            let url = addRevalidationParam(
-              manifest,
-              routeModules,
-              matches.map((m) => m.route),
-              matches.filter((m) => m.shouldLoad).map((m) => m.route),
-              stripIndexParam(singleFetchUrl(request.url))
-            );
-            singleFetchPromise = fetchAndDecode(url).then(
-              ({ data }) => data as SingleFetchResults
-            );
-          }
-          results = await singleFetchPromise;
-        }
-        let redirect = results[SingleFetchRedirectSymbol];
-        if (redirect) {
-          return unwrapSingleFetchResult(redirect, routeId);
-        } else {
-          return results[routeId] !== undefined
-            ? unwrapSingleFetchResult(results[routeId], routeId)
-            : null;
-        }
-      };
-    }
+// Actions are simple since they're singular calls to the server
+function singleFetchActionStrategy(
+  request: Request,
+  matches: DataStrategyFunctionArgs["matches"]
+) {
+  return Promise.all(
+    matches.map(async (m) =>
+      m.resolve(async (handler): Promise<HandlerResult> => {
+        let actionStatus: number | undefined;
+        let result = await handler(async () => {
+          let url = singleFetchUrl(request.url);
+          let init = await createRequestInit(request);
+          let { data, status } = await fetchAndDecode(url, init);
+          actionStatus = status;
+          return unwrapSingleFetchResult(data as SingleFetchResult, m.route.id);
+        });
+        return {
+          type: "data",
+          result,
+          status: actionStatus,
+        };
+      })
+    )
+  );
+}
 
-    // Call the route handlers passing through the `singleFetch` function that will
-    // be called instead of making a server call
-    return Promise.all(
-      matches.map(async (m) =>
-        m.resolve(async (handler): Promise<HandlerResult> => {
-          return {
-            type: "data",
-            result: await handler(() => singleFetch(m.route.id)),
-            status: actionStatus,
-          };
-        })
-      )
-    );
-  };
+// Loaders are trickier since we only want to hit the server once, so we
+// create a singular promise for all server-loader routes to latch onto.
+function singleFetchLoaderStrategy(
+  manifest: AssetsManifest,
+  routeModules: RouteModules,
+  request: Request,
+  matches: DataStrategyFunctionArgs["matches"]
+) {
+  let singleFetchPromise: Promise<SingleFetchResults>;
+  return Promise.all(
+    matches.map(async (m) =>
+      m.resolve(async (handler): Promise<HandlerResult> => {
+        let result: unknown;
+        // When a route has a client loader, it calls it's singular server loader
+        if (manifest.routes[m.route.id].hasClientLoader) {
+          result = await handler(async () => {
+            let url = stripIndexParam(singleFetchUrl(request.url));
+            url.searchParams.set("_routes", m.route.id);
+            let { data } = await fetchAndDecode(url);
+            return unwrapSingleFetchResults(
+              data as SingleFetchResults,
+              m.route.id
+            );
+          });
+        } else {
+          result = await handler(async () => {
+            // Otherwise we let multiple routes hook onto the same promise
+            if (!singleFetchPromise) {
+              let url = addRevalidationParam(
+                manifest,
+                routeModules,
+                matches.map((m) => m.route),
+                matches.filter((m) => m.shouldLoad).map((m) => m.route),
+                stripIndexParam(singleFetchUrl(request.url))
+              );
+              singleFetchPromise = fetchAndDecode(url).then(
+                ({ data }) => data as SingleFetchResults
+              );
+            }
+            let results = await singleFetchPromise;
+            return unwrapSingleFetchResults(results, m.route.id);
+          });
+        }
+
+        return {
+          type: "data",
+          result,
+        };
+      })
+    )
+  );
 }
 
 function stripIndexParam(url: URL) {
@@ -320,6 +332,20 @@ export function decodeViaTurboStream(
       },
     ],
   });
+}
+
+function unwrapSingleFetchResults(
+  results: SingleFetchResults,
+  routeId: string
+) {
+  let redirect = results[SingleFetchRedirectSymbol];
+  if (redirect) {
+    return unwrapSingleFetchResult(redirect, routeId);
+  }
+
+  return results[routeId] !== undefined
+    ? unwrapSingleFetchResult(results[routeId], routeId)
+    : null;
 }
 
 function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
