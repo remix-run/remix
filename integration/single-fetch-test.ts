@@ -562,6 +562,26 @@ test.describe("single-fetch", () => {
     expect(res.headers.get("x-b-headers")).toBeNull();
     expect(res.headers.get("x-c-loader")).toBeNull();
     expect(res.headers.get("x-c-headers")).toBeNull();
+
+    res = await fixture.requestSingleFetchData(
+      "/a/b/c.data?_routes=routes%2Fa.b.c"
+    );
+    expect(res.headers.get("x-a-loader")).toBeNull();
+    expect(res.headers.get("x-a-headers")).toBeNull();
+    expect(res.headers.get("x-b-loader")).toBeNull();
+    expect(res.headers.get("x-b-headers")).toBeNull();
+    expect(res.headers.get("x-c-loader")).toEqual("true");
+    expect(res.headers.get("x-c-headers")).toEqual("true");
+
+    res = await fixture.requestSingleFetchData(
+      "/a/b/c.data?_routes=routes%2Fa,routes%2Fa.b.c"
+    );
+    expect(res.headers.get("x-a-loader")).toEqual("true");
+    expect(res.headers.get("x-a-loader")).toEqual("true");
+    expect(res.headers.get("x-b-headers")).toBeNull();
+    expect(res.headers.get("x-b-headers")).toBeNull();
+    expect(res.headers.get("x-c-loader")).toEqual("true");
+    expect(res.headers.get("x-c-headers")).toEqual("true");
   });
 
   test.describe("client loaders", () => {
