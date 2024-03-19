@@ -15,11 +15,12 @@ import { ServerMode } from "../../build/node_modules/@remix-run/server-runtime/d
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime/dist/index.js";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime/dist/index.js";
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express/dist/index.js";
-// @ts-ignore
 import { installGlobals } from "../../build/node_modules/@remix-run/node/dist/index.js";
+import { decodeViaTurboStream } from "../../build/node_modules/@remix-run/react/dist/single-fetch.js";
 
-const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+const root = path.join(__dirname, "../..");
+const TMP_DIR = path.join(root, ".tmp", "integration");
 
 export interface FixtureInit {
   buildStdio?: Writable;
@@ -28,6 +29,8 @@ export interface FixtureInit {
   template?: "cf-template" | "deno-template" | "node-template";
   config?: Partial<AppConfig>;
   useRemixServe?: boolean;
+  compiler?: "remix" | "vite";
+  spaMode?: boolean;
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -42,10 +45,59 @@ export function json(value: JsonObject) {
 
 export async function createFixture(init: FixtureInit, mode?: ServerMode) {
   installGlobals();
+  let compiler = init.compiler ?? "remix";
   let projectDir = await createFixtureProject(init, mode);
   let buildPath = url.pathToFileURL(
-    path.join(projectDir, "build/index.js")
+    path.join(
+      projectDir,
+      compiler === "vite" ? "build/server/index.js" : "build/index.js"
+    )
   ).href;
+
+  let getBrowserAsset = async (asset: string) => {
+    return fse.readFile(
+      path.join(projectDir, "public", asset.replace(/^\//, "")),
+      "utf8"
+    );
+  };
+
+  let isSpaMode = compiler === "vite" && init.spaMode;
+
+  if (isSpaMode) {
+    let requestDocument = () => {
+      let html = fse.readFileSync(
+        path.join(projectDir, "build/client/index.html")
+      );
+      return new Response(html, {
+        headers: {
+          "Content-Type": "text/html",
+        },
+      });
+    };
+
+    return {
+      projectDir,
+      build: null,
+      isSpaMode,
+      compiler,
+      requestDocument,
+      requestData: () => {
+        throw new Error("Cannot requestData in SPA Mode tests");
+      },
+      requestResource: () => {
+        throw new Error("Cannot requestResource in SPA Mode tests");
+      },
+      requestSingleFetchData: () => {
+        throw new Error("Cannot requestSingleFetchData in SPA Mode tests");
+      },
+      postDocument: () => {
+        throw new Error("Cannot postDocument in SPA Mode tests");
+      },
+      getBrowserAsset,
+      useRemixServe: init.useRemixServe,
+    };
+  }
+
   let app: ServerBuild = await import(buildPath);
   let handler = createRequestHandler(app, mode || ServerMode.Production);
 
@@ -71,6 +123,29 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
     return handler(request);
   };
 
+  let requestResource = async (href: string, init?: RequestInit) => {
+    init = init || {};
+    init.signal = init.signal || new AbortController().signal;
+    let url = new URL(href, "test://test");
+    let request = new Request(url.toString(), init);
+    return handler(request);
+  };
+
+  let requestSingleFetchData = async (href: string, init?: RequestInit) => {
+    init = init || {};
+    init.signal = init.signal || new AbortController().signal;
+    let url = new URL(href, "test://test");
+    let request = new Request(url.toString(), init);
+    let response = await handler(request);
+    let decoded = await decodeViaTurboStream(response.body!, global);
+    return {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+      data: decoded.value,
+    };
+  };
+
   let postDocument = async (href: string, data: URLSearchParams | FormData) => {
     return requestDocument(href, {
       method: "POST",
@@ -84,18 +159,15 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
     });
   };
 
-  let getBrowserAsset = async (asset: string) => {
-    return fse.readFile(
-      path.join(projectDir, "public", asset.replace(/^\//, "")),
-      "utf8"
-    );
-  };
-
   return {
     projectDir,
     build: app,
+    isSpaMode,
+    compiler,
     requestDocument,
     requestData,
+    requestResource,
+    requestSingleFetchData,
     postDocument,
     getBrowserAsset,
     useRemixServe: init.useRemixServe,
@@ -114,7 +186,12 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
         let nodebin = process.argv[0];
         let serveProcess = spawn(
           nodebin,
-          ["node_modules/@remix-run/serve/dist/cli.js", "build/index.js"],
+          [
+            "node_modules/@remix-run/serve/dist/cli.js",
+            fixture.compiler === "vite"
+              ? "server/build/index.js"
+              : "build/index.js",
+          ],
           {
             env: {
               NODE_ENV: mode || "production",
@@ -164,10 +241,33 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
       });
     }
 
+    if (fixture.isSpaMode) {
+      return new Promise(async (accept) => {
+        let port = await getPort();
+        let app = express();
+        app.use(express.static(path.join(fixture.projectDir, "build/client")));
+        app.get("*", (_, res, next) =>
+          res.sendFile(
+            path.join(fixture.projectDir, "build/client/index.html"),
+            next
+          )
+        );
+        let server = app.listen(port);
+        accept({ stop: server.close.bind(server), port });
+      });
+    }
+
     return new Promise(async (accept) => {
       let port = await getPort();
       let app = express();
-      app.use(express.static(path.join(fixture.projectDir, "public")));
+      app.use(
+        express.static(
+          path.join(
+            fixture.projectDir,
+            fixture.compiler === "vite" ? "build/client" : "public"
+          )
+        )
+      );
 
       app.all(
         "*",
@@ -215,14 +315,10 @@ export async function createFixtureProject(
   let integrationTemplateDir = path.resolve(__dirname, template);
   let projectName = `remix-${template}-${Math.random().toString(32).slice(2)}`;
   let projectDir = path.join(TMP_DIR, projectName);
+  let compiler = init.compiler ?? "remix";
 
   await fse.ensureDir(projectDir);
   await fse.copy(integrationTemplateDir, projectDir);
-  await fse.copy(
-    path.join(__dirname, "../../build/node_modules"),
-    path.join(projectDir, "node_modules"),
-    { overwrite: true }
-  );
   // let remixDev = path.join(
   //   projectDir,
   //   "node_modules/@remix-run/dev/dist/cli.js"
@@ -262,7 +358,7 @@ export async function createFixtureProject(
       at the same time, unless the \`remix.config.js\` file contains a reference
       to the \`global.INJECTED_FIXTURE_REMIX_CONFIG\` placeholder so it can
       accept the injected config values. Either move all config values into
-      \`remix.config.js\` file, or spread the  injected config, 
+      \`remix.config.js\` file, or spread the  injected config,
       e.g. \`export default { ...global.INJECTED_FIXTURE_REMIX_CONFIG }\`.
     `);
   }
@@ -272,7 +368,7 @@ export async function createFixtureProject(
   );
   fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
 
-  build(projectDir, init.buildStdio, init.sourcemap, mode);
+  build(projectDir, init.buildStdio, init.sourcemap, mode, compiler);
 
   return projectDir;
 }
@@ -281,7 +377,8 @@ function build(
   projectDir: string,
   buildStdio?: Writable,
   sourcemap?: boolean,
-  mode?: ServerMode
+  mode?: ServerMode,
+  compiler?: "remix" | "vite"
 ) {
   // We have a "require" instead of a dynamic import in readConfig gated
   // behind mode === ServerMode.Test to make jest happy, but that doesn't
@@ -289,10 +386,13 @@ function build(
   // force the mode to be production for ESM configs when runtime mode is
   // tested.
   mode = mode === ServerMode.Test ? ServerMode.Production : mode;
-  let buildArgs = ["node_modules/@remix-run/dev/dist/cli.js", "build"];
-  if (sourcemap) {
-    buildArgs.push("--sourcemap");
-  }
+
+  let remixBin = "node_modules/@remix-run/dev/dist/cli.js";
+
+  let buildArgs: string[] =
+    compiler === "vite"
+      ? [remixBin, "vite:build"]
+      : [remixBin, "build", ...(sourcemap ? ["--sourcemap"] : [])];
 
   let buildSpawn = spawnSync("node", buildArgs, {
     cwd: projectDir,
@@ -303,7 +403,7 @@ function build(
   });
 
   // These logs are helpful for debugging. Remove comments if needed.
-  // console.log("spawning @remix-run/dev/cli.js `build`:\n");
+  // console.log("spawning node " + buildArgs.join(" ") + ":\n");
   // console.log("  STDOUT:");
   // console.log("  " + buildSpawn.stdout.toString("utf-8"));
   // console.log("  STDERR:");

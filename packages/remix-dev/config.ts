@@ -33,7 +33,12 @@ type Dev = {
   tlsCert?: string;
 };
 
-interface FutureConfig {}
+interface FutureConfig {
+  v3_fetcherPersist: boolean;
+  v3_relativeSplatPath: boolean;
+  v3_throwAbortReason: boolean;
+  unstable_singleFetch: boolean;
+}
 
 type NodeBuiltinsPolyfillOptions = Pick<
   EsbuildPluginsNodeModulesPolyfillOptions,
@@ -63,7 +68,9 @@ export interface AppConfig {
    */
   routes?: (
     defineRoutes: DefineRoutesFunction
-  ) => Promise<ReturnType<DefineRoutesFunction>>;
+  ) =>
+    | ReturnType<DefineRoutesFunction>
+    | Promise<ReturnType<DefineRoutesFunction>>;
 
   /**
    * The path to the browser build, relative to `remix.config.js`. Defaults to
@@ -78,7 +85,7 @@ export interface AppConfig {
   publicPath?: string;
 
   /**
-   * Options for `remix dev`. See https://remix.run/docs/en/main/other-api/dev-v2#options-1
+   * Options for `remix dev`. See https://remix.run/other-api/dev#options-1
    */
   dev?: Dev;
 
@@ -158,8 +165,8 @@ export interface AppConfig {
   serverPlatform?: ServerPlatform;
 
   /**
-   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
-   * Defaults to `true`.
+   * Whether to support Tailwind functions and directives in CSS files if
+   * `tailwindcss` is installed. Defaults to `true`.
    */
   tailwind?: boolean;
 
@@ -171,16 +178,21 @@ export interface AppConfig {
   ignoredRouteFiles?: string[];
 
   /**
-   * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
+   * A function for defining custom directories to watch while running `remix dev`,
+   * in addition to `appDirectory`.
    */
   watchPaths?:
     | string
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  future?: Partial<FutureConfig> & {
-    [propName: string]: never;
-  };
+  /**
+   * Enabled future flags
+   */
+  future?: [keyof FutureConfig] extends [never]
+    ? // Partial<FutureConfig> doesn't work when it's empty so just prevent any keys
+      { [key: string]: never }
+    : Partial<FutureConfig>;
 }
 
 /**
@@ -243,7 +255,7 @@ export interface RemixConfig {
   publicPath: string;
 
   /**
-   * Options for `remix dev`. See https://remix.run/docs/en/main/other-api/dev-v2#options-1
+   * Options for `remix dev`. See https://remix.run/other-api/dev#options-1
    */
   dev: Dev;
 
@@ -355,12 +367,8 @@ export interface RemixConfig {
  */
 export async function readConfig(
   remixRoot?: string,
-  serverMode = ServerMode.Production
+  serverMode?: ServerMode
 ): Promise<RemixConfig> {
-  if (!isValidServerMode(serverMode)) {
-    throw new Error(`Invalid server mode "${serverMode}"`);
-  }
-
   if (!remixRoot) {
     remixRoot = process.env.REMIX_ROOT || process.cwd();
   }
@@ -391,6 +399,28 @@ export async function readConfig(
         `Error loading Remix config at ${configFile}\n${String(error)}`
       );
     }
+  }
+
+  return await resolveConfig(appConfig, {
+    rootDirectory,
+    serverMode,
+  });
+}
+
+export async function resolveConfig(
+  appConfig: AppConfig,
+  {
+    rootDirectory,
+    serverMode = ServerMode.Production,
+    isSpaMode = false,
+  }: {
+    rootDirectory: string;
+    serverMode?: ServerMode;
+    isSpaMode?: boolean;
+  }
+): Promise<RemixConfig> {
+  if (!isValidServerMode(serverMode)) {
+    throw new Error(`Invalid server mode "${serverMode}"`);
   }
 
   let serverBuildPath = path.resolve(
@@ -436,10 +466,20 @@ export async function readConfig(
   let entryServerFile: string;
   let entryClientFile = userEntryClientFile || "entry.client.tsx";
 
-  let pkgJson = await PackageJson.load(remixRoot);
+  let pkgJson = await PackageJson.load(rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
-  if (userEntryServerFile) {
+  if (isSpaMode && appConfig.future?.unstable_singleFetch != true) {
+    // This is a super-simple default since we don't need streaming in SPA Mode.
+    // We can include this in a remix-spa template, but right now `npx remix reveal`
+    // will still expose the streaming template since that command doesn't have
+    // access to the `ssr:false` flag in the vite config (the streaming template
+    // works just fine so maybe instea dof having this we _only have this version
+    // in the template...).  We let users manage an entry.server file in SPA Mode
+    // so they can de ide if they want to hydrate the full document or just an
+    // embedded `<div id="app">` or whatever.
+    entryServerFile = "entry.server.spa.tsx";
+  } else if (userEntryServerFile) {
     entryServerFile = userEntryServerFile;
   } else {
     let serverRuntime = deps["@remix-run/deno"]
@@ -470,7 +510,7 @@ export async function readConfig(
       pkgJson.update({
         dependencies: {
           ...pkgJson.content.dependencies,
-          isbot: "latest",
+          isbot: "^4",
         },
       });
 
@@ -479,7 +519,7 @@ export async function readConfig(
       let packageManager = detectPackageManager() ?? "npm";
 
       execSync(`${packageManager} install`, {
-        cwd: remixRoot,
+        cwd: rootDirectory,
         stdio: "inherit",
       });
     }
@@ -557,7 +597,12 @@ export async function readConfig(
   // list below, so we can let folks know if they have obsolete flags in their
   // config.  If we ever convert remix.config.js to a TS file, so we get proper
   // typings this won't be necessary anymore.
-  let future: FutureConfig = {};
+  let future: FutureConfig = {
+    v3_fetcherPersist: appConfig.future?.v3_fetcherPersist === true,
+    v3_relativeSplatPath: appConfig.future?.v3_relativeSplatPath === true,
+    v3_throwAbortReason: appConfig.future?.v3_throwAbortReason === true,
+    unstable_singleFetch: appConfig.future?.unstable_singleFetch === true,
+  };
 
   if (appConfig.future) {
     let userFlags = appConfig.future;

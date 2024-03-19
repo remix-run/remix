@@ -6,9 +6,9 @@ title: action
 
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Data Mutations with Form + action</a> and <a href="https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Multiple Forms and Single Button Mutations</a></docs-success>
 
-A route `action` is a server only function to handle data mutations and other actions. If a non-`GET` request is made to your route (`POST`, `PUT`, `PATCH`, `DELETE`) then the action is called before the loaders.
+A route `action` is a server only function to handle data mutations and other actions. If a non-`GET` request is made to your route (`DELETE`, `PATCH`, `POST`, or `PUT`) then the action is called before the [`loader`][loader]s.
 
-Actions have the same API as loaders, the only difference is when they are called. This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
+`action`s have the same API as `loader`s, the only difference is when they are called. This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
 import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
@@ -61,10 +61,11 @@ Also note that forms without an action prop (`<Form method="post">`) will automa
 
 See also:
 
-- [`<Form>`][form_component]
-- [`<Form action>`][form_component_action]
-- [`?index` query param][index_query_param]
+- [`<Form>`][form-component]
+- [`<Form action>`][form-component-action]
+- [`?index` query param][index-query-param]
 
-[form_component]: ../components/form
-[form_component_action]: ../components/form#action
-[index_query_param]: ../guides/index-query-param
+[loader]: ./loader
+[form-component]: ../components/form
+[form-component-action]: ../components/form#action
+[index-query-param]: ../guides/index-query-param

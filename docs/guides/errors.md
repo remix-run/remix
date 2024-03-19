@@ -17,7 +17,7 @@ Remix will automatically catch errors and render the nearest error boundary for 
 
 ## Root Error Boundary
 
-If you used one of the starter templates you should already have an [`ErrorBoundary`][error-boundary] in your `app/root.tsx` file. You’ll want to edit that right away because that’s what your users will see whenever an uncaught error is thrown.
+By default, Remix ships with a default `ErrorBoundary` built-in, but we hope you'll want to add a little branding to your own global error boundary. You can do so by exporting your own [`ErrorBoundary`][error-boundary] from `app/root.tsx`. This is what your users will see whenever an uncaught error is thrown.
 
 ```tsx
 export function ErrorBoundary() {
@@ -56,7 +56,7 @@ app/
 └── root.tsx
 ```
 
-If `app/routes/sales.invoices.$invoiceId.tsx` exports an `ErrorBoundary` and an error is thrown in its component, `action`, or `loader`, the rest of the app renders normally and only the invoice section of the page renders the error.
+If `app/routes/sales.invoices.$invoiceId.tsx` exports an [`ErrorBoundary`][error-boundary] and an error is thrown in its component, [`action`][action], or [`loader`][loader], the rest of the app renders normally and only the invoice section of the page renders the error.
 
 ![error in a nested route where the parent route's navigation renders normally][error-in-a-nested-route-where-the-parent-route-s-navigation-renders-normally]
 
@@ -64,7 +64,7 @@ If a route doesn't have an error boundary, the error "bubbles up" to the closest
 
 ## Error Sanitization
 
-In production mode, any errors that happen on the server are automatically sanitized to prevent leaking any sensitive server information (such as stack traces) to the client. This means that the `Error` instance you receive from `useRouteError` will have a generic message and no stack trace:
+In production mode, any errors that happen on the server are automatically sanitized to prevent leaking any sensitive server information (such as stack traces) to the client. This means that the `Error` instance you receive from [`useRouteError`][use-route-error] will have a generic message and no stack trace:
 
 ```tsx
 export async function loader() {
@@ -110,6 +110,9 @@ export function ErrorBoundary() {
 [meta-component]: ../components/meta
 [scripts-component]: ../components/scripts
 [error-in-a-nested-route-where-the-parent-route-s-navigation-renders-normally]: /docs-images/error-boundary.png
+[action]: ../route/action
+[loader]: ../route/loader
+[use-route-error]: ../hooks/use-route-error
 [bugsnag]: https://www.bugsnag.com/
 [sentry]: https://sentry.io/
 [handle-error]: ../file-conventions/entry.server#handleerror

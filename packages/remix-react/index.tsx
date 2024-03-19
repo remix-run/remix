@@ -1,5 +1,3 @@
-export type { RemixBrowserProps } from "./browser";
-export { RemixBrowser } from "./browser";
 export type {
   ErrorResponse,
   Fetcher,
@@ -16,18 +14,26 @@ export type {
   ShouldRevalidateFunctionArgs,
   SubmitFunction,
   SubmitOptions,
-  unstable_Blocker,
-  unstable_BlockerFunction,
+  Blocker,
+  BlockerFunction,
 } from "react-router-dom";
 export {
   createPath,
+  createRoutesFromChildren,
+  createRoutesFromElements,
+  createSearchParams,
   generatePath,
   matchPath,
   matchRoutes,
   parsePath,
+  renderMatches,
   resolvePath,
   Form,
+  Navigate,
+  NavigationType,
   Outlet,
+  Route,
+  Routes,
   useAsyncError,
   useAsyncValue,
   isRouteErrorResponse,
@@ -35,6 +41,8 @@ export {
   useFetchers,
   useFormAction,
   useHref,
+  useInRouterContext,
+  useLinkClickHandler,
   useLocation,
   useMatch,
   useNavigate,
@@ -46,12 +54,23 @@ export {
   useResolvedPath,
   useRevalidator,
   useRouteError,
+  useRoutes,
   useSearchParams,
   useSubmit,
-  unstable_useBlocker,
+  useBlocker,
   unstable_usePrompt,
+  unstable_useViewTransitionState,
 } from "react-router-dom";
+export {
+  // For use in clientLoader/clientAction
+  defer,
+  json,
+  redirect,
+  redirectDocument,
+} from "@remix-run/server-runtime";
 
+export type { RemixBrowserProps } from "./browser";
+export { RemixBrowser } from "./browser";
 export type {
   AwaitProps,
   RemixNavLinkProps as NavLinkProps,
@@ -77,6 +96,10 @@ export {
 
 export type { HtmlLinkDescriptor } from "./links";
 export type {
+  ClientActionFunction,
+  ClientActionFunctionArgs,
+  ClientLoaderFunction,
+  ClientLoaderFunctionArgs,
   MetaArgs,
   MetaDescriptor,
   MetaFunction,

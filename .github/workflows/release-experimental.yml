@@ -16,7 +16,7 @@
 # - Make whatever changes you need and commit them:
 #   - `git add . && git commit "experimental changes!"`
 # - Update version numbers and create a release tag:
-#   - `yarn run version:experimental`
+#   - `pnpm run version:experimental`
 # - Push to GitHub:
 #   - `git push origin --follow-tags`
 # - Create a new release for the tag on GitHub to trigger the CI workflow that
@@ -46,17 +46,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3.0.0
+
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          cache: "yarn"
+          cache: "pnpm"
 
       - name: 📥 Install deps
-        run: yarn --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 🏗 Build
-        run: yarn build
+        run: pnpm build
 
       - name: 🔐 Setup npm auth
         run: |
@@ -64,4 +67,4 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: 🚀 Publish
-        run: npm run publish
+        run: pnpm run publish

@@ -259,10 +259,7 @@ app.all(
   "*",
   process.env.NODE_ENV === "development"
     ? createDevRequestHandler(initialBuild)
-    : createRequestHandler({
-        build: initialBuild,
-        mode: initialBuild.mode,
-      })
+    : createRequestHandler({ build: initialBuild })
 );
 ```
 

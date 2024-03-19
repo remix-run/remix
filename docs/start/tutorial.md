@@ -18,7 +18,7 @@ The rest is just there for your information and deeper understanding. Let's get 
 👉 **Generate a basic template**
 
 ```shellscript nonumber
-npx create-remix@latest --template ryanflorence/remix-tutorial-template
+npx create-remix@latest --template remix-run/remix/templates/remix-tutorial
 ```
 
 This uses a pretty bare-bones template but includes our css and data model, so we can focus on Remix. The [Quick Start][quickstart] can familiarize you with the basic setup of a Remix project if you'd like to learn more.
@@ -36,7 +36,7 @@ npm install
 npm run dev
 ```
 
-You should be able to open up \[http\://localhost:3000]\[http-localhost-3000] and see an unstyled screen that looks like this:
+You should be able to open up [http://localhost:3000][http-localhost-3000] and see an unstyled screen that looks like this:
 
 <img class="tutorial" src="/docs-images/contacts/03.webp" />
 
@@ -58,7 +58,7 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 
-export default function Root() {
+export default function App() {
   return (
     <html lang="en">
       <head>
@@ -282,12 +282,12 @@ import {
 
 // existing imports & code
 
-export default function Root() {
+export default function App() {
   return (
     <html lang="en">
       {/* other elements */}
       <body>
-        {/* other elements */}
+        <div id="sidebar">{/* other elements */}</div>
         <div id="detail">
           <Outlet />
         </div>
@@ -325,7 +325,7 @@ import {
 
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   return (
     <html lang="en">
       {/* other elements */}
@@ -367,6 +367,8 @@ There are two APIs we'll be using to load data, [`loader`][loader] and [`useLoad
 
 👉 **Export a `loader` function from `app/root.tsx` and render the data**
 
+<docs-info>The following code has a type error in it, we'll fix it in the next section</docs-info>
+
 ```tsx filename=app/root.tsx lines=[2,12,16,20-23,26,35-58]
 // existing imports
 import { json } from "@remix-run/node";
@@ -392,7 +394,7 @@ export const loader = async () => {
   return json({ contacts });
 };
 
-export default function Root() {
+export default function App() {
   const { contacts } = useLoaderData();
 
   return (
@@ -446,7 +448,7 @@ You may have noticed TypeScript complaining about the `contact` type inside the 
 ```tsx filename=app/root.tsx lines=[4]
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts } = useLoaderData<typeof loader>();
 
   // existing code
@@ -468,6 +470,8 @@ These [`params`][params] are passed to the loader with keys that match the dynam
 These params are most often used to find a record by ID. Let's try it out.
 
 👉 **Add a `loader` function to the contact page and access data with `useLoaderData`**
+
+<docs-info>The following code has type errors in it, we'll fix them in the next section</docs-info>
 
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[1-2,5,7-10,13]
 import { json } from "@remix-run/node";
@@ -602,13 +606,13 @@ Just like creating data, you update data with [`<Form>`][form-component]. Let's 
 touch app/routes/contacts.\$contactId_.edit.tsx
 ```
 
-Note the weird `_` in `$contactId_`. By default, routes will automatically nest inside routes with the same prefixed name. Adding a trialing `_` tells the route to **not** nest inside `app/routes/contacts.$contactId.tsx`. Read more in the [Route File Naming][routes-file-conventions] guide.
+Note the weird `_` in `$contactId_`. By default, routes will automatically nest inside routes with the same prefixed name. Adding a trailing `_` tells the route to **not** nest inside `app/routes/contacts.$contactId.tsx`. Read more in the [Route File Naming][routes-file-conventions] guide.
 
 👉 **Add the edit page UI**
 
 Nothing we haven't seen before, feel free to copy/paste:
 
-```tsx filename=app/routes/contacts.$contactId.edit.tsx
+```tsx filename=app/routes/contacts.$contactId_.edit.tsx
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
@@ -631,7 +635,7 @@ export default function EditContact() {
   const { contact } = useLoaderData<typeof loader>();
 
   return (
-    <Form id="contact-form" method="post">
+    <Form key={contact.id} id="contact-form" method="post">
       <p>
         <span>Name</span>
         <input
@@ -745,7 +749,7 @@ Without JavaScript, when a form is submitted, the browser will create [`FormData
 
 Each field in the `form` is accessible with `formData.get(name)`. For example, given the input field from above, you could access the first and last names like this:
 
-```tsx lines=[3,4] nocopy
+```tsx filename=app/routes/contacts.$contactId_.edit.tsx lines=[6,7] nocopy
 export const action = async ({
   params,
   request,
@@ -759,7 +763,7 @@ export const action = async ({
 
 Since we have a handful of form fields, we used [`Object.fromEntries`][object-from-entries] to collect them all into an object, which is exactly what our `updateContact` function wants.
 
-```tsx nocopy
+```tsx filename=app/routes/contacts.$contactId_.edit.tsx nocopy
 const updates = Object.fromEntries(formData);
 updates.first; // "Some"
 updates.last; // "Name"
@@ -833,7 +837,7 @@ import {
 
 // existing imports and exports
 
-export default function Root() {
+export default function App() {
   const { contacts } = useLoaderData<typeof loader>();
 
   return (
@@ -898,7 +902,7 @@ import {
 
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
 
@@ -932,7 +936,7 @@ In our case, we add a `"loading"` class to the main part of the app if we're not
 
 If we review code in the contact route, we can find the delete button looks like this:
 
-```tsx filename=src/routes/contact.$contactId.tsx lines=[2]
+```tsx filename=app/routes/contact.$contactId.tsx lines=[2]
 <Form
   action="destroy"
   method="post"
@@ -1004,7 +1008,7 @@ When a route has children, and you're at the parent route's path, the `<Outlet>`
 
 👉 **Create an index route for the root route**
 
-```
+```shellscript nonumber
 touch app/routes/_index.tsx
 ```
 
@@ -1053,7 +1057,7 @@ export default function EditContact() {
   const navigate = useNavigate();
 
   return (
-    <Form id="contact-form" method="post">
+    <Form key={contact.id} id="contact-form" method="post">
       {/* existing elements */}
       <p>
         <button type="submit">Save</button>
@@ -1145,7 +1149,7 @@ export const loader = async ({
   return json({ contacts, q });
 };
 
-export default function Root() {
+export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
 
@@ -1190,7 +1194,7 @@ import { useEffect } from "react";
 
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
 
@@ -1219,7 +1223,7 @@ import { useEffect, useState } from "react";
 
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   // the query now needs to be kept in state
@@ -1292,7 +1296,7 @@ import {
 } from "@remix-run/react";
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const submit = useSubmit();
@@ -1343,7 +1347,7 @@ For a better user experience, let's add some immediate UI feedback for the searc
 ```tsx filename=app/root.tsx lines=[7-11]
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const submit = useSubmit();
@@ -1364,7 +1368,7 @@ When nothing is happening, `navigation.location` will be `undefined`, but when t
 ```tsx filename=app/root.tsx lines=[22,31]
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   // existing code
 
   return (
@@ -1412,7 +1416,7 @@ Bonus points, avoid fading out the main screen when searching:
 ```tsx filename=app/root.tsx lines=[13]
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   // existing code
 
   return (
@@ -1454,7 +1458,7 @@ We can avoid this by _replacing_ the current entry in the history stack with the
 ```tsx filename=app/root.tsx lines=[16-19]
 // existing imports & exports
 
-export default function Root() {
+export default function App() {
   // existing code
 
   return (

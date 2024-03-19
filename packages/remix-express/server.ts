@@ -37,7 +37,7 @@ export function createRequestHandler({
   getLoadContext,
   mode = process.env.NODE_ENV,
 }: {
-  build: ServerBuild;
+  build: ServerBuild | (() => Promise<ServerBuild>);
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): RequestHandler {
@@ -87,7 +87,15 @@ export function createRemixRequest(
   req: express.Request,
   res: express.Response
 ): Request {
-  let url = new URL(`${req.protocol}://${req.get("host")}${req.url}`);
+  // req.hostname doesn't include port information so grab that from
+  // `X-Forwarded-Host` or `Host`
+  let [, hostnamePort] = req.get("X-Forwarded-Host")?.split(":") ?? [];
+  let [, hostPort] = req.get("host")?.split(":") ?? [];
+  let port = hostnamePort || hostPort;
+  // Use req.hostname here as it respects the "trust proxy" setting
+  let resolvedHost = `${req.hostname}${port ? `:${port}` : ""}`;
+  // Use `req.originalUrl` so Remix is aware of the full path
+  let url = new URL(`${req.protocol}://${resolvedHost}${req.originalUrl}`);
 
   // Abort action/loaders once we can no longer write a response
   let controller = new AbortController();
@@ -116,6 +124,10 @@ export async function sendRemixResponse(
 
   for (let [key, value] of nodeResponse.headers.entries()) {
     res.append(key, value);
+  }
+
+  if (nodeResponse.headers.get("Content-Type")?.match(/text\/event-stream/i)) {
+    res.flushHeaders();
   }
 
   if (nodeResponse.body) {

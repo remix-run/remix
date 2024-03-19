@@ -42,7 +42,7 @@ async function run(args) {
     if (answer === false) return 0;
   }
 
-  await incrementRemixVersion(nextVersion);
+  await incrementRemixVersion(nextVersion, givenVersion === "experimental");
 }
 
 /**

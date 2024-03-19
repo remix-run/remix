@@ -1,5 +1,120 @@
 # `@remix-run/serve`
 
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.8.1`
+  - `@remix-run/node@2.8.1`
+
+## 2.8.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.8.0`
+  - `@remix-run/node@2.8.0`
+
+## 2.7.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.7.2`
+  - `@remix-run/node@2.7.2`
+
+## 2.7.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.7.1`
+  - `@remix-run/node@2.7.1`
+
+## 2.7.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.7.0`
+  - `@remix-run/node@2.7.0`
+
+## 2.6.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.6.0`
+  - `@remix-run/express@2.6.0`
+
+## 2.5.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.5.1`
+  - `@remix-run/node@2.5.1`
+
+## 2.5.0
+
+### Patch Changes
+
+- Don't try to load sourcemaps if they don't exist on disk ([#8446](https://github.com/remix-run/remix/pull/8446))
+- Updated dependencies:
+  - `@remix-run/node@2.5.0`
+  - `@remix-run/express@2.5.0`
+
+## 2.4.1
+
+### Patch Changes
+
+- Use node `fileURLToPath` to convert source map URL to path ([#8321](https://github.com/remix-run/remix/pull/8321))
+- Updated dependencies:
+  - `@remix-run/node@2.4.1`
+  - `@remix-run/express@2.4.1`
+
+## 2.4.0
+
+### Patch Changes
+
+- Fix source map loading when file has `?t=timestamp` suffix (rebuilds) ([#8174](https://github.com/remix-run/remix/pull/8174))
+- Updated dependencies:
+  - `@remix-run/node@2.4.0`
+  - `@remix-run/express@2.4.0`
+
+## 2.3.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.3.1`
+  - `@remix-run/node@2.3.1`
+
+## 2.3.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.3.0`
+  - `@remix-run/node@2.3.0`
+
+## 2.2.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.2.0`
+  - `@remix-run/node@2.2.0`
+
+## 2.1.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.1.0`
+  - `@remix-run/node@2.1.0`
+
 ## 2.0.1
 
 ### Patch Changes

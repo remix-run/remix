@@ -233,7 +233,7 @@ function Sidebar() {
 }
 ```
 
-By initializing the state within an effect, there's potential for a mismatch between the server-rendered state and the state stored in local storage. This discrepancy wll lead to brief UI flickering shortly after the page renders and should be avoided.
+By initializing the state within an effect, there's potential for a mismatch between the server-rendered state and the state stored in local storage. This discrepancy will lead to brief UI flickering shortly after the page renders and should be avoided.
 
 #### Cookies
 
@@ -264,24 +264,28 @@ Next we set up the server action and loader to read and write the cookie:
 
 ```tsx
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import { prefs } from "./prefs-cookie";
 
 // read the state from the cookie
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const cookieHeader = request.headers.get("Cookie");
-  const cookie = await prefs.parse(cookieHeader);
+  const cookie = (await prefs.parse(cookieHeader)) || {};
   return json({ sidebarIsOpen: cookie.sidebarIsOpen });
 }
 
 // write the state to the cookie
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const cookieHeader = request.headers.get("Cookie");
-  const cookie = await prefs.parse(cookieHeader);
+  const cookie = (await prefs.parse(cookieHeader)) || {};
   const formData = await request.formData();
 
   const isOpen = formData.get("sidebar") === "open";
@@ -450,15 +454,17 @@ export async function signupHandler(request: Request) {
 
 Now, let's contrast this with a Remix-based implementation. The action remains consistent, but the component is vastly simplified due to the direct utilization of server state via [`useActionData`][use_action_data], and leveraging the network state that Remix inherently manages.
 
-```tsx filename=app/routes/signup.tsx good lines=[21-23]
-import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/signup.tsx good lines=[23-25]
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
   useActionData,
   useNavigation,
 } from "@remix-run/react";
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const errors = await validateSignupRequest(request);
   if (errors) {
     return json({ ok: false, errors: errors });

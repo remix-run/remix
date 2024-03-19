@@ -1,5 +1,9 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactElement } from "react";
 import type {
+  ActionFunction as RRActionFunction,
+  ActionFunctionArgs as RRActionFunctionArgs,
+  LoaderFunction as RRLoaderFunction,
+  LoaderFunctionArgs as RRLoaderFunctionArgs,
   DataRouteMatch,
   Params,
   Location,
@@ -12,11 +16,15 @@ import type { LinkDescriptor } from "./links";
 import type { EntryRoute } from "./routes";
 
 export interface RouteModules {
-  [routeId: string]: RouteModule;
+  [routeId: string]: RouteModule | undefined;
 }
 
 export interface RouteModule {
+  clientAction?: ClientActionFunction;
+  clientLoader?: ClientLoaderFunction;
   ErrorBoundary?: ErrorBoundaryComponent;
+  HydrateFallback?: HydrateFallbackComponent;
+  Layout?: LayoutComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
@@ -25,11 +33,57 @@ export interface RouteModule {
 }
 
 /**
- * V2 version of the ErrorBoundary that eliminates the distinction between
- * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
- * errors with useRouteError()
+ * A function that handles data mutations for a route on the client
+ */
+export type ClientActionFunction = (
+  args: ClientActionFunctionArgs
+) => ReturnType<RRActionFunction>;
+
+/**
+ * Arguments passed to a route `clientAction` function
+ */
+export type ClientActionFunctionArgs = RRActionFunctionArgs<undefined> & {
+  serverAction: <T = AppData>() => Promise<SerializeFrom<T>>;
+};
+
+/**
+ * A function that loads data for a route on the client
+ */
+export type ClientLoaderFunction = ((
+  args: ClientLoaderFunctionArgs
+) => ReturnType<RRLoaderFunction>) & {
+  hydrate?: boolean;
+};
+
+/**
+ * Arguments passed to a route `clientLoader` function
+ */
+export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
+  serverLoader: <T = AppData>() => Promise<SerializeFrom<T>>;
+};
+
+/**
+ * ErrorBoundary to display for this route
  */
 export type ErrorBoundaryComponent = ComponentType;
+
+/**
+ * `<Route HydrateFallback>` component to render on initial loads
+ * when client loaders are present
+ */
+export type HydrateFallbackComponent = ComponentType;
+
+/**
+ * Optional, root-only `<Route Layout>` component to wrap the root content in.
+ * Useful for defining the <html>/<head>/<body> document shell shared by the
+ * Component, HydrateFallback, and ErrorBoundary
+ */
+export type LayoutComponent = ComponentType<{
+  children: ReactElement<
+    unknown,
+    ErrorBoundaryComponent | HydrateFallbackComponent | RouteComponent
+  >;
+}>;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of
@@ -128,7 +182,7 @@ export async function loadRouteModule(
   routeModulesCache: RouteModules
 ): Promise<RouteModule> {
   if (route.id in routeModulesCache) {
-    return routeModulesCache[route.id];
+    return routeModulesCache[route.id] as RouteModule;
   }
 
   try {
@@ -140,6 +194,18 @@ export async function loadRouteModule(
     // asset we're trying to import! Reload from the server and the user
     // (should) get the new manifest--unless the developer purged the static
     // assets, the manifest path, but not the documents 😬
+    if (
+      window.__remixContext.isSpaMode &&
+      // @ts-expect-error
+      typeof import.meta.hot !== "undefined"
+    ) {
+      // In SPA Mode (which implies vite) we don't want to perform a hard reload
+      // on dev-time errors since it's a vite compilation error and a reload is
+      // just going to fail with the same issue.  Let the UI bubble to the error
+      // boundary and let them see the error in the overlay or the dev server log
+      console.error(`Error loading route module \`${route.module}\`:`, error);
+      throw error;
+    }
     window.location.reload();
     return new Promise(() => {
       // check out of this hook cause the DJs never gonna re[s]olve this

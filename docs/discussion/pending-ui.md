@@ -107,12 +107,14 @@ While localized indicators on links are nice, they are incomplete. There are man
 
 **Busy Indicator**: It's typically best to wait for a record to be created instead of using optimistic UI since things like IDs and other fields are unknown until it completes. Also note this action redirects to the new record from the action.
 
-```tsx filename=app/routes/create-project.tsx lines=[2,11,19-20,24,33]
-import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/create-project.tsx lines=[2,13,21-22,26,35]
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useNavigation } from "@remix-run/react";
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const formData = await request.formData();
   const project = await createRecord({
     name: formData.get("name"),
@@ -202,13 +204,15 @@ function ProjectListItem({ project }) {
 
 **Skeleton Fallback**: When data is deferred, you can add fallbacks with [`<Suspense>`][suspense_component]. This allows the UI to render without waiting for the data to load, speeding up the perceived and actual performance of the application.
 
-```tsx lines=[9-12,21-25]
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[11-14,23-27]
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { defer } from "@remix-run/node"; // or cloudflare/deno
 import { Await } from "@remix-run/react";
 import { Suspense } from "react";
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const reviewsPromise = getReviews(params.productId);
   const product = await getProduct(params.productId);
   return defer({

@@ -19,9 +19,9 @@ Consider this route module from the last section:
 
 ```tsx filename=routes/settings.tsx
 import type {
-  ActionArgs,
+  ActionFunctionArgs,
   HeadersFunction,
-  LoaderArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
@@ -32,7 +32,9 @@ export const headers: HeadersFunction = () => ({
   "Cache-Control": "max-age=300, s-maxage=3600",
 });
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const user = await getUser(request);
   return json({
     displayName: user.displayName,
@@ -57,7 +59,10 @@ export default function Component() {
   );
 }
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
+  const formData = await request.formData();
   const user = await getUser(request);
 
   await updateUser(user.id, {
@@ -94,13 +99,13 @@ export default function Component() {
 
 ## Forcing Code Out of the Browser or Server Builds
 
-You can force code out of either the client or the server with the [`*.client.tsx`][file_convention_client] and [`*.server.tsx`][file_convention_server] conventions.
+You can force code out of either the client or the server with the [`*.client.ts`][file_convention_client] and [`*.server.ts`][file_convention_server] conventions.
 
-While rare, sometimes server code makes it to client bundles because of how the compiler determines the dependencies of a route module, or because you accidentally try to use it in code that needs to ship to the client. You can force it out by adding `*.server.tsx` on the end of the file name.
+While rare, sometimes server code makes it to client bundles because of how the compiler determines the dependencies of a route module, or because you accidentally try to use it in code that needs to ship to the client. You can force it out by adding `*.server.ts` on the end of the file name.
 
 For example, we could name a module `app/user.server.ts` instead of `app/user.ts` to ensure that the code in that module is never bundled into the client — even if you try to use it in the component.
 
-Additionally, you may depend on client libraries that are unsafe to even bundle on the server — maybe it tries to access [`window`][window_global] by simply being imported. You can likewise remove these modules from the server build by appending `*.client.tsx` to the file name.
+Additionally, you may depend on client libraries that are unsafe to even bundle on the server — maybe it tries to access [`window`][window_global] by simply being imported. You can likewise remove these modules from the server build by appending `*.client.ts` to the file name.
 
 [action]: ../route/action
 [headers]: ../route/headers

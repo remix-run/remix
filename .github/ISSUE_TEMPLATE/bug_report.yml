@@ -8,33 +8,48 @@ body:
       value: |
         Thank you for helping to improve Remix!
 
-        ## The best bug report is a failing test!
+        ## Option 1: Submit a PR with a failing test
 
-        The fastest way to get a bug fixed is to add a failing test and send a pull request. **It's usually easy to do with our bug report test template**.
+        🏆 The most helpful reproduction is to use our _bug report integration test_ template:
 
-        1. Click the "Fork" button
-        2. Open up the file [`integration/bug-report-test.ts`](https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts) on your machine
-        3. Follow the instructions!
+        1. [Fork `remix-run/remix`](https://github.com/remix-run/remix/fork)
+        2. Open [`integration/bug-report-test.ts`](https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts) in your editor
+        3. Follow the instructions and submit a pull request with a failing bug report test!
 
-        ## I'd rather just report the bug
+        ## Option 2: Continue filling out this form
 
-        That's fine too! Go ahead and fill out this form.
+        If you'd rather open a GitHub issue, here are other ways to share a reproduction (ordered from most helpful to least):
 
-  - type: input
+        - 🥇 Link to a [StackBlitz](https://remix.new) environment
+        - 🥈 Link to a GitHub repository
+        - 🥉 Description of project including template, `remix.config.js`, `package.json` scripts, etc.
+
+  - type: textarea
+    id: reproduction
     attributes:
-      label: What version of Remix are you using?
+      label: Reproduction
+      description: Link to reproduction and steps to reproduce the behavior
+      placeholder: Go to https://stackblitz.com/edit/... and click the "Submit" button
     validations:
       required: true
-  - type: checkboxes
-    attributes:
-      label: Are all your remix dependencies & dev-dependencies using the same version?
-      options:
-        - label: "Yes"
-          required: true
   - type: textarea
+    id: system-info
     attributes:
-      label: Steps to Reproduce
-      description: Steps to reproduce the behavior.
+      label: System Info
+      description: Output of `npx envinfo --system --npmPackages '{vite,@remix-run/*}' --binaries --browsers`
+      render: shell
+      placeholder: System, Binaries, Browsers
+    validations:
+      required: true
+  - type: dropdown
+    id: package-manager
+    attributes:
+      label: Used Package Manager
+      description: Select the used package manager
+      options:
+        - npm
+        - yarn
+        - pnpm
     validations:
       required: true
   - type: textarea

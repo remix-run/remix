@@ -426,6 +426,25 @@ describe("create-remix CLI", () => {
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
 
+  it("works for a path to a tgz tarball on disk", async () => {
+    let projectDir = getProjectDir("local-tarball");
+
+    let { status, stderr } = await execCreateRemix({
+      args: [
+        projectDir,
+        "--template",
+        path.join(__dirname, "fixtures", "arc.tgz"),
+        "--no-git-init",
+        "--no-install",
+      ],
+    });
+
+    expect(stderr.trim()).toBeFalsy();
+    expect(status).toBe(0);
+    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+  });
+
   it("works for a file URL to a tarball on disk", async () => {
     let projectDir = getProjectDir("file-url-tarball");
 
@@ -947,6 +966,32 @@ describe("create-remix CLI", () => {
       fse.removeSync(path.join(templateWithIgnoredDirs, ".git"));
       fse.removeSync(path.join(templateWithIgnoredDirs, "node_modules"));
     }
+  });
+
+  it("changes star dependencies for only Remix packages", async () => {
+    let projectDir = getProjectDir("local-directory");
+
+    let { status } = await execCreateRemix({
+      args: [
+        projectDir,
+        "--template",
+        path.join(__dirname, "fixtures", "stack"),
+        "--no-git-init",
+        "--no-install",
+      ],
+    });
+
+    expect(status).toBe(0);
+
+    let packageJsonPath = path.join(projectDir, "package.json");
+    let packageJson = JSON.parse(String(fse.readFileSync(packageJsonPath)));
+    let dependencies = packageJson.dependencies;
+
+    expect(dependencies).toMatchObject({
+      "@remix-run/react": expect.any(String),
+      remix: expect.any(String),
+      "not-remix": "*",
+    });
   });
 
   describe("when project directory contains files", () => {

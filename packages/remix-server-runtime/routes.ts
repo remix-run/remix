@@ -27,8 +27,11 @@ export interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
+  hasClientAction: boolean;
+  hasClientLoader: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
+  css?: string[];
   module: string;
   parentId?: string;
 }
@@ -96,6 +99,7 @@ export function createStaticHandlerDataRoutes(
               loadContext: args.context,
               loader: route.module.loader!,
               routeId: route.id,
+              singleFetch: future.unstable_singleFetch === true,
             })
         : undefined,
       action: route.module.action
@@ -106,6 +110,7 @@ export function createStaticHandlerDataRoutes(
               loadContext: args.context,
               action: route.module.action!,
               routeId: route.id,
+              singleFetch: future.unstable_singleFetch === true,
             })
         : undefined,
       handle: route.module.handle,

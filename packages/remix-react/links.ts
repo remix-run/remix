@@ -4,6 +4,7 @@ import { parsePath } from "react-router-dom";
 
 import type { AssetsManifest } from "./entry";
 import type { RouteModules, RouteModule } from "./routeModules";
+import type { EntryRoute } from "./routes";
 import { loadRouteModule } from "./routeModules";
 
 type Primitive = null | undefined | string | number | boolean | symbol | bigint;
@@ -211,22 +212,31 @@ export function getKeyedLinksForMatches(
   manifest: AssetsManifest
 ): KeyedLinkDescriptor[] {
   let descriptors = matches
-    .map((match): LinkDescriptor[] => {
+    .map((match): LinkDescriptor[][] => {
       let module = routeModules[match.route.id];
-      return module.links?.() || [];
+      let route = manifest.routes[match.route.id];
+      return [
+        route.css ? route.css.map((href) => ({ rel: "stylesheet", href })) : [],
+        module?.links?.() || [],
+      ];
     })
-    .flat(1);
+    .flat(2);
 
   let preloads = getCurrentPageModulePreloadHrefs(matches, manifest);
   return dedupeLinkDescriptors(descriptors, preloads);
 }
 
 export async function prefetchStyleLinks(
+  route: EntryRoute,
   routeModule: RouteModule
 ): Promise<void> {
-  if (!routeModule.links || !isPreloadSupported()) return;
-  let descriptors = routeModule.links();
-  if (!descriptors) return;
+  if ((!route.css && !routeModule.links) || !isPreloadSupported()) return;
+
+  let descriptors = [
+    route.css?.map((href) => ({ rel: "stylesheet", href })) ?? [],
+    routeModule.links?.() ?? [],
+  ].flat(1);
+  if (descriptors.length === 0) return;
 
   let styleLinks: HtmlLinkDescriptor[] = [];
   for (let descriptor of descriptors) {

@@ -35,7 +35,12 @@ describe("readConfig", () => {
         "entryClientFilePath": Any<String>,
         "entryServerFile": "entry.server.tsx",
         "entryServerFilePath": Any<String>,
-        "future": {},
+        "future": {
+          "unstable_singleFetch": false,
+          "v3_fetcherPersist": false,
+          "v3_relativeSplatPath": false,
+          "v3_throwAbortReason": false,
+        },
         "mdx": undefined,
         "postcss": true,
         "publicPath": "/build/",

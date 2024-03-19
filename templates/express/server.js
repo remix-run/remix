@@ -9,14 +9,34 @@ import express from "express";
 import morgan from "morgan";
 import sourceMapSupport from "source-map-support";
 
-sourceMapSupport.install();
+sourceMapSupport.install({
+  retrieveSourceMap: function (source) {
+    const match = source.startsWith("file://");
+    if (match) {
+      const filePath = url.fileURLToPath(source);
+      const sourceMapPath = `${filePath}.map`;
+      if (fs.existsSync(sourceMapPath)) {
+        return {
+          url: source,
+          map: fs.readFileSync(sourceMapPath, "utf8"),
+        };
+      }
+    }
+    return null;
+  },
+});
 installGlobals();
 
 /** @typedef {import('@remix-run/node').ServerBuild} ServerBuild */
 
 const BUILD_PATH = path.resolve("build/index.js");
 const VERSION_PATH = path.resolve("build/version.txt");
+
 const initialBuild = await reimportServer();
+const remixHandler =
+  process.env.NODE_ENV === "development"
+    ? await createDevRequestHandler(initialBuild)
+    : createRequestHandler({ build: initialBuild });
 
 const app = express();
 
@@ -37,22 +57,11 @@ app.use(express.static("public", { maxAge: "1h" }));
 
 app.use(morgan("tiny"));
 
-app.all("*", async (...args) => {
-  if (process.env.NODE_ENV === "development") {
-    const handler = await createDevRequestHandler(initialBuild);
-    return handler(...args);
-  }
-
-  const handler = createRequestHandler({
-    build: initialBuild,
-    mode: initialBuild.mode,
-  });
-  return handler(...args);
-});
+app.all("*", remixHandler);
 
 const port = process.env.PORT || 3000;
 app.listen(port, async () => {
-  console.log(`Express server listening on port ${port}`);
+  console.log(`Express server listening at http://localhost:${port}`);
 
   if (process.env.NODE_ENV === "development") {
     broadcastDevReady(initialBuild);
@@ -74,7 +83,7 @@ async function reimportServer() {
 
 /**
  * @param {ServerBuild} initialBuild
- * @returns {import('@remix-run/express').RequestHandler}
+ * @returns {Promise<import('@remix-run/express').RequestHandler>}
  */
 async function createDevRequestHandler(initialBuild) {
   let build = initialBuild;

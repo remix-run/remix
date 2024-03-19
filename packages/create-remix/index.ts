@@ -32,7 +32,6 @@ import {
 } from "./utils";
 import { renderLoadingIndicator } from "./loading-indicator";
 import { copyTemplate, CopyTemplateError } from "./copy-template";
-import { getLatestRemixVersion } from "./remix-version";
 
 async function createRemix(argv: string[]) {
   let ctx = await getContext(argv);
@@ -121,7 +120,6 @@ async function getContext(argv: string[]): Promise<Context> {
   } = flags;
 
   let cwd = flags["_"][0] as string;
-  let latestRemixVersion = await getLatestRemixVersion();
   let interactive = isInteractive();
   let projectName = cwd;
 
@@ -137,7 +135,7 @@ async function getContext(argv: string[]): Promise<Context> {
     } else {
       log(
         `\n${color.warning(
-          `${selectedRemixVersion} is an invalid version specifier. Using Remix v${latestRemixVersion}.`
+          `${selectedRemixVersion} is an invalid version specifier. Using Remix v${thisRemixVersion}.`
         )}`
       );
       selectedRemixVersion = undefined;
@@ -168,7 +166,7 @@ async function getContext(argv: string[]): Promise<Context> {
     ),
     projectName,
     prompt,
-    remixVersion: selectedRemixVersion || latestRemixVersion,
+    remixVersion: selectedRemixVersion || thisRemixVersion,
     template,
     token,
     versionRequested,
@@ -203,7 +201,7 @@ interface Context {
 
 async function introStep(ctx: Context) {
   log(
-    `\n${color.bgWhite(` ${color.whiteBright("remix")} `)}  ${color.green(
+    `\n${color.bgWhite(` ${color.black("remix")} `)}  ${color.green(
       color.bold(`v${ctx.remixVersion}`)
     )} ${color.bold("💿 Let's build a better website...")}`
   );
@@ -265,7 +263,7 @@ async function copyTemplateToTempDirStep(ctx: Context) {
   } else {
     log("");
     info("Using basic template", [
-      "See https://remix.run/docs/guides/templates for more",
+      "See https://remix.run/guides/templates for more",
     ]);
   }
 
@@ -722,7 +720,10 @@ async function updatePackageJSON(ctx: Context) {
 
     for (let dependency in dependencies) {
       let version = dependencies[dependency];
-      if (version === "*") {
+      if (
+        (dependency.startsWith("@remix-run/") || dependency === "remix") &&
+        version === "*"
+      ) {
         dependencies[dependency] = semver.prerelease(ctx.remixVersion)
           ? // Templates created from prereleases should pin to a specific version
             ctx.remixVersion
@@ -756,7 +757,7 @@ async function loadingIndicator(args: {
 }
 
 function title(text: string) {
-  return align(color.bgWhite(` ${color.whiteBright(text)} `), "end", 7) + " ";
+  return align(color.bgWhite(` ${color.black(text)} `), "end", 7) + " ";
 }
 
 function printHelp(ctx: Context) {

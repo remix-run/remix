@@ -16,7 +16,11 @@ You can export an optional `handleDataRequest` function that will allow you to m
 ```tsx
 export function handleDataRequest(
   response: Response,
-  { request, params, context }: DataFunctionArgs
+  {
+    request,
+    params,
+    context,
+  }: LoaderFunctionArgs | ActionFunctionArgs
 ) {
   response.headers.set("X-Custom-Header", "value");
   return response;
@@ -30,7 +34,11 @@ By default, Remix will log encountered server-side errors to the console. If you
 ```tsx
 export function handleError(
   error: unknown,
-  { request, params, context }: DataFunctionArgs
+  {
+    request,
+    params,
+    context,
+  }: LoaderFunctionArgs | ActionFunctionArgs
 ) {
   if (!request.signal.aborted) {
     sendErrorToErrorReportingService(error);
@@ -57,5 +65,5 @@ Note that this does not handle thrown `Response` instances from your `loader`/`a
 [browser-entry-module]: ./entry.client
 [rendertopipeablestream]: https://react.dev/reference/react-dom/server/renderToPipeableStream
 [rendertoreadablestream]: https://react.dev/reference/react-dom/server/renderToReadableStream
-[node-streaming-entry-server]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/node/entry.server.react-stream.tsx
-[cloudflare-streaming-entry-server]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/cloudflare/entry.server.react-stream.tsx
+[node-streaming-entry-server]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/entry.server.node.tsx
+[cloudflare-streaming-entry-server]: https://github.com/remix-run/remix/blob/main/packages/remix-dev/config/defaults/entry.server.cloudflare.tsx

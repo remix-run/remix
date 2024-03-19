@@ -91,13 +91,7 @@ If not, you can follow these steps to integrate your project with `remix dev`:
 
    // ... code for setting up your express app goes here ...
 
-   app.all(
-     "*",
-     createRequestHandler({
-       build,
-       mode: build.mode,
-     })
-   );
+   app.all("*", createRequestHandler({ build }));
 
    const port = 3000;
    app.listen(port, () => {
@@ -197,10 +191,21 @@ For example, you can use `NODE_OPTIONS` to set Node's `--require` flag when runn
 }
 ```
 
+If you're using ESM as the default module system you will need to set the `--import` flag instead of `--require`:
+
+```json filename=package.json
+{
+  "scripts": {
+    "dev": "remix dev -c \"npm run dev:app\"",
+    "dev:app": "cross-env NODE_OPTIONS=\"--import ./mocks/index.js\" remix-serve ./build/index.js"
+  }
+}
+```
+
 Next, you can use `REMIX_DEV_ORIGIN` to let MSW forward internal "dev ready" messages on `/ping`:
 
 ```ts
-import { rest } from "msw";
+import { http, passthrough } from "msw";
 
 const REMIX_DEV_PING = new URL(
   process.env.REMIX_DEV_ORIGIN
@@ -208,7 +213,7 @@ const REMIX_DEV_PING = new URL(
 REMIX_DEV_PING.pathname = "/ping";
 
 export const server = setupServer(
-  rest.post(REMIX_DEV_PING.href, (req) => req.passthrough())
+  http.post(REMIX_DEV_PING.href, () => passthrough())
   // ... other request handlers go here ...
 );
 ```
@@ -265,69 +270,10 @@ Check out our [bundle analysis guide][bundle_analysis] for more details.
 
 ### Troubleshooting
 
-#### HMR: React Fast Refresh Limitations
+#### HMR
 
-[React Fast Refresh][react_refresh] does not preserve state for class components.
-This includes higher-order components that internally return classes:
-
-```ts
-export class ComponentA extends Component {} // ❌
-
-export const ComponentB = HOC(ComponentC); // ❌ won't work if HOC returns a class component
-
-export function ComponentD() {} // ✅
-export const ComponentE = () => {}; // ✅
-export default function ComponentF() {} // ✅
-```
-
-Function components must be named, not anonymous, for React Fast Refresh to track changes:
-
-```ts
-export default () => {}; // ❌
-export default function () {} // ❌
-
-const ComponentA = () => {};
-export default ComponentA; // ✅
-
-export default function ComponentB() {} // ✅
-```
-
-React Fast Refresh can only handle component exports. While Remix manages special route exports like `meta`, `links`, and `header` for you, any user-defined, will cause full reloads:
-
-```ts
-// these exports are specially handled by Remix to be HMR-compatible
-export const meta = { title: "Home" }; // ✅
-export const links = [
-  { rel: "stylesheet", href: "style.css" },
-]; // ✅
-export const headers = { "Cache-Control": "max-age=3600" }; // ✅
-
-// these exports are treeshaken by Remix, so they never affect HMR
-export const loader = () => {}; // ✅
-export const action = () => {}; // ✅
-
-// This is not a Remix export, nor a component export
-// so it will cause a full reloads for this route
-export const myValue = "some value"; // ❌
-
-export default function Route() {} // ✅
-```
-
-👆 Routes probably shouldn't be exporting random values like that anyway.
-If you want to reuse values across routes, stick them in their own non-route module:
-
-```ts filename=my-custom-value.ts
-export const myValue = "some value";
-```
-
-React Fast Refresh cannot track changes for a component when hooks are being added or removed from it,
-causing full reloads just for the next render. After the hooks has been added, changes should result in hot updates again.
-For example, if you add [`useLoaderData`][use_loader_data] to your component, you may lose state local to that component for that render.
-
-In some cases React cannot distinguish between existing components being changed and new components being added.
-[React needs `key`s][react_keys] to disambiguate these cases and track changes when sibling elements are modified.
-
-These are all limitations of React and [React Refresh][react_refresh], not Remix.
+If you are expecting hot updates but getting full page reloads,
+check out our [discussion on Hot Module Replacement][hmr] to learn more about the limitations of React Fast Refresh and workarounds for common issues.
 
 #### HDR: every code change triggers HDR
 
@@ -375,3 +321,4 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [path_imports]: https://mui.com/material-ui/guides/minimizing-bundle-size/#option-one-use-path-imports
 [bundle_analysis]: ../guides/performance
 [manual_mode]: ../guides/manual-mode
+[hmr]: ../discussion/hot-module-replacement

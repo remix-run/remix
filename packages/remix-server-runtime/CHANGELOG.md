@@ -1,5 +1,162 @@
 # `@remix-run/server-runtime`
 
+## 2.8.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.8.1.
+
+## 2.8.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.8.0.
+
+## 2.7.2
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.7.2.
+
+## 2.7.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.7.1.
+
+## 2.7.0
+
+### Minor Changes
+
+- Allow an optional `Layout` export from the root route ([#8709](https://github.com/remix-run/remix/pull/8709))
+- Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/en/main/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
+
+### Patch Changes
+
+- Add a more specific error if a user returns a `defer` response from a resource route ([#8726](https://github.com/remix-run/remix/pull/8726))
+
+## 2.6.0
+
+### Minor Changes
+
+- Add `future.v3_throwAbortReason` flag to throw `request.signal.reason` when a request is aborted instead of an `Error` such as `new Error("query() call aborted: GET /path")` ([#8251](https://github.com/remix-run/remix/pull/8251))
+
+### Patch Changes
+
+- Vite: Cloudflare Pages support ([#8531](https://github.com/remix-run/remix/pull/8531))
+
+  To get started with Cloudflare, you can use the \[`unstable-vite-cloudflare`]\[template-vite-cloudflare] template:
+
+  ```shellscript nonumber
+  npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
+  ```
+
+  Or read the new docs at [Future > Vite > Cloudflare](https://remix.run/docs/en/main/future/vite#cloudflare) and
+  [Future > Vite > Migrating > Migrating Cloudflare Functions](https://remix.run/docs/en/main/future/vite#migrating-cloudflare-functions).
+
+- Unwrap thrown `Response`'s from `entry.server` into `ErrorResponse`'s and preserve the status code ([#8577](https://github.com/remix-run/remix/pull/8577))
+
+## 2.5.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.5.1.
+
+## 2.5.0
+
+### Minor Changes
+
+- Updated `cookie` dependency to [`0.6.0`](https://github.com/jshttp/cookie/blob/master/HISTORY.md#060--2023-11-06) to inherit support for the [`Partitioned`](https://developer.mozilla.org/en-US/docs/Web/Privacy/Partitioned_cookies) attribute ([#8375](https://github.com/remix-run/remix/pull/8375))
+- Add unstable support for "SPA Mode" ([#8457](https://github.com/remix-run/remix/pull/8457))
+
+  You can opt into SPA Mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
+
+  ```js
+  // vite.config.ts
+  import { unstable_vitePlugin as remix } from "@remix-run/dev";
+  import { defineConfig } from "vite";
+
+  export default defineConfig({
+    plugins: [remix({ unstable_ssr: false })],
+  });
+  ```
+
+  Development in SPA Mode is just like a normal Remix app, and still uses the Remix dev server for HMR/HDR:
+
+  ```sh
+  remix vite:dev
+  ```
+
+  Building in SPA Mode will generate an `index.html` file in your client assets directory:
+
+  ```sh
+  remix vite:build
+  ```
+
+  To run your SPA, you serve your client assets directory via an HTTP server:
+
+  ```sh
+  npx http-server build/client
+  ```
+
+  For more information, please refer to the [SPA Mode docs](https://remix.run/future/spa-mode).
+
+## 2.4.1
+
+### Patch Changes
+
+- Add optional `error` to `ServerRuntimeMetaArgs` type to align with `MetaArgs` ([#8238](https://github.com/remix-run/remix/pull/8238))
+
+## 2.4.0
+
+### Minor Changes
+
+- Add support for `clientLoader`/`clientAction`/`HydrateFallback` route exports ([RFC](https://github.com/remix-run/remix/discussions/7634)). ([#8173](https://github.com/remix-run/remix/pull/8173))
+
+  Remix now supports loaders/actions that run on the client (in addition to, or instead of the loader/action that runs on the server). While we still recommend server loaders/actions for the majority of your data needs in a Remix app - these provide some levers you can pull for more advanced use-cases such as:
+
+  - Leveraging a data source local to the browser (i.e., `localStorage`)
+  - Managing a client-side cache of server data (like `IndexedDB`)
+  - Bypassing the Remix server in a BFF setup and hitting your API directly from the browser
+  - Migrating a React Router SPA to a Remix application
+
+  By default, `clientLoader` will not run on hydration, and will only run on subsequent client side navigations.
+
+  If you wish to run your client loader on hydration, you can set `clientLoader.hydrate=true` to force Remix to execute it on initial page load. Keep in mind that Remix will still SSR your route component so you should ensure that there is no new _required_ data being added by your `clientLoader`.
+
+  If your `clientLoader` needs to run on hydration and adds data you require to render the route component, you can export a `HydrateFallback` component that will render during SSR, and then your route component will not render until the `clientLoader` has executed on hydration.
+
+  `clientAction` is simpler than `clientLoader` because it has no hydration use-cases. `clientAction` will only run on client-side navigations.
+
+  For more information, please refer to the [`clientLoader`](https://remix.run/route/client-loader) and [`clientAction`](https://remix.run/route/client-action) documentation.
+
+- Deprecate `DataFunctionArgs` in favor of `LoaderFunctionArgs`/`ActionFunctionArgs`. This is aimed at keeping the types aligned across server/client loaders/actions now that `clientLoader`/`clientActon` functions have `serverLoader`/`serverAction` parameters which differentiate `ClientLoaderFunctionArgs`/`ClientActionFunctionArgs`. ([#8173](https://github.com/remix-run/remix/pull/8173))
+
+- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/release-next/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths). ([#8216](https://github.com/remix-run/remix/pull/8216))
+
+### Patch Changes
+
+- Fix flash of unstyled content for non-Express custom servers in Vite dev ([#8076](https://github.com/remix-run/remix/pull/8076))
+- Pass request handler errors to `vite.ssrFixStacktrace` in Vite dev to ensure stack traces correctly map to the original source code ([#8066](https://github.com/remix-run/remix/pull/8066))
+
+## 2.3.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.3.1.
+
+## 2.3.0
+
+### Minor Changes
+
+- Updated `cookie` dependency from `0.4.1` to [`0.5.0`](https://github.com/jshttp/cookie/blob/v0.5.0/HISTORY.md#050--2022-04-11) to inherit support for `Priority` attribute in Chrome ([#6770](https://github.com/remix-run/remix/pull/6770))
+
+## 2.2.0
+
+### Minor Changes
+
+- Unstable Vite support for Node-based Remix apps ([#7590](https://github.com/remix-run/remix/pull/7590))
+  - `remix build` 👉 `vite build && vite build --ssr`
+  - `remix dev` 👉 `vite dev`
+  - Other runtimes (e.g. Deno, Cloudflare) not yet supported.
+  - See "Future > Vite" in the Remix Docs for details
+
+## 2.1.0
+
+### Patch Changes
+
+- Emulate types for `JSON.parse(JSON.stringify(x))` in `SerializeFrom` ([#7605](https://github.com/remix-run/remix/pull/7605))
+  - Notably, type fields that are only assignable to `undefined` after serialization are now omitted since `JSON.stringify |> JSON.parse` will omit them -- see test cases for examples
+  - Also fixes type errors when upgrading to v2 from 1.19
+
 ## 2.0.1
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%402.0.1) for an overview of all changes in v2.0.1.

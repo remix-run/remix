@@ -135,8 +135,7 @@ export async function action({
 }
 
 export default function Login() {
-  const { currentUser, error } =
-    useLoaderData<typeof loader>();
+  const { error } = useLoaderData<typeof loader>();
 
   return (
     <div>
@@ -293,6 +292,8 @@ const { getSession, commitSession, destroySession } =
     },
   });
 ```
+
+Note that other session implementations store a unique session ID in a cookie and use that ID to look up the session in the source of truth (in-memory, filesystem, DB, etc.). In a cookie session, the cookie _is_ the source of truth so there is no unique ID out of the box. If you need to track a unique ID in your cookie session you will need to add an ID value yourself via `session.set()`.
 
 ## `createMemorySessionStorage`
 

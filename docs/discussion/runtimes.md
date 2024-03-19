@@ -20,7 +20,7 @@ Let's talk about what each part does.
 
 ## JavaScript Runtimes
 
-Remix can be deployed to any JavaScript runtime like Node.js, Shopify Oxygen, Cloudflare Workers/Pages, Fastly Functions, Deno, Bun, etc.
+Remix can be deployed to any JavaScript runtime like Node.js, Shopify Oxygen, Cloudflare Workers/Pages, Fastly Compute, Deno, Bun, etc.
 
 Each runtime has varying support for the standard Web APIs that Remix is built on, so Remix runtime package is required to polyfill any missing features of the runtime. These polyfills include web standard APIs like Request, Response, crypto, and more. This allows you to use the same APIs on the server as in the browser.
 
@@ -36,11 +36,11 @@ The majority of the APIs you interact with in your app are not imported directly
 For example, you might want to store cookies on the file system, or in Cloudflare KV storage. These are specific features of runtimes that aren't shared with other runtimes:
 
 ```tsx
-// store sessions on the file system in node
-import { createWorkersKVSessionStorage } from "@remix-run/cloudflare";
-import { createFileSessionStorage } from "@remix-run/node";
-
 // store sessions in cloudflare KV storage
+import { createWorkersKVSessionStorage } from "@remix-run/cloudflare";
+
+// store sessions on the file system in node
+import { createFileSessionStorage } from "@remix-run/node";
 ```
 
 But if you're storing a session in the cookie itself, this is supported in all runtimes:

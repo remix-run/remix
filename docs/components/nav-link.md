@@ -4,7 +4,7 @@ title: NavLink
 
 # `<NavLink>`
 
-Wraps [`<Link>`][link_component] with additional props for styling active and pending states.
+Wraps [`<Link>`][link-component] with additional props for styling active and pending states.
 
 ```tsx
 import { NavLink } from "@remix-run/react";
@@ -37,7 +37,35 @@ a.active {
 
 ### `aria-current`
 
-When a `NavLink` is active it will automatically apply `<a aria-current="page">` to the underlying anchor tag. See [aria_current][aria_current] on MDN.
+When a `NavLink` is active it will automatically apply `<a aria-current="page">` to the underlying anchor tag. See [`aria-current`][aria-current] on MDN.
+
+### `.pending`
+
+A `pending` class is added to a `<NavLink>` component when it is pending during a navigation, so you can use CSS to style it.
+
+```tsx
+<NavLink to="/messages" />
+```
+
+```css
+a.pending {
+  color: red;
+}
+```
+
+### `.transitioning`
+
+A `transitioning` class is added to a [`<NavLink unstable_viewTransition>`][view-transition-prop] component when it is transitioning during a navigation, so you can use CSS to style it.
+
+```tsx
+<NavLink to="/messages" unstable_viewTransition />
+```
+
+```css
+a.transitioning {
+  view-transition-name: my-transition;
+}
+```
 
 ## Props
 
@@ -108,9 +136,71 @@ Adding the `caseSensitive` prop changes the matching logic to make it case-sensi
 | `<NavLink to="/SpOnGe-bOB" />`               | `/sponge-bob` | true     |
 | `<NavLink to="/SpOnGe-bOB" caseSensitive />` | `/sponge-bob` | false    |
 
+## `unstable_viewTransition`
+
+The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in [`document.startViewTransition()`][document-start-view-transition]. By default, during the transition a [`transitioning` class][transitioning-class] will be added to the [`<a>` element][a-element] that you can use to customize the view transition.
+
+```css
+a.transitioning p {
+  view-transition-name: "image-title";
+}
+
+a.transitioning img {
+  view-transition-name: "image-expand";
+}
+```
+
+```tsx
+<NavLink to={to} unstable_viewTransition>
+  <p>Image Number {idx}</p>
+  <img src={src} alt={`Img ${idx}`} />
+</NavLink>
+```
+
+You may also use the [`className`][class-name-prop]/[`style`][style-prop] props or the render props passed to [`children`][children-prop] to further customize based on the `isTransitioning` value.
+
+```tsx
+<NavLink to={to} unstable_viewTransition>
+  {({ isTransitioning }) => (
+    <>
+      <p
+        style={{
+          viewTransitionName: isTransitioning
+            ? "image-title"
+            : "",
+        }}
+      >
+        Image Number {idx}
+      </p>
+      <img
+        src={src}
+        alt={`Img ${idx}`}
+        style={{
+          viewTransitionName: isTransitioning
+            ? "image-expand"
+            : "",
+        }}
+      />
+    </>
+  )}
+</NavLink>
+```
+
+<docs-warning>
+Please note that this API is marked unstable and may be subject to breaking changes without a major release.
+</docs-warning>
+
 ### `<Link>` props
 
-All other props of [`<Link>`][link_component] are supported.
+All other props of [`<Link>`][link-component] are supported.
 
-[link_component]: ./link
-[aria_current]: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-current
+[link-component]: ./link
+[aria-current]: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-current
+[view-transition-prop]: #unstableviewtransition
+[view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API
+[document-start-view-transition]: https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition
+[transitioning-class]: #transitioning
+[a-element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a
+[class-name-prop]: #classname-callback
+[style-prop]: #style-callback
+[children-prop]: #children-callback

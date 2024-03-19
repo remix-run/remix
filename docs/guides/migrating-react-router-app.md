@@ -54,7 +54,7 @@ import type {
 } from "@remix-run/node";
 import { createReadableStreamFromReadable } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
-import isbot from "isbot";
+import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 
 const ABORT_DELAY = 5_000;
@@ -66,7 +66,7 @@ export default function handleRequest(
   remixContext: EntryContext,
   loadContext: AppLoadContext
 ) {
-  return isbot(request.headers.get("user-agent"))
+  return isbot(request.headers.get("user-agent") || "")
     ? handleBotRequest(
         request,
         responseStatusCode,
@@ -445,7 +445,7 @@ Every Remix app accepts a `remix.config.js` file in the project root. While its 
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
-  ignoredRouteFiles: ["**/.*"],
+  ignoredRouteFiles: ["**/*.css"],
   assetsBuildDirectory: "public/build",
 };
 ```

@@ -1,5 +1,171 @@
 # `@remix-run/testing`
 
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.8.1`
+  - `@remix-run/node@2.8.1`
+
+## 2.8.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.8.0`
+  - `@remix-run/node@2.8.0`
+
+## 2.7.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.7.2`
+  - `@remix-run/react@2.7.2`
+
+## 2.7.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.7.1`
+  - `@remix-run/react@2.7.1`
+
+## 2.7.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.7.0`
+  - `@remix-run/node@2.7.0`
+
+## 2.6.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.6.0`
+  - `@remix-run/node@2.6.0`
+
+## 2.5.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.5.1`
+  - `@remix-run/node@2.5.1`
+
+## 2.5.0
+
+### Minor Changes
+
+- Add unstable support for "SPA Mode" ([#8457](https://github.com/remix-run/remix/pull/8457))
+
+  You can opt into SPA Mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
+
+  ```js
+  // vite.config.ts
+  import { unstable_vitePlugin as remix } from "@remix-run/dev";
+  import { defineConfig } from "vite";
+
+  export default defineConfig({
+    plugins: [remix({ unstable_ssr: false })],
+  });
+  ```
+
+  Development in SPA Mode is just like a normal Remix app, and still uses the Remix dev server for HMR/HDR:
+
+  ```sh
+  remix vite:dev
+  ```
+
+  Building in SPA Mode will generate an `index.html` file in your client assets directory:
+
+  ```sh
+  remix vite:build
+  ```
+
+  To run your SPA, you serve your client assets directory via an HTTP server:
+
+  ```sh
+  npx http-server build/client
+  ```
+
+  For more information, please refer to the [SPA Mode docs](https://remix.run/future/spa-mode).
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.5.0`
+  - `@remix-run/node@2.5.0`
+
+## 2.4.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.4.1`
+  - `@remix-run/node@2.4.1`
+
+## 2.4.0
+
+### Minor Changes
+
+- Add support for `clientLoader`/`clientAction`/`HydrateFallback` route exports ([RFC](https://github.com/remix-run/remix/discussions/7634)). ([#8173](https://github.com/remix-run/remix/pull/8173))
+- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/release-next/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths). ([#8216](https://github.com/remix-run/remix/pull/8216))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.4.0`
+  - `@remix-run/node@2.4.0`
+
+## 2.3.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.3.1`
+  - `@remix-run/node@2.3.1`
+
+## 2.3.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.3.0`
+  - `@remix-run/node@2.3.0`
+
+## 2.2.0
+
+### Minor Changes
+
+- Unstable Vite support for Node-based Remix apps ([#7590](https://github.com/remix-run/remix/pull/7590))
+  - `remix build` 👉 `vite build && vite build --ssr`
+  - `remix dev` 👉 `vite dev`
+  - Other runtimes (e.g. Deno, Cloudflare) not yet supported.
+  - See "Future > Vite" in the Remix Docs for details
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.2.0`
+  - `@remix-run/node@2.2.0`
+
+## 2.1.0
+
+### Minor Changes
+
+- Remove the `unstable_` prefix from `createRemixStub` - after real-world experience, we're confident in the API and ready to commit to it ([#7647](https://github.com/remix-run/remix/pull/7647))
+  - **Note**: This involves 1 small breaking change. The `<RemixStub remixConfigFuture>` prop has been renamed to `<RemixStub future>`
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.1.0`
+  - `@remix-run/node@2.1.0`
+
 ## 2.0.1
 
 ### Patch Changes

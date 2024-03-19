@@ -1,10 +1,23 @@
 ---
 title: useOutletContext
-toc: false
 ---
 
 # `useOutletContext`
 
-<docs-info>This hook is simply a re-export of [React Router's `useOutletContext`][rr-useoutletcontext].</docs-info>
+Convenience API over [React Context][react-context] that returns the context value from the closest parent [`<Outlet context={val} />`][outlet-context] component.
 
-[rr-useoutletcontext]: https://reactrouter.com/hooks/use-outlet-context
+```tsx
+import { useOutletContext } from "@remix-run/react";
+
+function Child() {
+  const myValue = useOutletContext();
+  // ...
+}
+```
+
+## Additional Resources
+
+- [`<Outlet context>`][outlet-context]
+
+[react-context]: https://react.dev/learn/passing-data-deeply-with-context
+[outlet-context]: ../components/outlet#context

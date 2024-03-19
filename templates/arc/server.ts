@@ -6,7 +6,4 @@ import sourceMapSupport from "source-map-support";
 sourceMapSupport.install();
 installGlobals();
 
-export const handler = createRequestHandler({
-  build,
-  mode: build.mode,
-});
+export const handler = createRequestHandler({ build });

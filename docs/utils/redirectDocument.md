@@ -10,13 +10,14 @@ This is a small wrapper around [`redirect`][redirect] that will trigger a docume
 This is most useful when you have a Remix app living next to a non-Remix app on the same domain and need to redirect from the Remix app to the non-Remix app:
 
 ```tsx lines=[1,7]
-import { redirect } from "@remix-run/node"; // or cloudflare/deno
+import { redirectDocument } from "@remix-run/node"; // or cloudflare/deno
 
 export const action = async () => {
   const userSession = await getUserSessionOrWhatever();
 
   if (!userSession) {
-    return redirect("/login");
+    // Assuming `/login` is a separate non-Remix app
+    return redirectDocument("/login");
   }
 
   return json({ ok: true });

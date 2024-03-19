@@ -28,7 +28,7 @@ jobs:
             name: "grunge"
     steps:
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
@@ -37,7 +37,7 @@ jobs:
           npx -y create-remix@${{ inputs.version }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --no-install --no-git-init
 
       - name: ⎔ Setup dependency caching
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           cache: npm
           cache-dependency-path: ${{ matrix.stack.name }}/package.json
@@ -60,7 +60,7 @@ jobs:
         run: zip ${{ matrix.stack.name }}.zip ./${{ matrix.stack.name }} -r -x "**/node_modules/*"
 
       - name: 🗄️ Archive ${{ matrix.stack.name }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.stack.name }}-archive
           path: ${{ matrix.stack.name }}.zip
@@ -82,7 +82,7 @@ jobs:
             name: "grunge"
     steps:
       - name: 🗄️ Restore ${{ matrix.stack.name }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.stack.name }}-archive
 
@@ -90,7 +90,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
@@ -122,7 +122,7 @@ jobs:
             name: "grunge"
     steps:
       - name: 🗄️ Restore ${{ matrix.stack.name }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.stack.name }}-archive
 
@@ -130,7 +130,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
@@ -162,7 +162,7 @@ jobs:
             name: "grunge"
     steps:
       - name: 🗄️ Restore ${{ matrix.stack.name }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.stack.name }}-archive
 
@@ -170,7 +170,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
@@ -205,7 +205,7 @@ jobs:
             cypress: "npm run dev"
     steps:
       - name: 🗄️ Restore ${{ matrix.stack.name }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.stack.name }}-archive
 
@@ -213,7 +213,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm

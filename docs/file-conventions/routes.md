@@ -282,7 +282,9 @@ While [dynamic segments][dynamic_segments] match a single path segment (the stuf
 Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
 
 ```tsx filename=app/routes/files.$.tsx
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const filePath = params["*"];
   return fake.getFileInfo(filePath);
 }
@@ -331,7 +333,7 @@ app/
 │   │   └── scroll-experience.tsx
 │   ├── _landing.about/
 │   │   ├── employee-profile-card.tsx
-│   │   ├── get-employee-data.server.tsx
+│   │   ├── get-employee-data.server.ts
 │   │   ├── route.tsx
 │   │   └── team-photo.jpg
 │   ├── _landing/
@@ -342,7 +344,7 @@ app/
 │   │   ├── route.tsx
 │   │   └── stats.tsx
 │   ├── app.projects/
-│   │   ├── get-projects.server.tsx
+│   │   ├── get-projects.server.ts
 │   │   ├── project-buttons.tsx
 │   │   ├── project-card.tsx
 │   │   └── route.tsx
@@ -353,7 +355,7 @@ app/
 │   ├── app_.projects.$id.roadmap/
 │   │   ├── chart.tsx
 │   │   ├── route.tsx
-│   │   └── update-timeline.server.tsx
+│   │   └── update-timeline.server.ts
 │   └── contact-us.tsx
 └── root.tsx
 ```
