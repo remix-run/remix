@@ -1,32 +1,10 @@
-# Experimental releases are handled a bit differently than standard releases.
-# Experimental releases can be branched from anywhere as they are not intended
-# for general use, and all packages will be versioned and published with the
-# same hash for testing.
-#
-# This workflow will run when a GitHub release is created from experimental
-# version tag. Unlike standard releases created via Changesets, only one tag
-# should be created for all packages.
-#
-# To create a release:
-# - Create a new branch for the release: git checkout -b `release-experimental`
-#   - IMPORTANT: You should always create a new branch so that the version
-#     changes don't accidentally get merged into `dev` or `main`. The branch
-#     name must follow the convention of `release-experimental` or
-#     `release-experimental-[feature]`.
-# - Make whatever changes you need and commit them:
-#   - `git add . && git commit "experimental changes!"`
-# - Update version numbers and create a release tag:
-#   - `pnpm run version:experimental`
-# - Push to GitHub:
-#   - `git push origin --follow-tags`
-# - Create a new release for the tag on GitHub to trigger the CI workflow that
-#   will publish the release to npm
+name: 🧪 Experimental Release
 
-name: 🚀 Release (experimental)
 on:
-  push:
-    tags:
-      - "v0.0.0-experimental*"
+  workflow_dispatch:
+    inputs:
+      branch:
+        required: true
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -34,16 +12,17 @@ env:
   CI: true
 
 jobs:
-  release:
-    name: 🧑‍🔬 Experimental Release
-    if: |
-      github.repository == 'remix-run/remix' &&
-      contains(github.ref, 'experimental')
+  experimental:
+    name: 🧪 Experimental Release
+    if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.branch }}
+          # checkout using a custom token so that we can push later on
+          token: ${{ secrets.NIGHTLY_PAT }}
           fetch-depth: 0
 
       - name: 📦 Setup pnpm
@@ -57,6 +36,16 @@ jobs:
 
       - name: 📥 Install deps
         run: pnpm install --frozen-lockfile
+
+      - name: ⤴️ Update version
+        run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          NEXT_VERSION=0.0.0-experimental-${SHORT_SHA}
+          git checkout -b experimental/${NEXT_VERSION}
+          pnpm run version ${NEXT_VERSION} --skip-prompt
+          git push origin --tags
 
       - name: 🏗 Build
         run: pnpm build
