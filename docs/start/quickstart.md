@@ -12,7 +12,7 @@ When you're ready to get serious about your Remix project, you might consider st
 If you prefer to initialize a batteries-included Remix project, you can use the [`create-remix` CLI][create-remix]:
 
 ```shellscript nonumber
-npx create-remix@latest --template remix-run/remix/templates/vite
+npx create-remix@latest
 ```
 
 ## Installation
