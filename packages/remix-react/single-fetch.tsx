@@ -20,6 +20,7 @@ import { decode } from "turbo-stream";
 
 import { createRequestInit } from "./data";
 import type { AssetsManifest, EntryContext } from "./entry";
+import { escapeHtml } from "./markup";
 import type { RouteModules } from "./routeModules";
 import invariant from "./invariant";
 
@@ -74,8 +75,8 @@ export function StreamTransfer({
   let scriptTag = value ? (
     <script
       dangerouslySetInnerHTML={{
-        __html: `window.__remixContext.streamController.enqueue(${JSON.stringify(
-          value
+        __html: `window.__remixContext.streamController.enqueue(${escapeHtml(
+          JSON.stringify(value)
         )});`,
       }}
     />
