@@ -16,7 +16,7 @@ function getTaggedVersion() {
  */
 function publish(dir, tag) {
   let args = ["--access public", `--tag ${tag}`];
-  if (tag === "experimental") {
+  if (["experimental", "nightly"].includes(tag)) {
     args.push(`--no-git-checks`);
   } else {
     args.push("--publish-branch release-next");
