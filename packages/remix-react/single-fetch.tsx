@@ -158,10 +158,11 @@ function singleFetchLoaderStrategy(
     matches.map(async (m) =>
       m.resolve(async (handler): Promise<HandlerResult> => {
         let result: unknown;
+        let url = stripIndexParam(singleFetchUrl(request.url));
+
         // When a route has a client loader, it calls it's singular server loader
         if (manifest.routes[m.route.id].hasClientLoader) {
           result = await handler(async () => {
-            let url = stripIndexParam(singleFetchUrl(request.url));
             url.searchParams.set("_routes", m.route.id);
             let { data } = await fetchAndDecode(url);
             return unwrapSingleFetchResults(
@@ -173,12 +174,12 @@ function singleFetchLoaderStrategy(
           result = await handler(async () => {
             // Otherwise we let multiple routes hook onto the same promise
             if (!singleFetchPromise) {
-              let url = addRevalidationParam(
+              url = addRevalidationParam(
                 manifest,
                 routeModules,
                 matches.map((m) => m.route),
                 matches.filter((m) => m.shouldLoad).map((m) => m.route),
-                stripIndexParam(singleFetchUrl(request.url))
+                url
               );
               singleFetchPromise = fetchAndDecode(url).then(
                 ({ data }) => data as SingleFetchResults
