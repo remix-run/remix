@@ -8,7 +8,6 @@ export function getDocumentHeaders(
   context: StaticHandlerContext,
   loadRouteIds?: string[]
 ): Headers {
-  debugger;
   let boundaryIdx = context.errors
     ? context.matches.findIndex((m) => context.errors![m.route.id])
     : -1;
