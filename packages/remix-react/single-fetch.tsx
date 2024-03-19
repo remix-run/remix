@@ -153,7 +153,7 @@ function singleFetchLoaderStrategy(
   request: Request,
   matches: DataStrategyFunctionArgs["matches"]
 ) {
-  let singleFetchPromise: Promise<SingleFetchResults>;
+  let singleFetchPromise: Promise<SingleFetchResults> | undefined;
   return Promise.all(
     matches.map(async (m) =>
       m.resolve(async (handler): Promise<HandlerResult> => {
