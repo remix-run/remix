@@ -49,10 +49,7 @@ jobs:
       - name: 🕵️ Check for changes
         id: version
         run: |
-          # get latest commit sha
-          SHA=$(git rev-parse HEAD)
-          # get first 7 characters of sha
-          SHORT_SHA=${SHA::7}
+          SHORT_SHA=$(git rev-parse --short HEAD)
 
           # get latest nightly tag
           LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-creatordate | head -n 1)
