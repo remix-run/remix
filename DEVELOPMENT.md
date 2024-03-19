@@ -106,12 +106,13 @@ Hotfix releases follow the same process as standard releases above, but the `rel
 
 Experimental releases use a [manually-triggered Github Actions workflow](./.github/workflows/release-experimental.yml) and can be built from any existing branch. to build and publish an experimental release:
 
-- Commit your changes to a feature branch
+- Commit your changes to a branch
 - Push the branch to github
 - Go to the Github Actions UI for the [release-experimental.yml workflow](https://github.com/remix-run/remix/actions/workflows/release-experimental-dispatch.yml)
-- Click the `Run Workflow` dropdown
-- Type in your feature branch
-- Click the `Run Workflow` button
+- Click the `Run workflow` dropdown
+- Leave the `Use workflow from` dropdown as `main`
+- Enter your feature branch in the `branch` input
+- Click the `Run workflow` button
 
 ### Nightly releases
 
