@@ -21,7 +21,7 @@ export default function handleRequest(
   // This is ignored so we can keep it in the template for visibility.  Feel
   // free to delete this parameter in your app if you're not using it!
   // eslint-disable-next-line no-unused-vars
-  loadContext,
+  loadContext
 ) {
   return isbot(request.headers.get("user-agent") || "")
     ? handleBotRequest(
@@ -42,7 +42,7 @@ function handleBotRequest(
   request,
   responseStatusCode,
   responseHeaders,
-  remixContext,
+  remixContext
 ) {
   return new Promise((resolve, reject) => {
     let shellRendered = false;
@@ -92,7 +92,7 @@ function handleBrowserRequest(
   request,
   responseStatusCode,
   responseHeaders,
-  remixContext,
+  remixContext
 ) {
   return new Promise((resolve, reject) => {
     let shellRendered = false;
