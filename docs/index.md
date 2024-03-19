@@ -9,7 +9,7 @@ hidden: true
 # Remix Docs
 
 ```shellscript nonumber
-npx create-remix@latest --template remix-run/remix/templates/vite
+npx create-remix@latest
 ```
 
 <docs-cards>

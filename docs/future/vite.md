@@ -20,13 +20,13 @@ We've got a few different Vite-based templates to get you started.
 
 ```shellscript nonumber
 # Minimal server:
-npx create-remix@latest --template remix-run/remix/templates/vite
+npx create-remix@latest
 
 # Express:
-npx create-remix@latest --template remix-run/remix/templates/vite-express
+npx create-remix@latest --template remix-run/remix/templates/express
 
 # Cloudflare:
-npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
+npx create-remix@latest --template remix-run/remix/templates/cloudflare
 ```
 
 These templates include a `vite.config.ts` file which is where the Remix Vite plugin is configured.
@@ -37,10 +37,10 @@ The Remix Vite plugin is configured via a `vite.config.ts` file at the root of y
 
 ## Cloudflare
 
-To get started with Cloudflare, you can use the [`vite-cloudflare`][template-vite-cloudflare] template:
+To get started with Cloudflare, you can use the [`cloudflare`][template-cloudflare] template:
 
 ```shellscript nonumber
-npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
+npx create-remix@latest --template remix-run/remix/templates/cloudflare
 ```
 
 There are two ways to run your Cloudflare app locally:
@@ -1091,7 +1091,7 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 - [SvelteKit][sveltekit]
 
 [vite]: https://vitejs.dev
-[template-vite-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/vite-cloudflare
+[template-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/cloudflare
 [public-path]: ../file-conventions/remix-config#publicpath
 [server-build-path]: ../file-conventions/remix-config#serverbuildpath
 [vite-config]: ../file-conventions/vite-config
