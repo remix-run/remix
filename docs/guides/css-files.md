@@ -149,7 +149,7 @@ This approach is much more predictable in terms of rule ordering since it gives 
 
 The downside of this approach is that it can result in a lot of boilerplate.
 
-If you have many re-usable components each with their own CSS file, you'll need to manually surface all `links` for each component up to your route components, which may require passing CSS URLs up through multiple levels of components. This can also error prone since it's easy to forget to import a component's `links` array.
+If you have many re-usable components each with their own CSS file, you'll need to manually surface all `links` for each component up to your route components, which may require passing CSS URLs up through multiple levels of components. This can also be error prone since it's easy to forget to import a component's `links` array.
 
 Despite its advantages, you may find this to be too cumbersome compared to CSS bundling, or you may find the extra boilerplate to be worth it. There's no right or wrong on this one.
 
