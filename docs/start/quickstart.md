@@ -9,15 +9,15 @@ This guide will get you familiar with the basic plumbing required to run a Remix
 
 When you're ready to get serious about your Remix project, you might consider starting with a community template. They include TypeScript setups, databases, testing harnesses, authentication, and more. You can find a list of community templates on the [Remix Resources][templates] page.
 
+## Installation
+
 If you prefer to initialize a batteries-included Remix project, you can use the [`create-remix` CLI][create-remix]:
 
 ```shellscript nonumber
 npx create-remix@latest
 ```
 
-## Installation
-
-This guide will explain everything the CLI does to set up your project, and instead of using the CLI you can follow these steps. If you're just getting started with Remix, we recommend following this guide to understand all of the different pieces that make up a Remix app.
+However, this guide will explain everything the CLI does to set up your project, and instead of using the CLI you can follow these steps. If you're just getting started with Remix, we recommend following this guide to understand all of the different pieces that make up a Remix app.
 
 ```shellscript nonumber
 mkdir my-remix-app
