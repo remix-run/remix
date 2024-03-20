@@ -30,6 +30,7 @@ const files = {
           <body>
             <Link to="/">Home</Link><br/>
             <Link to="/data">Data</Link><br/>
+            <Link to="/a/b/c">/a/b/c</Link><br/>
             <Form method="post" action="/data">
               <button type="submit" name="key" value="value">
                 Submit
@@ -85,6 +86,17 @@ const files = {
 };
 
 test.describe("single-fetch", () => {
+  let oldConsoleError: typeof console.error;
+
+  test.beforeEach(() => {
+    oldConsoleError = console.error;
+    console.error = () => {};
+  });
+
+  test.afterEach(() => {
+    console.error = oldConsoleError;
+  });
+
   test("loads proper data on single fetch loader requests", async () => {
     let fixture = await createFixture(
       {
@@ -404,7 +416,7 @@ test.describe("single-fetch", () => {
     expect(urls).toEqual([]);
   });
 
-  test("returns loader headers through the headers function", async () => {
+  test("handles headers correctly for loader and action calls", async () => {
     let fixture = await createFixture({
       config: {
         future: {
@@ -462,5 +474,914 @@ test.describe("single-fetch", () => {
     });
     expect(res.headers.get("x-action-error")).toEqual("true");
     expect(res.headers.get("x-headers-function")).toEqual(null);
+  });
+
+  test("scopes loader headers to the _routes param if present", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/a.tsx": js`
+          export function headers({ loaderHeaders }) {
+            let headers = new Headers(loaderHeaders);
+            headers.set('x-a-headers', 'true')
+            return headers;
+          }
+
+          export function loader({ request }) {
+            return new Response(null, { headers: { "x-a-loader": "true" } });
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+        "app/routes/a.b.tsx": js`
+          export function headers({ loaderHeaders, parentHeaders }) {
+            let headers = new Headers(parentHeaders);
+            loaderHeaders.forEach((value, name) => headers.set(name, value));
+            headers.set('x-b-headers', 'true')
+            return headers;
+          }
+
+          export function loader({ request }) {
+            return new Response(null, { headers: { "x-b-loader": "true" } });
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+        "app/routes/a.b.c.tsx": js`
+          export function headers({ loaderHeaders, parentHeaders }) {
+            let headers = new Headers(parentHeaders);
+            loaderHeaders.forEach((value, name) => headers.set(name, value));
+            headers.set('x-c-headers', 'true')
+            return headers;
+          }
+
+          export function loader({ request }) {
+            return new Response(null, { headers: { "x-c-loader": "true" } });
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+      },
+    });
+
+    let res = await fixture.requestSingleFetchData("/a/b/c.data");
+    expect(res.headers.get("x-a-loader")).toEqual("true");
+    expect(res.headers.get("x-a-headers")).toEqual("true");
+    expect(res.headers.get("x-b-loader")).toEqual("true");
+    expect(res.headers.get("x-b-headers")).toEqual("true");
+    expect(res.headers.get("x-c-loader")).toEqual("true");
+    expect(res.headers.get("x-c-headers")).toEqual("true");
+
+    res = await fixture.requestSingleFetchData(
+      "/a/b/c.data?_routes=routes%2Fa,routes%2Fa.b"
+    );
+    expect(res.headers.get("x-a-loader")).toEqual("true");
+    expect(res.headers.get("x-a-headers")).toEqual("true");
+    expect(res.headers.get("x-b-loader")).toEqual("true");
+    expect(res.headers.get("x-b-headers")).toEqual("true");
+    expect(res.headers.get("x-c-loader")).toBeNull();
+    expect(res.headers.get("x-c-headers")).toBeNull();
+
+    res = await fixture.requestSingleFetchData(
+      "/a/b/c.data?_routes=routes%2Fa"
+    );
+    expect(res.headers.get("x-a-loader")).toEqual("true");
+    expect(res.headers.get("x-a-headers")).toEqual("true");
+    expect(res.headers.get("x-b-loader")).toBeNull();
+    expect(res.headers.get("x-b-headers")).toBeNull();
+    expect(res.headers.get("x-c-loader")).toBeNull();
+    expect(res.headers.get("x-c-headers")).toBeNull();
+
+    res = await fixture.requestSingleFetchData(
+      "/a/b/c.data?_routes=routes%2Fa.b.c"
+    );
+    expect(res.headers.get("x-a-loader")).toBeNull();
+    expect(res.headers.get("x-a-headers")).toBeNull();
+    expect(res.headers.get("x-b-loader")).toBeNull();
+    expect(res.headers.get("x-b-headers")).toBeNull();
+    expect(res.headers.get("x-c-loader")).toEqual("true");
+    expect(res.headers.get("x-c-headers")).toEqual("true");
+
+    res = await fixture.requestSingleFetchData(
+      "/a/b/c.data?_routes=routes%2Fa,routes%2Fa.b.c"
+    );
+    expect(res.headers.get("x-a-loader")).toEqual("true");
+    expect(res.headers.get("x-a-loader")).toEqual("true");
+    expect(res.headers.get("x-b-headers")).toBeNull();
+    expect(res.headers.get("x-b-headers")).toBeNull();
+    expect(res.headers.get("x-c-loader")).toEqual("true");
+    expect(res.headers.get("x-c-headers")).toEqual("true");
+  });
+
+  test.describe("client loaders", () => {
+    test("when no routes have client loaders", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/a.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "A server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>A</h1>
+                    <p id="a-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "B server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>B</h1>
+                    <p id="b-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.c.tsx": js`
+              import { useLoaderData } from '@remix-run/react';
+
+              export function  loader() {
+                return { message: "C server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>C</h1>
+                    <p id="c-data">{data.message}</p>
+                  </>
+                );
+              }
+            `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.method() === "GET" && req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.clickLink("/a/b/c");
+      await page.waitForSelector("#c-data");
+      expect(await app.getHtml("#a-data")).toContain("A server loader");
+      expect(await app.getHtml("#b-data")).toContain("B server loader");
+      expect(await app.getHtml("#c-data")).toContain("C server loader");
+
+      // No clientLoaders so we can make a single parameter-less fetch
+      expect(urls).toEqual([expect.stringMatching(/\/a\/b\/c\.data$/)]);
+    });
+
+    test("when one route has a client loader", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/a.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "A server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>A</h1>
+                    <p id="a-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "B server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>B</h1>
+                    <p id="b-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.c.tsx": js`
+              import { useLoaderData } from '@remix-run/react';
+
+              export function  loader() {
+                return { message: "C server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (C client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>C</h1>
+                    <p id="c-data">{data.message}</p>
+                  </>
+                );
+              }
+            `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.method() === "GET" && req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.clickLink("/a/b/c");
+      await page.waitForSelector("#c-data");
+      expect(await app.getHtml("#a-data")).toContain("A server loader");
+      expect(await app.getHtml("#b-data")).toContain("B server loader");
+      expect(await app.getHtml("#c-data")).toContain(
+        "C server loader (C client loader)"
+      );
+
+      // A/B can be loaded together, C needs it's own call due to it's clientLoader
+      expect(urls.sort()).toEqual([
+        expect.stringMatching(
+          /\/a\/b\/c\.data\?_routes=routes%2Fa%2Croutes%2Fa\.b$/
+        ),
+        expect.stringMatching(/\/a\/b\/c\.data\?_routes=routes%2Fa\.b\.c$/),
+      ]);
+    });
+
+    test("when multiple routes have client loaders", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/a.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "A server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>A</h1>
+                    <p id="a-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "B server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (B client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>B</h1>
+                    <p id="b-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.c.tsx": js`
+              import { useLoaderData } from '@remix-run/react';
+
+              export function  loader() {
+                return { message: "C server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (C client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>C</h1>
+                    <p id="c-data">{data.message}</p>
+                  </>
+                );
+              }
+            `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.method() === "GET" && req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.clickLink("/a/b/c");
+      await page.waitForSelector("#c-data");
+      expect(await app.getHtml("#a-data")).toContain("A server loader");
+      expect(await app.getHtml("#b-data")).toContain(
+        "B server loader (B client loader)"
+      );
+      expect(await app.getHtml("#c-data")).toContain(
+        "C server loader (C client loader)"
+      );
+
+      // B/C have client loaders so they get individual calls, which leaves A
+      // getting it's own "individual" since it's the last route standing
+      expect(urls.sort()).toEqual([
+        expect.stringMatching(/\/a\/b\/c\.data\?_routes=routes%2Fa$/),
+        expect.stringMatching(/\/a\/b\/c\.data\?_routes=routes%2Fa\.b$/),
+        expect.stringMatching(/\/a\/b\/c\.data\?_routes=routes%2Fa\.b\.c$/),
+      ]);
+    });
+
+    test("when all routes have client loaders", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/a.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "A server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (A client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>A</h1>
+                    <p id="a-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "B server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (B client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>B</h1>
+                    <p id="b-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.c.tsx": js`
+              import { useLoaderData } from '@remix-run/react';
+
+              export function  loader() {
+                return { message: "C server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (C client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>C</h1>
+                    <p id="c-data">{data.message}</p>
+                  </>
+                );
+              }
+            `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.method() === "GET" && req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.clickLink("/a/b/c");
+      await page.waitForSelector("#c-data");
+      expect(await app.getHtml("#a-data")).toContain(
+        "A server loader (A client loader)"
+      );
+      expect(await app.getHtml("#b-data")).toContain(
+        "B server loader (B client loader)"
+      );
+      expect(await app.getHtml("#c-data")).toContain(
+        "C server loader (C client loader)"
+      );
+
+      // A/B/C all have client loaders so they get individual calls
+      expect(urls.sort()).toEqual([
+        expect.stringMatching(/\/a\/b\/c.data\?_routes=routes%2Fa$/),
+        expect.stringMatching(/\/a\/b\/c.data\?_routes=routes%2Fa.b$/),
+        expect.stringMatching(/\/a\/b\/c.data\?_routes=routes%2Fa.b.c$/),
+      ]);
+    });
+  });
+
+  test.describe("prefetching", () => {
+    test("when no routes have client loaders", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/_index.tsx": js`
+              import {  Link } from "@remix-run/react";
+
+              export default function Index() {
+                return (
+                  <nav>
+                    <Link to="/a/b/c" prefetch="render">/a/b/c</Link>
+                  </nav>
+                );
+              }
+            `,
+            "app/routes/a.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "A server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>A</h1>
+                    <p id="a-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "B server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>B</h1>
+                    <p id="b-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.c.tsx": js`
+              import { useLoaderData } from '@remix-run/react';
+
+              export function  loader() {
+                return { message: "C server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>C</h1>
+                    <p id="c-data">{data.message}</p>
+                  </>
+                );
+              }
+            `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/", true);
+      // No clientLoaders so we can make a single parameter-less fetch
+      await page.waitForSelector(
+        "nav link[rel='prefetch'][as='fetch'][href='/a/b/c.data']",
+        { state: "attached" }
+      );
+      expect(await app.page.locator("nav link[as='fetch']").count()).toEqual(1);
+    });
+
+    test("when one route has a client loader", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/_index.tsx": js`
+              import {  Link } from "@remix-run/react";
+
+              export default function Index() {
+                return (
+                  <nav>
+                    <Link to="/a/b/c" prefetch="render">/a/b/c</Link>
+                  </nav>
+                );
+              }
+            `,
+            "app/routes/a.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "A server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>A</h1>
+                    <p id="a-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "B server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>B</h1>
+                    <p id="b-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.c.tsx": js`
+              import { useLoaderData } from '@remix-run/react';
+
+              export function  loader() {
+                return { message: "C server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (C client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>C</h1>
+                    <p id="c-data">{data.message}</p>
+                  </>
+                );
+              }
+            `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/", true);
+
+      // A/B can be prefetched, C doesn't get prefetched due to its `clientLoader`
+      await page.waitForSelector(
+        "nav link[rel='prefetch'][as='fetch'][href='/a/b/c.data?_routes=routes%2Fa%2Croutes%2Fa.b']",
+        { state: "attached" }
+      );
+      expect(await app.page.locator("nav link[as='fetch']").count()).toEqual(1);
+    });
+
+    test("when multiple routes have client loaders", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/_index.tsx": js`
+              import {  Link } from "@remix-run/react";
+
+              export default function Index() {
+                return (
+                  <nav>
+                    <Link to="/a/b/c" prefetch="render">/a/b/c</Link>
+                  </nav>
+                );
+              }
+            `,
+            "app/routes/a.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "A server loader" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>A</h1>
+                    <p id="a-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "B server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (B client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>B</h1>
+                    <p id="b-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.c.tsx": js`
+              import { useLoaderData } from '@remix-run/react';
+
+              export function  loader() {
+                return { message: "C server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (C client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>C</h1>
+                    <p id="c-data">{data.message}</p>
+                  </>
+                );
+              }
+            `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/", true);
+
+      // Only A can get prefetched, B/C can't due to `clientLoader`
+      await page.waitForSelector(
+        "nav link[rel='prefetch'][as='fetch'][href='/a/b/c.data?_routes=routes%2Fa']",
+        { state: "attached" }
+      );
+      expect(await app.page.locator("nav link[as='fetch']").count()).toEqual(1);
+    });
+
+    test("when all routes have client loaders", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/_index.tsx": js`
+              import {  Link } from "@remix-run/react";
+
+              export default function Index() {
+                return (
+                  <nav>
+                    <Link to="/a/b/c" prefetch="render">/a/b/c</Link>
+                  </nav>
+                );
+              }
+            `,
+            "app/routes/a.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "A server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (A client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>A</h1>
+                    <p id="a-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.tsx": js`
+              import { Outlet, useLoaderData } from '@remix-run/react';
+
+              export function loader() {
+                return { message: "B server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (B client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>B</h1>
+                    <p id="b-data">{data.message}</p>
+                    <Outlet/>
+                  </>
+                );
+              }
+            `,
+            "app/routes/a.b.c.tsx": js`
+              import { useLoaderData } from '@remix-run/react';
+
+              export function  loader() {
+                return { message: "C server loader" };
+              }
+
+              export async function clientLoader({ serverLoader }) {
+                let data = await serverLoader();
+                return { message: data.message + " (C client loader)" };
+              }
+
+              export default function Comp() {
+                let data = useLoaderData();
+                return (
+                  <>
+                    <h1>C</h1>
+                    <p id="c-data">{data.message}</p>
+                  </>
+                );
+              }
+            `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/", true);
+
+      // No prefetching due to clientLoaders
+      expect(await app.page.locator("nav link[as='fetch']").count()).toEqual(0);
+    });
   });
 });

@@ -429,39 +429,41 @@ function PrefetchPageLinksImpl({
   // just the manifest like the other links in here.
   let keyedPrefetchLinks = useKeyedPrefetchLinks(newMatchesForAssets);
 
-  let singleFetchHref: string | undefined;
-  if (future.unstable_singleFetch && newMatchesForData.length > 0) {
+  let linksToRender: React.ReactNode | React.ReactNode[] | null = null;
+  if (!future.unstable_singleFetch) {
+    // Non-single-fetch prefetching
+    linksToRender = dataHrefs.map((href) => (
+      <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
+    ));
+  } else if (newMatchesForData.length > 0) {
+    // Single-fetch with routes that require data
     let url = addRevalidationParam(
       manifest,
       routeModules,
-      matches.map((m) => m.route),
+      nextMatches.map((m) => m.route),
       newMatchesForData.map((m) => m.route),
       singleFetchUrl(page)
     );
-    singleFetchHref = url.pathname + url.search;
+    if (url.searchParams.get("_routes") !== "") {
+      linksToRender = (
+        <link
+          key={url.pathname + url.search}
+          rel="prefetch"
+          as="fetch"
+          href={url.pathname + url.search}
+          {...linkProps}
+        />
+      );
+    } else {
+      // No single-fetch prefetching if _routes param is empty due to `clientLoader`'s
+    }
+  } else {
+    // No single-fetch prefetching if there are no new matches for data
   }
 
   return (
     <>
-      {singleFetchHref ? (
-        <link
-          key={singleFetchHref}
-          rel="prefetch"
-          as="fetch"
-          href={singleFetchHref}
-          {...linkProps}
-        />
-      ) : (
-        dataHrefs.map((href) => (
-          <link
-            key={href}
-            rel="prefetch"
-            as="fetch"
-            href={href}
-            {...linkProps}
-          />
-        ))
-      )}
+      {linksToRender}
       {moduleHrefs.map((href) => (
         <link key={href} rel="modulepreload" href={href} {...linkProps} />
       ))}
