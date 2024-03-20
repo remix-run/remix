@@ -17,7 +17,16 @@ export function getDocumentHeaders(
       : context.matches;
 
   if (loadRouteIds) {
-    matches = matches.filter((m) => loadRouteIds.includes(m.route.id));
+    let deepestRouteId = loadRouteIds[loadRouteIds.length - 1];
+    let deepestRouteIdx = matches.findLastIndex(
+      (m) => m.route.id === deepestRouteId
+    );
+    let deepestHeadersIdx = matches.findLastIndex((m) => m.route.headers);
+    let idx =
+      deepestHeadersIdx >= 0
+        ? Math.min(deepestRouteIdx, deepestHeadersIdx)
+        : deepestRouteIdx;
+    matches = matches.slice(0, idx + 1);
   }
 
   let errorHeaders: Headers | undefined;
