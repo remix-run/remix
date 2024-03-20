@@ -145,7 +145,7 @@ export default function HelloRoute() {
 }
 ```
 
-This approach is much more predictable in terms of rule ordering since it gives you granular control over each file and provides consistent behavior between development and production. As opposed to bundled CSS during development, styles aren't injected into the document until the route is active, and the styles are removed from the document when navigating away from the route. If the page's `head` element is ever re-mounted, any `link` tags defined by your routes will also be re-mounted since they are part of the React lifecycle.
+This approach is much more predictable in terms of rule ordering since it gives you granular control over each file and provides consistent behavior between development and production. As opposed to bundled CSS during development, styles are removed from the document when they are no longer needed. If the page's `head` element is ever re-mounted, any `link` tags defined by your routes will also be re-mounted since they are part of the React lifecycle.
 
 The downside of this approach is that it can result in a lot of boilerplate.
 
