@@ -50,4 +50,11 @@ module.exports = {
   // in typescript-eslint@6
   "@typescript-eslint/consistent-type-assertions": "warn",
   "@typescript-eslint/consistent-type-imports": "warn",
+
+  // In TS 5.0, there is a option called verbatimModuleSyntax. add the following rules to correct this potential side effect import.
+  "@typescript-eslint/no-import-type-side-effects": "error",
+  
+  // Method Shorthand Syntax Considered Harmful
+  // https://www.totaltypescript.com/method-shorthand-syntax-considered-harmful
+  "@typescript-eslint/method-signature-style": ["error", "property"],
 };
