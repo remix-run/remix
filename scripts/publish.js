@@ -15,7 +15,13 @@ function getTaggedVersion() {
  * @param {string} tag
  */
 function publish(dir, tag) {
-  execSync(`npm publish --access public --tag ${tag} ${dir}`, {
+  let args = ["--access public", `--tag ${tag}`];
+  if (["experimental", "nightly"].includes(tag)) {
+    args.push(`--no-git-checks`);
+  } else {
+    args.push("--publish-branch release-next");
+  }
+  execSync(`pnpm publish ${dir} ${args.join(" ")}`, {
     stdio: "inherit",
   });
 }

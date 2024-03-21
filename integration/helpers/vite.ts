@@ -15,16 +15,24 @@ import { test as base, expect } from "@playwright/test";
 
 const remixBin = "node_modules/@remix-run/dev/dist/cli.js";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+const root = path.resolve(__dirname, "../..");
+const TMP_DIR = path.join(root, ".tmp/integration");
 
 export const viteConfig = {
-  server: async (args: { port: number }) => {
+  server: async (args: { port: number; fsAllow?: string[] }) => {
+    let { port, fsAllow } = args;
     let hmrPort = await getPort();
     let text = dedent`
-      server: { port: ${args.port}, strictPort: true, hmr: { port: ${hmrPort} } },
+      server: {
+        port: ${port},
+        strictPort: true,
+        hmr: { port: ${hmrPort} },
+        fs: { allow: ${fsAllow ? JSON.stringify(fsAllow) : "undefined"} }
+      },
     `;
     return text;
   },
-  basic: async (args: { port: number }) => {
+  basic: async (args: { port: number; fsAllow?: string[] }) => {
     return dedent`
       import { vitePlugin as remix } from "@remix-run/dev";
 
@@ -82,15 +90,19 @@ export const EXPRESS_SERVER = (args: {
     app.listen(port, () => console.log('http://localhost:' + port));
   `;
 
-const TMP_DIR = path.join(process.cwd(), ".tmp/integration");
-export async function createProject(files: Record<string, string> = {}) {
+type TemplateName = "vite-template" | "vite-cloudflare-template";
+
+export async function createProject(
+  files: Record<string, string> = {},
+  templateName: TemplateName = "vite-template"
+) {
   let projectName = `remix-${Math.random().toString(32).slice(2)}`;
   let projectDir = path.join(TMP_DIR, projectName);
   await fse.ensureDir(projectDir);
 
   // base template
-  let template = path.resolve(__dirname, "vite-template");
-  await fse.copy(template, projectDir, { errorOnExist: true });
+  let templateDir = path.resolve(__dirname, templateName);
+  await fse.copy(templateDir, projectDir, { errorOnExist: true });
 
   // user-defined files
   await Promise.all(
@@ -101,22 +113,33 @@ export async function createProject(files: Record<string, string> = {}) {
     })
   );
 
-  // node_modules: overwrite with locally built Remix packages
-  await fse.copy(
-    path.join(__dirname, "../../build/node_modules"),
-    path.join(projectDir, "node_modules"),
-    { overwrite: true }
-  );
-
   return projectDir;
 }
 
-export const viteBuild = ({ cwd }: { cwd: string }) => {
+// Avoid "Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env
+// being set" in vite-ecosystem-ci which breaks empty stderr assertions. To fix
+// this we always ensure that only NO_COLOR is set after spreading process.env.
+const colorEnv = {
+  FORCE_COLOR: undefined,
+  NO_COLOR: "1",
+} as const;
+
+export const viteBuild = ({
+  cwd,
+  env = {},
+}: {
+  cwd: string;
+  env?: Record<string, string>;
+}) => {
   let nodeBin = process.argv[0];
 
   return spawnSync(nodeBin, [remixBin, "vite:build"], {
     cwd,
-    env: { ...process.env },
+    env: {
+      ...process.env,
+      ...colorEnv,
+      ...env,
+    },
   });
 };
 
@@ -146,6 +169,31 @@ export const viteRemixServe = async ({
   );
   await waitForServer(serveProc, { port, basename });
   return () => serveProc.kill();
+};
+
+export const wranglerPagesDev = async ({
+  cwd,
+  port,
+}: {
+  cwd: string;
+  port: number;
+}) => {
+  let nodeBin = process.argv[0];
+
+  // grab wrangler bin from remix-run/remix root node_modules since its not copied into integration project's node_modules
+  let wranglerBin = path.resolve("node_modules/wrangler/bin/wrangler.js");
+
+  let proc = spawn(
+    nodeBin,
+    [wranglerBin, "pages", "dev", "./build/client", "--port", String(port)],
+    {
+      cwd,
+      stdio: "pipe",
+      env: { NODE_ENV: "production" },
+    }
+  );
+  await waitForServer(proc, { port });
+  return () => proc.kill();
 };
 
 type ServerArgs = {
@@ -185,7 +233,10 @@ declare module "@playwright/test" {
 export type Files = (args: { port: number }) => Promise<Record<string, string>>;
 type Fixtures = {
   page: Page;
-  viteDev: (files: Files) => Promise<{
+  viteDev: (
+    files: Files,
+    templateName?: TemplateName
+  ) => Promise<{
     port: number;
     cwd: string;
   }>;
@@ -194,6 +245,10 @@ type Fixtures = {
     cwd: string;
   }>;
   viteRemixServe: (files: Files) => Promise<{
+    port: number;
+    cwd: string;
+  }>;
+  wranglerPagesDev: (files: Files) => Promise<{
     port: number;
     cwd: string;
   }>;
@@ -208,9 +263,9 @@ export const test = base.extend<Fixtures>({
   // eslint-disable-next-line no-empty-pattern
   viteDev: async ({}, use) => {
     let stop: (() => unknown) | undefined;
-    await use(async (files) => {
+    await use(async (files, template) => {
       let port = await getPort();
-      let cwd = await createProject(await files({ port }));
+      let cwd = await createProject(await files({ port }), template);
       stop = await viteDev({ cwd, port });
       return { port, cwd };
     });
@@ -240,6 +295,22 @@ export const test = base.extend<Fixtures>({
     });
     stop?.();
   },
+  // eslint-disable-next-line no-empty-pattern
+  wranglerPagesDev: async ({}, use) => {
+    let stop: (() => unknown) | undefined;
+    await use(async (files) => {
+      let port = await getPort();
+      let cwd = await createProject(
+        await files({ port }),
+        "vite-cloudflare-template"
+      );
+      let { status } = viteBuild({ cwd });
+      expect(status).toBe(0);
+      stop = await wranglerPagesDev({ cwd, port });
+      return { port, cwd };
+    });
+    stop?.();
+  },
 });
 
 function node(
@@ -252,6 +323,7 @@ function node(
     cwd: options.cwd,
     env: {
       ...process.env,
+      ...colorEnv,
       ...options.env,
     },
     stdio: "pipe",

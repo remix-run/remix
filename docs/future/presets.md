@@ -13,32 +13,6 @@ Presets can only do two things:
 
 The config returned by each preset is merged in the order they were defined. Any config directly passed to the Remix Vite plugin will be merged last. This means that user config will always take precedence over any presets.
 
-## Using a preset
-
-Presets are designed to be published to npm and used within your Vite config. For example, Remix ships with a preset for Cloudflare:
-
-```ts filename=vite.config.ts lines=[3,11]
-import {
-  vitePlugin as remix,
-  cloudflarePreset as cloudflare,
-} from "@remix-run/dev";
-import { defineConfig } from "vite";
-import { getBindingsProxy } from "wrangler";
-
-export default defineConfig({
-  plugins: [
-    remix({
-      presets: [cloudflare(getBindingsProxy)],
-    }),
-  ],
-  ssr: {
-    resolve: {
-      externalConditions: ["workerd", "worker"],
-    },
-  },
-});
-```
-
 ## Creating a preset
 
 Presets conform to the following `Preset` type:
@@ -47,9 +21,9 @@ Presets conform to the following `Preset` type:
 type Preset = {
   name: string;
 
-  remixConfig?: () =>
-    | RemixConfigPreset
-    | Promise<RemixConfigPreset>;
+  remixConfig?: (args: {
+    remixUserConfig: VitePluginConfig;
+  }) => RemixConfigPreset | Promise<RemixConfigPreset>;
 
   remixConfigResolved?: (args: {
     remixConfig: ResolvedVitePluginConfig;
@@ -120,6 +94,24 @@ export function myCoolPreset(): Preset {
 ```
 
 The `remixConfigResolved` hook should only be used in cases where it would be an error to merge or override your preset's config.
+
+## Using a preset
+
+Presets are designed to be published to npm and used within your Vite config.
+
+```ts filename=vite.config.ts lines=[3,8]
+import { vitePlugin as remix } from "@remix-run/dev";
+import { myCoolPreset } from "remix-preset-cool";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      presets: [myCoolPreset()],
+    }),
+  ],
+});
+```
 
 [remix-vite]: ./vite
 [server-bundles]: ./server-bundles

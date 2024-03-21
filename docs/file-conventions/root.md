@@ -123,7 +123,7 @@ export default function App() {
   return <Outlet />;
 }
 
-export default function ErrorBoundary() {
+export function ErrorBoundary() {
   const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
@@ -142,6 +142,56 @@ export default function ErrorBoundary() {
       <h1>Error!</h1>
       <p>{error?.message ?? "Unknown error"}</p>
     </>
+  );
+}
+```
+
+**A note on `useLoaderData`in the `Layout` Component**
+
+`useLoaderData` is not permitted to be used in `ErrorBoundary` components because it is intended for the happy-path route rendering, and its typings have a built-in assumption that the `loader` ran successfully and returned something. That assumption doesn't hold in an `ErrorBoundary` because it could have been the `loader` that threw and triggered the boundary! In order to access loader data in `ErrorBoundary`'s, you can use `useRouteLoaderData` which accounts for the loader data potentially being `undefined`.
+
+Because your `Layout` component is used in both success and error flows, this same restriction holds. If you need to fork logic in your `Layout` depending on if it was a successful request or not, you can use `useRouteLoaderData("root")` and `useRouteError()`:
+
+```tsx filename="app/root.tsx" lines=[6-7,19-29,32-34]
+export function Layout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const data = useRouteLoaderData("root");
+  const error = useRouteError();
+
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1"
+        />
+        <Meta />
+        <Links />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              :root {
+                --themeVar: ${
+                  data?.themeVar || defaultThemeVar
+                }
+              }
+            `,
+          }}
+        />
+      </head>
+      <body>
+        {data ? (
+          <Analytics token={data.analyticsToken} />
+        ) : null}
+        {children}
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
   );
 }
 ```

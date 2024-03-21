@@ -40,13 +40,33 @@ Each `route` in the `branch` array contains the following properties:
 - `file` — The absolute path to the entry point for this route.
 - `index` — Whether or not this route is an index route.
 
-## Server bundle manifest
+## Build manifest
 
-When the build is complete, Remix will generate a `bundles.json` manifest file in your server build directory containing an object with the following properties:
+When the build is complete, Remix will call the Vite plugin's `buildEnd` hook passing a `buildManifest` object. This is useful if you need to inspect the build manifest to determine how to route requests to the correct server bundle.
+
+```ts filename=vite.config.ts lines=[8-10]
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      // ...
+      buildEnd: async ({ buildManifest }) => {
+        // ...
+      },
+    }),
+  ],
+});
+```
+
+When using server bundles, the build manifest contains the following properties:
 
 - `serverBundles` — An object that maps bundle IDs to the bundle's `id` and `file`.
 - `routeIdToServerBundleId` — An object that maps route IDs to its server bundle ID.
 - `routes` — A route manifest that maps route IDs to route metadata. This can be used to drive a custom routing layer in front of your Remix request handlers.
+
+Alternatively, you can enable the `manifest` option on the Vite plugin to write this build manifest object to disk as `.remix/manifest.json` in your build directory.
 
 [remix-vite]: ./vite
 [pathless-layout-route]: ../file-conventions/routes#nested-layouts-without-nested-urls

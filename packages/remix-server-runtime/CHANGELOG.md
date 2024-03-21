@@ -1,5 +1,32 @@
 # `@remix-run/server-runtime`
 
+## 2.8.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.8.1.
+
+## 2.8.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.8.0.
+
+## 2.7.2
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.7.2.
+
+## 2.7.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.7.1.
+
+## 2.7.0
+
+### Minor Changes
+
+- Allow an optional `Layout` export from the root route ([#8709](https://github.com/remix-run/remix/pull/8709))
+- Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/en/main/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
+
+### Patch Changes
+
+- Add a more specific error if a user returns a `defer` response from a resource route ([#8726](https://github.com/remix-run/remix/pull/8726))
+
 ## 2.6.0
 
 ### Minor Changes

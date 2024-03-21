@@ -8,7 +8,8 @@
     "start": "wrangler pages dev ./build/client",
     "deploy": "wrangler pages deploy ./build/client",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "typegen": "wrangler types"
   },
   "dependencies": {
     "@remix-run/cloudflare": "*",
@@ -25,8 +26,8 @@
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
+    "@typescript-eslint/parser": "^6.7.4",
     "eslint": "^8.38.0",
-    "eslint-config-prettier": "^9.0.0",
     "eslint-import-resolver-typescript": "^3.6.1",
     "eslint-plugin-import": "^2.28.1",
     "eslint-plugin-jsx-a11y": "^6.7.1",

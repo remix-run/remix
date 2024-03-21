@@ -7,15 +7,49 @@ import dedent from "dedent";
 
 import { viteBuild, test, createProject } from "./helpers/vite.js";
 
+const js = String.raw;
+
 const files = {
-  "vite.config.ts": dedent`
+  "vite.config.ts": dedent(js`
     import { vitePlugin as remix } from "@remix-run/dev";
     import fs from "node:fs/promises";
     import serializeJs from "serialize-javascript";
 
+    let isDeepFrozen = (obj: any) =>
+      Object.isFrozen(obj) &&
+      Object.keys(obj).every(
+        prop => typeof obj[prop] !== 'object' || isDeepFrozen(obj[prop])
+      );
+
     export default {
+      build: {
+        assetsDir: "custom-assets-dir",
+      },
       plugins: [remix({
         presets: [
+          // Ensure user config is passed to remixConfig hook
+          {
+            name: "test-preset",
+            remixConfig: async ({ remixUserConfig: { presets, ...restUserConfig } }) => {
+              if (!Array.isArray(presets)) {
+                throw new Error("Remix user config doesn't have presets array.");
+              }
+
+              let expected = JSON.stringify({ appDirectory: "app"});
+              let actual = JSON.stringify(restUserConfig);
+
+              if (actual !== expected) {
+                throw new Error([
+                  "Remix user config wasn't passed to remixConfig hook.",
+                  "Expected: " + expected,
+                  "Actual: " + actual,
+                ].join(" "));
+              }
+
+              return {};
+            },
+          },
+          
           // Ensure preset config takes lower precedence than user config
           {
             name: "test-preset",
@@ -46,16 +80,20 @@ const files = {
             }),
           },
 
+          // Ensure remixConfig is called with a frozen Remix user config
+          {
+            name: "test-preset",
+            remixConfig: async ({ remixUserConfig }) => {
+              await fs.writeFile("PRESET_REMIX_CONFIG_META.json", JSON.stringify({
+                remixUserConfigFrozen: isDeepFrozen(remixUserConfig),
+              }), "utf-8");
+            }
+          },
+
           // Ensure remixConfigResolved is called with a frozen Remix config
           {
             name: "test-preset",
             remixConfigResolved: async ({ remixConfig }) => {
-              let isDeepFrozen = (obj: any) =>
-                Object.isFrozen(obj) &&
-                Object.keys(obj).every(
-                  prop => typeof obj[prop] !== 'object' || isDeepFrozen(obj[prop])
-                );
-
               await fs.writeFile("PRESET_REMIX_CONFIG_RESOLVED_META.json", JSON.stringify({
                 remixConfigFrozen: isDeepFrozen(remixConfig),
               }), "utf-8");
@@ -77,9 +115,16 @@ const files = {
             name: "test-preset",
             remixConfig: async () => ({
               async buildEnd(buildEndArgs) {
+                let { viteConfig, buildManifest, remixConfig } = buildEndArgs;
+
                 await fs.writeFile(
-                  "BUILD_END_ARGS.js",
-                  "export default " + serializeJs(buildEndArgs, { space: 2, unsafe: true }),
+                  "BUILD_END_META.js",
+                  [
+                    "export const keys = " + JSON.stringify(Object.keys(buildEndArgs)) + ";",
+                    "export const buildManifest = " + serializeJs(buildManifest, { space: 2, unsafe: true }) + ";",
+                    "export const remixConfig = " + serializeJs(remixConfig, { space: 2, unsafe: true }) + ";",
+                    "export const assetsDir = " + JSON.stringify(viteConfig.build.assetsDir) + ";",
+                  ].join("\\n"),
                   "utf-8"
                 );
               },
@@ -90,7 +135,7 @@ const files = {
         appDirectory: "app",
       })],
     }
-  `,
+  `),
 };
 
 test("Vite / presets", async () => {
@@ -107,10 +152,14 @@ test("Vite / presets", async () => {
     return normalizePath(path.relative(cwd, pathname));
   }
 
-  let buildEndArgs: any = (
-    await import(URL.pathToFileURL(path.join(cwd, "BUILD_END_ARGS.js")).href)
-  ).default;
-  let { remixConfig } = buildEndArgs;
+  let buildEndArgsMeta: any = await import(
+    URL.pathToFileURL(path.join(cwd, "BUILD_END_META.js")).href
+  );
+
+  let { remixConfig } = buildEndArgsMeta;
+
+  // Smoke test Vite config
+  expect(buildEndArgsMeta.assetsDir).toBe("custom-assets-dir");
 
   // Before rewriting to relative paths, assert that paths are absolute within cwd
   expect(pathStartsWithCwd(remixConfig.buildDirectory)).toBe(true);
@@ -124,6 +173,18 @@ test("Vite / presets", async () => {
   // Ensure preset config takes lower precedence than user config
   expect(remixConfig.serverModuleFormat).toBe("esm");
 
+  // Ensure `remixConfig` is called with a frozen Remix user config
+  expect(
+    JSON.parse(
+      await fs.readFile(
+        path.join(cwd, "PRESET_REMIX_CONFIG_META.json"),
+        "utf-8"
+      )
+    )
+  ).toEqual({
+    remixUserConfigFrozen: true,
+  });
+
   // Ensure `remixConfigResolved` is called with a frozen Remix config
   expect(
     JSON.parse(
@@ -135,10 +196,16 @@ test("Vite / presets", async () => {
   ).toEqual({
     remixConfigFrozen: true,
   });
-  expect(Object.keys(buildEndArgs)).toEqual(["buildManifest", "remixConfig"]);
+
+  // Snapshot the buildEnd args keys
+  expect(buildEndArgsMeta.keys).toEqual([
+    "buildManifest",
+    "remixConfig",
+    "viteConfig",
+  ]);
 
   // Smoke test the resolved config
-  expect(Object.keys(buildEndArgs.remixConfig)).toEqual([
+  expect(Object.keys(remixConfig)).toEqual([
     "appDirectory",
     "basename",
     "buildDirectory",
@@ -154,7 +221,7 @@ test("Vite / presets", async () => {
   ]);
 
   // Ensure we get a valid build manifest
-  expect(buildEndArgs.buildManifest).toEqual({
+  expect(buildEndArgsMeta.buildManifest).toEqual({
     routeIdToServerBundleId: {
       "routes/_index": "preset-server-bundle-id",
     },

@@ -13,69 +13,92 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.6.0](#v260)
-    - [What's Changed](#whats-changed)
-      - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
-    - [Minor Changes](#minor-changes)
+  - [v2.8.1](#v281)
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
     - [Changes by Package](#changes-by-package)
-  - [v2.5.1](#v251)
+  - [v2.8.0](#v280)
+    - [Minor Changes](#minor-changes)
     - [Patch Changes](#patch-changes-1)
     - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
-  - [v2.5.0](#v250)
-    - [What's Changed](#whats-changed-1)
-      - [SPA Mode (unstable)](#spa-mode-unstable)
-      - [Server Bundles (unstable)](#server-bundles-unstable)
-    - [Minor Changes](#minor-changes-1)
+  - [2.7.2](#272)
     - [Patch Changes](#patch-changes-2)
+  - [2.7.1](#271)
+    - [Patch Changes](#patch-changes-3)
+  - [v2.7.0](#v270)
+    - [What's Changed](#whats-changed)
+      - [Stabilized Vite Plugin](#stabilized-vite-plugin)
+      - [New `Layout` Export](#new-layout-export)
+      - [Basename support](#basename-support)
+      - [Cloudflare Proxy as a Vite Plugin](#cloudflare-proxy-as-a-vite-plugin)
+    - [Minor Changes](#minor-changes-1)
+    - [Patch Changes](#patch-changes-4)
     - [Updated Dependencies](#updated-dependencies-2)
     - [Changes by Package](#changes-by-package-2)
-  - [v2.4.1](#v241)
-    - [Patch Changes](#patch-changes-3)
+  - [v2.6.0](#v260)
+    - [What's Changed](#whats-changed-1)
+      - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
+    - [Minor Changes](#minor-changes-2)
+    - [Patch Changes](#patch-changes-5)
     - [Updated Dependencies](#updated-dependencies-3)
     - [Changes by Package](#changes-by-package-3)
-  - [v2.4.0](#v240)
+  - [v2.5.1](#v251)
+    - [Patch Changes](#patch-changes-6)
+    - [Updated Dependencies](#updated-dependencies-4)
+    - [Changes by Package](#changes-by-package-4)
+  - [v2.5.0](#v250)
     - [What's Changed](#whats-changed-2)
+      - [SPA Mode (unstable)](#spa-mode-unstable)
+      - [Server Bundles (unstable)](#server-bundles-unstable)
+    - [Minor Changes](#minor-changes-3)
+    - [Patch Changes](#patch-changes-7)
+    - [Updated Dependencies](#updated-dependencies-5)
+    - [Changes by Package](#changes-by-package-5)
+  - [v2.4.1](#v241)
+    - [Patch Changes](#patch-changes-8)
+    - [Updated Dependencies](#updated-dependencies-6)
+    - [Changes by Package](#changes-by-package-6)
+  - [v2.4.0](#v240)
+    - [What's Changed](#whats-changed-3)
       - [Client Data](#client-data)
       - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
       - [Vite Updates (Unstable)](#vite-updates-unstable)
-    - [Minor Changes](#minor-changes-2)
-    - [Patch Changes](#patch-changes-4)
-    - [Updated Dependencies](#updated-dependencies-4)
-    - [Changes by Package](#changes-by-package-4)
+    - [Minor Changes](#minor-changes-4)
+    - [Patch Changes](#patch-changes-9)
+    - [Updated Dependencies](#updated-dependencies-7)
+    - [Changes by Package](#changes-by-package-7)
   - [v2.3.1](#v231)
-    - [Patch Changes](#patch-changes-5)
-    - [Updated Dependencies](#updated-dependencies-5)
-    - [Changes by Package](#changes-by-package-5)
+    - [Patch Changes](#patch-changes-10)
+    - [Updated Dependencies](#updated-dependencies-8)
+    - [Changes by Package](#changes-by-package-8)
   - [v2.3.0](#v230)
-    - [What's Changed](#whats-changed-3)
+    - [What's Changed](#whats-changed-4)
       - [Stabilized `useBlocker`](#stabilized-useblocker)
       - [`unstable_flushSync` API](#unstable_flushsync-api)
-    - [Minor Changes](#minor-changes-3)
-    - [Patch Changes](#patch-changes-6)
-    - [Updated Dependencies](#updated-dependencies-6)
-    - [Changes by Package](#changes-by-package-6)
+    - [Minor Changes](#minor-changes-5)
+    - [Patch Changes](#patch-changes-11)
+    - [Updated Dependencies](#updated-dependencies-9)
+    - [Changes by Package](#changes-by-package-9)
   - [v2.2.0](#v220)
-    - [What's Changed](#whats-changed-4)
+    - [What's Changed](#whats-changed-5)
       - [Vite!](#vite)
       - [New Fetcher APIs](#new-fetcher-apis)
       - [Persistence Future Flag](#persistence-future-flag)
-    - [Minor Changes](#minor-changes-4)
-    - [Patch Changes](#patch-changes-7)
-    - [Updated Dependencies](#updated-dependencies-7)
-    - [Changes by Package](#changes-by-package-7)
+    - [Minor Changes](#minor-changes-6)
+    - [Patch Changes](#patch-changes-12)
+    - [Updated Dependencies](#updated-dependencies-10)
+    - [Changes by Package](#changes-by-package-10)
   - [v2.1.0](#v210)
-    - [What's Changed](#whats-changed-5)
+    - [What's Changed](#whats-changed-6)
       - [View Transitions](#view-transitions)
       - [Stable `createRemixStub`](#stable-createremixstub)
-    - [Minor Changes](#minor-changes-5)
-    - [Patch Changes](#patch-changes-8)
-    - [Updated Dependencies](#updated-dependencies-8)
-    - [Changes by Package](#changes-by-package-8)
+    - [Minor Changes](#minor-changes-7)
+    - [Patch Changes](#patch-changes-13)
+    - [Updated Dependencies](#updated-dependencies-11)
+    - [Changes by Package](#changes-by-package-11)
   - [v2.0.1](#v201)
-    - [Patch Changes](#patch-changes-9)
+    - [Patch Changes](#patch-changes-14)
     - [Changes by Package 🔗](#changes-by-package-)
   - [v2.0.0](#v200)
     - [Breaking Changes](#breaking-changes)
@@ -87,8 +110,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
         - [Breaking Type Changes](#breaking-type-changes)
     - [New Features](#new-features)
     - [Other Notable Changes](#other-notable-changes)
-    - [Updated Dependencies](#updated-dependencies-9)
-    - [Changes by Package](#changes-by-package-9)
+    - [Updated Dependencies](#updated-dependencies-12)
+    - [Changes by Package](#changes-by-package-12)
 
 </details>
 
@@ -135,6 +158,235 @@ Date: YYYY-MM-DD
 **Full Changelog**: [`v2.X.Y...v2.X.Y`](https://github.com/remix-run/remix/compare/remix@2.X.Y...remix@2.X.Y)
 
 -->
+
+## v2.8.1
+
+Date: 2024-03-06
+
+### Patch Changes
+
+- `@remix-run/dev` - Vite: Support reading from Vite config when running `remix reveal` and `remix routes` CLI commands ([#8916](https://github.com/remix-run/remix/pull/8916))
+- `@remix-run/dev` - Vite: Clean up redundant client route query strings on route JavaScript files in production builds ([#8969](https://github.com/remix-run/remix/pull/8969))
+- `@remix-run/dev` - Vite: Add vite commands to Remix CLI `--help` output ([#8939](https://github.com/remix-run/remix/pull/8939))
+- `@remix-run/dev` - Vite: Fix support for `build.sourcemap` option in Vite config ([#8965](https://github.com/remix-run/remix/pull/8965))
+- `@remix-run/dev` - Vite: Fix error when using Vite's `server.fs.allow` option without a client entry file ([#8966](https://github.com/remix-run/remix/pull/8966))
+- `@remix-run/react` - Strengthen the internal `LayoutComponent` type to accept limited children ([#8910](https://github.com/remix-run/remix/pull/8910))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.22.3`](https://github.com/remix-run/react-router/releases/tag/react-router%406.22.3)
+- [`@remix-run/router@1.15.3`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1153)
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/create-remix/CHANGELOG.md#281)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-architect/CHANGELOG.md#281)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-cloudflare/CHANGELOG.md#281)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-cloudflare-pages/CHANGELOG.md#281)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-cloudflare-workers/CHANGELOG.md#281)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-css-bundle/CHANGELOG.md#281)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-deno/CHANGELOG.md#281)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-dev/CHANGELOG.md#281)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-eslint-config/CHANGELOG.md#281)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-express/CHANGELOG.md#281)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-node/CHANGELOG.md#281)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-react/CHANGELOG.md#281)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-serve/CHANGELOG.md#281)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-server-runtime/CHANGELOG.md#281)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.8.1/packages/remix-testing/CHANGELOG.md#281)
+
+**Full Changelog**: [`v2.8.0...v2.8.1`](https://github.com/remix-run/remix/compare/remix@2.8.0...remix@2.8.1)
+
+## v2.8.0
+
+Date: 2024-02-28
+
+### Minor Changes
+
+- `@remix-run/dev` - Vite: Pass resolved `viteConfig` to Remix Vite plugin's `buildEnd` hook ([#8885](https://github.com/remix-run/remix/pull/8885))
+
+### Patch Changes
+
+- `@remix-run/dev` - Mark `Layout` as browser safe route export in `esbuild` compiler ([#8842](https://github.com/remix-run/remix/pull/8842))
+- `@remix-run/dev` - Vite: Silence build warnings when dependencies include `"use client"` directives ([#8897](https://github.com/remix-run/remix/pull/8897))
+- `@remix-run/dev` - Vite: Fix `serverBundles` issue where multiple browser manifests are generated ([#8864](https://github.com/remix-run/remix/pull/8864))
+- `@remix-run/dev` - Vite: Support custom `build.assetsDir` option ([#8843](https://github.com/remix-run/remix/pull/8843))
+- `@remix-run/react` - Fix the default root `ErrorBoundary` component so it leverages the user-provided `Layout` component ([#8859](https://github.com/remix-run/remix/pull/8859))
+- `@remix-run/react` - Fix the default root `HydrateFallback` component so it leverages any user-provided `Layout` component ([#8892](https://github.com/remix-run/remix/pull/8892))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.22.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.22.2)
+- [`@remix-run/router@1.15.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1152)
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/create-remix/CHANGELOG.md#280)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-architect/CHANGELOG.md#280)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-cloudflare/CHANGELOG.md#280)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-cloudflare-pages/CHANGELOG.md#280)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-cloudflare-workers/CHANGELOG.md#280)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-css-bundle/CHANGELOG.md#280)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-deno/CHANGELOG.md#280)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-dev/CHANGELOG.md#280)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-eslint-config/CHANGELOG.md#280)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-express/CHANGELOG.md#280)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-node/CHANGELOG.md#280)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-react/CHANGELOG.md#280)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-serve/CHANGELOG.md#280)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-server-runtime/CHANGELOG.md#280)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.8.0/packages/remix-testing/CHANGELOG.md#280)
+
+**Full Changelog**: [`v2.7.2...v2.8.0`](https://github.com/remix-run/remix/compare/remix@2.7.2...remix@2.8.0)
+
+## 2.7.2
+
+Date: 2024-02-21
+
+### Patch Changes
+
+- `@remix-run/dev` - Vite: Fix error when building projects with `.css?url` imports ([#8829](https://github.com/remix-run/remix/pull/8829))
+
+## 2.7.1
+
+Date: 2024-02-20
+
+### Patch Changes
+
+- `@remix-run/cloudflare-pages` - Fix breaking change and restore Cloudflare event context fields in `getLoadContext` argument for backwards compatibility ([#8819](https://github.com/remix-run/remix/pull/8819))
+
+## v2.7.0
+
+Date: 2024-02-20
+
+### What's Changed
+
+#### Stabilized Vite Plugin
+
+We're excited to announce that support for [Vite](https://vitejs.dev/) is now stable in Remix `2.7.0`! Ever since the [initial unstable release of Remix Vite](https://remix.run/blog/remix-heart-vite), we’ve been hard at work refining and extending it over the past few months with help from all of our early adopters and community contributors. This also means that Vite-only features such as [SPA Mode](https://remix.run/docs/en/main/future/spa-mode), [Server Bundles](https://remix.run/docs/future/server-bundles), and [`basename` support](https://remix.run/docs/en/dev/future/vite#basename) are now officially stable as well 😊.
+
+For more information, check out the [blog post](https://remix.run/blog/remix-vite-stable) and the [Vite docs](https://remix.run/docs/en/main/future/vite).
+
+#### New `Layout` Export
+
+We've found that it's _super_ common to create your own component in your root route to hold the shared layout/app shell between your `Component`/`ErrorBoundary`/`HydrateFallback`. This is so common (and can also cause some minor edge-case issues such as a FOUC on hydration) that we've incorporated this as a first-class API in `2.7.0`.
+
+You can now export an optional `Layout` component from your root route which will be provided your route component, ErrorBoundary, or HydrateFallback as it's `children`. For more information, please see the [`Layout` docs](https://remix.run/docs/en/dev/file-conventions/root#layout-export) and the [RFC](https://github.com/remix-run/remix/discussions/8702).
+
+#### Basename support
+
+React Router has long supported a [`basename`](https://reactrouter.com/en/main/routers/create-browser-router#basename) config that allows you to serve your app within a subpath such as `http://localhost/myapp/*` without having to include the `/myapp` segment in all of your route paths. This was originally omitted from Remix because v1 nested folders file-convention made it pretty easy to put your route files in a `routes/myapp/` folder, giving you the same functionality. There has also been an [open proposal from the community](https://github.com/remix-run/remix/discussions/2891) to add this functionality.
+
+Two things have since changed that made us reconsider the lack of `basename` support:
+
+- We switched to a flat-file based convention in v2, and it gets far less ergonomic to have to prefix all of your route files with `myapp.` compared to the nested folder convention
+- We moved to Vite which has it's own `base` config which is often (and easily) confused with the concept of a React Router `basename` (when in reality it's more aligned with the old Remix `publicPath` config)
+
+In `2.7.0` we've added support for a `basename` in the Vite plugin config. For more information, please check out the [`basename` docs](https://remix.run/docs/en/dev/future/vite#basename).
+
+_Note: This is a Vite-only feature and is not available via the `esbuild` compiler._
+
+#### Cloudflare Proxy as a Vite Plugin
+
+⚠️ This is a breaking change for projects relying on Cloudflare support from the unstable Vite plugin
+
+The Cloudflare preset (`unstable_cloudflarePreset`) as been removed and replaced with a new Vite plugin:
+
+```diff
+ import {
+    unstable_vitePlugin as remix,
+-   unstable_cloudflarePreset as cloudflare,
++   cloudflareDevProxyVitePlugin as remixCloudflareDevProxy,
+  } from "@remix-run/dev";
+  import { defineConfig } from "vite";
+
+  export default defineConfig({
+    plugins: [
++     remixCloudflareDevProxy(),
++     remix(),
+-     remix({
+-       presets: [cloudflare()],
+-     }),
+    ],
+-   ssr: {
+-     resolve: {
+-       externalConditions: ["workerd", "worker"],
+-     },
+-   },
+  });
+```
+
+A few notes on the new plugin:
+
+- `remixCloudflareDevProxy` must come _before_ the `remix` plugin so that it can override Vite's dev server middleware to be compatible with Cloudflare's proxied environment
+- Because it is a Vite plugin, `remixCloudflareDevProxy` can set `ssr.resolve.externalConditions` to be `workerd`-compatible for you
+- `remixCloudflareDevProxy` accepts a `getLoadContext` function that replaces the old `getRemixDevLoadContext`
+- If you were using a `nightly` version that required `getBindingsProxy` or `getPlatformProxy`, that is no longer required
+- Any options you were passing to `getBindingsProxy` or `getPlatformProxy` should now be passed to `remixCloudflareDevProxy` instead
+- This API also better aligns with future plans to support Cloudflare with a framework-agnostic Vite plugin that makes use of Vite's (experimental) Runtime API.
+
+### Minor Changes
+
+- `@remix-run/react` - Allow an optional `Layout` export from the root route ([#8709](https://github.com/remix-run/remix/pull/8709))
+- `@remix-run/cloudflare-pages` - Make `getLoadContext` optional for Cloudflare Pages ([#8701](https://github.com/remix-run/remix/pull/8701))
+  - Defaults to `(context) => ({ env: context })`, which is what we used to have in all the templates
+  - This gives parity with the Cloudflare preset for the Remix Vite plugin and keeps our templates leaner
+- `@remix-run/dev` - Vite: Cloudflare Proxy as a Vite plugin ([#8749](https://github.com/remix-run/remix/pull/8749))
+  - **⚠️ This is a breaking change for projects relying on Cloudflare support from the unstable Vite plugin**
+- `@remix-run/dev` - Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/en/main/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
+- `@remix-run/dev` - Vite: Stabilize the Remix Vite plugin, Cloudflare preset, and all related types by removing all `unstable_` / `Unstable_` prefixes ([#8713](https://github.com/remix-run/remix/pull/8713))
+  - While this is a breaking change for existing Remix Vite plugin consumers, now that the plugin has stabilized, there will no longer be any breaking changes outside of a major release. Thank you to all of our early adopters and community contributors for helping us get here! 🙏
+- `@remix-run/dev` - Vite: Stabilize "SPA Mode" by renaming the Remix vite plugin config from `unstable_ssr -> ssr` ([#8692](https://github.com/remix-run/remix/pull/8692))
+
+### Patch Changes
+
+- `@remix-run/express` - Use `req.originalUrl` instead of `req.url` so that Remix sees the full URL ([#8145](https://github.com/remix-run/remix/pull/8145))
+  - Remix relies on the knowing the full URL to ensure that server and client code can function together, and does not support URL rewriting prior to the Remix handler
+- `@remix-run/react` - Fix a bug with SPA mode when the root route had no children ([#8747](https://github.com/remix-run/remix/pull/8747))
+- `@remix-run/server-runtime` - Add a more specific error if a user returns a `defer` response from a resource route ([#8726](https://github.com/remix-run/remix/pull/8726))
+- `@remix-run/dev` - Always prepend `DOCTYPE` in SPA mode `entry.server.tsx`, can opt out via remix reveal ([#8725](https://github.com/remix-run/remix/pull/8725))
+- `@remix-run/dev` - Fix build issue in SPA mode when using a `basename` ([#8720](https://github.com/remix-run/remix/pull/8720))
+- `@remix-run/dev` - Fix type error in Remix config for synchronous `routes` function ([#8745](https://github.com/remix-run/remix/pull/8745))
+- `@remix-run/dev` - Vite: Fix issue where client route file requests fail if search params have been parsed and serialized before reaching the Remix Vite plugin ([#8740](https://github.com/remix-run/remix/pull/8740))
+- `@remix-run/dev` - Vite: Validate that the MDX Rollup plugin, if present, is placed before Remix in Vite config ([#8690](https://github.com/remix-run/remix/pull/8690))
+- `@remix-run/dev` - Vite: Fix issue resolving critical CSS during development when the current working directory differs from the project root ([#8752](https://github.com/remix-run/remix/pull/8752))
+- `@remix-run/dev` - Vite: Require version `5.1.0` to support `.css?url` imports ([#8723](https://github.com/remix-run/remix/pull/8723))
+- `@remix-run/dev` - Vite: Support Vite `5.1.0`'s `.css?url` imports ([#8684](https://github.com/remix-run/remix/pull/8684))
+- `@remix-run/dev` - Vite: Enable use of [`vite preview`](https://main.vitejs.dev/guide/static-deploy.html#deploying-a-static-site) to preview Remix SPA applications ([#8624](https://github.com/remix-run/remix/pull/8624))
+  - In the SPA template, `npm run start` has been renamed to `npm run preview` which uses `vite preview` instead of a standalone HTTP server such as `http-server` or `serv-cli`
+- `@remix-run/dev` - Vite: Remove the ability to pass `publicPath` as an option to the Remix vite plugin ([#8145](https://github.com/remix-run/remix/pull/8145))
+  - **⚠️ This is a breaking change for projects using the unstable Vite plugin with a `publicPath`**
+  - This is already handled in Vite via the [`base`](https://vitejs.dev/guide/build.html#public-base-path) config so we now set the Remix `publicPath` from the Vite `base` config
+- `@remix-run/dev` - Vite: Enable HMR for `.md` and `.mdx` files ([#8711](https://github.com/remix-run/remix/pull/8711))
+- `@remix-run/dev` - Vite: reliably detect non-root routes in Windows ([#8806](https://github.com/remix-run/remix/pull/8806))
+- `@remix-run/dev` - Vite: Pass `remixUserConfig` to preset `remixConfig` hook ([#8797](https://github.com/remix-run/remix/pull/8797))
+- `@remix-run/dev` - Vite: Ensure CSS file URLs that are only referenced in the server build are available on the client ([#8796](https://github.com/remix-run/remix/pull/8796))
+- `@remix-run/dev` - Vite: fix server exports dead-code elimination for routes outside of app directory ([#8795](https://github.com/remix-run/remix/pull/8795))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.22.Y`](https://github.com/remix-run/react-router/releases/tag/react-router%406.22.1)
+- [`@remix-run/router@1.15.Y`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1151)
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/create-remix/CHANGELOG.md#270)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-architect/CHANGELOG.md#270)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-cloudflare/CHANGELOG.md#270)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-cloudflare-pages/CHANGELOG.md#270)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-cloudflare-workers/CHANGELOG.md#270)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-css-bundle/CHANGELOG.md#270)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-deno/CHANGELOG.md#270)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-dev/CHANGELOG.md#270)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-eslint-config/CHANGELOG.md#270)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-express/CHANGELOG.md#270)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-node/CHANGELOG.md#270)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-react/CHANGELOG.md#270)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-serve/CHANGELOG.md#270)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-server-runtime/CHANGELOG.md#270)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.7.0/packages/remix-testing/CHANGELOG.md#270)
+
+**Full Changelog**: [`v2.6.0...v2.7.0`](https://github.com/remix-run/remix/compare/remix@2.6.0...remix@2.7.0)
 
 ## v2.6.0
 

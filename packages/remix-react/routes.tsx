@@ -91,28 +91,28 @@ function getRouteComponents(
     return {
       ...(Component
         ? {
-            element: React.createElement(
-              routeModule.Layout,
-              null,
-              React.createElement(Component)
+            element: (
+              <routeModule.Layout>
+                <Component />
+              </routeModule.Layout>
             ),
           }
         : { Component }),
       ...(ErrorBoundary
         ? {
-            errorElement: React.createElement(
-              routeModule.Layout,
-              null,
-              React.createElement(ErrorBoundary)
+            errorElement: (
+              <routeModule.Layout>
+                <ErrorBoundary />
+              </routeModule.Layout>
             ),
           }
         : { ErrorBoundary }),
       ...(HydrateFallback
         ? {
-            hydrateFallbackElement: React.createElement(
-              routeModule.Layout,
-              null,
-              React.createElement(HydrateFallback)
+            hydrateFallbackElement: (
+              <routeModule.Layout>
+                <HydrateFallback />
+              </routeModule.Layout>
             ),
           }
         : { HydrateFallback }),
@@ -148,11 +148,11 @@ export function createServerRoutes(
       index: route.index,
       path: route.path,
       handle: routeModule.handle,
-      // For SPA Mode, all routes are lazy except root.  We don't need a full
-      // implementation here though - just need a `lazy` prop to tell the RR
-      // rendering where to stop
-      lazy:
-        isSpaMode && route.id !== "root" ? () => spaModeLazyPromise : undefined,
+      // For SPA Mode, all routes are lazy except root.  However we tell the
+      // router root is also lazy here too since we don't need a full
+      // implementation - we just need a `lazy` prop to tell the RR rendering
+      // where to stop which is always at the root route in SPA mode
+      lazy: isSpaMode ? () => spaModeLazyPromise : undefined,
       // For partial hydration rendering, we need to indicate when the route
       // has a loader/clientLoader, but it won't ever be called during the static
       // render, so just give it a no-op function so we can render down to the
@@ -249,16 +249,40 @@ export function createClientRoutes(
   return (routesByParentId[parentId] || []).map((route) => {
     let routeModule = routeModulesCache[route.id];
 
-    async function fetchServerLoader(request: Request) {
-      if (!route.hasLoader) return null;
-      return fetchServerHandler(request, route);
+    // Fetch data from the server either via single fetch or the standard `?_data`
+    // request.  Unwrap it when called via `serverLoader`/`serverAction` in a
+    // client handler, otherwise return the raw response for the router to unwrap
+    async function fetchServerHandlerAndMaybeUnwrap(
+      request: Request,
+      unwrap: boolean,
+      singleFetch: unknown
+    ) {
+      if (typeof singleFetch === "function") {
+        let result = await singleFetch();
+        return result;
+      }
+      let result = await fetchServerHandler(request, route);
+      return unwrap ? unwrapServerResponse(result) : result;
     }
 
-    async function fetchServerAction(request: Request) {
+    function fetchServerLoader(
+      request: Request,
+      unwrap: boolean,
+      singleFetch: unknown
+    ) {
+      if (!route.hasLoader) return Promise.resolve(null);
+      return fetchServerHandlerAndMaybeUnwrap(request, unwrap, singleFetch);
+    }
+
+    function fetchServerAction(
+      request: Request,
+      unwrap: boolean,
+      singleFetch: unknown
+    ) {
       if (!route.hasAction) {
         throw noActionDefinedError("action", route.id);
       }
-      return fetchServerHandler(request, route);
+      return fetchServerHandlerAndMaybeUnwrap(request, unwrap, singleFetch);
     }
 
     async function prefetchStylesAndCallHandler(
@@ -306,7 +330,10 @@ export function createClientRoutes(
         needsRevalidation == null &&
         (routeModule.clientLoader?.hydrate === true || !route.hasLoader);
 
-      dataRoute.loader = async ({ request, params }: LoaderFunctionArgs) => {
+      dataRoute.loader = async (
+        { request, params }: LoaderFunctionArgs,
+        singleFetch?: unknown
+      ) => {
         try {
           let result = await prefetchStylesAndCallHandler(async () => {
             invariant(
@@ -316,7 +343,7 @@ export function createClientRoutes(
             if (!routeModule.clientLoader) {
               if (isSpaMode) return null;
               // Call the server when no client loader exists
-              return fetchServerLoader(request);
+              return fetchServerLoader(request, false, singleFetch);
             }
 
             return routeModule.clientLoader({
@@ -334,9 +361,7 @@ export function createClientRoutes(
                 }
 
                 // Call the server loader for client-side navigations
-                let result = await fetchServerLoader(request);
-                let unwrapped = await unwrapServerResponse(result);
-                return unwrapped;
+                return fetchServerLoader(request, true, singleFetch);
               },
             });
           });
@@ -355,7 +380,10 @@ export function createClientRoutes(
         isSpaMode
       );
 
-      dataRoute.action = ({ request, params }: ActionFunctionArgs) => {
+      dataRoute.action = (
+        { request, params }: ActionFunctionArgs,
+        singleFetch?: unknown
+      ) => {
         return prefetchStylesAndCallHandler(async () => {
           invariant(
             routeModule,
@@ -365,7 +393,7 @@ export function createClientRoutes(
             if (isSpaMode) {
               throw noActionDefinedError("clientAction", route.id);
             }
-            return fetchServerAction(request);
+            return fetchServerAction(request, false, singleFetch);
           }
 
           return routeModule.clientAction({
@@ -373,9 +401,7 @@ export function createClientRoutes(
             params,
             async serverAction() {
               preventInvalidServerHandlerCall("action", route, isSpaMode);
-              let result = await fetchServerAction(request);
-              let unwrapped = await unwrapServerResponse(result);
-              return unwrapped;
+              return fetchServerAction(request, true, singleFetch);
             },
           });
         });
@@ -385,19 +411,25 @@ export function createClientRoutes(
       // the server loader/action in parallel with the module load so we add
       // loader/action as static props on the route
       if (!route.hasClientLoader) {
-        dataRoute.loader = ({ request }: LoaderFunctionArgs) =>
+        dataRoute.loader = (
+          { request }: LoaderFunctionArgs,
+          singleFetch?: unknown
+        ) =>
           prefetchStylesAndCallHandler(() => {
             if (isSpaMode) return Promise.resolve(null);
-            return fetchServerLoader(request);
+            return fetchServerLoader(request, false, singleFetch);
           });
       }
       if (!route.hasClientAction) {
-        dataRoute.action = ({ request }: ActionFunctionArgs) =>
+        dataRoute.action = (
+          { request }: ActionFunctionArgs,
+          singleFetch?: unknown
+        ) =>
           prefetchStylesAndCallHandler(() => {
             if (isSpaMode) {
               throw noActionDefinedError("clientAction", route.id);
             }
-            return fetchServerAction(request);
+            return fetchServerAction(request, false, singleFetch);
           });
       }
 
@@ -411,28 +443,30 @@ export function createClientRoutes(
         let lazyRoute: Partial<DataRouteObject> = { ...mod };
         if (mod.clientLoader) {
           let clientLoader = mod.clientLoader;
-          lazyRoute.loader = (args) =>
+          lazyRoute.loader = (
+            args: LoaderFunctionArgs,
+            singleFetch?: unknown
+          ) =>
             clientLoader({
               ...args,
               async serverLoader() {
                 preventInvalidServerHandlerCall("loader", route, isSpaMode);
-                let response = await fetchServerLoader(args.request);
-                let result = await unwrapServerResponse(response);
-                return result;
+                return fetchServerLoader(args.request, true, singleFetch);
               },
             });
         }
 
         if (mod.clientAction) {
           let clientAction = mod.clientAction;
-          lazyRoute.action = (args) =>
+          lazyRoute.action = (
+            args: ActionFunctionArgs,
+            singleFetch?: unknown
+          ) =>
             clientAction({
               ...args,
               async serverAction() {
                 preventInvalidServerHandlerCall("action", route, isSpaMode);
-                let response = await fetchServerAction(args.request);
-                let result = await unwrapServerResponse(response);
-                return result;
+                return fetchServerAction(args.request, true, singleFetch);
               },
             });
         }
