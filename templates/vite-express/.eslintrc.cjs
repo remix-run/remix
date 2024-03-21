@@ -22,6 +22,7 @@ module.exports = {
 
   // Base config
   extends: ["eslint:recommended"],
+  ignorePatterns: ["!**/.server", "!**/.client"],
 
   overrides: [
     // React
