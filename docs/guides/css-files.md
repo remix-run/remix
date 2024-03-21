@@ -6,8 +6,8 @@ title: CSS Files
 
 There are two main ways to manage CSS files in Remix:
 
-- [CSS bundling](#css-bundling)
-- [CSS URL imports](#css-url-imports)
+- [CSS bundling][css-bundling]
+- [CSS URL imports][css-url-imports]
 
 This guide covers the pros and cons of each approach, and provides some recommendations based on your project's specific needs.
 
@@ -168,3 +168,5 @@ It's ultimately personal preference when it comes to managing CSS files in your 
 [package-overrides]: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides
 [vite-url-imports]: https://vitejs.dev/guide/assets#explicit-url-imports
 [links-export]: ../route/links
+[css-bundling]: #css-bundling
+[css-url-imports]: #css-url-imports
