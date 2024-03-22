@@ -1,19 +1,4 @@
 import {
-  ByteLengthQueuingStrategy as NodeByteLengthQueuingStrategy,
-  CountQueuingStrategy as NodeCountQueuingStrategy,
-  ReadableByteStreamController as NodeReadableByteStreamController,
-  ReadableStream as NodeReadableStream,
-  ReadableStreamBYOBReader as NodeReadableStreamBYOBReader,
-  ReadableStreamBYOBRequest as NodeReadableStreamBYOBRequest,
-  ReadableStreamDefaultController as NodeReadableStreamDefaultController,
-  ReadableStreamDefaultReader as NodeReadableStreamDefaultReader,
-  TransformStream as NodeTransformStream,
-  TransformStreamDefaultController as NodeTransformStreamDefaultController,
-  WritableStream as NodeWritableStream,
-  WritableStreamDefaultController as NodeWritableStreamDefaultController,
-  WritableStreamDefaultWriter as NodeWritableStreamDefaultWriter,
-} from "node:stream/web";
-import {
   File as NodeFile,
   fetch as nodeFetch,
   FormData as NodeFormData,
@@ -60,26 +45,4 @@ export function installGlobals() {
   global.fetch = nodeFetch;
   // @ts-expect-error - overriding globals
   global.FormData = NodeFormData;
-
-  // Export everything from https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
-  global.ByteLengthQueuingStrategy = NodeByteLengthQueuingStrategy;
-  global.CountQueuingStrategy = NodeCountQueuingStrategy;
-  // @ts-expect-error - overriding globals
-  global.ReadableByteStreamController = NodeReadableByteStreamController;
-  // @ts-expect-error - overriding globals
-  global.ReadableStream = NodeReadableStream;
-  global.ReadableStreamBYOBReader = NodeReadableStreamBYOBReader;
-  global.ReadableStreamBYOBRequest = NodeReadableStreamBYOBRequest;
-  global.ReadableStreamDefaultController = NodeReadableStreamDefaultController;
-  // @ts-expect-error - overriding globals
-  global.ReadableStreamDefaultReader = NodeReadableStreamDefaultReader;
-  // @ts-expect-error - overriding globals
-  global.TransformStream = NodeTransformStream;
-  global.TransformStreamDefaultController =
-    NodeTransformStreamDefaultController;
-  // @ts-expect-error - overriding globals
-  global.WritableStream = NodeWritableStream;
-  // @ts-expect-error - overriding globals
-  global.WritableStreamDefaultController = NodeWritableStreamDefaultController;
-  global.WritableStreamDefaultWriter = NodeWritableStreamDefaultWriter;
 }
