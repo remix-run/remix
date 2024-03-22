@@ -61,7 +61,6 @@
     "@remix-run/css-bundle": "workspace:*",
     "@remix-run/dev": "workspace:*",
     "@remix-run/node": "workspace:*",
-    "@remix-run/web-fetch": "^4.4.2",
     "@remix-run/react": "workspace:*",
     "@remix-run/testing": "workspace:*",
     "@rollup/plugin-babel": "^5.2.2",
