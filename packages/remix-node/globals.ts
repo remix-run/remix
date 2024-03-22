@@ -1,12 +1,4 @@
 import {
-  File as NodeFile,
-  fetch as nodeFetch,
-  FormData as NodeFormData,
-  Headers as NodeHeaders,
-  Request as NodeRequest,
-  Response as NodeResponse,
-} from "@remix-run/web-fetch";
-import {
   ByteLengthQueuingStrategy as NodeByteLengthQueuingStrategy,
   CountQueuingStrategy as NodeCountQueuingStrategy,
   ReadableByteStreamController as NodeReadableByteStreamController,
@@ -20,7 +12,15 @@ import {
   WritableStream as NodeWritableStream,
   WritableStreamDefaultController as NodeWritableStreamDefaultController,
   WritableStreamDefaultWriter as NodeWritableStreamDefaultWriter,
-} from "@remix-run/web-stream";
+} from "node:stream/web";
+import {
+  File as NodeFile,
+  fetch as nodeFetch,
+  FormData as NodeFormData,
+  Headers as NodeHeaders,
+  Request as NodeRequest,
+  Response as NodeResponse,
+} from "undici";
 
 declare global {
   namespace NodeJS {
@@ -41,30 +41,45 @@ declare global {
       WritableStream: typeof WritableStream;
     }
   }
+
+  interface RequestInit {
+    duplex?: "half";
+  }
 }
 
 export function installGlobals() {
-  global.File = NodeFile;
+  global.File = NodeFile as unknown as typeof File;
 
-  global.Headers = NodeHeaders as typeof Headers;
-  global.Request = NodeRequest as typeof Request;
-  global.Response = NodeResponse as unknown as typeof Response;
-  global.fetch = nodeFetch as typeof fetch;
+  // @ts-expect-error - overriding globals
+  global.Headers = NodeHeaders;
+  // @ts-expect-error - overriding globals
+  global.Request = NodeRequest;
+  // @ts-expect-error - overriding globals
+  global.Response = NodeResponse;
+  // @ts-expect-error - overriding globals
+  global.fetch = nodeFetch;
+  // @ts-expect-error - overriding globals
   global.FormData = NodeFormData;
 
   // Export everything from https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
   global.ByteLengthQueuingStrategy = NodeByteLengthQueuingStrategy;
   global.CountQueuingStrategy = NodeCountQueuingStrategy;
+  // @ts-expect-error - overriding globals
   global.ReadableByteStreamController = NodeReadableByteStreamController;
+  // @ts-expect-error - overriding globals
   global.ReadableStream = NodeReadableStream;
   global.ReadableStreamBYOBReader = NodeReadableStreamBYOBReader;
   global.ReadableStreamBYOBRequest = NodeReadableStreamBYOBRequest;
   global.ReadableStreamDefaultController = NodeReadableStreamDefaultController;
+  // @ts-expect-error - overriding globals
   global.ReadableStreamDefaultReader = NodeReadableStreamDefaultReader;
+  // @ts-expect-error - overriding globals
   global.TransformStream = NodeTransformStream;
   global.TransformStreamDefaultController =
     NodeTransformStreamDefaultController;
+  // @ts-expect-error - overriding globals
   global.WritableStream = NodeWritableStream;
+  // @ts-expect-error - overriding globals
   global.WritableStreamDefaultController = NodeWritableStreamDefaultController;
   global.WritableStreamDefaultWriter = NodeWritableStreamDefaultWriter;
 }

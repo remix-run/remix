@@ -91,9 +91,6 @@ importers:
       '@remix-run/testing':
         specifier: workspace:*
         version: link:packages/remix-testing
-      '@remix-run/web-fetch':
-        specifier: ^4.4.2
-        version: 4.4.2
       '@rollup/plugin-babel':
         specifier: ^5.2.2
         version: 5.3.1(@babel/core@7.23.7)(rollup@2.75.7)
@@ -1185,15 +1182,6 @@ importers:
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
-      '@remix-run/web-fetch':
-        specifier: ^4.4.2
-        version: 4.4.2
-      '@remix-run/web-file':
-        specifier: ^3.1.0
-        version: 3.1.0
-      '@remix-run/web-stream':
-        specifier: ^1.1.0
-        version: 1.1.0
       '@web3-storage/multipart-parser':
         specifier: ^1.0.0
         version: 1.0.0
@@ -1206,6 +1194,9 @@ importers:
       stream-slice:
         specifier: ^0.1.2
         version: 0.1.2
+      undici:
+        specifier: ^6.10.1
+        version: 6.10.1
     devDependencies:
       '@types/cookie-signature':
         specifier: ^1.0.3
@@ -1365,7 +1356,7 @@ importers:
         specifier: ^18.2.7
         version: 18.2.7
       jest-environment-jsdom:
-        specifier: ^29.6.4
+        specifier: ^29.7.0
         version: 29.7.0
       react:
         specifier: ^18.2.0
@@ -4225,7 +4216,7 @@ packages:
       '@web3-storage/multipart-parser': 1.0.0
       abort-controller: 3.0.0
       data-uri-to-buffer: 3.0.1
-      mrmime: 1.0.0
+      mrmime: 1.0.1
     dev: false
 
   /@remix-run/web-file@3.1.0:
@@ -11637,8 +11628,8 @@ packages:
     engines: {node: '>=4'}
     dev: false
 
-  /mrmime@1.0.0:
-    resolution: {integrity: sha512-a70zx7zFfVO7XpnQ2IX1Myh9yY4UYvfld/dikWRnsXxbyvMcfz+u6UfgNAtH+k2QqtJuzVpv6eLTx1G2+WKZbQ==}
+  /mrmime@1.0.1:
+    resolution: {integrity: sha512-hzzEagAgDyoU1Q6yg5uI+AorQgdvMCur3FcKf7NhMKWsaYg+RnbTyHRa/9IlLF9rf455MOCtcqqrQQ83pPP7Uw==}
     engines: {node: '>=10'}
     dev: false
 
@@ -14461,6 +14452,11 @@ packages:
     engines: {node: '>=14.0'}
     dependencies:
       '@fastify/busboy': 2.1.0
+
+  /undici@6.10.1:
+    resolution: {integrity: sha512-kSzmWrOx3XBKTgPm4Tal8Hyl3yf+hzlA00SAf4goxv8LZYafKmS6gJD/7Fe5HH/DMNiFTRXvkwhLo7mUn5fuQQ==}
+    engines: {node: '>=18.0'}
+    dev: false
 
   /unicode-canonical-property-names-ecmascript@2.0.0:
     resolution: {integrity: sha512-yY5PpDlfVIU5+y/BSCxAJRBIS1Zc2dDG3Ujq+sR0U+JjUevW2JhocOF+soROYDSaAezOzOKuyyixhD6mBknSmQ==}
