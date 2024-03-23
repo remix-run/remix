@@ -1,4 +1,4 @@
--mamala42/remix--
+npx create-remix@latest
 title: Remix Docs Home
 order: 1
 description: Learn how to Build Better Websites with Remix.
