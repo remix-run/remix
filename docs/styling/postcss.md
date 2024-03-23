@@ -4,6 +4,8 @@ title: PostCSS
 
 # PostCSS
 
+<docs-warning>This documentation is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. If you're using [Remix Vite][remix-vite], support for [PostCSS is built into Vite][vite-postcss].</docs-warning>
+
 [PostCSS][postcss] is a popular tool with a rich plugin ecosystem, commonly used to prefix CSS for older browsers, transpile future CSS syntax, inline images, lint your styles and more. When a PostCSS config is detected, Remix will automatically run PostCSS across all CSS in your project.
 
 For example, to use [Autoprefixer][autoprefixer], first install the PostCSS plugin.
@@ -103,3 +105,6 @@ An example using SASS.
 [css-bundling]: ./bundling
 [postcss-preset-env]: https://preset-env.cssdb.org
 [esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370
+[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../future/vite
+[vite-postcss]: https://vitejs.dev/guide/features#postcss

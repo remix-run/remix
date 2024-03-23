@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactElement } from "react";
 import type {
   ActionFunction as RRActionFunction,
   ActionFunctionArgs as RRActionFunctionArgs,
@@ -78,7 +78,12 @@ export type HydrateFallbackComponent = ComponentType;
  * Useful for defining the <html>/<head>/<body> document shell shared by the
  * Component, HydrateFallback, and ErrorBoundary
  */
-export type LayoutComponent = ComponentType;
+export type LayoutComponent = ComponentType<{
+  children: ReactElement<
+    unknown,
+    ErrorBoundaryComponent | HydrateFallbackComponent | RouteComponent
+  >;
+}>;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of

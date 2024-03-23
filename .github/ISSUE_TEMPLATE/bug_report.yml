@@ -20,7 +20,7 @@ body:
 
         If you'd rather open a GitHub issue, here are other ways to share a reproduction (ordered from most helpful to least):
 
-        - 🥇 Link to a [StackBlitz](https://stackblitz.com/?starters=fullstack) environment
+        - 🥇 Link to a [StackBlitz](https://remix.new) environment
         - 🥈 Link to a GitHub repository
         - 🥉 Description of project including template, `remix.config.js`, `package.json` scripts, etc.
 

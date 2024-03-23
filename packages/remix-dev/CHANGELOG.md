@@ -1,5 +1,34 @@
 # `@remix-run/dev`
 
+## 2.8.1
+
+### Patch Changes
+
+- Support reading from Vite config when running `remix reveal` and `remix routes` CLI commands ([#8916](https://github.com/remix-run/remix/pull/8916))
+- Add Vite commands to Remix CLI `--help` output ([#8939](https://github.com/remix-run/remix/pull/8939))
+- Vite: Fix support for `build.sourcemap` option in Vite config ([#8965](https://github.com/remix-run/remix/pull/8965))
+- Clean up redundant client route query strings on route JavaScript files in production builds ([#8969](https://github.com/remix-run/remix/pull/8969))
+- Vite: Fix error when using Vite's `server.fs.allow` option without a client entry file ([#8966](https://github.com/remix-run/remix/pull/8966))
+- Updated dependencies:
+  - `@remix-run/node@2.8.1`
+  - `@remix-run/server-runtime@2.8.1`
+
+## 2.8.0
+
+### Minor Changes
+
+- Pass resolved `viteConfig` to Remix Vite plugin's `buildEnd` hook ([#8885](https://github.com/remix-run/remix/pull/8885))
+
+### Patch Changes
+
+- Mark `Layout` as browser safe route export in `esbuild` compiler ([#8842](https://github.com/remix-run/remix/pull/8842))
+- Vite: Silence build warnings when dependencies include "use client" directives ([#8897](https://github.com/remix-run/remix/pull/8897))
+- Vite: Fix `serverBundles` issue where multiple browser manifests are generated ([#8864](https://github.com/remix-run/remix/pull/8864))
+- Support custom Vite `build.assetsDir` option ([#8843](https://github.com/remix-run/remix/pull/8843))
+- Updated dependencies:
+  - `@remix-run/node@2.8.0`
+  - `@remix-run/server-runtime@2.8.0`
+
 ## 2.7.2
 
 ### Patch Changes

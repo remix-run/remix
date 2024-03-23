@@ -24,8 +24,9 @@ module.exports = {
   extends: ["eslint:recommended"],
 
   overrides: [
+    // React
     {
-      files: ["**/*.{js,jsx}"],
+      files: ["**/*.{js,jsx,ts,tsx}"],
       plugins: ["react", "jsx-a11y"],
       extends: [
         "plugin:react/recommended",
@@ -42,6 +43,9 @@ module.exports = {
           { name: "Link", linkAttribute: "to" },
           { name: "NavLink", linkAttribute: "to" },
         ],
+      },
+      rules: {
+        "react/prop-types": "off",
       },
     },
 

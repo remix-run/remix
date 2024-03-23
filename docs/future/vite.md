@@ -6,94 +6,41 @@ title: Vite
 
 [Vite][vite] is a powerful, performant and extensible development environment for JavaScript projects. In order to improve and extend Remix's bundling capabilities, we now support Vite as an alternative compiler. In the future, Vite will become the default compiler for Remix.
 
+## Classic Remix Compiler vs. Remix Vite
+
+The existing Remix compiler, accessed via the `remix build` and `remix dev` CLI commands and configured via `remix.config.js`, is now referred to as the "Classic Remix Compiler".
+
+The Remix Vite plugin and the `remix vite:build` and `remix vite:dev` CLI commands are collectively referred to as "Remix Vite".
+
+Moving forwards, documentation will assume usage of Remix Vite unless otherwise stated.
+
 ## Getting started
 
 We've got a few different Vite-based templates to get you started.
 
 ```shellscript nonumber
 # Minimal server:
-npx create-remix@latest --template remix-run/remix/templates/vite
+npx create-remix@latest
 
 # Express:
-npx create-remix@latest --template remix-run/remix/templates/vite-express
+npx create-remix@latest --template remix-run/remix/templates/express
 
 # Cloudflare:
-npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
+npx create-remix@latest --template remix-run/remix/templates/cloudflare
 ```
 
 These templates include a `vite.config.ts` file which is where the Remix Vite plugin is configured.
 
 ## Configuration
 
-The Vite plugin does not use [`remix.config.js`][remix-config]. Instead, the plugin accepts options directly.
-
-For example, to configure `ignoredRouteFiles`:
-
-```ts filename=vite.config.ts lines=[7]
-import { vitePlugin as remix } from "@remix-run/dev";
-import { defineConfig } from "vite";
-
-export default defineConfig({
-  plugins: [
-    remix({
-      ignoredRouteFiles: ["**/*.css"],
-    }),
-  ],
-});
-```
-
-All other bundling-related options are now [configured with Vite][vite-config]. This means you have much greater control over the bundling process.
-
-#### Supported Remix config options
-
-The following subset of Remix config options are supported:
-
-- [appDirectory][app-directory]
-- [future][future]
-- [ignoredRouteFiles][ignored-route-files]
-- [routes][routes]
-- [serverModuleFormat][server-module-format]
-
-The Vite plugin also accepts the following additional options:
-
-#### buildDirectory
-
-The path to the build directory, relative to the project root. Defaults to
-`"build"`.
-
-#### basename
-
-An optional basename for your route paths, passed through to the [React Router "basename" option][rr-basename]. Please note that this is different from your _asset_ paths. You can can configure the [base public path][vite-public-base-path] for your assets via the [Vite "base" option][vite-base].
-
-#### buildEnd
-
-A function that is called after the full Remix build is complete.
-
-#### manifest
-
-Whether to write a `.remix/manifest.json` file to the build directory. Defaults
-to `false`.
-
-#### presets
-
-An array of [presets] to ease integration with other tools and hosting providers.
-
-#### serverBuildFile
-
-The name of the server file generated in the server build directory. Defaults to `"index.js"`.
-
-#### serverBundles
-
-A function for assigning addressable routes to [server bundles][server-bundles].
-
-You may also want to enable the `manifest` option since, when server bundles are enabled, it contains mappings between routes and server bundles.
+The Remix Vite plugin is configured via a `vite.config.ts` file at the root of your project. For more information, see our [Vite config documentation][vite-config].
 
 ## Cloudflare
 
-To get started with Cloudflare, you can use the [`vite-cloudflare`][template-vite-cloudflare] template:
+To get started with Cloudflare, you can use the [`cloudflare`][template-cloudflare] template:
 
 ```shellscript nonumber
-npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
+npx create-remix@latest --template remix-run/remix/templates/cloudflare
 ```
 
 There are two ways to run your Cloudflare app locally:
@@ -239,73 +186,7 @@ export const onRequest = createPagesFunctionHandler({
 
 ## Splitting up client and server code
 
-Remix lets you write code that [runs on both the client and the server][server-vs-client].
-Out-of-the-box, Vite doesn't support mixing server-only code with client-safe code in the same module.
-Remix is able to make an exception for routes because we know which exports are server-only and can remove them from the client.
-
-There are a few ways to isolate server-only code in Remix.
-The simplest approach is to use `.server` modules.
-
-#### `.server` modules
-
-While not strictly necessary, `.server` modules are a good way to explicitly mark entire modules as server-only.
-The build will fail if any code in a `.server` file or `.server` directory accidentally ends up in the client module graph.
-
-```txt
-app
-├── .server 👈 marks all files in this directory as server-only
-│   ├── auth.ts
-│   └── db.ts
-├── cms.server.ts 👈 marks this file as server-only
-├── root.tsx
-└── routes
-    └── _index.tsx
-```
-
-`.server` modules must be within your Remix app directory.
-
-#### vite-env-only
-
-If you want to mix server-only code and client-safe code in the same module, you
-can use <nobr>[vite-env-only][vite-env-only]</nobr>.
-This Vite plugin allows you to explicitly mark any expression as server-only so that it gets
-replaced with `undefined` in the client.
-
-For example, once you've added the plugin to your Vite config, you can wrap any server-only exports with `serverOnly$`:
-
-```tsx
-import { serverOnly$ } from "vite-env-only";
-
-import { db } from "~/.server/db";
-
-export const getPosts = serverOnly$(async () => {
-  return db.posts.findMany();
-});
-
-export const PostPreview = ({ title, description }) => {
-  return (
-    <article>
-      <h2>{title}</h2>
-      <p>{description}</p>
-    </article>
-  );
-};
-```
-
-This example would be compiled into the following code for the client:
-
-```tsx
-export const getPosts = undefined;
-
-export const PostPreview = ({ title, description }) => {
-  return (
-    <article>
-      <h2>{title}</h2>
-      <p>{description}</p>
-    </article>
-  );
-};
-```
+Vite handles mixed use of client and server code differently to the Classic Remix compiler. For more information, see our documentation on [splitting up client and server code][splitting-up-client-and-server-code].
 
 ## New build output paths
 
@@ -318,9 +199,7 @@ This also means that the following configuration defaults have been changed:
 - [publicPath][public-path] has been replaced by [Vite's "base" option][vite-base] which defaults to `"/"` rather than `"/build/"`.
 - [serverBuildPath][server-build-path] has been replaced by `serverBuildFile` which defaults to `"index.js"`. This file will be written into the server directory within your configured `buildDirectory`.
 
-## Additional features & plugins
-
-One of the reasons that Remix is moving to Vite is, so you have less to learn when adopting Remix.
+One of the reasons that Remix is moving to Vite is so you have less to learn when adopting Remix.
 This means that, for any additional bundling features you'd like to use, you should reference [Vite documentation][vite] and the [Vite plugin community][vite-plugins] rather than the Remix documentation.
 
 Vite has many [features][vite-features] and [plugins][vite-plugins] that are not built into the existing Remix compiler.
@@ -1102,6 +981,23 @@ For example, to use a Vite config specifically scoped to Remix:
 remix vite:dev --config vite.config.remix.ts
 ```
 
+When not providing the Remix Vite plugin, your setup might also need to provide [Vite Plugin React][vite-plugin-react]. For example, when using Vitest:
+
+```ts filename=vite.config.ts lines=[2,6]
+import { vitePlugin as remix } from "@remix-run/dev";
+import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv } from "vite";
+
+export default defineConfig({
+  plugins: [!process.env.VITEST ? remix() : react()],
+  test: {
+    environment: "happy-dom",
+    // Additionally, this is to load ".env.test" during vitest
+    env: loadEnv("test", process.cwd(), ""),
+  },
+});
+```
+
 #### Styles disappearing in development when document remounts
 
 When React is used to render the entire document (as Remix does) you can run into issues when elements are dynamically injected into the `head` element. If the document is re-mounted, the existing `head` element is removed and replaced with an entirely new one, removing any `style` elements that Vite injects during development.
@@ -1194,19 +1090,11 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 - [SolidStart][solidstart]
 - [SvelteKit][sveltekit]
 
-We're definitely late to the Vite party, but we're excited to be here now!
-
 [vite]: https://vitejs.dev
-[template-vite-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/vite-cloudflare
-[remix-config]: ../file-conventions/remix-config
-[app-directory]: ../file-conventions/remix-config#appdirectory
-[future]: ../file-conventions/remix-config#future
-[ignored-route-files]: ../file-conventions/remix-config#ignoredroutefiles
+[template-cloudflare]: https://github.com/remix-run/remix/tree/main/templates/cloudflare
 [public-path]: ../file-conventions/remix-config#publicpath
-[routes]: ../file-conventions/remix-config#routes
 [server-build-path]: ../file-conventions/remix-config#serverbuildpath
-[server-module-format]: ../file-conventions/remix-config#servermoduleformat
-[vite-config]: https://vitejs.dev/config
+[vite-config]: ../file-conventions/vite-config
 [vite-plugins]: https://vitejs.dev/plugins
 [vite-features]: https://vitejs.dev/guide/features
 [supported-remix-config-options]: #configuration
@@ -1253,7 +1141,6 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [rollup-plugin-visualizer]: https://github.com/btd/rollup-plugin-visualizer
 [debugging]: #debugging
 [performance]: #performance
-[server-vs-client]: ../discussion/server-vs-client.md
 [vite-env-only]: https://github.com/pcattori/vite-env-only
 [explicitly-isolate-server-only-code]: #splitting-up-client-and-server-code
 [route-component]: ../route/component
@@ -1280,3 +1167,5 @@ We're definitely late to the Vite party, but we're excited to be here now!
 [how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
 [presets]: ./presets
 [fix-up-css-imports-referenced-in-links]: #fix-up-css-imports-referenced-in-links
+[vite-plugin-react]: https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react
+[splitting-up-client-and-server-code]: ../discussion/server-vs-client

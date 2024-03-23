@@ -12,15 +12,21 @@ In our approach to software development, we aim to achieve the following goals f
 
 ## Unstable APIs and Future Flags
 
-We introduce new features into the current release with a future flag in [`remix.config.js`][remix-config] that looks something like `unstable_someFeature`.
+We introduce new features into the current release with a future flag that looks something like `unstable_someFeature`.
 
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-export default {
-  future: {
-    unstable_someFeature: true,
-  },
-};
+```ts filename=vite.config.ts lines=[7-9]
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      future: {
+        unstable_someFeature: true,
+      },
+    }),
+  ],
+});
 ```
 
 - Once an unstable feature reaches a stable state, we remove the special prefix and include the feature in the next minor release. At this point, the API's structure remains consistent throughout subsequent minor releases.
@@ -33,13 +39,19 @@ export default {
 
 When we introduce breaking changes, we do so within the context of the current major version, and we hide them behind future flags. For instance, if we're in `v2`, a breaking change might be placed under a future flag named `v3_somethingDifferent`.
 
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-export default {
-  future: {
-    v3_someFeature: true,
-  },
-};
+```ts filename=vite.config.ts lines=[7-9]
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      future: {
+        v3_someFeature: true,
+      },
+    }),
+  ],
+});
 ```
 
 - Both the existing `v2` behavior and the new `v3_somethingDifferent` behavior coexist simultaneously.
@@ -51,7 +63,6 @@ export default {
 
 Our development strategy focuses on gradual feature adoption and seamless version upgrades for major releases. This empowers developers to selectively integrate new features, avoiding the need for extensive code adjustments during version transitions. By introducing features through `unstable_*` flags, we refine the API collaboratively with early adopters while ensuring stable releases benefit from enhancements. Through careful management of breaking changes using `v3_*` flags, we provide the flexibility to adopt changes incrementally, facilitating a smoother transition between major versions. While this increases the complexity for developing Remix the framework, this developer-centric approach greatly simplifies application development with Remix, ultimately leading to improved software quality and (hopefully!) developer satisfaction.
 
-For a list of currently available Future Flags, please see the [`future`][remix-config-future] section in the `remix.config.js` documentation.
+For a list of currently available Future Flags, please see the [`future`][remix-config-future] section in the `vite.config.ts` documentation.
 
-[remix-config]: ../file-conventions/remix-config
-[remix-config-future]: ../file-conventions/remix-config#future
+[remix-config-future]: ../file-conventions/vite-config#future

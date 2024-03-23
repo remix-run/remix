@@ -1,11 +1,11 @@
 ---
-title: "*.client.ts extension"
+title: ".client modules"
 toc: false
 ---
 
-# `*.client.ts`
+# `.client` modules
 
-While uncommon, you may have a file or dependency that uses module side effects in the browser. You can use `*.client.ts` on file names to force them out of server bundles.
+While uncommon, you may have a file or dependency that uses module side effects in the browser. You can use `*.client.ts` on file names or nest files within `.client` directories to force them out of server bundles.
 
 ```ts filename=feature-check.client.ts
 // this would break the server
@@ -23,6 +23,10 @@ console.log(supportsVibrationAPI);
 // client: true | false
 ```
 
+<docs-warning>`.client` directories are only supported when using [Remix Vite][remix-vite]. The [Classic Remix Compiler][classic-remix-compiler] only supports `.client` files.</docs-warning>
+
 Refer to the Route Module section in the sidebar for more information.
 
 [use_effect]: https://react.dev/reference/react/useEffect
+[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../future/vite

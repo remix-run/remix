@@ -8,7 +8,57 @@ Rendering your app on the server and in the browser with React has some inherent
 
 This document should help you get over these bumps.
 
+## `typeof window` checks
+
+Because the same JavaScript code can run in the browser as well as the server, sometimes you need to have a part of your code that only runs in one context or the other:
+
+```ts bad
+if (typeof window === "undefined") {
+  // running in a server environment
+} else {
+  // running in a browser environment
+}
+```
+
+This works fine in a Node.js environment, however, Deno actually supports `window`! So if you really want to check whether you're running in the browser, it's better to check for `document` instead:
+
+```ts good
+if (typeof document === "undefined") {
+  // running in a server environment
+} else {
+  // running in a browser environment
+}
+```
+
+This will work for all JS environments (Node.js, Deno, Workers, etc.).
+
+## Browser extensions injecting code
+
+You may run into this warning in the browser:
+
+```
+Warning: Did not expect server HTML to contain a <script> in <html>.
+```
+
+This is a hydration warning from React, and is most likely due to one of your browser extensions injecting scripts into the server-rendered HTML, creating a difference with the resulting HTML.
+
+Check out the page in incognito mode, the warning should disappear.
+
+## Writing to Sessions in `loader`s
+
+Typically, you should only write to sessions in actions, but there are occasions where it makes sense in loaders (anonymous users, navigation tracking, etc.)
+
+While multiple loaders can _read_ from the same session, _writing_ to a session in loaders can cause problems.
+
+Remix loaders run in parallel, and sometimes in separate requests (client transitions call [`fetch`][fetch] for each loader). If one loader is writing to a session while another is attempting to read from it, you will hit bugs and/or non-deterministic behavior.
+
+Additionally, sessions are built on cookies which come from the browser's request. After committing a session, it goes to the browser in a [`Set-Cookie`][set_cookie_header] header which is then sent back to the server on the next request in the [`Cookie`][cookie_header] header. Regardless of parallel loaders, you can't write to a cookie with `Set-Cookie` and then attempt to read it from the original request `Cookie` and expect updated values. It needs to make a round trip to the browser first and come from the next request.
+
+If you need to write to a session in a loader, ensure the loader doesn't share that session with any other loaders.
+
 ## Server Code in Client Bundles
+
+<docs-warning>This section is only relevant if you're using the [Classic Remix Compiler][classic-remix-compiler].</docs-warning>
 
 You may run into this strange error in the browser. It almost always means that server code made it into browser bundles.
 
@@ -97,6 +147,8 @@ When you import a third-party module, Remix checks the `package.json` of that pa
 
 ## Importing ESM Packages
 
+<docs-warning>This section is only relevant if you're using the [Classic Remix Compiler][classic-remix-compiler].</docs-warning>
+
 You may try importing an ESM-only package into your app and see an error like this when server rendering:
 
 ```
@@ -130,43 +182,9 @@ You may ask why we don't just bundle everything for the server. We could, but th
 
 With major deployment platforms now supporting ESM server side, we're confident the future is brighter than the past here. We're still working on a solid dev experience for ESM server builds, our current approach relies on some things that you can't do in ESM. We'll get there.
 
-## `typeof window` checks
-
-Because the same JavaScript code can run in the browser as well as the server, sometimes you need to have a part of your code that only runs in one context or the other:
-
-```ts bad
-if (typeof window === "undefined") {
-  // running in a server environment
-} else {
-  // running in a browser environment
-}
-```
-
-This works fine in a Node.js environment, however, Deno actually supports `window`! So if you really want to check whether you're running in the browser, it's better to check for `document` instead:
-
-```ts good
-if (typeof document === "undefined") {
-  // running in a server environment
-} else {
-  // running in a browser environment
-}
-```
-
-This will work for all JS environments (Node.js, Deno, Workers, etc.).
-
-## Browser extensions injecting code
-
-You may run into this warning in the browser:
-
-```
-Warning: Did not expect server HTML to contain a <script> in <html>.
-```
-
-This is a hydration warning from React, and is most likely due to one of your browser extensions injecting scripts into the server-rendered HTML, creating a difference with the resulting HTML.
-
-Check out the page in incognito mode, the warning should disappear.
-
 ## CSS bundle being incorrectly tree-shaken
+
+<docs-warning>This section is only relevant if you're using the [Classic Remix Compiler][classic-remix-compiler].</docs-warning>
 
 When using [CSS bundling features][css_bundling] in combination with `export *` (e.g. when using an index file like `components/index.ts` that re-exports from all subdirectories) you may find that styles from the re-exported modules are missing from the build output.
 
@@ -179,18 +197,6 @@ This is due to an [issue with `esbuild`'s CSS tree shaking][esbuild_css_tree_sha
 
 Note that, even if this issue didn't exist, we'd still recommend using named re-exports! While it may introduce a bit more boilerplate, you get explicit control over the module's public interface rather than inadvertently exposing everything.
 
-## Writing to Sessions in `loader`s
-
-Typically, you should only write to sessions in actions, but there are occasions where it makes sense in loaders (anonymous users, navigation tracking, etc.)
-
-While multiple loaders can _read_ from the same session, _writing_ to a session in loaders can cause problems.
-
-Remix loaders run in parallel, and sometimes in separate requests (client transitions call [`fetch`][fetch] for each loader). If one loader is writing to a session while another is attempting to read from it, you will hit bugs and/or non-deterministic behavior.
-
-Additionally, sessions are built on cookies which come from the browser's request. After committing a session, it goes to the browser in a [`Set-Cookie`][set_cookie_header] header which is then sent back to the server on the next request in the [`Cookie`][cookie_header] header. Regardless of parallel loaders, you can't write to a cookie with `Set-Cookie` and then attempt to read it from the original request `Cookie` and expect updated values. It needs to make a round trip to the browser first and come from the next request.
-
-If you need to write to a session in a loader, ensure the loader doesn't share that session with any other loaders.
-
 [esbuild]: https://esbuild.github.io
 [parse_multipart_form_data_upload_handler]: ../utils/parse-multipart-form-data#uploadhandler
 [server_dependencies_to_bundle]: ../file-conventions/remix-config#serverdependenciestobundle
@@ -200,3 +206,4 @@ If you need to write to a session in a loader, ensure the loader doesn't share t
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/fetch
 [set_cookie_header]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie
 [cookie_header]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie
+[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite

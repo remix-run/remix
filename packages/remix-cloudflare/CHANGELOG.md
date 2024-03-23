@@ -1,5 +1,19 @@
 # `@remix-run/cloudflare`
 
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.1`
+
+## 2.8.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.0`
+
 ## 2.7.2
 
 ### Patch Changes
