@@ -12,7 +12,7 @@ When you enable Single Fetch, Remix will make a single HTTP call to your server 
 
 ### Breaking Changes
 
-- Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON, including `Date`, `Map`, `Set`, `Promise`, `RegExp`, and `BigInt` instances
+- Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
 - Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 - TODO: The `headers` export is no longer used in favor of the `ResponseStub`
@@ -23,14 +23,15 @@ When you enable Single Fetch, Remix will make a single HTTP call to your server 
 
 Previously, Remix used `JSON.stringify` to serialize your loader/action data over the wire, and needed to implement a custom streaming format to support `defer` responses.
 
-With Single Fetch, Remix now uses [`turbo-stream`][turbo-stream] under the hood which provides first class support for streaming and allows you to automatically serialize/deserialize more complex data than JSON.
+With Single Fetch, Remix now uses [`turbo-stream`][turbo-stream] under the hood which provides first class support for streaming and allows you to automatically serialize/deserialize more complex data than JSON. The following data types can be streamed down directly via `turbo-stream`: `BigInt`, `Date`, `Error`, `Map`, `Promise`, `RegExp`, `Set`, `Symbol`, and `URL`. Subtypes of `Error` are also supported as long as they have a globally available constructor on the client (`SyntaxError`, `TypeError`, etc.).
 
-- If you are already returning `json`/`defer` responses from your loader/action functions, they'll work the same after Single Fetch is enabled
-- If you are returning naked objects, they will no longer be automatically converted to JSON, and will be streamed down as-is
-  - This means that `return { date: new Date() }` from your loader will result in `useLoaderData().date` being a `Date` instance (instead of a`string` as it is today).
-  - If you wish to maintain current behavior, just wrap any existing naked object returns in `json`
+This may or may not require any changes to your code once enabling Single Fetch:
 
-This also means that you no longer need to use the `defer` utility to send `Promise` instances over the wire! You can include a `Promise` anywhere in the native object and pick it up on `useLoaderData().whatever`. You can also nest `Promise`'s if needed!
+- ✅ `json` responses returned from `loader`/`action` functions will still be serialized via `JSON.stringify` so if you return a `Date`, you'll receive a `string` from `useLoaderData`/`useActionData`
+- ⚠️ If you're returning a `defer` instance or a naked object, it will now be serialized via `turbo-stream`, so if you return a `Date`, you'll receive a `Date` from `useLoaderData`/`useActionData`
+  - If you wish to maintain current behavior (excluding streaming `defer` responses), you may just wrap any existing naked object returns in `json`
+
+This also means that you no longer need to use the `defer` utility to send `Promise` instances over the wire! You can include a `Promise` anywhere in a naked object and pick it up on `useLoaderData().whatever`. You can also nest `Promise`'s if needed - but beware of potential UX implications.
 
 ### React Rendering APIs
 
