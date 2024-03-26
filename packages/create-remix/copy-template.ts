@@ -423,7 +423,7 @@ function isGithubRepoShorthand(value: string) {
   // remix-run/remix
   // remix-run/remix/templates/express
   // remix-run/examples/socket.io
-  return /^[\w-]+\/[\w-]+(\/[\w-.]+)*$/.test(value);
+  return /^[\w-]+\/[\w-.]+(\/[\w-.]+)*$/.test(value);
 }
 
 function isGithubReleaseAssetUrl(url: string) {
