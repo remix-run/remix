@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.8.1
+
+### Patch Changes
+
+- Strengthen the internal `LayoutComponent` type to accept limited children ([#8910](https://github.com/remix-run/remix/pull/8910))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.1`
+
 ## 2.8.0
 
 ### Patch Changes

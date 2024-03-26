@@ -88,7 +88,9 @@ export function createRemixHeaders(
   }
 
   if (requestCookies) {
-    headers.append("Cookie", requestCookies.join("; "));
+    for (let cookie of requestCookies) {
+      headers.append("Cookie", cookie);
+    }
   }
 
   return headers;

@@ -152,11 +152,11 @@ The following steps will get you set up to contribute changes to this repo:
    git checkout dev
    ```
 
-3. Install dependencies by running `yarn`. Remix uses [Yarn (version 1)][yarn_v1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+3. Install dependencies by running `pnpm`. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
 
 4. Install Playwright to be able to run tests properly by running `npx playwright install`, or [use the Visual Studio Code plugin][vscode_playwright].
 
-5. Verify you've got everything set up for local development by running `yarn test`.
+5. Verify you've got everything set up for local development by running `pnpm test`.
 
 ### Branches
 
@@ -175,18 +175,18 @@ We use a mix of `jest` and `playwright` for our testing in this project. We have
 
 The integration tests and the primary tests can be run in parallel using `npm-run-all` to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently you'll need to run the individual script:
 
-- `yarn test:primary`
-- `yarn test:integration`
+- `pnpm test:primary`
+- `pnpm test:integration`
 
 We also support watch plugins for project, file, and test filtering. To filter things down, you can use a combination of `--testNamePattern`, `--testPathPattern`, and `--selectProjects`. For example:
 
 ```shellscript nonumber
-yarn test:primary --selectProjects react --testPathPattern transition --testNamePattern "initial values"
+pnpm test:primary --selectProjects react --testPathPattern transition --testNamePattern "initial values"
 ```
 
-We also have watch mode plugins for these. So, you can run `yarn test:primary --watch` and hit `w` to see the available watch commands.
+We also have watch mode plugins for these. So, you can run `pnpm test:primary --watch` and hit `w` to see the available watch commands.
 
-Alternatively, you can run a project completely independently by `cd`-ing into that project and running `yarn jest` which will pick up that project's jest config.
+Alternatively, you can run a project completely independently by `cd`-ing into that project and running `pnpm jest` which will pick up that project's jest config.
 
 ## Development Workflow
 
@@ -194,11 +194,11 @@ Alternatively, you can run a project completely independently by `cd`-ing into t
 
 Remix uses a monorepo to host code for multiple packages. These packages live in the `packages` directory.
 
-We use [Yarn workspaces][yarn_workspaces] to manage installation of dependencies and running various scripts. To get everything installed, make sure you have [Yarn (version 1) installed][yarn_v1], and then run `yarn` or `yarn install` from the repo root.
+We use [pnpm workspaces][pnpm_workspaces] to manage installation of dependencies and running various scripts. To get everything installed run `pnpm install` from the repo root.
 
 ### Building
 
-Running `yarn build` from the root directory will run the build. You can run the build in watch mode with `yarn watch`.
+Running `pnpm build` from the root directory will run the build. You can run the build in watch mode with `pnpm watch`.
 
 ### Playground
 
@@ -207,23 +207,23 @@ It's often really useful to be able to interact with a real app while developing
 To generate a new playground, simply run:
 
 ```shellscript nonumber
-yarn playground:new <?name>
+pnpm playground:new <?name>
 ```
 
-Where the name of the playground is optional and defaults to `playground-${Date.now()}`. Then you can `cd` into the directory that's generated for you and run `npm run dev`. In another terminal window have `yarn watch` running, and you're ready to work on whatever Remix features you like with live reload magic 🧙‍♂️
+Where the name of the playground is optional and defaults to `playground-${Date.now()}`. Then you can `cd` into the directory that's generated for you and run `npm run dev`. In another terminal window have `pnpm watch` running, and you're ready to work on whatever Remix features you like with live reload magic 🧙‍♂️
 
-The playground generated from `yarn playground:new` is based on a template in `scripts/playground/template`. If you'd like to change anything about the template, you can create a custom one in `scripts/playground/template.local` which is `.gitignored` so you can customize it to your heart's content.
+The playground generated from `pnpm playground:new` is based on a template in `scripts/playground/template`. If you'd like to change anything about the template, you can create a custom one in `scripts/playground/template.local` which is `.gitignored` so you can customize it to your heart's content.
 
 ### Testing
 
-Before running the tests, you need to run a build. After you build, running `yarn test` from the root directory will run **every** package's tests. If you want to run tests for a specific package, use `yarn test --selectProjects <display-name>`:
+Before running the tests, you need to run a build. After you build, running `pnpm test` from the root directory will run **every** package's tests. If you want to run tests for a specific package, use `pnpm test --selectProjects <display-name>`:
 
 ```shellscript nonumber
 # Test all packages
-yarn test
+pnpm test
 
 # Test only @remix-run/express
-yarn test --selectProjects express
+pnpm test --selectProjects express
 ```
 
 ## Repository Branching
@@ -252,8 +252,7 @@ For every release of Remix (stable, experimental, nightly, and pre-releases), we
 [contributors_yaml]: https://github.com/remix-run/remix/blob/main/contributors.yml
 [cla]: https://github.com/remix-run/remix/blob/main/CLA.md
 [fork]: https://github.com/remix-run/remix
-[yarn_v1]: https://classic.yarnpkg.com/lang/en/docs/install
-[yarn_workspaces]: https://classic.yarnpkg.com/en/docs/workspaces
+[pnpm_workspaces]: https://pnpm.io/workspaces
 [vscode_playwright]: https://playwright.dev/docs/intro#using-the-vs-code-extension
 [nightly_action_comment]: https://github.com/remix-run/remix/blob/main/.github/workflows/nightly.yml#L8-L12
 [templates]: ./templates
