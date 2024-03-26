@@ -566,7 +566,12 @@ test.describe("single-fetch", () => {
     // x-two only uses set
     // x-three only uses append
     // x-four deletes
-    let res = await fixture.requestDocument("/a");
+    let res: Awaited<
+      ReturnType<
+        typeof fixture.requestDocument | typeof fixture.requestSingleFetchData
+      >
+    >;
+    res = await fixture.requestDocument("/a");
     expect(res.headers.get("x-one")).toEqual("a set, a append");
     expect(res.headers.get("x-two")).toEqual("a set");
     expect(res.headers.get("x-three")).toEqual("a append");
@@ -706,7 +711,12 @@ test.describe("single-fetch", () => {
     });
 
     // Loaders
-    let res = await fixture.requestDocument("/a");
+    let res: Awaited<
+      ReturnType<
+        typeof fixture.requestDocument | typeof fixture.requestSingleFetchData
+      >
+    >;
+    res = await fixture.requestDocument("/a");
     expect(res.status).toEqual(201);
 
     res = await fixture.requestSingleFetchData("/a.data");
@@ -807,7 +817,12 @@ test.describe("single-fetch", () => {
     // x-two only uses set
     // x-three only uses append
     // x-four deletes
-    let res = await fixture.requestDocument("/a");
+    let res: Awaited<
+      ReturnType<
+        typeof fixture.requestDocument | typeof fixture.requestSingleFetchData
+      >
+    >;
+    res = await fixture.requestDocument("/a");
     expect(res.headers.get("x-one")).toEqual("a set, a append");
     expect(res.headers.get("x-two")).toEqual("a set");
     expect(res.headers.get("x-three")).toEqual("a append");
@@ -900,7 +915,12 @@ test.describe("single-fetch", () => {
     });
 
     // Loaders
-    let res = await fixture.requestDocument("/a");
+    let res: Awaited<
+      ReturnType<
+        typeof fixture.requestDocument | typeof fixture.requestSingleFetchData
+      >
+    >;
+    res = await fixture.requestDocument("/a");
     expect(res.status).toEqual(201);
 
     res = await fixture.requestSingleFetchData("/a.data");

@@ -915,6 +915,9 @@ function getSingleFetchDataStrategy(
               responseStub.headers.set(k, v);
             }
           }
+
+          // Unsure why this is complaining?  It's fine in VSCode but fails with tsc...
+          // @ts-expect-error
           for (let v of result.result.headers.getSetCookie()) {
             responseStub.headers.append("Set-Cookie", v);
           }
@@ -956,13 +959,13 @@ function mergeResponseStubs(
     // Take the highest error/redirect, or the lowest success value - preferring
     // action 200's over loader 200s
     if (statusCode < 300 && stub.status && statusCode !== actionStub?.status) {
-        statusCode = stub.status;
-      }
+      statusCode = stub.status;
+    }
 
-      // Replay headers operations in order
-      let ops = stub[ResponseStubOperationsSymbol];
-      // @ts-expect-error
-      ops.forEach(([op, ...args]) => headers[op](...args));
+    // Replay headers operations in order
+    let ops = stub[ResponseStubOperationsSymbol];
+    // @ts-expect-error
+    ops.forEach(([op, ...args]) => headers[op](...args));
   });
   return { statusCode, headers };
 }

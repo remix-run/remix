@@ -92,10 +92,7 @@ export function createStaticHandlerDataRoutes(
       loader: route.module.loader
         ? // Need to use RR's version here to permit the optional context even
           // though we know it'll always be provided in remix
-          (
-            args: RRLoaderFunctionArgs,
-            dataStrategyCtx?: { response: ResponseStub }
-          ) =>
+          (args: RRLoaderFunctionArgs, dataStrategyCtx?: unknown) =>
             callRouteLoader({
               request: args.request,
               params: args.params,
@@ -103,14 +100,13 @@ export function createStaticHandlerDataRoutes(
               loader: route.module.loader!,
               routeId: route.id,
               singleFetch: future.unstable_singleFetch === true,
-              response: dataStrategyCtx?.response,
+              response: (
+                dataStrategyCtx as unknown as { response: ResponseStub }
+              )?.response,
             })
         : undefined,
       action: route.module.action
-        ? (
-            args: RRActionFunctionArgs,
-            dataStrategyCtx?: { response: ResponseStub }
-          ) =>
+        ? (args: RRActionFunctionArgs, dataStrategyCtx?: unknown) =>
             callRouteAction({
               request: args.request,
               params: args.params,
@@ -118,7 +114,9 @@ export function createStaticHandlerDataRoutes(
               action: route.module.action!,
               routeId: route.id,
               singleFetch: future.unstable_singleFetch === true,
-              response: dataStrategyCtx?.response,
+              response: (
+                dataStrategyCtx as unknown as { response: ResponseStub }
+              )?.response,
             })
         : undefined,
       handle: route.module.handle,
