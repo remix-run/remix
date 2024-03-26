@@ -27,6 +27,18 @@ export type DataFunctionArgs = RRActionFunctionArgs<AppLoadContext> &
     context: AppLoadContext;
   };
 
+export const ResponseStubSymbol = Symbol("ResponseStub");
+
+/**
+ * A stubbed response to let you set the status/headers of your response from
+ * loader/action functions
+ */
+export type ResponseStub = {
+  status: number;
+  headers: Headers;
+  [ResponseStubSymbol]: boolean;
+};
+
 /**
  * A function that handles data mutations for a route on the server
  */
@@ -40,6 +52,8 @@ export type ActionFunction = (
 export type ActionFunctionArgs = RRActionFunctionArgs<AppLoadContext> & {
   // Context is always provided in Remix, and typed for module augmentation support.
   context: AppLoadContext;
+  // TODO: (v7) Make this non-optional once single-fetch is the default
+  response?: ResponseStub;
 };
 
 /**
@@ -71,6 +85,8 @@ export type LoaderFunction = (
 export type LoaderFunctionArgs = RRLoaderFunctionArgs<AppLoadContext> & {
   // Context is always provided in Remix, and typed for module augmentation support.
   context: AppLoadContext;
+  // TODO: (v7) Make this non-optional once single-fetch is the default
+  response?: ResponseStub;
 };
 
 /**

@@ -334,19 +334,23 @@ test.describe("single-fetch", () => {
         "app/routes/action.tsx": js`
           import { Form, Link, useActionData, useLoaderData, useNavigation } from '@remix-run/react';
 
-          export async function action({ request }) {
+          export async function action({ request, response }) {
             let fd = await request.formData();
             if (fd.get('throw') === "5xx") {
-              throw new Response("Thrown 500", { status: 500 });
+              response.status = 500;
+              throw new Error("Thrown 500");
             }
             if (fd.get('throw') === "4xx") {
-              throw new Response("Thrown 400", { status: 400 });
+              response.status = 400;
+              throw new Error("Thrown 400");
             }
             if (fd.get('return') === "5xx") {
-              return new Response("Returned 500", { status: 500 });
+              response.status = 500;
+              return "Returned 500";
             }
             if (fd.get('return') === "4xx") {
-              return new Response("Returned 400", { status: 400 });
+              response.status = 400;
+              return "Returned 400";
             }
             return null;
           }
@@ -361,7 +365,7 @@ test.describe("single-fetch", () => {
             let data = useLoaderData();
             return (
               <Form method="post">
-                <button type="submit" name="throw" value="5xx">Throw 5x</button>
+                <button type="submit" name="throw" value="5xx">Throw 5xx</button>
                 <button type="submit" name="throw" value="4xx">Throw 4xx</button>
                 <button type="submit" name="return" value="5xx">Return 5xx</button>
                 <button type="submit" name="return" value="4xx">Return 4xx</button>
@@ -390,6 +394,8 @@ test.describe("single-fetch", () => {
       }
     });
 
+    console.error = () => {};
+
     let appFixture = await createAppFixture(fixture);
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/action");
@@ -409,6 +415,7 @@ test.describe("single-fetch", () => {
     await page.click('button[name="throw"][value="5xx"]');
     await page.waitForSelector("#error");
     expect(urls).toEqual([]);
+
     await app.clickLink("/action");
     await page.waitForSelector("#data");
     expect(await app.getHtml("#data")).toContain("2");
@@ -429,24 +436,22 @@ test.describe("single-fetch", () => {
       files: {
         ...files,
         "app/routes/headers.tsx": js`
-          export function headers({ loaderHeaders }) {
-            let headers = new Headers(loaderHeaders);
-            headers.set('x-headers-function', 'true')
-            return headers;
+          export function action({ request, response }) {
+            if (new URL(request.url).searchParams.has("error")) {
+              response.headers.set("x-action-error", "true");
+              throw response;
+            }
+            response.headers.set("x-action", "true");
+            return null;
           }
 
-          export function action({ request }) {
+          export function loader({ request, response }) {
             if (new URL(request.url).searchParams.has("error")) {
-              throw new Response(null, { headers: { "x-action-error": "true" } });
+              response.headers.set("x-loader-error", "true");
+              throw response;
             }
-            return new Response(null, { headers: { "x-action": "true" } });
-          }
-
-          export function loader({ request }) {
-            if (new URL(request.url).searchParams.has("error")) {
-              throw new Response(null, { headers: { "x-loader-error": "true" } });
-            }
-            return new Response(null, { headers: { "x-loader": "true" } });
+            response.headers.set("x-loader", "true");
+            return null;
           }
 
           export default function Comp() {
@@ -456,137 +461,43 @@ test.describe("single-fetch", () => {
       },
     });
 
-    let res = await fixture.requestSingleFetchData("/headers.data");
-    expect(res.headers.get("x-loader")).toEqual("true");
-    expect(res.headers.get("x-headers-function")).toEqual("true");
+    // Loader
+    let docResponse = await fixture.requestDocument("/headers");
+    let dataResponse = await fixture.requestSingleFetchData("/headers.data");
+    expect(docResponse.headers.get("x-loader")).toEqual("true");
+    expect(dataResponse.headers.get("x-loader")).toEqual("true");
 
-    res = await fixture.requestSingleFetchData("/headers.data", {
+    // Action
+    docResponse = await fixture.requestDocument("/headers", {
       method: "post",
       body: null,
     });
-    expect(res.headers.get("x-action")).toEqual("true");
-    expect(res.headers.get("x-headers-function")).toEqual(null);
+    dataResponse = await fixture.requestSingleFetchData("/headers.data", {
+      method: "post",
+      body: null,
+    });
+    expect(docResponse.headers.get("x-action")).toEqual("true");
+    expect(dataResponse.headers.get("x-action")).toEqual("true");
 
     console.error = () => {};
 
-    res = await fixture.requestSingleFetchData("/headers.data?error");
-    expect(res.headers.get("x-loader-error")).toEqual("true");
-    expect(res.headers.get("x-headers-function")).toEqual("true");
+    // Loader Error
+    docResponse = await fixture.requestDocument("/headers?error");
+    dataResponse = await fixture.requestSingleFetchData("/headers.data?error");
+    expect(docResponse.headers.get("x-loader-error")).toEqual("true");
+    expect(dataResponse.headers.get("x-loader-error")).toEqual("true");
 
-    res = await fixture.requestSingleFetchData("/headers.data?error", {
+    // Action Error
+    docResponse = await fixture.requestDocument("/headers?error", {
       method: "post",
       body: null,
     });
-    expect(res.headers.get("x-action-error")).toEqual("true");
-    expect(res.headers.get("x-headers-function")).toEqual(null);
-  });
-
-  test("scopes headers function to the _routes param if more than one route exists", async () => {
-    let fixture = await createFixture({
-      config: {
-        future: {
-          unstable_singleFetch: true,
-        },
-      },
-      files: {
-        ...files,
-        "app/routes/a.tsx": js`
-          export function headers({ loaderHeaders }) {
-            let headers = new Headers(loaderHeaders);
-            headers.set('x-a-headers', 'true')
-            return headers;
-          }
-
-          export function loader({ request }) {
-            return new Response(null, { headers: { "x-a-loader": "true" } });
-          }
-
-          export default function Comp() {
-            return null;
-          }
-        `,
-        "app/routes/a.b.tsx": js`
-          export function headers({ loaderHeaders, parentHeaders }) {
-            let headers = new Headers(parentHeaders);
-            loaderHeaders.forEach((value, name) => headers.set(name, value));
-            headers.set('x-b-headers', 'true')
-            return headers;
-          }
-
-          export function loader({ request }) {
-            return new Response(null, { headers: { "x-b-loader": "true" } });
-          }
-
-          export default function Comp() {
-            return null;
-          }
-        `,
-        "app/routes/a.b.c.tsx": js`
-          export function headers({ loaderHeaders, parentHeaders }) {
-            let headers = new Headers(parentHeaders);
-            loaderHeaders.forEach((value, name) => headers.set(name, value));
-            headers.set('x-c-headers', 'true')
-            return headers;
-          }
-
-          export function loader({ request }) {
-            return new Response(null, { headers: { "x-c-loader": "true" } });
-          }
-
-          export default function Comp() {
-            return null;
-          }
-        `,
-      },
+    dataResponse = await fixture.requestSingleFetchData("/headers.data?error", {
+      method: "post",
+      body: null,
     });
-
-    let res = await fixture.requestSingleFetchData("/a/b/c.data");
-    expect(res.headers.get("x-a-loader")).toEqual("true");
-    expect(res.headers.get("x-a-headers")).toEqual("true");
-    expect(res.headers.get("x-b-loader")).toEqual("true");
-    expect(res.headers.get("x-b-headers")).toEqual("true");
-    expect(res.headers.get("x-c-loader")).toEqual("true");
-    expect(res.headers.get("x-c-headers")).toEqual("true");
-
-    res = await fixture.requestSingleFetchData(
-      "/a/b/c.data?_routes=routes%2Fa,routes%2Fa.b"
-    );
-    expect(res.headers.get("x-a-loader")).toEqual("true");
-    expect(res.headers.get("x-a-headers")).toEqual("true");
-    expect(res.headers.get("x-b-loader")).toEqual("true");
-    expect(res.headers.get("x-b-headers")).toEqual("true");
-    expect(res.headers.get("x-c-loader")).toBeNull();
-    expect(res.headers.get("x-c-headers")).toBeNull();
-
-    res = await fixture.requestSingleFetchData(
-      "/a/b/c.data?_routes=routes%2Fa"
-    );
-    expect(res.headers.get("x-a-loader")).toEqual("true");
-    expect(res.headers.get("x-a-headers")).toEqual("true");
-    expect(res.headers.get("x-b-loader")).toBeNull();
-    expect(res.headers.get("x-b-headers")).toBeNull();
-    expect(res.headers.get("x-c-loader")).toBeNull();
-    expect(res.headers.get("x-c-headers")).toBeNull();
-
-    res = await fixture.requestSingleFetchData(
-      "/a/b/c.data?_routes=routes%2Fa.b.c"
-    );
-    expect(res.headers.get("x-a-loader")).toBeNull();
-    expect(res.headers.get("x-a-headers")).toEqual("true");
-    expect(res.headers.get("x-b-loader")).toBeNull();
-    expect(res.headers.get("x-b-headers")).toEqual("true");
-    expect(res.headers.get("x-c-loader")).toEqual("true");
-    expect(res.headers.get("x-c-headers")).toEqual("true");
-
-    res = await fixture.requestSingleFetchData(
-      "/a/b/c.data?_routes=routes%2Fa,routes%2Fa.b.c"
-    );
-    expect(res.headers.get("x-a-loader")).toEqual("true");
-    expect(res.headers.get("x-a-headers")).toEqual("true");
-    expect(res.headers.get("x-b-loader")).toBeNull();
-    expect(res.headers.get("x-b-headers")).toEqual("true");
-    expect(res.headers.get("x-c-loader")).toEqual("true");
-    expect(res.headers.get("x-c-headers")).toEqual("true");
+    expect(docResponse.headers.get("x-action-error")).toEqual("true");
+    expect(dataResponse.headers.get("x-action-error")).toEqual("true");
   });
 
   test("processes loader redirects", async ({ page }) => {

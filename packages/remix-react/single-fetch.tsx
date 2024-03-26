@@ -126,9 +126,9 @@ function singleFetchActionStrategy(
   matches: DataStrategyFunctionArgs["matches"]
 ) {
   return Promise.all(
-    matches.map(async (m) =>
-      m.resolve(async (handler): Promise<HandlerResult> => {
-        let actionStatus: number | undefined;
+    matches.map(async (m) => {
+      let actionStatus: number | undefined;
+      let result = await m.resolve(async (handler): Promise<HandlerResult> => {
         let result = await handler(async () => {
           let url = singleFetchUrl(request.url);
           let init = await createRequestInit(request);
@@ -141,8 +141,13 @@ function singleFetchActionStrategy(
           result,
           status: actionStatus,
         };
-      })
-    )
+      });
+      return {
+        ...result,
+        // Proxy along the action HTTP response status for thrown errors
+        status: actionStatus,
+      };
+    })
   );
 }
 
