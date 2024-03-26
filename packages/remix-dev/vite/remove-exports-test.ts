@@ -11,7 +11,7 @@ describe("removeExports", () => {
       export const clientExport_2 = () => {}
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "export const clientExport_1 = () => {};
     export const clientExport_2 = () => {};"
@@ -34,12 +34,12 @@ describe("removeExports", () => {
 
       export const serverExport_1 = () => serverUtil()
       export const serverExport_2 = () => serverUtil()
-      
+
       export const clientExport_1 = () => clientUtil()
       export const clientExport_2 = () => clientUtil()
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "import { clientLib } from 'client-lib';
     import { sharedLib } from 'shared-lib';
@@ -61,7 +61,7 @@ describe("removeExports", () => {
       export function clientExport_2(){}
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "export function clientExport_1() {}
     export function clientExport_2() {}"
@@ -89,7 +89,7 @@ describe("removeExports", () => {
       export function clientExport_2() { return clientUtil() }
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "import { clientLib } from 'client-lib';
     import { sharedLib } from 'shared-lib';
@@ -119,7 +119,7 @@ describe("removeExports", () => {
       export const clientExport_2 = {}
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "export const clientExport_1 = {};
     export const clientExport_2 = {};"
@@ -147,7 +147,7 @@ describe("removeExports", () => {
       export const clientExport_2 = { value: clientUtil() }
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "import { clientLib } from 'client-lib';
     import { sharedLib } from 'shared-lib';
@@ -173,7 +173,7 @@ describe("removeExports", () => {
       export const clientExport_2 = globalFunction()
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "export const clientExport_1 = globalFunction();
     export const clientExport_2 = globalFunction();"
@@ -201,7 +201,7 @@ describe("removeExports", () => {
       export const clientExport_2 = clientUtil()
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "import { clientLib } from 'client-lib';
     import { sharedLib } from 'shared-lib';
@@ -223,7 +223,7 @@ describe("removeExports", () => {
       export const clientExport_2 = (() => {})()
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "export const clientExport_1 = (() => {})();
     export const clientExport_2 = (() => {})();"
@@ -251,7 +251,7 @@ describe("removeExports", () => {
       export const clientExport_2 = (() => clientUtil())()
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "import { clientLib } from 'client-lib';
     import { sharedLib } from 'shared-lib';
@@ -273,7 +273,7 @@ describe("removeExports", () => {
       export { clientExport_2 } from './client/2'
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "export { clientExport_1 } from './client/1';
     export { clientExport_2 } from './client/2';"
@@ -289,7 +289,7 @@ describe("removeExports", () => {
       export { clientExport_1, clientExport_2 } from './client'
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(
       "\"export { clientExport_1, clientExport_2 } from './client';\""
     );
@@ -311,7 +311,7 @@ describe("removeExports", () => {
       export { clientExport_2 }
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "import { clientExport_1 } from './client/1';
     import { clientExport_2 } from './client/2';
@@ -331,7 +331,7 @@ describe("removeExports", () => {
       export const clientExport_2 = 123
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "export const clientExport_1 = 123;
     export const clientExport_2 = 123;"
@@ -349,7 +349,7 @@ describe("removeExports", () => {
       export const clientExport_2 = 'string'
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "export const clientExport_1 = 'string';
     export const clientExport_2 = 'string';"
@@ -370,7 +370,7 @@ describe("removeExports", () => {
       export const clientExport_2 = CLIENT_STRING
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "const CLIENT_STRING = 'CLIENT_STRING';
     export const clientExport_1 = CLIENT_STRING;
@@ -389,7 +389,7 @@ describe("removeExports", () => {
       export const clientExport_2 = null
     `,
       ["serverExport_1", "serverExport_2"]
-    )({});
+    );
     expect(result.code).toMatchInlineSnapshot(`
     "export const clientExport_1 = null;
     export const clientExport_2 = null;"

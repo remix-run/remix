@@ -63,10 +63,12 @@ function isIdentifierReferenced(
   return false;
 }
 
-export const removeExports = (source: string, exportsToRemove: string[]) => {
+export const removeExports = (
+  source: string,
+  exportsToRemove: string[],
+  generateOptions: GeneratorOptions = {}
+) => {
   let document = parse(source, { sourceType: "module" });
-  let generateCodeAndSourceMaps = (opts: Partial<GeneratorOptions>) =>
-    generate(document, { ...opts, sourceMaps: true });
 
   let referencedIdentifiers = new Set<NodePath<BabelTypes.Identifier>>();
   let removedExports = new Set<string>();
@@ -216,7 +218,7 @@ export const removeExports = (source: string, exportsToRemove: string[]) => {
   if (removedExports.size === 0) {
     // No server-specific exports found so there's
     // no need to remove unused references
-    return generateCodeAndSourceMaps;
+    return generate(document, generateOptions);
   }
 
   let referencesRemovedInThisPass: number;
@@ -362,5 +364,5 @@ export const removeExports = (source: string, exportsToRemove: string[]) => {
     });
   } while (referencesRemovedInThisPass);
 
-  return generateCodeAndSourceMaps;
+  return generate(document, generateOptions);
 };
