@@ -947,7 +947,7 @@ function mergeResponseStubs(
   context: StaticHandlerContext,
   responseStubs: ReturnType<typeof getResponseStubs>
 ) {
-  let statusCode = 200;
+  let statusCode: number | undefined = undefined;
   let headers = new Headers();
   // Action followed by top-down loaders
   let actionStub = responseStubs[ResponseStubActionSymbol];
@@ -958,7 +958,11 @@ function mergeResponseStubs(
   stubs.forEach((stub: ResponseStub) => {
     // Take the highest error/redirect, or the lowest success value - preferring
     // action 200's over loader 200s
-    if (statusCode < 300 && stub.status && statusCode !== actionStub?.status) {
+    if (
+      (statusCode === undefined || statusCode < 300) &&
+      stub.status &&
+      statusCode !== actionStub?.status
+    ) {
       statusCode = stub.status;
     }
 
@@ -967,6 +971,14 @@ function mergeResponseStubs(
     // @ts-expect-error
     ops.forEach(([op, ...args]) => headers[op](...args));
   });
+
+  // If no response stubs set it, use whatever we got back from the router
+  // context which handles internal ErrorResponse cases like 404/405's where
+  // we may never run a loader/action
+  if (statusCode === undefined) {
+    statusCode = context.statusCode;
+  }
+
   return { statusCode, headers };
 }
 
