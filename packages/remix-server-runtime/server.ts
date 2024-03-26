@@ -37,6 +37,7 @@ import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
   isRedirectResponse,
+  isRedirectStatusCode,
   isResponse,
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
@@ -84,7 +85,7 @@ function derive(build: ServerBuild, mode?: string) {
 }
 
 export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
-export const ContextResponseStubSymbol = Symbol("ContextResponseStub");
+export const ResponseStubActionSymbol = Symbol("ResponseStubAction");
 
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
@@ -196,7 +197,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
         if (isRedirectResponse(response)) {
           let result: SingleFetchResult | SingleFetchResults =
-            getSingleFetchRedirect(response);
+            getSingleFetchRedirect(response.status, response.headers);
 
           if (request.method === "GET") {
             result = {
@@ -410,7 +411,7 @@ async function singleFetchAction(
       ...(request.body ? { duplex: "half" } : undefined),
     });
 
-    let responseStubs: Record<string, ResponseStub> = {};
+    let responseStubs = getResponseStubs();
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       skipLoaderErrorBubbling: true,
@@ -422,13 +423,24 @@ async function singleFetchAction(
     // let non-Response return values through
     if (isResponse(result)) {
       return {
-        result: getSingleFetchRedirect(result),
+        result: getSingleFetchRedirect(result.status, result.headers),
         headers: result.headers,
         status: 200,
       };
     }
 
     let context = result;
+
+    let singleFetchResult: SingleFetchResult;
+    let { statusCode, headers } = mergeResponseStubs(context, responseStubs);
+
+    if (isRedirectStatusCode(statusCode) && headers.has("Location")) {
+      return {
+        result: getSingleFetchRedirect(statusCode, headers),
+        headers,
+        status: 200, // Don't want the `fetch` call to follow the redirect
+      };
+    }
 
     // Sanitize errors outside of development environments
     if (context.errors) {
@@ -441,8 +453,6 @@ async function singleFetchAction(
       context.errors = sanitizeErrors(context.errors, serverMode);
     }
 
-    let singleFetchResult: SingleFetchResult;
-    let { statusCode, headers } = mergeResponseStubs(context, responseStubs);
     if (context.errors) {
       let error = Object.values(context.errors)[0];
       singleFetchResult = { error: isResponseStub(error) ? null : error };
@@ -482,7 +492,7 @@ async function singleFetchLoaders(
     let loadRouteIds =
       new URL(request.url).searchParams.get("_routes")?.split(",") || undefined;
 
-    let responseStubs: Record<string, ResponseStub> = {};
+    let responseStubs = getResponseStubs();
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       loadRouteIds,
@@ -493,7 +503,10 @@ async function singleFetchLoaders(
     if (isResponse(result)) {
       return {
         result: {
-          [SingleFetchRedirectSymbol]: getSingleFetchRedirect(result),
+          [SingleFetchRedirectSymbol]: getSingleFetchRedirect(
+            result.status,
+            result.headers
+          ),
         },
         headers: result.headers,
         status: 200, // Don't want the `fetch` call to follow the redirect
@@ -501,6 +514,21 @@ async function singleFetchLoaders(
     }
 
     let context = result;
+
+    let { statusCode, headers } = mergeResponseStubs(context, responseStubs);
+
+    if (isRedirectStatusCode(statusCode) && headers.has("Location")) {
+      return {
+        result: {
+          [SingleFetchRedirectSymbol]: getSingleFetchRedirect(
+            statusCode,
+            headers
+          ),
+        },
+        headers,
+        status: 200, // Don't want the `fetch` call to follow the redirect
+      };
+    }
 
     // Sanitize errors outside of development environments
     if (context.errors) {
@@ -521,6 +549,7 @@ async function singleFetchLoaders(
           (m) => m.route.loader && loadRouteIds!.includes(m.route.id)
         )
       : context.matches;
+
     loadedMatches.forEach((m) => {
       let data = context.loaderData?.[m.route.id];
       let error = context.errors?.[m.route.id];
@@ -534,8 +563,6 @@ async function singleFetchLoaders(
         results[m.route.id] = { data };
       }
     });
-
-    let { statusCode, headers } = mergeResponseStubs(context, responseStubs);
 
     return {
       result: results,
@@ -563,7 +590,7 @@ async function handleDocumentRequest(
   criticalCss?: string
 ) {
   let context;
-  let responseStubs: Record<string, ResponseStub> = {};
+  let responseStubs = getResponseStubs();
   try {
     context = await staticHandler.query(request, {
       requestContext: loadContext,
@@ -597,6 +624,13 @@ async function handleDocumentRequest(
     let merged = mergeResponseStubs(context, responseStubs);
     statusCode = merged.statusCode;
     headers = merged.headers;
+
+    if (isRedirectStatusCode(statusCode) && headers.has("Location")) {
+      return new Response(null, {
+        status: statusCode,
+        headers,
+      });
+    }
   } else {
     statusCode = context.statusCode;
     headers = getDocumentHeaders(build, context);
@@ -824,7 +858,7 @@ function unwrapResponse(response: Response) {
     : response.text();
 }
 
-function getResponseStub(status = 200) {
+function getResponseStub(status?: number) {
   let headers = new Headers();
   let operations: ResponseStubOperation[] = [];
   let headersProxy = new Proxy(headers, {
@@ -846,20 +880,46 @@ function getResponseStub(status = 200) {
 }
 
 function getSingleFetchDataStrategy(
-  responseStubs: Record<string, ResponseStub>
+  responseStubs: ReturnType<typeof getResponseStubs>
 ) {
-  return async ({ matches }: DataStrategyFunctionArgs) => {
+  return async ({ request, matches }: DataStrategyFunctionArgs) => {
     let results = await Promise.all(
       matches.map(async (match) => {
-        let result = await match.resolve(async (handler) => {
-          let responseStub = responseStubs[match.route.id];
+        let responseStub: ResponseStub | undefined;
+        if (request.method !== "GET") {
+          responseStub = responseStubs[ResponseStubActionSymbol];
+          if (!responseStub) {
+            responseStub = getResponseStub();
+            responseStubs[ResponseStubActionSymbol] = responseStub;
+          }
+        } else {
+          responseStub = responseStubs[match.route.id];
           if (!responseStub) {
             responseStub = getResponseStub();
             responseStubs[match.route.id] = responseStub;
           }
+        }
+
+        let result = await match.resolve(async (handler) => {
           let data = await handler({ response: responseStub });
           return { type: "data", result: data };
         });
+
+        // Transfer raw Response status/headers to responseStubs
+        if (isResponse(result.result)) {
+          if (responseStub.status == null) {
+            responseStub.status = result.result.status;
+          }
+          for (let [k, v] of result.result.headers) {
+            if (k !== "Set-Cookie") {
+              responseStub.headers.set(k, v);
+            }
+          }
+          for (let v of result.result.headers.getSetCookie()) {
+            responseStub.headers.append("Set-Cookie", v);
+          }
+        }
+
         return result;
       })
     );
@@ -873,17 +933,29 @@ function isResponseStub(value: any): value is ResponseStub {
   );
 }
 
+function getResponseStubs(): {
+  [k: string]: ResponseStub;
+  [ResponseStubActionSymbol]?: ResponseStub;
+} {
+  return {};
+}
+
 function mergeResponseStubs(
   context: StaticHandlerContext,
-  responseStubs: Record<string, ResponseStub>
+  responseStubs: ReturnType<typeof getResponseStubs>
 ) {
   let statusCode = 200;
   let headers = new Headers();
-  context.matches.forEach((m) => {
-    let stub = responseStubs[m.route.id];
-    if (stub) {
-      // Take the highest error/redirect, or the lowest success value
-      if (statusCode < 300 && stub.status) {
+  // Action followed by top-down loaders
+  let actionStub = responseStubs[ResponseStubActionSymbol];
+  let stubs = [
+    actionStub,
+    ...context.matches.map((m) => responseStubs[m.route.id]),
+  ].filter((stub) => stub) as ResponseStub[];
+  stubs.forEach((stub: ResponseStub) => {
+    // Take the highest error/redirect, or the lowest success value - preferring
+    // action 200's over loader 200s
+    if (statusCode < 300 && stub.status && statusCode !== actionStub?.status) {
         statusCode = stub.status;
       }
 
@@ -891,15 +963,17 @@ function mergeResponseStubs(
       let ops = stub[ResponseStubOperationsSymbol];
       // @ts-expect-error
       ops.forEach(([op, ...args]) => headers[op](...args));
-    }
   });
   return { statusCode, headers };
 }
 
-function getSingleFetchRedirect(response: Response): SingleFetchRedirectResult {
+function getSingleFetchRedirect(
+  status: number,
+  headers: Headers
+): SingleFetchRedirectResult {
   return {
-    redirect: response.headers.get("Location")!,
-    status: response.status,
+    redirect: headers.get("Location")!,
+    status,
     revalidate:
       // Technically X-Remix-Revalidate isn't needed here - that was an implementation
       // detail of ?_data requests as our way to tell the front end to revalidate when
@@ -908,9 +982,8 @@ function getSingleFetchRedirect(response: Response): SingleFetchRedirectResult {
       // However, we're respecting it for now because it may be something folks have
       // used in their own responses
       // TODO(v3): Consider removing or making this official public API
-      response.headers.has("X-Remix-Revalidate") ||
-      response.headers.has("Set-Cookie"),
-    reload: response.headers.has("X-Remix-Reload-Document"),
+      headers.has("X-Remix-Revalidate") || headers.has("Set-Cookie"),
+    reload: headers.has("X-Remix-Reload-Document"),
   };
 }
 
