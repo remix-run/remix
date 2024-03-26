@@ -20,7 +20,7 @@ export function isNetworkErrorResponse(response: any): response is Response {
   // If we reach the Remix server, we can safely identify response types via the
   // X-Remix-Error/X-Remix-Catch headers.  However, if we never reach the Remix
   // server, and instead receive a 4xx/5xx from somewhere in between (like
-  // Cloudflare), then we get a false negative n the isErrorResponse check and
+  // Cloudflare), then we get a false negative in the isErrorResponse check and
   // we incorrectly assume that the user returns the 4xx/5xx response and
   // consider it successful.  To alleviate this, we add X-Remix-Response to any
   // non-Error/non-Catch responses coming back from the server.  If we don't
@@ -73,37 +73,13 @@ export async function fetchData(
   let url = new URL(request.url);
   url.searchParams.set("_data", routeId);
 
-  let init: RequestInit = { signal: request.signal };
-
-  if (request.method !== "GET") {
-    init.method = request.method;
-
-    let contentType = request.headers.get("Content-Type");
-
-    // Check between word boundaries instead of startsWith() due to the last
-    // paragraph of https://httpwg.org/specs/rfc9110.html#field.content-type
-    if (contentType && /\bapplication\/json\b/.test(contentType)) {
-      init.headers = { "Content-Type": contentType };
-      init.body = JSON.stringify(await request.json());
-    } else if (contentType && /\btext\/plain\b/.test(contentType)) {
-      init.headers = { "Content-Type": contentType };
-      init.body = await request.text();
-    } else if (
-      contentType &&
-      /\bapplication\/x-www-form-urlencoded\b/.test(contentType)
-    ) {
-      init.body = new URLSearchParams(await request.text());
-    } else {
-      init.body = await request.formData();
-    }
-  }
-
   if (retry > 0) {
     // Retry up to 3 times waiting 50, 250, 1250 ms
     // between retries for a total of 1550 ms before giving up.
     await new Promise((resolve) => setTimeout(resolve, 5 ** retry * 10));
   }
 
+  let init = await createRequestInit(request);
   let revalidation = window.__remixRevalidation;
   let response = await fetch(url.href, init).catch((error) => {
     if (
@@ -132,6 +108,37 @@ export async function fetchData(
   }
 
   return response;
+}
+
+export async function createRequestInit(
+  request: Request
+): Promise<RequestInit> {
+  let init: RequestInit = { signal: request.signal };
+
+  if (request.method !== "GET") {
+    init.method = request.method;
+
+    let contentType = request.headers.get("Content-Type");
+
+    // Check between word boundaries instead of startsWith() due to the last
+    // paragraph of https://httpwg.org/specs/rfc9110.html#field.content-type
+    if (contentType && /\bapplication\/json\b/.test(contentType)) {
+      init.headers = { "Content-Type": contentType };
+      init.body = JSON.stringify(await request.json());
+    } else if (contentType && /\btext\/plain\b/.test(contentType)) {
+      init.headers = { "Content-Type": contentType };
+      init.body = await request.text();
+    } else if (
+      contentType &&
+      /\bapplication\/x-www-form-urlencoded\b/.test(contentType)
+    ) {
+      init.body = new URLSearchParams(await request.text());
+    } else {
+      init.body = await request.formData();
+    }
+  }
+
+  return init;
 }
 
 const DEFERRED_VALUE_PLACEHOLDER_PREFIX = "__deferred_promise:";

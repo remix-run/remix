@@ -115,6 +115,7 @@ function itPrefetchesPageLinks<
         url: "",
         version: "",
       },
+      future: {},
     };
 
     beforeEach(() => {

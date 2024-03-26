@@ -31,7 +31,6 @@
     "changeset:version": "changeset version && node ./scripts/remove-prerelease-changelogs.mjs && node ./scripts/patchup-version.mjs",
     "changeset:release": "pnpm build --tsc && changeset publish",
     "version": "node ./scripts/version.js",
-    "version:experimental": "node ./scripts/version.js experimental",
     "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\""
   },
   "packageManager": "pnpm@8.10.5",
@@ -62,7 +61,6 @@
     "@remix-run/css-bundle": "workspace:*",
     "@remix-run/dev": "workspace:*",
     "@remix-run/node": "workspace:*",
-    "@remix-run/web-fetch": "^4.4.2",
     "@remix-run/react": "workspace:*",
     "@remix-run/testing": "workspace:*",
     "@rollup/plugin-babel": "^5.2.2",
