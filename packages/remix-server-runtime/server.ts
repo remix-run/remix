@@ -3,6 +3,7 @@ import type {
   ErrorResponse,
   StaticHandler,
   unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
+  StaticHandlerContext,
 } from "@remix-run/router";
 import {
   UNSAFE_DEFERRED_SYMBOL as DEFERRED_SYMBOL,
@@ -29,7 +30,8 @@ import { getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import { matchServerRoutes } from "./routeMatching";
-import { ResponseStubSymbol, type ResponseStub } from "./routeModules";
+import type { ResponseStub, ResponseStubOperation } from "./routeModules";
+import { ResponseStubOperationsSymbol } from "./routeModules";
 import type { ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
@@ -60,9 +62,6 @@ function derive(build: ServerBuild, mode?: string) {
       v7_relativeSplatPath: build.future?.v3_relativeSplatPath === true,
       v7_throwAbortReason: build.future?.v3_throwAbortReason === true,
     },
-    unstable_dataStrategy: build.future.unstable_singleFetch
-      ? singleFetchDataStrategy
-      : undefined,
   });
 
   let errorHandler =
@@ -411,10 +410,12 @@ async function singleFetchAction(
       ...(request.body ? { duplex: "half" } : undefined),
     });
 
+    let responseStubs: Record<string, ResponseStub> = {};
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       skipLoaderErrorBubbling: true,
       skipLoaders: true,
+      unstable_dataStrategy: getSingleFetchDataStrategy(responseStubs),
     });
 
     // Unlike `handleDataRequest`, when singleFetch is enabled, queryRoute does
@@ -441,41 +442,26 @@ async function singleFetchAction(
     }
 
     let singleFetchResult: SingleFetchResult;
+    let { statusCode, headers } = mergeResponseStubs(context, responseStubs);
     if (context.errors) {
       let error = Object.values(context.errors)[0];
-      if (isResponseStub(error)) {
-        return {
-          result: { error: null },
-          headers: error.headers,
-          status: error.status,
-        };
-      }
-      singleFetchResult = { error: Object.values(context.errors)[0] };
+      singleFetchResult = { error: isResponseStub(error) ? null : error };
     } else {
       singleFetchResult = { data: Object.values(context.actionData || {})[0] };
     }
 
-    let responseStub: ResponseStub =
-      loadContext && ContextResponseStubSymbol in loadContext
-        ? (loadContext[ContextResponseStubSymbol] as ResponseStub)
-        : getResponseStub();
-
     return {
       result: singleFetchResult,
-      headers: responseStub.headers,
-      status: responseStub.status,
+      headers,
+      status: statusCode,
     };
   } catch (error) {
-    let responseStub: ResponseStub =
-      loadContext && ContextResponseStubSymbol in loadContext
-        ? (loadContext[ContextResponseStubSymbol] as ResponseStub)
-        : getResponseStub(500);
-
     handleError(error);
+    // These should only be internal remix errors, no need to deal with responseStubs
     return {
       result: { error },
-      headers: responseStub.headers,
-      status: responseStub.status,
+      headers: new Headers(),
+      status: 500,
     };
   }
 }
@@ -496,12 +482,14 @@ async function singleFetchLoaders(
     let loadRouteIds =
       new URL(request.url).searchParams.get("_routes")?.split(",") || undefined;
 
+    let responseStubs: Record<string, ResponseStub> = {};
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       loadRouteIds,
       skipLoaderErrorBubbling: true,
-      // dataStrategy: createDataStrategy(responseStubs),
+      unstable_dataStrategy: getSingleFetchDataStrategy(responseStubs),
     });
+
     if (isResponse(result)) {
       return {
         result: {
@@ -547,27 +535,20 @@ async function singleFetchLoaders(
       }
     });
 
-    let responseStub: ResponseStub =
-      loadContext && ContextResponseStubSymbol in loadContext
-        ? (loadContext[ContextResponseStubSymbol] as ResponseStub)
-        : getResponseStub();
+    let { statusCode, headers } = mergeResponseStubs(context, responseStubs);
 
     return {
       result: results,
-      headers: responseStub.headers,
-      status: responseStub.status,
+      headers,
+      status: statusCode,
     };
   } catch (error: unknown) {
     handleError(error);
-    let responseStub: ResponseStub =
-      loadContext && ContextResponseStubSymbol in loadContext
-        ? (loadContext[ContextResponseStubSymbol] as ResponseStub)
-        : getResponseStub(500);
-
+    // These should only be internal remix errors, no need to deal with responseStubs
     return {
       result: { root: { error } },
-      headers: responseStub.headers,
-      status: responseStub.status,
+      headers: new Headers(),
+      status: 500,
     };
   }
 }
@@ -582,9 +563,13 @@ async function handleDocumentRequest(
   criticalCss?: string
 ) {
   let context;
+  let responseStubs: Record<string, ResponseStub> = {};
   try {
     context = await staticHandler.query(request, {
       requestContext: loadContext,
+      unstable_dataStrategy: build.future.unstable_singleFetch
+        ? getSingleFetchDataStrategy(responseStubs)
+        : undefined,
     });
   } catch (error: unknown) {
     handleError(error);
@@ -609,12 +594,9 @@ async function handleDocumentRequest(
   let statusCode: number;
   let headers: Headers;
   if (build.future.unstable_singleFetch) {
-    let responseStub =
-      ContextResponseStubSymbol in loadContext
-        ? (loadContext[ContextResponseStubSymbol] as ResponseStub)
-        : getResponseStub();
-    statusCode = responseStub.status;
-    headers = responseStub.headers;
+    let merged = mergeResponseStubs(context, responseStubs);
+    statusCode = merged.statusCode;
+    headers = merged.headers;
   } else {
     statusCode = context.statusCode;
     headers = getDocumentHeaders(build, context);
@@ -843,55 +825,75 @@ function unwrapResponse(response: Response) {
 }
 
 function getResponseStub(status = 200) {
+  let headers = new Headers();
+  let operations: ResponseStubOperation[] = [];
+  let headersProxy = new Proxy(headers, {
+    get(target, prop, receiver) {
+      if (prop === "set" || prop === "append" || prop === "delete") {
+        return (name: string, value: string) => {
+          operations.push([prop, name, value]);
+          Reflect.apply(target[prop], target, [name, value]);
+        };
+      }
+      return Reflect.get(target, prop, receiver);
+    },
+  });
   return {
     status,
-    headers: new Headers(),
-    [ResponseStubSymbol]: true,
+    headers: headersProxy,
+    [ResponseStubOperationsSymbol]: operations,
   };
 }
 
-async function singleFetchDataStrategy({
-  matches,
-  context,
-}: DataStrategyFunctionArgs) {
-  // We will have an existing responseStub on document POST requests when we run
-  // this the second time for the loader pass
-  let hasResponseStub = ContextResponseStubSymbol in context;
-  let responseStub = hasResponseStub
-    ? (context[ContextResponseStubSymbol] as ResponseStub)
-    : getResponseStub();
-
-  if (!hasResponseStub) {
-    Object.defineProperty(context, ContextResponseStubSymbol, {
-      get: () => responseStub,
-    });
-  }
-
-  let results = await Promise.all(
-    matches.map(async (match) => {
-      let result = await match.resolve(async (handler) => {
-        // create responseStub specific to this loader/acton implementation
-        let data = await handler({ response: responseStub });
-        return { type: "data", result: data };
-      });
-      return result;
-    })
-  );
-  return results.map((result) => ({
-    type: result.type,
-    result: result.result,
-    status: responseStub.status,
-    headers: responseStub.headers,
-  }));
+function getSingleFetchDataStrategy(
+  responseStubs: Record<string, ResponseStub>
+) {
+  return async ({ matches }: DataStrategyFunctionArgs) => {
+    let results = await Promise.all(
+      matches.map(async (match) => {
+        let result = await match.resolve(async (handler) => {
+          let responseStub = responseStubs[match.route.id];
+          if (!responseStub) {
+            responseStub = getResponseStub();
+            responseStubs[match.route.id] = responseStub;
+          }
+          let data = await handler({ response: responseStub });
+          return { type: "data", result: data };
+        });
+        return result;
+      })
+    );
+    return results;
+  };
 }
 
 function isResponseStub(value: any): value is ResponseStub {
   return (
-    value &&
-    typeof value === "object" &&
-    ResponseStubSymbol in value &&
-    value[ResponseStubSymbol] === true
+    value && typeof value === "object" && ResponseStubOperationsSymbol in value
   );
+}
+
+function mergeResponseStubs(
+  context: StaticHandlerContext,
+  responseStubs: Record<string, ResponseStub>
+) {
+  let statusCode = 200;
+  let headers = new Headers();
+  context.matches.forEach((m) => {
+    let stub = responseStubs[m.route.id];
+    if (stub) {
+      // Take the highest error/redirect, or the lowest success value
+      if (statusCode < 300 && stub.status) {
+        statusCode = stub.status;
+      }
+
+      // Replay headers operations in order
+      let ops = stub[ResponseStubOperationsSymbol];
+      // @ts-expect-error
+      ops.forEach(([op, ...args]) => headers[op](...args));
+    }
+  });
+  return { statusCode, headers };
 }
 
 function getSingleFetchRedirect(response: Response): SingleFetchRedirectResult {

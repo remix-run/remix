@@ -426,7 +426,7 @@ test.describe("single-fetch", () => {
     expect(urls).toEqual([]);
   });
 
-  test("merges headers correctly for loader and action calls", async () => {
+  test("returns headers correctly for singular loader and action calls", async () => {
     let fixture = await createFixture({
       config: {
         future: {
@@ -498,6 +498,117 @@ test.describe("single-fetch", () => {
     });
     expect(docResponse.headers.get("x-action-error")).toEqual("true");
     expect(dataResponse.headers.get("x-action-error")).toEqual("true");
+  });
+
+  test("merges headers from nested route loaders", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/a.tsx": js`
+          export function loader({ request, response }) {
+            response.headers.set('x-one', 'a set');
+            response.headers.append('x-one', 'a append');
+            response.headers.set('x-two', 'a set');
+            response.headers.append('x-three', 'a append');
+            response.headers.set('x-four', 'a set');
+            return null;
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+        "app/routes/a.b.tsx": js`
+          export function loader({ request, response }) {
+            response.headers.set('x-one', 'b set');
+            response.headers.append('x-one', 'b append');
+            response.headers.set('x-two', 'b set');
+            response.headers.append('x-three', 'b append');
+            response.headers.delete('x-four');
+            return null;
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+        "app/routes/a.b.c.tsx": js`
+          export function loader({ request, response }) {
+            response.headers.set('x-one', 'c set');
+            response.headers.append('x-one', 'c append');
+            response.headers.set('x-two', 'c set');
+            response.headers.append('x-three', 'c append');
+            return null;
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+      },
+    });
+
+    // x-one used both set and append
+    // x-two only uses set
+    // x-three only uses append
+    // x-four deletes
+    async function assertHeaders(
+      method: "requestDocument" | "requestSingleFetchData"
+    ) {
+      let res = await fixture[method]("/a.data");
+      expect(res.headers.get("x-one")).toEqual("a set, a append");
+      expect(res.headers.get("x-two")).toEqual("a set");
+      expect(res.headers.get("x-three")).toEqual("a append");
+      expect(res.headers.get("x-four")).toEqual("a set");
+
+      res = await fixture[method]("/a/b.data");
+      expect(res.headers.get("x-one")).toEqual("b set, b append");
+      expect(res.headers.get("x-two")).toEqual("b set");
+      expect(res.headers.get("x-three")).toEqual("a append, b append");
+      expect(res.headers.get("x-four")).toEqual(null);
+
+      res = await fixture[method]("/a/b/c.data");
+      expect(res.headers.get("x-one")).toEqual("c set, c append");
+      expect(res.headers.get("x-two")).toEqual("c set");
+      expect(res.headers.get("x-three")).toEqual(
+        "a append, b append, c append"
+      );
+      expect(res.headers.get("x-four")).toEqual(null);
+
+      res = await fixture[method]("/a/b/c.data?_routes=routes%2Fa");
+      expect(res.headers.get("x-one")).toEqual("a set, a append");
+      expect(res.headers.get("x-two")).toEqual("a set");
+      expect(res.headers.get("x-three")).toEqual("a append");
+      expect(res.headers.get("x-four")).toEqual("a set");
+
+      res = await fixture[method]("/a/b.data?_routes=routes%2Fa,routes%2Fa.b");
+      expect(res.headers.get("x-one")).toEqual("b set, b append");
+      expect(res.headers.get("x-two")).toEqual("b set");
+      expect(res.headers.get("x-three")).toEqual("a append, b append");
+      expect(res.headers.get("x-four")).toEqual(null);
+
+      res = await fixture[method]("/a/b/c.data?_routes=routes%2Fa.b.c");
+      expect(res.headers.get("x-one")).toEqual("c set, c append");
+      expect(res.headers.get("x-two")).toEqual("c set");
+      expect(res.headers.get("x-three")).toEqual("c append");
+      expect(res.headers.get("x-four")).toEqual(null);
+
+      res = await fixture[method](
+        "/a/b/c.data?_routes=routes%2Fa,routes%2Fa.b.c"
+      );
+      expect(res.headers.get("x-one")).toEqual("c set, c append");
+      expect(res.headers.get("x-two")).toEqual("c set");
+      expect(res.headers.get("x-three")).toEqual("a append, c append");
+      expect(res.headers.get("x-four")).toEqual("a set");
+    }
+
+    assertHeaders("requestDocument");
+    assertHeaders("requestSingleFetchData");
   });
 
   test("processes loader redirects", async ({ page }) => {
