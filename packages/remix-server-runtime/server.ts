@@ -889,16 +889,8 @@ function getSingleFetchDataStrategy(
         let responseStub: ResponseStub | undefined;
         if (request.method !== "GET") {
           responseStub = responseStubs[ResponseStubActionSymbol];
-          if (!responseStub) {
-            responseStub = getResponseStub();
-            responseStubs[ResponseStubActionSymbol] = responseStub;
-          }
         } else {
           responseStub = responseStubs[match.route.id];
-          if (!responseStub) {
-            responseStub = getResponseStub();
-            responseStubs[match.route.id] = responseStub;
-          }
         }
 
         let result = await match.resolve(async (handler) => {
@@ -943,7 +935,7 @@ function proxyResponseToResponseStub(
   }
 
   // Unsure why this is complaining?  It's fine in VSCode but fails with tsc...
-  // @ts-expect-error
+  // @ts-ignore - ignoring instead of expecting because otherwise build fails locally
   for (let v of headers.getSetCookie()) {
     responseStub.headers.append("Set-Cookie", v);
   }
@@ -955,11 +947,16 @@ function isResponseStub(value: any): value is ResponseStub {
   );
 }
 
-function getResponseStubs(): {
-  [k: string]: ResponseStub;
-  [ResponseStubActionSymbol]?: ResponseStub;
-} {
-  return {};
+function getResponseStubs() {
+  return new Proxy({} as Record<string | symbol, ResponseStub>, {
+    get(responseStubCache, prop) {
+      let cached = responseStubCache[prop];
+      if (!cached) {
+        responseStubCache[prop] = cached = getResponseStub();
+      }
+      return cached;
+    },
+  });
 }
 
 function mergeResponseStubs(
@@ -974,7 +971,7 @@ function mergeResponseStubs(
   let stubs = [
     actionStub,
     ...context.matches.map((m) => responseStubs[m.route.id]),
-  ].filter((stub) => stub) as ResponseStub[];
+  ];
 
   for (let stub of stubs) {
     // Take the highest error/redirect, or the lowest success value - preferring
