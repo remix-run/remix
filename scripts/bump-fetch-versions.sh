@@ -7,7 +7,7 @@ if [ "${VERSION}" == "" ]; then
 fi
 
 
-echo "Updating the web-std-io dependencies to version '${VERSION}'"
+echo "Updating the undici dependencies to version '${VERSION}'"
 echo ""
 
 if [ ! -d "packages/remix-node" ]; then
@@ -18,7 +18,7 @@ fi
 set -x
 
 cd packages/remix-node
-pnpm add @remix-run/web-fetch@${VERSION} @remix-run/web-file@${VERSION} @remix-run/web-stream@${VERSION}
+pnpm add undici@${VERSION}
 cd ../..
 
 set +x
