@@ -1,13 +1,16 @@
-const babel = require("@rollup/plugin-babel").default;
+/* eslint-disable import/no-nodejs-modules */
 const path = require("node:path");
+const babel = require("@rollup/plugin-babel").default;
+const nodeResolve = require("@rollup/plugin-node-resolve").default;
+const copy = require("rollup-plugin-copy");
 
 const {
-  copyPublishFiles,
-  copyToPlaygrounds,
-  createBanner,
   getOutputDir,
+  isBareModuleId,
+  createBanner,
+  copyToPlaygrounds,
 } = require("../../rollup.utils");
-let { name: packageName, version } = require("./package.json");
+const { name: packageName, version } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
@@ -17,14 +20,16 @@ module.exports = function rollup() {
 
   return [
     {
-      external() {
-        return true;
+      external(id) {
+        return isBareModuleId(id);
       },
       input: `${sourceDir}/index.ts`,
       output: {
-        format: "cjs",
-        dir: outputDist,
         banner: createBanner(packageName, version),
+        dir: outputDist,
+        format: "cjs",
+        preserveModules: true,
+        exports: "named",
       },
       plugins: [
         babel({
@@ -32,19 +37,27 @@ module.exports = function rollup() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
-        copyPublishFiles(packageName),
+        nodeResolve({ extensions: [".ts", ".tsx"] }),
+        copy({
+          targets: [
+            { src: "LICENSE.md", dest: [outputDir, sourceDir] },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
+          ],
+        }),
         copyToPlaygrounds(),
       ],
     },
     {
-      external() {
-        return true;
+      external(id) {
+        return isBareModuleId(id);
       },
       input: `${sourceDir}/index.ts`,
       output: {
-        format: "esm",
-        dir: path.join(outputDist, "esm"),
         banner: createBanner(packageName, version),
+        dir: `${outputDist}/esm`,
+        format: "esm",
+        preserveModules: true,
       },
       plugins: [
         babel({
@@ -52,7 +65,7 @@ module.exports = function rollup() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
-        copyPublishFiles(packageName),
+        nodeResolve({ extensions: [".ts", ".tsx"] }),
         copyToPlaygrounds(),
       ],
     },

@@ -734,7 +734,33 @@ importers:
         specifier: ^1.2.0
         version: 1.3.1
 
-  packages/remix: {}
+  packages/remix:
+    dependencies:
+      '@remix-run/router':
+        specifier: 1.15.3
+        version: 1.15.3
+      '@types/cookie':
+        specifier: ^0.6.0
+        version: 0.6.0
+      '@web3-storage/multipart-parser':
+        specifier: ^1.0.0
+        version: 1.0.0
+      cookie:
+        specifier: ^0.6.0
+        version: 0.6.0
+      set-cookie-parser:
+        specifier: ^2.4.8
+        version: 2.6.0
+      source-map:
+        specifier: ^0.7.3
+        version: 0.7.3
+    devDependencies:
+      '@types/set-cookie-parser':
+        specifier: ^2.4.1
+        version: 2.4.7
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
 
   packages/remix-architect:
     dependencies:
