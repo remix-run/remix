@@ -7,7 +7,7 @@ For more, check out the [Remix docs](https://remix.run/docs).
 ## Install
 
 ```sh
-npx create-remix@latest --template remix-run/remix/templates/deno
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/deno
 ```
 
 ## Managing dependencies
@@ -29,7 +29,7 @@ Read about
   import { copy } from "https://deno.land/std@0.138.0/streams/conversion.ts";
   ```
 - ❌ Do not use
-  [import maps](https://deno.land/manual/linking_to_external_code/import_maps).
+  [import maps](https://docs.deno.com/runtime/manual/basics/import_maps).
 
 ## Development
 

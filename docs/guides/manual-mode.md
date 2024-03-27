@@ -4,6 +4,8 @@ title: Manual Dev Server
 
 # Manual mode
 
+<docs-warning>This guide is only relevant when using the [Classic Remix Compiler][classic-remix-compiler].</docs-warning>
+
 By default, `remix dev` drives like an automatic.
 It keeps your app server up-to-date with the latest code changes by automatically restarting the app server whenever file changes are detected in your app code.
 This is a simple approach that stays out of your way, and we think will work well for most apps.
@@ -308,3 +310,4 @@ There is also a handy [`remember` utility][remember] that can help out here if y
 [templates]: https://github.com/remix-run/remix/blob/main/templates
 [community_examples]: https://github.com/xHomu/remix-v2-server
 [remember]: https://npm.im/@epic-web/remember
+[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite

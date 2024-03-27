@@ -10,16 +10,6 @@ Instead of prescribing a precise architecture with all of its constraints like S
 
 The fastest thing to send to a user is, of course, a static document on a CDN that's close to the user. Until recently, servers pretty much only ran in one region of the world, which made for slow responses everywhere else. This is perhaps one reason SSG gained so much popularity, it allowed developers to essentially "cache" their data into HTML documents and then distribute them across the world. It comes with a lot of tradeoffs too: build times, build complexity, duplicate websites for translations, can't use it for authenticated user experiences, can't use it for very large and dynamic data sources (like our project [unpkg.com][unpkg-com]!) to name a few.
 
-## Bundle analysis
-
-Remix outputs metafiles to the server build directory (`build/` by default) so you can analyze your bundle size and composition.
-
-- `metafile.css.json` : Metafile for the CSS bundle
-- `metafile.js.json` : Metafile for the browser JS bundle
-- `metafile.server.json` : Metafile for the serve JS bundle
-
-Remix uses esbuild's metafile format so you can directly upload those files to [https://esbuild.github.io/analyze/][https-esbuild-github-io-analyze] to visualize your bundle.
-
 ## The Edge
 
 (No, not the U2 guy.)
@@ -50,6 +40,18 @@ Not only does Cloudflare run the app close to the user, they also have persisten
 
 There are other similar platforms that we've got plans to support soon.
 
+## Bundle analysis
+
+<docs-warning>This documentation is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]</docs-warning>
+
+Remix outputs metafiles to the server build directory (`build/` by default) so you can analyze your bundle size and composition.
+
+- `metafile.css.json` : Metafile for the CSS bundle
+- `metafile.js.json` : Metafile for the browser JS bundle
+- `metafile.server.json` : Metafile for the serve JS bundle
+
+Remix uses esbuild's metafile format so you can directly upload those files to [https://esbuild.github.io/analyze/][https-esbuild-github-io-analyze] to visualize your bundle.
+
 ## Other Technologies
 
 Here are some other technologies to help speed up your servers:
@@ -67,3 +69,4 @@ Here are some other technologies to help speed up your servers:
 [lru-cache]: https://www.npmjs.com/package/lru-cache
 [redis]: https://www.npmjs.com/package/redis
 [https-esbuild-github-io-analyze]: https://esbuild.github.io/analyze
+[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
