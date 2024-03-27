@@ -8,14 +8,14 @@ Remix introduced support for "Single Fetch" ([RFC][rfc]) behind the [`future.uns
 
 ## Overview
 
-When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). If you are currently returning `Response` instances from your loaders (i.e., `json`/`defer`) then you shouldn't _need_ to make any changes to your app code, but please read through the "breaking" changes below to be aware of some of the underlying behavior changes.
+When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). If you are currently returning `Response` instances from your loaders (i.e., `json`/`defer`) then you shouldn't _need_ to make many changes to your app code, but please read through the "breaking" changes below to be aware of some of the underlying behavior changes - specifically around serialization and status/header behavior.
 
 ### Breaking Changes
 
 - Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
 - Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
-- TODO: The `headers` export is no longer used in favor of the `ResponseStub`
+- The `headers` function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
 
 ## Details
 
@@ -49,7 +49,7 @@ Now that Remix is streaming internally, we can cancel the `turbo-stream` process
 
 You can control this by exporting a `streamTimeout` numeric value from your `entry.server.tsx` and Remix will use that as the number of milliseconds after which to reject any outstanding Promises from `loader`/`action`'s. It's recommended to decouple this value from the timeout in which you abort the React renderer - and you should always set the React timeout to a higher value so it has time to stream down the underlying rejections from your `streamTimeout`.
 
-## Type Inference
+### Type Inference
 
 The current generics support type inference but have a built-in assumption of a JSON-serialized response. With the new streaming format, this assumption no longer holds so `useLoaderData<typeof loader>()` will _not_ return the proper types because it would assume that a `Date` would be a string on the client 😕. Unfortunately, we can't make these types aware of a runtime future flag and we do not want to introduce another hook just for this. Thankfully, the manual typing is also much simpler without needing to think about JSON serialization, so the current recommendation is to skip the generics when opting into single fetch and manually cast the type yourself:
 
@@ -95,7 +95,48 @@ This "functionality" is handled via the `future.unstable_skipActionErrorRevalida
 
 ### Headers
 
-TODO: Moving to `ResponseStub`
+The [`headers`][headers] function is no longer used when Single Fetch is enabled.
+Instead, your `loader`/`action` functions now receive a mutable `response` parameter unique to that execution:
+
+```ts
+type ResponseStub = {
+  status: numbers | undefined;
+  headers: Headers;
+};
+```
+
+- To alter the status of your HTTP Response, set the `status` field directly:
+  - `response.status = 201`
+- To set the headers on your HTTP Response, use the standard [`Headers`][mdn-headers] APIs:
+  - `response.headers.set`
+  - `response.headers.append`
+  - `response.headers.delete`
+
+```ts
+export async function action({ request, response }) {
+  if (!loggedIn(request)) {
+    response.status = 401;
+    response.headers.append("Set-Cookie", "foo=bar");
+    return { message: "Invalid Submission! " };
+  }
+  await addItemToDb(request);
+  return null;
+}
+```
+
+Each `loader`/`action` receives it's own unique `response` instance so you cannot see what other `loader`/`action` functions have set (which would be subject to race conditions). The resulting HTTP Response status and headers are determined as follows:
+
+- Status Code
+  - If all status codes are unset or have values <200, the deepest status code will be used for the HTTP response
+  - If any status codes are set to a value >=300, the highest >=300 value will be used for the HTTP Response
+- Headers
+  - Remix tracks header operations and will replay them on a fresh `Headers` instance after all handlers have completed
+  - These are replayed in order - action first (if present) followed by loaders in top-down order
+  - `headers.set` on any child handler will overwrite values from parent handlers
+  - `headers.append` can be used to set the same header from both a parent and child handler
+  - `headers.delete` can be used to delete a value set by a parent handler, but not a value set from a child handler
+
+Because single fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities are considered deprecated when using Single Fetch. You may still continue returning normal `Response` instances and they'll apply status codes in the same way as the `response` stub, and will apply all headers via `headers.set` - overwriting any same-named header values from parents. If you need to append a header, you will need to switch from returning a `Response` instance to using the new `response` parameter.
 
 ### Client Loaders
 
@@ -154,3 +195,5 @@ GET /a/b/c.data?_routes=routes/c
 [rendertostring]: https://react.dev/reference/react-dom/server/renderToString
 [hydrateroot]: https://react.dev/reference/react-dom/client/hydrateRoot
 [starttransition]: https://react.dev/reference/react/startTransition
+[headers]: ../route/headers
+[mdn-headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
