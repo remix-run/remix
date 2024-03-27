@@ -4,6 +4,8 @@ title: "Local TLS"
 
 # Local TLS
 
+<docs-warning>This guide is currently only relevant when using the [Classic Remix Compiler][classic-remix-compiler].</docs-warning>
+
 It's simpler to use HTTP locally, but if you really need to use HTTPS locally, here's how to do it.
 
 <docs-warning>
@@ -116,3 +118,4 @@ remix dev --tls-key=key.pem --tls-cert=cert.pem -c "node ./server.js"
 Your app should now be running with local TLS!
 
 [mkcert]: https://github.com/FiloSottile/mkcert#installation
+[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite

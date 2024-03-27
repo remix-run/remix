@@ -14,10 +14,10 @@ Built on top of [React Router][react_router], Remix is four things:
 
 ## Compiler
 
-Everything in Remix starts with the compiler: `remix build`. Using [esbuild][esbuild], this creates a few things:
+Everything in Remix starts with the compiler: `remix vite:build`. Using [Vite], this creates a few things:
 
-1. A server HTTP handler, usually in `server/build/index.js` (it's configurable) that includes all routes and modules together to be able to render on the server and handle any other server-side requests for resources.
-2. A browser build, usually in `public/build/*`. This includes automatic code splitting by route, fingerprinted asset imports (like CSS and images), etc. Anything needed to run an application in the browser.
+1. A server HTTP handler, usually in `build/server/index.js` (it's configurable) that includes all routes and modules together to be able to render on the server and handle any other server-side requests for resources.
+2. A browser build, usually in `build/client/*`. This includes automatic code splitting by route, fingerprinted asset imports (like CSS and images), etc. Anything needed to run an application in the browser.
 3. An asset manifest. Both the client and the server use this manifest to know the entire dependency graph. This is useful for preloading resources in the initial server render as well as prefetching them for client-side transitions. This is how Remix is able to eliminate the render+fetch waterfalls so common in web apps today.
 
 With these build artifacts, an application can be deployed to any hosting service that runs JavaScript.
@@ -38,7 +38,9 @@ const app = express();
 
 app.all(
   "*",
-  remix.createRequestHandler({ build: require("./build") })
+  remix.createRequestHandler({
+    build: require("./build/server"),
+  })
 );
 ```
 
@@ -222,7 +224,7 @@ For example. Building a plain HTML form and server-side handler in a back-end he
 
 We borrowed an old term and called this Progressive Enhancement in Remix. Start small with a plain HTML form (Remix scales down) and then scale the UI up when you have the time and ambition.
 
-[esbuild]: https://esbuild.github.io/
+[vite]: https://vitejs.dev
 [cf]: https://workers.cloudflare.com/
 [deno]: https://deno.com/deploy/docs
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API

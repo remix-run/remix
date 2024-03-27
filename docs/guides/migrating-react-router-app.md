@@ -7,6 +7,8 @@ description: Migrating your React Router app to Remix can be done all at once or
 
 # Migrating your React Router App to Remix
 
+<docs-warning>This guide currently assumes you are using the [Classic Remix Compiler][classic-remix-compiler] rather than [Remix Vite][remix-vite].</docs-warning>
+
 Millions of React applications deployed worldwide are powered by [React Router][react-router]. Chances are you've shipped a few of them! Because Remix is built on top of React Router, we have worked to make migration an easy process you can work through iteratively to avoid huge refactors.
 
 If you aren't already using React Router, we think there are several compelling reasons to reconsider! History management, dynamic path matching, nested routing, and much more. Take a look at the [React Router docs][react-router-docs] and see all what we have to offer.
@@ -281,7 +283,7 @@ Lastly, in your root `App` component (the one that would have been mounted to th
 
 Remix needs routes beyond the root route to know what to render in `<Outlet />`. Fortunately you already render `<Route>` components in your app, and Remix can use those as you migrate to use our [routing conventions][routing-conventions].
 
-To start, create a new directory in `app` called `routes`. In that directory, create two files called `_index.tsx` and `$.tsx`. `$.tsx` is called [a **catch-all route**][a-catch-all-route], and it will be useful to let your old app handle routes that you haven't moved into the `routes` directory yet.
+To start, create a new directory in `app` called `routes`. In that directory, create two files called `_index.tsx` and `$.tsx`. `$.tsx` is called [a **catch-all or "splat" route**][a-catch-all-route], and it will be useful to let your old app handle routes that you haven't moved into the `routes` directory yet.
 
 Inside your `_index.tsx` and `$.tsx` files, all we need to do is export the code from our old root `App`:
 
@@ -696,12 +698,12 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [backwards-compatibility-package]: https://www.npmjs.com/package/react-router-dom-v5-compat
 [a-few-tweaks-to-improve-progressive-enhancement]: ../pages/philosophy#progressive-enhancement
 [routing-conventions]: ./routing
-[a-catch-all-route]: ./routing#splats
+[a-catch-all-route]: ../file-conventions/routes#splat-routes
 [hydration-mismatch]: https://reactjs.org/docs/react-dom.html#hydrate
 [loader-data]: ../route/loader
 [client-only-component]: https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx
 [remix-utils]: https://www.npmjs.com/package/remix-utils
-[examples-repository]: https://github.com/remix-run/examples/blob/main/client-only-components/app/routes/index.tsx
+[examples-repository]: https://github.com/remix-run/examples/blob/main/client-only-components/app/routes/_index.tsx
 [react-lazy]: https://reactjs.org/docs/code-splitting.html#reactlazy
 [react-suspense]: https://reactjs.org/docs/react-api.html#reactsuspense
 [client-only-approach]: #client-only-components
@@ -725,3 +727,5 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [css-side-effect-imports]: ./styling#css-side-effect-imports
 [css-bundling]: ./styling#css-bundling
 [open-graph-protocol]: https://ogp.me
+[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../future/vite

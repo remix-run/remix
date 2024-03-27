@@ -29,18 +29,23 @@ This is a great place to start if you're just looking to try out Remix for the f
 If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Cloudflare][cloudflare], or [Deno][deno]—then you can try one of our [official templates][official_templates] from the Remix repository:
 
 ```shellscript nonumber
-npx create-remix@latest --template remix-run/remix/templates/arc
-npx create-remix@latest --template remix-run/remix/templates/cloudflare-pages
-npx create-remix@latest --template remix-run/remix/templates/cloudflare-workers
-npx create-remix@latest --template remix-run/remix/templates/deno
+npx create-remix@latest --template remix-run/remix/templates/cloudflare
 npx create-remix@latest --template remix-run/remix/templates/express
-npx create-remix@latest --template remix-run/remix/templates/fly
-npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
-npx create-remix@latest --template remix-run/remix/templates/vite-express
-npx create-remix@latest --template remix-run/remix/templates/vite
+npx create-remix@latest --template remix-run/remix/templates/remix
+npx create-remix@latest --template remix-run/remix/templates/remix-javascript
 
 ## SPA Mode
 npx create-remix@latest --template remix-run/remix/templates/spa
+
+## Classic Remix Compiler
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/arc
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/cloudflare-pages
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/cloudflare-workers
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/deno
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/express
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/fly
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/remix
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/remix-javascript
 ```
 
 ### Third-Party Templates
