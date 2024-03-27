@@ -1,7 +1,8 @@
-import type { HydrationState, Router } from "@remix-run/router";
+import type { HydrationState, LoaderFunction, Router } from "@remix-run/router";
 import { createBrowserHistory, createRouter } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
+import type { DataRouteObject } from "react-router";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
 import { matchRoutes, RouterProvider } from "react-router-dom";
 
@@ -9,7 +10,11 @@ import { RemixContext } from "./components";
 import type { AssetsManifest, FutureConfig } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
-import type { RouteModules } from "./routeModules";
+import type {
+  ClientActionFunction,
+  ClientLoaderFunction,
+  RouteModules,
+} from "./routeModules";
 import {
   createClientRoutes,
   createClientRoutesWithHMRRevalidationOptOut,
@@ -50,7 +55,9 @@ declare global {
 }
 /* eslint-enable prefer-let/prefer-let */
 
-export interface RemixBrowserProps {}
+export interface RemixBrowserProps {
+  routes?: DataRouteObject[];
+}
 
 let stateDecodingPromise:
   | (Promise<void> & {
@@ -191,7 +198,7 @@ if (import.meta && import.meta.hot) {
  * `app/entry.client.js`). This component is used by React to hydrate the HTML
  * that was received from the server.
  */
-export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
+export function RemixBrowser(props: RemixBrowserProps): ReactElement {
   if (!router) {
     // Hard reload if the path we tried to load is not the current path.
     // This is usually the result of 2 rapid back/forward clicks from an
@@ -251,6 +258,35 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       window.__remixContext.future,
       window.__remixContext.isSpaMode
     );
+
+    let propRoutesError: unknown;
+    if (props.routes && props.routes.length > 0) {
+      let rootRoute = routes[0];
+      if (!rootRoute.children) {
+        rootRoute.children = [];
+      }
+
+      try {
+        validatePropRoutes(
+          props.routes,
+          rootRoute.children,
+          window.__remixContext.isSpaMode
+        );
+
+        // If a route doesn't have a loader, add a dummy hydrating loader to stop
+        // rendering at that level for hydration
+        let hydratingLoader: LoaderFunction = () => null;
+        hydratingLoader.hydrate = true;
+        for (let route of props.routes) {
+          if (!route.loader) {
+            route = { ...route, loader: hydratingLoader };
+          }
+          rootRoute.children.push(route);
+        }
+      } catch (e) {
+        propRoutesError = e;
+      }
+    }
 
     let hydrationData = undefined;
     if (!window.__remixContext.isSpaMode) {
@@ -325,6 +361,20 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
           )
         : undefined,
     });
+
+    // Do this after creating the router so ID's have been added to the routes
+    // that we can use as keys in the manifest. `router.routes` will contain the
+    // route IDs, `props.routes` may not.
+    if (props.routes) {
+      if (propRoutesError) {
+        console.warn(propRoutesError);
+      } else {
+        let rootDataRoute = router.routes[0];
+        rootDataRoute.children?.forEach((route) =>
+          addPropRoutesToRemix(route as DataRouteObject, rootDataRoute.id)
+        );
+      }
+    }
 
     // We can call initialize() immediately if the router doesn't have any
     // loaders to run on hydration
@@ -413,4 +463,76 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       {window.__remixContext.future.unstable_singleFetch ? <></> : null}
     </>
   );
+}
+
+function addPropRoutesToRemix(route: DataRouteObject, parentId: string) {
+  if (!window.__remixManifest.routes[route.id]) {
+    window.__remixManifest.routes[route.id] = {
+      index: route.index,
+      caseSensitive: route.caseSensitive,
+      id: route.id,
+      path: route.path,
+      parentId,
+      hasAction: false,
+      hasLoader: false,
+      hasClientAction: route.action != null,
+      hasClientLoader: route.loader != null,
+      hasErrorBoundary: route.hasErrorBoundary === true,
+      imports: [],
+      css: [],
+      module: undefined,
+    };
+    window.__remixRouteModules[route.id] = {
+      ...route,
+      clientAction: route.action as ClientActionFunction,
+      clientLoader: route.loader as ClientLoaderFunction,
+      default: route.Component || (() => null),
+      HydrateFallback: route.HydrateFallback || undefined,
+      ErrorBoundary: route.ErrorBoundary || undefined,
+    };
+  }
+  if (route.children) {
+    for (let child of route.children) {
+      addPropRoutesToRemix(child, route.id);
+    }
+  }
+}
+
+function validatePropRoutes(
+  propRoutes: DataRouteObject[],
+  rootChildren: DataRouteObject[],
+  isSpaMode: boolean
+) {
+  if (!isSpaMode) {
+    throw new Error(
+      `The <RemixBrowser routes> prop is only usable in SPA Mode.`
+    );
+  }
+
+  let existingRootChildren = new Set();
+  for (let child of rootChildren) {
+    if (child.index) {
+      existingRootChildren.add("_index");
+    } else if (child.path) {
+      existingRootChildren.add(child.path);
+    }
+  }
+
+  for (let route of propRoutes) {
+    if (route.index && existingRootChildren.has("_index")) {
+      throw new Error(
+        `Cannot add a duplicate child index route to the root route via ` +
+          `the \`RemixBrowser\` \`routes\` prop.  The \`routes\` prop ` +
+          `will be ignored.`
+      );
+    }
+
+    if (route.path && existingRootChildren.has(route.path.replace(/^\//, ""))) {
+      throw new Error(
+        `Cannot add a duplicate child route with path \`${route.path}\` to ` +
+          `the root route via the \`RemixBrowser\` \`routes\` prop.  The ` +
+          `\`routes\` prop will be ignored.`
+      );
+    }
+  }
 }

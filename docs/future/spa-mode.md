@@ -270,17 +270,16 @@ Once you're using vite, you should be able to drop your `BrowserRouter` app into
 
 **If you are currently using `RouterProvider`**
 
-If you are currently using `RouterProvider`, then the best approach is to move your routes to individual files and load them via `route.lazy`:
+Replace your React Router `index.html` file with an `app/root.tsx` route that exports a `default` component (which renders an `Outlet`) and `HydrateFallback` for your loading state.
 
-- Name these files according to the Remix file conventions to make the move to Remix (SPA) easier
-- Export your route components as a named `Component` export (for RR) and also a `default` export (for eventual use by Remix)
+You can migrate your routes by passing your route config to the [`<RemixBrowser routes>`][remix-browser-routes] prop, which should get your current `RouterProvider` app running in Remix SPA Mode.
 
-Once you've got all your routes living in their own files, you can:
+Then, you can start moving sub-trees to individual files iteratively:
 
-- Move those files over into the Remix `app/` directory
-- Enable SPA Mode
-- Rename all `loader`/`action` function to `clientLoader`/`clientAction`
-- Replace your React Router `index.html` file with an `app/root.tsx` route that exports a `default` component and `HydrateFallback`
+- Export your route `Component` as the `default` export
+- Rename any `loader`/`action` functions to `clientLoader`/`clientAction`
+
+You must move entire sub-trees starting with top-level routes, since Remix doesn't know how to intelligently combine your file-based routes with prop-based routes. I.e., you can't have `routes/parent.tsx` and then provide a `path: "child"` route via the `<RemixBrowser routes>` prop that is intended to be a child of the parent route. You must move the parent route and all of it's children to files in one pass.
 
 [rfc]: https://github.com/remix-run/remix/discussions/7638
 [client-data]: ../guides/client-data
@@ -302,3 +301,4 @@ Once you've got all your routes living in their own files, you can:
 [sirv-cli]: https://www.npmjs.com/package/sirv-cli
 [vite-ssr-noexternal]: https://vitejs.dev/config/ssr-options#ssr-noexternal
 [vite-ssr-external]: https://vitejs.dev/config/ssr-options#ssr-external
+[remix-browser-routes]: ../file-conventions/entry.client#routes-prop

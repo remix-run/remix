@@ -12,6 +12,7 @@ import type {
 import type { LoaderFunction, SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
+import invariant from "./invariant";
 import type { LinkDescriptor } from "./links";
 import type { EntryRoute } from "./routes";
 
@@ -186,6 +187,7 @@ export async function loadRouteModule(
   }
 
   try {
+    invariant(route.module, "Can't load route without a defined module");
     let routeModule = await import(/* webpackIgnore: true */ route.module);
     routeModulesCache[route.id] = routeModule;
     return routeModule;
