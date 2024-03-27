@@ -25,5 +25,16 @@
     "@remix-run/server-runtime": "2.8.1",
     "@remix-run/testing": "2.8.1"
   },
-  "changesets": []
+  "changesets": [
+    "brave-cars-approve",
+    "curvy-seahorses-jog",
+    "heavy-steaks-remember",
+    "odd-frogs-attend",
+    "response-stub",
+    "shy-buttons-buy",
+    "single-fetch-client-loaders",
+    "single-fetch-spa-mode",
+    "single-fetch",
+    "spicy-ghosts-watch"
+  ]
 }
