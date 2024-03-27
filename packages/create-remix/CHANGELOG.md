@@ -1,5 +1,11 @@
 # `create-remix`
 
+## 2.9.0-pre.0
+
+### Patch Changes
+
+- Allow `.` in repo name when using `--template` flag ([#9026](https://github.com/remix-run/remix/pull/9026))
+
 ## 2.8.1
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.8.1.
