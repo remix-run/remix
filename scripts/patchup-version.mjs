@@ -107,14 +107,14 @@ async function bumpPeerDepRanges() {
         "utf-8"
       );
     }
-
-    console.log("✅ Bumped peer dependency ranges");
-
-    execSync("pnpm install --no-frozen-lockfile");
-    console.log(
-      "✅ Synced up `pnpm-lock.yaml` via `pnpm install --no-frozen-lockfile`"
-    );
   }
+
+  console.log("✅ Bumped peer dependency ranges");
+
+  execSync("pnpm install --no-frozen-lockfile");
+  console.log(
+    "✅ Synced up `pnpm-lock.yaml` via `pnpm install --no-frozen-lockfile`"
+  );
 }
 
 async function writeRemixChangelog() {
