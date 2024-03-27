@@ -36,6 +36,7 @@ import type { ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
+  isDeferredData,
   isRedirectResponse,
   isRedirectStatusCode,
   isResponse,
@@ -907,20 +908,17 @@ function getSingleFetchDataStrategy(
 
         // Transfer raw Response status/headers to responseStubs
         if (isResponse(result.result)) {
-          if (responseStub.status == null) {
-            responseStub.status = result.result.status;
-          }
-          for (let [k, v] of result.result.headers) {
-            if (k.toLowerCase() !== "set-cookie") {
-              responseStub.headers.set(k, v);
-            }
-          }
-
-          // Unsure why this is complaining?  It's fine in VSCode but fails with tsc...
-          // @ts-expect-error
-          for (let v of result.result.headers.getSetCookie()) {
-            responseStub.headers.append("Set-Cookie", v);
-          }
+          proxyResponseToResponseStub(
+            result.result.status,
+            result.result.headers,
+            responseStub
+          );
+        } else if (isDeferredData(result.result) && result.result.init) {
+          proxyResponseToResponseStub(
+            result.result.init.status,
+            new Headers(result.result.init.headers),
+            responseStub
+          );
         }
 
         return result;
@@ -928,6 +926,25 @@ function getSingleFetchDataStrategy(
     );
     return results;
   };
+}
+
+function proxyResponseToResponseStub(
+  status: number | undefined,
+  headers: Headers,
+  responseStub: ResponseStub
+) {
+  if (status != null && responseStub.status == null) {
+    responseStub.status = status;
+  }
+  for (let [k, v] of headers) {
+    if (k.toLowerCase() !== "set-cookie") {
+      responseStub.headers.set(k, v);
+    }
+  }
+
+  for (let v of headers.getSetCookie()) {
+    responseStub.headers.append("Set-Cookie", v);
+  }
 }
 
 function isResponseStub(value: any): value is ResponseStub {
