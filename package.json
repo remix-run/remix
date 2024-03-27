@@ -28,7 +28,7 @@
     "vite-ecosystem-ci:before-test": "pnpm playwright install",
     "vite-ecosystem-ci:test": "pnpm playwright:integration --project=chromium integration/vite-* && pnpm clean:integration",
     "changeset": "changeset",
-    "changeset:version": "changeset version && node ./scripts/remove-prerelease-changelogs.mjs && node ./scripts/patchup-version.mjs",
+    "changeset:version": "changeset version && node ./scripts/remove-prerelease-changelogs.mjs && node ./scripts/patchup-version.mjs && pnpm install --no-frozen-lockfile",
     "changeset:release": "pnpm build --tsc && changeset publish",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\""
