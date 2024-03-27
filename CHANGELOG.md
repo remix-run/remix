@@ -13,92 +13,100 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.8.1](#v281)
+  - [v2.9.0](#v290)
+    - [What's Changed](#whats-changed)
+      - [Single Fetch (unstable)](#single-fetch-unstable)
+      - [Undici](#undici)
+    - [Minor Changes](#minor-changes)
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
     - [Changes by Package](#changes-by-package)
-  - [v2.8.0](#v280)
-    - [Minor Changes](#minor-changes)
+  - [v2.8.1](#v281)
     - [Patch Changes](#patch-changes-1)
     - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
-  - [2.7.2](#272)
+  - [v2.8.0](#v280)
+    - [Minor Changes](#minor-changes-1)
     - [Patch Changes](#patch-changes-2)
-  - [2.7.1](#271)
+    - [Updated Dependencies](#updated-dependencies-2)
+    - [Changes by Package](#changes-by-package-2)
+  - [2.7.2](#272)
     - [Patch Changes](#patch-changes-3)
+  - [2.7.1](#271)
+    - [Patch Changes](#patch-changes-4)
   - [v2.7.0](#v270)
-    - [What's Changed](#whats-changed)
+    - [What's Changed](#whats-changed-1)
       - [Stabilized Vite Plugin](#stabilized-vite-plugin)
       - [New `Layout` Export](#new-layout-export)
       - [Basename support](#basename-support)
       - [Cloudflare Proxy as a Vite Plugin](#cloudflare-proxy-as-a-vite-plugin)
-    - [Minor Changes](#minor-changes-1)
-    - [Patch Changes](#patch-changes-4)
-    - [Updated Dependencies](#updated-dependencies-2)
-    - [Changes by Package](#changes-by-package-2)
-  - [v2.6.0](#v260)
-    - [What's Changed](#whats-changed-1)
-      - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
     - [Minor Changes](#minor-changes-2)
     - [Patch Changes](#patch-changes-5)
     - [Updated Dependencies](#updated-dependencies-3)
     - [Changes by Package](#changes-by-package-3)
-  - [v2.5.1](#v251)
+  - [v2.6.0](#v260)
+    - [What's Changed](#whats-changed-2)
+      - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
+    - [Minor Changes](#minor-changes-3)
     - [Patch Changes](#patch-changes-6)
     - [Updated Dependencies](#updated-dependencies-4)
     - [Changes by Package](#changes-by-package-4)
-  - [v2.5.0](#v250)
-    - [What's Changed](#whats-changed-2)
-      - [SPA Mode (unstable)](#spa-mode-unstable)
-      - [Server Bundles (unstable)](#server-bundles-unstable)
-    - [Minor Changes](#minor-changes-3)
+  - [v2.5.1](#v251)
     - [Patch Changes](#patch-changes-7)
     - [Updated Dependencies](#updated-dependencies-5)
     - [Changes by Package](#changes-by-package-5)
-  - [v2.4.1](#v241)
+  - [v2.5.0](#v250)
+    - [What's Changed](#whats-changed-3)
+      - [SPA Mode (unstable)](#spa-mode-unstable)
+      - [Server Bundles (unstable)](#server-bundles-unstable)
+    - [Minor Changes](#minor-changes-4)
     - [Patch Changes](#patch-changes-8)
     - [Updated Dependencies](#updated-dependencies-6)
     - [Changes by Package](#changes-by-package-6)
-  - [v2.4.0](#v240)
-    - [What's Changed](#whats-changed-3)
-      - [Client Data](#client-data)
-      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
-      - [Vite Updates (Unstable)](#vite-updates-unstable)
-    - [Minor Changes](#minor-changes-4)
+  - [v2.4.1](#v241)
     - [Patch Changes](#patch-changes-9)
     - [Updated Dependencies](#updated-dependencies-7)
     - [Changes by Package](#changes-by-package-7)
-  - [v2.3.1](#v231)
+  - [v2.4.0](#v240)
+    - [What's Changed](#whats-changed-4)
+      - [Client Data](#client-data)
+      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
+      - [Vite Updates (Unstable)](#vite-updates-unstable)
+    - [Minor Changes](#minor-changes-5)
     - [Patch Changes](#patch-changes-10)
     - [Updated Dependencies](#updated-dependencies-8)
     - [Changes by Package](#changes-by-package-8)
-  - [v2.3.0](#v230)
-    - [What's Changed](#whats-changed-4)
-      - [Stabilized `useBlocker`](#stabilized-useblocker)
-      - [`unstable_flushSync` API](#unstable_flushsync-api)
-    - [Minor Changes](#minor-changes-5)
+  - [v2.3.1](#v231)
     - [Patch Changes](#patch-changes-11)
     - [Updated Dependencies](#updated-dependencies-9)
     - [Changes by Package](#changes-by-package-9)
-  - [v2.2.0](#v220)
+  - [v2.3.0](#v230)
     - [What's Changed](#whats-changed-5)
-      - [Vite!](#vite)
-      - [New Fetcher APIs](#new-fetcher-apis)
-      - [Persistence Future Flag](#persistence-future-flag)
+      - [Stabilized `useBlocker`](#stabilized-useblocker)
+      - [`unstable_flushSync` API](#unstable_flushsync-api)
     - [Minor Changes](#minor-changes-6)
     - [Patch Changes](#patch-changes-12)
     - [Updated Dependencies](#updated-dependencies-10)
     - [Changes by Package](#changes-by-package-10)
-  - [v2.1.0](#v210)
+  - [v2.2.0](#v220)
     - [What's Changed](#whats-changed-6)
-      - [View Transitions](#view-transitions)
-      - [Stable `createRemixStub`](#stable-createremixstub)
+      - [Vite!](#vite)
+      - [New Fetcher APIs](#new-fetcher-apis)
+      - [Persistence Future Flag](#persistence-future-flag)
     - [Minor Changes](#minor-changes-7)
     - [Patch Changes](#patch-changes-13)
     - [Updated Dependencies](#updated-dependencies-11)
     - [Changes by Package](#changes-by-package-11)
-  - [v2.0.1](#v201)
+  - [v2.1.0](#v210)
+    - [What's Changed](#whats-changed-7)
+      - [View Transitions](#view-transitions)
+      - [Stable `createRemixStub`](#stable-createremixstub)
+    - [Minor Changes](#minor-changes-8)
     - [Patch Changes](#patch-changes-14)
+    - [Updated Dependencies](#updated-dependencies-12)
+    - [Changes by Package](#changes-by-package-12)
+  - [v2.0.1](#v201)
+    - [Patch Changes](#patch-changes-15)
     - [Changes by Package 🔗](#changes-by-package-)
   - [v2.0.0](#v200)
     - [Breaking Changes](#breaking-changes)
@@ -110,8 +118,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
         - [Breaking Type Changes](#breaking-type-changes)
     - [New Features](#new-features)
     - [Other Notable Changes](#other-notable-changes)
-    - [Updated Dependencies](#updated-dependencies-12)
-    - [Changes by Package](#changes-by-package-12)
+    - [Updated Dependencies](#updated-dependencies-13)
+    - [Changes by Package](#changes-by-package-13)
 
 </details>
 
@@ -158,6 +166,70 @@ Date: YYYY-MM-DD
 **Full Changelog**: [`v2.X.Y...v2.X.Y`](https://github.com/remix-run/remix/compare/remix@2.X.Y...remix@2.X.Y)
 
 -->
+
+## v2.9.0
+
+Date: 2024-04-03
+
+### What's Changed
+
+#### Single Fetch (unstable)
+
+`2.9.0` introduces a `future.unstable_singleFetch` flag to enable to Single Fetch behavior ([RFC](https://github.com/remix-run/remix/discussions/7640)) in your Remix application. Please refer to the [docs](https://remix.run/docs/en/main/guides/single-fetch) for the full detail but the high-level changes to be aware of include:
+
+- Naked objects returned from `loader`/`action` functions are no longer automatically serialized to JSON responses
+  - Instead, they'll be streamed as-is via [`turbo-stream`](https://github.com/jacob-ebey/turbo-stream) which allows direct serialization of more complex types such as `Promise`, `Date`, `Map` instances, and more
+- The `headers` export is no longer used when Single Fetch is enabled in favor of a new `response` stub passed to your `loader`/`action` functions
+- The `json`/`defer`/`redirect` utilities are deprecated when using Single Fetch (but still work _mostly_ the same)
+- Actions no longer automatically revalidate on `4xx`/`5xx` responses - you can return a `2xx` to opt-into revalidation or use `shouldRevalidate`
+
+#### Undici
+
+Wih Remix `2.9.0`, we have switched the underlying [Web Fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) polyfills to use the [`undici`](https://github.com/nodejs/undici) package. This change has a few primary benefits:
+
+- It allows us to stop maintaining our own [web-std-io fork](https://github.com/remix-run/web-std-io)
+- It should bring us more in-line with spec compliance
+  - ⚠️ It is possible that some non-spec-compliant bugs in our fork will be fixed" wit this move, so beware of "breaking bug fixes" and keep an eye on any advanced fetch API interactions you're performing in your app
+- Because `undici` is the fetch implementation used by `node` internally, it should better prepare Remix apps to more smoothly drop the polyfill to use the built-in Node.js APIs on `node` 20+
+
+### Minor Changes
+
+- New `future.unstable_singleFetch` flag ([#8773](https://github.com/remix-run/remix/pull/8773), [#9073](https://github.com/remix-run/remix/pull/9073), [#9084](https://github.com/remix-run/remix/pull/9084))
+- `@remix-run/dev` - Improve `getDependenciesToBundle` resolution in monorepos ([#8848](https://github.com/remix-run/remix/pull/8848))
+- `@remix-run/dev` - Fix SPA mode when Single Fetch is enabled by using streaming `entry.server` ([#9063](https://github.com/remix-run/remix/pull/9063))
+- `@remix-run/dev` - Vite: added sourcemap support for transformed routes ([#8970](https://github.com/remix-run/remix/pull/8970))
+- `@remix-run/node` - Use [`undici`](https://github.com/nodejs/undici) as the fetch polyfill going forward instead of `@remix-run/web-*` ([#9106](https://github.com/remix-run/remix/pull/9106), [#9111](https://github.com/remix-run/remix/pull/9111))
+- `@remix-run/server-runtime` - Add `ResponseStub` header interface for Single Fetch and deprecate the `headers` export ([#9142](https://github.com/remix-run/remix/pull/9142))
+- `@remix-run/server-runtime` - Handle redirects created by `handleDataRequest` ([#9104](https://github.com/remix-run/remix/pull/9104))
+
+### Patch Changes
+
+- `create-remix` - Allow `.` in repo name when using `--template` flag ([#9026](https://github.com/remix-run/remix/pull/9026))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.23.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.23.0)
+- [`@remix-run/router@1.16.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1160)
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/create-remix/CHANGELOG.md#290)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-architect/CHANGELOG.md#290)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-cloudflare/CHANGELOG.md#290)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-cloudflare-pages/CHANGELOG.md#290)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-cloudflare-workers/CHANGELOG.md#290)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-css-bundle/CHANGELOG.md#290)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-deno/CHANGELOG.md#290)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-dev/CHANGELOG.md#290)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-eslint-config/CHANGELOG.md#290)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-express/CHANGELOG.md#290)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-node/CHANGELOG.md#290)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-react/CHANGELOG.md#290)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-serve/CHANGELOG.md#290)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-server-runtime/CHANGELOG.md#290)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.9.0/packages/remix-testing/CHANGELOG.md#290)
+
+**Full Changelog**: [`v2.8.1...v2.9.0`](https://github.com/remix-run/remix/compare/remix@2.8.1...remix@2.9.0)
 
 ## v2.8.1
 
