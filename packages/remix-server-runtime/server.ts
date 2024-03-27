@@ -942,6 +942,8 @@ function proxyResponseToResponseStub(
     }
   }
 
+  // Unsure why this is complaining?  It's fine in VSCode but fails with tsc...
+  // @ts-expect-error
   for (let v of headers.getSetCookie()) {
     responseStub.headers.append("Set-Cookie", v);
   }
