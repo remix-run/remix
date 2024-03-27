@@ -4,23 +4,13 @@ import type {
   StaticHandlerContext,
 } from "@remix-run/router";
 import {
-  UNSAFE_DEFERRED_SYMBOL as DEFERRED_SYMBOL,
-  getStaticContextFromError,
   isRouteErrorResponse,
-  createStaticHandler,
-  json as routerJson,
-  stripBasename,
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
 } from "@remix-run/router";
 import { encode } from "turbo-stream";
 
 import type { AppLoadContext } from "./data";
-import {
-  sanitizeError,
-  sanitizeErrors,
-  serializeError,
-  serializeErrors,
-} from "./errors";
+import { sanitizeError, sanitizeErrors } from "./errors";
 import { ServerMode } from "./mode";
 import type { ResponseStub, ResponseStubOperation } from "./routeModules";
 import { ResponseStubOperationsSymbol } from "./routeModules";
