@@ -1,12 +1,12 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
-import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import type { AppFixture, Fixture } from "./helpers/create-fixture.js";
 import {
   createAppFixture,
   createFixture,
   js,
 } from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -71,10 +71,49 @@ test.beforeAll(async () => {
           return (
             <div>
               {data}
-              <Link to="/burgers">Other Route</Link>
+              <Link to="/burgers">Burgers</Link>
+              <Link to="/spaghetti">spaghetti</Link>
             </div>
           )
         }
+      `,
+      "app/routes/spaghetti.tsx": js`
+      import { Await, defer, useLoaderData, useRevalidator } from "@remix-run/react";
+      import { Suspense, useEffect, useRef } from "react";
+
+      export const loader = () => {
+        const meatball = Promise.resolve(1);
+
+        return defer({ meatball });
+      };
+
+      export default function Spaghetti() {
+        const { meatball } = useLoaderData();
+        const { revalidate } = useRevalidator();
+        const renderCounter = useRef(0);
+
+        useEffect(() => {
+          revalidate();
+        }, []);
+
+        renderCounter.current++;
+        console.log("render", renderCounter.current);
+
+        return (
+          <>
+            <p data-testid="render-count">[{renderCounter.current}]</p>
+            <Suspense>
+              <Await resolve={meatball.then((amount) => amount * 2)}>
+                {(val) => (
+                  <div>
+                    <p>Async val: {val}</p>
+                  </div>
+                )}
+              </Await>
+            </Suspense>
+          </>
+        );
+      }
       `,
 
       "app/routes/burgers.tsx": js`
@@ -98,7 +137,9 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("Revalidate & Suspense/Await should not cause infinite renders", async ({
+  page,
+}) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
@@ -106,12 +147,18 @@ test("[description of what you expect it to do]", async ({ page }) => {
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  await page.waitForSelector("text=cheeseburger");
+  await app.clickLink("/spaghetti");
+
+  await page.waitForSelector("p");
+
+  // await page.waitForTimeout(1000);
+
+  await expect(page.getByTestId("render-count")).toHaveText("[2]");
+
+  await app.poke(20, "/spaghetti");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
 
   // Go check out the other tests to see what else you can do.
 });
