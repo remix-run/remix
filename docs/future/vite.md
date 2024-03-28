@@ -399,7 +399,12 @@ if (viteDevServer) {
     express.static("build/client/assets", {
       immutable: true,
       maxAge: "1y",
-    })
+      fallthrough: true
+    }),
+    (req, res) => {
+      res.status(404).send('Not found')
+      return
+    }
   );
 }
 app.use(express.static("build/client", { maxAge: "1h" }));
