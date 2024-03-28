@@ -1,7 +1,6 @@
 import type {
   StaticHandler,
   unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
-  unstable_HandlerResult as HandlerResult,
   StaticHandlerContext,
 } from "@remix-run/router";
 import {
