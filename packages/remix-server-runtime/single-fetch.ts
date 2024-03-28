@@ -131,7 +131,9 @@ export async function singleFetchAction(
     let context = result;
 
     let singleFetchResult: SingleFetchResult;
-    let { statusCode, headers } = mergeResponseStubs(context, responseStubs);
+    let { statusCode, headers } = mergeResponseStubs(context, responseStubs, {
+      isActionDataRequest: true,
+    });
 
     if (isRedirectStatusCode(statusCode) && headers.has("Location")) {
       return {
@@ -215,9 +217,7 @@ export async function singleFetchLoaders(
 
     let context = result;
 
-    let { statusCode, headers } = mergeResponseStubs(context, responseStubs, {
-      isActionDataRequest: true,
-    });
+    let { statusCode, headers } = mergeResponseStubs(context, responseStubs);
 
     if (isRedirectStatusCode(statusCode) && headers.has("Location")) {
       return {
