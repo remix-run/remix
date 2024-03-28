@@ -138,8 +138,9 @@ export function flatRoutesUniversal(
 
   // id -> file
   let routeIds = new Map<string, string>();
+  let configRouteOrder = new Map<string, number>();
 
-  for (let file of routes) {
+  for (let [idx, file] of routes.entries()) {
     let normalizedFile = normalizeSlashes(file);
     let routeExt = path.extname(normalizedFile);
     let routeDir = path.dirname(normalizedFile);
@@ -163,6 +164,7 @@ export function flatRoutesUniversal(
     }
 
     routeIds.set(routeId, normalizedFile);
+    configRouteOrder.set(routeId, idx);
   }
 
   let sortedRouteIds = Array.from(routeIds).sort(
@@ -294,7 +296,21 @@ export function flatRoutesUniversal(
     }
   }
 
-  return routeManifest;
+  // At this point, `routeManifest` is ordered by the routeId length above, but
+  // we want them exposed in the order they came in from the config
+  return Object.keys(routeManifest)
+    .sort((a, b) => {
+      let aIdx = configRouteOrder.get(a) ?? -1;
+      let bIdx = configRouteOrder.get(b) ?? -1;
+      return aIdx < bIdx ? -1 : aIdx > bIdx ? 1 : 0;
+    })
+    .reduce(
+      (acc, routeId) =>
+        Object.assign(acc, {
+          [routeId]: routeManifest[routeId],
+        }),
+      {}
+    );
 }
 
 function findRouteModuleForFile(
