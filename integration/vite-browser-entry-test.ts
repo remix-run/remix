@@ -1,20 +1,19 @@
 import { test, expect } from "@playwright/test";
+import getPort from "get-port";
 
-import type { AppFixture, Fixture } from "./helpers/create-fixture.js";
-import {
-  createFixture,
-  js,
-  createAppFixture,
-} from "./helpers/create-fixture.js";
-import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import { createProject, viteDev, viteConfig } from "./helpers/vite.js";
 
-let fixture: Fixture;
-let appFixture: AppFixture;
+const js = String.raw;
+
+let port: number;
+let cwd: string;
+let stop: () => void;
 
 test.beforeAll(async () => {
-  fixture = await createFixture({
-    files: {
-      "app/routes/_index.tsx": js`
+  port = await getPort();
+  cwd = await createProject({
+    "vite.config.js": await viteConfig.basic({ port: port }),
+    "app/routes/_index.tsx": js`
         import { Link } from "@remix-run/react";
 
         export default function Index() {
@@ -27,19 +26,16 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/burgers.tsx": js`
+    "app/routes/burgers.tsx": js`
         export default function Index() {
           return <div id="cheeseburger">cheeseburger</div>;
         }
       `,
-    },
   });
-
-  // This creates an interactive app using puppeteer.
-  appFixture = await createAppFixture(fixture);
+  stop = await viteDev({ cwd, port });
 });
 
-test.afterAll(() => appFixture.close());
+test.afterAll(() => stop());
 
 test(
   "expect to be able to browse backward out of a remix app, then forward " +
@@ -49,8 +45,6 @@ test(
       browserName === "firefox",
       "FireFox doesn't support browsing to an empty page (aka about:blank)"
     );
-
-    let app = new PlaywrightFixture(appFixture, page);
 
     // Slow down the entry chunk on the second load so the bug surfaces
     let isSecondLoad = false;
@@ -62,12 +56,12 @@ test(
     });
 
     // This sets up the Remix modules cache in memory, priming the error case.
-    await app.goto("/");
-    await app.clickLink("/burgers");
-    expect(await page.content()).toContain("cheeseburger");
+    await page.goto(`http://localhost:${port}/`);
+    await page.click('a[href="/burgers"]');
+    await page.waitForSelector("#cheeseburger");
     await page.goBack();
     await page.waitForSelector("#pizza");
-    expect(await app.getHtml()).toContain("pizza");
+    expect(await page.content()).toContain("pizza");
 
     // Takes the browser out of the Remix app
     await page.goBack();
@@ -83,6 +77,6 @@ test(
     // If we resolve the error, we should hard reload and eventually
     // successfully render /burgers
     await page.waitForSelector("#cheeseburger");
-    expect(await app.getHtml()).toContain("cheeseburger");
+    expect(await page.content()).toContain("cheeseburger");
   }
 );

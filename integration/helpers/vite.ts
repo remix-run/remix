@@ -10,7 +10,7 @@ import getPort from "get-port";
 import shell from "shelljs";
 import glob from "glob";
 import dedent from "dedent";
-import type { Page } from "@playwright/test";
+import type { Page, Request, Response } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 
 const remixBin = "node_modules/@remix-run/dev/dist/cli.js";
@@ -383,4 +383,39 @@ export function grep(cwd: string, pattern: RegExp): string[] {
     .split("\n")
     .filter((line) => line.length > 0);
   return lines;
+}
+
+/**
+ * Collects all responses from the network, usually after a link click or
+ * form submission. A filter can be provided to only collect responses
+ * that meet a certain criteria.
+ */
+export function collectResponses(page: Page, filter?: (url: URL) => boolean) {
+  let responses: Response[] = [];
+
+  page.on("response", (res) => {
+    if (!filter || filter(new URL(res.url()))) {
+      responses.push(res);
+    }
+  });
+
+  return responses;
+}
+
+/**
+ * Collects data responses from the network, usually after a link click or
+ * form submission. This is useful for asserting that specific loaders
+ * were called (or not).
+ */
+export function collectDataResponses(page: Page) {
+  return collectResponses(page, (url) => url.searchParams.has("_data"));
+}
+
+/**
+ * Collects single fetch data responses from the network, usually after a
+ * link click or form submission. This is useful for asserting that specific
+ * loaders were called (or not).
+ */
+export function collectSingleFetchResponses(page: Page) {
+  return collectResponses(page, (url) => url.pathname.endsWith(".data"));
 }

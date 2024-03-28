@@ -1,20 +1,19 @@
 import { test } from "@playwright/test";
+import getPort from "get-port";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
-import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
-import {
-  createAppFixture,
-  createFixture,
-  js,
-} from "./helpers/create-fixture.js";
+import { createProject, viteDev, viteConfig } from "./helpers/vite.js";
 
-let fixture: Fixture;
-let appFixture: AppFixture;
+const js = String.raw;
+
+let port: number;
+let cwd: string;
+let stop: () => void;
 
 test.beforeAll(async () => {
-  fixture = await createFixture({
-    files: {
-      "app/routes/_index.tsx": js`
+  port = await getPort();
+  cwd = await createProject({
+    "vite.config.js": await viteConfig.basic({ port: port }),
+    "app/routes/_index.tsx": js`
         import { json } from "@remix-run/node";
         import { useActionData, useLoaderData, Form } from "@remix-run/react";
 
@@ -42,24 +41,18 @@ test.beforeAll(async () => {
           )
         }
       `,
-    },
   });
-
-  // This creates an interactive app using playwright.
-  appFixture = await createAppFixture(fixture);
+  stop = await viteDev({ cwd, port });
 });
 
-test.afterAll(() => {
-  appFixture.close();
-});
+test.afterAll(() => stop());
 
 test("should not abort the request in a new event loop", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  await app.goto("/");
+  await page.goto(`http://localhost:${port}/`);
   await page.waitForSelector(`.action:has-text("empty")`);
   await page.waitForSelector(`.loader:has-text("false")`);
 
-  await app.clickElement('button[type="submit"]');
+  await page.click('button[type="submit"]');
 
   await page.waitForSelector(`.action:has-text("false")`);
   await page.waitForSelector(`.loader:has-text("false")`);
