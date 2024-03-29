@@ -320,8 +320,8 @@ importers:
         specifier: workspace:*
         version: link:../packages/remix-node
       '@remix-run/router':
-        specifier: 1.16.0-pre.0
-        version: 1.16.0-pre.0
+        specifier: 1.16.0-pre.1
+        version: 1.16.0-pre.1
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../packages/remix-server-runtime
@@ -868,8 +868,8 @@ importers:
         specifier: ^2.9.0-pre.0
         version: link:../remix-react
       '@remix-run/router':
-        specifier: 1.16.0-pre.0
-        version: 1.16.0-pre.0
+        specifier: 1.16.0-pre.1
+        version: 1.16.0-pre.1
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
@@ -1211,17 +1211,17 @@ importers:
   packages/remix-react:
     dependencies:
       '@remix-run/router':
-        specifier: 1.16.0-pre.0
-        version: 1.16.0-pre.0
+        specifier: 1.16.0-pre.1
+        version: 1.16.0-pre.1
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
       react-router:
-        specifier: 6.23.0-pre.0
-        version: 6.23.0-pre.0(react@18.2.0)
+        specifier: 6.23.0-pre.1
+        version: 6.23.0-pre.1(react@18.2.0)
       react-router-dom:
-        specifier: 6.23.0-pre.0
-        version: 6.23.0-pre.0(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.23.0-pre.1
+        version: 6.23.0-pre.1(react-dom@18.2.0)(react@18.2.0)
       turbo-stream:
         specifier: ^2.0.0
         version: 2.0.0
@@ -1297,8 +1297,8 @@ importers:
   packages/remix-server-runtime:
     dependencies:
       '@remix-run/router':
-        specifier: 1.16.0-pre.0
-        version: 1.16.0-pre.0
+        specifier: 1.16.0-pre.1
+        version: 1.16.0-pre.1
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -1334,11 +1334,11 @@ importers:
         specifier: workspace:*
         version: link:../remix-react
       '@remix-run/router':
-        specifier: 1.16.0-pre.0
-        version: 1.16.0-pre.0
+        specifier: 1.16.0-pre.1
+        version: 1.16.0-pre.1
       react-router-dom:
-        specifier: 6.23.0-pre.0
-        version: 6.23.0-pre.0(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.23.0-pre.1
+        version: 6.23.0-pre.1(react-dom@18.2.0)(react@18.2.0)
     devDependencies:
       '@remix-run/server-runtime':
         specifier: workspace:*
@@ -4193,8 +4193,8 @@ packages:
       - encoding
     dev: false
 
-  /@remix-run/router@1.16.0-pre.0:
-    resolution: {integrity: sha512-4KYbcmBcjX1HO/sLPZIcY87YWTF3e5qs9KTTieXE0HNukV2m199yTkMIjcmzTNL6w0wDj5YYc2YiXxm4W9qsTw==}
+  /@remix-run/router@1.16.0-pre.1:
+    resolution: {integrity: sha512-zmaT9ICBPTMyoerhGgydSZVdBbEysM7SHan4pJUBIPe66ofscEv60OCjPyX+ZcH2ihjspj3tN2/ZnYAIZmEzjA==}
     engines: {node: '>=14.0.0'}
     dev: false
 
@@ -12784,26 +12784,26 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /react-router-dom@6.23.0-pre.0(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-TDEljjV6XwOEb9gp6FFNquAB0yY490lhSZRo4YNDPI8+QEA0n3yJ2VfIZLmxR70ljnFBwYOnWmNl94EHom/JjQ==}
+  /react-router-dom@6.23.0-pre.1(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-iZnPPBGCvg/gGzzKCqaXoPJjdVQwjJ4aJj2UTatJvzIQq6c586BS7u8WzpHy2pmbri58btGj4eLIgF7jv1Fgvw==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
     dependencies:
-      '@remix-run/router': 1.16.0-pre.0
+      '@remix-run/router': 1.16.0-pre.1
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      react-router: 6.23.0-pre.0(react@18.2.0)
+      react-router: 6.23.0-pre.1(react@18.2.0)
     dev: false
 
-  /react-router@6.23.0-pre.0(react@18.2.0):
-    resolution: {integrity: sha512-GawzByLrAoOr4Sc0ybAuYBTJmtysK8I7p3VuBQCzDCqXzu10uAP7tu0Iy+mv0SGkmzKpPXg4PUO26UQ9bBH7bg==}
+  /react-router@6.23.0-pre.1(react@18.2.0):
+    resolution: {integrity: sha512-lijdeB51mv3Cxij+ymI/NcGCb0D9KjXPuvqFXxeUIyMtevHh6i1viDD/0U+gknla1ZfawhWKfwkn4XAD2T7KTA==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
     dependencies:
-      '@remix-run/router': 1.16.0-pre.0
+      '@remix-run/router': 1.16.0-pre.1
       react: 18.2.0
     dev: false
 
