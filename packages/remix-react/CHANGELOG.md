@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.9.0-pre.1
+
+### Patch Changes
+
+- [REMOVE] Loosen header check on turbo stream responses for SSG compatibility ([#9162](https://github.com/remix-run/remix/pull/9162))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.0-pre.1`
+
 ## 2.9.0-pre.0
 
 ### Minor Changes
