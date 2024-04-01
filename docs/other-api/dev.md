@@ -369,5 +369,5 @@ While the initial build slowdown is inherently a cost for HDR, we plan to optimi
 [bundle_analysis]: ../guides/performance
 [manual_mode]: ../guides/manual-mode
 [hmr]: ../discussion/hot-module-replacement
-[remix-vite]: ../future/vite
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite

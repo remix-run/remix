@@ -74,14 +74,7 @@ relative to `remix.config.js`. Defaults to `".cache"`.
 
 ## future
 
-The `future` config lets you opt-into future breaking changes via [Future Flags][future-flags]. The following future flags currently exist in Remix v2 and will become the default behavior in Remix v3:
-
-- **`v3_fetcherPersist`**: Change fetcher persistence/cleanup behavior in 2 ways ([RFC][fetcherpersist-rfc]):
-  - Fetchers are no longer removed on unmount, and remain exposed via [`useFetchers`][use-fetchers] until they return to an `idle` state
-  - Fetchers that complete while still mounted no longer persist in [`useFetchers`][use-fetchers] since you can access those fetchers via [`useFetcher`][use-fetcher]
-- **`v3_relativeSplatPath`**: Fixes buggy relative path resolution in splat routes. Please see the [React Router docs][relativesplatpath] for more information.
-- **`v3_throwAbortReason`**: When a server-side request is aborted, Remix will throw the `request.signal.reason` instead of an error such as `new Error("query() call aborted...")`
-- **`unstable_singleFetch`**: Opt into [Single Fetch][single-fetch] behavior
+The `future` config lets you opt-into future breaking changes via [Future Flags][future-flags]. Please see the [Current Future Flags][current-future-flags] section for a list of all available Future Flags.
 
 ## ignoredRouteFiles
 
@@ -282,11 +275,7 @@ There are a few conventions that Remix uses you should be aware of.
 [browser-node-builtins-polyfill]: #browsernodebuiltinspolyfill
 [server-node-builtins-polyfill]: #servernodebuiltinspolyfill
 [future-flags]: ../start/future-flags
-[fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
-[use-fetchers]: ../hooks/use-fetchers
-[use-fetcher]: ../hooks/use-fetcher
-[relativesplatpath]: https://reactrouter.com/en/main/hooks/use-resolved-path#splat-paths
-[single-fetch]: ../guides/single-fetch
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
 [vite-config]: ./vite-configuration
+[current-future-flags]: ../start/future-flags#current-future-flags

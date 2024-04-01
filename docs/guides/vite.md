@@ -487,7 +487,8 @@ export const onRequest = createPagesFunctionHandler({
 👉 **Access Bindings and Environment Variables through `context.cloudflare.env` instead of `context.env`**
 
 While you'll mostly use Vite during development, you can also use Wrangler to preview and deploy your app.
-To learn more, see [_Cloudflare > Vite & Wrangler_][cloudflare-vite-and-wrangler].
+
+To learn more, see the [_Cloudflare_][cloudflare-vite] section of this document.
 
 👉 **Update your `package.json` scripts**
 
@@ -1126,14 +1127,12 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 [server-dependencies-to-bundle]: https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle
 [blues-stack]: https://github.com/remix-run/blues-stack
 [global-node-polyfills]: ../other-api/node#polyfills
-[server-bundles]: ./server-bundles
 [vite-plugin-inspect]: https://github.com/antfu/vite-plugin-inspect
 [vite-perf]: https://vitejs.dev/guide/performance.html
 [node-options]: https://nodejs.org/api/cli.html#node_optionsoptions
 [rollup-plugin-visualizer]: https://github.com/btd/rollup-plugin-visualizer
 [debugging]: #debugging
 [performance]: #performance
-[vite-env-only]: https://github.com/pcattori/vite-env-only
 [explicitly-isolate-server-only-code]: #splitting-up-client-and-server-code
 [route-component]: ../route/component
 [error-boundary]: ../route/error-boundary
@@ -1152,12 +1151,9 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 [wrangler-getplatformproxy]: https://developers.cloudflare.com/workers/wrangler/api/#getplatformproxy
 [wrangler-getplatformproxy-return]: https://developers.cloudflare.com/workers/wrangler/api/#return-type-1
 [remix-config-server]: https://remix.run/docs/en/main/file-conventions/remix-config#server
-[cloudflare-vite-and-wrangler]: #vite--wrangler
-[rr-basename]: https://reactrouter.com/routers/create-browser-router#basename
-[vite-public-base-path]: https://vitejs.dev/config/shared-options.html#base
+[cloudflare-vite]: #cloudflare
 [vite-base]: https://vitejs.dev/config/shared-options.html#base
 [how-fix-cjs-esm]: https://www.youtube.com/watch?v=jmNuEEtwkD4
-[presets]: ./presets
 [fix-up-css-imports-referenced-in-links]: #fix-up-css-imports-referenced-in-links
 [vite-plugin-react]: https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react
 [splitting-up-client-and-server-code]: ../discussion/server-vs-client

@@ -1,7 +1,6 @@
 ---
 title: Templates
 description: The quickest way to get rocking and rolling with Remix
-order: 3
 ---
 
 # Templates and Stacks

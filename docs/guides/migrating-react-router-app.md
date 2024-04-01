@@ -727,5 +727,5 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [css-side-effect-imports]: ./styling#css-side-effect-imports
 [css-bundling]: ./styling#css-bundling
 [open-graph-protocol]: https://ogp.me
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ./vite
