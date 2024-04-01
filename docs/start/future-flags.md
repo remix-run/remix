@@ -61,10 +61,6 @@ export default defineConfig({
 - If all the `v3_*` future flags are enabled, transitioning to `v3` should ideally not necessitate any changes to your codebase.
 - Some future flags that bring about breaking changes initially start as `unstable_*` flags. These might undergo modifications during minor releases. Once they become `v3_*` future flags, the corresponding API is set and won't change further.
 
-## Summary
-
-Our development strategy focuses on gradual feature adoption and seamless version upgrades for major releases. This empowers developers to selectively integrate new features, avoiding the need for extensive code adjustments during version transitions. By introducing features through `unstable_*` flags, we refine the API collaboratively with early adopters while ensuring stable releases benefit from enhancements. Through careful management of breaking changes using `v3_*` flags, we provide the flexibility to adopt changes incrementally, facilitating a smoother transition between major versions. While this increases the complexity for developing Remix the framework, this developer-centric approach greatly simplifies application development with Remix, ultimately leading to improved software quality and (hopefully!) developer satisfaction.
-
 ## Current Future Flags
 
 The following future flags currently exist in Remix v2 and will become the default behavior in Remix v3:
@@ -75,6 +71,10 @@ The following future flags currently exist in Remix v2 and will become the defau
 - **`v3_relativeSplatPath`**: Fixes buggy relative path resolution in splat routes. Please see the [React Router docs][relativesplatpath] for more information.
 - **`v3_throwAbortReason`**: When a server-side request is aborted, Remix will throw the `request.signal.reason` instead of an error such as `new Error("query() call aborted...")`
 - **`unstable_singleFetch`**: Opt into [Single Fetch][single-fetch] behavior
+
+## Summary
+
+Our development strategy focuses on gradual feature adoption and seamless version upgrades for major releases. This empowers developers to selectively integrate new features, avoiding the need for extensive code adjustments during version transitions. By introducing features through `unstable_*` flags, we refine the API collaboratively with early adopters while ensuring stable releases benefit from enhancements. Through careful management of breaking changes using `v3_*` flags, we provide the flexibility to adopt changes incrementally, facilitating a smoother transition between major versions. While this increases the complexity for developing Remix the framework, this developer-centric approach greatly simplifies application development with Remix, ultimately leading to improved software quality and (hopefully!) developer satisfaction.
 
 [vite-config-future]: ../file-conventions/vite-config#future
 [remix-config-future]: ../file-conventions/remix-config#future
