@@ -12,32 +12,37 @@ import {
   stripBasename,
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
 } from "@remix-run/router";
-import { encode } from "turbo-stream";
 
 import type { AppLoadContext } from "./data";
 import type { HandleErrorFunction, ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryRouteModules } from "./entry";
-import {
-  sanitizeError,
-  sanitizeErrors,
-  serializeError,
-  serializeErrors,
-} from "./errors";
+import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
 import { getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
-import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
 import type { ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
   isRedirectResponse,
+  isRedirectStatusCode,
   isResponse,
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
+import type { SingleFetchResult, SingleFetchResults } from "./single-fetch";
+import {
+  encodeViaTurboStream,
+  getResponseStubs,
+  getSingleFetchDataStrategy,
+  getSingleFetchRedirect,
+  mergeResponseStubs,
+  singleFetchAction,
+  singleFetchLoaders,
+  SingleFetchRedirectSymbol,
+} from "./single-fetch";
 
 export type RequestHandler = (
   request: Request,
@@ -79,8 +84,6 @@ function derive(build: ServerBuild, mode?: string) {
     errorHandler,
   };
 }
-
-export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
 
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
@@ -167,7 +170,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         .replace(/\.data$/, "")
         .replace(/^\/_root$/, "/");
 
-      let matches = matchServerRoutes(
+      let singleFetchMatches = matchServerRoutes(
         routes,
         handlerUrl.pathname,
         _build.basename
@@ -177,7 +180,6 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         serverMode,
         _build,
         staticHandler,
-        matches,
         request,
         handlerUrl,
         loadContext,
@@ -187,13 +189,13 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       if (_build.entry.module.handleDataRequest) {
         response = await _build.entry.module.handleDataRequest(response, {
           context: loadContext,
-          params,
+          params: singleFetchMatches ? singleFetchMatches[0].params : {},
           request,
         });
 
         if (isRedirectResponse(response)) {
           let result: SingleFetchResult | SingleFetchResults =
-            getSingleFetchRedirect(response);
+            getSingleFetchRedirect(response.status, response.headers);
 
           if (request.method === "GET") {
             result = {
@@ -324,27 +326,10 @@ async function handleDataRequest(
   }
 }
 
-type SingleFetchRedirectResult = {
-  redirect: string;
-  status: number;
-  revalidate: boolean;
-  reload: boolean;
-};
-export type SingleFetchResult =
-  | { data: unknown }
-  | { error: unknown }
-  | SingleFetchRedirectResult;
-
-export type SingleFetchResults = {
-  [key: string]: SingleFetchResult;
-  [SingleFetchRedirectSymbol]?: SingleFetchRedirectResult;
-};
-
 async function handleSingleFetchRequest(
   serverMode: ServerMode,
   build: ServerBuild,
   staticHandler: StaticHandler,
-  matches: RouteMatch<ServerRoute>[] | null,
   request: Request,
   handlerUrl: URL,
   loadContext: AppLoadContext,
@@ -353,20 +338,20 @@ async function handleSingleFetchRequest(
   let { result, headers, status } =
     request.method !== "GET"
       ? await singleFetchAction(
+          serverMode,
+          staticHandler,
           request,
           handlerUrl,
-          staticHandler,
           loadContext,
           handleError
         )
       : await singleFetchLoaders(
+          serverMode,
+          staticHandler,
           request,
           handlerUrl,
-          staticHandler,
           loadContext,
-          handleError,
-          serverMode,
-          build
+          handleError
         );
 
   // Mark all successful responses with a header so we can identify in-flight
@@ -391,145 +376,6 @@ async function handleSingleFetchRequest(
   );
 }
 
-async function singleFetchAction(
-  request: Request,
-  handlerUrl: URL,
-  staticHandler: StaticHandler,
-  loadContext: AppLoadContext,
-  handleError: (err: unknown) => void
-): Promise<{ result: SingleFetchResult; headers: Headers; status: number }> {
-  try {
-    let handlerRequest = new Request(handlerUrl, {
-      method: request.method,
-      body: request.body,
-      headers: request.headers,
-      signal: request.signal,
-      ...(request.body ? { duplex: "half" } : undefined),
-    });
-    let result = await staticHandler.queryRoute(handlerRequest, {
-      requestContext: loadContext,
-    });
-
-    // Unlike `handleDataRequest`, when singleFetch is enabled, queryRoute does
-    // let non-Response return values through
-    if (!isResponse(result)) {
-      return { result: { data: result }, headers: new Headers(), status: 200 };
-    }
-
-    if (isRedirectResponse(result)) {
-      return {
-        result: getSingleFetchRedirect(result),
-        headers: result.headers,
-        status: 200, // Don't trigger a redirect on the `fetch`
-      };
-    }
-    return {
-      result: { data: await unwrapResponse(result) },
-      headers: result.headers,
-      status: result.status,
-    };
-  } catch (error) {
-    if (isResponse(error)) {
-      return {
-        result: {
-          error: new ErrorResponseImpl(
-            error.status,
-            error.statusText,
-            await unwrapResponse(error)
-          ),
-        },
-        headers: error.headers,
-        status: error.status,
-      };
-    } else {
-      handleError(error);
-      return {
-        result: { error },
-        headers: new Headers(),
-        status: isRouteErrorResponse(error) ? error.status : 500,
-      };
-    }
-  }
-}
-
-async function singleFetchLoaders(
-  request: Request,
-  handlerUrl: URL,
-  staticHandler: StaticHandler,
-  loadContext: AppLoadContext,
-  handleError: (err: unknown) => void,
-  serverMode: ServerMode,
-  build: ServerBuild
-): Promise<{ result: SingleFetchResults; headers: Headers; status: number }> {
-  try {
-    let handlerRequest = new Request(handlerUrl, {
-      headers: request.headers,
-      signal: request.signal,
-    });
-    let loadRouteIds =
-      new URL(request.url).searchParams.get("_routes")?.split(",") || undefined;
-
-    let result = await staticHandler.query(handlerRequest, {
-      requestContext: loadContext,
-      loadRouteIds,
-      skipLoaderErrorBubbling: true,
-    });
-    if (isResponse(result)) {
-      return {
-        result: {
-          [SingleFetchRedirectSymbol]: getSingleFetchRedirect(result),
-        },
-        headers: result.headers,
-        status: 200, // Don't want the `fetch` call to follow the redirect
-      };
-    }
-
-    let context = result;
-
-    // Sanitize errors outside of development environments
-    if (context.errors) {
-      Object.values(context.errors).forEach((err) => {
-        // @ts-expect-error This is "private" from users but intended for internal use
-        if (!isRouteErrorResponse(err) || err.error) {
-          handleError(err);
-        }
-      });
-      context.errors = sanitizeErrors(context.errors, serverMode);
-    }
-
-    // Aggregate results based on the matches we intended to load since we get
-    // `null` values back in `context.loaderData` for routes we didn't load
-    let results: SingleFetchResults = {};
-    let loadedMatches = loadRouteIds
-      ? context.matches.filter(
-          (m) => m.route.loader && loadRouteIds!.includes(m.route.id)
-        )
-      : context.matches;
-    loadedMatches.forEach((m) => {
-      let data = context.loaderData?.[m.route.id];
-      let error = context.errors?.[m.route.id];
-      if (error !== undefined) {
-        results[m.route.id] = { error };
-      } else if (data !== undefined) {
-        results[m.route.id] = { data };
-      }
-    });
-
-    return {
-      result: results,
-      headers: getDocumentHeaders(build, context, loadRouteIds),
-      status: context.statusCode,
-    };
-  } catch (error: unknown) {
-    handleError(error);
-    return {
-      result: { root: { error } },
-      headers: new Headers(),
-      status: 500,
-    };
-  }
-}
-
 async function handleDocumentRequest(
   serverMode: ServerMode,
   build: ServerBuild,
@@ -540,9 +386,13 @@ async function handleDocumentRequest(
   criticalCss?: string
 ) {
   let context;
+  let responseStubs = getResponseStubs();
   try {
     context = await staticHandler.query(request, {
       requestContext: loadContext,
+      unstable_dataStrategy: build.future.unstable_singleFetch
+        ? getSingleFetchDataStrategy(responseStubs)
+        : undefined,
     });
   } catch (error: unknown) {
     handleError(error);
@@ -564,7 +414,23 @@ async function handleDocumentRequest(
     context.errors = sanitizeErrors(context.errors, serverMode);
   }
 
-  let headers = getDocumentHeaders(build, context);
+  let statusCode: number;
+  let headers: Headers;
+  if (build.future.unstable_singleFetch) {
+    let merged = mergeResponseStubs(context, responseStubs);
+    statusCode = merged.statusCode;
+    headers = merged.headers;
+
+    if (isRedirectStatusCode(statusCode) && headers.has("Location")) {
+      return new Response(null, {
+        status: statusCode,
+        headers,
+      });
+    }
+  } else {
+    statusCode = context.statusCode;
+    headers = getDocumentHeaders(build, context);
+  }
 
   // Server UI state to send to the client.
   // - When single fetch is enabled, this is streamed down via `serverHandoffStream`
@@ -607,7 +473,7 @@ async function handleDocumentRequest(
   try {
     return await handleDocumentRequestFunction(
       request,
-      context.statusCode,
+      statusCode,
       headers,
       entryContext,
       loadContext
@@ -786,77 +652,6 @@ function unwrapResponse(response: Response) {
       ? null
       : response.json()
     : response.text();
-}
-
-function getSingleFetchRedirect(response: Response): SingleFetchRedirectResult {
-  return {
-    redirect: response.headers.get("Location")!,
-    status: response.status,
-    revalidate:
-      // Technically X-Remix-Revalidate isn't needed here - that was an implementation
-      // detail of ?_data requests as our way to tell the front end to revalidate when
-      // we didn't have a response body to include that information in.
-      // With single fetch, we tell the front end via this revalidate boolean field.
-      // However, we're respecting it for now because it may be something folks have
-      // used in their own responses
-      // TODO(v3): Consider removing or making this official public API
-      response.headers.has("X-Remix-Revalidate") ||
-      response.headers.has("Set-Cookie"),
-    reload: response.headers.has("X-Remix-Reload-Document"),
-  };
-}
-
-// Note: If you change this function please change the corresponding
-// decodeViaTurboStream function in server-runtime
-function encodeViaTurboStream(
-  data: any,
-  requestSignal: AbortSignal,
-  streamTimeout: number | undefined,
-  serverMode: ServerMode
-) {
-  let controller = new AbortController();
-  // How long are we willing to wait for all of the promises in `data` to resolve
-  // before timing out?  We default this to 50ms shorter than the default value for
-  // `ABORT_DELAY` in our built-in `entry.server.tsx` so that once we reject we
-  // have time to flush the rejections down through React's rendering stream before `
-  // we call abort() on that.  If the user provides their own it's up to them to
-  // decouple the aborting of the stream from the aborting of React's renderToPipeableStream
-  let timeoutId = setTimeout(
-    () => controller.abort(new Error("Server Timeout")),
-    typeof streamTimeout === "number" ? streamTimeout : 4950
-  );
-  requestSignal.addEventListener("abort", () => clearTimeout(timeoutId));
-
-  return encode(data, {
-    signal: controller.signal,
-    plugins: [
-      (value) => {
-        // Even though we sanitized errors on context.errors prior to responding,
-        // we still need to handle this for any deferred data that rejects with an
-        // Error - as those will not be sanitized yet
-        if (value instanceof Error) {
-          let { name, message, stack } =
-            serverMode === ServerMode.Production
-              ? sanitizeError(value, serverMode)
-              : value;
-          return ["SanitizedError", name, message, stack];
-        }
-
-        if (value instanceof ErrorResponseImpl) {
-          let { data, status, statusText } = value;
-          return ["ErrorResponse", data, status, statusText];
-        }
-
-        if (
-          value &&
-          typeof value === "object" &&
-          SingleFetchRedirectSymbol in value
-        ) {
-          return ["SingleFetchRedirect", value[SingleFetchRedirectSymbol]];
-        }
-      },
-    ],
-  });
 }
 
 function createRemixRedirectResponse(

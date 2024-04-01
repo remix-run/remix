@@ -41,7 +41,7 @@ cd ../..
 
 cd integration
 pnpm add -E @remix-run/router@${ROUTER_VERSION}
-cd ../..
+cd ..
 
 # Because deplicates...
 pnpm dedupe && rm -rf ./node_modules && pnpm install
