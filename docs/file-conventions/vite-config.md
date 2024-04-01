@@ -150,7 +150,7 @@ You may also want to enable the `manifest` option since, when server bundles are
 [relativesplatpath]: https://reactrouter.com/en/main/hooks/use-resolved-path#splat-paths
 [minimatch]: https://npm.im/minimatch
 [presets]: ../guides/presets
-[server-bundles]: ../future/server-bundles
+[server-bundles]: ../guides/server-bundles
 [rr-basename]: https://reactrouter.com/routers/create-browser-router#basename
 [vite-public-base-path]: https://vitejs.dev/config/shared-options.html#base
 [vite-base]: https://vitejs.dev/config/shared-options.html#base
