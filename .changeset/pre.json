@@ -37,6 +37,7 @@
     "single-fetch-client-loaders",
     "single-fetch-spa-mode",
     "single-fetch",
-    "spicy-ghosts-watch"
+    "spicy-ghosts-watch",
+    "update-docs"
   ]
 }
