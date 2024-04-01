@@ -189,7 +189,7 @@ Wih Remix `2.9.0`, we have switched the underlying [Web Fetch](https://developer
 
 - It allows us to stop maintaining our own [web-std-io fork](https://github.com/remix-run/web-std-io)
 - It should bring us more in-line with spec compliance
-  - ⚠️ It is possible that some non-spec-compliant bugs in our fork will be fixed" wit this move, so beware of "breaking bug fixes" and keep an eye on any advanced fetch API interactions you're performing in your app
+  - ⚠️ It is possible that some non-spec-compliant bugs in our fork will be fixed" with this move, so beware of "breaking bug fixes" and keep an eye on any advanced fetch API interactions you're performing in your app
 - Because `undici` is the fetch implementation used by `node` internally, it should better prepare Remix apps to more smoothly drop the polyfill to use the built-in Node.js APIs on `node` 20+
 
 ### Minor Changes
