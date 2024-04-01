@@ -140,7 +140,7 @@ A function for assigning addressable routes to [server bundles][server-bundles].
 
 You may also want to enable the `manifest` option since, when server bundles are enabled, it contains mappings between routes and server bundles.
 
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
 [remix-config]: ./remix-config
 [vite]: https://vitejs.dev
 [future-flags]: ../start/future-flags

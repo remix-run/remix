@@ -27,5 +27,5 @@ Refer to the Route Module section in the sidebar for more information.
 
 <docs-warning>When using the [Classic Remix Compiler][classic-remix-compiler], `.server` modules are replaced with empty modules and will not result in a compilation error. Note that this can result in runtime errors.</docs-warning>
 
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite

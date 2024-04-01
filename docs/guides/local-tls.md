@@ -118,4 +118,4 @@ remix dev --tls-key=key.pem --tls-cert=cert.pem -c "node ./server.js"
 Your app should now be running with local TLS!
 
 [mkcert]: https://github.com/FiloSottile/mkcert#installation
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite

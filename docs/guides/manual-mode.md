@@ -310,4 +310,4 @@ There is also a handy [`remember` utility][remember] that can help out here if y
 [templates]: https://github.com/remix-run/remix/blob/main/templates
 [community_examples]: https://github.com/xHomu/remix-v2-server
 [remember]: https://npm.im/@epic-web/remember
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite

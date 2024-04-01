@@ -105,6 +105,6 @@ An example using SASS.
 [css-bundling]: ./bundling
 [postcss-preset-env]: https://preset-env.cssdb.org
 [esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
 [vite-postcss]: https://vitejs.dev/guide/features#postcss

@@ -37,6 +37,6 @@ Button.displayName = "Button";
 
 [css-bundling]: ./bundling
 [css-modules]: https://github.com/css-modules/css-modules
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
 [vite-css-modules]: https://vitejs.dev/guide/features#css-modules

@@ -1548,7 +1548,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               "",
               `  But other route exports in '${importerShort}' depend on '${id}'.`,
               "",
-              "  See https://remix.run/docs/en/main/future/vite#splitting-up-client-and-server-code",
+              "  See https://remix.run/docs/en/main/guides/vite#splitting-up-client-and-server-code",
               "",
             ].join("\n")
           );
@@ -1560,7 +1560,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             "",
             `    '${id}' imported by '${importerShort}'`,
             "",
-            "  See https://remix.run/docs/en/main/future/vite#splitting-up-client-and-server-code",
+            "  See https://remix.run/docs/en/main/guides/vite#splitting-up-client-and-server-code",
             "",
           ].join("\n")
         );

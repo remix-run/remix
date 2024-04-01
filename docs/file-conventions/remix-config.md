@@ -287,6 +287,6 @@ There are a few conventions that Remix uses you should be aware of.
 [use-fetcher]: ../hooks/use-fetcher
 [relativesplatpath]: https://reactrouter.com/en/main/hooks/use-resolved-path#splat-paths
 [single-fetch]: ../guides/single-fetch
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
 [vite-config]: ./vite-configuration
