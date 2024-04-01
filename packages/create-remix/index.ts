@@ -237,7 +237,7 @@ async function projectNameStep(ctx: Context) {
       name: "name",
       type: "text",
       label: title("dir"),
-      message: "Where should we create your new project?",
+      message: "Where should we create your new project? (Will be relative to current directory)",
       initial: "./my-remix-app",
     });
     ctx.cwd = name!;
