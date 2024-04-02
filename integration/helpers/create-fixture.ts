@@ -414,6 +414,7 @@ function build(
   // force the mode to be production for ESM configs when runtime mode is
   // tested.
   mode = mode === ServerMode.Test ? ServerMode.Production : mode;
+  compiler = compiler ?? "vite";
 
   let remixBin = "node_modules/@remix-run/dev/dist/cli.js";
 
