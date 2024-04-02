@@ -185,7 +185,7 @@ Date: 2024-04-03
 
 #### Undici
 
-Wih Remix `2.9.0`, we have switched the underlying [Web Fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) polyfills to use the [`undici`](https://github.com/nodejs/undici) package. This change has a few primary benefits:
+With Remix `2.9.0`, we have switched the underlying [Web Fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) polyfills to use the [`undici`](https://github.com/nodejs/undici) package. This change has a few primary benefits:
 
 - It allows us to stop maintaining our own [web-std-io fork](https://github.com/remix-run/web-std-io)
 - It should bring us more in-line with spec compliance
