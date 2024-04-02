@@ -15,5 +15,6 @@ function SomeComponent() {
 }
 ```
 
-Assuming a route like `routes/posts/$postId.tsx` is matched by `/posts/123` then `params.postId` will be `"123"`.
-[Splat route parameters](https://remix.run/docs/en/main/file-conventions/routes#splat-routes) are available as `params["*"]`.
+Assuming a route like `routes/posts/$postId.tsx` is matched by `/posts/123` then `params.postId` will be `"123"`. Params for [splat routes][splat-routes] are available as `params["*"]`.
+
+[splat-params]: ../file-conventions/routes#splat-routes
