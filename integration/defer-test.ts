@@ -1324,11 +1324,7 @@ test.describe("single fetch", () => {
 
     test.beforeAll(async () => {
       fixture = await createFixture({
-        config: {
-          future: {
-            unstable_singleFetch: true,
-          },
-        },
+        singleFetch: true,
         files: {
           "app/components/counter.tsx": js`
             import { useState } from "react";
@@ -2287,11 +2283,7 @@ test.describe("single fetch", () => {
 
     test.beforeAll(async () => {
       fixture = await createFixture({
-        config: {
-          future: {
-            unstable_singleFetch: true,
-          },
-        },
+        singleFetch: true,
         files: {
           "app/entry.server.tsx": js`
             import { PassThrough } from "node:stream";

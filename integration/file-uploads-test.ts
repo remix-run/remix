@@ -17,6 +17,7 @@ test.describe("file-uploads", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      useRemixServe: true, // To support usage of process.cwd() in fileUploadHandler.ts
       files: {
         "app/fileUploadHandler.ts": js`
           import * as path from "node:path";
@@ -27,10 +28,9 @@ test.describe("file-uploads", () => {
             unstable_createMemoryUploadHandler as createMemoryUploadHandler,
           } from "@remix-run/node";
 
-          const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
           export let uploadHandler = composeUploadHandlers(
             createFileUploadHandler({
-              directory: path.resolve(__dirname, "..", "uploads"),
+              directory: path.resolve(process.cwd(), "uploads"),
               maxPartSize: 10_000, // 10kb
               // you probably want to avoid conflicts in production
               // do not set to false or passthrough filename in real
@@ -155,11 +155,7 @@ test.describe("single fetch", () => {
 
     test.beforeAll(async () => {
       fixture = await createFixture({
-        config: {
-          future: {
-            unstable_singleFetch: true,
-          },
-        },
+        singleFetch: true,
         files: {
           "app/fileUploadHandler.ts": js`
             import * as path from "node:path";
