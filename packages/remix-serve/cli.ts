@@ -34,7 +34,6 @@ sourceMapSupport.install({
     return null;
   },
 });
-installGlobals();
 
 run();
 
@@ -100,6 +99,8 @@ async function run() {
   }
 
   let build: ServerBuild = await reimportServer();
+
+  installGlobals({ nativeFetch: build.future.unstable_singleFetch });
 
   let onListen = () => {
     let address =
