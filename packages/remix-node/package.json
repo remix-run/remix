@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@remix-run/server-runtime": "workspace:*",
+    "@remix-run/web-fetch": "^4.4.2",
     "@web3-storage/multipart-parser": "^1.0.0",
     "cookie-signature": "^1.1.0",
     "source-map-support": "^0.5.21",

@@ -64,6 +64,7 @@
     "@remix-run/react": "workspace:*",
     "@remix-run/testing": "workspace:*",
     "@rollup/plugin-babel": "^5.2.2",
+    "@rollup/plugin-commonjs": "^21.1.0",
     "@rollup/plugin-json": "^5.0.0",
     "@rollup/plugin-node-resolve": "^11.0.1",
     "@rollup/plugin-replace": "^5.0.2",

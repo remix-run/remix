@@ -4,5 +4,5 @@ global.TextEncoder = require("util").TextEncoder;
 global.ReadableStream = require("stream/web").ReadableStream;
 global.WritableStream = require("stream/web").WritableStream;
 
-require("@remix-run/node").installGlobals();
+require("@remix-run/node").installGlobals({ nativeFetch: true });
 global.FormData = JSDOMFormData;

@@ -94,6 +94,9 @@ importers:
       '@rollup/plugin-babel':
         specifier: ^5.2.2
         version: 5.3.1(@babel/core@7.23.7)(rollup@2.75.7)
+      '@rollup/plugin-commonjs':
+        specifier: ^21.1.0
+        version: 21.1.0(rollup@2.75.7)
       '@rollup/plugin-json':
         specifier: ^5.0.0
         version: 5.0.2(rollup@2.75.7)
@@ -1182,6 +1185,9 @@ importers:
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
+      '@remix-run/web-fetch':
+        specifier: ^4.4.2
+        version: 4.4.2
       '@web3-storage/multipart-parser':
         specifier: ^1.0.0
         version: 1.0.0
@@ -4254,6 +4260,22 @@ packages:
       rollup: 2.75.7
     dev: false
 
+  /@rollup/plugin-commonjs@21.1.0(rollup@2.75.7):
+    resolution: {integrity: sha512-6ZtHx3VHIp2ReNNDxHjuUml6ur+WcQ28N1yHgCQwsbNkQg2suhxGMDQGJOn/KuDxKtd1xuZP5xSTwBA4GQ8hbA==}
+    engines: {node: '>= 8.0.0'}
+    peerDependencies:
+      rollup: ^2.38.3
+    dependencies:
+      '@rollup/pluginutils': 3.1.0(rollup@2.75.7)
+      commondir: 1.0.1
+      estree-walker: 2.0.2
+      glob: 7.2.0
+      is-reference: 1.2.1
+      magic-string: 0.25.9
+      resolve: 1.22.8
+      rollup: 2.75.7
+    dev: false
+
   /@rollup/plugin-json@5.0.2(rollup@2.75.7):
     resolution: {integrity: sha512-D1CoOT2wPvadWLhVcmpkDnesTzjhNIQRWLsc3fA49IFOP2Y84cFOOJ+nKGYedvXHKUsPeq07HR4hXpBBr+CHlA==}
     engines: {node: '>=14.0.0'}
@@ -6512,6 +6534,10 @@ packages:
   /common-tags@1.8.2:
     resolution: {integrity: sha512-gk/Z852D2Wtb//0I+kRFNKKE9dIIVirjoqPoA1wJU+XePVXZfGeBpk45+A1rKO4Q43prqWBNY/MiIeRLbPWUaA==}
     engines: {node: '>=4.0.0'}
+    dev: false
+
+  /commondir@1.0.1:
+    resolution: {integrity: sha512-W9pAhw0ja1Edb5GVdIF1mjZw/ASI0AlShXM83UUGe2DVr5TdAPEA1OA8m/g8zWp9x6On7gqufY+FatDbC3MDQg==}
     dev: false
 
   /component-emitter@1.3.0:
@@ -9330,6 +9356,12 @@ packages:
   /is-potential-custom-element-name@1.0.1:
     resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
     dev: true
+
+  /is-reference@1.2.1:
+    resolution: {integrity: sha512-U82MsXXiFIrjCK4otLT+o2NA2Cd2g5MLoOVXUZjIOhLurrRxpEXzI8O0KZHr3IjLvlAH1kTPYSuqer5T9ZVBKQ==}
+    dependencies:
+      '@types/estree': 1.0.0
+    dev: false
 
   /is-reference@3.0.0:
     resolution: {integrity: sha512-Eo1W3wUoHWoCoVM4GVl/a+K0IgiqE5aIo4kJABFyMum1ZORlPkC+UC357sSQUL5w5QCE5kCC9upl75b7+7CY/Q==}
