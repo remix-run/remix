@@ -186,8 +186,8 @@ Date: 2024-04-03
 > [!IMPORTANT]
 > Single Fetch requires using `undici` as your fetch polyfill, or using the built-in fetch on Node 20+, because it relies on APIs available there but not in the `@remix-run/web-fetch` polyfill. Please refer to the [Undici](#undici) section below for more details.
 >
-> - If you are managing your own server and calling `installGlobals`, you will need to call `installGlobals({ nativeFetch: true })` to avoid runtime errors when using Dingle Fetch
-> - If you are using `remix-serve`, you'll be switched to use `undici` automatically when you enable Single Fetch
+> - If you are managing your own server and calling `installGlobals()`, you will need to call `installGlobals({ nativeFetch: true })` to avoid runtime errors when using Single Fetch
+> - If you are using `remix-serve`, it will use `undici` automatically if Single Fetch is enabled
 
 #### Undici
 
@@ -196,7 +196,7 @@ Remix `2.9.0` adds a new `installGlobals({ nativeFetch: true })` flag to opt int
 - It will allow us to stop maintaining our own [web-std-io fork](https://github.com/remix-run/web-std-io) in future versions of Remix
 - It should bring us more in-line with spec compliance
   - ⚠️ It is possible that some non-spec-compliant bugs in our fork will be "fixed" by moving to `undici`, so beware of "breaking bug fixes" and keep an eye on any advanced `fetch` API interactions you're performing in your app
-  - ⚠️ In some cases, `undici` may have different behavior by design -- Most notably, `undici`'s garbage collection behavior differs and you are [required to consume all fetch response bodies](https://github.com/nodejs/undici?tab=readme-ov-file#garbage-collection) to avoid a memory leak in your app
+  - ⚠️ In some cases, `undici` may have different behavior by design -- most notably, `undici`'s garbage collection behavior differs and you are [required to consume all fetch response bodies](https://github.com/nodejs/undici?tab=readme-ov-file#garbage-collection) to avoid a memory leak in your app
 - Because `undici` is the fetch implementation used by `node` internally, it should better prepare Remix apps to more smoothly drop the polyfill to use the built-in Node.js APIs on `node` 20+
 
 ### Minor Changes
@@ -206,8 +206,6 @@ Remix `2.9.0` adds a new `installGlobals({ nativeFetch: true })` flag to opt int
 - `@remix-run/dev` - Fix SPA mode when Single Fetch is enabled by using streaming `entry.server` ([#9063](https://github.com/remix-run/remix/pull/9063))
 - `@remix-run/dev` - Vite: added sourcemap support for transformed routes ([#8970](https://github.com/remix-run/remix/pull/8970))
 - `@remix-run/node` - Add a new `installGlobals({ nativeFetch: true })` flag to opt-into using [`undici`](https://github.com/nodejs/undici) as the fetch polyfill instead of `@remix-run/web-*` ([#9106](https://github.com/remix-run/remix/pull/9106), [#9111](https://github.com/remix-run/remix/pull/9111), [#9198](https://github.com/remix-run/remix/pull/9198))
-  - ⚠️ When enabling `future._unstable_singleFetch`, `remix-serve` will default to using `undici` as the polyfill because the single fetch implementation relies on the `undici` polyfill
-  - ⚠️ Any users opting into Single Fetch and managing their own polyfill (i.e., not using `remix-serve`) will need to pass the flag to `installGlobals` on their own to avoid runtime errors with Single Fetch
 - `@remix-run/server-runtime` - Add `ResponseStub` header interface for Single Fetch and deprecate the `headers` export ([#9142](https://github.com/remix-run/remix/pull/9142))
 - `@remix-run/server-runtime` - Handle redirects created by `handleDataRequest` ([#9104](https://github.com/remix-run/remix/pull/9104))
 
