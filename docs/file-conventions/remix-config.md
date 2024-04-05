@@ -287,4 +287,4 @@ There are a few conventions that Remix uses you should be aware of.
 [relativesplatpath]: https://reactrouter.com/en/main/hooks/use-resolved-path#splat-paths
 [classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
 [remix-vite]: ../future/vite
-[vite-config]: ./vite-configuration
+[vite-config]: ./vite-config
