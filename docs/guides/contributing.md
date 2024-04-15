@@ -216,14 +216,14 @@ The playground generated from `yarn playground:new` is based on a template in `s
 
 ### Testing
 
-Before running the tests, you need to run a build. After you build, running `yarn test` from the root directory will run **every** package's tests. If you want to run tests for a specific package, use `yarn test --selectProjects <display-name>`:
+Before running the tests, you need to run a build. After you build, running `yarn test` from the root directory will run **every** package's tests. If you want to run tests for a specific package, use `yarn test:primary --selectProjects <display-name>`:
 
 ```shellscript nonumber
 # Test all packages
 yarn test
 
 # Test only @remix-run/express
-yarn test --selectProjects express
+yarn test:primary --selectProjects express
 ```
 
 ## Repository Branching
