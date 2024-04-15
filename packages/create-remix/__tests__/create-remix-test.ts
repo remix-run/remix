@@ -82,7 +82,7 @@ describe("create-remix CLI", () => {
 
       --template <name>   The project template to use
       --[no-]install      Whether or not to install dependencies after creation
-      --package-manager   The package manager to use
+      --package-manager   The package manager to use (npm, pnpm, yarn, bun)
       --show-install-output   Whether to show the output of the install process
       --[no-]init-script  Whether or not to run the template's remix.init script, if present
       --[no-]git-init     Whether or not to initialize a Git repository
@@ -898,6 +898,36 @@ describe("create-remix CLI", () => {
       expect.anything()
     );
     process.env.npm_config_user_agent = originalUserAgent;
+  });
+
+  it("uses npm when package manager is unknown", async () => {
+    let projectDir = getProjectDir("pnpm-create-override");
+
+    let execa = require("execa");
+    execa.mockImplementation(async () => {});
+
+    // Suppress terminal output
+    let stdoutMock = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
+    await createRemix([
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "blank"),
+      "--no-git-init",
+      "--yes",
+      "--package-manager",
+      "notSupportedPackageManagerOrTypo",
+    ]);
+
+    stdoutMock.mockReset();
+
+    expect(execa).toHaveBeenCalledWith(
+      "npm",
+      expect.arrayContaining(["install"]),
+      expect.anything()
+    );
   });
 
   it("works when creating an app in the current dir", async () => {

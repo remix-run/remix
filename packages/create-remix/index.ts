@@ -782,7 +782,7 @@ ${color.arg("--no-motion")}         ${color.dim(`Disable animations in console o
 
 ${color.arg("--template <name>")}   ${color.dim(`The project template to use`)}
 ${color.arg("--[no-]install")}      ${color.dim(`Whether or not to install dependencies after creation`)}
-${color.arg("--package-manager")}   ${color.dim(`The package manager to use`)}
+${color.arg("--package-manager")}   ${color.dim(`The package manager to use (npm, pnpm, yarn, bun)`)}
 ${color.arg("--show-install-output")}   ${color.dim(`Whether to show the output of the install process`)}
 ${color.arg("--[no-]init-script")}  ${color.dim(`Whether or not to run the template's remix.init script, if present`)}
 ${color.arg("--[no-]git-init")}     ${color.dim(`Whether or not to initialize a Git repository`)}
