@@ -1399,8 +1399,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           let movedAssetPaths: string[] = [];
           for (let ssrAssetPath of ssrAssetPaths) {
             let src = path.join(serverBuildDirectory, ssrAssetPath);
-            if (!clientAssetPaths.has(ssrAssetPath)) {
-              let dest = path.join(clientBuildDirectory, ssrAssetPath);
+            let dest = path.join(clientBuildDirectory, ssrAssetPath);
+            if (!clientAssetPaths.has(ssrAssetPath) && !fse.existsSync(dest)) {
               await fse.move(src, dest);
               movedAssetPaths.push(dest);
             } else {
