@@ -1700,6 +1700,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         }
 
         let result = await babel.transformAsync(code, {
+          configFile: false,
+          babelrc: false,
           filename: id,
           sourceFileName: filepath,
           parserOpts: {
