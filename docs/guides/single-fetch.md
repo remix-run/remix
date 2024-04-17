@@ -96,14 +96,7 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 ### Headers
 
 The [`headers`][headers] function is no longer used when Single Fetch is enabled.
-Instead, your `loader`/`action` functions now receive a mutable `response` parameter unique to that execution:
-
-```ts
-type ResponseStub = {
-  status: number | undefined;
-  headers: Headers;
-};
-```
+Instead, your `loader`/`action` functions now receive a mutable `ResponseStub` unique to that execution:
 
 - To alter the status of your HTTP Response, set the `status` field directly:
   - `response.status = 201`
@@ -113,7 +106,18 @@ type ResponseStub = {
   - `response.headers.delete(name)`
 
 ```ts
-export async function action({ request, response }) {
+type ResponseStub = {
+  status: number | undefined;
+  headers: Headers;
+};
+
+export async function action({
+  request,
+  response,
+}: {
+  request: Request;
+  response?: ResponseStub;
+}) {
   if (!loggedIn(request)) {
     response.status = 401;
     response.headers.append("Set-Cookie", "foo=bar");
@@ -127,8 +131,8 @@ export async function action({ request, response }) {
 Each `loader`/`action` receives it's own unique `response` instance so you cannot see what other `loader`/`action` functions have set (which would be subject to race conditions). The resulting HTTP Response status and headers are determined as follows:
 
 - Status Code
-  - If all status codes are unset or have values <200, the deepest status code will be used for the HTTP response
-  - If any status codes are set to a value >=300, the highest >=300 value will be used for the HTTP Response
+  - If all status codes are unset or have values <300, the deepest status code will be used for the HTTP response
+  - If any status codes are set to a value >=300, the shallowest >=300 value will be used for the HTTP Response
 - Headers
   - Remix tracks header operations and will replay them on a fresh `Headers` instance after all handlers have completed
   - These are replayed in order - action first (if present) followed by loaders in top-down order
@@ -167,7 +171,7 @@ export function clientLoader({ serverLoader }) {
 }
 ```
 
-If a user navigates from `/ -> /a/b/c`, then we need to run the server loaders for `a` and `b`, and the `clientLoader` for `c` - which may eventually (or may not) call it's own server `loader`. We can't decide to include the `c` server `loader` in a single fetch call when we want to fetch the `a`/`b` `loader`'s', nor can we delay until `c` actually makes the `serverLoader` call (or returns) without introducing a waterfall.
+If a user navigates from `/ -> /a/b/c`, then we need to run the server loaders for `a` and `b`, and the `clientLoader` for `c` - which may eventually (or may not) call it's own server `loader`. We can't decide to include the `c` server `loader` in a single fetch call when we want to fetch the `a`/`b` `loader`'s, nor can we delay until `c` actually makes the `serverLoader` call (or returns) without introducing a waterfall.
 
 Therefore, when you export a `clientLoader` that route opts-out of Single Fetch and when you call `serverLoader` it will make a single fetch to get only it's route server `loader`. All routes that do not export a `clientLoader` will be fetched in a singular HTTP request.
 
