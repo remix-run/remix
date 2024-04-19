@@ -69,7 +69,7 @@ You may need to make changes to a pre-release prior to publishing a final stable
 - Create a new changeset: `yarn changeset`
   - **IMPORTANT:** This is required even if you ultimately don't want to include these changes in the logs
   - Remember, changelogs can be edited prior to publishing, but the Changeset version script needs to see new changesets in order to create a new version
-- Commit the changesets and push the the `release-*` branch to GitHub
+- Commit the changesets and push the `release-*` branch to GitHub
 - Wait for the release workflow to finish and the Changesets action to open its PR that will increment all versions
 - Review the PR, make any adjustments necessary, and merge it into the `release-*` branch
 - Once the PR is merged, the release workflow will publish the updated packages to npm
