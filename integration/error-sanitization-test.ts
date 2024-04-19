@@ -206,7 +206,7 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("Defer Route");
       expect(html).toMatch("RESOLVED");
       expect(html).not.toMatch("MESSAGE:");
-      // Defer errors are not not part of the JSON blob but rather rejected
+      // Defer errors are not part of the JSON blob but rather rejected
       // against a pending promise and therefore are inlined JS.
       expect(html).not.toMatch("x.stack=e.stack;");
     });
@@ -217,7 +217,7 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("Defer Error");
       expect(html).not.toMatch("RESOLVED");
       expect(html).toMatch('{"message":"Unexpected Server Error"}');
-      // Defer errors are not not part of the JSON blob but rather rejected
+      // Defer errors are not part of the JSON blob but rather rejected
       // against a pending promise and therefore are inlined JS.
       expect(html).toMatch("x.stack=undefined;");
       // defer errors are not logged to the server console since the request
@@ -371,7 +371,7 @@ test.describe("Error Sanitization", () => {
       let html = await response.text();
       expect(html).toMatch("Defer Error");
       expect(html).not.toMatch("RESOLVED");
-      // Defer errors are not not part of the JSON blob but rather rejected
+      // Defer errors are not part of the JSON blob but rather rejected
       // against a pending promise and therefore are inlined JS.
       expect(html).toMatch("x.stack=e.stack;");
       // defer errors are not logged to the server console since the request
@@ -567,7 +567,7 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("Defer Route");
       expect(html).toMatch("RESOLVED");
       expect(html).not.toMatch("MESSAGE:");
-      // Defer errors are not not part of the JSON blob but rather rejected
+      // Defer errors are not part of the JSON blob but rather rejected
       // against a pending promise and therefore are inlined JS.
       expect(html).not.toMatch("x.stack=e.stack;");
     });
@@ -578,7 +578,7 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("Defer Error");
       expect(html).not.toMatch("RESOLVED");
       expect(html).toMatch('{"message":"Unexpected Server Error"}');
-      // Defer errors are not not part of the JSON blob but rather rejected
+      // Defer errors are not part of the JSON blob but rather rejected
       // against a pending promise and therefore are inlined JS.
       expect(html).toMatch("x.stack=undefined;");
       // defer errors are not logged to the server console since the request
