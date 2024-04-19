@@ -125,6 +125,8 @@ app/
 
 To configure this structure into the same URLs as the previous examples, you can use the `routes` function in `remix.config.js`:
 
+<docs-warning>`remix.config.js` is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. When using [Remix Vite][remix-vite], this file should not be present in your project. Instead, Remix configuration should be provided to the Remix plugin in your [Vite config][vite-config].</docs-warning>
+
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
 export default {
