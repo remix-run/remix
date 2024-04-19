@@ -85,7 +85,7 @@ app/
 └── root.tsx
 ```
 
-You can read more about the specific patterns in the file names and other features in the [Route File Conventions][route_file_conventions] reference.
+You can read more about the specific patterns in the file names and other features in the [Route File Conventions][route-file-conventions] reference.
 
 Only the folders directly beneath `app/routes` will be registered as a route. Deeply nested folders are ignored. The file at `app/routes/about/header/route.tsx` will not create a route.
 
@@ -101,7 +101,11 @@ app/
 
 ## Manual Route Configuration
 
-While the `app/routes` folder offers a convenient convention for developers, Remix appreciates that one size doesn't fit all. There are times when the provided convention might not align with specific project requirements or a developer's preferences. In such cases, Remix allows for manual route configuration via [`remix.config.js`][remix_config]. This flexibility ensures developers can structure their application in a way that makes sense for their project.
+While the `app/routes` folder offers a convenient convention for developers, Remix appreciates that one size doesn't fit all. There are times when the provided convention might not align with specific project requirements or a developer's preferences. In such cases, Remix allows for manual route configuration via [`vite.config.ts`][vite-routes]. This flexibility ensures developers can structure their application in a way that makes sense for their project.
+
+<docs-warning>
+If you have not yet migrated to [Vite][remix-vite] and are still using the [Classic Remix Compiler][classic-remix-compiler], you can configure routes manually in your [`remix.config.js`][remix-config] file.
+</docs-warning>
 
 A common way to structure an app is by top-level features folders. Consider that routes related to a particular theme, like concerts, likely share several modules. Organizing them under a single folder makes sense:
 
@@ -123,26 +127,35 @@ app/
 └── root.tsx
 ```
 
-To configure this structure into the same URLs as the previous examples, you can use the `routes` function in `remix.config.js`:
+To configure this structure into the same URLs as the previous examples, you can use the `routes` function in `vite.config.ts`:
 
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-export default {
-  routes(defineRoutes) {
-    return defineRoutes((route) => {
-      route("/", "home/route.tsx", { index: true });
-      route("about", "about/route.tsx");
-      route("concerts", "concerts/layout.tsx", () => {
-        route("", "concerts/home.tsx", { index: true });
-        route("trending", "concerts/trending.tsx");
-        route(":city", "concerts/city.tsx");
-      });
-    });
-  },
-};
+```ts filename=vite.config.ts
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    remix({
+      routes(defineRoutes) {
+        return defineRoutes((route) => {
+          route("/", "home/route.tsx", { index: true });
+          route("about", "about/route.tsx");
+          route("concerts", "concerts/layout.tsx", () => {
+            route("", "concerts/home.tsx", { index: true });
+            route("trending", "concerts/trending.tsx");
+            route(":city", "concerts/city.tsx");
+          });
+        });
+      },
+    }),
+  ],
+});
 ```
 
-Remix's route configuration approach blends convention with flexibility. You can use the `app/routes` folder for an easy, organized way to set up your routes. If you want more control, dislike the file names, or have unique needs, there's `remix.config.js`. It is expected that many apps forgo the routes folder convention in favor of `remix.config.js`.
+Remix's route configuration approach blends convention with flexibility. You can use the `app/routes` folder for an easy, organized way to set up your routes. If you want more control, dislike the file names, or have unique needs, there's `vite.config.ts`. It is expected that many apps forgo the routes folder convention in favor of `vite.config.ts`.
 
-[route_file_conventions]: ../file-conventions/routes
-[remix_config]: ../file-conventions/remix-config
+[route-file-conventions]: ../file-conventions/routes
+[remix-config]: ../file-conventions/remix-config
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
+[vite-routes]: ../file-conventions/vite-config#routes
