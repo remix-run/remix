@@ -127,7 +127,7 @@ app/
 └── root.tsx
 ```
 
-To configure this structure into the same URLs as the previous examples, you can use the `routes` function in `vite-config.ts`:
+To configure this structure into the same URLs as the previous examples, you can use the `routes` function in `vite.config.ts`:
 
 ```ts filename=vite.config.ts
 import { vitePlugin as remix } from "@remix-run/dev";
