@@ -1,5 +1,14 @@
 # `@remix-run/react`
 
+## 2.9.0-pre.5
+
+### Patch Changes
+
+- Opt-in types for single-fetch ([#9272](https://github.com/remix-run/remix/pull/9272))
+  - To opt-in to type inference for single-fetch, add `./node_modules/@remix-run/react/future/single-fetch.d.ts` to `include` in your `tsconfig.json`
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.0-pre.5`
+
 ## 2.9.0-pre.4
 
 ### Patch Changes
