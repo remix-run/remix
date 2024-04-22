@@ -1,10 +1,15 @@
+import type { MetaArgs, UNSAFE_MetaMatch } from "@remix-run/react";
 import type {
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
+  LoaderFunction,
+  ActionFunction,
   SerializeFrom,
   TypedDeferredData,
   TypedResponse,
 } from "@remix-run/server-runtime";
+import type {
+  useFetcher as useFetcherRR,
+  FetcherWithComponents,
+} from "react-router-dom";
 
 type Serializable =
   | undefined
@@ -24,37 +29,93 @@ type Serializable =
   | Set<Serializable>
   | Promise<Serializable>;
 
-type DataFunctionReturnValue =
-  | Serializable
-  | TypedDeferredData<Record<string, unknown>>
-  | TypedResponse<Record<string, unknown>>;
+// type DataFunctionReturnValue =
+//   | Serializable
+//   | TypedDeferredData<Record<string, unknown>>
+//   | TypedResponse<Record<string, unknown>>;
 
-type Loader = ((
-  args: LoaderFunctionArgs
-) => Promise<DataFunctionReturnValue>) & {
-  hydrate?: boolean;
-};
-
-type Action = (args: ActionFunctionArgs) => Promise<DataFunctionReturnValue>;
+// type Loader = (args: LoaderFunctionArgs) => Promise<DataFunctionReturnValue>;
+// type Action = (args: ActionFunctionArgs) => Promise<DataFunctionReturnValue>;
 
 // Backwards-compatible type for Remix v2 where json/defer still use the old types,
 // and only non-json/defer returns use the new types.  This allows for incremental
 // migration of loaders to return naked objects.  In the next major version,
 // json/defer will be removed so everything will use the new simplified typings.
-type SingleFetchSerialize_V2<T extends Loader | Action> = Awaited<
-  ReturnType<T>
-> extends TypedDeferredData<Record<string, unknown>>
-  ? SerializeFrom<T>
-  : Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>>
-  ? SerializeFrom<T>
-  : Awaited<ReturnType<T>>;
+// prettier-ignore
+type SingleFetchSerialize_V2<T extends LoaderFunction | ActionFunction> =
+  Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
+  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
+  Awaited<ReturnType<T>>;
+
+// interface SingleFetchUIMatch_V2<D = AppData, H = RouteHandle>
+//   extends UIMatchRR<
+//     D extends Loader | Action ? SingleFetchSerialize_V2<D> : never,
+//     H
+//   > {}
 
 declare module "@remix-run/react" {
-  export function useLoaderData<T>(): T extends Loader
+  export function useLoaderData<T>(): T extends LoaderFunction
     ? SingleFetchSerialize_V2<T>
     : never;
 
-  export function useActionData<T>(): T extends Action
+  export function useActionData<T>(): T extends ActionFunction
     ? SingleFetchSerialize_V2<T>
     : never;
+
+  export function useRouteLoaderData<T>(
+    routeId: string
+  ): T extends LoaderFunction ? SingleFetchSerialize_V2<T> : never;
+
+  export function useFetcher<TData = unknown>(
+    opts?: Parameters<typeof useFetcherRR>[0]
+  ): FetcherWithComponents<
+    TData extends LoaderFunction | ActionFunction
+      ? SingleFetchSerialize_V2<TData>
+      : never
+  >;
+
+  export type UIMatch_SingleFetch<D = unknown, H = unknown> = Omit<
+    UIMatch<D, H>,
+    "data"
+  > & {
+    data: D extends LoaderFunction ? SingleFetchSerialize_V2<D> : never;
+  };
+
+  interface MetaMatch_SingleFetch<
+    RouteId extends string = string,
+    Loader extends LoaderFunction | unknown = unknown
+  > extends Omit<UNSAFE_MetaMatch<RouteId, Loader>, "data"> {
+    data: Loader extends LoaderFunction
+      ? SingleFetchSerialize_V2<Loader>
+      : unknown;
+  }
+
+  type MetaMatches_SingleFetch<
+    MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+      string,
+      unknown
+    >
+  > = Array<
+    {
+      [K in keyof MatchLoaders]: MetaMatch_SingleFetch<
+        Exclude<K, number | symbol>,
+        MatchLoaders[K]
+      >;
+    }[keyof MatchLoaders]
+  >;
+
+  export interface MetaArgs_SingleFetch<
+    Loader extends LoaderFunction | unknown = unknown,
+    MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+      string,
+      unknown
+    >
+  > extends Omit<MetaArgs<Loader, MatchLoaders>, "data" | "matches"> {
+    data:
+      | (Loader extends LoaderFunction
+          ? SingleFetchSerialize_V2<Loader>
+          : unknown)
+      | undefined;
+    matches: MetaMatches_SingleFetch<MatchLoaders>;
+  }
 }
