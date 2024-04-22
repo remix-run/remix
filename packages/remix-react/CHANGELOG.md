@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.9.0-pre.7
+
+### Patch Changes
+
+- [REMOVE] Fix return type when no promise is used ([`194788b93`](https://github.com/remix-run/remix/commit/194788b930e2e627200349af19ca818146151244))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.0-pre.7`
+
 ## 2.9.0-pre.6
 
 ### Patch Changes

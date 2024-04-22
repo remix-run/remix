@@ -1,5 +1,12 @@
 # `@remix-run/cloudflare-pages`
 
+## 2.9.0-pre.7
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@2.9.0-pre.7`
+
 ## 2.9.0-pre.6
 
 ### Patch Changes
