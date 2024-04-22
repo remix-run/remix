@@ -51,9 +51,9 @@ You can control this by exporting a `streamTimeout` numeric value from your `ent
 
 ### Type Inference
 
-the current type-inference in Remix has a built-in assumption of JSON-serialized responses. So, if you return a Javascript object from a `loader` or `action` without using the `json` utility, Remix will assume that object was converted to a JSON `Response` internally.
+Without Single Fetch, any plain Javascript object returned from a `loader` or `action` is automatically serialized into a JSON response (as if you returned it via `json`). The type inference assumes this is the case and infer naked object returns as if they were JSON serialized.
 
-With the new streaming format, this assumption no longer holds, so some of the type built-in inference is no longer accurate once you have opted-into Single Fetch. For example, they would assume that a `Date` would be serialized to a string on the client 😕.
+With Single Fetch, naked objects will be streamed directly, so the built-in type inference is no longer accurate once you have opted-into Single Fetch. For example, they would assume that a `Date` would be serialized to a string on the client 😕.
 
 In order to ensure you get the proper types when using Single Fetch, we've included a set of type overrides that you can include in your `tsconfig.json` which aligns the types with the Single Fetch behavior:
 
