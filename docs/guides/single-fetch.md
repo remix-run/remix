@@ -51,9 +51,9 @@ You can control this by exporting a `streamTimeout` numeric value from your `ent
 
 ### Type Inference
 
-The current generics support type inference but have a built-in assumption of JSON-serialized responses. So, if you return a Javascript object from a `loader` or `action` without using the `json` utility, Remix will convert that to a JSON `Response` internally.
+the current type-inference in Remix has a built-in assumption of JSON-serialized responses. So, if you return a Javascript object from a `loader` or `action` without using the `json` utility, Remix will assume that object was converted to a JSON `Response` internally.
 
-With the new streaming format, this assumption no longer holds, so `useLoaderData<typeof loader>()` and other related generics (`useActionData`, `useRouteLoaderData`, `useFetcher`) in their current form will _not_ indicate the proper types because it would assume that a `Date` would be a string on the client 😕.
+With the new streaming format, this assumption no longer holds, so some of the type built-in inference is no longer accurate once you have opted-into Single Fetch. For example, they would assume that a `Date` would be serialized to a string on the client 😕.
 
 In order to ensure you get the proper types when using Single Fetch, we've included a set of type overrides that you can include in your `tsconfig.json` which aligns the types with the Single Fetch behavior:
 
@@ -66,7 +66,9 @@ In order to ensure you get the proper types when using Single Fetch, we've inclu
 }
 ```
 
-This will update your typings to reflect the advanced serialization capabilities provided by Single Fetch's streaming format:
+**`useLoaderData`, `useActionData`, `useRouteLoaderData`, and `useFetcher`**
+
+These methods do not require any code changes on your part - adding the single fetch types will cause their generics to deserialize correctly:
 
 ```ts
 export async function loader() {
@@ -88,11 +90,9 @@ export default function Component() {
 }
 ```
 
-In some cases, we couldn't strictly override the generics verbatim, so we had to introduce a new type you can use when opting into Single Fetch:
+**`useMatches`**
 
-**useMatches**
-
-`useMatches`, requires a manual cast to specify the loader type in order to get proper type inference on a given `match.data`. When using Single Fetch, you will need to replace the `UIMatch` type with `UIMatch_SingleFetch`:
+`useMatches` requires a manual cast to specify the loader type in order to get proper type inference on a given `match.data`. When using Single Fetch, you will need to replace the `UIMatch` type with `UIMatch_SingleFetch`:
 
 ```diff
   let matches = useMatches();
@@ -102,7 +102,7 @@ In some cases, we couldn't strictly override the generics verbatim, so we had to
 
 **`meta` Function**
 
-`meta` functions also require generic to indicate the current and ancestor route loader types in order to properly type the `data` and `matches` parameters. When using Single Fetch, you will need to replace the `MetaArgs` type with `MetaArgs_SingleFetch`:
+`meta` functions also require a generic to indicate the current and ancestor route loader types in order to properly type the `data` and `matches` parameters. When using Single Fetch, you will need to replace the `MetaArgs` type with `MetaArgs_SingleFetch`:
 
 ```diff
   export function meta({
