@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.9.0-pre.6
+
+### Patch Changes
+
+- [REMOVE] Include future folder in published package ([#9282](https://github.com/remix-run/remix/pull/9282))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.0-pre.6`
+
 ## 2.9.0-pre.5
 
 ### Patch Changes
