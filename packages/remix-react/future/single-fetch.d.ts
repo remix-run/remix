@@ -36,10 +36,10 @@ type DataFunctionReturnValue =
 
 type LoaderFunction_SingleFetch = (
   args: LoaderFunctionArgs
-) => Promise<DataFunctionReturnValue>;
+) => Promise<DataFunctionReturnValue> | DataFunctionReturnValue;
 type ActionFunction_SingleFetch = (
   args: ActionFunctionArgs
-) => Promise<DataFunctionReturnValue>;
+) => Promise<DataFunctionReturnValue> | DataFunctionReturnValue;
 
 // Backwards-compatible type for Remix v2 where json/defer still use the old types,
 // and only non-json/defer returns use the new types.  This allows for incremental
