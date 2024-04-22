@@ -51,11 +51,26 @@ You can control this by exporting a `streamTimeout` numeric value from your `ent
 
 ### Type Inference
 
-The current generics support type inference but have a built-in assumption of a JSON-serialized response. With the new streaming format, this assumption no longer holds so `useLoaderData<typeof loader>()` will _not_ return the proper types because it would assume that a `Date` would be a string on the client 😕. Unfortunately, we can't make these types aware of a runtime future flag and we do not want to introduce another hook just for this. Thankfully, the manual typing is much simpler without needing to think about JSON serialization, so the current recommendation is to skip the generics when opting into single fetch and manually cast the type yourself:
+The current generics support type inference but have a built-in assumption of a JSON-serialized response. So, if you return a Javascript object without using the `json` utility, Remix will convert that to a JSON `Response` internally.
+
+With the new streaming format, this assumption no longer holds, so `useLoaderData<typeof loader>()` in it's current form will _not_ return the proper types because it would assume that a `Date` would be a string on the client 😕.
+
+In order to ensure you get the proper types when using Single Fetch, we've included a set of type overrides that you can include in your `tsconfig.json` which aligns the `useLoaderData`/`useActionData`/etc. types with the Single Fetch behavior:
+
+```json
+{
+  "include": [
+    // ...
+    "./node_modules/@remix-run/react/future/single-fetch.d.ts"
+  ]
+}
+```
+
+This will update your typings to reflect the advanced serialization capabilities provided by Single Fetch's streaming format:
 
 ```ts
 export async function loader() {
-  const data = await fetchSomeData(); // Assume this returns
+  const data = await fetchSomeData();
   return {
     message: data.message, // <- string
     date: data.date, // <- Date
@@ -63,25 +78,13 @@ export async function loader() {
 }
 
 export default function Component() {
-  // ❌ Before
+  // ❌ Before opting into single fetch types, types are serialized via JSON.stringify
   const data = useLoaderData<typeof loader>();
   //    ^? { message: string, date: string }
 
-  // ✅ After
-  const data = useLoaderData() as unknown as Awaited<
-    ReturnType<typeof loader>
-  >;
+  // ✅ After opting into single fetch types, types are serialized via turbo-stream
+  const data = useLoaderData<typeof loader>;
   //    ^? { message: string, date: Date }
-}
-```
-
-In the next version of Remix, we may re-introduce this generic, but in the meantime you could wrap this up into your own utility:
-
-```ts
-function useTypedLoaderData<T>() {
-  return useLoaderData() as unknown as Awaited<
-    ReturnType<T>
-  >;
 }
 ```
 
