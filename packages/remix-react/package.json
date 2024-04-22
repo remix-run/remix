@@ -51,6 +51,7 @@
   },
   "files": [
     "dist/",
+    "future/",
     "CHANGELOG.md",
     "LICENSE.md",
     "README.md"
