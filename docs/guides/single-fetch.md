@@ -14,6 +14,7 @@ When you enable Single Fetch, Remix will make a single HTTP call to your server 
 
 - Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
+- You must add `node_modules/@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `include` array to get proper type inference
 - Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 - The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
 
@@ -61,7 +62,7 @@ In order to ensure you get the proper types when using Single Fetch, we've inclu
 {
   "include": [
     // ...
-    "./node_modules/@remix-run/react/future/single-fetch.d.ts"
+    "node_modules/@remix-run/react/future/single-fetch.d.ts"
   ]
 }
 ```
