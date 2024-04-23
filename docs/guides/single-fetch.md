@@ -50,6 +50,44 @@ Now that Remix is streaming internally, we can cancel the `turbo-stream` process
 
 You can control this by exporting a `streamTimeout` numeric value from your `entry.server.tsx` and Remix will use that as the number of milliseconds after which to reject any outstanding Promises from `loader`/`action`'s. It's recommended to decouple this value from the timeout in which you abort the React renderer - and you should always set the React timeout to a higher value so it has time to stream down the underlying rejections from your `streamTimeout`.
 
+```tsx filename=app/entry.server.tsx lines=[1-2,32-33]
+// Reject all pending promises from handler functions after 5 seconds
+export const streamTimeout = 5000;
+
+// ...
+
+function handleBrowserRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  return new Promise((resolve, reject) => {
+    const { pipe, abort } = renderToPipeableStream(
+      <RemixServer
+        context={remixContext}
+        url={request.url}
+        abortDelay={ABORT_DELAY}
+      />,
+      {
+        onShellReady() {
+          /* ... */
+        },
+        onShellError(error: unknown) {
+          /* ... */
+        },
+        onError(error: unknown) {
+          /* ... */
+        },
+      }
+    );
+
+    // Automatically timeout the react renderer after 10 seconds
+    setTimeout(abort, 10000);
+  });
+}
+```
+
 ### Type Inference
 
 Without Single Fetch, any plain Javascript object returned from a `loader` or `action` is automatically serialized into a JSON response (as if you returned it via `json`). The type inference assumes this is the case and infer naked object returns as if they were JSON serialized.
@@ -119,7 +157,9 @@ export default function Component() {
 
 Previously, Remix would always revalidate all active loaders after _any_ action submission, regardless of the result of the action. You could opt-out of revalidation on a per-route basis via [`shouldRevalidate`][should-revalidate].
 
-With Single Fetch, if an `action` returns or throws a `Response` with a `4xx/5xx` status code, Remix will _not revalidate_ loaders by default. You can then opt-into revalidation on a per-route basis. If an `action` returns or throws anything that is not a 4xx/5xx Response, then the revalidation behavior is unchanged. The reasoning here is that in most cases, if you return a `4xx`/`5xx` Response, you didn't actually mutate any data so there is no need to reload data.
+With Single Fetch, if an `action` returns or throws a `Response` with a `4xx/5xx` status code, Remix will _not revalidate_ loaders by default. If an `action` returns or throws anything that is not a 4xx/5xx Response, then the revalidation behavior is unchanged. The reasoning here is that in most cases, if you return a `4xx`/`5xx` Response, you didn't actually mutate any data so there is no need to reload data.
+
+If you _want_ to continue revalidating one or more loaders after a 4xx/5xx action response, you can opt-into revalidation on a per-route basis by returning `true` from your [`shouldRevalidate`][should-revalidate] function. There is also a new `unstable_actionStatus` parameter passed to the function that you can use if you need to decide based on the action status code.
 
 Revalidation is handled via a `?_routes` query string parameter on the single fetch HTTP call which limits the loaders being called. This means that when you are doing fine-grained revalidation, you will have cache enumerations based on the routes being requested - but all of the information is in the URL so you should not need any special CDN configurations (as opposed to if this was done via a custom header that required your CDN to respect the `Vary` header).
 
@@ -155,6 +195,19 @@ export async function action({
   }
   await addItemToDb(request);
   return null;
+}
+```
+
+You can also throw these response stubs to short circuit the flow of your loaders and actions:
+
+```tsx
+export async function loader({ request, response }) {
+  if (shouldRedirectToHome(request)) {
+    response.status = 302;
+    response.headers.set("Location", "/");
+    throw response;
+  }
+  // ...
 }
 ```
 
