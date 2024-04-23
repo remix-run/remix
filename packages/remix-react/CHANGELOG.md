@@ -13,16 +13,11 @@
     - If you export your own streamTimeout, you should decouple that from aborting the react `renderToPipeableStream`. You should always ensure that react is aborted _afer_ the stream is aborted so that abort rejections can be flushed down
   - Actions no longer automatically revalidate on 4xx/5xx responses (via RR `future.unstable_skipActionErrorRevalidation` flag) - you can return a 2xx to opt-into revalidation or use `shouldRevalidate`
 
-### Patch Changes
-
-- \[REMOVE] Loosen header check on turbo stream responses for SSG compatibility ([#9162](https://github.com/remix-run/remix/pull/9162))
-- \[REMOVE] bump router ([#9289](https://github.com/remix-run/remix/pull/9289))
-- fix: escape single fetch transfer ([#9084](https://github.com/remix-run/remix/pull/9084))
-- Update single fetch implementation to avoid over-fetching when clientLoader's exist ([#9073](https://github.com/remix-run/remix/pull/9073))
-- \[REMOVE] Include future folder in published package ([#9282](https://github.com/remix-run/remix/pull/9282))
-- \[REMOVE] Fix return type when no promise is used ([`194788b93`](https://github.com/remix-run/remix/commit/194788b930e2e627200349af19ca818146151244))
 - Opt-in types for single-fetch ([#9272](https://github.com/remix-run/remix/pull/9272))
   - To opt-in to type inference for single-fetch, add `./node_modules/@remix-run/react/future/single-fetch.d.ts` to `include` in your `tsconfig.json`
+
+### Patch Changes
+
 - Updated dependencies:
   - `@remix-run/server-runtime@2.9.0`
 

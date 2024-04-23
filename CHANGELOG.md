@@ -169,7 +169,7 @@ Date: YYYY-MM-DD
 
 ## v2.9.0
 
-Date: 2024-04-03
+Date: 2024-04-23
 
 ### What's Changed
 
@@ -179,6 +179,7 @@ Date: 2024-04-03
 
 - Naked objects returned from `loader`/`action` functions are no longer automatically serialized to JSON responses
   - Instead, they'll be streamed as-is via [`turbo-stream`](https://github.com/jacob-ebey/turbo-stream) which allows direct serialization of more complex types such as `Promise`, `Date`, `Map` instances, and more
+  - You will need to modify your `tsconfig.json`'s `include` array to infer types properly when using Single Fetch
 - The `headers` export is no longer used when Single Fetch is enabled in favor of a new `response` stub passed to your `loader`/`action` functions
 - The `json`/`defer`/`redirect` utilities are deprecated when using Single Fetch (but still work _mostly_ the same)
 - Actions no longer automatically revalidate on `4xx`/`5xx` responses - you can return a `2xx` to opt-into revalidation or use `shouldRevalidate`
@@ -201,18 +202,18 @@ Remix `2.9.0` adds a new `installGlobals({ nativeFetch: true })` flag to opt int
 
 ### Minor Changes
 
-- New `future.unstable_singleFetch` flag ([#8773](https://github.com/remix-run/remix/pull/8773), [#9073](https://github.com/remix-run/remix/pull/9073), [#9084](https://github.com/remix-run/remix/pull/9084))
-- `@remix-run/dev` - Improve `getDependenciesToBundle` resolution in monorepos ([#8848](https://github.com/remix-run/remix/pull/8848))
-- `@remix-run/dev` - Fix SPA mode when Single Fetch is enabled by using streaming `entry.server` ([#9063](https://github.com/remix-run/remix/pull/9063))
-- `@remix-run/dev` - Vite: added sourcemap support for transformed routes ([#8970](https://github.com/remix-run/remix/pull/8970))
+- New `future.unstable_singleFetch` flag ([#8773](https://github.com/remix-run/remix/pull/8773), [#9073](https://github.com/remix-run/remix/pull/9073), [#9084](https://github.com/remix-run/remix/pull/9084), [#9272](https://github.com/remix-run/remix/pull/9272))
 - `@remix-run/node` - Add a new `installGlobals({ nativeFetch: true })` flag to opt-into using [`undici`](https://github.com/nodejs/undici) as the fetch polyfill instead of `@remix-run/web-*` ([#9106](https://github.com/remix-run/remix/pull/9106), [#9111](https://github.com/remix-run/remix/pull/9111), [#9198](https://github.com/remix-run/remix/pull/9198))
-- `@remix-run/server-runtime` - Add `ResponseStub` header interface for Single Fetch and deprecate the `headers` export ([#9142](https://github.com/remix-run/remix/pull/9142))
-- `@remix-run/server-runtime` - Handle redirects created by `handleDataRequest` ([#9104](https://github.com/remix-run/remix/pull/9104))
+- `@remix-run/server-runtime` - Add `ResponseStub` header interface and deprecate the `headers` export when Single Fetch is enabled ([#9142](https://github.com/remix-run/remix/pull/9142))
 
 ### Patch Changes
 
 - `create-remix` - Allow `.` in repo name when using `--template` flag ([#9026](https://github.com/remix-run/remix/pull/9026))
+- `@remix-run/dev` - Improve `getDependenciesToBundle` resolution in monorepos ([#8848](https://github.com/remix-run/remix/pull/8848))
+- `@remix-run/dev` - Fix SPA mode when Single Fetch is enabled by using streaming `entry.server` ([#9063](https://github.com/remix-run/remix/pull/9063))
+- `@remix-run/dev` - Vite: added sourcemap support for transformed routes ([#8970](https://github.com/remix-run/remix/pull/8970))
 - `@remix-run/dev` - Update links printed to the console by the Remix CLI/Dev Server to point to updated docs locations ([#9176](https://github.com/remix-run/remix/pull/9176))
+- `@remix-run/server-runtime` - Handle redirects created by `handleDataRequest` ([#9104](https://github.com/remix-run/remix/pull/9104))
 
 ### Updated Dependencies
 
