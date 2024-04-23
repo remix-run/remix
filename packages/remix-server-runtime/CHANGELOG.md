@@ -1,30 +1,6 @@
 # `@remix-run/server-runtime`
 
-## 2.9.0-pre.8
-
-## 2.9.0-pre.7
-
-## 2.9.0-pre.6
-
-## 2.9.0-pre.5
-
-## 2.9.0-pre.4
-
-### Patch Changes
-
-- [REMOVE] Fix typings for response in LoaderFunctonArgs/ActionFunctionArgs ([#9254](https://github.com/remix-run/remix/pull/9254))
-
-## 2.9.0-pre.3
-
-## 2.9.0-pre.2
-
-## 2.9.0-pre.1
-
-### Patch Changes
-
-- [REMOVE] Remove RR flags and implement via dataStrategy ([#9157](https://github.com/remix-run/remix/pull/9157))
-
-## 2.9.0-pre.0
+## 2.9.0
 
 ### Minor Changes
 
@@ -39,7 +15,9 @@
 
 ### Patch Changes
 
+- \[REMOVE] Fix typings for response in LoaderFunctonArgs/ActionFunctionArgs ([#9254](https://github.com/remix-run/remix/pull/9254))
 - handle net new redirects created by handleDataRequest ([#9104](https://github.com/remix-run/remix/pull/9104))
+- \[REMOVE] Remove RR flags and implement via dataStrategy ([#9157](https://github.com/remix-run/remix/pull/9157))
 - Add `ResponseStub` header interface for single fetch and deprecate the `headers` export ([#9142](https://github.com/remix-run/remix/pull/9142))
 
   - The `headers` export is no longer used when single fetch is enabled
