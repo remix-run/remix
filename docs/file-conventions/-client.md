@@ -28,5 +28,5 @@ console.log(supportsVibrationAPI);
 Refer to the Route Module section in the sidebar for more information.
 
 [use_effect]: https://react.dev/reference/react/useEffect
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite

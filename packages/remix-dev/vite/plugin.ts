@@ -1052,6 +1052,27 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             ctx.remixConfig.ssr === false
               ? "spa"
               : "custom",
+
+          ssr: {
+            external: [
+              // This is only necessary for development within the Remix repo
+              // because these packages are symlinked and Vite treats them as
+              // internal source code. For consumers this is a no-op.
+              "@remix-run/architect",
+              "@remix-run/cloudflare-pages",
+              "@remix-run/cloudflare-workers",
+              "@remix-run/cloudflare",
+              "@remix-run/css-bundle",
+              "@remix-run/deno",
+              "@remix-run/dev",
+              "@remix-run/express",
+              "@remix-run/netlify",
+              "@remix-run/node",
+              "@remix-run/react",
+              "@remix-run/serve",
+              "@remix-run/server-runtime",
+            ],
+          },
           optimizeDeps: {
             include: [
               // Pre-bundle React dependencies to avoid React duplicates,
@@ -1527,7 +1548,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               "",
               `  But other route exports in '${importerShort}' depend on '${id}'.`,
               "",
-              "  See https://remix.run/docs/en/main/future/vite#splitting-up-client-and-server-code",
+              "  See https://remix.run/docs/en/main/guides/vite#splitting-up-client-and-server-code",
               "",
             ].join("\n")
           );
@@ -1539,7 +1560,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             "",
             `    '${id}' imported by '${importerShort}'`,
             "",
-            "  See https://remix.run/docs/en/main/future/vite#splitting-up-client-and-server-code",
+            "  See https://remix.run/docs/en/main/guides/vite#splitting-up-client-and-server-code",
             "",
           ].join("\n")
         );
@@ -1582,7 +1603,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             let str = serverOnlyExports.map((e) => `\`${e}\``).join(", ");
             let message =
               `SPA Mode: ${serverOnlyExports.length} invalid route export(s) in ` +
-              `\`${route.file}\`: ${str}. See https://remix.run/future/spa-mode ` +
+              `\`${route.file}\`: ${str}. See https://remix.run/guides/spa-mode ` +
               `for more information.`;
             throw Error(message);
           }
@@ -1595,17 +1616,20 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               let message =
                 `SPA Mode: Invalid \`HydrateFallback\` export found in ` +
                 `\`${route.file}\`. \`HydrateFallback\` is only permitted on ` +
-                `the root route in SPA Mode. See https://remix.run/future/spa-mode ` +
+                `the root route in SPA Mode. See https://remix.run/guides/spa-mode ` +
                 `for more information.`;
               throw Error(message);
             }
           }
         }
 
-        return {
-          code: removeExports(code, SERVER_ONLY_ROUTE_EXPORTS),
-          map: null,
-        };
+        let [filepath] = id.split("?");
+
+        return removeExports(code, SERVER_ONLY_ROUTE_EXPORTS, {
+          sourceMaps: true,
+          filename: id,
+          sourceFileName: filepath,
+        });
       },
     },
     {

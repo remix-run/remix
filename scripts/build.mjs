@@ -1,12 +1,13 @@
 import { spawn } from "cross-spawn";
 
 const args = process.argv.slice(2);
-const publish = process.env.CI || args.includes("--publish");
-const tsc = process.env.CI || args.includes("--tsc") || publish;
+const tsc = process.env.CI || args.includes("--tsc");
 
-exec("yarn", ["rollup", "-c"])
-  .then(() => tsc && exec("yarn", ["tsc", "-b"]))
-  .then(() => publish && exec("node", ["scripts/copy-build-to-dist.mjs"]))
+exec("pnpm", ["rollup", "-c"])
+  .then(() => tsc && exec("pnpm", ["--recursive", "tsc", "-b"]))
+  .then(() =>
+    exec("node", ["scripts/copy-build-to-dist.mjs", ...(tsc ? ["--tsc"] : [])])
+  )
   .then(() => process.exit(0))
   .catch((err) => {
     console.error(err);

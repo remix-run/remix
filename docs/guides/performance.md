@@ -69,4 +69,4 @@ Here are some other technologies to help speed up your servers:
 [lru-cache]: https://www.npmjs.com/package/lru-cache
 [redis]: https://www.npmjs.com/package/redis
 [https-esbuild-github-io-analyze]: https://esbuild.github.io/analyze
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite

@@ -49,6 +49,6 @@ Avoid using `export *` due to an [issue with `esbuild`'s CSS tree shaking][esbui
 [css-modules]: ./css-modules
 [vanilla-extract]: ./vanilla-extract
 [regular-stylesheet-imports]: ./css
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
 [vite-css]: https://vitejs.dev/guide/features#css

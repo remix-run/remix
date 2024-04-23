@@ -204,9 +204,8 @@ exports.mdx = async (filename) => {
 };
 ```
 
-[remix-vite]: ../future//vite
 [mdx-plugin]: https://mdxjs.com/packages/rollup
 [mdx]: https://mdxjs.com
 [yaml]: https://yaml.org
 [mdx-bundler]: https://github.com/kentcdodds/mdx-bundler
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite

@@ -97,7 +97,7 @@ const customServerFile = ({
     import { createRequestHandler } from "@remix-run/express";
     import { installGlobals } from "@remix-run/node";
     import express from "express";
-    installGlobals();
+    installGlobals({ nativeFetch: true });
 
     const viteDevServer =
       process.env.NODE_ENV === "production"
@@ -416,7 +416,7 @@ test.describe("Vite base / Remix basename / express build", async () => {
         import { createRequestHandler } from "@remix-run/express";
         import { installGlobals } from "@remix-run/node";
         import express from "express";
-        installGlobals();
+        installGlobals({ nativeFetch: true });
 
         const app = express();
         app.all(

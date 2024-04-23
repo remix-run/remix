@@ -34,4 +34,4 @@ module.exports = {
 
 [css-bundling]: ./bundling
 [server-dependencies-to-bundle]: ../file-conventions/remix-config#serverdependenciestobundle
-[remix-vite]: ../future/vite
+[remix-vite]: ../guides/vite

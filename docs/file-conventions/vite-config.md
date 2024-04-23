@@ -52,13 +52,7 @@ The path to the `app` directory, relative to the project root. Defaults to
 
 #### future
 
-The `future` config lets you opt-into future breaking changes via [Future Flags][future-flags]. The following future flags currently exist in Remix v2 and will become the default behavior in Remix v3:
-
-- **`v3_fetcherPersist`**: Change fetcher persistence/cleanup behavior in 2 ways ([RFC][fetcherpersist-rfc]):
-  - Fetchers are no longer removed on unmount, and remain exposed via [`useFetchers`][use-fetchers] until they return to an `idle` state
-  - Fetchers that complete while still mounted no longer persist in [`useFetchers`][use-fetchers] since you can access those fetchers via [`useFetcher`][use-fetcher]
-- **`v3_relativeSplatPath`**: Fixes buggy relative path resolution in splat routes. Please see the [React Router docs][relativesplatpath] for more information.
-- **`v3_throwAbortReason`**: When a server-side request is aborted, Remix will throw the `request.signal.reason` instead of an error such as `new Error("query() call aborted...")`
+The `future` config lets you opt-into future breaking changes via [Future Flags][future-flags]. Please see the [Current Future Flags][current-future-flags] section for a list of all available Future Flags.
 
 #### ignoredRouteFiles
 
@@ -139,17 +133,14 @@ A function for assigning addressable routes to [server bundles][server-bundles].
 
 You may also want to enable the `manifest` option since, when server bundles are enabled, it contains mappings between routes and server bundles.
 
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
 [remix-config]: ./remix-config
 [vite]: https://vitejs.dev
 [future-flags]: ../start/future-flags
-[fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
-[use-fetchers]: ../hooks/use-fetchers
-[use-fetcher]: ../hooks/use-fetcher
-[relativesplatpath]: https://reactrouter.com/en/main/hooks/use-resolved-path#splat-paths
 [minimatch]: https://npm.im/minimatch
-[presets]: ../future/presets
-[server-bundles]: ../future/server-bundles
+[presets]: ../guides/presets
+[server-bundles]: ../guides/server-bundles
 [rr-basename]: https://reactrouter.com/routers/create-browser-router#basename
 [vite-public-base-path]: https://vitejs.dev/config/shared-options.html#base
 [vite-base]: https://vitejs.dev/config/shared-options.html#base
+[current-future-flags]: ../start/future-flags#current-future-flags
