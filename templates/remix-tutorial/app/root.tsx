@@ -1,7 +1,6 @@
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   Scripts,
   ScrollRestoration,
@@ -48,7 +47,6 @@ export default function App() {
 
         <ScrollRestoration />
         <Scripts />
-        <LiveReload />
       </body>
     </html>
   );

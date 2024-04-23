@@ -1,7 +1,6 @@
 ---
 title: Contributing
 description: Thank you for contributing to Remix! Here's everything you need to know before you open a pull request.
-order: 6
 ---
 
 # Contributing to Remix
