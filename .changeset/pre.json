@@ -25,5 +25,7 @@
     "@remix-run/server-runtime": "2.9.0",
     "@remix-run/testing": "2.9.0"
   },
-  "changesets": []
+  "changesets": [
+    "sweet-falcons-relax"
+  ]
 }
