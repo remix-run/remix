@@ -26,6 +26,7 @@
     "@remix-run/testing": "2.9.0"
   },
   "changesets": [
-    "sweet-falcons-relax"
+    "sweet-falcons-relax",
+    "thirty-donuts-clean"
   ]
 }
