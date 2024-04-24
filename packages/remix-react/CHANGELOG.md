@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Ignore future/\*.d.ts files from TS build ([#9299](https://github.com/remix-run/remix/pull/9299))
+- Ignore `future/*.d.ts` files from TS build ([#9299](https://github.com/remix-run/remix/pull/9299))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.9.1`
 

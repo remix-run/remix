@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Fix issue where consumers who had added Remix packages to Vite's `ssr.noExternal` option were being overridden by the Remix Vite plugin adding Remix packages to Vite's `ssr.external` option. ([#9301](https://github.com/remix-run/remix/pull/9301))
+- Fix issue where consumers who had added Remix packages to Vite's `ssr.noExternal` option were being overridden by the Remix Vite plugin adding Remix packages to Vite's `ssr.external` option ([#9301](https://github.com/remix-run/remix/pull/9301))
 - Updated dependencies:
   - `@remix-run/node@2.9.1`
   - `@remix-run/server-runtime@2.9.1`
