@@ -167,6 +167,22 @@ Date: YYYY-MM-DD
 
 -->
 
+## v2.9.1
+
+Date: 2024-04-24
+
+### Patch Changes
+
+- `@remix-run/dev` - Fix issue where consumers who had added Remix packages to Vite's `ssr.noExternal` option were being overridden by the Remix Vite plugin adding Remix packages to Vite's `ssr.external` option ([#9301](https://github.com/remix-run/remix/pull/9301))
+- `@remix-run/react` - Ignore `future/*.d.ts` files from TS build ([#9299](https://github.com/remix-run/remix/pull/9299))
+
+### Changes by Package
+
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.9.1/packages/remix-dev/CHANGELOG.md#291)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.9.1/packages/remix-react/CHANGELOG.md#291)
+
+**Full Changelog**: [`v2.9.0...v2.9.1`](https://github.com/remix-run/remix/compare/remix@2.9.0...remix@2.9.1)
+
 ## v2.9.0
 
 Date: 2024-04-23

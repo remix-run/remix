@@ -1,19 +1,12 @@
 # `@remix-run/react`
 
-## 2.9.1-pre.1
+## 2.9.1
 
 ### Patch Changes
 
+- Ignore `future/*.d.ts` files from TS build ([#9299](https://github.com/remix-run/remix/pull/9299))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.9.1-pre.1`
-
-## 2.9.1-pre.0
-
-### Patch Changes
-
-- Ignore future/\*.d.ts files from TS build ([#9299](https://github.com/remix-run/remix/pull/9299))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.9.1-pre.0`
+  - `@remix-run/server-runtime@2.9.1`
 
 ## 2.9.0
 
