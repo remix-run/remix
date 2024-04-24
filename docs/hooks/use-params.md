@@ -15,4 +15,6 @@ function SomeComponent() {
 }
 ```
 
-Assuming a route like `routes/posts/$postId.tsx` is matched by `/posts/123` then `params.postId` will be `"123"`.
+Assuming a route like `routes/posts/$postId.tsx` is matched by `/posts/123` then `params.postId` will be `"123"`. Params for [splat routes][splat-routes] are available as `params["*"]`.
+
+[splat-routes]: ../file-conventions/routes#splat-routes

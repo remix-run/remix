@@ -183,7 +183,7 @@ export const PostPreview = ({ title, description }) => {
 [file_convention_server]: ../file-conventions/-server
 [window_global]: https://developer.mozilla.org/en-US/docs/Web/API/Window/window
 [server-bundles]: ../guides/server-bundles
-[vite-config]: ../file-conventions/vite-configuration
+[vite-config]: ../file-conventions/vite-config
 [vite-env-only]: https://github.com/pcattori/vite-env-only
 [classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
 [remix-vite]: ../guides/vite

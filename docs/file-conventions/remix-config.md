@@ -275,7 +275,7 @@ There are a few conventions that Remix uses you should be aware of.
 [browser-node-builtins-polyfill]: #browsernodebuiltinspolyfill
 [server-node-builtins-polyfill]: #servernodebuiltinspolyfill
 [future-flags]: ../start/future-flags
+[current-future-flags]: ../start/future-flags#current-future-flags
 [classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
 [remix-vite]: ../guides/vite
-[vite-config]: ./vite-configuration
-[current-future-flags]: ../start/future-flags#current-future-flags
+[vite-config]: ./vite-config
