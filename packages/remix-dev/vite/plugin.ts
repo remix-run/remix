@@ -1054,24 +1054,26 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               : "custom",
 
           ssr: {
-            external: [
-              // This is only necessary for development within the Remix repo
-              // because these packages are symlinked and Vite treats them as
-              // internal source code. For consumers this is a no-op.
-              "@remix-run/architect",
-              "@remix-run/cloudflare-pages",
-              "@remix-run/cloudflare-workers",
-              "@remix-run/cloudflare",
-              "@remix-run/css-bundle",
-              "@remix-run/deno",
-              "@remix-run/dev",
-              "@remix-run/express",
-              "@remix-run/netlify",
-              "@remix-run/node",
-              "@remix-run/react",
-              "@remix-run/serve",
-              "@remix-run/server-runtime",
-            ],
+            external: isInRemixMonorepo()
+              ? [
+                  // This is only needed within the Remix repo because these
+                  // packages are linked to a directory outside of node_modules
+                  // so Vite treats them as internal code by default.
+                  "@remix-run/architect",
+                  "@remix-run/cloudflare-pages",
+                  "@remix-run/cloudflare-workers",
+                  "@remix-run/cloudflare",
+                  "@remix-run/css-bundle",
+                  "@remix-run/deno",
+                  "@remix-run/dev",
+                  "@remix-run/express",
+                  "@remix-run/netlify",
+                  "@remix-run/node",
+                  "@remix-run/react",
+                  "@remix-run/serve",
+                  "@remix-run/server-runtime",
+                ]
+              : undefined,
           },
           optimizeDeps: {
             include: [
@@ -1770,6 +1772,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     },
   ];
 };
+
+function isInRemixMonorepo() {
+  let devPath = path.dirname(require.resolve("@remix-run/dev/package.json"));
+  let devParentDir = path.basename(path.resolve(devPath, ".."));
+  return devParentDir === "packages";
+}
 
 function isEqualJson(v1: unknown, v2: unknown) {
   return JSON.stringify(v1) === JSON.stringify(v2);
