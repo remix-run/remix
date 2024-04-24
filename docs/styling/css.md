@@ -14,6 +14,8 @@ CSS Maintenance issues can creep into a web app for a few reasons. It can get di
 
 Remix alleviates these issues with route-based stylesheets. Nested routes can each add their own stylesheets to the page and Remix will automatically prefetch, load, and unload them with the route. When the scope of concern is limited to just the active routes, the risks of these problems are reduced significantly. The only chances for conflicts are with the parent routes' styles (and even then, you will likely see the conflict since the parent route is also rendering).
 
+<docs-warning>If you're using the [Classic Remix Compiler][classic-remix-compiler] rather than [Remix Vite][remix-vite], you should remove `?url` from the end of your CSS import paths.</docs-warning>
+
 ### Route Styles
 
 Each route can add style links to the page, for example:
@@ -21,7 +23,7 @@ Each route can add style links to the page, for example:
 ```tsx filename=app/routes/dashboard.tsx
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-import styles from "~/styles/dashboard.css";
+import styles from "~/styles/dashboard.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
@@ -31,7 +33,7 @@ export const links: LinksFunction = () => [
 ```tsx filename=app/routes/dashboard.accounts.tsx
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-import styles from "~/styles/accounts.css";
+import styles from "~/styles/accounts.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
@@ -41,7 +43,7 @@ export const links: LinksFunction = () => [
 ```tsx filename=app/routes/dashboard.sales.tsx
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-import styles from "~/styles/sales.css";
+import styles from "~/styles/sales.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
@@ -116,7 +118,7 @@ Note that these are not routes, but they export `links` functions as if they wer
 ```tsx filename=app/components/button/index.tsx lines=[1,3,5-7]
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-import styles from "./styles.css";
+import styles from "./styles.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
@@ -144,7 +146,7 @@ import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 import { Button, links as buttonLinks } from "../button";
 
-import styles from "./styles.css";
+import styles from "./styles.css?url";
 
 export const links: LinksFunction = () => [
   ...buttonLinks(),
@@ -174,7 +176,7 @@ import {
   PrimaryButton,
   links as primaryButtonLinks,
 } from "~/components/primary-button";
-import styles from "~/styles/index.css";
+import styles from "~/styles/index.css?url";
 
 export const links: LinksFunction = () => [
   ...primaryButtonLinks(),
@@ -193,7 +195,7 @@ import { AddFavoriteButton } from "~/components/add-favorite-button";
 import { ProductDetails } from "~/components/product-details";
 import { ProductTile } from "~/components/product-tile";
 import { TileGrid } from "~/components/tile-grid";
-import styles from "~/styles/$category.css";
+import styles from "~/styles/$category.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
@@ -235,7 +237,7 @@ import {
   TileGrid,
   links as tileGridLinks,
 } from "~/components/tile-grid";
-import styles from "~/styles/$category.css";
+import styles from "~/styles/$category.css?url";
 
 export const links: LinksFunction = () => {
   return [
@@ -273,7 +275,7 @@ Since these are just `<link>` tags, you can do more than stylesheet links, like 
 ```tsx filename=app/components/copy-to-clipboard.tsx lines=[6-11]
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-import styles from "./styles.css";
+import styles from "./styles.css?url";
 
 export const links: LinksFunction = () => [
   {
@@ -330,3 +332,5 @@ export const links: LinksFunction = () => {
 [links]: ../route/links
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../components/link
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite

@@ -1,5 +1,6 @@
 const path = require("node:path");
 const babel = require("@rollup/plugin-babel").default;
+const commonjs = require("@rollup/plugin-commonjs");
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
 
@@ -37,6 +38,7 @@ module.exports = function rollup() {
           extensions: [".ts", ".tsx"],
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
+        commonjs({ ignoreDynamicRequires: true }),
         copy({
           targets: [
             { src: "LICENSE.md", dest: [outputDir, sourceDir] },

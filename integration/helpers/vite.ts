@@ -53,7 +53,7 @@ export const EXPRESS_SERVER = (args: {
     import { installGlobals } from "@remix-run/node";
     import express from "express";
 
-    installGlobals();
+    installGlobals({ nativeFetch: true });
 
     let viteDevServer =
       process.env.NODE_ENV === "production"

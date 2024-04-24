@@ -1,16 +1,14 @@
-# Welcome to Remix!
+# Welcome to Remix + Vite!
 
-- [Remix Docs](https://remix.run/docs)
+📖 See the [Remix docs](https://remix.run/docs) and the [Remix Vite docs](https://remix.run/docs/en/main/guides/vite) for details on supported features.
 
 ## Development
 
-Start the Remix development asset server and the Express server by running:
+Run the Express server with Vite dev middleware:
 
-```sh
+```shellscript
 npm run dev
 ```
-
-This starts your app in development mode, which will purge the server require cache when Remix rebuilds assets so you don't need a process manager restarting the express server.
 
 ## Deployment
 
@@ -30,7 +28,7 @@ Now you'll need to pick a host to deploy it to.
 
 ### DIY
 
-If you're familiar with deploying express applications you should be right at home just make sure to deploy the output of `remix build`
+If you're familiar with deploying Express applications you should be right at home. Just make sure to deploy the output of `npm run build`
 
-- `build/`
-- `public/build/`
+- `build/server`
+- `build/client`

@@ -44,8 +44,9 @@ export function json(value: JsonObject) {
 }
 
 export async function createFixture(init: FixtureInit, mode?: ServerMode) {
-  installGlobals();
+  installGlobals({ nativeFetch: true });
   let compiler = init.compiler ?? "remix";
+
   let projectDir = await createFixtureProject(init, mode);
   let buildPath = url.pathToFileURL(
     path.join(

@@ -4,9 +4,11 @@ title: Tailwind
 
 # Tailwind
 
+<docs-warning>This documentation is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. If you're using [Remix Vite][remix-vite], Tailwind can be integrated using [Vite's built-in PostCSS support][vite-postcss].</docs-warning>
+
 Perhaps the most popular way to style a Remix application in the community is to use [Tailwind CSS][tailwind].
 
-Remix supports tailwind automatically if `tailwind.config.js` is present in the root of your project. You can disable it in [Remix Config][remix_config]
+Remix supports Tailwind automatically if `tailwind.config.js` is present in the root of your project. You can disable it in [Remix Config][remix_config]
 
 Tailwind has the benefits of inline-style co-location for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out to a reasonable size, even for large applications. Load that file into the `app/root.tsx` links and be done with it.
 
@@ -81,3 +83,6 @@ Alternatively, you can use [PostCSS][built-in-post-css-support] with the [postcs
 [built-in-post-css-support]: ./postcss
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
 [postcss-import]: https://github.com/postcss/postcss-import
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
+[vite-postcss]: https://vitejs.dev/guide/features#postcss

@@ -282,16 +282,21 @@ export function singleFetchUrl(reqUrl: URL | string) {
 
 async function fetchAndDecode(url: URL, init?: RequestInit) {
   let res = await fetch(url, init);
-  if (res.headers.get("Content-Type")?.includes("text/x-turbo")) {
-    invariant(res.body, "No response body to decode");
+  // Don't do a hard check against the header here.  We'll get `text/x-turbo`
+  // when we have a running server, but if folks want to prerender `.data` files
+  // and serve them from a CDN we should let them come back with whatever
+  // Content-Type their CDN provides and not force them to make sure `.data`
+  // files are served as `text/x-turbo`.  We'll throw if we can't decode anyway.
+  invariant(res.body, "No response body to decode");
+  try {
     let decoded = await decodeViaTurboStream(res.body, window);
     return { status: res.status, data: decoded.value };
+  } catch (e) {
+    console.error(e);
+    throw new Error(
+      `Unable to decode turbo-stream response from URL: ${url.toString()}`
+    );
   }
-
-  // If we didn't get back a turbo-stream response, then we never reached the
-  // Remix server and likely this is a network error - just expose up the
-  // response body as an Error
-  throw new Error(await res.text());
 }
 
 // Note: If you change this function please change the corresponding

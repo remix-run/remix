@@ -180,7 +180,7 @@ let customServer = (options: { appPort: number; devReady: string }) => {
       import { createRequestHandler } from "@remix-run/express";
       import { ${options.devReady}, installGlobals } from "@remix-run/node";
 
-      installGlobals();
+      installGlobals({ nativeFetch: true });
 
       const app = express();
       app.use(express.static("public", { immutable: true, maxAge: "1y" }));

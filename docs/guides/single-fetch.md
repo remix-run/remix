@@ -14,8 +14,9 @@ When you enable Single Fetch, Remix will make a single HTTP call to your server 
 
 - Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
+- You must add `node_modules/@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `include` array to get proper type inference
 - Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
-- The `headers` function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
+- The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
 
 ## Details
 
@@ -51,11 +52,28 @@ You can control this by exporting a `streamTimeout` numeric value from your `ent
 
 ### Type Inference
 
-The current generics support type inference but have a built-in assumption of a JSON-serialized response. With the new streaming format, this assumption no longer holds so `useLoaderData<typeof loader>()` will _not_ return the proper types because it would assume that a `Date` would be a string on the client 😕. Unfortunately, we can't make these types aware of a runtime future flag and we do not want to introduce another hook just for this. Thankfully, the manual typing is also much simpler without needing to think about JSON serialization, so the current recommendation is to skip the generics when opting into single fetch and manually cast the type yourself:
+Without Single Fetch, any plain Javascript object returned from a `loader` or `action` is automatically serialized into a JSON response (as if you returned it via `json`). The type inference assumes this is the case and infer naked object returns as if they were JSON serialized.
+
+With Single Fetch, naked objects will be streamed directly, so the built-in type inference is no longer accurate once you have opted-into Single Fetch. For example, they would assume that a `Date` would be serialized to a string on the client 😕.
+
+In order to ensure you get the proper types when using Single Fetch, we've included a set of type overrides that you can include in your `tsconfig.json` which aligns the types with the Single Fetch behavior:
+
+```json
+{
+  "include": [
+    // ...
+    "node_modules/@remix-run/react/future/single-fetch.d.ts"
+  ]
+}
+```
+
+**`useLoaderData`, `useActionData`, `useRouteLoaderData`, and `useFetcher`**
+
+These methods do not require any code changes on your part - adding the single fetch types will cause their generics to deserialize correctly:
 
 ```ts
 export async function loader() {
-  const data = await fetchSomeData(); // Assume this returns
+  const data = await fetchSomeData();
   return {
     message: data.message, // <- string
     date: data.date, // <- Date
@@ -63,24 +81,38 @@ export async function loader() {
 }
 
 export default function Component() {
-  // ❌ Before
+  // ❌ Before opting into single fetch types, types are serialized via JSON.stringify
   const data = useLoaderData<typeof loader>();
   //    ^? { message: string, date: string }
 
-  // ✅ After
-  const data = useLoaderData() as Awaited<
-    ReturnType<typeof loader>
-  >;
+  // ✅ After opting into single fetch types, types are serialized via turbo-stream
+  const data = useLoaderData<typeof loader>;
   //    ^? { message: string, date: Date }
 }
 ```
 
-In the next version of Remix, we may re-introduce this generic, but because it's so simple in the meantime you could wrap this up into your own utility:
+**`useMatches`**
 
-```ts
-function useTypedLoaderData<T>() {
-  return useLoaderData() as Awaited<ReturnType<T>>;
-}
+`useMatches` requires a manual cast to specify the loader type in order to get proper type inference on a given `match.data`. When using Single Fetch, you will need to replace the `UIMatch` type with `UIMatch_SingleFetch`:
+
+```diff
+  let matches = useMatches();
+- let rootMatch = matches[0] as UIMatch<typeof loader>;
++ let rootMatch = matches[0] as UIMatch_SingleFetch<typeof loader>;
+```
+
+**`meta` Function**
+
+`meta` functions also require a generic to indicate the current and ancestor route loader types in order to properly type the `data` and `matches` parameters. When using Single Fetch, you will need to replace the `MetaArgs` type with `MetaArgs_SingleFetch`:
+
+```diff
+  export function meta({
+    data,
+    matches,
+- }: MetaArgs<typeof loader, { root: typeof rootLoader }>) {
++ }: MetaArgs_SingleFetch<typeof loader, { root: typeof rootLoader }>) {
+    // ...
+  }
 ```
 
 ### Revalidations
@@ -91,29 +123,31 @@ With Single Fetch, if an `action` returns or throws a `Response` with a `4xx/5xx
 
 Revalidation is handled via a `?_routes` query string parameter on the single fetch HTTP call which limits the loaders being called. This means that when you are doing fine-grained revalidation, you will have cache enumerations based on the routes being requested - but all of the information is in the URL so you should not need any special CDN configurations (as opposed to if this was done via a custom header that required your CDN to respect the `Vary` header).
 
-This "functionality" is handled via the `future.unstable_skipActionErrorRevalidation` flag in React Router, which is always set to true when Single Fetch is enabled.
-
 ### Headers
 
 The [`headers`][headers] function is no longer used when Single Fetch is enabled.
-Instead, your `loader`/`action` functions now receive a mutable `response` parameter unique to that execution:
-
-```ts
-type ResponseStub = {
-  status: numbers | undefined;
-  headers: Headers;
-};
-```
+Instead, your `loader`/`action` functions now receive a mutable `ResponseStub` unique to that execution:
 
 - To alter the status of your HTTP Response, set the `status` field directly:
   - `response.status = 201`
 - To set the headers on your HTTP Response, use the standard [`Headers`][mdn-headers] APIs:
-  - `response.headers.set`
-  - `response.headers.append`
-  - `response.headers.delete`
+  - `response.headers.set(name, value)`
+  - `response.headers.append(name, value)`
+  - `response.headers.delete(name)`
 
 ```ts
-export async function action({ request, response }) {
+type ResponseStub = {
+  status: number | undefined;
+  headers: Headers;
+};
+
+export async function action({
+  request,
+  response,
+}: {
+  request: Request;
+  response?: ResponseStub;
+}) {
   if (!loggedIn(request)) {
     response.status = 401;
     response.headers.append("Set-Cookie", "foo=bar");
@@ -127,8 +161,8 @@ export async function action({ request, response }) {
 Each `loader`/`action` receives it's own unique `response` instance so you cannot see what other `loader`/`action` functions have set (which would be subject to race conditions). The resulting HTTP Response status and headers are determined as follows:
 
 - Status Code
-  - If all status codes are unset or have values <200, the deepest status code will be used for the HTTP response
-  - If any status codes are set to a value >=300, the highest >=300 value will be used for the HTTP Response
+  - If all status codes are unset or have values <300, the deepest status code will be used for the HTTP response
+  - If any status codes are set to a value >=300, the shallowest >=300 value will be used for the HTTP Response
 - Headers
   - Remix tracks header operations and will replay them on a fresh `Headers` instance after all handlers have completed
   - These are replayed in order - action first (if present) followed by loaders in top-down order
@@ -167,7 +201,7 @@ export function clientLoader({ serverLoader }) {
 }
 ```
 
-If a user navigates from `/ -> /a/b/c`, then we need to run the server loaders for `a` and `b`, and the `clientLoader` for `c` - which may eventually (or may not) call it's own server `loader`. We can't decide to include the `c` server `loader` in a single fetch call when we want to fetch the `a`/`b` `loader`'s', nor can we delay until `c` actually makes the `serverLoader` call (or returns) without introducing a waterfall.
+If a user navigates from `/ -> /a/b/c`, then we need to run the server loaders for `a` and `b`, and the `clientLoader` for `c` - which may eventually (or may not) call it's own server `loader`. We can't decide to include the `c` server `loader` in a single fetch call when we want to fetch the `a`/`b` `loader`'s, nor can we delay until `c` actually makes the `serverLoader` call (or returns) without introducing a waterfall.
 
 Therefore, when you export a `clientLoader` that route opts-out of Single Fetch and when you call `serverLoader` it will make a single fetch to get only it's route server `loader`. All routes that do not export a `clientLoader` will be fetched in a singular HTTP request.
 
