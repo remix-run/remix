@@ -39,7 +39,8 @@ export type FileUploadHandlerPathResolver = (
 export type FileUploadHandlerOptions = {
   /**
    * Avoid file conflicts by appending a count on the end of the filename
-   * if it already exists on disk. Defaults to `true`.
+   * if it already exists on disk.
+   * @default true
    */
   avoidFileConflicts?: boolean;
   /**
@@ -53,7 +54,7 @@ export type FileUploadHandlerOptions = {
   file?: FileUploadHandlerPathResolver;
   /**
    * The maximum upload size allowed. If the size is exceeded an error will be thrown.
-   * Defaults to 3000000B (3MB).
+   * @default 3000000 (3MB)
    */
   maxPartSize?: number;
   /**

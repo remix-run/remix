@@ -62,8 +62,7 @@ export type RedirectFunction = (
 
 /**
  * A redirect response. Sets the status code and the `Location` header.
- * Defaults to "302 Found".
- *
+ * @default 302 Found
  * @see https://remix.run/utils/redirect
  */
 export const redirect: RedirectFunction = (url, init = 302) => {
@@ -73,7 +72,7 @@ export const redirect: RedirectFunction = (url, init = 302) => {
 /**
  * A redirect response that will force a document reload to the new location.
  * Sets the status code and the `Location` header.
- * Defaults to "302 Found".
+ * @default 302 Found
  *
  * @see https://remix.run/utils/redirect
  */

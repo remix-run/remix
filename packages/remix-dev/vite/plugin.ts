@@ -193,12 +193,13 @@ export type Preset = {
 
 export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
   /**
-   * The react router app basename.  Defaults to `"/"`.
+   * The react router app basename.
+   * @default "/"
    */
   basename?: string;
   /**
-   * The path to the build directory, relative to the project. Defaults to
-   * `"build"`.
+   * The path to the build directory, relative to the project.
+   * @default "build"
    */
   buildDirectory?: string;
   /**
@@ -207,7 +208,7 @@ export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
   buildEnd?: BuildEndHook;
   /**
    * Whether to write a `"manifest.json"` file to the build directory.`
-   * Defaults to `false`.
+   * @default false
    */
   manifest?: boolean;
   /**
@@ -218,7 +219,7 @@ export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
   /**
    * The file name of the server build output. This file
    * should end in a `.js` extension and should be deployed to your server.
-   * Defaults to `"index.js"`.
+   * @default "index.js"
    */
   serverBuildFile?: string;
   /**
@@ -231,7 +232,8 @@ export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
    * Enable server-side rendering for your application. Disable to use Remix in
    * "SPA Mode", which will request the `/` path at build-time and save it as
    * an `index.html` file with your assets so your application can be deployed
-   * as a SPA without server-rendering. Default's to `true`.
+   * as a SPA without server-rendering.
+   * @default true
    */
   ssr?: boolean;
 };

@@ -16,7 +16,8 @@ export interface ConfigRoute {
   index?: boolean;
 
   /**
-   * Should be `true` if the `path` is case-sensitive. Defaults to `false`.
+   * Should be `true` if the `path` is case-sensitive.
+   * @default false
    */
   caseSensitive?: boolean;
 
@@ -45,8 +46,8 @@ export interface RouteManifest {
 
 export interface DefineRouteOptions {
   /**
-   * Should be `true` if the route `path` is case-sensitive. Defaults to
-   * `false`.
+   * Should be `true` if the route `path` is case-sensitive.
+   * @default false
    */
   caseSensitive?: boolean;
 

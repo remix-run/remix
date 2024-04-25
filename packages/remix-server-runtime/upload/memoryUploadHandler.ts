@@ -10,7 +10,7 @@ export type MemoryUploadHandlerFilterArgs = {
 export type MemoryUploadHandlerOptions = {
   /**
    * The maximum upload size allowed. If the size is exceeded an error will be thrown.
-   * Defaults to 3000000B (3MB).
+   * @default 3000000 (3MB)
    */
   maxPartSize?: number;
   /**

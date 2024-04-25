@@ -50,14 +50,15 @@ type NodeBuiltinsPolyfillOptions = Pick<
  */
 export interface AppConfig {
   /**
-   * The path to the `app` directory, relative to `remix.config.js`. Defaults
-   * to `"app"`.
+   * The path to the `app` directory, relative to `remix.config.js`.
+   * @default "app"
    */
   appDirectory?: string;
 
   /**
    * The path to a directory Remix can use for caching things in development,
-   * relative to `remix.config.js`. Defaults to `".cache"`.
+   * relative to `remix.config.js`.
+   * @default ".cache"
    */
   cacheDirectory?: string;
 
@@ -73,14 +74,15 @@ export interface AppConfig {
     | Promise<ReturnType<DefineRoutesFunction>>;
 
   /**
-   * The path to the browser build, relative to `remix.config.js`. Defaults to
-   * "public/build".
+   * The path to the browser build, relative to `remix.config.js`.
+   * @default "public/build"
    */
   assetsBuildDirectory?: string;
 
   /**
-   * The URL prefix of the browser build with a trailing slash. Defaults to
-   * `"/build/"`. This is the path the browser will use to find assets.
+   * The URL prefix of the browser build with a trailing slash.
+   * This is the path the browser will use to find assets.
+   * @default "/build/"
    */
   publicPath?: string;
 
@@ -96,7 +98,7 @@ export interface AppConfig {
 
   /**
    * Whether to process CSS using PostCSS if a PostCSS config file is present.
-   * Defaults to `true`.
+   * @default true
    */
   postcss?: boolean;
 
@@ -131,7 +133,7 @@ export interface AppConfig {
 
   /**
    * The order of main fields to use when resolving server dependencies.
-   * Defaults to `["main", "module"]`.
+   * @default ["main", "module"]
    *
    * For more information, see: https://esbuild.github.io/api/#main-fields
    */
@@ -139,12 +141,13 @@ export interface AppConfig {
 
   /**
    * Whether to minify the server build in production or not.
-   * Defaults to `false`.
+   * @default false
    */
   serverMinify?: boolean;
 
   /**
-   * The output format of the server build. Defaults to "esm".
+   * The output format of the server build.
+   * @default "esm"
    */
   serverModuleFormat?: ServerModuleFormat;
 
@@ -160,13 +163,15 @@ export interface AppConfig {
   browserNodeBuiltinsPolyfill?: NodeBuiltinsPolyfillOptions;
 
   /**
-   * The platform the server build is targeting. Defaults to "node".
+   * The platform the server build is targeting.
+   * @default "node"
    */
   serverPlatform?: ServerPlatform;
 
   /**
    * Whether to support Tailwind functions and directives in CSS files if
-   * `tailwindcss` is installed. Defaults to `true`.
+   * `tailwindcss` is installed.
+   * @default true
    */
   tailwind?: boolean;
 
@@ -266,7 +271,7 @@ export interface RemixConfig {
 
   /**
    * Whether to process CSS using PostCSS if a PostCSS config file is present.
-   * Defaults to `true`.
+   * @default true
    */
   postcss: boolean;
 
@@ -304,7 +309,7 @@ export interface RemixConfig {
 
   /**
    * The order of main fields to use when resolving server dependencies.
-   * Defaults to `["main", "module"]`.
+   * @default ["main", "module"]
    *
    * For more information, see: https://esbuild.github.io/api/#main-fields
    */
@@ -312,7 +317,7 @@ export interface RemixConfig {
 
   /**
    * Whether to minify the server build in production or not.
-   * Defaults to `false`.
+   * @default false
    */
   serverMinify: boolean;
 
@@ -322,7 +327,8 @@ export interface RemixConfig {
   serverMode: ServerMode;
 
   /**
-   * The output format of the server build. Defaults to "esm".
+   * The output format of the server build.
+   * @default "esm"
    */
   serverModuleFormat: ServerModuleFormat;
 
@@ -338,13 +344,14 @@ export interface RemixConfig {
   browserNodeBuiltinsPolyfill?: NodeBuiltinsPolyfillOptions;
 
   /**
-   * The platform the server build is targeting. Defaults to "node".
+   * The platform the server build is targeting.
+   * @default "node"
    */
   serverPlatform: ServerPlatform;
 
   /**
    * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
-   * Defaults to `true`.
+   * @default true
    */
   tailwind: boolean;
 
