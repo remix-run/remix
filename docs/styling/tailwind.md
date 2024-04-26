@@ -55,7 +55,7 @@ import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 // ...
 
-import styles from "./tailwind.css";
+import styles from "./tailwind.css?url"; // ?url bypasses Vite injection
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
