@@ -1,4 +1,4 @@
-import type { MetaArgs, UNSAFE_MetaMatch } from "@remix-run/react";
+import type { MetaArgs, UIMatch, UNSAFE_MetaMatch } from "@remix-run/react";
 import type {
   LoaderFunctionArgs,
   ActionFunctionArgs,
@@ -57,7 +57,7 @@ declare module "@remix-run/react" {
     : never;
 
   export function useActionData<T>(): T extends ActionFunction_SingleFetch
-    ? SingleFetchSerialize_V2<T>
+    ? SingleFetchSerialize_V2<T> | undefined
     : never;
 
   export function useRouteLoaderData<T>(
