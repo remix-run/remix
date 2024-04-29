@@ -94,14 +94,17 @@ Without Single Fetch, any plain Javascript object returned from a `loader` or `a
 
 With Single Fetch, naked objects will be streamed directly, so the built-in type inference is no longer accurate once you have opted-into Single Fetch. For example, they would assume that a `Date` would be serialized to a string on the client 😕.
 
-In order to ensure you get the proper types when using Single Fetch, we've included a set of type overrides that you can include in your `tsconfig.json` which aligns the types with the Single Fetch behavior:
+In order to ensure you get the proper types when using Single Fetch, we've included a set of type overrides that you can include in your `tsconfig.json`'s `compilerOptions.types` array which aligns the types with the Single Fetch behavior:
 
 ```json
 {
-  "include": [
-    // ...
-    "node_modules/@remix-run/react/future/single-fetch.d.ts"
-  ]
+  "compilerOptions": {
+    //...
+    "types": [
+      // ...
+      "@remix-run/react/future/single-fetch.d.ts"
+    ]
+  }
 }
 ```
 
