@@ -17,6 +17,7 @@ When you enable Single Fetch, Remix will make a single HTTP call to your server 
 - You must add `node_modules/@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `include` array to get proper type inference
 - Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 - The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
+- The old `installGlobals()` polyfill doens't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
 
 ## Details
 
@@ -270,6 +271,13 @@ And then when `c` calls `serverLoader`, it'll make it's own call for just the `c
 GET /a/b/c.data?_routes=routes/c
 ```
 
+### Fetch Polyfill
+
+Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or using the built-in `fetch` on Node 20+, because it relies on APIs available there but not in the `@remix-run/web-fetch` polyfill. Please refer to the [Undici][undici-polyfill] section in the 2.9.0 release notes below for more details.
+
+- If you are managing your own server and calling `installGlobals()`, you will need to call `installGlobals({ nativeFetch: true })` to avoid runtime errors when using Single Fetch
+- If you are using `remix-serve`, it will use `undici` automatically if Single Fetch is enabled.
+
 [future-flags]: ../file-conventions/remix-config#future
 [should-revalidate]: ../route/should-revalidate
 [entry-server]: ../file-conventions/entry.server
@@ -284,3 +292,5 @@ GET /a/b/c.data?_routes=routes/c
 [starttransition]: https://react.dev/reference/react/startTransition
 [headers]: ../route/headers
 [mdn-headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
+[undici-polyfill]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#undici
+[undici]: https://github.com/nodejs/undici
