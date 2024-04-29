@@ -206,4 +206,4 @@ Note that, even if this issue didn't exist, we'd still recommend using named re-
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/fetch
 [set_cookie_header]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie
 [cookie_header]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
+[classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite

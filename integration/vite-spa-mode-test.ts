@@ -44,7 +44,7 @@ test.describe("SPA Mode", () => {
         let stderr = result.stderr.toString("utf8");
         expect(stderr).toMatch(
           "SPA Mode: 3 invalid route export(s) in `routes/invalid-exports.tsx`: " +
-            "`headers`, `loader`, `action`. See https://remix.run/future/spa-mode " +
+            "`headers`, `loader`, `action`. See https://remix.run/guides/spa-mode " +
             "for more information."
         );
       });
@@ -74,7 +74,7 @@ test.describe("SPA Mode", () => {
         expect(stderr).toMatch(
           "SPA Mode: Invalid `HydrateFallback` export found in `routes/invalid-exports.tsx`. " +
             "`HydrateFallback` is only permitted on the root route in SPA Mode. " +
-            "See https://remix.run/future/spa-mode for more information."
+            "See https://remix.run/guides/spa-mode for more information."
         );
       });
 
@@ -833,7 +833,7 @@ test.describe("SPA Mode", () => {
 
     test("hydrates a proper useId value", async ({ page }) => {
       // SSR'd useId value we can assert against pre- and post-hydration
-      let USE_ID_VALUE = ":R1:";
+      let USE_ID_VALUE = ":R5:";
 
       // Ensure we SSR a proper useId value
       let res = await fixture.requestDocument("/");

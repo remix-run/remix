@@ -55,7 +55,7 @@ import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 // ...
 
-import styles from "./tailwind.css";
+import styles from "./tailwind.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
@@ -83,6 +83,6 @@ Alternatively, you can use [PostCSS][built-in-post-css-support] with the [postcs
 [built-in-post-css-support]: ./postcss
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
 [postcss-import]: https://github.com/postcss/postcss-import
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
 [vite-postcss]: https://vitejs.dev/guide/features#postcss

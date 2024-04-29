@@ -48,6 +48,6 @@ Button.displayName = "Button";
 [vanilla-extract]: https://vanilla-extract.style
 [sprinkles]: https://vanilla-extract.style/documentation/packages/sprinkles
 [css-bundling]: ./bundling
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
 [vanilla-extract-vite]: https://vanilla-extract.style/documentation/integrations/vite

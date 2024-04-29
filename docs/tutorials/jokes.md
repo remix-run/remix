@@ -7784,8 +7784,8 @@ Any time you make a change, simply run `fly deploy` again to redeploy.
 
 Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success][tweet-your-success])! There's a lot to Remix, and we've only gotten you started. Good luck on the rest of your Remix journey!
 
-[classic-remix-compiler]: ../future/vite#classic-remix-compiler-vs-remix-vite
-[remix-vite]: ../future/vite
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
 [remix-jokes]: https://remix-jokes.lol
 [mdn]: https://developer.mozilla.org/en-US
 [prisma]: https://www.prisma.io

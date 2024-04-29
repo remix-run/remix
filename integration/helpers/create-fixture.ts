@@ -15,11 +15,12 @@ import { ServerMode } from "../../build/node_modules/@remix-run/server-runtime/d
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime/dist/index.js";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime/dist/index.js";
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express/dist/index.js";
-// @ts-ignore
 import { installGlobals } from "../../build/node_modules/@remix-run/node/dist/index.js";
+import { decodeViaTurboStream } from "../../build/node_modules/@remix-run/react/dist/single-fetch.js";
 
-const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+const root = path.join(__dirname, "../..");
+const TMP_DIR = path.join(root, ".tmp", "integration");
 
 export interface FixtureInit {
   buildStdio?: Writable;
@@ -43,8 +44,9 @@ export function json(value: JsonObject) {
 }
 
 export async function createFixture(init: FixtureInit, mode?: ServerMode) {
-  installGlobals();
+  installGlobals({ nativeFetch: true });
   let compiler = init.compiler ?? "remix";
+
   let projectDir = await createFixtureProject(init, mode);
   let buildPath = url.pathToFileURL(
     path.join(
@@ -83,6 +85,12 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
       requestData: () => {
         throw new Error("Cannot requestData in SPA Mode tests");
       },
+      requestResource: () => {
+        throw new Error("Cannot requestResource in SPA Mode tests");
+      },
+      requestSingleFetchData: () => {
+        throw new Error("Cannot requestSingleFetchData in SPA Mode tests");
+      },
       postDocument: () => {
         throw new Error("Cannot postDocument in SPA Mode tests");
       },
@@ -116,6 +124,29 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
     return handler(request);
   };
 
+  let requestResource = async (href: string, init?: RequestInit) => {
+    init = init || {};
+    init.signal = init.signal || new AbortController().signal;
+    let url = new URL(href, "test://test");
+    let request = new Request(url.toString(), init);
+    return handler(request);
+  };
+
+  let requestSingleFetchData = async (href: string, init?: RequestInit) => {
+    init = init || {};
+    init.signal = init.signal || new AbortController().signal;
+    let url = new URL(href, "test://test");
+    let request = new Request(url.toString(), init);
+    let response = await handler(request);
+    let decoded = await decodeViaTurboStream(response.body!, global);
+    return {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+      data: decoded.value,
+    };
+  };
+
   let postDocument = async (href: string, data: URLSearchParams | FormData) => {
     return requestDocument(href, {
       method: "POST",
@@ -136,6 +167,8 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
     compiler,
     requestDocument,
     requestData,
+    requestResource,
+    requestSingleFetchData,
     postDocument,
     getBrowserAsset,
     useRemixServe: init.useRemixServe,
@@ -287,11 +320,6 @@ export async function createFixtureProject(
 
   await fse.ensureDir(projectDir);
   await fse.copy(integrationTemplateDir, projectDir);
-  await fse.copy(
-    path.join(__dirname, "../../build/node_modules"),
-    path.join(projectDir, "node_modules"),
-    { overwrite: true }
-  );
   // let remixDev = path.join(
   //   projectDir,
   //   "node_modules/@remix-run/dev/dist/cli.js"

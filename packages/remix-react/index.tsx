@@ -101,6 +101,7 @@ export type {
   ClientLoaderFunction,
   ClientLoaderFunctionArgs,
   MetaArgs,
+  MetaMatch as UNSAFE_MetaMatch,
   MetaDescriptor,
   MetaFunction,
   RouteModules as UNSAFE_RouteModules,

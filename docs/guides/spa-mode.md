@@ -294,7 +294,7 @@ Once you've got all your routes living in their own files, you can:
 [meta]: ../components/meta
 [links]: ../components/links
 [migrating-rr]: https://remix.run/docs/en/main/guides/migrating-react-router-app
-[remix-vite]: ../future/vite
+[remix-vite]: ./vite
 [migrate-rr]: #migrating-from-react-router
 [react-lazy]: https://react.dev/reference/react/lazy
 [client-only]: https://github.com/sergiodxa/remix-utils?tab=readme-ov-file#clientonly
