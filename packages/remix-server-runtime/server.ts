@@ -29,6 +29,7 @@ import {
   isRedirectResponse,
   isRedirectStatusCode,
   isResponse,
+  json,
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
@@ -43,6 +44,7 @@ import {
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
 } from "./single-fetch";
+import { resourceRouteJsonWarning } from "./deprecations";
 
 export type RequestHandler = (
   request: Request,
@@ -226,6 +228,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     ) {
       response = await handleResourceRequest(
         serverMode,
+        _build,
         staticHandler,
         matches.slice(-1)[0].route.id,
         request,
@@ -559,6 +562,7 @@ async function handleDocumentRequest(
 
 async function handleResourceRequest(
   serverMode: ServerMode,
+  build: ServerBuild,
   staticHandler: StaticHandler,
   routeId: string,
   request: Request,
@@ -573,6 +577,7 @@ async function handleResourceRequest(
       routeId,
       requestContext: loadContext,
     });
+
     if (typeof response === "object") {
       invariant(
         !(DEFERRED_SYMBOL in response),
@@ -580,6 +585,17 @@ async function handleResourceRequest(
           `forget to export a default UI component from the "${routeId}" route?`
       );
     }
+
+    if (build.future.unstable_singleFetch && !isResponse(response)) {
+      console.warn(
+        resourceRouteJsonWarning(
+          request.method === "GET" ? "loader" : "action",
+          routeId
+        )
+      );
+      response = json(response);
+    }
+
     // callRouteLoader/callRouteAction always return responses (w/o single fetch).
     // With single fetch, users should always be Responses from resource routes
     invariant(

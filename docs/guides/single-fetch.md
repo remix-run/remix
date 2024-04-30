@@ -270,6 +270,30 @@ And then when `c` calls `serverLoader`, it'll make it's own call for just the `c
 GET /a/b/c.data?_routes=routes/c
 ```
 
+### Resource Routes
+
+Because of the new streaming format used by Single Fetch, raw JavaScript objects returned from `loader` and `action` functions are no longer automatically converted to `Response` instances via the `json()` utility.
+
+However, you may have been relying on this wrapping in [resource routes][resource-routes] previously, so in v2 we will continue this automatic conversion. When Remix v2 detects a raw object returned from a resource route, it will log a deprecation warning and wrap the value in `json()` for easier opt-into the Single Fetch feature. At your convenience, you can add the `json()` call to your resource route handlers. Once you've addressed all of the deprecation warnings in your application's resource routes, you will be better prepared for the eventual Remix v3 upgrade.
+
+```tsx filename=app/routes/resource.tsx bad
+export function loader() {
+  return {
+    message: "My resource route",
+  };
+}
+```
+
+```tsx filename=app/routes/resource.tsx good
+import { json } from "@remix-run/react";
+
+export function loader() {
+  return json({
+    message: "My resource route",
+  });
+}
+```
+
 [future-flags]: ../file-conventions/remix-config#future
 [should-revalidate]: ../route/should-revalidate
 [entry-server]: ../file-conventions/entry.server
@@ -284,3 +308,4 @@ GET /a/b/c.data?_routes=routes/c
 [starttransition]: https://react.dev/reference/react/startTransition
 [headers]: ../route/headers
 [mdn-headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
+[resource-routes]: ../guides/resource-routes

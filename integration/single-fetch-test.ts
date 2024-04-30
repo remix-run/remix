@@ -1500,6 +1500,45 @@ test.describe("single-fetch", () => {
     expect(await app.getHtml("#target")).toContain("Target");
   });
 
+  test("wraps resource route naked object returns in json with a deprecation warning", async () => {
+    let oldConsoleWarn = console.warn;
+    let warnLogs: unknown[] = [];
+    console.warn = (...args) => warnLogs.push(...args);
+
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/resource.tsx": js`
+            export function loader() {
+              return { message: "RESOURCE" };
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+    let res = await fixture.requestResource("/resource");
+    expect(await res.json()).toEqual({
+      message: "RESOURCE",
+    });
+
+    expect(warnLogs).toEqual([
+      "⚠️ REMIX FUTURE CHANGE: Resource routes will no longer be able to return " +
+        "raw JavaScript objects in v3 when Single Fetch becomes the default. You " +
+        "can prepare for this change at your convenience by wrapping the data " +
+        "returned from your `loader` function in the `routes/resource` route with " +
+        "`json()`.  For instructions on making this change see " +
+        "https://remix.run/docs/en/v2.9.2/guides/single-fetch#resource-routes",
+    ]);
+    console.warn = oldConsoleWarn;
+  });
+
   test.describe("client loaders", () => {
     test("when no routes have client loaders", async ({ page }) => {
       let fixture = await createFixture(
