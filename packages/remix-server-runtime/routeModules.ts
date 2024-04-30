@@ -59,8 +59,6 @@ export type ActionFunction = (
 export type ActionFunctionArgs = RRActionFunctionArgs<AppLoadContext> & {
   // Context is always provided in Remix, and typed for module augmentation support.
   context: AppLoadContext;
-  // TODO: (v7) Make this non-optional once single-fetch is the default
-  response?: ResponseStub;
 };
 
 /**
@@ -92,8 +90,6 @@ export type LoaderFunction = (
 export type LoaderFunctionArgs = RRLoaderFunctionArgs<AppLoadContext> & {
   // Context is always provided in Remix, and typed for module augmentation support.
   context: AppLoadContext;
-  // TODO: (v7) Make this non-optional once single-fetch is the default
-  response?: ResponseStub;
 };
 
 /**

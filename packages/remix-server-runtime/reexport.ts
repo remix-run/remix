@@ -45,6 +45,7 @@ export type {
   LinksFunction,
   LoaderFunction,
   LoaderFunctionArgs,
+  ResponseStub,
   ServerRuntimeMetaArgs,
   ServerRuntimeMetaDescriptor,
   ServerRuntimeMetaFunction,
