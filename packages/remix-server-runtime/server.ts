@@ -39,12 +39,14 @@ import {
   getResponseStubs,
   getSingleFetchDataStrategy,
   getSingleFetchRedirect,
+  getSingleFetchResourceRouteDataStrategy,
   mergeResponseStubs,
   singleFetchAction,
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
 } from "./single-fetch";
 import { resourceRouteJsonWarning } from "./deprecations";
+import { ResponseStubOperationsSymbol } from "./routeModules";
 
 export type RequestHandler = (
   request: Request,
@@ -570,12 +572,22 @@ async function handleResourceRequest(
   handleError: (err: unknown) => void
 ) {
   try {
+    let responseStubs = build.future.unstable_singleFetch
+      ? getResponseStubs()
+      : {};
     // Note we keep the routeId here to align with the Remix handling of
     // resource routes which doesn't take ?index into account and just takes
     // the leaf match
     let response = await staticHandler.queryRoute(request, {
       routeId,
       requestContext: loadContext,
+      ...(build.future.unstable_singleFetch
+        ? {
+            unstable_dataStrategy: getSingleFetchResourceRouteDataStrategy({
+              responseStubs,
+            }),
+          }
+        : null),
     });
 
     if (typeof response === "object") {
@@ -586,14 +598,28 @@ async function handleResourceRequest(
       );
     }
 
-    if (build.future.unstable_singleFetch && !isResponse(response)) {
-      console.warn(
-        resourceRouteJsonWarning(
-          request.method === "GET" ? "loader" : "action",
-          routeId
-        )
-      );
-      response = json(response);
+    if (build.future.unstable_singleFetch) {
+      let stub = responseStubs[routeId];
+      if (isResponse(response)) {
+        // Merge directly onto the response if one was returned
+        let ops = stub[ResponseStubOperationsSymbol];
+        for (let [op, ...args] of ops) {
+          // @ts-expect-error
+          response.headers[op](...args);
+        }
+      } else {
+        console.warn(
+          resourceRouteJsonWarning(
+            request.method === "GET" ? "loader" : "action",
+            routeId
+          )
+        );
+        // Otherwise just create a response using the ResponseStub fields
+        response = json(response, {
+          status: stub.status || 200,
+          headers: stub.headers,
+        });
+      }
     }
 
     // callRouteLoader/callRouteAction always return responses (w/o single fetch).

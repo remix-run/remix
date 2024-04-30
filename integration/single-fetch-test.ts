@@ -1539,6 +1539,85 @@ test.describe("single-fetch", () => {
     console.warn = oldConsoleWarn;
   });
 
+  test("processes response stub onto resource routes returning raw data", async () => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/resource.tsx": js`
+            import { json } from '@remix-run/node';
+
+            export function loader({ response }) {
+              // When raw json is returned, the stub status/headers will just be used directly
+              response.status = 201;
+              response.headers.set('X-Stub', 'yes')
+              return { message: "RESOURCE" };
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+    let res = await fixture.requestResource("/resource");
+    expect(res.status).toBe(201);
+    expect(res.headers.get("X-Stub")).toBe("yes");
+    expect(await res.json()).toEqual({
+      message: "RESOURCE",
+    });
+  });
+
+  test("processes response stub onto resource routes returning responses", async () => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/resource.tsx": js`
+            import { json } from '@remix-run/node';
+
+            export function loader({ response }) {
+              // This will be ignored in favor of the returned Response status
+              response.status = 200;
+              response.headers.set('X-Stub', 'yes')
+              // This will overwrite the returned Response header
+              response.headers.set('X-Set', '2')
+              // This will append to the returned Response header
+              response.headers.append('X-Append', '2')
+              return json({ message: "RESOURCE" }, {
+                // This one takes precedence
+                status: 201,
+                headers: {
+                  'X-Response': 'yes',
+                  'X-Set': '1',
+                  'X-Append': '1',
+                },
+              });
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+    let res = await fixture.requestResource("/resource");
+    expect(res.status).toBe(201);
+    expect(res.headers.get("X-Response")).toBe("yes");
+    expect(res.headers.get("X-Stub")).toBe("yes");
+    expect(res.headers.get("X-Set")).toBe("2");
+    expect(res.headers.get("X-Append")).toBe("1, 2");
+    expect(await res.json()).toEqual({
+      message: "RESOURCE",
+    });
+  });
+
   test.describe("client loaders", () => {
     test("when no routes have client loaders", async ({ page }) => {
       let fixture = await createFixture(

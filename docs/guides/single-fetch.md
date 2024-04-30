@@ -294,6 +294,42 @@ export function loader() {
 }
 ```
 
+#### Response Stub and Resource Routes
+
+Ad discussed above, the `headers` export is deprecated in favor of a new [`response` stub][responsestub] passed to your `loader` and `action` functions. This is somewhat confusing in resource routes, though, because you get to return the _actual_ `Response` - there's no real need for a "stub" concept because there's no merging results from multiple loaders into a single Response:
+
+```tsx filename=routes/resource.tsx
+// Using your own Response is the most straightforward approach
+export async function loader() {
+  const data = await getData();
+  return json(data, {
+    status: 200,
+    headers: {
+      "X-Custom": "whatever",
+    },
+  });
+}
+```
+
+To keep things consistent, resource route `loader`/`action` functions will still receive a `response` stub and you can use it if you need to (maybe to share code amongst non-resource-route handlers):
+
+```tsx filename=routes/resource.tsx
+// But you can still set values on the response stubstraightforward approach
+export async function loader({
+  response,
+}: LoaderFunctionArgs) {
+  const data = await getData();
+  response.status = 200;
+  response.headers.set("X-Custom", "whatever");
+  return json(data);
+}
+```
+
+It's best to try to avoid using the `response` stub _and also_ returning a `Response` with custom status/headers, but if you do, the following logic will apply":
+
+- The `Response` instance status will take priority over any `response` stub status
+- Headers operations on the `response` stub `headers` will be re-played on the returned `Response` headers instance
+
 [future-flags]: ../file-conventions/remix-config#future
 [should-revalidate]: ../route/should-revalidate
 [entry-server]: ../file-conventions/entry.server
@@ -309,3 +345,8 @@ export function loader() {
 [headers]: ../route/headers
 [mdn-headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 [resource-routes]: ../guides/resource-routes
+[responsestub]: #headers
+
+```
+
+```
