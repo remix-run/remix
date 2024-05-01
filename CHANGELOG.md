@@ -195,7 +195,7 @@ Date: 2024-04-23
 
 - Naked objects returned from `loader`/`action` functions are no longer automatically serialized to JSON responses
   - Instead, they'll be streamed as-is via [`turbo-stream`](https://github.com/jacob-ebey/turbo-stream) which allows direct serialization of more complex types such as `Promise`, `Date`, `Map` instances, and more
-  - You will need to modify your `tsconfig.json`'s `include` array to infer types properly when using Single Fetch
+  - You will need to modify your `tsconfig.json`'s `compilerOptions.types` array to infer types properly when using Single Fetch
 - The `headers` export is no longer used when Single Fetch is enabled in favor of a new `response` stub passed to your `loader`/`action` functions
 - The `json`/`defer`/`redirect` utilities are deprecated when using Single Fetch (but still work _mostly_ the same)
 - Actions no longer automatically revalidate on `4xx`/`5xx` responses - you can return a `2xx` to opt-into revalidation or use `shouldRevalidate`
