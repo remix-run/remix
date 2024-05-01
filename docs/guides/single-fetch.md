@@ -272,14 +272,22 @@ GET /a/b/c.data?_routes=routes/c
 
 ### Resource Routes
 
-Because of the new streaming format used by Single Fetch, raw JavaScript objects returned from `loader` and `action` functions are no longer automatically converted to `Response` instances via the `json()` utility.
+Because of the new streaming format used by Single Fetch, raw JavaScript objects returned from `loader` and `action` functions are no longer automatically converted to `Response` instances via the `json()` utility. Instead, in normal navigational data loads they're combined with the other loader data and streamed down in a `turbo-stream` response. Resource routes are unique because they're intended to be hit individually -- and not always via Remix client side code. They can also be accessed via any other HTTP client (`fetch`, `cURL`, etc.).
 
-However, you may have been relying on this wrapping in [resource routes][resource-routes] previously, so in v2 we will continue this automatic conversion. When Remix v2 detects a raw object returned from a resource route, it will log a deprecation warning and wrap the value in `json()` for easier opt-into the Single Fetch feature. At your convenience, you can add the `json()` call to your resource route handlers. Once you've addressed all of the deprecation warnings in your application's resource routes, you will be better prepared for the eventual Remix v3 upgrade.
+With Single Fetch enabled, raw Javascript objects returned from resource routes will be handled as follows:
+
+When accessing from a Remix API such as `useFetcher`, raw Javascript objects will be returned as turbo-stream responses, just like normal loaders and actions (this is because `useFetcher` will append the `.data` suffix to the request).
+
+When accessing from an external tool such as `fetch` or `cURL`, we will continue this automatic conversion to `json()` or backwards-compatibility in v2:
+
+- When we detect a raw object for an external request in v2, we will will log a deprecation warning and wrap the value in `json()` for easier opt-into the Single Fetch feature
+- At your convenience, you can add the `json()` call to your resource route handlers to stop returning raw objects when you want a JSON response for external consumption
+- Once you've addressed all of the deprecation warnings in your application's resource routes, you will be better prepared for the eventual Remix v3 upgrade
 
 ```tsx filename=app/routes/resource.tsx bad
 export function loader() {
   return {
-    message: "My resource route",
+    message: "My externally-accessed resource route",
   };
 }
 ```
@@ -289,7 +297,7 @@ import { json } from "@remix-run/react";
 
 export function loader() {
   return json({
-    message: "My resource route",
+    message: "My externally-accessed resource route",
   });
 }
 ```
@@ -346,7 +354,3 @@ It's best to try to avoid using the `response` stub _and also_ returning a `Resp
 [mdn-headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 [resource-routes]: ../guides/resource-routes
 [responsestub]: #headers
-
-```
-
-```

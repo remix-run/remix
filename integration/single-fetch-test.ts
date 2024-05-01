@@ -1618,6 +1618,55 @@ test.describe("single-fetch", () => {
     });
   });
 
+  test("allows fetcher to hit resource route and return via turbo stream", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/_index.tsx": js`
+          import { useFetcher } from "@remix-run/react";
+
+          export default function Component() {
+            let fetcher = useFetcher();
+            return (
+              <div>
+                <button id="load" onClick={() => fetcher.load('/resource')}>
+                  Load
+                </button>
+                {fetcher.data ? <pre id="fetcher-data">{fetcher.data.message} {fetcher.data.date.toISOString()}</pre> : null}
+              </div>
+            );
+          }
+        `,
+        "app/routes/resource.tsx": js`
+          export function loader() {
+            // Fetcher calls to resource routes will append ".data" and we'll go through
+            // the turbo-stream flow.  If a user were to curl this endpoint they'd go
+            // through "handleResourceRoute" and it would be returned as "json()"
+            return {
+              message: "RESOURCE",
+              date: new Date("${ISO_DATE}"),
+            };
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickElement("#load");
+    await page.waitForSelector("#fetcher-data");
+    expect(await app.getHtml("#fetcher-data")).toContain(
+      "RESOURCE 2024-03-12T12:00:00.000Z"
+    );
+  });
+
   test.describe("client loaders", () => {
     test("when no routes have client loaders", async ({ page }) => {
       let fixture = await createFixture(

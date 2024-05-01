@@ -601,7 +601,8 @@ async function handleResourceRequest(
     if (build.future.unstable_singleFetch) {
       let stub = responseStubs[routeId];
       if (isResponse(response)) {
-        // Merge directly onto the response if one was returned
+        // If a response was returned, we use it's status and we merge our
+        // response stub headers onto it
         let ops = stub[ResponseStubOperationsSymbol];
         for (let [op, ...args] of ops) {
           // @ts-expect-error
@@ -614,9 +615,9 @@ async function handleResourceRequest(
             routeId
           )
         );
-        // Otherwise just create a response using the ResponseStub fields
+        // Otherwise we create a json Response using the stub
         response = json(response, {
-          status: stub.status || 200,
+          status: stub.status,
           headers: stub.headers,
         });
       }
