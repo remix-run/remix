@@ -29,6 +29,7 @@ import {
   isRedirectResponse,
   isRedirectStatusCode,
   isResponse,
+  json,
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
@@ -38,11 +39,14 @@ import {
   getResponseStubs,
   getSingleFetchDataStrategy,
   getSingleFetchRedirect,
+  getSingleFetchResourceRouteDataStrategy,
   mergeResponseStubs,
   singleFetchAction,
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
 } from "./single-fetch";
+import { resourceRouteJsonWarning } from "./deprecations";
+import { ResponseStubOperationsSymbol } from "./routeModules";
 
 export type RequestHandler = (
   request: Request,
@@ -226,6 +230,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     ) {
       response = await handleResourceRequest(
         serverMode,
+        _build,
         staticHandler,
         matches.slice(-1)[0].route.id,
         request,
@@ -559,6 +564,7 @@ async function handleDocumentRequest(
 
 async function handleResourceRequest(
   serverMode: ServerMode,
+  build: ServerBuild,
   staticHandler: StaticHandler,
   routeId: string,
   request: Request,
@@ -566,13 +572,24 @@ async function handleResourceRequest(
   handleError: (err: unknown) => void
 ) {
   try {
+    let responseStubs = build.future.unstable_singleFetch
+      ? getResponseStubs()
+      : {};
     // Note we keep the routeId here to align with the Remix handling of
     // resource routes which doesn't take ?index into account and just takes
     // the leaf match
     let response = await staticHandler.queryRoute(request, {
       routeId,
       requestContext: loadContext,
+      ...(build.future.unstable_singleFetch
+        ? {
+            unstable_dataStrategy: getSingleFetchResourceRouteDataStrategy({
+              responseStubs,
+            }),
+          }
+        : null),
     });
+
     if (typeof response === "object") {
       invariant(
         !(DEFERRED_SYMBOL in response),
@@ -580,6 +597,32 @@ async function handleResourceRequest(
           `forget to export a default UI component from the "${routeId}" route?`
       );
     }
+
+    if (build.future.unstable_singleFetch) {
+      let stub = responseStubs[routeId];
+      if (isResponse(response)) {
+        // If a response was returned, we use it's status and we merge our
+        // response stub headers onto it
+        let ops = stub[ResponseStubOperationsSymbol];
+        for (let [op, ...args] of ops) {
+          // @ts-expect-error
+          response.headers[op](...args);
+        }
+      } else {
+        console.warn(
+          resourceRouteJsonWarning(
+            request.method === "GET" ? "loader" : "action",
+            routeId
+          )
+        );
+        // Otherwise we create a json Response using the stub
+        response = json(response, {
+          status: stub.status,
+          headers: stub.headers,
+        });
+      }
+    }
+
     // callRouteLoader/callRouteAction always return responses (w/o single fetch).
     // With single fetch, users should always be Responses from resource routes
     invariant(

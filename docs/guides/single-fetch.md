@@ -270,6 +270,74 @@ And then when `c` calls `serverLoader`, it'll make it's own call for just the `c
 GET /a/b/c.data?_routes=routes/c
 ```
 
+### Resource Routes
+
+Because of the new streaming format used by Single Fetch, raw JavaScript objects returned from `loader` and `action` functions are no longer automatically converted to `Response` instances via the `json()` utility. Instead, in normal navigational data loads they're combined with the other loader data and streamed down in a `turbo-stream` response. Resource routes are unique because they're intended to be hit individually -- and not always via Remix client side code. They can also be accessed via any other HTTP client (`fetch`, `cURL`, etc.).
+
+With Single Fetch enabled, raw Javascript objects returned from resource routes will be handled as follows:
+
+When accessing from a Remix API such as `useFetcher`, raw Javascript objects will be returned as turbo-stream responses, just like normal loaders and actions (this is because `useFetcher` will append the `.data` suffix to the request).
+
+When accessing from an external tool such as `fetch` or `cURL`, we will continue this automatic conversion to `json()` or backwards-compatibility in v2:
+
+- When we detect a raw object for an external request in v2, we will will log a deprecation warning and wrap the value in `json()` for easier opt-into the Single Fetch feature
+- At your convenience, you can add the `json()` call to your resource route handlers to stop returning raw objects when you want a JSON response for external consumption
+- Once you've addressed all of the deprecation warnings in your application's resource routes, you will be better prepared for the eventual Remix v3 upgrade
+
+```tsx filename=app/routes/resource.tsx bad
+export function loader() {
+  return {
+    message: "My externally-accessed resource route",
+  };
+}
+```
+
+```tsx filename=app/routes/resource.tsx good
+import { json } from "@remix-run/react";
+
+export function loader() {
+  return json({
+    message: "My externally-accessed resource route",
+  });
+}
+```
+
+#### Response Stub and Resource Routes
+
+Ad discussed above, the `headers` export is deprecated in favor of a new [`response` stub][responsestub] passed to your `loader` and `action` functions. This is somewhat confusing in resource routes, though, because you get to return the _actual_ `Response` - there's no real need for a "stub" concept because there's no merging results from multiple loaders into a single Response:
+
+```tsx filename=routes/resource.tsx
+// Using your own Response is the most straightforward approach
+export async function loader() {
+  const data = await getData();
+  return json(data, {
+    status: 200,
+    headers: {
+      "X-Custom": "whatever",
+    },
+  });
+}
+```
+
+To keep things consistent, resource route `loader`/`action` functions will still receive a `response` stub and you can use it if you need to (maybe to share code amongst non-resource-route handlers):
+
+```tsx filename=routes/resource.tsx
+// But you can still set values on the response stubstraightforward approach
+export async function loader({
+  response,
+}: LoaderFunctionArgs) {
+  const data = await getData();
+  response.status = 200;
+  response.headers.set("X-Custom", "whatever");
+  return json(data);
+}
+```
+
+It's best to try to avoid using the `response` stub _and also_ returning a `Response` with custom status/headers, but if you do, the following logic will apply":
+
+- The `Response` instance status will take priority over any `response` stub status
+- Headers operations on the `response` stub `headers` will be re-played on the returned `Response` headers instance
+
 [future-flags]: ../file-conventions/remix-config#future
 [should-revalidate]: ../route/should-revalidate
 [entry-server]: ../file-conventions/entry.server
@@ -284,3 +352,5 @@ GET /a/b/c.data?_routes=routes/c
 [starttransition]: https://react.dev/reference/react/startTransition
 [headers]: ../route/headers
 [mdn-headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
+[resource-routes]: ../guides/resource-routes
+[responsestub]: #headers
