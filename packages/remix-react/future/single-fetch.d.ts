@@ -2,7 +2,6 @@ import type { MetaArgs, UIMatch, UNSAFE_MetaMatch } from "@remix-run/react";
 import type {
   LoaderFunctionArgs,
   ActionFunctionArgs,
-  ResponseStub,
   SerializeFrom,
   TypedDeferredData,
   TypedResponse,
@@ -119,13 +118,4 @@ declare module "@remix-run/react" {
       | undefined;
     matches: MetaMatches_SingleFetch<MatchLoaders>;
   }
-}
-
-declare module "@remix-run/server-runtime" {
-  export type ActionFunctionArgs_SingleFetch = ActionFunctionArgs & {
-    response: ResponseStub;
-  };
-  export type LoaderFunctionArgs_SingleFetch = LoaderFunctionArgs & {
-    response: ResponseStub;
-  };
 }

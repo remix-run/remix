@@ -56,7 +56,6 @@ export type {
   MemoryUploadHandlerOptions,
   PageLinkDescriptor,
   RequestHandler,
-  ResponseStub,
   SerializeFrom,
   ServerBuild,
   ServerEntryModule,

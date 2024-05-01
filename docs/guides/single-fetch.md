@@ -186,7 +186,7 @@ export async function action({
   response,
 }: {
   request: Request;
-  response: ResponseStub;
+  response?: ResponseStub;
 }) {
   if (!loggedIn(request)) {
     response.status = 401;

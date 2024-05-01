@@ -53,7 +53,6 @@ export type {
   HandleErrorFunction,
   PageLinkDescriptor,
   RequestHandler,
-  ResponseStub,
   SerializeFrom,
   ServerBuild,
   ServerEntryModule,

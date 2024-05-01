@@ -49,8 +49,6 @@ export async function callRouteAction({
     request: stripDataParam(stripIndexParam(request)),
     context: loadContext,
     params,
-    // This is valid when using the single fetch type overrides
-    // @ts-expect-error
     response,
   });
 
@@ -90,8 +88,6 @@ export async function callRouteLoader({
     request: stripDataParam(stripIndexParam(request)),
     context: loadContext,
     params,
-    // This is valid when using the single fetch type overrides
-    // @ts-expect-error
     response,
   });
 
