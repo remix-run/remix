@@ -272,35 +272,41 @@ GET /a/b/c.data?_routes=routes/c
 
 ### Resource Routes
 
-Because of the new streaming format used by Single Fetch, raw JavaScript objects returned from `loader` and `action` functions are no longer automatically converted to `Response` instances via the `json()` utility. Instead, in normal navigational data loads they're combined with the other loader data and streamed down in a `turbo-stream` response. Resource routes are unique because they're intended to be hit individually -- and not always via Remix client side code. They can also be accessed via any other HTTP client (`fetch`, `cURL`, etc.).
+Because of the new [streaming format][streaming-format] used by Single Fetch, raw JavaScript objects returned from `loader` and `action` functions are no longer automatically converted to `Response` instances via the `json()` utility. Instead, in navigational data loads they're combined with the other loader data and streamed down in a `turbo-stream` response.
 
-With Single Fetch enabled, raw Javascript objects returned from resource routes will be handled as follows:
+This poses an interesting conundrum for [resource routes][resource-routes] which are unique because they're intended to be hit individually -- and not always via Remix APIs. They can also be accessed via any other HTTP client (`fetch`, `cURL`, etc.).
 
-When accessing from a Remix API such as `useFetcher`, raw Javascript objects will be returned as turbo-stream responses, just like normal loaders and actions (this is because `useFetcher` will append the `.data` suffix to the request).
+If a resource route is intended for consumption by internal Remix APIs, we _want_ to be able to leverage the `turbo-stream` encoding to unlock the ability to stream down more complex structures such as `Date` and `Promise` instances. However, when accessed externally, we'd probably prefer to return the more easily consumable JSON structure. Thus, the behavior is slightly ambiguous if you return a raw object in v2 - should it be serialized via `turbo-stream` or `json()`?
 
-When accessing from an external tool such as `fetch` or `cURL`, we will continue this automatic conversion to `json()` or backwards-compatibility in v2:
+To ease backwards-compatibility and ease the adoption of the single fetch future flag, Remix v2 will handle this based on whether it's accessed from a Remix API or externally. In the future Remix will require you to return your own JSON response if you do not want raw objects to be streamed down for external consumption.
 
-- When we detect a raw object for an external request in v2, we will will log a deprecation warning and wrap the value in `json()` for easier opt-into the Single Fetch feature
-- At your convenience, you can add the `json()` call to your resource route handlers to stop returning raw objects when you want a JSON response for external consumption
-- Once you've addressed all of the deprecation warnings in your application's resource routes, you will be better prepared for the eventual Remix v3 upgrade
+The Remix v2 behavior is as follows:
 
-```tsx filename=app/routes/resource.tsx bad
-export function loader() {
-  return {
-    message: "My externally-accessed resource route",
-  };
-}
-```
+- When accessing from a Remix API such as `useFetcher`, raw Javascript objects will be returned as `turbo-stream` responses, just like normal loaders and actions (this is because `useFetcher` will append the `.data` suffix to the request)
 
-```tsx filename=app/routes/resource.tsx good
-import { json } from "@remix-run/react";
+- When accessing from an external tool such as `fetch` or `cURL`, we will continue this automatic conversion to `json()` for backwards-compatibility in v2:
 
-export function loader() {
-  return json({
-    message: "My externally-accessed resource route",
-  });
-}
-```
+  - Remix will log a deprecation warning when this situation is encountered
+  - At your convenience, you can add the `json()` call to impacted resource route handlers
+  - Addressing these deprecation warnings will better prepare you for the eventual Remix v3 upgrade
+
+  ```tsx filename=app/routes/resource.tsx bad
+  export function loader() {
+    return {
+      message: "My externally-accessed resource route",
+    };
+  }
+  ```
+
+  ```tsx filename=app/routes/resource.tsx good
+  import { json } from "@remix-run/react";
+
+  export function loader() {
+    return json({
+      message: "My externally-accessed resource route",
+    });
+  }
+  ```
 
 #### Response Stub and Resource Routes
 
@@ -354,3 +360,4 @@ It's best to try to avoid using the `response` stub _and also_ returning a `Resp
 [mdn-headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 [resource-routes]: ../guides/resource-routes
 [responsestub]: #headers
+[streaming-format]: #streaming-data-format
