@@ -5,15 +5,17 @@ import {
 } from "@remix-run/dev";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-export default defineConfig((env) => ({
+export default defineConfig({
   plugins: [cloudflareDevProxyVitePlugin(), remix(), tsconfigPaths()],
-  ...(env.isSsrBuild && {
+  ssr: {
     resolve: {
       conditions: ["workerd", "worker", "browser"],
-      mainFields: ["browser", "module", "main"],
     },
-    build: {
-      minify: true,
-    },
-  }),
-}));
+  },
+  resolve: {
+    mainFields: ["browser", "module", "main"],
+  },
+  build: {
+    minify: true,
+  },
+});
