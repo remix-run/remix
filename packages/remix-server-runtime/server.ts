@@ -408,17 +408,6 @@ async function handleDocumentRequest(
     return context;
   }
 
-  // Sanitize errors outside of development environments
-  if (context.errors) {
-    Object.values(context.errors).forEach((err) => {
-      // @ts-expect-error This is "private" from users but intended for internal use
-      if (!isRouteErrorResponse(err) || err.error) {
-        handleError(err);
-      }
-    });
-    context.errors = sanitizeErrors(context.errors, serverMode);
-  }
-
   let statusCode: number;
   let headers: Headers;
   if (build.future.unstable_singleFetch) {
@@ -435,6 +424,17 @@ async function handleDocumentRequest(
   } else {
     statusCode = context.statusCode;
     headers = getDocumentHeaders(build, context);
+  }
+
+  // Sanitize errors outside of development environments
+  if (context.errors) {
+    Object.values(context.errors).forEach((err) => {
+      // @ts-expect-error `err.error` is "private" from users but intended for internal use
+      if (!isRouteErrorResponse(err) || err.error) {
+        handleError(err);
+      }
+    });
+    context.errors = sanitizeErrors(context.errors, serverMode);
   }
 
   // Server UI state to send to the client.
