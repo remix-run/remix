@@ -61,3 +61,5 @@ export type {
   SessionStorage,
   FlashSessionData,
 } from "./sessions";
+
+export { defineLoader, defineAction } from "./single-fetch";

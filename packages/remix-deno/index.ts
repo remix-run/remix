@@ -16,6 +16,8 @@ export {
 export {
   broadcastDevReady,
   createSession,
+  defineLoader,
+  defineAction,
   defer,
   isCookie,
   isSession,

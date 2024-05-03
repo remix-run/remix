@@ -1,4 +1,6 @@
 import type {
+  ActionFunctionArgs as RRActionArgs,
+  LoaderFunctionArgs as RRLoaderArgs,
   StaticHandler,
   unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
   unstable_DataStrategyFunction as DataStrategyFunction,
@@ -19,6 +21,7 @@ import type {
   ResponseStubOperation,
 } from "./routeModules";
 import { ResponseStubOperationsSymbol } from "./routeModules";
+import type { TypedDeferredData, TypedResponse } from "./responses";
 import { isDeferredData, isRedirectStatusCode, isResponse } from "./responses";
 
 export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
@@ -504,3 +507,51 @@ export function encodeViaTurboStream(
     ],
   });
 }
+
+type MaybePromise<T> = T | Promise<T>;
+
+type Serializable =
+  | undefined
+  | null
+  | boolean
+  | string
+  | symbol
+  | number
+  | Array<Serializable>
+  | { [key: PropertyKey]: Serializable }
+  | bigint
+  | Date
+  | URL
+  | RegExp
+  | Error
+  | Map<Serializable, Serializable>
+  | Set<Serializable>
+  | Promise<Serializable>;
+
+type DataFunctionReturnValue =
+  | Serializable
+  | TypedDeferredData<Record<string, unknown>>
+  | TypedResponse<Record<string, unknown>>;
+
+type LoaderArgs = RRLoaderArgs<AppLoadContext> & {
+  // Context is always provided in Remix, and typed for module augmentation support.
+  context: AppLoadContext;
+  response: ResponseStub;
+};
+
+export type Loader = (
+  args: LoaderArgs
+) => MaybePromise<DataFunctionReturnValue>;
+
+type ActionArgs = RRActionArgs<AppLoadContext> & {
+  // Context is always provided in Remix, and typed for module augmentation support.
+  context: AppLoadContext;
+  response: ResponseStub;
+};
+
+export type Action = (
+  args: ActionArgs
+) => MaybePromise<DataFunctionReturnValue>;
+
+export let defineLoader = <T extends Loader>(loader: T): T => loader;
+export let defineAction = <T extends Action>(action: T): T => action;

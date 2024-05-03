@@ -6,6 +6,8 @@ export {
 } from "./formData";
 export { defer, json, redirect, redirectDocument } from "./responses";
 export type {
+  Loader,
+  Action,
   SingleFetchResult as UNSAFE_SingleFetchResult,
   SingleFetchResults as UNSAFE_SingleFetchResults,
 } from "./single-fetch";
@@ -85,3 +87,4 @@ export type {
   UploadHandler,
   UploadHandlerPart,
 } from "./reexport";
+export { defineLoader, defineAction } from "./reexport";
