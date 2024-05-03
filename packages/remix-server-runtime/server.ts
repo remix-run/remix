@@ -40,6 +40,7 @@ import {
   getSingleFetchDataStrategy,
   getSingleFetchRedirect,
   getSingleFetchResourceRouteDataStrategy,
+  isResponseStub,
   mergeResponseStubs,
   singleFetchAction,
   singleFetchLoaders,
@@ -430,7 +431,7 @@ async function handleDocumentRequest(
   if (context.errors) {
     Object.values(context.errors).forEach((err) => {
       // @ts-expect-error `err.error` is "private" from users but intended for internal use
-      if (!isRouteErrorResponse(err) || err.error) {
+      if ((!isRouteErrorResponse(err) || err.error) && !isResponseStub(err)) {
         handleError(err);
       }
     });
