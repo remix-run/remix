@@ -2478,7 +2478,7 @@ test.describe("single-fetch", () => {
       files: {
         ...files,
         "app/root.tsx": js`
-          import { Form, Link, Links, Meta, Outlet, Scripts } from "@remix-run/react";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export function loader() {
             return {
@@ -2494,14 +2494,6 @@ test.describe("single-fetch", () => {
                   <Links />
                 </head>
                 <body>
-                  <Link to="/">Home</Link><br/>
-                  <Link to="/data">Data</Link><br/>
-                  <Link to="/a/b/c">/a/b/c</Link><br/>
-                  <Form method="post" action="/data">
-                    <button type="submit" name="key" value="value">
-                      Submit
-                    </button>
-                  </Form>
                   <Outlet />
                   <Scripts nonce="the-nonce" />
                 </body>
