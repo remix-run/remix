@@ -101,11 +101,9 @@ app/
 
 ## Manual Route Configuration
 
-While the `app/routes` folder offers a convenient convention for developers, Remix appreciates that one size doesn't fit all. There are times when the provided convention might not align with specific project requirements or a developer's preferences. In such cases, Remix allows for manual route configuration via [`vite.config.ts`][vite-routes]. This flexibility ensures developers can structure their application in a way that makes sense for their project.
+While the `app/routes` folder offers a convenient convention for developers, Remix appreciates that [one size doesn't fit all][routes-disclaimer]. There are times when the provided convention might not align with specific project requirements or a developer's preferences. In such cases, Remix allows for manual route configuration via [`vite.config.ts`][vite-routes]. This flexibility ensures developers can structure their application in a way that makes sense for their project.
 
-<docs-warning>
-If you have not yet migrated to [Vite][remix-vite] and are still using the [Classic Remix Compiler][classic-remix-compiler], you can configure routes manually in your [`remix.config.js`][remix-config] file.
-</docs-warning>
+<docs-warning>If you have not yet migrated to [Vite][remix-vite] and are still using the [Classic Remix Compiler][classic-remix-compiler], you can configure routes manually in your [`remix.config.js`][remix-config] file.</docs-warning>
 
 A common way to structure an app is by top-level features folders. Consider that routes related to a particular theme, like concerts, likely share several modules. Organizing them under a single folder makes sense:
 
@@ -159,3 +157,4 @@ Remix's route configuration approach blends convention with flexibility. You can
 [classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
 [remix-vite]: ../guides/vite
 [vite-routes]: ../file-conventions/vite-config#routes
+[routes-disclaimer]: ../file-conventions/routes#disclaimer
