@@ -344,6 +344,10 @@ It's best to try to avoid using the `response` stub _and also_ returning a `Resp
 - The `Response` instance status will take priority over any `response` stub status
 - Headers operations on the `response` stub `headers` will be re-played on the returned `Response` headers instance
 
+### Inline Scripts
+
+The `<RemixServer>` component renders inline scripts that handle the streaming data on the client side. If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you can use `<RemixServer nonce>` to pass through the nonce to these `<script>` tags.
+
 [future-flags]: ../file-conventions/remix-config#future
 [should-revalidate]: ../route/should-revalidate
 [entry-server]: ../file-conventions/entry.server
@@ -361,3 +365,5 @@ It's best to try to avoid using the `response` stub _and also_ returning a `Resp
 [resource-routes]: ../guides/resource-routes
 [responsestub]: #headers
 [streaming-format]: #streaming-data-format
+[csp]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
+[csp-nonce]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources
