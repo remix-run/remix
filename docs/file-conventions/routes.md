@@ -84,6 +84,8 @@ Adding a `.` to a route filename will create a `/` in the URL.
 
 | URL                        | Matched Route                            |
 | -------------------------- | ---------------------------------------- |
+| `/`                        | `app/routes/_index.tsx`                  |
+| `/about`                   | `app/routes/about.tsx`                   |
 | `/concerts/trending`       | `app/routes/concerts.trending.tsx`       |
 | `/concerts/salt-lake-city` | `app/routes/concerts.salt-lake-city.tsx` |
 | `/concerts/san-diego`      | `app/routes/concerts.san-diego.tsx`      |
@@ -106,6 +108,8 @@ Usually your URLs aren't static but data-driven. Dynamic segments allow you to m
 
 | URL                        | Matched Route                      |
 | -------------------------- | ---------------------------------- |
+| `/`                        | `app/routes/_index.tsx`            |
+| `/about`                   | `app/routes/about.tsx`             |
 | `/concerts/trending`       | `app/routes/concerts.trending.tsx` |
 | `/concerts/salt-lake-city` | `app/routes/concerts.$city.tsx`    |
 | `/concerts/san-diego`      | `app/routes/concerts.$city.tsx`    |
@@ -196,6 +200,7 @@ Sometimes you want the URL to be nested, but you don't want the automatic layout
 | URL                        | Matched Route                      | Layout                    |
 | -------------------------- | ---------------------------------- | ------------------------- |
 | `/`                        | `app/routes/_index.tsx`            | `app/root.tsx`            |
+| `/about`                   | `app/routes/about.tsx`             | `app/root.tsx`            |
 | `/concerts/mine`           | `app/routes/concerts_.mine.tsx`    | `app/root.tsx`            |
 | `/concerts/trending`       | `app/routes/concerts.trending.tsx` | `app/routes/concerts.tsx` |
 | `/concerts/salt-lake-city` | `app/routes/concerts.$city.tsx`    | `app/routes/concerts.tsx` |
@@ -227,6 +232,7 @@ Sometimes you want to share a layout with a group of routes without adding any p
 | `/`                        | `app/routes/_index.tsx`         | `app/root.tsx`            |
 | `/login`                   | `app/routes/_auth.login.tsx`    | `app/routes/_auth.tsx`    |
 | `/register`                | `app/routes/_auth.register.tsx` | `app/routes/_auth.tsx`    |
+| `/concerts`                | `app/routes/concerts.tsx`       | `app/routes/concerts.tsx` |
 | `/concerts/salt-lake-city` | `app/routes/concerts.$city.tsx` | `app/routes/concerts.tsx` |
 
 Think of the `_leading` underscore as a blanket you're pulling over the filename, hiding the filename from the URL.
@@ -273,6 +279,7 @@ While [dynamic segments][dynamic_segments] match a single path segment (the stuf
 | URL                                          | Matched Route            |
 | -------------------------------------------- | ------------------------ |
 | `/`                                          | `app/routes/_index.tsx`  |
+| `/about`                                     | `app/routes/about.tsx`  |
 | `/beef/and/cheese`                           | `app/routes/$.tsx`       |
 | `/files`                                     | `app/routes/files.$.tsx` |
 | `/files/talks/remix-conf_old.pdf`            | `app/routes/files.$.tsx` |
