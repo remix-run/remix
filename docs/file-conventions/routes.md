@@ -279,7 +279,7 @@ While [dynamic segments][dynamic_segments] match a single path segment (the stuf
 | URL                                          | Matched Route            |
 | -------------------------------------------- | ------------------------ |
 | `/`                                          | `app/routes/_index.tsx`  |
-| `/about`                                     | `app/routes/about.tsx`  |
+| `/about`                                     | `app/routes/about.tsx`   |
 | `/beef/and/cheese`                           | `app/routes/$.tsx`       |
 | `/files`                                     | `app/routes/files.$.tsx` |
 | `/files/talks/remix-conf_old.pdf`            | `app/routes/files.$.tsx` |
