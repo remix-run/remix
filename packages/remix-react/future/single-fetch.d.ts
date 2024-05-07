@@ -22,21 +22,17 @@ type Serialize<T extends Loader | Action> =
   Awaited<ReturnType<T>>;
 
 declare module "@remix-run/react" {
-  export function useLoaderData<T>(): T extends Loader ? Serialize<T> : T;
+  export function useLoaderData<T extends Loader>(): Serialize<T>;
 
-  export function useActionData<T>(): T extends Action
-    ? Serialize<T> | undefined
-    : T;
+  export function useActionData<T extends Action>(): Serialize<T> | undefined;
 
-  export function useRouteLoaderData<T>(
+  export function useRouteLoaderData<T extends Loader>(
     routeId: string
-  ): T extends Loader ? Serialize<T> : never;
+  ): Serialize<T>;
 
-  export function useFetcher<TData = unknown>(
+  export function useFetcher<T extends Loader | Action>(
     opts?: Parameters<typeof useFetcherRR>[0]
-  ): FetcherWithComponents<
-    TData extends Loader | Action ? Serialize<TData> : TData
-  >;
+  ): FetcherWithComponents<Serialize<T>>;
 
   export type UIMatch_SingleFetch<D = unknown, H = unknown> = Omit<
     UIMatch<D, H>,

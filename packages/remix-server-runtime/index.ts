@@ -87,4 +87,7 @@ export type {
   UploadHandler,
   UploadHandlerPart,
 } from "./reexport";
-export { defineLoader, defineAction } from "./reexport";
+export {
+  defineLoader as unstable_defineLoader,
+  defineAction as unstable_defineAction,
+} from "./reexport";
