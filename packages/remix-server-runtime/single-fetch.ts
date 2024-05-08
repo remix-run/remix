@@ -560,8 +560,9 @@ type ClientLoaderArgs = RRLoaderArgs<undefined> & {
   serverLoader: <T extends Loader>() => Promise<Serialize<T>>;
 };
 type ClientLoader = (args: ClientLoaderArgs) => MaybePromise<Serializable>;
-export let defineClientLoader = <T extends ClientLoader>(clientLoader: T): T =>
-  clientLoader;
+export let defineClientLoader = <T extends ClientLoader>(
+  clientLoader: T
+): T & { hydrate?: boolean } => clientLoader;
 
 // action
 type ActionArgs = RRActionArgs<AppLoadContext> & {
