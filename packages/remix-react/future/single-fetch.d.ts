@@ -1,25 +1,13 @@
 import type { MetaArgs, UIMatch, UNSAFE_MetaMatch } from "@remix-run/react";
 import type {
-  Loader,
-  Action,
-  SerializeFrom,
-  TypedDeferredData,
-  TypedResponse,
+  unstable_Loader as Loader,
+  unstable_Action as Action,
+  unstable_Serialize as Serialize,
 } from "@remix-run/server-runtime";
 import type {
   useFetcher as useFetcherRR,
   FetcherWithComponents,
 } from "react-router-dom";
-
-// Backwards-compatible type for Remix v2 where json/defer still use the old types,
-// and only non-json/defer returns use the new types.  This allows for incremental
-// migration of loaders to return naked objects.  In the next major version,
-// json/defer will be removed so everything will use the new simplified typings.
-// prettier-ignore
-type Serialize<T extends Loader | Action> =
-  Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
-  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
-  Awaited<ReturnType<T>>;
 
 declare module "@remix-run/react" {
   export function useLoaderData<T extends Loader>(): Serialize<T>;

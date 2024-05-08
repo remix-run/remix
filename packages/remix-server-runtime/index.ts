@@ -5,13 +5,22 @@ export {
   parseMultipartFormData as unstable_parseMultipartFormData,
 } from "./formData";
 export { defer, json, redirect, redirectDocument } from "./responses";
+
+export {
+  SingleFetchRedirectSymbol as UNSAFE_SingleFetchRedirectSymbol,
+  defineLoader as unstable_defineLoader,
+  defineClientLoader as unstable_defineClientLoader,
+  defineAction as unstable_defineAction,
+  defineClientAction as unstable_defineClientAction,
+} from "./single-fetch";
 export type {
-  Loader,
-  Action,
+  Loader as unstable_Loader,
+  Action as unstable_Action,
+  Serialize as unstable_Serialize,
   SingleFetchResult as UNSAFE_SingleFetchResult,
   SingleFetchResults as UNSAFE_SingleFetchResults,
 } from "./single-fetch";
-export { SingleFetchRedirectSymbol as UNSAFE_SingleFetchRedirectSymbol } from "./single-fetch";
+
 export { createRequestHandler } from "./server";
 export {
   createSession,
@@ -86,8 +95,4 @@ export type {
   UnsignFunction,
   UploadHandler,
   UploadHandlerPart,
-} from "./reexport";
-export {
-  defineLoader as unstable_defineLoader,
-  defineAction as unstable_defineAction,
 } from "./reexport";

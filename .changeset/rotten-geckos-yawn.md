@@ -6,7 +6,7 @@
 "@remix-run/server-runtime": patch
 ---
 
-Typesafety for single-fetch
+Typesafety for single-fetch: defineLoader, defineClientLoader, defineAction, defineClientAction
 
 `defineLoader` and `defineAction` are helpers for authoring `loader`s and `action`s.
 They are identity functions; they don't modify your loader or action at runtime.

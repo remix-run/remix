@@ -23,6 +23,7 @@ import type {
 import { ResponseStubOperationsSymbol } from "./routeModules";
 import type { TypedDeferredData, TypedResponse } from "./responses";
 import { isDeferredData, isRedirectStatusCode, isResponse } from "./responses";
+import type { SerializeFrom } from "./serialize";
 
 export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
 const ResponseStubActionSymbol = Symbol("ResponseStubAction");
@@ -533,25 +534,50 @@ type DataFunctionReturnValue =
   | TypedDeferredData<Record<string, unknown>>
   | TypedResponse<Record<string, unknown>>;
 
+// Backwards-compatible type for Remix v2 where json/defer still use the old types,
+// and only non-json/defer returns use the new types.  This allows for incremental
+// migration of loaders to return naked objects.  In the next major version,
+// json/defer will be removed so everything will use the new simplified typings.
+// prettier-ignore
+export type Serialize<T extends Loader | ClientLoader | Action | ClientAction> =
+  Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
+  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
+  Awaited<ReturnType<T>>;
+
+// loader
 type LoaderArgs = RRLoaderArgs<AppLoadContext> & {
   // Context is always provided in Remix, and typed for module augmentation support.
   context: AppLoadContext;
   response: ResponseStub;
 };
-
 export type Loader = (
   args: LoaderArgs
 ) => MaybePromise<DataFunctionReturnValue>;
+export let defineLoader = <T extends Loader>(loader: T): T => loader;
 
+// clientLoader
+type ClientLoaderArgs = RRLoaderArgs<undefined> & {
+  serverLoader: <T extends Loader>() => Promise<Serialize<T>>;
+};
+type ClientLoader = (args: ClientLoaderArgs) => MaybePromise<Serializable>;
+export let defineClientLoader = <T extends ClientLoader>(clientLoader: T): T =>
+  clientLoader;
+
+// action
 type ActionArgs = RRActionArgs<AppLoadContext> & {
   // Context is always provided in Remix, and typed for module augmentation support.
   context: AppLoadContext;
   response: ResponseStub;
 };
-
 export type Action = (
   args: ActionArgs
 ) => MaybePromise<DataFunctionReturnValue>;
-
-export let defineLoader = <T extends Loader>(loader: T): T => loader;
 export let defineAction = <T extends Action>(action: T): T => action;
+
+// clientAction
+type ClientActionArgs = RRActionArgs<undefined> & {
+  serverAction: <T extends Action>() => Promise<Serialize<T>>;
+};
+type ClientAction = (args: ClientActionArgs) => MaybePromise<Serializable>;
+export let defineClientAction = <T extends ClientAction>(clientAction: T): T =>
+  clientAction;
