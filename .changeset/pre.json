@@ -25,5 +25,17 @@
     "@remix-run/server-runtime": "2.9.1",
     "@remix-run/testing": "2.9.1"
   },
-  "changesets": []
+  "changesets": [
+    "five-planets-grin",
+    "happy-ladybugs-smoke",
+    "hot-suits-jam",
+    "nasty-pandas-accept",
+    "nasty-vans-brake",
+    "rare-dodos-push",
+    "rich-spoons-draw",
+    "rotten-geckos-yawn",
+    "slimy-shrimps-roll",
+    "slow-peaches-matter",
+    "tame-otters-clap"
+  ]
 }

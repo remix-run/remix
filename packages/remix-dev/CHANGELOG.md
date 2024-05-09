@@ -1,5 +1,20 @@
 # `@remix-run/dev`
 
+## 2.9.2-pre.0
+
+### Patch Changes
+
+- Fix `dest already exists` error when running `remix vite:build` ([#9305](https://github.com/remix-run/remix/pull/9305))
+- Vite: Fix issue resolving critical CSS during development when route files are located outside of the app directory. ([#9194](https://github.com/remix-run/remix/pull/9194))
+- Remove `@remix-run/node` from Vite plugin's `optimizeDeps.include` list since it was unnecessary and resulted in Vite warnings when not depending on this package. ([#9287](https://github.com/remix-run/remix/pull/9287))
+- Clean up redundant `?client-route=1` imports in development ([#9395](https://github.com/remix-run/remix/pull/9395))
+- Ensure Babel config files are not referenced when applying the `react-refresh` Babel transform within the Remix Vite plugin ([#9241](https://github.com/remix-run/remix/pull/9241))
+- Updated dependencies:
+  - `@remix-run/react@2.9.2-pre.0`
+  - `@remix-run/server-runtime@2.9.2-pre.0`
+  - `@remix-run/node@2.9.2-pre.0`
+  - `@remix-run/serve@2.9.2-pre.0`
+
 ## 2.9.1
 
 ### Patch Changes
