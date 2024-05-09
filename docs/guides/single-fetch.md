@@ -14,7 +14,9 @@ When you enable Single Fetch, Remix will make a single HTTP call to your server 
 
 - Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
-- You must add `node_modules/@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `include` array to get proper type inference
+- To get proper type inference, you must do two things:
+  - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
+  - Add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array
 - Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 - The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
 - The old `installGlobals()` polyfill doesn't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
@@ -111,23 +113,19 @@ In order to ensure you get the proper types when using Single Fetch, we've inclu
 
 🚨 Make sure the single-fetch types come after any other Remix packages in `types` so that they override those existing types.
 
-\*\* `defineLoader`, `defineAction`, `defineClientLoader`, `defineClientAction` \*\*
+#### loader/action definition utilities
 
-To get typesafety when defining loaders and actions, you can use the `defineLoader` and `defineAction` utilities:
+To enhance type-safety when defining loaders and actions with single fetch, you can use the new `unstable_defineLoader` and `unstable_defineAction` utilities:
 
 ```ts
-import { defineLoader } from "@remix-run/node";
+import { unstable_defineLoader as defineLoader } from "@remix-run/node";
 
 export const loader = defineLoader(({ request }) => {
   //                                  ^? Request
 });
-
-export const action = defineAction(({ context }) => {
-  //                                  ^? AppLoadContext
-});
 ```
 
-Not only does this give you types for any arguments, but it also ensures you are returning single-fetch compatible types:
+Not only does this give you types for arguments (and deprecates `LoaderFunctionArgs`), but it also ensures you are returning single-fetch compatible types:
 
 ```ts
 export const loader = defineLoader(() => {
@@ -163,31 +161,33 @@ type Serializable =
   | Promise<Serializable>;
 ```
 
-**`useLoaderData`, `useActionData`, `useRouteLoaderData`, and `useFetcher`**
+<docs-info>These utilities are primarily for type inference on `useLoaderData` and it's equivalents. If you have a resource route that returns a `Response` and is not consumed by Remix APIs (such as `useFetcher`) than you can just stick with your normal `loader`/`action` definitions. Converting those routes to use `defineLoader`/`defineAction` would cause type errors because `turbo-stream` cannot serialize a `Response` instance.</docs-info>
+
+#### `useLoaderData`, `useActionData`, `useRouteLoaderData`, `useFetcher`
 
 These methods do not require any code changes on your part - adding the single fetch types will cause their generics to deserialize correctly:
 
 ```ts
-export async function loader() {
+export const loader = defineLoader(async () => {
   const data = await fetchSomeData();
   return {
     message: data.message, // <- string
     date: data.date, // <- Date
   };
-}
+});
 
 export default function Component() {
-  // ❌ Before opting into single fetch types, types are serialized via JSON.stringify
+  // ❌ Before single fetch, types were serialized via JSON.stringify
   const data = useLoaderData<typeof loader>();
   //    ^? { message: string, date: string }
 
-  // ✅ After opting into single fetch types, types are serialized via turbo-stream
+  // ✅ With single fetch, types are serialized via turbo-stream
   const data = useLoaderData<typeof loader>();
   //    ^? { message: string, date: Date }
 }
 ```
 
-**`useMatches`**
+#### `useMatches`
 
 `useMatches` requires a manual cast to specify the loader type in order to get proper type inference on a given `match.data`. When using Single Fetch, you will need to replace the `UIMatch` type with `UIMatch_SingleFetch`:
 
@@ -197,7 +197,7 @@ export default function Component() {
 + let rootMatch = matches[0] as UIMatch_SingleFetch<typeof loader>;
 ```
 
-**`meta` Function**
+#### `meta` Function
 
 `meta` functions also require a generic to indicate the current and ancestor route loader types in order to properly type the `data` and `matches` parameters. When using Single Fetch, you will need to replace the `MetaArgs` type with `MetaArgs_SingleFetch`:
 
@@ -338,7 +338,7 @@ If a resource route is intended for consumption by internal Remix APIs, we _want
 
 To ease backwards-compatibility and ease the adoption of the single fetch future flag, Remix v2 will handle this based on whether it's accessed from a Remix API or externally. In the future Remix will require you to return your own JSON response if you do not want raw objects to be streamed down for external consumption.
 
-The Remix v2 behavior is as follows:
+The Remix v2 behavior wih single fetch enabled is as follows:
 
 - When accessing from a Remix API such as `useFetcher`, raw Javascript objects will be returned as `turbo-stream` responses, just like normal loaders and actions (this is because `useFetcher` will append the `.data` suffix to the request)
 
@@ -366,6 +366,8 @@ The Remix v2 behavior is as follows:
   }
   ```
 
+Note: It is _not_ recommended to use `defineLoader`/`defineAction` for externally-accessed resource routes that need to return specific `Response` instances. It's best to just stick with `loader`/`LoaderFunctionArgs` for these cases.
+
 #### Response Stub and Resource Routes
 
 Ad discussed above, the `headers` export is deprecated in favor of a new [`response` stub][responsestub] passed to your `loader` and `action` functions. This is somewhat confusing in resource routes, though, because you get to return the _actual_ `Response` - there's no real need for a "stub" concept because there's no merging results from multiple loaders into a single Response:
@@ -391,8 +393,8 @@ export async function loader({
   response,
 }: LoaderFunctionArgs) {
   const data = await getData();
-  response.status = 200;
-  response.headers.set("X-Custom", "whatever");
+  response?.status = 200;
+  response?.headers.set("X-Custom", "whatever");
   return json(data);
 }
 ```
