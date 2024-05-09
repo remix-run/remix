@@ -217,7 +217,7 @@ describe("architect createRemixHeaders", () => {
         "x-foo": "bar, baz",
         "x-bar": "baz",
       });
-      expect(headers.getAll("x-foo")).toEqual(["bar, baz"]);
+      expect(headers.get("x-foo")).toEqual("bar, baz");
       expect(headers.get("x-bar")).toBe("baz");
     });
 
@@ -226,9 +226,9 @@ describe("architect createRemixHeaders", () => {
         "__session=some_value",
         "__other=some_other_value",
       ]);
-      expect(headers.getAll("cookie")).toEqual([
-        "__session=some_value; __other=some_other_value",
-      ]);
+      expect(headers.get("cookie")).toEqual(
+        "__session=some_value; __other=some_other_value"
+      );
     });
   });
 });

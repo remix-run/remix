@@ -5,9 +5,11 @@ description: Remix makes integrating MDX into your project a breeze with built i
 
 # MDX
 
+<docs-warning>This documentation is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. Vite consumers wanting to use MDX should use the [MDX Rollup (and Vite) plugin][mdx-plugin].</docs-warning>
+
 While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX][mdx] (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
 
-<docs-warning>Rather than compiling your content at build-time like this document demonstrates, it's typically better UX and DX if you do this at runtime via something like <a href="https://github.com/kentcdodds/mdx-bundler">mdx-bundler</a>. It's also much more customizable and powerful. However, if you prefer to do this compilation at build-time, continue reading.</docs-warning>
+<docs-info>Rather than compiling your content at build-time like this document demonstrates, it's typically better UX and DX if you do this at runtime via something like <a href="https://github.com/kentcdodds/mdx-bundler">mdx-bundler</a>. It's also much more customizable and powerful. However, if you prefer to do this compilation at build-time, continue reading.</docs-info>
 
 Remix has built-in support for using MDX at build-time in two ways:
 
@@ -202,6 +204,8 @@ exports.mdx = async (filename) => {
 };
 ```
 
+[mdx-plugin]: https://mdxjs.com/packages/rollup
 [mdx]: https://mdxjs.com
 [yaml]: https://yaml.org
 [mdx-bundler]: https://github.com/kentcdodds/mdx-bundler
+[classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite

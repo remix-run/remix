@@ -15,7 +15,7 @@ export default function Index() {
         <li>
           <a
             target="_blank"
-            href="https://remix.run/future/spa-mode"
+            href="https://remix.run/guides/spa-mode"
             rel="noreferrer"
           >
             SPA Mode Guide

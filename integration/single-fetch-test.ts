@@ -90,7 +90,6 @@ test.describe("single-fetch", () => {
 
   test.beforeEach(() => {
     oldConsoleError = console.error;
-    console.error = () => {};
   });
 
   test.afterEach(() => {
@@ -138,6 +137,8 @@ test.describe("single-fetch", () => {
   });
 
   test("loads proper errors on single fetch loader requests", async () => {
+    console.error = () => {};
+
     let fixture = await createFixture(
       {
         config: {
@@ -149,6 +150,8 @@ test.describe("single-fetch", () => {
       },
       ServerMode.Development
     );
+
+    console.error = () => {};
 
     let res = await fixture.requestSingleFetchData("/data.data?error=true");
     expect(res.data).toEqual({
@@ -331,19 +334,23 @@ test.describe("single-fetch", () => {
         "app/routes/action.tsx": js`
           import { Form, Link, useActionData, useLoaderData, useNavigation } from '@remix-run/react';
 
-          export async function action({ request }) {
+          export async function action({ request, response }) {
             let fd = await request.formData();
             if (fd.get('throw') === "5xx") {
-              throw new Response("Thrown 500", { status: 500 });
+              response.status = 500;
+              throw new Error("Thrown 500");
             }
             if (fd.get('throw') === "4xx") {
-              throw new Response("Thrown 400", { status: 400 });
+              response.status = 400;
+              throw new Error("Thrown 400");
             }
             if (fd.get('return') === "5xx") {
-              return new Response("Returned 500", { status: 500 });
+              response.status = 500;
+              return "Returned 500";
             }
             if (fd.get('return') === "4xx") {
-              return new Response("Returned 400", { status: 400 });
+              response.status = 400;
+              return "Returned 400";
             }
             return null;
           }
@@ -358,7 +365,7 @@ test.describe("single-fetch", () => {
             let data = useLoaderData();
             return (
               <Form method="post">
-                <button type="submit" name="throw" value="5xx">Throw 5x</button>
+                <button type="submit" name="throw" value="5xx">Throw 5xx</button>
                 <button type="submit" name="throw" value="4xx">Throw 4xx</button>
                 <button type="submit" name="return" value="5xx">Return 5xx</button>
                 <button type="submit" name="return" value="4xx">Return 4xx</button>
@@ -387,6 +394,8 @@ test.describe("single-fetch", () => {
       }
     });
 
+    console.error = () => {};
+
     let appFixture = await createAppFixture(fixture);
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/action");
@@ -406,6 +415,7 @@ test.describe("single-fetch", () => {
     await page.click('button[name="throw"][value="5xx"]');
     await page.waitForSelector("#error");
     expect(urls).toEqual([]);
+
     await app.clickLink("/action");
     await page.waitForSelector("#data");
     expect(await app.getHtml("#data")).toContain("2");
@@ -416,7 +426,7 @@ test.describe("single-fetch", () => {
     expect(urls).toEqual([]);
   });
 
-  test("handles headers correctly for loader and action calls", async () => {
+  test("returns headers correctly for singular loader and action calls", async () => {
     let fixture = await createFixture({
       config: {
         future: {
@@ -426,24 +436,22 @@ test.describe("single-fetch", () => {
       files: {
         ...files,
         "app/routes/headers.tsx": js`
-          export function headers({ loaderHeaders }) {
-            let headers = new Headers(loaderHeaders);
-            headers.set('x-headers-function', 'true')
-            return headers;
+          export function action({ request, response }) {
+            if (new URL(request.url).searchParams.has("error")) {
+              response.headers.set("x-action-error", "true");
+              throw response;
+            }
+            response.headers.set("x-action", "true");
+            return null;
           }
 
-          export function action({ request }) {
+          export function loader({ request, response }) {
             if (new URL(request.url).searchParams.has("error")) {
-              throw new Response(null, { headers: { "x-action-error": "true" } });
+              response.headers.set("x-loader-error", "true");
+              throw response;
             }
-            return new Response(null, { headers: { "x-action": "true" } });
-          }
-
-          export function loader({ request }) {
-            if (new URL(request.url).searchParams.has("error")) {
-              throw new Response(null, { headers: { "x-loader-error": "true" } });
-            }
-            return new Response(null, { headers: { "x-loader": "true" } });
+            response.headers.set("x-loader", "true");
+            return null;
           }
 
           export default function Comp() {
@@ -453,30 +461,46 @@ test.describe("single-fetch", () => {
       },
     });
 
-    let res = await fixture.requestSingleFetchData("/headers.data");
-    expect(res.headers.get("x-loader")).toEqual("true");
-    expect(res.headers.get("x-headers-function")).toEqual("true");
+    // Loader
+    let docResponse = await fixture.requestDocument("/headers");
+    let dataResponse = await fixture.requestSingleFetchData("/headers.data");
+    expect(docResponse.headers.get("x-loader")).toEqual("true");
+    expect(dataResponse.headers.get("x-loader")).toEqual("true");
 
-    res = await fixture.requestSingleFetchData("/headers.data", {
+    // Action
+    docResponse = await fixture.requestDocument("/headers", {
       method: "post",
       body: null,
     });
-    expect(res.headers.get("x-action")).toEqual("true");
-    expect(res.headers.get("x-headers-function")).toEqual(null);
-
-    res = await fixture.requestSingleFetchData("/headers.data?error");
-    expect(res.headers.get("x-loader-error")).toEqual("true");
-    expect(res.headers.get("x-headers-function")).toEqual("true");
-
-    res = await fixture.requestSingleFetchData("/headers.data?error", {
+    dataResponse = await fixture.requestSingleFetchData("/headers.data", {
       method: "post",
       body: null,
     });
-    expect(res.headers.get("x-action-error")).toEqual("true");
-    expect(res.headers.get("x-headers-function")).toEqual(null);
+    expect(docResponse.headers.get("x-action")).toEqual("true");
+    expect(dataResponse.headers.get("x-action")).toEqual("true");
+
+    console.error = () => {};
+
+    // Loader Error
+    docResponse = await fixture.requestDocument("/headers?error");
+    dataResponse = await fixture.requestSingleFetchData("/headers.data?error");
+    expect(docResponse.headers.get("x-loader-error")).toEqual("true");
+    expect(dataResponse.headers.get("x-loader-error")).toEqual("true");
+
+    // Action Error
+    docResponse = await fixture.requestDocument("/headers?error", {
+      method: "post",
+      body: null,
+    });
+    dataResponse = await fixture.requestSingleFetchData("/headers.data?error", {
+      method: "post",
+      body: null,
+    });
+    expect(docResponse.headers.get("x-action-error")).toEqual("true");
+    expect(dataResponse.headers.get("x-action-error")).toEqual("true");
   });
 
-  test("scopes loader headers to the _routes param if present", async () => {
+  test("merges headers from nested routes", async () => {
     let fixture = await createFixture({
       config: {
         future: {
@@ -486,14 +510,13 @@ test.describe("single-fetch", () => {
       files: {
         ...files,
         "app/routes/a.tsx": js`
-          export function headers({ loaderHeaders }) {
-            let headers = new Headers(loaderHeaders);
-            headers.set('x-a-headers', 'true')
-            return headers;
-          }
-
-          export function loader({ request }) {
-            return new Response(null, { headers: { "x-a-loader": "true" } });
+          export function loader({ request, response }) {
+            response.headers.set('x-one', 'a set');
+            response.headers.append('x-one', 'a append');
+            response.headers.set('x-two', 'a set');
+            response.headers.append('x-three', 'a append');
+            response.headers.set('x-four', 'a set');
+            return null;
           }
 
           export default function Comp() {
@@ -501,15 +524,13 @@ test.describe("single-fetch", () => {
           }
         `,
         "app/routes/a.b.tsx": js`
-          export function headers({ loaderHeaders, parentHeaders }) {
-            let headers = new Headers(parentHeaders);
-            loaderHeaders.forEach((value, name) => headers.set(name, value));
-            headers.set('x-b-headers', 'true')
-            return headers;
-          }
-
-          export function loader({ request }) {
-            return new Response(null, { headers: { "x-b-loader": "true" } });
+          export function loader({ request, response }) {
+            response.headers.set('x-one', 'b set');
+            response.headers.append('x-one', 'b append');
+            response.headers.set('x-two', 'b set');
+            response.headers.append('x-three', 'b append');
+            response.headers.delete('x-four');
+            return null;
           }
 
           export default function Comp() {
@@ -517,15 +538,21 @@ test.describe("single-fetch", () => {
           }
         `,
         "app/routes/a.b.c.tsx": js`
-          export function headers({ loaderHeaders, parentHeaders }) {
-            let headers = new Headers(parentHeaders);
-            loaderHeaders.forEach((value, name) => headers.set(name, value));
-            headers.set('x-c-headers', 'true')
-            return headers;
+          export function action({ request, response }) {
+            response.headers.set('x-one', 'c action set');
+            response.headers.append('x-one', 'c action append');
+            response.headers.set('x-two', 'c action set');
+            response.headers.append('x-three', 'c action append');
+            response.headers.set('x-four', 'c action set');
+            return null;
           }
 
-          export function loader({ request }) {
-            return new Response(null, { headers: { "x-c-loader": "true" } });
+          export function loader({ request, response }) {
+            response.headers.set('x-one', 'c set');
+            response.headers.append('x-one', 'c append');
+            response.headers.set('x-two', 'c set');
+            response.headers.append('x-three', 'c append');
+            return null;
           }
 
           export default function Comp() {
@@ -535,53 +562,1184 @@ test.describe("single-fetch", () => {
       },
     });
 
-    let res = await fixture.requestSingleFetchData("/a/b/c.data");
-    expect(res.headers.get("x-a-loader")).toEqual("true");
-    expect(res.headers.get("x-a-headers")).toEqual("true");
-    expect(res.headers.get("x-b-loader")).toEqual("true");
-    expect(res.headers.get("x-b-headers")).toEqual("true");
-    expect(res.headers.get("x-c-loader")).toEqual("true");
-    expect(res.headers.get("x-c-headers")).toEqual("true");
+    // x-one uses both set and append
+    // x-two only uses set
+    // x-three only uses append
+    // x-four deletes
+    let res: Awaited<
+      ReturnType<
+        typeof fixture.requestDocument | typeof fixture.requestSingleFetchData
+      >
+    >;
+    res = await fixture.requestDocument("/a");
+    expect(res.headers.get("x-one")).toEqual("a set, a append");
+    expect(res.headers.get("x-two")).toEqual("a set");
+    expect(res.headers.get("x-three")).toEqual("a append");
+    expect(res.headers.get("x-four")).toEqual("a set");
 
-    res = await fixture.requestSingleFetchData(
-      "/a/b/c.data?_routes=routes%2Fa,routes%2Fa.b"
+    res = await fixture.requestSingleFetchData("/a.data");
+    expect(res.headers.get("x-one")).toEqual("a set, a append");
+    expect(res.headers.get("x-two")).toEqual("a set");
+    expect(res.headers.get("x-three")).toEqual("a append");
+    expect(res.headers.get("x-four")).toEqual("a set");
+
+    res = await fixture.requestDocument("/a/b");
+    expect(res.headers.get("x-one")).toEqual("b set, b append");
+    expect(res.headers.get("x-two")).toEqual("b set");
+    expect(res.headers.get("x-three")).toEqual("a append, b append");
+    expect(res.headers.get("x-four")).toEqual(null);
+
+    res = await fixture.requestSingleFetchData("/a/b.data");
+    expect(res.headers.get("x-one")).toEqual("b set, b append");
+    expect(res.headers.get("x-two")).toEqual("b set");
+    expect(res.headers.get("x-three")).toEqual("a append, b append");
+    expect(res.headers.get("x-four")).toEqual(null);
+
+    res = await fixture.requestDocument("/a/b/c");
+    expect(res.headers.get("x-one")).toEqual("c set, c append");
+    expect(res.headers.get("x-two")).toEqual("c set");
+    expect(res.headers.get("x-three")).toEqual("a append, b append, c append");
+    expect(res.headers.get("x-four")).toEqual(null);
+
+    res = await fixture.requestSingleFetchData("/a/b/c.data");
+    expect(res.headers.get("x-one")).toEqual("c set, c append");
+    expect(res.headers.get("x-two")).toEqual("c set");
+    expect(res.headers.get("x-three")).toEqual("a append, b append, c append");
+    expect(res.headers.get("x-four")).toEqual(null);
+
+    // Fine-grained revalidation
+    res = await fixture.requestDocument("/a/b/c.data?_routes=routes%2Fa");
+    expect(res.headers.get("x-one")).toEqual("a set, a append");
+    expect(res.headers.get("x-two")).toEqual("a set");
+    expect(res.headers.get("x-three")).toEqual("a append");
+    expect(res.headers.get("x-four")).toEqual("a set");
+
+    res = await fixture.requestDocument(
+      "/a/b.data?_routes=routes%2Fa,routes%2Fa.b"
     );
-    expect(res.headers.get("x-a-loader")).toEqual("true");
-    expect(res.headers.get("x-a-headers")).toEqual("true");
-    expect(res.headers.get("x-b-loader")).toEqual("true");
-    expect(res.headers.get("x-b-headers")).toEqual("true");
-    expect(res.headers.get("x-c-loader")).toBeNull();
-    expect(res.headers.get("x-c-headers")).toBeNull();
+    expect(res.headers.get("x-one")).toEqual("b set, b append");
+    expect(res.headers.get("x-two")).toEqual("b set");
+    expect(res.headers.get("x-three")).toEqual("a append, b append");
+    expect(res.headers.get("x-four")).toEqual(null);
 
-    res = await fixture.requestSingleFetchData(
-      "/a/b/c.data?_routes=routes%2Fa"
-    );
-    expect(res.headers.get("x-a-loader")).toEqual("true");
-    expect(res.headers.get("x-a-headers")).toEqual("true");
-    expect(res.headers.get("x-b-loader")).toBeNull();
-    expect(res.headers.get("x-b-headers")).toBeNull();
-    expect(res.headers.get("x-c-loader")).toBeNull();
-    expect(res.headers.get("x-c-headers")).toBeNull();
+    res = await fixture.requestDocument("/a/b/c.data?_routes=routes%2Fa.b.c");
+    expect(res.headers.get("x-one")).toEqual("c set, c append");
+    expect(res.headers.get("x-two")).toEqual("c set");
+    expect(res.headers.get("x-three")).toEqual("c append");
+    expect(res.headers.get("x-four")).toEqual(null);
 
-    res = await fixture.requestSingleFetchData(
-      "/a/b/c.data?_routes=routes%2Fa.b.c"
-    );
-    expect(res.headers.get("x-a-loader")).toBeNull();
-    expect(res.headers.get("x-a-headers")).toBeNull();
-    expect(res.headers.get("x-b-loader")).toBeNull();
-    expect(res.headers.get("x-b-headers")).toBeNull();
-    expect(res.headers.get("x-c-loader")).toEqual("true");
-    expect(res.headers.get("x-c-headers")).toEqual("true");
-
-    res = await fixture.requestSingleFetchData(
+    res = await fixture.requestDocument(
       "/a/b/c.data?_routes=routes%2Fa,routes%2Fa.b.c"
     );
-    expect(res.headers.get("x-a-loader")).toEqual("true");
-    expect(res.headers.get("x-a-loader")).toEqual("true");
-    expect(res.headers.get("x-b-headers")).toBeNull();
-    expect(res.headers.get("x-b-headers")).toBeNull();
-    expect(res.headers.get("x-c-loader")).toEqual("true");
-    expect(res.headers.get("x-c-headers")).toEqual("true");
+    expect(res.headers.get("x-one")).toEqual("c set, c append");
+    expect(res.headers.get("x-two")).toEqual("c set");
+    expect(res.headers.get("x-three")).toEqual("a append, c append");
+    expect(res.headers.get("x-four")).toEqual("a set");
+
+    // Action only - single fetch request
+    res = await fixture.requestSingleFetchData("/a/b/c.data", {
+      method: "post",
+      body: null,
+    });
+    expect(res.headers.get("x-one")).toEqual("c action set, c action append");
+    expect(res.headers.get("x-two")).toEqual("c action set");
+    expect(res.headers.get("x-three")).toEqual("c action append");
+    expect(res.headers.get("x-four")).toEqual("c action set");
+
+    // Actions and Loaders - Document request
+    res = await fixture.requestDocument("/a/b/c", {
+      method: "post",
+      body: null,
+    });
+    expect(res.headers.get("x-one")).toEqual("c set, c append");
+    expect(res.headers.get("x-two")).toEqual("c set");
+    expect(res.headers.get("x-three")).toEqual(
+      "c action append, a append, b append, c append"
+    );
+    expect(res.headers.get("x-four")).toEqual(null);
+  });
+
+  test("merges status codes from nested routes", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/a.tsx": js`
+          export function loader({ request, response }) {
+            if (new URL(request.url).searchParams.has("error")) {
+              response.status = 401
+            } else {
+              response.status = 201
+            }
+            return null;
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+        "app/routes/a.b.tsx": js`
+          export function loader({ request, response }) {
+            response.status = 202
+            return null;
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+        "app/routes/a.b.c.tsx": js`
+          export function action({ request, response }) {
+            response.status = 206
+            return null;
+          }
+
+          export function loader({ request, response }) {
+            response.status = 203
+            return null;
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+      },
+    });
+
+    // Loaders
+    let res: Awaited<
+      ReturnType<
+        typeof fixture.requestDocument | typeof fixture.requestSingleFetchData
+      >
+    >;
+    res = await fixture.requestDocument("/a");
+    expect(res.status).toEqual(201);
+
+    res = await fixture.requestSingleFetchData("/a.data");
+    expect(res.status).toEqual(201);
+
+    res = await fixture.requestDocument("/a/b");
+    expect(res.status).toEqual(202);
+
+    res = await fixture.requestSingleFetchData("/a/b.data");
+    expect(res.status).toEqual(202);
+
+    res = await fixture.requestDocument("/a/b/c");
+    expect(res.status).toEqual(203);
+
+    res = await fixture.requestSingleFetchData("/a/b/c.data");
+    expect(res.status).toEqual(203);
+
+    // Errors
+    res = await fixture.requestDocument("/a?error");
+    expect(res.status).toEqual(401);
+
+    res = await fixture.requestSingleFetchData("/a.data?error");
+    expect(res.status).toEqual(401);
+
+    res = await fixture.requestDocument("/a/b?error");
+    expect(res.status).toEqual(401);
+
+    res = await fixture.requestSingleFetchData("/a/b.data?error");
+    expect(res.status).toEqual(401);
+
+    // Actions
+    res = await fixture.requestDocument("/a/b/c", {
+      method: "post",
+      body: null,
+    });
+    expect(res.status).toEqual(206);
+
+    res = await fixture.requestSingleFetchData("/a/b/c.data", {
+      method: "post",
+      body: null,
+    });
+    expect(res.status).toEqual(206);
+  });
+
+  test("merges headers from nested routes when raw Responses are returned", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/a.tsx": js`
+          export function loader({ request}) {
+            let headers = new Headers();
+            headers.set('x-one', 'a set');
+            headers.append('x-one', 'a append');
+            headers.set('x-two', 'a set');
+            headers.append('x-three', 'a append');
+            headers.set('x-four', 'a set');
+            return new Response(null, { headers });
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+        "app/routes/a.b.tsx": js`
+          export function action({ request, response }) {
+            let headers = new Headers();
+            headers.set('x-one', 'b action set');
+            headers.append('x-one', 'b action append');
+            headers.set('x-two', 'b action set');
+            headers.append('x-three', 'b action append');
+            headers.set('x-four', 'b action set');
+            return new Response(null, { headers });
+          }
+
+          export function loader({ request, response }) {
+            let headers = new Headers();
+            headers.set('x-one', 'b set');
+            headers.append('x-one', 'b append');
+            headers.set('x-two', 'b set');
+            headers.append('x-three', 'b append');
+            headers.delete('x-four');
+            return new Response(null, { headers });
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+      },
+    });
+
+    // x-one uses both set and append
+    // x-two only uses set
+    // x-three only uses append
+    // x-four deletes
+    let res: Awaited<
+      ReturnType<
+        typeof fixture.requestDocument | typeof fixture.requestSingleFetchData
+      >
+    >;
+    res = await fixture.requestDocument("/a");
+    expect(res.headers.get("x-one")).toEqual("a set, a append");
+    expect(res.headers.get("x-two")).toEqual("a set");
+    expect(res.headers.get("x-three")).toEqual("a append");
+    expect(res.headers.get("x-four")).toEqual("a set");
+
+    res = await fixture.requestSingleFetchData("/a.data");
+    expect(res.headers.get("x-one")).toEqual("a set, a append");
+    expect(res.headers.get("x-two")).toEqual("a set");
+    expect(res.headers.get("x-three")).toEqual("a append");
+    expect(res.headers.get("x-four")).toEqual("a set");
+
+    res = await fixture.requestDocument("/a/b");
+    expect(res.headers.get("x-one")).toEqual("b set, b append");
+    expect(res.headers.get("x-two")).toEqual("b set");
+    expect(res.headers.get("x-three")).toEqual("b append"); // Blows away "a append"
+    expect(res.headers.get("x-four")).toEqual("a set");
+
+    res = await fixture.requestSingleFetchData("/a/b.data");
+    expect(res.headers.get("x-one")).toEqual("b set, b append");
+    expect(res.headers.get("x-two")).toEqual("b set");
+    expect(res.headers.get("x-three")).toEqual("b append"); // Blows away "a append"
+    expect(res.headers.get("x-four")).toEqual("a set");
+
+    // Action only - single fetch request
+    res = await fixture.requestSingleFetchData("/a/b.data", {
+      method: "post",
+      body: null,
+    });
+    expect(res.headers.get("x-one")).toEqual("b action set, b action append");
+    expect(res.headers.get("x-two")).toEqual("b action set");
+    expect(res.headers.get("x-three")).toEqual("b action append");
+    expect(res.headers.get("x-four")).toEqual("b action set");
+
+    // Actions and Loaders - Document request
+    res = await fixture.requestDocument("/a/b", {
+      method: "post",
+      body: null,
+    });
+    expect(res.headers.get("x-one")).toEqual("b set, b append");
+    expect(res.headers.get("x-two")).toEqual("b set");
+    expect(res.headers.get("x-three")).toEqual("b append"); // Blows away prior appends
+    expect(res.headers.get("x-four")).toEqual("a set"); // Can't delete via Response
+  });
+
+  test("merges status codes from nested routes when raw Responses are used", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/a.tsx": js`
+          export function loader({ request, response }) {
+            if (new URL(request.url).searchParams.has("error")) {
+              return new Response(null, { status: 401 });
+            } else {
+              return new Response(null, { status: 201 });
+            }
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+        "app/routes/a.b.tsx": js`
+          export function loader({ request, response }) {
+            return new Response(null, { status: 202 });
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+        "app/routes/a.b.c.tsx": js`
+          export function action({ request, response }) {
+            return new Response(null, { status: 206 });
+          }
+
+          export function loader({ request, response }) {
+            return new Response(null, { status: 203 });
+          }
+
+          export default function Comp() {
+            return null;
+          }
+        `,
+      },
+    });
+
+    // Loaders
+    let res: Awaited<
+      ReturnType<
+        typeof fixture.requestDocument | typeof fixture.requestSingleFetchData
+      >
+    >;
+    res = await fixture.requestDocument("/a");
+    expect(res.status).toEqual(201);
+
+    res = await fixture.requestSingleFetchData("/a.data");
+    expect(res.status).toEqual(201);
+
+    res = await fixture.requestDocument("/a/b");
+    expect(res.status).toEqual(202);
+
+    res = await fixture.requestSingleFetchData("/a/b.data");
+    expect(res.status).toEqual(202);
+
+    res = await fixture.requestDocument("/a/b/c");
+    expect(res.status).toEqual(203);
+
+    res = await fixture.requestSingleFetchData("/a/b/c.data");
+    expect(res.status).toEqual(203);
+
+    // Errors
+    res = await fixture.requestDocument("/a?error");
+    expect(res.status).toEqual(401);
+
+    res = await fixture.requestSingleFetchData("/a.data?error");
+    expect(res.status).toEqual(401);
+
+    res = await fixture.requestDocument("/a/b?error");
+    expect(res.status).toEqual(401);
+
+    res = await fixture.requestSingleFetchData("/a/b.data?error");
+    expect(res.status).toEqual(401);
+
+    // Actions
+    res = await fixture.requestDocument("/a/b/c", {
+      method: "post",
+      body: null,
+    });
+    expect(res.status).toEqual(206);
+
+    res = await fixture.requestSingleFetchData("/a/b/c.data", {
+      method: "post",
+      body: null,
+    });
+    expect(res.status).toEqual(206);
+  });
+
+  test("processes thrown loader redirects via responseStub", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/data.tsx": js`
+          import { redirect } from '@remix-run/node';
+          export function loader({ request, response }) {
+            response.status = 302;
+            response.headers.set('Location', '/target');
+            throw response;
+          }
+          export default function Component() {
+            return null
+          }
+        `,
+        "app/routes/target.tsx": js`
+          export default function Component() {
+            return <h1 id="target">Target</h1>
+          }
+        `,
+      },
+    });
+
+    console.error = () => {};
+
+    let res = await fixture.requestDocument("/data");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/target");
+    expect(await res.text()).toBe("");
+
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickLink("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("processes returned loader redirects via responseStub", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/data.tsx": js`
+          import { redirect } from '@remix-run/node';
+          export function loader({ request, response }) {
+            response.status = 302;
+            response.headers.set('Location', '/target');
+            return null
+          }
+          export default function Component() {
+            return null
+          }
+        `,
+        "app/routes/target.tsx": js`
+          export default function Component() {
+            return <h1 id="target">Target</h1>
+          }
+        `,
+      },
+    });
+
+    let res = await fixture.requestDocument("/data");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/target");
+    expect(await res.text()).toBe("");
+
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickLink("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("processes thrown loader redirects via Response", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/data.tsx": js`
+          import { redirect } from '@remix-run/node';
+          export function loader() {
+            throw redirect('/target');
+          }
+          export default function Component() {
+            return null
+          }
+        `,
+        "app/routes/target.tsx": js`
+          export default function Component() {
+            return <h1 id="target">Target</h1>
+          }
+        `,
+      },
+    });
+
+    console.error = () => {};
+
+    let res = await fixture.requestDocument("/data");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/target");
+    expect(await res.text()).toBe("");
+
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickLink("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("processes returned loader redirects via Response", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/data.tsx": js`
+          import { redirect } from '@remix-run/node';
+          export function loader() {
+            return redirect('/target');
+          }
+          export default function Component() {
+            return null
+          }
+        `,
+        "app/routes/target.tsx": js`
+          export default function Component() {
+            return <h1 id="target">Target</h1>
+          }
+        `,
+      },
+    });
+    let res = await fixture.requestDocument("/data");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/target");
+    expect(await res.text()).toBe("");
+
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickLink("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("processes thrown action redirects via responseStub", async ({
+    page,
+  }) => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/data.tsx": js`
+            import { redirect } from '@remix-run/node';
+            export function action({ response }) {
+              response.status = 302;
+              response.headers.set('Location', '/target');
+              throw response;
+            }
+            export default function Component() {
+              return null
+            }
+          `,
+          "app/routes/target.tsx": js`
+            export default function Component() {
+              return <h1 id="target">Target</h1>
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+
+    console.error = () => {};
+
+    let res = await fixture.requestDocument("/data", {
+      method: "post",
+      body: null,
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/target");
+    expect(await res.text()).toBe("");
+
+    let appFixture = await createAppFixture(fixture, ServerMode.Development);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickSubmitButton("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("processes returned action redirects via responseStub", async ({
+    page,
+  }) => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/data.tsx": js`
+            import { redirect } from '@remix-run/node';
+            export function action({ response }) {
+              response.status = 302;
+              response.headers.set('Location', '/target');
+              return null
+            }
+            export default function Component() {
+              return null
+            }
+          `,
+          "app/routes/target.tsx": js`
+            export default function Component() {
+              return <h1 id="target">Target</h1>
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+
+    let res = await fixture.requestDocument("/data", {
+      method: "post",
+      body: null,
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/target");
+    expect(await res.text()).toBe("");
+
+    let appFixture = await createAppFixture(fixture, ServerMode.Development);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickSubmitButton("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("processes thrown action redirects via Response", async ({ page }) => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/data.tsx": js`
+            import { redirect } from '@remix-run/node';
+            export function action() {
+              throw redirect('/target');
+            }
+            export default function Component() {
+              return null
+            }
+          `,
+          "app/routes/target.tsx": js`
+            export default function Component() {
+              return <h1 id="target">Target</h1>
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+
+    console.error = () => {};
+
+    let res = await fixture.requestDocument("/data", {
+      method: "post",
+      body: null,
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/target");
+    expect(await res.text()).toBe("");
+
+    let appFixture = await createAppFixture(fixture, ServerMode.Development);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickSubmitButton("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("processes returned action redirects via Response", async ({ page }) => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/data.tsx": js`
+            import { redirect } from '@remix-run/node';
+            export function action() {
+              return redirect('/target');
+            }
+            export default function Component() {
+              return null
+            }
+          `,
+          "app/routes/target.tsx": js`
+            export default function Component() {
+              return <h1 id="target">Target</h1>
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+
+    let res = await fixture.requestDocument("/data", {
+      method: "post",
+      body: null,
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/target");
+    expect(await res.text()).toBe("");
+
+    let appFixture = await createAppFixture(fixture, ServerMode.Development);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickSubmitButton("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("processes redirects from handleDataRequest (after loaders)", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/entry.server.tsx": js`
+          import { PassThrough } from "node:stream";
+
+          import type { EntryContext } from "@remix-run/node";
+          import { createReadableStreamFromReadable } from "@remix-run/node";
+          import { RemixServer } from "@remix-run/react";
+          import { renderToPipeableStream } from "react-dom/server";
+
+          export default function handleRequest(
+            request: Request,
+            responseStatusCode: number,
+            responseHeaders: Headers,
+            remixContext: EntryContext
+          ) {
+            return new Promise((resolve, reject) => {
+              const { pipe } = renderToPipeableStream(
+                <RemixServer context={remixContext} url={request.url} />,
+                {
+                  onShellReady() {
+                    const body = new PassThrough();
+                    const stream = createReadableStreamFromReadable(body);
+                    responseHeaders.set("Content-Type", "text/html");
+                    resolve(
+                      new Response(stream, {
+                        headers: responseHeaders,
+                        status: responseStatusCode,
+                      })
+                    );
+                    pipe(body);
+                  },
+                  onShellError(error: unknown) {
+                    reject(error);
+                  },
+                  onError(error: unknown) {
+                    responseStatusCode = 500;
+                  },
+                }
+              );
+            });
+          }
+
+          export function handleDataRequest(response, { request }) {
+            if (request.url.endsWith("/data.data")) {
+              return new Response(null, {
+                status: 302,
+                headers: {
+                  Location: "/target",
+                },
+              });
+            }
+            return response;
+          }
+        `,
+        "app/routes/data.tsx": js`
+          import { redirect } from '@remix-run/node';
+          export function loader() {
+            return redirect('/target');
+          }
+          export default function Component() {
+            return null
+          }
+        `,
+        "app/routes/target.tsx": js`
+          export default function Component() {
+            return <h1 id="target">Target</h1>
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickLink("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("processes redirects from handleDataRequest (after actions)", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/entry.server.tsx": js`
+          import { PassThrough } from "node:stream";
+
+          import type { EntryContext } from "@remix-run/node";
+          import { createReadableStreamFromReadable } from "@remix-run/node";
+          import { RemixServer } from "@remix-run/react";
+          import { renderToPipeableStream } from "react-dom/server";
+
+          export default function handleRequest(
+            request: Request,
+            responseStatusCode: number,
+            responseHeaders: Headers,
+            remixContext: EntryContext
+          ) {
+            return new Promise((resolve, reject) => {
+              const { pipe } = renderToPipeableStream(
+                <RemixServer context={remixContext} url={request.url} />,
+                {
+                  onShellReady() {
+                    const body = new PassThrough();
+                    const stream = createReadableStreamFromReadable(body);
+                    responseHeaders.set("Content-Type", "text/html");
+                    resolve(
+                      new Response(stream, {
+                        headers: responseHeaders,
+                        status: responseStatusCode,
+                      })
+                    );
+                    pipe(body);
+                  },
+                  onShellError(error: unknown) {
+                    reject(error);
+                  },
+                  onError(error: unknown) {
+                    responseStatusCode = 500;
+                  },
+                }
+              );
+            });
+          }
+
+          export function handleDataRequest(response, { request }) {
+            if (request.url.endsWith("/data.data")) {
+              return new Response(null, {
+                status: 302,
+                headers: {
+                  Location: "/target",
+                },
+              });
+            }
+            return response;
+          }
+        `,
+        "app/routes/data.tsx": js`
+          import { redirect } from '@remix-run/node';
+          export function action() {
+            return redirect('/target');
+          }
+          export default function Component() {
+            return null
+          }
+        `,
+        "app/routes/target.tsx": js`
+          export default function Component() {
+            return <h1 id="target">Target</h1>
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickSubmitButton("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("wraps resource route naked object returns in json with a deprecation warning", async () => {
+    let oldConsoleWarn = console.warn;
+    let warnLogs: unknown[] = [];
+    console.warn = (...args) => warnLogs.push(...args);
+
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/resource.tsx": js`
+            export function loader() {
+              return { message: "RESOURCE" };
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+    let res = await fixture.requestResource("/resource");
+    expect(await res.json()).toEqual({
+      message: "RESOURCE",
+    });
+
+    expect(warnLogs).toEqual([
+      "⚠️ REMIX FUTURE CHANGE: Resource routes will no longer be able to return " +
+        "raw JavaScript objects in v3 when Single Fetch becomes the default. You " +
+        "can prepare for this change at your convenience by wrapping the data " +
+        "returned from your `loader` function in the `routes/resource` route with " +
+        "`json()`.  For instructions on making this change see " +
+        "https://remix.run/docs/en/v2.9.2/guides/single-fetch#resource-routes",
+    ]);
+    console.warn = oldConsoleWarn;
+  });
+
+  test("processes response stub onto resource routes returning raw data", async () => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/resource.tsx": js`
+            import { json } from '@remix-run/node';
+
+            export function loader({ response }) {
+              // When raw json is returned, the stub status/headers will just be used directly
+              response.status = 201;
+              response.headers.set('X-Stub', 'yes')
+              return { message: "RESOURCE" };
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+    let res = await fixture.requestResource("/resource");
+    expect(res.status).toBe(201);
+    expect(res.headers.get("X-Stub")).toBe("yes");
+    expect(await res.json()).toEqual({
+      message: "RESOURCE",
+    });
+  });
+
+  test("processes response stub onto resource routes returning responses", async () => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/resource.tsx": js`
+            import { json } from '@remix-run/node';
+
+            export function loader({ response }) {
+              // This will be ignored in favor of the returned Response status
+              response.status = 200;
+              response.headers.set('X-Stub', 'yes')
+              // This will overwrite the returned Response header
+              response.headers.set('X-Set', '2')
+              // This will append to the returned Response header
+              response.headers.append('X-Append', '2')
+              return json({ message: "RESOURCE" }, {
+                // This one takes precedence
+                status: 201,
+                headers: {
+                  'X-Response': 'yes',
+                  'X-Set': '1',
+                  'X-Append': '1',
+                },
+              });
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+    let res = await fixture.requestResource("/resource");
+    expect(res.status).toBe(201);
+    expect(res.headers.get("X-Response")).toBe("yes");
+    expect(res.headers.get("X-Stub")).toBe("yes");
+    expect(res.headers.get("X-Set")).toBe("2");
+    expect(res.headers.get("X-Append")).toBe("1, 2");
+    expect(await res.json()).toEqual({
+      message: "RESOURCE",
+    });
+  });
+
+  test("allows fetcher to hit resource route and return via turbo stream", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/_index.tsx": js`
+          import { useFetcher } from "@remix-run/react";
+
+          export default function Component() {
+            let fetcher = useFetcher();
+            return (
+              <div>
+                <button id="load" onClick={() => fetcher.load('/resource')}>
+                  Load
+                </button>
+                {fetcher.data ? <pre id="fetcher-data">{fetcher.data.message} {fetcher.data.date.toISOString()}</pre> : null}
+              </div>
+            );
+          }
+        `,
+        "app/routes/resource.tsx": js`
+          export function loader() {
+            // Fetcher calls to resource routes will append ".data" and we'll go through
+            // the turbo-stream flow.  If a user were to curl this endpoint they'd go
+            // through "handleResourceRoute" and it would be returned as "json()"
+            return {
+              message: "RESOURCE",
+              date: new Date("${ISO_DATE}"),
+            };
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickElement("#load");
+    await page.waitForSelector("#fetcher-data");
+    expect(await app.getHtml("#fetcher-data")).toContain(
+      "RESOURCE 2024-03-12T12:00:00.000Z"
+    );
+  });
+
+  test("does not log thrown redirect response stubs via handleError", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/redirect.tsx": js`
+          export function action({ response }) {
+            response.status = 301;
+            response.headers.set("Location", "/data");
+            throw response;
+          }
+          export function loader({ response }) {
+            response.status = 301;
+            response.headers.set("Location", "/data");
+            throw response;
+          }
+          export default function Component() {
+            return <h1>Should not see me</h1>;
+          }
+        `,
+      },
+    });
+
+    let errorLogs = [];
+    console.error = (e) => errorLogs.push(e);
+    await fixture.requestDocument("/redirect");
+    await fixture.requestSingleFetchData("/redirect.data");
+    await fixture.requestSingleFetchData("/redirect.data", {
+      method: "post",
+      body: null,
+    });
+    expect(errorLogs.length).toBe(0);
+  });
+
+  test("does not log thrown non-redirect response stubs via handleError", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/redirect.tsx": js`
+          export function action({ response }) {
+            response.status = 400;
+            throw response;
+          }
+          export function loader({ response }) {
+            response.status = 400;
+            throw response;
+          }
+          export default function Component() {
+            return <h1>Should not see me</h1>;
+          }
+        `,
+      },
+    });
+
+    let errorLogs = [];
+    console.error = (e) => errorLogs.push(e);
+    await fixture.requestDocument("/redirect");
+    expect(errorLogs.length).toBe(1); // ErrorBoundary render logs this
+    await fixture.requestSingleFetchData("/redirect.data");
+    await fixture.requestSingleFetchData("/redirect.data", {
+      method: "post",
+      body: null,
+    });
+    expect(errorLogs.length).toBe(1);
   });
 
   test.describe("client loaders", () => {
@@ -1383,5 +2541,97 @@ test.describe("single-fetch", () => {
       // No prefetching due to clientLoaders
       expect(await app.page.locator("nav link[as='fetch']").count()).toEqual(0);
     });
+  });
+
+  test("supports nonce on streaming script tags", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/root.tsx": js`
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+          export function loader() {
+            return {
+              message: "ROOT",
+            };
+          }
+
+          export default function Root() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <Scripts nonce="the-nonce" />
+                </body>
+              </html>
+            );
+          }
+        `,
+        "app/entry.server.tsx": js`
+          import { PassThrough } from "node:stream";
+
+          import type { EntryContext } from "@remix-run/node";
+          import { createReadableStreamFromReadable } from "@remix-run/node";
+          import { RemixServer } from "@remix-run/react";
+          import { renderToPipeableStream } from "react-dom/server";
+
+          export default function handleRequest(
+            request: Request,
+            responseStatusCode: number,
+            responseHeaders: Headers,
+            remixContext: EntryContext
+          ) {
+            return new Promise((resolve, reject) => {
+              const { pipe } = renderToPipeableStream(
+                <RemixServer context={remixContext} url={request.url} nonce="the-nonce" />,
+                {
+                  onShellReady() {
+                    const body = new PassThrough();
+                    const stream = createReadableStreamFromReadable(body);
+                    responseHeaders.set("Content-Type", "text/html");
+                    resolve(
+                      new Response(stream, {
+                        headers: responseHeaders,
+                        status: responseStatusCode,
+                      })
+                    );
+                    pipe(body);
+                  },
+                  onShellError(error: unknown) {
+                    reject(error);
+                  },
+                  onError(error: unknown) {
+                    responseStatusCode = 500;
+                  },
+                }
+              );
+            });
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/data", true);
+    let scripts = await page.$$("script");
+    expect(scripts.length).toBe(6);
+    let remixScriptsCount = 0;
+    for (let script of scripts) {
+      let content = await script.innerHTML();
+      if (content.includes("window.__remix")) {
+        remixScriptsCount++;
+        expect(await script.getAttribute("nonce")).toEqual("the-nonce");
+      }
+    }
+    expect(remixScriptsCount).toBe(4);
   });
 });

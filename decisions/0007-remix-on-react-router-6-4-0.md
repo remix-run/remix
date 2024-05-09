@@ -129,7 +129,7 @@ We can also split this into iterative approaches on the server too, and do `hand
 5. `handleDocumentRequest`
    1. This is the big one. It simplifies down pretty far, but has the biggest surface area where some things don't quite match up
    2. We need to map query "errors" to Remix's definition of error/catch and bubble them upwards accordingly.
-      1. For example, in a URL like `/a/b/c`, if C exports a a `CatchBoundary` but not an `ErrorBoundary`, then it'll be represented in the `DataRouteObject` with `hasErrorBoundary=true` since the `@remix-run/router` doesn't distinguish
+      1. For example, in a URL like `/a/b/c`, if C exports a `CatchBoundary` but not an `ErrorBoundary`, then it'll be represented in the `DataRouteObject` with `hasErrorBoundary=true` since the `@remix-run/router` doesn't distinguish
       2. If C's loader throws an error, the router will "catch" that at C's `errorElement`, but we then need to re-bubble that upwards to the nearest `ErrorBoundary`
       3. See `differentiateCatchVersusErrorBoundaries` in the `brophdawg11/rrr` branch
    3. New `RemixContext`

@@ -24,6 +24,10 @@ export {
 export {
   createRequestHandler,
   createSession,
+  unstable_defineLoader,
+  unstable_defineClientLoader,
+  unstable_defineAction,
+  unstable_defineClientAction,
   defer,
   broadcastDevReady,
   logDevReady,

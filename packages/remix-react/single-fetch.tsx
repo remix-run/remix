@@ -29,6 +29,7 @@ interface StreamTransferProps {
   identifier: number;
   reader: ReadableStreamDefaultReader<Uint8Array>;
   textDecoder: TextDecoder;
+  nonce?: string;
 }
 
 // StreamTransfer recursively renders down chunks of the `serverHandoffStream`
@@ -38,6 +39,7 @@ export function StreamTransfer({
   identifier,
   reader,
   textDecoder,
+  nonce,
 }: StreamTransferProps) {
   // If the user didn't render the <Scripts> component then we don't have to
   // bother streaming anything in
@@ -74,6 +76,7 @@ export function StreamTransfer({
   let { done, value } = promise.result;
   let scriptTag = value ? (
     <script
+      nonce={nonce}
       dangerouslySetInnerHTML={{
         __html: `window.__remixContext.streamController.enqueue(${escapeHtml(
           JSON.stringify(value)
@@ -87,6 +90,7 @@ export function StreamTransfer({
       <>
         {scriptTag}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `window.__remixContext.streamController.close();`,
           }}
@@ -103,6 +107,7 @@ export function StreamTransfer({
             identifier={identifier + 1}
             reader={reader}
             textDecoder={textDecoder}
+            nonce={nonce}
           />
         </React.Suspense>
       </>
@@ -126,9 +131,9 @@ function singleFetchActionStrategy(
   matches: DataStrategyFunctionArgs["matches"]
 ) {
   return Promise.all(
-    matches.map(async (m) =>
-      m.resolve(async (handler): Promise<HandlerResult> => {
-        let actionStatus: number | undefined;
+    matches.map(async (m) => {
+      let actionStatus: number | undefined;
+      let result = await m.resolve(async (handler): Promise<HandlerResult> => {
         let result = await handler(async () => {
           let url = singleFetchUrl(request.url);
           let init = await createRequestInit(request);
@@ -141,8 +146,13 @@ function singleFetchActionStrategy(
           result,
           status: actionStatus,
         };
-      })
-    )
+      });
+      return {
+        ...result,
+        // Proxy along the action HTTP response status for thrown errors
+        status: actionStatus,
+      };
+    })
   );
 }
 
@@ -277,16 +287,21 @@ export function singleFetchUrl(reqUrl: URL | string) {
 
 async function fetchAndDecode(url: URL, init?: RequestInit) {
   let res = await fetch(url, init);
-  if (res.headers.get("Content-Type")?.includes("text/x-turbo")) {
-    invariant(res.body, "No response body to decode");
+  // Don't do a hard check against the header here.  We'll get `text/x-turbo`
+  // when we have a running server, but if folks want to prerender `.data` files
+  // and serve them from a CDN we should let them come back with whatever
+  // Content-Type their CDN provides and not force them to make sure `.data`
+  // files are served as `text/x-turbo`.  We'll throw if we can't decode anyway.
+  invariant(res.body, "No response body to decode");
+  try {
     let decoded = await decodeViaTurboStream(res.body, window);
     return { status: res.status, data: decoded.value };
+  } catch (e) {
+    console.error(e);
+    throw new Error(
+      `Unable to decode turbo-stream response from URL: ${url.toString()}`
+    );
   }
-
-  // If we didn't get back a turbo-stream response, then we never reached the
-  // Remix server and likely this is a network error - just expose up the
-  // response body as an Error
-  throw new Error(await res.text());
 }
 
 // Note: If you change this function please change the corresponding
