@@ -106,7 +106,7 @@ In order to ensure you get the proper types when using Single Fetch, we've inclu
 
 🚨 Make sure the single-fetch types come after any other Remix packages in `types` so that they override those existing types.
 
-** `defineLoader`, `defineAction`, `defineClientLoader`, `defineClientAction` **
+\*\* `defineLoader`, `defineAction`, `defineClientLoader`, `defineClientAction` \*\*
 
 To get typesafety when defining loaders and actions, you can use the `defineLoader` and `defineAction` utilities:
 

@@ -15,9 +15,9 @@ Rather, they exist solely for typesafety by providing types for args and by ensu
 ```ts
 export let loader = defineLoader(({ request }) => {
   //                                ^? Request
-  return {a:1, b: () => 2}
+  return { a: 1, b: () => 2 };
   //           ^ type error: `b` is not serializable
-})
+});
 ```
 
 Note that `defineLoader` and `defineAction` are not technically necessary for defining loaders and actions if you aren't concerned with typesafety:
@@ -25,8 +25,8 @@ Note that `defineLoader` and `defineAction` are not technically necessary for de
 ```ts
 // this totally works! and typechecking is happy too!
 export let loader = () => {
-  return {a: 1}
-}
+  return { a: 1 };
+};
 ```
 
 This means that you can opt-in to `defineLoader` incrementally, one loader at a time.
@@ -35,15 +35,15 @@ You can return custom responses via the `json`/`defer` utilities, but doing so w
 
 ```ts
 let loader1 = () => {
-  return {a: 1, b: new Date()}
-}
-let data1 = useLoaderData<typeof loader1>()
+  return { a: 1, b: new Date() };
+};
+let data1 = useLoaderData<typeof loader1>();
 //  ^? {a: number, b: Date}
 
 let loader2 = () => {
-  return json({a: 1, b: new Date()}) // this opts-out of turbo-stream
-}
-let data2 = useLoaderData<typeof loader2>()
+  return json({ a: 1, b: new Date() }); // this opts-out of turbo-stream
+};
+let data2 = useLoaderData<typeof loader2>();
 //  ^? JsonifyObject<{a: number, b: Date}> which is really {a: number, b: string}
 ```
 

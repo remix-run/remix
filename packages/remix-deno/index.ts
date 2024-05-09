@@ -16,10 +16,6 @@ export {
 export {
   broadcastDevReady,
   createSession,
-  unstable_defineLoader,
-  unstable_defineClientLoader,
-  unstable_defineAction,
-  unstable_defineClientAction,
   defer,
   isCookie,
   isSession,
@@ -30,6 +26,10 @@ export {
   redirectDocument,
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
+  unstable_defineAction,
+  unstable_defineClientAction,
+  unstable_defineClientLoader,
+  unstable_defineLoader,
   unstable_parseMultipartFormData,
 } from "@remix-run/server-runtime";
 
