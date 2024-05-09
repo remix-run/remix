@@ -45,9 +45,9 @@ import {
   singleFetchAction,
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
+  ResponseStubOperationsSymbol,
 } from "./single-fetch";
 import { resourceRouteJsonWarning } from "./deprecations";
-import { ResponseStubOperationsSymbol } from "./routeModules";
 
 export type RequestHandler = (
   request: Request,
