@@ -130,9 +130,11 @@ const CLIENT_ROUTE_EXPORTS = [
   "shouldRevalidate",
 ];
 
-// The "=1" suffix ensures client route requests can be processed before hitting
-// the Vite plugin since "?client-route" can be serialized as "?client-route="
-const CLIENT_ROUTE_QUERY_STRING = "?client-route=1";
+/** This is used to manage a build optimization to remove unused route exports
+from the client build output. This is important in cases where custom route
+exports are only ever used on the server. Without this optimization we can't
+tree-shake any unused custom exports because routes are entry points. */
+const BUILD_CLIENT_ROUTE_QUERY_STRING = "?__remix-build-client-route";
 
 // Only expose a subset of route properties to the "serverBundles" function
 const branchRouteProperties = [
@@ -318,10 +320,6 @@ const getHash = (source: BinaryLike, maxLength?: number): string => {
   return typeof maxLength === "number" ? hash.slice(0, maxLength) : hash;
 };
 
-const isClientRoute = (id: string): boolean => {
-  return id.endsWith(CLIENT_ROUTE_QUERY_STRING);
-};
-
 const resolveChunk = (
   ctx: RemixPluginContext,
   viteManifest: Vite.Manifest,
@@ -332,7 +330,7 @@ const resolveChunk = (
     path.relative(ctx.rootDirectory, absoluteFilePath)
   );
   let entryChunk =
-    viteManifest[rootRelativeFilePath + CLIENT_ROUTE_QUERY_STRING] ??
+    viteManifest[rootRelativeFilePath + BUILD_CLIENT_ROUTE_QUERY_STRING] ??
     viteManifest[rootRelativeFilePath];
 
   if (!entryChunk) {
@@ -966,7 +964,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           `${resolveFileUrl(
             ctx,
             resolveRelativeRouteFilePath(route, ctx.remixConfig)
-          )}${CLIENT_ROUTE_QUERY_STRING}`
+          )}`
         ),
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
@@ -1142,7 +1140,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                                 `${path.resolve(
                                   ctx.remixConfig.appDirectory,
                                   route.file
-                                )}${CLIENT_ROUTE_QUERY_STRING}`
+                                )}${BUILD_CLIENT_ROUTE_QUERY_STRING}`
                             ),
                           ],
                         },
@@ -1271,8 +1269,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           cssModulesManifest[id] = code;
         }
 
-        if (isClientRoute(id)) {
-          let routeModuleId = id.replace(CLIENT_ROUTE_QUERY_STRING, "");
+        if (id.endsWith(BUILD_CLIENT_ROUTE_QUERY_STRING)) {
+          let routeModuleId = id.replace(BUILD_CLIENT_ROUTE_QUERY_STRING, "");
           let sourceExports = await getRouteModuleExports(
             viteChildCompiler,
             ctx,
@@ -1695,10 +1693,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         let useFastRefresh = !ssr && (isJSX || code.includes(devRuntime));
         if (!useFastRefresh) return;
 
-        if (isClientRoute(id)) {
-          return { code: addRefreshWrapper(ctx.remixConfig, code, id) };
-        }
-
         let result = await babel.transformAsync(code, {
           configFile: false,
           babelrc: false,
@@ -1789,17 +1783,16 @@ function addRefreshWrapper(
   id: string
 ): string {
   let route = getRoute(remixConfig, id);
-  let acceptExports =
-    route || isClientRoute(id)
-      ? [
-          "clientAction",
-          "clientLoader",
-          "handle",
-          "meta",
-          "links",
-          "shouldRevalidate",
-        ]
-      : [];
+  let acceptExports = route
+    ? [
+        "clientAction",
+        "clientLoader",
+        "handle",
+        "meta",
+        "links",
+        "shouldRevalidate",
+      ]
+    : [];
   return (
     REACT_REFRESH_HEADER.replaceAll("__SOURCE__", JSON.stringify(id)) +
     code +
