@@ -11,6 +11,7 @@ import type {
 import type { AppData, AppLoadContext } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { SerializeFrom } from "./serialize";
+import type { ResponseStub } from "./single-fetch";
 
 export interface RouteModules<RouteModule> {
   [routeId: string]: RouteModule | undefined;
@@ -40,6 +41,8 @@ export type ActionFunction = (
 export type ActionFunctionArgs = RRActionFunctionArgs<AppLoadContext> & {
   // Context is always provided in Remix, and typed for module augmentation support.
   context: AppLoadContext;
+  // TODO: (v7) Make this non-optional once single-fetch is the default
+  response?: ResponseStub;
 };
 
 /**
@@ -71,6 +74,8 @@ export type LoaderFunction = (
 export type LoaderFunctionArgs = RRLoaderFunctionArgs<AppLoadContext> & {
   // Context is always provided in Remix, and typed for module augmentation support.
   context: AppLoadContext;
+  // TODO: (v7) Make this non-optional once single-fetch is the default
+  response?: ResponseStub;
 };
 
 /**
