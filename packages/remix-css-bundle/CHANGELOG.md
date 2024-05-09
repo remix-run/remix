@@ -1,5 +1,7 @@
 # @remix-run/css-bundle
 
+## 2.9.2-pre.1
+
 ## 2.9.2-pre.0
 
 ## 2.9.1
