@@ -98,11 +98,64 @@ In order to ensure you get the proper types when using Single Fetch, we've inclu
 
 ```json
 {
-  "include": [
-    // ...
-    "node_modules/@remix-run/react/future/single-fetch.d.ts"
-  ]
+  "compilerOptions": {
+    "types": ["@remix-run/react/future/single-fetch.d.ts"]
+  }
 }
+```
+
+🚨 Make sure the single-fetch types come after any other Remix packages in `types` so that they override those existing types.
+
+** `defineLoader`, `defineAction`, `defineClientLoader`, `defineClientAction` **
+
+To get typesafety when defining loaders and actions, you can use the `defineLoader` and `defineAction` utilities:
+
+```ts
+import { defineLoader } from "@remix-run/node";
+
+export const loader = defineLoader(({ request }) => {
+  //                                  ^? Request
+});
+
+export const action = defineAction(({ context }) => {
+  //                                  ^? AppLoadContext
+});
+```
+
+Not only does this give you types for any arguments, but it also ensures you are returning single-fetch compatible types:
+
+```ts
+export const loader = defineLoader(() => {
+  return { hello: "world", badData: () => 1 };
+  //                       ^^^^^^^ Type error: `badData` is not serializable
+});
+
+export const action = defineAction(() => {
+  return { hello: "world", badData: new CustomType() };
+  //                       ^^^^^^^ Type error: `badData` is not serializable
+});
+```
+
+Single-fetch supports the following return types:
+
+```ts
+type Serializable =
+  | undefined
+  | null
+  | boolean
+  | string
+  | symbol
+  | number
+  | bigint
+  | Date
+  | URL
+  | RegExp
+  | Error
+  | Array<Serializable>
+  | { [key: PropertyKey]: Serializable } // objects with serializable values
+  | Map<Serializable, Serializable>
+  | Set<Serializable>
+  | Promise<Serializable>;
 ```
 
 **`useLoaderData`, `useActionData`, `useRouteLoaderData`, and `useFetcher`**
