@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.9.2-pre.1
+
+### Patch Changes
+
+- [REMOVE] Move defineClientLoader/defineClientAction to @remix-run/react package ([#9404](https://github.com/remix-run/remix/pull/9404))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.2-pre.1`
+
 ## 2.9.2-pre.0
 
 ### Patch Changes
