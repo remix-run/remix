@@ -29,6 +29,7 @@ If you want more control over your server or wish to deploy to a non-node runtim
 
 ```shellscript nonumber
 npx create-remix@latest --template remix-run/remix/templates/cloudflare
+npx create-remix@latest --template remix-run/remix/templates/cloudflare-workers
 npx create-remix@latest --template remix-run/remix/templates/express
 npx create-remix@latest --template remix-run/remix/templates/remix
 npx create-remix@latest --template remix-run/remix/templates/remix-javascript

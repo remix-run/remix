@@ -1,0 +1,12 @@
+name = "remix-cloudflare-workers-template"
+
+main = "./server.js"
+workers_dev = true
+# https://developers.cloudflare.com/workers/platform/compatibility-dates
+compatibility_date = "2023-04-20"
+
+[site]
+bucket = "./build/client"
+
+[build]
+command = "npm run build"

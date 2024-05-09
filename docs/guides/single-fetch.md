@@ -17,6 +17,7 @@ When you enable Single Fetch, Remix will make a single HTTP call to your server 
 - You must add `node_modules/@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `include` array to get proper type inference
 - Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 - The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
+- The old `installGlobals()` polyfill doesn't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
 
 ## Details
 
@@ -46,7 +47,7 @@ On the client side, this also means that your need to wrap your client-side [`hy
 
 Previously, Remix has a concept of an `ABORT_TIMEOUT` built-into the default [`entry.server.tsx`][entry-server] files which would terminate the React renderer, but it didn't do anything in particular to clean up any pending deferred promises.
 
-Now that Remix is streaming internally, we can cancel the `turbo-stream` processing and automatically reject any pending promises and stream up those errors to the client. By default, this happens after 4950ms - a value that was chosen to be just under the current 5000ms `ABORT_DELAY` in most entry.server.tsx files - since we need to cancel the promises and let the rejections stream up through the React renderer prior to aborting the React sid eof things.
+Now that Remix is streaming internally, we can cancel the `turbo-stream` processing and automatically reject any pending promises and stream up those errors to the client. By default, this happens after 4950ms - a value that was chosen to be just under the current 5000ms `ABORT_DELAY` in most entry.server.tsx files - since we need to cancel the promises and let the rejections stream up through the React renderer prior to aborting the React side of things.
 
 You can control this by exporting a `streamTimeout` numeric value from your `entry.server.tsx` and Remix will use that as the number of milliseconds after which to reject any outstanding Promises from `loader`/`action`'s. It's recommended to decouple this value from the timeout in which you abort the React renderer - and you should always set the React timeout to a higher value so it has time to stream down the underlying rejections from your `streamTimeout`.
 
@@ -94,12 +95,16 @@ Without Single Fetch, any plain Javascript object returned from a `loader` or `a
 
 With Single Fetch, naked objects will be streamed directly, so the built-in type inference is no longer accurate once you have opted-into Single Fetch. For example, they would assume that a `Date` would be serialized to a string on the client 😕.
 
-In order to ensure you get the proper types when using Single Fetch, we've included a set of type overrides that you can include in your `tsconfig.json` which aligns the types with the Single Fetch behavior:
+In order to ensure you get the proper types when using Single Fetch, we've included a set of type overrides that you can include in your `tsconfig.json`'s `compilerOptions.types` array which aligns the types with the Single Fetch behavior:
 
 ```json
 {
   "compilerOptions": {
-    "types": ["@remix-run/react/future/single-fetch.d.ts"]
+    //...
+    "types": [
+      // ...
+      "@remix-run/react/future/single-fetch.d.ts"
+    ]
   }
 }
 ```
@@ -177,7 +182,7 @@ export default function Component() {
   //    ^? { message: string, date: string }
 
   // ✅ After opting into single fetch types, types are serialized via turbo-stream
-  const data = useLoaderData<typeof loader>;
+  const data = useLoaderData<typeof loader>();
   //    ^? { message: string, date: Date }
 }
 ```
@@ -397,6 +402,13 @@ It's best to try to avoid using the `response` stub _and also_ returning a `Resp
 - The `Response` instance status will take priority over any `response` stub status
 - Headers operations on the `response` stub `headers` will be re-played on the returned `Response` headers instance
 
+### Fetch Polyfill
+
+Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or using the built-in `fetch` on Node 20+, because it relies on APIs available there but not in the `@remix-run/web-fetch` polyfill. Please refer to the [Undici][undici-polyfill] section in the 2.9.0 release notes below for more details.
+
+- If you are managing your own server and calling `installGlobals()`, you will need to call `installGlobals({ nativeFetch: true })` to avoid runtime errors when using Single Fetch
+- If you are using `remix-serve`, it will use `undici` automatically if Single Fetch is enabled.
+
 ### Inline Scripts
 
 The `<RemixServer>` component renders inline scripts that handle the streaming data on the client side. If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you can use `<RemixServer nonce>` to pass through the nonce to these `<script>` tags.
@@ -418,5 +430,7 @@ The `<RemixServer>` component renders inline scripts that handle the streaming d
 [resource-routes]: ../guides/resource-routes
 [responsestub]: #headers
 [streaming-format]: #streaming-data-format
+[undici-polyfill]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#undici
+[undici]: https://github.com/nodejs/undici
 [csp]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
 [csp-nonce]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources
