@@ -9,9 +9,7 @@ export { defer, json, redirect, redirectDocument } from "./responses";
 export {
   SingleFetchRedirectSymbol as UNSAFE_SingleFetchRedirectSymbol,
   defineLoader as unstable_defineLoader,
-  defineClientLoader as unstable_defineClientLoader,
   defineAction as unstable_defineAction,
-  defineClientAction as unstable_defineClientAction,
 } from "./single-fetch";
 export type {
   Loader as unstable_Loader,

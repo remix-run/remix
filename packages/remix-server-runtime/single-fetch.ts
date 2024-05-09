@@ -533,7 +533,7 @@ type DataFunctionReturnValue =
 // migration of loaders to return naked objects.  In the next major version,
 // json/defer will be removed so everything will use the new simplified typings.
 // prettier-ignore
-export type Serialize<T extends Loader | ClientLoader | Action | ClientAction> =
+export type Serialize<T extends Loader | Action> =
   Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
   Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
   Awaited<ReturnType<T>>;
@@ -569,15 +569,6 @@ export type Loader = (
 ) => MaybePromise<DataFunctionReturnValue>;
 export let defineLoader = <T extends Loader>(loader: T): T => loader;
 
-// clientLoader
-type ClientLoaderArgs = RRLoaderArgs<undefined> & {
-  serverLoader: <T extends Loader>() => Promise<Serialize<T>>;
-};
-type ClientLoader = (args: ClientLoaderArgs) => MaybePromise<Serializable>;
-export let defineClientLoader = <T extends ClientLoader>(
-  clientLoader: T
-): T & { hydrate?: boolean } => clientLoader;
-
 // action
 type ActionArgs = RRActionArgs<AppLoadContext> & {
   // Context is always provided in Remix, and typed for module augmentation support.
@@ -588,11 +579,3 @@ export type Action = (
   args: ActionArgs
 ) => MaybePromise<DataFunctionReturnValue>;
 export let defineAction = <T extends Action>(action: T): T => action;
-
-// clientAction
-type ClientActionArgs = RRActionArgs<undefined> & {
-  serverAction: <T extends Action>() => Promise<Serialize<T>>;
-};
-type ClientAction = (args: ClientActionArgs) => MaybePromise<Serializable>;
-export let defineClientAction = <T extends ClientAction>(clientAction: T): T =>
-  clientAction;
