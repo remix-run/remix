@@ -1,5 +1,7 @@
 import * as React from "react";
 import type {
+  ActionFunctionArgs as RRActionArgs,
+  LoaderFunctionArgs as RRLoaderArgs,
   unstable_DataStrategyFunction as DataStrategyFunction,
   unstable_HandlerResult as HandlerResult,
 } from "@remix-run/router";
@@ -10,6 +12,9 @@ import {
 import type {
   UNSAFE_SingleFetchResult as SingleFetchResult,
   UNSAFE_SingleFetchResults as SingleFetchResults,
+  unstable_Action,
+  unstable_Loader,
+  unstable_Serialize,
 } from "@remix-run/server-runtime";
 import { UNSAFE_SingleFetchRedirectSymbol as SingleFetchRedirectSymbol } from "@remix-run/server-runtime";
 import type {
@@ -23,6 +28,23 @@ import type { AssetsManifest, EntryContext } from "./entry";
 import { escapeHtml } from "./markup";
 import type { RouteModules } from "./routeModules";
 import invariant from "./invariant";
+
+// clientLoader
+type ClientLoaderArgs = RRLoaderArgs<undefined> & {
+  serverLoader: <T extends unstable_Loader>() => Promise<unstable_Serialize<T>>;
+};
+export type ClientLoader = (args: ClientLoaderArgs) => unknown;
+export let defineClientLoader = <T extends ClientLoader>(
+  clientLoader: T
+): T & { hydrate?: boolean } => clientLoader;
+
+// clientAction
+type ClientActionArgs = RRActionArgs<undefined> & {
+  serverAction: <T extends unstable_Action>() => Promise<unstable_Serialize<T>>;
+};
+export type ClientAction = (args: ClientActionArgs) => unknown;
+export let defineClientAction = <T extends ClientAction>(clientAction: T): T =>
+  clientAction;
 
 interface StreamTransferProps {
   context: EntryContext;

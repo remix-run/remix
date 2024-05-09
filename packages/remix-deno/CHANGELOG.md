@@ -35,14 +35,18 @@
   let loader1 = () => {
     return { a: 1, b: new Date() };
   };
-  let data1 = useLoaderData<typeof loader1>();
-  //  ^? {a: number, b: Date}
+  function Component() {
+    let data1 = useLoaderData<typeof loader1>();
+    //  ^? {a: number, b: Date}
+  }
 
   let loader2 = () => {
     return json({ a: 1, b: new Date() }); // this opts-out of turbo-stream
   };
-  let data2 = useLoaderData<typeof loader2>();
-  //  ^? JsonifyObject<{a: number, b: Date}> which is really {a: number, b: string}
+  function Component2() {
+    let data2 = useLoaderData<typeof loader2>();
+    //  ^? JsonifyObject<{a: number, b: Date}> which is really {a: number, b: string}
+  }
   ```
 
   You can also continue to return totally custom responses with `Response` though this continues to be outside of the typesystem since the built-in `Response` type is not generic
