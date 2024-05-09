@@ -15,12 +15,6 @@ import { encode } from "turbo-stream";
 import type { AppLoadContext } from "./data";
 import { sanitizeError, sanitizeErrors } from "./errors";
 import { ServerMode } from "./mode";
-import type {
-  ResponseStub,
-  ResponseStubImpl,
-  ResponseStubOperation,
-} from "./routeModules";
-import { ResponseStubOperationsSymbol } from "./routeModules";
 import type { TypedDeferredData, TypedResponse } from "./responses";
 import { isDeferredData, isRedirectStatusCode, isResponse } from "./responses";
 import type { SerializeFrom } from "./serialize";
@@ -543,6 +537,26 @@ export type Serialize<T extends Loader | ClientLoader | Action | ClientAction> =
   Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
   Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
   Awaited<ReturnType<T>>;
+
+export const ResponseStubOperationsSymbol = Symbol("ResponseStubOperations");
+export type ResponseStubOperation = [
+  "set" | "append" | "delete",
+  string,
+  string?
+];
+
+/**
+ * A stubbed response to let you set the status/headers of your response from
+ * loader/action functions
+ */
+export type ResponseStub = {
+  status: number | undefined;
+  headers: Headers;
+};
+
+export type ResponseStubImpl = ResponseStub & {
+  [ResponseStubOperationsSymbol]: ResponseStubOperation[];
+};
 
 // loader
 type LoaderArgs = RRLoaderArgs<AppLoadContext> & {
