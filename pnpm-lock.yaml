@@ -1223,11 +1223,11 @@ importers:
         specifier: workspace:*
         version: link:../remix-server-runtime
       react-router:
-        specifier: 6.23.1-pre.0
-        version: 6.23.1-pre.0(react@18.2.0)
+        specifier: 6.23.1-pre.1
+        version: 6.23.1-pre.1(react@18.2.0)
       react-router-dom:
-        specifier: 6.23.1-pre.0
-        version: 6.23.1-pre.0(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.23.1-pre.1
+        version: 6.23.1-pre.1(react-dom@18.2.0)(react@18.2.0)
       turbo-stream:
         specifier: ^2.0.0
         version: 2.0.0
@@ -1343,8 +1343,8 @@ importers:
         specifier: 1.16.1-pre.0
         version: 1.16.1-pre.0
       react-router-dom:
-        specifier: 6.23.1-pre.0
-        version: 6.23.1-pre.0(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.23.1-pre.1
+        version: 6.23.1-pre.1(react-dom@18.2.0)(react@18.2.0)
     devDependencies:
       '@remix-run/server-runtime':
         specifier: workspace:*
@@ -12816,8 +12816,8 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /react-router-dom@6.23.1-pre.0(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-gXwu2McNyyuD+d2kC8TRqBGmfoYZO9sc7Egv8f/KQQc/wpPDdKOaq4BALX5oHwJZv142uSpfuE+bf8YsdGYFRg==}
+  /react-router-dom@6.23.1-pre.1(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-Iqols/mnK5FmOb/fXmHHHJfmXb2gGO2cMfv04+Y0oHl5ihDNNnUihVeZ1tP37ywrgeKWik5UFyb1Nf5XA7+P1w==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
@@ -12826,11 +12826,11 @@ packages:
       '@remix-run/router': 1.16.1-pre.0
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      react-router: 6.23.1-pre.0(react@18.2.0)
+      react-router: 6.23.1-pre.1(react@18.2.0)
     dev: false
 
-  /react-router@6.23.1-pre.0(react@18.2.0):
-    resolution: {integrity: sha512-bks0gSImPeGXVcfUVA/Xz210cuXci+3le+wCgIqIUy0EQaHrgy0desL7K8AvWom0yBkmBimIJ0kin36lkoI5RA==}
+  /react-router@6.23.1-pre.1(react@18.2.0):
+    resolution: {integrity: sha512-dSCIQtpLqXKobzJLBxjb2wHgLXoelnnWH3kE9hPS94CQXN/8sXzw8DDyWfdcvrB/qOGfDE+EJ1u5qjTfrQ3TYA==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
