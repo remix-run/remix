@@ -13,100 +13,109 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.9.0](#v290)
+  - [v2.9.2](#v292)
     - [What's Changed](#whats-changed)
-      - [Single Fetch (unstable)](#single-fetch-unstable)
-      - [Undici](#undici)
-    - [Minor Changes](#minor-changes)
+      - [Updated Type-Safety for Single Fetch](#updated-type-safety-for-single-fetch)
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
     - [Changes by Package](#changes-by-package)
-  - [v2.8.1](#v281)
+  - [v2.9.1](#v291)
     - [Patch Changes](#patch-changes-1)
-    - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
+  - [v2.9.0](#v290)
+    - [What's Changed](#whats-changed-1)
+      - [Single Fetch (unstable)](#single-fetch-unstable)
+      - [Undici](#undici)
+    - [Minor Changes](#minor-changes)
+    - [Patch Changes](#patch-changes-2)
+    - [Updated Dependencies](#updated-dependencies-1)
+    - [Changes by Package](#changes-by-package-2)
+  - [v2.8.1](#v281)
+    - [Patch Changes](#patch-changes-3)
+    - [Updated Dependencies](#updated-dependencies-2)
+    - [Changes by Package](#changes-by-package-3)
   - [v2.8.0](#v280)
     - [Minor Changes](#minor-changes-1)
-    - [Patch Changes](#patch-changes-2)
-    - [Updated Dependencies](#updated-dependencies-2)
-    - [Changes by Package](#changes-by-package-2)
-  - [2.7.2](#272)
-    - [Patch Changes](#patch-changes-3)
-  - [2.7.1](#271)
     - [Patch Changes](#patch-changes-4)
+    - [Updated Dependencies](#updated-dependencies-3)
+    - [Changes by Package](#changes-by-package-4)
+  - [2.7.2](#272)
+    - [Patch Changes](#patch-changes-5)
+  - [2.7.1](#271)
+    - [Patch Changes](#patch-changes-6)
   - [v2.7.0](#v270)
-    - [What's Changed](#whats-changed-1)
+    - [What's Changed](#whats-changed-2)
       - [Stabilized Vite Plugin](#stabilized-vite-plugin)
       - [New `Layout` Export](#new-layout-export)
       - [Basename support](#basename-support)
       - [Cloudflare Proxy as a Vite Plugin](#cloudflare-proxy-as-a-vite-plugin)
     - [Minor Changes](#minor-changes-2)
-    - [Patch Changes](#patch-changes-5)
-    - [Updated Dependencies](#updated-dependencies-3)
-    - [Changes by Package](#changes-by-package-3)
+    - [Patch Changes](#patch-changes-7)
+    - [Updated Dependencies](#updated-dependencies-4)
+    - [Changes by Package](#changes-by-package-5)
   - [v2.6.0](#v260)
-    - [What's Changed](#whats-changed-2)
+    - [What's Changed](#whats-changed-3)
       - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
     - [Minor Changes](#minor-changes-3)
-    - [Patch Changes](#patch-changes-6)
-    - [Updated Dependencies](#updated-dependencies-4)
-    - [Changes by Package](#changes-by-package-4)
-  - [v2.5.1](#v251)
-    - [Patch Changes](#patch-changes-7)
+    - [Patch Changes](#patch-changes-8)
     - [Updated Dependencies](#updated-dependencies-5)
-    - [Changes by Package](#changes-by-package-5)
+    - [Changes by Package](#changes-by-package-6)
+  - [v2.5.1](#v251)
+    - [Patch Changes](#patch-changes-9)
+    - [Updated Dependencies](#updated-dependencies-6)
+    - [Changes by Package](#changes-by-package-7)
   - [v2.5.0](#v250)
-    - [What's Changed](#whats-changed-3)
+    - [What's Changed](#whats-changed-4)
       - [SPA Mode (unstable)](#spa-mode-unstable)
       - [Server Bundles (unstable)](#server-bundles-unstable)
     - [Minor Changes](#minor-changes-4)
-    - [Patch Changes](#patch-changes-8)
-    - [Updated Dependencies](#updated-dependencies-6)
-    - [Changes by Package](#changes-by-package-6)
-  - [v2.4.1](#v241)
-    - [Patch Changes](#patch-changes-9)
+    - [Patch Changes](#patch-changes-10)
     - [Updated Dependencies](#updated-dependencies-7)
-    - [Changes by Package](#changes-by-package-7)
+    - [Changes by Package](#changes-by-package-8)
+  - [v2.4.1](#v241)
+    - [Patch Changes](#patch-changes-11)
+    - [Updated Dependencies](#updated-dependencies-8)
+    - [Changes by Package](#changes-by-package-9)
   - [v2.4.0](#v240)
-    - [What's Changed](#whats-changed-4)
+    - [What's Changed](#whats-changed-5)
       - [Client Data](#client-data)
       - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
       - [Vite Updates (Unstable)](#vite-updates-unstable)
     - [Minor Changes](#minor-changes-5)
-    - [Patch Changes](#patch-changes-10)
-    - [Updated Dependencies](#updated-dependencies-8)
-    - [Changes by Package](#changes-by-package-8)
-  - [v2.3.1](#v231)
-    - [Patch Changes](#patch-changes-11)
+    - [Patch Changes](#patch-changes-12)
     - [Updated Dependencies](#updated-dependencies-9)
-    - [Changes by Package](#changes-by-package-9)
+    - [Changes by Package](#changes-by-package-10)
+  - [v2.3.1](#v231)
+    - [Patch Changes](#patch-changes-13)
+    - [Updated Dependencies](#updated-dependencies-10)
+    - [Changes by Package](#changes-by-package-11)
   - [v2.3.0](#v230)
-    - [What's Changed](#whats-changed-5)
+    - [What's Changed](#whats-changed-6)
       - [Stabilized `useBlocker`](#stabilized-useblocker)
       - [`unstable_flushSync` API](#unstable_flushsync-api)
     - [Minor Changes](#minor-changes-6)
-    - [Patch Changes](#patch-changes-12)
-    - [Updated Dependencies](#updated-dependencies-10)
-    - [Changes by Package](#changes-by-package-10)
+    - [Patch Changes](#patch-changes-14)
+    - [Updated Dependencies](#updated-dependencies-11)
+    - [Changes by Package](#changes-by-package-12)
   - [v2.2.0](#v220)
-    - [What's Changed](#whats-changed-6)
+    - [What's Changed](#whats-changed-7)
       - [Vite!](#vite)
       - [New Fetcher APIs](#new-fetcher-apis)
       - [Persistence Future Flag](#persistence-future-flag)
     - [Minor Changes](#minor-changes-7)
-    - [Patch Changes](#patch-changes-13)
-    - [Updated Dependencies](#updated-dependencies-11)
-    - [Changes by Package](#changes-by-package-11)
+    - [Patch Changes](#patch-changes-15)
+    - [Updated Dependencies](#updated-dependencies-12)
+    - [Changes by Package](#changes-by-package-13)
   - [v2.1.0](#v210)
-    - [What's Changed](#whats-changed-7)
+    - [What's Changed](#whats-changed-8)
       - [View Transitions](#view-transitions)
       - [Stable `createRemixStub`](#stable-createremixstub)
     - [Minor Changes](#minor-changes-8)
-    - [Patch Changes](#patch-changes-14)
-    - [Updated Dependencies](#updated-dependencies-12)
-    - [Changes by Package](#changes-by-package-12)
+    - [Patch Changes](#patch-changes-16)
+    - [Updated Dependencies](#updated-dependencies-13)
+    - [Changes by Package](#changes-by-package-14)
   - [v2.0.1](#v201)
-    - [Patch Changes](#patch-changes-15)
+    - [Patch Changes](#patch-changes-17)
     - [Changes by Package 🔗](#changes-by-package-)
   - [v2.0.0](#v200)
     - [Breaking Changes](#breaking-changes)
@@ -118,8 +127,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
         - [Breaking Type Changes](#breaking-type-changes)
     - [New Features](#new-features)
     - [Other Notable Changes](#other-notable-changes)
-    - [Updated Dependencies](#updated-dependencies-13)
-    - [Changes by Package](#changes-by-package-13)
+    - [Updated Dependencies](#updated-dependencies-14)
+    - [Changes by Package](#changes-by-package-15)
 
 </details>
 
@@ -167,6 +176,76 @@ Date: YYYY-MM-DD
 
 -->
 
+## v2.9.2
+
+Date: 2024-05-10
+
+### What's Changed
+
+#### Updated Type-Safety for Single Fetch
+
+In 2.9.2 we've enhanced the type-safety when opting into the `future.unstable_singleFetch` feature. Previously, we added the `response` stub to `LoaderFunctionArgs` and used type overrides for inference on `useLoaderData`, etc., but we found that it wasn't quite enough.
+
+With this release we're introducing new functions to assist the type-inference when using single fetch - `defineLoader`/`defineAction` and their client-side counterparts `defineClientLoader` and nd `defineClientAction`. These are identity functions; they don't modify your loader or action at runtime. Rather, they exist solely for type-safety by providing types for args and by ensuring valid return types.
+
+```ts
+export let loader = defineLoader(({ request }) => {
+  //                                ^? Request
+  return { a: 1, b: () => 2 };
+  //           ^ type error: `b` is not serializable
+});
+```
+
+Note that `defineLoader` and `defineAction` are not technically necessary for defining loaders and actions if you aren't concerned with type-safety:
+
+```ts
+// this totally works! and typechecking is happy too!
+export let loader = () => {
+  return { a: 1 };
+};
+```
+
+This means that you can opt-in to `defineLoader` incrementally, one loader at a time.
+
+Please see the [Single Fetch docs](https://remix.run/docs/en/main/guides/single-fetch) for more information.
+
+### Patch Changes
+
+- `@remix-run/dev` - Vite: Fix `dest already exists` error when running `remix vite:build` ([#9305](https://github.com/remix-run/remix/pull/9305))
+- `@remix-run/dev` - Vite: Fix issue resolving critical CSS during development when route files are located outside of the app directory ([#9194](https://github.com/remix-run/remix/pull/9194))
+- `@remix-run/dev` - Vite: Remove `@remix-run/node` from Vite plugin's `optimizeDeps.include` list since it was unnecessary and resulted in Vite warnings when not depending on this package ([#9287](https://github.com/remix-run/remix/pull/9287))
+- `@remix-run/dev` - Vite: Clean up redundant `?client-route=1` imports in development ([#9395](https://github.com/remix-run/remix/pull/9395))
+- `@remix-run/dev` - Vite: Ensure Babel config files are not referenced when applying the `react-refresh` Babel transform within the Remix Vite plugin ([#9241](https://github.com/remix-run/remix/pull/9241))
+- `@remix-run/react` - Type-safety for single-fetch: `defineLoader`, `defineClientLoader`, `defineAction`, `defineClientAction` ([#9372](https://github.com/remix-run/remix/pull/9372))
+- `@remix-run/react` - Single Fetch: Add `undefined` to `useActionData` type override ([#9322](https://github.com/remix-run/remix/pull/9322))
+- `@remix-run/react` - Single Fetch: Allow a `nonce` to be set on single fetch stream transfer inline scripts via `<RemixServer>` ([#9364](https://github.com/remix-run/remix/pull/9364))
+- `@remix-run/server-runtime` - Single Fetch: Don't log thrown response stubs via `handleError` ([#9369](https://github.com/remix-run/remix/pull/9369))
+- `@remix-run/server-runtime` - Single Fetch: Automatically wrap resource route naked object returns in `json()` for back-compat in v2 (and log deprecation warning) ([#9349](https://github.com/remix-run/remix/pull/9349))
+- `@remix-run/server-runtime` - Single Fetch: Pass `response` stub to resource route handlers ([#9349](https://github.com/remix-run/remix/pull/9349))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.23.1`](https://github.com/remix-run/react-router/releases/tag/react-router%406.23.1)
+- [`@remix-run/router@1.16.1`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1161)
+
+### Changes by Package
+
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-cloudflare/CHANGELOG.md#292)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-cloudflare-pages/CHANGELOG.md#292)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-cloudflare-workers/CHANGELOG.md#292)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-css-bundle/CHANGELOG.md#292)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-deno/CHANGELOG.md#292)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-dev/CHANGELOG.md#292)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-eslint-config/CHANGELOG.md#292)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-express/CHANGELOG.md#292)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-node/CHANGELOG.md#292)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-react/CHANGELOG.md#292)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-serve/CHANGELOG.md#292)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-server-runtime/CHANGELOG.md#292)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-testing/CHANGELOG.md#292)
+
+**Full Changelog**: [`v2.9.1...v2.9.2`](https://github.com/remix-run/remix/compare/remix@2.9.1...remix@2.9.2)
+
 ## v2.9.1
 
 Date: 2024-04-24
@@ -195,7 +274,7 @@ Date: 2024-04-23
 
 - Naked objects returned from `loader`/`action` functions are no longer automatically serialized to JSON responses
   - Instead, they'll be streamed as-is via [`turbo-stream`](https://github.com/jacob-ebey/turbo-stream) which allows direct serialization of more complex types such as `Promise`, `Date`, `Map` instances, and more
-  - You will need to modify your `tsconfig.json`'s `include` array to infer types properly when using Single Fetch
+  - You will need to modify your `tsconfig.json`'s `compilerOptions.types` array to infer types properly when using Single Fetch
 - The `headers` export is no longer used when Single Fetch is enabled in favor of a new `response` stub passed to your `loader`/`action` functions
 - The `json`/`defer`/`redirect` utilities are deprecated when using Single Fetch (but still work _mostly_ the same)
 - Actions no longer automatically revalidate on `4xx`/`5xx` responses - you can return a `2xx` to opt-into revalidation or use `shouldRevalidate`

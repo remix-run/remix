@@ -1,4 +1,10 @@
-import type { MetaArgs, UIMatch, UNSAFE_MetaMatch } from "@remix-run/react";
+import type {
+  MetaArgs,
+  UIMatch,
+  UNSAFE_MetaMatch,
+  unstable_ClientLoader as ClientLoader,
+  unstable_ClientAction as ClientAction,
+} from "@remix-run/react";
 import type {
   unstable_Loader as Loader,
   unstable_Action as Action,
@@ -10,9 +16,13 @@ import type {
 } from "react-router-dom";
 
 declare module "@remix-run/react" {
-  export function useLoaderData<T extends Loader>(): Serialize<T>;
+  export function useLoaderData<
+    T extends Loader | ClientLoader
+  >(): T extends Loader ? Serialize<T> : Awaited<ReturnType<T>>;
 
-  export function useActionData<T extends Action>(): Serialize<T> | undefined;
+  export function useActionData<T extends Action | ClientAction>():
+    | (T extends Action ? Serialize<T> : Awaited<ReturnType<T>>)
+    | undefined;
 
   export function useRouteLoaderData<T extends Loader>(
     routeId: string

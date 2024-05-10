@@ -27,6 +27,9 @@ npx create-remix@latest --template remix-run/remix/templates/express
 
 # Cloudflare:
 npx create-remix@latest --template remix-run/remix/templates/cloudflare
+
+# Cloudflare Workers:
+npx create-remix@latest --template remix-run/remix/templates/cloudflare-workers
 ```
 
 These templates include a `vite.config.ts` file which is where the Remix Vite plugin is configured.

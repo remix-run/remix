@@ -15,3 +15,4 @@ templates/deno
 
 packages/remix-dev/config/defaults
 templates/remix-tutorial/app/data.ts
+templates/cloudflare-workers/worker-configuration.d.ts

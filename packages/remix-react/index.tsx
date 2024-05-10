@@ -111,6 +111,14 @@ export { ScrollRestoration } from "./scroll-restoration";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";
+export type {
+  ClientAction as unstable_ClientAction,
+  ClientLoader as unstable_ClientLoader,
+} from "./single-fetch";
+export {
+  defineClientAction as unstable_defineClientAction,
+  defineClientLoader as unstable_defineClientLoader,
+} from "./single-fetch";
 
 export type {
   FutureConfig as UNSAFE_FutureConfig,

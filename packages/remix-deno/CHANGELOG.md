@@ -1,5 +1,13 @@
 # `@remix-run/deno`
 
+## 2.9.2
+
+### Patch Changes
+
+- Typesafety for single-fetch: `defineLoader`, `defineClientLoader`, `defineAction`, `defineClientAction` ([#9372](https://github.com/remix-run/remix/pull/9372), [#9404](https://github.com/remix-run/remix/pull/9404))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.2`
+
 ## 2.9.1
 
 ### Patch Changes
