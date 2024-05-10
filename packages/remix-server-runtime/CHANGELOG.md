@@ -1,19 +1,13 @@
 # `@remix-run/server-runtime`
 
-## 2.9.2-pre.2
-
-## 2.9.2-pre.1
-
-### Patch Changes
-
-- [REMOVE] Move defineClientLoader/defineClientAction to @remix-run/react package ([#9404](https://github.com/remix-run/remix/pull/9404))
-
-## 2.9.2-pre.0
+## 2.9.2
 
 ### Patch Changes
 
 - Don't log thrown response stubs via `handleError` in Single Fetch ([#9369](https://github.com/remix-run/remix/pull/9369))
+
 - Automatically wrap resource route naked object returns in `json()` for back-compat in v2 (and log deprecation warning) ([#9349](https://github.com/remix-run/remix/pull/9349))
+
 - Typesafety for single-fetch: defineLoader, defineClientLoader, defineAction, defineClientAction ([#9372](https://github.com/remix-run/remix/pull/9372))
 
   `defineLoader` and `defineAction` are helpers for authoring `loader`s and `action`s.
@@ -61,7 +55,9 @@
 
   You can also continue to return totally custom responses with `Response` though this continues to be outside of the typesystem since the built-in `Response` type is not generic
 
-- Pass `response` stub to resource route handlerså when single fetch is enabled ([#9349](https://github.com/remix-run/remix/pull/9349))
+- \[REMOVE] Move defineClientLoader/defineClientAction to @remix-run/react package ([#9404](https://github.com/remix-run/remix/pull/9404))
+
+- Pass `response` stub to resource route handlers when single fetch is enabled ([#9349](https://github.com/remix-run/remix/pull/9349))
 
 ## 2.9.1
 

@@ -1,27 +1,15 @@
 # `@remix-run/react`
 
-## 2.9.2-pre.2
-
-### Patch Changes
-
-- [REMOVE] bump router ([#9414](https://github.com/remix-run/remix/pull/9414))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.9.2-pre.2`
-
-## 2.9.2-pre.1
-
-### Patch Changes
-
-- [REMOVE] Move defineClientLoader/defineClientAction to @remix-run/react package ([#9404](https://github.com/remix-run/remix/pull/9404))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.9.2-pre.1`
-
-## 2.9.2-pre.0
+## 2.9.2
 
 ### Patch Changes
 
 - Add `undefined` to `useActionData` type override ([#9322](https://github.com/remix-run/remix/pull/9322))
+
+- \[REMOVE] bump router ([#9414](https://github.com/remix-run/remix/pull/9414))
+
 - Allow a nonce to be set on single fetch stream transfer inline scripts ([#9364](https://github.com/remix-run/remix/pull/9364))
+
 - Typesafety for single-fetch: defineLoader, defineClientLoader, defineAction, defineClientAction ([#9372](https://github.com/remix-run/remix/pull/9372))
 
   `defineLoader` and `defineAction` are helpers for authoring `loader`s and `action`s.
@@ -69,8 +57,10 @@
 
   You can also continue to return totally custom responses with `Response` though this continues to be outside of the typesystem since the built-in `Response` type is not generic
 
+- \[REMOVE] Move defineClientLoader/defineClientAction to @remix-run/react package ([#9404](https://github.com/remix-run/remix/pull/9404))
+
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.9.2-pre.0`
+  - `@remix-run/server-runtime@2.9.2`
 
 ## 2.9.1
 

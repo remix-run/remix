@@ -1,20 +1,6 @@
 # `@remix-run/node`
 
-## 2.9.2-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.9.2-pre.2`
-
-## 2.9.2-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.9.2-pre.1`
-
-## 2.9.2-pre.0
+## 2.9.2
 
 ### Patch Changes
 
@@ -66,7 +52,7 @@
   You can also continue to return totally custom responses with `Response` though this continues to be outside of the typesystem since the built-in `Response` type is not generic
 
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.9.2-pre.0`
+  - `@remix-run/server-runtime@2.9.2`
 
 ## 2.9.1
 
