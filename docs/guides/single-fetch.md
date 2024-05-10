@@ -14,9 +14,10 @@ When you enable Single Fetch, Remix will make a single HTTP call to your server 
 
 - Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
-- To get proper type inference, you must do two things:
-  - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
+- To get the most accurate type inference, you should do two things:
   - Add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array
+  - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
+    - This can be done incrementally - you should have _mostly_ accurate type inference in your current state
 - Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 - The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
 - The old `installGlobals()` polyfill doesn't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
