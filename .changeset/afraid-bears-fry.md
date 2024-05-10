@@ -6,4 +6,4 @@
 "@remix-run/serve": patch
 ---
 
-feat: bump express to ^4.19.2
+Upgrade `express` dependency to `^4.19.2`
