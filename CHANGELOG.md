@@ -189,7 +189,7 @@ In 2.9.2 we've enhanced the type-safety when opting into the `future.unstable_si
 With this release we're introducing new functions to assist the type-inference when using single fetch - `defineLoader`/`defineAction` and their client-side counterparts `defineClientLoader` and nd `defineClientAction`. These are identity functions; they don't modify your loader or action at runtime. Rather, they exist solely for type-safety by providing types for args and by ensuring valid return types.
 
 ```ts
-export let loader = defineLoader(({ request }) => {
+export const loader = defineLoader(({ request }) => {
   //                                ^? Request
   return { a: 1, b: () => 2 };
   //           ^ type error: `b` is not serializable
@@ -200,7 +200,7 @@ Note that `defineLoader` and `defineAction` are not technically necessary for de
 
 ```ts
 // this totally works! and typechecking is happy too!
-export let loader = () => {
+export const loader = () => {
   return { a: 1 };
 };
 ```
