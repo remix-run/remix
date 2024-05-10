@@ -26,6 +26,8 @@ export {
   redirectDocument,
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
+  unstable_defineAction,
+  unstable_defineLoader,
   unstable_parseMultipartFormData,
 } from "@remix-run/server-runtime";
 

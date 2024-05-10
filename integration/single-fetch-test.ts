@@ -1500,6 +1500,248 @@ test.describe("single-fetch", () => {
     expect(await app.getHtml("#target")).toContain("Target");
   });
 
+  test("wraps resource route naked object returns in json with a deprecation warning", async () => {
+    let oldConsoleWarn = console.warn;
+    let warnLogs: unknown[] = [];
+    console.warn = (...args) => warnLogs.push(...args);
+
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/resource.tsx": js`
+            export function loader() {
+              return { message: "RESOURCE" };
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+    let res = await fixture.requestResource("/resource");
+    expect(await res.json()).toEqual({
+      message: "RESOURCE",
+    });
+
+    expect(warnLogs).toEqual([
+      "⚠️ REMIX FUTURE CHANGE: Resource routes will no longer be able to return " +
+        "raw JavaScript objects in v3 when Single Fetch becomes the default. You " +
+        "can prepare for this change at your convenience by wrapping the data " +
+        "returned from your `loader` function in the `routes/resource` route with " +
+        "`json()`.  For instructions on making this change see " +
+        "https://remix.run/docs/en/v2.9.2/guides/single-fetch#resource-routes",
+    ]);
+    console.warn = oldConsoleWarn;
+  });
+
+  test("processes response stub onto resource routes returning raw data", async () => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/resource.tsx": js`
+            import { json } from '@remix-run/node';
+
+            export function loader({ response }) {
+              // When raw json is returned, the stub status/headers will just be used directly
+              response.status = 201;
+              response.headers.set('X-Stub', 'yes')
+              return { message: "RESOURCE" };
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+    let res = await fixture.requestResource("/resource");
+    expect(res.status).toBe(201);
+    expect(res.headers.get("X-Stub")).toBe("yes");
+    expect(await res.json()).toEqual({
+      message: "RESOURCE",
+    });
+  });
+
+  test("processes response stub onto resource routes returning responses", async () => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/resource.tsx": js`
+            import { json } from '@remix-run/node';
+
+            export function loader({ response }) {
+              // This will be ignored in favor of the returned Response status
+              response.status = 200;
+              response.headers.set('X-Stub', 'yes')
+              // This will overwrite the returned Response header
+              response.headers.set('X-Set', '2')
+              // This will append to the returned Response header
+              response.headers.append('X-Append', '2')
+              return json({ message: "RESOURCE" }, {
+                // This one takes precedence
+                status: 201,
+                headers: {
+                  'X-Response': 'yes',
+                  'X-Set': '1',
+                  'X-Append': '1',
+                },
+              });
+            }
+          `,
+        },
+      },
+      ServerMode.Development
+    );
+    let res = await fixture.requestResource("/resource");
+    expect(res.status).toBe(201);
+    expect(res.headers.get("X-Response")).toBe("yes");
+    expect(res.headers.get("X-Stub")).toBe("yes");
+    expect(res.headers.get("X-Set")).toBe("2");
+    expect(res.headers.get("X-Append")).toBe("1, 2");
+    expect(await res.json()).toEqual({
+      message: "RESOURCE",
+    });
+  });
+
+  test("allows fetcher to hit resource route and return via turbo stream", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/_index.tsx": js`
+          import { useFetcher } from "@remix-run/react";
+
+          export default function Component() {
+            let fetcher = useFetcher();
+            return (
+              <div>
+                <button id="load" onClick={() => fetcher.load('/resource')}>
+                  Load
+                </button>
+                {fetcher.data ? <pre id="fetcher-data">{fetcher.data.message} {fetcher.data.date.toISOString()}</pre> : null}
+              </div>
+            );
+          }
+        `,
+        "app/routes/resource.tsx": js`
+          export function loader() {
+            // Fetcher calls to resource routes will append ".data" and we'll go through
+            // the turbo-stream flow.  If a user were to curl this endpoint they'd go
+            // through "handleResourceRoute" and it would be returned as "json()"
+            return {
+              message: "RESOURCE",
+              date: new Date("${ISO_DATE}"),
+            };
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickElement("#load");
+    await page.waitForSelector("#fetcher-data");
+    expect(await app.getHtml("#fetcher-data")).toContain(
+      "RESOURCE 2024-03-12T12:00:00.000Z"
+    );
+  });
+
+  test("does not log thrown redirect response stubs via handleError", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/redirect.tsx": js`
+          export function action({ response }) {
+            response.status = 301;
+            response.headers.set("Location", "/data");
+            throw response;
+          }
+          export function loader({ response }) {
+            response.status = 301;
+            response.headers.set("Location", "/data");
+            throw response;
+          }
+          export default function Component() {
+            return <h1>Should not see me</h1>;
+          }
+        `,
+      },
+    });
+
+    let errorLogs = [];
+    console.error = (e) => errorLogs.push(e);
+    await fixture.requestDocument("/redirect");
+    await fixture.requestSingleFetchData("/redirect.data");
+    await fixture.requestSingleFetchData("/redirect.data", {
+      method: "post",
+      body: null,
+    });
+    expect(errorLogs.length).toBe(0);
+  });
+
+  test("does not log thrown non-redirect response stubs via handleError", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/redirect.tsx": js`
+          export function action({ response }) {
+            response.status = 400;
+            throw response;
+          }
+          export function loader({ response }) {
+            response.status = 400;
+            throw response;
+          }
+          export default function Component() {
+            return <h1>Should not see me</h1>;
+          }
+        `,
+      },
+    });
+
+    let errorLogs = [];
+    console.error = (e) => errorLogs.push(e);
+    await fixture.requestDocument("/redirect");
+    expect(errorLogs.length).toBe(1); // ErrorBoundary render logs this
+    await fixture.requestSingleFetchData("/redirect.data");
+    await fixture.requestSingleFetchData("/redirect.data", {
+      method: "post",
+      body: null,
+    });
+    expect(errorLogs.length).toBe(1);
+  });
+
   test.describe("client loaders", () => {
     test("when no routes have client loaders", async ({ page }) => {
       let fixture = await createFixture(
@@ -2299,5 +2541,97 @@ test.describe("single-fetch", () => {
       // No prefetching due to clientLoaders
       expect(await app.page.locator("nav link[as='fetch']").count()).toEqual(0);
     });
+  });
+
+  test("supports nonce on streaming script tags", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/root.tsx": js`
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+          export function loader() {
+            return {
+              message: "ROOT",
+            };
+          }
+
+          export default function Root() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <Scripts nonce="the-nonce" />
+                </body>
+              </html>
+            );
+          }
+        `,
+        "app/entry.server.tsx": js`
+          import { PassThrough } from "node:stream";
+
+          import type { EntryContext } from "@remix-run/node";
+          import { createReadableStreamFromReadable } from "@remix-run/node";
+          import { RemixServer } from "@remix-run/react";
+          import { renderToPipeableStream } from "react-dom/server";
+
+          export default function handleRequest(
+            request: Request,
+            responseStatusCode: number,
+            responseHeaders: Headers,
+            remixContext: EntryContext
+          ) {
+            return new Promise((resolve, reject) => {
+              const { pipe } = renderToPipeableStream(
+                <RemixServer context={remixContext} url={request.url} nonce="the-nonce" />,
+                {
+                  onShellReady() {
+                    const body = new PassThrough();
+                    const stream = createReadableStreamFromReadable(body);
+                    responseHeaders.set("Content-Type", "text/html");
+                    resolve(
+                      new Response(stream, {
+                        headers: responseHeaders,
+                        status: responseStatusCode,
+                      })
+                    );
+                    pipe(body);
+                  },
+                  onShellError(error: unknown) {
+                    reject(error);
+                  },
+                  onError(error: unknown) {
+                    responseStatusCode = 500;
+                  },
+                }
+              );
+            });
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/data", true);
+    let scripts = await page.$$("script");
+    expect(scripts.length).toBe(6);
+    let remixScriptsCount = 0;
+    for (let script of scripts) {
+      let content = await script.innerHTML();
+      if (content.includes("window.__remix")) {
+        remixScriptsCount++;
+        expect(await script.getAttribute("nonce")).toEqual("the-nonce");
+      }
+    }
+    expect(remixScriptsCount).toBe(4);
   });
 });

@@ -1,5 +1,7 @@
 import * as React from "react";
 import type {
+  ActionFunctionArgs as RRActionArgs,
+  LoaderFunctionArgs as RRLoaderArgs,
   unstable_DataStrategyFunction as DataStrategyFunction,
   unstable_HandlerResult as HandlerResult,
 } from "@remix-run/router";
@@ -10,6 +12,9 @@ import {
 import type {
   UNSAFE_SingleFetchResult as SingleFetchResult,
   UNSAFE_SingleFetchResults as SingleFetchResults,
+  unstable_Action,
+  unstable_Loader,
+  unstable_Serialize,
 } from "@remix-run/server-runtime";
 import { UNSAFE_SingleFetchRedirectSymbol as SingleFetchRedirectSymbol } from "@remix-run/server-runtime";
 import type {
@@ -24,11 +29,29 @@ import { escapeHtml } from "./markup";
 import type { RouteModules } from "./routeModules";
 import invariant from "./invariant";
 
+// clientLoader
+type ClientLoaderArgs = RRLoaderArgs<undefined> & {
+  serverLoader: <T extends unstable_Loader>() => Promise<unstable_Serialize<T>>;
+};
+export type ClientLoader = (args: ClientLoaderArgs) => unknown;
+export let defineClientLoader = <T extends ClientLoader>(
+  clientLoader: T
+): T & { hydrate?: boolean } => clientLoader;
+
+// clientAction
+type ClientActionArgs = RRActionArgs<undefined> & {
+  serverAction: <T extends unstable_Action>() => Promise<unstable_Serialize<T>>;
+};
+export type ClientAction = (args: ClientActionArgs) => unknown;
+export let defineClientAction = <T extends ClientAction>(clientAction: T): T =>
+  clientAction;
+
 interface StreamTransferProps {
   context: EntryContext;
   identifier: number;
   reader: ReadableStreamDefaultReader<Uint8Array>;
   textDecoder: TextDecoder;
+  nonce?: string;
 }
 
 // StreamTransfer recursively renders down chunks of the `serverHandoffStream`
@@ -38,6 +61,7 @@ export function StreamTransfer({
   identifier,
   reader,
   textDecoder,
+  nonce,
 }: StreamTransferProps) {
   // If the user didn't render the <Scripts> component then we don't have to
   // bother streaming anything in
@@ -74,6 +98,7 @@ export function StreamTransfer({
   let { done, value } = promise.result;
   let scriptTag = value ? (
     <script
+      nonce={nonce}
       dangerouslySetInnerHTML={{
         __html: `window.__remixContext.streamController.enqueue(${escapeHtml(
           JSON.stringify(value)
@@ -87,6 +112,7 @@ export function StreamTransfer({
       <>
         {scriptTag}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `window.__remixContext.streamController.close();`,
           }}
@@ -103,6 +129,7 @@ export function StreamTransfer({
             identifier={identifier + 1}
             reader={reader}
             textDecoder={textDecoder}
+            nonce={nonce}
           />
         </React.Suspense>
       </>

@@ -1,6 +1,9 @@
 import type {
+  ActionFunctionArgs as RRActionArgs,
+  LoaderFunctionArgs as RRLoaderArgs,
   StaticHandler,
   unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
+  unstable_DataStrategyFunction as DataStrategyFunction,
   StaticHandlerContext,
 } from "@remix-run/router";
 import {
@@ -12,13 +15,9 @@ import { encode } from "turbo-stream";
 import type { AppLoadContext } from "./data";
 import { sanitizeError, sanitizeErrors } from "./errors";
 import { ServerMode } from "./mode";
-import type {
-  ResponseStub,
-  ResponseStubImpl,
-  ResponseStubOperation,
-} from "./routeModules";
-import { ResponseStubOperationsSymbol } from "./routeModules";
+import type { TypedDeferredData, TypedResponse } from "./responses";
 import { isDeferredData, isRedirectStatusCode, isResponse } from "./responses";
+import type { SerializeFrom } from "./serialize";
 
 export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
 const ResponseStubActionSymbol = Symbol("ResponseStubAction");
@@ -49,7 +48,7 @@ export function getSingleFetchDataStrategy(
     isActionDataRequest,
     loadRouteIds,
   }: { isActionDataRequest?: boolean; loadRouteIds?: string[] } = {}
-) {
+): DataStrategyFunction {
   return async ({ request, matches }: DataStrategyFunctionArgs) => {
     // Don't call loaders on action data requests
     if (isActionDataRequest && request.method === "GET") {
@@ -102,6 +101,32 @@ export function getSingleFetchDataStrategy(
   };
 }
 
+export function getSingleFetchResourceRouteDataStrategy({
+  responseStubs,
+}: {
+  responseStubs: ReturnType<typeof getResponseStubs>;
+}): DataStrategyFunction {
+  return async ({ matches }: DataStrategyFunctionArgs) => {
+    let results = await Promise.all(
+      matches.map(async (match) => {
+        let responseStub = match.shouldLoad
+          ? responseStubs[match.route.id]
+          : null;
+        let result = await match.resolve(async (handler) => {
+          // Cast `ResponseStubImpl -> ResponseStub` to hide the symbol in userland
+          let ctx: DataStrategyCtx = {
+            response: responseStub as ResponseStub,
+          };
+          let data = await handler(ctx);
+          return { type: "data", result: data };
+        });
+        return result;
+      })
+    );
+    return results;
+  };
+}
+
 export async function singleFetchAction(
   serverMode: ServerMode,
   staticHandler: StaticHandler,
@@ -128,7 +153,7 @@ export async function singleFetchAction(
       }),
     });
 
-    // Unlike `handleDataRequest`, when singleFetch is enabled, queryRoute does
+    // Unlike `handleDataRequest`, when singleFetch is enabled, query does
     // let non-Response return values through
     if (isResponse(result)) {
       return {
@@ -157,7 +182,7 @@ export async function singleFetchAction(
     if (context.errors) {
       Object.values(context.errors).forEach((err) => {
         // @ts-expect-error This is "private" from users but intended for internal use
-        if (!isRouteErrorResponse(err) || err.error) {
+        if ((!isRouteErrorResponse(err) || err.error) && !isResponseStub(err)) {
           handleError(err);
         }
       });
@@ -246,7 +271,7 @@ export async function singleFetchLoaders(
     if (context.errors) {
       Object.values(context.errors).forEach((err) => {
         // @ts-expect-error This is "private" from users but intended for internal use
-        if (!isRouteErrorResponse(err) || err.error) {
+        if ((!isRouteErrorResponse(err) || err.error) && !isResponseStub(err)) {
           handleError(err);
         }
       });
@@ -477,3 +502,80 @@ export function encodeViaTurboStream(
     ],
   });
 }
+
+type MaybePromise<T> = T | Promise<T>;
+
+type Serializable =
+  | undefined
+  | null
+  | boolean
+  | string
+  | symbol
+  | number
+  | Array<Serializable>
+  | { [key: PropertyKey]: Serializable }
+  | bigint
+  | Date
+  | URL
+  | RegExp
+  | Error
+  | Map<Serializable, Serializable>
+  | Set<Serializable>
+  | Promise<Serializable>;
+
+type DataFunctionReturnValue =
+  | Serializable
+  | TypedDeferredData<Record<string, unknown>>
+  | TypedResponse<Record<string, unknown>>;
+
+// Backwards-compatible type for Remix v2 where json/defer still use the old types,
+// and only non-json/defer returns use the new types.  This allows for incremental
+// migration of loaders to return naked objects.  In the next major version,
+// json/defer will be removed so everything will use the new simplified typings.
+// prettier-ignore
+export type Serialize<T extends Loader | Action> =
+  Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
+  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
+  Awaited<ReturnType<T>>;
+
+export const ResponseStubOperationsSymbol = Symbol("ResponseStubOperations");
+export type ResponseStubOperation = [
+  "set" | "append" | "delete",
+  string,
+  string?
+];
+
+/**
+ * A stubbed response to let you set the status/headers of your response from
+ * loader/action functions
+ */
+export type ResponseStub = {
+  status: number | undefined;
+  headers: Headers;
+};
+
+export type ResponseStubImpl = ResponseStub & {
+  [ResponseStubOperationsSymbol]: ResponseStubOperation[];
+};
+
+// loader
+type LoaderArgs = RRLoaderArgs<AppLoadContext> & {
+  // Context is always provided in Remix, and typed for module augmentation support.
+  context: AppLoadContext;
+  response: ResponseStub;
+};
+export type Loader = (
+  args: LoaderArgs
+) => MaybePromise<DataFunctionReturnValue>;
+export let defineLoader = <T extends Loader>(loader: T): T => loader;
+
+// action
+type ActionArgs = RRActionArgs<AppLoadContext> & {
+  // Context is always provided in Remix, and typed for module augmentation support.
+  context: AppLoadContext;
+  response: ResponseStub;
+};
+export type Action = (
+  args: ActionArgs
+) => MaybePromise<DataFunctionReturnValue>;
+export let defineAction = <T extends Action>(action: T): T => action;

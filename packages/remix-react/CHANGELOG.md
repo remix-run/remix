@@ -1,5 +1,15 @@
 # `@remix-run/react`
 
+## 2.9.2
+
+### Patch Changes
+
+- Add `undefined` to `useActionData` type override ([#9322](https://github.com/remix-run/remix/pull/9322))
+- Allow a `nonce` to be set on single fetch stream transfer inline scripts ([#9364](https://github.com/remix-run/remix/pull/9364))
+- Typesafety for single-fetch: `defineLoader`, `defineClientLoader`, `defineAction`, `defineClientAction` ([#9372](https://github.com/remix-run/remix/pull/9372), [#9404](https://github.com/remix-run/remix/pull/9404))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.2`
+
 ## 2.9.1
 
 ### Patch Changes
