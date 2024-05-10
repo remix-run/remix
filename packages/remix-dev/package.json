@@ -47,7 +47,7 @@
     "esbuild-plugins-node-modules-polyfill": "^1.6.0",
     "execa": "5.1.1",
     "exit-hook": "2.2.1",
-    "express": "^4.17.1",
+    "express": "^4.19.2",
     "fs-extra": "^10.0.0",
     "get-port": "^5.1.1",
     "gunzip-maybe": "^1.4.2",
