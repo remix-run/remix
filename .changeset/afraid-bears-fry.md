@@ -1,6 +1,4 @@
 ---
-"integration-tests": patch
-"remix": patch
 "@remix-run/dev": patch
 "@remix-run/express": patch
 "@remix-run/serve": patch
