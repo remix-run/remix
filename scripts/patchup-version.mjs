@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import path from "node:path";
 import * as url from "node:url";
@@ -7,12 +7,9 @@ import { getPackagesSync } from "@manypkg/get-packages";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const rootDir = path.join(__dirname, "..");
 
-Promise.all([
-  writeRemixChangelog().then(() => console.log("✅ Wrote `remix` changelog")),
-  bumpPeerDepRanges().then(() =>
-    console.log("✅ Bumped peer dependency ranges")
-  ),
-]).then(() => console.log("---\n🎉 Done!"));
+Promise.all([writeRemixChangelog(), bumpPeerDepRanges()]).then(() =>
+  console.log("---\n🎉 Done!")
+);
 
 /**
  * Consider this scenario:
@@ -111,11 +108,19 @@ async function bumpPeerDepRanges() {
       );
     }
   }
+
+  console.log("✅ Bumped peer dependency ranges");
+
+  execSync("pnpm install --no-frozen-lockfile");
+  console.log(
+    "✅ Synced up `pnpm-lock.yaml` via `pnpm install --no-frozen-lockfile`"
+  );
 }
 
 async function writeRemixChangelog() {
   let contents =
     "# `remix`\n\nSee the `CHANGELOG.md` in individual Remix packages for all changes.\n";
   let filePath = path.join(rootDir, "packages", "remix", "CHANGELOG.md");
-  return fs.promises.writeFile(filePath, contents, "utf-8");
+  await fs.promises.writeFile(filePath, contents, "utf-8");
+  console.log("✅ Wrote `remix` changelog");
 }

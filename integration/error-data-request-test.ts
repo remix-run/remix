@@ -327,9 +327,7 @@ test.describe("single fetch", () => {
         fixture.requestSingleFetchData("/loader-return-json.data", {
           method: "TRACE",
         })
-      ).rejects.toThrowError(
-        `Failed to construct 'Request': 'TRACE' HTTP method is unsupported.`
-      );
+      ).rejects.toThrow(/'TRACE' HTTP method is unsupported\./);
     });
 
     test("returns a 404 on a data fetch to a path with no matches", async () => {
