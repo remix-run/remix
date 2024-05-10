@@ -15,6 +15,7 @@ export interface RemixServerProps {
   context: EntryContext;
   url: string | URL;
   abortDelay?: number;
+  nonce?: string;
 }
 
 /**
@@ -26,6 +27,7 @@ export function RemixServer({
   context,
   url,
   abortDelay,
+  nonce,
 }: RemixServerProps): ReactElement {
   if (typeof url === "string") {
     url = new URL(url);
@@ -101,6 +103,7 @@ export function RemixServer({
             identifier={0}
             reader={context.serverHandoffStream.getReader()}
             textDecoder={new TextDecoder()}
+            nonce={nonce}
           />
         </React.Suspense>
       ) : null}
