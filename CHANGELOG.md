@@ -167,6 +167,76 @@ Date: YYYY-MM-DD
 
 -->
 
+## v2.9.2
+
+Date: 2024-05-10
+
+### What's Changed
+
+#### Updated Type-Safety for Single Fetch
+
+In 2.9.2 we've enhanced the type-safety when opting into the `future.unstable_singleFetch` feature. Previously, we added the `response` stub to `LoaderFunctionArgs` and used type overrides for inference on `useLoaderData`, etc., but we found that it wasn't quite enough.
+
+With this release we're introducing new functions to assist the type-inference when using single fetch - `defineLoader`/`defineAction` and their client-side counterparts `defineClientLoader` and nd `defineClientAction`. These are identity functions; they don't modify your loader or action at runtime. Rather, they exist solely for type-safety by providing types for args and by ensuring valid return types.
+
+```ts
+export let loader = defineLoader(({ request }) => {
+  //                                ^? Request
+  return { a: 1, b: () => 2 };
+  //           ^ type error: `b` is not serializable
+});
+```
+
+Note that `defineLoader` and `defineAction` are not technically necessary for defining loaders and actions if you aren't concerned with type-safety:
+
+```ts
+// this totally works! and typechecking is happy too!
+export let loader = () => {
+  return { a: 1 };
+};
+```
+
+This means that you can opt-in to `defineLoader` incrementally, one loader at a time.
+
+Please see the [Single Fetch docs](https://remix.run/docs/en/main/guides/single-fetch) for more information.
+
+### Patch Changes
+
+- `@remix-run/dev` - Vite: Fix `dest already exists` error when running `remix vite:build` ([#9305](https://github.com/remix-run/remix/pull/9305))
+- `@remix-run/dev` - Vite: Fix issue resolving critical CSS during development when route files are located outside of the app directory ([#9194](https://github.com/remix-run/remix/pull/9194))
+- `@remix-run/dev` - Vite: Remove `@remix-run/node` from Vite plugin's `optimizeDeps.include` list since it was unnecessary and resulted in Vite warnings when not depending on this package ([#9287](https://github.com/remix-run/remix/pull/9287))
+- `@remix-run/dev` - Vite: Clean up redundant `?client-route=1` imports in development ([#9395](https://github.com/remix-run/remix/pull/9395))
+- `@remix-run/dev` - Vite: Ensure Babel config files are not referenced when applying the `react-refresh` Babel transform within the Remix Vite plugin ([#9241](https://github.com/remix-run/remix/pull/9241))
+- `@remix-run/react` - Type-safety for single-fetch: `defineLoader`, `defineClientLoader`, `defineAction`, `defineClientAction` ([#9372](https://github.com/remix-run/remix/pull/9372))
+- `@remix-run/react` - Single Fetch: Add `undefined` to `useActionData` type override ([#9322](https://github.com/remix-run/remix/pull/9322))
+- `@remix-run/react` - Single Fetch: Allow a `nonce` to be set on single fetch stream transfer inline scripts via `<RemixServer>` ([#9364](https://github.com/remix-run/remix/pull/9364))
+- `@remix-run/server-runtime` - Single Fetch: Don't log thrown response stubs via `handleError` ([#9369](https://github.com/remix-run/remix/pull/9369))
+- `@remix-run/server-runtime` - Single Fetch: Automatically wrap resource route naked object returns in `json()` for back-compat in v2 (and log deprecation warning) ([#9349](https://github.com/remix-run/remix/pull/9349))
+- `@remix-run/server-runtime` - Single Fetch: Pass `response` stub to resource route handlers ([#9349](https://github.com/remix-run/remix/pull/9349))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.23.1`](https://github.com/remix-run/react-router/releases/tag/react-router%406.23.1)
+- [`@remix-run/router@1.16.1`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1161)
+
+### Changes by Package
+
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-cloudflare/CHANGELOG.md#292)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-cloudflare-pages/CHANGELOG.md#292)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-cloudflare-workers/CHANGELOG.md#292)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-css-bundle/CHANGELOG.md#292)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-deno/CHANGELOG.md#292)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-dev/CHANGELOG.md#292)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-eslint-config/CHANGELOG.md#292)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-express/CHANGELOG.md#292)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-node/CHANGELOG.md#292)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-react/CHANGELOG.md#292)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-serve/CHANGELOG.md#292)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-server-runtime/CHANGELOG.md#292)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.9.2/packages/remix-testing/CHANGELOG.md#292)
+
+**Full Changelog**: [`v2.9.1...v2.9.2`](https://github.com/remix-run/remix/compare/remix@2.9.1...remix@2.9.2)
+
 ## v2.9.1
 
 Date: 2024-04-24

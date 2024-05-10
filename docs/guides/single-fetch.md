@@ -29,13 +29,15 @@ Previously, Remix used `JSON.stringify` to serialize your loader/action data ove
 
 With Single Fetch, Remix now uses [`turbo-stream`][turbo-stream] under the hood which provides first class support for streaming and allows you to automatically serialize/deserialize more complex data than JSON. The following data types can be streamed down directly via `turbo-stream`: `BigInt`, `Date`, `Error`, `Map`, `Promise`, `RegExp`, `Set`, `Symbol`, and `URL`. Subtypes of `Error` are also supported as long as they have a globally available constructor on the client (`SyntaxError`, `TypeError`, etc.).
 
-This may or may not require any changes to your code once enabling Single Fetch:
+This may or may not require any immediate changes to your code once enabling Single Fetch:
 
 - ✅ `json` responses returned from `loader`/`action` functions will still be serialized via `JSON.stringify` so if you return a `Date`, you'll receive a `string` from `useLoaderData`/`useActionData`
 - ⚠️ If you're returning a `defer` instance or a naked object, it will now be serialized via `turbo-stream`, so if you return a `Date`, you'll receive a `Date` from `useLoaderData`/`useActionData`
   - If you wish to maintain current behavior (excluding streaming `defer` responses), you may just wrap any existing naked object returns in `json`
 
 This also means that you no longer need to use the `defer` utility to send `Promise` instances over the wire! You can include a `Promise` anywhere in a naked object and pick it up on `useLoaderData().whatever`. You can also nest `Promise`'s if needed - but beware of potential UX implications.
+
+Once adopting Single Fetch, it is recommended that you incrementally remove the usage of `json`/`defer` throughout your application in favor of returning raw objects.
 
 ### React Rendering APIs
 
@@ -113,7 +115,7 @@ In order to ensure you get the proper types when using Single Fetch, we've inclu
 
 🚨 Make sure the single-fetch types come after any other Remix packages in `types` so that they override those existing types.
 
-#### loader/action definition utilities
+#### Loader/Action Definition Utilities
 
 To enhance type-safety when defining loaders and actions with single fetch, you can use the new `unstable_defineLoader` and `unstable_defineAction` utilities:
 
@@ -159,6 +161,33 @@ type Serializable =
   | Map<Serializable, Serializable>
   | Set<Serializable>
   | Promise<Serializable>;
+```
+
+There are also client-side equivalents un `defineClientLoader`/`defineClientAction` that don't have the same return value restrictions because data returned from `clientLoader`/`clientAction` does not need to be serialized over the wire:
+
+```ts
+import { unstable_defineLoader as defineLoader } from "@remix-run/node";
+import { unstable_defineClientLoader as defineClientLoader } from "@remix-run/react";
+
+export const loader = defineLoader(() => {
+  return { msg: "Hello!", date: new Date() };
+});
+
+export const clientLoader = defineClientLoader(
+  async ({ serverLoader }) => {
+    const data = await serverLoader<typeof loader>();
+    //    ^? { msg: string, date: Date }
+    return {
+      ...data,
+      client: "World!",
+    };
+  }
+);
+
+export default function Component() {
+  const data = useLoaderData<typeof clientLoader>();
+  //    ^? { msg: string, date: Date, client: string }
+}
 ```
 
 <docs-info>These utilities are primarily for type inference on `useLoaderData` and it's equivalents. If you have a resource route that returns a `Response` and is not consumed by Remix APIs (such as `useFetcher`) than you can just stick with your normal `loader`/`action` definitions. Converting those routes to use `defineLoader`/`defineAction` would cause type errors because `turbo-stream` cannot serialize a `Response` instance.</docs-info>
@@ -234,39 +263,32 @@ Instead, your `loader`/`action` functions now receive a mutable `ResponseStub` u
   - `response.headers.delete(name)`
 
 ```ts
-type ResponseStub = {
-  status: number | undefined;
-  headers: Headers;
-};
-
-export async function action({
-  request,
-  response,
-}: {
-  request: Request;
-  response?: ResponseStub;
-}) {
-  if (!loggedIn(request)) {
-    response.status = 401;
-    response.headers.append("Set-Cookie", "foo=bar");
-    return { message: "Invalid Submission! " };
+export const action = defineAction(
+  async ({ request, response }) => {
+    if (!loggedIn(request)) {
+      response.status = 401;
+      response.headers.append("Set-Cookie", "foo=bar");
+      return { message: "Invalid Submission! " };
+    }
+    await addItemToDb(request);
+    return null;
   }
-  await addItemToDb(request);
-  return null;
-}
+);
 ```
 
 You can also throw these response stubs to short circuit the flow of your loaders and actions:
 
 ```tsx
-export async function loader({ request, response }) {
-  if (shouldRedirectToHome(request)) {
-    response.status = 302;
-    response.headers.set("Location", "/");
-    throw response;
+export const loader = defineLoader(
+  ({ request, response }) => {
+    if (shouldRedirectToHome(request)) {
+      response.status = 302;
+      response.headers.set("Location", "/");
+      throw response;
+    }
+    // ...
   }
-  // ...
-}
+);
 ```
 
 Each `loader`/`action` receives it's own unique `response` instance so you cannot see what other `loader`/`action` functions have set (which would be subject to race conditions). The resulting HTTP Response status and headers are determined as follows:
@@ -285,7 +307,7 @@ Because single fetch supports naked object returns, and you no longer need to re
 
 ### Client Loaders
 
-If your app has route using [`clientLoader`][client-loader] functions, it's important to note that the behavior of Single Fetch will change slightly. Because `clientLoader` is intended to give you a way to opt-out of calling the server `loader` function - it would be incorrect for the Single Fetch call to execute that server loader. But we run all loaders in parallel and we don't want to _wait_ to make the call until we know which `clientLoader`'s are actually asking for server data.
+If your app has routes using [`clientLoader`][client-loader] functions, it's important to note that the behavior of Single Fetch will change slightly. Because `clientLoader` is intended to give you a way to opt-out of calling the server `loader` function - it would be incorrect for the Single Fetch call to execute that server loader. But we run all loaders in parallel and we don't want to _wait_ to make the call until we know which `clientLoader`'s are actually asking for server data.
 
 For example, consider the following `/a/b/c` routes:
 
