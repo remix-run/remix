@@ -5,6 +5,8 @@ import util from "node:util";
 import fse from "fs-extra";
 import semver from "semver";
 
+import { run } from "../cli/run";
+
 let execFile = util.promisify(childProcess.execFile);
 
 const TEMP_DIR = path.join(
@@ -20,6 +22,16 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await fse.remove(TEMP_DIR);
+});
+
+jest.mock("../cli/commands", () => {
+  let originalModule = jest.requireActual("../cli/commands");
+
+  return {
+    __esModule: true,
+    ...originalModule,
+    dev: jest.fn(),
+  };
 });
 
 async function execRemix(
@@ -197,6 +209,34 @@ describe("remix CLI", () => {
     it("prints the current version", async () => {
       let { stdout } = await execRemix(["--version"]);
       expect(!!semver.valid(stdout.trim())).toBe(true);
+    });
+  });
+
+  describe("the `dev` command", () => {
+    beforeEach(() => {
+      let remixRoot = path.join(__dirname, "fixtures", "node");
+
+      fse.copySync(remixRoot, TEMP_DIR);
+    });
+
+    it("call the `dev` command process", async () => {
+      let res = await run(["dev"]);
+
+      expect(res).toBeUndefined();
+    });
+  });
+
+  describe("not command specified", () => {
+    beforeEach(() => {
+      let remixRoot = path.join(__dirname, "fixtures", "node");
+
+      fse.copySync(remixRoot, TEMP_DIR);
+    });
+
+    it("call the `dev` command process", async () => {
+      let res = await run([]);
+
+      expect(res).toBeUndefined();
     });
   });
 });
