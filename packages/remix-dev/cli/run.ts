@@ -163,7 +163,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--tls-key": String,
       "--tls-cert": String,
 
-      ...(argv[0].startsWith("vite:") ||
+      ...(argv[0]?.startsWith("vite:") ||
       argv[0] === "reveal" ||
       argv[0] === "routes"
         ? // Handle commands that support Vite's --config flag
@@ -176,7 +176,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             "-c": "--command",
           }),
 
-      ...(argv[0].startsWith("vite:")
+      ...(argv[0]?.startsWith("vite:")
         ? {
             // Vite commands
             // --config, --force and --port are already defined above
