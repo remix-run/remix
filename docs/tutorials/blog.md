@@ -57,6 +57,8 @@ npm run dev
 
 💿 Open up [http://localhost:3000][http-localhost-3000], the app should be running.
 
+<docs-info>Note, if you encounter an error that says `Error: Invariant failed: SESSION_SECRET must be set`. Try adding a new .env file with the same content as the .env.example file.</docs-info>
+
 If you want, take a minute and poke around the UI a bit. Feel free to create an account and create/delete some notes to get an idea of what's available in the UI out of the box.
 
 ## Your First Route
