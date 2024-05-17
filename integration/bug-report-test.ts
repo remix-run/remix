@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import {
   createAppFixture,
@@ -57,30 +56,24 @@ test.beforeAll(async () => {
     // 💿 Next, add files to this object, just like files in a real app,
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
+    config: {
+      future: {
+        unstable_singleFetch: true,
+      },
+    },
     files: {
       "app/routes/_index.tsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import { unstable_defineLoader as defineLoader } from "@remix-run/node";
 
-        export function loader() {
-          return json("pizza");
-        }
+        export const loader = defineLoader(({ response }) => {
+          response.status = 302;
+          response.headers.set("Location", "/hello");
+          throw response;
+        });
 
-        export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
-        }
-      `,
+        // Uncomment the line below and the test will pass
 
-      "app/routes/burgers.tsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
-        }
+        // export default function Index() { return null; }
       `,
     },
   });
@@ -98,22 +91,9 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
+test("throwing a response stub from a resource route redirects", async () => {
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  await page.waitForSelector("text=cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  expect(response.status).toBe(302);
 });
 
 ////////////////////////////////////////////////////////////////////////////////
