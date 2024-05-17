@@ -277,7 +277,13 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load-balanced scenarios. However, cookie-based sessions may not exceed the browser's max-allowed cookie length (typically 4kb).
 
-The downside is that you have to send a "Set-Cookie" header from almost every loader and action, this can cause complications when writing to simultaneous requests for the same session. With other session storage strategies you only have to send a "Set-Cookie" header when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere). Note that you still need to call `commitSession()` whenever you change the session for anything based on `createSessionStorage`, you just don't need to send an updated header.
+The downside is that you have to `commitSession` and send a "Set-Cookie" header from every loader and action that changes the session. That mean, for example, that if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away.
+
+This can cause complications when handling simultaneous requests for the same session. 
+
+With other session storage strategies you only have to send a "Set-Cookie" header when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere). 
+
+Note that you still need to call `commitSession()` whenever you change the session for anything based on `createSessionStorage`, you just don't need to send an updated header.
 
 ```ts
 import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
