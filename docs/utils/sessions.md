@@ -277,7 +277,7 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load-balanced scenarios. However, cookie-based sessions may not exceed the browser's max-allowed cookie length (typically 4kb).
 
-The downside is that you have to `commitSession` and send a "Set-Cookie" header from every loader and action that changes the session. That means, for example, that if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away.
+The downside is that you have to `commitSession` and send a "Set-Cookie" header from every loader and action that changes the session. This means, for example, that if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away.
 
 This can cause complications if loaders or actions are writing to the same session at the same time.
 
