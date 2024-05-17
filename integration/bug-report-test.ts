@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import {
   createAppFixture,
@@ -57,29 +56,68 @@ test.beforeAll(async () => {
     // 💿 Next, add files to this object, just like files in a real app,
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
+    config: {
+      future: {
+        unstable_singleFetch: true,
+      },
+    },
     files: {
       "app/routes/_index.tsx": js`
-        import { json } from "@remix-run/node";
+        import { unstable_defineLoader as defineLoader } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
 
-        export function loader() {
-          return json("pizza");
-        }
+        export const loader = defineLoader(({ response }) => {
+          response.status = 404;
+          throw response;
+        });
 
         export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
+          return null;
         }
       `,
 
-      "app/routes/burgers.tsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+      "app/root.tsx": js`
+        import {
+          Links,
+          Meta,
+          Outlet,
+          Scripts,
+          ScrollRestoration,
+          isRouteErrorResponse,
+          useRouteError,
+        } from "@remix-run/react";
+        import { isResponseStub } from "@remix-run/server-runtime/dist/single-fetch.js";
+
+        export function Layout({ children }: { children: React.ReactNode }) {
+          return (
+            <html lang="en">
+              <head>
+                <meta charSet="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <Meta />
+                <Links />
+              </head>
+              <body>
+                {children}
+                <ScrollRestoration />
+                <Scripts />
+              </body>
+            </html>
+          );
+        }
+
+        export default function App() {
+          return <Outlet />;
+        }
+
+        export function ErrorBoundary() {
+          const error = useRouteError();
+
+          if ((isRouteErrorResponse(error) || isResponseStub(error)) && error.status === 404) {
+            return <h1>Not found</h1>;
+          }
+
+          return <h1>Something went wrong</h1>;
         }
       `,
     },
@@ -98,22 +136,9 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
+test("throwing a response stub with status 404 hits the root error boundary and renders the not found page", async () => {
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  await page.waitForSelector("text=cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  expect(await response.text()).toContain("Not found");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
