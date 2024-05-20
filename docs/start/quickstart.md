@@ -199,7 +199,7 @@ First, as a convenience, add `dev` and `start` commands in `package.json` that w
 
 👉 **Add Vite development middleware to your server**
 
-Vite middleware not applied if `process.env.NODE_ENV` is set to `"production"`, in which case you'll still be running the regular build output as you did earlier.
+Vite middleware is not applied if `process.env.NODE_ENV` is set to `"production"`, in which case you'll still be running the regular build output as you did earlier.
 
 ```js filename=server.js lines=[4-11,14-18,20-25]
 import { createRequestHandler } from "@remix-run/express";
