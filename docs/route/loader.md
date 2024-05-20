@@ -248,6 +248,7 @@ import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
   isRouteErrorResponse,
   useLoaderData,
+  useRouteError,
 } from "@remix-run/react";
 
 import { getInvoice } from "~/db";
