@@ -9,6 +9,11 @@ on:
       - "!release-manual"
       - "!release-manual-*"
 
+permissions: 
+  contents: write
+  pull-requests: write
+  
+
 jobs:
   release:
     name: 🦋 Changesets Release
@@ -20,20 +25,21 @@ jobs:
       github.repository == 'remix-run/remix' &&
       !contains(github.ref, 'nightly')
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     outputs:
       published_packages: ${{ steps.changesets.outputs.publishedPackages }}
       published: ${{ steps.changesets.outputs.published }}
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
         with:
           fetch-depth: 0
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v3.0.0
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v3.0.0
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4
         with:
           node-version-file: ".nvmrc"
           cache: "pnpm"
@@ -53,7 +59,7 @@ jobs:
         # publish to npm.
       - name: 🚀 PR / Publish
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@aba318e9165b45b7948c60273e0b72fce0a64eb9 # v1
         with:
           version: pnpm run changeset:version
           commit: "chore: Update version for release"
@@ -73,13 +79,13 @@ jobs:
       package_version: ${{ steps.find_package_version.outputs.package_version }}
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v3.0.0
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v3.0.0
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4
         with:
           node-version-file: ".nvmrc"
           cache: "pnpm"
