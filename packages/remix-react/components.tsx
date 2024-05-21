@@ -36,7 +36,7 @@ import {
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
-import type { RemixContextObject } from "./entry";
+import type { AssetsManifest, RemixContextObject } from "./entry";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
@@ -846,13 +846,14 @@ export function Scripts(props: ScriptProps) {
           ? `__remixContext.a=${deferredScripts.length};`
           : "");
 
+    // TODO: Put fog of war behind a future flag
     let routeModulesScript = !isStatic
       ? " "
       : `${
           manifest.hmr?.runtime
             ? `import ${JSON.stringify(manifest.hmr.runtime)};`
             : ""
-        }import ${JSON.stringify(manifest.url)};
+        }${"" /* import ${JSON.stringify(manifest.url) */};
 ${matches
   .map(
     (match, index) =>
@@ -861,6 +862,11 @@ ${matches
       )};`
   )
   .join("\n")}
+window.__remixManifest = ${JSON.stringify(
+          getPartialHydrationManifest(manifest, matches),
+          null,
+          2
+        )}
 window.__remixRouteModules = {${matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
@@ -914,11 +920,15 @@ import(${JSON.stringify(manifest.entry.module)});`;
         navigation.location,
         router.basename
       );
-      invariant(
-        matches,
-        `No routes match path "${navigation.location.pathname}"`
-      );
-      return matches;
+      // TODO: With fog of war we won't always be able to match the next
+      // routes synchronously.
+      // TODO: Is this even used since we don't even render these when
+      // isHydrated is false?  Maybe dead code?
+      // invariant(
+      //   matches,
+      //   `No routes match path "${navigation.location.pathname}"`
+      // );
+      return matches || [];
     }
 
     return [];
@@ -936,11 +946,12 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   return isHydrated ? null : (
     <>
-      <link
+      {/* TODO: Put this behind a future flag */}
+      {/* <link
         rel="modulepreload"
         href={manifest.url}
         crossOrigin={props.crossOrigin}
-      />
+      /> */}
       <link
         rel="modulepreload"
         href={manifest.entry.module}
@@ -958,6 +969,29 @@ import(${JSON.stringify(manifest.entry.module)});`;
       {deferredScripts}
     </>
   );
+}
+
+function getPartialHydrationManifest(
+  manifest: AssetsManifest,
+  matches: AgnosticDataRouteMatch[]
+) {
+  return {
+    ...manifest,
+    routes: Object.values(manifest.routes)
+      .filter(
+        (r) =>
+          r.id === "root" ||
+          matches.some((m) => m.route.id === r.id) ||
+          r.parentId === "root"
+      )
+      .reduce(
+        (acc, r) =>
+          Object.assign(acc, {
+            [r.id]: r,
+          }),
+        {}
+      ),
+  };
 }
 
 function DeferredHydrationScript({

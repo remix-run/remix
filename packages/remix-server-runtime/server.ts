@@ -119,6 +119,15 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     let url = new URL(request.url);
 
+    // Manifest request for fog of war
+    if (url.pathname === "/__manifest") {
+      let routeIds = new Set(url.searchParams.getAll("routes"));
+      let filteredManifest = Object.values(_build.assets.routes)
+        .filter((r) => r.parentId != null && routeIds.has(r.parentId))
+        .reduce((acc, r) => Object.assign(acc, { [r.id]: r }), {});
+      return json(filteredManifest);
+    }
+
     let matches = matchServerRoutes(routes, url.pathname, _build.basename);
     let params = matches && matches.length > 0 ? matches[0].params : {};
     let handleError = (error: unknown) => {

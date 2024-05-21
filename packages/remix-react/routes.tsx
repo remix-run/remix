@@ -406,6 +406,18 @@ export function createClientRoutes(
           });
         });
       };
+
+      let children = createClientRoutes(
+        manifest,
+        routeModulesCache,
+        initialState,
+        future,
+        isSpaMode,
+        route.id,
+        routesByParentId,
+        needsRevalidation
+      );
+      if (children.length > 0) dataRoute.children = children;
     } else {
       // If the lazy route does not have a client loader/action we want to call
       // the server loader/action in parallel with the module load so we add
@@ -491,19 +503,28 @@ export function createClientRoutes(
           ErrorBoundary: lazyRoute.ErrorBoundary,
         };
       };
+
+      if (!dataRoute.index) {
+        dataRoute.children = async () => {
+          let params = new URLSearchParams();
+          params.set("routes", dataRoute.id);
+          let res = await fetch(`/__manifest?${params.toString()}`);
+          let patch = await res.json();
+          Object.assign(window.__remixManifest.routes, patch);
+          let children = createClientRoutes(
+            window.__remixManifest.routes,
+            routeModulesCache,
+            // These routes, by definition, can't have any hydrated state
+            { loaderData: {} },
+            future,
+            isSpaMode,
+            route.id
+          );
+          return children;
+        };
+      }
     }
 
-    let children = createClientRoutes(
-      manifest,
-      routeModulesCache,
-      initialState,
-      future,
-      isSpaMode,
-      route.id,
-      routesByParentId,
-      needsRevalidation
-    );
-    if (children.length > 0) dataRoute.children = children;
     return dataRoute;
   });
 }
