@@ -1492,9 +1492,90 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             }
 
             let remixManifest = await getRemixManifestForDev();
-            let remixManifestString = jsesc(remixManifest, { es6: true });
 
-            return `window.__remixManifest=${remixManifestString};`;
+            // Optimize
+            let KEYS = {
+              hasAction: "hasAction", // "a",
+              hasLoader: "hasLoader", // "l",
+              hasClientAction: "hasClientAction", // "ca",
+              hasClientLoader: "hasClientLoader", // "cl",
+              hasErrorBoundary: "hasErrorBoundary", // "eb",
+              imports: "imports", // "i",
+              parentId: "parentId", // "p",
+              // TODO: ???
+              // css: route.css,
+            };
+            let modules = Object.values(remixManifest.routes).reduce(
+              (acc, route) =>
+                Object.assign(acc, {
+                  [`${route.module}`]: {
+                    [`${KEYS.hasAction}`]: route.hasAction,
+                    [`${KEYS.hasLoader}`]: route.hasLoader,
+                    [`${KEYS.hasClientAction}`]: route.hasClientAction,
+                    [`${KEYS.hasClientLoader}`]: route.hasClientLoader,
+                    [`${KEYS.hasErrorBoundary}`]: route.hasErrorBoundary,
+                    [`${KEYS.imports}`]: route.imports,
+                    [`${KEYS.parentId}`]: route.parentId,
+                    // TODO: ???
+                    // css: route.css,
+                  },
+                }),
+              {}
+            );
+            let routes = Object.values(remixManifest.routes).reduce(
+              (acc, route) =>
+                Object.assign(acc, {
+                  [`${route.id}`]: {
+                    module: route.module,
+                    id: route.id,
+                    ...(route.path != null ? { path: route.path } : {}),
+                    ...(route.index != null ? { index: route.index } : {}),
+                    ...(route.caseSensitive != null
+                      ? { caseSensitive: route.caseSensitive }
+                      : {}),
+                    parentId: route.parentId,
+                  },
+                }),
+              {}
+            );
+
+            let modulesString = jsesc(modules, { es6: true });
+            let routesString = jsesc(routes, { es6: true });
+            //let remixManifestString = jsesc(remixManifest, { es6: true });
+
+            return [
+              `window.__remixModules=${modulesString}`,
+              `window.__remixRoutes=${routesString}`,
+              `window.__remixManifest={
+                'version': '${remixManifest.version}',
+                'url': ${JSON.stringify(remixManifest.url)},
+                'hmr': ${
+                  remixManifest.hmr
+                    ? JSON.stringify(remixManifest.hmr)
+                    : "undefined"
+                },
+                'entry': ${JSON.stringify(remixManifest.entry)},
+                'routes': Object.entries(window.__remixRoutes).reduce((acc, [id, route]) => {
+                  let m = window.__remixModules[route.module];
+                  return Object.assign(acc, {
+                    [\`\${route.id}\`]: {
+                      ...route,
+                      module: route.module,
+                      hasAction: m["${KEYS.hasAction}"],
+                      hasLoader: m["${KEYS.hasLoader}"],
+                      hasClientAction: m["${KEYS.hasClientAction}"],
+                      hasClientLoader: m["${KEYS.hasClientLoader}"],
+                      hasErrorBoundary: m["${KEYS.hasErrorBoundary}"],
+                      imports: m["${KEYS.imports}"],
+                      parentId: m["${KEYS.parentId}"],
+                      // TODO: ???
+                      // css: route.css,
+                    }
+                  });
+                }, {}),
+              }`,
+              //`window.__remixManifest=${remixManifestString};`,
+            ].join("\n");
           }
         }
       },
