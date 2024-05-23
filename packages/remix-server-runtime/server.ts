@@ -90,6 +90,7 @@ function derive(build: ServerBuild, mode?: string) {
   };
 }
 
+// @ts-ignore
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
   mode
