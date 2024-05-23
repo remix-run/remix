@@ -304,7 +304,15 @@ Each `loader`/`action` receives it's own unique `response` instance so you canno
   - `headers.append` can be used to set the same header from both a parent and child handler
   - `headers.delete` can be used to delete a value set by a parent handler, but not a value set from a child handler
 
-Because single fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities are considered deprecated when using Single Fetch. You may still continue returning normal `Response` instances and they'll apply status codes in the same way as the `response` stub, and will apply all headers via `headers.set` - overwriting any same-named header values from parents. If you need to append a header, you will need to switch from returning a `Response` instance to using the new `response` parameter.
+Because single fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities can be considered deprecated when using Single Fetch.
+
+_**However**, this does not mean you need to change them all right away in order to adopt Single Fetch!_
+
+These utilities will remain for the rest of Remix v2, and it's likely that in a future version they'll be available via something like [`remix-utils`][remix-utils] (or they're also very easy to re-implement yourself).
+
+For v2, you may still continue returning normal `Response` instances and they'll apply status codes in the same way as the `response` stub, and will apply all headers via `headers.set` - overwriting any same-named header values from parents. If you need to append a header, you will need to switch from returning a `Response` instance to using the new `response` parameter.
+
+To ensure you can adopt these features incrementally, our goal is that you can enable single fetch without changing all of your `loader`/`action` functions to leverage the `response` stub. Then over time, you can incrementally convert individual routes to leverage the new `response` stub.
 
 ### Client Loaders
 
@@ -459,3 +467,4 @@ The `<RemixServer>` component renders inline scripts that handle the streaming d
 [undici]: https://github.com/nodejs/undici
 [csp]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
 [csp-nonce]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources
+[remix-utils]: https://github.com/sergiodxa/remix-utils
