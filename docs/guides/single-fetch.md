@@ -306,7 +306,7 @@ Each `loader`/`action` receives it's own unique `response` instance so you canno
 
 Because single fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities can be considered deprecated when using Single Fetch.
 
-_**However**, this does not mean you need to change them all right away in order to adopt Single Fetch!_
+**\*However**, this does not mean you need to change them all right away in order to adopt Single Fetch!\*
 
 These utilities will remain for the rest of Remix v2, and it's likely that in a future version they'll be available via something like [`remix-utils`][remix-utils] (or they're also very easy to re-implement yourself).
 
