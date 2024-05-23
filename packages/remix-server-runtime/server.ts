@@ -15,7 +15,7 @@ import {
 
 import type { AppLoadContext } from "./data";
 import type { HandleErrorFunction, ServerBuild } from "./build";
-import type { EntryContext } from "./entry";
+import type { AssetsManifest, EntryContext } from "./entry";
 import { createEntryRouteModules } from "./entry";
 import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
 import { getDocumentHeaders } from "./headers";
@@ -133,9 +133,9 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           _build.assets.routes
         )
           .filter((r) => r.parentId === routeId)
-        .reduce((acc, r) => Object.assign(acc, { [r.id]: r }), {});
-      return json(filteredManifest);
-    }
+          .reduce((acc, r) => Object.assign(acc, { [r.id]: r }), {});
+        return json(filteredManifest);
+      }
       return new Response("Invalid Request", { status: 400 });
     }
 
