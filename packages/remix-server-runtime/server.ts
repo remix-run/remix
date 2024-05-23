@@ -121,11 +121,22 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     // Manifest request for fog of war
     if (url.pathname === "/__manifest") {
-      let routeIds = new Set(url.searchParams.getAll("routes"));
-      let filteredManifest = Object.values(_build.assets.routes)
-        .filter((r) => r.parentId != null && routeIds.has(r.parentId))
+      // Singular route children() request - if we were unable to prefetch in
+      // time and the user clicks on a link, we'll fetch directly for a single
+      // route via route.children()
+      let routeId = url.searchParams.get("route");
+      if (routeId) {
+        if (!_build.assets.routes[routeId]) {
+          return new Response("Not found", { status: 404 });
+        }
+        let filteredManifest: AssetsManifest["routes"] = Object.values(
+          _build.assets.routes
+        )
+          .filter((r) => r.parentId === routeId)
         .reduce((acc, r) => Object.assign(acc, { [r.id]: r }), {});
       return json(filteredManifest);
+    }
+      return new Response("Invalid Request", { status: 400 });
     }
 
     let matches = matchServerRoutes(routes, url.pathname, _build.basename);

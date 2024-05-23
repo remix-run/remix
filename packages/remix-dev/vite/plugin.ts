@@ -951,8 +951,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       ctx
     );
 
+    let parentRoutes = new Set<string>();
     for (let [key, route] of Object.entries(ctx.remixConfig.routes)) {
       let sourceExports = routeManifestExports[key];
+      if (route.parentId) {
+        parentRoutes.add(route.parentId);
+      }
       routes[key] = {
         id: route.id,
         parentId: route.parentId,
@@ -966,6 +970,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             resolveRelativeRouteFilePath(route, ctx.remixConfig)
           )}`
         ),
+        hasChildren: false,
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
         hasClientAction: sourceExports.includes("clientAction"),
@@ -974,6 +979,10 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         imports: [],
       };
     }
+
+    parentRoutes.forEach((p) => {
+      routes[p].hasChildren = true;
+    });
 
     return {
       version: String(Math.random()),

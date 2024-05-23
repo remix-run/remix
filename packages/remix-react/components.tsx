@@ -853,7 +853,7 @@ export function Scripts(props: ScriptProps) {
           manifest.hmr?.runtime
             ? `import ${JSON.stringify(manifest.hmr.runtime)};`
             : ""
-        }${"" /* import ${JSON.stringify(manifest.url) */};
+        }${"" /*import ${JSON.stringify(manifest.url)}*/};
 ${matches
   .map(
     (match, index) =>
@@ -975,22 +975,43 @@ function getPartialHydrationManifest(
   manifest: AssetsManifest,
   matches: AgnosticDataRouteMatch[]
 ) {
+  let renderedParentIds = new Set(matches.slice(0, -1).map((m) => m.route.id));
+
+  // We start by gathering the root route and all children of any rendered
+  // parent routes
+  let criticalRoutes: AssetsManifest["routes"] = Object.values(manifest.routes)
+    .filter((r) => r.parentId == null || renderedParentIds.has(r.parentId))
+    .reduce((acc, r) => Object.assign(acc, { [r.id]: r }), {});
+
+  // Then, if any of our criticalRoutes are pathless routes, we need to include
+  // their children as well so we can match into them
+  while (true) {
+    let pathlessRoutes = new Set<string>(
+      Object.values(criticalRoutes)
+        .filter((r) => !r.index && !r.path)
+        .map((r) => r.id)
+    );
+
+    let missingPathlessChildren = Object.values(manifest.routes).filter(
+      (r) =>
+        r.parentId != null &&
+        pathlessRoutes.has(r.parentId) &&
+        !(r.id in criticalRoutes)
+    );
+
+    Object.values(missingPathlessChildren).forEach((r) =>
+      Object.assign(criticalRoutes, { [r.id]: r })
+    );
+
+    // If we've exhausted all of them, we're good
+    if (missingPathlessChildren.length === 0) {
+      break;
+    }
+  }
+
   return {
     ...manifest,
-    routes: Object.values(manifest.routes)
-      .filter(
-        (r) =>
-          r.id === "root" ||
-          matches.some((m) => m.route.id === r.id) ||
-          r.parentId === "root"
-      )
-      .reduce(
-        (acc, r) =>
-          Object.assign(acc, {
-            [r.id]: r,
-          }),
-        {}
-      ),
+    routes: criticalRoutes,
   };
 }
 
