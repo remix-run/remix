@@ -946,7 +946,7 @@ If we review code in the contact route, we can find the delete button looks like
 </Form>
 ```
 
-Note the `action` points to `"destroy"`. Like `<Link to>`, `<Form action>` can take a _relative_ value. Since the form is rendered in `contacts.$contactId.tsx`, then a relative action with `destroy` will submit the form to `contacts.$contactId.destroy` when clicked.
+Note the `action` points to `"destroy"`. Like `<Link to>`, `<Form action>` can take a _relative_ value. Since the form is rendered in `contacts.$contactId.tsx`, then a relative action with `destroy` will submit the form to `contacts.$contactId_.destroy` when clicked.
 
 At this point you should know everything you need to know to make the delete button work. Maybe give it a shot before moving on? You'll need:
 
@@ -958,12 +958,12 @@ At this point you should know everything you need to know to make the delete but
 👉 **Create the "destroy" route module**
 
 ```shellscript nonumber
-touch app/routes/contacts.\$contactId.destroy.tsx
+touch app/routes/contacts.\$contactId_.destroy.tsx
 ```
 
 👉 **Add the destroy action**
 
-```tsx filename=app/routes/contacts.$contactId.destroy.tsx
+```tsx filename=app/routes/contacts.$contactId_.destroy.tsx
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import invariant from "tiny-invariant";
@@ -986,7 +986,7 @@ Alright, navigate to a record and click the "Delete" button. It works!
 When the user clicks the submit button:
 
 1. `<Form>` prevents the default browser behavior of sending a new document `POST` request to the server, but instead emulates the browser by creating a `POST` request with client side routing and [`fetch`][fetch]
-2. The `<Form action="destroy">` matches the new route at `"contacts.$contactId.destroy"` and sends it the request
+2. The `<Form action="destroy">` matches the new route at `"contacts.$contactId_.destroy"` and sends it the request
 3. After the `action` redirects, Remix calls all the `loader`s for the data on the page to get the latest values (this is "revalidation"). `useLoaderData` returns new values and causes the components to update!
 
 Add a `Form`, add an `action`, Remix does the rest.
