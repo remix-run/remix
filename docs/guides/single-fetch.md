@@ -118,7 +118,7 @@ In order to ensure you get the proper types when using Single Fetch, we've inclu
 
 #### Loader/Action Definition Utilities
 
-To enhance type-safety when defining loaders and actions with single fetch, you can use the new `unstable_defineLoader` and `unstable_defineAction` utilities:
+To enhance type-safety when defining loaders and actions with Single Fetch, you can use the new `unstable_defineLoader` and `unstable_defineAction` utilities:
 
 ```ts
 import { unstable_defineLoader as defineLoader } from "@remix-run/node";
@@ -195,7 +195,7 @@ export default function Component() {
 
 #### `useLoaderData`, `useActionData`, `useRouteLoaderData`, `useFetcher`
 
-These methods do not require any code changes on your part - adding the single fetch types will cause their generics to deserialize correctly:
+These methods do not require any code changes on your part - adding the Single Fetch types will cause their generics to deserialize correctly:
 
 ```ts
 export const loader = defineLoader(async () => {
@@ -207,11 +207,11 @@ export const loader = defineLoader(async () => {
 });
 
 export default function Component() {
-  // ❌ Before single fetch, types were serialized via JSON.stringify
+  // ❌ Before Single Fetch, types were serialized via JSON.stringify
   const data = useLoaderData<typeof loader>();
   //    ^? { message: string, date: string }
 
-  // ✅ With single fetch, types are serialized via turbo-stream
+  // ✅ With Single Fetch, types are serialized via turbo-stream
   const data = useLoaderData<typeof loader>();
   //    ^? { message: string, date: Date }
 }
@@ -269,7 +269,7 @@ export const action = defineAction(
     if (!loggedIn(request)) {
       response.status = 401;
       response.headers.append("Set-Cookie", "foo=bar");
-      return { message: "Invalid Submission! " };
+      return { message: "Invalid Submission!" };
     }
     await addItemToDb(request);
     return null;
@@ -292,7 +292,7 @@ export const loader = defineLoader(
 );
 ```
 
-Each `loader`/`action` receives it's own unique `response` instance so you cannot see what other `loader`/`action` functions have set (which would be subject to race conditions). The resulting HTTP Response status and headers are determined as follows:
+Each `loader`/`action` receives its own unique `response` instance so you cannot see what other `loader`/`action` functions have set (which would be subject to race conditions). The resulting HTTP Response status and headers are determined as follows:
 
 - Status Code
   - If all status codes are unset or have values <300, the deepest status code will be used for the HTTP response
@@ -304,7 +304,7 @@ Each `loader`/`action` receives it's own unique `response` instance so you canno
   - `headers.append` can be used to set the same header from both a parent and child handler
   - `headers.delete` can be used to delete a value set by a parent handler, but not a value set from a child handler
 
-Because single fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities can be considered deprecated when using Single Fetch.
+Because Single Fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities can be considered deprecated when using Single Fetch.
 
 **\*However**, this does not mean you need to change them all right away in order to adopt Single Fetch!\*
 
@@ -312,7 +312,7 @@ These utilities will remain for the rest of Remix v2, and it's likely that in a 
 
 For v2, you may still continue returning normal `Response` instances and they'll apply status codes in the same way as the `response` stub, and will apply all headers via `headers.set` - overwriting any same-named header values from parents. If you need to append a header, you will need to switch from returning a `Response` instance to using the new `response` parameter.
 
-To ensure you can adopt these features incrementally, our goal is that you can enable single fetch without changing all of your `loader`/`action` functions to leverage the `response` stub. Then over time, you can incrementally convert individual routes to leverage the new `response` stub.
+To ensure you can adopt these features incrementally, our goal is that you can enable Single Fetch without changing all of your `loader`/`action` functions to leverage the `response` stub. Then over time, you can incrementally convert individual routes to leverage the new `response` stub.
 
 ### Client Loaders
 
@@ -367,9 +367,9 @@ This poses an interesting conundrum for [resource routes][resource-routes] which
 
 If a resource route is intended for consumption by internal Remix APIs, we _want_ to be able to leverage the `turbo-stream` encoding to unlock the ability to stream down more complex structures such as `Date` and `Promise` instances. However, when accessed externally, we'd probably prefer to return the more easily consumable JSON structure. Thus, the behavior is slightly ambiguous if you return a raw object in v2 - should it be serialized via `turbo-stream` or `json()`?
 
-To ease backwards-compatibility and ease the adoption of the single fetch future flag, Remix v2 will handle this based on whether it's accessed from a Remix API or externally. In the future Remix will require you to return your own JSON response if you do not want raw objects to be streamed down for external consumption.
+To ease backwards-compatibility and ease the adoption of the Single Fetch future flag, Remix v2 will handle this based on whether it's accessed from a Remix API or externally. In the future Remix will require you to return your own JSON response if you do not want raw objects to be streamed down for external consumption.
 
-The Remix v2 behavior wih single fetch enabled is as follows:
+The Remix v2 behavior with Single Fetch enabled is as follows:
 
 - When accessing from a Remix API such as `useFetcher`, raw Javascript objects will be returned as `turbo-stream` responses, just like normal loaders and actions (this is because `useFetcher` will append the `.data` suffix to the request)
 
@@ -388,7 +388,7 @@ The Remix v2 behavior wih single fetch enabled is as follows:
   ```
 
   ```tsx filename=app/routes/resource.tsx good
-  import { json } from "@remix-run/react";
+  import { json } from "@remix-run/node";
 
   export function loader() {
     return json({
@@ -403,7 +403,7 @@ Note: It is _not_ recommended to use `defineLoader`/`defineAction` for externall
 
 Ad discussed above, the `headers` export is deprecated in favor of a new [`response` stub][responsestub] passed to your `loader` and `action` functions. This is somewhat confusing in resource routes, though, because you get to return the _actual_ `Response` - there's no real need for a "stub" concept because there's no merging results from multiple loaders into a single Response:
 
-```tsx filename=routes/resource.tsx
+```tsx filename=app/routes/resource.tsx
 // Using your own Response is the most straightforward approach
 export async function loader() {
   const data = await getData();
@@ -418,7 +418,7 @@ export async function loader() {
 
 To keep things consistent, resource route `loader`/`action` functions will still receive a `response` stub and you can use it if you need to (maybe to share code amongst non-resource-route handlers):
 
-```tsx filename=routes/resource.tsx
+```tsx filename=app/routes/resource.tsx
 // But you can still set values on the response stubstraightforward approach
 export async function loader({
   response,
