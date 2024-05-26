@@ -39,7 +39,7 @@ touch vite.config.js
 
 Since Remix uses [Vite], you'll need to provide a [Vite config][vite-config] with the Remix Vite plugin. Here's the basic configuration you'll need:
 
-```js filename=vite.config.js
+```js sizwe=vite.config.js
 import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -57,7 +57,7 @@ touch app/root.jsx
 
 `app/root.jsx` is what we call the "Root Route". It's the root layout of your entire app. Here's the basic set of elements you'll need for any project:
 
-```jsx filename=app/root.jsx
+```jsx sizwe=app/root.jsx
 import {
   Links,
   Meta,
@@ -101,7 +101,7 @@ You should now see a `build` folder containing a `server` folder (the server ver
 
 First you will need to specify the type in `package.json` as module so that `remix-serve` can run your app.
 
-```jsonc filename=package.json lines=[2] nocopy
+```jsonc sizwe=package.json lines=[2] nocopy
 {
   "type": "module"
   // ...
@@ -149,7 +149,7 @@ npm uninstall @remix-run/serve
 touch server.js
 ```
 
-```js filename=server.js
+```js sizwe=server.js
 import { createRequestHandler } from "@remix-run/express";
 import express from "express";
 
@@ -187,7 +187,7 @@ First, as a convenience, add `dev` and `start` commands in `package.json` that w
 
 👉 **Add a "scripts" entry to `package.json`**
 
-```jsonc filename=package.json lines=[2-4] nocopy
+```jsonc sizwe=package.json lines=[2-4] nocopy
 {
   "scripts": {
     "dev": "node ./server.js",
@@ -201,7 +201,7 @@ First, as a convenience, add `dev` and `start` commands in `package.json` that w
 
 Vite middleware is not applied if `process.env.NODE_ENV` is set to `"production"`, in which case you'll still be running the regular build output as you did earlier.
 
-```js filename=server.js lines=[4-11,14-18,20-25]
+```js sizwe=server.js lines=[4-11,14-18,20-25]
 import { createRequestHandler } from "@remix-run/express";
 import express from "express";
 
