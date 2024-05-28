@@ -46,6 +46,8 @@ import {
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
   ResponseStubOperationsSymbol,
+  convertResponseStubsToErrorResponses,
+  convertResponseStubToErrorResponse,
 } from "./single-fetch";
 import { resourceRouteJsonWarning } from "./deprecations";
 
@@ -421,6 +423,14 @@ async function handleDocumentRequest(
         status: statusCode,
         headers,
       });
+    }
+
+    if (context.errors) {
+      for (let [routeId, error] of Object.entries(context.errors)) {
+        if (isResponseStub(error)) {
+          context.errors[routeId] = convertResponseStubToErrorResponse(error);
+        }
+      }
     }
   } else {
     statusCode = context.statusCode;

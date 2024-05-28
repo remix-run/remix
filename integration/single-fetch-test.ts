@@ -1500,6 +1500,101 @@ test.describe("single-fetch", () => {
     expect(await app.getHtml("#target")).toContain("Target");
   });
 
+  test("processes thrown loader errors via responseStub", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/data.tsx": js`
+          import { redirect } from '@remix-run/node';
+          import { isRouteErrorResponse, useRouteError } from '@remix-run/react';
+          export function loader({ request, response }) {
+            response.status = 404;
+            response.headers.set('X-Foo', 'Bar');
+            throw response;
+          }
+          export default function Component() {
+            return null
+          }
+          export function ErrorBoundary() {
+            let error = useRouteError();
+            if (isRouteErrorResponse(error)) {
+              return <p id="error">{error.status}</p>
+            }
+            throw new Error('Nope')
+          }
+        `,
+      },
+    });
+
+    console.error = () => {};
+
+    let res = await fixture.requestDocument("/data");
+    expect(res.status).toBe(404);
+    expect(res.headers.get("X-Foo")).toBe("Bar");
+    expect(await res.text()).toContain('<p id="error">404</p>');
+
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickLink("/data");
+    await page.waitForSelector("#error");
+    expect(await app.getHtml("#error")).toContain("404");
+  });
+
+  test("processes thrown action errors via responseStub", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/data.tsx": js`
+          import { redirect } from '@remix-run/node';
+          import { isRouteErrorResponse, useRouteError } from '@remix-run/react';
+          export function action({ request, response }) {
+            response.status = 404;
+            response.headers.set('X-Foo', 'Bar');
+            throw response;
+          }
+          export default function Component() {
+            return null
+          }
+          export function ErrorBoundary() {
+            let error = useRouteError();
+            if (isRouteErrorResponse(error)) {
+              return <p id="error">{error.status}</p>
+            }
+            throw new Error('Nope')
+          }
+        `,
+      },
+    });
+
+    console.error = () => {};
+
+    let res = await fixture.requestDocument("/data", {
+      method: "post",
+      body: null,
+    });
+    expect(res.status).toBe(404);
+    expect(res.headers.get("X-Foo")).toBe("Bar");
+    expect(await res.text()).toContain('<p id="error">404</p>');
+
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickSubmitButton("/data");
+    await page.waitForSelector("#error");
+    expect(await app.getHtml("#error")).toContain("404");
+  });
+
   test("wraps resource route naked object returns in json with a deprecation warning", async () => {
     let oldConsoleWarn = console.warn;
     let warnLogs: unknown[] = [];
