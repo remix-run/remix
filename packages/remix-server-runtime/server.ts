@@ -600,7 +600,7 @@ async function handleResourceRequest(
         : null),
     });
 
-    if (typeof response === "object") {
+    if (typeof response === "object" && response !== null) {
       invariant(
         !(DEFERRED_SYMBOL in response),
         `You cannot return a \`defer()\` response from a Resource Route.  Did you ` +
@@ -618,6 +618,13 @@ async function handleResourceRequest(
           // @ts-expect-error
           response.headers[op](...args);
         }
+      } else if (isResponseStub(response) || response == null) {
+        // If the stub or null was returned, then there is no body so we just
+        // proxy along the status/headers to a Response
+        response = new Response(null, {
+          status: stub.status,
+          headers: stub.headers,
+        });
       } else {
         console.warn(
           resourceRouteJsonWarning(
@@ -646,6 +653,13 @@ async function handleResourceRequest(
       // match identically to what Remix returns
       error.headers.set("X-Remix-Catch", "yes");
       return error;
+    }
+
+    if (isResponseStub(error)) {
+      return new Response(null, {
+        status: error.status,
+        headers: error.headers,
+      });
     }
 
     if (isRouteErrorResponse(error)) {
