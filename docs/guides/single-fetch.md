@@ -4,43 +4,40 @@ title: Single Fetch
 
 # Single Fetch
 
-Remix introduced support for "Single Fetch" ([RFC][rfc]) behind the [`future.unstable_singleFetch`][future-flags] flag in [`v2.9.0`][2.9.0] which allows you to opt-into this behavior which will become the default in Remix v3.
+Single fetch is a new data data loading strategy and streaming format. When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). Additionally, Single Fetch also allows you to send down naked objects from your `loader` and `action`, such as `Date`, `Error`, `Promise`, `RegExp`, and more.
 
-## Overview
+## Enabling Single Fetch
 
-When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). If you are currently returning `Response` instances from your loaders (i.e., `json`/`defer`) then you shouldn't _need_ to make many changes to your app code, but please read through the "breaking" changes below to be aware of some of the underlying behavior changes - specifically around serialization and status/header behavior.
+Remix introduced support for "Single Fetch" ([RFC][rfc]) behind the [`future.unstable_singleFetch`][future-flags] flag in [`v2.9.0`][2.9.0] which allows you to opt-into this behavior. Single Fetch will be the default in [React Router v7][merging-remix-and-rr].
 
-### Breaking Changes
+Enabling Single Fetch is incredibly simple. If you are currently returning `Response` instances from your loaders (i.e., `json`/`defer`) then you shouldn't _need_ to make many changes to your app code, but please read through the "breaking" changes below to be aware of some of the underlying behavior changes - specifically around serialization and status/header behavior.
 
-- Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
-- Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
-- To get the most accurate type inference, you should do two things:
-  - Add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array
-  - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
-    - This can be done incrementally - you should have _mostly_ accurate type inference in your current state
-- Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
-- The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
-- The old `installGlobals()` polyfill doesn't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
+**1. Enable the future flag**
 
-## Details
+```diff
+  remix({
+    future: {
+      // ...
++     unstable_singleFetch: true,
+    },
+  }),
+```
 
-### Streaming Data Format
+**2. Update or remove `installGlobals`**
 
-Previously, Remix used `JSON.stringify` to serialize your loader/action data over the wire, and needed to implement a custom streaming format to support `defer` responses.
+Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or using the built-in `fetch` on Node 20+, because it relies on APIs available there that are not in the `@remix-run/web-fetch` polyfill. Please refer to the [Undici][undici-polyfill] section in the 2.9.0 release notes below for more details.
 
-With Single Fetch, Remix now uses [`turbo-stream`][turbo-stream] under the hood which provides first class support for streaming and allows you to automatically serialize/deserialize more complex data than JSON. The following data types can be streamed down directly via `turbo-stream`: `BigInt`, `Date`, `Error`, `Map`, `Promise`, `RegExp`, `Set`, `Symbol`, and `URL`. Subtypes of `Error` are also supported as long as they have a globally available constructor on the client (`SyntaxError`, `TypeError`, etc.).
+- If you are using Node 20+, remove `installGlobals()` and use Node's built-in `fetch` (this is the same thing as `undici`).
+- If you are managing your own server and calling `installGlobals()`, you will need to call `installGlobals({ nativeFetch: true })` to use `undici`.
 
-This may or may not require any immediate changes to your code once enabling Single Fetch:
+  ```diff
+  - installGlobals()
+  + installGlobals({ nativeFetch: true })
+  ```
 
-- ✅ `json` responses returned from `loader`/`action` functions will still be serialized via `JSON.stringify` so if you return a `Date`, you'll receive a `string` from `useLoaderData`/`useActionData`
-- ⚠️ If you're returning a `defer` instance or a naked object, it will now be serialized via `turbo-stream`, so if you return a `Date`, you'll receive a `Date` from `useLoaderData`/`useActionData`
-  - If you wish to maintain current behavior (excluding streaming `defer` responses), you may just wrap any existing naked object returns in `json`
+- If you are using `remix-serve`, it will use `undici` automatically if Single Fetch is enabled.
 
-This also means that you no longer need to use the `defer` utility to send `Promise` instances over the wire! You can include a `Promise` anywhere in a naked object and pick it up on `useLoaderData().whatever`. You can also nest `Promise`'s if needed - but beware of potential UX implications.
-
-Once adopting Single Fetch, it is recommended that you incrementally remove the usage of `json`/`defer` throughout your application in favor of returning raw objects.
-
-### React Rendering APIs
+**3. Replace `renderToString`**
 
 In order to maintain consistency between document and data requests, `turbo-stream` is also used as the format for sending down data in initial document requests. This means that once opted-into Single Fetch, your application can no longer use [`renderToString`][rendertostring] and must use a React streaming renderer API such as [`renderToPipeableStream`][rendertopipeablestream] or [`renderToReadableStream`][rendertoreadablestream]) in [`entry.server.tsx`][entry-server].
 
@@ -48,55 +45,54 @@ This does not mean you _have_ to stream down your HTTP response, you can still s
 
 On the client side, this also means that your need to wrap your client-side [`hydrateRoot`][hydrateroot] call in a [`startTransition`][starttransition] call because the streamed data will be coming down wrapped in a `Suspense` boundary.
 
-### Streaming Timeout
+## Breaking Changes
 
-Previously, Remix has a concept of an `ABORT_TIMEOUT` built-into the default [`entry.server.tsx`][entry-server] files which would terminate the React renderer, but it didn't do anything in particular to clean up any pending deferred promises.
+As mentioned above, if you are returning `Response` instances from your loaders (i.e., `json`/`defer`) you shouldn't _need_ to make many changes to your app code. To get better type inference and prepare for React Router v7 you can [migrate your routes one by one](#migrating-a-route-with-single-fetch).
 
-Now that Remix is streaming internally, we can cancel the `turbo-stream` processing and automatically reject any pending promises and stream up those errors to the client. By default, this happens after 4950ms - a value that was chosen to be just under the current 5000ms `ABORT_DELAY` in most entry.server.tsx files - since we need to cancel the promises and let the rejections stream up through the React renderer prior to aborting the React side of things.
+There are a few important breaking changes Single Fetch introduces which are important to cover:
 
-You can control this by exporting a `streamTimeout` numeric value from your `entry.server.tsx` and Remix will use that as the number of milliseconds after which to reject any outstanding Promises from `loader`/`action`'s. It's recommended to decouple this value from the timeout in which you abort the React renderer - and you should always set the React timeout to a higher value so it has time to stream down the underlying rejections from your `streamTimeout`.
+- **[New streaming Data format](#streaming-data-format)**: Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
+- **No more auto-serialization**: Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
+- **Updates to type inference**: To get the most accurate type inference, you should do two things:
+  - Add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array
+  - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
+    - This can be done incrementally - you should have _mostly_ accurate type inference in your current state
+- [**Opt-in `action` revalidation**](#revalidations): Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
+- **Deprecated `headers` export**: The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
+- **Deprecated `fetch` polyfill**: The old `installGlobals()` polyfill doesn't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
 
-```tsx filename=app/entry.server.tsx lines=[1-2,32-33]
-// Reject all pending promises from handler functions after 5 seconds
-export const streamTimeout = 5000;
+## Adding a New Route with Single Fetch
 
-// ...
+With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format and `response` stub
 
-function handleBrowserRequest(
-  request: Request,
-  responseStatusCode: number,
-  responseHeaders: Headers,
-  remixContext: EntryContext
-) {
-  return new Promise((resolve, reject) => {
-    const { pipe, abort } = renderToPipeableStream(
-      <RemixServer
-        context={remixContext}
-        url={request.url}
-        abortDelay={ABORT_DELAY}
-      />,
-      {
-        onShellReady() {
-          /* ... */
-        },
-        onShellError(error: unknown) {
-          /* ... */
-        },
-        onError(error: unknown) {
-          /* ... */
-        },
-      }
-    );
+<docs-info>In order to get proper type inference, you first need to add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array. You can read more about this in the [Type Inference section](#type-inference)</docs-info>
 
-    // Automatically timeout the react renderer after 10 seconds
-    setTimeout(abort, 10000);
-  });
+```tsx
+import { unstable_defineLoader as defineLoader } from "@remix-run/node";
+
+export const loader = defineLoader(async () => {
+  const data = await fetchSomeData();
+  return {
+    message: data.message, // <- string
+    date: data.date, // <- Date
+  };
+});
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  //    ^? { message: string, date: Date }
 }
 ```
 
+## Migrating a Route with Single Fetch
+
+The following changes are not required to take advantage of Single Fetch (refer to [Enabling Single Fetch](#enabling-single-fetch) to get started). We recommend making the following changes on a route-by-route basis, as it's easier to validate changes to things like headers and data types.
+
+Making these changes will ensure a smooth, non-breaking upgrade to React Router v7.
+
 ### Type Inference
 
-Without Single Fetch, any plain Javascript object returned from a `loader` or `action` is automatically serialized into a JSON response (as if you returned it via `json`). The type inference assumes this is the case and infer naked object returns as if they were JSON serialized.
+Without Single Fetch, any plain Javascript object returned from a `loader` or `action` is automatically serialized into a JSON response (as if you returned it via `json`). The type inference assumes this is the case and infers naked object returns as if they were JSON serialized.
 
 With Single Fetch, naked objects will be streamed directly, so the built-in type inference is no longer accurate once you have opted-into Single Fetch. For example, they would assume that a `Date` would be serialized to a string on the client 😕.
 
@@ -241,16 +237,6 @@ export default function Component() {
   }
 ```
 
-### Revalidations
-
-Previously, Remix would always revalidate all active loaders after _any_ action submission, regardless of the result of the action. You could opt-out of revalidation on a per-route basis via [`shouldRevalidate`][should-revalidate].
-
-With Single Fetch, if an `action` returns or throws a `Response` with a `4xx/5xx` status code, Remix will _not revalidate_ loaders by default. If an `action` returns or throws anything that is not a 4xx/5xx Response, then the revalidation behavior is unchanged. The reasoning here is that in most cases, if you return a `4xx`/`5xx` Response, you didn't actually mutate any data so there is no need to reload data.
-
-If you _want_ to continue revalidating one or more loaders after a 4xx/5xx action response, you can opt-into revalidation on a per-route basis by returning `true` from your [`shouldRevalidate`][should-revalidate] function. There is also a new `unstable_actionStatus` parameter passed to the function that you can use if you need to decide based on the action status code.
-
-Revalidation is handled via a `?_routes` query string parameter on the single fetch HTTP call which limits the loaders being called. This means that when you are doing fine-grained revalidation, you will have cache enumerations based on the routes being requested - but all of the information is in the URL so you should not need any special CDN configurations (as opposed to if this was done via a custom header that required your CDN to respect the `Vary` header).
-
 ### Headers
 
 The [`headers`][headers] function is no longer used when Single Fetch is enabled.
@@ -304,9 +290,7 @@ Each `loader`/`action` receives its own unique `response` instance so you cannot
   - `headers.append` can be used to set the same header from both a parent and child handler
   - `headers.delete` can be used to delete a value set by a parent handler, but not a value set from a child handler
 
-Because Single Fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities can be considered deprecated when using Single Fetch.
-
-**\*However**, this does not mean you need to change them all right away in order to adopt Single Fetch!\*
+Because Single Fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities should be considered deprecated when using Single Fetch.
 
 These utilities will remain for the rest of Remix v2, and it's likely that in a future version they'll be available via something like [`remix-utils`][remix-utils] (or they're also very easy to re-implement yourself).
 
@@ -367,7 +351,7 @@ This poses an interesting conundrum for [resource routes][resource-routes] which
 
 If a resource route is intended for consumption by internal Remix APIs, we _want_ to be able to leverage the `turbo-stream` encoding to unlock the ability to stream down more complex structures such as `Date` and `Promise` instances. However, when accessed externally, we'd probably prefer to return the more easily consumable JSON structure. Thus, the behavior is slightly ambiguous if you return a raw object in v2 - should it be serialized via `turbo-stream` or `json()`?
 
-To ease backwards-compatibility and ease the adoption of the Single Fetch future flag, Remix v2 will handle this based on whether it's accessed from a Remix API or externally. In the future Remix will require you to return your own JSON response if you do not want raw objects to be streamed down for external consumption.
+To ease backwards-compatibility and ease the adoption of the Single Fetch future flag, Remix v2 will handle this based on whether it's accessed from a Remix API or externally. In the future Remix will require you to return your own [JSON response][returning-response] if you do not want raw objects to be streamed down for external consumption.
 
 The Remix v2 behavior with Single Fetch enabled is as follows:
 
@@ -401,7 +385,7 @@ Note: It is _not_ recommended to use `defineLoader`/`defineAction` for externall
 
 #### Response Stub and Resource Routes
 
-Ad discussed above, the `headers` export is deprecated in favor of a new [`response` stub][responsestub] passed to your `loader` and `action` functions. This is somewhat confusing in resource routes, though, because you get to return the _actual_ `Response` - there's no real need for a "stub" concept because there's no merging results from multiple loaders into a single Response:
+As discussed above, the `headers` export is deprecated in favor of a new [`response` stub][responsestub] passed to your `loader` and `action` functions. This is somewhat confusing in resource routes, though, because you get to return the _actual_ `Response` - there's no real need for a "stub" concept because there's no merging results from multiple loaders into a single Response:
 
 ```tsx filename=app/routes/resource.tsx
 // Using your own Response is the most straightforward approach
@@ -435,12 +419,79 @@ It's best to try to avoid using the `response` stub _and also_ returning a `Resp
 - The `Response` instance status will take priority over any `response` stub status
 - Headers operations on the `response` stub `headers` will be re-played on the returned `Response` headers instance
 
-### Fetch Polyfill
+## Additional Details
 
-Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or using the built-in `fetch` on Node 20+, because it relies on APIs available there but not in the `@remix-run/web-fetch` polyfill. Please refer to the [Undici][undici-polyfill] section in the 2.9.0 release notes below for more details.
+### Streaming Data Format
 
-- If you are managing your own server and calling `installGlobals()`, you will need to call `installGlobals({ nativeFetch: true })` to avoid runtime errors when using Single Fetch
-- If you are using `remix-serve`, it will use `undici` automatically if Single Fetch is enabled.
+Previously, Remix used `JSON.stringify` to serialize your loader/action data over the wire, and needed to implement a custom streaming format to support `defer` responses.
+
+With Single Fetch, Remix now uses [`turbo-stream`][turbo-stream] under the hood which provides first class support for streaming and allows you to automatically serialize/deserialize more complex data than JSON. The following data types can be streamed down directly via `turbo-stream`: `BigInt`, `Date`, `Error`, `Map`, `Promise`, `RegExp`, `Set`, `Symbol`, and `URL`. Subtypes of `Error` are also supported as long as they have a globally available constructor on the client (`SyntaxError`, `TypeError`, etc.).
+
+This may or may not require any immediate changes to your code once enabling Single Fetch:
+
+- ✅ `json` responses returned from `loader`/`action` functions will still be serialized via `JSON.stringify` so if you return a `Date`, you'll receive a `string` from `useLoaderData`/`useActionData`
+- ⚠️ If you're returning a `defer` instance or a naked object, it will now be serialized via `turbo-stream`, so if you return a `Date`, you'll receive a `Date` from `useLoaderData`/`useActionData`
+  - If you wish to maintain current behavior (excluding streaming `defer` responses), you may just wrap any existing naked object returns in `json`
+
+This also means that you no longer need to use the `defer` utility to send `Promise` instances over the wire! You can include a `Promise` anywhere in a naked object and pick it up on `useLoaderData().whatever`. You can also nest `Promise`'s if needed - but beware of potential UX implications.
+
+Once adopting Single Fetch, it is recommended that you incrementally remove the usage of `json`/`defer` throughout your application in favor of returning raw objects.
+
+### Streaming Timeout
+
+Previously, Remix has a concept of an `ABORT_TIMEOUT` built-into the default [`entry.server.tsx`][entry-server] files which would terminate the React renderer, but it didn't do anything in particular to clean up any pending deferred promises.
+
+Now that Remix is streaming internally, we can cancel the `turbo-stream` processing and automatically reject any pending promises and stream up those errors to the client. By default, this happens after 4950ms - a value that was chosen to be just under the current 5000ms `ABORT_DELAY` in most entry.server.tsx files - since we need to cancel the promises and let the rejections stream up through the React renderer prior to aborting the React side of things.
+
+You can control this by exporting a `streamTimeout` numeric value from your `entry.server.tsx` and Remix will use that as the number of milliseconds after which to reject any outstanding Promises from `loader`/`action`'s. It's recommended to decouple this value from the timeout in which you abort the React renderer - and you should always set the React timeout to a higher value so it has time to stream down the underlying rejections from your `streamTimeout`.
+
+```tsx filename=app/entry.server.tsx lines=[1-2,32-33]
+// Reject all pending promises from handler functions after 5 seconds
+export const streamTimeout = 5000;
+
+// ...
+
+function handleBrowserRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  return new Promise((resolve, reject) => {
+    const { pipe, abort } = renderToPipeableStream(
+      <RemixServer
+        context={remixContext}
+        url={request.url}
+        abortDelay={ABORT_DELAY}
+      />,
+      {
+        onShellReady() {
+          /* ... */
+        },
+        onShellError(error: unknown) {
+          /* ... */
+        },
+        onError(error: unknown) {
+          /* ... */
+        },
+      }
+    );
+
+    // Automatically timeout the react renderer after 10 seconds
+    setTimeout(abort, 10000);
+  });
+}
+```
+
+### Revalidations
+
+Previously, Remix would always revalidate all active loaders after _any_ action submission, regardless of the result of the action. You could opt-out of revalidation on a per-route basis via [`shouldRevalidate`][should-revalidate].
+
+With Single Fetch, if an `action` returns or throws a `Response` with a `4xx/5xx` status code, Remix will _not revalidate_ loaders by default. If an `action` returns or throws anything that is not a 4xx/5xx Response, then the revalidation behavior is unchanged. The reasoning here is that in most cases, if you return a `4xx`/`5xx` Response, you didn't actually mutate any data so there is no need to reload data.
+
+If you _want_ to continue revalidating one or more loaders after a 4xx/5xx action response, you can opt-into revalidation on a per-route basis by returning `true` from your [`shouldRevalidate`][should-revalidate] function. There is also a new `unstable_actionStatus` parameter passed to the function that you can use if you need to decide based on the action status code.
+
+Revalidation is handled via a `?_routes` query string parameter on the single fetch HTTP call which limits the loaders being called. This means that when you are doing fine-grained revalidation, you will have cache enumerations based on the routes being requested - but all of the information is in the URL so you should not need any special CDN configurations (as opposed to if this was done via a custom header that required your CDN to respect the `Vary` header).
 
 ### Inline Scripts
 
@@ -461,6 +512,7 @@ The `<RemixServer>` component renders inline scripts that handle the streaming d
 [headers]: ../route/headers
 [mdn-headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 [resource-routes]: ../guides/resource-routes
+[returning-response]: ../route/loader.md#returning-response-instances
 [responsestub]: #headers
 [streaming-format]: #streaming-data-format
 [undici-polyfill]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#undici
@@ -468,3 +520,4 @@ The `<RemixServer>` component renders inline scripts that handle the streaming d
 [csp]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
 [csp-nonce]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources
 [remix-utils]: https://github.com/sergiodxa/remix-utils
+[merging-remix-and-rr]: https://remix.run/blog/merging-remix-and-react-router
