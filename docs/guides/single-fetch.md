@@ -47,17 +47,17 @@ On the client side, this also means that your need to wrap your client-side [`hy
 
 ## Breaking Changes
 
-As mentioned above, if you are returning `Response` instances from your loaders (i.e., `json`/`defer`) you shouldn't _need_ to make many changes to your app code. To get better type inference and prepare for React Router v7 you can [migrate your routes one by one](#migrating-a-route-with-single-fetch).
+As mentioned above, if you are returning `Response` instances from your loaders (i.e., `json`/`defer`) you shouldn't _need_ to make many changes to your app code. To get better type inference and prepare for React Router v7 you can [migrate your routes one by one][migration-guide].
 
 There are a few important breaking changes Single Fetch introduces which are important to cover:
 
-- **[New streaming Data format](#streaming-data-format)**: Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
+- **[New streaming Data format][streaming-format]**: Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - **No more auto-serialization**: Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
 - **Updates to type inference**: To get the most accurate type inference, you should do two things:
   - Add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array
   - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
     - This can be done incrementally - you should have _mostly_ accurate type inference in your current state
-- [**Opt-in `action` revalidation**](#revalidations): Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
+- [**Opt-in `action` revalidation**][action-revalidation]: Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 - **Deprecated `headers` export**: The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
 - **Deprecated `fetch` polyfill**: The old `installGlobals()` polyfill doesn't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
 
@@ -65,7 +65,7 @@ There are a few important breaking changes Single Fetch introduces which are imp
 
 With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format and `response` stub
 
-<docs-info>In order to get proper type inference, you first need to add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array. You can read more about this in the [Type Inference section](#type-inference)</docs-info>
+<docs-info>In order to get proper type inference, you first need to add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array. You can read more about this in the [Type Inference section](#type-inference).</docs-info>
 
 ```tsx
 import { unstable_defineLoader as defineLoader } from "@remix-run/node";
@@ -86,7 +86,7 @@ export default function Component() {
 
 ## Migrating a Route with Single Fetch
 
-The following changes are not required to take advantage of Single Fetch (refer to [Enabling Single Fetch](#enabling-single-fetch) to get started). We recommend making the following changes on a route-by-route basis, as it's easier to validate changes to things like headers and data types.
+The following changes are not required to take advantage of Single Fetch (refer to [Enabling Single Fetch][start] to get started). We recommend making the following changes on a route-by-route basis, as it's easier to validate changes to things like headers and data types.
 
 Making these changes will ensure a smooth, non-breaking upgrade to React Router v7.
 
@@ -521,3 +521,6 @@ The `<RemixServer>` component renders inline scripts that handle the streaming d
 [csp-nonce]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources
 [remix-utils]: https://github.com/sergiodxa/remix-utils
 [merging-remix-and-rr]: https://remix.run/blog/merging-remix-and-react-router
+[migration-guide]: #migrating-a-route-with-single-fetch
+[action-revalidation]: #streaming-data-format
+[start]: #enabling-single-fetch
