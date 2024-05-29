@@ -191,7 +191,7 @@ export default function Component() {
 }
 ```
 
-<docs-info>These utilities are primarily for type inference on `useLoaderData` and it's equivalents. If you have a resource route that returns a `Response` and is not consumed by Remix APIs (such as `useFetcher`), then you can just stick with your normal `loader`/`action` definitions. Converting those routes to use `defineLoader`/`defineAction` would cause type errors because `turbo-stream` cannot serialize a `Response` instance.</docs-info>
+<docs-info>These utilities are primarily for type inference on `useLoaderData` and its equivalents. If you have a resource route that returns a `Response` and is not consumed by Remix APIs (such as `useFetcher`), then you can just stick with your normal `loader`/`action` definitions. Converting those routes to use `defineLoader`/`defineAction` would cause type errors because `turbo-stream` cannot serialize a `Response` instance.</docs-info>
 
 #### `useLoaderData`, `useActionData`, `useRouteLoaderData`, `useFetcher`
 
@@ -401,7 +401,7 @@ Note: It is _not_ recommended to use `defineLoader`/`defineAction` for externall
 
 #### Response Stub and Resource Routes
 
-Ad discussed above, the `headers` export is deprecated in favor of a new [`response` stub][responsestub] passed to your `loader` and `action` functions. This is somewhat confusing in resource routes, though, because you get to return the _actual_ `Response` - there's no real need for a "stub" concept because there's no merging results from multiple loaders into a single Response:
+As discussed above, the `headers` export is deprecated in favor of a new [`response` stub][responsestub] passed to your `loader` and `action` functions. This is somewhat confusing in resource routes, though, because you get to return the _actual_ `Response` - there's no real need for a "stub" concept because there's no merging results from multiple loaders into a single Response:
 
 ```tsx filename=app/routes/resource.tsx
 // Using your own Response is the most straightforward approach
