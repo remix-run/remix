@@ -190,7 +190,7 @@ export default function Component() {
 }
 ```
 
-<docs-info>These utilities are primarily for type inference on `useLoaderData` and it's equivalents. If you have a resource route that returns a `Response` and is not consumed by Remix APIs (such as `useFetcher`), then you can just stick with your normal `loader`/`action` definitions. Converting those routes to use `defineLoader`/`defineAction` would cause type errors because `turbo-stream` cannot serialize a `Response` instance.</docs-info>
+<docs-info>These utilities are primarily for type inference on `useLoaderData` and its equivalents. If you have a resource route that returns a `Response` and is not consumed by Remix APIs (such as `useFetcher`), then you can just stick with your normal `loader`/`action` definitions. Converting those routes to use `defineLoader`/`defineAction` would cause type errors because `turbo-stream` cannot serialize a `Response` instance.</docs-info>
 
 #### `useLoaderData`, `useActionData`, `useRouteLoaderData`, `useFetcher`
 
