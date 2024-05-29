@@ -47,6 +47,10 @@ declare global {
   var $RefreshRuntime$: {
     performReactRefresh: () => void;
   };
+
+  interface Navigator {
+    connection?: { saveData: boolean };
+  }
 }
 /* eslint-enable prefer-let/prefer-let */
 
@@ -343,6 +347,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     }
   }
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  let [, rerender] = React.useState(Math.random());
+
   // Critical CSS can become stale after code changes, e.g. styles might be
   // removed from a component, but the styles will still be present in the
   // server HTML. This allows our HMR logic to clear the critical CSS state.
@@ -379,6 +386,113 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         setLocation(newState.location);
       }
     });
+  }, [location]);
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  let fogOfWarAbortControllerRef = React.useRef<AbortController | undefined>();
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  let known404Paths = React.useRef<Set<string>>(new Set());
+
+  // Alternate API if we didn't want to manage a mutable Set() and wanted to
+  // give the user some more control
+  //   useRouteDiscovery(ref)           => Discovers ref.querySelectorAll('a')
+  //   useRouteDiscovery(ref, filterFn) => Filterable version of the above
+
+  // TODO: This was the original "easier" non-Rwact-lifecycle approach before
+  // introducing nextPaths
+  // let currentLinkPaths = new Set(
+  //   Array.from(document.querySelectorAll("a"))
+  //     .map((a) => a.getAttribute("href"))
+  //     .filter((h) => h)
+  // );
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  React.useEffect(() => {
+    if (navigator.connection?.saveData === true) {
+      return;
+    }
+
+    if (!window.__ENABLE_PREFETCHING) {
+      console.log(
+        "skipping prefetching due to DEV window.__ENABLE_PREFETCHING flag"
+      );
+      return;
+    }
+
+    console.log("running effect - nextPaths:", [
+      ...window.__remixManifest.nextPaths,
+    ]);
+    if (fogOfWarAbortControllerRef.current) {
+      fogOfWarAbortControllerRef.current.abort();
+    }
+    let currentLinkPaths = window.__remixManifest.nextPaths;
+
+    let lazyPaths = [...currentLinkPaths].filter((path) => {
+      if (known404Paths.current.has(path)) {
+        console.log("skipping prefetch for known 404 path:", path);
+        return false;
+      }
+
+      let matches = matchRoutes(router.routes, path);
+      if (matches) {
+        let leafRoute = matches[matches.length - 1].route;
+        if (typeof leafRoute.children !== "function") {
+          console.log("no need to prefetch path:", path);
+          return false;
+        }
+        console.log("prefetching path due to lazy children:", path, leafRoute);
+      } else {
+        console.log("prefetching path due to no matches:", path);
+      }
+      return true;
+    });
+
+    if (lazyPaths.length > 0) {
+      let knownParents = Object.values(window.__remixManifest.routes).reduce(
+        (acc, r) => {
+          if (r.parentId) {
+            acc.add(r.parentId);
+          }
+          return acc;
+        },
+        new Set()
+      );
+      let url = new URL("/__manifest", window.location.origin);
+      url.searchParams.set("routes", [...knownParents].join(","));
+      url.searchParams.set("paths", [...lazyPaths].join(","));
+      console.log("Fetching manifest patches for", [...lazyPaths]);
+      let controller = new AbortController();
+      fogOfWarAbortControllerRef.current = controller;
+      fetch(url, { signal: controller.signal })
+        .then((res) => res.json())
+        .then(
+          ({ manifestPatches, notFoundPaths }) => {
+            Object.assign(window.__remixManifest.routes, manifestPatches);
+
+            // Clear out the set of paths for the next batch
+            // TODO: Move this into state so we can run it in an effect instead
+            // of on location changes
+            window.__remixManifest.nextPaths = new Set();
+
+            // Track paths the server identifies as legit 404's so we never try
+            // to fetch them again
+            notFoundPaths.forEach((p) => known404Paths.current.add(p));
+
+            // FIXME: TODO: This is only for development - allows me to re-render the
+            // current known routes in the manifest - remove before final merge
+            rerender();
+          },
+          (e) => {
+            console.log("error in manifest patch fetch:", e);
+          }
+        );
+    } else {
+      console.log("woohoo no need to fetch any manifest patches!");
+    }
+
+    return () => {
+      fogOfWarAbortControllerRef.current?.abort("unmount");
+    };
   }, [location]);
 
   // We need to include a wrapper RemixErrorBoundary here in case the root error

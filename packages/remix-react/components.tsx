@@ -188,6 +188,19 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 
 const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
+function useRegisterFogOfWarLink(href: string, isAbsolute: boolean) {
+  let { manifest } = useRemixContext();
+  // TODO: Clean this up
+  if (
+    typeof document !== "undefined" &&
+    !isAbsolute &&
+    manifest.nextPaths &&
+    manifest.nextPaths.add
+  ) {
+    manifest.nextPaths.add(href);
+  }
+}
+
 /**
  * A special kind of `<Link>` that knows whether it is "active".
  *
@@ -202,6 +215,7 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
       prefetch,
       props
     );
+    useRegisterFogOfWarLink(href, isAbsolute);
 
     return (
       <>
@@ -236,6 +250,7 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
       prefetch,
       props
     );
+    useRegisterFogOfWarLink(href, isAbsolute);
 
     return (
       <>
@@ -867,6 +882,7 @@ window.__remixManifest = ${JSON.stringify(
           null,
           2
         )}
+window.__remixManifest.nextPaths = new Set();
 window.__remixRouteModules = {${matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`

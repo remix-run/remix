@@ -52,6 +52,7 @@ export interface AssetsManifest {
     module: string;
   };
   routes: RouteManifest<EntryRoute>;
+  nextPaths: Set<string>;
   url: string;
   version: string;
   hmr?: {
