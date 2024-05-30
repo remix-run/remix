@@ -362,7 +362,7 @@ The Remix v2 behavior with Single Fetch enabled is as follows:
 - When accessing from an external tool such as `fetch` or `cURL`, we will continue this automatic conversion to `json()` for backwards-compatibility in v2:
 
   - Remix will log a deprecation warning when this situation is encountered
-  - At your convenience, you can add the `json()` call to impacted resource route handlers
+  - At your convenience, you can update impacted resource route handlers to return a `Response` object
   - Addressing these deprecation warnings will better prepare you for the eventual Remix v3 upgrade
 
   ```tsx filename=app/routes/resource.tsx bad
@@ -374,11 +374,14 @@ The Remix v2 behavior with Single Fetch enabled is as follows:
   ```
 
   ```tsx filename=app/routes/resource.tsx good
-  import { json } from "@remix-run/node";
-
   export function loader() {
-    return json({
+    const body = JSON.stringify({
       message: "My externally-accessed resource route",
+    });
+    return new Response(body, {
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
   }
   ```
@@ -393,7 +396,8 @@ As discussed above, the `headers` export is deprecated in favor of a new [`respo
 // Using your own Response is the most straightforward approach
 export async function loader() {
   const data = await getData();
-  return json(data, {
+  const body = JSON.stringify(data);
+  return new Response(body, {
     status: 200,
     headers: {
       "X-Custom": "whatever",
@@ -402,7 +406,7 @@ export async function loader() {
 }
 ```
 
-To keep things consistent, resource route `loader`/`action` functions will still receive a `response` stub and you can use it if you need to (maybe to share code amongst non-resource-route handlers):
+To keep things consistent, resource route `loader`/`action` functions will still receive a `response` stub and you can use it if you need to (maybe to share code amongst non-resource route handlers):
 
 ```tsx filename=app/routes/resource.tsx
 // But you can still set values on the response stubstraightforward approach
@@ -412,7 +416,7 @@ export async function loader({
   const data = await getData();
   response?.status = 200;
   response?.headers.set("X-Custom", "whatever");
-  return json(data);
+  return JSON.stringify(data);
 }
 ```
 
