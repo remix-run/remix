@@ -468,8 +468,7 @@ These params are most often used to find a record by ID. Let's try it out.
 
 <docs-info>The following code has type errors in it, we'll fix them in the next section</docs-info>
 
-```tsx filename=app/routes/contacts.$contactId.tsx lines=[1-2,5,7-10,13]
-import { json } from "@remix-run/node";
+```tsx filename=app/routes/contacts.$contactId.tsx lines=[1,4,6-9,12]
 import { Form, useLoaderData } from "@remix-run/react";
 // existing imports
 
@@ -477,7 +476,7 @@ import { getContact } from "../data";
 
 export const loader = async ({ params }) => {
   const contact = await getContact(params.contactId);
-  return json({ contact });
+  return contact;
 };
 
 export default function Contact() {
@@ -507,7 +506,7 @@ export const loader = async ({
 }: LoaderFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   const contact = await getContact(params.contactId);
-  return json({ contact });
+  return contact;
 };
 
 // existing code
@@ -530,7 +529,7 @@ export const loader = async ({
   if (!contact) {
     throw new Response("Not Found", { status: 404 });
   }
-  return json({ contact });
+  return contact;
 };
 
 // existing code
