@@ -404,7 +404,7 @@ export async function loader() {
 To keep things consistent, resource route `loader`/`action` functions will still receive a `response` stub and you can use it if you need to (maybe to share code amongst non-resource route handlers):
 
 ```tsx filename=app/routes/resource.tsx
-// But you can still set values on the response stubstraightforward approach
+// But you can still set values on the response stub
 export async function loader({
   response,
 }: LoaderFunctionArgs) {
