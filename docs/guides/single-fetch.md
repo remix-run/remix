@@ -28,6 +28,7 @@ Enabling Single Fetch is incredibly simple. If you are currently returning `Resp
 Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or using the built-in `fetch` on Node 20+, because it relies on APIs available there that are not in the `@remix-run/web-fetch` polyfill. Please refer to the [Undici][undici-polyfill] section in the 2.9.0 release notes below for more details.
 
 - If you are using Node 20+, remove `installGlobals()` and use Node's built-in `fetch` (this is the same thing as `undici`).
+
 - If you are managing your own server and calling `installGlobals()`, you will need to call `installGlobals({ nativeFetch: true })` to use `undici`.
 
   ```diff
@@ -67,7 +68,7 @@ There are a few important breaking changes Single Fetch introduces which are imp
 
 With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format and `response` stub
 
-<docs-info>In order to get proper type inference, you first need to add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array. You can read more about this in the [Type Inference section](#type-inference).</docs-info>
+<docs-info>In order to get proper type inference, you first need to add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array. You can read more about this in the [Type Inference section][type-inference-section].</docs-info>
 
 ```tsx
 import { unstable_defineLoader as defineLoader } from "@remix-run/node";
@@ -524,3 +525,4 @@ The `<RemixServer>` component renders inline scripts that handle the streaming d
 [migration-guide]: #migrating-a-route-with-single-fetch
 [action-revalidation]: #streaming-data-format
 [start]: #enabling-single-fetch
+[type-inference-section]: #type-inference
