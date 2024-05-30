@@ -391,7 +391,6 @@ As discussed above, the `headers` export is deprecated in favor of a new [`respo
 // Using your own Response is the most straightforward approach
 export async function loader() {
   const data = await getData();
-  const body = JSON.stringify(data);
   return Response.json(data, {
     status: 200,
     headers: {
