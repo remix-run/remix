@@ -375,13 +375,8 @@ The Remix v2 behavior with Single Fetch enabled is as follows:
 
   ```tsx filename=app/routes/resource.tsx good
   export function loader() {
-    const body = JSON.stringify({
+    return Response.json({
       message: "My externally-accessed resource route",
-    });
-    return new Response(body, {
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
   }
   ```
@@ -397,7 +392,7 @@ As discussed above, the `headers` export is deprecated in favor of a new [`respo
 export async function loader() {
   const data = await getData();
   const body = JSON.stringify(data);
-  return new Response(body, {
+  return Response.json(data, {
     status: 200,
     headers: {
       "X-Custom": "whatever",
@@ -416,7 +411,7 @@ export async function loader({
   const data = await getData();
   response?.status = 200;
   response?.headers.set("X-Custom", "whatever");
-  return JSON.stringify(data);
+  return Response.json(data);
 }
 ```
 
