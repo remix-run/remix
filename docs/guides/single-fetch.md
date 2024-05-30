@@ -39,6 +39,8 @@ Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or usin
 
 **3. Replace `renderToString`**
 
+For most Remix apps it's unlikely you're using `renderToString`, but if you have opted into using it in your `entry.server.tsx`, then continue reading, otherwise you can skip this step.
+
 In order to maintain consistency between document and data requests, `turbo-stream` is also used as the format for sending down data in initial document requests. This means that once opted-into Single Fetch, your application can no longer use [`renderToString`][rendertostring] and must use a React streaming renderer API such as [`renderToPipeableStream`][rendertopipeablestream] or [`renderToReadableStream`][rendertoreadablestream]) in [`entry.server.tsx`][entry-server].
 
 This does not mean you _have_ to stream down your HTTP response, you can still send the full document at once by leveraging the `onAllReady` option in `renderToPipeableStream`, or the `allReady` promise in `renderToReadableStream`.
@@ -290,7 +292,7 @@ Each `loader`/`action` receives its own unique `response` instance so you cannot
   - `headers.append` can be used to set the same header from both a parent and child handler
   - `headers.delete` can be used to delete a value set by a parent handler, but not a value set from a child handler
 
-Because Single Fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities should be considered deprecated when using Single Fetch.
+Because Single Fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities should be considered deprecated when using Single Fetch. These will remain for the duration of v2 so you don't need to remove them immediately. They will likely be removed in the next major version, so we recommend remove them incrementally between now and then.
 
 These utilities will remain for the rest of Remix v2, and it's likely that in a future version they'll be available via something like [`remix-utils`][remix-utils] (or they're also very easy to re-implement yourself).
 
