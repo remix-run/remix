@@ -68,24 +68,50 @@ There are a few important breaking changes Single Fetch introduces which are imp
 
 ## Adding a New Route with Single Fetch
 
-With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format and `response` stub
+With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format and `response` stub.
 
 <docs-info>In order to get proper type inference, you first need to add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array. You can read more about this in the [Type Inference section][type-inference-section].</docs-info>
 
+With Single Fetch you can return the following data types from your loader: `BigInt`, `Date`, `Error`, `Map`, `Promise`, `RegExp`, `Set`, `Symbol`, and `URL`.
+
 ```tsx
+// routes/blog.$slug.tsx
 import { unstable_defineLoader as defineLoader } from "@remix-run/node";
 
-export const loader = defineLoader(async () => {
-  const data = await fetchSomeData();
-  return {
-    message: data.message, // <- string
-    date: data.date, // <- Date
-  };
-});
+export const loader = defineLoader(
+  async ({ params, response }) => {
+    const { slug } = params;
 
-export default function Component() {
-  const data = useLoaderData<typeof loader>();
-  //    ^? { message: string, date: Date }
+    const comments = fetchComments(slug);
+    const blogData = await fetchBlogData(slug);
+
+    response.headers.set("Cache-Control", "max-age=300");
+
+    return {
+      content: blogData.content, // <- string
+      published: blogData.date, // <- Date
+      comments, // <- Promise
+    };
+  }
+);
+
+export default function BlogPost() {
+  const blogData = useLoaderData<typeof loader>();
+  //    ^? { content: string, published: Date, comments: Promise }
+
+  return (
+    <>
+      <Header published={blogData.date} />
+      <BlogContent content={blogData.content} />
+      <Suspense fallback={<CommentsSkeleton />}>
+        <Await resolve={blogData.comments}>
+          {(comments) => (
+            <BlogComments comments={comments} />
+          )}
+        </Await>
+      </Suspense>
+    </>
+  );
 }
 ```
 
