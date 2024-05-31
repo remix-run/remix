@@ -107,7 +107,7 @@ function Dashboard() {
 
 **Background**
 
-When a server-side request is aborted, Remix will throw the `request.signal.reason` instead of an error such as `new Error("query() call aborted...")`.
+When a server-side request is aborted, such as when a user navigates away from a page before the loader finishes, Remix will throw the `request.signal.reason` instead of an error such as `new Error("query() call aborted...")`.
 
 👉 **Enable the Flag**
 
@@ -121,7 +121,7 @@ remix({
 
 **Update your Code**
 
-You likely won't need to adjust any code, unless you had custom logic that was matching the previous error message to distinguish it from other errors.
+You likely won't need to adjust any code, unless you had custom logic inside of `handleError` that was matching the previous error message to differentiate it from other errors.
 
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
