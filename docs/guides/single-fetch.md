@@ -8,53 +8,15 @@ title: Single Fetch
 
 Single fetch is a new data data loading strategy and streaming format. When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). Additionally, Single Fetch also allows you to send down naked objects from your `loader` and `action`, such as `Date`, `Error`, `Promise`, `RegExp`, and more.
 
-## Enabling Single Fetch
+## Overview
 
 Remix introduced support for "Single Fetch" ([RFC][rfc]) behind the [`future.unstable_singleFetch`][future-flags] flag in [`v2.9.0`][2.9.0] which allows you to opt-into this behavior. Single Fetch will be the default in [React Router v7][merging-remix-and-rr].
 
-Enabling Single Fetch is incredibly simple. If you are currently returning `Response` instances from your loaders (i.e., `json`/`defer`) then you shouldn't _need_ to make many changes to your app code, but please read through the "breaking" changes below to be aware of some of the underlying behavior changes - specifically around serialization and status/header behavior.
+Enabling Single Fetch is incredibly simple. Start by applying the minimal required changes to [enable Single Fetch][start], then use the [migration guide][migration-guide] for incremental changes to make in Remix v2 in preparing for [React Router v7][merging-remix-and-rr].  
 
-**1. Enable the future flag**
-
-```diff
-  remix({
-    future: {
-      // ...
-+     unstable_singleFetch: true,
-    },
-  }),
-```
-
-**2. Update or remove `installGlobals`**
-
-Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or using the built-in `fetch` on Node 20+, because it relies on APIs available there that are not in the `@remix-run/web-fetch` polyfill. Please refer to the [Undici][undici-polyfill] section in the 2.9.0 release notes below for more details.
-
-- If you are using Node 20+, remove `installGlobals()` and use Node's built-in `fetch` (this is the same thing as `undici`).
-
-- If you are managing your own server and calling `installGlobals()`, you will need to call `installGlobals({ nativeFetch: true })` to use `undici`.
-
-  ```diff
-  - installGlobals()
-  + installGlobals({ nativeFetch: true })
-  ```
-
-- If you are using `remix-serve`, it will use `undici` automatically if Single Fetch is enabled.
-
-**3. Replace `renderToString`**
-
-For most Remix apps it's unlikely you're using `renderToString`, but if you have opted into using it in your `entry.server.tsx`, then continue reading, otherwise you can skip this step.
-
-In order to maintain consistency between document and data requests, `turbo-stream` is also used as the format for sending down data in initial document requests. This means that once opted-into Single Fetch, your application can no longer use [`renderToString`][rendertostring] and must use a React streaming renderer API such as [`renderToPipeableStream`][rendertopipeablestream] or [`renderToReadableStream`][rendertoreadablestream]) in [`entry.server.tsx`][entry-server].
-
-This does not mean you _have_ to stream down your HTTP response, you can still send the full document at once by leveraging the `onAllReady` option in `renderToPipeableStream`, or the `allReady` promise in `renderToReadableStream`.
-
-On the client side, this also means that your need to wrap your client-side [`hydrateRoot`][hydrateroot] call in a [`startTransition`][starttransition] call because the streamed data will be coming down wrapped in a `Suspense` boundary.
+Please also read through [Breaking Changes][breaking-changes] to be aware of some of the underlying behavior changes - specifically around serialization and status/header behavior before starting.
 
 ## Breaking Changes
-
-As mentioned above, if you are returning `Response` instances from your loaders (i.e., `json`/`defer`) you shouldn't _need_ to make many changes to your app code. To get better type inference and prepare for React Router v7 you can [migrate your routes one by one][migration-guide].
-
-There are a few important breaking changes Single Fetch introduces which are important to cover:
 
 - **[New streaming Data format][streaming-format]**: Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - **No more auto-serialization**: Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
@@ -66,9 +28,55 @@ There are a few important breaking changes Single Fetch introduces which are imp
 - **Deprecated `headers` export**: The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
 - **Deprecated `fetch` polyfill**: The old `installGlobals()` polyfill doesn't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
 
+## Enabling Single Fetch
+
+**1. Enable the future flag**
+
+```diff
+// vite.config.ts
+  remix({
+    future: {
+      // ...
++     unstable_singleFetch: true,
+    },
+  }),
+```
+
+**2. Deprecated `fetch` polyfill**
+
+Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or using the built-in `fetch` on Node 20+, because it relies on APIs available there that are not in the `@remix-run/web-fetch` polyfill. Please refer to the [Undici][undici-polyfill] section in the 2.9.0 release notes below for more details.
+
+- If you are using Node 20+, remove `installGlobals()` and use Node's built-in `fetch` (this is the same thing as `undici`).
+
+- If you are managing your own server and calling `installGlobals()`, you will need to call `installGlobals({ nativeFetch: true })` to use `undici`.
+
+  ```diff
+// vite.config.ts
+  - installGlobals()
+  + installGlobals({ nativeFetch: true })
+  ```
+
+- If you are using `remix-serve`, it will use `undici` automatically if Single Fetch is enabled.
+- If you are using miniflare/cloudflare worker with your remix project. Ensure your [compatibility flag](https://developers.cloudflare.com/workers/configuration/compatibility-dates/) `2023-03-01` or later as well.
+
+**3. Replace `renderToString`**
+
+For most Remix apps it's unlikely you're using `renderToString`, but if you have opted into using it in your `entry.server.tsx`, then continue reading, otherwise you can skip this step.
+
+In order to maintain consistency between document and data requests, `turbo-stream` is also used as the format for sending down data in initial document requests. This means that once opted-into Single Fetch, your application can no longer use [`renderToString`][rendertostring] and must use a React streaming renderer API such as [`renderToPipeableStream`][rendertopipeablestream] or [`renderToReadableStream`][rendertoreadablestream]) in [`entry.server.tsx`][entry-server].
+
+This does not mean you _have_ to stream down your HTTP response, you can still send the full document at once by leveraging the `onAllReady` option in `renderToPipeableStream`, or the `allReady` promise in `renderToReadableStream`.
+
+On the client side, this also means that your need to wrap your client-side [`hydrateRoot`][hydrateroot] call in a [`startTransition`][starttransition] call because the streamed data will be coming down wrapped in a `Suspense` boundary.
+
+**4. Add `nonce` to RemixServer for CSP**
+
+The `<RemixServer>` component renders inline scripts that handle the streaming data on the client side. If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you can use `<RemixServer nonce>` to pass through the nonce to these `<script>` tags.
+
+
 ## Adding a New Route with Single Fetch
 
-With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format and `response` stub.
+With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format and [`response` stub][responsestub].
 
 <docs-info>In order to get proper type inference, you first need to add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array. You can read more about this in the [Type Inference section][type-inference-section].</docs-info>
 
@@ -117,9 +125,9 @@ export default function BlogPost() {
 
 ## Migrating a Route with Single Fetch
 
-The following changes are not required to take advantage of Single Fetch (refer to [Enabling Single Fetch][start] to get started). We recommend making the following changes on a route-by-route basis, as it's easier to validate changes to things like headers and data types.
+If you are currently returning `Response` instances from your loaders (i.e., `json`/`defer`) then you shouldn't _need_ to make many changes to your app code to take advantage of Single Fetch.
 
-Making these changes will ensure a smooth, non-breaking upgrade to React Router v7.
+However, to better ensure a smooth, non-breaking upgrade to [React Router v7][merging-remix-and-rr]. We recommend that you start making the following changes on a route-by-route basis, as it's easier to validate changes to things like headers and data types.
 
 ### Type Inference
 
@@ -522,10 +530,6 @@ If you _want_ to continue revalidating one or more loaders after a 4xx/5xx actio
 
 Revalidation is handled via a `?_routes` query string parameter on the single fetch HTTP call which limits the loaders being called. This means that when you are doing fine-grained revalidation, you will have cache enumerations based on the routes being requested - but all of the information is in the URL so you should not need any special CDN configurations (as opposed to if this was done via a custom header that required your CDN to respect the `Vary` header).
 
-### Inline Scripts
-
-The `<RemixServer>` component renders inline scripts that handle the streaming data on the client side. If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you can use `<RemixServer nonce>` to pass through the nonce to these `<script>` tags.
-
 [future-flags]: ../file-conventions/remix-config#future
 [should-revalidate]: ../route/should-revalidate
 [entry-server]: ../file-conventions/entry.server
@@ -551,6 +555,7 @@ The `<RemixServer>` component renders inline scripts that handle the streaming d
 [remix-utils]: https://github.com/sergiodxa/remix-utils
 [merging-remix-and-rr]: https://remix.run/blog/merging-remix-and-react-router
 [migration-guide]: #migrating-a-route-with-single-fetch
+[breaking-changes]: #breaking-changes
 [action-revalidation]: #streaming-data-format
 [start]: #enabling-single-fetch
 [type-inference-section]: #type-inference
