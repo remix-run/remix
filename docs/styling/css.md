@@ -259,7 +259,7 @@ While that's a bit of boilerplate it enables a lot:
 - The only CSS ever loaded is the CSS that's used on the current page
 - When your components aren't used by a route, their CSS is unloaded from the page
 - Remix will prefetch the CSS for the next page with [`<Link prefetch>`][link]
-- When one component's styles change, browser and CDN caches for the other components won't break because they are all have their own URLs.
+- When one component's styles change, browser and CDN caches for the other components won't break because they all have their own URLs.
 - When a component's JavaScript changes but its styles don't, the cache is not broken for the styles
 
 #### Asset Preloads
