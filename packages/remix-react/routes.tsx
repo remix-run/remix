@@ -41,7 +41,6 @@ interface Route {
 
 // NOTE: make sure to change the EntryRoute in server-runtime if you change this
 export interface EntryRoute extends Route {
-  hasChildren: boolean;
   hasAction: boolean;
   hasLoader: boolean;
   hasClientAction: boolean;
@@ -407,18 +406,6 @@ export function createClientRoutes(
           });
         });
       };
-
-      let children = createClientRoutes(
-        manifest,
-        routeModulesCache,
-        initialState,
-        future,
-        isSpaMode,
-        route.id,
-        routesByParentId,
-        needsRevalidation
-      );
-      if (children.length > 0) dataRoute.children = children;
     } else {
       // If the lazy route does not have a client loader/action we want to call
       // the server loader/action in parallel with the module load so we add
@@ -504,54 +491,19 @@ export function createClientRoutes(
           ErrorBoundary: lazyRoute.ErrorBoundary,
         };
       };
-
-      if (!dataRoute.index) {
-        // If we have at least one of our children in the manifest, then we've
-        // already loaded them so no need for fog of war
-        if (Object.values(manifest).some((r) => r.parentId === route.id)) {
-          let children = createClientRoutes(
-            manifest,
-            routeModulesCache,
-            initialState,
-            future,
-            isSpaMode,
-            route.id,
-            routesByParentId,
-            needsRevalidation
-          );
-          if (children.length > 0) dataRoute.children = children;
-        } else if (route.hasChildren) {
-          dataRoute.children = async () => {
-            // We only need to fetch patches if we haven't already loaded our
-            // children into the manifest, either from initial SSR or manifest
-            // prefetching
-            if (
-              !Object.values(window.__remixManifest.routes).some(
-                (r) => r.parentId === dataRoute.id
-              )
-            ) {
-              let params = new URLSearchParams();
-              params.set("route", dataRoute.id);
-              let res = await fetch(`/__manifest?${params.toString()}`);
-              let patch = await res.json();
-              Object.assign(window.__remixManifest.routes, patch);
-            }
-
-            let children = createClientRoutes(
-              window.__remixManifest.routes,
-              routeModulesCache,
-              // These routes, by definition, can't have any hydrated state
-              { loaderData: {} },
-              future,
-              isSpaMode,
-              route.id
-            );
-            return children;
-          };
-        }
-      }
     }
 
+    let children = createClientRoutes(
+      manifest,
+      routeModulesCache,
+      initialState,
+      future,
+      isSpaMode,
+      route.id,
+      routesByParentId,
+      needsRevalidation
+    );
+    if (children.length > 0) dataRoute.children = children;
     return dataRoute;
   });
 }

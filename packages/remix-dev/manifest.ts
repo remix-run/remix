@@ -14,7 +14,6 @@ export type Manifest = {
       caseSensitive?: boolean;
       module: string;
       imports?: string[];
-      hasChildren: boolean;
       hasAction: boolean;
       hasLoader: boolean;
       hasClientAction: boolean;

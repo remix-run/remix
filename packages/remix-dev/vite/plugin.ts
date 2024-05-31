@@ -889,7 +889,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         path: route.path,
         index: route.index,
         caseSensitive: route.caseSensitive,
-        hasChildren: false,
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
         hasClientAction: sourceExports.includes("clientAction"),
@@ -913,13 +912,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         serverRoutes[key] = routeManifestEntry;
       }
     }
-
-    parentRoutes.forEach((p) => {
-      browserRoutes[p].hasChildren = true;
-      if (serverRoutes[p]) {
-        serverRoutes[p].hasChildren = true;
-      }
-    });
 
     let fingerprintedValues = { entry, routes: browserRoutes };
     let version = getHash(JSON.stringify(fingerprintedValues), 8);
@@ -983,7 +975,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
             resolveRelativeRouteFilePath(route, ctx.remixConfig)
           )}`
         ),
-        hasChildren: false,
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
         hasClientAction: sourceExports.includes("clientAction"),
@@ -992,10 +983,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         imports: [],
       };
     }
-
-    parentRoutes.forEach((p) => {
-      routes[p].hasChildren = true;
-    });
 
     return {
       version: String(Math.random()),
@@ -1909,8 +1896,6 @@ async function getRouteMetadata(
         resolveRelativeRouteFilePath(route, ctx.remixConfig)
       )}?import`
     ), // Ensure the Vite dev server responds with a JS module
-    // TODO: Can we determine this here?
-    hasChildren: false,
     hasAction: sourceExports.includes("action"),
     hasClientAction: sourceExports.includes("clientAction"),
     hasLoader: sourceExports.includes("loader"),

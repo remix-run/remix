@@ -1,4 +1,8 @@
-import type { HydrationState, Router } from "@remix-run/router";
+import type {
+  AgnosticDataRouteMatch,
+  HydrationState,
+  Router,
+} from "@remix-run/router";
 import { createBrowserHistory, createRouter } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
@@ -64,6 +68,7 @@ let stateDecodingPromise:
   | undefined;
 let router: Router;
 let routerInitialized = false;
+let known404Paths: Set<string> = new Set();
 let hmrAbortController: AbortController | undefined;
 let hmrRouterReadyResolve: ((router: Router) => void) | undefined;
 // There's a race condition with HMR where the remix:manifest is signaled before
@@ -328,6 +333,27 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
             window.__remixRouteModules
           )
         : undefined,
+      async unstable_patchRoutesOnMiss(
+        path: string,
+        partialMatches: AgnosticDataRouteMatch[]
+      ) {
+        if (known404Paths.has(path)) {
+          return null;
+        }
+        let params = new URLSearchParams({ paths: path });
+        let patches = await fetchManifestPatches(params);
+        Object.assign(window.__remixManifest.routes, patches);
+        let children = createClientRoutes(
+          patches,
+          window.__remixRouteModules,
+          // These routes, by definition, can't have any hydrated state
+          { loaderData: {} },
+          window.__remixContext.future,
+          window.__remixContext.isSpaMode,
+          partialMatches[partialMatches.length - 1].route.id
+        );
+        return children;
+      },
     });
 
     // We can call initialize() immediately if the router doesn't have any
@@ -390,8 +416,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   let fogOfWarAbortControllerRef = React.useRef<AbortController | undefined>();
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  let known404Paths = React.useRef<Set<string>>(new Set());
 
   // Alternate API if we didn't want to manage a mutable Set() and wanted to
   // give the user some more control
@@ -428,7 +452,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     let currentLinkPaths = window.__remixManifest.nextPaths;
 
     let lazyPaths = [...currentLinkPaths].filter((path) => {
-      if (known404Paths.current.has(path)) {
+      if (known404Paths.has(path)) {
         console.log("skipping prefetch for known 404 path:", path);
         return false;
       }
@@ -448,44 +472,62 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     });
 
     if (lazyPaths.length > 0) {
-      let knownParents = Object.values(window.__remixManifest.routes).reduce(
-        (acc, r) => {
-          if (r.parentId) {
-            acc.add(r.parentId);
-          }
-          return acc;
-        },
-        new Set()
-      );
-      let url = new URL("/__manifest", window.location.origin);
-      url.searchParams.set("routes", [...knownParents].join(","));
-      url.searchParams.set("paths", [...lazyPaths].join(","));
       console.log("Fetching manifest patches for", [...lazyPaths]);
+      let params = new URLSearchParams();
+      lazyPaths.forEach((p) => params.append("paths", p));
       let controller = new AbortController();
       fogOfWarAbortControllerRef.current = controller;
-      fetch(url, { signal: controller.signal })
-        .then((res) => res.json())
-        .then(
-          ({ manifestPatches, notFoundPaths }) => {
-            Object.assign(window.__remixManifest.routes, manifestPatches);
+      fetchManifestPatches(params, controller.signal).then(
+        (patches) => {
+          let knownRoutes = new Set(Object.keys(window.__remixManifest.routes));
+          Object.assign(window.__remixManifest.routes, patches);
+          let patchParents = Object.values(patches).filter(
+            (route) => route.parentId && !patches[route.parentId]
+          );
 
-            // Clear out the set of paths for the next batch
-            // TODO: Move this into state so we can run it in an effect instead
-            // of on location changes
-            window.__remixManifest.nextPaths = new Set();
-
-            // Track paths the server identifies as legit 404's so we never try
-            // to fetch them again
-            notFoundPaths.forEach((p) => known404Paths.current.add(p));
-
-            // FIXME: TODO: This is only for development - allows me to re-render the
-            // current known routes in the manifest - remove before final merge
-            rerender();
-          },
-          (e) => {
-            console.log("error in manifest patch fetch:", e);
+          for (let parent of patchParents) {
+            if (knownRoutes.has(parent.id)) {
+              // This parent already exists and we're adding more children to it
+              let children = createClientRoutes(
+                patches,
+                window.__remixRouteModules,
+                // These routes, by definition, can't have any hydrated state
+                { loaderData: {} },
+                window.__remixContext.future,
+                window.__remixContext.isSpaMode,
+                parent.id
+              );
+              router.patchRoutes(parent.id, children);
+            } else {
+              // This is a net new parent we're adding for the first time,
+              // potentially along with some of it's children
+              let children = createClientRoutes(
+                patches,
+                window.__remixRouteModules,
+                // These routes, by definition, can't have any hydrated state
+                { loaderData: {} },
+                window.__remixContext.future,
+                window.__remixContext.isSpaMode,
+                parent.parentId
+              );
+              children = children.filter((child) => child.id === parent.id);
+              router.patchRoutes(parent.parentId, children);
+            }
           }
-        );
+
+          // Clear out the set of paths for the next batch
+          // TODO: Move this into state so we can run it in an effect instead
+          // of on location changes
+          window.__remixManifest.nextPaths = new Set();
+
+          // FIXME: TODO: This is only for development - allows me to re-render the
+          // current known routes in the manifest - remove before final merge
+          rerender();
+        },
+        (e) => {
+          console.log("error in manifest patch fetch:", e);
+        }
+      );
     } else {
       console.log("woohoo no need to fetch any manifest patches!");
     }
@@ -527,4 +569,24 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       {window.__remixContext.future.unstable_singleFetch ? <></> : null}
     </>
   );
+}
+
+async function fetchManifestPatches(
+  params: URLSearchParams,
+  signal?: AbortSignal
+): Promise<AssetsManifest["routes"]> {
+  let res = await fetch(`/__manifest?${params.toString()}`, { signal });
+  let data = await res.json();
+
+  // Track paths the server identifies as legit 404's so we never try
+  // to fetch them again
+  data.notFoundPaths.forEach((p: string) => known404Paths.add(p));
+
+  // Only return patches for routes we don't yet know about
+  return Object.entries(data.patches).reduce((acc, [routeId, route]) => {
+    if (!window.__remixManifest.routes[routeId]) {
+      Object.assign(acc, { [routeId]: route });
+    }
+    return acc;
+  }, {});
 }

@@ -22,7 +22,7 @@ import { getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import { matchServerRoutes } from "./routeMatching";
-import type { ServerRoute } from "./routes";
+import type { EntryRoute, ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
@@ -123,57 +123,25 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     // Manifest request for fog of war
     if (url.pathname === "/__manifest") {
       await new Promise((resolve) => setTimeout(resolve, 1000));
+      let data: {
+        patches: Record<string, EntryRoute>;
+        notFoundPaths: string[];
+      } = { patches: {}, notFoundPaths: [] };
 
-      // Singular route children() request - if we were unable to prefetch in
-      // time and the user clicks on a link, we'll fetch directly for a single
-      // route via route.children()
-      let routeId = url.searchParams.get("route");
-      if (routeId) {
-        if (!_build.assets.routes[routeId]) {
-          return new Response("Not found", { status: 404 });
-        }
-        let filteredManifest: AssetsManifest["routes"] = Object.values(
-          _build.assets.routes
-        )
-          .filter((r) => r.parentId === routeId)
-          .reduce((acc, r) => Object.assign(acc, { [r.id]: r }), {});
-        return json(filteredManifest);
-      }
-
-      // Prefetching request to load manifest routes for all currently rendered
-      // links ahead of time
-      if (url.searchParams.has("routes") && url.searchParams.has("paths")) {
-        let paths = new Set(url.searchParams.get("paths")!.split(","));
-        let knownParents = new Set(url.searchParams.get("routes")!.split(","));
-        let matchedParents = new Set<string>();
-        let notFoundPaths: string[] = [];
-
-        paths.forEach((p) => {
-          let matches = matchServerRoutes(routes, p, _build.basename);
+      let paths = url.searchParams.getAll("paths");
+      if (paths.length > 0) {
+        for (let path of paths) {
+          let matches = matchServerRoutes(routes, path, _build.basename);
           if (matches) {
-            // Resolve children all the way down to and including the leaf route
-            // so that we can match synchronously if this link is clicked
-            matches.forEach((m) => matchedParents.add(m.route.id));
+            for (let match of matches) {
+              let routeId = match.route.id;
+              data.patches[routeId] = _build.assets.routes[routeId];
+            }
           } else {
-            notFoundPaths.push(p);
+            data.notFoundPaths.push(path);
           }
-        });
-
-        // Patch all children of the matched parents that aren't already known
-        // by the client
-        let manifestPatches = Object.values(_build.assets.routes)
-          .filter(
-            (r) =>
-              r.parentId != null &&
-              matchedParents.has(r.parentId) &&
-              !knownParents.has(r.parentId)
-          )
-          .reduce((acc, r) => Object.assign(acc, { [r.id]: r }), {});
-
-        return json({
-          manifestPatches,
-          notFoundPaths,
-        });
+        }
+        return json(data);
       }
 
       return new Response("Invalid Request", { status: 400 });

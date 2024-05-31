@@ -96,7 +96,6 @@ export async function create({
           caseSensitive: route.caseSensitive,
           module: resolveUrl(key),
           imports: resolveImports(output.imports),
-          hasChildren: false,
           hasAction: sourceExports.includes("action"),
           hasLoader: sourceExports.includes("loader"),
           hasClientAction: sourceExports.includes("clientAction"),
