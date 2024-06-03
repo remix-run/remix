@@ -12610,7 +12610,7 @@ packages:
       log-utils: 0.2.1
       pointer-symbol: 1.0.0
       radio-symbol: 2.0.0
-      set-value: 3.0.2
+      set-value: 3.0.3
       strip-color: 0.1.0
       terminal-paginator: 2.0.2
       toggle-array: 1.0.1
@@ -13474,8 +13474,8 @@ packages:
       to-object-path: 0.3.0
     dev: false
 
-  /set-value@3.0.2:
-    resolution: {integrity: sha512-npjkVoz+ank0zjlV9F47Fdbjfj/PfXyVhZvGALWsyIYU/qrMzpi6avjKW3/7KeSU2Df3I46BrN1xOI1+6vW0hA==}
+  /set-value@3.0.3:
+    resolution: {integrity: sha512-Xsn/XSatoVOGBbp5hs3UylFDs5Bi9i+ArpVJKdHPniZHoEgRniXTqHWrWrGQ0PbEClVT6WtfnBwR8CAHC9sveg==}
     engines: {node: '>=6.0'}
     dependencies:
       is-plain-object: 2.0.4
