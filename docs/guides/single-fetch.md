@@ -12,7 +12,7 @@ Single fetch is a new data data loading strategy and streaming format. When you 
 
 Remix introduced support for "Single Fetch" ([RFC][rfc]) behind the [`future.unstable_singleFetch`][future-flags] flag in [`v2.9.0`][2.9.0] which allows you to opt-into this behavior. Single Fetch will be the default in [React Router v7][merging-remix-and-rr].
 
-Enabling Single Fetch is incredibly simple. Start by applying the minimal required changes to [enable Single Fetch][start], then use the [migration guide][migration-guide] to make incremental changes in your application to ensure a smooth, non-breaking upgrade to [React Router v7][merging-remix-and-rr].  
+Enabling Single Fetch is incredibly simple. Start by applying the minimal required changes to [enable Single Fetch][start], then use the [migration guide][migration-guide] to make incremental changes in your application to ensure a smooth, non-breaking upgrade to [React Router v7][merging-remix-and-rr].
 
 Please also read through the [Breaking Changes][breaking-changes] before starting so you can be aware of some of the underlying behavior changes, specifically around serialization and status/header behavior.
 
@@ -34,12 +34,12 @@ Please also read through the [Breaking Changes][breaking-changes] before startin
 
 ```diff
 // vite.config.ts
-  remix({
-    future: {
-      // ...
+remix({
+  future: {
+    // ...
 +     unstable_singleFetch: true,
-    },
-  }),
+  },
+}),
 ```
 
 **2. Deprecated `fetch` polyfill**
@@ -50,11 +50,11 @@ Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or usin
 
 - If you are managing your own server and calling `installGlobals()`, you will need to call `installGlobals({ nativeFetch: true })` to use `undici`.
 
-  ```diff
+```diff
 // vite.config.ts
-  - installGlobals()
-  + installGlobals({ nativeFetch: true })
-  ```
+- installGlobals()
++ installGlobals({ nativeFetch: true })
+```
 
 - If you are using `remix-serve`, it will use `undici` automatically if Single Fetch is enabled.
 - If you are using miniflare/cloudflare worker with your remix project. Ensure your [compatibility flag](https://developers.cloudflare.com/workers/configuration/compatibility-dates/) is set to `2023-03-01` or later as well.
@@ -72,7 +72,6 @@ On the client side, this also means that your need to wrap your client-side [`hy
 **4. Add `nonce` to RemixServer for CSP**
 
 The `<RemixServer>` component renders inline scripts that handle the streaming data on the client side. If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you can use `<RemixServer nonce>` to pass through the nonce to these `<script>` tags.
-
 
 ## Adding a New Route with Single Fetch
 
@@ -127,7 +126,7 @@ export default function BlogPost() {
 
 If you are currently returning `Response` instances from your loaders (i.e., `json`/`defer`) then you shouldn't _need_ to make many changes to your app code to take advantage of Single Fetch.
 
-However, to better prepare your upgrade to [React Router v7][merging-remix-and-rr] in the future. We recommend that you start making the following changes on a route-by-route basis, as it's easier to validate changes to things like headers and data types.
+However, to better prepare your upgrade to [React Router v7][merging-remix-and-rr] in the future, we recommend that you start making the following changes on a route-by-route basis, as that is the easiest way to validate that updating the headers and data types doesn't break anything.
 
 ### Type Inference
 
