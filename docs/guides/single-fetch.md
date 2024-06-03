@@ -14,7 +14,7 @@ Remix introduced support for "Single Fetch" ([RFC][rfc]) behind the [`future.uns
 
 Enabling Single Fetch is incredibly simple. Start by applying the minimal required changes to [enable Single Fetch][start], then use the [migration guide][migration-guide] to make incremental changes in your application to ensure a smooth, non-breaking upgrade to [React Router v7][merging-remix-and-rr].  
 
-Please also read through [Breaking Changes][breaking-changes] to be aware of some of the underlying behavior changes - specifically around serialization and status/header behavior before starting.
+Please also read through the [Breaking Changes][breaking-changes] before starting so you can be aware of some of the underlying behavior changes, specifically around serialization and status/header behavior.
 
 ## Breaking Changes
 
