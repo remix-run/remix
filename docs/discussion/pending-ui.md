@@ -101,7 +101,7 @@ export function ProjectList({ projects }) {
 }
 ```
 
-While localized indicators on links are nice, they are incomplete. There are many other ways a navigation can be triggered: form submissions, back and forward button clicks in the browser chrome, action redirects, and imperative `navigate(path)` calls, so you'll typically want a global indicator to capture everything.
+While localized indicators on links are nice, they are incomplete. There are many other ways a navigation can be triggered: form submissions, back and forward button clicks in the browser, action redirects, and imperative `navigate(path)` calls, so you'll typically want a global indicator to capture everything.
 
 ### Record Creation
 
@@ -176,7 +176,7 @@ function ProjectListItem({ project }) {
   const fetcher = useFetcher();
 
   const starred = fetcher.formData
-    ? // use to optimistic value if submitting
+    ? // use optimistic value if submitting
       fetcher.formData.get("starred") === "1"
     : // fall back to the database state
       project.starred;
@@ -191,7 +191,7 @@ function ProjectListItem({ project }) {
           // use optimistic value to allow interruptions
           value={starred ? "0" : "1"}
         >
-          {/* display optimistic value */}
+          {/* 👇 display optimistic value */}
           {starred ? "☆" : "★"}
         </button>
       </fetcher.Form>
@@ -204,7 +204,7 @@ function ProjectListItem({ project }) {
 
 **Skeleton Fallback**: When data is deferred, you can add fallbacks with [`<Suspense>`][suspense_component]. This allows the UI to render without waiting for the data to load, speeding up the perceived and actual performance of the application.
 
-```tsx lines=[11-14,23-27]
+```tsx lines=[11-14,24-28]
 import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { defer } from "@remix-run/node"; // or cloudflare/deno
 import { Await } from "@remix-run/react";
