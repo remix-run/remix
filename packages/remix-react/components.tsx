@@ -869,12 +869,11 @@ window.__remixManifest = ${JSON.stringify(
           null,
           2
         )};
-        window.__remixRouteModules = {${matches
+window.__remixRouteModules = {${matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
           )
           .join(",")}};
-
 import(${JSON.stringify(manifest.entry.module)});`;
 
     return (

@@ -437,63 +437,32 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         fogOfWarAbortControllerRef.current.abort();
       }
 
-      let lazyPaths = Array.from(nextPaths.keys()).filter((path) => {
-        if (knownGoodPaths.has(path)) {
-          nextPaths.delete(path);
-          return false;
-        }
-
-        if (known404Paths.has(path)) {
-          nextPaths.delete(path);
-          return false;
-        }
-
-        let matches = matchRoutes(router.routes, path);
-        if (matches) {
-          knownGoodPaths.add(path);
-          nextPaths.delete(path);
-          return false;
-        }
-
-        return true;
-      });
-
+      let lazyPaths = getFogOfWarPaths();
       if (lazyPaths.length === 0) {
         return;
       }
 
       try {
-        let controller = new AbortController();
-        fogOfWarAbortControllerRef.current = controller;
+        fogOfWarAbortControllerRef.current = new AbortController();
         let patches = await fetchManifestPatches(
           lazyPaths,
           window.__remixManifest.version,
-          controller.signal
+          fogOfWarAbortControllerRef.current.signal
         );
-        processManifestPatches(patches);
+        applyManifestPatches(patches);
       } catch (e) {
         console.error("Failed to fetch manifest patches", e);
       }
     }
 
-    document.body.querySelectorAll("a[data-discover]").forEach((a) => {
-      console.log("initial querySelectorAll prefetch", a.getAttribute("href"));
-      nextPaths.add(a.getAttribute("href")!);
-    });
-
-    fetchPatches();
-
-    // ==========================================
     let debouncedFetchPatches = debounce(fetchPatches, 100);
 
     function registerPath(path: string | null) {
-      console.log("registering path for prefetching", path);
       if (!path || knownGoodPaths.has(path) || known404Paths.has(path)) return;
       nextPaths.add(path);
     }
 
     let observer = new MutationObserver((records) => {
-      console.log("observer fired", records);
       records.forEach((r) => {
         if (r.type !== "childList") return;
 
@@ -509,6 +478,12 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         });
       });
     });
+
+    document.body
+      .querySelectorAll("a[data-discover]")
+      .forEach((a) => registerPath(a.getAttribute("href")));
+
+    fetchPatches();
 
     observer.observe(document.documentElement, {
       subtree: true,
@@ -555,6 +530,29 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   );
 }
 
+function getFogOfWarPaths() {
+  return Array.from(nextPaths.keys()).filter((path) => {
+    if (knownGoodPaths.has(path)) {
+      nextPaths.delete(path);
+      return false;
+    }
+
+    if (known404Paths.has(path)) {
+      nextPaths.delete(path);
+      return false;
+    }
+
+    let matches = matchRoutes(router.routes, path);
+    if (matches) {
+      knownGoodPaths.add(path);
+      nextPaths.delete(path);
+      return false;
+    }
+
+    return true;
+  });
+}
+
 async function fetchManifestPatches(
   paths: string[],
   version: string,
@@ -578,11 +576,11 @@ async function fetchManifestPatches(
   }, {});
 }
 
-function processManifestPatches(patches: AssetsManifest["routes"]) {
+function applyManifestPatches(patches: AssetsManifest["routes"]) {
   let knownRoutes = new Set(Object.keys(window.__remixManifest.routes));
   Object.assign(window.__remixManifest.routes, patches);
   for (let patch of Object.values(patches)) {
-    if (!patch.parentId || patches[patch.parentId]) return;
+    if (!patch.parentId || patches[patch.parentId]) continue;
 
     if (knownRoutes.has(patch.id)) {
       // This parent already exists and we're adding more children to it
