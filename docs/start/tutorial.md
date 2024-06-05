@@ -1227,7 +1227,7 @@ export default function App() {
   // by using a separate piece of state to store the previous
   // value
   if (q !== prevQ) {
-    setPrevQ(q)
+    setPrevQ(q);
     setQuery(q || "");
   }
 
