@@ -323,8 +323,8 @@ importers:
         specifier: workspace:*
         version: link:../packages/remix-node
       '@remix-run/router':
-        specifier: 0.0.0-experimental-52e9b8eb3
-        version: 0.0.0-experimental-52e9b8eb3
+        specifier: 0.0.0-experimental-abead7ae1
+        version: 0.0.0-experimental-abead7ae1
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../packages/remix-server-runtime
@@ -868,8 +868,8 @@ importers:
         specifier: ^2.9.2
         version: link:../remix-react
       '@remix-run/router':
-        specifier: 0.0.0-experimental-52e9b8eb3
-        version: 0.0.0-experimental-52e9b8eb3
+        specifier: 0.0.0-experimental-abead7ae1
+        version: 0.0.0-experimental-abead7ae1
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
@@ -1214,17 +1214,17 @@ importers:
   packages/remix-react:
     dependencies:
       '@remix-run/router':
-        specifier: 0.0.0-experimental-52e9b8eb3
-        version: 0.0.0-experimental-52e9b8eb3
+        specifier: 0.0.0-experimental-abead7ae1
+        version: 0.0.0-experimental-abead7ae1
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
       react-router:
-        specifier: 0.0.0-experimental-52e9b8eb3
-        version: 0.0.0-experimental-52e9b8eb3(react@18.2.0)
+        specifier: 0.0.0-experimental-abead7ae1
+        version: 0.0.0-experimental-abead7ae1(react@18.2.0)
       react-router-dom:
-        specifier: 0.0.0-experimental-52e9b8eb3
-        version: 0.0.0-experimental-52e9b8eb3(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.0-experimental-abead7ae1
+        version: 0.0.0-experimental-abead7ae1(react-dom@18.2.0)(react@18.2.0)
       turbo-stream:
         specifier: ^2.0.0
         version: 2.0.0
@@ -1300,8 +1300,8 @@ importers:
   packages/remix-server-runtime:
     dependencies:
       '@remix-run/router':
-        specifier: 0.0.0-experimental-52e9b8eb3
-        version: 0.0.0-experimental-52e9b8eb3
+        specifier: 0.0.0-experimental-abead7ae1
+        version: 0.0.0-experimental-abead7ae1
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -1337,11 +1337,11 @@ importers:
         specifier: workspace:*
         version: link:../remix-react
       '@remix-run/router':
-        specifier: 0.0.0-experimental-52e9b8eb3
-        version: 0.0.0-experimental-52e9b8eb3
+        specifier: 0.0.0-experimental-abead7ae1
+        version: 0.0.0-experimental-abead7ae1
       react-router-dom:
-        specifier: 0.0.0-experimental-52e9b8eb3
-        version: 0.0.0-experimental-52e9b8eb3(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.0-experimental-abead7ae1
+        version: 0.0.0-experimental-abead7ae1(react-dom@18.2.0)(react@18.2.0)
     devDependencies:
       '@remix-run/server-runtime':
         specifier: workspace:*
@@ -4196,8 +4196,8 @@ packages:
       - encoding
     dev: false
 
-  /@remix-run/router@0.0.0-experimental-52e9b8eb3:
-    resolution: {integrity: sha512-snjkoBXuRqeBgyV9jtD7n0qCdPY6I2pACfKCT1hK+sxNPaKgwrmKAOFbtGbfYUoEMAwfhfIiFITyAiVG78h7eQ==}
+  /@remix-run/router@0.0.0-experimental-abead7ae1:
+    resolution: {integrity: sha512-B+x7EBA7kd+VR07QMdblGr5Vdkm7l+6j63BgMI0VnMLE4VFRLlHMhPaUqXnIi9WvrnvJxEQaYpudAHw85hM2jg==}
     engines: {node: '>=14.0.0'}
     dev: false
 
@@ -8545,6 +8545,7 @@ packages:
 
   /glob@7.2.0:
     resolution: {integrity: sha512-lmLf6gtyrPq8tTjSmrO94wBeQbFR3HbLHbuyD69wuyQkImp2hWqMGB47OX65FBkPffO641IP9jWa1z4ivqG26Q==}
+    deprecated: Glob versions prior to v9 are no longer supported
     dependencies:
       fs.realpath: 1.0.0
       inflight: 1.0.6
@@ -12779,26 +12780,26 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /react-router-dom@0.0.0-experimental-52e9b8eb3(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-CT/N/JCNzYD2HQVd/ufiYNO35wiNZHXa1f25Tl2YlrSRmaMmmL0+8d2OWrNuNnwbrwkyJxSq3HucxOD0B4jqyQ==}
+  /react-router-dom@0.0.0-experimental-abead7ae1(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-43QfTFFAVHmwMs3lEb6ZEgKDR6uFJUxwr/hpSBldu8HpzsPJuQUbb5SfKYCV9nS2e7HBypZmj/6hq2zLxmUAgw==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
     dependencies:
-      '@remix-run/router': 0.0.0-experimental-52e9b8eb3
+      '@remix-run/router': 0.0.0-experimental-abead7ae1
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      react-router: 0.0.0-experimental-52e9b8eb3(react@18.2.0)
+      react-router: 0.0.0-experimental-abead7ae1(react@18.2.0)
     dev: false
 
-  /react-router@0.0.0-experimental-52e9b8eb3(react@18.2.0):
-    resolution: {integrity: sha512-755gjKuUWd2ktnNnuMAkemzi0rPxJaDEhL0G/N3FTi2ivLRMeDOZAS6dfA84E0BVXosZeLuK1tNUXJmFpX4EbQ==}
+  /react-router@0.0.0-experimental-abead7ae1(react@18.2.0):
+    resolution: {integrity: sha512-mHVWMOHQ6jOSOzQyUxGoTU2kxkQaRGBr1vps1UzhyJMar84/Hrqhkhuj/N1jOL6QoIY2H8R9kJMeZMEe6s7OKA==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
     dependencies:
-      '@remix-run/router': 0.0.0-experimental-52e9b8eb3
+      '@remix-run/router': 0.0.0-experimental-abead7ae1
       react: 18.2.0
     dev: false
 
@@ -13194,6 +13195,7 @@ packages:
 
   /rimraf@3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
+    deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
     dependencies:
       glob: 7.2.0
