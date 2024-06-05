@@ -84,13 +84,13 @@ export default defineConfig({
 
 Update the `types` field in `tsconfig.json` and make sure `skipLibCheck`, `module`, and `moduleResolution` are all set correctly.
 
-```diff filename=tsconfig.json
+```json filename=tsconfig.json lines=[3-6]
 {
   "compilerOptions": {
-+    "types": ["@remix-run/node", "vite/client"],
+    "types": ["@remix-run/node", "vite/client"],
     "skipLibCheck": true,
     "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "Bundler"
   }
 }
 ```

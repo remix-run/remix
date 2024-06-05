@@ -231,7 +231,7 @@ export default defineConfig({
 });
 ```
 
-The subset of [supported Remix config options][supported-remix-config-options] should be passed directly to the plugin:
+The subset of [supported Remix config options][vite-config] should be passed directly to the plugin:
 
 ```ts filename=vite.config.ts lines=[3-5]
 export default defineConfig({
@@ -283,13 +283,13 @@ Since the module types provided by `vite/client` are not compatible with the mod
 
 Update the `types` field in `tsconfig.json` and make sure `skipLibCheck`, `module`, and `moduleResolution` are all set correctly.
 
-```diff filename=tsconfig.json
+```json filename=tsconfig.json lines=[3-6]
 {
   "compilerOptions": {
-+   "types": ["@remix-run/node", "vite/client"],
+    "types": ["@remix-run/node", "vite/client"],
     "skipLibCheck": true,
     "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "Bundler"
   }
 }
 ```
@@ -1088,7 +1088,6 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 [vite-config]: ../file-conventions/vite-config
 [vite-plugins]: https://vitejs.dev/plugins
 [vite-features]: https://vitejs.dev/guide/features
-[supported-remix-config-options]: https://remix.run/docs/en/main/file-conventions/vite-config
 [tsx]: https://github.com/esbuild-kit/tsx
 [tsm]: https://github.com/lukeed/tsm
 [vite-tsconfig-paths]: https://github.com/aleclarson/vite-tsconfig-paths
