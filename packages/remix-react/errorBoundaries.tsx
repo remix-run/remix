@@ -103,7 +103,7 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
   }
 
   return (
-    <BoundaryShell title="Application Error!">
+    <BoundaryShell title="Application Error!" isRenderError>
       <h1 style={{ fontSize: "24px" }}>Application Error</h1>
       <pre
         style={{
@@ -123,15 +123,25 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
 export function BoundaryShell({
   title,
   renderScripts,
+  isRenderError,
   children,
 }: {
   title: string;
   renderScripts?: boolean;
+  isRenderError?: boolean;
   children: React.ReactNode | React.ReactNode[];
 }) {
   let { routeModules } = useRemixContext();
+  let rootRoute = routeModules.root;
 
-  if (routeModules.root?.Layout) {
+  // If the root route has a Layout and does not have an ErrorBoundary, then
+  // render the error UI inside the Layout.  However, if the root route has an
+  // ErrorBoundary and we're in this flow, that must mean we threw trying to
+  // render the root route error boundary - so don't try to render
+  // Layout+ErrorBoundary again since we'll just get into a loop.  Skip the
+  // Layout and just render our own shell here.
+  let isBubbledRenderError = isRenderError && rootRoute?.ErrorBoundary != null;
+  if (rootRoute && rootRoute.Layout && !isBubbledRenderError) {
     return children;
   }
 
