@@ -231,7 +231,7 @@ export default defineConfig({
 });
 ```
 
-The subset of [supported Remix config options][supported-remix-config-options] should be passed directly to the plugin:
+The subset of [supported Remix config options][vite-config] should be passed directly to the plugin:
 
 ```ts filename=vite.config.ts lines=[3-5]
 export default defineConfig({
@@ -279,39 +279,34 @@ Vite handles imports for all sorts of different file types, sometimes in ways th
 
 Since the module types provided by `vite/client` are not compatible with the module types implicitly included with `@remix-run/dev`, you'll also need to enable the `skipLibCheck` flag in your TypeScript config. Remix won't require this flag in the future once the Vite plugin is the default compiler.
 
-👉 **Rename `remix.env.d.ts` to `env.d.ts`**
+👉 **Update `tsconfig.json`**
 
-```diff nonumber
--/remix.env.d.ts
-+/env.d.ts
+Update the `types` field in `tsconfig.json` and make sure `skipLibCheck`, `module`, and `moduleResolution` are all set correctly.
+
+```json filename=tsconfig.json lines=[3-6]
+{
+  "compilerOptions": {
+    "types": ["@remix-run/node", "vite/client"],
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  }
+}
 ```
 
-👉 **Replace `@remix-run/dev` types with `vite/client` in `env.d.ts`**
+👉 **Update/remove `remix.env.d.ts`**
 
-```diff filename=env.d.ts
--/// <reference types="@remix-run/dev" />
-+/// <reference types="vite/client" />
-/// <reference types="@remix-run/node" />
+Remove the following type declarations in `remix.env.d.ts`
+
+```diff filename=remix.env.d.ts
+- /// <reference types="@remix-run/dev" />
+- /// <reference types="@remix-run/node" />
 ```
 
-👉 **Replace reference to `remix.env.d.ts` with `env.d.ts` in `tsconfig.json`**
+If `remix.env.d.ts` is now empty, delete it
 
-```diff filename=tsconfig.json
-- "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
-+ "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
-```
-
-👉 **Ensure `skipLibCheck` is enabled in `tsconfig.json`**
-
-```json filename=tsconfig.json
-"skipLibCheck": true,
-```
-
-👉 **Ensure `module` and `moduleResolution` fields are set correctly in `tsconfig.json`**
-
-```json filename=tsconfig.json
-"module": "ESNext",
-"moduleResolution": "Bundler",
+```shellscript nonumber
+rm remix.env.d.ts
 ```
 
 #### Migrating from Remix App Server
@@ -1093,7 +1088,6 @@ Finally, we were inspired by how other frameworks implemented Vite support:
 [vite-config]: ../file-conventions/vite-config
 [vite-plugins]: https://vitejs.dev/plugins
 [vite-features]: https://vitejs.dev/guide/features
-[supported-remix-config-options]: #configuration
 [tsx]: https://github.com/esbuild-kit/tsx
 [tsm]: https://github.com/lukeed/tsm
 [vite-tsconfig-paths]: https://github.com/aleclarson/vite-tsconfig-paths
