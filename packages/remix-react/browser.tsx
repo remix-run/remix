@@ -581,12 +581,10 @@ async function fetchManifestPatches(
 function processManifestPatches(patches: AssetsManifest["routes"]) {
   let knownRoutes = new Set(Object.keys(window.__remixManifest.routes));
   Object.assign(window.__remixManifest.routes, patches);
-  let patchParents = Object.values(patches).filter(
-    (route) => route.parentId && !patches[route.parentId]
-  );
+  for (let patch of Object.values(patches)) {
+    if (!patch.parentId || patches[patch.parentId]) return;
 
-  for (let parent of patchParents) {
-    if (knownRoutes.has(parent.id)) {
+    if (knownRoutes.has(patch.id)) {
       // This parent already exists and we're adding more children to it
       let children = createClientRoutes(
         patches,
@@ -595,9 +593,9 @@ function processManifestPatches(patches: AssetsManifest["routes"]) {
         { loaderData: {} },
         window.__remixContext.future,
         window.__remixContext.isSpaMode,
-        parent.id
+        patch.id
       );
-      router.patchRoutes(parent.id, children);
+      router.patchRoutes(patch.id, children);
     } else {
       // This is a net new parent we're adding for the first time,
       // potentially along with some of it's children
@@ -608,10 +606,10 @@ function processManifestPatches(patches: AssetsManifest["routes"]) {
         { loaderData: {} },
         window.__remixContext.future,
         window.__remixContext.isSpaMode,
-        parent.parentId
+        patch.parentId
       );
-      children = children.filter((child) => child.id === parent.id);
-      router.patchRoutes(parent.parentId, children);
+      children = children.filter((child) => child.id === patch.id);
+      router.patchRoutes(patch.parentId, children);
     }
   }
 }

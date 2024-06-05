@@ -180,7 +180,6 @@ function processRoutes(
       path: route.path,
       index: route.index,
       parentId,
-      hasChildren: false,
       hasAction: route.action != null,
       hasLoader: route.loader != null,
       // When testing routes, you should just be stubbing loader/action, not
@@ -204,7 +203,6 @@ function processRoutes(
     };
 
     if (route.children) {
-      entryRoute.hasChildren = true;
       newRoute.children = processRoutes(
         route.children,
         context,
