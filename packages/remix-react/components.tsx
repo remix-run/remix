@@ -188,17 +188,14 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 
 const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
-function useRegisterFogOfWarLink(href: string, isAbsolute: boolean) {
-  let { manifest } = useRemixContext();
-  // TODO: Clean this up
-  if (
-    typeof document !== "undefined" &&
-    !isAbsolute &&
-    manifest.nextPaths &&
-    manifest.nextPaths.add
-  ) {
-    manifest.nextPaths.add(href);
-  }
+function useRegisterFogOfWarLink(path: string, isAbsolute: boolean) {
+  let { registerPath } = useRemixContext();
+  React.useLayoutEffect(() => {
+    console.log("running useRegisterFogOfWarLink effect");
+    let isActive = typeof document !== "undefined" && !isAbsolute;
+    if (!isActive) return;
+    registerPath(path);
+  }, [isAbsolute, path, registerPath]);
 }
 
 /**
@@ -882,7 +879,6 @@ window.__remixManifest = ${JSON.stringify(
           null,
           2
         )}
-window.__remixManifest.nextPaths = new Set();
 window.__remixRouteModules = {${matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`

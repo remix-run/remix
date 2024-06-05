@@ -12,6 +12,7 @@ type SerializedError = {
 export interface RemixContextObject {
   manifest: AssetsManifest;
   routeModules: RouteModules;
+  registerPath: (path: string) => void;
   criticalCss?: string;
   serverHandoffString?: string;
   future: FutureConfig;
@@ -52,7 +53,6 @@ export interface AssetsManifest {
     module: string;
   };
   routes: RouteManifest<EntryRoute>;
-  nextPaths: Set<string>;
   url: string;
   version: string;
   hmr?: {

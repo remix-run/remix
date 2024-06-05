@@ -340,8 +340,11 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         if (known404Paths.has(path)) {
           return null;
         }
-        let params = new URLSearchParams({ paths: path });
-        let patches = await fetchManifestPatches(params);
+
+        let patches = await fetchManifestPatches(
+          [path],
+          window.__remixManifest.version
+        );
         Object.assign(window.__remixManifest.routes, patches);
         let children = createClientRoutes(
           patches,
@@ -374,7 +377,10 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   }
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  let [, rerender] = React.useState(Math.random());
+  let [nextPaths, setNextPaths] = React.useState<Set<string>>(new Set());
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  let [, rerender] = React.useState(0);
 
   // Critical CSS can become stale after code changes, e.g. styles might be
   // removed from a component, but the styles will still be present in the
@@ -431,6 +437,17 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // );
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
+  let registerPath = React.useCallback(
+    (path: string) => {
+      if (nextPaths.has(path)) return;
+      // Using an updater function is important here to ensure we batch all
+      // links into one run
+      setNextPaths((p) => new Set([...p, path]));
+    },
+    [nextPaths]
+  );
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useEffect(() => {
     if (navigator.connection?.saveData === true) {
       return;
@@ -443,99 +460,51 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       return;
     }
 
-    console.log("running effect - nextPaths:", [
-      ...window.__remixManifest.nextPaths,
-    ]);
+    console.log("running effect - nextPaths:", nextPaths);
     if (fogOfWarAbortControllerRef.current) {
       fogOfWarAbortControllerRef.current.abort();
     }
-    let currentLinkPaths = window.__remixManifest.nextPaths;
-
-    let lazyPaths = [...currentLinkPaths].filter((path) => {
+    let lazyPaths = [...nextPaths.keys()].filter((path) => {
       if (known404Paths.has(path)) {
         console.log("skipping prefetch for known 404 path:", path);
         return false;
       }
 
+      // TODO: Probably a bit CPU intensive - alternative design would be to
+      // pass all client-known routeIds to the server and filter there
       let matches = matchRoutes(router.routes, path);
       if (matches) {
-        let leafRoute = matches[matches.length - 1].route;
-        if (typeof leafRoute.children !== "function") {
-          console.log("no need to prefetch path:", path);
-          return false;
-        }
-        console.log("prefetching path due to lazy children:", path, leafRoute);
+        console.log("no need to prefetch path:", path);
+        return false;
       } else {
         console.log("prefetching path due to no matches:", path);
+        return true;
       }
-      return true;
     });
 
-    if (lazyPaths.length > 0) {
-      console.log("Fetching manifest patches for", [...lazyPaths]);
-      let params = new URLSearchParams();
-      lazyPaths.forEach((p) => params.append("paths", p));
-      let controller = new AbortController();
-      fogOfWarAbortControllerRef.current = controller;
-      fetchManifestPatches(params, controller.signal).then(
-        (patches) => {
-          let knownRoutes = new Set(Object.keys(window.__remixManifest.routes));
-          Object.assign(window.__remixManifest.routes, patches);
-          let patchParents = Object.values(patches).filter(
-            (route) => route.parentId && !patches[route.parentId]
-          );
-
-          for (let parent of patchParents) {
-            if (knownRoutes.has(parent.id)) {
-              // This parent already exists and we're adding more children to it
-              let children = createClientRoutes(
-                patches,
-                window.__remixRouteModules,
-                // These routes, by definition, can't have any hydrated state
-                { loaderData: {} },
-                window.__remixContext.future,
-                window.__remixContext.isSpaMode,
-                parent.id
-              );
-              router.patchRoutes(parent.id, children);
-            } else {
-              // This is a net new parent we're adding for the first time,
-              // potentially along with some of it's children
-              let children = createClientRoutes(
-                patches,
-                window.__remixRouteModules,
-                // These routes, by definition, can't have any hydrated state
-                { loaderData: {} },
-                window.__remixContext.future,
-                window.__remixContext.isSpaMode,
-                parent.parentId
-              );
-              children = children.filter((child) => child.id === parent.id);
-              router.patchRoutes(parent.parentId, children);
-            }
-          }
-
-          // Clear out the set of paths for the next batch
-          // TODO: Move this into state so we can run it in an effect instead
-          // of on location changes
-          window.__remixManifest.nextPaths = new Set();
-
-          // FIXME: TODO: This is only for development - allows me to re-render the
-          // current known routes in the manifest - remove before final merge
-          rerender();
-        },
-        (e) => {
-          console.log("error in manifest patch fetch:", e);
-        }
-      );
-    } else {
+    if (lazyPaths.length === 0) {
       console.log("woohoo no need to fetch any manifest patches!");
+      return;
     }
+
+    console.log("Fetching manifest patches for", lazyPaths);
+    let controller = new AbortController();
+    fogOfWarAbortControllerRef.current = controller;
+
+    fetchManifestPatches(
+      lazyPaths,
+      window.__remixManifest.version,
+      controller.signal
+    )
+      .then((patches) => processManifestPatches(patches))
+      // FIXME: TODO: This is only for development - allows me to re-render the
+      // current known routes in the manifest - remove before final merge
+      .then(() => rerender());
 
     return () => {
       fogOfWarAbortControllerRef.current?.abort("unmount");
     };
-  }, [location]);
+  }, [nextPaths]);
 
   // We need to include a wrapper RemixErrorBoundary here in case the root error
   // boundary also throws and we need to bubble up outside of the router entirely.
@@ -549,6 +518,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         value={{
           manifest: window.__remixManifest,
           routeModules: window.__remixRouteModules,
+          registerPath,
           future: window.__remixContext.future,
           criticalCss,
           isSpaMode: window.__remixContext.isSpaMode,
@@ -572,11 +542,14 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
 }
 
 async function fetchManifestPatches(
-  params: URLSearchParams,
+  paths: string[],
+  version: string,
   signal?: AbortSignal
 ): Promise<AssetsManifest["routes"]> {
-  let res = await fetch(`/__manifest?${params.toString()}`, { signal });
-  let data = await res.json();
+  let url = new URL("/__manifest", window.location.origin);
+  url.searchParams.set("version", version);
+  paths.forEach((path) => url.searchParams.append("paths", path));
+  let data = await fetch(url, { signal }).then((res) => res.json());
 
   // Track paths the server identifies as legit 404's so we never try
   // to fetch them again
@@ -589,4 +562,42 @@ async function fetchManifestPatches(
     }
     return acc;
   }, {});
+}
+
+function processManifestPatches(patches: AssetsManifest["routes"]) {
+  let knownRoutes = new Set(Object.keys(window.__remixManifest.routes));
+  Object.assign(window.__remixManifest.routes, patches);
+  let patchParents = Object.values(patches).filter(
+    (route) => route.parentId && !patches[route.parentId]
+  );
+
+  for (let parent of patchParents) {
+    if (knownRoutes.has(parent.id)) {
+      // This parent already exists and we're adding more children to it
+      let children = createClientRoutes(
+        patches,
+        window.__remixRouteModules,
+        // These routes, by definition, can't have any hydrated state
+        { loaderData: {} },
+        window.__remixContext.future,
+        window.__remixContext.isSpaMode,
+        parent.id
+      );
+      router.patchRoutes(parent.id, children);
+    } else {
+      // This is a net new parent we're adding for the first time,
+      // potentially along with some of it's children
+      let children = createClientRoutes(
+        patches,
+        window.__remixRouteModules,
+        // These routes, by definition, can't have any hydrated state
+        { loaderData: {} },
+        window.__remixContext.future,
+        window.__remixContext.isSpaMode,
+        parent.parentId
+      );
+      children = children.filter((child) => child.id === parent.id);
+      router.patchRoutes(parent.parentId, children);
+    }
+  }
 }
