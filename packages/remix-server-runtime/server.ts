@@ -46,6 +46,7 @@ import {
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
   ResponseStubOperationsSymbol,
+  SINGLE_FETCH_REDIRECT_STATUS,
 } from "./single-fetch";
 import { resourceRouteJsonWarning } from "./deprecations";
 
@@ -218,7 +219,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
               serverMode
             ),
             {
-              status: 200,
+              status: SINGLE_FETCH_REDIRECT_STATUS,
               headers,
             }
           );
