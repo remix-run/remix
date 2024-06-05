@@ -21,7 +21,7 @@ npm install @remix-run/{dev,react,node,etc.}@2
 
 **Background**
 
-Remix no longer uses it's own, closed compiler (now referred to as the "Classic Compiler"), and instead uses [Vite][vite]. Vite is a powerful, performant and extensible development environment for JavaScript projects. [View the Vite docs][vite-docs] for more information on performance, troubleshooting, etc.
+Remix no longer uses its own, closed compiler (now referred to as the "Classic Compiler"), and instead uses [Vite][vite]. Vite is a powerful, performant and extensible development environment for JavaScript projects. [View the Vite docs][vite-docs] for more information on performance, troubleshooting, etc.
 
 While this is not a future flag, new features and some feature flags are only available in the Vite plugin, and the Classic Compiler will be deprecated in the next version of Remix.
 
