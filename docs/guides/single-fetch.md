@@ -16,18 +16,6 @@ Enabling Single Fetch is incredibly simple. Start by applying the minimal requir
 
 Please also read through the [Breaking Changes][breaking-changes] before starting so you can be aware of some of the underlying behavior changes, specifically around serialization and status/header behavior.
 
-## Breaking Changes
-
-- **[New streaming Data format][streaming-format]**: Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
-- **No more auto-serialization**: Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
-- **Updates to type inference**: To get the most accurate type inference, you should do two things:
-  - Add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array
-  - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
-    - This can be done incrementally - you should have _mostly_ accurate type inference in your current state
-- [**Opt-in `action` revalidation**][action-revalidation]: Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
-- **Deprecated `headers` export**: The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
-- **Deprecated `fetch` polyfill**: The old `installGlobals()` polyfill doesn't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
-
 ## Enabling Single Fetch
 
 **1. Enable the future flag**
@@ -72,6 +60,18 @@ On the client side, this also means that your need to wrap your client-side [`hy
 **4. Add `nonce` to RemixServer for CSP**
 
 The `<RemixServer>` component renders inline scripts that handle the streaming data on the client side. If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you can use `<RemixServer nonce>` to pass through the nonce to these `<script>` tags.
+
+## Breaking Changes
+
+- **[New streaming Data format][streaming-format]**: Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
+- **No more auto-serialization**: Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
+- **Updates to type inference**: To get the most accurate type inference, you should do two things:
+  - Add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array
+  - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
+    - This can be done incrementally - you should have _mostly_ accurate type inference in your current state
+- [**Opt-in `action` revalidation**][action-revalidation]: Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
+- **Deprecated `headers` export**: The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
+- **Deprecated `fetch` polyfill**: The old `installGlobals()` polyfill doesn't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
 
 ## Adding a New Route with Single Fetch
 
