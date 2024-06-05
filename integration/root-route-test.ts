@@ -193,7 +193,7 @@ test.describe("root route", () => {
                 // this lets the app hydrate properly, then reject the deferred promise,
                 // which should throw on the initial render _and_ the error render,
                 // resulting in us bubbling to the default error boundary and skipping
-                // our Layout component entirely
+                // our Layout component entirely to avoid a loop
                 lazy: new Promise((r) => setTimeout(() => r(null), 1000)),
               });
             }
