@@ -43,7 +43,7 @@ Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or usin
 - If you are managing your own server and calling `installGlobals()`, you will need to call `installGlobals({ nativeFetch: true })` to use `undici`.
 
   ```diff
-  - installGlobals()
+  - installGlobals();
   + installGlobals({ nativeFetch: true });
   ```
 
