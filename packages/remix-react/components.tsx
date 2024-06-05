@@ -188,16 +188,6 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 
 const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
-function useRegisterFogOfWarLink(path: string, isAbsolute: boolean) {
-  let { registerPath } = useRemixContext();
-  React.useLayoutEffect(() => {
-    console.log("running useRegisterFogOfWarLink effect");
-    let isActive = typeof document !== "undefined" && !isAbsolute;
-    if (!isActive) return;
-    registerPath(path);
-  }, [isAbsolute, path, registerPath]);
-}
-
 /**
  * A special kind of `<Link>` that knows whether it is "active".
  *
@@ -212,7 +202,6 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
       prefetch,
       props
     );
-    useRegisterFogOfWarLink(href, isAbsolute);
 
     return (
       <>
@@ -221,6 +210,7 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
           {...prefetchHandlers}
           ref={mergeRefs(forwardedRef, ref)}
           to={to}
+          data-discover
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -247,7 +237,6 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
       prefetch,
       props
     );
-    useRegisterFogOfWarLink(href, isAbsolute);
 
     return (
       <>
@@ -256,6 +245,7 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
           {...prefetchHandlers}
           ref={mergeRefs(forwardedRef, ref)}
           to={to}
+          data-discover
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -878,8 +868,8 @@ window.__remixManifest = ${JSON.stringify(
           getPartialHydrationManifest(manifest, matches),
           null,
           2
-        )}
-window.__remixRouteModules = {${matches
+        )};
+        window.__remixRouteModules = {${matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
           )

@@ -68,7 +68,6 @@ let stateDecodingPromise:
   | undefined;
 let router: Router;
 let routerInitialized = false;
-let known404Paths: Set<string> = new Set();
 let hmrAbortController: AbortController | undefined;
 let hmrRouterReadyResolve: ((router: Router) => void) | undefined;
 // There's a race condition with HMR where the remix:manifest is signaled before
@@ -83,6 +82,15 @@ let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
   // in the console. The promise is never rejected.
   return undefined;
 });
+
+// Track rendered links for fog of war prefetching
+let nextPaths = new Set<string>();
+// Once a path has been matched in the client, track it so we never have to
+// re-match or re-fetch
+let knownGoodPaths = new Set<string>();
+// Track routes that the server was unable to match so we don't ask for
+// them again
+let known404Paths = new Set<string>();
 
 // @ts-expect-error
 if (import.meta && import.meta.hot) {
@@ -376,12 +384,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     }
   }
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  let [nextPaths, setNextPaths] = React.useState<Set<string>>(new Set());
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  let [, rerender] = React.useState(0);
-
   // Critical CSS can become stale after code changes, e.g. styles might be
   // removed from a component, but the styles will still be present in the
   // server HTML. This allows our HMR logic to clear the critical CSS state.
@@ -423,88 +425,101 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   let fogOfWarAbortControllerRef = React.useRef<AbortController | undefined>();
 
-  // Alternate API if we didn't want to manage a mutable Set() and wanted to
-  // give the user some more control
-  //   useRouteDiscovery(ref)           => Discovers ref.querySelectorAll('a')
-  //   useRouteDiscovery(ref, filterFn) => Filterable version of the above
-
-  // TODO: This was the original "easier" non-Rwact-lifecycle approach before
-  // introducing nextPaths
-  // let currentLinkPaths = new Set(
-  //   Array.from(document.querySelectorAll("a"))
-  //     .map((a) => a.getAttribute("href"))
-  //     .filter((h) => h)
-  // );
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  let registerPath = React.useCallback(
-    (path: string) => {
-      if (nextPaths.has(path)) return;
-      // Using an updater function is important here to ensure we batch all
-      // links into one run
-      setNextPaths((p) => new Set([...p, path]));
-    },
-    [nextPaths]
-  );
-
   // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useEffect(() => {
+    // Don't perform any prefetching if the user has saveData enabled
     if (navigator.connection?.saveData === true) {
       return;
     }
 
-    if (!window.__ENABLE_PREFETCHING) {
-      console.log(
-        "skipping prefetching due to DEV window.__ENABLE_PREFETCHING flag"
-      );
-      return;
-    }
-
-    console.log("running effect - nextPaths:", nextPaths);
-    if (fogOfWarAbortControllerRef.current) {
-      fogOfWarAbortControllerRef.current.abort();
-    }
-    let lazyPaths = [...nextPaths.keys()].filter((path) => {
-      if (known404Paths.has(path)) {
-        console.log("skipping prefetch for known 404 path:", path);
-        return false;
+    async function fetchPatches() {
+      if (fogOfWarAbortControllerRef.current) {
+        fogOfWarAbortControllerRef.current.abort();
       }
 
-      // TODO: Probably a bit CPU intensive - alternative design would be to
-      // pass all client-known routeIds to the server and filter there
-      let matches = matchRoutes(router.routes, path);
-      if (matches) {
-        console.log("no need to prefetch path:", path);
-        return false;
-      } else {
-        console.log("prefetching path due to no matches:", path);
+      let lazyPaths = Array.from(nextPaths.keys()).filter((path) => {
+        if (knownGoodPaths.has(path)) {
+          nextPaths.delete(path);
+          return false;
+        }
+
+        if (known404Paths.has(path)) {
+          nextPaths.delete(path);
+          return false;
+        }
+
+        let matches = matchRoutes(router.routes, path);
+        if (matches) {
+          knownGoodPaths.add(path);
+          nextPaths.delete(path);
+          return false;
+        }
+
         return true;
+      });
+
+      if (lazyPaths.length === 0) {
+        return;
       }
+
+      try {
+        let controller = new AbortController();
+        fogOfWarAbortControllerRef.current = controller;
+        let patches = await fetchManifestPatches(
+          lazyPaths,
+          window.__remixManifest.version,
+          controller.signal
+        );
+        processManifestPatches(patches);
+      } catch (e) {
+        console.error("Failed to fetch manifest patches", e);
+      }
+    }
+
+    document.body.querySelectorAll("a[data-discover]").forEach((a) => {
+      console.log("initial querySelectorAll prefetch", a.getAttribute("href"));
+      nextPaths.add(a.getAttribute("href")!);
     });
 
-    if (lazyPaths.length === 0) {
-      console.log("woohoo no need to fetch any manifest patches!");
-      return;
+    fetchPatches();
+
+    // ==========================================
+    let debouncedFetchPatches = debounce(fetchPatches, 100);
+
+    function registerPath(path: string | null) {
+      console.log("registering path for prefetching", path);
+      if (!path || knownGoodPaths.has(path) || known404Paths.has(path)) return;
+      nextPaths.add(path);
     }
 
-    console.log("Fetching manifest patches for", lazyPaths);
-    let controller = new AbortController();
-    fogOfWarAbortControllerRef.current = controller;
+    let observer = new MutationObserver((records) => {
+      console.log("observer fired", records);
+      records.forEach((r) => {
+        if (r.type !== "childList") return;
 
-    fetchManifestPatches(
-      lazyPaths,
-      window.__remixManifest.version,
-      controller.signal
-    )
-      .then((patches) => processManifestPatches(patches))
-      // FIXME: TODO: This is only for development - allows me to re-render the
-      // current known routes in the manifest - remove before final merge
-      .then(() => rerender());
+        r.addedNodes.forEach((node) => {
+          if (node.nodeType !== Node.ELEMENT_NODE) return;
+          let el = node as Element;
+          let links = Array.from(el.querySelectorAll("a[data-discover]"));
+          if (el.tagName === "A" && el.getAttribute("data-discover")) {
+            links.push(el);
+          }
+          links.forEach((el) => registerPath(el.getAttribute("href")));
+          debouncedFetchPatches();
+        });
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+    });
 
     return () => {
       fogOfWarAbortControllerRef.current?.abort("unmount");
+      observer.disconnect();
     };
-  }, [nextPaths]);
+  }, []);
 
   // We need to include a wrapper RemixErrorBoundary here in case the root error
   // boundary also throws and we need to bubble up outside of the router entirely.
@@ -518,7 +533,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         value={{
           manifest: window.__remixManifest,
           routeModules: window.__remixRouteModules,
-          registerPath,
           future: window.__remixContext.future,
           criticalCss,
           isSpaMode: window.__remixContext.isSpaMode,
@@ -600,4 +614,14 @@ function processManifestPatches(patches: AssetsManifest["routes"]) {
       router.patchRoutes(parent.parentId, children);
     }
   }
+}
+
+// Thanks Josh!
+// https://www.joshwcomeau.com/snippets/javascript/debounce/
+function debounce(callback: (...args: unknown[]) => unknown, wait: number) {
+  let timeoutId: number | undefined;
+  return (...args: unknown[]) => {
+    window.clearTimeout(timeoutId);
+    timeoutId = window.setTimeout(() => callback(...args), wait);
+  };
 }
