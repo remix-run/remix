@@ -1,10 +1,10 @@
-# Welcome to Remix + Vite!
+# Welcome to Remix!
 
-📖 See the [Remix docs](https://remix.run/docs) and the [Remix Vite docs](https://remix.run/docs/en/main/guides/vite) for details on supported features.
+- 📖 [Remix docs](https://remix.run/docs)
 
 ## Development
 
-Run the Vite dev server:
+Run the dev server:
 
 ```shellscript
 npm run dev
