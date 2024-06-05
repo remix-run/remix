@@ -286,7 +286,7 @@ Update the `types` field in `tsconfig.json` and make sure `skipLibCheck`, `modul
 ```diff filename=tsconfig.json
 {
   "compilerOptions": {
-+    "types": ["@remix-run/node", "vite/client"],
++   "types": ["@remix-run/node", "vite/client"],
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
