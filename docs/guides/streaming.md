@@ -153,6 +153,29 @@ export async function loader({
 }
 ```
 
+## Handling Server Timeouts
+
+When using `defer` for streaming, you can tell Remix how long to wait for deferred data to resolve before timing out via the `<RemixServer abortDelay>` prop (which defaults to 5 seconds) in your `entry.server.tsx` file. If you don't currently have an `entry.server.tsx` file you can expose it via `npx remix reveal entry.server`. You can also use this value to abort the React `renderToPipeableStream` method via a `setTimeout`.
+
+```tsx filename=entry.server.tsx lines=[1,9,16]
+const ABORT_DELAY = 5_000;
+
+// ...
+
+const { pipe, abort } = renderToPipeableStream(
+  <RemixServer
+    context={remixContext}
+    url={request.url}
+    abortDelay={ABORT_DELAY}
+  />
+  // ...
+);
+
+// ...
+
+setTimeout(abort, ABORT_DELAY);
+```
+
 ## Streaming with a Content Security Policy
 
 Streaming works by inserting script tags into the DOM as deferred promises resolve. If your page includes a [Content Security Policy for scripts][csp], you'll either need to weaken your security policy by including `script-src 'self' 'unsafe-inline'` in your `Content-Security-Policy` header, or add nonces to all of your script tags.
@@ -163,7 +186,7 @@ If you are using a nonce, it needs to be included in three places:
 - The `<Scripts />`, `<ScrollRestoration />` and `<LiveReload />` components, like so: `<Scripts nonce="secretnoncevalue" />`
 - In `entry.server.ts` where you call `renderToPipeableStream`, like so:
 
-```tsx
+```tsx filename=entry.server.tsx
 const { pipe, abort } = renderToPipeableStream(
   <RemixServer
     context={remixContext}
