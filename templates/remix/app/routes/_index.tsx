@@ -15,19 +15,19 @@ export default function Index() {
         <li>
           <a
             target="_blank"
-            href="https://remix.run/tutorials/blog"
+            href="https://remix.run/start/quickstart"
             rel="noreferrer"
           >
-            15m Quickstart Blog Tutorial
+            5m Quick Start
           </a>
         </li>
         <li>
           <a
             target="_blank"
-            href="https://remix.run/tutorials/jokes"
+            href="https://remix.run/start/tutorial"
             rel="noreferrer"
           >
-            Deep Dive Jokes App Tutorial
+            30m Tutorial
           </a>
         </li>
         <li>
