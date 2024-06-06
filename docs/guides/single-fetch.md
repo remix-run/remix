@@ -49,7 +49,7 @@ Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or usin
 
 - If you are using `remix-serve`, it will use `undici` automatically if Single Fetch is enabled.
 
-- If you are using miniflare/cloudflare worker with your remix project, ensure your [compatibility flag](https://developers.cloudflare.com/workers/configuration/compatibility-dates/) is set to `2023-03-01` or later as well.
+- If you are using miniflare/cloudflare worker with your remix project, ensure your [compatibility flag][compatibility-flag] is set to `2023-03-01` or later as well.
 
 **3. Remove document-level `headers` implementation (if you have one)**
 
@@ -573,3 +573,4 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [action-revalidation]: #streaming-data-format
 [start]: #enabling-single-fetch
 [type-inference-section]: #type-inference
+[compatibility-flag]: https://developers.cloudflare.com/workers/configuration/compatibility-dates
