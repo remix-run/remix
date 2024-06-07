@@ -341,29 +341,14 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
             window.__remixRouteModules
           )
         : undefined,
-      async unstable_patchRoutesOnMiss(
-        path: string,
-        partialMatches: AgnosticDataRouteMatch[]
-      ) {
-        if (known404Paths.has(path)) {
-          return null;
+      async unstable_patchRoutesOnMiss(path, _, patch) {
+        if (!known404Paths.has(path)) {
+          await fetchAndApplyManifestPatches(
+            [path],
+            window.__remixManifest.version,
+            patch
+          );
         }
-
-        let patches = await fetchManifestPatches(
-          [path],
-          window.__remixManifest.version
-        );
-        Object.assign(window.__remixManifest.routes, patches);
-        let children = createClientRoutes(
-          patches,
-          window.__remixRouteModules,
-          // These routes, by definition, can't have any hydrated state
-          { loaderData: {} },
-          window.__remixContext.future,
-          window.__remixContext.isSpaMode,
-          partialMatches[partialMatches.length - 1].route.id
-        );
-        return children;
       },
     });
 
@@ -444,12 +429,12 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
 
       try {
         fogOfWarAbortControllerRef.current = new AbortController();
-        let patches = await fetchManifestPatches(
+        await fetchAndApplyManifestPatches(
           lazyPaths,
           window.__remixManifest.version,
+          router.patchRoutes,
           fogOfWarAbortControllerRef.current.signal
         );
-        applyManifestPatches(patches);
       } catch (e) {
         console.error("Failed to fetch manifest patches", e);
       }
@@ -553,63 +538,57 @@ function getFogOfWarPaths() {
   });
 }
 
-async function fetchManifestPatches(
+async function fetchAndApplyManifestPatches(
   paths: string[],
   version: string,
+  patchRoutes: Router["patchRoutes"],
   signal?: AbortSignal
-): Promise<AssetsManifest["routes"]> {
+): Promise<void> {
   let url = new URL("/__manifest", window.location.origin);
   url.searchParams.set("version", version);
   paths.forEach((path) => url.searchParams.append("paths", path));
-  let data = await fetch(url, { signal }).then((res) => res.json());
+  let data = (await fetch(url, { signal }).then((res) => res.json())) as {
+    notFoundPaths: string[];
+    patches: AssetsManifest["routes"];
+  };
 
-  // Track paths the server identifies as legit 404's so we never try
-  // to fetch them again
+  // Capture this before we apply the patches to the manifest
+  let knownRoutes = new Set(Object.keys(window.__remixManifest.routes));
+
+  // Patch routes we don't know about yet into the manifest
+  let patches: AssetsManifest["routes"] = Object.values(data.patches).reduce(
+    (acc, route) =>
+      !knownRoutes.has(route.id)
+        ? Object.assign(acc, { [route.id]: route })
+        : acc,
+    {}
+  );
+  Object.assign(window.__remixManifest.routes, patches);
+
+  // Track legit 404s so we don't try to fetch them again
   data.notFoundPaths.forEach((p: string) => known404Paths.add(p));
 
-  // Only return patches for routes we don't yet know about
-  return Object.entries(data.patches).reduce((acc, [routeId, route]) => {
-    if (!window.__remixManifest.routes[routeId]) {
-      Object.assign(acc, { [routeId]: route });
+  // Identify all parentIds for which we have new children to add and patch
+  // in their new children
+  let parentIds = new Set<string | undefined>();
+  Object.values(patches).forEach((patch) => {
+    if (!patch.parentId || !patches[patch.parentId]) {
+      parentIds.add(patch.parentId);
     }
-    return acc;
-  }, {});
-}
-
-function applyManifestPatches(patches: AssetsManifest["routes"]) {
-  let knownRoutes = new Set(Object.keys(window.__remixManifest.routes));
-  Object.assign(window.__remixManifest.routes, patches);
-  for (let patch of Object.values(patches)) {
-    if (!patch.parentId || patches[patch.parentId]) continue;
-
-    if (knownRoutes.has(patch.id)) {
-      // This parent already exists and we're adding more children to it
-      let children = createClientRoutes(
+  });
+  parentIds.forEach((parentId) =>
+    patchRoutes(
+      parentId || null,
+      createClientRoutes(
         patches,
         window.__remixRouteModules,
-        // These routes, by definition, can't have any hydrated state
-        { loaderData: {} },
+        null,
         window.__remixContext.future,
         window.__remixContext.isSpaMode,
-        patch.id
-      );
-      router.patchRoutes(patch.id, children);
-    } else {
-      // This is a net new parent we're adding for the first time,
-      // potentially along with some of it's children
-      let children = createClientRoutes(
-        patches,
-        window.__remixRouteModules,
-        // These routes, by definition, can't have any hydrated state
-        { loaderData: {} },
-        window.__remixContext.future,
-        window.__remixContext.isSpaMode,
-        patch.parentId
-      );
-      children = children.filter((child) => child.id === patch.id);
-      router.patchRoutes(patch.parentId, children);
-    }
-  }
+        parentId
+      )
+    )
+  );
 }
 
 // Thanks Josh!
