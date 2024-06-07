@@ -14,8 +14,8 @@ import {
 } from "./helpers/vite.js";
 import { js } from "./helpers/create-fixture.js";
 
-const files = {
-  "app/routes/_index.tsx": String.raw`
+const sharedFiles = {
+  "app/routes/_index.tsx": js`
     import { useState, useEffect } from "react";
     import { Link } from "@remix-run/react"
 
@@ -36,7 +36,7 @@ const files = {
       );
     }
   `,
-  "app/routes/other.tsx": String.raw`
+  "app/routes/other.tsx": js`
     import { useLoaderData } from "@remix-run/react";
 
     export const loader = () => {
@@ -93,7 +93,7 @@ const customServerFile = ({
   base = base ?? "/mybase/";
   basename = basename ?? base;
 
-  return String.raw`
+  return js`
     import { createRequestHandler } from "@remix-run/express";
     import { installGlobals } from "@remix-run/node";
     import express from "express";
@@ -139,15 +139,17 @@ test.describe("Vite base / Remix basename / Vite dev", () => {
     base,
     basename,
     startServer,
+    files,
   }: {
     base: string;
     basename: string;
     startServer?: boolean;
+    files?: Record<string, string>;
   }) {
     port = await getPort();
     cwd = await createProject({
       "vite.config.js": await viteConfigFile({ port, base, basename }),
-      ...files,
+      ...(files || sharedFiles),
     });
     if (startServer !== false) {
       stop = await viteDev({ cwd, port, basename });
@@ -178,6 +180,80 @@ test.describe("Vite base / Remix basename / Vite dev", () => {
         "`basename` config must begin with `base` for the default Vite dev server."
     );
   });
+
+  test.only("works with child routes using client loaders", async ({
+    page,
+  }) => {
+    let basename = "/mybase/";
+    await setup({
+      base: basename,
+      basename,
+      files: {
+        ...sharedFiles,
+        "app/routes/parent.tsx": js`
+          import { Outlet } from '@remix-run/react'
+          export default function Parent() {
+            return <div id="parent"><Outlet /></div>;
+          }
+        `,
+        "app/routes/parent.child.tsx": js`
+          import { useState, useEffect } from "react";
+          import { useLoaderData } from '@remix-run/react'
+          export async function clientLoader() {
+            await new Promise(resolve => setTimeout(resolve, 500))
+            return "CHILD"
+          }
+          export function HydrateFallback() {
+            const [mounted, setMounted] = useState(false);
+            useEffect(() => setMounted(true), []);
+            return (
+              <>
+                <p id="loading">Loading...</p>
+                <p data-mounted>Mounted: {mounted ? "yes" : "no"}</p>
+              </>
+            );
+          }
+          export default function Child() {
+            const data = useLoaderData()
+            const [mounted, setMounted] = useState(false);
+            useEffect(() => setMounted(true), []);
+            return (
+              <>
+                <div id="child">{data}</div>;
+                <p data-mounted>Mounted: {mounted ? "yes" : "no"}</p>
+              </>
+            );
+          }
+        `,
+      },
+    });
+
+    let hydrationErrors: Error[] = [];
+    page.on("pageerror", (error) => {
+      if (
+        error.message.includes("Hydration failed") ||
+        error.message.includes("error while hydrating") ||
+        error.message.includes("does not match server-rendered HTML")
+      ) {
+        hydrationErrors.push(error);
+      }
+    });
+
+    // setup: initial render at basename
+    await page.goto(`http://localhost:${port}${basename}parent/child`, {
+      waitUntil: "domcontentloaded",
+    });
+
+    await expect(page.locator("#parent")).toBeDefined();
+    await expect(page.locator("#loading")).toContainText("Loading...");
+    await expect(page.locator("[data-mounted]")).toHaveText("Mounted: yes");
+
+    expect(hydrationErrors).toEqual([]);
+
+    await page.waitForSelector("#child");
+    await expect(page.locator("#child")).toHaveText("CHILD");
+    await expect(page.locator("[data-mounted]")).toHaveText("Mounted: yes");
+  });
 });
 
 test.describe("Vite base / Remix basename / express dev", async () => {
@@ -198,7 +274,7 @@ test.describe("Vite base / Remix basename / express dev", async () => {
     cwd = await createProject({
       "vite.config.js": await viteConfigFile({ port, base, basename }),
       "server.mjs": customServerFile({ port, basename }),
-      ...files,
+      ...sharedFiles,
     });
     if (startServer !== false) {
       stop = await customDev({ cwd, port, basename });
@@ -323,7 +399,7 @@ test.describe("Vite base / Remix basename / vite build", () => {
     port = await getPort();
     cwd = await createProject({
       "vite.config.js": await viteConfigFile({ port, base, basename }),
-      ...files,
+      ...sharedFiles,
     });
     viteBuild({ cwd });
     if (startServer !== false) {
@@ -370,7 +446,7 @@ test.describe("Vite base / Remix basename / express build", async () => {
     cwd = await createProject({
       "vite.config.js": await viteConfigFile({ port, base, basename }),
       "server.mjs": customServerFile({ port, base, basename }),
-      ...files,
+      ...sharedFiles,
     });
     viteBuild({ cwd });
     if (startServer !== false) {
@@ -427,7 +503,7 @@ test.describe("Vite base / Remix basename / express build", async () => {
         const port = ${port};
         app.listen(port, () => console.log('http://localhost:' + port));
       `,
-      ...files,
+      ...sharedFiles,
     });
 
     viteBuild({ cwd });
