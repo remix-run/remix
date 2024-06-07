@@ -1,3 +1,4 @@
+import type { LinksFunction } from "@remix-run/cloudflare";
 import {
   Links,
   Meta,
