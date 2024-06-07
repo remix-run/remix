@@ -181,9 +181,7 @@ test.describe("Vite base / Remix basename / Vite dev", () => {
     );
   });
 
-  test.only("works with child routes using client loaders", async ({
-    page,
-  }) => {
+  test("works with child routes using client loaders", async ({ page }) => {
     let basename = "/mybase/";
     await setup({
       base: basename,
