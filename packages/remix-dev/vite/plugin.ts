@@ -873,15 +873,10 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       ctx
     );
 
-    let parentRoutes = new Set<string>();
     for (let [key, route] of Object.entries(ctx.remixConfig.routes)) {
       let routeFilePath = path.join(ctx.remixConfig.appDirectory, route.file);
       let sourceExports = routeManifestExports[key];
       let isRootRoute = route.parentId === undefined;
-
-      if (route.parentId) {
-        parentRoutes.add(route.parentId);
-      }
 
       let routeManifestEntry = {
         id: route.id,
@@ -956,12 +951,8 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       ctx
     );
 
-    let parentRoutes = new Set<string>();
     for (let [key, route] of Object.entries(ctx.remixConfig.routes)) {
       let sourceExports = routeManifestExports[key];
-      if (route.parentId) {
-        parentRoutes.add(route.parentId);
-      }
       routes[key] = {
         id: route.id,
         parentId: route.parentId,

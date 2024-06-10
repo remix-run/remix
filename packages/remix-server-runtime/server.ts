@@ -21,7 +21,8 @@ import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
 import { getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
-import { RouteMatch, matchServerRoutes } from "./routeMatching";
+import type { RouteMatch } from "./routeMatching";
+import { matchServerRoutes } from "./routeMatching";
 import type { EntryRoute, ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
@@ -90,7 +91,6 @@ function derive(build: ServerBuild, mode?: string) {
   };
 }
 
-// @ts-ignore
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
   mode
@@ -135,7 +135,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     // Manifest request for fog of war
     if (url.pathname === "/__manifest") {
       try {
-        let res = handleManifestRequest(_build, routes, url);
+        let res = await handleManifestRequest(_build, routes, url);
         return res;
       } catch (e) {
         handleError(e);

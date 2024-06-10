@@ -88,7 +88,8 @@ let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
 // Track rendered links for fog of war prefetching
 let nextPaths = new Set<string>();
 // Once a path has been matched in the client, track it so we never have to
-// re-match or re-fetch
+// re-match - just an optimization to avoid re-matching on a larger and larger
+// route tree over time
 let knownGoodPaths = new Set<string>();
 // Track routes that the server was unable to match so we don't ask for
 // them again

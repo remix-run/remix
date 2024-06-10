@@ -7,7 +7,10 @@ import {
 } from "./helpers/create-fixture.js";
 import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
-function getFiles(opts?: { prefetchManifestPatches?: boolean }) {
+// TODO: Add a test for dynamically changing the value of data-discover and
+//       ensure the mutation observer picks it up.
+
+function getFiles() {
   return {
     "app/root.tsx": js`
       import * as React from "react";

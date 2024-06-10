@@ -26,7 +26,6 @@ export interface Route {
 
 // NOTE: make sure to change the EntryRoute in remix-react if you change this
 export interface EntryRoute extends Route {
-  hasChildren: boolean;
   hasAction: boolean;
   hasLoader: boolean;
   hasClientAction: boolean;
