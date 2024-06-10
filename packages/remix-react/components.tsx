@@ -95,6 +95,14 @@ export function useRemixContext(): RemixContextObject {
 /**
  * Defines the prefetching behavior of the link:
  *
+ * - "render": Discovered when the link is rendered (efault)
+ * - "click": Discovered when the link is clicked
+ */
+export type DiscoverBehavior = "render" | "click";
+
+/**
+ * Defines the prefetching behavior of the link:
+ *
  * - "none": Never fetched
  * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
@@ -103,10 +111,12 @@ export function useRemixContext(): RemixContextObject {
 type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
 export interface RemixLinkProps extends LinkProps {
+  discover?: DiscoverBehavior;
   prefetch?: PrefetchBehavior;
 }
 
 export interface RemixNavLinkProps extends NavLinkProps {
+  discover?: DiscoverBehavior;
   prefetch?: PrefetchBehavior;
 }
 
@@ -194,7 +204,7 @@ const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
  * @see https://remix.run/components/nav-link
  */
 let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
-  ({ to, prefetch = "none", ...props }, forwardedRef) => {
+  ({ to, prefetch = "none", discover = "render", ...props }, forwardedRef) => {
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
@@ -210,7 +220,9 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
           {...prefetchHandlers}
           ref={mergeRefs(forwardedRef, ref)}
           to={to}
-          data-discover
+          data-discover={
+            !isAbsolute && discover === "render" ? "true" : undefined
+          }
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -229,7 +241,7 @@ export { NavLink };
  * @see https://remix.run/components/link
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
-  ({ to, prefetch = "none", ...props }, forwardedRef) => {
+  ({ to, prefetch = "none", discover = "render", ...props }, forwardedRef) => {
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
@@ -245,7 +257,9 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
           {...prefetchHandlers}
           ref={mergeRefs(forwardedRef, ref)}
           to={to}
-          data-discover
+          data-discover={
+            !isAbsolute && discover === "render" ? "true" : undefined
+          }
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />

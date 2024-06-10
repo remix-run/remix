@@ -6,30 +6,9 @@ import {
   js,
 } from "./helpers/create-fixture.js";
 import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
-import { ServerMode } from "../build/node_modules/@remix-run/server-runtime/dist/mode.js";
-
-const ISO_DATE = "2024-03-12T12:00:00.000Z";
 
 function getFiles(opts?: { prefetchManifestPatches?: boolean }) {
   return {
-    ...(opts?.prefetchManifestPatches === false
-      ? {
-          "app/entry.client.tsx": js`
-            import { RemixBrowser } from "@remix-run/react";
-            import { startTransition, StrictMode } from "react";
-            import { hydrateRoot } from "react-dom/client";
-
-            startTransition(() => {
-              hydrateRoot(
-                document,
-                <StrictMode>
-                  <RemixBrowser prefetchManifestPatches={false} />
-                </StrictMode>
-              );
-            });
-          `,
-        }
-      : {}),
     "app/root.tsx": js`
       import * as React from "react";
       import { Link, Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -124,9 +103,23 @@ test.describe("Fog of War", () => {
 
   test("loads minimal manifest on initial load", async ({ page }) => {
     let fixture = await createFixture({
-      files: getFiles({
-        prefetchManifestPatches: false,
-      }),
+      files: {
+        ...getFiles(),
+        "app/entry.client.tsx": js`
+          import { RemixBrowser } from "@remix-run/react";
+          import { startTransition, StrictMode } from "react";
+          import { hydrateRoot } from "react-dom/client";
+
+          startTransition(() => {
+            hydrateRoot(
+              document,
+              <StrictMode>
+                <RemixBrowser discover={"click"} />
+              </StrictMode>
+            );
+          });
+        `,
+      },
     });
     let appFixture = await createAppFixture(fixture);
     let app = new PlaywrightFixture(appFixture, page);
@@ -210,6 +203,62 @@ test.describe("Fog of War", () => {
     await page.waitForFunction(
       () => (window as any).__remixManifest.routes["routes/a.b"]
     );
+
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a", "routes/a.b"]);
+  });
+
+  test('does not prefetch links with discover="click"', async ({ page }) => {
+    let fixture = await createFixture({
+      files: {
+        ...getFiles(),
+        "app/routes/a.tsx": js`
+          import { Link, Outlet, useLoaderData } from "@remix-run/react";
+
+          export function loader({ request }) {
+            return { message: "A LOADER" };
+          }
+
+          export default function Index() {
+            let data = useLoaderData();
+            return (
+              <>
+                <h1 id="a">A: {data.message}</h1>
+                <Link to="/a/b" discover="click">/a/b</Link>
+                <Outlet/>
+              </>
+            )
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/", true);
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a"]);
+
+    await app.clickLink("/a");
+    await page.waitForSelector("#a");
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    // /a/b is not discovered yet even thought it's rendered
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a"]);
+
+    // /a/b gets discovered on click
+    await app.clickLink("/a/b");
+    await page.waitForSelector("#b");
 
     expect(
       await page.evaluate(() =>
