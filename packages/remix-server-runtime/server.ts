@@ -305,7 +305,7 @@ async function handleManifestRequest(
         data.notFoundPaths.push(path);
       }
     }
-    return json(data);
+    return json(data) as Response; // Override the TypedResponse stuff
   }
 
   return new Response("Invalid Request", { status: 400 });
