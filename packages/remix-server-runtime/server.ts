@@ -133,7 +133,12 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     };
 
     // Manifest request for fog of war
-    if (url.pathname === "/__manifest") {
+
+    let manifestUrl = `${_build.basename ?? "/"}/__manifest`.replace(
+      /\/+/g,
+      "/"
+    );
+    if (url.pathname === manifestUrl) {
       try {
         let res = await handleManifestRequest(_build, routes, url);
         return res;

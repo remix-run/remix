@@ -347,6 +347,7 @@ export function RemixBrowser({
         if (!known404Paths.has(path)) {
           await fetchAndApplyManifestPatches(
             [path],
+            window.__remixContext.basename,
             window.__remixManifest.version,
             patch
           );
@@ -422,7 +423,7 @@ export function RemixBrowser({
     async function fetchPatches() {
       fogOfWarAbortControllerRef.current?.abort();
 
-      let lazyPaths = getFogOfWarPaths();
+      let lazyPaths = getFogOfWarPaths(window.__remixContext.basename);
       if (lazyPaths.length === 0) {
         return;
       }
@@ -431,6 +432,7 @@ export function RemixBrowser({
         fogOfWarAbortControllerRef.current = new AbortController();
         await fetchAndApplyManifestPatches(
           lazyPaths,
+          window.__remixContext.basename,
           window.__remixManifest.version,
           router.patchRoutes,
           fogOfWarAbortControllerRef.current.signal
@@ -515,7 +517,7 @@ export function RemixBrowser({
   );
 }
 
-function getFogOfWarPaths() {
+function getFogOfWarPaths(basename: string | undefined) {
   return Array.from(nextPaths.keys()).filter((path) => {
     if (knownGoodPaths.has(path)) {
       nextPaths.delete(path);
@@ -527,7 +529,7 @@ function getFogOfWarPaths() {
       return false;
     }
 
-    let matches = matchRoutes(router.routes, path);
+    let matches = matchRoutes(router.routes, path, basename);
     if (matches) {
       knownGoodPaths.add(path);
       nextPaths.delete(path);
@@ -540,11 +542,13 @@ function getFogOfWarPaths() {
 
 async function fetchAndApplyManifestPatches(
   paths: string[],
+  basename: string | undefined,
   version: string,
   patchRoutes: Router["patchRoutes"],
   signal?: AbortSignal
 ): Promise<void> {
-  let url = new URL("/__manifest", window.location.origin);
+  let manifestPath = `${basename ?? "/"}/__manifest`.replace(/\/+/g, "/");
+  let url = new URL(manifestPath, window.location.origin);
   url.searchParams.set("version", version);
   paths.forEach((path) => url.searchParams.append("paths", path));
   let data = (await fetch(url, { signal }).then((res) => res.json())) as {
