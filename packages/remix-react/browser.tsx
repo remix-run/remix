@@ -1,15 +1,12 @@
-import type {
-  AgnosticDataRouteMatch,
-  HydrationState,
-  Router,
-} from "@remix-run/router";
+import type { HydrationState, Router } from "@remix-run/router";
 import { createBrowserHistory, createRouter } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
 import { matchRoutes, RouterProvider } from "react-router-dom";
 
-import { DiscoverBehavior, RemixContext } from "./components";
+import type { DiscoverBehavior } from "./components";
+import { RemixContext } from "./components";
 import type { AssetsManifest, FutureConfig } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
@@ -423,9 +420,7 @@ export function RemixBrowser({
     }
 
     async function fetchPatches() {
-      if (fogOfWarAbortControllerRef.current) {
-        fogOfWarAbortControllerRef.current.abort();
-      }
+      fogOfWarAbortControllerRef.current?.abort();
 
       let lazyPaths = getFogOfWarPaths();
       if (lazyPaths.length === 0) {
@@ -484,7 +479,7 @@ export function RemixBrowser({
       fogOfWarAbortControllerRef.current?.abort("unmount");
       observer.disconnect();
     };
-  }, []);
+  }, [discover]);
 
   // We need to include a wrapper RemixErrorBoundary here in case the root error
   // boundary also throws and we need to bubble up outside of the router entirely.
