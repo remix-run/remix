@@ -5,7 +5,6 @@ import * as React from "react";
 import { UNSAFE_mapRouteProperties as mapRouteProperties } from "react-router";
 import { matchRoutes, RouterProvider } from "react-router-dom";
 
-import type { DiscoverBehavior } from "./components";
 import { RemixContext } from "./components";
 import type { AssetsManifest, FutureConfig } from "./entry";
 import { RemixErrorBoundary } from "./errorBoundaries";
@@ -80,15 +79,20 @@ let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
   return undefined;
 });
 
-// Track rendered links for fog of war prefetching
-let nextPaths = new Set<string>();
-// Once a path has been matched in the client, track it so we never have to
-// re-match - just an optimization to avoid re-matching on a larger and larger
-// route tree over time
-let knownGoodPaths = new Set<string>();
-// Track routes that the server was unable to match so we don't ask for
-// them again
-let known404Paths = new Set<string>();
+let fogOfWar = {
+  enabled:
+    window.__remixContext.future.unstable_fogOfWar === true &&
+    !window.__remixContext.isSpaMode,
+  // Track rendered links for fog of war prefetching
+  nextPaths: new Set<string>(),
+  // Once a path has been matched in the client, track it so we never have to
+  // re-match - just an optimization to avoid re-matching on a larger and larger
+  // route tree over time
+  knownGoodPaths: new Set<string>(),
+  // Track routes that the server was unable to match so we don't ask for
+  // them again
+  known404Paths: new Set<string>(),
+};
 
 // @ts-expect-error
 if (import.meta && import.meta.hot) {
@@ -339,16 +343,20 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
             window.__remixRouteModules
           )
         : undefined,
-      async unstable_patchRoutesOnMiss(path, _, patch) {
-        if (!known404Paths.has(path)) {
-          await fetchAndApplyManifestPatches(
-            [path],
-            window.__remixContext.basename,
-            window.__remixManifest.version,
-            patch
-          );
-        }
-      },
+      ...(fogOfWar.enabled
+        ? {
+            async unstable_patchRoutesOnMiss({ path, patch }) {
+              if (!fogOfWar.known404Paths.has(path)) {
+                await fetchAndApplyManifestPatches(
+                  [path],
+                  window.__remixContext.basename,
+                  window.__remixManifest.version,
+                  patch
+                );
+              }
+            },
+          }
+        : {}),
     });
 
     // We can call initialize() immediately if the router doesn't have any
@@ -412,7 +420,7 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useEffect(() => {
     // Don't perform any prefetching if the app asked not to or the user has saveData enabled
-    if (navigator.connection?.saveData === true) {
+    if (!fogOfWar.enabled || navigator.connection?.saveData === true) {
       return;
     }
 
@@ -441,8 +449,10 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
     let debouncedFetchPatches = debounce(fetchPatches, 100);
 
     function registerPath(path: string | null) {
-      if (!path || knownGoodPaths.has(path) || known404Paths.has(path)) return;
-      nextPaths.add(path);
+      let { knownGoodPaths, known404Paths, nextPaths } = fogOfWar;
+      if (path && !knownGoodPaths.has(path) && !known404Paths.has(path)) {
+        nextPaths.add(path);
+      }
     }
 
     let observer = new MutationObserver((records) => {
@@ -514,6 +524,7 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
 }
 
 function getFogOfWarPaths(basename: string | undefined) {
+  let { knownGoodPaths, known404Paths, nextPaths } = fogOfWar;
   return Array.from(nextPaths.keys()).filter((path) => {
     if (knownGoodPaths.has(path)) {
       nextPaths.delete(path);
@@ -566,7 +577,7 @@ async function fetchAndApplyManifestPatches(
   Object.assign(window.__remixManifest.routes, patches);
 
   // Track legit 404s so we don't try to fetch them again
-  data.notFoundPaths.forEach((p: string) => known404Paths.add(p));
+  data.notFoundPaths.forEach((p: string) => fogOfWar.known404Paths.add(p));
 
   // Identify all parentIds for which we have new children to add and patch
   // in their new children

@@ -681,6 +681,7 @@ export function Scripts(props: ScriptProps) {
   let { router, static: isStatic, staticContext } = useDataRouterContext();
   let { matches: routerMatches } = useDataRouterStateContext();
   let navigation = useNavigation();
+  let enableFogOfWar = future.unstable_fogOfWar && !isSpaMode;
 
   // Let <RemixServer> know that we hydrated and we should render the single
   // fetch streaming scripts
@@ -862,14 +863,13 @@ export function Scripts(props: ScriptProps) {
           ? `__remixContext.a=${deferredScripts.length};`
           : "");
 
-    // TODO: Put fog of war behind a future flag
     let routeModulesScript = !isStatic
       ? " "
       : `${
           manifest.hmr?.runtime
             ? `import ${JSON.stringify(manifest.hmr.runtime)};`
             : ""
-        }${"" /*import ${JSON.stringify(manifest.url)}*/};
+        }${enableFogOfWar ? "" : `import ${JSON.stringify(manifest.url)}`};
 ${matches
   .map(
     (match, index) =>
@@ -878,11 +878,15 @@ ${matches
       )};`
   )
   .join("\n")}
-window.__remixManifest = ${JSON.stringify(
-          getPartialHydrationManifest(manifest, matches),
-          null,
-          2
-        )};
+${
+  enableFogOfWar
+    ? `window.__remixManifest = ${JSON.stringify(
+        getPartialHydrationManifest(manifest, matches),
+        null,
+        2
+      )};`
+    : ""
+}
 window.__remixRouteModules = {${matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
