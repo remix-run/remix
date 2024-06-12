@@ -106,6 +106,11 @@ test.describe("Fog of War", () => {
 
   test("loads minimal manifest on initial load", async ({ page }) => {
     let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
       files: {
         ...getFiles(),
         "app/entry.client.tsx": js`
@@ -126,21 +131,31 @@ test.describe("Fog of War", () => {
     });
     let appFixture = await createAppFixture(fixture);
     let app = new PlaywrightFixture(appFixture, page);
+    let res = await fixture.requestDocument("/");
+    let html = await res.text();
+
+    expect(html).toContain('"root": {');
+    expect(html).toContain('"routes/_index": {');
+    expect(html).not.toContain('"routes/a"');
 
     await app.goto("/", true);
+    await app.clickLink("/a");
+    await page.waitForSelector("#a");
+    expect(await app.getHtml("#a")).toBe(`<h1 id="a">A: A LOADER</h1>`);
     expect(
       await page.evaluate(() =>
         Object.keys((window as any).__remixManifest.routes)
       )
-    ).toEqual(["root", "routes/_index"]);
-
-    await app.clickLink("/a");
-    await page.waitForSelector("#a");
-    expect(await app.getHtml("#a")).toBe(`<h1 id="a">A: A LOADER</h1>`);
+    ).toEqual(["root", "routes/_index", "routes/a"]);
   });
 
   test("prefetches initially rendered links", async ({ page }) => {
     let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
       files: getFiles(),
     });
     let appFixture = await createAppFixture(fixture);
@@ -160,6 +175,11 @@ test.describe("Fog of War", () => {
 
   test("prefetches links rendered via navigations", async ({ page }) => {
     let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
       files: getFiles(),
     });
     let appFixture = await createAppFixture(fixture);
@@ -190,6 +210,11 @@ test.describe("Fog of War", () => {
     page,
   }) => {
     let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
       files: getFiles(),
     });
     let appFixture = await createAppFixture(fixture);
@@ -216,6 +241,11 @@ test.describe("Fog of War", () => {
 
   test('does not prefetch links with discover="click"', async ({ page }) => {
     let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
       files: {
         ...getFiles(),
         "app/routes/a.tsx": js`
