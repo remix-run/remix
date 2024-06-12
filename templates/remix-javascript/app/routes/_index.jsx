@@ -7,11 +7,12 @@ export const meta = () => {
 
 export default function Index() {
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
-      <h1>Welcome to Remix</h1>
-      <ul>
+    <div className="font-sans p-4">
+      <h1 className="text-3xl">Welcome to Remix</h1>
+      <ul className="list-disc mt-4 pl-6 space-y-2">
         <li>
           <a
+            className="text-blue-700 underline visited:text-purple-900"
             target="_blank"
             href="https://remix.run/start/quickstart"
             rel="noreferrer"
@@ -21,6 +22,7 @@ export default function Index() {
         </li>
         <li>
           <a
+            className="text-blue-700 underline visited:text-purple-900"
             target="_blank"
             href="https://remix.run/start/tutorial"
             rel="noreferrer"
@@ -29,7 +31,12 @@ export default function Index() {
           </a>
         </li>
         <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
+          <a
+            className="text-blue-700 underline visited:text-purple-900"
+            target="_blank"
+            href="https://remix.run/docs"
+            rel="noreferrer"
+          >
             Remix Docs
           </a>
         </li>
