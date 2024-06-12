@@ -55,9 +55,7 @@ declare global {
 }
 /* eslint-enable prefer-let/prefer-let */
 
-export interface RemixBrowserProps {
-  discover?: DiscoverBehavior;
-}
+export interface RemixBrowserProps {}
 
 let stateDecodingPromise:
   | (Promise<void> & {
@@ -208,9 +206,7 @@ if (import.meta && import.meta.hot) {
  * `app/entry.client.js`). This component is used by React to hydrate the HTML
  * that was received from the server.
  */
-export function RemixBrowser({
-  discover = "render",
-}: RemixBrowserProps): ReactElement {
+export function RemixBrowser(props: RemixBrowserProps): ReactElement {
   if (!router) {
     // Hard reload if the path we tried to load is not the current path.
     // This is usually the result of 2 rapid back/forward clicks from an
@@ -416,7 +412,7 @@ export function RemixBrowser({
   // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useEffect(() => {
     // Don't perform any prefetching if the app asked not to or the user has saveData enabled
-    if (discover !== "render" || navigator.connection?.saveData === true) {
+    if (navigator.connection?.saveData === true) {
       return;
     }
 
@@ -481,7 +477,7 @@ export function RemixBrowser({
       fogOfWarAbortControllerRef.current?.abort("unmount");
       observer.disconnect();
     };
-  }, [discover]);
+  }, []);
 
   // We need to include a wrapper RemixErrorBoundary here in case the root error
   // boundary also throws and we need to bubble up outside of the router entirely.
