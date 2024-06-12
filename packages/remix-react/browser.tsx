@@ -81,6 +81,7 @@ let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
 
 let fogOfWar = {
   enabled:
+    typeof window !== "undefined" &&
     window.__remixContext.future.unstable_fogOfWar === true &&
     !window.__remixContext.isSpaMode,
   // Track rendered links for fog of war prefetching

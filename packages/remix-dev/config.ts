@@ -528,6 +528,12 @@ export async function resolveConfig(
     entryServerFile = `entry.server.${serverRuntime}.tsx`;
   }
 
+  if (isSpaMode && appConfig.future?.unstable_fogOfWar === true) {
+    throw new Error(
+      "You can not use `future.unstable_fogOfWar` in SPA Mode (`ssr: false`)"
+    );
+  }
+
   let entryClientFilePath = userEntryClientFile
     ? path.resolve(appDirectory, userEntryClientFile)
     : path.resolve(defaultsDirectory, entryClientFile);
