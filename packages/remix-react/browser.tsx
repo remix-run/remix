@@ -79,20 +79,11 @@ let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
   return undefined;
 });
 
-let fogOfWar = {
-  enabled:
-    typeof window !== "undefined" &&
-    window.__remixContext.future.unstable_fogOfWar === true &&
-    !window.__remixContext.isSpaMode,
-  // Track rendered links for fog of war prefetching
-  nextPaths: new Set<string>(),
-  // Once a path has been matched in the client, track it so we never have to
-  // re-match - just an optimization to avoid re-matching on a larger and larger
-  // route tree over time
-  knownGoodPaths: new Set<string>(),
-  // Track routes that the server was unable to match so we don't ask for
-  // them again
-  known404Paths: new Set<string>(),
+let fogOfWar: {
+  enabled: boolean;
+  nextPaths: Set<string>;
+  knownGoodPaths: Set<string>;
+  known404Paths: Set<string>;
 };
 
 // @ts-expect-error
@@ -319,6 +310,21 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
         hydrationData.errors = deserializeErrors(hydrationData.errors);
       }
     }
+
+    fogOfWar = {
+      enabled:
+        window.__remixContext.future.unstable_fogOfWar === true &&
+        !window.__remixContext.isSpaMode,
+      // Track rendered links for fog of war prefetching
+      nextPaths: new Set<string>(),
+      // Once a path has been matched in the client, track it so we never have to
+      // re-match - just an optimization to avoid re-matching on a larger and larger
+      // route tree over time
+      knownGoodPaths: new Set<string>(),
+      // Track routes that the server was unable to match so we don't ask for
+      // them again
+      known404Paths: new Set<string>(),
+    };
 
     // We don't use createBrowserRouter here because we need fine-grained control
     // over initialization to support synchronous `clientLoader` flows.
