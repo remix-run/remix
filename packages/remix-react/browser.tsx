@@ -464,14 +464,15 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
 
     let observer = new MutationObserver((records) => {
       records.forEach((r) => {
-        if (r.type !== "childList") return;
-
-        r.addedNodes.forEach((node) => {
+        [r.target, ...r.addedNodes].forEach((node) => {
           if (node.nodeType !== Node.ELEMENT_NODE) return;
           let el = node as Element;
           let links = Array.from(el.querySelectorAll("a[data-discover]"));
           if (el.tagName === "A" && el.getAttribute("data-discover")) {
             links.push(el);
+          }
+          if (el.tagName !== "A") {
+            links.push(...el.querySelectorAll("a[data-discover]"));
           }
           links.forEach((el) => registerPath(el.getAttribute("href")));
           debouncedFetchPatches();
@@ -488,6 +489,8 @@ export function RemixBrowser(props: RemixBrowserProps): ReactElement {
     observer.observe(document.documentElement, {
       subtree: true,
       childList: true,
+      attributes: true,
+      attributeFilter: ["data-discover", "href"],
     });
 
     return () => {
