@@ -1226,7 +1226,7 @@ importers:
         specifier: 6.23.1
         version: 6.23.1(react-dom@18.2.0)(react@18.2.0)
       turbo-stream:
-        specifier: ^2.2.0
+        specifier: 2.2.0
         version: 2.2.0
     devDependencies:
       '@remix-run/node':
@@ -1318,7 +1318,7 @@ importers:
         specifier: ^0.7.3
         version: 0.7.3
       turbo-stream:
-        specifier: ^2.2.0
+        specifier: 2.2.0
         version: 2.2.0
     devDependencies:
       '@types/set-cookie-parser':
