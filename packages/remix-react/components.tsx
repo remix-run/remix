@@ -930,31 +930,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     }
   }
 
-  // avoid waterfall when importing the next route module
-  let nextMatches = React.useMemo(() => {
-    if (navigation.location) {
-      // FIXME: can probably use transitionManager `nextMatches`
-      let matches = matchRoutes(
-        router.routes,
-        navigation.location,
-        router.basename
-      );
-      // TODO: With fog of war we won't always be able to match the next
-      // routes synchronously.
-      // TODO: Is this even used since we don't even render these when
-      // isHydrated is false?  Maybe dead code?
-      // invariant(
-      //   matches,
-      //   `No routes match path "${navigation.location.pathname}"`
-      // );
-      return matches || [];
-    }
-
-    return [];
-  }, [navigation.location, router.routes, router.basename]);
-
   let routePreloads = matches
-    .concat(nextMatches)
     .map((match) => {
       let route = manifest.routes[match.route.id];
       return (route.imports || []).concat([route.module]);
