@@ -965,12 +965,13 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   return isHydrated ? null : (
     <>
-      {/* TODO: Put this behind a future flag */}
-      {/* <link
-        rel="modulepreload"
-        href={manifest.url}
-        crossOrigin={props.crossOrigin}
-      /> */}
+      {enableFogOfWar ? (
+        <link
+          rel="modulepreload"
+          href={manifest.url}
+          crossOrigin={props.crossOrigin}
+        />
+      ) : null}
       <link
         rel="modulepreload"
         href={manifest.entry.module}
