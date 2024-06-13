@@ -7,9 +7,6 @@ import {
 } from "./helpers/create-fixture.js";
 import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
-// TODO: Add a test for dynamically changing the value of data-discover and
-//       ensure the mutation observer picks it up.
-
 function getFiles() {
   return {
     "app/root.tsx": js`
@@ -238,6 +235,63 @@ test.describe("Fog of War", () => {
         Object.keys((window as any).__remixManifest.routes)
       )
     ).toEqual(["root", "routes/_index", "routes/a", "routes/a.b"]);
+  });
+
+  test("prefetches links who opt-into [data-discover] via an in-page stateful update", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
+      files: {
+        ...getFiles(),
+        "app/routes/a.tsx": js`
+          import * as React from 'react';
+          import { Link, Outlet, useLoaderData } from "@remix-run/react";
+
+          export function loader({ request }) {
+            return { message: "A LOADER" };
+          }
+
+          export default function Index() {
+            let data = useLoaderData();
+            let [discover, setDiscover] = React.useState(false)
+            return (
+              <>
+                <h1 id="a">A: {data.message}</h1>
+                <Link to="/a/b" discover={discover ? "render" : "click"}>/a/b</Link>
+                <button onClick={() => setDiscover(true)}>Toggle</button>
+                <Outlet/>
+              </>
+            )
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/a", true);
+    await new Promise((r) => setTimeout(r, 250));
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/a"]);
+
+    await app.clickElement("button");
+    await page.waitForFunction(
+      () => (window as any).__remixManifest.routes["routes/a.b"]
+    );
+
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/a", "routes/a.b"]);
   });
 
   test('does not prefetch links with discover="click"', async ({ page }) => {
