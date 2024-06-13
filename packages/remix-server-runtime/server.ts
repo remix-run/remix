@@ -35,6 +35,7 @@ import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
 import type { SingleFetchResult, SingleFetchResults } from "./single-fetch";
 import {
+  convertResponseStubToErrorResponse,
   encodeViaTurboStream,
   getResponseStubs,
   getSingleFetchDataStrategy,
@@ -46,7 +47,7 @@ import {
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
   ResponseStubOperationsSymbol,
-  convertResponseStubToErrorResponse,
+  SINGLE_FETCH_REDIRECT_STATUS,
 } from "./single-fetch";
 import { resourceRouteJsonWarning } from "./deprecations";
 
@@ -219,7 +220,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
               serverMode
             ),
             {
-              status: 200,
+              status: SINGLE_FETCH_REDIRECT_STATUS,
               headers,
             }
           );
