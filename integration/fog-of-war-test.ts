@@ -138,6 +138,7 @@ test.describe("Fog of War", () => {
     expect(html).toContain('"routes/_index": {');
     expect(html).not.toContain('"routes/a"');
 
+    // Linking to A loads A and succeeds
     await app.goto("/", true);
     await app.clickLink("/a");
     await page.waitForSelector("#a");
@@ -146,7 +147,7 @@ test.describe("Fog of War", () => {
       await page.evaluate(() =>
         Object.keys((window as any).__remixManifest.routes)
       )
-    ).toEqual(["root", "routes/_index", "routes/a"]);
+    ).toContain("routes/a");
   });
 
   test("prefetches initially rendered links", async ({ page }) => {

@@ -678,9 +678,8 @@ export function Scripts(props: ScriptProps) {
     future,
     renderMeta,
   } = useRemixContext();
-  let { router, static: isStatic, staticContext } = useDataRouterContext();
+  let { static: isStatic, staticContext } = useDataRouterContext();
   let { matches: routerMatches } = useDataRouterStateContext();
-  let navigation = useNavigation();
   let enableFogOfWar = future.unstable_fogOfWar && !isSpaMode;
 
   // Let <RemixServer> know that we hydrated and we should render the single
@@ -880,8 +879,18 @@ ${matches
   .join("\n")}
 ${
   enableFogOfWar
-    ? `window.__remixManifest = ${JSON.stringify(
-        getPartialHydrationManifest(manifest, matches),
+    ? // Inline a minimal manifest with the SSR matches
+      `window.__remixManifest = ${JSON.stringify(
+        {
+          ...manifest,
+          routes: matches.reduce(
+            (acc, m) =>
+              Object.assign(acc, {
+                [m.route.id]: manifest.routes[m.route.id],
+              }),
+            {}
+          ),
+        },
         null,
         2
       )};`
@@ -941,7 +950,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   return isHydrated ? null : (
     <>
-      {enableFogOfWar ? (
+      {!enableFogOfWar ? (
         <link
           rel="modulepreload"
           href={manifest.url}
@@ -965,22 +974,6 @@ import(${JSON.stringify(manifest.entry.module)});`;
       {deferredScripts}
     </>
   );
-}
-
-function getPartialHydrationManifest(
-  manifest: AssetsManifest,
-  matches: AgnosticDataRouteMatch[]
-) {
-  return {
-    ...manifest,
-    routes: matches.reduce(
-      (acc, match) =>
-        Object.assign(acc, {
-          [match.route.id]: manifest.routes[match.route.id],
-        }),
-      {}
-    ),
-  };
 }
 
 function DeferredHydrationScript({
