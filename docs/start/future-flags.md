@@ -71,6 +71,7 @@ The following future flags currently exist in Remix v2 and will become the defau
 - **`v3_relativeSplatPath`**: Fixes buggy relative path resolution in splat routes. Please see the [React Router docs][relativesplatpath] for more information.
 - **`v3_throwAbortReason`**: When a server-side request is aborted, Remix will throw the `request.signal.reason` instead of an error such as `new Error("query() call aborted...")`
 - **`unstable_singleFetch`**: Opt into [Single Fetch][single-fetch] behavior
+- **`unstable_fogOfWar`**: Opt into [Fog of War][fog-of-war] behavior
 
 ## Summary
 
@@ -83,3 +84,4 @@ Our development strategy focuses on gradual feature adoption and seamless versio
 [use-fetcher]: ../hooks/use-fetcher
 [relativesplatpath]: https://reactrouter.com/en/main/hooks/use-resolved-path#splat-paths
 [single-fetch]: ../guides/single-fetch
+[fog-of-war]: ../guides/fog-of-war
