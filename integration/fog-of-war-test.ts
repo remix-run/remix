@@ -119,7 +119,7 @@ test.describe("Fog of War", () => {
             hydrateRoot(
               document,
               <StrictMode>
-                <RemixBrowser discover={"click"} />
+                <RemixBrowser discover={"none"} />
               </StrictMode>
             );
           });
@@ -262,7 +262,7 @@ test.describe("Fog of War", () => {
             return (
               <>
                 <h1 id="a">A: {data.message}</h1>
-                <Link to="/a/b" discover={discover ? "render" : "click"}>/a/b</Link>
+                <Link to="/a/b" discover={discover ? "render" : "none"}>/a/b</Link>
                 <button onClick={() => setDiscover(true)}>Toggle</button>
                 <Outlet/>
               </>
@@ -294,7 +294,7 @@ test.describe("Fog of War", () => {
     ).toEqual(["root", "routes/a", "routes/a.b"]);
   });
 
-  test('does not prefetch links with discover="click"', async ({ page }) => {
+  test('does not prefetch links with discover="none"', async ({ page }) => {
     let fixture = await createFixture({
       config: {
         future: {
@@ -315,7 +315,7 @@ test.describe("Fog of War", () => {
             return (
               <>
                 <h1 id="a">A: {data.message}</h1>
-                <Link to="/a/b" discover="click">/a/b</Link>
+                <Link to="/a/b" discover="none">/a/b</Link>
                 <Outlet/>
               </>
             )

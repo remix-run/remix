@@ -93,12 +93,12 @@ export function useRemixContext(): RemixContextObject {
 // Public API
 
 /**
- * Defines the prefetching behavior of the link:
+ * Defines the discovery behavior of the link:
  *
- * - "render": Discovered when the link is rendered (efault)
- * - "click": Discovered when the link is clicked
+ * - "render": Eagerly discover when the link is rendered (default)
+ * - "none": No eager discovery - discover when the link is clicked
  */
-export type DiscoverBehavior = "render" | "click";
+export type DiscoverBehavior = "render" | "none";
 
 /**
  * Defines the prefetching behavior of the link:
