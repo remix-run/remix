@@ -426,17 +426,23 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   }, [location]);
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  let fogOfWarAbortControllerRef = React.useRef<AbortController | undefined>();
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useEffect(() => {
     // Don't perform prefetching without flag or if the user has `saveData` enabled
     if (!fogOfWar || navigator.connection?.saveData === true) {
       return;
     }
 
+    // Register a link href for patching
+    function registerPath(path: string | null) {
+      let { knownGoodPaths, known404Paths, nextPaths } = fogOfWar!;
+      if (path && !knownGoodPaths.has(path) && !known404Paths.has(path)) {
+        nextPaths.add(path);
+      }
+    }
+
+    // Fetch patches for all currently rendered links
     async function fetchPatches() {
-      fogOfWarAbortControllerRef.current?.abort();
+      fogOfWar?.controller?.abort();
 
       let lazyPaths = getFogOfWarPaths(
         fogOfWar!,
@@ -461,38 +467,35 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       }
     }
 
-    let debouncedFetchPatches = debounce(fetchPatches, 100);
-
-    function registerPath(path: string | null) {
-      let { knownGoodPaths, known404Paths, nextPaths } = fogOfWar!;
-      if (path && !knownGoodPaths.has(path) && !known404Paths.has(path)) {
-        nextPaths.add(path);
-      }
-    }
-
-    let observer = new MutationObserver((records) => {
-      records.forEach((r) => {
-        [r.target, ...r.addedNodes].forEach((node) => {
-          if (node.nodeType !== Node.ELEMENT_NODE) return;
-          let el = node as Element;
-          let links = Array.from(el.querySelectorAll("a[data-discover]"));
-          if (el.tagName === "A" && el.getAttribute("data-discover")) {
-            links.push(el);
-          }
-          if (el.tagName !== "A") {
-            links.push(...el.querySelectorAll("a[data-discover]"));
-          }
-          links.forEach((el) => registerPath(el.getAttribute("href")));
-          debouncedFetchPatches();
-        });
-      });
-    });
-
+    // Register and fetch patches for all initially-rendered links
     document.body
       .querySelectorAll("a[data-discover]")
       .forEach((a) => registerPath(a.getAttribute("href")));
 
     fetchPatches();
+
+    // Setup a MutationObserver to fetch all subsequently rendered links
+    let debouncedFetchPatches = debounce(fetchPatches, 100);
+
+    function isElement(node: Node): node is Element {
+      return node.nodeType === Node.ELEMENT_NODE;
+    }
+
+    let observer = new MutationObserver((records) => {
+      records.forEach((r) => {
+        [r.target, ...r.addedNodes].forEach((node) => {
+          if (!isElement(node)) return;
+          if (node.tagName === "A" && node.getAttribute("data-discover")) {
+            registerPath(node.getAttribute("href"));
+          } else if (node.tagName !== "A") {
+            node
+              .querySelectorAll("a[data-discover]")
+              .forEach((el) => registerPath(el.getAttribute("href")));
+          }
+          debouncedFetchPatches();
+        });
+      });
+    });
 
     observer.observe(document.documentElement, {
       subtree: true,
@@ -502,7 +505,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     });
 
     return () => {
-      fogOfWar?.controller?.abort("unmount");
+      fogOfWar?.controller?.abort();
       observer.disconnect();
     };
   }, []);
