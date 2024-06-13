@@ -425,7 +425,11 @@ export function getDataLinkHrefs(
   let path = parsePathPatch(page);
   return dedupeHrefs(
     matches
-      .filter((match) => manifest.routes[match.route.id].hasLoader)
+      .filter(
+        (match) =>
+          manifest.routes[match.route.id].hasLoader &&
+          !manifest.routes[match.route.id].hasClientLoader
+      )
       .map((match) => {
         let { pathname, search } = path;
         let searchParams = new URLSearchParams(search);
