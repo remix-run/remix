@@ -35,6 +35,7 @@ import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
 import type { SingleFetchResult, SingleFetchResults } from "./single-fetch";
 import {
+  convertResponseStubToErrorResponse,
   encodeViaTurboStream,
   getResponseStubs,
   getSingleFetchDataStrategy,
@@ -422,6 +423,14 @@ async function handleDocumentRequest(
         status: statusCode,
         headers,
       });
+    }
+
+    if (context.errors) {
+      for (let [routeId, error] of Object.entries(context.errors)) {
+        if (isResponseStub(error)) {
+          context.errors[routeId] = convertResponseStubToErrorResponse(error);
+        }
+      }
     }
   } else {
     statusCode = context.statusCode;
