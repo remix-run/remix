@@ -30,13 +30,12 @@ import {
   useMatches as useMatchesRR,
   useRouteLoaderData as useRouteLoaderDataRR,
   useLocation,
-  useNavigation,
   useHref,
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
-import type { AssetsManifest, RemixContextObject } from "./entry";
+import type { RemixContextObject } from "./entry";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
