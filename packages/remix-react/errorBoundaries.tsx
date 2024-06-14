@@ -147,7 +147,6 @@ export function BoundaryShell({
   children: React.ReactNode | React.ReactNode[];
 }) {
   let { routeModules } = useRemixContext();
-  let rootRoute = routeModules.root;
 
   // Generally speaking, when the root route has a Layout we want to use that
   // as the app shell instead of the default `BoundaryShell` wrapper markup below.
@@ -165,7 +164,7 @@ export function BoundaryShell({
   // during hydration that wraps `RouterProvider`, then we can't trust the
   // `Layout` and should fallback to the default app shell so we're always
   // returning an `<html>` document.
-  if (rootRoute && rootRoute.Layout && !isOutsideRemixApp) {
+  if (routeModules.root?.Layout && !isOutsideRemixApp) {
     return children;
   }
 
