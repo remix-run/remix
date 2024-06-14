@@ -6,7 +6,17 @@ import {
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [cloudflareDevProxyVitePlugin(), remix(), tsconfigPaths()],
+  plugins: [
+    cloudflareDevProxyVitePlugin(),
+    remix({
+      future: {
+        v3_fetcherPersist: true,
+        v3_relativeSplatPath: true,
+        v3_throwAbortReason: true,
+      },
+    }),
+    tsconfigPaths(),
+  ],
   ssr: {
     resolve: {
       conditions: ["workerd", "worker", "browser"],
