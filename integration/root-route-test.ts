@@ -214,6 +214,7 @@ test.describe("root route", () => {
 
   test("Skip the Layout on subsequent client renders if Layout/ErrorBoundary throws (async)", async ({
     page,
+    browserName,
   }) => {
     let oldConsoleError;
     oldConsoleError = console.error;
@@ -275,9 +276,15 @@ test.describe("root route", () => {
     expect(await app.page.$("#layout")).toBeNull();
     expect(await app.getHtml("title")).toMatch("Application Error");
     expect(await app.getHtml("h1")).toMatch("Application Error");
-    expect(await app.getHtml("pre")).toMatch(
-      "TypeError: Cannot read properties of null"
-    );
+    if (browserName === "chromium") {
+      expect(await app.getHtml("pre")).toMatch(
+        "TypeError: Cannot read properties of null"
+      );
+    } else {
+      // Other browsers don't include the error message in the stack trace so just
+      // ensure we get the `<pre>` rendered
+      expect(await app.getHtml("pre")).toMatch("color: red;");
+    }
 
     console.error = oldConsoleError;
   });
@@ -340,6 +347,7 @@ test.describe("root route", () => {
 
   test("Skip the Layout on subsequent client renders if the Layout/DefaultErrorBoundary throws (async)", async ({
     page,
+    browserName,
   }) => {
     let oldConsoleError;
     oldConsoleError = console.error;
@@ -398,9 +406,15 @@ test.describe("root route", () => {
     expect(await app.page.$("#layout")).toBeNull();
     expect(await app.getHtml("title")).toMatch("Application Error");
     expect(await app.getHtml("h1")).toMatch("Application Error");
-    expect(await app.getHtml("pre")).toMatch(
-      "TypeError: Cannot read properties of null"
-    );
+    if (browserName === "chromium") {
+      expect(await app.getHtml("pre")).toMatch(
+        "TypeError: Cannot read properties of null"
+      );
+    } else {
+      // Other browsers don't include the error message in the stack trace so just
+      // ensure we get the `<pre>` rendered
+      expect(await app.getHtml("pre")).toMatch("color: red;");
+    }
 
     console.error = oldConsoleError;
   });
