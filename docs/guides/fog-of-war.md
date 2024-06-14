@@ -8,7 +8,7 @@ Remix introduced support for "Fog of War" ([RFC][rfc]) behind the [`future.unsta
 
 ## Overview
 
-When you enable Fog of War, Remix will no longer send a full route manifest on initial load. Previously this would be loaded through a JS file on initial load (i.e., `/assets/manifest-[hash]].js`). The manifest does not contain the route module implementations, but rather just their paths and some meta information on their imports and whether they have a server side `loader`/`action`, etc. Having this full manifest up-front allows Remix to do synchronous client-side route matching on Link clicks and kick off the loads for route modules and data imediately. For small-to-medium-sized apps, loading the full manifest up-front is usually not prohibitive as it is highly cacheable and gzips down quite well. However, at scale we found that this manifest could grow large enough to impact some performance metrics.
+When you enable Fog of War, Remix will no longer send a full route manifest on initial load. Previously this would be loaded through a JS file on initial load (i.e., `/assets/manifest-[hash]].js`). The manifest does not contain the route module implementations, but rather just their paths and some meta information on their imports and whether they have a server side `loader`/`action`, etc. Having this full manifest up-front allows Remix to do synchronous client-side route matching on Link clicks and kick off the loads for route modules and data immediately. For small-to-medium-sized apps, loading the full manifest up-front is usually not prohibitive as it is highly cacheable and gzips down quite well. However, at scale we found that this manifest could grow large enough to impact some performance metrics.
 
 The "Fog of War" approach solves this problem by only sending up the initially-rendered routes in the initial manifest, and then loads additional routes as needed as the user navigates around the application and patches them into the manifest. Over time, the manifest grows to include only portions of the app the user navigated to.
 
@@ -44,8 +44,6 @@ If you wish to opt-out of this eager route discovery on a per-link basis, you ca
 - When this feature is enabled, the route manifest in `window.__remixManifest.routes` will only contain the minimal required routes on initial SSR, and routes will be added to it dynamically as the user navigates around
 - The Remix handler now has a new internal `__manifest` endpoint through which it will fetch manifest patches
   - ⚠️ This is considered an internal implementation detail and is not intended to be requested by application code.
-
-## Details
 
 [rfc]: https://github.com/remix-run/react-router/discussions/11113
 [future-flags]: ../file-conventions/remix-config#future
