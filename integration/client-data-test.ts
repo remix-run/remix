@@ -980,6 +980,7 @@ test.describe("Client Data", () => {
 
     test("does not prefetch server loader if a client loader is present", async ({
       page,
+      browserName,
     }) => {
       appFixture = await createAppFixture(
         await createTestFixture({
@@ -1014,10 +1015,16 @@ test.describe("Client Data", () => {
 
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/", true);
-      // Only prefetch child server loader since parent has a `clientLoader`
-      expect(dataUrls).toEqual([
-        expect.stringMatching(/parent\/child\?_data=routes%2Fparent\.child/),
-      ]);
+
+      if (browserName === "webkit") {
+        // No prefetch support :/
+        expect(dataUrls).toEqual([]);
+      } else {
+        // Only prefetch child server loader since parent has a `clientLoader`
+        expect(dataUrls).toEqual([
+          expect.stringMatching(/parent\/child\?_data=routes%2Fparent\.child/),
+        ]);
+      }
     });
   });
 
@@ -2257,6 +2264,7 @@ test.describe("single fetch", () => {
 
       test("does not prefetch server loader if a client loader is present", async ({
         page,
+        browserName,
       }) => {
         appFixture = await createAppFixture(
           await createTestFixture({
@@ -2291,12 +2299,18 @@ test.describe("single fetch", () => {
 
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/", true);
-        // Only prefetch child server loader since parent has a `clientLoader`
-        expect(dataUrls).toEqual([
-          expect.stringMatching(
-            /parent\/child\.data\?_routes=routes%2Fparent\.child/
-          ),
-        ]);
+
+        if (browserName === "webkit") {
+          // No prefetch support :/
+          expect(dataUrls).toEqual([]);
+        } else {
+          // Only prefetch child server loader since parent has a `clientLoader`
+          expect(dataUrls).toEqual([
+            expect.stringMatching(
+              /parent\/child\.data\?_routes=routes%2Fparent\.child/
+            ),
+          ]);
+        }
       });
     });
 
