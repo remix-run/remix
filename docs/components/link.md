@@ -40,7 +40,7 @@ You can also pass a `Partial<Path>` value:
 
 ### `discover`
 
-Defines the route discovery behavior when using [future.unstable_fogOfWar][fog-of-war].
+Defines the route discovery behavior when using [`future.unstable_fogOfWar`][fog-of-war].
 
 ```tsx
 <>

@@ -55,6 +55,7 @@ import type {
   RouteHandle,
 } from "./routeModules";
 import { addRevalidationParam, singleFetchUrl } from "./single-fetch";
+import { isFogOfWarEnabled } from "./fog-of-war";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -679,7 +680,7 @@ export function Scripts(props: ScriptProps) {
   } = useRemixContext();
   let { static: isStatic, staticContext } = useDataRouterContext();
   let { matches: routerMatches } = useDataRouterStateContext();
-  let enableFogOfWar = future.unstable_fogOfWar && !isSpaMode;
+  let enableFogOfWar = isFogOfWarEnabled(future, isSpaMode);
 
   // Let <RemixServer> know that we hydrated and we should render the single
   // fetch streaming scripts
@@ -900,6 +901,7 @@ window.__remixRouteModules = {${matches
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
           )
           .join(",")}};
+
 import(${JSON.stringify(manifest.entry.module)});`;
 
     return (

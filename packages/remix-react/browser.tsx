@@ -48,10 +48,6 @@ declare global {
   var $RefreshRuntime$: {
     performReactRefresh: () => void;
   };
-
-  interface Navigator {
-    connection?: { saveData: boolean };
-  }
 }
 /* eslint-enable prefer-let/prefer-let */
 

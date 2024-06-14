@@ -7,6 +7,12 @@ import type { AssetsManifest, FutureConfig } from "./entry";
 import type { RouteModules } from "./routeModules";
 import { createClientRoutes } from "./routes";
 
+declare global {
+  interface Navigator {
+    connection?: { saveData: boolean };
+  }
+}
+
 type FogOfWarInfo = {
   controller: AbortController | null;
   // Currently rendered links that may need prefetching
@@ -20,6 +26,10 @@ type FogOfWarInfo = {
 };
 
 let fogOfWar: FogOfWarInfo | null = null;
+
+export function isFogOfWarEnabled(future: FutureConfig, isSpaMode: boolean) {
+  return future.unstable_fogOfWar === true && !isSpaMode;
+}
 
 export function initFogOfWar(
   manifest: AssetsManifest,
@@ -153,10 +163,6 @@ export function useFogOFWarDiscovery(
       observer.disconnect();
     };
   }, [future, isSpaMode, manifest, routeModules, router]);
-}
-
-function isFogOfWarEnabled(future: FutureConfig, isSpaMode: boolean) {
-  return future.unstable_fogOfWar === true && !isSpaMode;
 }
 
 function getFogOfWarPaths(fogOfWar: FogOfWarInfo, router: Router) {
