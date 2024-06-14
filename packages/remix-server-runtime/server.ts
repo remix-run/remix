@@ -21,8 +21,9 @@ import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
 import { getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
+import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
-import type { ServerRoute } from "./routes";
+import type { EntryRoute, ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
@@ -120,9 +121,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     }
 
     let url = new URL(request.url);
-
-    let matches = matchServerRoutes(routes, url.pathname, _build.basename);
-    let params = matches && matches.length > 0 ? matches[0].params : {};
+    let params: RouteMatch<ServerRoute>["params"] = {};
     let handleError = (error: unknown) => {
       if (mode === ServerMode.Development) {
         getDevServerHooks()?.processRequestError?.(error);
@@ -134,6 +133,27 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         request,
       });
     };
+
+    // Manifest request for fog of war
+
+    let manifestUrl = `${_build.basename ?? "/"}/__manifest`.replace(
+      /\/+/g,
+      "/"
+    );
+    if (url.pathname === manifestUrl) {
+      try {
+        let res = await handleManifestRequest(_build, routes, url);
+        return res;
+      } catch (e) {
+        handleError(e);
+        return new Response("Unknown Server Error", { status: 500 });
+      }
+    }
+
+    let matches = matchServerRoutes(routes, url.pathname, _build.basename);
+    if (matches && matches.length > 0) {
+      Object.assign(params, matches[0].params);
+    }
 
     let response: Response;
     if (url.searchParams.has("_data")) {
@@ -268,6 +288,39 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     return response;
   };
 };
+
+async function handleManifestRequest(
+  build: ServerBuild,
+  routes: ServerRoute[],
+  url: URL
+) {
+  let data: {
+    patches: Record<string, EntryRoute>;
+    notFoundPaths: string[];
+  } = { patches: {}, notFoundPaths: [] };
+
+  let paths = url.searchParams.getAll("paths");
+  if (paths.length > 0) {
+    for (let path of paths) {
+      let matches = matchServerRoutes(routes, path, build.basename);
+      if (matches) {
+        for (let match of matches) {
+          let routeId = match.route.id;
+          data.patches[routeId] = build.assets.routes[routeId];
+        }
+      } else {
+        data.notFoundPaths.push(path);
+      }
+    }
+    return json(data, {
+      headers: {
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    }) as Response; // Override the TypedResponse stuff
+  }
+
+  return new Response("Invalid Request", { status: 400 });
+}
 
 async function handleDataRequest(
   serverMode: ServerMode,
