@@ -25,5 +25,15 @@
     "@remix-run/server-runtime": "2.9.2",
     "@remix-run/testing": "2.9.2"
   },
-  "changesets": []
+  "changesets": [
+    "afraid-bears-fry",
+    "forty-gifts-boil",
+    "heavy-ways-rule",
+    "mighty-experts-agree",
+    "neat-ghosts-thank",
+    "shiny-bags-breathe",
+    "smart-mirrors-flow",
+    "strange-chefs-think",
+    "two-jars-help"
+  ]
 }

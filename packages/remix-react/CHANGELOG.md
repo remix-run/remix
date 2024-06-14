@@ -1,5 +1,23 @@
 # `@remix-run/react`
 
+## 2.10.0-pre.0
+
+### Minor Changes
+
+- Add support for Lazy Route Discovery (a.k.a. Fog of War) ([#9600](https://github.com/remix-run/remix/pull/9600))
+
+  - RFC: https://github.com/remix-run/react-router/discussions/11113
+  - Docs: https://remix.run/docs/guides/fog-of-war
+
+### Patch Changes
+
+- Don't prefetch server loader data when clientLoader exists ([#9580](https://github.com/remix-run/remix/pull/9580))
+- Avoid hydration loops when `Layout` `ErrorBoundary` renders also throw ([#9566](https://github.com/remix-run/remix/pull/9566))
+- Fix a bug where hydration wouldn't work right when using child routes and hydrate fallbacks with a basename ([#9584](https://github.com/remix-run/remix/pull/9584))
+- Update to `turbo-stream@2.2.0` for single fetch ([#9562](https://github.com/remix-run/remix/pull/9562))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.0-pre.0`
+
 ## 2.9.2
 
 ### Patch Changes
