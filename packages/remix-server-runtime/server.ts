@@ -36,6 +36,7 @@ import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
 import type { SingleFetchResult, SingleFetchResults } from "./single-fetch";
 import {
+  convertResponseStubToErrorResponse,
   encodeViaTurboStream,
   getResponseStubs,
   getSingleFetchDataStrategy,
@@ -47,6 +48,7 @@ import {
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
   ResponseStubOperationsSymbol,
+  SINGLE_FETCH_REDIRECT_STATUS,
 } from "./single-fetch";
 import { resourceRouteJsonWarning } from "./deprecations";
 
@@ -238,7 +240,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
               serverMode
             ),
             {
-              status: 200,
+              status: SINGLE_FETCH_REDIRECT_STATUS,
               headers,
             }
           );
@@ -475,6 +477,14 @@ async function handleDocumentRequest(
         headers,
       });
     }
+
+    if (context.errors) {
+      for (let [routeId, error] of Object.entries(context.errors)) {
+        if (isResponseStub(error)) {
+          context.errors[routeId] = convertResponseStubToErrorResponse(error);
+        }
+      }
+    }
   } else {
     statusCode = context.statusCode;
     headers = getDocumentHeaders(build, context);
@@ -644,7 +654,7 @@ async function handleResourceRequest(
         : null),
     });
 
-    if (typeof response === "object") {
+    if (typeof response === "object" && response !== null) {
       invariant(
         !(DEFERRED_SYMBOL in response),
         `You cannot return a \`defer()\` response from a Resource Route.  Did you ` +
@@ -662,6 +672,13 @@ async function handleResourceRequest(
           // @ts-expect-error
           response.headers[op](...args);
         }
+      } else if (isResponseStub(response) || response == null) {
+        // If the stub or null was returned, then there is no body so we just
+        // proxy along the status/headers to a Response
+        response = new Response(null, {
+          status: stub.status,
+          headers: stub.headers,
+        });
       } else {
         console.warn(
           resourceRouteJsonWarning(
@@ -690,6 +707,13 @@ async function handleResourceRequest(
       // match identically to what Remix returns
       error.headers.set("X-Remix-Catch", "yes");
       return error;
+    }
+
+    if (isResponseStub(error)) {
+      return new Response(null, {
+        status: error.status,
+        headers: error.headers,
+      });
     }
 
     if (isRouteErrorResponse(error)) {

@@ -265,7 +265,11 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         ...window.__remixContext.state,
         loaderData: { ...window.__remixContext.state.loaderData },
       };
-      let initialMatches = matchRoutes(routes, window.location);
+      let initialMatches = matchRoutes(
+        routes,
+        window.location,
+        window.__remixContext.basename
+      );
       if (initialMatches) {
         for (let match of initialMatches) {
           let routeId = match.route.id;
