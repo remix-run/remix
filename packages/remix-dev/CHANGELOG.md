@@ -1,5 +1,16 @@
 # `@remix-run/dev`
 
+## 2.10.0-pre.0
+
+### Patch Changes
+
+- Upgrade `express` dependency to `^4.19.2` ([#9184](https://github.com/remix-run/remix/pull/9184))
+- Updated dependencies:
+  - `@remix-run/serve@2.10.0-pre.0`
+  - `@remix-run/server-runtime@2.10.0-pre.0`
+  - `@remix-run/react@2.10.0-pre.0`
+  - `@remix-run/node@2.10.0-pre.0`
+
 ## 2.9.2
 
 ### Patch Changes

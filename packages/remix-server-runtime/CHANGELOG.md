@@ -1,5 +1,22 @@
 # `@remix-run/server-runtime`
 
+## 2.10.0-pre.0
+
+### Minor Changes
+
+- Add support for Lazy Route Discovery (a.k.a. Fog of War) ([#9600](https://github.com/remix-run/remix/pull/9600))
+
+  - RFC: https://github.com/remix-run/react-router/discussions/11113
+  - Docs: https://remix.run/docs/guides/fog-of-war
+
+### Patch Changes
+
+- Properly handle thrown 4xx/5xx response stubs in single fetch ([#9501](https://github.com/remix-run/remix/pull/9501))
+- Change single fetch redirects to use a 202 status to avoid automatic caching ([#9564](https://github.com/remix-run/remix/pull/9564))
+- - Fix error when returning null from a resource route in single fetch ([#9488](https://github.com/remix-run/remix/pull/9488))
+  - Fix issues with returning or throwing a response stub from a resource route in single fetch
+- Update to `turbo-stream@2.2.0` for single fetch ([#9562](https://github.com/remix-run/remix/pull/9562))
+
 ## 2.9.2
 
 ### Patch Changes
