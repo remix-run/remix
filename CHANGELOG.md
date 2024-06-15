@@ -199,7 +199,7 @@ Enabling this flag should require no application code changes. For more informat
 
 ### Minor Changes
 
-- Add support for Lazy Route Discovery (a.k.a. Fog of War) ([#9600](https://github.com/remix-run/remix/pull/9600))
+- Add support for Lazy Route Discovery (a.k.a. Fog of War) ([#9600](https://github.com/remix-run/remix/pull/9600), [#9619](https://github.com/remix-run/remix/pull/9619))
 
 ### Patch Changes
 
