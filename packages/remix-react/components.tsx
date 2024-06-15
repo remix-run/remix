@@ -55,7 +55,7 @@ import type {
   RouteHandle,
 } from "./routeModules";
 import { addRevalidationParam, singleFetchUrl } from "./single-fetch";
-import { isFogOfWarEnabled } from "./fog-of-war";
+import { getPartialManifest, isFogOfWarEnabled } from "./fog-of-war";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -881,16 +881,7 @@ ${
   enableFogOfWar
     ? // Inline a minimal manifest with the SSR matches
       `window.__remixManifest = ${JSON.stringify(
-        {
-          ...manifest,
-          routes: matches.reduce(
-            (acc, m) =>
-              Object.assign(acc, {
-                [m.route.id]: manifest.routes[m.route.id],
-              }),
-            {}
-          ),
-        },
+        getPartialManifest(manifest, matches),
         null,
         2
       )};`
