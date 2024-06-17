@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.10.0-pre.2
+
+### Patch Changes
+
+- [REMOVE] Properly handle pathless children of ancestor routes in FOW ([#9624](https://github.com/remix-run/remix/pull/9624))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.0-pre.2`
+
 ## 2.10.0-pre.1
 
 ### Patch Changes
