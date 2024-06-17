@@ -426,7 +426,7 @@ test.describe("Fog of War", () => {
       await page.evaluate(() =>
         Object.keys((window as any).__remixManifest.routes)
       )
-    ).toEqual(["root", "routes/_index", "routes/deep"]);
+    ).toEqual(["root", "routes/deep", "routes/_index"]);
 
     // Without pre-loading the index, we'd "match" `/` to just the root route
     // client side and never fetch the `routes/_index` route
@@ -528,12 +528,12 @@ test.describe("Fog of War", () => {
       )
     ).toEqual([
       "root",
-      "routes/_index",
       "routes/parent",
-      "routes/parent._index",
       "routes/parent.child",
-      "routes/parent.child._index",
       "routes/parent.child.grandchild",
+      "routes/_index",
+      "routes/parent.child._index",
+      "routes/parent._index",
     ]);
 
     // Without pre-loading the index, we'd "match" `/parent/child` to just the
@@ -551,5 +551,131 @@ test.describe("Fog of War", () => {
     expect(await app.getHtml("#parent-index")).toMatch(`Parent Index`);
 
     expect(manifestRequests.length).toBe(0);
+  });
+
+  test("prefetches ancestor pathless children when SSR-ing a deep route", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
+      files: {
+        "app/root.tsx": js`
+          import { Link, Outlet, Scripts } from "@remix-run/react";
+
+          export default function Root() {
+            return (
+              <html lang="en">
+                <head></head>
+                <body >
+                  <nav>
+                    <Link to="/parent" discover="none">Parent Index</Link>
+                    <Link to="/parent/child2" discover="none">Child2</Link>
+                  </nav>
+                  <Outlet />
+                  <Scripts />
+                  </body>
+              </html>
+            );
+          }
+        `,
+
+        "app/routes/_index.tsx": js`
+          export default function Index() {
+            return <h1 id="index">Index</h1>
+          }
+        `,
+        "app/routes/parent.tsx": js`
+          import { Outlet } from "@remix-run/react";
+          export default function Component() {
+            return (
+              <>
+                <h1 id="parent">Parent</h1>
+                <Outlet />
+              </>
+            )
+          }
+        `,
+        "app/routes/parent.child.tsx": js`
+          export default function Component() {
+            return <h2 id="child">Child</h2>;
+          }
+        `,
+        "app/routes/parent._a.tsx": js`
+          import { Outlet } from '@remix-run/react';
+          export default function Component() {
+            return <div id="a"><Outlet/></div>;
+          }
+        `,
+        "app/routes/parent._a._b._index.tsx": js`
+          export default function Component() {
+            return <h2 id="parent-index">Parent Pathless Index</h2>;
+          }
+        `,
+        "app/routes/parent._a._b.tsx": js`
+          import { Outlet } from '@remix-run/react';
+          export default function Component() {
+            return <div id="b"><Outlet/></div>;
+          }
+        `,
+        "app/routes/parent._a._b.child2.tsx": js`
+          export default function Component() {
+            return <h2 id="child2">Child 2</h2>;
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    let manifestRequests: string[] = [];
+    page.on("request", (req) => {
+      if (req.url().includes("/__manifest")) {
+        manifestRequests.push(req.url());
+      }
+    });
+
+    await app.goto("/parent/child", true);
+    expect(await app.getHtml("#child")).toMatch("Child");
+    expect(await page.$("#a")).toBeNull();
+    expect(await page.$("#b")).toBeNull();
+
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual([
+      "root",
+      "routes/parent",
+      "routes/parent.child",
+      "routes/_index",
+      "routes/parent._a",
+      "routes/parent._a._b",
+      "routes/parent._a._b._index",
+    ]);
+
+    // Without pre-loading the index, we'd "match" `/parent` to just the
+    // parent route client side and never fetch the children pathless/index routes
+    await app.clickLink("/parent");
+    await page.waitForSelector("#parent-index");
+    expect(await page.$("#a")).not.toBeNull();
+    expect(await page.$("#b")).not.toBeNull();
+    expect(await app.getHtml("#parent")).toMatch("Parent");
+    expect(await app.getHtml("#parent-index")).toMatch("Parent Pathless Index");
+    expect(manifestRequests.length).toBe(0);
+
+    // This will require a new fetch for the child2 portion
+    await app.clickLink("/parent/child2");
+    await page.waitForSelector("#child2");
+    expect(await app.getHtml("#parent")).toMatch(`Parent`);
+    expect(await app.getHtml("#child2")).toMatch(`Child 2`);
+    expect(manifestRequests).toEqual([
+      expect.stringMatching(
+        /\/__manifest\?version=[a-z0-9]{8}&paths=%2Fparent%2Fchild2/
+      ),
+    ]);
   });
 });

@@ -31,27 +31,38 @@ export function isFogOfWarEnabled(future: FutureConfig, isSpaMode: boolean) {
   return future.unstable_fogOfWar === true && !isSpaMode;
 }
 
-export function getPartialManifest(manifest: AssetsManifest, matches: any[]) {
-  let routeIds = new Set(matches.map((m) => m.route.id));
-  // Include the root index route if we enter on a different route, otherwise
-  // we can get a false positive when client-side matching on a link back to
-  // `/` since we will match the root route
-  let initialRoutes = Object.values(manifest.routes).filter(
-    (r) =>
-      // This route is part of the initial matches
-      routeIds.has(r.id) ||
-      // This route is an index child of an initial match, so we need to
-      // include it in case we client-side route to the path
-      (r.index === true && routeIds.has(r.parentId))
+export function getPartialManifest(manifest: AssetsManifest, router: Router) {
+  // Start with our matches for this pathname
+  let routeIds = new Set(router.state.matches.map((m) => m.route.id));
+
+  let segments = router.state.location.pathname.split("/").filter(Boolean);
+  let paths: string[] = ["/"];
+
+  // We've already matched to the last segment
+  segments.pop();
+
+  // Traverse each path for our parents and match in case they have pathless/index
+  // children we need to include in the initial manifest
+  while (segments.length > 0) {
+    paths.push(`/${segments.join("/")}`);
+    segments.pop();
+  }
+
+  paths.forEach((path) => {
+    let matches = matchRoutes(router.routes, path, router.basename);
+    if (matches) {
+      matches.forEach((m) => routeIds.add(m.route.id));
+    }
+  });
+
+  let initialRoutes = [...routeIds].reduce(
+    (acc, id) => Object.assign(acc, { [id]: manifest.routes[id] }),
+    {}
   );
+
   return {
     ...manifest,
-    routes: {
-      ...initialRoutes.reduce(
-        (acc, r) => Object.assign(acc, { [r.id]: r }),
-        {}
-      ),
-    },
+    routes: initialRoutes,
   };
 }
 
