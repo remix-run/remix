@@ -319,9 +319,13 @@ async function handleManifestRequest(
       }
     }
     return json(data, {
-      headers: {
-        "Cache-Control": "public, max-age=31536000, immutable",
-      },
+      ...(request.method === "GET"
+        ? {
+            headers: {
+              "Cache-Control": "public, max-age=31536000, immutable",
+            },
+          }
+        : {}),
     }) as Response; // Override the TypedResponse stuff
   }
 

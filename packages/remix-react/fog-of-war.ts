@@ -241,6 +241,12 @@ export async function fetchAndApplyManifestPatches(
         })
       : await fetch(url);
 
+  if (!res.ok) {
+    throw new Error(`${res.status} ${res.statusText}`);
+  } else if (res.status >= 400) {
+    throw new Error(await res.text());
+  }
+
   let data = (await res.json()) as {
     notFoundPaths: string[];
     patches: AssetsManifest["routes"];
