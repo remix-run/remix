@@ -14,7 +14,6 @@ declare global {
 }
 
 type FogOfWarInfo = {
-  controller: AbortController | null;
   // Currently rendered links that may need prefetching
   nextPaths: Set<string>;
   // Paths we know the client can already match, so no need to perform client-side
@@ -81,7 +80,6 @@ export function initFogOfWar(
   }
 
   fogOfWar = {
-    controller: null,
     nextPaths: new Set<string>(),
     knownGoodPaths: new Set<string>(),
     known404Paths: new Set<string>(),
@@ -131,15 +129,12 @@ export function useFogOFWarDiscovery(
 
     // Fetch patches for all currently rendered links
     async function fetchPatches() {
-      fogOfWar?.controller?.abort();
-
       let lazyPaths = getFogOfWarPaths(fogOfWar!, router);
       if (lazyPaths.length === 0) {
         return;
       }
 
       try {
-        fogOfWar!.controller = new AbortController();
         await fetchAndApplyManifestPatches(
           lazyPaths,
           fogOfWar!.known404Paths,
@@ -148,8 +143,7 @@ export function useFogOFWarDiscovery(
           future,
           isSpaMode,
           router.basename,
-          router.patchRoutes,
-          fogOfWar!.controller.signal
+          router.patchRoutes
         );
       } catch (e) {
         console.error("Failed to fetch manifest patches", e);
@@ -193,10 +187,7 @@ export function useFogOFWarDiscovery(
       attributeFilter: ["data-discover", "href"],
     });
 
-    return () => {
-      fogOfWar?.controller?.abort();
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, [future, isSpaMode, manifest, routeModules, router]);
 }
 
@@ -232,14 +223,14 @@ export async function fetchAndApplyManifestPatches(
   future: FutureConfig,
   isSpaMode: boolean,
   basename: string | undefined,
-  patchRoutes: Router["patchRoutes"],
-  signal?: AbortSignal
+  patchRoutes: Router["patchRoutes"]
 ): Promise<void> {
   let manifestPath = `${basename ?? "/"}/__manifest`.replace(/\/+/g, "/");
   let url = new URL(manifestPath, window.location.origin);
   url.searchParams.set("version", manifest.version);
   paths.forEach((path) => url.searchParams.append("paths", path));
-  let data = (await fetch(url, { signal }).then((res) => res.json())) as {
+  let res = await fetch(url);
+  let data = (await res.json()) as {
     notFoundPaths: string[];
     patches: AssetsManifest["routes"];
   };
