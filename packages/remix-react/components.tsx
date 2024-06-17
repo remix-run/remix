@@ -678,7 +678,7 @@ export function Scripts(props: ScriptProps) {
     future,
     renderMeta,
   } = useRemixContext();
-  let { static: isStatic, staticContext } = useDataRouterContext();
+  let { router, static: isStatic, staticContext } = useDataRouterContext();
   let { matches: routerMatches } = useDataRouterStateContext();
   let enableFogOfWar = isFogOfWarEnabled(future, isSpaMode);
 
@@ -881,7 +881,7 @@ ${
   enableFogOfWar
     ? // Inline a minimal manifest with the SSR matches
       `window.__remixManifest = ${JSON.stringify(
-        getPartialManifest(manifest, matches),
+        getPartialManifest(manifest, router),
         null,
         2
       )};`
