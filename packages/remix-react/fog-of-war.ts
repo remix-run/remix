@@ -24,6 +24,10 @@ type FogOfWarInfo = {
   known404Paths: Set<string>;
 };
 
+// 7.5k to come in under the ~8k limit for most browsers
+// https://stackoverflow.com/a/417184
+const URL_LIMIT = 7680;
+
 let fogOfWar: FogOfWarInfo | null = null;
 
 export function isFogOfWarEnabled(future: FutureConfig, isSpaMode: boolean) {
@@ -88,10 +92,15 @@ export function initFogOfWar(
   return {
     enabled: true,
     patchRoutesOnMiss: async ({ path, patch }) => {
-      if (fogOfWar!.known404Paths.has(path)) return;
+      if (
+        fogOfWar!.known404Paths.has(path) ||
+        fogOfWar!.knownGoodPaths.has(path)
+      ) {
+        return;
+      }
       await fetchAndApplyManifestPatches(
         [path],
-        fogOfWar!.known404Paths,
+        fogOfWar!,
         manifest,
         routeModules,
         future,
@@ -121,10 +130,15 @@ export function useFogOFWarDiscovery(
 
     // Register a link href for patching
     function registerPath(path: string | null) {
-      let { knownGoodPaths, known404Paths, nextPaths } = fogOfWar!;
-      if (path && !knownGoodPaths.has(path) && !known404Paths.has(path)) {
-        nextPaths.add(path);
+      if (!path) {
+        return;
       }
+      let url = new URL(path, window.location.origin);
+      let { knownGoodPaths, known404Paths, nextPaths } = fogOfWar!;
+      if (knownGoodPaths.has(url.pathname) || known404Paths.has(url.pathname)) {
+        return;
+      }
+      nextPaths.add(url.pathname);
     }
 
     // Fetch patches for all currently rendered links
@@ -137,7 +151,7 @@ export function useFogOFWarDiscovery(
       try {
         await fetchAndApplyManifestPatches(
           lazyPaths,
-          fogOfWar!.known404Paths,
+          fogOfWar!,
           manifest,
           routeModules,
           future,
@@ -165,19 +179,22 @@ export function useFogOFWarDiscovery(
     }
 
     let observer = new MutationObserver((records) => {
+      let links = new Set<Element>();
       records.forEach((r) => {
         [r.target, ...r.addedNodes].forEach((node) => {
           if (!isElement(node)) return;
           if (node.tagName === "A" && node.getAttribute("data-discover")) {
-            registerPath(node.getAttribute("href"));
+            links.add(node);
           } else if (node.tagName !== "A") {
             node
               .querySelectorAll("a[data-discover]")
-              .forEach((el) => registerPath(el.getAttribute("href")));
+              .forEach((el) => links.add(el));
           }
-          debouncedFetchPatches();
         });
       });
+      links.forEach((link) => registerPath(link.getAttribute("href")));
+
+      debouncedFetchPatches();
     });
 
     observer.observe(document.documentElement, {
@@ -204,20 +221,13 @@ function getFogOfWarPaths(fogOfWar: FogOfWarInfo, router: Router) {
       return false;
     }
 
-    let matches = matchRoutes(router.routes, path, router.basename);
-    if (matches) {
-      knownGoodPaths.add(path);
-      nextPaths.delete(path);
-      return false;
-    }
-
     return true;
   });
 }
 
 export async function fetchAndApplyManifestPatches(
   paths: string[],
-  known404Paths: Set<string>,
+  _fogOfWar: FogOfWarInfo,
   manifest: AssetsManifest,
   routeModules: RouteModules,
   future: FutureConfig,
@@ -225,14 +235,17 @@ export async function fetchAndApplyManifestPatches(
   basename: string | undefined,
   patchRoutes: Router["patchRoutes"]
 ): Promise<void> {
+  let { nextPaths, knownGoodPaths, known404Paths } = _fogOfWar;
   let manifestPath = `${basename ?? "/"}/__manifest`.replace(/\/+/g, "/");
   let url = new URL(manifestPath, window.location.origin);
   url.searchParams.set("version", manifest.version);
   paths.forEach((path) => url.searchParams.append("p", path));
 
   // If the URL is nearing the ~8k limit on GET requests, skip this optimization
-  // step and just let discovery happen on link click
-  if (url.toString().length > 7168) {
+  // step and just let discovery happen on link click.  We also wipe out the
+  // nextPaths Set here so we can start filling it with fresh links
+  if (url.toString().length > URL_LIMIT) {
+    nextPaths.clear();
     return;
   }
 
@@ -263,7 +276,10 @@ export async function fetchAndApplyManifestPatches(
   Object.assign(manifest.routes, patches);
 
   // Track legit 404s so we don't try to fetch them again
-  data.notFoundPaths.forEach((p: string) => known404Paths.add(p));
+  data.notFoundPaths.forEach((p) => known404Paths.add(p));
+
+  // Track matched paths so we don't have to fetch them again
+  paths.forEach((p) => knownGoodPaths.add(p));
 
   // Identify all parentIds for which we have new children to add and patch
   // in their new children
