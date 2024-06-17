@@ -32,27 +32,23 @@ export function isFogOfWarEnabled(future: FutureConfig, isSpaMode: boolean) {
 }
 
 export function getPartialManifest(manifest: AssetsManifest, matches: any[]) {
-  let rootIndexRoute = Object.values(manifest.routes).find(
-    (r) => r.parentId === "root" && r.index === true
+  let routeIds = new Set(matches.map((m) => m.route.id));
+  // Include the root index route if we enter on a different route, otherwise
+  // we can get a false positive when client-side matching on a link back to
+  // `/` since we will match the root route
+  let initialRoutes = Object.values(manifest.routes).filter(
+    (r) =>
+      // This route is part of the initial matches
+      routeIds.has(r.id) ||
+      // This route is an index child of an initial match, so we need to
+      // include it in case we client-side route to the path
+      (r.index === true && routeIds.has(r.parentId))
   );
-  let matchesContainsIndex =
-    rootIndexRoute && !matches.some((m) => m.route.id === rootIndexRoute!.id);
   return {
     ...manifest,
     routes: {
-      // Include the root index route if we enter on a different route, otherwise
-      // we can get a false positive when client-side matching on a link back to
-      // `/` since we will match the root route
-      ...(matchesContainsIndex
-        ? {
-            [rootIndexRoute!.id]: rootIndexRoute,
-          }
-        : {}),
-      ...matches.reduce(
-        (acc, m) =>
-          Object.assign(acc, {
-            [m.route.id]: manifest.routes[m.route.id],
-          }),
+      ...initialRoutes.reduce(
+        (acc, r) => Object.assign(acc, { [r.id]: r }),
         {}
       ),
     },
