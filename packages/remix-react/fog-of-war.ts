@@ -228,7 +228,7 @@ export async function fetchAndApplyManifestPatches(
   let manifestPath = `${basename ?? "/"}/__manifest`.replace(/\/+/g, "/");
   let url = new URL(manifestPath, window.location.origin);
   url.searchParams.set("version", manifest.version);
-  paths.forEach((path) => url.searchParams.append("paths", path));
+  paths.forEach((path) => url.searchParams.append("p", path));
 
   // GET requests should be good up to 8k - but some providers (GCP) also have
   // hard limits on entire GET request sizes including headers and such so let's

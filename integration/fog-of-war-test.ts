@@ -1,3 +1,4 @@
+import type { Request as PlaywrightRequest } from "@playwright/test";
 import { test, expect } from "@playwright/test";
 
 import {
@@ -674,8 +675,52 @@ test.describe("Fog of War", () => {
     expect(await app.getHtml("#child2")).toMatch(`Child 2`);
     expect(manifestRequests).toEqual([
       expect.stringMatching(
-        /\/__manifest\?version=[a-z0-9]{8}&paths=%2Fparent%2Fchild2/
+        /\/__manifest\?version=[a-z0-9]{8}&p=%2Fparent%2Fchild2/
       ),
     ]);
+  });
+
+  test("uses a POST request if the URL gets too large", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
+      files: {
+        ...getFiles(),
+        "app/routes/_index.tsx": js`
+          import { Link } from "@remix-run/react";
+          export default function Index() {
+            return (
+              <>
+                <h1 id="index">Index</h1>
+                {/* ~250 links * ~16 chars per link > 4196 char URL limit */}
+                {...new Array(250).fill(null).map((el, i) => (
+                  <Link to={"/dummy-link-" + i}>{i}</Link>
+                ))}
+              </>
+            );
+
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    let manifestRequests: PlaywrightRequest[] = [];
+    page.on("request", (req) => {
+      if (req.url().includes("/__manifest")) {
+        manifestRequests.push(req);
+      }
+    });
+
+    await app.goto("/", true);
+    await page.waitForFunction(
+      () => (window as any).__remixManifest.routes["routes/a"]
+    );
+    expect(manifestRequests.length).toBe(1);
+    expect(manifestRequests[0].method()).toBe("POST");
   });
 });

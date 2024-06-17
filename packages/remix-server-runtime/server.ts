@@ -305,7 +305,7 @@ async function handleManifestRequest(
       ? new URLSearchParams(await request.text())
       : url.searchParams;
 
-  let paths = searchParams.getAll("paths");
+  let paths = searchParams.getAll("p");
   if (paths.length > 0) {
     for (let path of paths) {
       let matches = matchServerRoutes(routes, path, build.basename);
