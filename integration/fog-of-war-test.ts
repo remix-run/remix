@@ -680,7 +680,7 @@ test.describe("Fog of War", () => {
     ]);
   });
 
-  test("uses a POST request if the URL gets too large", async ({ page }) => {
+  test("skips prefetching if the URL gets too large", async ({ page }) => {
     let fixture = await createFixture({
       config: {
         future: {
@@ -695,8 +695,8 @@ test.describe("Fog of War", () => {
             return (
               <>
                 <h1 id="index">Index</h1>
-                {/* ~250 links * ~16 chars per link > 4196 char URL limit */}
-                {...new Array(250).fill(null).map((el, i) => (
+                {/* 400 links * ~19 chars per link > our 7198 char URL limit */}
+                {...new Array(400).fill(null).map((el, i) => (
                   <Link to={"/dummy-link-" + i}>{i}</Link>
                 ))}
               </>
@@ -717,10 +717,16 @@ test.describe("Fog of War", () => {
     });
 
     await app.goto("/", true);
-    await page.waitForFunction(
-      () => (window as any).__remixManifest.routes["routes/a"]
-    );
-    expect(manifestRequests.length).toBe(1);
-    expect(manifestRequests[0].method()).toBe("POST");
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(manifestRequests.length).toBe(0);
+
+    await app.clickLink("/a");
+    await page.waitForSelector("#a");
+    expect(await app.getHtml("#a")).toMatch("A LOADER");
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a"]);
   });
 });

@@ -142,7 +142,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     );
     if (url.pathname === manifestUrl) {
       try {
-        let res = await handleManifestRequest(_build, routes, request, url);
+        let res = await handleManifestRequest(_build, routes, url);
         return res;
       } catch (e) {
         handleError(e);
@@ -292,7 +292,6 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 async function handleManifestRequest(
   build: ServerBuild,
   routes: ServerRoute[],
-  request: Request,
   url: URL
 ) {
   let data: {
@@ -300,14 +299,8 @@ async function handleManifestRequest(
     notFoundPaths: string[];
   } = { patches: {}, notFoundPaths: [] };
 
-  let searchParams =
-    request.method === "POST"
-      ? new URLSearchParams(await request.text())
-      : url.searchParams;
-
-  let paths = searchParams.getAll("p");
-  if (paths.length > 0) {
-    for (let path of paths) {
+  if (url.searchParams.has("p")) {
+    for (let path of url.searchParams.getAll("p")) {
       let matches = matchServerRoutes(routes, path, build.basename);
       if (matches) {
         for (let match of matches) {
@@ -318,15 +311,12 @@ async function handleManifestRequest(
         data.notFoundPaths.push(path);
       }
     }
+
     return json(data, {
-      ...(request.method === "GET"
-        ? {
-            headers: {
-              "Cache-Control": "public, max-age=31536000, immutable",
-            },
-          }
-        : {}),
-    }) as Response; // Override the TypedResponse stuff
+      headers: {
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    }) as Response; // Override the TypedResponse stuff from json()
   }
 
   return new Response("Invalid Request", { status: 400 });

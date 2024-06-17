@@ -230,16 +230,13 @@ export async function fetchAndApplyManifestPatches(
   url.searchParams.set("version", manifest.version);
   paths.forEach((path) => url.searchParams.append("p", path));
 
-  // GET requests should be good up to 8k - but some providers (GCP) also have
-  // hard limits on entire GET request sizes including headers and such so let's
-  // be somewhat conservative here and move to a POST if our params go beyond 4k.
-  let res =
-    url.searchParams.toString().length > 4196
-      ? await fetch(url.pathname, {
-          method: "post",
-          body: url.searchParams,
-        })
-      : await fetch(url);
+  // If the URL is nearing the ~8k limit on GET requests, skip this optimization
+  // step and just let discovery happen on link click
+  if (url.toString().length > 7168) {
+    return;
+  }
+
+  let res = await fetch(url);
 
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText}`);
