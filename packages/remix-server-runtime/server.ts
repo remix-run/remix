@@ -142,7 +142,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     );
     if (url.pathname === manifestUrl) {
       try {
-        let res = await handleManifestRequest(_build, routes, url);
+        let res = await handleManifestRequest(_build, routes, request, url);
         return res;
       } catch (e) {
         handleError(e);
@@ -292,6 +292,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 async function handleManifestRequest(
   build: ServerBuild,
   routes: ServerRoute[],
+  request: Request,
   url: URL
 ) {
   let data: {
@@ -299,7 +300,12 @@ async function handleManifestRequest(
     notFoundPaths: string[];
   } = { patches: {}, notFoundPaths: [] };
 
-  let paths = url.searchParams.getAll("paths");
+  let searchParams =
+    request.method === "POST"
+      ? new URLSearchParams(await request.text())
+      : url.searchParams;
+
+  let paths = searchParams.getAll("paths");
   if (paths.length > 0) {
     for (let path of paths) {
       let matches = matchServerRoutes(routes, path, build.basename);
