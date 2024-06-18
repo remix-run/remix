@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-[REMOVE] Remove abort logic and use a POST on large URL requests
+[REMOVE] FOW: Remove abort controller logic and skip prefetching if URL is too large
