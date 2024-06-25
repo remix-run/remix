@@ -193,7 +193,7 @@ Date: 2024-06-18
 
 The "Fog of War" feature in Remix, now available through the `future.unstable_fogOfWar` flag, is an optimization to reduce the up front size of the Remix route manifest. In most scenarios the Remix route manifest isn't prohibitively large so as to impact initial perf metrics, but at scale we've found that some apps can generate large manifests that are expensive to download and execute on app startup.
 
-When Fog of War is enabled, Remix will only include the initially server-rendered routes in the manifest and then it will fetch manifest "patches" for outgoing links as the user navigates around. By default, to avoid waterfalls Remix fetches patches for all rendered links, so that in the ideal case they've already been patched in prior to being clicked. If a user clicks an link before this eager discovery completes, then a small waterwall will occur to first "discover" the route, and then navigate to the route.
+When Fog of War is enabled, Remix will only include the initially server-rendered routes in the manifest and then it will fetch manifest "patches" for outgoing links as the user navigates around. By default, to avoid waterfalls Remix fetches patches for all rendered links, so that in the ideal case they've already been patched in prior to being clicked. If a user clicks a link before this eager discovery completes, then a small waterwall will occur to first "discover" the route, and then navigate to the route.
 
 Enabling this flag should require no application code changes. For more information, please see the [documentation](https://remix.run/docs/guides/fog-of-war).
 
