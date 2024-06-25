@@ -4,7 +4,9 @@ title: Fog of War
 
 # Fog Of War
 
-Remix introduced support for "Fog of War" ([RFC][rfc]) behind the [`future.unstable_fogOfWar`][future-flags] flag in [`v2.10.0`][2.10.0] which allows you to opt-into this behavior which will become the default in the next major version of Remix - a.k.a. React Router v7 ([1][rr-v7], [2][rr-v7-2]).
+<docs-warning>This is an unstable API and will continue to change, do not adopt in production</docs-warning>
+
+Remix introduced support for "Fog of War" ([RFC][rfc]) behind the `future.unstable_fogOfWar` [Future Flag][future-flags] in [`v2.10.0`][2.10.0]. This allows you to opt-into this behavior which will become the default in the next major version of Remix - a.k.a. React Router v7 ([1][rr-v7], [2][rr-v7-2]).
 
 ## Current Behavior
 
@@ -48,7 +50,7 @@ If you wish to opt-out of this eager route discovery on a per-link basis, you ca
   - ⚠️ This is considered an internal implementation detail and is not intended to be requested by application code.
 
 [rfc]: https://github.com/remix-run/react-router/discussions/11113
-[future-flags]: ../file-conventions/remix-config#future
+[future-flags]: ../guides/api-development-strategy
 [2.10.0]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#v2100
 [link]: ../components/link
 [navlink]: ../components/nav-link
