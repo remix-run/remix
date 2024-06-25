@@ -323,8 +323,8 @@ importers:
         specifier: workspace:*
         version: link:../packages/remix-node
       '@remix-run/router':
-        specifier: 1.17.0-pre.0
-        version: 1.17.0-pre.0
+        specifier: 1.17.0
+        version: 1.17.0
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../packages/remix-server-runtime
@@ -548,13 +548,13 @@ importers:
   integration/helpers/vite-cloudflare-template:
     dependencies:
       '@remix-run/cloudflare':
-        specifier: 2.9.2
+        specifier: 2.10.0
         version: link:../../../packages/remix-cloudflare
       '@remix-run/cloudflare-pages':
-        specifier: 2.9.2
+        specifier: 2.10.0
         version: link:../../../packages/remix-cloudflare-pages
       '@remix-run/react':
-        specifier: 2.9.2
+        specifier: 2.10.0
         version: link:../../../packages/remix-react
       isbot:
         specifier: ^4.1.0
@@ -865,11 +865,11 @@ importers:
         specifier: workspace:*
         version: link:../remix-node
       '@remix-run/react':
-        specifier: ^2.9.2
+        specifier: ^2.10.0
         version: link:../remix-react
       '@remix-run/router':
-        specifier: 1.17.0-pre.0
-        version: 1.17.0-pre.0
+        specifier: 1.17.0
+        version: 1.17.0
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
@@ -1198,8 +1198,8 @@ importers:
         specifier: ^0.1.2
         version: 0.1.2
       undici:
-        specifier: ^6.10.1
-        version: 6.10.1
+        specifier: ^6.11.1
+        version: 6.11.1
     devDependencies:
       '@types/cookie-signature':
         specifier: ^1.0.3
@@ -1214,17 +1214,17 @@ importers:
   packages/remix-react:
     dependencies:
       '@remix-run/router':
-        specifier: 1.17.0-pre.0
-        version: 1.17.0-pre.0
+        specifier: 1.17.0
+        version: 1.17.0
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
       react-router:
-        specifier: 6.24.0-pre.0
-        version: 6.24.0-pre.0(react@18.2.0)
+        specifier: 6.24.0
+        version: 6.24.0(react@18.2.0)
       react-router-dom:
-        specifier: 6.24.0-pre.0
-        version: 6.24.0-pre.0(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.24.0
+        version: 6.24.0(react-dom@18.2.0)(react@18.2.0)
       turbo-stream:
         specifier: 2.2.0
         version: 2.2.0
@@ -1300,8 +1300,8 @@ importers:
   packages/remix-server-runtime:
     dependencies:
       '@remix-run/router':
-        specifier: 1.17.0-pre.0
-        version: 1.17.0-pre.0
+        specifier: 1.17.0
+        version: 1.17.0
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -1337,11 +1337,11 @@ importers:
         specifier: workspace:*
         version: link:../remix-react
       '@remix-run/router':
-        specifier: 1.17.0-pre.0
-        version: 1.17.0-pre.0
+        specifier: 1.17.0
+        version: 1.17.0
       react-router-dom:
-        specifier: 6.24.0-pre.0
-        version: 6.24.0-pre.0(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.24.0
+        version: 6.24.0(react-dom@18.2.0)(react@18.2.0)
     devDependencies:
       '@remix-run/server-runtime':
         specifier: workspace:*
@@ -1377,8 +1377,8 @@ packages:
     resolution: {integrity: sha512-1Yjs2SvM8TflER/OD3cOjhWWOZb58A2t7wpE2S9XfBYTiIl+XFhQG2bjy4Pu1I+EAlCNUzRDYDdFwFYUKvXcIA==}
     engines: {node: '>=0.10.0'}
 
-  /@adobe/css-tools@4.3.1:
-    resolution: {integrity: sha512-/62yikz7NLScCGAAST5SHdnjaDJQBDq0M2muyRTpf2VQhw6StBg2ALiu73zSJQ4fMVLA+0uBhBHAle7Wg+2kSg==}
+  /@adobe/css-tools@4.3.3:
+    resolution: {integrity: sha512-rE0Pygv0sEZ4vBWHlAgJLGDU7Pm8xoO6p3wsEceb7GYAjScrOHpEo8KK/eVkAcnSM+slAEtXjA2JpdjLp4fJQQ==}
 
   /@alloc/quick-lru@5.2.0:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -4198,8 +4198,8 @@ packages:
       - encoding
     dev: false
 
-  /@remix-run/router@1.17.0-pre.0:
-    resolution: {integrity: sha512-GiN0H3ICPbdEgaIa48SZ2A3vBJmgc2At8lA0u7YGd2CnuCnoN37EeaN/7D29noFwe3JIl2D7xqHcVGSx1WKC6Q==}
+  /@remix-run/router@1.17.0:
+    resolution: {integrity: sha512-2D6XaHEVvkCn682XBnipbJjgZUU7xjLtA4dGJRBVUKpEaDYOZMENZoZjAOSb7qirxt5RupjzZxz4fK2FO+EFPw==}
     engines: {node: '>=14.0.0'}
     dev: false
 
@@ -4517,7 +4517,7 @@ packages:
     resolution: {integrity: sha512-ynmNeT7asXyH3aSVv4vvX4Rb+0qjOhdNHnO/3vuZNqPmhDpV/+rCSGwQ7bLcmU2cJ4dvoheIO85LQj0IbJHEtg==}
     engines: {node: '>=8', npm: '>=6', yarn: '>=1'}
     dependencies:
-      '@adobe/css-tools': 4.3.1
+      '@adobe/css-tools': 4.3.3
       '@babel/runtime': 7.23.9
       '@types/testing-library__jest-dom': 5.14.2
       aria-query: 5.3.0
@@ -5885,7 +5885,7 @@ packages:
   /axios@0.27.2:
     resolution: {integrity: sha512-t+yRIyySRTp/wua5xEr+z1q60QmLq8ABsS5O9Me1AsE5dfKqgnCFzwiCZZ/cGNd1lq4/7akDWMxdhVlucjmnOQ==}
     dependencies:
-      follow-redirects: 1.15.3
+      follow-redirects: 1.15.6
       form-data: 4.0.0
     transitivePeerDependencies:
       - debug
@@ -8241,8 +8241,8 @@ packages:
   /flatted@3.2.2:
     resolution: {integrity: sha512-JaTY/wtrcSyvXJl4IMFHPKyFur1sE9AUqc0QnhOaJ0CxHtAoIV8pYDzeEfAaNEtGkOfq4gr3LBFmdXW5mOQFnA==}
 
-  /follow-redirects@1.15.3:
-    resolution: {integrity: sha512-1VzOtuEM8pC9SFU1E+8KfTjZyMztRsgEfwQl44z8A25uy13jSzTj6dyK2Df52iV0vgHCfBwLhDWevLn95w5v6Q==}
+  /follow-redirects@1.15.6:
+    resolution: {integrity: sha512-wWN62YITEaOpSK584EZXJafH1AGpO8RVgElfkuXbTOrPX4fIfOyEpW/CsiNd8JdYrAoOvafRTOEnvsO++qCqFA==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -12577,7 +12577,7 @@ packages:
       log-utils: 0.2.1
       pointer-symbol: 1.0.0
       radio-symbol: 2.0.0
-      set-value: 3.0.2
+      set-value: 3.0.3
       strip-color: 0.1.0
       terminal-paginator: 2.0.2
       toggle-array: 1.0.1
@@ -12783,26 +12783,26 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /react-router-dom@6.24.0-pre.0(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-9nqbRVVDlbuQFBsGouL7InXO5vt9H5Tt2h37lyT3y59IH10O/3dEVUN62g0AFQUYgaIjDmdALHJsfxnd/Df0Tw==}
+  /react-router-dom@6.24.0(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-960sKuau6/yEwS8e+NVEidYQb1hNjAYM327gjEyXlc6r3Skf2vtwuJ2l7lssdegD2YjoKG5l8MsVyeTDlVeY8g==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
     dependencies:
-      '@remix-run/router': 1.17.0-pre.0
+      '@remix-run/router': 1.17.0
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      react-router: 6.24.0-pre.0(react@18.2.0)
+      react-router: 6.24.0(react@18.2.0)
     dev: false
 
-  /react-router@6.24.0-pre.0(react@18.2.0):
-    resolution: {integrity: sha512-iSJqzLruQ+VYQBDRXK+K77Sa246TR4LlBTptimvUM64wbCbqKpAq70wxtDCVPahWGr52vtt53mpjH51Lq+5kuw==}
+  /react-router@6.24.0(react@18.2.0):
+    resolution: {integrity: sha512-sQrgJ5bXk7vbcC4BxQxeNa5UmboFm35we1AFK0VvQaz9g0LzxEIuLOhHIoZ8rnu9BO21ishGeL9no1WB76W/eg==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
     dependencies:
-      '@remix-run/router': 1.17.0-pre.0
+      '@remix-run/router': 1.17.0
       react: 18.2.0
     dev: false
 
@@ -13442,8 +13442,8 @@ packages:
       to-object-path: 0.3.0
     dev: false
 
-  /set-value@3.0.2:
-    resolution: {integrity: sha512-npjkVoz+ank0zjlV9F47Fdbjfj/PfXyVhZvGALWsyIYU/qrMzpi6avjKW3/7KeSU2Df3I46BrN1xOI1+6vW0hA==}
+  /set-value@3.0.3:
+    resolution: {integrity: sha512-Xsn/XSatoVOGBbp5hs3UylFDs5Bi9i+ArpVJKdHPniZHoEgRniXTqHWrWrGQ0PbEClVT6WtfnBwR8CAHC9sveg==}
     engines: {node: '>=6.0'}
     dependencies:
       is-plain-object: 2.0.4
@@ -14454,8 +14454,8 @@ packages:
     dependencies:
       '@fastify/busboy': 2.1.0
 
-  /undici@6.10.1:
-    resolution: {integrity: sha512-kSzmWrOx3XBKTgPm4Tal8Hyl3yf+hzlA00SAf4goxv8LZYafKmS6gJD/7Fe5HH/DMNiFTRXvkwhLo7mUn5fuQQ==}
+  /undici@6.11.1:
+    resolution: {integrity: sha512-KyhzaLJnV1qa3BSHdj4AZ2ndqI0QWPxYzaIOio0WzcEJB9gvuysprJSLtpvc2D9mhR9jPDUk7xlJlZbH2KR5iw==}
     engines: {node: '>=18.0'}
     dev: false
 
