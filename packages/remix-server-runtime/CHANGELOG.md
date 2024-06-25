@@ -1,21 +1,13 @@
 # `@remix-run/server-runtime`
 
-## 2.10.0-pre.4
-
-## 2.10.0-pre.3
-
-## 2.10.0-pre.2
-
-## 2.10.0-pre.1
-
-## 2.10.0-pre.0
+## 2.10.0
 
 ### Minor Changes
 
 - Add support for Lazy Route Discovery (a.k.a. Fog of War) ([#9600](https://github.com/remix-run/remix/pull/9600))
 
-  - RFC: https://github.com/remix-run/react-router/discussions/11113
-  - Docs: https://remix.run/docs/guides/fog-of-war
+  - RFC: <https://github.com/remix-run/react-router/discussions/11113>
+  - Docs: <https://remix.run/docs/guides/fog-of-war>
 
 ### Patch Changes
 

@@ -1,54 +1,26 @@
 # `@remix-run/react`
 
-## 2.10.0-pre.4
-
-### Patch Changes
-
-- [REMOVE] Bump router ([#9648](https://github.com/remix-run/remix/pull/9648))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.10.0-pre.4`
-
-## 2.10.0-pre.3
-
-### Patch Changes
-
-- [REMOVE] FOW: Remove abort controller logic and skip prefetching if URL is too large ([#9626](https://github.com/remix-run/remix/pull/9626))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.10.0-pre.3`
-
-## 2.10.0-pre.2
-
-### Patch Changes
-
-- [REMOVE] Properly handle pathless children of ancestor routes in FOW ([#9624](https://github.com/remix-run/remix/pull/9624))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.10.0-pre.2`
-
-## 2.10.0-pre.1
-
-### Patch Changes
-
-- Fix fog of war issue with routing back to homepage from deep SSR page ([#9619](https://github.com/remix-run/remix/pull/9619))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.10.0-pre.1`
-
-## 2.10.0-pre.0
+## 2.10.0
 
 ### Minor Changes
 
 - Add support for Lazy Route Discovery (a.k.a. Fog of War) ([#9600](https://github.com/remix-run/remix/pull/9600))
 
-  - RFC: https://github.com/remix-run/react-router/discussions/11113
-  - Docs: https://remix.run/docs/guides/fog-of-war
+  - RFC: <https://github.com/remix-run/react-router/discussions/11113>
+  - Docs: <https://remix.run/docs/guides/fog-of-war>
 
 ### Patch Changes
 
+- \[REMOVE] Fix fog of war issue with routing back to homepage from deep SSR page ([#9619](https://github.com/remix-run/remix/pull/9619))
 - Don't prefetch server loader data when clientLoader exists ([#9580](https://github.com/remix-run/remix/pull/9580))
 - Avoid hydration loops when `Layout` `ErrorBoundary` renders also throw ([#9566](https://github.com/remix-run/remix/pull/9566))
+- \[REMOVE] Properly handle pathless children of ancestor routes in FOW ([#9624](https://github.com/remix-run/remix/pull/9624))
 - Fix a bug where hydration wouldn't work right when using child routes and hydrate fallbacks with a basename ([#9584](https://github.com/remix-run/remix/pull/9584))
+- \[REMOVE] Bump router ([#9648](https://github.com/remix-run/remix/pull/9648))
 - Update to `turbo-stream@2.2.0` for single fetch ([#9562](https://github.com/remix-run/remix/pull/9562))
+- \[REMOVE] FOW: Remove abort controller logic and skip prefetching if URL is too large ([#9626](https://github.com/remix-run/remix/pull/9626))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.10.0-pre.0`
+  - `@remix-run/server-runtime@2.10.0`
 
 ## 2.9.2
 
