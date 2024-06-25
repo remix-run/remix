@@ -52,7 +52,7 @@ The path to the `app` directory, relative to the project root. Defaults to
 
 #### future
 
-The `future` config lets you opt-into future breaking changes via [Future Flags][future-flags]. Please see the [Current Future Flags][current-future-flags] section for a list of all available Future Flags.
+The `future` config lets you opt-into future breaking changes via [Future Flags][future-flags].
 
 #### ignoredRouteFiles
 
@@ -143,4 +143,3 @@ You may also want to enable the `manifest` option since, when server bundles are
 [rr-basename]: https://reactrouter.com/routers/create-browser-router#basename
 [vite-public-base-path]: https://vitejs.dev/config/shared-options.html#base
 [vite-base]: https://vitejs.dev/config/shared-options.html#base
-[current-future-flags]: ../start/future-flags#current-future-flags

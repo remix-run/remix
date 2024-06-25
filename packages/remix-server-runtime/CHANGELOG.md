@@ -13,8 +13,8 @@
 
 - Properly handle thrown 4xx/5xx response stubs in single fetch ([#9501](https://github.com/remix-run/remix/pull/9501))
 - Change single fetch redirects to use a 202 status to avoid automatic caching ([#9564](https://github.com/remix-run/remix/pull/9564))
-- - Fix error when returning null from a resource route in single fetch ([#9488](https://github.com/remix-run/remix/pull/9488))
-  - Fix issues with returning or throwing a response stub from a resource route in single fetch
+- Fix error when returning `null` from a resource route in single fetch ([#9488](https://github.com/remix-run/remix/pull/9488))
+- Fix issues with returning or throwing a response stub from a resource route in single fetch ([#9488](https://github.com/remix-run/remix/pull/9488))
 - Update to `turbo-stream@2.2.0` for single fetch ([#9562](https://github.com/remix-run/remix/pull/9562))
 
 ## 2.9.2
