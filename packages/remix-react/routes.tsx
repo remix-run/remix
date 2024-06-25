@@ -236,7 +236,7 @@ function noActionDefinedError(
 export function createClientRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
-  initialState: HydrationState,
+  initialState: HydrationState | null,
   future: FutureConfig,
   isSpaMode: boolean,
   parentId: string = "",

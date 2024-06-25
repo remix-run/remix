@@ -30,7 +30,6 @@ import {
   useMatches as useMatchesRR,
   useRouteLoaderData as useRouteLoaderDataRR,
   useLocation,
-  useNavigation,
   useHref,
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
@@ -56,6 +55,7 @@ import type {
   RouteHandle,
 } from "./routeModules";
 import { addRevalidationParam, singleFetchUrl } from "./single-fetch";
+import { getPartialManifest, isFogOfWarEnabled } from "./fog-of-war";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -93,6 +93,14 @@ export function useRemixContext(): RemixContextObject {
 // Public API
 
 /**
+ * Defines the discovery behavior of the link:
+ *
+ * - "render": Eagerly discover when the link is rendered (default)
+ * - "none": No eager discovery - discover when the link is clicked
+ */
+export type DiscoverBehavior = "render" | "none";
+
+/**
  * Defines the prefetching behavior of the link:
  *
  * - "none": Never fetched
@@ -103,10 +111,12 @@ export function useRemixContext(): RemixContextObject {
 type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
 export interface RemixLinkProps extends LinkProps {
+  discover?: DiscoverBehavior;
   prefetch?: PrefetchBehavior;
 }
 
 export interface RemixNavLinkProps extends NavLinkProps {
+  discover?: DiscoverBehavior;
   prefetch?: PrefetchBehavior;
 }
 
@@ -194,7 +204,7 @@ const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
  * @see https://remix.run/components/nav-link
  */
 let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
-  ({ to, prefetch = "none", ...props }, forwardedRef) => {
+  ({ to, prefetch = "none", discover = "render", ...props }, forwardedRef) => {
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
@@ -210,6 +220,9 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
           {...prefetchHandlers}
           ref={mergeRefs(forwardedRef, ref)}
           to={to}
+          data-discover={
+            !isAbsolute && discover === "render" ? "true" : undefined
+          }
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -228,7 +241,7 @@ export { NavLink };
  * @see https://remix.run/components/link
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
-  ({ to, prefetch = "none", ...props }, forwardedRef) => {
+  ({ to, prefetch = "none", discover = "render", ...props }, forwardedRef) => {
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
@@ -244,6 +257,9 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
           {...prefetchHandlers}
           ref={mergeRefs(forwardedRef, ref)}
           to={to}
+          data-discover={
+            !isAbsolute && discover === "render" ? "true" : undefined
+          }
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -664,7 +680,7 @@ export function Scripts(props: ScriptProps) {
   } = useRemixContext();
   let { router, static: isStatic, staticContext } = useDataRouterContext();
   let { matches: routerMatches } = useDataRouterStateContext();
-  let navigation = useNavigation();
+  let enableFogOfWar = isFogOfWarEnabled(future, isSpaMode);
 
   // Let <RemixServer> know that we hydrated and we should render the single
   // fetch streaming scripts
@@ -852,7 +868,7 @@ export function Scripts(props: ScriptProps) {
           manifest.hmr?.runtime
             ? `import ${JSON.stringify(manifest.hmr.runtime)};`
             : ""
-        }import ${JSON.stringify(manifest.url)};
+        }${enableFogOfWar ? "" : `import ${JSON.stringify(manifest.url)}`};
 ${matches
   .map(
     (match, index) =>
@@ -861,6 +877,16 @@ ${matches
       )};`
   )
   .join("\n")}
+${
+  enableFogOfWar
+    ? // Inline a minimal manifest with the SSR matches
+      `window.__remixManifest = ${JSON.stringify(
+        getPartialManifest(manifest, router),
+        null,
+        2
+      )};`
+    : ""
+}
 window.__remixRouteModules = {${matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
@@ -905,27 +931,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     }
   }
 
-  // avoid waterfall when importing the next route module
-  let nextMatches = React.useMemo(() => {
-    if (navigation.location) {
-      // FIXME: can probably use transitionManager `nextMatches`
-      let matches = matchRoutes(
-        router.routes,
-        navigation.location,
-        router.basename
-      );
-      invariant(
-        matches,
-        `No routes match path "${navigation.location.pathname}"`
-      );
-      return matches;
-    }
-
-    return [];
-  }, [navigation.location, router.routes, router.basename]);
-
   let routePreloads = matches
-    .concat(nextMatches)
     .map((match) => {
       let route = manifest.routes[match.route.id];
       return (route.imports || []).concat([route.module]);
@@ -936,11 +942,13 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   return isHydrated ? null : (
     <>
-      <link
-        rel="modulepreload"
-        href={manifest.url}
-        crossOrigin={props.crossOrigin}
-      />
+      {!enableFogOfWar ? (
+        <link
+          rel="modulepreload"
+          href={manifest.url}
+          crossOrigin={props.crossOrigin}
+        />
+      ) : null}
       <link
         rel="modulepreload"
         href={manifest.entry.module}

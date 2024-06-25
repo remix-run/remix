@@ -20,6 +20,7 @@ import {
   getSingleFetchDataStrategy,
 } from "./single-fetch";
 import invariant from "./invariant";
+import { initFogOfWar, useFogOFWarDiscovery } from "./fog-of-war";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -264,7 +265,11 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         ...window.__remixContext.state,
         loaderData: { ...window.__remixContext.state.loaderData },
       };
-      let initialMatches = matchRoutes(routes, window.location);
+      let initialMatches = matchRoutes(
+        routes,
+        window.location,
+        window.__remixContext.basename
+      );
       if (initialMatches) {
         for (let match of initialMatches) {
           let routeId = match.route.id;
@@ -300,6 +305,14 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       }
     }
 
+    let { enabled: isFogOfWarEnabled, patchRoutesOnMiss } = initFogOfWar(
+      window.__remixManifest,
+      window.__remixRouteModules,
+      window.__remixContext.future,
+      window.__remixContext.isSpaMode,
+      window.__remixContext.basename
+    );
+
     // We don't use createBrowserRouter here because we need fine-grained control
     // over initialization to support synchronous `clientLoader` flows.
     router = createRouter({
@@ -324,6 +337,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
             window.__remixRouteModules
           )
         : undefined,
+      ...(isFogOfWarEnabled
+        ? { unstable_patchRoutesOnMiss: patchRoutesOnMiss }
+        : {}),
     });
 
     // We can call initialize() immediately if the router doesn't have any
@@ -380,6 +396,15 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       }
     });
   }, [location]);
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useFogOFWarDiscovery(
+    router,
+    window.__remixManifest,
+    window.__remixRouteModules,
+    window.__remixContext.future,
+    window.__remixContext.isSpaMode
+  );
 
   // We need to include a wrapper RemixErrorBoundary here in case the root error
   // boundary also throws and we need to bubble up outside of the router entirely.

@@ -332,15 +332,21 @@ remix({
 
 You likely won't need to adjust any code, unless you had custom logic inside of `handleError` that was matching the previous error message to differentiate it from other errors.
 
+## unstable_singleFetch
+
+Opt into [Single Fetch][single-fetch] behavior (details will be expanded once the flag stabilizes).
+
+## unstable_fogOfWar
+
+Opt into [Fog of War][fog-of-war] behavior (details will be expanded once the flag stabilizes).
+
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
-[use-fetchers]: ../hooks/use-fetchers
-[use-fetcher]: ../hooks/use-fetcher
 [relativesplatpath-changelog]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#futurev3_relativesplatpath
 [single-fetch]: ../guides/single-fetch
+[fog-of-war]: ../guides/fog-of-war
 [vite]: https://vitejs.dev
 [vite-docs]: ../guides/vite
-[vite-blog-post]: https://remix.run/blog/remix-vite-stable
 [supported-remix-config-options]: ../file-conventions/vite-config
 [migrate-css-frameworks]: ../guides/vite#enable-tailwind-via-postcss
 [migrate-a-custom-server]: ../guides/vite#migrating-a-custom-server

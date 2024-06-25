@@ -21,8 +21,9 @@ import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
 import { getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
+import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
-import type { ServerRoute } from "./routes";
+import type { EntryRoute, ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
@@ -35,6 +36,7 @@ import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
 import type { SingleFetchResult, SingleFetchResults } from "./single-fetch";
 import {
+  convertResponseStubToErrorResponse,
   encodeViaTurboStream,
   getResponseStubs,
   getSingleFetchDataStrategy,
@@ -46,6 +48,7 @@ import {
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
   ResponseStubOperationsSymbol,
+  SINGLE_FETCH_REDIRECT_STATUS,
 } from "./single-fetch";
 import { resourceRouteJsonWarning } from "./deprecations";
 
@@ -118,9 +121,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     }
 
     let url = new URL(request.url);
-
-    let matches = matchServerRoutes(routes, url.pathname, _build.basename);
-    let params = matches && matches.length > 0 ? matches[0].params : {};
+    let params: RouteMatch<ServerRoute>["params"] = {};
     let handleError = (error: unknown) => {
       if (mode === ServerMode.Development) {
         getDevServerHooks()?.processRequestError?.(error);
@@ -132,6 +133,27 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         request,
       });
     };
+
+    // Manifest request for fog of war
+
+    let manifestUrl = `${_build.basename ?? "/"}/__manifest`.replace(
+      /\/+/g,
+      "/"
+    );
+    if (url.pathname === manifestUrl) {
+      try {
+        let res = await handleManifestRequest(_build, routes, url);
+        return res;
+      } catch (e) {
+        handleError(e);
+        return new Response("Unknown Server Error", { status: 500 });
+      }
+    }
+
+    let matches = matchServerRoutes(routes, url.pathname, _build.basename);
+    if (matches && matches.length > 0) {
+      Object.assign(params, matches[0].params);
+    }
 
     let response: Response;
     if (url.searchParams.has("_data")) {
@@ -218,7 +240,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
               serverMode
             ),
             {
-              status: 200,
+              status: SINGLE_FETCH_REDIRECT_STATUS,
               headers,
             }
           );
@@ -266,6 +288,39 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     return response;
   };
 };
+
+async function handleManifestRequest(
+  build: ServerBuild,
+  routes: ServerRoute[],
+  url: URL
+) {
+  let data: {
+    patches: Record<string, EntryRoute>;
+    notFoundPaths: string[];
+  } = { patches: {}, notFoundPaths: [] };
+
+  if (url.searchParams.has("p")) {
+    for (let path of url.searchParams.getAll("p")) {
+      let matches = matchServerRoutes(routes, path, build.basename);
+      if (matches) {
+        for (let match of matches) {
+          let routeId = match.route.id;
+          data.patches[routeId] = build.assets.routes[routeId];
+        }
+      } else {
+        data.notFoundPaths.push(path);
+      }
+    }
+
+    return json(data, {
+      headers: {
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    }) as Response; // Override the TypedResponse stuff from json()
+  }
+
+  return new Response("Invalid Request", { status: 400 });
+}
 
 async function handleDataRequest(
   serverMode: ServerMode,
@@ -421,6 +476,14 @@ async function handleDocumentRequest(
         status: statusCode,
         headers,
       });
+    }
+
+    if (context.errors) {
+      for (let [routeId, error] of Object.entries(context.errors)) {
+        if (isResponseStub(error)) {
+          context.errors[routeId] = convertResponseStubToErrorResponse(error);
+        }
+      }
     }
   } else {
     statusCode = context.statusCode;
@@ -591,7 +654,7 @@ async function handleResourceRequest(
         : null),
     });
 
-    if (typeof response === "object") {
+    if (typeof response === "object" && response !== null) {
       invariant(
         !(DEFERRED_SYMBOL in response),
         `You cannot return a \`defer()\` response from a Resource Route.  Did you ` +
@@ -609,6 +672,13 @@ async function handleResourceRequest(
           // @ts-expect-error
           response.headers[op](...args);
         }
+      } else if (isResponseStub(response) || response == null) {
+        // If the stub or null was returned, then there is no body so we just
+        // proxy along the status/headers to a Response
+        response = new Response(null, {
+          status: stub.status,
+          headers: stub.headers,
+        });
       } else {
         console.warn(
           resourceRouteJsonWarning(
@@ -637,6 +707,13 @@ async function handleResourceRequest(
       // match identically to what Remix returns
       error.headers.set("X-Remix-Catch", "yes");
       return error;
+    }
+
+    if (isResponseStub(error)) {
+      return new Response(null, {
+        status: error.status,
+        headers: error.headers,
+      });
     }
 
     if (isRouteErrorResponse(error)) {
