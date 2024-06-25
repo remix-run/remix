@@ -359,7 +359,7 @@ URL segments, layouts, and data are more often than not coupled (tripled?) toget
 
 Because of this natural coupling, Remix has data conventions to get data into your route components easily.
 
-There are two APIs we'll be using to load data, [`loader`][loader] and [`useLoaderData`][use-loader-data]. First we'll create and export a `loader` function in the root route and then render the data.
+There are two APIs we'll be using to load data: [`loader`][loader] and [`useLoaderData`][use-loader-data]. First we'll create and export a `loader` function in the root route and then render the data.
 
 👉 **Export a `loader` function from `app/root.tsx` and render the data**
 
