@@ -91,7 +91,16 @@ export default function App() {
 
 ## Build and Run
 
-First build the app for production:
+First you will need to specify the type as `module` in `package.json` to satisfy esmodule requirements for `remix-run` and future versions of `vite`.
+
+```jsonc filename=package.json lines=[2] nocopy
+{
+  "type": "module"
+  // ...
+}
+```
+
+Next build the app for production:
 
 ```shellscript nonumber
 npx remix vite:build
@@ -100,15 +109,6 @@ npx remix vite:build
 You should now see a `build` folder containing a `server` folder (the server version of your app) and a `client` folder (the browser version) with some build artifacts in them. (This is all [configurable][vite_config].)
 
 👉 **Run the app with `remix-serve`**
-
-First you will need to specify the type in `package.json` as module so that `remix-serve` can run your app.
-
-```jsonc filename=package.json lines=[2] nocopy
-{
-  "type": "module"
-  // ...
-}
-```
 
 Now you can run your app with `remix-serve`:
 
