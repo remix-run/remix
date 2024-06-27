@@ -2354,7 +2354,7 @@ test.describe("single fetch", () => {
         });
 
         let app = new PlaywrightFixture(appFixture, page);
-        await app.goto("/", true);
+        await app.goto("/", false);
 
         if (browserName === "webkit") {
           // No prefetch support :/
