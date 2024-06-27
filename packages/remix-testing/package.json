@@ -21,8 +21,8 @@
   "dependencies": {
     "@remix-run/node": "workspace:*",
     "@remix-run/react": "workspace:*",
-    "@remix-run/router": "1.17.0",
-    "react-router-dom": "6.24.0"
+    "@remix-run/router": "0.0.0-experimental-3ce8d73c7",
+    "react-router-dom": "0.0.0-experimental-3ce8d73c7"
   },
   "devDependencies": {
     "@remix-run/server-runtime": "workspace:*",
