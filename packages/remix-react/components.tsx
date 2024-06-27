@@ -13,11 +13,13 @@ import type {
 } from "@remix-run/router";
 import type {
   FetcherWithComponents,
+  FormProps,
   LinkProps,
   NavLinkProps,
 } from "react-router-dom";
 import {
   Await as AwaitRR,
+  Form as RouterForm,
   Link as RouterLink,
   NavLink as RouterNavLink,
   UNSAFE_DataRouterContext as DataRouterContext,
@@ -270,6 +272,33 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
 );
 Link.displayName = "Link";
 export { Link };
+
+export interface RemixFormProps extends FormProps {
+  discover?: DiscoverBehavior;
+}
+
+/**
+ * This component renders a form tag and is the primary way the user will
+ * submit information via your website.
+ *
+ * @see https://remix.run/components/form
+ */
+let Form = React.forwardRef<HTMLFormElement, RemixFormProps>(
+  ({ discover = "render", ...props }, forwardedRef) => {
+    let isAbsolute =
+      typeof props.action === "string" && ABSOLUTE_URL_REGEX.test(props.action);
+    return (
+      <RouterForm
+        {...props}
+        data-discover={
+          !isAbsolute && discover === "render" ? "true" : undefined
+        }
+      />
+    );
+  }
+);
+Form.displayName = "Form";
+export { Form };
 
 export function composeEventHandlers<
   EventType extends React.SyntheticEvent | Event
