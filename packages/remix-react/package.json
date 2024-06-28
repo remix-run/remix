@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "2.10.0",
+  "version": "0.0.0-nightly-bd4f87355-20240628",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -20,14 +20,14 @@
   },
   "dependencies": {
     "@remix-run/router": "0.0.0-experimental-078ef8de9",
-    "@remix-run/server-runtime": "workspace:*",
+    "@remix-run/server-runtime": "0.0.0-nightly-bd4f87355-20240628",
     "react-router": "0.0.0-experimental-078ef8de9",
     "react-router-dom": "0.0.0-experimental-078ef8de9",
     "turbo-stream": "2.2.0"
   },
   "devDependencies": {
-    "@remix-run/node": "workspace:*",
-    "@remix-run/react": "workspace:*",
+    "@remix-run/node": "0.0.0-nightly-bd4f87355-20240628",
+    "@remix-run/react": "0.0.0-nightly-bd4f87355-20240628",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.3.0",
     "@types/react": "^18.2.20",
