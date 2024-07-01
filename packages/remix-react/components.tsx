@@ -200,6 +200,14 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 
 const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
+function enableFogOfWarDiscovery(
+  discover: DiscoverBehavior,
+  isAbsolute: boolean,
+  reloadDocument: boolean | undefined
+) {
+  return discover === "render" && !isAbsolute && !reloadDocument;
+}
+
 /**
  * A special kind of `<Link>` that knows whether it is "active".
  *
@@ -223,7 +231,9 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
           ref={mergeRefs(forwardedRef, ref)}
           to={to}
           data-discover={
-            !isAbsolute && discover === "render" ? "true" : undefined
+            enableFogOfWarDiscovery(discover, isAbsolute, props.reloadDocument)
+              ? "true"
+              : undefined
           }
         />
         {shouldPrefetch && !isAbsolute ? (
@@ -260,7 +270,9 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
           ref={mergeRefs(forwardedRef, ref)}
           to={to}
           data-discover={
-            !isAbsolute && discover === "render" ? "true" : undefined
+            enableFogOfWarDiscovery(discover, isAbsolute, props.reloadDocument)
+              ? "true"
+              : undefined
           }
         />
         {shouldPrefetch && !isAbsolute ? (
@@ -291,7 +303,9 @@ let Form = React.forwardRef<HTMLFormElement, RemixFormProps>(
       <RouterForm
         {...props}
         data-discover={
-          !isAbsolute && discover === "render" ? "true" : undefined
+          enableFogOfWarDiscovery(discover, isAbsolute, props.reloadDocument)
+            ? "true"
+            : undefined
         }
       />
     );
