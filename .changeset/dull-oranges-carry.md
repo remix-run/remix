@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-Fog of War: Don't prefetch links/forms with `reloadDocument`
+Fog of War (unstable): Don't discover links/forms with `reloadDocument`

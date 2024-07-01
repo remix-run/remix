@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-Fog of War: Support route discovery from `<Form>` components
+Fog of War (unstable): Support route discovery from `<Form>` components
