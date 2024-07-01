@@ -739,8 +739,8 @@ importers:
   packages/remix-architect:
     dependencies:
       '@architect/functions':
-        specifier: ^5.2.0
-        version: 5.4.1
+        specifier: ^7.0.0
+        version: 7.0.0
       '@remix-run/node':
         specifier: workspace:*
         version: link:../remix-node
@@ -1391,9 +1391,9 @@ packages:
       '@jridgewell/gen-mapping': 0.1.1
       '@jridgewell/trace-mapping': 0.3.19
 
-  /@architect/functions@5.4.1:
-    resolution: {integrity: sha512-F13FBUvVHjerUaSdnXIC3pZUnI10lxyVZ7HsrU8vM2qB5pFNqw5EgqcnVgORz/eqCcqevpIKayQ9yOUf/HuBAA==}
-    engines: {node: '>=12'}
+  /@architect/functions@7.0.0:
+    resolution: {integrity: sha512-6HumTH9885uMAZ9yIEBUi8RmgzFTQoGefd6CD6sNkVzoZM2QCyk4BRfKvo8hdgm+AxDjkZdvA/4kaj5K7680Bg==}
+    engines: {node: '>=14'}
     dependencies:
       cookie: 0.5.0
       cookie-signature: 1.2.1
