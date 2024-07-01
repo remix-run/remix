@@ -30,10 +30,6 @@ You will need to rerun typegen whenever you make changes to `wrangler.toml`.
 
 ## Deployment
 
-> [!WARNING]  
-> Cloudflare does _not_ use `wrangler.toml` to configure deployment bindings.
-> You **MUST** [configure deployment bindings manually in the Cloudflare dashboard][bindings].
-
 First, build your app for production:
 
 ```sh
@@ -45,8 +41,6 @@ Then, deploy your app to Cloudflare Pages:
 ```sh
 npm run deploy
 ```
-
-[bindings]: https://developers.cloudflare.com/pages/functions/bindings/
 
 ## Styling
 
