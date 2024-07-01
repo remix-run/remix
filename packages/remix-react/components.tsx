@@ -200,12 +200,14 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 
 const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
-function enableFogOfWarDiscovery(
+function getDiscoverAttr(
   discover: DiscoverBehavior,
   isAbsolute: boolean,
   reloadDocument: boolean | undefined
 ) {
-  return discover === "render" && !isAbsolute && !reloadDocument;
+  return discover === "render" && !isAbsolute && !reloadDocument
+    ? "true"
+    : undefined;
 }
 
 /**
@@ -230,11 +232,11 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
           {...prefetchHandlers}
           ref={mergeRefs(forwardedRef, ref)}
           to={to}
-          data-discover={
-            enableFogOfWarDiscovery(discover, isAbsolute, props.reloadDocument)
-              ? "true"
-              : undefined
-          }
+          data-discover={getDiscoverAttr(
+            discover,
+            isAbsolute,
+            props.reloadDocument
+          )}
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -269,11 +271,11 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
           {...prefetchHandlers}
           ref={mergeRefs(forwardedRef, ref)}
           to={to}
-          data-discover={
-            enableFogOfWarDiscovery(discover, isAbsolute, props.reloadDocument)
-              ? "true"
-              : undefined
-          }
+          data-discover={getDiscoverAttr(
+            discover,
+            isAbsolute,
+            props.reloadDocument
+          )}
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -302,11 +304,11 @@ let Form = React.forwardRef<HTMLFormElement, RemixFormProps>(
     return (
       <RouterForm
         {...props}
-        data-discover={
-          enableFogOfWarDiscovery(discover, isAbsolute, props.reloadDocument)
-            ? "true"
-            : undefined
-        }
+        data-discover={getDiscoverAttr(
+          discover,
+          isAbsolute,
+          props.reloadDocument
+        )}
       />
     );
   }
