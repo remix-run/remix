@@ -31,7 +31,7 @@ const URL_LIMIT = 7680;
 let fogOfWar: FogOfWarInfo | null = null;
 
 export function isFogOfWarEnabled(future: FutureConfig, isSpaMode: boolean) {
-  return future.unstable_fogOfWar === true && !isSpaMode;
+  return future.unstable_fogOfWar !== false && !isSpaMode;
 }
 
 export function getPartialManifest(manifest: AssetsManifest, router: Router) {
@@ -246,7 +246,11 @@ export async function fetchAndApplyManifestPatches(
   patchRoutes: Router["patchRoutes"]
 ): Promise<void> {
   let { nextPaths, knownGoodPaths, known404Paths } = _fogOfWar;
-  let manifestPath = `${basename ?? "/"}/__manifest`.replace(/\/+/g, "/");
+  let path =
+    typeof future.unstable_fogOfWar === "string"
+      ? future.unstable_fogOfWar
+      : "/__manifest";
+  let manifestPath = `${basename ?? "/"}${path}`.replace(/\/+/g, "/");
   let url = new URL(manifestPath, window.location.origin);
   url.searchParams.set("version", manifest.version);
   paths.forEach((path) => url.searchParams.append("p", path));

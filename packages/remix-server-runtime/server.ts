@@ -136,17 +136,20 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     // Manifest request for fog of war
 
-    let manifestUrl = `${_build.basename ?? "/"}/__manifest`.replace(
-      /\/+/g,
-      "/"
-    );
-    if (url.pathname === manifestUrl) {
-      try {
-        let res = await handleManifestRequest(_build, routes, url);
-        return res;
-      } catch (e) {
-        handleError(e);
-        return new Response("Unknown Server Error", { status: 500 });
+    if (_build.future.unstable_fogOfWar !== false) {
+      let path =
+        typeof _build.future.unstable_fogOfWar === "string"
+          ? _build.future.unstable_fogOfWar
+          : "/__manifest";
+      let manifestUrl = `${_build.basename ?? "/"}${path}`.replace(/\/+/g, "/");
+      if (url.pathname === manifestUrl) {
+        try {
+          let res = await handleManifestRequest(_build, routes, url);
+          return res;
+        } catch (e) {
+          handleError(e);
+          return new Response("Unknown Server Error", { status: 500 });
+        }
       }
     }
 
