@@ -3,6 +3,7 @@ import path from "node:path";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import lambdaTester from "lambda-tester";
+import { Headers as RemixHeaders } from "@remix-run/web-fetch";
 
 import {
   createRequestHandler,
@@ -226,6 +227,17 @@ describe("architect createRemixHeaders", () => {
         "__session=some_value",
         "__other=some_other_value",
       ]);
+      expect(headers.get("cookie")).toEqual(
+        "__session=some_value; __other=some_other_value"
+      );
+    });
+    it("handles multiple request cookies when using @remix-run/web-fetch", () => {
+      let headers = createRemixHeaders(
+        {},
+        ["__session=some_value", "__other=some_other_value"],
+        //@ts-expect-error
+        RemixHeaders
+      );
       expect(headers.get("cookie")).toEqual(
         "__session=some_value; __other=some_other_value"
       );
