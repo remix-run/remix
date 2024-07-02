@@ -890,4 +890,40 @@ test.describe("Fog of War", () => {
       )
     ).toEqual(["root", "routes/_index", "routes/a"]);
   });
+
+  test("allows apps to specify their own manifest path", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: "/my/manifest/path",
+        },
+      },
+      files: getFiles(),
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    let patchRequests: string[] = [];
+    page.on("request", (req) => {
+      if (req.url().includes("manifest")) {
+        patchRequests.push(req.url());
+      }
+    });
+
+    await app.goto("/", true);
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a"]);
+
+    await app.clickLink("/a");
+    await page.waitForSelector("#a");
+    expect(await app.getHtml("#a")).toBe(`<h1 id="a">A: A LOADER</h1>`);
+
+    expect(patchRequests.length).toBe(1);
+    let url = new URL(patchRequests[0]);
+    expect(url.pathname).toBe("/my/manifest/path");
+    expect(url.searchParams.getAll("p")).toContain("/a");
+  });
 });

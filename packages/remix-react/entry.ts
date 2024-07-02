@@ -43,7 +43,7 @@ export interface EntryContext extends RemixContextObject {
 export interface FutureConfig {
   v3_fetcherPersist: boolean;
   v3_relativeSplatPath: boolean;
-  unstable_fogOfWar: boolean;
+  unstable_fogOfWar: boolean | string;
   unstable_singleFetch: boolean;
 }
 
