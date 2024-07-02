@@ -528,16 +528,14 @@ export async function resolveConfig(
     entryServerFile = `entry.server.${serverRuntime}.tsx`;
   }
 
-  if (appConfig.future?.unstable_fogOfWar !== false) {
+  let fogOfWar = appConfig.future?.unstable_fogOfWar;
+  if (fogOfWar === true || typeof fogOfWar === "string") {
     if (isSpaMode) {
       throw new Error(
         "You can not use `future.unstable_fogOfWar` in SPA Mode (`ssr: false`)"
       );
     }
-    if (
-      typeof appConfig.future?.unstable_fogOfWar === "string" &&
-      !appConfig.future?.unstable_fogOfWar.startsWith("/")
-    ) {
+    if (typeof fogOfWar === "string" && !fogOfWar.startsWith("/")) {
       throw new Error(
         "If you choose to customize the manifest path via `future.unstable_fogOfWar`, " +
           "you must specify a root-relative path starting with `/`."
@@ -620,9 +618,7 @@ export async function resolveConfig(
     v3_relativeSplatPath: appConfig.future?.v3_relativeSplatPath === true,
     v3_throwAbortReason: appConfig.future?.v3_throwAbortReason === true,
     unstable_singleFetch: appConfig.future?.unstable_singleFetch === true,
-    unstable_fogOfWar: appConfig.future?.unstable_fogOfWar
-      ? appConfig.future?.unstable_fogOfWar
-      : false,
+    unstable_fogOfWar: fogOfWar ?? false,
   };
 
   if (appConfig.future) {
