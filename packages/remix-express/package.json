@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/express",
-  "version": "2.10.0",
+  "version": "0.0.0-nightly-f4a701989-20240702",
   "description": "Express server request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -17,7 +17,7 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "@remix-run/node": "workspace:*"
+    "@remix-run/node": "0.0.0-nightly-f4a701989-20240702"
   },
   "devDependencies": {
     "@types/express": "^4.17.9",
