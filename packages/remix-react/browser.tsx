@@ -25,7 +25,7 @@ import { initFogOfWar, useFogOFWarDiscovery } from "./fog-of-war";
 /* eslint-disable prefer-let/prefer-let */
 declare global {
   var __remixContext: {
-    url: string;
+    ssrMatches: string[];
     basename?: string;
     state: HydrationState;
     criticalCss?: string;
@@ -61,6 +61,7 @@ let stateDecodingPromise:
   | undefined;
 let router: Router;
 let routerInitialized = false;
+let alreadyReloadedIgnoreStrictModeRerender = false;
 let hmrAbortController: AbortController | undefined;
 let hmrRouterReadyResolve: ((router: Router) => void) | undefined;
 // There's a race condition with HMR where the remix:manifest is signaled before
@@ -194,26 +195,7 @@ if (import.meta && import.meta.hot) {
  */
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
-    // Hard reload if the path we tried to load is not the current path.
-    // This is usually the result of 2 rapid back/forward clicks from an
-    // external site into a Remix app, where we initially start the load for
-    // one URL and while the JS chunks are loading a second forward click moves
-    // us to a new URL.  Avoid comparing search params because of CDNs which
-    // can be configured to ignore certain params and only pathname is relevant
-    // towards determining the route matches.
-    let initialPathname = window.__remixContext.url;
-    let hydratedPathname = window.location.pathname;
-    if (
-      initialPathname !== hydratedPathname &&
-      !window.__remixContext.isSpaMode
-    ) {
-      let errorMsg =
-        `Initial URL (${initialPathname}) does not match URL at time of hydration ` +
-        `(${hydratedPathname}), reloading page...`;
-      console.error(errorMsg);
-      window.location.reload();
-      // Get out of here so the reload can happen - don't create the router
-      // since it'll then kick off unnecessary route.lazy() loads
+    if (alreadyReloadedIgnoreStrictModeRerender) {
       return <></>;
     }
 
@@ -270,6 +252,52 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         window.location,
         window.__remixContext.basename
       );
+
+      // Hard reload if the path we tried to load is not the current path.
+      // This is usually the result of 2 rapid back/forward clicks from an
+      // external site into a Remix app, where we initially start the load for
+      // one URL and while the JS chunks are loading a second forward click moves
+      // us to a new URL.  Avoid comparing search params because of CDNs which
+      // can be configured to ignore certain params and only pathname is relevant
+      // towards determining the route matches.
+      let ssrMatches = window.__remixContext.ssrMatches;
+      let hydrationReloadStorageKey = "remix-hydration-reloaded";
+      if (
+        !initialMatches ||
+        initialMatches.length !== ssrMatches.length ||
+        !initialMatches.every((m, i) => ssrMatches[i] === m.route.id)
+      ) {
+        let ssr = ssrMatches.join(",");
+        let client = initialMatches
+          ? initialMatches.map((m) => m.route.id).join(",")
+          : "[]";
+        let errorMsg =
+          `SSR Matches (${ssr}) do not match client matches at time of ` +
+          `hydration (${client}), reloading page...`;
+        console.error(errorMsg);
+
+        // Avoid reload loops - if the reload didn't fix it, then just let
+        // the hydration fail
+        if (
+          window.sessionStorage.getItem(hydrationReloadStorageKey) !== "true"
+        ) {
+          // In StrictMode we'll render this component again and we don't want
+          // to skip this check based on the sessionStorage value, so set this
+          // module scoped variable to just short circuit in that flow
+          alreadyReloadedIgnoreStrictModeRerender = true;
+
+          window.sessionStorage.setItem(hydrationReloadStorageKey, "true");
+          window.location.reload();
+
+          // Get out of here so the reload can happen - don't create the router
+          // since it'll then kick off unnecessary route.lazy() loads
+          return <></>;
+        }
+      }
+
+      // Once we've cleared the above, reset the sessionStorage value
+      window.sessionStorage.removeItem(hydrationReloadStorageKey);
+
       if (initialMatches) {
         for (let match of initialMatches) {
           let routeId = match.route.id;

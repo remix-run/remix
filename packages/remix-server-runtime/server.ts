@@ -515,7 +515,7 @@ async function handleDocumentRequest(
     staticHandlerContext: context,
     criticalCss,
     serverHandoffString: createServerHandoffString({
-      url: context.location.pathname,
+      ssrMatches: context.matches.map((m) => m.route.id),
       basename: build.basename,
       criticalCss,
       future: build.future,
@@ -592,7 +592,7 @@ async function handleDocumentRequest(
       ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString({
-        url: context.location.pathname,
+        ssrMatches: context.matches.map((m) => m.route.id),
         basename: build.basename,
         future: build.future,
         isSpaMode: build.isSpaMode,
