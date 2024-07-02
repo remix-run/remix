@@ -800,6 +800,11 @@ function createRemixRedirectResponse(
   });
 }
 
+// Anytime we are setting a header on a `Response` created in the loader/action,
+// we have to so it in this manner since in an `undici` world, if the `Response`
+// came directly from a `fetch` call, the headers are immutable will throw if
+// we try to set a new header.  This is a sort of shallow clone of the `Response`
+// so we can safely set our own header.
 function safelySetHeader(
   response: Response,
   name: string,
