@@ -612,6 +612,35 @@ describe("shared server runtime", () => {
       expect(indexLoader.mock.calls.length).toBe(1);
     });
 
+    test("data request calls loader returning raw fetch response", async () => {
+      let build = mockServerBuild({
+        root: {
+          default: {},
+        },
+        "routes/_index": {
+          parentId: "root",
+          index: true,
+          loader() {
+            return fetch(`https://remix.run/docs/en/main?_data=root`);
+          },
+        },
+      });
+      let handler = createRequestHandler(build, ServerMode.Development);
+
+      let request = new Request(`${baseUrl}/?_data=routes/_index`, {
+        method: "get",
+      });
+
+      let result = await handler(request);
+      expect(result.status).toBe(200);
+      expect(result.headers.get("X-Remix-Response")).toBe("yes");
+      expect(await result.json()).toEqual({
+        colorScheme: "system",
+        host: "remix.run",
+        isProductionHost: true,
+        noIndex: false,
+      });
+    });
     test("data request calls loader and responds with generic message and error header", async () => {
       let rootLoader = jest.fn(() => {
         throw new Error("test");
