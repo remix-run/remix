@@ -360,12 +360,12 @@ async function handleDataRequest(
 
     // Mark all successful responses with a header so we can identify in-flight
     // network errors that are missing this header
-    response.headers.set("X-Remix-Response", "yes");
+    response = await safelySetHeader(response, "X-Remix-Response", "yes");
     return response;
   } catch (error: unknown) {
     if (isResponse(error)) {
-      error.headers.set("X-Remix-Catch", "yes");
-      return error;
+      let response = await safelySetHeader(error, "X-Remix-Catch", "yes");
+      return response;
     }
 
     if (isRouteErrorResponse(error)) {
@@ -705,8 +705,8 @@ async function handleResourceRequest(
     if (isResponse(error)) {
       // Note: Not functionally required but ensures that our response headers
       // match identically to what Remix returns
-      error.headers.set("X-Remix-Catch", "yes");
-      return error;
+      let response = await safelySetHeader(error, "X-Remix-Catch", "yes");
+      return response;
     }
 
     if (isResponseStub(error)) {
@@ -798,4 +798,43 @@ function createRemixRedirectResponse(
     status: 204,
     headers,
   });
+}
+
+async function safelySetHeader(
+  response: Response,
+  name: string,
+  value: string
+): Promise<Response> {
+  try {
+    response.headers.set(name, value);
+  } catch (error: unknown) {
+    // Check if this was a directly-returned native `fetch` response with
+    // immutable headers preventing us from setting additional headers
+    let isImmutableHeadersError =
+      isError(error) &&
+      error.name === "TypeError" &&
+      error.message === "immutable";
+
+    // Re-throw any other type of error
+    if (!isImmutableHeadersError) {
+      throw error;
+    }
+
+    // Clone the response so we can set our headers
+    let newHeaders = new Headers();
+    for (let [key, value] of response.headers.entries()) {
+      newHeaders.append(key, value);
+    }
+    newHeaders.set(name, value);
+    return new Response(await response.blob(), {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders,
+    });
+  }
+  return response;
+}
+
+function isError(e: unknown): e is Error {
+  return e != null && "name" in e && "message" in e && "stack" in e;
 }
