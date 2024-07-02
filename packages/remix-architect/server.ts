@@ -77,9 +77,15 @@ export function createRemixRequest(event: APIGatewayProxyEventV2): Request {
 
 export function createRemixHeaders(
   requestHeaders: APIGatewayProxyEventHeaders,
-  requestCookies?: string[]
+  requestCookies?: string[],
+  _Headers?: typeof Headers
 ): Headers {
-  let headers = new Headers();
+  // `_Headers` should only be used for unit testing purposes so we can unit test
+  // the different behaviors of the @remix-run/web-fetch `Headers` implementation
+  // and the node/undici implementation.  See:
+  // https://github.com/remix-run/remix/issues/9657
+  let HeadersImpl = _Headers || Headers;
+  let headers = new HeadersImpl();
 
   for (let [header, value] of Object.entries(requestHeaders)) {
     if (value) {
