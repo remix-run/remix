@@ -836,5 +836,11 @@ async function safelySetHeader(
 }
 
 function isError(e: unknown): e is Error {
-  return e != null && "name" in e && "message" in e && "stack" in e;
+  return (
+    typeof e === "object" &&
+    e != null &&
+    "name" in e &&
+    "message" in e &&
+    "stack" in e
+  );
 }
