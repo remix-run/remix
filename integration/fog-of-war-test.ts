@@ -367,6 +367,57 @@ test.describe("Fog of War", () => {
     ).toEqual(["root", "routes/_index", "routes/a", "routes/a.b"]);
   });
 
+  test("does not prefetch links with reloadDocument", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
+      files: {
+        ...getFiles(),
+        "app/routes/a.tsx": js`
+          import { Link, Outlet, useLoaderData } from "@remix-run/react";
+
+          export function loader({ request }) {
+            return { message: "A LOADER" };
+          }
+
+          export default function Index() {
+            let data = useLoaderData();
+            return (
+              <>
+                <h1 id="a">A: {data.message}</h1>
+                <Link to="/a/b" reloadDocument>/a/b</Link>
+                <Outlet/>
+              </>
+            )
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/", true);
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a"]);
+
+    await app.clickLink("/a");
+    await page.waitForSelector("#a");
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    // /a/b is not discovered yet even thought it's rendered
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a"]);
+  });
+
   test("prefetches initially rendered forms", async ({ page }) => {
     let fixture = await createFixture({
       config: {
