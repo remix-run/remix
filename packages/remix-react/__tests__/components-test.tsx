@@ -293,7 +293,7 @@ describe("<RemixServer>", () => {
 describe("<RemixBrowser>", () => {
   it("handles empty default export objects from the compiler", () => {
     window.__remixContext = {
-      url: "/",
+      ssrMatches: ["root", "empty"],
       state: {
         loaderData: {},
       },
