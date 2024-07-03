@@ -40,6 +40,12 @@ import { resolveFileUrl } from "./resolve-file-url";
 import { removeExports } from "./remove-exports";
 import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
 
+function combineURLs(baseURL: string, relativeURL: string) {
+  return relativeURL
+      ? baseURL.replace(/\/+$/, '') + '/' + relativeURL.replace(/^\/+/, '')
+      : baseURL;
+}
+
 export async function resolveViteConfig({
   configFile,
   mode,
@@ -959,7 +965,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         path: route.path,
         index: route.index,
         caseSensitive: route.caseSensitive,
-        module: path.posix.join(
+        module: combineURLs(
           ctx.remixConfig.publicPath,
           `${resolveFileUrl(
             ctx,
@@ -977,18 +983,18 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
     return {
       version: String(Math.random()),
-      url: path.posix.join(
+      url: combineURLs(
         ctx.remixConfig.publicPath,
         VirtualModule.url(browserManifestId)
       ),
       hmr: {
-        runtime: path.posix.join(
+        runtime: combineURLs(
           ctx.remixConfig.publicPath,
           VirtualModule.url(injectHmrRuntimeId)
         ),
       },
       entry: {
-        module: path.posix.join(
+        module: combineURLs(
           ctx.remixConfig.publicPath,
           resolveFileUrl(ctx, ctx.entryClientFilePath)
         ),
@@ -1872,15 +1878,15 @@ async function getRouteMetadata(
     path: route.path,
     index: route.index,
     caseSensitive: route.caseSensitive,
-    url: path.posix.join(
+    url: combineURLs(
       ctx.remixConfig.publicPath,
       "/" +
         path.relative(
           ctx.rootDirectory,
           resolveRelativeRouteFilePath(route, ctx.remixConfig)
         )
-    ),
-    module: path.posix.join(
+      ),
+    module: combineURLs(
       ctx.remixConfig.publicPath,
       `${resolveFileUrl(
         ctx,
