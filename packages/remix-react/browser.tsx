@@ -61,7 +61,6 @@ let stateDecodingPromise:
   | undefined;
 let router: Router;
 let routerInitialized = false;
-let alreadyReloadedIgnoreStrictModeRerender = false;
 let hmrAbortController: AbortController | undefined;
 let hmrRouterReadyResolve: ((router: Router) => void) | undefined;
 // There's a race condition with HMR where the remix:manifest is signaled before
@@ -195,10 +194,6 @@ if (import.meta && import.meta.hot) {
  */
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
-    if (alreadyReloadedIgnoreStrictModeRerender) {
-      return <></>;
-    }
-
     // When single fetch is enabled, we need to suspend until the initial state
     // snapshot is decoded into window.__remixContext.state
     if (window.__remixContext.future.unstable_singleFetch) {
@@ -261,11 +256,23 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       // can be configured to ignore certain params and only pathname is relevant
       // towards determining the route matches.
       let ssrMatches = window.__remixContext.ssrMatches;
+      let mismatchBetweenSsrMatchesAndHydratedMatches =
+        (initialMatches || []).length !== ssrMatches.length ||
+        !(initialMatches || []).every((m, i) => ssrMatches[i] === m.route.id);
+
+      // Avoid reload loops - if the reload didn't fix it, then just let
+      // the hydration fail.  Note that in StrictMode in dev this loop prevention
+      // doesn't quite work since the second render will clear it out.  The
+      // workaround for that is messy (module scoped variable short circuit) so
+      // it is a known issue that reload loops may happen in dev+StrictMode in
+      // these edge cases.
       let hydrationReloadStorageKey = "remix-hydration-reloaded";
+      let alreadyAttemptedReload =
+        window.sessionStorage.getItem(hydrationReloadStorageKey) === "true";
+
       if (
-        !initialMatches ||
-        initialMatches.length !== ssrMatches.length ||
-        !initialMatches.every((m, i) => ssrMatches[i] === m.route.id)
+        mismatchBetweenSsrMatchesAndHydratedMatches &&
+        !alreadyAttemptedReload
       ) {
         let ssr = ssrMatches.join(",");
         let client = initialMatches
@@ -276,26 +283,15 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
           `hydration (${client}), reloading page...`;
         console.error(errorMsg);
 
-        // Avoid reload loops - if the reload didn't fix it, then just let
-        // the hydration fail
-        if (
-          window.sessionStorage.getItem(hydrationReloadStorageKey) !== "true"
-        ) {
-          // In StrictMode we'll render this component again and we don't want
-          // to skip this check based on the sessionStorage value, so set this
-          // module scoped variable to just short circuit in that flow
-          alreadyReloadedIgnoreStrictModeRerender = true;
+        window.sessionStorage.setItem(hydrationReloadStorageKey, "true");
+        window.location.reload();
 
-          window.sessionStorage.setItem(hydrationReloadStorageKey, "true");
-          window.location.reload();
-
-          // Get out of here so the reload can happen - don't create the router
-          // since it'll then kick off unnecessary route.lazy() loads
-          return <></>;
-        }
+        // Get out of here so the reload can happen - don't create the router
+        // since it'll then kick off unnecessary route.lazy() loads
+        return <></>;
       }
 
-      // Once we've cleared the above, reset the sessionStorage value
+      // Reset sessionStorage once we've synced our ssr and client matches,
       window.sessionStorage.removeItem(hydrationReloadStorageKey);
 
       if (initialMatches) {
