@@ -153,6 +153,48 @@ describe("shared server runtime", () => {
       expect(resourceLoader.mock.calls.length).toBe(1);
     });
 
+    test("calls resource route loader throwing response with immutable headers", async () => {
+      let build = mockServerBuild({
+        root: {
+          default: {},
+        },
+        "routes/resource": {
+          parentId: "root",
+          path: "resource",
+          loader() {
+            let headers = new Headers({ "x-test": "yes" });
+            let headersProxy = new Proxy(headers, {
+              get(target, prop, receiver) {
+                if (prop === "set") {
+                  throw new TypeError("immutable");
+                }
+                return Reflect.get(target, prop, receiver);
+              },
+            });
+            // Mock a "response" that will pass the `isResponse` check
+            throw {
+              status: 400,
+              statusText: "Bad Request",
+              headers: headersProxy,
+              body: "text",
+              text: () => Promise.resolve("text"),
+            };
+          },
+        },
+      });
+      let handler = createRequestHandler(build, ServerMode.Development);
+
+      let request = new Request(`${baseUrl}/resource`, {
+        method: "get",
+      });
+
+      let result = await handler(request);
+      expect(result.status).toBe(400);
+      expect(result.headers.get("x-test")).toBe("yes");
+      expect(result.headers.get("X-Remix-Catch")).toBe("yes");
+      expect(await result.text()).toBe("text");
+    });
+
     test("calls sub resource route loader", async () => {
       let rootLoader = jest.fn(() => {
         return "root";
@@ -612,7 +654,7 @@ describe("shared server runtime", () => {
       expect(indexLoader.mock.calls.length).toBe(1);
     });
 
-    test("data request calls loader returning raw fetch response", async () => {
+    test("data request calls loader returning response with immutable headers", async () => {
       let build = mockServerBuild({
         root: {
           default: {},
@@ -621,7 +663,23 @@ describe("shared server runtime", () => {
           parentId: "root",
           index: true,
           loader() {
-            return fetch(`https://remix.run/docs/en/main?_data=root`);
+            let headers = new Headers({ "x-test": "yes" });
+            let headersProxy = new Proxy(headers, {
+              get(target, prop, receiver) {
+                if (prop === "set") {
+                  throw new TypeError("immutable");
+                }
+                return Reflect.get(target, prop, receiver);
+              },
+            });
+            // Mock a "response" that will pass the `isResponse` check
+            return {
+              status: 200,
+              statusText: "OK",
+              headers: headersProxy,
+              body: "text",
+              text: () => Promise.resolve("text"),
+            };
           },
         },
       });
@@ -633,14 +691,53 @@ describe("shared server runtime", () => {
 
       let result = await handler(request);
       expect(result.status).toBe(200);
+      expect(result.headers.get("x-test")).toBe("yes");
       expect(result.headers.get("X-Remix-Response")).toBe("yes");
-      expect(await result.json()).toEqual({
-        colorScheme: "system",
-        host: "remix.run",
-        isProductionHost: true,
-        noIndex: false,
-      });
+      expect(await result.text()).toBe("text");
     });
+
+    test("data request calls loader throwing response with immutable headers", async () => {
+      let build = mockServerBuild({
+        root: {
+          default: {},
+        },
+        "routes/_index": {
+          parentId: "root",
+          index: true,
+          loader() {
+            let headers = new Headers({ "x-test": "yes" });
+            let headersProxy = new Proxy(headers, {
+              get(target, prop, receiver) {
+                if (prop === "set") {
+                  throw new TypeError("immutable");
+                }
+                return Reflect.get(target, prop, receiver);
+              },
+            });
+            // Mock a "response" that will pass the `isResponse` check
+            throw {
+              status: 400,
+              statusText: "Bad Request",
+              headers: headersProxy,
+              body: "text",
+              text: () => Promise.resolve("text"),
+            };
+          },
+        },
+      });
+      let handler = createRequestHandler(build, ServerMode.Development);
+
+      let request = new Request(`${baseUrl}/?_data=routes/_index`, {
+        method: "get",
+      });
+
+      let result = await handler(request);
+      expect(result.status).toBe(400);
+      expect(result.headers.get("x-test")).toBe("yes");
+      expect(result.headers.get("X-Remix-Catch")).toBe("yes");
+      expect(await result.text()).toBe("text");
+    });
+
     test("data request calls loader and responds with generic message and error header", async () => {
       let rootLoader = jest.fn(() => {
         throw new Error("test");
