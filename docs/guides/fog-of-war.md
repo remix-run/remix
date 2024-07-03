@@ -47,7 +47,9 @@ If you wish to opt-out of this eager route discovery on a per-link basis, you ca
 
 - When this feature is enabled, the route manifest in `window.__remixManifest.routes` will only contain the minimal required routes on initial SSR, and routes will be added to it dynamically as the user navigates around
 - The Remix handler now has a new internal `/__manifest` endpoint through which it will fetch manifest patches
-  - ⚠️ This is considered an internal implementation detail and is not intended to be requested by application code.
+  - You will need to ensure that your deployment architecture routes any `/__manifest` requests through to the Remix handler
+  - If you have any CDN/Edge caching layers in place, the `/__manifest` route accepts 2 query string params you may need to include in your cache key: `version` and `p`
+  - ⚠️ This is considered an internal implementation detail and is not intended to be requested by application code
 
 [rfc]: https://github.com/remix-run/react-router/discussions/11113
 [future-flags]: ../guides/api-development-strategy
