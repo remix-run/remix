@@ -31,7 +31,11 @@ const URL_LIMIT = 7680;
 let fogOfWar: FogOfWarInfo | null = null;
 
 export function isFogOfWarEnabled(future: FutureConfig, isSpaMode: boolean) {
-  return future.unstable_fogOfWar !== false && !isSpaMode;
+  return (
+    (typeof future.unstable_fogOfWar === "string" ||
+      future.unstable_fogOfWar === true) &&
+    !isSpaMode
+  );
 }
 
 export function getPartialManifest(manifest: AssetsManifest, router: Router) {

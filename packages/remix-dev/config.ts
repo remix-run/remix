@@ -529,7 +529,8 @@ export async function resolveConfig(
   }
 
   let fogOfWar = appConfig.future?.unstable_fogOfWar;
-  if (fogOfWar === true || typeof fogOfWar === "string") {
+  let isFogOfWarEnabled = fogOfWar === true || typeof fogOfWar === "string";
+  if (isFogOfWarEnabled) {
     if (isSpaMode) {
       throw new Error(
         "You can not use `future.unstable_fogOfWar` in SPA Mode (`ssr: false`)"
@@ -618,7 +619,7 @@ export async function resolveConfig(
     v3_relativeSplatPath: appConfig.future?.v3_relativeSplatPath === true,
     v3_throwAbortReason: appConfig.future?.v3_throwAbortReason === true,
     unstable_singleFetch: appConfig.future?.unstable_singleFetch === true,
-    unstable_fogOfWar: fogOfWar ?? false,
+    unstable_fogOfWar: isFogOfWarEnabled ? fogOfWar! : false,
   };
 
   if (appConfig.future) {

@@ -135,8 +135,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     };
 
     // Manifest request for fog of war
-
-    if (_build.future.unstable_fogOfWar !== false) {
+    let isFogOfWarEnabled =
+      _build.future.unstable_fogOfWar === true ||
+      typeof _build.future.unstable_fogOfWar === "string";
+    if (isFogOfWarEnabled) {
       let path =
         typeof _build.future.unstable_fogOfWar === "string"
           ? _build.future.unstable_fogOfWar
