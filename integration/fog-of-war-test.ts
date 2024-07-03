@@ -44,7 +44,7 @@ function getFiles() {
     "app/routes/a.tsx": js`
       import { Link, Outlet, useLoaderData } from "@remix-run/react";
 
-      export function loader({ request }) {
+      export function loader() {
         return { message: "A LOADER" };
       }
 
@@ -359,6 +359,167 @@ test.describe("Fog of War", () => {
     // /a/b gets discovered on click
     await app.clickLink("/a/b");
     await page.waitForSelector("#b");
+
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a", "routes/a.b"]);
+  });
+
+  test("does not prefetch links with reloadDocument", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
+      files: {
+        ...getFiles(),
+        "app/routes/a.tsx": js`
+          import { Link, Outlet, useLoaderData } from "@remix-run/react";
+
+          export function loader({ request }) {
+            return { message: "A LOADER" };
+          }
+
+          export default function Index() {
+            let data = useLoaderData();
+            return (
+              <>
+                <h1 id="a">A: {data.message}</h1>
+                <Link to="/a/b" reloadDocument>/a/b</Link>
+                <Outlet/>
+              </>
+            )
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/", true);
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a"]);
+
+    await app.clickLink("/a");
+    await page.waitForSelector("#a");
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    // /a/b is not discovered yet even thought it's rendered
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a"]);
+  });
+
+  test("prefetches initially rendered forms", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
+      files: {
+        ...getFiles(),
+        "app/root.tsx": js`
+          import * as React from "react";
+          import { Form, Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+          export default function Root() {
+            let [showLink, setShowLink] = React.useState(false);
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Form method="post" action="/a">
+                    <button type="submit">Submit</button>
+                  </Form>
+                  <Outlet />
+                  <Scripts />
+                </body>
+              </html>
+            );
+          }
+        `,
+        "app/routes/a.tsx": js`
+          import { useActionData } from "@remix-run/react";
+
+          export function action() {
+            return { message: "A ACTION" };
+          }
+
+          export default function Index() {
+            let actionData = useActionData();
+            return <h1 id="a">A: {actionData.message}</h1>
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/", true);
+    await page.waitForFunction(
+      () => (window as any).__remixManifest.routes["routes/a"]
+    );
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a"]);
+
+    await app.clickSubmitButton("/a");
+    await page.waitForSelector("#a");
+    expect(await app.getHtml("#a")).toBe(`<h1 id="a">A: A ACTION</h1>`);
+  });
+
+  test("prefetches forms rendered via navigations", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_fogOfWar: true,
+        },
+      },
+      files: {
+        ...getFiles(),
+        "app/routes/a.tsx": js`
+          import { Form } from "@remix-run/react";
+
+          export default function Component() {
+            return (
+              <Form method="post" action="/a/b">
+                <button type="submit">Submit</button>
+              </Form>
+            );
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/", true);
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index", "routes/a"]);
+
+    await app.clickLink("/a");
+    await page.waitForSelector("form");
+
+    await page.waitForFunction(
+      () => (window as any).__remixManifest.routes["routes/a.b"]
+    );
 
     expect(
       await page.evaluate(() =>

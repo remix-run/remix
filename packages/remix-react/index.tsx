@@ -4,7 +4,6 @@ export type {
   FetcherWithComponents,
   FormEncType,
   FormMethod,
-  FormProps,
   Location,
   NavigateFunction,
   Navigation,
@@ -28,7 +27,6 @@ export {
   parsePath,
   renderMatches,
   resolvePath,
-  Form,
   Navigate,
   NavigationType,
   Outlet,
@@ -73,6 +71,7 @@ export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
   AwaitProps,
+  RemixFormProps as FormProps,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
   UIMatch,
@@ -82,6 +81,7 @@ export {
   Meta,
   Links,
   Scripts,
+  Form,
   Link,
   NavLink,
   PrefetchPageLinks,
