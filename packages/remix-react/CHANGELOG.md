@@ -5,7 +5,6 @@
 ### Patch Changes
 
 - Fog of War (unstable): Don't discover links/forms with `reloadDocument` ([#9686](https://github.com/remix-run/remix/pull/9686))
-- \[REMOVE] Bump router versions ([#9701](https://github.com/remix-run/remix/pull/9701))
 - Fog of War (unstable): Support route discovery from `<Form>` components ([#9665](https://github.com/remix-run/remix/pull/9665))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.10.1`
