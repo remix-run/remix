@@ -189,7 +189,7 @@ Date: YYYY-MM-DD
 
 ## v2.10.1
 
-Date: 2024-07-02
+Date: 2024-07-03
 
 ### Patch Changes
 
