@@ -304,6 +304,7 @@ let Form = React.forwardRef<HTMLFormElement, RemixFormProps>(
     return (
       <RouterForm
         {...props}
+        ref={forwardedRef}
         data-discover={getDiscoverAttr(
           discover,
           isAbsolute,
