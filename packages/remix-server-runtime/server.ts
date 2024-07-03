@@ -360,12 +360,12 @@ async function handleDataRequest(
 
     // Mark all successful responses with a header so we can identify in-flight
     // network errors that are missing this header
-    response.headers.set("X-Remix-Response", "yes");
+    response = safelySetHeader(response, "X-Remix-Response", "yes");
     return response;
   } catch (error: unknown) {
     if (isResponse(error)) {
-      error.headers.set("X-Remix-Catch", "yes");
-      return error;
+      let response = safelySetHeader(error, "X-Remix-Catch", "yes");
+      return response;
     }
 
     if (isRouteErrorResponse(error)) {
@@ -705,8 +705,8 @@ async function handleResourceRequest(
     if (isResponse(error)) {
       // Note: Not functionally required but ensures that our response headers
       // match identically to what Remix returns
-      error.headers.set("X-Remix-Catch", "yes");
-      return error;
+      let response = safelySetHeader(error, "X-Remix-Catch", "yes");
+      return response;
     }
 
     if (isResponseStub(error)) {
@@ -798,4 +798,24 @@ function createRemixRedirectResponse(
     status: 204,
     headers,
   });
+}
+
+// Anytime we are setting a header on a `Response` created in the loader/action,
+// we have to so it in this manner since in an `undici` world, if the `Response`
+// came directly from a `fetch` call, the headers are immutable will throw if
+// we try to set a new header.  This is a sort of shallow clone of the `Response`
+// so we can safely set our own header.
+function safelySetHeader(
+  response: Response,
+  name: string,
+  value: string
+): Response {
+  let headers = new Headers(response.headers);
+  headers.set(name, value);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+    duplex: response.body ? "half" : undefined,
+  } as ResponseInit & { duplex?: "half" });
 }
