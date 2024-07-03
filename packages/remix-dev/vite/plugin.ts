@@ -959,13 +959,13 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         path: route.path,
         index: route.index,
         caseSensitive: route.caseSensitive,
-        module: path.posix.join(
-          ctx.remixConfig.publicPath,
+        module: new URL(
           `${resolveFileUrl(
             ctx,
             resolveRelativeRouteFilePath(route, ctx.remixConfig)
-          )}`
-        ),
+          )}`,
+          ctx.remixConfig.publicPath
+        ).href,
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
         hasClientAction: sourceExports.includes("clientAction"),
@@ -977,21 +977,21 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
     return {
       version: String(Math.random()),
-      url: path.posix.join(
-        ctx.remixConfig.publicPath,
-        VirtualModule.url(browserManifestId)
-      ),
+      url: new URL(
+        VirtualModule.url(browserManifestId),
+        ctx.remixConfig.publicPath
+      ).href,
       hmr: {
-        runtime: path.posix.join(
-          ctx.remixConfig.publicPath,
-          VirtualModule.url(injectHmrRuntimeId)
-        ),
+        runtime: new URL(
+          VirtualModule.url(injectHmrRuntimeId),
+          ctx.remixConfig.publicPath
+        ).href,
       },
       entry: {
-        module: path.posix.join(
-          ctx.remixConfig.publicPath,
-          resolveFileUrl(ctx, ctx.entryClientFilePath)
-        ),
+        module: new URL(
+          resolveFileUrl(ctx, ctx.entryClientFilePath),
+          ctx.remixConfig.publicPath
+        ).href,
         imports: [],
       },
       routes,
@@ -1872,21 +1872,21 @@ async function getRouteMetadata(
     path: route.path,
     index: route.index,
     caseSensitive: route.caseSensitive,
-    url: path.posix.join(
-      ctx.remixConfig.publicPath,
+    url: new URL(
       "/" +
         path.relative(
           ctx.rootDirectory,
           resolveRelativeRouteFilePath(route, ctx.remixConfig)
-        )
-    ),
-    module: path.posix.join(
-      ctx.remixConfig.publicPath,
+        ),
+      ctx.remixConfig.publicPath
+      ).href,
+    module: new URL(
       `${resolveFileUrl(
         ctx,
         resolveRelativeRouteFilePath(route, ctx.remixConfig)
-      )}?import`
-    ), // Ensure the Vite dev server responds with a JS module
+      )}?import`,
+      ctx.remixConfig.publicPath
+    ).href, // Ensure the Vite dev server responds with a JS module
     hasAction: sourceExports.includes("action"),
     hasClientAction: sourceExports.includes("clientAction"),
     hasLoader: sourceExports.includes("loader"),
