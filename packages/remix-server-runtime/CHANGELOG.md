@@ -1,10 +1,10 @@
 # `@remix-run/server-runtime`
 
-## 2.10.2-pre.0
+## 2.10.2
 
 ### Patch Changes
 
-- Fix issue with setting additional headers on raw native fetch responses with immutable headers ([#9693](https://github.com/remix-run/remix/pull/9693))
+- Fix bug with `immutable` headers on raw native `fetch` responses returned from loaders ([#9693](https://github.com/remix-run/remix/pull/9693))
 
 ## 2.10.1
 

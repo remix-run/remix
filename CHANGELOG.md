@@ -193,8 +193,8 @@ Date: 2024-07-04
 
 ### Patch Changes
 
-- `@remix-run/react` - Forward ref to `Form` ([`bdd04217`](https://github.com/remix-run/remix/commit/bdd04217713292307078a30dab9033926d48ede6))
-- `@remix-run/server-runtime` - Fix issue setting additional headers on raw native `fetch` responses with immutable headers ([#9693](https://github.com/remix-run/remix/pull/9693))
+- `@remix-run/react` - Forward `ref` to `Form` ([`bdd04217`](https://github.com/remix-run/remix/commit/bdd04217713292307078a30dab9033926d48ede6))
+- `@remix-run/server-runtime` - Fix bug with `immutable` headers on raw native `fetch` responses returned from loaders ([#9693](https://github.com/remix-run/remix/pull/9693))
 
 ### Changes by Package
 
