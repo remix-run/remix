@@ -25,5 +25,8 @@
     "@remix-run/server-runtime": "2.10.1",
     "@remix-run/testing": "2.10.1"
   },
-  "changesets": []
+  "changesets": [
+    "cyan-dingos-report",
+    "young-hairs-hug"
+  ]
 }
