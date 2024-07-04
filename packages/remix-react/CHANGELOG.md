@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.10.2-pre.0
+
+### Patch Changes
+
+- forward ref to Form ([`64be40070`](https://github.com/remix-run/remix/commit/64be40070883f866e85b1131afb10b092ffe6045))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.2-pre.0`
+
 ## 2.10.1
 
 ### Patch Changes
