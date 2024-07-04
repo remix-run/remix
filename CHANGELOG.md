@@ -187,6 +187,35 @@ Date: YYYY-MM-DD
 
 -->
 
+## v2.10.2
+
+Date: 2024-07-04
+
+### Patch Changes
+
+- `@remix-run/react` - Forward ref to `Form` ([`bdd04217`](https://github.com/remix-run/remix/commit/bdd04217713292307078a30dab9033926d48ede6))
+- `@remix-run/server-runtime` - Fix issue setting additional headers on raw native `fetch` responses with immutable headers ([#9693](https://github.com/remix-run/remix/pull/9693))
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/create-remix/CHANGELOG.md#2102)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-architect/CHANGELOG.md#2102)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-cloudflare/CHANGELOG.md#2102)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-cloudflare-pages/CHANGELOG.md#2102)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-cloudflare-workers/CHANGELOG.md#2102)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-css-bundle/CHANGELOG.md#2102)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-deno/CHANGELOG.md#2102)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-dev/CHANGELOG.md#2102)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-eslint-config/CHANGELOG.md#2102)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-express/CHANGELOG.md#2102)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-node/CHANGELOG.md#2102)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-react/CHANGELOG.md#2102)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-serve/CHANGELOG.md#2102)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-server-runtime/CHANGELOG.md#2102)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.10.2/packages/remix-testing/CHANGELOG.md#2102)
+
+**Full Changelog**: [`v2.10.1...v2.10.2`](https://github.com/remix-run/remix/compare/remix@2.10.1...remix@2.10.2)
+
 ## v2.10.1
 
 Date: 2024-07-03
