@@ -426,6 +426,26 @@ test.describe("Forms", () => {
           }
         `,
 
+        "app/routes/empty-multipart-form.tsx": js`
+          import { json } from "@remix-run/server-runtime";
+          import { Form, useActionData } from "@remix-run/react";
+
+          export async function action({ request }) {
+            let formData = await request.formData();
+            return json({ ok: true });
+          }
+
+          export default function() {
+            const actionData = useActionData();
+            return (
+              <Form method="post" encType="multipart/form-data">
+                <button type="submit">Submit</button>
+                {actionData?.ok  ? <p id="action-data">Worked</p> : null}
+              </Form>
+            )
+          }
+        `,
+
         // Generic route for outputting url-encoded form data (either from the request body or search params)
         //
         // TODO: refactor other tests to use this
@@ -1118,6 +1138,17 @@ test.describe("Forms", () => {
       );
     });
 
+    test("Forms with multipart/form-data and no inputs submit without issue", async ({
+      page,
+    }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+
+      await app.goto("/empty-multipart-form");
+      await app.clickSubmitButton("/empty-multipart-form");
+      await page.waitForSelector("#action-data");
+      expect((await app.getElement("#action-data")).text()).toContain("Worked");
+    });
+
     test("pathless layout routes are ignored in form actions", async ({
       page,
     }) => {
@@ -1562,6 +1593,26 @@ test.describe("single fetch", () => {
                   <input type="file" name="fileMultiple" multiple />
                   <button type="submit">Submit</button>
                   {actionData ? <p id="action-data">{JSON.stringify(actionData)}</p> : null}
+                </Form>
+              )
+            }
+          `,
+
+          "app/routes/empty-multipart-form.tsx": js`
+            import { json } from "@remix-run/server-runtime";
+            import { Form, useActionData } from "@remix-run/react";
+
+            export async function action({ request }) {
+              let formData = await request.formData();
+              return json({ ok: true });
+            }
+
+            export default function() {
+              const actionData = useActionData();
+              return (
+                <Form method="post" encType="multipart/form-data">
+                  <button type="submit">Submit</button>
+                  {actionData?.ok  ? <p id="action-data">Worked</p> : null}
                 </Form>
               )
             }
@@ -2261,6 +2312,19 @@ test.describe("single fetch", () => {
         await page.waitForSelector("#action-data");
         expect((await app.getElement("#action-data")).text()).toContain(
           '{"text":"","file":{"name":"","size":0},"fileMultiple":[{"name":"","size":0}]}'
+        );
+      });
+
+      test("Forms with multipart/form-data and no inputs submit without issue", async ({
+        page,
+      }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+
+        await app.goto("/empty-multipart-form");
+        await app.clickSubmitButton("/empty-multipart-form");
+        await page.waitForSelector("#action-data");
+        expect((await app.getElement("#action-data")).text()).toContain(
+          "Worked"
         );
       });
 

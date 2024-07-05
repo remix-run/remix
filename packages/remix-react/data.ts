@@ -122,7 +122,12 @@ export async function createRequestInit(
 
     // Check between word boundaries instead of startsWith() due to the last
     // paragraph of https://httpwg.org/specs/rfc9110.html#field.content-type
-    if (contentType && /\bapplication\/json\b/.test(contentType)) {
+    if (request.body === null) {
+      init.headers = {
+        "Content-Type": contentType || "application/x-www-form-urlencoded",
+      };
+      init.body = null;
+    } else if (contentType && /\bapplication\/json\b/.test(contentType)) {
       init.headers = { "Content-Type": contentType };
       init.body = JSON.stringify(await request.json());
     } else if (contentType && /\btext\/plain\b/.test(contentType)) {
