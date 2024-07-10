@@ -9,16 +9,15 @@ const handleRemixRequest = createRequestHandler(remixBuild);
 
 export default {
   async fetch(request, env, ctx) {
+    const waitUntil = ctx.waitUntil.bind(ctx);
+    const passThroughOnException = ctx.passThroughOnException.bind(ctx);
     try {
       const url = new URL(request.url);
       const ttl = url.pathname.startsWith("/assets/")
         ? 60 * 60 * 24 * 365 // 1 year
         : 60 * 5; // 5 minutes
       return await getAssetFromKV(
-        {
-          request,
-          waitUntil: ctx.waitUntil.bind(ctx),
-        },
+        { request, waitUntil },
         {
           ASSET_NAMESPACE: env.__STATIC_CONTENT,
           ASSET_MANIFEST: MANIFEST,
@@ -40,10 +39,7 @@ export default {
           // `cloudflareDevProxyVitePlugin`:
           // https://developers.cloudflare.com/workers/wrangler/api/#getplatformproxy
           cf: request.cf,
-          ctx: {
-            waitUntil: ctx.waitUntil,
-            passThroughOnException: ctx.passThroughOnException,
-          },
+          ctx: { waitUntil, passThroughOnException },
           caches,
           env,
         },
