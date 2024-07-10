@@ -135,6 +135,17 @@ export default function Projects() {
 }
 ```
 
+<docs-warning>
+Older browser versions might break this functionality because they might not support the [SubmitEvent: submitter property](https://developer.mozilla.org/en-US/docs/Web/API/SubmitEvent/submitter) or the [FormData() constructor submitter parameter](https://developer.mozilla.org/en-US/docs/Web/API/FormData/FormData#submitter). Be sure to check the browser compatibility for these features.
+
+Here are two polyfill packages that may help resolve this issue:
+
+- [Event Submitter Polyfill](https://github.com/idea2app/event-submitter-polyfill)
+- [FormData Submitter Polyfill](https://github.com/jenseng/formdata-submitter-polyfill)
+
+For more details, see the related issue [remix-run/remix#9704](https://github.com/remix-run/remix/issues/9704).
+</docs-warning>
+
 ## How can I have structured data in a form?
 
 If you're used to doing fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form_data] is a bit different from JSON.
