@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-Singl Fetch: proxy abort signal through dataStrategy for loaders for request cancellation
+Single Fetch: Proxy `request.signal` through `dataStrategy` for `loader` calls to fix cancellation
