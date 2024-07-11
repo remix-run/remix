@@ -1,28 +1,28 @@
 {
-	"name": "multipart-web-stream",
-	"version": "0.1.0",
-	"description": "A multipart parser for fetch streams",
-	"scripts": {
-		"build": "pnpm run build:cjs && pnpm run build:esm",
-		"build:cjs": "tsc --outDir dist --project tsconfig.lib.json",
-		"build:esm": "esbuild src/index.ts --bundle --format=esm --target=node16 --outfile=dist/index.mjs",
-		"test": "node --import tsimp/import --test ./src/**/*.spec.ts"
-	},
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.mjs",
-			"require": "./dist/index.js",
-			"default": "./dist/index.js"
-		},
-		"./package.json": "./package.json"
-	},
-	"author": "Michael Jackson <mjijackson@gmail.com>",
-	"license": "MIT",
-	"devDependencies": {
-		"@types/node": "^20.14.10",
-		"esbuild": "^0.23.0",
-		"tsimp": "^2.0.11",
-		"typescript": "^5.5.3"
-	}
+  "name": "multipart-web-stream",
+  "version": "0.1.0",
+  "description": "A multipart parser for fetch streams",
+  "scripts": {
+    "build": "pnpm run build:cjs && pnpm run build:esm",
+    "build:cjs": "tsc --outDir dist --project tsconfig.lib.json",
+    "build:esm": "esbuild src/index.ts --bundle --format=esm --target=node16 --outfile=dist/index.mjs",
+    "test": "node --import tsimp/import --test ./src/**/*.spec.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "esbuild": "^0.23.0",
+    "tsimp": "^2.0.11",
+    "typescript": "^5.5.3"
+  }
 }
