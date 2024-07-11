@@ -2,7 +2,13 @@
 
 This is a streaming multipart parser for JavaScript with no dependencies.
 
-Usage:
+## Installation
+
+```sh
+$ npm install multipart-web-stream
+```
+
+## Usage
 
 ```typescript
 import { parseMultipartFormData, MultipartParseError } from 'multipart-web-stream';
