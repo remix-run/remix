@@ -69,7 +69,7 @@ export class MultipartPart {
   }
 
   get contentType(): string | null {
-    return this.headers.get('content-type') || null;
+    return this.headers.get('Content-Type') || null;
   }
 
   get filename(): string | null {
@@ -153,11 +153,11 @@ export async function* parseMultipartFormData(
   let maxHeaderSize = options.maxHeaderSize || DefaultMaxHeaderSize;
   let maxPartSize = options.maxPartSize || DefaultMaxPartSize;
 
-  if (!request.body) {
-    throw new MultipartParseError('Request body is empty');
-  }
   if (!isMultipartFormData(request)) {
     throw new MultipartParseError('Request is not multipart/form-data');
+  }
+  if (!request.body) {
+    throw new MultipartParseError('Request body is empty');
   }
 
   let boundaryMatch = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(request.headers.get('Content-Type')!);
