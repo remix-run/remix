@@ -16,6 +16,8 @@ Currently, Remix loads the complete route manifest in a JS file on initial load 
 
 When you enable "Fog of War", Remix will no longer send a full route manifest on initial load. Instead, your SSR render will only include the SSR routes in the initial manifest and additional routes will be loaded as the user navigates around the application. Over time, the manifest grows to include the portions of the app the user navigated to.
 
+Please note that this is **not** a way to "hide" any of your application URLs from end-users. It doesn't ship them all in the manifest initially, but the manifest endpoint used to fetch new routes as the user navigates around will still have the ability to expose all of your defined application routes - albeit it's just a bit more obscured.
+
 ### Eager Route Discovery
 
 As always, there is a tradeoff with this type of lazy-route discovery. It improves initial application load times -- but Remix can no longer perform synchronous route matching on link clicks, which can lead to waterfalls.

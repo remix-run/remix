@@ -31,7 +31,7 @@ Remix already revalidates the data on the page automatically when actions are ca
 
 ### `revalidator.state`
 
-The state the revalidation. Either `"idle"` or `"loading"`.
+The state of the revalidation. Either `"idle"` or `"loading"`.
 
 ### `revalidator.revalidate()`
 
