@@ -122,6 +122,15 @@ export class SuperHeaders implements Iterable<[string, string]> {
     this.map.set('content-disposition', value);
   }
 
+  get contentLength(): number {
+    let value = this.map.get('content-length');
+    return value ? parseInt(value.toString(), 10) : NaN;
+  }
+
+  set contentLength(value: number) {
+    this.map.set('content-length', value.toString());
+  }
+
   get contentType(): ContentType {
     return this.getHeaderValue('content-type', ContentType) as ContentType;
   }

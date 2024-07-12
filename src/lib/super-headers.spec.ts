@@ -134,6 +134,14 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Content-Disposition'), 'attachment; filename=new.txt');
     });
 
+    it('handles Content-Length header', () => {
+      let headers = new SuperHeaders();
+      headers.contentLength = 42;
+
+      assert.equal(headers.contentLength, 42);
+      assert.equal(headers.get('Content-Length'), '42');
+    });
+
     it('handles Content-Type header', () => {
       let headers = new SuperHeaders();
       headers.contentType = 'text/plain; charset=utf-8';
