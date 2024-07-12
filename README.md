@@ -23,6 +23,8 @@ headers feel a lot more like working with JavaScript objects.
 
 ```ts
 import Headers from 'fetch-super-headers';
+// or, if you don't want to clobber the global `Headers` reference:
+// import SuperHeaders from 'fetch-super-headers';
 
 let headers = new Headers();
 
