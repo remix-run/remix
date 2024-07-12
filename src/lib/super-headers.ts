@@ -13,13 +13,16 @@ export type SuperHeadersInit =
   | Record<string, string | HeaderValue>;
 
 /**
- * HTTP Headers object, with superpowers.
+ * A Headers object, with superpowers.
  */
-export class SuperHeaders implements Iterable<[string, string]> {
+export class SuperHeaders extends Headers implements Iterable<[string, string]> {
   private map: Map<string, string | HeaderValue>;
 
   constructor(init?: string | SuperHeadersInit) {
+    super();
+
     this.map = new Map();
+
     if (init) {
       if (typeof init === 'string') {
         let lines = init.split(CRLF);

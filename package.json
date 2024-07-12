@@ -1,7 +1,7 @@
 {
   "name": "fetch-super-headers",
   "version": "0.2.0",
-  "description": "A suite of tools that make it a little more fun to work with Headers",
+  "description": "JavaScript Headers, with superpowers",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "files": [

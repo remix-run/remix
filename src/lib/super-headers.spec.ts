@@ -7,6 +7,12 @@ import { Cookie } from './cookie.js';
 import { SuperHeaders } from './super-headers.js';
 
 describe('SuperHeaders', () => {
+  it('is an instance of Headers', () => {
+    let headers = new SuperHeaders();
+    assert.ok(headers instanceof SuperHeaders);
+    assert.ok(headers instanceof Headers);
+  });
+
   it('initializes with no arguments', () => {
     let headers = new SuperHeaders();
     assert.equal(headers.get('content-type'), null);
