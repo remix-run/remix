@@ -1,7 +1,7 @@
 {
   "name": "fetch-super-headers",
   "version": "0.1.0",
-  "description": "A suite of tools that make it a little more fun to work with fetch Headers",
+  "description": "A suite of tools that make it a little more fun to work with Headers",
   "main": "dist/index.js",
   "scripts": {
     "build": "pnpm run build:cjs && pnpm run build:esm",

@@ -1,6 +1,6 @@
 # fetch-super-headers
 
-This package is a suite of tools that make it a little more fun to work with fetch `Headers`.
+This package is a suite of tools that make it a little more fun to work with `Headers`.
 
 ## Key Features
 
