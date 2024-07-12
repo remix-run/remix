@@ -1,7 +1,7 @@
 import { ContentDisposition } from './content-disposition.js';
 import { ContentType } from './content-type.js';
 import { Cookie } from './cookie.js';
-import { normalizeHeaderName } from './header-names.js';
+import { canonicalHeaderName } from './header-names.js';
 import { HeaderValue } from './header-value.js';
 
 const CRLF = '\r\n';
@@ -74,7 +74,7 @@ export class SuperHeaders implements Iterable<[string, string]> {
     for (let [name, value] of this.map) {
       let stringValue = value.toString();
       if (stringValue !== '') {
-        yield [normalizeHeaderName(name), stringValue];
+        yield [canonicalHeaderName(name), stringValue];
       }
     }
   }
@@ -124,11 +124,12 @@ export class SuperHeaders implements Iterable<[string, string]> {
 
   get contentLength(): number {
     let value = this.map.get('content-length');
+    if (typeof value === 'number') return value;
     return value ? parseInt(value.toString(), 10) : NaN;
   }
 
   set contentLength(value: number) {
-    this.map.set('content-length', value.toString());
+    this.map.set('content-length', value);
   }
 
   get contentType(): ContentType {
