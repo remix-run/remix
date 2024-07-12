@@ -744,6 +744,9 @@ importers:
       '@remix-run/node':
         specifier: workspace:*
         version: link:../remix-node
+      '@remix-run/web-fetch':
+        specifier: ^4.4.2
+        version: 4.4.2
       '@types/aws-lambda':
         specifier: ^8.10.82
         version: 8.10.133
