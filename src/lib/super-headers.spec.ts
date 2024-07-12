@@ -12,9 +12,15 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('content-type'), null);
   });
 
+  it('initializes from a string', () => {
+    let headers = new SuperHeaders('Content-Type: text/plain\r\nContent-Length: 42');
+    assert.equal(headers.get('Content-Type'), 'text/plain');
+    assert.equal(headers.get('Content-Length'), '42');
+  });
+
   it('initializes from an object', () => {
     let headers = new SuperHeaders({ 'Content-Type': 'text/plain' });
-    assert.equal(headers.get('content-type'), 'text/plain');
+    assert.equal(headers.get('Content-Type'), 'text/plain');
   });
 
   it('initializes from an array of key-value pairs', () => {
@@ -22,96 +28,96 @@ describe('SuperHeaders', () => {
       ['Content-Type', 'text/plain'],
       ['X-Custom', 'value'],
     ]);
-    assert.equal(headers.get('content-type'), 'text/plain');
-    assert.equal(headers.get('x-custom'), 'value');
+    assert.equal(headers.get('Content-Type'), 'text/plain');
+    assert.equal(headers.get('X-Custom'), 'value');
   });
 
   it('initializes from another Headers instance', () => {
     let original = new SuperHeaders({ 'Content-Type': 'text/plain' });
     let headers = new SuperHeaders(original);
-    assert.equal(headers.get('content-type'), 'text/plain');
+    assert.equal(headers.get('Content-Type'), 'text/plain');
   });
 
   it('appends values', () => {
     let headers = new SuperHeaders();
     headers.append('X-Custom', 'value1');
     headers.append('X-Custom', 'value2');
-    assert.equal(headers.get('x-custom'), 'value1, value2');
+    assert.equal(headers.get('X-Custom'), 'value1, value2');
   });
 
   it('sets values', () => {
     let headers = new SuperHeaders();
     headers.set('X-Custom', 'value1');
     headers.set('X-Custom', 'value2');
-    assert.equal(headers.get('x-custom'), 'value2');
+    assert.equal(headers.get('X-Custom'), 'value2');
   });
 
   it('deletes values', () => {
     let headers = new SuperHeaders({ 'X-Custom': 'value' });
     headers.delete('X-Custom');
-    assert.equal(headers.has('x-custom'), false);
+    assert.equal(headers.has('X-Custom'), false);
   });
 
   it('checks if a header exists', () => {
     let headers = new SuperHeaders({ 'X-Custom': 'value' });
-    assert.equal(headers.has('x-custom'), true);
-    assert.equal(headers.has('nonexistent'), false);
+    assert.equal(headers.has('X-Custom'), true);
+    assert.equal(headers.has('Nonexistent'), false);
   });
 
   it('iterates over entries', () => {
     let headers = new SuperHeaders({
-      'X-Custom1': 'value1',
-      'X-Custom2': 'value2',
+      'Content-Type': 'text/plain',
+      'Content-Length': '42',
     });
     let entries = Array.from(headers.entries());
     assert.deepEqual(entries, [
-      ['x-custom1', 'value1'],
-      ['x-custom2', 'value2'],
+      ['Content-Type', 'text/plain'],
+      ['Content-Length', '42'],
     ]);
   });
 
   it('iterates over names', () => {
     let headers = new SuperHeaders({
-      'X-Custom1': 'value1',
-      'X-Custom2': 'value2',
+      'Content-Type': 'text/plain',
+      'Content-Length': '42',
     });
     let keys = Array.from(headers.names());
-    assert.deepEqual(keys, ['x-custom1', 'x-custom2']);
+    assert.deepEqual(keys, ['Content-Type', 'Content-Length']);
   });
 
   it('iterates over values', () => {
     let headers = new SuperHeaders({
-      'X-Custom1': 'value1',
-      'X-Custom2': 'value2',
+      'Content-Type': 'text/plain',
+      'Content-Length': '42',
     });
     let values = Array.from(headers.values());
-    assert.deepEqual(values, ['value1', 'value2']);
+    assert.deepEqual(values, ['text/plain', '42']);
   });
 
   it('uses forEach correctly', () => {
     let headers = new SuperHeaders({
-      'X-Custom1': 'value1',
-      'X-Custom2': 'value2',
+      'Content-Type': 'text/plain',
+      'Content-Length': '42',
     });
     let result: [string, string][] = [];
     headers.forEach((value, key) => {
       result.push([key, value]);
     });
     assert.deepEqual(result, [
-      ['x-custom1', 'value1'],
-      ['x-custom2', 'value2'],
+      ['Content-Type', 'text/plain'],
+      ['Content-Length', '42'],
     ]);
   });
 
   it('is directly iterable', () => {
     let headers = new SuperHeaders({
-      'X-Custom1': 'value1',
-      'X-Custom2': 'value2',
+      'Content-Type': 'text/plain',
+      'Content-Length': '42',
     });
     let entries = Array.from(headers);
     assert.deepEqual(entries, [
-      ['x-custom1', 'value1'],
-      ['x-custom2', 'value2'],
+      ['Content-Type', 'text/plain'],
+      ['Content-Length', '42'],
     ]);
   });
 

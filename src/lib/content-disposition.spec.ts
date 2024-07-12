@@ -204,9 +204,19 @@ describe('ContentDisposition', () => {
       assert.equal(header.preferredFilename, '文件.txt');
     });
 
-    it('falls back gracefully for unknown charsets', () => {
+    it('falls back gracefully with a warning for unknown charsets', () => {
+      let warn = console.warn;
+      let warnWasCalled = false;
+      console.warn = () => {
+        warnWasCalled = true;
+      };
+
       let header = new ContentDisposition("attachment; filename*=unknown-charset''file%FF.txt");
+
       assert.equal(header.preferredFilename, 'fileÿ.txt');
+      assert.ok(warnWasCalled, 'console.warn should have been called');
+
+      console.warn = warn;
     });
   });
 });

@@ -4,6 +4,8 @@ import { Cookie } from './cookie.js';
 import { normalizeHeaderName } from './header-names.js';
 import { HeaderValue } from './header-value.js';
 
+const CRLF = '\r\n';
+
 export type SuperHeadersInit =
   | SuperHeaders
   | Headers
@@ -16,10 +18,18 @@ export type SuperHeadersInit =
 export class SuperHeaders implements Iterable<[string, string]> {
   private map: Map<string, string | HeaderValue>;
 
-  constructor(init?: SuperHeadersInit) {
+  constructor(init?: string | SuperHeadersInit) {
     this.map = new Map();
     if (init) {
-      if (init instanceof SuperHeaders || Array.isArray(init)) {
+      if (typeof init === 'string') {
+        let lines = init.split(CRLF);
+        for (let line of lines) {
+          let match = line.match(/^([^:]+):(.*)/);
+          if (match) {
+            this.append(match[1].trim(), match[2].trim());
+          }
+        }
+      } else if (init instanceof SuperHeaders || Array.isArray(init)) {
         for (let [name, value] of init) {
           this.append(name, value);
         }
@@ -38,9 +48,9 @@ export class SuperHeaders implements Iterable<[string, string]> {
   }
 
   append(name: string, value: string | HeaderValue): void {
-    let lowerName = name.toLowerCase();
-    let existingValue = this.map.get(lowerName);
-    this.map.set(lowerName, existingValue ? `${existingValue}, ${value}` : value);
+    let key = name.toLowerCase();
+    let existingValue = this.map.get(key);
+    this.map.set(key, existingValue ? `${existingValue}, ${value}` : value);
   }
 
   delete(name: string): void {
@@ -64,7 +74,7 @@ export class SuperHeaders implements Iterable<[string, string]> {
     for (let [name, value] of this.map) {
       let stringValue = value.toString();
       if (stringValue !== '') {
-        yield [name, stringValue];
+        yield [normalizeHeaderName(name), stringValue];
       }
     }
   }
@@ -97,9 +107,9 @@ export class SuperHeaders implements Iterable<[string, string]> {
   toString(): string {
     let lines: string[] = [];
     for (let [name, value] of this) {
-      lines.push(`${normalizeHeaderName(name)}: ${value}`);
+      lines.push(`${name}: ${value}`);
     }
-    return lines.join('\r\n');
+    return lines.join(CRLF);
   }
 
   // Header-specific getters and setters
@@ -130,19 +140,19 @@ export class SuperHeaders implements Iterable<[string, string]> {
 
   private getHeaderValue(
     key: string,
-    constructor: new (initialValue: string) => HeaderValue
+    ctor: new (initialValue: string) => HeaderValue
   ): HeaderValue {
     let value = this.map.get(key);
     if (value) {
       if (typeof value === 'string') {
-        let headerValue = new constructor(value);
+        let headerValue = new ctor(value);
         this.map.set(key, headerValue);
         return headerValue;
       } else {
         return value;
       }
     } else {
-      let headerValue = new constructor('');
+      let headerValue = new ctor('');
       this.map.set(key, headerValue);
       return headerValue;
     }
