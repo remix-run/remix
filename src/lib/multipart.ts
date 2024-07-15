@@ -115,10 +115,9 @@ const textDecoder = new TextDecoder();
 const findDoubleCRLF = createSeqFinder(textEncoder.encode(CRLF + CRLF));
 
 /**
- * Parses a multipart/form-data request body and yields each part as a MultipartPart object.
+ * Parses a `multipart/form-data` request body and yields each part as a `MultipartPart` object.
  *
- * Throws MultipartParseError if the parse fails for some reason.
- *
+ * Throws `MultipartParseError` if the parse fails for some reason.
  *
  * Example:
  *
@@ -150,9 +149,6 @@ export async function* parseMultipartFormData(
   request: Request,
   options: MultipartParseOptions = {}
 ): AsyncGenerator<MultipartPart> {
-  let maxHeaderSize = options.maxHeaderSize || DefaultMaxHeaderSize;
-  let maxPartSize = options.maxPartSize || DefaultMaxPartSize;
-
   if (!isMultipartFormData(request)) {
     throw new MultipartParseError('Request is not multipart/form-data');
   }
@@ -166,12 +162,36 @@ export async function* parseMultipartFormData(
   }
 
   let boundary = boundaryMatch[1] || boundaryMatch[2]; // handle quoted and unquoted boundaries
+
+  yield* parseMultipartStream(boundary, request.body, options);
+}
+
+/**
+ * Parses a multipart stream and yields each part as a `MultipartPart` object.
+ *
+ * Throws `MultipartParseError` if the parse fails for some reason.
+ *
+ * Note: This is a low-level function that requires manually handling the stream and boundary. For most common use cases,
+ * consider using `parseMultipartFormData(request)` instead.
+ *
+ * @param boundary
+ * @param stream
+ * @param options
+ */
+export async function* parseMultipartStream(
+  boundary: string,
+  stream: ReadableStream<Uint8Array>,
+  options: MultipartParseOptions = {}
+) {
+  let maxHeaderSize = options.maxHeaderSize || DefaultMaxHeaderSize;
+  let maxPartSize = options.maxPartSize || DefaultMaxPartSize;
+
   let boundarySeq = textEncoder.encode(`--${boundary}`);
   let findBoundary = createSeqFinder(boundarySeq);
 
   let initialBoundaryFound = false;
   let isFinished = false;
-  let reader = request.body.getReader();
+  let reader = stream.getReader();
   let buffer = new Uint8Array(0);
   let boundarySearchStartIndex = 0;
 

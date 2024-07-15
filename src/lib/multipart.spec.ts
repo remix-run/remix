@@ -42,7 +42,7 @@ function createMockRequest(
   } as unknown as Request;
 }
 
-describe('Multipart Form Data Parser', async () => {
+describe('parseMultipartFormData', async () => {
   let boundary = 'boundary123';
 
   it('Successfully parses a simple multipart form', async () => {
