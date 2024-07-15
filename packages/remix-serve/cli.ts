@@ -18,22 +18,24 @@ import getPort from "get-port";
 
 process.env.NODE_ENV = process.env.NODE_ENV ?? "production";
 
-sourceMapSupport.install({
-  retrieveSourceMap: function (source) {
-    let match = source.startsWith("file://");
-    if (match) {
-      let filePath = url.fileURLToPath(source);
-      let sourceMapPath = `${filePath}.map`;
-      if (fs.existsSync(sourceMapPath)) {
-        return {
-          url: source,
-          map: fs.readFileSync(sourceMapPath, "utf8"),
-        };
+if (!process.env.REMIX_NO_SOURCE_MAP_SUPPORT) {
+  sourceMapSupport.install({
+    retrieveSourceMap: function (source) {
+      let match = source.startsWith("file://");
+      if (match) {
+        let filePath = url.fileURLToPath(source);
+        let sourceMapPath = `${filePath}.map`;
+        if (fs.existsSync(sourceMapPath)) {
+          return {
+            url: source,
+            map: fs.readFileSync(sourceMapPath, "utf8"),
+          };
+        }
       }
-    }
-    return null;
-  },
-});
+      return null;
+    },
+  });
+}
 
 run();
 
