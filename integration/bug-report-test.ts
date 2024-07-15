@@ -99,21 +99,13 @@ test.afterAll(() => {
 ////////////////////////////////////////////////////////////////////////////////
 
 test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  await page.waitForSelector("text=cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  // The request throws, which produces a 500 error in prod.
+  // Instead it should respond with a 400 bad request.
+  let response = await fixture.requestDocument("/", {
+    method: "GET",
+    body: "something",
+  });
+  expect(response.status).toBe(400);
 });
 
 ////////////////////////////////////////////////////////////////////////////////
