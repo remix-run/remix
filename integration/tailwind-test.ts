@@ -23,7 +23,10 @@ function runTests(ext: typeof extensions[number]) {
   let tailwindConfig = ["mjs", "ts", "js"].includes(ext)
     ? js`
       export default {
-        content: ["./app/**/*.{ts,tsx,jsx,js}"],
+        content: [
+          "./app/**/*.{ts,tsx,jsx,js}",
+          "./app/**/.client/**/*.{js,jsx,ts,tsx}",          
+        ],
         theme: {
           spacing: {
             'test': ${JSON.stringify(TEST_PADDING_VALUE)}
@@ -33,7 +36,10 @@ function runTests(ext: typeof extensions[number]) {
     `
     : js`
       module.exports = {
-        content: ["./app/**/*.{ts,tsx,jsx,js}"],
+        content: [
+          "./app/**/*.{ts,tsx,jsx,js}",
+          "./app/**/.client/**/*.{js,jsx,ts,tsx}",
+        ],
         theme: {
           spacing: {
             'test': ${JSON.stringify(TEST_PADDING_VALUE)}
@@ -364,7 +370,10 @@ test.describe("Tailwind disabled", () => {
       files: {
         "tailwind.config.js": js`
           module.exports = {
-            content: ["./app/**/*.{ts,tsx,jsx,js}"],
+            content: [
+              "./app/**/*.{ts,tsx,jsx,js}",
+              "./app/**/.client/**/*.{js,jsx,ts,tsx}",
+            ],
             theme: {
               spacing: {
                 'test': ${JSON.stringify(TEST_PADDING_VALUE)}
