@@ -4,15 +4,15 @@
   "description": "A multipart parser for fetch streams",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
-  "type": "module",
-  "main": "./dist/index.js",
   "files": [
     "dist",
     "LICENSE",
     "README.md"
   ],
+  "type": "module",
+  "main": "./dist/index.js",
   "dependencies": {
-    "fetch-super-headers": "^0.3.2"
+    "fetch-super-headers": "^0.4.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
@@ -24,5 +24,6 @@
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
     "prepare": "npm run build",
     "prepublishOnly": "npm run test"
-  }
+  },
+  "packageManager": "pnpm@9.4.0"
 }
