@@ -1,20 +1,12 @@
 # `@remix-run/testing`
 
-## 2.10.3-pre.1
+## 2.10.3
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/react@2.10.3-pre.1`
-  - `@remix-run/node@2.10.3-pre.1`
-
-## 2.10.3-pre.0
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/react@2.10.3-pre.0`
-  - `@remix-run/node@2.10.3-pre.0`
+  - `@remix-run/react@2.10.3`
+  - `@remix-run/node@2.10.3`
 
 ## 2.10.2
 

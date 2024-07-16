@@ -200,10 +200,10 @@ Date: 2024-07-16
 
 ### Patch Changes
 
-- `@remix-run/architect` - Manually joining headers with semi-colons to avoid differences in Remix and node/undici Headers implementation. ([#9664](https://github.com/remix-run/remix/pull/9664))
+- `@remix-run/architect` - Manually joining headers with semi-colons to avoid differences in Remix and node/undici Headers implementation ([#9664](https://github.com/remix-run/remix/pull/9664))
 - `@remix-run/react` - Log any errors encountered loading a route module prior to reloading the page ([#8932](https://github.com/remix-run/remix/pull/8932))
-- `@remix-run/react` - Single Fetch: Proxy `request.signal` through `dataStrategy` for `loader` calls to fix cancellation ([#9738](https://github.com/remix-run/remix/pull/9738))
-- `@remix-run/react` - Single Fetch: Adopt React Router's stabilized `future.v7_skipActionErrorRevalidation` under the hood ([#9706](https://github.com/remix-run/remix/pull/9706))
+- `@remix-run/react` - Single Fetch (unstable): Proxy `request.signal` through `dataStrategy` for `loader` calls to fix cancellation ([#9738](https://github.com/remix-run/remix/pull/9738))
+- `@remix-run/react` - Single Fetch (unstable): Adopt React Router's stabilized `future.v7_skipActionErrorRevalidation` under the hood ([#9706](https://github.com/remix-run/remix/pull/9706))
   - This stabilizes the `shouldRevalidate` parameter from `unstable_actionStatus` to `actionStatus`
   - ⚠️ This might be a breaking change for your app if you have opted into single fetch and the `unstable_actionStatus` parameter
 
