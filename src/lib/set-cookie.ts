@@ -1,5 +1,5 @@
 import { HeaderValue } from './header-value.js';
-import { quote, parseParams } from './param-values.js';
+import { parseParams, quote } from './param-values.js';
 
 type SameSiteValue = 'Strict' | 'Lax' | 'None';
 
