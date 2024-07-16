@@ -1,5 +1,16 @@
 # `@remix-run/react`
 
+## 2.10.3
+
+### Patch Changes
+
+- Log any errors encountered loading a route module prior to reloading the page ([#8932](https://github.com/remix-run/remix/pull/8932))
+- Single Fetch (unstable): Proxy `request.signal` through `dataStrategy` for `loader` calls to fix cancellation ([#9738](https://github.com/remix-run/remix/pull/9738))
+- Single Fetch (unstable): Adopt React Router's stabilized `future.v7_skipActionErrorRevalidation` under the hood ([#9706](https://github.com/remix-run/remix/pull/9706))
+  - This also stabilizes the `shouldRevalidate` parameter from `unstable_actionStatus` to `actionStatus`
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.3`
+
 ## 2.10.2
 
 ### Patch Changes
