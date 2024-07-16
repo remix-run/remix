@@ -1,14 +1,14 @@
 # fetch-super-headers
 
-fetch-super-headers is JavaScript `Headers`, with superpowers.
+`SuperHeaders` is a drop-in replacement for JavaScript's `Headers` with type-safe access to common headers.
 
 ## Key Features
 
 This package is a suite of tools that make it a little more fun to work with `Headers`.
 
-- Drop-in replacement for [the standard `Headers` object](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
-- Strongly typed header-specific getters and setters (e.g., `contentType`, `cookie`)
-- Easy parsing and manipulation of complex headers like Content-Type and Content-Disposition
+- Drop-in replacement for [the standard `Headers` class](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
+- Strongly typed header-specific getters and setters (e.g., `headers.contentType`, `headers.setCookie`, etc.)
+- Easy parsing and manipulation of complex headers like `Content-Disposition`, `Content-Type`, `Set-Cookie`, and more
 - Iterable interface for easy header enumeration
 - Convenient string conversion for HTTP message parsing and assembly
 
@@ -20,8 +20,7 @@ $ npm install fetch-super-headers
 
 ## Usage
 
-fetch-super-headers is designed to be a drop-in replacement for `Headers`, with some additions that make working with HTTP
-headers feel a lot more like working with JavaScript objects.
+fetch-super-headers is designed to be a drop-in replacement for `Headers`, with some additions that make working with HTTP headers feel a lot more like working with JavaScript objects.
 
 ```ts
 import SuperHeaders from 'fetch-super-headers';
@@ -119,8 +118,7 @@ for (let [name, value] of headers) {
 // Accept-Language: en-US,en;q=0.9
 ```
 
-If you're assembling HTTP messages, you can easily convert to a multiline string suitable for using as a Request/Response
-header block:
+If you're assembling HTTP messages, you can easily convert to a multiline string suitable for using as a Request/Response header block:
 
 ```ts
 let headers = new SuperHeaders();
@@ -135,10 +133,7 @@ console.log(headers.toString());
 // get [object Headers] from toString().
 ```
 
-In addition to the high-level API, fetch-super-headers also provides a rich set of primitives you can use
-to work with just about any complex HTTP header value. Each header class includes a spec-compliant parser
-(the constructor), stringifier (`toString`), and getters/setters for all relevant attributes. Classes for
-headers that contain a list of fields, like `Cookie`, are iterable.
+In addition to the high-level API, fetch-super-headers also provides a rich set of primitives you can use to work with just about any complex HTTP header value. Each header class includes a spec-compliant parser (the constructor), stringifier (`toString`), and getters/setters for all relevant attributes. Classes for headers that contain a list of fields, like `Cookie`, are iterable.
 
 ```ts
 import { ContentType, Cookie } from 'fetch-super-headers';
@@ -154,10 +149,6 @@ for (let [key, value] of cookie) {
   // ...
 }
 ```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. Make sure to follow the existing coding style and add tests for any new functionality.
 
 ## License
 

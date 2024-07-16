@@ -16,7 +16,19 @@ export type SuperHeadersInit =
   | Record<string, string | HeaderValue>;
 
 /**
- * A Headers object, with superpowers.
+ * A drop-in replacement for JavaScript's `Headers` with type-safe access to common headers.
+ *
+ * @example
+ *
+ * ```ts
+ * let headers = new SuperHeaders();
+ * headers.contentType = 'text/plain; charset=utf-8';
+ * headers.contentType.mediaType; // 'text/plain'
+ * headers.contentType.charset; // 'utf-8'
+ *
+ * headers.contentType.mediaType = 'text/html';
+ * headers.get('Content-Type'); // 'text/html; charset=utf-8'
+ * ```
  */
 export class SuperHeaders extends Headers implements Iterable<[string, string]> {
   private map: Map<string, string | HeaderValue>;
