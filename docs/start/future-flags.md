@@ -336,15 +336,15 @@ You likely won't need to adjust any code, unless you had custom logic inside of 
 
 Opt into [Single Fetch][single-fetch] behavior (details will be expanded once the flag stabilizes).
 
-## unstable_fogOfWar
+## unstable_lazyRouteDiscovery
 
-Opt into [Fog of War][fog-of-war] behavior (details will be expanded once the flag stabilizes).
+Opt into [Lazy Route Discovery][lazy-route-discovery] behavior (details will be expanded once the flag stabilizes).
 
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
 [relativesplatpath-changelog]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#futurev3_relativesplatpath
 [single-fetch]: ../guides/single-fetch
-[fog-of-war]: ../guides/fog-of-war
+[lazy-route-discovery]: ../guides/lazy-route-discovery
 [vite]: https://vitejs.dev
 [vite-docs]: ../guides/vite
 [supported-remix-config-options]: ../file-conventions/vite-config

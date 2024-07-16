@@ -1,12 +1,12 @@
 ---
-title: Fog of War
+title: Lazy Route Discovery
 ---
 
-# Fog Of War
+# Lazy Route Discovery (a.k.a. "Fog of War")
 
 <docs-warning>This is an unstable API and will continue to change, do not adopt in production</docs-warning>
 
-Remix introduced support for "Fog of War" ([RFC][rfc]) behind the `future.unstable_fogOfWar` [Future Flag][future-flags] in [`v2.10.0`][2.10.0]. This allows you to opt-into this behavior which will become the default in the next major version of Remix - a.k.a. React Router v7 ([1][rr-v7], [2][rr-v7-2]).
+Remix introduced support for Lazy Route Discovery (a.k.a. "Fog of War") ([RFC][rfc]) behind the `future.unstable_lazyRouteDiscovery` [Future Flag][future-flags] in [`v2.10.0`][2.10.0]. This allows you to opt-into this behavior which will become the default in the next major version of Remix - a.k.a. React Router v7 ([1][rr-v7], [2][rr-v7-2]). For more information on this feature, please check out the [blog post][blog-post].
 
 ## Current Behavior
 
@@ -61,3 +61,4 @@ If you wish to opt-out of this eager route discovery on a per-link basis, you ca
 [link-discover]: ../components/link#discover
 [rr-v7]: https://remix.run/blog/merging-remix-and-react-router
 [rr-v7-2]: https://remix.run/blog/incremental-path-to-react-19
+[blog-post]: https://remix.run/blog/fog-of-war
