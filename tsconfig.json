@@ -4,13 +4,5 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true
-  },
-  "references": [
-    {
-      "path": "./tsconfig.lib.json"
-    },
-    {
-      "path": "./tsconfig.spec.json"
-    }
-  ]
+  }
 }
