@@ -11,7 +11,7 @@ $ npm install fetch-multipart-parser
 ## Usage
 
 ```typescript
-import { parseMultipartFormData, MultipartParseError } from 'fetch-multipart-parser';
+import { MultipartParseError, parseMultipartFormData } from 'fetch-multipart-parser';
 
 function handleMultipartRequest(request: Request): void {
   try {
