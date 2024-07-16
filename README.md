@@ -99,7 +99,7 @@ header block:
 
 ```ts
 let headers = new SuperHeaders();
-headers.set('content-type', 'text/html'); // or headers.contentType = 'text/html'
+headers.set('Content-Type', 'text/html'); // or headers.contentType = 'text/html'
 headers.set('X-Custom-Header', 'value');
 
 console.log(headers.toString());
