@@ -1,21 +1,29 @@
 import { HeaderValue } from './header-value.js';
-import { quote, unquote } from './param-values.js';
+import { quote, parseParams } from './param-values.js';
 
 /**
  * Represents the value of a `Content-Disposition` HTTP header.
  */
 export class ContentDisposition implements HeaderValue {
-  private attributes: Map<string, string>;
-  private _type: string;
+  public type?: string;
+  public filename?: string;
+  public filenameSplat?: string;
+  public name?: string;
 
-  constructor(initialValue: string) {
-    this.attributes = new Map();
-    let parts = initialValue.split(';').map((part) => part.trim());
-    this._type = parts[0];
-    for (let i = 1; i < parts.length; i++) {
-      let match = parts[i].match(/([\w\*]+)\s*=\s*(.*)/);
-      if (match) {
-        this.attributes.set(match[1].toLowerCase(), unquote(match[2]));
+  constructor(initialValue?: string) {
+    if (initialValue) {
+      let params = parseParams(initialValue);
+      if (params.length > 0) {
+        this.type = params[0][0];
+        for (let [name, value] of params.slice(1)) {
+          if (name === 'filename') {
+            this.filename = value;
+          } else if (name === 'filename*') {
+            this.filenameSplat = value;
+          } else if (name === 'name') {
+            this.name = value;
+          }
+        }
       }
     }
   }
@@ -35,55 +43,22 @@ export class ContentDisposition implements HeaderValue {
     return this.filename;
   }
 
-  get filename(): string | undefined {
-    return this.attributes.get('filename');
-  }
-
-  set filename(value: string | null) {
-    if (value === null) {
-      this.attributes.delete('filename');
-    } else {
-      this.attributes.set('filename', value);
-    }
-  }
-
-  get filenameSplat(): string | undefined {
-    return this.attributes.get('filename*');
-  }
-
-  set filenameSplat(value: string | null) {
-    if (value === null) {
-      this.attributes.delete('filename*');
-    } else {
-      this.attributes.set('filename*', value);
-    }
-  }
-
-  get name(): string | undefined {
-    return this.attributes.get('name');
-  }
-
-  set name(value: string | null) {
-    if (value === null) {
-      this.attributes.delete('name');
-    } else {
-      this.attributes.set('name', value);
-    }
-  }
-
-  get type(): string {
-    return this._type;
-  }
-
-  set type(value: string) {
-    this._type = value.trim();
-  }
-
   toString(): string {
-    let parts = [this._type];
-    for (let [key, value] of this.attributes) {
-      parts.push(`${key}=${quote(value)}`);
+    let parts = [];
+
+    if (this.type) {
+      parts.push(this.type);
     }
+    if (this.name) {
+      parts.push(`name=${quote(this.name)}`);
+    }
+    if (this.filename) {
+      parts.push(`filename=${quote(this.filename)}`);
+    }
+    if (this.filenameSplat) {
+      parts.push(`filename*=${quote(this.filenameSplat)}`);
+    }
+
     return parts.join('; ');
   }
 }

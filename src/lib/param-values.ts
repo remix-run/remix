@@ -1,13 +1,25 @@
-export function quote(value: string): string {
-  if (value.includes('"') || value.includes(";") || value.includes(" ")) {
-    return `"${value.replace(/"/g, '\\"')}"`;
+export function parseParams(input: string): [string, string | undefined][] {
+  let regex = /(?:^|;)\s*([^=;\s]+)(\s*=\s*(?:"((?:[^"\\]|\\.)*)"|((?:[^;]|\\\;)+))?)?/g;
+  let params: [string, string | undefined][] = [];
+
+  let match;
+  while ((match = regex.exec(input)) !== null) {
+    let key = match[1].trim();
+
+    let value: string | undefined;
+    if (match[2]) {
+      value = (match[3] || match[4] || '').replace(/\\(.)/g, '$1').trim();
+    }
+
+    params.push([key, value]);
   }
-  return value;
+
+  return params;
 }
 
-export function unquote(value: string): string {
-  if (value.startsWith('"') && value.endsWith('"')) {
-    return value.slice(1, -1).replace(/\\"/g, '"');
+export function quote(value: string): string {
+  if (value.includes('"') || value.includes(';') || value.includes(' ')) {
+    return `"${value.replace(/"/g, '\\"')}"`;
   }
   return value;
 }

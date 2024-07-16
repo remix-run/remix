@@ -38,8 +38,14 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('X-Custom'), 'value');
   });
 
-  it('initializes from another Headers instance', () => {
+  it('initializes from another SuperHeaders instance', () => {
     let original = new SuperHeaders({ 'Content-Type': 'text/plain' });
+    let headers = new SuperHeaders(original);
+    assert.equal(headers.get('Content-Type'), 'text/plain');
+  });
+
+  it('initializes from a Headers instance', () => {
+    let original = new Headers({ 'Content-Type': 'text/plain' });
     let headers = new SuperHeaders(original);
     assert.equal(headers.get('Content-Type'), 'text/plain');
   });
@@ -77,18 +83,26 @@ describe('SuperHeaders', () => {
     });
     let entries = Array.from(headers.entries());
     assert.deepEqual(entries, [
-      ['Content-Type', 'text/plain'],
-      ['Content-Length', '42'],
+      ['content-type', 'text/plain'],
+      ['content-length', '42'],
     ]);
   });
 
-  it('iterates over names', () => {
+  it('iterates over keys', () => {
     let headers = new SuperHeaders({
       'Content-Type': 'text/plain',
       'Content-Length': '42',
     });
-    let keys = Array.from(headers.names());
-    assert.deepEqual(keys, ['Content-Type', 'Content-Length']);
+    let keys = Array.from(headers.keys());
+    assert.deepEqual(keys, ['content-type', 'content-length']);
+  });
+
+  it('iterates over set-cookie keys correctly', () => {
+    let headers = new SuperHeaders();
+    headers.append('Set-Cookie', 'session=abc');
+    headers.append('Set-Cookie', 'theme=dark');
+    let keys = Array.from(headers.keys());
+    assert.deepEqual(keys, ['set-cookie', 'set-cookie']);
   });
 
   it('iterates over values', () => {
@@ -110,8 +124,8 @@ describe('SuperHeaders', () => {
       result.push([key, value]);
     });
     assert.deepEqual(result, [
-      ['Content-Type', 'text/plain'],
-      ['Content-Length', '42'],
+      ['content-type', 'text/plain'],
+      ['content-length', '42'],
     ]);
   });
 
@@ -122,8 +136,8 @@ describe('SuperHeaders', () => {
     });
     let entries = Array.from(headers);
     assert.deepEqual(entries, [
-      ['Content-Type', 'text/plain'],
-      ['Content-Length', '42'],
+      ['content-type', 'text/plain'],
+      ['content-length', '42'],
     ]);
   });
 
@@ -172,6 +186,22 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Cookie'), 'name1=value1; name2=value2; name3=value3');
     });
 
+    it('handles Set-Cookie header', () => {
+      let headers = new SuperHeaders();
+      headers.setCookie = ['session=abc', 'theme=dark'];
+
+      assert.ok(Array.isArray(headers.setCookie));
+      assert.equal(headers.setCookie.length, 2);
+      assert.equal(headers.setCookie[0].name, 'session');
+      assert.equal(headers.setCookie[0].value, 'abc');
+      assert.equal(headers.setCookie[1].name, 'theme');
+      assert.equal(headers.setCookie[1].value, 'dark');
+
+      headers.setCookie = [...headers.setCookie, 'lang=en'];
+
+      assert.equal(headers.get('Set-Cookie'), 'session=abc, theme=dark, lang=en');
+    });
+
     it('creates empty header objects when accessed', () => {
       let headers = new SuperHeaders();
 
@@ -183,6 +213,9 @@ describe('SuperHeaders', () => {
 
       assert.ok(headers.cookie instanceof Cookie);
       assert.equal(headers.cookie.toString(), '');
+
+      assert.ok(Array.isArray(headers.setCookie));
+      assert.equal(headers.setCookie.length, 0);
     });
   });
 

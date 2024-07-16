@@ -3,8 +3,10 @@ import { ContentType } from './content-type.js';
 import { Cookie } from './cookie.js';
 import { canonicalHeaderName } from './header-names.js';
 import { HeaderValue } from './header-value.js';
+import { SetCookie } from './set-cookie.js';
 
 const CRLF = '\r\n';
+const SetCookieKey = 'set-cookie';
 
 export type SuperHeadersInit =
   | SuperHeaders
@@ -17,6 +19,7 @@ export type SuperHeadersInit =
  */
 export class SuperHeaders extends Headers implements Iterable<[string, string]> {
   private map: Map<string, string | HeaderValue>;
+  private setCookieValues: (string | SetCookie)[] = [];
 
   constructor(init?: string | SuperHeadersInit) {
     super();
@@ -52,39 +55,74 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
 
   append(name: string, value: string | HeaderValue): void {
     let key = name.toLowerCase();
-    let existingValue = this.map.get(key);
-    this.map.set(key, existingValue ? `${existingValue}, ${value}` : value);
+    if (key === SetCookieKey) {
+      this.setCookieValues.push(value as string | SetCookie);
+    } else {
+      let existingValue = this.map.get(key);
+      this.map.set(key, existingValue ? `${existingValue}, ${value}` : value);
+    }
   }
 
   delete(name: string): void {
-    this.map.delete(name.toLowerCase());
+    let key = name.toLowerCase();
+    if (key === SetCookieKey) {
+      this.setCookieValues = [];
+    } else {
+      this.map.delete(key);
+    }
   }
 
   get(name: string): string | null {
-    let value = this.map.get(name.toLowerCase());
-    return value === undefined ? null : value.toString();
+    let key = name.toLowerCase();
+    if (key === SetCookieKey) {
+      return this.setCookieValues.map((value) => value.toString()).join(', ');
+    } else {
+      let value = this.map.get(key);
+      return value === undefined ? null : value.toString();
+    }
+  }
+
+  getSetCookie(): string[] {
+    return this.setCookieValues.map((value) => value.toString());
   }
 
   has(name: string): boolean {
-    return this.map.has(name.toLowerCase());
+    let key = name.toLowerCase();
+    if (key === SetCookieKey) {
+      return this.setCookieValues.length > 0;
+    } else {
+      return this.map.has(key);
+    }
   }
 
   set(name: string, value: string | HeaderValue): void {
-    this.map.set(name.toLowerCase(), value);
+    let key = name.toLowerCase();
+    if (key === SetCookieKey) {
+      this.setCookieValues = [value as string | SetCookie];
+    } else {
+      this.map.set(key, value);
+    }
   }
 
   *entries(): IterableIterator<[string, string]> {
-    for (let [name, value] of this.map) {
+    for (let [key, value] of this.map) {
       let stringValue = value.toString();
       if (stringValue !== '') {
-        yield [canonicalHeaderName(name), stringValue];
+        yield [key, stringValue];
+      }
+    }
+
+    for (let value of this.setCookieValues) {
+      let stringValue = value.toString();
+      if (stringValue !== '') {
+        yield [SetCookieKey, stringValue];
       }
     }
   }
 
-  *names(): IterableIterator<string> {
-    for (let [name] of this) {
-      yield name;
+  *keys(): IterableIterator<string> {
+    for (let [key] of this) {
+      yield key;
     }
   }
 
@@ -99,18 +137,18 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
   }
 
   forEach(
-    callback: (value: string, name: string, parent: SuperHeaders) => void,
+    callback: (value: string, key: string, parent: SuperHeaders) => void,
     thisArg?: any
   ): void {
-    for (let [name, value] of this) {
-      callback.call(thisArg, value, name, this);
+    for (let [key, value] of this) {
+      callback.call(thisArg, value, key, this);
     }
   }
 
   toString(): string {
     let lines: string[] = [];
-    for (let [name, value] of this) {
-      lines.push(`${name}: ${value}`);
+    for (let [key, value] of this) {
+      lines.push(`${canonicalHeaderName(key)}: ${value}`);
     }
     return lines.join(CRLF);
   }
@@ -118,7 +156,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
   // Header-specific getters and setters
 
   get contentDisposition(): ContentDisposition {
-    return this.getHeaderValue('content-disposition', ContentDisposition) as ContentDisposition;
+    return this.getHeaderValue('content-disposition', ContentDisposition);
   }
 
   set contentDisposition(value: string | ContentDisposition) {
@@ -136,7 +174,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
   }
 
   get contentType(): ContentType {
-    return this.getHeaderValue('content-type', ContentType) as ContentType;
+    return this.getHeaderValue('content-type', ContentType);
   }
 
   set contentType(value: string | ContentType) {
@@ -144,17 +182,36 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
   }
 
   get cookie(): Cookie {
-    return this.getHeaderValue('cookie', Cookie) as Cookie;
+    return this.getHeaderValue('cookie', Cookie);
   }
 
   set cookie(value: string | Cookie) {
     this.map.set('cookie', value);
   }
 
-  private getHeaderValue(
+  get setCookie(): SetCookie[] {
+    for (let i = 0; i < this.setCookieValues.length; i++) {
+      let value = this.setCookieValues[i];
+      if (typeof value === 'string') {
+        this.setCookieValues[i] = new SetCookie(value);
+      }
+    }
+
+    return this.setCookieValues as SetCookie[];
+  }
+
+  set setCookie(values: string | (string | SetCookie)[]) {
+    if (typeof values === 'string') {
+      this.setCookieValues = [values];
+    } else {
+      this.setCookieValues = values.slice(0);
+    }
+  }
+
+  private getHeaderValue<T extends HeaderValue>(
     key: string,
-    ctor: new (initialValue: string) => HeaderValue
-  ): HeaderValue {
+    ctor: new (initialValue: string) => T
+  ): T {
     let value = this.map.get(key);
     if (value) {
       if (typeof value === 'string') {
@@ -162,7 +219,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
         this.map.set(key, headerValue);
         return headerValue;
       } else {
-        return value;
+        return value as T;
       }
     } else {
       let headerValue = new ctor('');

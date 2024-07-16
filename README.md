@@ -68,12 +68,10 @@ let headers = new SuperHeaders(response.headers);
 Or use them to construct a new `fetch` request, or even convert back to a normal `Headers` object:
 
 ```ts
-// this works
 fetch('https://example.com', {
   headers: new SuperHeaders(),
 });
 
-// this works too
 let headers = new Headers(new SuperHeaders());
 
 assert.ok(new SuperHeaders() instanceof Headers);

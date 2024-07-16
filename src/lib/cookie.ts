@@ -1,18 +1,19 @@
 import { HeaderValue } from './header-value.js';
 
+import { quote, parseParams } from './param-values.js';
+
 /**
  * Represents the value of a `Cookie` HTTP header.
  */
 export class Cookie implements HeaderValue, Iterable<[string, string]> {
   private cookies: Map<string, string>;
 
-  constructor(initialValue: string) {
+  constructor(initialValue?: string) {
     this.cookies = new Map();
-    let pairs = initialValue.split(';').map((pair) => pair.trim());
-    for (let pair of pairs) {
-      let [name, value] = splitNameValue(pair);
-      if (name) {
-        this.cookies.set(name, value);
+    if (initialValue) {
+      let params = parseParams(initialValue);
+      for (let [name, value] of params) {
+        this.cookies.set(name, value || '');
       }
     }
   }
@@ -66,17 +67,11 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
 
   toString(): string {
     let pairs: string[] = [];
+
     for (let [name, value] of this.cookies) {
-      pairs.push(`${name}=${value}`);
+      pairs.push(`${name}=${quote(value)}`);
     }
+
     return pairs.join('; ');
   }
-}
-
-function splitNameValue(pair: string): [string, string] {
-  let equalsIndex = pair.indexOf('=');
-  if (equalsIndex === -1) {
-    return [pair, ''];
-  }
-  return [pair.substring(0, equalsIndex).trim(), pair.substring(equalsIndex + 1).trim()];
 }

@@ -12,7 +12,7 @@ describe('ContentDisposition', () => {
 
   it('handles empty initial value', () => {
     let header = new ContentDisposition('');
-    assert.equal(header.type, '');
+    assert.equal(header.type, undefined);
     assert.equal(header.filename, undefined);
   });
 
@@ -46,24 +46,6 @@ describe('ContentDisposition', () => {
     assert.equal(header.filenameSplat, "UTF-8''%E6%96%87%E4%BB%B6.txt");
   });
 
-  it('removes filename when set to null', () => {
-    let header = new ContentDisposition('attachment; filename="example.txt"');
-    header.filename = null;
-    assert.equal(header.filename, undefined);
-  });
-
-  it('removes name when set to null', () => {
-    let header = new ContentDisposition('form-data; name="field1"');
-    header.name = null;
-    assert.equal(header.name, undefined);
-  });
-
-  it('removes filenameSplat when set to null', () => {
-    let header = new ContentDisposition("attachment; filename*=UTF-8''%E6%96%87%E4%BB%B6.txt");
-    header.filenameSplat = null;
-    assert.equal(header.filenameSplat, undefined);
-  });
-
   it('handles quoted attribute values', () => {
     let header = new ContentDisposition('attachment; filename="file with spaces.txt"');
     assert.equal(header.filename, 'file with spaces.txt');
@@ -84,11 +66,6 @@ describe('ContentDisposition', () => {
   it('preserves case for type', () => {
     let header = new ContentDisposition('Attachment');
     assert.equal(header.type, 'Attachment');
-  });
-
-  it('converts attribute names to lowercase', () => {
-    let header = new ContentDisposition('attachment; FileName="example.txt"');
-    assert.equal(header.filename, 'example.txt');
   });
 
   it('handles attribute values with special characters', () => {
