@@ -6,6 +6,7 @@
   "license": "MIT",
   "files": [
     "dist",
+    "LICENSE",
     "README.md"
   ],
   "type": "module",
