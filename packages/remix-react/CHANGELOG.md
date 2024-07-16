@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.10.3-pre.1
+
+### Patch Changes
+
+- [REMOVE] Bump router ([#9760](https://github.com/remix-run/remix/pull/9760))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.3-pre.1`
+
 ## 2.10.3-pre.0
 
 ### Patch Changes
