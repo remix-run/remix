@@ -1,3 +1,5 @@
+import { SuperHeaders } from 'fetch-super-headers';
+
 const CRLF = '\r\n';
 
 const DefaultMaxHeaderSize = 1024 * 1024; // 1 MB
@@ -10,93 +12,19 @@ export class MultipartParseError extends Error {
   }
 }
 
-export interface ContentDisposition {
-  type: string | null;
-  name: string | null;
-  filename: string | null;
-  filenameSplat: string | null;
-  creationDate: Date | null;
-  modificationDate: Date | null;
-  readDate: Date | null;
-  size: number | null;
-}
-
 export class MultipartPart {
-  private _parsedContentDisposition: ContentDisposition | null = null;
-
-  constructor(public headers: Headers, public content: Uint8Array) {}
-
-  get contentDisposition(): ContentDisposition {
-    if (this._parsedContentDisposition) {
-      return this._parsedContentDisposition;
-    }
-
-    let header = this.headers.get('Content-Disposition');
-    if (!header) {
-      return (this._parsedContentDisposition = {
-        type: null,
-        name: null,
-        filename: null,
-        filenameSplat: null,
-        creationDate: null,
-        modificationDate: null,
-        readDate: null,
-        size: null,
-      });
-    }
-
-    let parts = header.split(';').map((part) => part.trim());
-    let type = parts.shift() || null;
-    let params: { [key: string]: string } = {};
-
-    for (let part of parts) {
-      let [key, value] = part.split('=');
-      if (key && value) {
-        params[key.toLowerCase()] = value.replace(/^["']|["']$/g, '');
-      }
-    }
-
-    return (this._parsedContentDisposition = {
-      type,
-      name: params['name'] || null,
-      filename: params['filename'] || null,
-      filenameSplat: params['filename*'] || null,
-      creationDate: params['creation-date'] ? new Date(params['creation-date']) : null,
-      modificationDate: params['modification-date'] ? new Date(params['modification-date']) : null,
-      readDate: params['read-date'] ? new Date(params['read-date']) : null,
-      size: params['size'] ? parseInt(params['size'], 10) : null,
-    });
-  }
-
-  get contentType(): string | null {
-    return this.headers.get('Content-Type') || null;
-  }
+  constructor(public headers: SuperHeaders, public content: Uint8Array) {}
 
   get filename(): string | null {
-    if (this.contentDisposition.filenameSplat) {
-      try {
-        let [encodingPart, _languagePart, ...filenameParts] =
-          this.contentDisposition.filenameSplat.split("'");
-        let encoding = encodingPart.toLowerCase();
-        let encodedFilename = filenameParts.join("'");
+    return this.headers.contentDisposition.preferredFilename || null;
+  }
 
-        let filename = decodeURIComponent(encodedFilename.replace(/%([0-9A-Fa-f]{2})/g, '%$1'));
-
-        if (encoding !== 'utf-8') {
-          console.warn(`Unsupported encoding: ${encoding}. Treating as UTF-8.`);
-        }
-
-        return filename;
-      } catch (error) {
-        throw new Error(`Failed to decode internationalized filename*: ${error}`);
-      }
-    }
-
-    return this.contentDisposition.filename;
+  get mediaType(): string | null {
+    return this.headers.contentType.mediaType || null;
   }
 
   get name(): string | null {
-    return this.contentDisposition.name;
+    return this.headers.contentDisposition.name || null;
   }
 }
 
@@ -115,14 +43,14 @@ const textDecoder = new TextDecoder();
 const findDoubleCRLF = createSeqFinder(textEncoder.encode(CRLF + CRLF));
 
 /**
- * Parses a `multipart/form-data` request body and yields each part as a `MultipartPart` object.
+ * Parse a `multipart/form-data` request body and yield each part as a `MultipartPart` object.
  *
- * Throws `MultipartParseError` if the parse fails for some reason.
+ * Throw `MultipartParseError` if the parse fails for some reason.
  *
  * Example:
  *
  * ```typescript
- * import { parseMultipartFormData, MultipartParseError } from 'fetch-multipart-parser';
+ * import { MultipartParseError, parseMultipartFormData } from 'fetch-multipart-parser';
  *
  * function handleMultipartRequest(request: Request): void {
  *   try {
@@ -130,7 +58,12 @@ const findDoubleCRLF = createSeqFinder(textEncoder.encode(CRLF + CRLF));
  *       console.log(part.name);
  *       console.log(part.filename);
  *       console.log(part.contentType);
- *       console.log(new TextDecoder().decode(part.content));
+ *
+ *       if (/^text\//.test(part.contentType)) {
+ *         console.log(new TextDecoder().decode(part.content));
+ *       } else {
+ *         // part.content is binary data, save it to a file
+ *       }
  *     }
  *   } catch (error) {
  *     if (error instanceof MultipartParseError) {
@@ -167,9 +100,9 @@ export async function* parseMultipartFormData(
 }
 
 /**
- * Parses a multipart stream and yields each part as a `MultipartPart` object.
+ * Parse a multipart stream and yield each part as a `MultipartPart` object.
  *
- * Throws `MultipartParseError` if the parse fails for some reason.
+ * Throw `MultipartParseError` if the parse fails for some reason.
  *
  * Note: This is a low-level function that requires manually handling the stream and boundary. For most common use cases,
  * consider using `parseMultipartFormData(request)` instead.
@@ -219,7 +152,7 @@ export async function* parseMultipartStream(
           let partData = buffer.subarray(0, boundaryIndex - 2); // -2 to remove \r\n before boundary
           let headerEndIndex = findDoubleCRLF(partData);
 
-          let headers: Headers;
+          let headers: SuperHeaders;
           let content: Uint8Array;
           if (headerEndIndex !== -1) {
             if (headerEndIndex > maxHeaderSize) {
@@ -228,11 +161,11 @@ export async function* parseMultipartStream(
               );
             }
 
-            headers = parseHeaders(partData.subarray(0, headerEndIndex));
+            headers = new SuperHeaders(textDecoder.decode(partData.subarray(0, headerEndIndex)));
             content = partData.subarray(headerEndIndex + 4); // +4 to remove \r\n\r\n after headers
           } else {
             // No headers found, treat entire part as content
-            headers = new Headers();
+            headers = new SuperHeaders();
             content = partData;
           }
 
@@ -264,20 +197,6 @@ export async function* parseMultipartStream(
   } finally {
     reader.releaseLock();
   }
-}
-
-function parseHeaders(headerData: Uint8Array): Headers {
-  let headers = new Headers();
-
-  let lines = textDecoder.decode(headerData).split(CRLF);
-  for (let line of lines) {
-    let [key, value] = line.split(':').map((s) => s.trim());
-    if (key && value) {
-      headers.append(key, value);
-    }
-  }
-
-  return headers;
 }
 
 function createSeqFinder(needle: Uint8Array): (haystack: Uint8Array, offset?: number) => number {

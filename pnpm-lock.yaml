@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      fetch-super-headers:
+        specifier: ^0.3.2
+        version: 0.3.2
     devDependencies:
       '@types/node':
         specifier: ^20.14.10
@@ -230,6 +234,9 @@ packages:
     resolution: {integrity: sha512-1lvV17H2bMYda/WaFb2jLPeHU3zml2k4/yagNMG8Q/YtfMjCwEUZa2eXXMgZTVSL5q1n4H7sQ0X6CdJDqqeCFA==}
     engines: {node: '>=18'}
     hasBin: true
+
+  fetch-super-headers@0.3.2:
+    resolution: {integrity: sha512-bq+upFu2iaEMjJs7zS9k8cABlLU3TBQgbWxA1rZUNDzzYdDGi6q9KdHcYADzCi7OJ7eIKowxjBVUTOcYQEO7bQ==}
 
   foreground-child@3.2.1:
     resolution: {integrity: sha512-PXUUyLqrR2XCWICfv6ukppP96sdFwWbNEnfEMt7jNsISjMsvaLNinAHNDYyvkyU+SZG2BTSbT5NjG+vZslfGTA==}
@@ -508,6 +515,8 @@ snapshots:
       '@esbuild/win32-arm64': 0.23.0
       '@esbuild/win32-ia32': 0.23.0
       '@esbuild/win32-x64': 0.23.0
+
+  fetch-super-headers@0.3.2: {}
 
   foreground-child@3.2.1:
     dependencies:

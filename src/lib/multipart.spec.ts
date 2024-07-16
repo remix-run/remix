@@ -116,7 +116,7 @@ describe('parseMultipartFormData', async () => {
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'file1');
     assert.equal(parts[0].filename, 'test.txt');
-    assert.equal(parts[0].contentType, 'text/plain');
+    assert.equal(parts[0].mediaType, 'text/plain');
     assert.equal(new TextDecoder().decode(parts[0].content), 'File content here');
   });
 
@@ -153,7 +153,7 @@ describe('parseMultipartFormData', async () => {
     assert.equal(new TextDecoder().decode(parts[1].content), 'value2');
     assert.equal(parts[2].name, 'file1');
     assert.equal(parts[2].filename, 'test.txt');
-    assert.equal(parts[2].contentType, 'text/plain');
+    assert.equal(parts[2].mediaType, 'text/plain');
     assert.equal(new TextDecoder().decode(parts[2].content), 'File content here');
   });
 
@@ -299,7 +299,5 @@ describe('parseMultipartFormData', async () => {
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'file');
     assert.equal(parts[0].filename, 'encoded filename.txt');
-    assert.equal(parts[0].contentDisposition.filename, 'name with spaces.txt');
-    assert.equal(parts[0].contentDisposition.filenameSplat, "utf-8''encoded%20filename.txt");
   });
 });

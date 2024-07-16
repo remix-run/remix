@@ -26,5 +26,8 @@
     "esbuild": "^0.23.0",
     "tsimp": "^2.0.11",
     "typescript": "^5.5.3"
+  },
+  "dependencies": {
+    "fetch-super-headers": "^0.3.2"
   }
 }
