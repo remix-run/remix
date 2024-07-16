@@ -56,6 +56,31 @@ console.log(headers.cookie.get('user_id')); // '12345'
 
 headers.cookie.set('theme', 'dark');
 console.log(headers.get('Cookie')); // 'session_id=abc123; user_id=12345; theme=dark'
+
+// Set-Cookie
+headers.setCookie = 'session_id=abc123; Path=/; HttpOnly';
+
+console.log(headers.setCookie.name); // 'session_id'
+console.log(headers.setCookie.value); // 'abc123'
+console.log(headers.setCookie.path); // '/'
+console.log(headers.setCookie.httpOnly); // true
+
+// Modifying Set-Cookie attributes
+headers.setCookie.maxAge = 3600;
+headers.setCookie.secure = true;
+
+console.log(headers.get('Set-Cookie'));
+// session_id=abc123; Path=/; HttpOnly; Max-Age=3600; Secure
+
+// Setting multiple cookies
+headers.append('Set-Cookie', 'user_id=12345; Path=/api; Secure');
+
+// Accessing multiple Set-Cookie headers
+for (let cookie of headers.getSetCookie()) {
+  console.log(cookie);
+}
+// session_id=abc123; Path=/; HttpOnly; Max-Age=3600; Secure
+// user_id=12345; Path=/api; Secure
 ```
 
 You can easily build `SuperHeaders` from an exising `Headers` object, like the one you get in a `fetch` response:
