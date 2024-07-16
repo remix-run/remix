@@ -12,22 +12,37 @@ export class MultipartParseError extends Error {
   }
 }
 
+/**
+ * Represents a part of a `multipart/form-data` request.
+ */
 export class MultipartPart {
   constructor(public headers: SuperHeaders, public content: Uint8Array) {}
 
+  /**
+   * The filename of the part, if it is a file upload.
+   */
   get filename(): string | null {
     return this.headers.contentDisposition.preferredFilename || null;
   }
 
+  /**
+   * The media type of the part.
+   */
   get mediaType(): string | null {
     return this.headers.contentType.mediaType || null;
   }
 
+  /**
+   * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
+   */
   get name(): string | null {
     return this.headers.contentDisposition.name || null;
   }
 }
 
+/**
+ * Returns true if the request is `multipart/form-data`.
+ */
 export function isMultipartFormData(request: Request): boolean {
   let contentType = request.headers.get('Content-Type');
   return contentType != null && contentType.startsWith('multipart/form-data');
@@ -74,9 +89,6 @@ const findDoubleCRLF = createSeqFinder(textEncoder.encode(CRLF + CRLF));
  *   }
  * }
  * ```
- *
- * @param request
- * @param options
  */
 export async function* parseMultipartFormData(
   request: Request,
@@ -106,10 +118,6 @@ export async function* parseMultipartFormData(
  *
  * Note: This is a low-level function that requires manually handling the stream and boundary. For most common use cases,
  * consider using `parseMultipartFormData(request)` instead.
- *
- * @param boundary
- * @param stream
- * @param options
  */
 export async function* parseMultipartStream(
   boundary: string,
