@@ -5,156 +5,162 @@ import { SetCookie } from './set-cookie.js';
 
 describe('SetCookie', () => {
   it('parses initial value correctly', () => {
-    let setCookie = new SetCookie(
+    let header = new SetCookie(
       'session=abc123; Domain=example.com; Path=/; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Secure; HttpOnly'
     );
-    assert.equal(setCookie.name, 'session');
-    assert.equal(setCookie.value, 'abc123');
-    assert.equal(setCookie.domain, 'example.com');
-    assert.equal(setCookie.path, '/');
-    assert.equal(setCookie.expires?.toUTCString(), 'Wed, 21 Oct 2015 07:28:00 GMT');
-    assert.equal(setCookie.secure, true);
-    assert.equal(setCookie.httpOnly, true);
+    assert.equal(header.name, 'session');
+    assert.equal(header.value, 'abc123');
+    assert.equal(header.domain, 'example.com');
+    assert.equal(header.path, '/');
+    assert.equal(header.expires?.toUTCString(), 'Wed, 21 Oct 2015 07:28:00 GMT');
+    assert.equal(header.secure, true);
+    assert.equal(header.httpOnly, true);
   });
 
   it('handles cookies without attributes', () => {
-    let setCookie = new SetCookie('user=john');
-    assert.equal(setCookie.name, 'user');
-    assert.equal(setCookie.value, 'john');
+    let header = new SetCookie('user=john');
+    assert.equal(header.name, 'user');
+    assert.equal(header.value, 'john');
   });
 
   it('initializes with an empty string', () => {
-    let setCookie = new SetCookie('');
-    assert.equal(setCookie.name, undefined);
-    assert.equal(setCookie.value, undefined);
+    let header = new SetCookie('');
+    assert.equal(header.name, undefined);
+    assert.equal(header.value, undefined);
   });
 
   it('handles cookie values with commas', () => {
-    let setCookie = new SetCookie('list=apple,banana,cherry; Domain=example.com');
-    assert.equal(setCookie.name, 'list');
-    assert.equal(setCookie.value, 'apple,banana,cherry');
-    assert.equal(setCookie.domain, 'example.com');
+    let header = new SetCookie('list=apple,banana,cherry; Domain=example.com');
+    assert.equal(header.name, 'list');
+    assert.equal(header.value, 'apple,banana,cherry');
+    assert.equal(header.domain, 'example.com');
   });
 
   it('handles cookie values with semicolons', () => {
-    let setCookie = new SetCookie('complex="value; with; semicolons"; Path=/');
-    assert.equal(setCookie.name, 'complex');
-    assert.equal(setCookie.value, 'value; with; semicolons');
-    assert.equal(setCookie.path, '/');
+    let header = new SetCookie('complex="value; with; semicolons"; Path=/');
+    assert.equal(header.name, 'complex');
+    assert.equal(header.value, 'value; with; semicolons');
+    assert.equal(header.path, '/');
   });
 
   it('handles cookie values with equals signs', () => {
-    let setCookie = new SetCookie('equation="1+1=2"; Secure');
-    assert.equal(setCookie.name, 'equation');
-    assert.equal(setCookie.value, '1+1=2');
-    assert.equal(setCookie.secure, true);
+    let header = new SetCookie('equation="1+1=2"; Secure');
+    assert.equal(header.name, 'equation');
+    assert.equal(header.value, '1+1=2');
+    assert.equal(header.secure, true);
   });
 
   it('sets and gets attributes', () => {
-    let setCookie = new SetCookie('test=value');
-    setCookie.domain = 'example.org';
-    setCookie.path = '/api';
-    setCookie.maxAge = 3600;
-    setCookie.secure = true;
-    setCookie.httpOnly = true;
-    setCookie.sameSite = 'Strict';
+    let header = new SetCookie('test=value');
+    header.domain = 'example.org';
+    header.path = '/api';
+    header.maxAge = 3600;
+    header.secure = true;
+    header.httpOnly = true;
+    header.sameSite = 'Strict';
 
-    assert.equal(setCookie.domain, 'example.org');
-    assert.equal(setCookie.path, '/api');
-    assert.equal(setCookie.maxAge, 3600);
-    assert.equal(setCookie.secure, true);
-    assert.equal(setCookie.httpOnly, true);
-    assert.equal(setCookie.sameSite, 'Strict');
+    assert.equal(header.domain, 'example.org');
+    assert.equal(header.path, '/api');
+    assert.equal(header.maxAge, 3600);
+    assert.equal(header.secure, true);
+    assert.equal(header.httpOnly, true);
+    assert.equal(header.sameSite, 'Strict');
   });
 
   it('converts to string correctly', () => {
-    let setCookie = new SetCookie('session=abc123');
-    setCookie.domain = 'example.com';
-    setCookie.path = '/';
-    setCookie.secure = true;
-    setCookie.httpOnly = true;
-    setCookie.sameSite = 'Lax';
+    let header = new SetCookie('session=abc123');
+    header.domain = 'example.com';
+    header.path = '/';
+    header.secure = true;
+    header.httpOnly = true;
+    header.sameSite = 'Lax';
 
     assert.equal(
-      setCookie.toString(),
+      header.toString(),
       'session=abc123; Domain=example.com; Path=/; Secure; HttpOnly; SameSite=Lax'
     );
   });
 
+  it('converts to an empty string when name is not set', () => {
+    let header = new SetCookie();
+    header.value = 'test';
+    assert.equal(header.toString(), '');
+  });
+
   it('handles quoted values', () => {
-    let setCookie = new SetCookie('complex="quoted value; with semicolon"');
-    assert.equal(setCookie.name, 'complex');
-    assert.equal(setCookie.value, 'quoted value; with semicolon');
+    let header = new SetCookie('complex="quoted value; with semicolon"');
+    assert.equal(header.name, 'complex');
+    assert.equal(header.value, 'quoted value; with semicolon');
   });
 
   it('parses and formats expires attribute correctly', () => {
     let expiresDate = new Date('Wed, 21 Oct 2015 07:28:00 GMT');
-    let setCookie = new SetCookie(`test=value; Expires=${expiresDate.toUTCString()}`);
-    assert.equal(setCookie.expires?.toUTCString(), expiresDate.toUTCString());
+    let header = new SetCookie(`test=value; Expires=${expiresDate.toUTCString()}`);
+    assert.equal(header.expires?.toUTCString(), expiresDate.toUTCString());
 
-    setCookie.expires = new Date('Thu, 22 Oct 2015 07:28:00 GMT');
-    assert.equal(setCookie.toString(), 'test=value; Expires=Thu, 22 Oct 2015 07:28:00 GMT');
+    header.expires = new Date('Thu, 22 Oct 2015 07:28:00 GMT');
+    assert.equal(header.toString(), 'test=value; Expires=Thu, 22 Oct 2015 07:28:00 GMT');
   });
 
   it('handles SameSite attribute case-insensitively', () => {
-    let setCookie = new SetCookie('test=value; SameSite=lax');
-    assert.equal(setCookie.sameSite, 'Lax');
+    let header = new SetCookie('test=value; SameSite=lax');
+    assert.equal(header.sameSite, 'Lax');
 
-    setCookie = new SetCookie('test=value; SameSite=STRICT');
-    assert.equal(setCookie.sameSite, 'Strict');
+    header = new SetCookie('test=value; SameSite=STRICT');
+    assert.equal(header.sameSite, 'Strict');
 
-    setCookie = new SetCookie('test=value; SameSite=NoNe');
-    assert.equal(setCookie.sameSite, 'None');
+    header = new SetCookie('test=value; SameSite=NoNe');
+    assert.equal(header.sameSite, 'None');
   });
 
   it('handles cookies with empty value', () => {
-    let setCookie = new SetCookie('name=');
-    assert.equal(setCookie.name, 'name');
-    assert.equal(setCookie.value, '');
+    let header = new SetCookie('name=');
+    assert.equal(header.name, 'name');
+    assert.equal(header.value, '');
   });
 
   it('handles multiple identical attributes', () => {
-    let setCookie = new SetCookie('test=value; Path=/; Path=/api');
-    assert.equal(setCookie.path, '/api');
+    let header = new SetCookie('test=value; Path=/; Path=/api');
+    assert.equal(header.path, '/api');
   });
 
   it('ignores unknown attributes', () => {
-    let setCookie = new SetCookie('test=value; Unknown=something');
-    assert.equal(setCookie.toString(), 'test=value');
+    let header = new SetCookie('test=value; Unknown=something');
+    assert.equal(header.toString(), 'test=value');
   });
 
   it('handles Max-Age as a number', () => {
-    let setCookie = new SetCookie('test=value; Max-Age=3600');
-    assert.equal(setCookie.maxAge, 3600);
+    let header = new SetCookie('test=value; Max-Age=3600');
+    assert.equal(header.maxAge, 3600);
   });
 
   it('ignores invalid Max-Age', () => {
-    let setCookie = new SetCookie('test=value; Max-Age=invalid');
-    assert.equal(setCookie.maxAge, undefined);
+    let header = new SetCookie('test=value; Max-Age=invalid');
+    assert.equal(header.maxAge, undefined);
   });
 
   it('handles missing value in attributes', () => {
-    let setCookie = new SetCookie('test=value; Domain=; Path');
-    assert.equal(setCookie.domain, '');
-    assert.equal(setCookie.path, undefined);
+    let header = new SetCookie('test=value; Domain=; Path');
+    assert.equal(header.domain, '');
+    assert.equal(header.path, undefined);
   });
 
   it('preserves the case of the cookie name and value', () => {
-    let setCookie = new SetCookie('TestName=TestValue');
-    assert.equal(setCookie.name, 'TestName');
-    assert.equal(setCookie.value, 'TestValue');
+    let header = new SetCookie('TestName=TestValue');
+    assert.equal(header.name, 'TestName');
+    assert.equal(header.value, 'TestValue');
   });
 
   it('handles setting new name and value', () => {
-    let setCookie = new SetCookie('old=value');
-    setCookie.name = 'new';
-    setCookie.value = 'newvalue';
-    assert.equal(setCookie.toString(), 'new=newvalue');
+    let header = new SetCookie('old=value');
+    header.name = 'new';
+    header.value = 'newvalue';
+    assert.equal(header.toString(), 'new=newvalue');
   });
 
   it('correctly quotes values when necessary', () => {
-    let setCookie = new SetCookie('test=value');
-    setCookie.value = 'need; quotes';
-    assert.equal(setCookie.toString(), 'test="need; quotes"');
+    let header = new SetCookie('test=value');
+    header.value = 'need; quotes';
+    assert.equal(header.toString(), 'test="need; quotes"');
   });
 });

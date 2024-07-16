@@ -50,6 +50,12 @@ describe('ContentType', () => {
     assert.equal(header.toString(), 'text/plain; charset=utf-8');
   });
 
+  it('converts to an empty string when media type is not set', () => {
+    let header = new ContentType();
+    header.charset = 'utf-8';
+    assert.equal(header.toString(), '');
+  });
+
   it('handles multiple attributes', () => {
     let header = new ContentType('multipart/form-data; boundary="abc123"; charset=utf-8');
     assert.equal(header.mediaType, 'multipart/form-data');

@@ -26,11 +26,12 @@ export class ContentType implements HeaderValue {
   }
 
   toString(): string {
-    let parts = [];
-
-    if (this.mediaType) {
-      parts.push(this.mediaType);
+    if (!this.mediaType) {
+      return '';
     }
+
+    let parts = [this.mediaType];
+
     if (this.charset) {
       parts.push(`charset=${quote(this.charset)}`);
     }

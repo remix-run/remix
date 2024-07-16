@@ -65,11 +65,12 @@ export class SetCookie implements HeaderValue {
   }
 
   toString(): string {
-    let parts = [];
-
-    if (this.name) {
-      parts.push(`${this.name}=${quote(this.value || '')}`);
+    if (!this.name) {
+      return '';
     }
+
+    let parts = [`${this.name}=${quote(this.value || '')}`];
+
     if (this.domain) {
       parts.push(`Domain=${this.domain}`);
     }

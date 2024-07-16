@@ -44,11 +44,12 @@ export class ContentDisposition implements HeaderValue {
   }
 
   toString(): string {
-    let parts = [];
-
-    if (this.type) {
-      parts.push(this.type);
+    if (!this.type) {
+      return '';
     }
+
+    let parts = [this.type];
+
     if (this.name) {
       parts.push(`name=${quote(this.name)}`);
     }

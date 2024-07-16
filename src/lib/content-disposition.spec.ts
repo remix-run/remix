@@ -56,6 +56,12 @@ describe('ContentDisposition', () => {
     assert.equal(header.toString(), 'attachment; filename=example.txt');
   });
 
+  it('converts to an empty string when type is not set', () => {
+    let header = new ContentDisposition();
+    header.filename = 'example.txt';
+    assert.equal(header.toString(), '');
+  });
+
   it('handles multiple attributes', () => {
     let header = new ContentDisposition('form-data; name="field1"; filename="example.txt"');
     assert.equal(header.type, 'form-data');
