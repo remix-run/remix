@@ -151,7 +151,3 @@ for (let [key, value] of cookie) {
   // ...
 }
 ```
-
-## License
-
-MIT License
