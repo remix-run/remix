@@ -1,6 +1,6 @@
 {
   "name": "fetch-super-headers",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "A drop-in replacement for JavaScript Headers with type-safe access",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
