@@ -1,6 +1,6 @@
 {
   "name": "fetch-super-headers",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "JavaScript Headers, with superpowers",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
