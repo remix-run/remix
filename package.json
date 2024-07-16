@@ -1,6 +1,6 @@
 {
   "name": "fetch-multipart-parser",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A multipart parser for fetch streams",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
