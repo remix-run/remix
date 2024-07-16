@@ -399,6 +399,9 @@ function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
     if (result.reload) {
       headers["X-Remix-Reload-Document"] = "yes";
     }
+    if (result.replace) {
+      headers["X-Remix-Replace"] = "yes";
+    }
     return redirect(result.redirect, { status: result.status, headers });
   } else if ("data" in result) {
     return result.data;
