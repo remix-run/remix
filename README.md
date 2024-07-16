@@ -1,6 +1,8 @@
 # fetch-super-headers
 
-`SuperHeaders` is a drop-in replacement for JavaScript's `Headers` with type-safe access to common headers.
+`SuperHeaders` is a drop-in replacement for JavaScript `Headers` with type-safe access.
+
+Another way to think about it is a spec-compliant, type-safe way to parse, modify, and stringify various HTTP headers and collections of them.
 
 ## Key Features
 

@@ -16,7 +16,7 @@ export type SuperHeadersInit =
   | Record<string, string | HeaderValue>;
 
 /**
- * A drop-in replacement for JavaScript's `Headers` with type-safe access to common headers.
+ * A drop-in replacement for JavaScript `Headers` with type-safe access.
  *
  * @example
  *
