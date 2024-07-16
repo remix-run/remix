@@ -11,16 +11,16 @@
   ],
   "type": "module",
   "main": "./dist/index.js",
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "tsimp": "^2.0.11",
+    "typescript": "^5.5.3"
+  },
   "scripts": {
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
     "prepare": "npm run build",
     "prepublishOnly": "npm run test"
-  },
-  "devDependencies": {
-    "@types/node": "^20.14.10",
-    "tsimp": "^2.0.11",
-    "typescript": "^5.5.3"
   },
   "packageManager": "pnpm@9.4.0"
 }
