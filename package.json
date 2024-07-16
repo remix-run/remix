@@ -9,10 +9,7 @@
     "README.md"
   ],
   "type": "module",
-  "exports": {
-    ".": "./dist/index.js",
-    "./package.json": "./package.json"
-  },
+  "main": "./dist/index.js",
   "scripts": {
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
