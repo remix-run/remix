@@ -142,6 +142,14 @@ describe('SuperHeaders', () => {
   });
 
   describe('header-specific getters and setters', () => {
+    it('handles Age header', () => {
+      let headers = new SuperHeaders();
+      headers.age = 42;
+
+      assert.equal(headers.age, 42);
+      assert.equal(headers.get('Age'), '42');
+    });
+
     it('handles Content-Disposition header', () => {
       let headers = new SuperHeaders();
       headers.contentDisposition = 'attachment; filename="example.txt"';
@@ -184,6 +192,24 @@ describe('SuperHeaders', () => {
 
       headers.cookie.set('name3', 'value3');
       assert.equal(headers.get('Cookie'), 'name1=value1; name2=value2; name3=value3');
+    });
+
+    it('handles Expires header', () => {
+      let headers = new SuperHeaders();
+      headers.expires = new Date('2021-01-01T00:00:00Z');
+
+      assert.ok(headers.expires instanceof Date);
+      assert.equal(headers.expires.toUTCString(), 'Fri, 01 Jan 2021 00:00:00 GMT');
+      assert.equal(headers.get('Expires'), 'Fri, 01 Jan 2021 00:00:00 GMT');
+    });
+
+    it('handles Last-Modified header', () => {
+      let headers = new SuperHeaders();
+      headers.lastModified = new Date('2021-01-01T00:00:00Z');
+
+      assert.ok(headers.lastModified instanceof Date);
+      assert.equal(headers.lastModified.toUTCString(), 'Fri, 01 Jan 2021 00:00:00 GMT');
+      assert.equal(headers.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT');
     });
 
     it('handles Set-Cookie header', () => {

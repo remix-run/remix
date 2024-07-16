@@ -4,6 +4,7 @@ import { Cookie } from './cookie.js';
 import { canonicalHeaderName } from './header-names.js';
 import { HeaderValue } from './header-value.js';
 import { SetCookie } from './set-cookie.js';
+import { isValidDate } from './utils.js';
 
 const CRLF = '\r\n';
 const SetCookieKey = 'set-cookie';
@@ -78,7 +79,15 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
       return this.setCookieValues.map((value) => value.toString()).join(', ');
     } else {
       let value = this.map.get(key);
-      return value === undefined ? null : value.toString();
+      if (typeof value === 'string') {
+        return value;
+      } else if (value instanceof Date) {
+        return value.toUTCString();
+      } else if (value != null) {
+        return value.toString();
+      } else {
+        return null;
+      }
     }
   }
 
@@ -105,16 +114,16 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
   }
 
   *entries(): IterableIterator<[string, string]> {
-    for (let [key, value] of this.map) {
-      let stringValue = value.toString();
-      if (stringValue !== '') {
+    for (let [key] of this.map) {
+      let stringValue = this.get(key);
+      if (stringValue) {
         yield [key, stringValue];
       }
     }
 
     for (let value of this.setCookieValues) {
       let stringValue = value.toString();
-      if (stringValue !== '') {
+      if (stringValue) {
         yield [SetCookieKey, stringValue];
       }
     }
@@ -157,6 +166,14 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
 
   // Header-specific getters and setters
 
+  get age(): number | undefined {
+    return this.getNumberValue('age');
+  }
+
+  set age(value: string | number) {
+    this.map.set('age', value);
+  }
+
   get contentDisposition(): ContentDisposition {
     return this.getHeaderValue('content-disposition', ContentDisposition);
   }
@@ -165,13 +182,11 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
     this.map.set('content-disposition', value);
   }
 
-  get contentLength(): number {
-    let value = this.map.get('content-length');
-    if (typeof value === 'number') return value;
-    return value ? parseInt(value.toString(), 10) : NaN;
+  get contentLength(): number | undefined {
+    return this.getNumberValue('content-length');
   }
 
-  set contentLength(value: number) {
+  set contentLength(value: string | number) {
     this.map.set('content-length', value);
   }
 
@@ -189,6 +204,46 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
 
   set cookie(value: string | Cookie) {
     this.map.set('cookie', value);
+  }
+
+  get date(): Date | undefined {
+    return this.getDateValue('date');
+  }
+
+  set date(value: string | Date) {
+    this.map.set('date', value);
+  }
+
+  get expires(): Date | undefined {
+    return this.getDateValue('expires');
+  }
+
+  set expires(value: string | Date) {
+    this.map.set('expires', value);
+  }
+
+  get ifModifiedSince(): Date | undefined {
+    return this.getDateValue('if-modified-since');
+  }
+
+  set ifModifiedSince(value: string | Date) {
+    this.map.set('if-modified-since', value);
+  }
+
+  get ifUnmodifiedSince(): Date | undefined {
+    return this.getDateValue('if-unmodified-since');
+  }
+
+  set ifUnmodifiedSince(value: string | Date) {
+    this.map.set('if-unmodified-since', value);
+  }
+
+  get lastModified(): Date | undefined {
+    return this.getDateValue('last-modified');
+  }
+
+  set lastModified(value: string | Date) {
+    this.map.set('last-modified', value);
   }
 
   get setCookie(): SetCookie[] {
@@ -210,9 +265,49 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
     }
   }
 
+  // helpers
+
+  private getDateValue(key: string): Date | undefined {
+    let value = this.map.get(key);
+    if (value) {
+      if (typeof value === 'string') {
+        let date = new Date(value);
+        if (isValidDate(date)) {
+          this.map.set(key, date); // cache the parsed date
+          return date;
+        } else {
+          this.map.delete(key); // bad value, remove it
+        }
+      } else if (value instanceof Date) {
+        return value;
+      } else {
+        this.map.delete(key); // bad value, remove it
+      }
+    }
+  }
+
+  private getNumberValue(key: string): number | undefined {
+    let value = this.map.get(key);
+    if (value) {
+      if (typeof value === 'string') {
+        let v = parseInt(value, 10);
+        if (!isNaN(v)) {
+          this.map.set(key, v); // cache the parsed number
+          return v;
+        } else {
+          this.map.delete(key); // bad value, remove it
+        }
+      } else if (typeof value === 'number') {
+        return value;
+      } else {
+        this.map.delete(key); // bad value, remove it
+      }
+    }
+  }
+
   private getHeaderValue<T extends HeaderValue>(
     key: string,
-    ctor: new (initialValue: string) => T
+    ctor: new (initialValue?: string) => T
   ): T {
     let value = this.map.get(key);
     if (value) {
@@ -224,7 +319,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
         return value as T;
       }
     } else {
-      let headerValue = new ctor('');
+      let headerValue = new ctor();
       this.map.set(key, headerValue);
       return headerValue;
     }

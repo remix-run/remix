@@ -1,5 +1,6 @@
 import { HeaderValue } from './header-value.js';
 import { parseParams, quote } from './param-values.js';
+import { capitalize, isValidDate } from './utils.js';
 
 type SameSiteValue = 'Strict' | 'Lax' | 'None';
 
@@ -93,12 +94,4 @@ export class SetCookie implements HeaderValue {
 
     return parts.join('; ');
   }
-}
-
-function capitalize(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-}
-
-function isValidDate(date: unknown): boolean {
-  return date instanceof Date && !isNaN(date.getTime());
 }
