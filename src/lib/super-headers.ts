@@ -147,9 +147,11 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
 
   toString(): string {
     let lines: string[] = [];
+
     for (let [key, value] of this) {
       lines.push(`${canonicalHeaderName(key)}: ${value}`);
     }
+
     return lines.join(CRLF);
   }
 
