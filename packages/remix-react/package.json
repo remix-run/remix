@@ -19,10 +19,10 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "@remix-run/router": "1.18.0-pre.0",
+    "@remix-run/router": "1.18.0",
     "@remix-run/server-runtime": "workspace:*",
-    "react-router": "6.25.0-pre.0",
-    "react-router-dom": "6.25.0-pre.0",
+    "react-router": "6.25.0",
+    "react-router-dom": "6.25.0",
     "turbo-stream": "2.2.0"
   },
   "devDependencies": {
