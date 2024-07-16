@@ -1,12 +1,14 @@
 {
-  "name": "multipart-web-stream",
+  "name": "fetch-multipart-parser",
   "version": "0.1.0",
   "description": "A multipart parser for fetch streams",
   "scripts": {
     "build": "pnpm run build:cjs && pnpm run build:esm",
     "build:cjs": "tsc --outDir dist --project tsconfig.lib.json",
     "build:esm": "esbuild src/index.ts --bundle --format=esm --target=node16 --outfile=dist/index.mjs",
-    "test": "node --import tsimp/import --test ./src/**/*.spec.ts"
+    "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
+    "prepare": "pnpm run build",
+    "prepublishOnly": "pnpm run test"
   },
   "exports": {
     ".": {

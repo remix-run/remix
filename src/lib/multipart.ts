@@ -122,7 +122,7 @@ const findDoubleCRLF = createSeqFinder(textEncoder.encode(CRLF + CRLF));
  * Example:
  *
  * ```typescript
- * import { parseMultipartFormData, MultipartParseError } from 'multipart-web-stream';
+ * import { parseMultipartFormData, MultipartParseError } from 'fetch-multipart-parser';
  *
  * function handleMultipartRequest(request: Request): void {
  *   try {
