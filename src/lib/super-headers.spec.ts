@@ -248,16 +248,14 @@ describe('SuperHeaders', () => {
   describe('toString', () => {
     it('omits empty values when stringified', () => {
       let headers = new SuperHeaders();
-      headers.set('X-Test', 'value');
-      headers.contentDisposition = '';
-      headers.contentType = '';
-      headers.cookie = '';
 
-      let result = headers.toString();
-      assert.equal(result, 'X-Test: value');
-      assert.ok(!result.includes('Content-Disposition'));
-      assert.ok(!result.includes('Content-Type'));
-      assert.ok(!result.includes('Cookie'));
+      // This should appear in the string since it has a media type, it's complete
+      headers.contentType = 'text/plain';
+
+      // This should not appear in the string since it's incomplete, missing the type
+      headers.contentDisposition.filename = 'example.txt';
+
+      assert.equal(headers.toString(), 'Content-Type: text/plain');
     });
   });
 });
