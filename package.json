@@ -10,6 +10,10 @@
     "prepare": "pnpm run build",
     "prepublishOnly": "pnpm run test"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
