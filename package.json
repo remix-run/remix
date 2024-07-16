@@ -21,7 +21,9 @@
     "build": "pnpm run build:cjs && pnpm run build:esm",
     "build:cjs": "tsc --outDir dist --project tsconfig.lib.json",
     "build:esm": "esbuild src/index.ts --bundle --format=esm --target=node16 --outfile=dist/index.mjs",
-    "test": "node --import tsimp/import --test ./src/**/*.spec.ts"
+    "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
+    "prepare": "pnpm run build",
+    "prepublishOnly": "pnpm run test"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
