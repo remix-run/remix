@@ -57,9 +57,9 @@ const findDoubleCRLF = createSeqFinder(textEncoder.encode(CRLF + CRLF));
  *     for await (let part of parseMultipartFormData(request)) {
  *       console.log(part.name);
  *       console.log(part.filename);
- *       console.log(part.contentType);
+ *       console.log(part.mediaType);
  *
- *       if (/^text\//.test(part.contentType)) {
+ *       if (/^text\//.test(part.mediaType)) {
  *         console.log(new TextDecoder().decode(part.content));
  *       } else {
  *         // part.content is binary data, save it to a file
