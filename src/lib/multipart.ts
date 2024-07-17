@@ -116,7 +116,7 @@ export async function* parseMultipartFormData(
  *
  * Throw `MultipartParseError` if the parse fails for some reason.
  *
- * Note: This is a low-level function that requires manually handling the stream and boundary. For most common use cases,
+ * Note: This is a low-level API that requires manually handling the stream and boundary. For most common use cases,
  * consider using `parseMultipartFormData(request)` instead.
  */
 export async function* parseMultipartStream(
