@@ -11,7 +11,6 @@ import type {
   LoaderFunction,
   LoaderFunctionArgs,
 } from "./routeModules";
-import type { ResponseStub } from "./single-fetch";
 
 /**
  * An object of unknown type for route loaders and actions provided by the
@@ -35,7 +34,6 @@ export async function callRouteAction({
   request,
   routeId,
   singleFetch,
-  response,
 }: {
   request: Request;
   action: ActionFunction;
@@ -43,15 +41,11 @@ export async function callRouteAction({
   loadContext: AppLoadContext;
   routeId: string;
   singleFetch: boolean;
-  response?: ResponseStub;
 }) {
   let result = await action({
     request: stripDataParam(stripIndexParam(request)),
     context: loadContext,
     params,
-    // Only provided when single fetch is enabled, and made available via
-    // `defineAction` types, not `ActionFunctionArgs`
-    ...(singleFetch ? { response } : null),
   });
 
   if (result === undefined) {
@@ -76,7 +70,6 @@ export async function callRouteLoader({
   request,
   routeId,
   singleFetch,
-  response,
 }: {
   request: Request;
   loader: LoaderFunction;
@@ -84,15 +77,11 @@ export async function callRouteLoader({
   loadContext: AppLoadContext;
   routeId: string;
   singleFetch: boolean;
-  response?: ResponseStub;
 }) {
   let result = await loader({
     request: stripDataParam(stripIndexParam(request)),
     context: loadContext,
     params,
-    // Only provided when single fetch is enabled, and made available via
-    // `defineLoader` types, not `LoaderFunctionArgs`
-    ...(singleFetch ? { response } : null),
   });
 
   if (result === undefined) {
