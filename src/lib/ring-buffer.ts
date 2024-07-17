@@ -1,3 +1,6 @@
+/**
+ * A ring buffer that automatically resizes to accomodate more data when it is full.
+ */
 export class RingBuffer {
   private start = 0;
   private end = 0;
@@ -8,10 +11,16 @@ export class RingBuffer {
     this.buffer = new Uint8Array(initialCapacity);
   }
 
+  /**
+   * The maximum number of bytes the buffer can hold.
+   */
   get capacity(): number {
     return this.buffer.length;
   }
 
+  /**
+   * The number of bytes in the buffer.
+   */
   get length(): number {
     return this._length;
   }
@@ -39,6 +48,9 @@ export class RingBuffer {
     this.end = length;
   }
 
+  /**
+   * Appends a chunk of data to the buffer. If the buffer is full, it will be resized.
+   */
   append(chunk: Uint8Array): void {
     if (chunk.length === 0) return;
 
@@ -64,6 +76,9 @@ export class RingBuffer {
     this._length += chunk.length;
   }
 
+  /**
+   * Returns a view of the next `size` bytes in the buffer without removing them.
+   */
   peek(size: number): Uint8Array {
     if (size < 0) {
       throw new Error('Requested size must be non-negative');
@@ -85,6 +100,9 @@ export class RingBuffer {
     return result;
   }
 
+  /**
+   * Removes and returns the next `size` bytes from the buffer.
+   */
   read(size: number): Uint8Array {
     let result = this.peek(size);
     this.start = (this.start + size) % this.capacity;
