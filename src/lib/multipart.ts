@@ -1,5 +1,7 @@
 import { SuperHeaders } from 'fetch-super-headers';
 
+import { RingBuffer } from './ring-buffer.js';
+
 const CRLF = '\r\n';
 
 const DefaultMaxHeaderSize = 1024 * 1024; // 1 MB
@@ -52,10 +54,6 @@ export interface MultipartParseOptions {
   maxHeaderSize?: number;
   maxPartSize?: number;
 }
-
-const textEncoder = new TextEncoder();
-const textDecoder = new TextDecoder();
-const findDoubleCRLF = createSeqFinder(textEncoder.encode(CRLF + CRLF));
 
 /**
  * Parse a `multipart/form-data` request body and yield each part as a `MultipartPart` object.
@@ -111,6 +109,10 @@ export async function* parseMultipartFormData(
   yield* parseMultipartStream(boundary, request.body, options);
 }
 
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+const findHeaderEnd = createSeqFinder(textEncoder.encode(CRLF + CRLF));
+
 /**
  * Parse a multipart stream and yield each part as a `MultipartPart` object.
  *
@@ -130,11 +132,11 @@ export async function* parseMultipartStream(
   let boundarySeq = textEncoder.encode(`--${boundary}`);
   let findBoundary = createSeqFinder(boundarySeq);
 
+  let reader = stream.getReader();
+  let buffer = new RingBuffer(16 * 1024); // Start with a 16KB buffer
+  let boundarySearchStartIndex = 0;
   let initialBoundaryFound = false;
   let isFinished = false;
-  let reader = stream.getReader();
-  let buffer = new Uint8Array(0);
-  let boundarySearchStartIndex = 0;
 
   try {
     while (!isFinished) {
@@ -146,31 +148,33 @@ export async function* parseMultipartStream(
         break;
       }
 
-      buffer = Uint8Array.from([...buffer, ...value]);
+      buffer.append(value);
 
       while (true) {
-        let boundaryIndex = findBoundary(buffer, boundarySearchStartIndex);
+        let boundaryIndex = findBoundary(buffer.peek(buffer.length), boundarySearchStartIndex);
         if (boundaryIndex === -1) {
-          // No boundary found, remember the last search index
+          // No boundary found, begin the boundary search on the next iteration from
+          // the start of the last potential boundary sequence.
           boundarySearchStartIndex = Math.max(0, buffer.length - boundarySeq.length);
           break;
         }
 
         if (initialBoundaryFound) {
-          let partData = buffer.subarray(0, boundaryIndex - 2); // -2 to remove \r\n before boundary
-          let headerEndIndex = findDoubleCRLF(partData);
+          let partData = buffer.read(boundaryIndex - 2); // -2 to avoid \r\n before the boundary
+          let headerEndIndex = findHeaderEnd(partData);
 
           let headers: SuperHeaders;
           let content: Uint8Array;
           if (headerEndIndex !== -1) {
-            if (headerEndIndex > maxHeaderSize) {
+            let header = partData.subarray(0, headerEndIndex);
+            if (header.length > maxHeaderSize) {
               throw new MultipartParseError(
                 `Headers size exceeds maximum allowed size of ${maxHeaderSize} bytes`
               );
             }
 
-            headers = new SuperHeaders(textDecoder.decode(partData.subarray(0, headerEndIndex)));
-            content = partData.subarray(headerEndIndex + 4); // +4 to remove \r\n\r\n after headers
+            headers = new SuperHeaders(textDecoder.decode(header));
+            content = partData.subarray(headerEndIndex + 4); // +4 to remove \r\n\r\n after header
           } else {
             // No headers found, treat entire part as content
             headers = new SuperHeaders();
@@ -184,23 +188,25 @@ export async function* parseMultipartStream(
           }
 
           yield new MultipartPart(headers, content);
+
+          buffer.read(2); // Skip the \r\n before the boundary
         } else {
           initialBoundaryFound = true;
         }
 
-        buffer = buffer.subarray(boundaryIndex + boundarySeq.length);
+        buffer.read(boundarySeq.length); // Skip the boundary
         boundarySearchStartIndex = 0;
 
-        if (buffer.length > 1 && buffer[0] === 45 && buffer[1] === 45) {
-          isFinished = true;
-          buffer = buffer.subarray(2); // Keep any data after final boundary
-          break;
+        if (buffer.length > 1) {
+          let endMarker = buffer.peek(2); // Check for "--"
+          if (endMarker[0] === 45 && endMarker[1] === 45) {
+            isFinished = true;
+            break;
+          } else {
+            buffer.read(2); // Skip the \r\n after the boundary
+          }
         }
       }
-    }
-
-    if (buffer.length > 0) {
-      throw new MultipartParseError('Unexpected data after final boundary');
     }
   } finally {
     reader.releaseLock();
@@ -213,32 +219,25 @@ function createSeqFinder(needle: Uint8Array): (haystack: Uint8Array, offset?: nu
     skipTable.set(needle[i], needle.length - 1 - i);
   }
 
-  return (haystack: Uint8Array, offset = 0) => findSeq(haystack, needle, skipTable, offset);
-}
-
-function findSeq(
-  haystack: Uint8Array,
-  needle: Uint8Array,
-  skipTable: Map<number, number>,
-  offset: number
-): number {
-  // boyer-moore-horspool algorithm
-  if (needle.length === 0) {
-    return offset;
-  }
-
-  let i = offset + needle.length - 1;
-  while (i < haystack.length) {
-    let j = needle.length - 1;
-    while (j >= 0 && haystack[i] === needle[j]) {
-      i--;
-      j--;
+  return (haystack: Uint8Array, offset = 0) => {
+    // boyer-moore-horspool algorithm
+    if (needle.length === 0) {
+      return offset;
     }
-    if (j < 0) {
-      return i + 1;
-    }
-    i += Math.max(needle.length - j, skipTable.get(haystack[i]) || needle.length);
-  }
 
-  return -1;
+    let i = offset + needle.length - 1;
+    while (i < haystack.length) {
+      let j = needle.length - 1;
+      while (j >= 0 && haystack[i] === needle[j]) {
+        i--;
+        j--;
+      }
+      if (j < 0) {
+        return i + 1;
+      }
+      i += Math.max(needle.length - j, skipTable.get(haystack[i]) || needle.length);
+    }
+
+    return -1;
+  };
 }
