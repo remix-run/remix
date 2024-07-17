@@ -2,11 +2,6 @@ import { SuperHeaders } from 'fetch-super-headers';
 
 import { RingBuffer } from './ring-buffer.js';
 
-const CRLF = '\r\n';
-
-const DefaultMaxHeaderSize = 1024 * 1024; // 1 MB
-const DefaultMaxFileSize = 1024 * 1024 * 10; // 10 MB
-
 export class MultipartParseError extends Error {
   constructor(message: string) {
     super(message);
@@ -125,9 +120,14 @@ export async function* parseMultipartFormData(
   yield* parseMultipartStream(boundary, request.body, options);
 }
 
-const textEncoder = new TextEncoder();
+const DefaultMaxHeaderSize = 1024 * 1024; // 1 MB
+const DefaultMaxFileSize = 1024 * 1024 * 10; // 10 MB
+
+const doubleCRLFSeq = new Uint8Array([13, 10, 13, 10]);
+const findHeaderEnd = createSeqFinder(doubleCRLFSeq);
+
 const textDecoder = new TextDecoder();
-const findHeaderEnd = createSeqFinder(textEncoder.encode(CRLF + CRLF));
+const textEncoder = new TextEncoder();
 
 /**
  * Parse a multipart stream and yield each part as a `MultipartPart` object.
