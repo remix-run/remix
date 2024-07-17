@@ -5,7 +5,7 @@ import { RingBuffer } from './ring-buffer.js';
 const CRLF = '\r\n';
 
 const DefaultMaxHeaderSize = 1024 * 1024; // 1 MB
-const DefaultMaxPartSize = 1024 * 1024 * 10; // 10 MB
+const DefaultMaxFileSize = 1024 * 1024 * 10; // 10 MB
 
 export class MultipartParseError extends Error {
   constructor(message: string) {
@@ -52,7 +52,7 @@ export function isMultipartFormData(request: Request): boolean {
 
 export interface MultipartParseOptions {
   maxHeaderSize?: number;
-  maxPartSize?: number;
+  maxFileSize?: number;
 }
 
 /**
@@ -127,7 +127,7 @@ export async function* parseMultipartStream(
   options: MultipartParseOptions = {}
 ) {
   let maxHeaderSize = options.maxHeaderSize || DefaultMaxHeaderSize;
-  let maxPartSize = options.maxPartSize || DefaultMaxPartSize;
+  let maxFileSize = options.maxFileSize || DefaultMaxFileSize;
 
   let boundarySeq = textEncoder.encode(`--${boundary}`);
   let findBoundary = createSeqFinder(boundarySeq);
@@ -181,9 +181,9 @@ export async function* parseMultipartStream(
             content = partData;
           }
 
-          if (content.length > maxPartSize) {
+          if (content.length > maxFileSize) {
             throw new MultipartParseError(
-              `Part size exceeds maximum allowed size of ${maxPartSize} bytes`
+              `Part size exceeds maximum allowed size of ${maxFileSize} bytes`
             );
           }
 

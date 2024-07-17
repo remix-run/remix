@@ -216,7 +216,7 @@ describe('parseMultipartFormData', async () => {
     );
 
     await assert.rejects(async () => {
-      await parseMultipartFormData(request, { maxPartSize: 1024 * 1024 * 10 }).next();
+      await parseMultipartFormData(request, { maxFileSize: 1024 * 1024 * 10 }).next();
     }, MultipartParseError);
   });
 
