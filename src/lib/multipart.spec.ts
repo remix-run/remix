@@ -64,7 +64,7 @@ describe('parseMultipartFormData', async () => {
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'field1');
-    assert.equal(new TextDecoder().decode(parts[0].content), 'value1');
+    assert.equal(parts[0].text, 'value1');
   });
 
   it('Handles multiple parts correctly', async () => {
@@ -90,9 +90,9 @@ describe('parseMultipartFormData', async () => {
 
     assert.equal(parts.length, 2);
     assert.equal(parts[0].name, 'field1');
-    assert.equal(new TextDecoder().decode(parts[0].content), 'value1');
+    assert.equal(parts[0].text, 'value1');
     assert.equal(parts[1].name, 'field2');
-    assert.equal(new TextDecoder().decode(parts[1].content), 'value2');
+    assert.equal(parts[1].text, 'value2');
   });
 
   it('Handles file uploads correctly', async () => {
@@ -117,7 +117,7 @@ describe('parseMultipartFormData', async () => {
     assert.equal(parts[0].name, 'file1');
     assert.equal(parts[0].filename, 'test.txt');
     assert.equal(parts[0].mediaType, 'text/plain');
-    assert.equal(new TextDecoder().decode(parts[0].content), 'File content here');
+    assert.equal(parts[0].text, 'File content here');
   });
 
   it('Handles multiple fields and a file upload', async () => {
@@ -148,13 +148,13 @@ describe('parseMultipartFormData', async () => {
 
     assert.equal(parts.length, 3);
     assert.equal(parts[0].name, 'field1');
-    assert.equal(new TextDecoder().decode(parts[0].content), 'value1');
+    assert.equal(parts[0].text, 'value1');
     assert.equal(parts[1].name, 'field2');
-    assert.equal(new TextDecoder().decode(parts[1].content), 'value2');
+    assert.equal(parts[1].text, 'value2');
     assert.equal(parts[2].name, 'file1');
     assert.equal(parts[2].filename, 'test.txt');
     assert.equal(parts[2].mediaType, 'text/plain');
-    assert.equal(new TextDecoder().decode(parts[2].content), 'File content here');
+    assert.equal(parts[2].text, 'File content here');
   });
 
   it('Throws error when Content-Type is not multipart/form-data', async () => {
@@ -235,7 +235,7 @@ describe('parseMultipartFormData', async () => {
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].headers.get('Invalid-Header'), null);
-    assert.equal(new TextDecoder().decode(parts[0].content), 'Some content');
+    assert.equal(parts[0].text, 'Some content');
   });
 
   it('Throws error when final boundary is missing', async () => {

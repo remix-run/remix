@@ -40,6 +40,15 @@ export class MultipartPart {
   get name(): string | null {
     return this.headers.contentDisposition.name || null;
   }
+
+  /**
+   * The content of the part as a string.
+   *
+   * Note: Do not use this for binary data, use `part.content` instead.
+   */
+  get text(): string {
+    return new TextDecoder().decode(this.content);
+  }
 }
 
 /**
@@ -183,7 +192,7 @@ export async function* parseMultipartStream(
 
           if (content.length > maxFileSize) {
             throw new MultipartParseError(
-              `Part size exceeds maximum allowed size of ${maxFileSize} bytes`
+              `File size exceeds maximum allowed size of ${maxFileSize} bytes`
             );
           }
 
