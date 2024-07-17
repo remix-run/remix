@@ -18,27 +18,34 @@ export class MultipartParseError extends Error {
  * Represents a part of a `multipart/form-data` request.
  */
 export class MultipartPart {
-  constructor(public headers: SuperHeaders, public content: Uint8Array) {}
+  constructor(public header: string, public content: Uint8Array) {}
+
+  get headers(): Headers {
+    return new SuperHeaders(this.header);
+  }
 
   /**
    * The filename of the part, if it is a file upload.
    */
   get filename(): string | null {
-    return this.headers.contentDisposition.preferredFilename || null;
+    let headers = this.headers as SuperHeaders;
+    return headers.contentDisposition.preferredFilename || null;
   }
 
   /**
    * The media type of the part.
    */
   get mediaType(): string | null {
-    return this.headers.contentType.mediaType || null;
+    let headers = this.headers as SuperHeaders;
+    return headers.contentType.mediaType || null;
   }
 
   /**
    * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
    */
   get name(): string | null {
-    return this.headers.contentDisposition.name || null;
+    let headers = this.headers as SuperHeaders;
+    return headers.contentDisposition.name || null;
   }
 
   /**
@@ -172,21 +179,21 @@ export async function* parseMultipartStream(
           let partData = buffer.read(boundaryIndex - 2); // -2 to avoid \r\n before the boundary
           let headerEndIndex = findHeaderEnd(partData);
 
-          let headers: SuperHeaders;
+          let header: string;
           let content: Uint8Array;
           if (headerEndIndex !== -1) {
-            let header = partData.subarray(0, headerEndIndex);
-            if (header.length > maxHeaderSize) {
+            let headerBytes = partData.subarray(0, headerEndIndex);
+            if (headerBytes.length > maxHeaderSize) {
               throw new MultipartParseError(
                 `Headers size exceeds maximum allowed size of ${maxHeaderSize} bytes`
               );
             }
 
-            headers = new SuperHeaders(textDecoder.decode(header));
+            header = textDecoder.decode(headerBytes);
             content = partData.subarray(headerEndIndex + 4); // +4 to remove \r\n\r\n after header
           } else {
             // No headers found, treat entire part as content
-            headers = new SuperHeaders();
+            header = '';
             content = partData;
           }
 
@@ -196,7 +203,7 @@ export async function* parseMultipartStream(
             );
           }
 
-          yield new MultipartPart(headers, content);
+          yield new MultipartPart(header, content);
 
           buffer.read(2); // Skip the \r\n before the boundary
         } else {
