@@ -105,8 +105,22 @@ export class RingBuffer {
    */
   read(size: number): Uint8Array {
     let result = this.peek(size);
+    this.skip(size);
+    return result;
+  }
+
+  /**
+   * Removes the next `size` bytes from the buffer without returning them.
+   */
+  skip(size: number): void {
+    if (size < 0) {
+      throw new Error('Requested size must be non-negative');
+    }
+    if (size > this._length) {
+      throw new Error('Requested size is larger than buffer length');
+    }
+
     this.start = (this.start + size) % this.capacity;
     this._length -= size;
-    return result;
   }
 }

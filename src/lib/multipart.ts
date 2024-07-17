@@ -170,32 +170,28 @@ export async function* parseMultipartStream(
         let boundaryIndex = findBoundary(buffer.peek(buffer.length), boundarySearchStartIndex);
         if (boundaryIndex === -1) {
           // No boundary found, begin the boundary search on the next iteration from
-          // the start of the last potential boundary sequence.
+          // the start of the last potential boundary sequence
           boundarySearchStartIndex = Math.max(0, buffer.length - boundarySeq.length);
           break;
         }
 
         if (initialBoundaryFound) {
-          let partData = buffer.read(boundaryIndex - 2); // -2 to avoid \r\n before the boundary
-          let headerEndIndex = findHeaderEnd(partData);
+          let partBytes = buffer.read(boundaryIndex - 2); // -2 to avoid \r\n before the boundary
 
-          let header: string;
-          let content: Uint8Array;
-          if (headerEndIndex !== -1) {
-            let headerBytes = partData.subarray(0, headerEndIndex);
-            if (headerBytes.length > maxHeaderSize) {
-              throw new MultipartParseError(
-                `Headers size exceeds maximum allowed size of ${maxHeaderSize} bytes`
-              );
-            }
-
-            header = textDecoder.decode(headerBytes);
-            content = partData.subarray(headerEndIndex + 4); // +4 to remove \r\n\r\n after header
-          } else {
-            // No headers found, treat entire part as content
-            header = '';
-            content = partData;
+          let headerEndIndex = findHeaderEnd(partBytes);
+          if (headerEndIndex === -1) {
+            throw new MultipartParseError('Invalid part: missing header');
           }
+
+          let headerBytes = partBytes.subarray(0, headerEndIndex);
+          if (headerBytes.length > maxHeaderSize) {
+            throw new MultipartParseError(
+              `Header size exceeds maximum allowed size of ${maxHeaderSize} bytes`
+            );
+          }
+
+          let header = textDecoder.decode(headerBytes);
+          let content = partBytes.subarray(headerEndIndex + 4); // +4 to skip \r\n\r\n after the header
 
           if (content.length > maxFileSize) {
             throw new MultipartParseError(
@@ -205,21 +201,21 @@ export async function* parseMultipartStream(
 
           yield new MultipartPart(header, content);
 
-          buffer.read(2); // Skip the \r\n before the boundary
+          buffer.skip(2); // Skip \r\n before the boundary
         } else {
           initialBoundaryFound = true;
         }
 
-        buffer.read(boundarySeq.length); // Skip the boundary
+        buffer.skip(boundarySeq.length); // Skip the boundary
         boundarySearchStartIndex = 0;
 
         if (buffer.length > 1) {
-          let endMarker = buffer.peek(2); // Check for "--"
-          if (endMarker[0] === 45 && endMarker[1] === 45) {
+          // If the next two bytes are "--", it's the final boundary and we're done.
+          // Otherwise, it's the \r\n after the boundary and we can discard it.
+          let twoBytes = buffer.read(2);
+          if (twoBytes[0] === 45 && twoBytes[1] === 45) {
             isFinished = true;
             break;
-          } else {
-            buffer.read(2); // Skip the \r\n after the boundary
           }
         }
       }
