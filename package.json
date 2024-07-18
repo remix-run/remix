@@ -12,7 +12,7 @@
   "type": "module",
   "main": "./dist/index.js",
   "dependencies": {
-    "fetch-super-headers": "^0.4.0"
+    "fetch-super-headers": "^0.4.1"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
