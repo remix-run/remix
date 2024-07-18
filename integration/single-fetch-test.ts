@@ -751,6 +751,7 @@ test.describe("single-fetch", () => {
         status: 302,
         redirect: "/target",
         reload: false,
+        replace: false,
         revalidate: false,
       },
     });
@@ -800,6 +801,62 @@ test.describe("single-fetch", () => {
         status: 302,
         redirect: "/target",
         reload: false,
+        replace: false,
+        revalidate: false,
+      },
+    });
+    expect(status).toBe(202);
+
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickLink("/data");
+    await page.waitForSelector("#target");
+    expect(await app.getHtml("#target")).toContain("Target");
+  });
+
+  test("processes thrown loader replace redirects via Response", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/data.tsx": js`
+          import { replace } from '@remix-run/node';
+          export function loader() {
+            throw replace('/target');
+          }
+          export default function Component() {
+            return null
+          }
+        `,
+        "app/routes/target.tsx": js`
+          export default function Component() {
+            return <h1 id="target">Target</h1>
+          }
+        `,
+      },
+    });
+
+    console.error = () => {};
+
+    let res = await fixture.requestDocument("/data");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/target");
+    expect(await res.text()).toBe("");
+
+    let { status, data } = await fixture.requestSingleFetchData("/data.data");
+    expect(data).toEqual({
+      [SingleFetchRedirectSymbol]: {
+        status: 302,
+        redirect: "/target",
+        reload: false,
+        replace: true,
         revalidate: false,
       },
     });
@@ -860,6 +917,7 @@ test.describe("single-fetch", () => {
       status: 302,
       redirect: "/target",
       reload: false,
+      replace: false,
       revalidate: false,
     });
     expect(status).toBe(202);
@@ -917,6 +975,7 @@ test.describe("single-fetch", () => {
       status: 302,
       redirect: "/target",
       reload: false,
+      replace: false,
       revalidate: false,
     });
     expect(status).toBe(202);
@@ -1094,6 +1153,7 @@ test.describe("single-fetch", () => {
         status: 302,
         redirect: "/target",
         reload: false,
+        replace: false,
         revalidate: false,
       },
     });
@@ -1196,6 +1256,7 @@ test.describe("single-fetch", () => {
       status: 302,
       redirect: "/target",
       reload: false,
+      replace: false,
       revalidate: false,
     });
     expect(status).toBe(202);
