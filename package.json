@@ -1,7 +1,7 @@
 {
   "name": "fetch-super-headers",
   "version": "0.4.0",
-  "description": "A drop-in replacement for JavaScript Headers with type-safe access",
+  "description": "An enhanced JavaScript Headers interface type-safe access",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "files": [
@@ -22,5 +22,9 @@
     "prepare": "npm run build",
     "prepublishOnly": "npm run test"
   },
-  "packageManager": "pnpm@9.4.0"
+  "packageManager": "pnpm@9.4.0",
+  "keywords": [
+    "fetch",
+    "headers"
+  ]
 }
