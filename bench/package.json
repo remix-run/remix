@@ -1,6 +1,7 @@
 {
-  "name": "fetch-multipart-parser-benchmark",
+  "name": "fetch-multipart-parser-bench",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@fastify/busboy": "^3.0.0",
     "@types/busboy": "^1.5.4",
