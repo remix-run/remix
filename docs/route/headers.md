@@ -127,6 +127,11 @@ export default function handleRequest(
 
 Just keep in mind that doing this will apply to _all_ document requests, but does not apply to `data` requests (for client-side transitions for example). For those, use [`handleDataRequest`][handle-data-request].
 
+## To be deprecated with with Single Fetch
+
+The unstable [Single Fetch][single-fetch] data loading strategy will replace the `headers` export with a mutable `Response` object passed to loaders. If you’ve enabled Single Fetch for your Remix application, consult the Single Fetch documentation instead of this page for information about how to set headers for documents.
+
+[single-fetch]: ../guides/single-fetch#headers
 [cache-control-header]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 [action]: ./action
 [loader]: ./loader
