@@ -186,8 +186,7 @@ export class MultipartParser {
           );
         }
 
-        let header = textDecoder.decode(headerArray);
-        parts.push(new MultipartPart(header, contentArray));
+        parts.push(new MultipartPart(headerArray, contentArray));
 
         this.buffer.skip(2 + this.boundaryArray.length); // Skip \r\n + boundary
       } else {
@@ -228,34 +227,43 @@ function findDoubleCRLF(buffer: Uint8Array): number {
  * A part of a `multipart/form-data` message.
  */
 export class MultipartPart {
-  constructor(public header: string, public content: Uint8Array) {}
+  private _rawHeader: Uint8Array;
+  private _headers?: SuperHeaders;
 
-  get headers(): Headers {
-    return new SuperHeaders(this.header);
+  constructor(header: Uint8Array, public content: Uint8Array) {
+    this._rawHeader = header;
+  }
+
+  /**
+   * The headers associated with this part.
+   */
+  get headers(): SuperHeaders {
+    if (!this._headers) {
+      this._headers = new SuperHeaders(textDecoder.decode(this._rawHeader));
+    }
+
+    return this._headers;
   }
 
   /**
    * The filename of the part, if it is a file upload.
    */
   get filename(): string | null {
-    let headers = this.headers as SuperHeaders;
-    return headers.contentDisposition.preferredFilename || null;
+    return this.headers.contentDisposition.preferredFilename || null;
   }
 
   /**
    * The media type of the part.
    */
   get mediaType(): string | null {
-    let headers = this.headers as SuperHeaders;
-    return headers.contentType.mediaType || null;
+    return this.headers.contentType.mediaType || null;
   }
 
   /**
    * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
    */
   get name(): string | null {
-    let headers = this.headers as SuperHeaders;
-    return headers.contentDisposition.name || null;
+    return this.headers.contentDisposition.name || null;
   }
 
   /**
