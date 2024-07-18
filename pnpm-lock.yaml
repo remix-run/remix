@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       fetch-super-headers:
-        specifier: ^0.4.0
-        version: 0.4.0
+        specifier: ^0.4.1
+        version: 0.4.1
     devDependencies:
       '@types/node':
         specifier: ^20.14.10
@@ -83,8 +83,8 @@ packages:
   emoji-regex@9.2.2:
     resolution: {integrity: sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg==}
 
-  fetch-super-headers@0.4.0:
-    resolution: {integrity: sha512-3lx+QZ3WnsQCxnUX7Ug+BPDvd1JxZ+CTn5QpvmLEx6jNev7lzd+56mfMr5fWd49X8VeHwZr4De88eeIKavwOIw==}
+  fetch-super-headers@0.4.1:
+    resolution: {integrity: sha512-jXB/p3m6iMeDFhHpJ56BgqrvoDIiyueNPF39twy2N63DMcme0imKhGoEZH8AAbnplnggU9OdUs9eFFPZxPULFA==}
 
   foreground-child@3.2.1:
     resolution: {integrity: sha512-PXUUyLqrR2XCWICfv6ukppP96sdFwWbNEnfEMt7jNsISjMsvaLNinAHNDYyvkyU+SZG2BTSbT5NjG+vZslfGTA==}
@@ -265,7 +265,7 @@ snapshots:
 
   emoji-regex@9.2.2: {}
 
-  fetch-super-headers@0.4.0: {}
+  fetch-super-headers@0.4.1: {}
 
   foreground-child@3.2.1:
     dependencies:
