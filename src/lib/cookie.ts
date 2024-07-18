@@ -1,18 +1,30 @@
 import { HeaderValue } from './header-value.js';
 import { parseParams, quote } from './param-values.js';
 
+export interface CookieInit {
+  [name: string]: string;
+}
+
 /**
  * Represents the value of a `Cookie` HTTP header.
  */
 export class Cookie implements HeaderValue, Iterable<[string, string]> {
   private cookies: Map<string, string>;
 
-  constructor(initialValue?: string) {
+  constructor(init?: string | CookieInit) {
     this.cookies = new Map();
-    if (initialValue) {
-      let params = parseParams(initialValue);
-      for (let [name, value] of params) {
-        this.cookies.set(name, value || '');
+    if (init) {
+      if (typeof init === 'string') {
+        let params = parseParams(init);
+        for (let [name, value] of params) {
+          this.cookies.set(name, value || '');
+        }
+      } else {
+        for (let name in init) {
+          if (Object.prototype.hasOwnProperty.call(init, name)) {
+            this.cookies.set(name, init[name]);
+          }
+        }
       }
     }
   }

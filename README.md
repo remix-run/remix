@@ -2,7 +2,7 @@
 
 `SuperHeaders` is an enhanced JavaScript `Headers` interface with type-safe access.
 
-Another way to think about it is a spec-compliant, type-safe way to parse, modify, and stringify various HTTP headers and collections of them.
+Another way to think about it is as a Swiss Army knife for HTTP headers. Whenever you need a spec-compliant, type-safe way to parse, modify, and stringify various HTTP headers and collections of them, SuperHeaders has you covered.
 
 ## Features
 

@@ -1,29 +1,43 @@
 import { HeaderValue } from './header-value.js';
 import { parseParams, quote } from './param-values.js';
 
+export interface ContentDispositionInit {
+  filename?: string;
+  filenameSplat?: string;
+  name?: string;
+  type?: string;
+}
+
 /**
  * Represents the value of a `Content-Disposition` HTTP header.
  */
 export class ContentDisposition implements HeaderValue {
-  public type?: string;
   public filename?: string;
   public filenameSplat?: string;
   public name?: string;
+  public type?: string;
 
-  constructor(initialValue?: string) {
-    if (initialValue) {
-      let params = parseParams(initialValue);
-      if (params.length > 0) {
-        this.type = params[0][0];
-        for (let [name, value] of params.slice(1)) {
-          if (name === 'filename') {
-            this.filename = value;
-          } else if (name === 'filename*') {
-            this.filenameSplat = value;
-          } else if (name === 'name') {
-            this.name = value;
+  constructor(init?: string | ContentDispositionInit) {
+    if (init) {
+      if (typeof init === 'string') {
+        let params = parseParams(init);
+        if (params.length > 0) {
+          this.type = params[0][0];
+          for (let [name, value] of params.slice(1)) {
+            if (name === 'filename') {
+              this.filename = value;
+            } else if (name === 'filename*') {
+              this.filenameSplat = value;
+            } else if (name === 'name') {
+              this.name = value;
+            }
           }
         }
+      } else {
+        this.filename = init.filename;
+        this.filenameSplat = init.filenameSplat;
+        this.name = init.name;
+        this.type = init.type;
       }
     }
   }

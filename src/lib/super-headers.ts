@@ -305,10 +305,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
     }
   }
 
-  private getHeaderValue<T extends HeaderValue>(
-    key: string,
-    ctor: new (initialValue?: string) => T
-  ): T {
+  private getHeaderValue<T extends HeaderValue>(key: string, ctor: new (init?: string) => T): T {
     let value = this.map.get(key);
     if (value) {
       if (typeof value === 'string') {
