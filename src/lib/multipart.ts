@@ -1,6 +1,6 @@
 import { SuperHeaders } from 'fetch-super-headers';
 
-import { RingBuffer, computeSkipTable } from './ring-buffer.js';
+import { RingBuffer } from './ring-buffer.js';
 
 /**
  * Returns true if the request is `multipart/form-data`.
@@ -133,7 +133,7 @@ export class MultipartParser {
 
   constructor(public boundary: string, options: MultipartParseOptions = {}) {
     this.boundaryArray = textEncoder.encode(`--${boundary}`);
-    this.boundarySkipTable = computeSkipTable(this.boundaryArray);
+    this.boundarySkipTable = RingBuffer.computeSkipTable(this.boundaryArray);
     this.buffer = new RingBuffer(options.initialBufferSize || 16 * 1024);
     this.maxHeaderSize = options.maxHeaderSize || 1024 * 1024;
     this.maxFileSize = options.maxFileSize || 10 * 1024 * 1024;
@@ -149,12 +149,13 @@ export class MultipartParser {
     let parts: MultipartPart[] = [];
 
     while (true) {
-      let boundaryIndex = this.buffer.find(
+      let nextBoundaryIndex = this.buffer.find(
         this.boundaryArray,
         this.boundarySkipTable,
         this.boundarySearchIndex
       );
-      if (boundaryIndex === -1) {
+
+      if (nextBoundaryIndex === -1) {
         // No boundary found, begin the boundary search on the next iteration from
         // the start of the last potential boundary sequence
         this.boundarySearchIndex = Math.max(0, this.buffer.length - this.boundaryArray.length);
@@ -164,7 +165,7 @@ export class MultipartParser {
       }
 
       if (this.initialBoundaryFound) {
-        let partArray = this.buffer.read(boundaryIndex - 2); // -2 to avoid \r\n before the boundary
+        let partArray = this.buffer.read(nextBoundaryIndex - 2); // -2 to avoid \r\n before the boundary
 
         let headerEndIndex = findDoubleCRLF(partArray);
         if (headerEndIndex === -1) {

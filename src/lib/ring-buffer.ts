@@ -118,7 +118,10 @@ export class RingBuffer {
     this._length -= size;
   }
 
-  find(needle: Uint8Array, skipTable: Uint8Array, offset = 0): number {
+  /**
+   * Returns the index of the first occurrence of `needle` in the buffer starting at `offset`.
+   */
+  find(needle: Uint8Array, skipTable = RingBuffer.computeSkipTable(needle), offset = 0): number {
     // boyer-moore-horspool algorithm
     if (needle.length === 0 || needle.length > this._length - offset) {
       return -1;
@@ -158,17 +161,18 @@ export class RingBuffer {
 
     return -1;
   }
-}
 
-/**
- * Computes a skip table to use with buffer.find().
- */
-export function computeSkipTable(needle: Uint8Array): Uint8Array {
-  let skipTable = new Uint8Array(256).fill(needle.length);
+  /**
+   * Computes a skip table ahead of time to use later with `buffer.find(needle, skipTable)`.
+   * This can improve performance when searching for the same `needle` multiple times.
+   */
+  static computeSkipTable(needle: Uint8Array): Uint8Array {
+    let skipTable = new Uint8Array(256).fill(needle.length);
 
-  for (let i = 0; i < needle.length - 1; i++) {
-    skipTable[needle[i]] = needle.length - 1 - i;
+    for (let i = 0; i < needle.length - 1; i++) {
+      skipTable[needle[i]] = needle.length - 1 - i;
+    }
+
+    return skipTable;
   }
-
-  return skipTable;
 }
