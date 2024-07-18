@@ -203,6 +203,28 @@ describe('parseMultipartFormData', async () => {
     assert.equal(parts[2].text, 'File content');
   });
 
+  it('parses large files that overflow the initial buffer', async () => {
+    let content = 'Multipart parsing is fun! '.repeat(1000);
+    let request = createMultipartRequest(boundary, {
+      file1: {
+        filename: 'large.txt',
+        mediaType: 'text/plain',
+        content,
+      },
+    });
+
+    let parts = [];
+    for await (let part of parseMultipartFormData(request, { initialBufferSize: 1024 })) {
+      parts.push(part);
+    }
+
+    assert.equal(parts.length, 1);
+    assert.equal(parts[0].name, 'file1');
+    assert.equal(parts[0].filename, 'large.txt');
+    assert.equal(parts[0].mediaType, 'text/plain');
+    assert.equal(parts[0].text, content);
+  });
+
   it('throws when Content-Type is not multipart/form-data', async () => {
     let request = createRequest({
       headers: { 'Content-Type': 'text/plain' },
