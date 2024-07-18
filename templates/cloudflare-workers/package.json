@@ -7,7 +7,7 @@
     "deploy": "wrangler deploy",
     "dev": "remix vite:dev",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
-    "start": "wrangler dev ./worker.ts",
+    "start": "wrangler dev",
     "typegen": "wrangler types",
     "typecheck": "tsc"
   },
