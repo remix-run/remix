@@ -1,18 +1,18 @@
 # fetch-super-headers
 
-`SuperHeaders` is a drop-in replacement for JavaScript `Headers` with type-safe access.
+`SuperHeaders` is an enhanced JavaScript `Headers` interface with type-safe access.
 
 Another way to think about it is a spec-compliant, type-safe way to parse, modify, and stringify various HTTP headers and collections of them.
 
-## Key Features
+## Features
 
 This package is a suite of tools that make it a little more fun to work with `Headers`.
 
-- Drop-in replacement for [the standard `Headers` class](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
 - Strongly typed header-specific getters and setters (e.g., `headers.contentType`, `headers.setCookie`, etc.)
 - Easy parsing and manipulation of complex headers like `Content-Disposition`, `Content-Type`, `Set-Cookie`, and more
 - Iterable interface for easy header enumeration
 - Convenient string conversion for HTTP message parsing and assembly
+- Drop-in replacement for [the standard `Headers` class](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
 
 ## Installation
 
@@ -22,7 +22,7 @@ $ npm install fetch-super-headers
 
 ## Usage
 
-fetch-super-headers is designed to be a drop-in replacement for `Headers`, with some additions that make working with HTTP headers feel a lot more like working with JavaScript objects.
+fetch-super-headers is an enhanced interface for `Headers`, with some additions that make working with HTTP headers feel a lot more like working with JavaScript objects.
 
 ```ts
 import SuperHeaders from 'fetch-super-headers';
@@ -38,6 +38,9 @@ console.log(headers.contentType.mediaType); // 'application/json'
 console.log(headers.contentType.charset); // 'utf-8'
 
 headers.contentType.charset = 'iso-8859-1';
+
+// SuperHeaders *extends* Headers, so all methods of Headers work just
+// as you'd expect them to.
 console.log(headers.get('Content-Type')); // 'application/json; charset=iso-8859-1'
 
 // Content-Disposition
