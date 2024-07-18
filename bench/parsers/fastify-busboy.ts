@@ -3,7 +3,7 @@ import busboy from '@fastify/busboy';
 
 import { MultipartMessage } from '../content.js';
 
-export async function parse(message: MultipartMessage): Promise<number> {
+export function parse(message: MultipartMessage): Promise<number> {
   let stream = new Readable({
     read() {
       this.push(message.payload);
