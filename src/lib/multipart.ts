@@ -2,57 +2,6 @@ import { SuperHeaders } from 'fetch-super-headers';
 
 import { RingBuffer } from './ring-buffer.js';
 
-export class MultipartParseError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'MultipartParseError';
-  }
-}
-
-/**
- * Represents a part of a `multipart/form-data` request.
- */
-export class MultipartPart {
-  constructor(public header: string, public content: Uint8Array) {}
-
-  get headers(): Headers {
-    return new SuperHeaders(this.header);
-  }
-
-  /**
-   * The filename of the part, if it is a file upload.
-   */
-  get filename(): string | null {
-    let headers = this.headers as SuperHeaders;
-    return headers.contentDisposition.preferredFilename || null;
-  }
-
-  /**
-   * The media type of the part.
-   */
-  get mediaType(): string | null {
-    let headers = this.headers as SuperHeaders;
-    return headers.contentType.mediaType || null;
-  }
-
-  /**
-   * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
-   */
-  get name(): string | null {
-    let headers = this.headers as SuperHeaders;
-    return headers.contentDisposition.name || null;
-  }
-
-  /**
-   * The content of the part as a string.
-   *
-   * Note: Do not use this for binary data, use `part.content` instead.
-   */
-  get text(): string {
-    return new TextDecoder().decode(this.content);
-  }
-}
-
 /**
  * Returns true if the request is `multipart/form-data`.
  */
@@ -61,7 +10,15 @@ export function isMultipartFormData(request: Request): boolean {
   return contentType != null && contentType.startsWith('multipart/form-data');
 }
 
+export class MultipartParseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MultipartParseError';
+  }
+}
+
 export interface MultipartParseOptions {
+  initialBufferSize?: number;
   maxHeaderSize?: number;
   maxFileSize?: number;
 }
@@ -117,17 +74,8 @@ export async function* parseMultipartFormData(
 
   let boundary = boundaryMatch[1] || boundaryMatch[2]; // handle quoted and unquoted boundaries
 
-  yield* parseMultipartStream(boundary, request.body, options);
+  yield* parseMultipartStream(request.body, boundary, options);
 }
-
-const DefaultMaxHeaderSize = 1024 * 1024; // 1 MB
-const DefaultMaxFileSize = 1024 * 1024 * 10; // 10 MB
-
-const doubleCRLFSeq = new Uint8Array([13, 10, 13, 10]);
-const findHeaderEnd = createSeqFinder(doubleCRLFSeq);
-
-const textDecoder = new TextDecoder();
-const textEncoder = new TextEncoder();
 
 /**
  * Parse a multipart stream and yield each part as a `MultipartPart` object.
@@ -138,86 +86,27 @@ const textEncoder = new TextEncoder();
  * consider using `parseMultipartFormData(request)` instead.
  */
 export async function* parseMultipartStream(
-  boundary: string,
   stream: ReadableStream<Uint8Array>,
+  boundary: string,
   options: MultipartParseOptions = {}
 ) {
-  let maxHeaderSize = options.maxHeaderSize || DefaultMaxHeaderSize;
-  let maxFileSize = options.maxFileSize || DefaultMaxFileSize;
-
-  let boundarySeq = textEncoder.encode(`--${boundary}`);
-  let findBoundary = createSeqFinder(boundarySeq);
-
+  let parser = new MultipartParser(boundary, options);
   let reader = stream.getReader();
-  let buffer = new RingBuffer(16 * 1024); // Start with a 16KB buffer
-  let boundarySearchStartIndex = 0;
-  let initialBoundaryFound = false;
-  let isFinished = false;
 
   try {
-    while (!isFinished) {
+    while (true) {
       const { done, value } = await reader.read();
+
       if (done) {
-        if (!isFinished) {
-          throw new MultipartParseError('Unexpected end of stream: final boundary not found');
+        if (!parser.done) {
+          throw new MultipartParseError('Unexpected end of stream');
         }
+
         break;
       }
 
-      buffer.append(value);
-
-      while (true) {
-        let boundaryIndex = findBoundary(buffer.peek(buffer.length), boundarySearchStartIndex);
-        if (boundaryIndex === -1) {
-          // No boundary found, begin the boundary search on the next iteration from
-          // the start of the last potential boundary sequence
-          boundarySearchStartIndex = Math.max(0, buffer.length - boundarySeq.length);
-          break;
-        }
-
-        if (initialBoundaryFound) {
-          let partBytes = buffer.read(boundaryIndex - 2); // -2 to avoid \r\n before the boundary
-
-          let headerEndIndex = findHeaderEnd(partBytes);
-          if (headerEndIndex === -1) {
-            throw new MultipartParseError('Invalid part: missing header');
-          }
-
-          let headerBytes = partBytes.subarray(0, headerEndIndex);
-          if (headerBytes.length > maxHeaderSize) {
-            throw new MultipartParseError(
-              `Header size exceeds maximum allowed size of ${maxHeaderSize} bytes`
-            );
-          }
-
-          let header = textDecoder.decode(headerBytes);
-          let content = partBytes.subarray(headerEndIndex + 4); // +4 to skip \r\n\r\n after the header
-
-          if (content.length > maxFileSize) {
-            throw new MultipartParseError(
-              `File size exceeds maximum allowed size of ${maxFileSize} bytes`
-            );
-          }
-
-          yield new MultipartPart(header, content);
-
-          buffer.skip(2); // Skip \r\n before the boundary
-        } else {
-          initialBoundaryFound = true;
-        }
-
-        buffer.skip(boundarySeq.length); // Skip the boundary
-        boundarySearchStartIndex = 0;
-
-        if (buffer.length > 1) {
-          // If the next two bytes are "--", it's the final boundary and we're done.
-          // Otherwise, it's the \r\n after the boundary and we can discard it.
-          let twoBytes = buffer.read(2);
-          if (twoBytes[0] === 45 && twoBytes[1] === 45) {
-            isFinished = true;
-            break;
-          }
-        }
+      for (let part of parser.push(value)) {
+        yield part;
       }
     }
   } finally {
@@ -225,31 +114,187 @@ export async function* parseMultipartStream(
   }
 }
 
-function createSeqFinder(needle: Uint8Array): (haystack: Uint8Array, offset?: number) => number {
+const textDecoder = new TextDecoder();
+const textEncoder = new TextEncoder();
+
+/**
+ * A parser for `multipart/form-data` streams.
+ */
+export class MultipartParser {
+  public buffer: RingBuffer;
+  public done = false;
+
+  private boundaryArray: Uint8Array;
+  private boundarySkipTable: Map<number, number>;
+  private maxHeaderSize: number;
+  private maxFileSize: number;
+  private boundarySearchIndex = 0;
+  private initialBoundaryFound = false;
+
+  constructor(public boundary: string, options: MultipartParseOptions = {}) {
+    this.boundaryArray = textEncoder.encode(`--${boundary}`);
+    this.boundarySkipTable = createSkipTable(this.boundaryArray);
+    this.buffer = new RingBuffer(options.initialBufferSize || 16 * 1024);
+    this.maxHeaderSize = options.maxHeaderSize || 1024 * 1024;
+    this.maxFileSize = options.maxFileSize || 10 * 1024 * 1024;
+  }
+
+  push(chunk: Uint8Array): MultipartPart[] {
+    if (this.done) {
+      throw new MultipartParseError('Cannot push, parser is done');
+    }
+
+    this.buffer.append(chunk);
+
+    let parts: MultipartPart[] = [];
+
+    while (true) {
+      let boundaryIndex = findBoundary(
+        this.buffer.peek(this.buffer.length),
+        this.boundaryArray,
+        this.boundarySkipTable,
+        this.boundarySearchIndex
+      );
+      if (boundaryIndex === -1) {
+        // No boundary found, begin the boundary search on the next iteration from
+        // the start of the last potential boundary sequence
+        this.boundarySearchIndex = Math.max(0, this.buffer.length - this.boundaryArray.length);
+        break;
+      } else {
+        this.boundarySearchIndex = 0;
+      }
+
+      if (this.initialBoundaryFound) {
+        let partArray = this.buffer.read(boundaryIndex - 2); // -2 to avoid \r\n before the boundary
+
+        let headerEndIndex = findDoubleCRLF(partArray);
+        if (headerEndIndex === -1) {
+          throw new MultipartParseError('Invalid part: missing header');
+        }
+
+        let headerArray = partArray.subarray(0, headerEndIndex);
+        if (headerArray.length > this.maxHeaderSize) {
+          throw new MultipartParseError(
+            `Header size exceeds maximum allowed size of ${this.maxHeaderSize} bytes`
+          );
+        }
+
+        let contentArray = partArray.subarray(headerEndIndex + 4); // +4 to skip \r\n\r\n after the header
+        if (contentArray.length > this.maxFileSize) {
+          throw new MultipartParseError(
+            `File size exceeds maximum allowed size of ${this.maxFileSize} bytes`
+          );
+        }
+
+        let header = textDecoder.decode(headerArray);
+        parts.push(new MultipartPart(header, contentArray));
+
+        this.buffer.skip(2 + this.boundaryArray.length); // Skip \r\n + boundary
+      } else {
+        this.initialBoundaryFound = true;
+        this.buffer.skip(this.boundaryArray.length); // Skip the boundary
+      }
+
+      if (this.buffer.length > 1) {
+        // If the next two bytes are "--", it's the final boundary and we're done.
+        // Otherwise, it's the \r\n after the boundary and we can discard it.
+        let twoBytes = this.buffer.read(2);
+        if (twoBytes[0] === 45 && twoBytes[1] === 45) {
+          this.done = true;
+          break;
+        }
+      }
+    }
+
+    return parts;
+  }
+}
+
+function createSkipTable(needle: Uint8Array): Map<number, number> {
   let skipTable = new Map<number, number>();
   for (let i = 0; i < needle.length - 1; i++) {
     skipTable.set(needle[i], needle.length - 1 - i);
   }
+  return skipTable;
+}
 
-  return (haystack: Uint8Array, offset = 0) => {
-    // boyer-moore-horspool algorithm
-    if (needle.length === 0) {
-      return offset;
+function findBoundary(
+  buffer: Uint8Array,
+  boundaryArray: Uint8Array,
+  skipTable: Map<number, number>,
+  offset = 0
+): number {
+  // boyer-moore-horspool algorithm
+  if (boundaryArray.length === 0) {
+    return offset;
+  }
+
+  let i = offset + boundaryArray.length - 1;
+  while (i < buffer.length) {
+    let j = boundaryArray.length - 1;
+    while (j >= 0 && buffer[i] === boundaryArray[j]) {
+      i--;
+      j--;
     }
-
-    let i = offset + needle.length - 1;
-    while (i < haystack.length) {
-      let j = needle.length - 1;
-      while (j >= 0 && haystack[i] === needle[j]) {
-        i--;
-        j--;
-      }
-      if (j < 0) {
-        return i + 1;
-      }
-      i += Math.max(needle.length - j, skipTable.get(haystack[i]) || needle.length);
+    if (j < 0) {
+      return i + 1;
     }
+    i += Math.max(boundaryArray.length - j, skipTable.get(buffer[i]) || boundaryArray.length);
+  }
 
-    return -1;
-  };
+  return -1;
+}
+
+function findDoubleCRLF(buffer: Uint8Array): number {
+  for (let i = 0; i < buffer.length - 3; i++) {
+    if (buffer[i] === 13 && buffer[i + 1] === 10 && buffer[i + 2] === 13 && buffer[i + 3] === 10) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * A part of a `multipart/form-data` message.
+ */
+export class MultipartPart {
+  constructor(public header: string, public content: Uint8Array) {}
+
+  get headers(): Headers {
+    return new SuperHeaders(this.header);
+  }
+
+  /**
+   * The filename of the part, if it is a file upload.
+   */
+  get filename(): string | null {
+    let headers = this.headers as SuperHeaders;
+    return headers.contentDisposition.preferredFilename || null;
+  }
+
+  /**
+   * The media type of the part.
+   */
+  get mediaType(): string | null {
+    let headers = this.headers as SuperHeaders;
+    return headers.contentType.mediaType || null;
+  }
+
+  /**
+   * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
+   */
+  get name(): string | null {
+    let headers = this.headers as SuperHeaders;
+    return headers.contentDisposition.name || null;
+  }
+
+  /**
+   * The content of the part as a string.
+   *
+   * Note: Do not use this for binary data, use `part.content` instead.
+   */
+  get text(): string {
+    return textDecoder.decode(this.content);
+  }
 }

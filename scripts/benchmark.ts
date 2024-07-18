@@ -75,7 +75,7 @@ const parsers: MultipartParser[] = [
 
       let start = performance.now();
 
-      let iterator = parseMultipartStream(message.boundary, stream, { maxFileSize: Infinity });
+      let iterator = parseMultipartStream(stream, message.boundary, { maxFileSize: Infinity });
       for await (let part of iterator) {
         // Do nothing
       }
