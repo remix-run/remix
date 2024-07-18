@@ -1,9 +1,7 @@
 import { HeaderValue } from './header-value.js';
 import { parseParams, quote } from './param-values.js';
 
-export interface CookieInit {
-  [name: string]: string;
-}
+export type CookieInit = [string, string][] | Record<string, string>;
 
 /**
  * Represents the value of a `Cookie` HTTP header.
@@ -18,6 +16,10 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
         let params = parseParams(init);
         for (let [name, value] of params) {
           this.cookies.set(name, value || '');
+        }
+      } else if (Array.isArray(init)) {
+        for (let [name, value] of init) {
+          this.cookies.set(name, value);
         }
       } else {
         for (let name in init) {
@@ -49,10 +51,6 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     this.cookies.clear();
   }
 
-  [Symbol.iterator](): IterableIterator<[string, string]> {
-    return this.cookies.entries();
-  }
-
   entries(): IterableIterator<[string, string]> {
     return this.cookies.entries();
   }
@@ -65,11 +63,15 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     return this.cookies.values();
   }
 
+  [Symbol.iterator](): IterableIterator<[string, string]> {
+    return this.entries();
+  }
+
   forEach(
-    callbackfn: (value: string, key: string, map: Map<string, string>) => void,
+    callback: (value: string, key: string, map: Map<string, string>) => void,
     thisArg?: any
   ): void {
-    this.cookies.forEach(callbackfn, thisArg);
+    this.cookies.forEach(callback, thisArg);
   }
 
   get size(): number {

@@ -138,19 +138,28 @@ console.log(headers.toString());
 // get [object Headers] from toString().
 ```
 
-In addition to the high-level API, fetch-super-headers also provides a rich set of primitives you can use to work with just about any complex HTTP header value. Each header class includes a spec-compliant parser (the constructor), stringifier (`toString`), and getters/setters for all relevant attributes. Classes for headers that contain a list of fields, like `Cookie`, are iterable.
+In addition to the high-level `SuperHeaders` API, fetch-super-headers also provides a rich set of primitives you can use to work with just about any complex HTTP header value. Each header class includes a spec-compliant parser (the constructor), stringifier (`toString`), and getters/setters for all relevant attributes. Classes for headers that contain a list of fields, like `Cookie`, are iterable.
+
+All individual header classes may be initialized with either a) the string value of the header or b) an `init` object specific to that class.
 
 ```ts
-import { ContentType, Cookie } from 'fetch-super-headers';
+import { ContentDisposition, ContentType, Cookie } from 'fetch-super-headers';
 
+// Parse a Content-Type header value
 let contentType = new ContentType('text/html; charset=utf-8');
 console.log(contentType.charset);
 
-let cookie = new Cookie();
-cookie.set('theme', 'dark');
-cookie.set('session_id', '123');
+// Stringify a Content-Disposition header value
+let contentDisposition = new ContentDisposition({
+  type: 'attachment',
+  name: 'file1',
+  filename: 'file1.txt',
+});
+console.log(`${contentDisposition}`); // "attachment; name=file1; filename=file1.txt"
 
-for (let [key, value] of cookie) {
+// Parse a Cookie header value and iterate over name/value pairs
+let cookie = new Cookie('theme=dark; session_id=123');
+for (let [name, value] of cookie) {
   // ...
 }
 ```
