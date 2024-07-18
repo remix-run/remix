@@ -77,9 +77,9 @@ export class RingBuffer {
   }
 
   /**
-   * Returns a view of the next `size` bytes in the buffer without removing them.
+   * Removes and returns the next `size` bytes from the buffer.
    */
-  peek(size: number): Uint8Array {
+  read(size: number): Uint8Array {
     if (size < 0) {
       throw new Error('Requested size must be non-negative');
     }
@@ -97,15 +97,9 @@ export class RingBuffer {
       result.set(this.buffer.subarray(0, size - firstPart), firstPart);
     }
 
-    return result;
-  }
+    this.start = (this.start + size) % this.capacity;
+    this._length -= size;
 
-  /**
-   * Removes and returns the next `size` bytes from the buffer.
-   */
-  read(size: number): Uint8Array {
-    let result = this.peek(size);
-    this.skip(size);
     return result;
   }
 
@@ -123,4 +117,58 @@ export class RingBuffer {
     this.start = (this.start + size) % this.capacity;
     this._length -= size;
   }
+
+  find(needle: Uint8Array, skipTable: Uint8Array, offset = 0): number {
+    // boyer-moore-horspool algorithm
+    if (needle.length === 0 || needle.length > this._length - offset) {
+      return -1;
+    }
+
+    let bufferLength = this.buffer.length;
+    let searchStart = (this.start + offset) % bufferLength;
+    let remaining = this._length - offset;
+
+    while (remaining >= needle.length) {
+      let j = needle.length - 1;
+      let i = searchStart + j;
+      if (i >= bufferLength) {
+        i -= bufferLength;
+      }
+
+      // Check characters from right to left
+      while (j >= 0 && this.buffer[i] === needle[j]) {
+        j--;
+        i = i === 0 ? bufferLength - 1 : i - 1;
+      }
+
+      if (j < 0) {
+        // Match found
+        return offset;
+      }
+
+      // Shift based on the skip table
+      let shift = skipTable[this.buffer[i]];
+      searchStart += shift;
+      if (searchStart >= bufferLength) {
+        searchStart -= bufferLength;
+      }
+      offset += shift;
+      remaining -= shift;
+    }
+
+    return -1;
+  }
+}
+
+/**
+ * Computes a skip table to use with buffer.find().
+ */
+export function computeSkipTable(needle: Uint8Array): Uint8Array {
+  let skipTable = new Uint8Array(256).fill(needle.length);
+
+  for (let i = 0; i < needle.length - 1; i++) {
+    skipTable[needle[i]] = needle.length - 1 - i;
+  }
+
+  return skipTable;
 }

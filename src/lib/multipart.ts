@@ -1,6 +1,6 @@
 import { SuperHeaders } from 'fetch-super-headers';
 
-import { RingBuffer } from './ring-buffer.js';
+import { RingBuffer, computeSkipTable } from './ring-buffer.js';
 
 /**
  * Returns true if the request is `multipart/form-data`.
@@ -125,7 +125,7 @@ export class MultipartParser {
   public done = false;
 
   private boundaryArray: Uint8Array;
-  private boundarySkipTable: Map<number, number>;
+  private boundarySkipTable: Uint8Array;
   private maxHeaderSize: number;
   private maxFileSize: number;
   private boundarySearchIndex = 0;
@@ -133,7 +133,7 @@ export class MultipartParser {
 
   constructor(public boundary: string, options: MultipartParseOptions = {}) {
     this.boundaryArray = textEncoder.encode(`--${boundary}`);
-    this.boundarySkipTable = createSkipTable(this.boundaryArray);
+    this.boundarySkipTable = computeSkipTable(this.boundaryArray);
     this.buffer = new RingBuffer(options.initialBufferSize || 16 * 1024);
     this.maxHeaderSize = options.maxHeaderSize || 1024 * 1024;
     this.maxFileSize = options.maxFileSize || 10 * 1024 * 1024;
@@ -149,8 +149,7 @@ export class MultipartParser {
     let parts: MultipartPart[] = [];
 
     while (true) {
-      let boundaryIndex = findBoundary(
-        this.buffer.peek(this.buffer.length),
+      let boundaryIndex = this.buffer.find(
         this.boundaryArray,
         this.boundarySkipTable,
         this.boundarySearchIndex
@@ -199,7 +198,7 @@ export class MultipartParser {
         // If the next two bytes are "--", it's the final boundary and we're done.
         // Otherwise, it's the \r\n after the boundary and we can discard it.
         let twoBytes = this.buffer.read(2);
-        if (twoBytes[0] === 45 && twoBytes[1] === 45) {
+        if (twoBytes[0] === HYPHEN && twoBytes[1] === HYPHEN) {
           this.done = true;
           break;
         }
@@ -210,44 +209,13 @@ export class MultipartParser {
   }
 }
 
-function createSkipTable(needle: Uint8Array): Map<number, number> {
-  let skipTable = new Map<number, number>();
-  for (let i = 0; i < needle.length - 1; i++) {
-    skipTable.set(needle[i], needle.length - 1 - i);
-  }
-  return skipTable;
-}
-
-function findBoundary(
-  buffer: Uint8Array,
-  boundaryArray: Uint8Array,
-  skipTable: Map<number, number>,
-  offset = 0
-): number {
-  // boyer-moore-horspool algorithm
-  if (boundaryArray.length === 0) {
-    return offset;
-  }
-
-  let i = offset + boundaryArray.length - 1;
-  while (i < buffer.length) {
-    let j = boundaryArray.length - 1;
-    while (j >= 0 && buffer[i] === boundaryArray[j]) {
-      i--;
-      j--;
-    }
-    if (j < 0) {
-      return i + 1;
-    }
-    i += Math.max(boundaryArray.length - j, skipTable.get(buffer[i]) || boundaryArray.length);
-  }
-
-  return -1;
-}
+const HYPHEN = 45;
+const CR = 13;
+const LF = 10;
 
 function findDoubleCRLF(buffer: Uint8Array): number {
   for (let i = 0; i < buffer.length - 3; i++) {
-    if (buffer[i] === 13 && buffer[i + 1] === 10 && buffer[i + 2] === 13 && buffer[i + 3] === 10) {
+    if (buffer[i] === CR && buffer[i + 1] === LF && buffer[i + 2] === CR && buffer[i + 3] === LF) {
       return i;
     }
   }

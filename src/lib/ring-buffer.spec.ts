@@ -14,7 +14,7 @@ describe('RingBuffer', () => {
     let buffer = new RingBuffer(5);
     buffer.append(new Uint8Array([1, 2, 3]));
     assert.equal(buffer.length, 3);
-    assert.deepEqual(buffer.peek(3), new Uint8Array([1, 2, 3]));
+    assert.deepEqual(buffer.read(3), new Uint8Array([1, 2, 3]));
   });
 
   it('handles appending an empty array', () => {
@@ -22,7 +22,7 @@ describe('RingBuffer', () => {
     buffer.append(new Uint8Array([1, 2]));
     buffer.append(new Uint8Array([]));
     assert.equal(buffer.length, 2);
-    assert.deepEqual(buffer.peek(2), new Uint8Array([1, 2]));
+    assert.deepEqual(buffer.read(2), new Uint8Array([1, 2]));
   });
 
   it('handles appending data larger than initial capacity', () => {
@@ -30,7 +30,7 @@ describe('RingBuffer', () => {
     buffer.append(new Uint8Array([1, 2, 3, 4, 5]));
     assert.equal(buffer.capacity, 6);
     assert.equal(buffer.length, 5);
-    assert.deepEqual(buffer.peek(5), new Uint8Array([1, 2, 3, 4, 5]));
+    assert.deepEqual(buffer.read(5), new Uint8Array([1, 2, 3, 4, 5]));
   });
 
   it('handles reading data correctly', () => {
@@ -54,7 +54,7 @@ describe('RingBuffer', () => {
     buffer.read(3);
     buffer.append(new Uint8Array([4, 5]));
     assert.equal(buffer.length, 2);
-    assert.deepEqual(buffer.peek(2), new Uint8Array([4, 5]));
+    assert.deepEqual(buffer.read(2), new Uint8Array([4, 5]));
   });
 
   it('handles circular behavior when appending', () => {
@@ -62,7 +62,7 @@ describe('RingBuffer', () => {
     buffer.append(new Uint8Array([1, 2, 3, 4, 5]));
     buffer.append(new Uint8Array([6, 7]));
     assert.equal(buffer.length, 7);
-    assert.deepEqual(buffer.peek(5), new Uint8Array([1, 2, 3, 4, 5]));
+    assert.deepEqual(buffer.read(5), new Uint8Array([1, 2, 3, 4, 5]));
   });
 
   it('handles circular behavior when reading', () => {
@@ -80,7 +80,7 @@ describe('RingBuffer', () => {
     buffer.append(new Uint8Array([6, 7, 8, 9, 10]));
     assert.equal(buffer.capacity, 10);
     assert.equal(buffer.length, 10);
-    assert.deepEqual(buffer.peek(10), new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]));
+    assert.deepEqual(buffer.read(10), new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]));
   });
 
   it('handles reading past the end of the internal buffer', () => {
@@ -100,7 +100,7 @@ describe('RingBuffer', () => {
     buffer.append(new Uint8Array([5, 6]));
     assert.equal(buffer.capacity, 8);
     assert.equal(buffer.length, 6);
-    assert.deepEqual(buffer.peek(6), new Uint8Array([1, 2, 3, 4, 5, 6]));
+    assert.deepEqual(buffer.read(6), new Uint8Array([1, 2, 3, 4, 5, 6]));
   });
 
   it('throws an error when reading with negative size', () => {
@@ -115,14 +115,14 @@ describe('RingBuffer', () => {
   it('handles peeking with zero size', () => {
     let buffer = new RingBuffer(5);
     buffer.append(new Uint8Array([1, 2, 3]));
-    assert.deepEqual(buffer.peek(0), new Uint8Array([]));
+    assert.deepEqual(buffer.read(0), new Uint8Array([]));
   });
 
   it('throws an error when peeking more data than available', () => {
     let buffer = new RingBuffer(5);
     buffer.append(new Uint8Array([1, 2, 3]));
     assert.equal(buffer.length, 3);
-    assert.throws(() => buffer.peek(4), {
+    assert.throws(() => buffer.read(4), {
       name: 'Error',
       message: 'Requested size is larger than buffer length',
     });
