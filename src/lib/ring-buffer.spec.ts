@@ -112,13 +112,13 @@ describe('RingBuffer', () => {
     });
   });
 
-  it('handles peeking with zero size', () => {
+  it('handles reading with zero size', () => {
     let buffer = new RingBuffer(5);
     buffer.append(new Uint8Array([1, 2, 3]));
     assert.deepEqual(buffer.read(0), new Uint8Array([]));
   });
 
-  it('throws an error when peeking more data than available', () => {
+  it('throws an error when reading more data than available', () => {
     let buffer = new RingBuffer(5);
     buffer.append(new Uint8Array([1, 2, 3]));
     assert.equal(buffer.length, 3);
