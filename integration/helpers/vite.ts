@@ -185,7 +185,16 @@ export const wranglerPagesDev = async ({
 
   let proc = spawn(
     nodeBin,
-    [wranglerBin, "pages", "dev", "./build/client", "--port", String(port)],
+    [
+      wranglerBin,
+      "pages",
+      "dev",
+      "./build/client",
+      "--port",
+      String(port),
+      "--compatibility-date",
+      "2024-01-29",
+    ],
     {
       cwd,
       stdio: "pipe",
