@@ -12,7 +12,7 @@ This package is a suite of tools that make it a little more fun to work with `He
 - Easy parsing and manipulation of complex headers like `Content-Disposition`, `Content-Type`, `Set-Cookie`, and more
 - Iterable interface for easy header enumeration
 - Convenient string conversion for HTTP message parsing and assembly
-- Drop-in replacement for [the standard `Headers` class](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
+- Extends [the standard `Headers` class](https://developer.mozilla.org/en-US/docs/Web/API/Headers), so all `Headers` methods work as you'd expect
 
 ## Installation
 
