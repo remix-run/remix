@@ -1,12 +1,12 @@
 import { Readable } from 'node:stream';
 import busboy from '@fastify/busboy';
 
-import { MultipartMessage } from '../content.js';
+import { MultipartMessage } from '../messages.js';
 
 export function parse(message: MultipartMessage): Promise<number> {
   let stream = new Readable({
     read() {
-      this.push(message.payload);
+      this.push(message.content);
       this.push(null);
     },
   });

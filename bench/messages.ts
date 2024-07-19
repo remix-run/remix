@@ -1,5 +1,5 @@
 export class MultipartMessage {
-  public payload: string;
+  public content: string;
 
   constructor(public boundary: string, partSizes: number[]) {
     let parts = [];
@@ -12,7 +12,7 @@ export class MultipartMessage {
     }
     parts.push(`--${boundary}--`);
 
-    this.payload = parts.join('\r\n');
+    this.content = parts.join('\r\n');
   }
 }
 

@@ -1,6 +1,6 @@
 import * as os from 'node:os';
 
-import * as content from './content.js';
+import * as content from './messages.js';
 
 import * as busboy from './parsers/busboy.js';
 import * as fastifyBusboy from './parsers/fastify-busboy.js';

@@ -1,12 +1,12 @@
 import { parseMultipartFormData } from '../../dist/index.js';
 
-import { MultipartMessage } from '../content.js';
+import { MultipartMessage } from '../messages.js';
 
 export async function parse(message: MultipartMessage): Promise<number> {
-  let buffer = new TextEncoder().encode(message.payload);
+  let buffer = new TextEncoder().encode(message.content);
   let request = {
     headers: new Headers({
-      'content-type': `multipart/form-data; boundary=${message.boundary}`,
+      'Content-Type': `multipart/form-data; boundary=${message.boundary}`,
     }),
     body: new ReadableStream({
       start(controller) {
