@@ -128,11 +128,12 @@ export class MultipartParser {
   private boundarySkipTable: Uint8Array;
   private maxHeaderSize: number;
   private maxFileSize: number;
-  private boundarySearchIndex = 0;
+  private boundarySearchIndex: number;
   private initialBoundaryFound = false;
 
   constructor(public boundary: string, options: MultipartParseOptions = {}) {
     this.boundaryArray = textEncoder.encode(`--${boundary}`);
+    this.boundarySearchIndex = 0;
     this.boundarySkipTable = RingBuffer.computeSkipTable(this.boundaryArray);
     this.buffer = new RingBuffer(options.initialBufferSize || 16 * 1024);
     this.maxHeaderSize = options.maxHeaderSize || 1024 * 1024;
@@ -151,8 +152,8 @@ export class MultipartParser {
     while (true) {
       let nextBoundaryIndex = this.buffer.find(
         this.boundaryArray,
-        this.boundarySkipTable,
-        this.boundarySearchIndex
+        this.boundarySearchIndex,
+        this.boundarySkipTable
       );
 
       if (nextBoundaryIndex === -1) {

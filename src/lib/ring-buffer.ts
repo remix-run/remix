@@ -128,7 +128,7 @@ export class RingBuffer {
   /**
    * Returns the index of the first occurrence of `needle` in the buffer starting at `offset`.
    */
-  find(needle: Uint8Array, skipTable = RingBuffer.computeSkipTable(needle), offset = 0): number {
+  find(needle: Uint8Array, offset = 0, skipTable = RingBuffer.computeSkipTable(needle)): number {
     // boyer-moore-horspool algorithm
     if (needle.length === 0 || needle.length > this._length - offset) {
       return -1;
