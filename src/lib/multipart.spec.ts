@@ -206,8 +206,17 @@ describe('parseMultipartFormData', async () => {
   it('parses large files that overflow the initial buffer', async () => {
     let content = 'Multipart parsing is fun! '.repeat(1000);
     let request = createMultipartRequest(boundary, {
+      // This first file will overflow the initial buffer and trigger a resize (or two).
       file1: {
-        filename: 'large.txt',
+        filename: 'large1.txt',
+        mediaType: 'text/plain',
+        content,
+      },
+      // The second file should wrap around the end of the resized buffer because its internal
+      // pointer will be updated after the first file is read() but it is already large enough
+      // to hold this file since it already expanded to hold the first one.
+      file2: {
+        filename: 'large2.txt',
         mediaType: 'text/plain',
         content,
       },
@@ -218,11 +227,15 @@ describe('parseMultipartFormData', async () => {
       parts.push(part);
     }
 
-    assert.equal(parts.length, 1);
+    assert.equal(parts.length, 2);
     assert.equal(parts[0].name, 'file1');
-    assert.equal(parts[0].filename, 'large.txt');
+    assert.equal(parts[0].filename, 'large1.txt');
     assert.equal(parts[0].mediaType, 'text/plain');
     assert.equal(parts[0].text, content);
+    assert.equal(parts[1].name, 'file2');
+    assert.equal(parts[1].filename, 'large2.txt');
+    assert.equal(parts[1].mediaType, 'text/plain');
+    assert.equal(parts[1].text, content);
   });
 
   it('throws when Content-Type is not multipart/form-data', async () => {
