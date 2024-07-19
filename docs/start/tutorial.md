@@ -125,7 +125,7 @@ You can import CSS files directly into JavaScript modules. Vite will fingerprint
 import type { LinksFunction } from "@remix-run/node";
 // existing imports
 
-import appStylesHref from "./app.css?url";
+import appStylesHref from "./app.css";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: appStylesHref },
