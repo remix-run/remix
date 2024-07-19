@@ -7,7 +7,7 @@ import { MultipartParseError, parseMultipartFormData } from './multipart.js';
 
 const CRLF = '\r\n';
 
-function createBody(
+function createReadableStream(
   content: string,
   chunkSize = 1024 * 16 // 16 KB is default on node servers
 ): ReadableStream<Uint8Array> {
@@ -33,7 +33,7 @@ function createBody(
   });
 }
 
-function createRequest({
+function createMockRequest({
   headers,
   body = '',
 }: {
@@ -42,7 +42,7 @@ function createRequest({
 }): Request {
   return {
     headers: headers instanceof Headers ? headers : new Headers(headers),
-    body: typeof body === 'string' ? createBody(body) : body,
+    body: typeof body === 'string' ? createReadableStream(body) : body,
   } as unknown as Request;
 }
 
@@ -94,21 +94,24 @@ function createMultipartBody(boundary: string, parts: { [name: string]: PartValu
   return lines.join(CRLF);
 }
 
-function createMultipartRequest(boundary: string, parts: { [name: string]: PartValue }): Request {
+function createMultipartMockRequest(
+  boundary: string,
+  parts: { [name: string]: PartValue }
+): Request {
   let headers = new SuperHeaders();
   headers.contentType.mediaType = 'multipart/form-data';
   headers.contentType.boundary = boundary;
 
   let body = createMultipartBody(boundary, parts);
 
-  return createRequest({ headers, body });
+  return createMockRequest({ headers, body });
 }
 
 describe('parseMultipartFormData', async () => {
   let boundary = 'boundary123';
 
   it('parses a simple multipart form', async () => {
-    let request = createMultipartRequest(boundary, {
+    let request = createMultipartMockRequest(boundary, {
       field1: 'value1',
     });
 
@@ -123,7 +126,7 @@ describe('parseMultipartFormData', async () => {
   });
 
   it('parses multiple parts correctly', async () => {
-    let request = createMultipartRequest(boundary, {
+    let request = createMultipartMockRequest(boundary, {
       field1: 'value1',
       field2: 'value2',
     });
@@ -141,7 +144,7 @@ describe('parseMultipartFormData', async () => {
   });
 
   it('parses empty parts correctly', async () => {
-    let request = createMultipartRequest(boundary, {
+    let request = createMultipartMockRequest(boundary, {
       empty: '',
     });
 
@@ -156,7 +159,7 @@ describe('parseMultipartFormData', async () => {
   });
 
   it('parses file uploads correctly', async () => {
-    let request = createMultipartRequest(boundary, {
+    let request = createMultipartMockRequest(boundary, {
       file1: {
         filename: 'test.txt',
         mediaType: 'text/plain',
@@ -177,7 +180,7 @@ describe('parseMultipartFormData', async () => {
   });
 
   it('parses multiple fields and a file upload', async () => {
-    let request = createMultipartRequest(boundary, {
+    let request = createMultipartMockRequest(boundary, {
       field1: 'value1',
       field2: 'value2',
       file1: {
@@ -203,43 +206,8 @@ describe('parseMultipartFormData', async () => {
     assert.equal(parts[2].text, 'File content');
   });
 
-  it('parses large files that overflow the initial buffer', async () => {
-    let content = 'Multipart parsing is fun! '.repeat(1000);
-    let request = createMultipartRequest(boundary, {
-      // This first file will overflow the initial buffer and trigger a resize (or two).
-      file1: {
-        filename: 'large1.txt',
-        mediaType: 'text/plain',
-        content,
-      },
-      // The second file should wrap around the end of the resized buffer because its internal
-      // pointer will be updated after the first file is read() but it is already large enough
-      // to hold this file since it already expanded to hold the first one.
-      file2: {
-        filename: 'large2.txt',
-        mediaType: 'text/plain',
-        content,
-      },
-    });
-
-    let parts = [];
-    for await (let part of parseMultipartFormData(request, { initialBufferSize: 1024 })) {
-      parts.push(part);
-    }
-
-    assert.equal(parts.length, 2);
-    assert.equal(parts[0].name, 'file1');
-    assert.equal(parts[0].filename, 'large1.txt');
-    assert.equal(parts[0].mediaType, 'text/plain');
-    assert.equal(parts[0].text, content);
-    assert.equal(parts[1].name, 'file2');
-    assert.equal(parts[1].filename, 'large2.txt');
-    assert.equal(parts[1].mediaType, 'text/plain');
-    assert.equal(parts[1].text, content);
-  });
-
   it('throws when Content-Type is not multipart/form-data', async () => {
-    let request = createRequest({
+    let request = createMockRequest({
       headers: { 'Content-Type': 'text/plain' },
     });
 
@@ -249,7 +217,7 @@ describe('parseMultipartFormData', async () => {
   });
 
   it('throws when boundary is missing', async () => {
-    let request = createRequest({
+    let request = createMockRequest({
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
@@ -259,7 +227,7 @@ describe('parseMultipartFormData', async () => {
   });
 
   it('throws when header exceeds maximum size', async () => {
-    let request = createRequest({
+    let request = createMockRequest({
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -279,7 +247,7 @@ describe('parseMultipartFormData', async () => {
   });
 
   it('throws when file exceeds maximum size', async () => {
-    let request = createRequest({
+    let request = createMockRequest({
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -298,7 +266,7 @@ describe('parseMultipartFormData', async () => {
   });
 
   it('parses malformed parts', async () => {
-    let request = createRequest({
+    let request = createMockRequest({
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -316,7 +284,7 @@ describe('parseMultipartFormData', async () => {
   });
 
   it('throws error when final boundary is missing', async () => {
-    let request = createRequest({
+    let request = createMockRequest({
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },

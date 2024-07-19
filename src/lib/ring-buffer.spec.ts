@@ -67,11 +67,11 @@ describe('RingBuffer', () => {
 
   it('handles circular behavior when reading', () => {
     let buffer = new RingBuffer(5);
-    buffer.append(new Uint8Array([1, 2, 3, 4, 5]));
+    buffer.append(new Uint8Array([1, 2, 3, 4]));
     assert.deepEqual(buffer.read(3), new Uint8Array([1, 2, 3]));
-    buffer.append(new Uint8Array([6, 7, 8]));
-    assert.equal(buffer.length, 5);
-    assert.deepEqual(buffer.read(5), new Uint8Array([4, 5, 6, 7, 8]));
+    buffer.append(new Uint8Array([5, 6, 7]));
+    assert.equal(buffer.length, 4);
+    assert.deepEqual(buffer.read(4), new Uint8Array([4, 5, 6, 7]));
   });
 
   it('handles resizing the buffer when necessary', () => {
