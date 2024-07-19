@@ -7,7 +7,14 @@ export class RingBuffer {
   private _length = 0;
   private buffer: Uint8Array;
 
-  constructor(initialCapacity: number, public maxCapacity = Infinity) {
+  constructor(initialCapacity: number, public readonly maxCapacity = Infinity) {
+    if (initialCapacity < 0) {
+      throw new Error('Initial capacity must be positive');
+    }
+    if (maxCapacity < initialCapacity) {
+      throw new Error('Max capacity must be greater than or equal to initial capacity');
+    }
+
     this.buffer = new Uint8Array(initialCapacity);
   }
 

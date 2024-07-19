@@ -33,6 +33,38 @@ describe('RingBuffer', () => {
     assert.deepEqual(buffer.read(5), new Uint8Array([1, 2, 3, 4, 5]));
   });
 
+  it('handles appending data that exactly fills the remaining capacity', () => {
+    let buffer = new RingBuffer(5);
+    buffer.append(new Uint8Array([1, 2, 3]));
+    assert.equal(buffer.length, 3);
+    assert.equal(buffer.capacity, 5);
+
+    // This should exactly fill the remaining capacity
+    buffer.append(new Uint8Array([4, 5]));
+
+    assert.equal(buffer.length, 5);
+    assert.equal(buffer.capacity, 5);
+
+    // This should trigger a resize
+    buffer.append(new Uint8Array([6]));
+
+    assert.equal(buffer.length, 6);
+    assert.ok(buffer.capacity > 5, 'Buffer should have resized');
+
+    // Verify the content
+    assert.deepEqual(buffer.read(6), new Uint8Array([1, 2, 3, 4, 5, 6]));
+  });
+
+  it('handles appending data that causes multiple wraps', () => {
+    let buffer = new RingBuffer(5);
+    buffer.append(new Uint8Array([1, 2, 3, 4, 5]));
+    assert.deepEqual(buffer.read(2), new Uint8Array([1, 2]));
+    buffer.append(new Uint8Array([6, 7]));
+    // Append more data that will cause another wrap and resize
+    buffer.append(new Uint8Array([8, 9, 10, 11, 12]));
+    assert.deepEqual(buffer.read(10), new Uint8Array([3, 4, 5, 6, 7, 8, 9, 10, 11, 12]));
+  });
+
   it('handles reading data correctly', () => {
     let buffer = new RingBuffer(5);
     buffer.append(new Uint8Array([1, 2, 3, 4, 5]));
