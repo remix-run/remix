@@ -58,28 +58,104 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/_index.tsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+      "app/routes/html-form.tsx": js`
+        import { json, useActionData } from "@remix-run/react";
 
-        export function loader() {
+        export async function action({ request }) {
           return json("pizza");
         }
 
-        export default function Index() {
-          let data = useLoaderData();
+        export default function Route() {
+          const data = useActionData();
+
           return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
+            <form method="post">
+              <div>
+                <label>
+                  <input type="checkbox" name="checkbox" defaultChecked /> Checkbox
+                </label>
+              </div>
+              <div>
+                <button type="submit">Submit</button>
+              </div>
+              {data != null && <pre>{data}</pre>}
+            </form>
+          );
         }
       `,
+      "app/routes/html-multipart-form.tsx": js`
+        import { json, useActionData } from "@remix-run/react";
 
-      "app/routes/burgers.tsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+        export async function action({ request }) {
+          return json("pizza");
+        }
+
+        export default function Route() {
+          const data = useActionData();
+
+          return (
+            <form method="post" encType="multipart/form-data">
+              <div>
+                <label>
+                  <input type="checkbox" name="checkbox" defaultChecked /> Checkbox
+                </label>
+              </div>
+              <div>
+                <button type="submit">Submit</button>
+              </div>
+              {data != null && <pre>{data}</pre>}
+            </form>
+          );
+        }
+      `,
+      "app/routes/remix-form.tsx": js`
+        import { Form, json, useActionData } from "@remix-run/react";
+
+        export async function action({ request }) {
+          return json("pizza");
+        }
+
+        export default function Route() {
+          const data = useActionData();
+
+          return (
+            <Form method="post">
+              <div>
+                <label>
+                  <input type="checkbox" name="checkbox" defaultChecked /> Checkbox
+                </label>
+              </div>
+              <div>
+                <button type="submit">Submit</button>
+              </div>
+              {data != null && <pre>{data}</pre>}
+            </Form>
+          );
+        }
+      `,
+      "app/routes/remix-multipart-form.tsx": js`
+        import { Form, json, useActionData } from "@remix-run/react";
+
+        export async function action({ request }) {
+          return json("pizza");
+        }
+
+        export default function Route() {
+          const data = useActionData();
+
+          return (
+            <Form method="post" encType="multipart/form-data">
+              <div>
+                <label>
+                  <input type="checkbox" name="checkbox" defaultChecked /> Checkbox
+                </label>
+              </div>
+              <div>
+                <button type="submit">Submit</button>
+              </div>
+              {data != null && <pre>{data}</pre>}
+            </Form>
+          );
         }
       `,
     },
@@ -98,22 +174,76 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+test.describe("HTML <form> action", () => {
+  test("form body does not crash app", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/html-form");
+    await app.clickElement("[type=submit]");
+    await page.waitForSelector("pre");
+    expect(await app.getHtml("pre")).toBe(`<pre>pizza</pre>`);
+  });
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  await page.waitForSelector("text=cheeseburger");
+  test("empty form body does not crash app", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/html-form");
+    await app.clickElement("[type=checkbox]");
+    await app.clickElement("[type=submit]");
+    await page.waitForSelector("pre");
+    expect(await app.getHtml("pre")).toBe(`<pre>pizza</pre>`);
+  });
+  
+  test("multipart form body does not crash app", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/html-multipart-form");
+    await app.clickElement("[type=submit]");
+    await page.waitForSelector("pre");
+    expect(await app.getHtml("pre")).toBe(`<pre>pizza</pre>`);
+  });
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+  test("empty multipart form body does not crash app", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/html-multipart-form");
+    await app.clickElement("[type=checkbox]");
+    await app.clickElement("[type=submit]");
+    await page.waitForSelector("pre");
+    expect(await app.getHtml("pre")).toBe(`<pre>pizza</pre>`);
+  });
+});
 
-  // Go check out the other tests to see what else you can do.
+test.describe("Remix <Form> action", () => {
+  test("form body does not crash app", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/remix-form");
+    await app.clickElement("[type=submit]");
+    await page.waitForSelector("pre");
+    expect(await app.getHtml("pre")).toBe(`<pre>pizza</pre>`);
+  });
+
+  test("empty form body does not crash app", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/remix-form");
+    await app.clickElement("[type=checkbox]");
+    await app.clickElement("[type=submit]");
+    await page.waitForSelector("pre");
+    expect(await app.getHtml("pre")).toBe(`<pre>pizza</pre>`);
+  });
+  
+  test("multipart form body does not crash app", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/remix-multipart-form");
+    await app.clickElement("[type=submit]");
+    await page.waitForSelector("pre");
+    expect(await app.getHtml("pre")).toBe(`<pre>pizza</pre>`);
+  });
+
+  test("empty multipart form body does not crash app", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/remix-multipart-form");
+    await app.clickElement("[type=checkbox]");
+    await app.clickElement("[type=submit]");
+    await page.waitForSelector("pre");
+    expect(await app.getHtml("pre")).toBe(`<pre>pizza</pre>`);
+  });
 });
 
 ////////////////////////////////////////////////////////////////////////////////
