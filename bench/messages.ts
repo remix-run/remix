@@ -14,6 +14,13 @@ export class MultipartMessage {
 
     this.content = parts.join('\r\n');
   }
+
+  *generateChunks(chunkSize = 16 * 1024): Generator<Uint8Array> {
+    let encoder = new TextEncoder();
+    for (let i = 0; i < this.content.length; i += chunkSize) {
+      yield encoder.encode(this.content.slice(i, i + chunkSize));
+    }
+  }
 }
 
 const oneKb = 1024;

@@ -6,7 +6,9 @@ import { MultipartMessage } from '../messages.js';
 export function parse(message: MultipartMessage): Promise<number> {
   let stream = new Readable({
     read() {
-      this.push(message.content);
+      for (let chunk of message.generateChunks()) {
+        this.push(chunk);
+      }
       this.push(null);
     },
   });
@@ -17,6 +19,12 @@ export function parse(message: MultipartMessage): Promise<number> {
     let bb = new busboy.Busboy({
       headers: { 'content-type': `multipart/form-data; boundary=${message.boundary}` },
       limits: { fileSize: Infinity },
+    });
+
+    bb.on('field', () => {});
+
+    bb.on('file', (_name, stream) => {
+      stream.resume();
     });
 
     bb.on('error', reject);

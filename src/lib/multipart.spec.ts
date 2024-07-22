@@ -7,30 +7,16 @@ import { MultipartParseError, parseMultipartFormData } from './multipart.js';
 
 const CRLF = '\r\n';
 
-function createReadableStream(
-  content: string,
-  chunkSize = 1024 * 16 // 16 KB is default on node servers
-): ReadableStream<Uint8Array> {
+function* generateChunks(content: string, chunkSize = 16 * 1024): Generator<Uint8Array> {
   let encoder = new TextEncoder();
+  for (let i = 0; i < content.length; i += chunkSize) {
+    yield encoder.encode(content.slice(i, i + chunkSize));
+  }
+}
 
-  return new ReadableStream({
-    start(controller) {
-      let offset = 0;
-
-      function pushChunk() {
-        if (offset < content.length) {
-          let chunk = content.slice(offset, offset + chunkSize);
-          controller.enqueue(encoder.encode(chunk));
-          offset += chunkSize;
-          setTimeout(pushChunk, 0);
-        } else {
-          controller.close();
-        }
-      }
-
-      pushChunk();
-    },
-  });
+function createReadableStream(content: string, chunkSize?: number): ReadableStream<Uint8Array> {
+  // @ts-expect-error ReadableStream.from is not yet in the DOM types
+  return ReadableStream.from(generateChunks(content, chunkSize));
 }
 
 function createMockRequest({

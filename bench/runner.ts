@@ -1,16 +1,15 @@
 import * as os from 'node:os';
 
-import * as content from './messages.js';
-
+import * as messages from './messages.js';
 import * as busboy from './parsers/busboy.js';
 import * as fastifyBusboy from './parsers/fastify-busboy.js';
 import * as fetchMultipartParser from './parsers/fetch-multipart-parser.js';
 
 const benchmarks = [
-  { name: '1 small file', message: content.oneSmallFile },
-  { name: '1 large file', message: content.oneLargeFile },
-  { name: '100 small files', message: content.oneHundredSmallFiles },
-  { name: '5 large files', message: content.fiveLargeFiles },
+  { name: '1 small file', message: messages.oneSmallFile },
+  { name: '1 large file', message: messages.oneLargeFile },
+  { name: '100 small files', message: messages.oneHundredSmallFiles },
+  { name: '5 large files', message: messages.fiveLargeFiles },
 ];
 
 function getMeanAndStdDev(measurements: number[]): string {
@@ -21,7 +20,7 @@ function getMeanAndStdDev(measurements: number[]): string {
 }
 
 interface Parser {
-  parse(message: content.MultipartMessage): Promise<number>;
+  parse(message: messages.MultipartMessage): Promise<number>;
 }
 
 async function runParserBenchmarks(
