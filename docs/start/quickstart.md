@@ -276,7 +276,7 @@ What's next?
 [runtimes]: ../discussion/runtimes
 [inspect]: https://nodejs.org/en/docs/guides/debugging-getting-started/
 [tutorial]: ./tutorial
-[vite_config]: ../file-conventions/vite-config.md
+[vite_config]: ../file-conventions/vite-config
 [templates]: /resources?category=templates
 [http-localhost-3000]: http://localhost:3000
 [es-modules]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
