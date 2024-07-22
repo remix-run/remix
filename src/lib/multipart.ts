@@ -150,7 +150,7 @@ export class MultipartParser {
     let parts: MultipartPart[] = [];
 
     while (true) {
-      let nextBoundaryIndex = this.buffer.find(
+      let nextBoundaryIndex = this.buffer.indexOf(
         this.boundaryArray,
         this.boundarySearchIndex,
         this.boundarySkipTable
