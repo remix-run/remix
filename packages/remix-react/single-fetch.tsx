@@ -164,15 +164,19 @@ function singleFetchActionStrategy(
           actionStatus = status;
           return unwrapSingleFetchResult(data as SingleFetchResult, m.route.id);
         });
-        // If we have a response here, like a redirect, return it as is
-        if (isResponse(result)) {
-          return { type: "data", result };
-        }
-        // Otherwise, proxy along the statusCode via unstable_data()
-        // (most notably for skipping action error revalidation)
-        return { type: "data", result: unstable_data(result, actionStatus) };
+        return { type: "data", result };
       });
-      return result;
+
+      if (isResponse(result.result)) {
+        return result;
+      }
+
+      // For non-responses, proxy along the statusCode via unstable_data()
+      // (most notably for skipping action error revalidation)
+      return {
+        type: result.type,
+        result: unstable_data(result.result, actionStatus),
+      };
     })
   );
 }
