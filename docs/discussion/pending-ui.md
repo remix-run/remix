@@ -192,7 +192,7 @@ function ProjectListItem({ project }) {
           value={starred ? "0" : "1"}
         >
           {/* 👇 display optimistic value */}
-          {starred ? "☆" : "★"}
+          {starred ? "★" : "☆"}
         </button>
       </fetcher.Form>
     </>
