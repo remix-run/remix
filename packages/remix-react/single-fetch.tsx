@@ -7,6 +7,7 @@ import type {
 } from "@remix-run/router";
 import {
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
+  isRouteErrorResponse,
   redirect,
   unstable_data,
 } from "@remix-run/router";
@@ -167,7 +168,7 @@ function singleFetchActionStrategy(
         return { type: "data", result };
       });
 
-      if (isResponse(result.result)) {
+      if (isResponse(result.result) || isRouteErrorResponse(result.result)) {
         return result;
       }
 

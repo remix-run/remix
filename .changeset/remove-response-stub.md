@@ -1,5 +1,6 @@
 ---
-"@remix-run/server-runtime": patch
+"@remix-run/server-runtime": minor
+"@remix-run/react": minor
 ---
 
 Single Fetch: Remove `responseStub` in favor of `headers`
