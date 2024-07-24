@@ -261,7 +261,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         (initialMatches || []).length !== ssrMatches.length ||
         !(initialMatches || []).every((m, i) => ssrMatches[i] === m.route.id);
 
-      if (hasDifferentSSRMatches) {
+      if (hasDifferentSSRMatches && !window.__remixContext.isSpaMode) {
         let ssr = ssrMatches.join(",");
         let client = (initialMatches || []).map((m) => m.route.id).join(",");
         let errorMsg =
