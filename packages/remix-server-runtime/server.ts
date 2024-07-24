@@ -441,7 +441,6 @@ async function handleDocumentRequest(
   criticalCss?: string
 ) {
   let context;
-  debugger;
   try {
     context = await staticHandler.query(request, {
       requestContext: loadContext,

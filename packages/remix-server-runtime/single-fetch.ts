@@ -5,6 +5,7 @@ import type {
 } from "@remix-run/router";
 import {
   isRouteErrorResponse,
+  unstable_data as routerData,
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
 } from "@remix-run/router";
 import { encode } from "turbo-stream";
@@ -170,7 +171,6 @@ export async function singleFetchLoaders(
   handleError: (err: unknown) => void
 ): Promise<{ result: SingleFetchResults; headers: Headers; status: number }> {
   try {
-    debugger;
     let handlerRequest = new Request(handlerUrl, {
       headers: request.headers,
       signal: request.signal,
@@ -333,6 +333,10 @@ export function encodeViaTurboStream(
       },
     ],
   });
+}
+
+export function data(value: Serializable, init?: number | ResponseInit) {
+  return routerData(value, init);
 }
 
 type MaybePromise<T> = T | Promise<T>;

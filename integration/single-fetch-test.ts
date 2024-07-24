@@ -94,6 +94,48 @@ const files = {
       )
     }
   `,
+
+  "app/routes/data-with-response.tsx": js`
+    import { useActionData, useLoaderData, unstable_data as data } from "@remix-run/react";
+
+    export function headers ({ actionHeaders, loaderHeaders, errorHeaders }) {
+      if ([...actionHeaders].length > 0) {
+        return actionHeaders;
+      } else {
+        return loaderHeaders;
+      }
+    }
+
+    export async function action({ request }) {
+      let formData = await request.formData();
+      return data({
+        key: formData.get('key'),
+      }, { status: 201, headers: { 'X-Action': 'yes' }});
+    }
+
+    export function loader({ request }) {
+      if (new URL(request.url).searchParams.has("error")) {
+        throw new Error("Loader Error");
+      }
+      return data({
+        message: "DATA",
+        date: new Date("${ISO_DATE}"),
+      }, { status: 206, headers: { 'X-Loader': 'yes' }});
+    }
+
+    export default function DataWithResponse() {
+      let data = useLoaderData();
+      let actionData = useActionData();
+      return (
+        <>
+          <h1 id="heading">Data</h1>
+          <p id="message">{data.message}</p>
+          <p id="date">{data.date.toISOString()}</p>
+          {actionData ? <p id="action-data">{actionData.key}</p> : null}
+        </>
+      )
+    }
+  `,
 };
 
 test.describe("single-fetch", () => {
@@ -193,6 +235,57 @@ test.describe("single-fetch", () => {
       method: "post",
       body: postBody,
     });
+    expect(res.data).toEqual({
+      data: {
+        key: "value",
+      },
+    });
+  });
+
+  test("loads proper data (via unstable_data) on single fetch loader requests", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files,
+    });
+    let res = await fixture.requestSingleFetchData("/data-with-response.data");
+    expect(res.status).toEqual(206);
+    expect(res.headers.get("X-Loader")).toEqual("yes");
+    expect(res.data).toEqual({
+      root: {
+        data: {
+          message: "ROOT",
+        },
+      },
+      "routes/data-with-response": {
+        data: {
+          message: "DATA",
+          date: new Date(ISO_DATE),
+        },
+      },
+    });
+  });
+
+  test("loads proper data (via unstable_data) on single fetch action requests", async () => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files,
+    });
+    let postBody = new URLSearchParams();
+    postBody.set("key", "value");
+    let res = await fixture.requestSingleFetchData("/data-with-response.data", {
+      method: "post",
+      body: postBody,
+    });
+    expect(res.status).toEqual(201);
+    expect(res.headers.get("X-Action")).toEqual("yes");
     expect(res.data).toEqual({
       data: {
         key: "value",
@@ -431,6 +524,107 @@ test.describe("single-fetch", () => {
     expect(urls).toEqual([]);
   });
 
+  test("does not revalidate on 4xx/5xx action responses (via unstable_data)", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          unstable_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/action.tsx": js`
+          import { Form, Link, useActionData, useLoaderData, useNavigation, unstable_data } from '@remix-run/react';
+
+          export async function action({ request }) {
+            let fd = await request.formData();
+            if (fd.get('throw') === "5xx") {
+              throw unstable_data("Thrown 500", { status: 500 });
+            }
+            if (fd.get('throw') === "4xx") {
+              throw unstable_data("Thrown 400", { status: 400 });
+            }
+            if (fd.get('return') === "5xx") {
+              return unstable_data("Returned 500", { status: 500 });
+            }
+            if (fd.get('return') === "4xx") {
+              return unstable_data("Returned 400", { status: 400 });
+            }
+            return null;
+          }
+
+          let count = 0;
+          export function loader() {
+            return { count: ++count };
+          }
+
+          export default function Comp() {
+            let navigation = useNavigation();
+            let data = useLoaderData();
+            return (
+              <Form method="post">
+                <button type="submit" name="throw" value="5xx">Throw 5xx</button>
+                <button type="submit" name="throw" value="4xx">Throw 4xx</button>
+                <button type="submit" name="return" value="5xx">Return 5xx</button>
+                <button type="submit" name="return" value="4xx">Return 4xx</button>
+                <p id="data">{data.count}</p>
+                {navigation.state === "idle" ? <p id="idle">idle</p> : null}
+              </Form>
+            );
+          }
+
+          export function ErrorBoundary() {
+            return (
+              <div>
+                <h1 id="error">Error</h1>
+                <Link to="/action">Back</Link>
+              </div>
+            );
+          }
+        `,
+      },
+    });
+
+    let urls: string[] = [];
+    page.on("request", (req) => {
+      if (req.method() === "GET" && req.url().includes(".data")) {
+        urls.push(req.url());
+      }
+    });
+
+    console.error = () => {};
+
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/action");
+    expect(await app.getHtml("#data")).toContain("1");
+    expect(urls).toEqual([]);
+
+    await page.click('button[name="return"][value="5xx"]');
+    await page.waitForSelector("#idle");
+    expect(await app.getHtml("#data")).toContain("1");
+    expect(urls).toEqual([]);
+
+    await page.click('button[name="return"][value="4xx"]');
+    await page.waitForSelector("#idle");
+    expect(await app.getHtml("#data")).toContain("1");
+    expect(urls).toEqual([]);
+
+    await page.click('button[name="throw"][value="5xx"]');
+    await page.waitForSelector("#error");
+    expect(urls).toEqual([]);
+
+    await app.clickLink("/action");
+    await page.waitForSelector("#data");
+    expect(await app.getHtml("#data")).toContain("2");
+    urls = [];
+
+    await page.click('button[name="throw"][value="4xx"]');
+    await page.waitForSelector("#error");
+    expect(urls).toEqual([]);
+  });
   test("returns headers correctly for singular loader and action calls", async () => {
     let fixture = await createFixture({
       config: {

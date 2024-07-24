@@ -66,6 +66,7 @@ export {
   redirect,
   redirectDocument,
   replace,
+  unstable_data,
 } from "@remix-run/server-runtime";
 
 export type { RemixBrowserProps } from "./browser";
