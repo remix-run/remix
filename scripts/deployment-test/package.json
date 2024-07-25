@@ -15,6 +15,7 @@
     "fetch-retry": "^5.0.2",
     "fs-extra": "^10.0.0",
     "semver": "^7.3.7",
-    "start-server-and-test": "^1.14.0"
+    "start-server-and-test": "^1.14.0",
+    "@remix-run/dev": "0.0.0-nightly-e171af77f-20240725"
   }
 }
