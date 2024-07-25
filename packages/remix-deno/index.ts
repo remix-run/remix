@@ -27,6 +27,7 @@ export {
   replace,
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
+  unstable_data,
   unstable_defineAction,
   unstable_defineLoader,
   unstable_parseMultipartFormData,

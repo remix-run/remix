@@ -12,6 +12,7 @@ export {
 export {
   createRequestHandler,
   createSession,
+  unstable_data,
   unstable_defineLoader,
   unstable_defineAction,
   defer,

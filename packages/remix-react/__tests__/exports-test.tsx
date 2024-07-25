@@ -40,6 +40,7 @@ let modifiedExports = new Set([
   "json", // types
   "redirect", // types
   "redirectDocument", // types
+  "replace", // types
   "useActionData", // types
   "useFetcher", // types
   "useLoaderData", // types
