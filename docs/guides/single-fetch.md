@@ -299,7 +299,7 @@ For v2, you may still continue returning normal `Response` instances and their `
 Over time, you should start eliminating returned Responses from your loaders and actions.
 
 - If your `loader`/`action` was returning `json`/`defer` without setting any `status`/`headers`, then you can just remove the call to `json`/`defer` and return the data directly
-- If you `loader`/`action` was returning custom `status`/`headers` via `json`/`defer`, you should switch those to use the new [`unstable_data()`][data-utility] utility.
+- If your `loader`/`action` was returning custom `status`/`headers` via `json`/`defer`, you should switch those to use the new [`unstable_data()`][data-utility] utility.
 
 ### Client Loaders
 
