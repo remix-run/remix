@@ -114,7 +114,7 @@ describe('parseMultipartFormData', async () => {
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'field1');
-    assert.equal(parts[0].text, 'value1');
+    assert.equal(await parts[0].text(), 'value1');
   });
 
   it('parses multiple parts correctly', async () => {
@@ -130,9 +130,9 @@ describe('parseMultipartFormData', async () => {
 
     assert.equal(parts.length, 2);
     assert.equal(parts[0].name, 'field1');
-    assert.equal(parts[0].text, 'value1');
+    assert.equal(await parts[0].text(), 'value1');
     assert.equal(parts[1].name, 'field2');
-    assert.equal(parts[1].text, 'value2');
+    assert.equal(await parts[1].text(), 'value2');
   });
 
   it('parses empty parts correctly', async () => {
@@ -147,7 +147,7 @@ describe('parseMultipartFormData', async () => {
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'empty');
-    assert.equal(parts[0].content.byteLength, 0);
+    assert.equal((await parts[0].bytes()).byteLength, 0);
   });
 
   it('parses file uploads correctly', async () => {
@@ -168,7 +168,7 @@ describe('parseMultipartFormData', async () => {
     assert.equal(parts[0].name, 'file1');
     assert.equal(parts[0].filename, 'test.txt');
     assert.equal(parts[0].mediaType, 'text/plain');
-    assert.equal(parts[0].text, 'File content');
+    assert.equal(await parts[0].text(), 'File content');
   });
 
   it('parses multiple fields and a file upload', async () => {
@@ -189,13 +189,13 @@ describe('parseMultipartFormData', async () => {
 
     assert.equal(parts.length, 3);
     assert.equal(parts[0].name, 'field1');
-    assert.equal(parts[0].text, 'value1');
+    assert.equal(await parts[0].text(), 'value1');
     assert.equal(parts[1].name, 'field2');
-    assert.equal(parts[1].text, 'value2');
+    assert.equal(await parts[1].text(), 'value2');
     assert.equal(parts[2].name, 'file1');
     assert.equal(parts[2].filename, 'test.txt');
     assert.equal(parts[2].mediaType, 'text/plain');
-    assert.equal(parts[2].text, 'File content');
+    assert.equal(await parts[2].text(), 'File content');
   });
 
   it('throws when Content-Type is not multipart/form-data', async () => {
@@ -272,7 +272,7 @@ describe('parseMultipartFormData', async () => {
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].headers.get('Invalid-Header'), null);
-    assert.equal(parts[0].text, 'Some content');
+    assert.equal(await parts[0].text(), 'Some content');
   });
 
   it('throws error when final boundary is missing', async () => {

@@ -200,7 +200,14 @@ export class MultipartParser {
           );
         }
 
-        parts.push(new MultipartPart(headerArray, contentArray));
+        let body = new ReadableStream({
+          start(controller) {
+            controller.enqueue(contentArray);
+            controller.close();
+          },
+        });
+
+        parts.push(new MultipartPart(headerArray, body));
 
         this.buffer.skip(2 + this.boundaryLength); // Skip \r\n + boundary
       } else {
@@ -243,9 +250,39 @@ function findDoubleCRLF(buffer: Uint8Array): number {
 export class MultipartPart {
   private _headerBytes: Uint8Array;
   private _headers?: SuperHeaders;
+  private _bodyUsed = false;
 
-  constructor(header: Uint8Array, public content: Uint8Array) {
+  constructor(header: Uint8Array, public readonly body: ReadableStream<Uint8Array>) {
     this._headerBytes = header;
+  }
+
+  async arrayBuffer(): Promise<ArrayBuffer> {
+    return (await this.bytes()).buffer;
+  }
+
+  get bodyUsed(): boolean {
+    return this._bodyUsed;
+  }
+
+  async bytes(): Promise<Uint8Array> {
+    if (this._bodyUsed) {
+      throw new Error('Body is already consumed or is being consumed');
+    }
+
+    this._bodyUsed = true;
+
+    let reader = this.body.getReader();
+    let chunks: Uint8Array[] = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        return concatChunks(chunks);
+      }
+
+      chunks.push(value);
+    }
   }
 
   /**
@@ -283,9 +320,26 @@ export class MultipartPart {
   /**
    * The content of the part as a string.
    *
-   * Note: Do not use this for binary data, use `part.content` instead.
+   * Note: Do not use this for binary data, use `await part.bytes()` or stream `part.body` directly instead.
    */
-  get text(): string {
-    return textDecoder.decode(this.content);
+  async text(): Promise<string> {
+    return textDecoder.decode(await this.bytes());
   }
+}
+
+function concatChunks(chunks: Uint8Array[]): Uint8Array {
+  if (chunks.length === 1) {
+    return chunks[0];
+  }
+
+  let length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  let result = new Uint8Array(length);
+  let offset = 0;
+
+  for (let i = 0; i < chunks.length; ++i) {
+    result.set(chunks[i], offset);
+    offset += chunks[i].length;
+  }
+
+  return result;
 }
