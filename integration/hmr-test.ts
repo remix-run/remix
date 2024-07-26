@@ -25,7 +25,7 @@ let files = {
   "tailwind.config.js": js`
       /** @type {import('tailwindcss').Config} */
       export default {
-        content: ["./app/**/*.{ts,tsx,jsx,js}"],
+        content: ["./app/**/{**,.client,.server}/**/*.{js,jsx,ts,tsx}"],
         theme: {
           extend: {},
         },

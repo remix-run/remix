@@ -95,7 +95,7 @@ First build the app for production:
 npx remix vite:build
 ```
 
-You should now see a `build` folder containing a `server` folder (the server version of your app) and a `client` folder (the browser version) with some build artifacts in them. (This is all [configurable][remix_config].)
+You should now see a `build` folder containing a `server` folder (the server version of your app) and a `client` folder (the browser version) with some build artifacts in them. (This is all [configurable][vite_config].)
 
 👉 **Run the app with `remix-serve`**
 
@@ -276,7 +276,7 @@ What's next?
 [runtimes]: ../discussion/runtimes
 [inspect]: https://nodejs.org/en/docs/guides/debugging-getting-started/
 [tutorial]: ./tutorial
-[remix_config]: ../file-conventions/remix-config
+[vite_config]: ../file-conventions/vite-config
 [templates]: /resources?category=templates
 [http-localhost-3000]: http://localhost:3000
 [es-modules]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
