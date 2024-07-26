@@ -1,28 +1,58 @@
 /**
  * A ring buffer that automatically resizes to accomodate more data when it is full.
  */
-export class RingBuffer {
+export class RingBuffer implements RelativeIndexable<number> {
+  private buffer: Uint8Array;
   private start = 0;
   private end = 0;
   private _length = 0;
-  private buffer: Uint8Array;
+  private mask: number;
 
-  constructor(initialCapacity: number, public readonly maxCapacity = Infinity) {
-    if (initialCapacity < 0) {
-      throw new Error('Initial capacity must be positive');
+  /**
+   * Creates a new ring buffer with the given initial `capacity`, which must be a power of 2.
+   * The buffer will automatically resize to accomodate more data when it is full, up to the
+   * given `maxCapacity`.
+   */
+  constructor(capacity: number, public readonly maxCapacity = capacity) {
+    if ((capacity & (capacity - 1)) !== 0) {
+      throw new Error('Initial capacity must be a power of 2');
     }
-    if (maxCapacity < initialCapacity) {
+    if (maxCapacity < capacity) {
       throw new Error('Max capacity must be greater than or equal to initial capacity');
     }
 
-    this.buffer = new Uint8Array(initialCapacity);
+    this.buffer = new Uint8Array(capacity);
+    this.mask = capacity - 1;
   }
 
-  /**
-   * The maximum number of bytes the buffer can hold.
-   */
   get capacity(): number {
     return this.buffer.length;
+  }
+
+  set capacity(newCapacity: number) {
+    if ((newCapacity & (newCapacity - 1)) !== 0) {
+      throw new Error('New capacity must be a power of 2');
+    }
+    if (newCapacity > this.maxCapacity) {
+      throw new Error('New capacity exceeds max capacity');
+    }
+
+    let newBuffer = new Uint8Array(newCapacity);
+
+    if (this._length !== 0) {
+      if (this.start < this.end) {
+        newBuffer.set(this.buffer.subarray(this.start, this.end), 0);
+      } else {
+        let firstPart = this.buffer.subarray(this.start);
+        newBuffer.set(firstPart, 0);
+        newBuffer.set(this.buffer.subarray(0, this.end), firstPart.length);
+      }
+    }
+
+    this.buffer = newBuffer;
+    this.start = 0;
+    this.end = this._length;
+    this.mask = newCapacity - 1;
   }
 
   /**
@@ -32,42 +62,33 @@ export class RingBuffer {
     return this._length;
   }
 
-  private resize(newCapacity: number): void {
-    let newBuffer = new Uint8Array(newCapacity);
-    let length = this._length;
-
-    if (length === 0) {
-      this.buffer = newBuffer;
-      this.start = this.end = 0;
-      return;
+  at(index: number): number | undefined {
+    if (index < -this._length || index >= this._length) {
+      return undefined;
     }
 
-    if (this.start < this.end) {
-      newBuffer.set(this.buffer.subarray(this.start, this.end), 0);
-    } else {
-      let firstPart = this.buffer.subarray(this.start);
-      newBuffer.set(firstPart, 0);
-      newBuffer.set(this.buffer.subarray(0, this.end), firstPart.length);
+    if (index < 0) {
+      index = this._length + index;
     }
 
-    this.buffer = newBuffer;
-    this.start = 0;
-    this.end = length;
+    return this.buffer[(this.start + index) & this.mask];
   }
 
   /**
-   * Appends a chunk of data to the buffer. If the buffer is full, it will be resized.
+   * Appends a chunk of data to the buffer. If the buffer is full, it will automatically
+   * resize to accomodate the new chunk.
    */
   append(chunk: Uint8Array): void {
     if (chunk.length === 0) return;
 
-    if (chunk.length > this.capacity - this._length) {
-      let minCapacity = this._length + chunk.length;
-      if (minCapacity > this.maxCapacity) {
-        throw new Error('Buffer capacity exceeded');
+    if (chunk.length + this._length > this.capacity) {
+      let newCapacity = this.capacity * 2;
+      while (newCapacity < this._length + chunk.length) {
+        newCapacity *= 2;
       }
-      let newCapacity = Math.min(Math.max(this.capacity * 2, minCapacity), this.maxCapacity);
-      this.resize(newCapacity);
+      this.capacity = newCapacity;
+
+      return this.append(chunk);
     }
 
     let spaceToEnd = this.capacity - this.end;
@@ -84,30 +105,36 @@ export class RingBuffer {
   }
 
   /**
-   * Removes and returns the next `size` bytes from the buffer.
+   * Returns the next `size` bytes from the buffer without removing them.
    */
-  read(size: number): Uint8Array {
+  peek(size: number): Uint8Array {
     if (size < 0) {
-      throw new Error('Requested size must be non-negative');
+      throw new Error('Cannot read a negative number of bytes');
     }
     if (size > this._length) {
-      throw new Error('Requested size is larger than buffer length');
+      throw new Error('Cannot read past the end of the buffer');
     }
 
-    let result = new Uint8Array(size);
-
+    let result: Uint8Array;
     if (this.start < this.end) {
-      result.set(this.buffer.subarray(this.start, this.start + size), 0);
+      result = this.buffer.subarray(this.start, this.start + size);
     } else {
+      result = new Uint8Array(size);
       let firstPart = Math.min(size, this.capacity - this.start);
       result.set(this.buffer.subarray(this.start, this.start + firstPart), 0);
       result.set(this.buffer.subarray(0, size - firstPart), firstPart);
     }
 
-    this.start = (this.start + size) % this.capacity;
-    this._length -= size;
-
     return result;
+  }
+
+  /**
+   * Removes and returns the next `size` bytes from the buffer.
+   */
+  read(size: number): Uint8Array {
+    let chunk = this.peek(size);
+    this.skip(size);
+    return chunk;
   }
 
   /**
@@ -115,71 +142,65 @@ export class RingBuffer {
    */
   skip(size: number): void {
     if (size < 0) {
-      throw new Error('Requested size must be non-negative');
+      throw new Error('Cannot skip a negative number of bytes');
     }
     if (size > this._length) {
-      throw new Error('Requested size is larger than buffer length');
+      throw new Error('Cannot skip past the end of the buffer');
     }
 
-    this.start = (this.start + size) % this.capacity;
+    this.start = (this.start + size) & this.mask;
     this._length -= size;
   }
 
   /**
-   * Returns the index of the first occurrence of `needle` in the buffer starting at `offset`.
+   * Computes the skip table for the Boyer-Moore-Horspool algorithm. This can be used to
+   * make indexOf searches more efficient when the needle is known in advance.
    */
-  indexOf(needle: Uint8Array, offset = 0, skipTable = RingBuffer.computeSkipTable(needle)): number {
-    // boyer-moore-horspool algorithm
-    if (needle.length === 0 || needle.length > this._length - offset) {
-      return -1;
+  static computeSkipTable(needle: string | Uint8Array): Uint8Array {
+    const table = new Uint8Array(256).fill(needle.length);
+    const lastIndex = needle.length - 1;
+
+    for (let i = 0; i < lastIndex; i++) {
+      table[typeof needle === 'string' ? needle.charCodeAt(i) : needle[i]] = lastIndex - i;
     }
 
-    let bufferLength = this.buffer.length;
-    let searchStart = (this.start + offset) % bufferLength;
-    let remaining = this._length - offset;
-
-    while (remaining >= needle.length) {
-      let j = needle.length - 1;
-      let i = searchStart + j;
-      if (i >= bufferLength) {
-        i -= bufferLength;
-      }
-
-      // Check characters from right to left
-      while (j >= 0 && this.buffer[i] === needle[j]) {
-        j--;
-        i = i === 0 ? bufferLength - 1 : i - 1;
-      }
-
-      if (j < 0) {
-        // Match found
-        return offset;
-      }
-
-      // Shift based on the skip table
-      let shift = skipTable[this.buffer[i]];
-      searchStart += shift;
-      if (searchStart >= bufferLength) {
-        searchStart -= bufferLength;
-      }
-      offset += shift;
-      remaining -= shift;
-    }
-
-    return -1;
+    return table;
   }
 
   /**
-   * Computes a skip table ahead of time to use later with `buffer.find(needle, skipTable)`.
-   * This can improve performance when searching for the same `needle` multiple times.
+   * Searches for the given value in the buffer using the Boyer-Moore-Horspool algorithm.
+   * Returns the index of the first occurrence if found, or -1 if not.
    */
-  static computeSkipTable(needle: Uint8Array): Uint8Array {
-    let skipTable = new Uint8Array(256).fill(needle.length);
+  indexOf(
+    needle: string | Uint8Array,
+    offset = 0,
+    skipTable = RingBuffer.computeSkipTable(needle)
+  ): number {
+    if (needle.length === 0) return offset;
+    if (needle.length > this._length - offset) return -1;
 
-    for (let i = 0; i < needle.length - 1; i++) {
-      skipTable[needle[i]] = needle.length - 1 - i;
+    let needleArray = typeof needle === 'string' ? new TextEncoder().encode(needle) : needle;
+    let needleLength = needleArray.length;
+    let lastIndex = needleLength - 1;
+
+    let i = (this.start + offset) & this.mask;
+    let j = offset;
+
+    while (j < this._length - needleLength + 1) {
+      let k = lastIndex;
+      while (k >= 0 && this.buffer[(i + k) & this.mask] === needleArray[k]) {
+        k--;
+      }
+
+      if (k < 0) {
+        return j; // Found a match
+      }
+
+      let skip = skipTable[this.buffer[(i + lastIndex) & this.mask]];
+      i = (i + skip) & this.mask;
+      j += skip;
     }
 
-    return skipTable;
+    return -1; // Not found
   }
 }

@@ -18,7 +18,7 @@ export class MultipartParseError extends Error {
 }
 
 export interface MultipartParseOptions {
-  initialBufferSize?: number;
+  maxBufferSize?: number;
   maxHeaderSize?: number;
   maxFileSize?: number;
 }
@@ -125,19 +125,32 @@ export class MultipartParser {
   public done = false;
 
   private boundaryArray: Uint8Array;
+  private boundaryLength: number;
   private boundarySkipTable: Uint8Array;
+  private boundarySearchOffset: number;
+  private initialBoundaryFound = false;
   private maxHeaderSize: number;
   private maxFileSize: number;
-  private boundarySearchIndex: number;
-  private initialBoundaryFound = false;
 
-  constructor(public boundary: string, options: MultipartParseOptions = {}) {
+  constructor(
+    public boundary: string,
+    {
+      maxBufferSize = Math.pow(2, 25), // 32 MB
+      maxHeaderSize = 8 * 1024, // 8 KB
+      maxFileSize = 10 * 1024 * 1024, // 10 MB
+    }: MultipartParseOptions = {}
+  ) {
+    if ((maxBufferSize & (maxBufferSize - 1)) !== 0) {
+      throw new Error('Max buffer size must be a power of 2');
+    }
+
     this.boundaryArray = textEncoder.encode(`--${boundary}`);
-    this.boundarySearchIndex = 0;
+    this.boundaryLength = this.boundaryArray.length;
+    this.boundarySearchOffset = 0;
     this.boundarySkipTable = RingBuffer.computeSkipTable(this.boundaryArray);
-    this.buffer = new RingBuffer(options.initialBufferSize || 16 * 1024);
-    this.maxHeaderSize = options.maxHeaderSize || 1024 * 1024;
-    this.maxFileSize = options.maxFileSize || 10 * 1024 * 1024;
+    this.buffer = new RingBuffer(64 * 1024, maxBufferSize);
+    this.maxHeaderSize = maxHeaderSize;
+    this.maxFileSize = maxFileSize;
   }
 
   push(chunk: Uint8Array): MultipartPart[] {
@@ -152,17 +165,17 @@ export class MultipartParser {
     while (true) {
       let nextBoundaryIndex = this.buffer.indexOf(
         this.boundaryArray,
-        this.boundarySearchIndex,
+        this.boundarySearchOffset,
         this.boundarySkipTable
       );
 
       if (nextBoundaryIndex === -1) {
         // No boundary found, begin the boundary search on the next iteration from
         // the start of the last potential boundary sequence
-        this.boundarySearchIndex = Math.max(0, this.buffer.length - this.boundaryArray.length);
+        this.boundarySearchOffset = Math.max(0, this.buffer.length - this.boundaryLength);
         break;
       } else {
-        this.boundarySearchIndex = 0;
+        this.boundarySearchOffset = 0;
       }
 
       if (this.initialBoundaryFound) {
@@ -189,10 +202,10 @@ export class MultipartParser {
 
         parts.push(new MultipartPart(headerArray, contentArray));
 
-        this.buffer.skip(2 + this.boundaryArray.length); // Skip \r\n + boundary
+        this.buffer.skip(2 + this.boundaryLength); // Skip \r\n + boundary
       } else {
         this.initialBoundaryFound = true;
-        this.buffer.skip(this.boundaryArray.length); // Skip the boundary
+        this.buffer.skip(this.boundaryLength); // Skip the boundary
       }
 
       if (this.buffer.length > 1) {
