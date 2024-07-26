@@ -17,7 +17,7 @@ $ npm install fetch-multipart-parser
 ```typescript
 import { MultipartParseError, parseMultipartFormData } from 'fetch-multipart-parser';
 
-function handleMultipartRequest(request: Request): void {
+async function handleMultipartRequest(request: Request): void {
   try {
     // The parser `yield`s each part as a MultipartPart as it becomes available.
     for await (let part of parseMultipartFormData(request)) {
@@ -26,9 +26,9 @@ function handleMultipartRequest(request: Request): void {
       console.log(part.mediaType);
 
       if (/^text\//.test(part.mediaType)) {
-        console.log(new TextDecoder().decode(part.content));
+        console.log(await part.text());
       } else {
-        // part.content is binary data, save it to a file
+        // TODO: part.body is a ReadableStream<Uint8Array>, stream it to a file
       }
     }
   } catch (error) {
