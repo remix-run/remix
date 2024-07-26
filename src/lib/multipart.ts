@@ -10,19 +10,6 @@ export function isMultipartFormData(request: Request): boolean {
   return contentType != null && contentType.startsWith('multipart/form-data');
 }
 
-export class MultipartParseError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'MultipartParseError';
-  }
-}
-
-export interface MultipartParseOptions {
-  maxBufferSize?: number;
-  maxHeaderSize?: number;
-  maxFileSize?: number;
-}
-
 /**
  * Parse a `multipart/form-data` request body and yield each part as a `MultipartPart` object.
  *
@@ -58,7 +45,7 @@ export interface MultipartParseOptions {
  */
 export async function* parseMultipartFormData(
   request: Request,
-  options: MultipartParseOptions = {}
+  options: MultipartParserOptions = {}
 ): AsyncGenerator<MultipartPart> {
   if (!isMultipartFormData(request)) {
     throw new MultipartParseError('Request is not multipart/form-data');
@@ -88,7 +75,7 @@ export async function* parseMultipartFormData(
 export async function* parseMultipartStream(
   stream: ReadableStream<Uint8Array>,
   boundary: string,
-  options: MultipartParseOptions = {}
+  options: MultipartParserOptions = {}
 ) {
   let parser = new MultipartParser(boundary, options);
   let reader = stream.getReader();
@@ -117,6 +104,19 @@ export async function* parseMultipartStream(
 const textDecoder = new TextDecoder();
 const textEncoder = new TextEncoder();
 
+export class MultipartParseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MultipartParseError';
+  }
+}
+
+export interface MultipartParserOptions {
+  maxBufferSize?: number;
+  maxHeaderSize?: number;
+  maxFileSize?: number;
+}
+
 /**
  * A parser for `multipart/form-data` streams.
  */
@@ -138,7 +138,7 @@ export class MultipartParser {
       maxBufferSize = Math.pow(2, 25), // 32 MB
       maxHeaderSize = 8 * 1024, // 8 KB
       maxFileSize = 10 * 1024 * 1024, // 10 MB
-    }: MultipartParseOptions = {}
+    }: MultipartParserOptions = {}
   ) {
     if ((maxBufferSize & (maxBufferSize - 1)) !== 0) {
       throw new Error('Max buffer size must be a power of 2');
@@ -241,11 +241,11 @@ function findDoubleCRLF(buffer: Uint8Array): number {
  * A part of a `multipart/form-data` message.
  */
 export class MultipartPart {
-  private _rawHeader: Uint8Array;
+  private _headerBytes: Uint8Array;
   private _headers?: SuperHeaders;
 
   constructor(header: Uint8Array, public content: Uint8Array) {
-    this._rawHeader = header;
+    this._headerBytes = header;
   }
 
   /**
@@ -253,7 +253,7 @@ export class MultipartPart {
    */
   get headers(): SuperHeaders {
     if (!this._headers) {
-      this._headers = new SuperHeaders(textDecoder.decode(this._rawHeader));
+      this._headers = new SuperHeaders(textDecoder.decode(this._headerBytes));
     }
 
     return this._headers;
