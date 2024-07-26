@@ -89,10 +89,7 @@ test.describe("PostCSS enabled", () => {
         `,
         "tailwind.config.js": js`
           export default {
-            content: [
-              "./app/**/*.{ts,tsx,jsx,js}",
-              "./app/**/.client/**/*.{js,jsx,ts,tsx}",              
-            ],
+            content: ["./app/**/{**,.client,.server}/**/*.{js,jsx,ts,tsx}"],
             theme: {
               spacing: {
                 'test': ${JSON.stringify(TEST_PADDING_VALUE)}
