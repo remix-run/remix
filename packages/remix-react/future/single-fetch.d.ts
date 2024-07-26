@@ -26,7 +26,7 @@ declare module "@remix-run/react" {
 
   export function useRouteLoaderData<T extends Loader>(
     routeId: string
-  ): Serialize<T>;
+  ): Serialize<T> | undefined;
 
   export function useFetcher<T extends Loader | Action>(
     opts?: Parameters<typeof useFetcherRR>[0]
