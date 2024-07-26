@@ -15,8 +15,14 @@ function* generateChunks(content: string, chunkSize = 16 * 1024): Generator<Uint
 }
 
 function createReadableStream(content: string, chunkSize?: number): ReadableStream<Uint8Array> {
-  // @ts-expect-error ReadableStream.from is not yet in the DOM types
-  return ReadableStream.from(generateChunks(content, chunkSize));
+  return new ReadableStream({
+    start(controller) {
+      for (let chunk of generateChunks(content, chunkSize)) {
+        controller.enqueue(chunk);
+      }
+      controller.close();
+    },
+  });
 }
 
 function createMockRequest({
