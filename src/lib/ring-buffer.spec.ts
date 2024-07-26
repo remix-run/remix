@@ -10,39 +10,6 @@ describe('RingBuffer', () => {
       assert.equal(buffer.capacity, 16);
       assert.equal(buffer.length, 0);
     });
-
-    it('throws an error when exceeding the maximum capacity', () => {
-      let buffer = new RingBuffer(8, 16);
-      buffer.append(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
-      assert.throws(() => buffer.append(new Uint8Array([9, 10, 11, 12, 13, 14, 15, 16, 17])), {
-        name: 'Error',
-        message: 'New capacity exceeds max capacity',
-      });
-    });
-  });
-
-  describe('capacity management', () => {
-    it('handles resizing the buffer when necessary', () => {
-      let buffer = new RingBuffer(8, 16);
-      buffer.append(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
-      buffer.append(new Uint8Array([9, 10, 11, 12, 13, 14, 15, 16]));
-      assert.equal(buffer.capacity, 16);
-      assert.equal(buffer.length, 16);
-      assert.deepEqual(
-        buffer.read(16),
-        new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
-      );
-    });
-
-    it('handles multiple resize operations', () => {
-      let buffer = new RingBuffer(2, 8);
-      buffer.append(new Uint8Array([1, 2]));
-      buffer.append(new Uint8Array([3, 4]));
-      buffer.append(new Uint8Array([5, 6]));
-      assert.equal(buffer.capacity, 8);
-      assert.equal(buffer.length, 6);
-      assert.deepEqual(buffer.read(6), new Uint8Array([1, 2, 3, 4, 5, 6]));
-    });
   });
 
   describe('at', () => {
@@ -80,16 +47,8 @@ describe('RingBuffer', () => {
       assert.deepEqual(buffer.read(2), new Uint8Array([1, 2]));
     });
 
-    it('handles appending data larger than initial capacity', () => {
-      let buffer = new RingBuffer(4, 8);
-      buffer.append(new Uint8Array([1, 2, 3, 4, 5]));
-      assert.equal(buffer.capacity, 8);
-      assert.equal(buffer.length, 5);
-      assert.deepEqual(buffer.read(5), new Uint8Array([1, 2, 3, 4, 5]));
-    });
-
     it('handles appending data that exactly fills the remaining capacity', () => {
-      let buffer = new RingBuffer(8, 16);
+      let buffer = new RingBuffer(8);
       buffer.append(new Uint8Array([1, 2, 3]));
       assert.equal(buffer.length, 3);
       assert.equal(buffer.capacity, 8);
@@ -98,31 +57,17 @@ describe('RingBuffer', () => {
       assert.equal(buffer.length, 8);
       assert.equal(buffer.capacity, 8);
 
-      buffer.append(new Uint8Array([9]));
-      assert.equal(buffer.length, 9);
-      assert.equal(buffer.capacity, 16);
-
-      assert.deepEqual(buffer.read(9), new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]));
+      assert.deepEqual(buffer.read(8), new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
     });
 
     it('handles appending data that causes multiple wraps', () => {
-      let buffer = new RingBuffer(8, 32);
+      let buffer = new RingBuffer(8);
       buffer.append(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
       assert.deepEqual(buffer.read(2), new Uint8Array([1, 2]));
       buffer.append(new Uint8Array([9, 10]));
+      assert.deepEqual(buffer.read(8), new Uint8Array([3, 4, 5, 6, 7, 8, 9, 10]));
       buffer.append(new Uint8Array([11, 12, 13, 14, 15, 16]));
-      assert.deepEqual(
-        buffer.read(14),
-        new Uint8Array([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
-      );
-    });
-
-    it('handles circular behavior when appending', () => {
-      let buffer = new RingBuffer(8, 16);
-      buffer.append(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
-      buffer.append(new Uint8Array([9, 10]));
-      assert.equal(buffer.length, 10);
-      assert.deepEqual(buffer.read(8), new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
+      assert.deepEqual(buffer.read(6), new Uint8Array([11, 12, 13, 14, 15, 16]));
     });
   });
 

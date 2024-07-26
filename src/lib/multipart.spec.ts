@@ -226,7 +226,7 @@ describe('parseMultipartFormData', async () => {
       body: [
         `--${boundary}`,
         'Content-Disposition: form-data; name="field1"',
-        'X-Large-Header: ' + 'a'.repeat(1024 * 1024), // 1MB header
+        'X-Large-Header: ' + 'a'.repeat(8 * 1024), // 8 KB header
         '',
         'value1',
         `--${boundary}--`,
@@ -234,7 +234,9 @@ describe('parseMultipartFormData', async () => {
     });
 
     await assert.rejects(async () => {
-      await parseMultipartFormData(request, { maxHeaderSize: 1024 }).next();
+      for await (let _ of parseMultipartFormData(request, { maxHeaderSize: 4 * 1024 })) {
+        // Consume all parts
+      }
     }, MultipartParseError);
   });
 
@@ -253,7 +255,9 @@ describe('parseMultipartFormData', async () => {
     });
 
     await assert.rejects(async () => {
-      await parseMultipartFormData(request, { maxFileSize: 1024 * 1024 * 10 }).next();
+      for await (let _ of parseMultipartFormData(request, { maxFileSize: 10 * 1024 * 1024 })) {
+        // Consume all parts
+      }
     }, MultipartParseError);
   });
 
@@ -290,7 +294,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     await assert.rejects(async () => {
-      for await (let part of parseMultipartFormData(request)) {
+      for await (let _ of parseMultipartFormData(request)) {
         // Consume all parts
       }
     }, MultipartParseError);

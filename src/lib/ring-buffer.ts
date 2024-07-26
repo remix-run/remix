@@ -1,5 +1,7 @@
 /**
- * A ring buffer that automatically resizes to accomodate more data when it is full.
+ * A fast ring (or "circular") buffer implementation that supports reusing a fixed-size buffer
+ * by overwriting the oldest data when the buffer is full. This is useful for buffering streaming
+ * data, such as reading from a file or network socket, before handing off the data to a consumer.
  */
 export class RingBuffer implements RelativeIndexable<number> {
   private buffer: Uint8Array;
@@ -9,50 +11,22 @@ export class RingBuffer implements RelativeIndexable<number> {
   private mask: number;
 
   /**
-   * Creates a new ring buffer with the given initial `capacity`, which must be a power of 2.
-   * The buffer will automatically resize to accomodate more data when it is full, up to the
-   * given `maxCapacity`.
+   * Creates a new RingBuffer with the given `capacity`, which must be a power of 2.
    */
-  constructor(capacity: number, public readonly maxCapacity = capacity) {
+  constructor(capacity: number) {
     if ((capacity & (capacity - 1)) !== 0) {
       throw new Error('Initial capacity must be a power of 2');
-    }
-    if (maxCapacity < capacity) {
-      throw new Error('Max capacity must be greater than or equal to initial capacity');
     }
 
     this.buffer = new Uint8Array(capacity);
     this.mask = capacity - 1;
   }
 
+  /**
+   * The total number of bytes this buffer can hold.
+   */
   get capacity(): number {
     return this.buffer.length;
-  }
-
-  set capacity(newCapacity: number) {
-    if ((newCapacity & (newCapacity - 1)) !== 0) {
-      throw new Error('New capacity must be a power of 2');
-    }
-    if (newCapacity > this.maxCapacity) {
-      throw new Error('New capacity exceeds max capacity');
-    }
-
-    let newBuffer = new Uint8Array(newCapacity);
-
-    if (this._length !== 0) {
-      if (this.start < this.end) {
-        newBuffer.set(this.buffer.subarray(this.start, this.end), 0);
-      } else {
-        let firstPart = this.buffer.subarray(this.start);
-        newBuffer.set(firstPart, 0);
-        newBuffer.set(this.buffer.subarray(0, this.end), firstPart.length);
-      }
-    }
-
-    this.buffer = newBuffer;
-    this.start = 0;
-    this.end = this._length;
-    this.mask = newCapacity - 1;
   }
 
   /**
@@ -75,20 +49,13 @@ export class RingBuffer implements RelativeIndexable<number> {
   }
 
   /**
-   * Appends a chunk of data to the buffer. If the buffer is full, it will automatically
-   * resize to accomodate the new chunk.
+   * Appends a chunk of data to the buffer.
    */
   append(chunk: Uint8Array): void {
     if (chunk.length === 0) return;
 
     if (chunk.length + this._length > this.capacity) {
-      let newCapacity = this.capacity * 2;
-      while (newCapacity < this._length + chunk.length) {
-        newCapacity *= 2;
-      }
-      this.capacity = newCapacity;
-
-      return this.append(chunk);
+      throw new Error(`Cannot append to buffer, it is full`);
     }
 
     let spaceToEnd = this.capacity - this.end;
@@ -138,7 +105,8 @@ export class RingBuffer implements RelativeIndexable<number> {
   }
 
   /**
-   * Removes the next `size` bytes from the buffer without returning them.
+   * Removes the next `size` bytes from the buffer without returning them, effectively "skipping"
+   * them and discarding the data.
    */
   skip(size: number): void {
     if (size < 0) {
@@ -154,7 +122,8 @@ export class RingBuffer implements RelativeIndexable<number> {
 
   /**
    * Computes the skip table for the Boyer-Moore-Horspool algorithm. This can be used to
-   * make indexOf searches more efficient when the needle is known in advance.
+   * precompute the 3rd argument to `indexOf` to make searches more efficient when the needle
+   * is known in advance.
    */
   static computeSkipTable(needle: string | Uint8Array): Uint8Array {
     const table = new Uint8Array(256).fill(needle.length);
