@@ -6,7 +6,7 @@ title: Single Fetch
 
 <docs-warning>This is an unstable API and will continue to change, do not adopt in production</docs-warning>
 
-Single fetch is a new data data loading strategy and streaming format. When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). Additionally, Single Fetch also allows you to send down naked objects from your `loader` and `action`, such as `Date`, `Error`, `Promise`, `RegExp`, and more.
+Single Fetch is a new data data loading strategy and streaming format. When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). Additionally, Single Fetch also allows you to send down naked objects from your `loader` and `action`, such as `Date`, `Error`, `Promise`, `RegExp`, and more.
 
 ## Overview
 
@@ -51,9 +51,9 @@ Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or usin
 
 - If you are using miniflare/cloudflare worker with your remix project, ensure your [compatibility flag][compatibility-flag] is set to `2023-03-01` or later as well.
 
-**3. Remove document-level `headers` implementation (if you have one)**
+**3. Adjust `headers` implementations (if necessary)**
 
-The [`headers`][headers] export is not longer used when single fetch is enabled. In many cases you may have been just re-returning the headers from your loader `Response` instances to apply them to document requests, and if so, you may can likely just remove the export and those Repsonse headers will apply to document requests automatically. If you were doing more complex logic for document headers in the `headers` function, then you will need to migrate those to the new [Response Stub][responsestub] instance in your `loader` functions.
+With Single Fetch enabled, there will now only be one request made on client-side navigations even when multiple loaders need to run. To handle merging headers for the handlers called, the [`headers`][headers] export will now also apply to `loader`/`action` data requests. In many cases, the logic you already have in there for document requests should be close to sufficient for your new Single Fetch data requests.
 
 **4. Add `nonce` to `<RemixServer>` (if you are using a CSP)**
 
@@ -76,7 +76,7 @@ There are a handful of breaking changes introduced with Single Fetch - some of w
 **Changes that need to be addressed up front:**
 
 - **Deprecated `fetch` polyfill**: The old `installGlobals()` polyfill doesn't work for Single Fetch, you must either use the native Node 20 `fetch` API or call `installGlobals({ nativeFetch: true })` in your custom server to get the [undici-based polyfill][undici-polyfill]
-- **Deprecated `headers` export**: The [`headers`][headers] function is no longer used when Single Fetch is enabled, in favor of the new `response` stub passed to your `loader`/`action` functions
+- **`headers` export applied to data requests**: The [`headers`][headers] function will now apply to both document and data requests
 
 **Changes to be aware of that you may need to handle over-time:**
 
@@ -90,7 +90,7 @@ There are a handful of breaking changes introduced with Single Fetch - some of w
 
 ## Adding a New Route with Single Fetch
 
-With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format and [`response` stub][responsestub].
+With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format.
 
 <docs-info>In order to get proper type inference, you first need to add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array. You can read more about this in the [Type Inference section][type-inference-section].</docs-info>
 
@@ -100,22 +100,18 @@ With Single Fetch you can return the following data types from your loader: `Big
 // routes/blog.$slug.tsx
 import { unstable_defineLoader as defineLoader } from "@remix-run/node";
 
-export const loader = defineLoader(
-  async ({ params, response }) => {
-    const { slug } = params;
+export const loader = defineLoader(async ({ params }) => {
+  const { slug } = params;
 
-    const comments = fetchComments(slug);
-    const blogData = await fetchBlogData(slug);
+  const comments = fetchComments(slug);
+  const blogData = await fetchBlogData(slug);
 
-    response.headers.set("Cache-Control", "max-age=300");
-
-    return {
-      content: blogData.content, // <- string
-      published: blogData.date, // <- Date
-      comments, // <- Promise
-    };
-  }
-);
+  return {
+    content: blogData.content, // <- string
+    published: blogData.date, // <- Date
+    comments, // <- Promise
+  };
+});
 
 export default function BlogPost() {
   const blogData = useLoaderData<typeof loader>();
@@ -292,64 +288,18 @@ export default function Component() {
 
 ### Headers
 
-The [`headers`][headers] function is no longer used when Single Fetch is enabled.
-Instead, your `loader`/`action` functions now receive a mutable `ResponseStub` unique to that execution:
+The [`headers`][headers] function is now used on both document and data requests when Single Fetch is enabled. You should use that function to merge any headers returned from loaders executed in parallel, or to return any given `actionHeaders`.
 
-- To alter the status of your HTTP Response, set the `status` field directly:
-  - `response.status = 201`
-- To set the headers on your HTTP Response, use the standard [`Headers`][mdn-headers] APIs:
-  - `response.headers.set(name, value)`
-  - `response.headers.append(name, value)`
-  - `response.headers.delete(name)`
+### Returned Responses
 
-```ts
-export const action = defineAction(
-  async ({ request, response }) => {
-    if (!loggedIn(request)) {
-      response.status = 401;
-      response.headers.append("Set-Cookie", "foo=bar");
-      return { message: "Invalid Submission!" };
-    }
-    await addItemToDb(request);
-    return null;
-  }
-);
-```
+With Single Fetch, you no longer need to return `Response` instances and can just return your data directly via naked object returns. Therefore, the `json`/`defer` utilities should be considered deprecated when using Single Fetch. These will remain for the duration of v2 so you don't need to remove them immediately. They will likely be removed in the next major version, so we recommend remove them incrementally between now and then.
 
-You can also throw these response stubs to short circuit the flow of your loaders and actions:
+For v2, you may still continue returning normal `Response` instances and their `status`/`headers` will take effect the same way they do on document requests (merging headers via the `headers()` function).
 
-```tsx
-export const loader = defineLoader(
-  ({ request, response }) => {
-    if (shouldRedirectToHome(request)) {
-      response.status = 302;
-      response.headers.set("Location", "/");
-      throw response;
-    }
-    // ...
-  }
-);
-```
+Over time, you should start eliminating returned Responses from your loaders and actions.
 
-Each `loader`/`action` receives its own unique `response` instance so you cannot see what other `loader`/`action` functions have set (which would be subject to race conditions). The resulting HTTP Response status and headers are determined as follows:
-
-- Status Code
-  - If all status codes are unset or have values <300, the deepest status code will be used for the HTTP response
-  - If any status codes are set to a value >=300, the shallowest >=300 value will be used for the HTTP Response
-- Headers
-  - Remix tracks header operations and will replay them on a fresh `Headers` instance after all handlers have completed
-  - These are replayed in order - action first (if present) followed by loaders in top-down order
-  - `headers.set` on any child handler will overwrite values from parent handlers
-  - `headers.append` can be used to set the same header from both a parent and child handler
-  - `headers.delete` can be used to delete a value set by a parent handler, but not a value set from a child handler
-
-Because Single Fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities should be considered deprecated when using Single Fetch. These will remain for the duration of v2 so you don't need to remove them immediately. They will likely be removed in the next major version, so we recommend remove them incrementally between now and then.
-
-These utilities will remain for the rest of Remix v2, and it's likely that in a future version they'll be available via something like [`remix-utils`][remix-utils] (or they're also very easy to re-implement yourself).
-
-For v2, you may still continue returning normal `Response` instances and they'll apply status codes in the same way as the `response` stub, and will apply all headers via `headers.set` - overwriting any same-named header values from parents. If you need to append a header, you will need to switch from returning a `Response` instance to using the new `response` parameter.
-
-To ensure you can adopt these features incrementally, our goal is that you can enable Single Fetch without changing all of your `loader`/`action` functions to leverage the `response` stub. Then over time, you can incrementally convert individual routes to leverage the new `response` stub.
+- If your `loader`/`action` was returning `json`/`defer` without setting any `status`/`headers`, then you can just remove the call to `json`/`defer` and return the data directly
+- If your `loader`/`action` was returning custom `status`/`headers` via `json`/`defer`, you should switch those to use the new [`unstable_data()`][data-utility] utility.
 
 ### Client Loaders
 
@@ -433,42 +383,6 @@ The Remix v2 behavior with Single Fetch enabled is as follows:
   ```
 
 Note: It is _not_ recommended to use `defineLoader`/`defineAction` for externally-accessed resource routes that need to return specific `Response` instances. It's best to just stick with `loader`/`LoaderFunctionArgs` for these cases.
-
-#### Response Stub and Resource Routes
-
-As discussed above, the `headers` export is deprecated in favor of a new [`response` stub][responsestub] passed to your `loader` and `action` functions. This is somewhat confusing in resource routes, though, because you get to return the _actual_ `Response` - there's no real need for a "stub" concept because there's no merging results from multiple loaders into a single Response:
-
-```tsx filename=app/routes/resource.tsx
-// Using your own Response is the most straightforward approach
-export async function loader() {
-  const data = await getData();
-  return Response.json(data, {
-    status: 200,
-    headers: {
-      "X-Custom": "whatever",
-    },
-  });
-}
-```
-
-To keep things consistent, resource route `loader`/`action` functions will still receive a `response` stub and you can use it if you need to (maybe to share code amongst non-resource route handlers):
-
-```tsx filename=app/routes/resource.tsx
-// But you can still set values on the response stub
-export async function loader({
-  response,
-}: LoaderFunctionArgs) {
-  const data = await getData();
-  response?.status = 200;
-  response?.headers.set("X-Custom", "whatever");
-  return Response.json(data);
-}
-```
-
-It's best to try to avoid using the `response` stub _and also_ returning a `Response` with custom status/headers, but if you do, the following logic will apply":
-
-- The `Response` instance status will take priority over any `response` stub status
-- Headers operations on the `response` stub `headers` will be re-played on the returned `Response` headers instance
 
 ## Additional Details
 
@@ -557,16 +471,13 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [hydrateroot]: https://react.dev/reference/react-dom/client/hydrateRoot
 [starttransition]: https://react.dev/reference/react/startTransition
 [headers]: ../route/headers
-[mdn-headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 [resource-routes]: ../guides/resource-routes
 [returning-response]: ../route/loader.md#returning-response-instances
-[responsestub]: #headers
 [streaming-format]: #streaming-data-format
 [undici-polyfill]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#undici
 [undici]: https://github.com/nodejs/undici
 [csp]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
 [csp-nonce]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources
-[remix-utils]: https://github.com/sergiodxa/remix-utils
 [merging-remix-and-rr]: https://remix.run/blog/merging-remix-and-react-router
 [migration-guide]: #migrating-a-route-with-single-fetch
 [breaking-changes]: #breaking-changes
@@ -574,3 +485,4 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [start]: #enabling-single-fetch
 [type-inference-section]: #type-inference
 [compatibility-flag]: https://developers.cloudflare.com/workers/configuration/compatibility-dates
+[data-utility]: ../utils/data
