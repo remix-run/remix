@@ -123,9 +123,9 @@ export interface MultipartParserOptions {
 
 enum MultipartParserState {
   Start = 0,
-  Header = 1,
-  Body = 2,
-  AfterBody = 3,
+  AfterBoundary = 1,
+  Header = 2,
+  Body = 3,
   Done = 4,
 }
 
@@ -183,17 +183,33 @@ export class MultipartParser {
 
     while (true) {
       if (this.state === MultipartParserState.Start) {
-        if (this.buffer.length < this.boundaryLength + 2) break;
+        if (this.buffer.length < this.boundaryLength) break;
 
         let boundaryIndex = this.buffer.indexOf(this.boundaryArray, 0, this.boundarySkipTable);
         if (boundaryIndex !== 0) {
           throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
         }
 
-        this.buffer.skip(this.boundaryLength + 2); // Skip boundary + \r\n
+        this.buffer.skip(this.boundaryLength);
+
+        this.state = MultipartParserState.AfterBoundary;
+      }
+
+      if (this.state === MultipartParserState.AfterBoundary) {
+        if (this.buffer.length < 2) break;
+
+        // If the next two bytes are "--" then we're done; this is the closing boundary. Otherwise
+        // they're the \r\n after a boundary in the middle of the message and we can ignore them.
+        let twoBytes = this.buffer.read(2);
+        if (twoBytes[0] === HYPHEN && twoBytes[1] === HYPHEN) {
+          this.state = MultipartParserState.Done;
+          break;
+        }
 
         this.state = MultipartParserState.Header;
-      } else if (this.state === MultipartParserState.Header) {
+      }
+
+      if (this.state === MultipartParserState.Header) {
         if (this.buffer.length < 4) break;
 
         let headerEndIndex = this.buffer.indexOf(DOUBLE_NEWLINE, 0, DOUBLE_NEWLINE_SKIP_TABLE);
@@ -216,7 +232,9 @@ export class MultipartParser {
         parts.push(new MultipartPart(headerBytes, body));
 
         this.state = MultipartParserState.Body;
-      } else if (this.state === MultipartParserState.Body) {
+      }
+
+      if (this.state === MultipartParserState.Body) {
         if (this.buffer.length < this.boundaryLength) break;
 
         let boundaryIndex = this.buffer.indexOf(this.boundaryArray, 0, this.boundarySkipTable);
@@ -233,19 +251,7 @@ export class MultipartParser {
 
         this.buffer.skip(2 + this.boundaryLength); // Skip \r\n + boundary
 
-        this.state = MultipartParserState.AfterBody;
-      } else if (this.state === MultipartParserState.AfterBody) {
-        if (this.buffer.length < 2) break;
-
-        // If the next two bytes are "--" then we're done; this is the closing boundary. Otherwise
-        // they're the \r\n after a boundary in the middle of the message and we can ignore them.
-        let twoBytes = this.buffer.read(2);
-        if (twoBytes[0] === HYPHEN && twoBytes[1] === HYPHEN) {
-          this.state = MultipartParserState.Done;
-          break;
-        }
-
-        this.state = MultipartParserState.Header;
+        this.state = MultipartParserState.AfterBoundary;
       }
     }
 
@@ -290,14 +296,23 @@ export class MultipartPart {
     this._header = header;
   }
 
+  /**
+   * The content of this part as an `ArrayBuffer`.
+   */
   async arrayBuffer(): Promise<ArrayBuffer> {
     return (await this.bytes()).buffer;
   }
 
+  /**
+   * Whether the body of this part has been consumed.
+   */
   get bodyUsed(): boolean {
     return this._bodyUsed;
   }
 
+  /**
+   * The content of this part as a `Uint8Array`.
+   */
   async bytes(): Promise<Uint8Array> {
     if (this._bodyUsed) {
       throw new Error('Body is already consumed or is being consumed');
@@ -305,14 +320,7 @@ export class MultipartPart {
 
     this._bodyUsed = true;
 
-    let reader = this.body.getReader();
-    let chunks: Uint8Array[] = [];
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) return concatChunks(chunks);
-      chunks.push(value);
-    }
+    return bufferStream(this.body);
   }
 
   /**
@@ -351,6 +359,26 @@ export class MultipartPart {
    */
   async text(): Promise<string> {
     return textDecoder.decode(await this.bytes());
+  }
+}
+
+async function bufferStream(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
+  let reader = stream.getReader();
+
+  try {
+    let chunks: Uint8Array[] = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        return concatChunks(chunks);
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
   }
 }
 

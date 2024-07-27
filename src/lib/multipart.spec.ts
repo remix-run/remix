@@ -47,37 +47,39 @@ type PartValue =
       content: string;
     };
 
-function createMultipartBody(boundary: string, parts: { [name: string]: PartValue }): string {
+function createMultipartBody(boundary: string, parts?: { [name: string]: PartValue }): string {
   let lines = [];
 
-  for (let [name, part] of Object.entries(parts)) {
-    lines.push(`--${boundary}`);
+  if (parts) {
+    for (let [name, part] of Object.entries(parts)) {
+      lines.push(`--${boundary}`);
 
-    if (typeof part === 'string') {
-      let contentDisposition = new ContentDisposition();
-      contentDisposition.type = 'form-data';
-      contentDisposition.name = name;
-      lines.push(`Content-Disposition: ${contentDisposition}`);
-      lines.push('');
-      lines.push(part);
-    } else {
-      let contentDisposition = new ContentDisposition();
-      contentDisposition.type = 'form-data';
-      contentDisposition.name = name;
-      contentDisposition.filename = part.filename;
-      contentDisposition.filenameSplat = part.filenameSplat;
+      if (typeof part === 'string') {
+        let contentDisposition = new ContentDisposition();
+        contentDisposition.type = 'form-data';
+        contentDisposition.name = name;
+        lines.push(`Content-Disposition: ${contentDisposition}`);
+        lines.push('');
+        lines.push(part);
+      } else {
+        let contentDisposition = new ContentDisposition();
+        contentDisposition.type = 'form-data';
+        contentDisposition.name = name;
+        contentDisposition.filename = part.filename;
+        contentDisposition.filenameSplat = part.filenameSplat;
 
-      lines.push(`Content-Disposition: ${contentDisposition}`);
+        lines.push(`Content-Disposition: ${contentDisposition}`);
 
-      if (part.mediaType) {
-        let contentType = new ContentType();
-        contentType.mediaType = part.mediaType;
+        if (part.mediaType) {
+          let contentType = new ContentType();
+          contentType.mediaType = part.mediaType;
 
-        lines.push(`Content-Type: ${contentType}`);
+          lines.push(`Content-Type: ${contentType}`);
+        }
+
+        lines.push('');
+        lines.push(part.content);
       }
-
-      lines.push('');
-      lines.push(part.content);
     }
   }
 
@@ -88,7 +90,7 @@ function createMultipartBody(boundary: string, parts: { [name: string]: PartValu
 
 function createMultipartMockRequest(
   boundary: string,
-  parts: { [name: string]: PartValue }
+  parts?: { [name: string]: PartValue }
 ): Request {
   let headers = new SuperHeaders();
   headers.contentType.mediaType = 'multipart/form-data';
@@ -101,6 +103,17 @@ function createMultipartMockRequest(
 
 describe('parseMultipartFormData', async () => {
   let boundary = 'boundary123';
+
+  it('parses an empty multipart message', async () => {
+    let request = createMultipartMockRequest(boundary);
+
+    let parts = [];
+    for await (let part of parseMultipartFormData(request)) {
+      parts.push(part);
+    }
+
+    assert.equal(parts.length, 0);
+  });
 
   it('parses a simple multipart form', async () => {
     let request = createMultipartMockRequest(boundary, {
