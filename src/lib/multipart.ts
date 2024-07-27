@@ -220,7 +220,7 @@ export class MultipartParser {
           );
         }
 
-        let headerBytes = this.buffer.read(headerEndIndex);
+        let header = this.buffer.read(headerEndIndex);
         this.buffer.skip(4); // Skip \r\n\r\n
 
         let body = new ReadableStream({
@@ -229,7 +229,7 @@ export class MultipartParser {
           },
         });
 
-        parts.push(new MultipartPart(headerBytes, body));
+        parts.push(new MultipartPart(header, body));
 
         this.state = MultipartParserState.Body;
       }
