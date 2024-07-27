@@ -246,7 +246,7 @@ export class MultipartParser {
         }
 
         this.writeBody(this.buffer.read(boundaryIndex - 2)); // -2 to avoid \r\n before boundary
-        this.finishBody();
+        this.closeBody();
 
         this.buffer.skip(2 + this.boundaryLength); // Skip \r\n + boundary
 
@@ -258,26 +258,18 @@ export class MultipartParser {
   }
 
   private writeBody(chunk: Uint8Array): void {
-    if (!this.bodyController) {
-      throw new Error('Body controller is not initialized');
-    }
-
     if (this.bodyLength + chunk.length > this.maxFileSize) {
       throw new MultipartParseError(
         `File size exceeds maximum allowed size of ${this.maxFileSize} bytes`
       );
     }
 
-    this.bodyController.enqueue(chunk);
+    this.bodyController!.enqueue(chunk);
     this.bodyLength += chunk.length;
   }
 
-  private finishBody(): void {
-    if (!this.bodyController) {
-      throw new Error('Body controller is not initialized');
-    }
-
-    this.bodyController.close();
+  private closeBody(): void {
+    this.bodyController!.close();
     this.bodyController = null;
     this.bodyLength = 0;
   }
