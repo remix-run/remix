@@ -133,11 +133,10 @@ enum MultipartParserState {
  * A parser for `multipart/form-data` streams.
  */
 export class MultipartParser {
-  public buffer: RingBuffer;
-
   private boundaryArray: Uint8Array;
   private boundaryLength: number;
   private boundarySkipTable: Uint8Array;
+  private buffer: RingBuffer;
   private maxHeaderSize: number;
   private maxFileSize: number;
 
@@ -181,20 +180,20 @@ export class MultipartParser {
 
     let parts: MultipartPart[] = [];
 
-    while (true) {
-      if (this.state === MultipartParserState.Start) {
-        if (this.buffer.length < this.boundaryLength) break;
+    if (this.state === MultipartParserState.Start) {
+      if (this.buffer.length < this.boundaryLength) return parts;
 
-        let boundaryIndex = this.buffer.indexOf(this.boundaryArray, 0, this.boundarySkipTable);
-        if (boundaryIndex !== 0) {
-          throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
-        }
-
-        this.buffer.skip(this.boundaryLength);
-
-        this.state = MultipartParserState.AfterBoundary;
+      let boundaryIndex = this.buffer.indexOf(this.boundaryArray, 0, this.boundarySkipTable);
+      if (boundaryIndex !== 0) {
+        throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
       }
 
+      this.buffer.skip(this.boundaryLength);
+
+      this.state = MultipartParserState.AfterBoundary;
+    }
+
+    while (true) {
       if (this.state === MultipartParserState.AfterBoundary) {
         if (this.buffer.length < 2) break;
 
