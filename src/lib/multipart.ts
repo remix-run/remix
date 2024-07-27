@@ -76,7 +76,7 @@ export async function* parseMultipartStream(
   stream: ReadableStream<Uint8Array>,
   boundary: string,
   options: MultipartParserOptions = {}
-) {
+): AsyncGenerator<MultipartPart> {
   let parser = new MultipartParser(boundary, options);
   let reader = stream.getReader();
 
