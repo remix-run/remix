@@ -19,11 +19,7 @@ export async function parse(message: MultipartMessage): Promise<number> {
 
   let start = performance.now();
 
-  let options = {
-    maxBufferSize: Math.pow(2, 26),
-    maxFileSize: Infinity,
-  };
-  for await (let _ of parseMultipartFormData(request, options)) {
+  for await (let _ of parseMultipartFormData(request, { maxFileSize: Infinity })) {
     // Do nothing
   }
 
