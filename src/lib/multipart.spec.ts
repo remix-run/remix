@@ -262,7 +262,7 @@ describe('parseMultipartFormData', async () => {
         `--${boundary}`,
         'Content-Disposition: form-data; name="field1"',
         '',
-        'a'.repeat(1024 * 1024 * 11), // 11MB content
+        'a'.repeat(11 * 1024 * 1024), // 11 MB file
         `--${boundary}--`,
       ].join(CRLF),
     });
