@@ -82,15 +82,15 @@ export class RingBuffer implements RelativeIndexable<number> {
       throw new Error('Cannot read past the end of the buffer');
     }
 
-    let result: Uint8Array;
     if (this.start < this.end) {
-      result = this.buffer.subarray(this.start, this.start + size);
-    } else {
-      result = new Uint8Array(size);
-      let firstPart = Math.min(size, this.capacity - this.start);
-      result.set(this.buffer.subarray(this.start, this.start + firstPart), 0);
-      result.set(this.buffer.subarray(0, size - firstPart), firstPart);
+      return this.buffer.slice(this.start, this.start + size);
     }
+
+    let result = new Uint8Array(size);
+
+    let firstPart = Math.min(size, this.capacity - this.start);
+    result.set(this.buffer.subarray(this.start, this.start + firstPart), 0);
+    result.set(this.buffer.subarray(0, size - firstPart), firstPart);
 
     return result;
   }
@@ -146,7 +146,7 @@ export class RingBuffer implements RelativeIndexable<number> {
     skipTable = RingBuffer.computeSkipTable(needle)
   ): number {
     if (needle.length === 0) return offset;
-    if (needle.length > this._length - offset) return -1;
+    if (needle.length > this._length) return -1;
 
     let needleArray = typeof needle === 'string' ? new TextEncoder().encode(needle) : needle;
     let needleLength = needleArray.length;
