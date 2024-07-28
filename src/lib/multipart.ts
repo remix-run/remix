@@ -254,6 +254,7 @@ export class MultipartParser {
           // Write as much of the buffer as we can to the current body stream while still
           // keeping enough to check if the last few bytes are part of the boundary.
           this.writeBody(this.read(this.length - this.boundaryLength + 1));
+          this.save();
           break;
         }
 
@@ -303,12 +304,13 @@ export class MultipartParser {
   }
 
   private save(): void {
-    this.buffer =
-      this.buffer.length === 0
-        ? this.chunk
-        : this.chunk.length === 0
-        ? this.buffer
-        : concatChunks([this.buffer, this.chunk]);
+    if (this.chunk.length > 0) {
+      if (this.buffer.length > 0) {
+        this.buffer = concatChunks([this.buffer, this.chunk]);
+      } else {
+        this.buffer = this.chunk;
+      }
+    }
   }
 
   private writeBody(chunks: Uint8Array[]): void {
