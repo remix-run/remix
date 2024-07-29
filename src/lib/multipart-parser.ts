@@ -338,7 +338,7 @@ function find(
       return k + 1;
     }
 
-    i += skipTable[byteAt(i)] || pattern.length;
+    i += skipTable[byteAt(i)];
   }
 
   return -1;
