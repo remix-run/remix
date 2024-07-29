@@ -1,5 +1,7 @@
 import { SuperHeaders } from 'fetch-super-headers';
 
+import { concatChunks, decodeUtf8Stream, stringToBinary } from './utils.js';
+
 /**
  * Returns true if the request is `multipart/form-data`.
  */
@@ -409,13 +411,7 @@ export class MultipartPart {
    * The content of this part as a `Uint8Array`.
    */
   async bytes(): Promise<Uint8Array> {
-    if (this._bodyUsed) {
-      throw new Error('Body is already consumed or is being consumed');
-    }
-
-    this._bodyUsed = true;
-
-    return bufferStream(this.body);
+    return stringToBinary(await this.text());
   }
 
   /**
@@ -424,6 +420,10 @@ export class MultipartPart {
   get headers(): SuperHeaders {
     if (!this._headers) this._headers = new SuperHeaders(textDecoder.decode(this._header));
     return this._headers;
+  }
+
+  get isFile(): boolean {
+    return this.filename !== null;
   }
 
   /**
@@ -452,42 +452,13 @@ export class MultipartPart {
    *
    * Note: Do not use this for binary data, use `await part.bytes()` or stream `part.body` directly instead.
    */
-  async text(): Promise<string> {
-    return textDecoder.decode(await this.bytes());
-  }
-}
-
-async function bufferStream(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
-  let reader = stream.getReader();
-
-  try {
-    let chunks: Uint8Array[] = [];
-
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) {
-        return concatChunks(chunks);
-      }
-
-      chunks.push(value);
+  text(): Promise<string> {
+    if (this._bodyUsed) {
+      throw new Error('Body is already consumed or is being consumed');
     }
-  } finally {
-    reader.releaseLock();
+
+    this._bodyUsed = true;
+
+    return decodeUtf8Stream(this.body);
   }
-}
-
-function concatChunks(chunks: Uint8Array[]): Uint8Array {
-  if (chunks.length === 1) return chunks[0];
-
-  let length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-  let result = new Uint8Array(length);
-  let offset = 0;
-
-  for (let i = 0; i < chunks.length; ++i) {
-    result.set(chunks[i], offset);
-    offset += chunks[i].length;
-  }
-
-  return result;
 }

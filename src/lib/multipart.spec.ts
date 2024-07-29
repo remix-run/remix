@@ -3,22 +3,20 @@ import { describe, it } from 'node:test';
 
 import { ContentDisposition, ContentType, SuperHeaders } from 'fetch-super-headers';
 
+import { readFixture } from '../test-utils.js';
 import { MultipartParseError, parseMultipartFormData } from './multipart.js';
+import { binaryToString } from './utils.js';
+
+const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
 
 const CRLF = '\r\n';
 
-function* generateChunks(content: string, chunkSize = 16 * 1024): Generator<Uint8Array> {
+function createReadableStream(content: string, chunkSize = 16 * 1024): ReadableStream<Uint8Array> {
   let encoder = new TextEncoder();
-  for (let i = 0; i < content.length; i += chunkSize) {
-    yield encoder.encode(content.slice(i, i + chunkSize));
-  }
-}
-
-function createReadableStream(content: string, chunkSize?: number): ReadableStream<Uint8Array> {
   return new ReadableStream({
     start(controller) {
-      for (let chunk of generateChunks(content, chunkSize)) {
-        controller.enqueue(chunk);
+      for (let i = 0; i < content.length; i += chunkSize) {
+        controller.enqueue(encoder.encode(content.slice(i, i + chunkSize)));
       }
       controller.close();
     },
@@ -44,7 +42,7 @@ type PartValue =
       filename?: string;
       filenameSplat?: string;
       mediaType?: string;
-      content: string;
+      content: string | Uint8Array;
     };
 
 function createMultipartBody(boundary: string, parts?: { [name: string]: PartValue }): string {
@@ -78,7 +76,7 @@ function createMultipartBody(boundary: string, parts?: { [name: string]: PartVal
         }
 
         lines.push('');
-        lines.push(part.content);
+        lines.push(typeof part.content === 'string' ? part.content : binaryToString(part.content));
       }
     }
   }
@@ -211,6 +209,27 @@ describe('parseMultipartFormData', async () => {
     assert.equal(await parts[2].text(), 'File content');
   });
 
+  it('parses large file uploads correctly', async () => {
+    let request = createMultipartMockRequest(boundary, {
+      file1: {
+        filename: 'tesla.jpg',
+        mediaType: 'image/jpeg',
+        content: TeslaRoadster,
+      },
+    });
+
+    let parts = [];
+    for await (let part of parseMultipartFormData(request)) {
+      parts.push(part);
+    }
+
+    assert.equal(parts.length, 1);
+    assert.equal(parts[0].name, 'file1');
+    assert.equal(parts[0].filename, 'tesla.jpg');
+    assert.equal(parts[0].mediaType, 'image/jpeg');
+    assert.deepEqual(await parts[0].bytes(), TeslaRoadster);
+  });
+
   it('throws when Content-Type is not multipart/form-data', async () => {
     let request = createMockRequest({
       headers: { 'Content-Type': 'text/plain' },
@@ -239,7 +258,7 @@ describe('parseMultipartFormData', async () => {
       body: [
         `--${boundary}`,
         'Content-Disposition: form-data; name="field1"',
-        'X-Large-Header: ' + 'a'.repeat(8 * 1024), // 8 KB header
+        'X-Large-Header: ' + 'X'.repeat(6 * 1024), // 6 KB header
         '',
         'value1',
         `--${boundary}--`,
@@ -262,7 +281,7 @@ describe('parseMultipartFormData', async () => {
         `--${boundary}`,
         'Content-Disposition: form-data; name="field1"',
         '',
-        'a'.repeat(11 * 1024 * 1024), // 11 MB file
+        'X'.repeat(11 * 1024 * 1024), // 11 MB file
         `--${boundary}--`,
       ].join(CRLF),
     });
