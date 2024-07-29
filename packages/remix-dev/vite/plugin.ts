@@ -1407,6 +1407,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           let clientViteManifest = await loadViteManifest(clientBuildDirectory);
 
           let clientFilePaths = getViteManifestFilePaths(clientViteManifest);
+          let clientAssetPaths = getViteManifestAssetPaths(clientViteManifest);
           let ssrAssetPaths = getViteManifestAssetPaths(ssrViteManifest);
 
           // We only move assets that aren't in the client build, otherwise we
@@ -1418,7 +1419,10 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           let movedAssetPaths: string[] = [];
           for (let ssrAssetPath of ssrAssetPaths) {
             let src = path.join(serverBuildDirectory, ssrAssetPath);
-            if (!clientFilePaths.has(ssrAssetPath)) {
+            if (
+              !clientFilePaths.has(ssrAssetPath) &&
+              !clientAssetPaths.has(ssrAssetPath)
+            ) {
               let dest = path.join(clientBuildDirectory, ssrAssetPath);
               await fse.move(src, dest);
               movedAssetPaths.push(dest);
