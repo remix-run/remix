@@ -1,4 +1,4 @@
-import { parseMultipartFormData } from '../../dist/index.js';
+import { parseMultipartRequest } from '../../dist/index.js';
 
 import { MultipartMessage } from '../messages.js';
 
@@ -19,7 +19,7 @@ export async function parse(message: MultipartMessage): Promise<number> {
 
   let start = performance.now();
 
-  for await (let _ of parseMultipartFormData(request, { maxFileSize: Infinity })) {
+  for await (let _ of parseMultipartRequest(request, { maxFileSize: Infinity })) {
     // Do nothing
   }
 

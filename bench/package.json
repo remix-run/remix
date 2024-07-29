@@ -1,5 +1,5 @@
 {
-  "name": "fetch-multipart-parser-bench",
+  "name": "multipart-parser-bench",
   "private": true,
   "type": "module",
   "dependencies": {

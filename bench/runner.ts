@@ -3,7 +3,7 @@ import * as os from 'node:os';
 import * as messages from './messages.js';
 import * as busboy from './parsers/busboy.js';
 import * as fastifyBusboy from './parsers/fastify-busboy.js';
-import * as fetchMultipartParser from './parsers/fetch-multipart-parser.js';
+import * as multipartParser from './parsers/multipart-parser.js';
 
 const benchmarks = [
   { name: '1 small file', message: messages.oneSmallFile },
@@ -50,8 +50,8 @@ interface BenchmarkResults {
 async function runBenchmarks(parserName?: string): Promise<BenchmarkResults> {
   let results: BenchmarkResults = {};
 
-  if (parserName === 'fetch-multipart-parser' || parserName === undefined) {
-    results['fetch-multipart-parser'] = await runParserBenchmarks(fetchMultipartParser);
+  if (parserName === 'multipart-parser' || parserName === undefined) {
+    results['multipart-parser'] = await runParserBenchmarks(multipartParser);
   }
   if (parserName === 'busboy' || parserName === undefined) {
     results.busboy = await runParserBenchmarks(busboy);

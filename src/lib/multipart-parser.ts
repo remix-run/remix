@@ -3,63 +3,39 @@ import { SuperHeaders } from 'fetch-super-headers';
 import { concatChunks, decodeUtf8Stream, stringToBinary } from './utils.js';
 
 /**
- * Returns true if the request is `multipart/form-data`.
+ * Extracts the boundary string from a `multipart/*` content type.
  */
-export function isMultipartFormData(request: Request): boolean {
-  let contentType = request.headers.get('Content-Type');
-  return contentType != null && contentType.startsWith('multipart/form-data');
+export function getMultipartBoundary(contentType: string): string | null {
+  let match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
+  return match ? match[1] || match[2] : null;
 }
 
 /**
- * Parse a `multipart/form-data` request body and yield each part as a `MultipartPart` object.
- *
- * Throw `MultipartParseError` if the parse fails for some reason.
- *
- * Example:
- *
- * ```typescript
- * import { MultipartParseError, parseMultipartFormData } from 'fetch-multipart-parser';
- *
- * function handleMultipartRequest(request: Request): void {
- *   try {
- *     for await (let part of parseMultipartFormData(request)) {
- *       console.log(part.name);
- *       console.log(part.filename);
- *       console.log(part.mediaType);
- *
- *       if (/^text\//.test(part.mediaType)) {
- *         console.log(new TextDecoder().decode(part.content));
- *       } else {
- *         // part.content is binary data, save it to a file
- *       }
- *     }
- *   } catch (error) {
- *     if (error instanceof MultipartParseError) {
- *       console.error('Failed to parse multipart/form-data:', error.message);
- *     } else {
- *       console.error('An unexpected error occurred:', error);
- *     }
- *   }
- * }
- * ```
+ * Returns true if the given request contains multipart data.
  */
-export async function* parseMultipartFormData(
+export function isMultipartRequest(request: Request): boolean {
+  let contentType = request.headers.get('Content-Type');
+  return contentType != null && /^multipart\//i.test(contentType);
+}
+
+/**
+ * Parse a multipart `Request` and yield each part as a `MultipartPart` object.
+ */
+export async function* parseMultipartRequest(
   request: Request,
-  options: MultipartParserOptions = {}
+  options?: MultipartParserOptions
 ): AsyncGenerator<MultipartPart> {
-  if (!isMultipartFormData(request)) {
-    throw new MultipartParseError('Request is not multipart/form-data');
+  if (!isMultipartRequest(request)) {
+    throw new MultipartParseError('Request is not a multipart request');
   }
   if (!request.body) {
     throw new MultipartParseError('Request body is empty');
   }
 
-  let boundaryMatch = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(request.headers.get('Content-Type')!);
-  if (!boundaryMatch) {
+  let boundary = getMultipartBoundary(request.headers.get('Content-Type')!);
+  if (!boundary) {
     throw new MultipartParseError('Invalid Content-Type header: missing boundary');
   }
-
-  let boundary = boundaryMatch[1] || boundaryMatch[2]; // handle quoted and unquoted boundaries
 
   yield* parseMultipartStream(request.body, boundary, options);
 }
@@ -67,15 +43,13 @@ export async function* parseMultipartFormData(
 /**
  * Parse a multipart stream and yield each part as a `MultipartPart` object.
  *
- * Throw `MultipartParseError` if the parse fails for some reason.
- *
- * Note: This is a low-level API that requires manually handling the stream and boundary. For most common use cases,
- * consider using `parseMultipartFormData(request)` instead.
+ * Note: This is a low-level API that requires manual handling of the stream and boundary. For most
+ * common cases, consider using `parseMultipartRequest(request)` instead.
  */
 export async function* parseMultipartStream(
   stream: ReadableStream<Uint8Array>,
   boundary: string,
-  options: MultipartParserOptions = {}
+  options?: MultipartParserOptions
 ): AsyncGenerator<MultipartPart> {
   let parser = new MultipartParser(boundary, options);
   let reader = stream.getReader();
@@ -422,6 +396,9 @@ export class MultipartPart {
     return this._headers;
   }
 
+  /**
+   * True if this part originated from a file upload.
+   */
   get isFile(): boolean {
     return this.filename !== null;
   }
@@ -453,12 +430,8 @@ export class MultipartPart {
    * Note: Do not use this for binary data, use `await part.bytes()` or stream `part.body` directly instead.
    */
   text(): Promise<string> {
-    if (this._bodyUsed) {
-      throw new Error('Body is already consumed or is being consumed');
-    }
-
+    if (this._bodyUsed) throw new Error('Body is already consumed or is being consumed');
     this._bodyUsed = true;
-
     return decodeUtf8Stream(this.body);
   }
 }

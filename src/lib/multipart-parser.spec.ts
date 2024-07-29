@@ -3,8 +3,13 @@ import { describe, it } from 'node:test';
 
 import { ContentDisposition, ContentType, SuperHeaders } from 'fetch-super-headers';
 
-import { readFixture } from '../test-utils.js';
-import { MultipartParseError, parseMultipartFormData } from './multipart.js';
+import { readFixture } from '../fixtures/utils.js';
+import {
+  isMultipartRequest,
+  parseMultipartRequest,
+  MultipartParseError,
+  getMultipartBoundary,
+} from './multipart-parser.js';
 import { binaryToString } from './utils.js';
 
 const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
@@ -99,14 +104,54 @@ function createMultipartMockRequest(
   return createMockRequest({ headers, body });
 }
 
-describe('parseMultipartFormData', async () => {
+describe('getMultipartBoundary', async () => {
+  it('returns the boundary from the Content-Type header', async () => {
+    assert.equal(getMultipartBoundary('multipart/form-data; boundary=boundary123'), 'boundary123');
+  });
+
+  it('returns null when boundary is missing', async () => {
+    assert.equal(getMultipartBoundary('multipart/form-data'), null);
+  });
+
+  it('returns null when Content-Type header is not multipart', async () => {
+    assert.equal(getMultipartBoundary('text/plain'), null);
+  });
+});
+
+describe('isMultipartRequest', async () => {
+  it('returns true for multipart/form-data requests', async () => {
+    let request = createMockRequest({
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    assert.ok(isMultipartRequest(request));
+  });
+
+  it('returns true for multipart/mixed requests', async () => {
+    let request = createMockRequest({
+      headers: { 'Content-Type': 'multipart/mixed' },
+    });
+
+    assert.ok(isMultipartRequest(request));
+  });
+
+  it('returns false for other content types', async () => {
+    let request = createMockRequest({
+      headers: { 'Content-Type': 'text/plain' },
+    });
+
+    assert.ok(!isMultipartRequest(request));
+  });
+});
+
+describe('parseMultipartRequest', async () => {
   let boundary = 'boundary123';
 
   it('parses an empty multipart message', async () => {
     let request = createMultipartMockRequest(boundary);
 
     let parts = [];
-    for await (let part of parseMultipartFormData(request)) {
+    for await (let part of parseMultipartRequest(request)) {
       parts.push(part);
     }
 
@@ -119,7 +164,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     let parts = [];
-    for await (let part of parseMultipartFormData(request)) {
+    for await (let part of parseMultipartRequest(request)) {
       parts.push(part);
     }
 
@@ -135,7 +180,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     let parts = [];
-    for await (let part of parseMultipartFormData(request)) {
+    for await (let part of parseMultipartRequest(request)) {
       parts.push(part);
     }
 
@@ -152,7 +197,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     let parts = [];
-    for await (let part of parseMultipartFormData(request)) {
+    for await (let part of parseMultipartRequest(request)) {
       parts.push(part);
     }
 
@@ -171,7 +216,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     let parts = [];
-    for await (let part of parseMultipartFormData(request)) {
+    for await (let part of parseMultipartRequest(request)) {
       parts.push(part);
     }
 
@@ -194,7 +239,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     let parts = [];
-    for await (let part of parseMultipartFormData(request)) {
+    for await (let part of parseMultipartRequest(request)) {
       parts.push(part);
     }
 
@@ -219,7 +264,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     let parts = [];
-    for await (let part of parseMultipartFormData(request)) {
+    for await (let part of parseMultipartRequest(request)) {
       parts.push(part);
     }
 
@@ -236,7 +281,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     await assert.rejects(async () => {
-      await parseMultipartFormData(request).next();
+      await parseMultipartRequest(request).next();
     }, MultipartParseError);
   });
 
@@ -246,7 +291,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     await assert.rejects(async () => {
-      await parseMultipartFormData(request).next();
+      await parseMultipartRequest(request).next();
     }, MultipartParseError);
   });
 
@@ -266,7 +311,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     await assert.rejects(async () => {
-      for await (let _ of parseMultipartFormData(request, { maxHeaderSize: 4 * 1024 })) {
+      for await (let _ of parseMultipartRequest(request, { maxHeaderSize: 4 * 1024 })) {
         // Consume all parts
       }
     }, MultipartParseError);
@@ -287,7 +332,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     await assert.rejects(async () => {
-      for await (let _ of parseMultipartFormData(request, { maxFileSize: 10 * 1024 * 1024 })) {
+      for await (let _ of parseMultipartRequest(request, { maxFileSize: 10 * 1024 * 1024 })) {
         // Consume all parts
       }
     }, MultipartParseError);
@@ -302,7 +347,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     let parts = [];
-    for await (let part of parseMultipartFormData(request)) {
+    for await (let part of parseMultipartRequest(request)) {
       parts.push(part);
     }
 
@@ -326,7 +371,7 @@ describe('parseMultipartFormData', async () => {
     });
 
     await assert.rejects(async () => {
-      for await (let _ of parseMultipartFormData(request)) {
+      for await (let _ of parseMultipartRequest(request)) {
         // Consume all parts
       }
     }, MultipartParseError);

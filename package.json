@@ -1,7 +1,7 @@
 {
-  "name": "fetch-multipart-parser",
-  "version": "0.4.0",
-  "description": "A multipart parser for fetch streams",
+  "name": "@mjackson/multipart-parser",
+  "version": "0.1.0",
+  "description": "A fast, efficient parser for multpart streams",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "files": [
@@ -26,5 +26,11 @@
     "prepare": "npm run build",
     "prepublishOnly": "npm run test"
   },
-  "packageManager": "pnpm@9.4.0"
+  "packageManager": "pnpm@9.4.0",
+  "keywords": [
+    "multipart",
+    "parser",
+    "stream",
+    "http"
+  ]
 }

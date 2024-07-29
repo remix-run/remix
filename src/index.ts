@@ -1,9 +1,10 @@
 export {
-  isMultipartFormData,
-  parseMultipartFormData,
+  getMultipartBoundary,
+  isMultipartRequest,
+  parseMultipartRequest,
   parseMultipartStream,
   MultipartParseError,
   MultipartParserOptions,
   MultipartParser,
   MultipartPart,
-} from './lib/multipart.js';
+} from './lib/multipart-parser.js';
