@@ -45,7 +45,7 @@ async function handleMultipartRequest(request: Request): void {
 
 ## Benchmark
 
-`multipart-parser` is designed to be as efficient as possible, only operating on streams of data and never buffering in common usage. This design yields exceptional performance when handling multipart payloads of any size. For large payloads, `multipart-parser` is as fast or faster than `busboy`.
+`multipart-parser` is designed to be as efficient as possible, only operating on streams of data and never buffering in common usage. This design yields exceptional performance when handling multipart payloads of any size. In most benchmarks, `multipart-parser` is as fast or faster than `busboy`.
 
 To run the benchmarks yourself:
 
@@ -59,12 +59,12 @@ The results of running the benchmarks on my laptop:
 Platform: Darwin (23.5.0)
 CPU: Apple M2 Pro
 Node.js v20.15.1
-Date: 7/29/2024, 9:28:36 AM
+Date: 7/29/2024, 2:15:40 PM
 ┌──────────────────┬──────────────────┬──────────────────┬──────────────────┬───────────────────┐
 │ (index)          │ 1 small file     │ 1 large file     │ 100 small files  │ 5 large files     │
 ├──────────────────┼──────────────────┼──────────────────┼──────────────────┼───────────────────┤
-│ multipart-parser │ '0.02 ms ± 0.13' │ '1.86 ms ± 0.53' │ '0.37 ms ± 0.13' │ '19.49 ms ± 1.89' │
-│ busboy           │ '0.03 ms ± 0.09' │ '3.97 ms ± 0.41' │ '0.22 ms ± 0.02' │ '45.94 ms ± 2.37' │
-│ @fastify/busboy  │ '0.03 ms ± 0.07' │ '1.90 ms ± 0.16' │ '0.38 ms ± 0.04' │ '26.73 ms ± 2.48' │
+│ multipart-parser │ '0.02 ms ± 0.15' │ '1.61 ms ± 0.07' │ '0.36 ms ± 0.13' │ '17.22 ms ± 1.03' │
+│ busboy           │ '0.03 ms ± 0.09' │ '4.09 ms ± 0.21' │ '0.22 ms ± 0.03' │ '45.37 ms ± 2.76' │
+│ @fastify/busboy  │ '0.03 ms ± 0.07' │ '2.33 ms ± 0.44' │ '0.40 ms ± 0.05' │ '27.02 ms ± 2.39' │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
 ```
