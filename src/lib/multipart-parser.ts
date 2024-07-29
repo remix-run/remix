@@ -1,6 +1,6 @@
 import { SuperHeaders } from 'fetch-super-headers';
 
-import { concatChunks, decodeUtf8Stream, stringToBinary } from './utils.js';
+import { concatChunks, readStream, stringToBinary } from './utils.js';
 
 /**
  * Extracts the boundary string from a `multipart/*` content type.
@@ -52,26 +52,15 @@ export async function* parseMultipartStream(
   options?: MultipartParserOptions
 ): AsyncGenerator<MultipartPart> {
   let parser = new MultipartParser(boundary, options);
-  let reader = stream.getReader();
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) {
-        if (!parser.done) {
-          throw new MultipartParseError('Unexpected end of stream');
-        }
-
-        break;
-      }
-
-      for (let part of parser.push(value)) {
-        yield part;
-      }
+  for await (let chunk of readStream(stream)) {
+    for (let part of parser.push(chunk)) {
+      yield part;
     }
-  } finally {
-    reader.releaseLock();
+  }
+
+  if (!parser.done) {
+    throw new MultipartParseError('Unexpected end of stream');
   }
 }
 
@@ -392,7 +381,10 @@ export class MultipartPart {
    * The headers associated with this part.
    */
   get headers(): SuperHeaders {
-    if (!this._headers) this._headers = new SuperHeaders(textDecoder.decode(this._header));
+    if (!this._headers) {
+      this._headers = new SuperHeaders(textDecoder.decode(this._header));
+    }
+
     return this._headers;
   }
 
@@ -429,9 +421,22 @@ export class MultipartPart {
    *
    * Note: Do not use this for binary data, use `await part.bytes()` or stream `part.body` directly instead.
    */
-  text(): Promise<string> {
-    if (this._bodyUsed) throw new Error('Body is already consumed or is being consumed');
+  async text(): Promise<string> {
+    if (this._bodyUsed) {
+      throw new Error('Body is already consumed or is being consumed');
+    }
+
     this._bodyUsed = true;
-    return decodeUtf8Stream(this.body);
+
+    let decoder = new TextDecoder('utf-8');
+
+    let string = '';
+    for await (let chunk of readStream(this.body)) {
+      string += decoder.decode(chunk, { stream: true });
+    }
+
+    string += decoder.decode();
+
+    return string;
   }
 }

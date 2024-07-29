@@ -13,22 +13,14 @@ export function concatChunks(chunks: Uint8Array[]): Uint8Array {
   return result;
 }
 
-export async function decodeUtf8Stream(stream: ReadableStream<Uint8Array>): Promise<string> {
-  let decoder = new TextDecoder('utf-8');
+export async function* readStream<T>(stream: ReadableStream<T>): AsyncGenerator<T> {
   let reader = stream.getReader();
 
   try {
-    let string = '';
-
     while (true) {
       const { done, value } = await reader.read();
-
-      if (done) {
-        string += decoder.decode();
-        return string;
-      }
-
-      string += decoder.decode(value, { stream: true });
+      if (done) break;
+      yield value;
     }
   } finally {
     reader.releaseLock();
