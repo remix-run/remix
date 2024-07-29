@@ -37,14 +37,9 @@ import {
 import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
+import { combineURLs } from "./combine-urls";
 import { removeExports } from "./remove-exports";
 import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
-
-function combineURLs(baseURL: string, relativeURL: string) {
-  return relativeURL
-      ? baseURL.replace(/\/+$/, '') + '/' + relativeURL.replace(/^\/+/, '')
-      : baseURL;
-}
 
 export async function resolveViteConfig({
   configFile,
@@ -1885,7 +1880,7 @@ async function getRouteMetadata(
           ctx.rootDirectory,
           resolveRelativeRouteFilePath(route, ctx.remixConfig)
         )
-      ),
+    ),
     module: combineURLs(
       ctx.remixConfig.publicPath,
       `${resolveFileUrl(
