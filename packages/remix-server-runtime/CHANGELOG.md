@@ -1,5 +1,15 @@
 # `@remix-run/server-runtime`
 
+## 2.10.3
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.10.3.
+
+## 2.10.2
+
+### Patch Changes
+
+- Fix bug with `immutable` headers on raw native `fetch` responses returned from loaders ([#9693](https://github.com/remix-run/remix/pull/9693))
+
 ## 2.10.1
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.10.1.

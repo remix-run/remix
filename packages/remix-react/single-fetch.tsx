@@ -7,7 +7,9 @@ import type {
 } from "@remix-run/router";
 import {
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
+  isRouteErrorResponse,
   redirect,
+  unstable_data,
 } from "@remix-run/router";
 import type {
   UNSAFE_SingleFetchResult as SingleFetchResult,
@@ -23,7 +25,7 @@ import type {
 } from "react-router-dom";
 import { decode } from "turbo-stream";
 
-import { createRequestInit } from "./data";
+import { createRequestInit, isResponse } from "./data";
 import type { AssetsManifest, EntryContext } from "./entry";
 import { escapeHtml } from "./markup";
 import type { RouteModules } from "./routeModules";
@@ -163,16 +165,18 @@ function singleFetchActionStrategy(
           actionStatus = status;
           return unwrapSingleFetchResult(data as SingleFetchResult, m.route.id);
         });
-        return {
-          type: "data",
-          result,
-          status: actionStatus,
-        };
+        return { type: "data", result };
       });
+
+      if (isResponse(result.result) || isRouteErrorResponse(result.result)) {
+        return result;
+      }
+
+      // For non-responses, proxy along the statusCode via unstable_data()
+      // (most notably for skipping action error revalidation)
       return {
-        ...result,
-        // Proxy along the action HTTP response status for thrown errors
-        status: actionStatus,
+        type: result.type,
+        result: unstable_data(result.result, actionStatus),
       };
     })
   );
@@ -192,12 +196,13 @@ function singleFetchLoaderStrategy(
       m.resolve(async (handler): Promise<HandlerResult> => {
         let result: unknown;
         let url = stripIndexParam(singleFetchUrl(request.url));
+        let init = await createRequestInit(request);
 
         // When a route has a client loader, it calls it's singular server loader
         if (manifest.routes[m.route.id].hasClientLoader) {
           result = await handler(async () => {
             url.searchParams.set("_routes", m.route.id);
-            let { data } = await fetchAndDecode(url);
+            let { data } = await fetchAndDecode(url, init);
             return unwrapSingleFetchResults(
               data as SingleFetchResults,
               m.route.id
@@ -214,7 +219,7 @@ function singleFetchLoaderStrategy(
                 matches.filter((m) => m.shouldLoad).map((m) => m.route),
                 url
               );
-              singleFetchPromise = fetchAndDecode(url).then(
+              singleFetchPromise = fetchAndDecode(url, init).then(
                 ({ data }) => data as SingleFetchResults
               );
             }
@@ -303,11 +308,17 @@ export function singleFetchUrl(reqUrl: URL | string) {
     typeof reqUrl === "string"
       ? new URL(reqUrl, window.location.origin)
       : reqUrl;
-  url.pathname = `${url.pathname === "/" ? "_root" : url.pathname}.data`;
+
+  if (url.pathname === "/") {
+    url.pathname = "_root.data";
+  } else {
+    url.pathname = `${url.pathname.replace(/\/$/, "")}.data`;
+  }
+
   return url;
 }
 
-async function fetchAndDecode(url: URL, init?: RequestInit) {
+async function fetchAndDecode(url: URL, init: RequestInit) {
   let res = await fetch(url, init);
   // Don't do a hard check against the header here.  We'll get `text/x-turbo`
   // when we have a running server, but if folks want to prerender `.data` files
@@ -397,6 +408,9 @@ function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
     }
     if (result.reload) {
       headers["X-Remix-Reload-Document"] = "yes";
+    }
+    if (result.replace) {
+      headers["X-Remix-Replace"] = "yes";
     }
     return redirect(result.redirect, { status: result.status, headers });
   } else if ("data" in result) {

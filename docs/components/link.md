@@ -40,7 +40,7 @@ You can also pass a `Partial<Path>` value:
 
 ### `discover`
 
-Defines the route discovery behavior when using [`future.unstable_fogOfWar`][fog-of-war].
+Defines the route discovery behavior when using [`future.unstable_lazyRouteDiscovery`][lazy-route-discovery].
 
 ```tsx
 <>
@@ -236,4 +236,4 @@ Please note that this API is marked unstable and may be subject to breaking chan
 [document-start-view-transition]: https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition
 [use-view-transition-state]: ../hooks/use-view-transition-state
 [relativesplatpath]: ../hooks/use-resolved-path#splat-paths
-[fog-of-war]: ../guides/fog-of-war
+[lazy-route-discovery]: ../guides/lazy-route-discovery

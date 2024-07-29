@@ -1,5 +1,20 @@
 # `@remix-run/architect`
 
+## 2.10.3
+
+### Patch Changes
+
+- Manually joining headers with semi-colons to avoid differences in Remix and `node`/`undici` `Headers` implementation ([#9664](https://github.com/remix-run/remix/pull/9664))
+- Updated dependencies:
+  - `@remix-run/node@2.10.3`
+
+## 2.10.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.10.2`
+
 ## 2.10.1
 
 ### Patch Changes

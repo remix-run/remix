@@ -1,12 +1,12 @@
 ---
-title: Fog of War
+title: Lazy Route Discovery
 ---
 
-# Fog Of War
+# Lazy Route Discovery (a.k.a. "Fog of War")
 
 <docs-warning>This is an unstable API and will continue to change, do not adopt in production</docs-warning>
 
-Remix introduced support for "Fog of War" ([RFC][rfc]) behind the `future.unstable_fogOfWar` [Future Flag][future-flags] in [`v2.10.0`][2.10.0]. This allows you to opt-into this behavior which will become the default in the next major version of Remix - a.k.a. React Router v7 ([1][rr-v7], [2][rr-v7-2]).
+Remix introduced support for Lazy Route Discovery (a.k.a. "Fog of War") ([RFC][rfc]) behind the `future.unstable_lazyRouteDiscovery` [Future Flag][future-flags] in [`v2.10.0`][2.10.0]. This allows you to opt-into this behavior which will become the default in the next major version of Remix - a.k.a. React Router v7 ([1][rr-v7], [2][rr-v7-2]). For more information on this feature, please check out the [blog post][blog-post].
 
 ## Current Behavior
 
@@ -15,6 +15,8 @@ Currently, Remix loads the complete route manifest in a JS file on initial load 
 ## New Behavior
 
 When you enable "Fog of War", Remix will no longer send a full route manifest on initial load. Instead, your SSR render will only include the SSR routes in the initial manifest and additional routes will be loaded as the user navigates around the application. Over time, the manifest grows to include the portions of the app the user navigated to.
+
+Please note that this is **not** a way to "hide" any of your application URLs from end-users. It doesn't ship them all in the manifest initially, but the manifest endpoint used to fetch new routes as the user navigates around will still have the ability to expose all of your defined application routes - albeit it's just a bit more obscured.
 
 ### Eager Route Discovery
 
@@ -59,3 +61,4 @@ If you wish to opt-out of this eager route discovery on a per-link basis, you ca
 [link-discover]: ../components/link#discover
 [rr-v7]: https://remix.run/blog/merging-remix-and-react-router
 [rr-v7-2]: https://remix.run/blog/incremental-path-to-react-19
+[blog-post]: https://remix.run/blog/fog-of-war
