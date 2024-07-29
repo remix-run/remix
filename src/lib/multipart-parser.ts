@@ -269,13 +269,8 @@ export class MultipartParser {
   }
 
   private save(): void {
-    if (this.chunk.length > 0) {
-      if (this.buffer.length > 0) {
-        this.buffer = concatChunks([this.buffer, this.chunk]);
-      } else {
-        this.buffer = this.chunk;
-      }
-    }
+    if (this.chunk.length === 0) return;
+    this.buffer = this.buffer.length > 0 ? concatChunks([this.buffer, this.chunk]) : this.chunk;
   }
 
   private writeBody(chunks: Uint8Array[]): void {
@@ -337,7 +332,7 @@ function computeSkipTable(pattern: Uint8Array): Uint8Array {
   let table = new Uint8Array(256).fill(pattern.length);
   let lastIndex = pattern.length - 1;
 
-  for (let i = 0; i < lastIndex; i++) {
+  for (let i = 0; i < lastIndex; ++i) {
     table[pattern[i]] = lastIndex - i;
   }
 
