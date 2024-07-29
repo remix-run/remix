@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/node",
-  "version": "2.10.3",
+  "version": "0.0.0-nightly-ef612a729-20240729",
   "description": "Node.js platform abstractions for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -20,7 +20,7 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "@remix-run/server-runtime": "workspace:*",
+    "@remix-run/server-runtime": "0.0.0-nightly-ef612a729-20240729",
     "@remix-run/web-fetch": "^4.4.2",
     "@web3-storage/multipart-parser": "^1.0.0",
     "cookie-signature": "^1.1.0",
