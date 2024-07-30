@@ -10,7 +10,11 @@
     "README.md"
   ],
   "type": "module",
-  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./node": "./dist/node.js",
+    "./package.json": "./package.json"
+  },
   "dependencies": {
     "fetch-super-headers": "^0.4.1"
   },
