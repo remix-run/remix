@@ -21,7 +21,7 @@
   },
   "scripts": {
     "clean": "git clean -fdX .",
-    "bench": "(cd bench && pnpm install); node --import tsimp/import ./bench/runner.ts",
+    "bench": "node --import tsimp/import ./bench/runner.ts",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
     "prepare": "npm run build",

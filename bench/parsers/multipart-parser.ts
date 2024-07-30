@@ -1,4 +1,4 @@
-import { parseMultipartRequest } from '../../dist/index.js';
+import { parseMultipartRequest } from '@mjackson/multipart-parser';
 
 import { MultipartMessage } from '../messages.js';
 

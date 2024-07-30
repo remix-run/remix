@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "@fastify/busboy": "^3.0.0",
+    "@mjackson/multipart-parser": "workspace:*",
     "@types/busboy": "^1.5.4",
     "busboy": "^1.6.0"
   }
