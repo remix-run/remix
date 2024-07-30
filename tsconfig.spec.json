@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src/**/*.spec.ts", "src/fixtures/**/*.ts"],
+  "include": ["src/**/*.spec.ts", "src/test/**/*.ts"],
   "compilerOptions": {
     "composite": true,
     "types": ["node"]

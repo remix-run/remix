@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts", "src/fixtures/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts", "src/test/**/*.ts"],
   "compilerOptions": {
     "composite": true,
     "rootDir": "src"
