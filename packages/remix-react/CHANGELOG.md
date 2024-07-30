@@ -32,7 +32,7 @@
 
 - Ensure single fetch calls don't include any trailing slash from the pathname (i.e., /path/.data) ([#9792](https://github.com/remix-run/remix/pull/9792))
 - Single Fetch: Add `undefined` to the `useRouteLoaderData` type override ([#9796](https://github.com/remix-run/remix/pull/9796))
-- - Change initial hydration route mismatch from a URL check to a matches check to be resistant to URL inconsistenceis ([#9695](https://github.com/remix-run/remix/pull/9695))
+- Change initial hydration route mismatch from a URL check to a matches check to be resistant to URL inconsistencies ([#9695](https://github.com/remix-run/remix/pull/9695))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.11.0-pre.0`
 

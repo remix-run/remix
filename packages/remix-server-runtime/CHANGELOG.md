@@ -30,7 +30,7 @@
 
 ### Patch Changes
 
-- - Change initial hydration route mismatch from a URL check to a matches check to be resistant to URL inconsistenceis ([#9695](https://github.com/remix-run/remix/pull/9695))
+- Change initial hydration route mismatch from a URL check to a matches check to be resistant to URL inconsistencies ([#9695](https://github.com/remix-run/remix/pull/9695))
 
 ## 2.10.3
 

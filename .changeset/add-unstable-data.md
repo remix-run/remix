@@ -6,4 +6,4 @@
 "@remix-run/server-runtime": minor
 ---
 
-Add a new `unstable_data()` API for usage with Remix Single Fetch
+Single Fetch: Add a new `unstable_data()` API as a replacement for `json`/`defer` when custom `status`/`headers` are needed
