@@ -53,15 +53,43 @@ export async function* parseMultipartStream(
 ): AsyncGenerator<MultipartPart> {
   let parser = new MultipartParser(boundary, options);
 
-  for await (let chunk of readStream(stream)) {
-    for (let part of parser.push(chunk)) {
+  let done = false;
+  let resolveNextChunk!: () => void;
+  let nextChunkPromise: Promise<void> | null;
+  let promise = (async () => {
+    try {
+      for await (let chunk of readStream(stream)) {
+        parser.push(chunk);
+        resolveNextChunk();
+      }
+    } finally {
+      resolveNextChunk();
+      done = true;
+    }
+  })();
+  promise.catch(() => {});
+
+  while (!done) {
+    nextChunkPromise = new Promise((resolve) => {
+      resolveNextChunk = resolve;
+    });
+    await nextChunkPromise;
+    let partsToYield = parser.parts;
+    parser.parts = [];
+    for (let part of partsToYield) {
       yield part;
     }
+  }
+
+  for (let part of parser.parts) {
+    yield part;
   }
 
   if (!parser.done) {
     throw new MultipartParseError('Unexpected end of stream');
   }
+
+  await promise;
 }
 
 const HYPHEN = 45;
@@ -105,10 +133,12 @@ export class MultipartParser {
   private state = MultipartParserState.Start;
   private buffer: Uint8Array = EMPTY_BUFFER;
   private chunk: Uint8Array = EMPTY_BUFFER;
-  private length: number = 0;
+  private length = 0;
 
   private bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
   private bodyLength = 0;
+
+  public parts: MultipartPart[] = [];
 
   constructor(
     public boundary: string,
@@ -128,7 +158,7 @@ export class MultipartParser {
     return this.state === MultipartParserState.Done;
   }
 
-  push(chunk: Uint8Array): MultipartPart[] {
+  push(chunk: Uint8Array) {
     if (this.done) {
       throw new MultipartParseError('Cannot push, parser is done');
     }
@@ -151,8 +181,6 @@ export class MultipartParser {
 
       this.state = MultipartParserState.AfterBoundary;
     }
-
-    let parts: MultipartPart[] = [];
 
     while (true) {
       if (this.state === MultipartParserState.AfterBoundary) {
@@ -202,7 +230,7 @@ export class MultipartParser {
           },
         });
 
-        parts.push(new MultipartPart(header, body));
+        this.parts.push(new MultipartPart(header, body));
 
         this.state = MultipartParserState.Body;
       }
@@ -231,8 +259,6 @@ export class MultipartParser {
         this.state = MultipartParserState.AfterBoundary;
       }
     }
-
-    return parts;
   }
 
   private read(size: number): Uint8Array[] {
@@ -245,16 +271,14 @@ export class MultipartParser {
         let tail = this.chunk.subarray(0, size - head.length);
         this.chunk = this.chunk.subarray(size - head.length);
         return [head, tail];
-      } else {
-        let head = this.chunk.subarray(0, size);
-        this.chunk = this.chunk.subarray(size);
-        return [head];
       }
-    } else {
-      let head = this.buffer.subarray(0, size);
-      this.buffer = this.buffer.subarray(size);
+      let head = this.chunk.subarray(0, size);
+      this.chunk = this.chunk.subarray(size);
       return [head];
     }
+    let head = this.buffer.subarray(0, size);
+    this.buffer = this.buffer.subarray(size);
+    return [head];
   }
 
   private skip(size: number): void {
