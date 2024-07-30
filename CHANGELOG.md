@@ -15,7 +15,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
 - [Remix Releases](#remix-releases)
   - [v2.11.0](#v2110)
     - [What's Changed](#whats-changed)
-      - [Renamed Future Flag for Fog of War (unstable)](#renamed-future-flag-for-fog-of-war-unstable)
+      - [Renamed `unstable_fogOfWar` future flag to `unstable_lazyRouteDiscovery` (unstable)](#renamed-unstable_fogofwar-future-flag-to-unstable_lazyroutediscovery-unstable)
       - [Removed `response` stub in Single Fetch (unstable)](#removed-response-stub-in-single-fetch-unstable)
     - [Minor Changes](#minor-changes)
     - [Patch Changes](#patch-changes)
@@ -208,7 +208,7 @@ Date: 2024-07-31
 
 ### What's Changed
 
-#### Renamed Future Flag for Fog of War (unstable)
+#### Renamed `unstable_fogOfWar` future flag to `unstable_lazyRouteDiscovery` (unstable)
 
 We found that the `future.unstable_fogOfWar` flag name could be a bit confusing without the proper context (notably, the [blog post](https://remix.run/blog/fog-of-war)), so we've renamed the flag to `future.unstable_lazyRouteDiscovery` for clarity. If you had opted into this feature already, please update the name of the flag in your `vite.config.ts` file (or `remix.config.js`).
 
@@ -223,13 +223,12 @@ With that gone, and still wanting to align how headers get merged between docume
 With this change:
 
 - The `headers()` function will let you control header merging for both document and data requests
-- You are still encouraged to stop returning `Response` instances in favor of returning raw data from loaders and actions:
-  - ~~`return json({ data: "whatever" });`~~
-  - `return { data: "whatever" };`
 - In most cases, if you were returning `json()`/`defer()` _without_ setting a custom `status` or `headers`, you can just remove those utility functions and return the raw data
-  - We will be removing both `json` and `defer` in the next major version, but both _should_ still work in Single Fetch in v2 to allow for incremental adoption of the new behavior
+  - ❌ `return json({ data: "whatever" });`
+  - ✅ `return { data: "whatever" };`
 - If you _were_ returning a custom `status` or `headers`:
   - We've added a new API-compatible `unstable_data({...}, number | responseInit)` utility that will let you send back `status`/`headers` alongside your raw data without having to encode it into a `Response`
+- We will be removing both `json` and `defer` in the next major version, but both _should_ still work in Single Fetch in v2 to allow for incremental adoption of the new behavior
 
 ⚠️ If you've already adopted Single Fetch in it's unstable state and converted to `response` stub, you'll need to move those changes back to leveraging the `headers()` API.
 
