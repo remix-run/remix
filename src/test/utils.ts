@@ -9,6 +9,7 @@ export function createReadableStream(
   chunkSize = 16 * 1024
 ): ReadableStream<Uint8Array> {
   let encoder = new TextEncoder();
+
   return new ReadableStream({
     start(controller) {
       for (let i = 0; i < content.length; i += chunkSize) {
@@ -32,7 +33,7 @@ export function createMockRequest({
   } as unknown as Request;
 }
 
-type PartValue =
+export type PartValue =
   | string
   | {
       filename?: string;

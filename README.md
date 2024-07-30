@@ -43,6 +43,38 @@ async function handleMultipartRequest(request: Request): void {
 }
 ```
 
+The main module (`import from "@mjackson/multipart-parser"`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
+
+If however you're building a server for node.js that still relies on slightly older APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
+
+```typescript
+import * as http from 'node:http';
+
+import { MultipartParseError } from '@mjackson/multipart-parser';
+// Note: Import from multipart-parser/node for node-specific APIs
+import { parseMultipartRequest } from '@mjackson/multipart-parser/node';
+
+const server = http.createServer(async (req, res) => {
+  try {
+    for await (let part of parseMultipartRequest(req)) {
+      console.log(part.name);
+      console.log(part.filename);
+      console.log(part.mediaType);
+
+      // ...
+    }
+  } catch (error) {
+    if (error instanceof MultipartParseError) {
+      console.error('Failed to parse multipart request:', error.message);
+    } else {
+      console.error('An unexpected error occurred:', error);
+    }
+  }
+});
+
+server.listen(8080);
+```
+
 ## Benchmark
 
 `multipart-parser` is designed to be as efficient as possible, only operating on streams of data and never buffering in common usage. This design yields exceptional performance when handling multipart payloads of any size. In most benchmarks, `multipart-parser` is as fast or faster than `busboy`.

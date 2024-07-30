@@ -80,7 +80,7 @@ export async function* parseMultipartStream(
     }
   }
 
-  // Throw any errors that occurred during parsing.
+  // Throw any errors that occurred during the parse.
   await promise;
 
   if (!parser.done) {
