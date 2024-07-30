@@ -133,7 +133,7 @@ async function run() {
     })
   );
   app.use(express.static("public", { maxAge: "1h" }));
-  app.use(morgan("tiny"));
+  if (process.env.DISABLE_ROUTES_LOGS) app.use(morgan("tiny"));
 
   app.all(
     "*",
