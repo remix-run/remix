@@ -1,7 +1,7 @@
 {
   "name": "@mjackson/multipart-parser",
   "version": "0.1.0",
-  "description": "A fast, efficient parser for multpart streams",
+  "description": "A fast, efficient parser for multipart streams",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "files": [
