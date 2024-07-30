@@ -1,5 +1,17 @@
 # `@remix-run/node`
 
+## 2.11.0-pre.0
+
+### Minor Changes
+
+- Add a new `unstable_data()` API for usage with Remix Single Fetch ([#9769](https://github.com/remix-run/remix/pull/9769))
+- Add a new `replace(url, init?)` alternative to `redirect(url, init?)` that performs a `history.replaceState` instead of a `history.pushState` on client-side navigation redirects ([#9764](https://github.com/remix-run/remix/pull/9764))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.0-pre.0`
+
 ## 2.10.3
 
 ### Patch Changes

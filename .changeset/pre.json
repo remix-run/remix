@@ -25,5 +25,14 @@
     "@remix-run/server-runtime": "2.10.3",
     "@remix-run/testing": "2.10.3"
   },
-  "changesets": []
+  "changesets": [
+    "add-unstable-data",
+    "curvy-vans-remember",
+    "happy-dots-sleep",
+    "large-donkeys-remember",
+    "remove-response-stub",
+    "silver-laws-invite",
+    "tender-elephants-kneel",
+    "vite-absolute-base"
+  ]
 }
