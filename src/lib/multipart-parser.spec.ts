@@ -52,7 +52,7 @@ describe('isMultipartRequest', async () => {
   });
 });
 
-describe('parseMultipartRequest', async () => {
+describe.only('parseMultipartRequest', async () => {
   let boundary = 'boundary123';
 
   it('parses an empty multipart message', async () => {
@@ -160,6 +160,31 @@ describe('parseMultipartRequest', async () => {
     assert.equal(parts[2].filename, 'test.txt');
     assert.equal(parts[2].mediaType, 'text/plain');
     assert.equal(await parts[2].text(), 'File content');
+  });
+
+  it.only('allows buffering part contents while parsing', async () => {
+    let request = createMultipartMockRequest(boundary, {
+      file1: {
+        filename: 'tesla.jpg',
+        mediaType: 'image/jpeg',
+        content: TeslaRoadster,
+      },
+      file2: {
+        filename: 'tesla.jpg',
+        mediaType: 'image/jpeg',
+        content: TeslaRoadster,
+      },
+    });
+
+    let parts = [];
+    for await (let part of parseMultipartRequest(request)) {
+      parts.push({
+        name: part.name,
+        content: await part.bytes(),
+      });
+    }
+
+    assert.equal(parts.length, 2);
   });
 
   it('parses large file uploads correctly', async () => {
