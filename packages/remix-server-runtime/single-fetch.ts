@@ -2,6 +2,7 @@ import type {
   StaticHandler,
   unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
   unstable_DataStrategyFunction as DataStrategyFunction,
+  UNSAFE_DataWithResponseInit as DataWithResponseInit,
 } from "@remix-run/router";
 import {
   isRouteErrorResponse,
@@ -335,7 +336,10 @@ export function encodeViaTurboStream(
   });
 }
 
-export function data(value: Serializable, init?: number | ResponseInit) {
+export function data<D extends Serializable>(
+  value: D,
+  init?: number | ResponseInit
+) {
   return routerData(value, init);
 }
 
@@ -361,6 +365,7 @@ type Serializable =
 
 type DataFunctionReturnValue =
   | Serializable
+  | DataWithResponseInit<Serializable>
   | TypedDeferredData<Record<string, unknown>>
   | TypedResponse<Record<string, unknown>>;
 
@@ -372,6 +377,7 @@ type DataFunctionReturnValue =
 export type Serialize<T extends Loader | Action> =
   Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
   Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
+  Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? D :
   Awaited<ReturnType<T>>;
 
 export type Loader = (
