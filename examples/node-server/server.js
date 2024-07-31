@@ -1,4 +1,6 @@
+import * as fs from 'node:fs';
 import * as http from 'node:http';
+import tmp from 'tmp';
 
 import { MultipartParseError } from '@mjackson/multipart-parser';
 import { parseMultipartRequest } from '@mjackson/multipart-parser/node';
@@ -26,17 +28,24 @@ const server = http.createServer(async (req, res) => {
 `);
   } else if (req.method === 'POST') {
     try {
-      /** @type any[] */
       let parts = [];
 
       for await (let part of parseMultipartRequest(req)) {
         if (part.isFile) {
-          let bytes = await part.bytes();
+          let tmpfile = tmp.fileSync();
+          let byteLength = await writeFile(tmpfile.name, part.body);
+
+          // Or, if you'd prefer to buffer you can do it like this:
+          // let bytes = await part.bytes();
+          // fs.writeFileSync(tmpfile.name, bytes, 'binary');
+          // let byteLength = bytes.byteLength;
+
           parts.push({
             name: part.name,
             filename: part.filename,
             mediaType: part.mediaType,
-            size: bytes.byteLength,
+            size: byteLength,
+            file: tmpfile.name,
           });
         } else {
           parts.push({
@@ -70,3 +79,35 @@ const server = http.createServer(async (req, res) => {
 server.listen(3000, () => {
   console.log('Server listening on http://localhost:3000');
 });
+
+// Some lil' helpers
+
+/** @type (filename: string, stream: ReadableStream<Uint8Array>) => Promise<number> */
+async function writeFile(filename, stream) {
+  let fileStream = fs.createWriteStream(filename);
+  let bytesWritten = 0;
+
+  await readStream(stream, (chunk) => {
+    fileStream.write(chunk);
+    bytesWritten += chunk.byteLength;
+  });
+
+  fileStream.end();
+
+  return bytesWritten;
+}
+
+/** @type <T>(stream: ReadableStream<T>, callback: (value: T) => void) => Promise<void> */
+async function readStream(stream, callback) {
+  let reader = stream.getReader();
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      callback(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

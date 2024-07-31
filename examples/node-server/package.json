@@ -3,9 +3,13 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@mjackson/multipart-parser": "workspace:*"
+    "@mjackson/multipart-parser": "workspace:*",
+    "tmp": "^0.2.3"
   },
   "scripts": {
     "start": "node server.js"
+  },
+  "devDependencies": {
+    "@types/tmp": "^0.2.6"
   }
 }
