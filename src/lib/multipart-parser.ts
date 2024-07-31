@@ -1,6 +1,6 @@
 import { SuperHeaders } from 'fetch-super-headers';
 
-import { concatChunks, readStream, stringToBinary } from './utils.js';
+import { concatChunks, readStream } from './utils.js';
 
 /**
  * Extracts the boundary string from a `multipart/*` content type.
@@ -393,7 +393,19 @@ export class MultipartPart {
    * The content of this part as a `Uint8Array`.
    */
   async bytes(): Promise<Uint8Array> {
-    return stringToBinary(await this.text());
+    if (this._bodyUsed) {
+      throw new Error('Body is already consumed or is being consumed');
+    }
+
+    this._bodyUsed = true;
+
+    let chunks: Uint8Array[] = [];
+
+    await readStream(this.body, (chunk) => {
+      chunks.push(chunk);
+    });
+
+    return concatChunks(chunks);
   }
 
   /**
@@ -441,21 +453,6 @@ export class MultipartPart {
    * Note: Do not use this for binary data, use `await part.bytes()` or stream `part.body` directly instead.
    */
   async text(): Promise<string> {
-    if (this._bodyUsed) {
-      throw new Error('Body is already consumed or is being consumed');
-    }
-
-    this._bodyUsed = true;
-
-    let decoder = new TextDecoder('utf-8');
-
-    let string = '';
-    await readStream(this.body, (chunk) => {
-      string += decoder.decode(chunk, { stream: true });
-    });
-
-    string += decoder.decode();
-
-    return string;
+    return new TextDecoder().decode(await this.bytes());
   }
 }

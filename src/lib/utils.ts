@@ -29,19 +29,3 @@ export async function readStream<T>(
     reader.releaseLock();
   }
 }
-
-export function binaryToString(binary: Uint8Array): string {
-  let string = '';
-  for (let i = 0; i < binary.length; ++i) {
-    string += String.fromCharCode(binary[i]);
-  }
-  return string;
-}
-
-export function stringToBinary(string: string): Uint8Array {
-  let binary = new Uint8Array(string.length);
-  for (let i = 0; i < string.length; ++i) {
-    binary[i] = string.charCodeAt(i);
-  }
-  return binary;
-}

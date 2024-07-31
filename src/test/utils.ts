@@ -1,11 +1,11 @@
 import { ContentDisposition, ContentType, SuperHeaders } from 'fetch-super-headers';
 
-import { binaryToString } from '../lib/utils.js';
+import { concatChunks } from '../lib/utils.js';
 
 export const CRLF = '\r\n';
 
 export function createReadableStream(
-  content: string,
+  content: string | Uint8Array,
   chunkSize = 16 * 1024
 ): ReadableStream<Uint8Array> {
   let encoder = new TextEncoder();
@@ -13,7 +13,11 @@ export function createReadableStream(
   return new ReadableStream({
     start(controller) {
       for (let i = 0; i < content.length; i += chunkSize) {
-        controller.enqueue(encoder.encode(content.slice(i, i + chunkSize)));
+        controller.enqueue(
+          typeof content === 'string'
+            ? encoder.encode(content.slice(i, i + chunkSize))
+            : content.subarray(i, i + chunkSize)
+        );
       }
       controller.close();
     },
@@ -25,11 +29,12 @@ export function createMockRequest({
   body = '',
 }: {
   headers?: Headers | HeadersInit;
-  body?: string | ReadableStream<Uint8Array>;
+  body?: string | Uint8Array | ReadableStream<Uint8Array>;
 }): Request {
   return {
     headers: headers instanceof Headers ? headers : new Headers(headers),
-    body: typeof body === 'string' ? createReadableStream(body) : body,
+    body:
+      typeof body === 'string' || body instanceof Uint8Array ? createReadableStream(body) : body,
   } as unknown as Request;
 }
 
@@ -45,20 +50,24 @@ export type PartValue =
 export function createMultipartBody(
   boundary: string,
   parts?: { [name: string]: PartValue }
-): string {
-  let lines = [];
+): Uint8Array {
+  let chunks: Uint8Array[] = [];
+
+  function pushLine(value: string) {
+    chunks.push(new TextEncoder().encode(value + CRLF));
+  }
 
   if (parts) {
     for (let [name, part] of Object.entries(parts)) {
-      lines.push(`--${boundary}`);
+      pushLine(`--${boundary}`);
 
       if (typeof part === 'string') {
         let contentDisposition = new ContentDisposition();
         contentDisposition.type = 'form-data';
         contentDisposition.name = name;
-        lines.push(`Content-Disposition: ${contentDisposition}`);
-        lines.push('');
-        lines.push(part);
+        pushLine(`Content-Disposition: ${contentDisposition}`);
+        pushLine('');
+        pushLine(part);
       } else {
         let contentDisposition = new ContentDisposition();
         contentDisposition.type = 'form-data';
@@ -66,24 +75,29 @@ export function createMultipartBody(
         contentDisposition.filename = part.filename;
         contentDisposition.filenameSplat = part.filenameSplat;
 
-        lines.push(`Content-Disposition: ${contentDisposition}`);
+        pushLine(`Content-Disposition: ${contentDisposition}`);
 
         if (part.mediaType) {
           let contentType = new ContentType();
           contentType.mediaType = part.mediaType;
 
-          lines.push(`Content-Type: ${contentType}`);
+          pushLine(`Content-Type: ${contentType}`);
         }
 
-        lines.push('');
-        lines.push(typeof part.content === 'string' ? part.content : binaryToString(part.content));
+        pushLine('');
+        if (typeof part.content === 'string') {
+          pushLine(part.content);
+        } else {
+          chunks.push(part.content);
+          pushLine('');
+        }
       }
     }
   }
 
-  lines.push(`--${boundary}--`);
+  pushLine(`--${boundary}--`);
 
-  return lines.join(CRLF);
+  return concatChunks(chunks);
 }
 
 export function createMultipartMockRequest(
