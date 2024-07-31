@@ -214,11 +214,11 @@ We found that the `future.unstable_fogOfWar` flag name could be a bit confusing 
 
 #### Removed `response` stub in Single Fetch (unstable)
 
-The original Single Fetch approach was based on an assumption that an eventual `middleware` implementation would require something like the `ResponseStub` API so users could mutate `status`/`headers` in `middleware` before/after handlers as well as during handlers. As part of Single Fetch, we wanted to align how response headers would be merged between document and data requests, so we made document requests also use the `response` stub and removed the usage of the `headers()` function.
+The original Single Fetch approach was based on an assumption that an eventual `middleware` implementation would require something like the `ResponseStub` API so users could mutate `status`/`headers` in `middleware` before/after handlers as well as during handlers. As part of Single Fetch, we wanted to align how response headers would be merged between document and data requests. Thinking `response` was the future API, we aligned document requests to use the `response` stub that data requests were using, and we stopped using the `headers()` function.
 
 However, the realization/alignment between Michael and Ryan on the recent [roadmap planning](https://www.youtube.com/watch?v=f5z_axCofW0) made us realize that the original assumption was incorrect. `middleware` won't need a `response` stub - as users can just mutate the `Response` they get from `await next()` directly.
 
-With that gone, and still wanting to align how headers get merged between document and data requests, it makes more sense to stick with the current `headers()` API and apply that to Single Fetch data requests and avoid introducing a totally new `response` stub (which also always felt a bit awkward to work with anyway).
+Removing that assumption, and still wanting to align how headers get merged between document and data requests, it makes more sense to stick with the current `headers()` API and align Single Fetch data requests to use that existing API. This was we don't need to introduce any new header-related APIs which will make the adoption of Single Fetch much easier.
 
 With this change:
 
@@ -226,8 +226,8 @@ With this change:
 - In most cases, if you were returning `json()`/`defer()` _without_ setting a custom `status` or `headers`, you can just remove those utility functions and return the raw data
   - ❌ `return json({ data: "whatever" });`
   - ✅ `return { data: "whatever" };`
-- If you _were_ returning a custom `status` or `headers`:
-  - We've added a new API-compatible `unstable_data({...}, number | responseInit)` utility that will let you send back `status`/`headers` alongside your raw data without having to encode it into a `Response`
+- If you _were_ returning a custom `status` or `headers` via `json`/`defer`:
+  - We've added a new API-compatible [`unstable_data`](https://remix.run/docs/utils/data) utility that will let you send back `status`/`headers` alongside your raw data without having to encode it into a `Response`
 - We will be removing both `json` and `defer` in the next major version, but both _should_ still work in Single Fetch in v2 to allow for incremental adoption of the new behavior
 
 ⚠️ If you've already adopted Single Fetch in it's unstable state and converted to `response` stub, you'll need to move those changes back to leveraging the `headers()` API.
