@@ -1,6 +1,6 @@
 # multipart-parser
 
-`multipart-parser` is a fast, efficient parser for multipart streams. It can be used in any JavaScript environment (not just node) for a variety of use cases including:
+`multipart-parser` is a fast, efficient parser for multipart streams. It can be used in any JavaScript environment (not just node.js) for a variety of use cases including:
 
 - Handling file uploads (`multipart/form-data` requests)
 - Parsing `multipart/mixed` messages (email attachments, API responses, etc.)
@@ -25,7 +25,6 @@ async function handleMultipartRequest(request: Request): void {
     for await (let part of parseMultipartRequest(request)) {
       console.log(part.name);
       console.log(part.filename);
-      console.log(part.mediaType);
 
       if (/^text\//.test(part.mediaType)) {
         console.log(await part.text());
@@ -104,3 +103,7 @@ Date: 7/30/2024, 7:01:45 PM
 │ @fastify/busboy  │ '0.03 ms ± 0.07' │ '2.13 ms ± 0.29' │ '0.40 ms ± 0.06' │ '26.67 ms ± 1.22' │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
 ```
+
+## Credits
+
+Thanks to Jacob Ebey who gave me several code reviews on this project prior to publishing.
