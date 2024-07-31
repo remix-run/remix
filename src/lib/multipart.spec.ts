@@ -8,7 +8,7 @@ import {
   parseMultipartRequest,
   MultipartParseError,
   getMultipartBoundary,
-} from './multipart-parser.js';
+} from './multipart.js';
 
 const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
 

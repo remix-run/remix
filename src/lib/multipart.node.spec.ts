@@ -2,8 +2,8 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { readFixture } from '../test/fixtures.js';
-import { createMultipartMockRequest } from '../test/utils-node.js';
-import { parseMultipartRequest } from './multipart-parser-node.js';
+import { createMultipartMockRequest } from '../test/utils.node.js';
+import { parseMultipartRequest } from './multipart.node.js';
 
 const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
 

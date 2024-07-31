@@ -7,7 +7,7 @@ import {
   MultipartParserOptions,
   MultipartParser,
   MultipartPart,
-} from './multipart-parser.js';
+} from './multipart.js';
 
 /**
  * Returns true if the given request is a multipart request.
