@@ -53,10 +53,13 @@ export async function* parseMultipartStream(
 ): AsyncGenerator<MultipartPart> {
   let parser = new MultipartParser(boundary, options);
 
-  // Since the top-level API is an async generator, we need to buffer parts
-  // until they're requested by the consumer.
+  // The async generator will suspend execution of this function until the next part
+  // is requested. This has the potential to cause a deadlock if the consumer tries
+  // to `await part.text()` while the parser is waiting for more bytes. To fix this,
+  // we read the stream in a promise and buffer parts until they're requested. When
+  // new parts become available or when we're done reading the stream, we manually
+  // run the loop to yield the buffered parts.
   let parts: MultipartPart[] = [];
-
   let done = false;
   let runTheLoop: () => void;
   let promise = readStream(stream, (chunk) => {
