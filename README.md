@@ -16,8 +16,16 @@ The goals of this project are:
 
 ## Installation
 
+Install from [npm](https://www.npmjs.com/):
+
 ```sh
 $ npm install @mjackson/multipart-parser
+```
+
+Or install from [JSR](https://jsr.io/):
+
+```sh
+$ deno add @mjackson/multipart-parser
 ```
 
 ## Usage
