@@ -298,9 +298,7 @@ export class MultipartParser {
   }
 
   private writeBody(chunks: Uint8Array[]): void {
-    for (let i = 0; i < chunks.length; ++i) {
-      let chunk = chunks[i];
-
+    for (let chunk of chunks) {
       if (this.bodyLength + chunk.length > this.maxFileSize) {
         throw new MultipartParseError(
           `File size exceeds maximum allowed size of ${this.maxFileSize} bytes`
