@@ -45,7 +45,7 @@ async function handleMultipartRequest(request: Request): void {
 
 The main module (`import from "@mjackson/multipart-parser"`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
 
-If however you're building a server for node.js that still relies on slightly older APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
+If however you're building a server for node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
 
 ```typescript
 import * as http from 'node:http';
@@ -74,6 +74,10 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(8080);
 ```
+
+## Examples
+
+See [the node-server example](/examples/node-server) for a working demo of how you can handle file uploads in node.js.
 
 ## Benchmark
 
