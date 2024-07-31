@@ -76,7 +76,10 @@ server.listen(8080);
 
 ## Examples
 
-See [the node-server example](/examples/node-server) for a working demo of how you can handle file uploads in node.js.
+The [`examples` directory](/examples) contains a few working examples of how you can use this library:
+
+- [`cf-workers`](/examples/cf-workers) shows how you can handle multipart uploads in a Cloudflare worker and store files in R2
+- [`node-server`](/examples/node-server) demonstrates handling multipart uploads and streaming files to disk
 
 ## Benchmark
 
