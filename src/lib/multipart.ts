@@ -148,7 +148,7 @@ export class MultipartParser {
     this.maxFileSize = maxFileSize;
   }
 
-  get done() {
+  get done(): boolean {
     return this.state === MultipartParserState.Done;
   }
 
