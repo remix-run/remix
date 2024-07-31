@@ -267,10 +267,12 @@ export class MultipartParser {
         this.chunk = this.chunk.subarray(size - head.length);
         return [head, tail];
       }
+
       let head = this.chunk.subarray(0, size);
       this.chunk = this.chunk.subarray(size);
       return [head];
     }
+
     let head = this.buffer.subarray(0, size);
     this.buffer = this.buffer.subarray(size);
     return [head];
