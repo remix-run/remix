@@ -11,8 +11,8 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./dist/index.js",
-    "./node": "./dist/node.js",
+    ".": "./dist/multipart-parser.js",
+    "./node": "./dist/multipart-parser.node.js",
     "./package.json": "./package.json"
   },
   "dependencies": {
