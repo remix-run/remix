@@ -53,43 +53,36 @@ export async function* parseMultipartStream(
 ): AsyncGenerator<MultipartPart> {
   let parser = new MultipartParser(boundary, options);
 
+  // Since the top-level API is an async generator, we need to buffer parts
+  // until they're requested by the consumer.
+  let parts: MultipartPart[] = [];
+
   let done = false;
-  let resolveNextChunk!: () => void;
-  let nextChunkPromise: Promise<void> | null;
-  let promise = (async () => {
-    try {
-      for await (let chunk of readStream(stream)) {
-        parser.push(chunk);
-        resolveNextChunk();
-      }
-    } finally {
-      resolveNextChunk();
-      done = true;
-    }
-  })();
-  promise.catch(() => {});
+  let runTheLoop: () => void;
+  let promise = readStream(stream, (chunk) => {
+    parts.push(...parser.push(chunk));
+    runTheLoop();
+  }).finally(() => {
+    done = true;
+    runTheLoop();
+  });
 
   while (!done) {
-    nextChunkPromise = new Promise((resolve) => {
-      resolveNextChunk = resolve;
+    await new Promise<void>((resolve) => {
+      runTheLoop = resolve;
     });
-    await nextChunkPromise;
-    let partsToYield = parser.parts;
-    parser.parts = [];
-    for (let part of partsToYield) {
-      yield part;
+
+    while (parts.length > 0) {
+      yield parts.shift()!;
     }
   }
 
-  for (let part of parser.parts) {
-    yield part;
-  }
+  // Throw any errors that occurred during parsing.
+  await promise;
 
   if (!parser.done) {
     throw new MultipartParseError('Unexpected end of stream');
   }
-
-  await promise;
 }
 
 const HYPHEN = 45;
@@ -138,8 +131,6 @@ export class MultipartParser {
   private bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
   private bodyLength = 0;
 
-  public parts: MultipartPart[] = [];
-
   constructor(
     public boundary: string,
     {
@@ -158,7 +149,7 @@ export class MultipartParser {
     return this.state === MultipartParserState.Done;
   }
 
-  push(chunk: Uint8Array) {
+  push(chunk: Uint8Array): MultipartPart[] {
     if (this.done) {
       throw new MultipartParseError('Cannot push, parser is done');
     }
@@ -181,6 +172,8 @@ export class MultipartParser {
 
       this.state = MultipartParserState.AfterBoundary;
     }
+
+    let parts: MultipartPart[] = [];
 
     while (true) {
       if (this.state === MultipartParserState.AfterBoundary) {
@@ -230,7 +223,7 @@ export class MultipartParser {
           },
         });
 
-        this.parts.push(new MultipartPart(header, body));
+        parts.push(new MultipartPart(header, body));
 
         this.state = MultipartParserState.Body;
       }
@@ -259,6 +252,8 @@ export class MultipartParser {
         this.state = MultipartParserState.AfterBoundary;
       }
     }
+
+    return parts;
   }
 
   private read(size: number): Uint8Array[] {
@@ -450,9 +445,9 @@ export class MultipartPart {
     let decoder = new TextDecoder('utf-8');
 
     let string = '';
-    for await (let chunk of readStream(this.body)) {
+    await readStream(this.body, (chunk) => {
       string += decoder.decode(chunk, { stream: true });
-    }
+    });
 
     string += decoder.decode();
 

@@ -13,14 +13,17 @@ export function concatChunks(chunks: Uint8Array[]): Uint8Array {
   return result;
 }
 
-export async function* readStream<T>(stream: ReadableStream<T>): AsyncGenerator<T> {
+export async function readStream<T>(
+  stream: ReadableStream<T>,
+  callback: (chunk: T) => void
+): Promise<void> {
   let reader = stream.getReader();
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      yield value;
+      callback(value);
     }
   } finally {
     reader.releaseLock();

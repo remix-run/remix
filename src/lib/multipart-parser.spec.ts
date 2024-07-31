@@ -52,7 +52,7 @@ describe('isMultipartRequest', async () => {
   });
 });
 
-describe.only('parseMultipartRequest', async () => {
+describe('parseMultipartRequest', async () => {
   let boundary = 'boundary123';
 
   it('parses an empty multipart message', async () => {
@@ -162,7 +162,7 @@ describe.only('parseMultipartRequest', async () => {
     assert.equal(await parts[2].text(), 'File content');
   });
 
-  it.only('allows buffering part contents while parsing', async () => {
+  it('allows buffering part contents while parsing', async () => {
     let request = createMultipartMockRequest(boundary, {
       file1: {
         filename: 'tesla.jpg',
