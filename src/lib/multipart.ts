@@ -89,8 +89,6 @@ export async function* parseMultipartStream(
 }
 
 const HYPHEN = 45;
-const DOUBLE_NEWLINE = new Uint8Array([13, 10, 13, 10]);
-const DOUBLE_NEWLINE_SKIP_TABLE = computeSkipTable(DOUBLE_NEWLINE);
 const EMPTY_BUFFER = new Uint8Array(0);
 
 export class MultipartParseError extends Error {
@@ -209,15 +207,15 @@ export class MultipartParser {
           break;
         }
 
-        let index = find(this.#buffer, this.#chunk, DOUBLE_NEWLINE, DOUBLE_NEWLINE_SKIP_TABLE);
-        if (index === -1) break;
-        if (index > this.#maxHeaderSize) {
+        let headerEndIndex = findDoubleNewline(this.#buffer, this.#chunk);
+        if (headerEndIndex === -1) break;
+        if (headerEndIndex > this.#maxHeaderSize) {
           throw new MultipartParseError(
             `Header size exceeds maximum allowed size of ${this.#maxHeaderSize} bytes`,
           );
         }
 
-        let header = concatChunks(this.read(index));
+        let header = concatChunks(this.read(headerEndIndex));
         this.skip(4); // Skip \r\n\r\n
 
         let body = new ReadableStream({
@@ -348,7 +346,7 @@ function find(
     i += skipTable[byteAt(i)];
   }
 
-  return -1;
+  return -1; // Not found
 }
 
 function computeSkipTable(pattern: Uint8Array): Uint8Array {
@@ -360,6 +358,33 @@ function computeSkipTable(pattern: Uint8Array): Uint8Array {
   }
 
   return table;
+}
+
+const CR = 13; // Carriage Return
+const LF = 10; // Line Feed
+
+function findDoubleNewline(head: Uint8Array, tail: Uint8Array): number {
+  let headLength = head.length;
+
+  function byteAt(index: number) {
+    return index < headLength ? head[index] : tail[index - headLength];
+  }
+
+  let end = headLength + tail.length - 3;
+  for (let i = 0; i < end; ++i) {
+    if (byteAt(i + 3) === LF) {
+      if (byteAt(i + 2) === CR && byteAt(i + 1) === LF && byteAt(i) === CR) {
+        return i;
+      }
+      i += 1;
+    } else if (byteAt(i + 3) === CR) {
+      i += 2;
+    } else {
+      i += 3;
+    }
+  }
+
+  return -1; // Not found
 }
 
 /**
