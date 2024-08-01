@@ -6,7 +6,7 @@ export const CRLF = '\r\n';
 
 export function createReadableStream(
   content: string | Uint8Array,
-  chunkSize = 16 * 1024
+  chunkSize = 64 * 1024,
 ): ReadableStream<Uint8Array> {
   let encoder = new TextEncoder();
 
@@ -16,7 +16,7 @@ export function createReadableStream(
         controller.enqueue(
           typeof content === 'string'
             ? encoder.encode(content.slice(i, i + chunkSize))
-            : content.subarray(i, i + chunkSize)
+            : content.subarray(i, i + chunkSize),
         );
       }
       controller.close();
@@ -49,12 +49,16 @@ export type PartValue =
 
 export function createMultipartBody(
   boundary: string,
-  parts?: { [name: string]: PartValue }
+  parts?: { [name: string]: PartValue },
 ): Uint8Array {
   let chunks: Uint8Array[] = [];
 
-  function pushLine(value: string) {
-    chunks.push(new TextEncoder().encode(value + CRLF));
+  function pushString(string: string) {
+    chunks.push(new TextEncoder().encode(string));
+  }
+
+  function pushLine(line = '') {
+    pushString(line + CRLF);
   }
 
   if (parts) {
@@ -66,7 +70,7 @@ export function createMultipartBody(
         contentDisposition.type = 'form-data';
         contentDisposition.name = name;
         pushLine(`Content-Disposition: ${contentDisposition}`);
-        pushLine('');
+        pushLine();
         pushLine(part);
       } else {
         let contentDisposition = new ContentDisposition();
@@ -84,25 +88,25 @@ export function createMultipartBody(
           pushLine(`Content-Type: ${contentType}`);
         }
 
-        pushLine('');
+        pushLine();
         if (typeof part.content === 'string') {
           pushLine(part.content);
         } else {
           chunks.push(part.content);
-          pushLine('');
+          pushLine();
         }
       }
     }
   }
 
-  pushLine(`--${boundary}--`);
+  pushString(`--${boundary}--`);
 
   return concatChunks(chunks);
 }
 
 export function createMultipartMockRequest(
   boundary: string,
-  parts?: { [name: string]: PartValue }
+  parts?: { [name: string]: PartValue },
 ): Request {
   let headers = new SuperHeaders();
   headers.contentType.mediaType = 'multipart/form-data';
