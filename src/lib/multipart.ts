@@ -7,7 +7,7 @@ import { concatChunks, readStream } from './utils.js';
  */
 export function getMultipartBoundary(contentType: string): string | null {
   let match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
-  return match ? match[1] ?? match[2] : null;
+  return match ? (match[1] ?? match[2]) : null;
 }
 
 /**
@@ -23,7 +23,7 @@ export function isMultipartRequest(request: Request): boolean {
  */
 export async function* parseMultipartRequest(
   request: Request,
-  options?: MultipartParserOptions
+  options?: MultipartParserOptions,
 ): AsyncGenerator<MultipartPart> {
   if (!isMultipartRequest(request)) {
     throw new MultipartParseError('Request is not a multipart request');
@@ -49,7 +49,7 @@ export async function* parseMultipartRequest(
 export async function* parseMultipartStream(
   stream: ReadableStream<Uint8Array>,
   boundary: string,
-  options?: MultipartParserOptions
+  options?: MultipartParserOptions,
 ): AsyncGenerator<MultipartPart> {
   let parser = new MultipartParser(boundary, options);
 
@@ -120,6 +120,8 @@ enum MultipartParserState {
  * A parser for `multipart/form-data` streams.
  */
 export class MultipartParser {
+  boundary: string;
+
   #boundaryArray: Uint8Array;
   #boundaryLength: number;
   #boundarySkipTable: Uint8Array;
@@ -135,12 +137,13 @@ export class MultipartParser {
   #bodyLength = 0;
 
   constructor(
-    public boundary: string,
+    boundary: string,
     {
       maxHeaderSize = 8 * 1024, // 8 KB
       maxFileSize = 10 * 1024 * 1024, // 10 MB
-    }: MultipartParserOptions = {}
+    }: MultipartParserOptions = {},
   ) {
+    this.boundary = boundary;
     this.#boundaryArray = textEncoder.encode(`--${boundary}`);
     this.#boundaryLength = this.#boundaryArray.length;
     this.#boundarySkipTable = computeSkipTable(this.#boundaryArray);
@@ -213,7 +216,7 @@ export class MultipartParser {
         if (index === -1) break;
         if (index > this.#maxHeaderSize) {
           throw new MultipartParseError(
-            `Header size exceeds maximum allowed size of ${this.#maxHeaderSize} bytes`
+            `Header size exceeds maximum allowed size of ${this.#maxHeaderSize} bytes`,
           );
         }
 
@@ -302,7 +305,7 @@ export class MultipartParser {
     for (let chunk of chunks) {
       if (this.#bodyLength + chunk.length > this.#maxFileSize) {
         throw new MultipartParseError(
-          `File size exceeds maximum allowed size of ${this.#maxFileSize} bytes`
+          `File size exceeds maximum allowed size of ${this.#maxFileSize} bytes`,
         );
       }
 
@@ -322,7 +325,7 @@ function find(
   head: Uint8Array,
   tail: Uint8Array,
   pattern: Uint8Array,
-  skipTable = computeSkipTable(pattern)
+  skipTable = computeSkipTable(pattern),
 ): number {
   let headLength = head.length;
   let totalLength = headLength + tail.length;
@@ -367,11 +370,14 @@ function computeSkipTable(pattern: Uint8Array): Uint8Array {
  */
 export class MultipartPart {
   #header: Uint8Array;
+  #body: ReadableStream<Uint8Array>;
+
   #headers?: SuperHeaders;
   #bodyUsed = false;
 
-  constructor(header: Uint8Array, public readonly body: ReadableStream<Uint8Array>) {
+  constructor(header: Uint8Array, body: ReadableStream<Uint8Array>) {
     this.#header = header;
+    this.#body = body;
   }
 
   /**
@@ -382,6 +388,14 @@ export class MultipartPart {
   }
 
   /**
+   * The body of this part as a `ReadableStream<Uint8Array>`. In `multipart/form-data` messages, this is useful
+   * for streaming the value of files that were uploaded using `<input type="file">` fields.
+   */
+  get body(): ReadableStream<Uint8Array> {
+    return this.#body;
+  }
+
+  /**
    * Whether the body of this part has been consumed.
    */
   get bodyUsed(): boolean {
@@ -389,7 +403,8 @@ export class MultipartPart {
   }
 
   /**
-   * The content of this part as a `Uint8Array`.
+   * The body of this part buffered into a single `Uint8Array`. In `multipart/form-data` messages, this is useful
+   * for reading the value of files that were uploaded using `<input type="file">` fields.
    */
   async bytes(): Promise<Uint8Array> {
     if (this.#bodyUsed) {
@@ -400,7 +415,7 @@ export class MultipartPart {
 
     let chunks: Uint8Array[] = [];
 
-    await readStream(this.body, (chunk) => {
+    await readStream(this.#body, (chunk) => {
       chunks.push(chunk);
     });
 
@@ -447,7 +462,8 @@ export class MultipartPart {
   }
 
   /**
-   * The content of the part as a string.
+   * The body of the part as a string. In `multipart/form-data` messages, this is useful for reading the value
+   * of parts that originated from `<input type="text">` fields.
    *
    * Note: Do not use this for binary data, use `await part.bytes()` or stream `part.body` directly instead.
    */
