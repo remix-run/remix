@@ -93,9 +93,6 @@ const DOUBLE_NEWLINE = new Uint8Array([13, 10, 13, 10]);
 const DOUBLE_NEWLINE_SKIP_TABLE = computeSkipTable(DOUBLE_NEWLINE);
 const EMPTY_BUFFER = new Uint8Array(0);
 
-const textDecoder = new TextDecoder();
-const textEncoder = new TextEncoder();
-
 export class MultipartParseError extends Error {
   constructor(message: string) {
     super(message);
@@ -144,7 +141,7 @@ export class MultipartParser {
     }: MultipartParserOptions = {},
   ) {
     this.boundary = boundary;
-    this.#boundaryArray = textEncoder.encode(`--${boundary}`);
+    this.#boundaryArray = new TextEncoder().encode(`--${boundary}`);
     this.#boundaryLength = this.#boundaryArray.length;
     this.#boundarySkipTable = computeSkipTable(this.#boundaryArray);
     this.#maxHeaderSize = maxHeaderSize;
@@ -427,7 +424,7 @@ export class MultipartPart {
    */
   get headers(): SuperHeaders {
     if (!this.#headers) {
-      this.#headers = new SuperHeaders(textDecoder.decode(this.#header));
+      this.#headers = new SuperHeaders(new TextDecoder().decode(this.#header));
     }
 
     return this.#headers;
