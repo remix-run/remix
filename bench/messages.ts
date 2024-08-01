@@ -1,24 +1,41 @@
+import { concatChunks, getRandomBytes } from './utils.js';
+
+const NodeDefaultHighWaterMark = 65536;
+
 export class MultipartMessage {
-  public content: string;
+  boundary: string;
+  content: Uint8Array;
 
-  constructor(public boundary: string, partSizes: number[]) {
-    let parts = [];
-    for (let i = 0; i < partSizes.length; i++) {
-      parts.push(`--${boundary}`);
-      parts.push(`Content-Disposition: form-data; name="file${i}"; filename="file${i}.txt"`);
-      parts.push('Content-Type: text/plain');
-      parts.push('');
-      parts.push('x'.repeat(partSizes[i]));
+  constructor(boundary: string, partSizes: number[]) {
+    this.boundary = boundary;
+
+    let chunks: Uint8Array[] = [];
+
+    function pushString(string: string): void {
+      chunks.push(new TextEncoder().encode(string));
     }
-    parts.push(`--${boundary}--`);
 
-    this.content = parts.join('\r\n');
+    function pushLine(line = ''): void {
+      pushString(line + '\r\n');
+    }
+
+    for (let i = 0; i < partSizes.length; i++) {
+      pushLine(`--${boundary}`);
+      pushLine(`Content-Disposition: form-data; name="file${i}"; filename="file${i}.dat"`);
+      pushLine('Content-Type: application/octet-stream');
+      pushLine();
+      chunks.push(getRandomBytes(partSizes[i]));
+      pushLine();
+    }
+
+    pushString(`--${boundary}--`);
+
+    this.content = concatChunks(chunks);
   }
 
-  *generateChunks(chunkSize = 16 * 1024): Generator<Uint8Array> {
-    let encoder = new TextEncoder();
+  *generateChunks(chunkSize = NodeDefaultHighWaterMark): Generator<Uint8Array> {
     for (let i = 0; i < this.content.length; i += chunkSize) {
-      yield encoder.encode(this.content.slice(i, i + chunkSize));
+      yield this.content.subarray(i, i + chunkSize);
     }
   }
 }
@@ -34,7 +51,7 @@ export const oneLargeFile = new MultipartMessage('----WebKitFormBoundaryzv0Og5zW
 
 export const oneHundredSmallFiles = new MultipartMessage(
   '----WebKitFormBoundaryzv0Og5zWtGjvzP2A',
-  Array(100).fill(oneKb)
+  Array(100).fill(oneKb),
 );
 
 export const fiveLargeFiles = new MultipartMessage('----WebKitFormBoundaryzv0Og5zWtGjvzP2A', [
