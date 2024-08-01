@@ -19,7 +19,8 @@ export function isMultipartRequest(request: Request): boolean {
 }
 
 /**
- * Parse a multipart `Request` and yield each part as a `MultipartPart` object.
+ * Parse a multipart [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and yield each part as
+ * a `MultipartPart` object. Useful in HTTP server contexts for handling incoming `multipart/*` requests.
  */
 export async function* parseMultipartRequest(
   request: Request,
@@ -41,7 +42,7 @@ export async function* parseMultipartRequest(
 }
 
 /**
- * Parse a multipart stream and yield each part as a `MultipartPart` object.
+ * Parse a `multipart/*` message stream and yield each part as a `MultipartPart` object.
  *
  * Note: This is a low-level API that requires manual handling of the stream and boundary. For most
  * common cases, consider using `parseMultipartRequest(request)` instead.
@@ -112,7 +113,7 @@ enum MultipartParserState {
 }
 
 /**
- * A parser for `multipart/form-data` streams.
+ * A parser for `multipart/*` message streams.
  */
 export class MultipartParser {
   boundary: string;
@@ -160,7 +161,7 @@ export class MultipartParser {
 
     if (this.#state === MultipartParserState.Start) {
       if (this.#length < this.#boundaryLength) {
-        this.save();
+        this.#save();
         return [];
       }
 
@@ -169,7 +170,7 @@ export class MultipartParser {
         throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
       }
 
-      this.skip(this.#boundaryLength);
+      this.#skip(this.#boundaryLength);
 
       this.#state = MultipartParserState.AfterBoundary;
     }
@@ -179,13 +180,13 @@ export class MultipartParser {
     while (true) {
       if (this.#state === MultipartParserState.AfterBoundary) {
         if (this.#length < 2) {
-          this.save();
+          this.#save();
           break;
         }
 
         // If the next two bytes are "--" then we're done; this is the closing boundary. Otherwise
         // they're the \r\n after a boundary in the middle of the message and we can ignore them.
-        let twoBytes = this.read(2);
+        let twoBytes = this.#read(2);
         if (
           (twoBytes.length === 1 && twoBytes[0][0] === HYPHEN && twoBytes[0][1] === HYPHEN) ||
           (twoBytes[0][0] === HYPHEN && twoBytes[1][0] === HYPHEN)
@@ -203,7 +204,7 @@ export class MultipartParser {
 
       if (this.#state === MultipartParserState.Header) {
         if (this.#length < 4) {
-          this.save();
+          this.#save();
           break;
         }
 
@@ -215,8 +216,8 @@ export class MultipartParser {
           );
         }
 
-        let header = concatChunks(this.read(headerEndIndex));
-        this.skip(4); // Skip \r\n\r\n
+        let header = concatChunks(this.#read(headerEndIndex));
+        this.#skip(4); // Skip \r\n\r\n
 
         let body = new ReadableStream({
           start: (controller) => {
@@ -231,7 +232,7 @@ export class MultipartParser {
 
       if (this.#state === MultipartParserState.Body) {
         if (this.#length < this.#boundaryLength) {
-          this.save();
+          this.#save();
           break;
         }
 
@@ -240,15 +241,15 @@ export class MultipartParser {
         if (index === -1) {
           // Write as much of the buffer as we can to the current body stream while still
           // keeping enough to check if the last few bytes are part of the boundary.
-          this.writeBody(this.read(this.#length - this.#boundaryLength + 1));
-          this.save();
+          this.#writeBody(this.#read(this.#length - this.#boundaryLength + 1));
+          this.#save();
           break;
         }
 
-        this.writeBody(this.read(index - 2)); // -2 to avoid \r\n before boundary
-        this.closeBody();
+        this.#writeBody(this.#read(index - 2)); // -2 to avoid \r\n before boundary
+        this.#closeBody();
 
-        this.skip(2 + this.#boundaryLength); // Skip \r\n + boundary
+        this.#skip(2 + this.#boundaryLength); // Skip \r\n + boundary
 
         this.#state = MultipartParserState.AfterBoundary;
       }
@@ -257,7 +258,7 @@ export class MultipartParser {
     return parts;
   }
 
-  private read(size: number): Uint8Array[] {
+  #read(size: number): Uint8Array[] {
     this.#length -= size;
 
     if (size > this.#buffer.length) {
@@ -279,7 +280,7 @@ export class MultipartParser {
     return [head];
   }
 
-  private skip(size: number): void {
+  #skip(size: number): void {
     this.#length -= size;
 
     if (size > this.#buffer.length) {
@@ -290,13 +291,13 @@ export class MultipartParser {
     }
   }
 
-  private save(): void {
+  #save(): void {
     if (this.#chunk.length === 0) return;
     this.#buffer =
       this.#buffer.length > 0 ? concatChunks([this.#buffer, this.#chunk]) : this.#chunk;
   }
 
-  private writeBody(chunks: Uint8Array[]): void {
+  #writeBody(chunks: Uint8Array[]): void {
     for (let chunk of chunks) {
       if (this.#bodyLength + chunk.length > this.#maxFileSize) {
         throw new MultipartParseError(
@@ -309,7 +310,7 @@ export class MultipartParser {
     }
   }
 
-  private closeBody(): void {
+  #closeBody(): void {
     this.#bodyController!.close();
     this.#bodyController = null;
     this.#bodyLength = 0;
@@ -388,7 +389,7 @@ function findDoubleNewline(head: Uint8Array, tail: Uint8Array): number {
 }
 
 /**
- * A part of a `multipart/form-data` message.
+ * A part of a `multipart/*` message.
  */
 export class MultipartPart {
   #header: Uint8Array;
