@@ -11,7 +11,6 @@ This is a utility for use with [Single Fetch][single-fetch] to return raw data a
 import { unstable_data as data } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader = async () => {
-  // So you can write this:
   return data(
     { not: "coffee" },
     {

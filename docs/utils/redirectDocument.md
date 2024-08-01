@@ -26,7 +26,7 @@ export const action = async () => {
 
 Just like [`redirect`][redirect], it accepts a status code or a `ResponseInit` as the second parameter:
 
-```
+```ts
 redirectDocument(path, 301);
 redirectDocument(path, 303);
 ```

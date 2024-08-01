@@ -6,7 +6,7 @@ title: Single Fetch
 
 <docs-warning>This is an unstable API and will continue to change, do not adopt in production</docs-warning>
 
-Single Fetch is a new data data loading strategy and streaming format. When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). Additionally, Single Fetch also allows you to send down naked objects from your `loader` and `action`, such as `Date`, `Error`, `Promise`, `RegExp`, and more.
+Single Fetch is a new data loading strategy and streaming format. When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). Additionally, Single Fetch also allows you to send down naked objects from your `loader` and `action`, such as `Date`, `Error`, `Promise`, `RegExp`, and more.
 
 ## Overview
 
