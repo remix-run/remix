@@ -7,7 +7,7 @@ import { concatChunks, readStream } from './utils.js';
  */
 export function getMultipartBoundary(contentType: string): string | null {
   let match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
-  return match ? match[1] || match[2] : null;
+  return match ? match[1] ?? match[2] : null;
 }
 
 /**
@@ -422,28 +422,28 @@ export class MultipartPart {
    * True if this part originated from a file upload.
    */
   get isFile(): boolean {
-    return this.filename !== null;
+    return this.filename !== undefined;
   }
 
   /**
    * The filename of the part, if it is a file upload.
    */
-  get filename(): string | null {
-    return this.headers.contentDisposition.preferredFilename || null;
+  get filename(): string | undefined {
+    return this.headers.contentDisposition.preferredFilename;
   }
 
   /**
    * The media type of the part.
    */
-  get mediaType(): string | null {
-    return this.headers.contentType.mediaType || null;
+  get mediaType(): string | undefined {
+    return this.headers.contentType.mediaType;
   }
 
   /**
    * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
    */
-  get name(): string | null {
-    return this.headers.contentDisposition.name || null;
+  get name(): string | undefined {
+    return this.headers.contentDisposition.name;
   }
 
   /**
