@@ -30,9 +30,7 @@
 
 ### Patch Changes
 
-- Bump to RR stable ([#9815](https://github.com/remix-run/remix/pull/9815))
 - Single Fetch: Ensure calls don't include any trailing slash from the pathname (i.e., `/path/.data`) ([#9792](https://github.com/remix-run/remix/pull/9792))
-- \[REMOVE] Fix typings for unstable\_data and useLoaderData ([#9811](https://github.com/remix-run/remix/pull/9811))
 - Single Fetch: Add `undefined` to the `useRouteLoaderData` type override ([#9796](https://github.com/remix-run/remix/pull/9796))
 - Change initial hydration route mismatch from a URL check to a matches check to be resistant to URL inconsistencies ([#9695](https://github.com/remix-run/remix/pull/9695))
 - Updated dependencies:
