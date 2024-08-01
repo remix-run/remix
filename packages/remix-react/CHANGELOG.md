@@ -1,26 +1,10 @@
 # `@remix-run/react`
 
-## 2.11.0-pre.2
-
-### Patch Changes
-
-- Bump to RR stable ([#9815](https://github.com/remix-run/remix/pull/9815))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.11.0-pre.2`
-
-## 2.11.0-pre.1
-
-### Patch Changes
-
-- [REMOVE] Fix typings for unstable_data and useLoaderData ([#9811](https://github.com/remix-run/remix/pull/9811))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.11.0-pre.1`
-
-## 2.11.0-pre.0
+## 2.11.0
 
 ### Minor Changes
 
-- Add a new `unstable_data()` API for usage with Remix Single Fetch ([#9769](https://github.com/remix-run/remix/pull/9769))
+- Single Fetch: Add a new `unstable_data()` API as a replacement for `json`/`defer` when custom `status`/`headers` are needed ([#9769](https://github.com/remix-run/remix/pull/9769))
 - Add a new `replace(url, init?)` alternative to `redirect(url, init?)` that performs a `history.replaceState` instead of a `history.pushState` on client-side navigation redirects ([#9764](https://github.com/remix-run/remix/pull/9764))
 - Rename `future.unstable_fogOfWar` to `future.unstable_lazyRouteDiscovery` for clarity ([#9763](https://github.com/remix-run/remix/pull/9763))
 - Single Fetch: Remove `responseStub` in favor of `headers` ([#9769](https://github.com/remix-run/remix/pull/9769))
@@ -46,11 +30,13 @@
 
 ### Patch Changes
 
-- Ensure single fetch calls don't include any trailing slash from the pathname (i.e., /path/.data) ([#9792](https://github.com/remix-run/remix/pull/9792))
+- Bump to RR stable ([#9815](https://github.com/remix-run/remix/pull/9815))
+- Single Fetch: Ensure calls don't include any trailing slash from the pathname (i.e., `/path/.data`) ([#9792](https://github.com/remix-run/remix/pull/9792))
+- \[REMOVE] Fix typings for unstable\_data and useLoaderData ([#9811](https://github.com/remix-run/remix/pull/9811))
 - Single Fetch: Add `undefined` to the `useRouteLoaderData` type override ([#9796](https://github.com/remix-run/remix/pull/9796))
 - Change initial hydration route mismatch from a URL check to a matches check to be resistant to URL inconsistencies ([#9695](https://github.com/remix-run/remix/pull/9695))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.11.0-pre.0`
+  - `@remix-run/server-runtime@2.11.0`
 
 ## 2.10.3
 
