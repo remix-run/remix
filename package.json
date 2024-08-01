@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
+    "prettier": "^3.3.3",
     "tsimp": "^2.0.11",
     "typescript": "^5.5.3"
   },
