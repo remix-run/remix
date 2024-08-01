@@ -5,7 +5,8 @@
   "dependencies": {
     "@fastify/busboy": "^3.0.0",
     "@mjackson/multipart-parser": "workspace:*",
-    "busboy": "^1.6.0"
+    "busboy": "^1.6.0",
+    "multipasta": "^0.2.4"
   },
   "devDependencies": {
     "@types/bun": "^1.1.6",

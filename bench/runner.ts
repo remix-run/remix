@@ -5,6 +5,7 @@ import * as messages from './messages.js';
 import * as busboy from './parsers/busboy.js';
 import * as fastifyBusboy from './parsers/fastify-busboy.js';
 import * as multipartParser from './parsers/multipart-parser.js';
+import * as multipasta from './parsers/multipasta.js';
 
 const benchmarks = [
   { name: '1 small file', message: messages.oneSmallFile },
@@ -59,6 +60,9 @@ async function runBenchmarks(parserName?: string): Promise<BenchmarkResults> {
   }
   if (parserName === 'fastify-busboy' || parserName === undefined) {
     results['@fastify/busboy'] = await runParserBenchmarks(fastifyBusboy);
+  }
+  if (parserName === 'multipasta' || parserName === undefined) {
+    results['multipasta'] = await runParserBenchmarks(multipasta);
   }
 
   return results;
