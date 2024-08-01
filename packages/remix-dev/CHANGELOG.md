@@ -1,22 +1,6 @@
 # `@remix-run/dev`
 
-## 2.11.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.11.0-pre.2`
-  - `@remix-run/server-runtime@2.11.0-pre.2`
-
-## 2.11.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.11.0-pre.1`
-  - `@remix-run/server-runtime@2.11.0-pre.1`
-
-## 2.11.0-pre.0
+## 2.11.0
 
 ### Minor Changes
 
@@ -26,10 +10,8 @@
 
 - Handle absolute Vite base URLs ([#9700](https://github.com/remix-run/remix/pull/9700))
 - Updated dependencies:
-  - `@remix-run/node@2.11.0-pre.0`
-  - `@remix-run/react@2.11.0-pre.0`
-  - `@remix-run/server-runtime@2.11.0-pre.0`
-  - `@remix-run/serve@2.11.0-pre.0`
+  - `@remix-run/node@2.11.0`
+  - `@remix-run/server-runtime@2.11.0`
 
 ## 2.10.3
 

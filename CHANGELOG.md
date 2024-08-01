@@ -204,7 +204,7 @@ Date: YYYY-MM-DD
 
 ## v2.11.0
 
-Date: 2024-07-31
+Date: 2024-08-01
 
 ### What's Changed
 
