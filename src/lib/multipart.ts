@@ -120,19 +120,19 @@ enum MultipartParserState {
  * A parser for `multipart/form-data` streams.
  */
 export class MultipartParser {
-  private boundaryArray: Uint8Array;
-  private boundaryLength: number;
-  private boundarySkipTable: Uint8Array;
-  private maxHeaderSize: number;
-  private maxFileSize: number;
+  #boundaryArray: Uint8Array;
+  #boundaryLength: number;
+  #boundarySkipTable: Uint8Array;
+  #maxHeaderSize: number;
+  #maxFileSize: number;
 
-  private state = MultipartParserState.Start;
-  private buffer: Uint8Array = EMPTY_BUFFER;
-  private chunk: Uint8Array = EMPTY_BUFFER;
-  private length = 0;
+  #state = MultipartParserState.Start;
+  #buffer: Uint8Array = EMPTY_BUFFER;
+  #chunk: Uint8Array = EMPTY_BUFFER;
+  #length = 0;
 
-  private bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
-  private bodyLength = 0;
+  #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
+  #bodyLength = 0;
 
   constructor(
     public boundary: string,
@@ -141,15 +141,15 @@ export class MultipartParser {
       maxFileSize = 10 * 1024 * 1024, // 10 MB
     }: MultipartParserOptions = {}
   ) {
-    this.boundaryArray = textEncoder.encode(`--${boundary}`);
-    this.boundaryLength = this.boundaryArray.length;
-    this.boundarySkipTable = computeSkipTable(this.boundaryArray);
-    this.maxHeaderSize = maxHeaderSize;
-    this.maxFileSize = maxFileSize;
+    this.#boundaryArray = textEncoder.encode(`--${boundary}`);
+    this.#boundaryLength = this.#boundaryArray.length;
+    this.#boundarySkipTable = computeSkipTable(this.#boundaryArray);
+    this.#maxHeaderSize = maxHeaderSize;
+    this.#maxFileSize = maxFileSize;
   }
 
   get done(): boolean {
-    return this.state === MultipartParserState.Done;
+    return this.#state === MultipartParserState.Done;
   }
 
   push(chunk: Uint8Array): MultipartPart[] {
@@ -157,30 +157,30 @@ export class MultipartParser {
       throw new MultipartParseError('Cannot push, parser is done');
     }
 
-    this.chunk = chunk;
-    this.length = this.buffer.length + this.chunk.length;
+    this.#chunk = chunk;
+    this.#length = this.#buffer.length + this.#chunk.length;
 
-    if (this.state === MultipartParserState.Start) {
-      if (this.length < this.boundaryLength) {
+    if (this.#state === MultipartParserState.Start) {
+      if (this.#length < this.#boundaryLength) {
         this.save();
         return [];
       }
 
-      let index = find(this.buffer, this.chunk, this.boundaryArray, this.boundarySkipTable);
+      let index = find(this.#buffer, this.#chunk, this.#boundaryArray, this.#boundarySkipTable);
       if (index !== 0) {
         throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
       }
 
-      this.skip(this.boundaryLength);
+      this.skip(this.#boundaryLength);
 
-      this.state = MultipartParserState.AfterBoundary;
+      this.#state = MultipartParserState.AfterBoundary;
     }
 
     let parts: MultipartPart[] = [];
 
     while (true) {
-      if (this.state === MultipartParserState.AfterBoundary) {
-        if (this.length < 2) {
+      if (this.#state === MultipartParserState.AfterBoundary) {
+        if (this.#length < 2) {
           this.save();
           break;
         }
@@ -193,27 +193,27 @@ export class MultipartParser {
           (twoBytes[0][0] === HYPHEN && twoBytes[1][0] === HYPHEN)
         ) {
           // Discard any remaining data in the current buffer/chunk so we don't leak memory.
-          this.buffer = EMPTY_BUFFER;
-          this.chunk = EMPTY_BUFFER;
+          this.#buffer = EMPTY_BUFFER;
+          this.#chunk = EMPTY_BUFFER;
 
-          this.state = MultipartParserState.Done;
+          this.#state = MultipartParserState.Done;
           break;
         }
 
-        this.state = MultipartParserState.Header;
+        this.#state = MultipartParserState.Header;
       }
 
-      if (this.state === MultipartParserState.Header) {
-        if (this.length < 4) {
+      if (this.#state === MultipartParserState.Header) {
+        if (this.#length < 4) {
           this.save();
           break;
         }
 
-        let index = find(this.buffer, this.chunk, DOUBLE_NEWLINE, DOUBLE_NEWLINE_SKIP_TABLE);
+        let index = find(this.#buffer, this.#chunk, DOUBLE_NEWLINE, DOUBLE_NEWLINE_SKIP_TABLE);
         if (index === -1) break;
-        if (index > this.maxHeaderSize) {
+        if (index > this.#maxHeaderSize) {
           throw new MultipartParseError(
-            `Header size exceeds maximum allowed size of ${this.maxHeaderSize} bytes`
+            `Header size exceeds maximum allowed size of ${this.#maxHeaderSize} bytes`
           );
         }
 
@@ -222,27 +222,27 @@ export class MultipartParser {
 
         let body = new ReadableStream({
           start: (controller) => {
-            this.bodyController = controller;
+            this.#bodyController = controller;
           },
         });
 
         parts.push(new MultipartPart(header, body));
 
-        this.state = MultipartParserState.Body;
+        this.#state = MultipartParserState.Body;
       }
 
-      if (this.state === MultipartParserState.Body) {
-        if (this.length < this.boundaryLength) {
+      if (this.#state === MultipartParserState.Body) {
+        if (this.#length < this.#boundaryLength) {
           this.save();
           break;
         }
 
-        let index = find(this.buffer, this.chunk, this.boundaryArray, this.boundarySkipTable);
+        let index = find(this.#buffer, this.#chunk, this.#boundaryArray, this.#boundarySkipTable);
 
         if (index === -1) {
           // Write as much of the buffer as we can to the current body stream while still
           // keeping enough to check if the last few bytes are part of the boundary.
-          this.writeBody(this.read(this.length - this.boundaryLength + 1));
+          this.writeBody(this.read(this.#length - this.#boundaryLength + 1));
           this.save();
           break;
         }
@@ -250,9 +250,9 @@ export class MultipartParser {
         this.writeBody(this.read(index - 2)); // -2 to avoid \r\n before boundary
         this.closeBody();
 
-        this.skip(2 + this.boundaryLength); // Skip \r\n + boundary
+        this.skip(2 + this.#boundaryLength); // Skip \r\n + boundary
 
-        this.state = MultipartParserState.AfterBoundary;
+        this.#state = MultipartParserState.AfterBoundary;
       }
     }
 
@@ -260,60 +260,61 @@ export class MultipartParser {
   }
 
   private read(size: number): Uint8Array[] {
-    this.length -= size;
+    this.#length -= size;
 
-    if (size > this.buffer.length) {
-      if (this.buffer.length > 0) {
-        let head = this.buffer;
-        this.buffer = EMPTY_BUFFER;
-        let tail = this.chunk.subarray(0, size - head.length);
-        this.chunk = this.chunk.subarray(size - head.length);
+    if (size > this.#buffer.length) {
+      if (this.#buffer.length > 0) {
+        let head = this.#buffer;
+        this.#buffer = EMPTY_BUFFER;
+        let tail = this.#chunk.subarray(0, size - head.length);
+        this.#chunk = this.#chunk.subarray(size - head.length);
         return [head, tail];
       }
 
-      let head = this.chunk.subarray(0, size);
-      this.chunk = this.chunk.subarray(size);
+      let head = this.#chunk.subarray(0, size);
+      this.#chunk = this.#chunk.subarray(size);
       return [head];
     }
 
-    let head = this.buffer.subarray(0, size);
-    this.buffer = this.buffer.subarray(size);
+    let head = this.#buffer.subarray(0, size);
+    this.#buffer = this.#buffer.subarray(size);
     return [head];
   }
 
   private skip(size: number): void {
-    this.length -= size;
+    this.#length -= size;
 
-    if (size > this.buffer.length) {
-      this.chunk = this.chunk.subarray(size - this.buffer.length);
-      this.buffer = EMPTY_BUFFER;
+    if (size > this.#buffer.length) {
+      this.#chunk = this.#chunk.subarray(size - this.#buffer.length);
+      this.#buffer = EMPTY_BUFFER;
     } else {
-      this.buffer = this.buffer.subarray(size);
+      this.#buffer = this.#buffer.subarray(size);
     }
   }
 
   private save(): void {
-    if (this.chunk.length === 0) return;
-    this.buffer = this.buffer.length > 0 ? concatChunks([this.buffer, this.chunk]) : this.chunk;
+    if (this.#chunk.length === 0) return;
+    this.#buffer =
+      this.#buffer.length > 0 ? concatChunks([this.#buffer, this.#chunk]) : this.#chunk;
   }
 
   private writeBody(chunks: Uint8Array[]): void {
     for (let chunk of chunks) {
-      if (this.bodyLength + chunk.length > this.maxFileSize) {
+      if (this.#bodyLength + chunk.length > this.#maxFileSize) {
         throw new MultipartParseError(
-          `File size exceeds maximum allowed size of ${this.maxFileSize} bytes`
+          `File size exceeds maximum allowed size of ${this.#maxFileSize} bytes`
         );
       }
 
-      this.bodyController!.enqueue(chunk);
-      this.bodyLength += chunk.length;
+      this.#bodyController!.enqueue(chunk);
+      this.#bodyLength += chunk.length;
     }
   }
 
   private closeBody(): void {
-    this.bodyController!.close();
-    this.bodyController = null;
-    this.bodyLength = 0;
+    this.#bodyController!.close();
+    this.#bodyController = null;
+    this.#bodyLength = 0;
   }
 }
 
@@ -365,12 +366,12 @@ function computeSkipTable(pattern: Uint8Array): Uint8Array {
  * A part of a `multipart/form-data` message.
  */
 export class MultipartPart {
-  private _header: Uint8Array;
-  private _headers?: SuperHeaders;
-  private _bodyUsed = false;
+  #header: Uint8Array;
+  #headers?: SuperHeaders;
+  #bodyUsed = false;
 
   constructor(header: Uint8Array, public readonly body: ReadableStream<Uint8Array>) {
-    this._header = header;
+    this.#header = header;
   }
 
   /**
@@ -384,18 +385,18 @@ export class MultipartPart {
    * Whether the body of this part has been consumed.
    */
   get bodyUsed(): boolean {
-    return this._bodyUsed;
+    return this.#bodyUsed;
   }
 
   /**
    * The content of this part as a `Uint8Array`.
    */
   async bytes(): Promise<Uint8Array> {
-    if (this._bodyUsed) {
+    if (this.#bodyUsed) {
       throw new Error('Body is already consumed or is being consumed');
     }
 
-    this._bodyUsed = true;
+    this.#bodyUsed = true;
 
     let chunks: Uint8Array[] = [];
 
@@ -410,11 +411,11 @@ export class MultipartPart {
    * The headers associated with this part.
    */
   get headers(): SuperHeaders {
-    if (!this._headers) {
-      this._headers = new SuperHeaders(textDecoder.decode(this._header));
+    if (!this.#headers) {
+      this.#headers = new SuperHeaders(textDecoder.decode(this.#header));
     }
 
-    return this._headers;
+    return this.#headers;
   }
 
   /**
