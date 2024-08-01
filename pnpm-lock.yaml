@@ -15,6 +15,9 @@ importers:
       '@types/node':
         specifier: ^20.14.10
         version: 20.14.13
+      prettier:
+        specifier: ^3.3.3
+        version: 3.3.3
       tsimp:
         specifier: ^2.0.11
         version: 2.0.11(typescript@5.5.4)
@@ -562,6 +565,11 @@ packages:
   pirates@4.0.6:
     resolution: {integrity: sha512-saLsH7WeYYPiD25LDuLRRY/i+6HaPYr6G1OUlN39otzkSTxKnubR9RTxS3/Kk50s1g2JTgFwWQDQyplC5/SHZg==}
     engines: {node: '>= 6'}
+
+  prettier@3.3.3:
+    resolution: {integrity: sha512-i2tDNA0O5IrMO757lfrdQZCc2jPNDVntV0m/+4whiDfWaTKfMNgR7Qz0NAeGz/nRqF4m5/6CLzbP4/liHt12Ew==}
+    engines: {node: '>=14'}
+    hasBin: true
 
   printable-characters@1.0.42:
     resolution: {integrity: sha512-dKp+C4iXWK4vVYZmYSd0KBH5F/h1HoZRsbJ82AVKRO3PEo8L4lBS/vLwhVtpwwuYcoIsVY+1JYKR268yn480uQ==}
@@ -1146,6 +1154,8 @@ snapshots:
   picomatch@2.3.1: {}
 
   pirates@4.0.6: {}
+
+  prettier@3.3.3: {}
 
   printable-characters@1.0.42: {}
 
