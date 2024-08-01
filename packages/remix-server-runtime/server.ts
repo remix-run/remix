@@ -28,7 +28,6 @@ import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
   isRedirectResponse,
-  isRedirectStatusCode,
   isResponse,
   json,
 } from "./responses";
@@ -36,18 +35,11 @@ import { createServerHandoffString } from "./serverHandoff";
 import { getDevServerHooks } from "./dev";
 import type { SingleFetchResult, SingleFetchResults } from "./single-fetch";
 import {
-  convertResponseStubToErrorResponse,
   encodeViaTurboStream,
-  getResponseStubs,
-  getSingleFetchDataStrategy,
   getSingleFetchRedirect,
-  getSingleFetchResourceRouteDataStrategy,
-  isResponseStub,
-  mergeResponseStubs,
   singleFetchAction,
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
-  ResponseStubOperationsSymbol,
   SINGLE_FETCH_REDIRECT_STATUS,
 } from "./single-fetch";
 import { resourceRouteJsonWarning } from "./deprecations";
@@ -399,6 +391,7 @@ async function handleSingleFetchRequest(
   let { result, headers, status } =
     request.method !== "GET"
       ? await singleFetchAction(
+          build,
           serverMode,
           staticHandler,
           request,
@@ -407,6 +400,7 @@ async function handleSingleFetchRequest(
           handleError
         )
       : await singleFetchLoaders(
+          build,
           serverMode,
           staticHandler,
           request,
@@ -447,13 +441,9 @@ async function handleDocumentRequest(
   criticalCss?: string
 ) {
   let context;
-  let responseStubs = getResponseStubs();
   try {
     context = await staticHandler.query(request, {
       requestContext: loadContext,
-      unstable_dataStrategy: build.future.unstable_singleFetch
-        ? getSingleFetchDataStrategy(responseStubs)
-        : undefined,
     });
   } catch (error: unknown) {
     handleError(error);
@@ -464,37 +454,13 @@ async function handleDocumentRequest(
     return context;
   }
 
-  let statusCode: number;
-  let headers: Headers;
-  if (build.future.unstable_singleFetch) {
-    let merged = mergeResponseStubs(context, responseStubs);
-    statusCode = merged.statusCode;
-    headers = merged.headers;
-
-    if (isRedirectStatusCode(statusCode) && headers.has("Location")) {
-      return new Response(null, {
-        status: statusCode,
-        headers,
-      });
-    }
-
-    if (context.errors) {
-      for (let [routeId, error] of Object.entries(context.errors)) {
-        if (isResponseStub(error)) {
-          context.errors[routeId] = convertResponseStubToErrorResponse(error);
-        }
-      }
-    }
-  } else {
-    statusCode = context.statusCode;
-    headers = getDocumentHeaders(build, context);
-  }
+  let headers = getDocumentHeaders(build, context);
 
   // Sanitize errors outside of development environments
   if (context.errors) {
     Object.values(context.errors).forEach((err) => {
       // @ts-expect-error `err.error` is "private" from users but intended for internal use
-      if ((!isRouteErrorResponse(err) || err.error) && !isResponseStub(err)) {
+      if (!isRouteErrorResponse(err) || err.error) {
         handleError(err);
       }
     });
@@ -515,7 +481,7 @@ async function handleDocumentRequest(
     staticHandlerContext: context,
     criticalCss,
     serverHandoffString: createServerHandoffString({
-      url: context.location.pathname,
+      ssrMatches: context.matches.map((m) => m.route.id),
       basename: build.basename,
       criticalCss,
       future: build.future,
@@ -542,7 +508,7 @@ async function handleDocumentRequest(
   try {
     return await handleDocumentRequestFunction(
       request,
-      statusCode,
+      context.statusCode,
       headers,
       entryContext,
       loadContext
@@ -592,7 +558,7 @@ async function handleDocumentRequest(
       ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString({
-        url: context.location.pathname,
+        ssrMatches: context.matches.map((m) => m.route.id),
         basename: build.basename,
         future: build.future,
         isSpaMode: build.isSpaMode,
@@ -636,22 +602,12 @@ async function handleResourceRequest(
   handleError: (err: unknown) => void
 ) {
   try {
-    let responseStubs = build.future.unstable_singleFetch
-      ? getResponseStubs()
-      : {};
     // Note we keep the routeId here to align with the Remix handling of
     // resource routes which doesn't take ?index into account and just takes
     // the leaf match
     let response = await staticHandler.queryRoute(request, {
       routeId,
       requestContext: loadContext,
-      ...(build.future.unstable_singleFetch
-        ? {
-            unstable_dataStrategy: getSingleFetchResourceRouteDataStrategy({
-              responseStubs,
-            }),
-          }
-        : null),
     });
 
     if (typeof response === "object" && response !== null) {
@@ -662,36 +618,14 @@ async function handleResourceRequest(
       );
     }
 
-    if (build.future.unstable_singleFetch) {
-      let stub = responseStubs[routeId];
-      if (isResponse(response)) {
-        // If a response was returned, we use it's status and we merge our
-        // response stub headers onto it
-        let ops = stub[ResponseStubOperationsSymbol];
-        for (let [op, ...args] of ops) {
-          // @ts-expect-error
-          response.headers[op](...args);
-        }
-      } else if (isResponseStub(response) || response == null) {
-        // If the stub or null was returned, then there is no body so we just
-        // proxy along the status/headers to a Response
-        response = new Response(null, {
-          status: stub.status,
-          headers: stub.headers,
-        });
-      } else {
-        console.warn(
-          resourceRouteJsonWarning(
-            request.method === "GET" ? "loader" : "action",
-            routeId
-          )
-        );
-        // Otherwise we create a json Response using the stub
-        response = json(response, {
-          status: stub.status,
-          headers: stub.headers,
-        });
-      }
+    if (build.future.unstable_singleFetch && !isResponse(response)) {
+      console.warn(
+        resourceRouteJsonWarning(
+          request.method === "GET" ? "loader" : "action",
+          routeId
+        )
+      );
+      response = json(response);
     }
 
     // callRouteLoader/callRouteAction always return responses (w/o single fetch).
@@ -707,13 +641,6 @@ async function handleResourceRequest(
       // match identically to what Remix returns
       let response = safelySetHeader(error, "X-Remix-Catch", "yes");
       return response;
-    }
-
-    if (isResponseStub(error)) {
-      return new Response(null, {
-        status: error.status,
-        headers: error.headers,
-      });
     }
 
     if (isRouteErrorResponse(error)) {

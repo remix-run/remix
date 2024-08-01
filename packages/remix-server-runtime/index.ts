@@ -4,10 +4,11 @@ export {
   composeUploadHandlers as unstable_composeUploadHandlers,
   parseMultipartFormData as unstable_parseMultipartFormData,
 } from "./formData";
-export { defer, json, redirect, redirectDocument } from "./responses";
+export { defer, json, redirect, redirectDocument, replace } from "./responses";
 
 export {
   SingleFetchRedirectSymbol as UNSAFE_SingleFetchRedirectSymbol,
+  data as unstable_data,
   defineLoader as unstable_defineLoader,
   defineAction as unstable_defineAction,
 } from "./single-fetch";

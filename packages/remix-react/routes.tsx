@@ -604,6 +604,10 @@ function getRedirect(response: Response): Response {
   if (reloadDocument) {
     headers["X-Remix-Reload-Document"] = reloadDocument;
   }
+  let replace = response.headers.get("X-Remix-Replace");
+  if (replace) {
+    headers["X-Remix-Replace"] = replace;
+  }
   return redirect(url, { status, headers });
 }
 
