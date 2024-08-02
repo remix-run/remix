@@ -1,4 +1,5 @@
 import * as os from 'node:os';
+import * as process from 'node:process';
 
 import * as messages from './messages.js';
 import * as busboy from './parsers/busboy.js';
@@ -25,7 +26,7 @@ interface Parser {
 
 async function runParserBenchmarks(
   parser: Parser,
-  times = 1000
+  times = 1000,
 ): Promise<{ [testName: string]: string }> {
   let results: { [testName: string]: string } = {};
 
@@ -66,8 +67,20 @@ async function runBenchmarks(parserName?: string): Promise<BenchmarkResults> {
 function printResults(results: BenchmarkResults) {
   console.log(`Platform: ${os.type()} (${os.release()})`);
   console.log(`CPU: ${os.cpus()[0].model}`);
-  console.log(`Node.js ${process.version}`);
   console.log(`Date: ${new Date().toLocaleString()}`);
+
+  // @ts-expect-error
+  const Bun = globalThis.Bun;
+  // @ts-expect-error
+  const Deno = globalThis.Deno;
+  if (typeof Bun !== 'undefined') {
+    console.log(`Bun ${Bun.version}`);
+  } else if (typeof Deno !== 'undefined') {
+    console.log(`Deno ${Deno.version.deno}`);
+  } else {
+    console.log(`Node.js ${process.version}`);
+  }
+
   console.table(results);
 }
 
