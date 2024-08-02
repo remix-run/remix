@@ -1,6 +1,6 @@
 import { SuperHeaders } from 'fetch-super-headers';
 
-import { concatChunks, readStream } from './utils.js';
+import { concatChunks, isIterable, readStream } from './utils.js';
 
 /**
  * Extracts the boundary string from a `multipart/*` content type.
@@ -38,55 +38,52 @@ export async function* parseMultipartRequest(
     throw new MultipartParseError('Invalid Content-Type header: missing boundary');
   }
 
-  yield* parseMultipartStream(request.body, boundary, options);
+  yield* parseMultipart(request.body, boundary, options);
 }
 
 /**
- * Parse a `multipart/*` message stream and yield each part as a `MultipartPart` object.
+ * Parse a `multipart/*` buffer or stream and yield each part it finds as a `MultipartPart` object.
  *
- * Note: This is a low-level API that requires manual handling of the stream and boundary. For most
- * common cases, consider using `parseMultipartRequest(request)` instead.
+ * Note: This is a low-level API that requires manual handling of the stream and boundary. If you're
+ * building a web server, consider using `parseMultipartRequest(request)` instead.
  */
-export async function* parseMultipartStream(
-  stream: ReadableStream<Uint8Array>,
+export async function* parseMultipart(
+  data: Uint8Array | Iterable<Uint8Array> | ReadableStream<Uint8Array> | AsyncIterable<Uint8Array>,
   boundary: string,
   options?: MultipartParserOptions,
 ): AsyncGenerator<MultipartPart> {
   let parser = new MultipartParser(boundary, options);
 
-  // The async generator will suspend execution of this function until the next part
-  // is requested. This has the potential to cause a deadlock if the consumer tries
-  // to `await part.text()` while the parser is waiting for more bytes. To fix this,
-  // we read the stream in a promise and buffer parts until they're requested. When
-  // new parts become available or when we're done reading the stream, we manually
-  // run the loop to yield the buffered parts.
   let parts: MultipartPart[] = [];
+  let resolveNext: (() => void) | null = null;
   let done = false;
-  let runTheLoop: () => void;
-  let promise = readStream(stream, (chunk) => {
-    parts.push(...parser.push(chunk));
-    runTheLoop();
-  }).finally(() => {
-    done = true;
-    runTheLoop();
-  });
+
+  let parse = parser
+    .parse(data, (part) => {
+      parts.push(part);
+      if (resolveNext) {
+        resolveNext();
+        resolveNext = null;
+      }
+    })
+    .finally(() => {
+      done = true;
+      if (resolveNext) resolveNext();
+    });
 
   while (!done) {
-    await new Promise<void>((resolve) => {
-      runTheLoop = resolve;
-    });
+    if (parts.length === 0) {
+      await new Promise<void>((resolve) => {
+        resolveNext = resolve;
+      });
+    }
 
     while (parts.length > 0) {
       yield parts.shift()!;
     }
   }
 
-  // Throw any errors that occurred during the parse.
-  await promise;
-
-  if (!parser.done) {
-    throw new MultipartParseError('Unexpected end of stream');
-  }
+  await parse;
 }
 
 const HYPHEN = 45;
@@ -147,10 +144,61 @@ export class MultipartParser {
     this.#maxFileSize = maxFileSize;
   }
 
+  /**
+   * True if the parser has finished parsing the stream and found the closing multipart boundary.
+   */
   get done(): boolean {
     return this.#state === MultipartParserState.Done;
   }
 
+  /**
+   * Parse a buffer or stream of multipart data and call the given handler for each part it contains.
+   * Resolves when the parse is done and all handlers are finished.
+   */
+  async parse(
+    data:
+      | Uint8Array
+      | Iterable<Uint8Array>
+      | ReadableStream<Uint8Array>
+      | AsyncIterable<Uint8Array>,
+    handler: (part: MultipartPart) => void,
+  ): Promise<void> {
+    this.reset();
+
+    let results = [];
+
+    if (data instanceof Uint8Array) {
+      for (let part of this.push(data)) {
+        results.push(handler(part));
+      }
+    } else if (isIterable(data)) {
+      for (let chunk of data) {
+        for (let part of this.push(chunk)) {
+          results.push(handler(part));
+        }
+      }
+    } else {
+      if (data instanceof ReadableStream) {
+        data = readStream(data);
+      }
+
+      for await (let chunk of data) {
+        for (let part of this.push(chunk)) {
+          results.push(handler(part));
+        }
+      }
+    }
+
+    if (!this.done) {
+      throw new MultipartParseError('Unexpected end of stream');
+    }
+
+    await Promise.all(results);
+  }
+
+  /**
+   * Push a new chunk of data into the parser and return any parts it contains.
+   */
   push(chunk: Uint8Array): MultipartPart[] {
     if (this.done) {
       throw new MultipartParseError('Cannot push, parser is done');
@@ -256,6 +304,18 @@ export class MultipartParser {
     }
 
     return parts;
+  }
+
+  /**
+   * Reset the internal state of the parser.
+   */
+  reset(): void {
+    this.#state = MultipartParserState.Start;
+    this.#buffer = EMPTY_BUFFER;
+    this.#chunk = EMPTY_BUFFER;
+    this.#length = 0;
+    this.#bodyController = null;
+    this.#bodyLength = 0;
   }
 
   #read(size: number): Uint8Array[] {
@@ -437,10 +497,9 @@ export class MultipartPart {
     this.#bodyUsed = true;
 
     let chunks: Uint8Array[] = [];
-
-    await readStream(this.#body, (chunk) => {
+    for await (let chunk of readStream(this.#body)) {
       chunks.push(chunk);
-    });
+    }
 
     return concatChunks(chunks);
   }

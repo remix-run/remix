@@ -2,7 +2,7 @@ export {
   getMultipartBoundary,
   isMultipartRequest,
   parseMultipartRequest,
-  parseMultipartStream,
+  parseMultipart,
   MultipartParseError,
   MultipartParserOptions,
   MultipartParser,

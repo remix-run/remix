@@ -22,14 +22,14 @@ $ npm install @mjackson/multipart-parser
 
 ## Usage
 
-If you're building a server you can use `multipart-parser` to handle file uploads.
+The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It will automatically validate the request is `multipart/form-data`, extract the multipart boundary from the `Content-Type` header, parse all fields and files in the `request.body` stream, and `yield` each one to you as a `MultipartPart` object so you can save it to disk or upload it somewhere.
 
 ```typescript
 import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
 
 async function handleMultipartRequest(request: Request): void {
   try {
-    // The parser `yield`s each MultipartPart as it becomes available.
+    // The parser `yield`s each MultipartPart as it becomes available
     for await (let part of parseMultipartRequest(request)) {
       console.log(part.name);
       console.log(part.filename);
@@ -50,9 +50,9 @@ async function handleMultipartRequest(request: Request): void {
 }
 ```
 
-The main module (`import from "@mjackson/multipart-parser"`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
+The main module (`import from "@mjackson/multipart-parser"`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to Node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
 
-If however you're building a server for node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
+If however you're building a server for Node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
 
 ```typescript
 import * as http from 'node:http';
@@ -82,6 +82,24 @@ const server = http.createServer(async (req, res) => {
 server.listen(8080);
 ```
 
+## Low-level API
+
+If you're working directly with buffers and/or streams that are not necessarily part of an HTTP request, `multipart-parser` provides a `MultipartParser` API that you can use directly:
+
+```typescript
+import { MultipartParser } from '@mjackson/multipart-parser';
+
+// Get the data from some API, the filesystem, etc.
+let multipartData = new Uint8Array(...);
+
+let boundary = '----WebKitFormBoundary56eac3x';
+let parser = new MultipartParser(boundary);
+
+await parser.parse(multipartData, (part) => {
+  // Do whatever you need...
+});
+```
+
 ## Examples
 
 The [`examples` directory](/examples) contains a few working examples of how you can use this library:
@@ -98,19 +116,16 @@ Important: Benchmarking can be tricky, and results vary greatly depending on pla
 The results of running the benchmarks on my laptop:
 
 ```
-> @mjackson/multipart-parser@0.1.1 bench:node /Users/michael/Projects/multipart-parser
-> node --import tsimp/import ./bench/runner.ts
-
 Platform: Darwin (23.5.0)
 CPU: Apple M2 Pro
-Date: 8/1/2024, 5:47:52 PM
+Date: 8/2/2024, 2:40:59 PM
 Node.js v20.15.1
 ┌──────────────────┬──────────────────┬──────────────────┬──────────────────┬───────────────────┐
 │ (index)          │ 1 small file     │ 1 large file     │ 100 small files  │ 5 large files     │
 ├──────────────────┼──────────────────┼──────────────────┼──────────────────┼───────────────────┤
-│ multipart-parser │ '0.02 ms ± 0.07' │ '1.48 ms ± 0.31' │ '0.35 ms ± 0.13' │ '15.14 ms ± 1.60' │
-│ busboy           │ '0.03 ms ± 0.08' │ '4.26 ms ± 0.08' │ '0.25 ms ± 0.02' │ '43.25 ms ± 2.45' │
-│ @fastify/busboy  │ '0.03 ms ± 0.07' │ '1.11 ms ± 0.06' │ '0.54 ms ± 0.62' │ '11.11 ms ± 1.17' │
+│ multipart-parser │ '0.01 ms ± 0.03' │ '1.33 ms ± 0.07' │ '0.33 ms ± 0.14' │ '13.28 ms ± 0.33' │
+│ busboy           │ '0.03 ms ± 0.07' │ '3.11 ms ± 1.26' │ '0.22 ms ± 0.03' │ '43.30 ms ± 2.25' │
+│ @fastify/busboy  │ '0.03 ms ± 0.07' │ '1.12 ms ± 0.22' │ '0.39 ms ± 0.03' │ '11.28 ms ± 0.36' │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
 
 > @mjackson/multipart-parser@0.1.1 bench:bun /Users/michael/Projects/multipart-parser
@@ -118,14 +133,14 @@ Node.js v20.15.1
 
 Platform: Darwin (23.5.0)
 CPU: Apple M2 Pro
-Date: 8/1/2024, 5:49:56 PM
+Date: 8/2/2024, 2:43:05 PM
 Bun 1.1.21
 ┌──────────────────┬────────────────┬────────────────┬─────────────────┬─────────────────┐
 │                  │ 1 small file   │ 1 large file   │ 100 small files │ 5 large files   │
 ├──────────────────┼────────────────┼────────────────┼─────────────────┼─────────────────┤
-│ multipart-parser │ 0.01 ms ± 0.07 │ 1.16 ms ± 0.17 │ 0.17 ms ± 0.10  │ 11.37 ms ± 1.25 │
-│           busboy │ 0.03 ms ± 0.14 │ 3.29 ms ± 0.10 │ 0.34 ms ± 0.15  │ 33.09 ms ± 2.06 │
-│  @fastify/busboy │ 0.03 ms ± 0.12 │ 6.92 ms ± 1.79 │ 0.58 ms ± 0.13  │ 67.20 ms ± 3.01 │
+│ multipart-parser │ 0.01 ms ± 0.05 │ 1.14 ms ± 0.16 │ 0.13 ms ± 0.07  │ 11.49 ms ± 1.61 │
+│           busboy │ 0.03 ms ± 0.13 │ 3.32 ms ± 0.13 │ 0.33 ms ± 0.14  │ 33.31 ms ± 3.08 │
+│  @fastify/busboy │ 0.03 ms ± 0.13 │ 6.71 ms ± 0.13 │ 0.60 ms ± 0.14  │ 67.62 ms ± 3.66 │
 └──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┘
 
 > @mjackson/multipart-parser@0.1.1 bench:deno /Users/michael/Projects/multipart-parser
@@ -133,14 +148,14 @@ Bun 1.1.21
 
 Platform: Darwin (23.5.0)
 CPU: Apple M2 Pro
-Date: 8/1/2024, 5:52:49 PM
+Date: 8/2/2024, 2:45:58 PM
 Deno 1.45.5
 ┌──────────────────┬──────────────────┬───────────────────┬──────────────────┬────────────────────┐
 │ (idx)            │ 1 small file     │ 1 large file      │ 100 small files  │ 5 large files      │
 ├──────────────────┼──────────────────┼───────────────────┼──────────────────┼────────────────────┤
-│ multipart-parser │ "0.03 ms ± 0.27" │ "1.16 ms ± 0.99"  │ "0.11 ms ± 0.46" │ "10.71 ms ± 0.98"  │
-│ busboy           │ "0.03 ms ± 0.26" │ "2.85 ms ± 0.99"  │ "0.28 ms ± 0.70" │ "29.11 ms ± 2.57"  │
-│ @fastify/busboy  │ "0.05 ms ± 0.31" │ "11.38 ms ± 0.93" │ "0.73 ms ± 0.96" │ "115.56 ms ± 8.07" │
+│ multipart-parser │ "0.02 ms ± 0.20" │ "1.09 ms ± 1.00"  │ "0.09 ms ± 0.42" │ "10.95 ms ± 1.81"  │
+│ busboy           │ "0.04 ms ± 0.28" │ "2.88 ms ± 0.99"  │ "0.29 ms ± 0.70" │ "29.23 ms ± 2.58"  │
+│ @fastify/busboy  │ "0.04 ms ± 0.30" │ "11.55 ms ± 0.89" │ "0.74 ms ± 0.97" │ "115.39 ms ± 6.50" │
 └──────────────────┴──────────────────┴───────────────────┴──────────────────┴────────────────────┘
 ```
 

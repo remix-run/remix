@@ -1,5 +1,1 @@
-export {
-  isMultipartRequest,
-  parseMultipartRequest,
-  parseMultipartStream,
-} from './lib/multipart.node.js';
+export { isMultipartRequest, parseMultipartRequest, parseMultipart } from './lib/multipart.node.js';
