@@ -225,12 +225,14 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
       props
     );
 
+    let mergedRef = useMergedRef(forwardedRef, ref)
+
     return (
       <>
         <RouterNavLink
           {...props}
           {...prefetchHandlers}
-          ref={mergeRefs(forwardedRef, ref)}
+          ref={mergedRef}
           to={to}
           data-discover={getDiscoverAttr(
             discover,
@@ -264,12 +266,14 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
       props
     );
 
+    let mergedRef = useMergedRef(forwardedRef, ref)
+
     return (
       <>
         <RouterLink
           {...props}
           {...prefetchHandlers}
-          ref={mergeRefs(forwardedRef, ref)}
+          ref={mergedRef}
           to={to}
           data-discover={getDiscoverAttr(
             discover,
@@ -1323,4 +1327,13 @@ function mergeRefs<T = any>(
       }
     });
   };
+}
+
+function useMergedRef<T = any>(
+  ...refs: Array<React.MutableRefObject<T> | React.LegacyRef<T>>
+): React.RefCallback<T> {
+  let rs = refs.filter((r): r is React.Ref<T> => !!r);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return React.useCallback(mergeRefs(...rs), rs);
 }
