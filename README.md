@@ -84,18 +84,36 @@ server.listen(8080);
 
 ## Low-level API
 
-If you're working directly with buffers and/or streams that are not necessarily part of an HTTP request, `multipart-parser` provides a `MultipartParser` API that you can use directly:
+If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a few lower-level APIs that you can use directly:
+
+```typescript
+import { parseMultipart } from '@mjackson/multipart-parser';
+
+// Get the data from some API, filesystem, etc.
+let multipartData = new Uint8Array();
+// can also be a stream or any Iterable/AsyncIterable
+// let multipartData = new ReadableStream(...);
+// let multipartData = [new Uint8Array(...), new Uint8Array(...)];
+
+let boundary = '----WebKitFormBoundary56eac3x';
+
+for await (let part of parseMultipart(multipartData, boundary)) {
+  // Do whatever you want with the part...
+}
+```
+
+If you'd prefer a callback-based API, instantiate your own `MultipartParser` and go for it:
 
 ```typescript
 import { MultipartParser } from '@mjackson/multipart-parser';
 
-// Get the data from some API, the filesystem, etc.
-let multipartData = new Uint8Array(...);
+let multipartData = new Uint8Array();
+let boundary = '...';
 
-let boundary = '----WebKitFormBoundary56eac3x';
 let parser = new MultipartParser(boundary);
 
-await parser.parse(multipartData, (part) => {
+// parse() will resolve once all your callbacks are done
+await parser.parse(multipartData, async (part) => {
   // Do whatever you need...
 });
 ```
