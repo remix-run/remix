@@ -5,6 +5,8 @@ import tmp from 'tmp';
 import { MultipartParseError } from '@mjackson/multipart-parser';
 import { parseMultipartRequest } from '@mjackson/multipart-parser/node';
 
+const PORT = 3000;
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'GET') {
     res.writeHead(200, {
@@ -76,8 +78,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(3000, () => {
-  console.log('Server listening on http://localhost:3000');
+server.listen(PORT, () => {
+  console.log(`Server listening on http://localhost:${PORT} ...`);
 });
 
 // Some lil' helpers
