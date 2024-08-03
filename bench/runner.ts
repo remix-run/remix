@@ -71,6 +71,8 @@ function printResults(results: BenchmarkResults) {
 
   if (typeof Bun !== 'undefined') {
     console.log(`Bun ${Bun.version}`);
+  } else if (typeof Deno !== 'undefined') {
+    console.log(`Deno ${Deno.version.deno}`);
   } else {
     console.log(`Node.js ${process.version}`);
   }

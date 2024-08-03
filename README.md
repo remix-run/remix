@@ -155,15 +155,30 @@ Node.js v20.15.1
 
 Platform: Darwin (23.5.0)
 CPU: Apple M2 Pro
-Date: 8/3/2024, 11:41:38 AM
+Date: 8/3/2024, 4:37:33 PM
 Bun 1.1.21
 ┌──────────────────┬────────────────┬────────────────┬─────────────────┬─────────────────┐
 │                  │ 1 small file   │ 1 large file   │ 100 small files │ 5 large files   │
 ├──────────────────┼────────────────┼────────────────┼─────────────────┼─────────────────┤
-│ multipart-parser │ 0.01 ms ± 0.04 │ 1.08 ms ± 0.07 │ 0.14 ms ± 0.13  │ 10.55 ms ± 0.26 │
-│           busboy │ 0.02 ms ± 0.07 │ 3.29 ms ± 0.12 │ 0.34 ms ± 0.14  │ 33.07 ms ± 1.87 │
-│  @fastify/busboy │ 0.03 ms ± 0.07 │ 6.64 ms ± 0.13 │ 0.60 ms ± 0.13  │ 67.54 ms ± 4.17 │
+│ multipart-parser │ 0.01 ms ± 0.04 │ 1.08 ms ± 0.09 │ 0.14 ms ± 0.13  │ 10.79 ms ± 1.92 │
+│           busboy │ 0.02 ms ± 0.07 │ 3.30 ms ± 0.30 │ 0.33 ms ± 0.16  │ 33.09 ms ± 2.06 │
+│  @fastify/busboy │ 0.03 ms ± 0.09 │ 6.67 ms ± 0.31 │ 0.60 ms ± 0.14  │ 67.18 ms ± 3.58 │
 └──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┘
+
+> @mjackson/multipart-parser@0.2.1 bench:deno /Users/michael/Projects/multipart-parser
+> deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts
+
+Platform: Darwin (23.5.0)
+CPU: Apple M2 Pro
+Date: 8/3/2024, 4:40:26 PM
+Deno 1.45.5
+┌──────────────────┬──────────────────┬───────────────────┬──────────────────┬────────────────────┐
+│ (idx)            │ 1 small file     │ 1 large file      │ 100 small files  │ 5 large files      │
+├──────────────────┼──────────────────┼───────────────────┼──────────────────┼────────────────────┤
+│ multipart-parser │ "0.02 ms ± 0.19" │ "1.12 ms ± 0.99"  │ "0.10 ms ± 0.44" │ "11.08 ms ± 1.03"  │
+│ busboy           │ "0.04 ms ± 0.27" │ "2.88 ms ± 1.00"  │ "0.28 ms ± 0.69" │ "29.03 ms ± 2.15"  │
+│ @fastify/busboy  │ "0.04 ms ± 0.29" │ "11.61 ms ± 2.77" │ "0.75 ms ± 0.98" │ "115.50 ms ± 4.23" │
+└──────────────────┴──────────────────┴───────────────────┴──────────────────┴────────────────────┘
 ```
 
 I'd encourage you to run the benchmarks yourself. You'll probably get different results!
