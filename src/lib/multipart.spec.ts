@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { readFixture } from '../test/fixtures.js';
-import { CRLF, createMockRequest, createMultipartMockRequest } from '../test/utils.js';
+import { createMockRequest, createMultipartMockRequest } from '../test/utils.js';
 import {
   isMultipartRequest,
   parseMultipartRequest,
@@ -10,7 +10,7 @@ import {
   getMultipartBoundary,
 } from './multipart.js';
 
-const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
+const CRLF = '\r\n';
 
 describe('getMultipartBoundary', async () => {
   it('returns the boundary from the Content-Type header', async () => {
@@ -163,6 +163,8 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('allows buffering part contents while parsing', async () => {
+    const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
+
     let request = createMultipartMockRequest(boundary, {
       file1: {
         filename: 'tesla.jpg',
@@ -188,6 +190,8 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('parses large file uploads correctly', async () => {
+    const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
+
     let request = createMultipartMockRequest(boundary, {
       file1: {
         filename: 'tesla.jpg',

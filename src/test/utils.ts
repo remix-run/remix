@@ -2,8 +2,6 @@ import { ContentDisposition, ContentType, SuperHeaders } from 'fetch-super-heade
 
 import { concatChunks } from '../lib/utils.js';
 
-export const CRLF = '\r\n';
-
 export function createReadableStream(
   content: string | Uint8Array,
   chunkSize = 64 * 1024,
@@ -58,7 +56,7 @@ export function createMultipartBody(
   }
 
   function pushLine(line = '') {
-    pushString(line + CRLF);
+    pushString(line + '\r\n');
   }
 
   if (parts) {

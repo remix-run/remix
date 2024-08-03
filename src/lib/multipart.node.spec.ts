@@ -5,8 +5,6 @@ import { readFixture } from '../test/fixtures.js';
 import { createMultipartMockRequest } from '../test/utils.node.js';
 import { parseMultipartRequest } from './multipart.node.js';
 
-const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
-
 describe('parseMultipartRequest (node)', () => {
   let boundary = 'boundary123';
 
@@ -37,6 +35,8 @@ describe('parseMultipartRequest (node)', () => {
   });
 
   it('parses large file uploads correctly', async () => {
+    const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
+
     let request = createMultipartMockRequest(boundary, {
       file1: {
         filename: 'tesla.jpg',
@@ -58,6 +58,8 @@ describe('parseMultipartRequest (node)', () => {
   });
 
   it('allows buffering part contents while parsing', async () => {
+    const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
+
     let request = createMultipartMockRequest(boundary, {
       file1: {
         filename: 'tesla.jpg',
