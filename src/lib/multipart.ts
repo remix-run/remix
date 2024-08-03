@@ -417,22 +417,26 @@ function find(
 ): number {
   let headLength = head.length;
   let totalLength = headLength + tail.length;
-  let patternLength = pattern.length;
-  let i = patternLength - 1;
+  let i = pattern.length - 1;
+
+  function byteAt(index: number) {
+    return index < headLength ? head[index] : tail[index - headLength];
+  }
 
   while (i < totalLength) {
-    let j = patternLength - 1;
+    let j = pattern.length - 1;
+    let k = i;
 
-    while (j >= 0 && (i < headLength ? head[i] : tail[i - headLength]) === pattern[j]) {
+    while (j >= 0 && byteAt(k) === pattern[j]) {
       j--;
-      i--;
+      k--;
     }
 
     if (j === -1) {
-      return i + 1;
+      return k + 1;
     }
 
-    i += skipTable[i < headLength ? head[i] : tail[i - headLength]];
+    i += skipTable[byteAt(i)];
   }
 
   return -1; // Not found
