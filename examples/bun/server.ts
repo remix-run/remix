@@ -85,7 +85,7 @@ async function writeFile(file: BunFile, stream: ReadableStream<Uint8Array>): Pro
     bytesWritten += value.byteLength;
   }
 
-  writer.end();
+  await writer.end();
 
   return bytesWritten;
 }
