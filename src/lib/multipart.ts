@@ -1,6 +1,6 @@
 import { SuperHeaders } from 'fetch-super-headers';
 
-import { concatChunks, isIterable, readStream } from './utils.js';
+import { concatChunks, isAsyncIterable, isIterable } from './utils.js';
 
 /**
  * Extracts the boundary string from a `multipart/*` content type.
@@ -159,9 +159,9 @@ export class MultipartParser {
    */
   async parse(
     data:
+      | ReadableStream<Uint8Array>
       | Uint8Array
       | Iterable<Uint8Array>
-      | ReadableStream<Uint8Array>
       | AsyncIterable<Uint8Array>,
     handler: (part: MultipartPart) => void,
   ): Promise<void> {
@@ -169,7 +169,22 @@ export class MultipartParser {
 
     let results = [];
 
-    if (data instanceof Uint8Array) {
+    if (data instanceof ReadableStream) {
+      let reader = data.getReader();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          for (let part of this.push(value)) {
+            results.push(handler(part));
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    } else if (data instanceof Uint8Array) {
       for (let part of this.push(data)) {
         results.push(handler(part));
       }
@@ -179,16 +194,14 @@ export class MultipartParser {
           results.push(handler(part));
         }
       }
-    } else {
-      if (data instanceof ReadableStream) {
-        data = readStream(data);
-      }
-
+    } else if (isAsyncIterable(data)) {
       for await (let chunk of data) {
         for (let part of this.push(chunk)) {
           results.push(handler(part));
         }
       }
+    } else {
+      throw new TypeError('Cannot parse data: expected a stream or buffer');
     }
 
     if (!this.done) {
@@ -458,7 +471,7 @@ export class MultipartPart {
   /**
    * The content of this part as an `ArrayBuffer`.
    */
-  async arrayBuffer(): Promise<ArrayBuffer> {
+  async arrayBuffer(): Promise<ArrayBufferLike> {
     return (await this.bytes()).buffer;
   }
 
@@ -488,10 +501,16 @@ export class MultipartPart {
 
     this.#bodyUsed = true;
 
+    let reader = this.#body.getReader();
     let chunks: Uint8Array[] = [];
-    for await (let chunk of readStream(this.#body)) {
-      chunks.push(chunk);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
     }
+
+    reader.releaseLock();
 
     return concatChunks(chunks);
   }

@@ -1,3 +1,11 @@
+export function isIterable<T>(value: unknown): value is Iterable<T> {
+  return typeof value === 'object' && value != null && Symbol.iterator in value;
+}
+
+export function isAsyncIterable(value: unknown): value is AsyncIterable<Uint8Array> {
+  return typeof value === 'object' && value != null && Symbol.asyncIterator in value;
+}
+
 export function concatChunks(chunks: Uint8Array[]): Uint8Array {
   if (chunks.length === 1) return chunks[0];
 
@@ -15,22 +23,4 @@ export function concatChunks(chunks: Uint8Array[]): Uint8Array {
   }
 
   return result;
-}
-
-export function isIterable<T>(value: unknown): value is Iterable<T> {
-  return typeof value === 'object' && value != null && Symbol.iterator in value;
-}
-
-export async function* readStream<T>(stream: ReadableStream<T>): AsyncGenerator<T> {
-  let reader = stream.getReader();
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      yield value;
-    }
-  } finally {
-    reader.releaseLock();
-  }
 }
