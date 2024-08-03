@@ -28,7 +28,10 @@ const server = http.createServer(async (req, res) => {
   </body>
 </html>
 `);
-  } else if (req.method === 'POST') {
+    return;
+  }
+
+  if (req.method === 'POST') {
     try {
       let parts = [];
 
@@ -61,21 +64,24 @@ const server = http.createServer(async (req, res) => {
         'Content-Type': 'application/json',
       });
       res.end(JSON.stringify({ parts }, null, 2));
+      return;
     } catch (error) {
       console.error(error);
 
       if (error instanceof MultipartParseError) {
         res.writeHead(400);
         res.end('Bad Request');
-      } else {
-        res.writeHead(500);
-        res.end('Internal Server Error');
+        return;
       }
+
+      res.writeHead(500);
+      res.end('Internal Server Error');
+      return;
     }
-  } else {
-    res.writeHead(405);
-    res.end('Method Not Allowed');
   }
+
+  res.writeHead(405);
+  res.end('Method Not Allowed');
 });
 
 server.listen(PORT, () => {
