@@ -419,15 +419,11 @@ function find(
   let totalLength = headLength + tail.length;
   let i = pattern.length - 1;
 
-  function byteAt(index: number) {
-    return index < headLength ? head[index] : tail[index - headLength];
-  }
-
   while (i < totalLength) {
     let j = pattern.length - 1;
     let k = i;
 
-    while (j >= 0 && byteAt(k) === pattern[j]) {
+    while (j >= 0 && (k < headLength ? head[k] : tail[k - headLength]) === pattern[j]) {
       j--;
       k--;
     }
@@ -436,7 +432,7 @@ function find(
       return k + 1;
     }
 
-    i += skipTable[byteAt(i)];
+    i += skipTable[i < headLength ? head[i] : tail[i - headLength]];
   }
 
   return -1; // Not found
