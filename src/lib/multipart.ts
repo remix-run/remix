@@ -48,7 +48,7 @@ export async function* parseMultipartRequest(
  * building a web server, consider using `parseMultipartRequest(request)` instead.
  */
 export async function* parseMultipart(
-  data: Uint8Array | Iterable<Uint8Array> | ReadableStream<Uint8Array> | AsyncIterable<Uint8Array>,
+  data: ReadableStream<Uint8Array> | Uint8Array | Iterable<Uint8Array> | AsyncIterable<Uint8Array>,
   boundary: string,
   options?: MultipartParserOptions,
 ): AsyncGenerator<MultipartPart> {
