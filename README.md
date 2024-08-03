@@ -122,8 +122,9 @@ await parser.parse(multipartData, async (part) => {
 
 The [`examples` directory](/examples) contains a few working examples of how you can use this library:
 
-- [`cf-workers`](/examples/cf-workers) shows how you can handle multipart uploads in a Cloudflare worker and store files in R2
-- [`node-server`](/examples/node-server) demonstrates handling multipart uploads and streaming files to disk
+- [`examples/bun`](/examples/bun) demonstrates handling multipart uploads in Bun and saving them in a tmp file on disk
+- [`examples/cf-workers`](/examples/cf-workers) demonstrates handling multipart uploads in a Cloudflare worker and store files in R2
+- [`examples/node`](/examples/node) demonstrates handling multipart uploads in Node.js and saving them in a tmp file on disk
 
 ## Benchmark
 

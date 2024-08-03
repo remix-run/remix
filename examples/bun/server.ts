@@ -1,17 +1,20 @@
+import type { BunFile } from 'bun';
 import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
+import tmp from 'tmp';
 
-export default {
-  async fetch(request, env): Promise<Response> {
+const server = Bun.serve({
+  port: 3000,
+  async fetch(request) {
     if (request.method === 'GET') {
       return new Response(
         `
 <!DOCTYPE html>
 <html>
   <head>
-    <title>multipart-parser CF Workers Example</title>
+    <title>multipart-parser Bun Example</title>
   </head>
   <body>
-    <h1>multipart-parser CF Workers Example</h1>
+    <h1>multipart-parser Bun Example</h1>
     <form method="post" enctype="multipart/form-data">
       <p><input name="text1" type="text" /></p>
       <p><input name="file1" type="file" /></p>
@@ -22,44 +25,25 @@ export default {
 `,
         {
           headers: { 'Content-Type': 'text/html' },
-        }
+        },
       );
     }
 
     if (request.method === 'POST') {
       try {
+        let parts: any[] = [];
 
-        let bucket = env.MULTIPART_UPLOADS;
-        let parts = [];
-  
         for await (let part of parseMultipartRequest(request)) {
           if (part.isFile) {
-            let uniqueKey = `upload-${new Date().getTime()}-${Math.random()
-              .toString(36)
-              .slice(2, 8)}`;
-  
-            // Put the file in R2.
-  
-            // Ideally we could stream part.body directly, but Cloudflare's R2
-            // API requires a FixedLengthStream and unfortunately we don't know
-            // the length of the stream at this point because browsers don't send
-            // Content-Length headers with file uploads.
-            // await bucket.put(uniqueKey, part.body);
-  
-            // So instead, we have to buffer the entire file in memory and then
-            // upload it to R2.
-            let bytes = await part.bytes();
-            await bucket.put(uniqueKey, bytes, {
-              httpMetadata: {
-                contentType: part.headers.get('Content-Type')!,
-              },
-            });
-  
+            let tmpfile = tmp.fileSync();
+            let bytesWritten = await writeFile(Bun.file(tmpfile.name), part.body);
+
             parts.push({
               name: part.name,
               filename: part.filename,
               mediaType: part.mediaType,
-              size: bytes.byteLength,
+              size: bytesWritten,
+              file: tmpfile.name,
             });
           } else {
             parts.push({
@@ -68,7 +52,7 @@ export default {
             });
           }
         }
-  
+
         return new Response(JSON.stringify({ parts }, null, 2), {
           headers: { 'Content-Type': 'application/json' },
         });
@@ -85,4 +69,23 @@ export default {
 
     return new Response('Method Not Allowed', { status: 405 });
   },
-} satisfies ExportedHandler<Env>;
+});
+
+console.log(`Server listening on http://localhost:${server.port} ...`);
+
+async function writeFile(file: BunFile, stream: ReadableStream<Uint8Array>): Promise<number> {
+  let reader = stream.getReader();
+  let writer = file.writer();
+  let bytesWritten = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    writer.write(value);
+    bytesWritten += value.byteLength;
+  }
+
+  writer.end();
+
+  return bytesWritten;
+}

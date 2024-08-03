@@ -16,10 +16,10 @@ const server = http.createServer(async (req, res) => {
 <!DOCTYPE html>
 <html>
   <head>
-    <title>multipart-parser Node Server Example</title>
+    <title>multipart-parser Node Example</title>
   </head>
   <body>
-    <h1>multipart-parser Node Server Example</h1>
+    <h1>multipart-parser Node Example</h1>
     <form method="post" enctype="multipart/form-data">
       <p><input name="text1" type="text" /></p>
       <p><input name="file1" type="file" /></p>
