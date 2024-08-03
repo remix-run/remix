@@ -3,13 +3,13 @@ import * as stream from 'node:stream';
 
 import { PartValue, createMultipartBody } from './utils.js';
 
-export function createReadable(content: string, chunkSize = 16 * 1024): stream.Readable {
+export function createReadable(content: Uint8Array, chunkSize = 16 * 1024): stream.Readable {
   let i = 0;
 
   return new stream.Readable({
     read() {
       if (i < content.length) {
-        this.push(Buffer.from(content.slice(i, i + chunkSize)));
+        this.push(content.subarray(i, i + chunkSize));
         i += chunkSize;
       } else {
         this.push(null);
@@ -20,7 +20,7 @@ export function createReadable(content: string, chunkSize = 16 * 1024): stream.R
 
 export function createMultipartMockRequest(
   boundary: string,
-  parts?: { [name: string]: PartValue }
+  parts?: { [name: string]: PartValue },
 ): http.IncomingMessage {
   let body = createMultipartBody(boundary, parts);
 
