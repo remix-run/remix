@@ -26,10 +26,9 @@
   },
   "scripts": {
     "clean": "git clean -fdX .",
-    "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
-    "bench:bun": "bun run ./bench/runner.ts",
-    "bench:deno": "deno --unstable-sloppy-imports run --allow-sys ./bench/runner.ts",
+    "bench": "pnpm run bench:node && pnpm run bench:bun",
     "bench:node": "node --import tsimp/import ./bench/runner.ts",
+    "bench:bun": "bun run ./bench/runner.ts",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
     "prepare": "npm run build",
