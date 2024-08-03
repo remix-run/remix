@@ -135,47 +135,35 @@ Important: Benchmarking can be tricky, and results vary greatly depending on pla
 The results of running the benchmarks on my laptop:
 
 ```
+> @mjackson/multipart-parser@0.2.1 bench:node /Users/michael/Projects/multipart-parser
+> node --import tsimp/import ./bench/runner.ts
+
 Platform: Darwin (23.5.0)
 CPU: Apple M2 Pro
-Date: 8/2/2024, 2:40:59 PM
+Date: 8/3/2024, 11:39:34 AM
 Node.js v20.15.1
 ┌──────────────────┬──────────────────┬──────────────────┬──────────────────┬───────────────────┐
 │ (index)          │ 1 small file     │ 1 large file     │ 100 small files  │ 5 large files     │
 ├──────────────────┼──────────────────┼──────────────────┼──────────────────┼───────────────────┤
-│ multipart-parser │ '0.01 ms ± 0.03' │ '1.33 ms ± 0.07' │ '0.33 ms ± 0.14' │ '13.28 ms ± 0.33' │
-│ busboy           │ '0.03 ms ± 0.07' │ '3.11 ms ± 1.26' │ '0.22 ms ± 0.03' │ '43.30 ms ± 2.25' │
-│ @fastify/busboy  │ '0.03 ms ± 0.07' │ '1.12 ms ± 0.22' │ '0.39 ms ± 0.03' │ '11.28 ms ± 0.36' │
+│ multipart-parser │ '0.01 ms ± 0.03' │ '1.11 ms ± 0.04' │ '0.32 ms ± 0.13' │ '10.94 ms ± 0.70' │
+│ busboy           │ '0.03 ms ± 0.07' │ '2.84 ms ± 0.06' │ '0.22 ms ± 0.02' │ '43.24 ms ± 2.45' │
+│ @fastify/busboy  │ '0.03 ms ± 0.06' │ '1.09 ms ± 0.07' │ '0.38 ms ± 0.03' │ '10.99 ms ± 0.15' │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
 
-> @mjackson/multipart-parser@0.1.1 bench:bun /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.2.1 bench:bun /Users/michael/Projects/multipart-parser
 > bun run ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
 CPU: Apple M2 Pro
-Date: 8/2/2024, 2:43:05 PM
+Date: 8/3/2024, 11:41:38 AM
 Bun 1.1.21
 ┌──────────────────┬────────────────┬────────────────┬─────────────────┬─────────────────┐
 │                  │ 1 small file   │ 1 large file   │ 100 small files │ 5 large files   │
 ├──────────────────┼────────────────┼────────────────┼─────────────────┼─────────────────┤
-│ multipart-parser │ 0.01 ms ± 0.05 │ 1.14 ms ± 0.16 │ 0.13 ms ± 0.07  │ 11.49 ms ± 1.61 │
-│           busboy │ 0.03 ms ± 0.13 │ 3.32 ms ± 0.13 │ 0.33 ms ± 0.14  │ 33.31 ms ± 3.08 │
-│  @fastify/busboy │ 0.03 ms ± 0.13 │ 6.71 ms ± 0.13 │ 0.60 ms ± 0.14  │ 67.62 ms ± 3.66 │
+│ multipart-parser │ 0.01 ms ± 0.04 │ 1.08 ms ± 0.07 │ 0.14 ms ± 0.13  │ 10.55 ms ± 0.26 │
+│           busboy │ 0.02 ms ± 0.07 │ 3.29 ms ± 0.12 │ 0.34 ms ± 0.14  │ 33.07 ms ± 1.87 │
+│  @fastify/busboy │ 0.03 ms ± 0.07 │ 6.64 ms ± 0.13 │ 0.60 ms ± 0.13  │ 67.54 ms ± 4.17 │
 └──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┘
-
-> @mjackson/multipart-parser@0.1.1 bench:deno /Users/michael/Projects/multipart-parser
-> deno --unstable-sloppy-imports run --allow-sys ./bench/runner.ts
-
-Platform: Darwin (23.5.0)
-CPU: Apple M2 Pro
-Date: 8/2/2024, 2:45:58 PM
-Deno 1.45.5
-┌──────────────────┬──────────────────┬───────────────────┬──────────────────┬────────────────────┐
-│ (idx)            │ 1 small file     │ 1 large file      │ 100 small files  │ 5 large files      │
-├──────────────────┼──────────────────┼───────────────────┼──────────────────┼────────────────────┤
-│ multipart-parser │ "0.02 ms ± 0.20" │ "1.09 ms ± 1.00"  │ "0.09 ms ± 0.42" │ "10.95 ms ± 1.81"  │
-│ busboy           │ "0.04 ms ± 0.28" │ "2.88 ms ± 0.99"  │ "0.29 ms ± 0.70" │ "29.23 ms ± 2.58"  │
-│ @fastify/busboy  │ "0.04 ms ± 0.30" │ "11.55 ms ± 0.89" │ "0.74 ms ± 0.97" │ "115.39 ms ± 6.50" │
-└──────────────────┴──────────────────┴───────────────────┴──────────────────┴────────────────────┘
 ```
 
 I'd encourage you to run the benchmarks yourself. You'll probably get different results!
