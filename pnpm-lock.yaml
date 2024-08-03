@@ -33,12 +33,16 @@ importers:
       '@mjackson/multipart-parser':
         specifier: workspace:*
         version: link:..
-      '@types/busboy':
-        specifier: ^1.5.4
-        version: 1.5.4
       busboy:
         specifier: ^1.6.0
         version: 1.6.0
+    devDependencies:
+      '@types/bun':
+        specifier: ^1.1.6
+        version: 1.1.6
+      '@types/busboy':
+        specifier: ^1.5.4
+        version: 1.5.4
 
   examples/bun:
     dependencies:

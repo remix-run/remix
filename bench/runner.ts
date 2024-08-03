@@ -13,13 +13,6 @@ const benchmarks = [
   { name: '5 large files', message: messages.fiveLargeFiles },
 ];
 
-function getMeanAndStdDev(measurements: number[]): string {
-  let mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-  let variance = measurements.reduce((a, b) => a + (b - mean) ** 2, 0) / measurements.length;
-  let stdDev = Math.sqrt(variance);
-  return mean.toFixed(2) + ' ms ± ' + stdDev.toFixed(2);
-}
-
 interface Parser {
   parse(message: messages.MultipartMessage): Promise<number>;
 }
@@ -40,6 +33,13 @@ async function runParserBenchmarks(
   }
 
   return results;
+}
+
+function getMeanAndStdDev(measurements: number[]): string {
+  let mean = measurements.reduce((a, b) => a + b, 0) / measurements.length;
+  let variance = measurements.reduce((a, b) => a + (b - mean) ** 2, 0) / measurements.length;
+  let stdDev = Math.sqrt(variance);
+  return mean.toFixed(2) + ' ms ± ' + stdDev.toFixed(2);
 }
 
 interface BenchmarkResults {
@@ -69,14 +69,8 @@ function printResults(results: BenchmarkResults) {
   console.log(`CPU: ${os.cpus()[0].model}`);
   console.log(`Date: ${new Date().toLocaleString()}`);
 
-  // @ts-expect-error
-  const Bun = globalThis.Bun;
-  // @ts-expect-error
-  const Deno = globalThis.Deno;
   if (typeof Bun !== 'undefined') {
     console.log(`Bun ${Bun.version}`);
-  } else if (typeof Deno !== 'undefined') {
-    console.log(`Deno ${Deno.version.deno}`);
   } else {
     console.log(`Node.js ${process.version}`);
   }
