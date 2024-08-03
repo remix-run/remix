@@ -88,6 +88,8 @@ export async function* parseMultipart(
 
 const HYPHEN = 45;
 const EMPTY_BUFFER = new Uint8Array(0);
+const DOUBLE_NEWLINE = new Uint8Array([13, 10, 13, 10]);
+const DOUBLE_NEWLINE_SKIP_TABLE = computeSkipTable(DOUBLE_NEWLINE);
 
 export class MultipartParseError extends Error {
   constructor(message: string) {
@@ -213,8 +215,13 @@ export class MultipartParser {
         return [];
       }
 
-      let index = find(this.#buffer, this.#chunk, this.#boundaryArray, this.#boundarySkipTable);
-      if (index !== 0) {
+      let boundaryIndex = find(
+        this.#buffer,
+        this.#chunk,
+        this.#boundaryArray,
+        this.#boundarySkipTable,
+      );
+      if (boundaryIndex !== 0) {
         throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
       }
 
@@ -256,7 +263,12 @@ export class MultipartParser {
           break;
         }
 
-        let headerEndIndex = findDoubleNewline(this.#buffer, this.#chunk);
+        let headerEndIndex = find(
+          this.#buffer,
+          this.#chunk,
+          DOUBLE_NEWLINE,
+          DOUBLE_NEWLINE_SKIP_TABLE,
+        );
         if (headerEndIndex === -1) break;
         if (headerEndIndex > this.#maxHeaderSize) {
           throw new MultipartParseError(
@@ -284,9 +296,14 @@ export class MultipartParser {
           break;
         }
 
-        let index = find(this.#buffer, this.#chunk, this.#boundaryArray, this.#boundarySkipTable);
+        let boundaryIndex = find(
+          this.#buffer,
+          this.#chunk,
+          this.#boundaryArray,
+          this.#boundarySkipTable,
+        );
 
-        if (index === -1) {
+        if (boundaryIndex === -1) {
           // Write as much of the buffer as we can to the current body stream while still
           // keeping enough to check if the last few bytes are part of the boundary.
           this.#writeBody(this.#read(this.#length - this.#boundaryLength + 1));
@@ -294,7 +311,9 @@ export class MultipartParser {
           break;
         }
 
-        this.#writeBody(this.#read(index - 2)); // -2 to avoid \r\n before boundary
+        if (boundaryIndex > 2) {
+          this.#writeBody(this.#read(boundaryIndex - 2)); // -2 to avoid \r\n before boundary
+        }
         this.#closeBody();
 
         this.#skip(2 + this.#boundaryLength); // Skip \r\n + boundary
@@ -419,33 +438,6 @@ function computeSkipTable(pattern: Uint8Array): Uint8Array {
   }
 
   return table;
-}
-
-const CR = 13; // Carriage Return
-const LF = 10; // Line Feed
-
-function findDoubleNewline(head: Uint8Array, tail: Uint8Array): number {
-  let headLength = head.length;
-
-  function byteAt(index: number) {
-    return index < headLength ? head[index] : tail[index - headLength];
-  }
-
-  let end = headLength + tail.length - 3;
-  for (let i = 0; i < end; ++i) {
-    if (byteAt(i + 3) === LF) {
-      if (byteAt(i + 2) === CR && byteAt(i + 1) === LF && byteAt(i) === CR) {
-        return i;
-      }
-      i += 1;
-    } else if (byteAt(i + 3) === CR) {
-      i += 2;
-    } else {
-      i += 3;
-    }
-  }
-
-  return -1; // Not found
 }
 
 /**
