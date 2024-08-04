@@ -144,49 +144,49 @@ Important: Benchmarking can be tricky, and results vary greatly depending on pla
 The results of running the benchmarks on my laptop:
 
 ```
-> @mjackson/multipart-parser@0.2.1 bench:node /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.3.0 bench:node /Users/michael/Projects/multipart-parser
 > node --import tsimp/import ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
 CPU: Apple M2 Pro
-Date: 8/3/2024, 11:39:34 AM
+Date: 8/4/2024, 3:41:42 PM
 Node.js v20.15.1
 ┌──────────────────┬──────────────────┬──────────────────┬──────────────────┬───────────────────┐
 │ (index)          │ 1 small file     │ 1 large file     │ 100 small files  │ 5 large files     │
 ├──────────────────┼──────────────────┼──────────────────┼──────────────────┼───────────────────┤
-│ multipart-parser │ '0.01 ms ± 0.03' │ '1.11 ms ± 0.04' │ '0.32 ms ± 0.13' │ '10.94 ms ± 0.70' │
-│ busboy           │ '0.03 ms ± 0.07' │ '2.84 ms ± 0.06' │ '0.22 ms ± 0.02' │ '43.24 ms ± 2.45' │
-│ @fastify/busboy  │ '0.03 ms ± 0.06' │ '1.09 ms ± 0.07' │ '0.38 ms ± 0.03' │ '10.99 ms ± 0.15' │
+│ multipart-parser │ '0.02 ms ± 0.09' │ '2.44 ms ± 0.21' │ '0.35 ms ± 0.15' │ '10.37 ms ± 0.53' │
+│ busboy           │ '0.03 ms ± 0.07' │ '4.52 ms ± 1.36' │ '0.25 ms ± 0.03' │ '43.37 ms ± 2.01' │
+│ @fastify/busboy  │ '0.03 ms ± 0.09' │ '1.11 ms ± 0.06' │ '0.38 ms ± 0.03' │ '11.14 ms ± 0.25' │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
 
-> @mjackson/multipart-parser@0.2.1 bench:bun /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.3.0 bench:bun /Users/michael/Projects/multipart-parser
 > bun run ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
 CPU: Apple M2 Pro
-Date: 8/3/2024, 4:37:33 PM
+Date: 8/4/2024, 3:43:45 PM
 Bun 1.1.21
 ┌──────────────────┬────────────────┬────────────────┬─────────────────┬─────────────────┐
 │                  │ 1 small file   │ 1 large file   │ 100 small files │ 5 large files   │
 ├──────────────────┼────────────────┼────────────────┼─────────────────┼─────────────────┤
-│ multipart-parser │ 0.01 ms ± 0.04 │ 1.08 ms ± 0.09 │ 0.14 ms ± 0.13  │ 10.79 ms ± 1.92 │
-│           busboy │ 0.02 ms ± 0.07 │ 3.30 ms ± 0.30 │ 0.33 ms ± 0.16  │ 33.09 ms ± 2.06 │
-│  @fastify/busboy │ 0.03 ms ± 0.09 │ 6.67 ms ± 0.31 │ 0.60 ms ± 0.14  │ 67.18 ms ± 3.58 │
+│ multipart-parser │ 0.01 ms ± 0.03 │ 0.87 ms ± 0.05 │ 0.14 ms ± 0.17  │ 8.58 ms ± 1.58  │
+│           busboy │ 0.02 ms ± 0.10 │ 3.29 ms ± 0.09 │ 0.33 ms ± 0.15  │ 33.07 ms ± 1.85 │
+│  @fastify/busboy │ 0.04 ms ± 0.14 │ 6.78 ms ± 0.12 │ 0.60 ms ± 0.14  │ 68.10 ms ± 3.41 │
 └──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┘
 
-> @mjackson/multipart-parser@0.2.1 bench:deno /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.3.0 bench:deno /Users/michael/Projects/multipart-parser
 > deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
 CPU: Apple M2 Pro
-Date: 8/3/2024, 4:40:26 PM
+Date: 8/4/2024, 3:46:35 PM
 Deno 1.45.5
 ┌──────────────────┬──────────────────┬───────────────────┬──────────────────┬────────────────────┐
 │ (idx)            │ 1 small file     │ 1 large file      │ 100 small files  │ 5 large files      │
 ├──────────────────┼──────────────────┼───────────────────┼──────────────────┼────────────────────┤
-│ multipart-parser │ "0.02 ms ± 0.19" │ "1.12 ms ± 0.99"  │ "0.10 ms ± 0.44" │ "11.08 ms ± 1.03"  │
-│ busboy           │ "0.04 ms ± 0.27" │ "2.88 ms ± 1.00"  │ "0.28 ms ± 0.69" │ "29.03 ms ± 2.15"  │
-│ @fastify/busboy  │ "0.04 ms ± 0.29" │ "11.61 ms ± 2.77" │ "0.75 ms ± 0.98" │ "115.50 ms ± 4.23" │
+│ multipart-parser │ "0.01 ms ± 0.14" │ "1.01 ms ± 1.00"  │ "0.10 ms ± 0.43" │ "10.27 ms ± 1.83"  │
+│ busboy           │ "0.03 ms ± 0.26" │ "2.91 ms ± 1.10"  │ "0.28 ms ± 0.70" │ "29.00 ms ± 1.45"  │
+│ @fastify/busboy  │ "0.04 ms ± 0.29" │ "11.22 ms ± 0.98" │ "0.74 ms ± 0.97" │ "114.25 ms ± 6.69" │
 └──────────────────┴──────────────────┴───────────────────┴──────────────────┴────────────────────┘
 ```
 
