@@ -190,7 +190,7 @@ Deno 1.45.5
 └──────────────────┴──────────────────┴───────────────────┴──────────────────┴────────────────────┘
 ```
 
-I'd encourage you to run the benchmarks yourself. You'll probably get different results!
+I encourage you to run the benchmarks yourself. You'll probably get different results!
 
 ```sh
 $ pnpm run bench
