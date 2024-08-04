@@ -1,0 +1,3 @@
+{
+  "deno.enablePaths": ["./examples/deno"]
+}

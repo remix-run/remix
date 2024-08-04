@@ -76,6 +76,19 @@ importers:
         specifier: ^3.60.3
         version: 3.67.1(@cloudflare/workers-types@4.20240725.0)
 
+  examples/deno:
+    dependencies:
+      '@mjackson/multipart-parser':
+        specifier: workspace:*
+        version: link:../..
+      tmp:
+        specifier: ^0.2.3
+        version: 0.2.3
+    devDependencies:
+      '@types/tmp':
+        specifier: ^0.2.6
+        version: 0.2.6
+
   examples/node:
     dependencies:
       '@mjackson/multipart-parser':
