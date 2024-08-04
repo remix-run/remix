@@ -1,6 +1,6 @@
 import { ContentDisposition, ContentType, SuperHeaders } from 'fetch-super-headers';
 
-import { concatChunks } from '../lib/utils.js';
+import { concat } from '../lib/buffer-utils.js';
 
 export function createReadableStream(
   content: string | Uint8Array,
@@ -99,7 +99,7 @@ export function createMultipartBody(
 
   pushString(`--${boundary}--`);
 
-  return concatChunks(chunks);
+  return concat(chunks);
 }
 
 export function createMultipartMockRequest(

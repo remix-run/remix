@@ -1,6 +1,6 @@
 import { SuperHeaders } from 'fetch-super-headers';
 
-import { concatChunks, isAsyncIterable, isIterable } from './utils.js';
+import { concat, indexOf, computeSkipTable } from './buffer-utils.js';
 
 /**
  * Extracts the boundary string from a `multipart/*` content type.
@@ -228,7 +228,7 @@ export class MultipartParser {
         return [];
       }
 
-      let boundaryIndex = find(
+      let boundaryIndex = indexOf(
         this.#buffer,
         this.#chunk,
         this.#boundaryArray,
@@ -276,7 +276,7 @@ export class MultipartParser {
           break;
         }
 
-        let headerEndIndex = find(
+        let headerEndIndex = indexOf(
           this.#buffer,
           this.#chunk,
           DOUBLE_NEWLINE,
@@ -289,7 +289,7 @@ export class MultipartParser {
           );
         }
 
-        let header = concatChunks(this.#read(headerEndIndex));
+        let header = concat(this.#read(headerEndIndex));
         this.#skip(4); // Skip \r\n\r\n
 
         let body = new ReadableStream({
@@ -309,7 +309,7 @@ export class MultipartParser {
           break;
         }
 
-        let boundaryIndex = find(
+        let boundaryIndex = indexOf(
           this.#buffer,
           this.#chunk,
           this.#boundaryArray,
@@ -385,8 +385,7 @@ export class MultipartParser {
 
   #save(): void {
     if (this.#chunk.length === 0) return;
-    this.#buffer =
-      this.#buffer.length > 0 ? concatChunks([this.#buffer, this.#chunk]) : this.#chunk;
+    this.#buffer = this.#buffer.length > 0 ? concat([this.#buffer, this.#chunk]) : this.#chunk;
   }
 
   #writeBody(chunks: Uint8Array[]): void {
@@ -409,44 +408,12 @@ export class MultipartParser {
   }
 }
 
-function find(
-  head: Uint8Array,
-  tail: Uint8Array,
-  pattern: Uint8Array,
-  skipTable = computeSkipTable(pattern),
-): number {
-  let headLength = head.length;
-  let totalLength = headLength + tail.length;
-  let i = pattern.length - 1;
-
-  while (i < totalLength) {
-    let j = pattern.length - 1;
-    let k = i;
-
-    while (j >= 0 && (k < headLength ? head[k] : tail[k - headLength]) === pattern[j]) {
-      j--;
-      k--;
-    }
-
-    if (j === -1) {
-      return k + 1;
-    }
-
-    i += skipTable[i < headLength ? head[i] : tail[i - headLength]];
-  }
-
-  return -1; // Not found
+function isIterable<T>(value: unknown): value is Iterable<T> {
+  return typeof value === 'object' && value != null && Symbol.iterator in value;
 }
 
-function computeSkipTable(pattern: Uint8Array): Uint8Array {
-  let table = new Uint8Array(256).fill(pattern.length);
-  let lastIndex = pattern.length - 1;
-
-  for (let i = 0; i < lastIndex; ++i) {
-    table[pattern[i]] = lastIndex - i;
-  }
-
-  return table;
+function isAsyncIterable<T>(value: unknown): value is AsyncIterable<T> {
+  return typeof value === 'object' && value != null && Symbol.asyncIterator in value;
 }
 
 /**
@@ -508,7 +475,7 @@ export class MultipartPart {
 
     reader.releaseLock();
 
-    return concatChunks(chunks);
+    return concat(chunks);
   }
 
   /**
