@@ -128,12 +128,12 @@ await parser.parse(multipartData, async (part) => {
 
 ## Examples
 
-The [`examples` directory](/examples) contains a few working examples of how you can use this library:
+The [`examples` directory](https://github.com/mjackson/multipart-parser/tree/main/examples) contains a few working examples of how you can use this library:
 
-- [`examples/bun`](/examples/bun) - using multipart-parser in Bun
-- [`examples/cf-workers`](/examples/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
-- [`examples/deno`](/examples/deno) - using multipart-parser in Deno
-- [`examples/node`](/examples/node) - using multipart-parser in Node.js
+- [`examples/bun`](https://github.com/mjackson/multipart-parser/tree/main/examples/bun) - using multipart-parser in Bun
+- [`examples/cf-workers`](https://github.com/mjackson/multipart-parser/tree/main/examples/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
+- [`examples/deno`](https://github.com/mjackson/multipart-parser/tree/main/examples/deno) - using multipart-parser in Deno
+- [`examples/node`](https://github.com/mjackson/multipart-parser/tree/main/examples/node) - using multipart-parser in Node.js
 
 ## Benchmark
 
