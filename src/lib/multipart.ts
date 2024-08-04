@@ -1,6 +1,6 @@
 import { SuperHeaders } from 'fetch-super-headers';
 
-import { concat, indexOf, computeSkipTable } from './buffer-utils.js';
+import { concat, computeSkipTable, combinedIndexOf } from './buffer-utils.js';
 
 /**
  * Extracts the boundary string from a `multipart/*` content type.
@@ -228,7 +228,7 @@ export class MultipartParser {
         return [];
       }
 
-      let boundaryIndex = indexOf(
+      let boundaryIndex = combinedIndexOf(
         this.#buffer,
         this.#chunk,
         this.#boundaryArray,
@@ -276,7 +276,7 @@ export class MultipartParser {
           break;
         }
 
-        let headerEndIndex = indexOf(
+        let headerEndIndex = combinedIndexOf(
           this.#buffer,
           this.#chunk,
           DOUBLE_NEWLINE,
@@ -309,7 +309,7 @@ export class MultipartParser {
           break;
         }
 
-        let boundaryIndex = indexOf(
+        let boundaryIndex = combinedIndexOf(
           this.#buffer,
           this.#chunk,
           this.#boundaryArray,
