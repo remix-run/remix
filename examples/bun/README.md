@@ -1,3 +1,3 @@
 # multipart-parser Bun Example
 
-This is an example of how you can upload a file to a [Bun](https://bun.sh) server and stream it to a tmp directory on the filesystem.
+This is an example of handling a `<form enctype="multipart/form-data">` POST to [a Bun server](https://bun.sh) and streaming any files it contains to a tmp directory on the filesystem.
