@@ -112,7 +112,7 @@ enum MultipartParserState {
 }
 
 /**
- * A parser for `multipart/*` message streams.
+ * A parser for `multipart/*` HTTP messages.
  */
 export class MultipartParser {
   boundary: string;
@@ -450,7 +450,7 @@ function computeSkipTable(pattern: Uint8Array): Uint8Array {
 }
 
 /**
- * A part of a `multipart/*` message.
+ * A part of a `multipart/*` HTTP message.
  */
 export class MultipartPart {
   #header: Uint8Array;
