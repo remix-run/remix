@@ -387,16 +387,25 @@ type DataFunctionReturnValue =
   | TypedDeferredData<Record<string, unknown>>
   | TypedResponse<Record<string, unknown>>;
 
+type Unwrap<T extends DataFunctionReturnValue> = T extends TypedDeferredData<
+  infer D
+>
+  ? D
+  : T extends TypedResponse<Record<string, unknown>>
+  ? SerializeFrom<T>
+  : T extends DataWithResponseInit<infer D>
+  ? D
+  : T;
+
 // Backwards-compatible type for Remix v2 where json/defer still use the old types,
 // and only non-json/defer returns use the new types.  This allows for incremental
 // migration of loaders to return naked objects.  In the next major version,
 // json/defer will be removed so everything will use the new simplified typings.
 // prettier-ignore
-export type Serialize<T extends Loader | Action> =
-  Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
-  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
-  Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? D :
-  Awaited<ReturnType<T>>;
+export type Serialize<T extends Loader | Action, R = Awaited<ReturnType<T>>> =
+  R extends DataFunctionReturnValue
+    ? Unwrap<R>
+    : R;
 
 export type Loader = (
   args: LoaderFunctionArgs
