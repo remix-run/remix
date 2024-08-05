@@ -66,17 +66,16 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ parts }, null, 2));
       return;
     } catch (error) {
-      console.error(error);
-
       if (error instanceof MultipartParseError) {
         res.writeHead(400);
         res.end('Bad Request');
         return;
       }
 
+      console.error(error);
+
       res.writeHead(500);
       res.end('Internal Server Error');
-      return;
     }
   }
 
@@ -95,25 +94,25 @@ async function writeFile(filename, stream) {
   let fileStream = fs.createWriteStream(filename);
   let bytesWritten = 0;
 
-  await readStream(stream, (chunk) => {
+  for await (let chunk of readStream(stream)) {
     fileStream.write(chunk);
     bytesWritten += chunk.byteLength;
-  });
+  }
 
   fileStream.end();
 
   return bytesWritten;
 }
 
-/** @type <T>(stream: ReadableStream<T>, callback: (value: T) => void) => Promise<void> */
-async function readStream(stream, callback) {
+/** @type <T>(stream: ReadableStream<T>) => AsyncGenerator<T> */
+async function* readStream(stream) {
   let reader = stream.getReader();
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      callback(value);
+      yield value;
     }
   } finally {
     reader.releaseLock();

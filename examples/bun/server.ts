@@ -57,11 +57,11 @@ const server = Bun.serve({
           headers: { 'Content-Type': 'application/json' },
         });
       } catch (error) {
-        console.error(error);
-
         if (error instanceof MultipartParseError) {
           return new Response(error.message, { status: 400 });
         }
+
+        console.error(error);
 
         return new Response('Internal Server Error', { status: 500 });
       }

@@ -22,30 +22,29 @@ export default {
 `,
         {
           headers: { 'Content-Type': 'text/html' },
-        }
+        },
       );
     }
 
     if (request.method === 'POST') {
       try {
-
         let bucket = env.MULTIPART_UPLOADS;
         let parts = [];
-  
+
         for await (let part of parseMultipartRequest(request)) {
           if (part.isFile) {
             let uniqueKey = `upload-${new Date().getTime()}-${Math.random()
               .toString(36)
               .slice(2, 8)}`;
-  
+
             // Put the file in R2.
-  
+
             // Ideally we could stream part.body directly, but Cloudflare's R2
             // API requires a FixedLengthStream and unfortunately we don't know
             // the length of the stream at this point because browsers don't send
             // Content-Length headers with file uploads.
             // await bucket.put(uniqueKey, part.body);
-  
+
             // So instead, we have to buffer the entire file in memory and then
             // upload it to R2.
             let bytes = await part.bytes();
@@ -54,7 +53,7 @@ export default {
                 contentType: part.headers.get('Content-Type')!,
               },
             });
-  
+
             parts.push({
               name: part.name,
               filename: part.filename,
@@ -68,16 +67,16 @@ export default {
             });
           }
         }
-  
+
         return new Response(JSON.stringify({ parts }, null, 2), {
           headers: { 'Content-Type': 'application/json' },
         });
       } catch (error) {
-        console.error(error);
-
         if (error instanceof MultipartParseError) {
           return new Response(error.message, { status: 400 });
         }
+
+        console.error(error);
 
         return new Response('Internal Server Error', { status: 500 });
       }
