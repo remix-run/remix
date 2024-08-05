@@ -115,7 +115,7 @@ If you'd prefer a callback-based API, instantiate your own `MultipartParser` and
 ```typescript
 import { MultipartParser } from '@mjackson/multipart-parser';
 
-let multipartData = new Uint8Array();
+let multipartData = new Uint8Array(); // or ReadableStream<Uint8Array>
 let boundary = '...';
 
 let parser = new MultipartParser(boundary);
