@@ -25,7 +25,7 @@ import { initFogOfWar, useFogOFWarDiscovery } from "./fog-of-war";
 /* eslint-disable prefer-let/prefer-let */
 declare global {
   var __remixContext: {
-    ssrMatches: string[];
+    url: string;
     basename?: string;
     state: HydrationState;
     criticalCss?: string;
@@ -194,6 +194,29 @@ if (import.meta && import.meta.hot) {
  */
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
+    // Hard reload if the path we tried to load is not the current path.
+    // This is usually the result of 2 rapid back/forward clicks from an
+    // external site into a Remix app, where we initially start the load for
+    // one URL and while the JS chunks are loading a second forward click moves
+    // us to a new URL.  Avoid comparing search params because of CDNs which
+    // can be configured to ignore certain params and only pathname is relevant
+    // towards determining the route matches.
+    let initialPathname = window.__remixContext.url;
+    let hydratedPathname = window.location.pathname;
+    if (
+      initialPathname !== hydratedPathname &&
+      !window.__remixContext.isSpaMode
+    ) {
+      let errorMsg =
+        `Initial URL (${initialPathname}) does not match URL at time of hydration ` +
+        `(${hydratedPathname}), reloading page...`;
+      console.error(errorMsg);
+      window.location.reload();
+      // Get out of here so the reload can happen - don't create the router
+      // since it'll then kick off unnecessary route.lazy() loads
+      return <></>;
+    }
+
     // When single fetch is enabled, we need to suspend until the initial state
     // snapshot is decoded into window.__remixContext.state
     if (window.__remixContext.future.unstable_singleFetch) {
@@ -247,35 +270,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         window.location,
         window.__remixContext.basename
       );
-
-      // Hard reload if the matches we rendered on the server aren't the matches
-      // we matched in the client, otherwise we'll try to hydrate without the
-      // right modules and throw a hydration error, which can put React into an
-      // infinite hydration loop when hydrating the full `<html>` document.
-      // This is usually the result of 2 rapid back/forward clicks from an
-      // external site into a Remix app, where we initially start the load for
-      // one URL and while the JS chunks are loading a second forward click moves
-      // us to a new URL.
-      let ssrMatches = window.__remixContext.ssrMatches;
-      let hasDifferentSSRMatches =
-        (initialMatches || []).length !== ssrMatches.length ||
-        !(initialMatches || []).every((m, i) => ssrMatches[i] === m.route.id);
-
-      if (hasDifferentSSRMatches && !window.__remixContext.isSpaMode) {
-        let ssr = ssrMatches.join(",");
-        let client = (initialMatches || []).map((m) => m.route.id).join(",");
-        let errorMsg =
-          `SSR Matches (${ssr}) do not match client matches (${client}) at ` +
-          `time of hydration , reloading page...`;
-        console.error(errorMsg);
-
-        window.location.reload();
-
-        // Get out of here so the reload can happen - don't create the router
-        // since it'll then kick off unnecessary route.lazy() loads
-        return <></>;
-      }
-
       if (initialMatches) {
         for (let match of initialMatches) {
           let routeId = match.route.id;
