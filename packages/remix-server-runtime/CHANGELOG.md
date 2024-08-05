@@ -1,5 +1,11 @@
 # `@remix-run/server-runtime`
 
+## 2.11.1
+
+### Patch Changes
+
+- Revert #9695, stop infinite reload. ([#9833](https://github.com/remix-run/remix/pull/9833))
+
 ## 2.11.0
 
 ### Minor Changes

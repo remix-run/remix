@@ -20,7 +20,7 @@ export function createServerHandoffString<T>(serverHandoff: {
   // we'd end up including duplicate info
   state?: ValidateShape<T, HydrationState>;
   criticalCss?: string;
-  ssrMatches: string[];
+  url: string;
   basename: string | undefined;
   future: FutureConfig;
   isSpaMode: boolean;
