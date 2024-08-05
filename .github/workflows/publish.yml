@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write
       id-token: write
 
     steps:
@@ -30,6 +30,13 @@ jobs:
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - run: node scripts/sync-jsr-version.js
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Sync JSR package version
+          file_pattern: jsr.json
 
       - name: Publish to JSR
         run: npx jsr publish
