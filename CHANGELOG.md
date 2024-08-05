@@ -13,6 +13,9 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
+  - [v2.11.1](#v2110)
+    - [Patch Changes](#patch-changes)
+    - [Changes by Package](#changes-by-package)
   - [v2.11.0](#v2110)
     - [What's Changed](#whats-changed)
       - [Renamed `unstable_fogOfWar` future flag to `unstable_lazyRouteDiscovery` (unstable)](#renamed-unstable_fogofwar-future-flag-to-unstable_lazyroutediscovery-unstable)
