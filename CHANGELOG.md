@@ -202,6 +202,34 @@ Date: YYYY-MM-DD
 
 -->
 
+## v2.11.1
+
+Date: 2024-08-05
+
+### Patch Changes
+
+- Revert #9695, stop infinite reload. ([`6dd275797`](https://github.com/remix-run/remix/commit/6dd2757977d9029501b399f02c83d1010df692d1))
+
+### Changes by Package
+
+- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/create-remix/CHANGELOG.md#2111)
+- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-architect/CHANGELOG.md#2111)
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-cloudflare/CHANGELOG.md#2111)
+- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-cloudflare-pages/CHANGELOG.md#2111)
+- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-cloudflare-workers/CHANGELOG.md#2111)
+- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-css-bundle/CHANGELOG.md#2111)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-deno/CHANGELOG.md#2111)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-dev/CHANGELOG.md#2111)
+- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-eslint-config/CHANGELOG.md#2111)
+- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-express/CHANGELOG.md#2111)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-node/CHANGELOG.md#2111)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-react/CHANGELOG.md#2111)
+- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-serve/CHANGELOG.md#2111)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-server-runtime/CHANGELOG.md#2111)
+- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-testing/CHANGELOG.md#2111)
+
+**Full Changelog**: [`v2.11.0...v2.11.1`](https://github.com/remix-run/remix/compare/remix@2.11.0...remix@2.11.1)
+
 ## v2.11.0
 
 Date: 2024-08-01
