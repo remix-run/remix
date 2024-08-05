@@ -35,6 +35,7 @@ jobs:
 
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
+          branch: main
           commit_message: Sync JSR package version
           file_pattern: jsr.json
 
