@@ -375,9 +375,8 @@ type DataFunctionReturnValue =
 // json/defer will be removed so everything will use the new simplified typings.
 // prettier-ignore
 export type Serialize<T extends Loader | Action> =
-  Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
+  Awaited<ReturnType<T>> extends TypedDeferredData<infer D> | DataWithResponseInit<infer D> | Serializable ? D :
   Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
-  Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? D :
   Awaited<ReturnType<T>>;
 
 export type Loader = (
