@@ -1,12 +1,12 @@
 # `@remix-run/react`
 
-## 2.11.1-pre.0
+## 2.11.1
 
 ### Patch Changes
 
-- Revert #9695, stop infinite reload. ([`6dd275797`](https://github.com/remix-run/remix/commit/6dd2757977d9029501b399f02c83d1010df692d1))
+- Revert #9695, stop infinite reload. ([#9833](https://github.com/remix-run/remix/pull/9833))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.11.1-pre.0`
+  - `@remix-run/server-runtime@2.11.1`
 
 ## 2.11.0
 
