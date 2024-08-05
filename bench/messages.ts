@@ -1,4 +1,4 @@
-import { concatChunks, getRandomBytes } from './utils.js';
+import { concat, getRandomBytes } from './utils.js';
 
 const NodeDefaultHighWaterMark = 65536;
 
@@ -30,7 +30,7 @@ export class MultipartMessage {
 
     pushString(`--${boundary}--`);
 
-    this.content = concatChunks(chunks);
+    this.content = concat(chunks);
   }
 
   *generateChunks(chunkSize = NodeDefaultHighWaterMark): Generator<Uint8Array> {

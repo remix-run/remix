@@ -1,4 +1,4 @@
-export function concatChunks(chunks: Uint8Array[]): Uint8Array {
+export function concat(chunks: Uint8Array[]): Uint8Array {
   if (chunks.length === 1) return chunks[0];
 
   let length = 0;
@@ -24,5 +24,5 @@ export function getRandomBytes(size: number): Uint8Array {
     chunks.push(crypto.getRandomValues(new Uint8Array(Math.min(size - i, 65536))));
   }
 
-  return concatChunks(chunks);
+  return concat(chunks);
 }
