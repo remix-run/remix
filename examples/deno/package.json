@@ -1,7 +1,6 @@
 {
   "name": "multipart-parser-deno-example",
   "private": true,
-  "type": "module",
   "dependencies": {
     "@mjackson/multipart-parser": "workspace:*",
     "tmp": "^0.2.3"
