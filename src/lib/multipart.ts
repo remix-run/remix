@@ -362,14 +362,14 @@ export class MultipartParser {
         return [head, tail];
       }
 
-      let head = this.#chunk.subarray(0, size);
+      let view = this.#chunk.subarray(0, size);
       this.#chunk = this.#chunk.subarray(size);
-      return [head];
+      return [view];
     }
 
-    let head = this.#buffer.subarray(0, size);
+    let view = this.#buffer.subarray(0, size);
     this.#buffer = this.#buffer.subarray(size);
-    return [head];
+    return [view];
   }
 
   #skip(size: number): void {
