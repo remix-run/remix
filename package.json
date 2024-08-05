@@ -3,6 +3,10 @@
   "version": "0.3.0",
   "description": "A fast, efficient parser for multipart streams in any JavaScript environment",
   "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mjackson/multipart-parser"
+  },
   "license": "MIT",
   "files": [
     "dist",
