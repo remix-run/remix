@@ -168,7 +168,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
 
   forEach(
     callback: (value: string, key: string, parent: SuperHeaders) => void,
-    thisArg?: any
+    thisArg?: any,
   ): void {
     for (let [key, value] of this) {
       callback.call(thisArg, value, key, this);
@@ -223,7 +223,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
     return this.#getHeaderValue('cookie', Cookie);
   }
 
-  set cookie(value: string | Cookie) {
+  set cookie(value: string | CookieInit) {
     this.#setHeaderValue('cookie', Cookie, value);
   }
 
@@ -352,7 +352,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
   #setHeaderValue<T>(
     key: string,
     ctor: new (init?: string | T) => HeaderValue,
-    value: string | T
+    value: string | T,
   ): void {
     if (typeof value === 'string' || value instanceof ctor) {
       this.#map.set(key, value);

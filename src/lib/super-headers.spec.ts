@@ -32,21 +32,6 @@ describe('SuperHeaders', () => {
   it('initializes from an object of property name/value pairs', () => {
     let headers = new SuperHeaders({ contentType: 'text/plain' });
     assert.equal(headers.get('Content-Type'), 'text/plain');
-
-    let headers2 = new SuperHeaders({
-      contentType: { mediaType: 'text/plain' },
-      lastModified: new Date('2021-01-01T00:00:00Z'),
-      setCookie: [
-        { name: 'session', value: 'abc', path: '/' },
-        { name: 'theme', value: 'dark', expires: new Date('2021-12-31T23:59:59Z') },
-      ],
-    });
-    assert.equal(headers2.get('Content-Type'), 'text/plain');
-    assert.equal(headers2.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT');
-    assert.deepEqual(headers2.getSetCookie(), [
-      'session=abc; Path=/',
-      'theme=dark; Expires=Fri, 31 Dec 2021 23:59:59 GMT',
-    ]);
   });
 
   it('initializes from an array of key-value pairs', () => {
@@ -68,6 +53,41 @@ describe('SuperHeaders', () => {
     let original = new Headers({ 'Content-Type': 'text/plain' });
     let headers = new SuperHeaders(original);
     assert.equal(headers.get('Content-Type'), 'text/plain');
+  });
+
+  it('initializes with a ContentDispositionInit', () => {
+    let headers = new SuperHeaders({
+      contentDisposition: { type: 'attachment', filename: 'example.txt' },
+    });
+    assert.equal(headers.get('Content-Disposition'), 'attachment; filename=example.txt');
+  });
+
+  it('initializes with a ContentTypeInit', () => {
+    let headers = new SuperHeaders({ contentType: { mediaType: 'text/plain', charset: 'utf-8' } });
+    assert.equal(headers.get('Content-Type'), 'text/plain; charset=utf-8');
+  });
+
+  it('initializes with a CookieInit', () => {
+    let headers = new SuperHeaders({ cookie: [['name', 'value']] });
+    assert.equal(headers.get('Cookie'), 'name=value');
+  });
+
+  it('initializes with a SetCookieInit', () => {
+    let headers = new SuperHeaders({
+      setCookie: [
+        { name: 'session', value: 'abc', path: '/' },
+        { name: 'theme', value: 'dark', expires: new Date('2021-12-31T23:59:59Z') },
+      ],
+    });
+    assert.deepEqual(headers.getSetCookie(), [
+      'session=abc; Path=/',
+      'theme=dark; Expires=Fri, 31 Dec 2021 23:59:59 GMT',
+    ]);
+  });
+
+  it('initializes with a lastModified Date', () => {
+    let headers = new SuperHeaders({ lastModified: new Date('2021-01-01T00:00:00Z') });
+    assert.equal(headers.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT');
   });
 
   it('appends values', () => {
@@ -180,6 +200,9 @@ describe('SuperHeaders', () => {
 
       headers.contentDisposition.filename = 'new.txt';
       assert.equal(headers.get('Content-Disposition'), 'attachment; filename=new.txt');
+
+      headers.contentDisposition = { type: 'inline', filename: 'index.html' };
+      assert.equal(headers.get('Content-Disposition'), 'inline; filename=index.html');
     });
 
     it('handles Content-Length header', () => {
@@ -200,6 +223,9 @@ describe('SuperHeaders', () => {
 
       headers.contentType.charset = 'iso-8859-1';
       assert.equal(headers.get('Content-Type'), 'text/plain; charset=iso-8859-1');
+
+      headers.contentType = { mediaType: 'text/html' };
+      assert.equal(headers.get('Content-Type'), 'text/html');
     });
 
     it('handles Cookie header', () => {
@@ -212,6 +238,9 @@ describe('SuperHeaders', () => {
 
       headers.cookie.set('name3', 'value3');
       assert.equal(headers.get('Cookie'), 'name1=value1; name2=value2; name3=value3');
+
+      headers.cookie = [['name4', 'value4']];
+      assert.equal(headers.get('Cookie'), 'name4=value4');
     });
 
     it('handles Expires header', () => {
@@ -246,6 +275,12 @@ describe('SuperHeaders', () => {
       headers.setCookie = [...headers.setCookie, 'lang=en'];
 
       assert.equal(headers.get('Set-Cookie'), 'session=abc, theme=dark, lang=en');
+
+      headers.setCookie = [
+        { name: 'session', value: 'def' },
+        { name: 'theme', value: 'light' },
+      ];
+      assert.equal(headers.get('Set-Cookie'), 'session=def, theme=light');
     });
 
     it('creates empty header objects when accessed', () => {

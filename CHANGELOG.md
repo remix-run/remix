@@ -1,5 +1,9 @@
 # `headers` CHANGELOG
 
+## HEAD
+
+- Added `CookieInit` support to `headers.cookie=` setter
+
 ## v0.5.0 - Aug 6, 2024
 
 - Added the ability to initialize a `SuperHeaders` instance with object config instead of just strings or header object instances.
