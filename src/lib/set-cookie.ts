@@ -22,15 +22,15 @@ export interface SetCookieInit {
  * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie)
  */
 export class SetCookie implements HeaderValue {
-  public domain?: string;
-  public expires?: Date;
-  public httpOnly?: true;
-  public maxAge?: number;
-  public name?: string;
-  public path?: string;
-  public sameSite?: SameSiteValue;
-  public secure?: true;
-  public value?: string;
+  domain?: string;
+  expires?: Date;
+  httpOnly?: true;
+  maxAge?: number;
+  name?: string;
+  path?: string;
+  sameSite?: SameSiteValue;
+  secure?: true;
+  value?: string;
 
   constructor(init?: string | SetCookieInit) {
     if (init) {

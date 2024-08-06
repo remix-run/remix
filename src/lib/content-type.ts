@@ -13,9 +13,9 @@ export interface ContentTypeInit {
  * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type)
  */
 export class ContentType implements HeaderValue {
-  public boundary?: string;
-  public charset?: string;
-  public mediaType?: string;
+  boundary?: string;
+  charset?: string;
+  mediaType?: string;
 
   constructor(init?: string | ContentTypeInit) {
     if (init) {

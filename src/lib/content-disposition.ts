@@ -14,10 +14,10 @@ export interface ContentDispositionInit {
  * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition)
  */
 export class ContentDisposition implements HeaderValue {
-  public filename?: string;
-  public filenameSplat?: string;
-  public name?: string;
-  public type?: string;
+  filename?: string;
+  filenameSplat?: string;
+  name?: string;
+  type?: string;
 
   constructor(init?: string | ContentDispositionInit) {
     if (init) {
