@@ -1,4 +1,4 @@
-import { ContentDisposition, ContentType, SuperHeaders } from 'fetch-super-headers';
+import Headers from '@mjackson/headers';
 
 import { concat } from '../lib/buffer-utils.js';
 
@@ -64,28 +64,31 @@ export function createMultipartBody(
       pushLine(`--${boundary}`);
 
       if (typeof part === 'string') {
-        let contentDisposition = new ContentDisposition();
-        contentDisposition.type = 'form-data';
-        contentDisposition.name = name;
-        pushLine(`Content-Disposition: ${contentDisposition}`);
+        let headers = new Headers({
+          contentDisposition: {
+            type: 'form-data',
+            name,
+          },
+        });
+
+        pushLine(`${headers}`);
         pushLine();
         pushLine(part);
       } else {
-        let contentDisposition = new ContentDisposition();
-        contentDisposition.type = 'form-data';
-        contentDisposition.name = name;
-        contentDisposition.filename = part.filename;
-        contentDisposition.filenameSplat = part.filenameSplat;
-
-        pushLine(`Content-Disposition: ${contentDisposition}`);
+        let headers = new Headers({
+          contentDisposition: {
+            type: 'form-data',
+            name,
+            filename: part.filename,
+            filenameSplat: part.filenameSplat,
+          },
+        });
 
         if (part.mediaType) {
-          let contentType = new ContentType();
-          contentType.mediaType = part.mediaType;
-
-          pushLine(`Content-Type: ${contentType}`);
+          headers.contentType = part.mediaType;
         }
 
+        pushLine(`${headers}`);
         pushLine();
         if (typeof part.content === 'string') {
           pushLine(part.content);
@@ -106,9 +109,12 @@ export function createMultipartMockRequest(
   boundary: string,
   parts?: { [name: string]: PartValue },
 ): Request {
-  let headers = new SuperHeaders();
-  headers.contentType.mediaType = 'multipart/form-data';
-  headers.contentType.boundary = boundary;
+  let headers = new Headers({
+    contentType: {
+      mediaType: 'multipart/form-data',
+      boundary,
+    },
+  });
 
   let body = createMultipartBody(boundary, parts);
 

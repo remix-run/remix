@@ -1,4 +1,4 @@
-import { SuperHeaders } from 'fetch-super-headers';
+import Headers from '@mjackson/headers';
 
 import { concat, computeSkipTable, combinedIndexOf } from './buffer-utils.js';
 
@@ -423,7 +423,7 @@ export class MultipartPart {
   #header: Uint8Array;
   #body: ReadableStream<Uint8Array>;
 
-  #headers?: SuperHeaders;
+  #headers?: Headers;
   #bodyUsed = false;
 
   constructor(header: Uint8Array, body: ReadableStream<Uint8Array>) {
@@ -481,9 +481,9 @@ export class MultipartPart {
   /**
    * The headers associated with this part.
    */
-  get headers(): SuperHeaders {
+  get headers(): Headers {
     if (!this.#headers) {
-      this.#headers = new SuperHeaders(new TextDecoder().decode(this.#header));
+      this.#headers = new Headers(new TextDecoder().decode(this.#header));
     }
 
     return this.#headers;

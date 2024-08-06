@@ -20,7 +20,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "fetch-super-headers": "^0.4.1"
+    "@mjackson/headers": "^0.5.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",

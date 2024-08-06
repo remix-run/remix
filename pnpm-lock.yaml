@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      fetch-super-headers:
-        specifier: ^0.4.1
-        version: 0.4.1
+      '@mjackson/headers':
+        specifier: ^0.5.0
+        version: 0.5.0
     devDependencies:
       '@types/node':
         specifier: ^20.14.10
@@ -317,6 +317,9 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
+  '@mjackson/headers@0.5.0':
+    resolution: {integrity: sha512-aRlcySUJXTm2krQbXMXhOOPdCWN0dtIL4Y0M1veLqp0ObjslNSJ2ttKN2W0+9gE01MUo5UgtwSXq8UMhMifytQ==}
+
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
@@ -466,9 +469,6 @@ packages:
   exit-hook@2.2.1:
     resolution: {integrity: sha512-eNTPlAD67BmP31LDINZ3U7HSF8l57TxOY2PmBJ1shpCvpnxBF93mWCE8YHBnXs8qiUZJc9WDcWIeC3a2HIAMfw==}
     engines: {node: '>=6'}
-
-  fetch-super-headers@0.4.1:
-    resolution: {integrity: sha512-jXB/p3m6iMeDFhHpJ56BgqrvoDIiyueNPF39twy2N63DMcme0imKhGoEZH8AAbnplnggU9OdUs9eFFPZxPULFA==}
 
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
@@ -929,6 +929,8 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
+  '@mjackson/headers@0.5.0': {}
+
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
@@ -1087,8 +1089,6 @@ snapshots:
   estree-walker@0.6.1: {}
 
   exit-hook@2.2.1: {}
-
-  fetch-super-headers@0.4.1: {}
 
   fill-range@7.1.1:
     dependencies:
