@@ -17,7 +17,9 @@ export interface SetCookieInit {
 }
 
 /**
- * Represents the value of a `Set-Cookie` HTTP header.
+ * The value of a `Set-Cookie` HTTP header.
+ *
+ * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie)
  */
 export class SetCookie implements HeaderValue {
   public domain?: string;

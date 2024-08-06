@@ -17,6 +17,10 @@ export type SuperHeadersInit =
 
 /**
  * An enhanced JavaScript `Headers` interface with type-safe access.
+ *
+ * [API Reference](https://github.com/mjackson/headers)
+ *
+ * [MDN Reference for `Headers` base class](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
  */
 export class SuperHeaders extends Headers implements Iterable<[string, string]> {
   private map: Map<string, string | HeaderValue>;

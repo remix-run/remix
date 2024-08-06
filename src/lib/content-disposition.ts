@@ -9,7 +9,9 @@ export interface ContentDispositionInit {
 }
 
 /**
- * Represents the value of a `Content-Disposition` HTTP header.
+ * The value of a `Content-Disposition` HTTP header.
+ *
+ * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition)
  */
 export class ContentDisposition implements HeaderValue {
   public filename?: string;

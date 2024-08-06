@@ -4,7 +4,9 @@ import { parseParams, quote } from './param-values.js';
 export type CookieInit = [string, string][] | Record<string, string>;
 
 /**
- * Represents the value of a `Cookie` HTTP header.
+ * The value of a `Cookie` HTTP header.
+ *
+ * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie)
  */
 export class Cookie implements HeaderValue, Iterable<[string, string]> {
   private cookies: Map<string, string>;
