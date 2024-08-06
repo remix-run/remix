@@ -57,12 +57,17 @@ export class ContentDisposition implements HeaderValue, ContentDispositionInit {
     }
   }
 
+  /**
+   * The preferred filename for the content, using the `filename*` parameter if present, falling back to the `filename` parameter.
+   *
+   * From [RFC 6266](https://tools.ietf.org/html/rfc6266):
+   *
+   * Many user agent implementations predating this specification do not understand the "filename*" parameter.
+   * Therefore, when both "filename" and "filename*" are present in a single header field value, recipients SHOULD
+   * pick "filename*" and ignore "filename". This way, senders can avoid special-casing specific user agents by
+   * sending both the more expressive "filename*" parameter, and the "filename" parameter as fallback for legacy recipients.
+   */
   get preferredFilename(): string | undefined {
-    // From RFC 6266:
-    // Many user agent implementations predating this specification do not understand the "filename*" parameter.
-    // Therefore, when both "filename" and "filename*" are present in a single header field value, recipients SHOULD
-    // pick "filename*" and ignore "filename". This way, senders can avoid special-casing specific user agents by
-    // sending both the more expressive "filename*" parameter, and the "filename" parameter as fallback for legacy recipients.
     let filenameSplat = this.filenameSplat;
     if (filenameSplat) {
       let decodedFilename = decodeFilenameSplat(filenameSplat);

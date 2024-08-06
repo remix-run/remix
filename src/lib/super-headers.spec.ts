@@ -36,9 +36,17 @@ describe('SuperHeaders', () => {
     let headers2 = new SuperHeaders({
       contentType: { mediaType: 'text/plain' },
       lastModified: new Date('2021-01-01T00:00:00Z'),
+      setCookie: [
+        { name: 'session', value: 'abc', path: '/' },
+        { name: 'theme', value: 'dark', expires: new Date('2021-12-31T23:59:59Z') },
+      ],
     });
     assert.equal(headers2.get('Content-Type'), 'text/plain');
     assert.equal(headers2.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT');
+    assert.deepEqual(headers2.getSetCookie(), [
+      'session=abc; Path=/',
+      'theme=dark; Expires=Fri, 31 Dec 2021 23:59:59 GMT',
+    ]);
   });
 
   it('initializes from an array of key-value pairs', () => {
