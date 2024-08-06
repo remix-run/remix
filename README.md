@@ -199,3 +199,7 @@ $ pnpm run bench
 ## Credits
 
 Thanks to Jacob Ebey who gave me several code reviews on this project prior to publishing.
+
+## License
+
+See [LICENSE](https://github.com/mjackson/multipart-parser/blob/main/LICENSE)
