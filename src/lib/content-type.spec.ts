@@ -4,16 +4,28 @@ import { describe, it } from 'node:test';
 import { ContentType } from './content-type.js';
 
 describe('ContentType', () => {
-  it('parses initial value correctly', () => {
+  it('initializes with an empty string', () => {
+    let header = new ContentType('');
+    assert.equal(header.mediaType, undefined);
+    assert.equal(header.charset, undefined);
+  });
+
+  it('initializes with a string', () => {
     let header = new ContentType('text/plain; charset=utf-8');
     assert.equal(header.mediaType, 'text/plain');
     assert.equal(header.charset, 'utf-8');
   });
 
-  it('handles empty initial value', () => {
-    let header = new ContentType('');
-    assert.equal(header.mediaType, undefined);
-    assert.equal(header.charset, undefined);
+  it('initializes with an object', () => {
+    let header = new ContentType({ mediaType: 'text/plain', charset: 'utf-8' });
+    assert.equal(header.mediaType, 'text/plain');
+    assert.equal(header.charset, 'utf-8');
+  });
+
+  it('initializes with another ContentType', () => {
+    let header = new ContentType(new ContentType('text/plain; charset=utf-8'));
+    assert.equal(header.mediaType, 'text/plain');
+    assert.equal(header.charset, 'utf-8');
   });
 
   it('handles whitespace in initial value', () => {

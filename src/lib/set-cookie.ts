@@ -5,14 +5,60 @@ import { capitalize, isValidDate } from './utils.js';
 type SameSiteValue = 'Strict' | 'Lax' | 'None';
 
 export interface SetCookieInit {
+  /**
+   * The domain of the cookie. For example, `example.com`.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#domaindomain-value)
+   */
   domain?: string;
+  /**
+   * The expiration date of the cookie. If not specified, the cookie is a session cookie.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#expiresdate)
+   */
   expires?: Date;
+  /**
+   * Indicates this cookie should not be accessible via JavaScript.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#httponly)
+   */
   httpOnly?: true;
+  /**
+   * The maximum age of the cookie in seconds.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#max-age)
+   */
   maxAge?: number;
+  /**
+   * The name of the cookie.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value)
+   */
   name?: string;
+  /**
+   * The path of the cookie. For example, `/` or `/admin`.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value)
+   */
   path?: string;
+  /**
+   * The `SameSite` attribute of the cookie. This attribute lets servers require that a cookie shouldn't be sent with
+   * cross-site requests, which provides some protection against cross-site request forgery attacks.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
+   */
   sameSite?: SameSiteValue;
+  /**
+   * Indicates the cookie should only be sent over HTTPS.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure)
+   */
   secure?: true;
+  /**
+   * The value of the cookie.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value)
+   */
   value?: string;
 }
 
@@ -21,7 +67,7 @@ export interface SetCookieInit {
  *
  * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie)
  */
-export class SetCookie implements HeaderValue {
+export class SetCookie implements HeaderValue, SetCookieInit {
   domain?: string;
   expires?: Date;
   httpOnly?: true;

@@ -24,9 +24,21 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('Content-Length'), '42');
   });
 
-  it('initializes from an object', () => {
+  it('initializes from an object of header name/value pairs', () => {
     let headers = new SuperHeaders({ 'Content-Type': 'text/plain' });
     assert.equal(headers.get('Content-Type'), 'text/plain');
+  });
+
+  it('initializes from an object of property name/value pairs', () => {
+    let headers = new SuperHeaders({ contentType: 'text/plain' });
+    assert.equal(headers.get('Content-Type'), 'text/plain');
+
+    let headers2 = new SuperHeaders({
+      contentType: { mediaType: 'text/plain' },
+      lastModified: new Date('2021-01-01T00:00:00Z'),
+    });
+    assert.equal(headers2.get('Content-Type'), 'text/plain');
+    assert.equal(headers2.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT');
   });
 
   it('initializes from an array of key-value pairs', () => {

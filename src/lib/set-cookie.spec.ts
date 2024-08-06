@@ -4,7 +4,13 @@ import { describe, it } from 'node:test';
 import { SetCookie } from './set-cookie.js';
 
 describe('SetCookie', () => {
-  it('parses initial value correctly', () => {
+  it('initializes with an empty string', () => {
+    let header = new SetCookie('');
+    assert.equal(header.name, undefined);
+    assert.equal(header.value, undefined);
+  });
+
+  it('initializes with a string', () => {
     let header = new SetCookie(
       'session=abc123; Domain=example.com; Path=/; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Secure; HttpOnly'
     );
@@ -17,16 +23,41 @@ describe('SetCookie', () => {
     assert.equal(header.httpOnly, true);
   });
 
+  it('initializes with an object', () => {
+    let header = new SetCookie({
+      name: 'session',
+      value: 'abc123',
+      domain: 'example.com',
+      path: '/',
+      expires: new Date('Wed, 21 Oct 2015 07:28:00 GMT'),
+      secure: true,
+      httpOnly: true,
+    });
+    assert.equal(header.name, 'session');
+    assert.equal(header.value, 'abc123');
+    assert.equal(header.domain, 'example.com');
+    assert.equal(header.path, '/');
+    assert.equal(header.expires?.toUTCString(), 'Wed, 21 Oct 2015 07:28:00 GMT');
+    assert.equal(header.secure, true);
+    assert.equal(header.httpOnly, true);
+  });
+
+  it('initializes with another SetCookie', () => {
+    let header = new SetCookie(
+      new SetCookie('session=abc123; Domain=example.com; Path=/; Secure; HttpOnly')
+    );
+    assert.equal(header.name, 'session');
+    assert.equal(header.value, 'abc123');
+    assert.equal(header.domain, 'example.com');
+    assert.equal(header.path, '/');
+    assert.equal(header.secure, true);
+    assert.equal(header.httpOnly, true);
+  });
+
   it('handles cookies without attributes', () => {
     let header = new SetCookie('user=john');
     assert.equal(header.name, 'user');
     assert.equal(header.value, 'john');
-  });
-
-  it('initializes with an empty string', () => {
-    let header = new SetCookie('');
-    assert.equal(header.name, undefined);
-    assert.equal(header.value, undefined);
   });
 
   it('handles cookie values with commas', () => {

@@ -2,9 +2,22 @@ import { HeaderValue } from './header-value.js';
 import { parseParams, quote } from './param-values.js';
 
 export interface ContentDispositionInit {
+  /**
+   * For file uploads, the name of the file that the user selected.
+   */
   filename?: string;
+  /**
+   * For file uploads, the name of the file that the user selected, encoded as a [RFC 8187](https://tools.ietf.org/html/rfc8187) `filename*` parameter.
+   * This parameter allows non-ASCII characters in filenames, and specifies the character encoding.
+   */
   filenameSplat?: string;
+  /**
+   * For `multipart/form-data` requests, the name of the `<input>` field associated with this content.
+   */
   name?: string;
+  /**
+   * The disposition type of the content, such as `attachment` or `inline`.
+   */
   type?: string;
 }
 
@@ -13,7 +26,7 @@ export interface ContentDispositionInit {
  *
  * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition)
  */
-export class ContentDisposition implements HeaderValue {
+export class ContentDisposition implements HeaderValue, ContentDispositionInit {
   filename?: string;
   filenameSplat?: string;
   name?: string;

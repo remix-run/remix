@@ -2,8 +2,23 @@ import { HeaderValue } from './header-value.js';
 import { parseParams, quote } from './param-values.js';
 
 export interface ContentTypeInit {
+  /**
+   * For multipart entities, the boundary that separates the different parts of the message.
+   */
   boundary?: string;
+  /**
+   * Indicates the [character encoding](https://developer.mozilla.org/en-US/docs/Glossary/Character_encoding) of the content.
+   *
+   * For example, `utf-8`, `iso-8859-1`.
+   */
   charset?: string;
+  /**
+   * The media type (or MIME type) of the content. This consists of a type and subtype, separated by a slash.
+   *
+   * For example, `text/html`, `application/json`, `image/png`.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types)
+   */
   mediaType?: string;
 }
 
@@ -12,7 +27,7 @@ export interface ContentTypeInit {
  *
  * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type)
  */
-export class ContentType implements HeaderValue {
+export class ContentType implements HeaderValue, ContentTypeInit {
   boundary?: string;
   charset?: string;
   mediaType?: string;

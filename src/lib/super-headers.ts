@@ -1,19 +1,31 @@
-import { ContentDisposition } from './content-disposition.js';
-import { ContentType } from './content-type.js';
-import { Cookie } from './cookie.js';
+import { ContentDispositionInit, ContentDisposition } from './content-disposition.js';
+import { ContentTypeInit, ContentType } from './content-type.js';
+import { CookieInit, Cookie } from './cookie.js';
 import { canonicalHeaderName } from './header-names.js';
 import { HeaderValue } from './header-value.js';
-import { SetCookie } from './set-cookie.js';
-import { isValidDate } from './utils.js';
+import { SetCookieInit, SetCookie } from './set-cookie.js';
+import { isIterable, isValidDate } from './utils.js';
 
 const CRLF = '\r\n';
 const SetCookieKey = 'set-cookie';
 
+interface SuperHeadersPropertyInit {
+  age?: string | number;
+  contentDisposition?: string | ContentDispositionInit;
+  contentLength?: string | number;
+  contentType?: string | ContentTypeInit;
+  cookie?: string | CookieInit;
+  date?: string | Date;
+  expires?: string | Date;
+  ifModifiedSince?: string | Date;
+  ifUnmodifiedSince?: string | Date;
+  lastModified?: string | Date;
+  setCookie?: string | (string | SetCookieInit)[];
+}
+
 export type SuperHeadersInit =
-  | SuperHeaders
-  | Headers
-  | [string, string | HeaderValue][]
-  | Record<string, string | HeaderValue>;
+  | Iterable<[string, string | HeaderValue]>
+  | (SuperHeadersPropertyInit & Record<string, string | HeaderValue>);
 
 /**
  * An enhanced JavaScript `Headers` interface with type-safe access.
@@ -26,7 +38,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
   #map: Map<string, string | HeaderValue>;
   #setCookieValues: (string | SetCookie)[] = [];
 
-  constructor(init?: string | SuperHeadersInit) {
+  constructor(init?: string | SuperHeadersInit | Headers) {
     super();
 
     this.#map = new Map();
@@ -40,7 +52,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
             this.append(match[1].trim(), match[2].trim());
           }
         }
-      } else if (init instanceof SuperHeaders || Array.isArray(init)) {
+      } else if (isIterable(init)) {
         for (let [name, value] of init) {
           this.append(name, value);
         }
@@ -51,7 +63,12 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
       } else if (typeof init === 'object') {
         for (let name in init) {
           if (Object.prototype.hasOwnProperty.call(init, name)) {
-            this.append(name, init[name]);
+            let setter = Object.getOwnPropertyDescriptor(SuperHeaders.prototype, name)?.set;
+            if (setter) {
+              setter.call(this, init[name]);
+            } else {
+              this.append(name, init[name]);
+            }
           }
         }
       }
@@ -182,8 +199,8 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
     return this.#getHeaderValue('content-disposition', ContentDisposition);
   }
 
-  set contentDisposition(value: string | ContentDisposition) {
-    this.#map.set('content-disposition', value);
+  set contentDisposition(value: string | ContentDispositionInit) {
+    this.#setHeaderValue('content-disposition', ContentDisposition, value);
   }
 
   get contentLength(): number | undefined {
@@ -198,8 +215,8 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
     return this.#getHeaderValue('content-type', ContentType);
   }
 
-  set contentType(value: string | ContentType) {
-    this.#map.set('content-type', value);
+  set contentType(value: string | ContentTypeInit) {
+    this.#setHeaderValue('content-type', ContentType, value);
   }
 
   get cookie(): Cookie {
@@ -207,7 +224,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
   }
 
   set cookie(value: string | Cookie) {
-    this.#map.set('cookie', value);
+    this.#setHeaderValue('cookie', Cookie, value);
   }
 
   get date(): Date | undefined {
@@ -251,7 +268,7 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
   }
 
   get setCookie(): SetCookie[] {
-    for (let i = 0; i < this.#setCookieValues.length; i++) {
+    for (let i = 0; i < this.#setCookieValues.length; ++i) {
       let value = this.#setCookieValues[i];
       if (typeof value === 'string') {
         this.#setCookieValues[i] = new SetCookie(value);
@@ -261,11 +278,17 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
     return this.#setCookieValues as SetCookie[];
   }
 
-  set setCookie(values: string | (string | SetCookie)[]) {
+  set setCookie(values: string | (string | SetCookieInit)[]) {
     if (typeof values === 'string') {
       this.#setCookieValues = [values];
     } else {
-      this.#setCookieValues = values.slice(0);
+      this.#setCookieValues = values.map((value) => {
+        if (typeof value === 'string' || value instanceof SetCookie) {
+          return value;
+        } else {
+          return new SetCookie(value);
+        }
+      });
     }
   }
 
@@ -323,6 +346,18 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
       let headerValue = new ctor();
       this.#map.set(key, headerValue);
       return headerValue;
+    }
+  }
+
+  #setHeaderValue<T>(
+    key: string,
+    ctor: new (init?: string | T) => HeaderValue,
+    value: string | T
+  ): void {
+    if (typeof value === 'string' || value instanceof ctor) {
+      this.#map.set(key, value);
+    } else {
+      this.#map.set(key, new ctor(value));
     }
   }
 }

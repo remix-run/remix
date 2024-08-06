@@ -4,16 +4,30 @@ import { describe, it } from 'node:test';
 import { ContentDisposition } from './content-disposition.js';
 
 describe('ContentDisposition', () => {
-  it('parses initial value correctly', () => {
+  it('initializes with an empty string', () => {
+    let header = new ContentDisposition('');
+    assert.equal(header.type, undefined);
+    assert.equal(header.filename, undefined);
+  });
+
+  it('initializes with a string', () => {
     let header = new ContentDisposition('attachment; filename="example.txt"');
     assert.equal(header.type, 'attachment');
     assert.equal(header.filename, 'example.txt');
   });
 
-  it('handles empty initial value', () => {
-    let header = new ContentDisposition('');
-    assert.equal(header.type, undefined);
-    assert.equal(header.filename, undefined);
+  it('initializes with an object', () => {
+    let header = new ContentDisposition({ type: 'attachment', filename: 'example.txt' });
+    assert.equal(header.type, 'attachment');
+    assert.equal(header.filename, 'example.txt');
+  });
+
+  it('initializes with another ContentDisposition', () => {
+    let header = new ContentDisposition(
+      new ContentDisposition('attachment; filename="example.txt"')
+    );
+    assert.equal(header.type, 'attachment');
+    assert.equal(header.filename, 'example.txt');
   });
 
   it('handles whitespace in initial value', () => {
