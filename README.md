@@ -1,47 +1,38 @@
-# fetch-super-headers
+# headers
 
-`SuperHeaders` is an enhanced JavaScript `Headers` interface with type-safe access.
+`headers` is a toolkit for working with HTTP headers in JavaScript.
 
-Another way to think about it is as a Swiss Army knife for HTTP headers. Whenever you need a spec-compliant, type-safe way to parse, modify, and stringify various HTTP headers and collections of them, SuperHeaders has you covered.
+HTTP headers contain a wealth of information!
 
-## Features
+- Who is sending this request?
+- What's in the payload and how is it encoded?
+- What is the filename of this file upload?
+- and much, much more!
 
-This package is a suite of tools that make it a little more fun to work with `Headers`.
-
-- Strongly typed header-specific getters and setters (e.g., `headers.contentType`, `headers.setCookie`, etc.)
-- Easy parsing and manipulation of complex headers like `Content-Disposition`, `Content-Type`, `Set-Cookie`, and more
-- Iterable interface for easy header enumeration
-- Convenient string conversion for HTTP message parsing and assembly
-- Extends [the standard `Headers` class](https://developer.mozilla.org/en-US/docs/Web/API/Headers), so all `Headers` methods work as you'd expect
+The list goes on and on. The [built-in JavaScript `Headers` interface](https://developer.mozilla.org/en-US/docs/Web/API/Headers) accepts and gives you strings for everything, which you're probably used to parsing and stringifying manually as needed. This library aims to give you a more fluent interface for all of this information. Similar to how the DOM gives you programmatic access to HTML documents, `headers` gives you access to HTTP headers.
 
 ## Installation
 
 ```sh
-$ npm install fetch-super-headers
+$ npm install @mjackson/headers
 ```
 
-## Usage
-
-fetch-super-headers is an enhanced interface for `Headers`, with some additions that make working with HTTP headers feel a lot more like working with JavaScript objects.
+## Overview
 
 ```ts
-import SuperHeaders from 'fetch-super-headers';
-// or, if you don't mind clobbering the global `Headers` reference:
-// import Headers from `fetch-super-headers';
+import Headers from '@mjackson/headers';
 
-let headers = new SuperHeaders();
+let headers = new Headers();
 
 // Content-Type
 headers.contentType = 'application/json; charset=utf-8';
 
-console.log(headers.contentType.mediaType); // 'application/json'
-console.log(headers.contentType.charset); // 'utf-8'
+console.log(headers.contentType.mediaType); // "application/json"
+console.log(headers.contentType.charset); // "utf-8"
 
 headers.contentType.charset = 'iso-8859-1';
 
-// SuperHeaders *extends* Headers, so all methods of Headers work just
-// as you'd expect them to.
-console.log(headers.get('Content-Type')); // 'application/json; charset=iso-8859-1'
+console.log(headers.get('Content-Type')); // "application/json; charset=iso-8859-1"
 
 // Content-Disposition
 headers.contentDisposition =
@@ -87,29 +78,49 @@ for (let cookie of headers.getSetCookie()) {
 // user_id=12345; Path=/api; Secure
 ```
 
-You can easily build `SuperHeaders` from an exising `Headers` object, like the one you get in a `fetch` response:
+`Headers` can be initialized with an object config:
 
 ```ts
-let response = await fetch('https://example.com');
-let headers = new SuperHeaders(response.headers);
-```
-
-Or use them to construct a new `fetch` request, or even convert back to a normal `Headers` object:
-
-```ts
-fetch('https://example.com', {
-  headers: new SuperHeaders(),
+let headers = new Headers({
+  contentType: {
+    mediaType: 'text/html',
+    charset: 'utf-8',
+  },
+  setCookie: [
+    { name: 'session', value: 'abc', path: '/' },
+    { name: 'theme', value: 'dark', expires: new Date('2021-12-31T23:59:59Z') },
+  ],
 });
 
-let headers = new Headers(new SuperHeaders());
-
-assert.ok(new SuperHeaders() instanceof Headers);
+console.log(`${headers}`);
+// Content-Type: text/html; charset=utf-8
+// Set-Cookie: session=abc; Path=/
+// Set-Cookie: theme=dark; Expires=Fri, 31 Dec 2021 23:59:59 GMT
 ```
 
-`SuperHeaders` are iterable:
+`Headers` works just like [DOM's `Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) (it's a subclass) so you can use them anywhere you need a `Headers`.
 
 ```ts
-let headers = new SuperHeaders({
+import Headers from '@mjackson/headers';
+
+// Use in a fetch()
+let response = await fetch('https://example.com', {
+  headers: new Headers(),
+});
+
+// Convert from DOM Headers
+let headers = new Headers(response.headers);
+
+headers.set('Content-Type', 'text/html');
+headers.get('Content-Type'); // "text/html"
+```
+
+If you're familiar with using DOM `Headers`, everything works as you'd expect.
+
+`Headers` are iterable:
+
+```ts
+let headers = new Headers({
   'Content-Type': 'application/json',
   'X-API-Key': 'secret-key',
   'Accept-Language': 'en-US,en;q=0.9',
@@ -126,40 +137,91 @@ for (let [name, value] of headers) {
 If you're assembling HTTP messages, you can easily convert to a multiline string suitable for using as a Request/Response header block:
 
 ```ts
-let headers = new SuperHeaders();
-headers.set('Content-Type', 'text/html'); // or headers.contentType = 'text/html'
-headers.set('X-Custom-Header', 'value');
+let headers = new Headers({
+  'Content-Type': 'application/json',
+  'Accept-Language': 'en-US,en;q=0.9',
+});
 
-console.log(headers.toString());
+console.log(`${headers}`);
 // Content-Type: text/html
-// X-Custom-Header: value
-
-// Note: This varies from the built-in Headers class where you would normally
-// get [object Headers] from toString().
+// Accept-Language: en-US,en;q=0.9
 ```
 
-In addition to the high-level `SuperHeaders` API, fetch-super-headers also provides a rich set of primitives you can use to work with just about any complex HTTP header value. Each header class includes a spec-compliant parser (the constructor), stringifier (`toString`), and getters/setters for all relevant attributes. Classes for headers that contain a list of fields, like `Cookie`, are iterable.
+## Low-level API
 
-All individual header classes may be initialized with either a) the string value of the header or b) an `init` object specific to that class.
+In addition to the high-level `Headers` API, `headers` also provides a rich set of primitives you can use to work with just about any complex HTTP header value. Each header class includes a spec-compliant parser (the constructor), stringifier (`toString`), and getters/setters for all relevant attributes. Classes for headers that contain a list of fields, like `Cookie`, are `Iterable`.
+
+All individual header classes may be initialized with either a) the string value of the header or b) an `init` object specific to that header.
+
+The following headers are supported:
+
+- [`Content-Disposition`](#content-disposition)
+- [`Content-Type`](#content-type)
+- [`Cookie`](#cookie)
+- [`Set-Cookie`](#set-cookie)
+
+### Content-Type
 
 ```ts
-import { ContentDisposition, ContentType, Cookie } from 'fetch-super-headers';
+import { ContentType } from '@mjackson/headers';
 
-// Parse a Content-Type header value
-let contentType = new ContentType('text/html; charset=utf-8');
-console.log(contentType.charset);
+let header = new ContentType('text/html; charset=utf-8');
+header.mediaType; // "text/html"
+header.boundary; // undefined
+header.charset; // "utf-8"
 
-// Stringify a Content-Disposition header value
-let contentDisposition = new ContentDisposition({
-  type: 'attachment',
-  name: 'file1',
-  filename: 'file1.txt',
+let header = new ContentType({
+  mediaType: 'multipart/form-data',
+  boundary: '------WebKitFormBoundary12345',
 });
-console.log(`${contentDisposition}`); // "attachment; name=file1; filename=file1.txt"
+```
 
-// Parse a Cookie header value and iterate over name/value pairs
-let cookie = new Cookie('theme=dark; session_id=123');
-for (let [name, value] of cookie) {
+### Content-Disposition
+
+```ts
+import { ContentDisposition } from '@mjackson/headers';
+
+let header = new ContentDisposition('attachment; name=file1; filename=file1.txt');
+header.type; // "attachment"
+header.name; // "file1"
+header.filename; // "file1.txt"
+header.preferredFilename; // "file1.txt"
+```
+
+### Cookie
+
+```ts
+import { Cookie } from '@mjackson/headers';
+
+let header = new Cookie('theme=dark; session_id=123');
+header.get('theme'); // "dark"
+header.set('theme', 'light');
+header.delete('theme');
+header.has('session_id'); // true
+
+// Iterate over cookie name/value pairs
+for (let [name, value] of header) {
   // ...
 }
 ```
+
+### Set-Cookie
+
+```ts
+import { SetCookie } from '@mjackson/headers';
+
+let header = new SetCookie('session_id=abc; Domain=example.com; Path=/; Secure; HttpOnly');
+header.name; // "session_id"
+header.value; // "abc"
+header.domain; // "example.com"
+header.path; // "/"
+header.secure; // true
+header.httpOnly; // true
+header.sameSite; // undefined
+header.maxAge; // undefined
+header.expires; // undefined
+```
+
+## License
+
+See [LICENSE](https://github.com/mjackson/headers/blob/main/LICENSE)

@@ -1,7 +1,7 @@
 {
-  "name": "fetch-super-headers",
+  "name": "@mjackson/headers",
   "version": "0.4.1",
-  "description": "An enhanced JavaScript Headers interface type-safe access",
+  "description": "A toolkit for working with HTTP headers in JavaScript",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "files": [
@@ -22,12 +22,13 @@
   "scripts": {
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run test"
+    "prepare": "npm run build"
   },
   "packageManager": "pnpm@9.4.0",
   "keywords": [
     "fetch",
+    "http",
+    "header",
     "headers"
   ]
 }
