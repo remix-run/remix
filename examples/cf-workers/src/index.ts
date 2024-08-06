@@ -73,7 +73,7 @@ export default {
         });
       } catch (error) {
         if (error instanceof MultipartParseError) {
-          return new Response(error.message, { status: 400 });
+          return new Response(`Error: ${error.message}`, { status: 400 });
         }
 
         console.error(error);

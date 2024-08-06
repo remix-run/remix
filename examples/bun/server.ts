@@ -58,7 +58,7 @@ const server = Bun.serve({
         });
       } catch (error) {
         if (error instanceof MultipartParseError) {
-          return new Response(error.message, { status: 400 });
+          return new Response(`Error: ${error.message}`, { status: 400 });
         }
 
         console.error(error);
@@ -74,18 +74,29 @@ const server = Bun.serve({
 console.log(`Server listening on http://localhost:${server.port} ...`);
 
 async function writeFile(file: BunFile, stream: ReadableStream<Uint8Array>): Promise<number> {
-  let reader = stream.getReader();
   let writer = file.writer();
   let bytesWritten = 0;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    writer.write(value);
-    bytesWritten += value.byteLength;
+  for await (let chunk of readStream(stream)) {
+    writer.write(chunk);
+    bytesWritten += chunk.byteLength;
   }
 
   await writer.end();
 
   return bytesWritten;
+}
+
+async function* readStream<T>(stream: ReadableStream<T>): AsyncGenerator<T> {
+  let reader = stream.getReader();
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      yield value;
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }

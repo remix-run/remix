@@ -9,9 +9,7 @@ const PORT = 3000;
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'GET') {
-    res.writeHead(200, {
-      'Content-Type': 'text/html',
-    });
+    res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(`
 <!DOCTYPE html>
 <html>
@@ -60,21 +58,19 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      res.writeHead(200, {
-        'Content-Type': 'application/json',
-      });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ parts }, null, 2));
       return;
     } catch (error) {
       if (error instanceof MultipartParseError) {
-        res.writeHead(400);
-        res.end('Bad Request');
+        res.writeHead(400, { 'Content-Type': 'text/plain', Connection: 'close' });
+        res.end(`Error: ${error.message}`);
         return;
       }
 
       console.error(error);
 
-      res.writeHead(500);
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
       res.end('Internal Server Error');
     }
   }
