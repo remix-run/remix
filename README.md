@@ -153,12 +153,14 @@ In addition to the high-level `Headers` API, `headers` also provides a rich set 
 
 All individual header classes may be initialized with either a) the string value of the header or b) an `init` object specific to that header.
 
-The following headers are supported:
+The following headers are currently supported:
 
 - [`Content-Disposition`](#content-disposition)
 - [`Content-Type`](#content-type)
 - [`Cookie`](#cookie)
 - [`Set-Cookie`](#set-cookie)
+
+If you need support for a header that isn't listed here, please [send a PR](https://github.com/mjackson/headers/pulls)! The goal is to have first-class support for all common HTTP headers.
 
 ### Content-Type
 
