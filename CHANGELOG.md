@@ -1,6 +1,6 @@
 # `headers` CHANGELOG
 
-## HEAD
+## v0.5.1 - Aug 6, 2024
 
 - Added `CookieInit` support to `headers.cookie=` setter
 
