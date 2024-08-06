@@ -10,7 +10,10 @@
     "README.md"
   ],
   "type": "module",
-  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/headers.js",
+    "./package.json": "./package.json"
+  },
   "devDependencies": {
     "@types/node": "^20.14.10",
     "tsimp": "^2.0.11",
