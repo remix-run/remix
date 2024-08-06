@@ -11,6 +11,9 @@ importers:
       '@types/node':
         specifier: ^20.14.10
         version: 20.14.10
+      prettier:
+        specifier: ^3.3.3
+        version: 3.3.3
       tsimp:
         specifier: ^2.0.11
         version: 2.0.11(typescript@5.5.3)
@@ -127,6 +130,11 @@ packages:
   pirates@4.0.6:
     resolution: {integrity: sha512-saLsH7WeYYPiD25LDuLRRY/i+6HaPYr6G1OUlN39otzkSTxKnubR9RTxS3/Kk50s1g2JTgFwWQDQyplC5/SHZg==}
     engines: {node: '>= 6'}
+
+  prettier@3.3.3:
+    resolution: {integrity: sha512-i2tDNA0O5IrMO757lfrdQZCc2jPNDVntV0m/+4whiDfWaTKfMNgR7Qz0NAeGz/nRqF4m5/6CLzbP4/liHt12Ew==}
+    engines: {node: '>=14'}
+    hasBin: true
 
   rimraf@5.0.9:
     resolution: {integrity: sha512-3i7b8OcswU6CpU8Ej89quJD4O98id7TtVM5U4Mybh84zQXdrFmDLouWBEEaD/QfO3gDDfH+AGFCGsR7kngzQnA==}
@@ -301,6 +309,8 @@ snapshots:
       minipass: 7.1.2
 
   pirates@4.0.6: {}
+
+  prettier@3.3.3: {}
 
   rimraf@5.0.9:
     dependencies:
