@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Revert #9695, stop infinite reload. ([#9833](https://github.com/remix-run/remix/pull/9833))
+- Revert #9695, stop infinite reload ([`a7cffe57`](https://github.com/remix-run/remix/commit/a7cffe5733c8b7d0f29bd2d8606876c537d87101))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.11.1`
 
