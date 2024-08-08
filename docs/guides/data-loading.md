@@ -631,7 +631,9 @@ You might want to make an abstraction for checkboxes like this:
 
 function SearchCheckbox({ name, value }) {
   const [searchParams] = useSearchParams();
-  const paramsIncludeValue = searchParams.getAll(name).includes(value);
+  const paramsIncludeValue = searchParams
+    .getAll(name)
+    .includes(value);
   const [checked, setChecked] = React.useState(
     paramsIncludeValue
   );
