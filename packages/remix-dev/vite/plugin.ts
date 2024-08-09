@@ -5,7 +5,7 @@ import { type BinaryLike, createHash } from "node:crypto";
 import * as path from "node:path";
 import * as url from "node:url";
 import * as fse from "fs-extra";
-import babel from "@babel/core";
+import reactPlugin from "@vitejs/plugin-react-swc";
 import {
   type ServerBuild,
   unstable_setDevServerHooks as setDevServerHooks,
@@ -290,7 +290,6 @@ let serverBuildId = VirtualModule.id("server-build");
 let serverManifestId = VirtualModule.id("server-manifest");
 let browserManifestId = VirtualModule.id("browser-manifest");
 let hmrRuntimeId = VirtualModule.id("hmr-runtime");
-let injectHmrRuntimeId = VirtualModule.id("inject-hmr-runtime");
 
 const resolveRelativeRouteFilePath = (
   route: ConfigRoute,
@@ -600,7 +599,9 @@ let deepFreeze = (o: any) => {
   return o;
 };
 
-export type RemixVitePlugin = (config?: VitePluginConfig) => Vite.Plugin[];
+export type RemixVitePlugin = (
+  config?: VitePluginConfig
+) => Vite.PluginOption[];
 export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
   // Prevent mutations to the user config
   remixUserConfig = deepFreeze(remixUserConfig);
@@ -985,7 +986,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       hmr: {
         runtime: combineURLs(
           ctx.remixConfig.publicPath,
-          VirtualModule.url(injectHmrRuntimeId)
+          VirtualModule.url(hmrRuntimeId)
         ),
       },
       entry: {
@@ -1586,6 +1587,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         }
       },
     },
+    ...reactPlugin(),
     {
       name: "remix-route-exports",
       async transform(code, id, options) {
@@ -1631,27 +1633,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         });
       },
     },
+    // TODO: combine HMR plugins
     {
-      name: "remix-inject-hmr-runtime",
-      enforce: "pre",
-      resolveId(id) {
-        if (id === injectHmrRuntimeId)
-          return VirtualModule.resolve(injectHmrRuntimeId);
-      },
-      async load(id) {
-        if (id !== VirtualModule.resolve(injectHmrRuntimeId)) return;
-
-        return [
-          `import RefreshRuntime from "${hmrRuntimeId}"`,
-          "RefreshRuntime.injectIntoGlobalHook(window)",
-          "window.$RefreshReg$ = () => {}",
-          "window.$RefreshSig$ = () => (type) => type",
-          "window.__vite_plugin_react_preamble_installed__ = true",
-        ].join("\n");
-      },
-    },
-    {
-      name: "remix-hmr-runtime",
+      name: "remix-hmr",
       enforce: "pre",
       resolveId(id) {
         if (id === hmrRuntimeId) return VirtualModule.resolve(hmrRuntimeId);
@@ -1659,65 +1643,18 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       async load(id) {
         if (id !== VirtualModule.resolve(hmrRuntimeId)) return;
 
-        let reactRefreshDir = path.dirname(
-          require.resolve("react-refresh/package.json")
-        );
-        let reactRefreshRuntimePath = path.join(
-          reactRefreshDir,
-          "cjs/react-refresh-runtime.development.js"
-        );
-
         return [
-          "const exports = {}",
-          await fse.readFile(reactRefreshRuntimePath, "utf8"),
-          await fse.readFile(
-            require.resolve("./static/refresh-utils.cjs"),
-            "utf8"
-          ),
-          "export default exports",
+          // preamble
+          `import * as RefreshRuntime from "/@react-refresh"`,
+          "RefreshRuntime.injectIntoGlobalHook(window)",
+          "window.$RefreshReg$ = () => {}",
+          "window.$RefreshSig$ = () => (type) => type",
+          "window.__vite_plugin_react_preamble_installed__ = true",
+          // framework integration
+          `window.__registerBeforePerformReactRefresh(() => console.log('[remix] before react refresh'))`,
+          `window.__getReactRefreshIgnoredExports = ({id}) => {console.log('[remix] ignored exports: ', id); return ['meta', 'links', 'handle', 'clientLoader'];}`,
         ].join("\n");
       },
-    },
-    {
-      name: "remix-react-refresh-babel",
-      async transform(code, id, options) {
-        if (viteCommand !== "serve") return;
-        if (id.includes("/node_modules/")) return;
-
-        let [filepath] = id.split("?");
-        let extensionsRE = /\.(jsx?|tsx?|mdx?)$/;
-        if (!extensionsRE.test(filepath)) return;
-
-        let devRuntime = "react/jsx-dev-runtime";
-        let ssr = options?.ssr === true;
-        let isJSX = filepath.endsWith("x");
-        let useFastRefresh = !ssr && (isJSX || code.includes(devRuntime));
-        if (!useFastRefresh) return;
-
-        let result = await babel.transformAsync(code, {
-          configFile: false,
-          babelrc: false,
-          filename: id,
-          sourceFileName: filepath,
-          parserOpts: {
-            sourceType: "module",
-            allowAwaitOutsideFunction: true,
-          },
-          plugins: [[require("react-refresh/babel"), { skipEnvCheck: true }]],
-          sourceMaps: true,
-        });
-        if (result === null) return;
-
-        code = result.code!;
-        let refreshContentRE = /\$Refresh(?:Reg|Sig)\$\(/;
-        if (refreshContentRE.test(code)) {
-          code = addRefreshWrapper(ctx.remixConfig, code, id);
-        }
-        return { code, map: result.map };
-      },
-    },
-    {
-      name: "remix-hmr-updates",
       async handleHotUpdate({ server, file, modules, read }) {
         let route = getRoute(ctx.remixConfig, file);
 
@@ -1777,68 +1714,6 @@ function isInRemixMonorepo() {
 function isEqualJson(v1: unknown, v2: unknown) {
   return JSON.stringify(v1) === JSON.stringify(v2);
 }
-
-function addRefreshWrapper(
-  remixConfig: ResolvedVitePluginConfig,
-  code: string,
-  id: string
-): string {
-  let route = getRoute(remixConfig, id);
-  let acceptExports = route
-    ? [
-        "clientAction",
-        "clientLoader",
-        "handle",
-        "meta",
-        "links",
-        "shouldRevalidate",
-      ]
-    : [];
-  return (
-    REACT_REFRESH_HEADER.replaceAll("__SOURCE__", JSON.stringify(id)) +
-    code +
-    REACT_REFRESH_FOOTER.replaceAll("__SOURCE__", JSON.stringify(id))
-      .replaceAll("__ACCEPT_EXPORTS__", JSON.stringify(acceptExports))
-      .replaceAll("__ROUTE_ID__", JSON.stringify(route?.id))
-  );
-}
-
-const REACT_REFRESH_HEADER = `
-import RefreshRuntime from "${hmrRuntimeId}";
-
-const inWebWorker = typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope;
-let prevRefreshReg;
-let prevRefreshSig;
-
-if (import.meta.hot && !inWebWorker) {
-  if (!window.__vite_plugin_react_preamble_installed__) {
-    throw new Error(
-      "Remix Vite plugin can't detect preamble. Something is wrong."
-    );
-  }
-
-  prevRefreshReg = window.$RefreshReg$;
-  prevRefreshSig = window.$RefreshSig$;
-  window.$RefreshReg$ = (type, id) => {
-    RefreshRuntime.register(type, __SOURCE__ + " " + id)
-  };
-  window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
-}`.replace(/\n+/g, "");
-
-const REACT_REFRESH_FOOTER = `
-if (import.meta.hot && !inWebWorker) {
-  window.$RefreshReg$ = prevRefreshReg;
-  window.$RefreshSig$ = prevRefreshSig;
-  RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {
-    RefreshRuntime.registerExportsForReactRefresh(__SOURCE__, currentExports);
-    import.meta.hot.accept((nextExports) => {
-      if (!nextExports) return;
-      __ROUTE_ID__ && window.__remixRouteModuleUpdates.set(__ROUTE_ID__, nextExports);
-      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate(currentExports, nextExports, __ACCEPT_EXPORTS__);
-      if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
-    });
-  });
-}`;
 
 function getRoute(
   pluginConfig: ResolvedVitePluginConfig,
