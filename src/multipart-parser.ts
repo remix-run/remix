@@ -4,7 +4,7 @@ export {
   parseMultipartRequest,
   parseMultipart,
   MultipartParseError,
-  MultipartParserOptions,
+  type MultipartParserOptions,
   MultipartParser,
   MultipartPart,
 } from './lib/multipart.js';
