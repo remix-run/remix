@@ -15,7 +15,7 @@ describe('SuperHeaders', () => {
 
   it('initializes with no arguments', () => {
     let headers = new SuperHeaders();
-    assert.equal(headers.get('content-type'), null);
+    assert.equal(headers.get('Content-Type'), null);
   });
 
   it('initializes from a string', () => {
