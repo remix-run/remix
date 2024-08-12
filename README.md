@@ -2,14 +2,14 @@
 
 `headers` is a toolkit for working with HTTP headers in JavaScript.
 
-HTTP headers contain a wealth of information!
+HTTP headers contain a wealth of information:
 
 - Who is sending this request?
 - What's in the payload and how is it encoded?
 - What is the filename of this file upload?
 - and much, much more!
 
-The list goes on and on. The [built-in JavaScript `Headers` interface](https://developer.mozilla.org/en-US/docs/Web/API/Headers) accepts and gives you strings for everything, which you're probably used to parsing and stringifying manually as needed. This library aims to give you a more fluent interface for all of this information. Similar to how the DOM gives you programmatic access to HTML documents, `headers` gives you access to HTTP headers.
+The [built-in JavaScript `Headers` interface](https://developer.mozilla.org/en-US/docs/Web/API/Headers) accepts and gives you strings for everything, which you're probably used to parsing and stringifying manually as needed. This library aims to give you a more fluent interface for all of this information. Similar to how the DOM gives you programmatic access to HTML documents, `headers` gives you access to HTTP headers.
 
 ## Installation
 
