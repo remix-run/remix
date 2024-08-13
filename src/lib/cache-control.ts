@@ -303,6 +303,7 @@ export class CacheControl implements HeaderValue, CacheControlInit {
     if (typeof this.minFresh === 'number') {
       parts.push(`min-fresh=${this.minFresh}`);
     }
+
     return parts.join(', ');
   }
 }

@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { CacheControl } from './cache-control.js';
 
 describe('CacheControl', () => {
