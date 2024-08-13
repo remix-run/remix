@@ -31,13 +31,5 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - run: node scripts/sync-jsr-version.js
-
-      - uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          branch: main
-          commit_message: Sync JSR package version
-          file_pattern: jsr.json
-
       - name: Publish to JSR
         run: npx jsr publish
