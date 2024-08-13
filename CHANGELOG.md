@@ -1,6 +1,6 @@
 # `headers` CHANGELOG
 
-## HEAD
+## v0.6.1 (Aug 13, 2024)
 
 - Associate `CacheControl` doc comments with the class instead of the constructor function
 
