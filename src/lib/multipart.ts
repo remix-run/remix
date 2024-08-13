@@ -169,20 +169,11 @@ export class MultipartParser {
 
     let results = [];
 
-    if (data instanceof ReadableStream) {
-      let reader = data.getReader();
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          for (let part of this.push(value)) {
-            results.push(handler(part));
-          }
+    if (data instanceof ReadableStream || isAsyncIterable(data)) {
+      for await (let chunk of data) {
+        for (let part of this.push(chunk)) {
+          results.push(handler(part));
         }
-      } finally {
-        reader.releaseLock();
       }
     } else if (data instanceof Uint8Array) {
       for (let part of this.push(data)) {
@@ -190,12 +181,6 @@ export class MultipartParser {
       }
     } else if (isIterable(data)) {
       for (let chunk of data) {
-        for (let part of this.push(chunk)) {
-          results.push(handler(part));
-        }
-      }
-    } else if (isAsyncIterable(data)) {
-      for await (let chunk of data) {
         for (let part of this.push(chunk)) {
           results.push(handler(part));
         }
@@ -464,16 +449,10 @@ export class MultipartPart {
 
     this.#bodyUsed = true;
 
-    let reader = this.#body.getReader();
     let chunks: Uint8Array[] = [];
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
+    for await (let chunk of this.#body) {
+      chunks.push(chunk);
     }
-
-    reader.releaseLock();
 
     return concat(chunks);
   }
