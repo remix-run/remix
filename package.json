@@ -5,7 +5,7 @@
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mjackson/multipart-parser"
+    "url": "git+https://github.com/mjackson/multipart-parser.git"
   },
   "license": "MIT",
   "files": [
