@@ -1,6 +1,6 @@
 # `headers` CHANGELOG
 
-## HEAD
+## v0.6.0 (Aug 13, 2024)
 
 - Added support for `Cache-Control` header (https://github.com/mjackson/headers/pull/7, thanks [@alexanderson1993](https://github.com/alexanderson1993))
 
