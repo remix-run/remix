@@ -5,6 +5,7 @@ import { ContentDisposition } from './content-disposition.js';
 import { ContentType } from './content-type.js';
 import { Cookie } from './cookie.js';
 import { SuperHeaders } from './super-headers.js';
+import { CacheControl } from './cache-control.js';
 
 describe('SuperHeaders', () => {
   it('is an instance of Headers', () => {
@@ -53,6 +54,11 @@ describe('SuperHeaders', () => {
     let original = new Headers({ 'Content-Type': 'text/plain' });
     let headers = new SuperHeaders(original);
     assert.equal(headers.get('Content-Type'), 'text/plain');
+  });
+
+  it('initializes with a CacheControlInit', () => {
+    let headers = new SuperHeaders({ cacheControl: 'public, max-age=3600' });
+    assert.equal(headers.get('Cache-Control'), 'public, max-age=3600');
   });
 
   it('initializes with a ContentDispositionInit', () => {
@@ -190,6 +196,20 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Age'), '42');
     });
 
+    it('handles Cache-Control header', () => {
+      let headers = new SuperHeaders();
+      headers.cacheControl = 'public, max-age=3600';
+
+      assert.ok(headers.cacheControl instanceof CacheControl);
+      assert.equal(headers.cacheControl.toString(), 'public, max-age=3600');
+
+      headers.cacheControl.maxAge = 1800;
+      assert.equal(headers.get('Cache-Control'), 'public, max-age=1800');
+
+      headers.cacheControl = { noCache: true, noStore: true };
+      assert.equal(headers.get('Cache-Control'), 'no-cache, no-store');
+    });
+
     it('handles Content-Disposition header', () => {
       let headers = new SuperHeaders();
       headers.contentDisposition = 'attachment; filename="example.txt"';
@@ -285,6 +305,9 @@ describe('SuperHeaders', () => {
 
     it('creates empty header objects when accessed', () => {
       let headers = new SuperHeaders();
+
+      assert.ok(headers.cacheControl instanceof CacheControl);
+      assert.equal(headers.cacheControl.toString(), '');
 
       assert.ok(headers.contentDisposition instanceof ContentDisposition);
       assert.equal(headers.contentDisposition.toString(), '');

@@ -1,5 +1,11 @@
-export function parseParams(input: string): [string, string | undefined][] {
+export function parseParams(
+  input: string,
+  delimiter: ';' | ',' = ';',
+): [string, string | undefined][] {
   let regex = /(?:^|;)\s*([^=;\s]+)(\s*=\s*(?:"((?:[^"\\]|\\.)*)"|((?:[^;]|\\\;)+))?)?/g;
+  if (delimiter === ',') {
+    regex = /(?:^|,)\s*([^=,\s]+)(\s*=\s*(?:"((?:[^"\\]|\\.)*)"|((?:[^,]|\\\,)+))?)?/g;
+  }
   let params: [string, string | undefined][] = [];
 
   let match;

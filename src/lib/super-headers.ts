@@ -1,3 +1,4 @@
+import { CacheControl, CacheControlInit } from './cache-control.js';
 import { ContentDispositionInit, ContentDisposition } from './content-disposition.js';
 import { ContentTypeInit, ContentType } from './content-type.js';
 import { CookieInit, Cookie } from './cookie.js';
@@ -21,6 +22,7 @@ interface SuperHeadersPropertyInit {
   ifUnmodifiedSince?: string | Date;
   lastModified?: string | Date;
   setCookie?: string | (string | SetCookieInit)[];
+  cacheControl?: string | CacheControlInit;
 }
 
 export type SuperHeadersInit =
@@ -193,6 +195,14 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
 
   set age(value: string | number) {
     this.#map.set('age', value);
+  }
+
+  get cacheControl(): CacheControl {
+    return this.#getHeaderValue('cache-control', CacheControl);
+  }
+
+  set cacheControl(value: string | CacheControlInit) {
+    this.#setHeaderValue('cache-control', CacheControl, value);
   }
 
   get contentDisposition(): ContentDisposition {

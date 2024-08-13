@@ -1,3 +1,4 @@
+export { CacheControlInit, CacheControl } from './lib/cache-control.js';
 export { ContentDispositionInit, ContentDisposition } from './lib/content-disposition.js';
 export { ContentTypeInit, ContentType } from './lib/content-type.js';
 export { CookieInit, Cookie } from './lib/cookie.js';
