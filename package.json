@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mjackson/headers"
+    "url": "git+https://github.com/mjackson/headers.git"
   },
   "files": [
     "dist",
