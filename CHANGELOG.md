@@ -2,7 +2,7 @@
 
 ## HEAD
 
-- Added support for `Cache-Control` header (#7, thanks @alexanderson1993)
+- Added support for `Cache-Control` header (https://github.com/mjackson/headers/pull/7, thanks [@alexanderson1993](https://github.com/alexanderson1993))
 
 ## v0.5.1 (Aug 6, 2024)
 
