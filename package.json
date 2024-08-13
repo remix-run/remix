@@ -28,7 +28,8 @@
     "clean": "git clean -fdX .",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "version": "node scripts/version.js"
   },
   "packageManager": "pnpm@9.4.0",
   "keywords": [
