@@ -1,5 +1,9 @@
 # `headers` CHANGELOG
 
+## HEAD
+
+- Added support for `Cache-Control` header (#7, thanks @alexanderson1993)
+
 ## v0.5.1 (Aug 6, 2024)
 
 - Added `CookieInit` support to `headers.cookie=` setter
