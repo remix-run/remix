@@ -3,7 +3,7 @@ import { parseParams } from './param-values.js';
 
 // Taken from https://github.com/jjenzz/pretty-cache-header by jjenzz
 // License: MIT https://github.com/jjenzz/pretty-cache-header/blob/main/LICENSE
-export type CacheControlInit = {
+export interface CacheControlInit {
   /**
    * The `max-age=N` **request directive** indicates that the client allows a stored response that
    * is generated on the origin server within _N_ seconds — where _N_ may be any non-negative
@@ -13,7 +13,7 @@ export type CacheControlInit = {
    * [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
    * until _N_ seconds after the response is generated.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#max-age
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#max-age)
    */
   maxAge?: number;
   /**
@@ -21,7 +21,7 @@ export type CacheControlInit = {
    * that is [stale](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
    * within _N_ seconds.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#max-stale
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#max-stale)
    */
   maxStale?: number;
   /**
@@ -29,7 +29,7 @@ export type CacheControlInit = {
    * that is [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
    * for at least _N_ seconds.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#min-fresh
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#min-fresh)
    */
   minFresh?: number;
   /**
@@ -37,7 +37,7 @@ export type CacheControlInit = {
    * [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age) for (similar to `max-age`) —
    * but it is specific to shared caches, and they will ignore `max-age` when it is present.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#s-maxage
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#s-maxage)
    */
   sMaxage?: number;
   /**
@@ -53,7 +53,7 @@ export type CacheControlInit = {
    * [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
    * response.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-cache
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-cache)
    */
   noCache?: true;
   /**
@@ -64,21 +64,21 @@ export type CacheControlInit = {
    * The `no-store` **response directive** indicates that any caches of any kind (private or shared)
    * should not store this response.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-store
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-store)
    */
   noStore?: true;
   /**
    * `no-transform` indicates that any intermediary (regardless of whether it implements a cache)
    * shouldn't transform the response contents.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-transform
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-transform)
    */
   noTransform?: true;
   /**
    * The client indicates that cache should obtain an already-cached response. If a cache has
    * stored a response, it's reused.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#only-if-cached
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#only-if-cached)
    */
   onlyIfCached?: true;
   /**
@@ -87,14 +87,14 @@ export type CacheControlInit = {
    * If the response becomes [stale](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age),
    * it must be validated with the origin server before reuse.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#must-revalidate
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#must-revalidate)
    */
   mustRevalidate?: true;
   /**
    * The `proxy-revalidate` **response directive** is the equivalent of `must-revalidate`, but
    * specifically for shared caches only.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#proxy-revalidate
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#proxy-revalidate)
    */
   proxyRevalidate?: true;
   /**
@@ -103,7 +103,7 @@ export type CacheControlInit = {
    *
    * `must-understand` should be coupled with `no-store` for fallback behavior.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#must-understand
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#must-understand)
    */
   mustUnderstand?: true;
   /**
@@ -113,7 +113,7 @@ export type CacheControlInit = {
    * You should add the `private` directive for user-personalized content, especially for responses
    * received after login and for sessions managed via cookies.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#private
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#private)
    */
   private?: true;
   /**
@@ -122,21 +122,21 @@ export type CacheControlInit = {
    * shared cache; however, the `public` directive will cause such responses to be stored in a
    * shared cache.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#public
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#public)
    */
   public?: true;
   /**
    * The `immutable` **response directive** indicates that the response will not be updated while
    * it's [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age).
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#public
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#public)
    */
   immutable?: true;
   /**
    * The `stale-while-revalidate` **response directive** indicates that the cache could reuse a
    * stale response while it revalidates it to a cache.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#stale-while-revalidate
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#stale-while-revalidate)
    */
   staleWhileRevalidate?: number;
   /**
@@ -145,11 +145,16 @@ export type CacheControlInit = {
    * when an upstream server generates an error, or when the error is generated locally. Here, an
    * error is considered any response with a status code of 500, 502, 503, or 504.
    *
-   * @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#stale-if-error
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#stale-if-error)
    */
   staleIfError?: number;
-};
+}
 
+/**
+ * The value of a `Cache-Control` HTTP header.
+ *
+ * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
+ */
 export class CacheControl implements HeaderValue, CacheControlInit {
   maxAge?: number;
   maxStale?: number;
@@ -168,11 +173,6 @@ export class CacheControl implements HeaderValue, CacheControlInit {
   staleWhileRevalidate?: number;
   staleIfError?: number;
 
-  /**
-   * The value of a `Cache-Control` HTTP header.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
-   */
   constructor(init?: string | CacheControlInit) {
     if (init) {
       if (typeof init === 'string') {
