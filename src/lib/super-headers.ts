@@ -1,4 +1,4 @@
-import { CacheControl, CacheControlInit } from './cache-control.js';
+import { CacheControlInit, CacheControl } from './cache-control.js';
 import { ContentDispositionInit, ContentDisposition } from './content-disposition.js';
 import { ContentTypeInit, ContentType } from './content-type.js';
 import { CookieInit, Cookie } from './cookie.js';
@@ -12,6 +12,7 @@ const SetCookieKey = 'set-cookie';
 
 interface SuperHeadersPropertyInit {
   age?: string | number;
+  cacheControl?: string | CacheControlInit;
   contentDisposition?: string | ContentDispositionInit;
   contentLength?: string | number;
   contentType?: string | ContentTypeInit;
@@ -22,7 +23,6 @@ interface SuperHeadersPropertyInit {
   ifUnmodifiedSince?: string | Date;
   lastModified?: string | Date;
   setCookie?: string | (string | SetCookieInit)[];
-  cacheControl?: string | CacheControlInit;
 }
 
 export type SuperHeadersInit =

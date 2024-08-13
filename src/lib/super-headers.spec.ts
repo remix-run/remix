@@ -1,11 +1,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { CacheControl } from './cache-control.js';
 import { ContentDisposition } from './content-disposition.js';
 import { ContentType } from './content-type.js';
 import { Cookie } from './cookie.js';
 import { SuperHeaders } from './super-headers.js';
-import { CacheControl } from './cache-control.js';
 
 describe('SuperHeaders', () => {
   it('is an instance of Headers', () => {

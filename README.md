@@ -155,12 +155,36 @@ All individual header classes may be initialized with either a) the string value
 
 The following headers are currently supported:
 
+- [`Cache-Control`](#cache-control)
 - [`Content-Disposition`](#content-disposition)
 - [`Content-Type`](#content-type)
 - [`Cookie`](#cookie)
 - [`Set-Cookie`](#set-cookie)
 
 If you need support for a header that isn't listed here, please [send a PR](https://github.com/mjackson/headers/pulls)! The goal is to have first-class support for all common HTTP headers.
+
+### Cache-Control
+
+```ts
+import { CacheControl } from '@mjackson/headers';
+
+let header = new CacheControl('public, max-age=3600, s-maxage=3600');
+header.public; // true
+header.maxAge; // 3600
+header.sMaxage; // 3600
+```
+
+### Content-Disposition
+
+```ts
+import { ContentDisposition } from '@mjackson/headers';
+
+let header = new ContentDisposition('attachment; name=file1; filename=file1.txt');
+header.type; // "attachment"
+header.name; // "file1"
+header.filename; // "file1.txt"
+header.preferredFilename; // "file1.txt"
+```
 
 ### Content-Type
 
@@ -176,18 +200,6 @@ let header = new ContentType({
   mediaType: 'multipart/form-data',
   boundary: '------WebKitFormBoundary12345',
 });
-```
-
-### Content-Disposition
-
-```ts
-import { ContentDisposition } from '@mjackson/headers';
-
-let header = new ContentDisposition('attachment; name=file1; filename=file1.txt');
-header.type; // "attachment"
-header.name; // "file1"
-header.filename; // "file1.txt"
-header.preferredFilename; // "file1.txt"
 ```
 
 ### Cookie
