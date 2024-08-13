@@ -14,7 +14,7 @@ The [built-in JavaScript `Headers` interface](https://developer.mozilla.org/en-U
 ## Installation
 
 ```sh
-$ npm install @mjackson/headers
+npm install @mjackson/headers
 ```
 
 ## Overview
