@@ -25,7 +25,7 @@
     "cookie": "^0.6.0",
     "set-cookie-parser": "^2.4.8",
     "source-map": "^0.7.3",
-    "turbo-stream": "2.2.0"
+    "turbo-stream": "2.3.0"
   },
   "devDependencies": {
     "@types/set-cookie-parser": "^2.4.1",

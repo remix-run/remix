@@ -23,7 +23,7 @@
     "@remix-run/server-runtime": "workspace:*",
     "react-router": "6.26.0",
     "react-router-dom": "6.26.0",
-    "turbo-stream": "2.2.0"
+    "turbo-stream": "2.3.0"
   },
   "devDependencies": {
     "@remix-run/node": "workspace:*",
