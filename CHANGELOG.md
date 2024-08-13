@@ -1,6 +1,6 @@
 # `multipart-parser` CHANGELOG
 
-## HEAD
+## v0.4.1 (Aug 12, 2024)
 
 - Add `type` keyword to `MultipartParserOptions` export for Deno (#11)
 
