@@ -77,7 +77,7 @@ async function writeFile(file: BunFile, stream: ReadableStream<Uint8Array>): Pro
   let writer = file.writer();
   let bytesWritten = 0;
 
-  for await (let chunk of readStream(stream)) {
+  for await (let chunk of stream) {
     writer.write(chunk);
     bytesWritten += chunk.byteLength;
   }
@@ -85,18 +85,4 @@ async function writeFile(file: BunFile, stream: ReadableStream<Uint8Array>): Pro
   await writer.end();
 
   return bytesWritten;
-}
-
-async function* readStream<T>(stream: ReadableStream<T>): AsyncGenerator<T> {
-  let reader = stream.getReader();
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      yield value;
-    }
-  } finally {
-    reader.releaseLock();
-  }
 }

@@ -72,6 +72,7 @@ const server = http.createServer(async (req, res) => {
 
       res.writeHead(500, { 'Content-Type': 'text/plain' });
       res.end('Internal Server Error');
+      return;
     }
   }
 
@@ -83,14 +84,12 @@ server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT} ...`);
 });
 
-// Some lil' helpers
-
 /** @type (filename: string, stream: ReadableStream<Uint8Array>) => Promise<number> */
 async function writeFile(filename, stream) {
   let fileStream = fs.createWriteStream(filename);
   let bytesWritten = 0;
 
-  for await (let chunk of readStream(stream)) {
+  for await (let chunk of stream) {
     fileStream.write(chunk);
     bytesWritten += chunk.byteLength;
   }
@@ -98,19 +97,4 @@ async function writeFile(filename, stream) {
   fileStream.end();
 
   return bytesWritten;
-}
-
-/** @type <T>(stream: ReadableStream<T>) => AsyncGenerator<T> */
-async function* readStream(stream) {
-  let reader = stream.getReader();
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      yield value;
-    }
-  } finally {
-    reader.releaseLock();
-  }
 }
