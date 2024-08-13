@@ -1,5 +1,9 @@
 # `multipart-parser` CHANGELOG
 
+## HEAD
+
+- Add `type` keyword to `MultipartParserOptions` export for Deno (#11)
+
 ## v0.4.0 (Aug 12, 2024)
 
 - Switch dependency from `fetch-super-headers` to `@mjackson/headers`
