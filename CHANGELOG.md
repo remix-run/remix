@@ -1,6 +1,6 @@
 # `multipart-parser` CHANGELOG
 
-## HEAD
+## v0.4.2 (Aug 13, 2024)
 
 - Fix bug where max file size exceeded error would crash Node.js servers (https://github.com/mjackson/multipart-parser/issues/8)
 
