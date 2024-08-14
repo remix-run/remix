@@ -25,5 +25,9 @@
     "@remix-run/server-runtime": "2.11.1",
     "@remix-run/testing": "2.11.1"
   },
-  "changesets": []
+  "changesets": [
+    "rich-teachers-warn",
+    "shy-ducks-repeat",
+    "sweet-roses-shake"
+  ]
 }
