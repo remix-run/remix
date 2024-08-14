@@ -86,15 +86,15 @@ server.listen(PORT, () => {
 
 /** @type (filename: string, stream: ReadableStream<Uint8Array>) => Promise<number> */
 async function writeFile(filename, stream) {
-  let fileStream = fs.createWriteStream(filename);
+  let file = fs.createWriteStream(filename);
   let bytesWritten = 0;
 
   for await (let chunk of stream) {
-    fileStream.write(chunk);
+    file.write(chunk);
     bytesWritten += chunk.byteLength;
   }
 
-  fileStream.end();
+  file.end();
 
   return bytesWritten;
 }

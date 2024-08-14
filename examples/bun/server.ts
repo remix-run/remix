@@ -1,4 +1,4 @@
-import type { BunFile } from 'bun';
+import { type BunFile } from 'bun';
 import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
 import tmp from 'tmp';
 

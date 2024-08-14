@@ -5,17 +5,10 @@ import tmp from 'npm:tmp';
 
 const PORT = 3000;
 
-Deno.serve(
-  {
-    port: PORT,
-    onListen() {
-      console.log(`Server listening on http://localhost:${PORT}`);
-    },
-  },
-  async (request) => {
-    if (request.method === 'GET') {
-      return new Response(
-        `
+async function requestHandler(request: Request): Promise<Response> {
+  if (request.method === 'GET') {
+    return new Response(
+      `
 <!DOCTYPE html>
 <html>
   <head>
@@ -31,51 +24,60 @@ Deno.serve(
   </body>
 </html>
 `,
-        {
-          headers: { 'Content-Type': 'text/html' },
-        },
-      );
-    }
+      {
+        headers: { 'Content-Type': 'text/html' },
+      },
+    );
+  }
 
-    if (request.method === 'POST') {
-      try {
-        // deno-lint-ignore no-explicit-any
-        let parts: any[] = [];
+  if (request.method === 'POST') {
+    try {
+      // deno-lint-ignore no-explicit-any
+      let parts: any[] = [];
 
-        for await (let part of parseMultipartRequest(request)) {
-          if (part.isFile) {
-            let tmpfile = tmp.fileSync();
-            await Deno.writeFile(tmpfile.name, part.body);
+      for await (let part of parseMultipartRequest(request)) {
+        if (part.isFile) {
+          let tmpfile = tmp.fileSync();
+          await Deno.writeFile(tmpfile.name, part.body);
 
-            parts.push({
-              name: part.name,
-              filename: part.filename,
-              mediaType: part.mediaType,
-              size: Deno.statSync(tmpfile.name).size,
-              file: tmpfile.name,
-            });
-          } else {
-            parts.push({
-              name: part.name,
-              value: await part.text(),
-            });
-          }
+          parts.push({
+            name: part.name,
+            filename: part.filename,
+            mediaType: part.mediaType,
+            size: Deno.statSync(tmpfile.name).size,
+            file: tmpfile.name,
+          });
+        } else {
+          parts.push({
+            name: part.name,
+            value: await part.text(),
+          });
         }
-
-        return new Response(JSON.stringify({ parts }, null, 2), {
-          headers: { 'Content-Type': 'application/json' },
-        });
-      } catch (error) {
-        if (error instanceof MultipartParseError) {
-          return new Response(`Error: ${error.message}`, { status: 400 });
-        }
-
-        console.error(error);
-
-        return new Response('Internal Server Error', { status: 500 });
       }
-    }
 
-    return new Response('Method Not Allowed', { status: 405 });
+      return new Response(JSON.stringify({ parts }, null, 2), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (error) {
+      if (error instanceof MultipartParseError) {
+        return new Response(`Error: ${error.message}`, { status: 400 });
+      }
+
+      console.error(error);
+
+      return new Response('Internal Server Error', { status: 500 });
+    }
+  }
+
+  return new Response('Method Not Allowed', { status: 405 });
+}
+
+Deno.serve(
+  {
+    port: PORT,
+    onListen() {
+      console.log(`Server listening on http://localhost:${PORT} ...`);
+    },
   },
+  requestHandler,
 );
