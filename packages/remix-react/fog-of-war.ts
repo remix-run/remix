@@ -1,7 +1,7 @@
 import type { Router } from "@remix-run/router";
 import { matchRoutes } from "@remix-run/router";
 import * as React from "react";
-import type { unstable_PatchRoutesOnMissFunction } from "react-router";
+import type { unstable_PatchRoutesOnNavigationFunction } from "react-router";
 
 import type { AssetsManifest, FutureConfig } from "./entry";
 import type { RouteModules } from "./routeModules";
@@ -64,36 +64,29 @@ export function getPartialManifest(manifest: AssetsManifest, router: Router) {
   };
 }
 
-export function initFogOfWar(
+export function getPatchRoutesOnNavigationFunction(
   manifest: AssetsManifest,
   routeModules: RouteModules,
   future: FutureConfig,
   isSpaMode: boolean,
   basename: string | undefined
-): {
-  enabled: boolean;
-  patchRoutesOnMiss?: unstable_PatchRoutesOnMissFunction;
-} {
+): unstable_PatchRoutesOnNavigationFunction | undefined {
   if (!isFogOfWarEnabled(future, isSpaMode)) {
-    return { enabled: false };
+    return undefined;
   }
-
-  return {
-    enabled: true,
-    patchRoutesOnMiss: async ({ path, patch }) => {
-      if (discoveredPaths.has(path)) {
-        return;
-      }
-      await fetchAndApplyManifestPatches(
-        [path],
-        manifest,
-        routeModules,
-        future,
-        isSpaMode,
-        basename,
-        patch
-      );
-    },
+  return async ({ path, patch }) => {
+    if (discoveredPaths.has(path)) {
+      return;
+    }
+    await fetchAndApplyManifestPatches(
+      [path],
+      manifest,
+      routeModules,
+      future,
+      isSpaMode,
+      basename,
+      patch
+    );
   };
 }
 
