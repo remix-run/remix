@@ -214,7 +214,7 @@ Date: 2024-08-15
 - `@remix-run/react` - Fog of War: Simplify implementation now that React Router handles slug/splat edge cases and tracks previously discovered routes (see https://github.com/remix-run/react-router/pull/11883) ([#9860](https://github.com/remix-run/remix/pull/9860))
   - ⚠️ This changes the return signature of the internal `/__manifest` endpoint since we no longer need the `notFoundPaths` field
 - `@remix-run/react` - Fog of War: Update to use renamed `unstable_patchRoutesOnNavigation` function in RR (see https://github.com/remix-run/react-router/pull/11888) ([#9860](https://github.com/remix-run/remix/pull/9860))
-- `@remix-run/server-runtime` - Single Fetch: Fix redirects when a `basename` is present ([#9848](https://github.com/remix-run/remix/pull/9848)
+- `@remix-run/server-runtime` - Single Fetch: Fix redirects when a `basename` is present ([#9848](https://github.com/remix-run/remix/pull/9848))
 - `@remix-run/server-runtime` - Single Fetch: Update `turbo-stream` to `v2.3.0` ([#9856](https://github.com/remix-run/remix/pull/9856))
   - Stabilize object key order for serialized payloads
   - Remove memory limitations payloads sizes
