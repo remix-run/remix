@@ -1,5 +1,9 @@
 # `multipart-parser` CHANGELOG
 
+## HEAD
+
+- Fix bug where max file size exceeded error would crash Node.js servers (https://github.com/mjackson/multipart-parser/issues/8)
+
 ## v0.4.1 (Aug 12, 2024)
 
 - Add `type` keyword to `MultipartParserOptions` export for Deno (https://github.com/mjackson/multipart-parser/pull/11)

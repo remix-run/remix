@@ -56,15 +56,19 @@ export async function* parseMultipart(
 
   let parts: MultipartPart[] = [];
   let resolveNext: (() => void) | null = null;
+  let error: Error | null = null;
   let done = false;
 
-  let parse = parser
+  parser
     .parse(data, (part) => {
       parts.push(part);
       if (resolveNext) {
         resolveNext();
         resolveNext = null;
       }
+    })
+    .catch((err) => {
+      error = err;
     })
     .finally(() => {
       done = true;
@@ -83,7 +87,9 @@ export async function* parseMultipart(
     }
   }
 
-  await parse;
+  if (error) {
+    throw error;
+  }
 }
 
 const HYPHEN = 45;
@@ -376,9 +382,13 @@ export class MultipartParser {
   #writeBody(chunks: Uint8Array[]): void {
     for (let chunk of chunks) {
       if (this.#bodyLength + chunk.length > this.#maxFileSize) {
-        throw new MultipartParseError(
+        let error = new MultipartParseError(
           `File size exceeds maximum allowed size of ${this.#maxFileSize} bytes`,
         );
+
+        this.#bodyController!.error(error);
+
+        throw error;
       }
 
       this.#bodyController!.enqueue(chunk);

@@ -248,8 +248,10 @@ describe('parseMultipartRequest', async () => {
     });
 
     await assert.rejects(async () => {
-      for await (let _ of parseMultipartRequest(request, { maxHeaderSize: 4 * 1024 })) {
-        // Consume all parts
+      for await (let part of parseMultipartRequest(request, { maxHeaderSize: 4 * 1024 })) {
+        for await (let _ of part.body) {
+          // Consume all parts
+        }
       }
     }, MultipartParseError);
   });
@@ -269,8 +271,10 @@ describe('parseMultipartRequest', async () => {
     });
 
     await assert.rejects(async () => {
-      for await (let _ of parseMultipartRequest(request, { maxFileSize: 10 * 1024 * 1024 })) {
-        // Consume all parts
+      for await (let part of parseMultipartRequest(request, { maxFileSize: 10 * 1024 * 1024 })) {
+        for await (let _ of part.body) {
+          // Consume all parts
+        }
       }
     }, MultipartParseError);
   });
@@ -308,8 +312,10 @@ describe('parseMultipartRequest', async () => {
     });
 
     await assert.rejects(async () => {
-      for await (let _ of parseMultipartRequest(request)) {
-        // Consume all parts
+      for await (let part of parseMultipartRequest(request)) {
+        for await (let _ of part.body) {
+          // Consume all parts
+        }
       }
     }, MultipartParseError);
   });
