@@ -56,7 +56,7 @@ export async function* parseMultipart(
 
   let parts: MultipartPart[] = [];
   let resolveNext: (() => void) | null = null;
-  let error: Error | null = null;
+  let parseError: Error | null = null;
   let done = false;
 
   parser
@@ -67,8 +67,8 @@ export async function* parseMultipart(
         resolveNext = null;
       }
     })
-    .catch((err) => {
-      error = err;
+    .catch((error) => {
+      parseError = error;
     })
     .finally(() => {
       done = true;
@@ -87,8 +87,8 @@ export async function* parseMultipart(
     }
   }
 
-  if (error) {
-    throw error;
+  if (parseError) {
+    throw parseError;
   }
 }
 
