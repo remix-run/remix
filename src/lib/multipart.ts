@@ -1,6 +1,6 @@
 import Headers from '@mjackson/headers';
 
-import { concat, computeSkipTable, combinedIndexOf } from './buffer-utils.js';
+import { BufferSearch, createSearch } from './buffer-search.js';
 
 /**
  * Extracts the boundary string from a `multipart/*` content type.
@@ -92,10 +92,8 @@ export async function* parseMultipart(
   }
 }
 
-const HYPHEN = 45;
 const EMPTY_BUFFER = new Uint8Array(0);
-const DOUBLE_NEWLINE = new Uint8Array([13, 10, 13, 10]);
-const DOUBLE_NEWLINE_SKIP_TABLE = computeSkipTable(DOUBLE_NEWLINE);
+const doubleNewlineSearch = createSearch('\r\n\r\n');
 
 export class MultipartParseError extends Error {
   constructor(message: string) {
@@ -123,16 +121,14 @@ const enum MultipartParserState {
 export class MultipartParser {
   boundary: string;
 
-  #boundaryArray: Uint8Array;
+  #boundarySearch: BufferSearch;
   #boundaryLength: number;
-  #boundarySkipTable: Uint8Array;
   #maxHeaderSize: number;
   #maxFileSize: number;
 
   #state = MultipartParserState.Start;
   #buffer: Uint8Array = EMPTY_BUFFER;
-  #chunk: Uint8Array = EMPTY_BUFFER;
-  #length = 0;
+  #bufferLength = 0;
 
   #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
   #bodyLength = 0;
@@ -145,9 +141,8 @@ export class MultipartParser {
     }: MultipartParserOptions = {},
   ) {
     this.boundary = boundary;
-    this.#boundaryArray = new TextEncoder().encode(`--${boundary}`);
-    this.#boundaryLength = this.#boundaryArray.length;
-    this.#boundarySkipTable = computeSkipTable(this.#boundaryArray);
+    this.#boundarySearch = createSearch(`--${boundary}`);
+    this.#boundaryLength = 2 + boundary.length; // +2 for leading "--"
     this.#maxHeaderSize = maxHeaderSize;
     this.#maxFileSize = maxFileSize;
   }
@@ -210,26 +205,28 @@ export class MultipartParser {
       throw new MultipartParseError('Cannot push, parser is done');
     }
 
-    this.#chunk = chunk;
-    this.#length = this.#buffer.length + this.#chunk.length;
+    if (this.#bufferLength > 0) {
+      let newBuffer = new Uint8Array(this.#bufferLength + chunk.length);
+      newBuffer.set(this.#buffer, 0);
+      newBuffer.set(chunk, this.#bufferLength);
+      this.#buffer = newBuffer;
+      this.#bufferLength += chunk.length;
+    } else {
+      this.#buffer = chunk;
+      this.#bufferLength = chunk.length;
+    }
 
     if (this.#state === MultipartParserState.Start) {
-      if (this.#length < this.#boundaryLength) {
-        this.#save();
+      if (this.#bufferLength < this.#boundaryLength) {
         return [];
       }
 
-      let boundaryIndex = combinedIndexOf(
-        this.#buffer,
-        this.#chunk,
-        this.#boundaryArray,
-        this.#boundarySkipTable,
-      );
+      let boundaryIndex = this.#boundarySearch.indexIn(this.#buffer);
       if (boundaryIndex !== 0) {
         throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
       }
 
-      this.#skip(this.#boundaryLength);
+      this.#skip(this.#boundaryLength); // Skip initial boundary
 
       this.#state = MultipartParserState.AfterBoundary;
     }
@@ -238,22 +235,15 @@ export class MultipartParser {
 
     while (true) {
       if (this.#state === MultipartParserState.AfterBoundary) {
-        if (this.#length < 2) {
-          this.#save();
+        if (this.#bufferLength < 2) {
           break;
         }
 
         // If the next two bytes are "--" then we're done; this is the closing boundary. Otherwise
         // they're the \r\n after a boundary in the middle of the message and we can ignore them.
-        let twoBytes = this.#read(2);
-        if (
-          (twoBytes.length === 1 && twoBytes[0][0] === HYPHEN && twoBytes[0][1] === HYPHEN) ||
-          (twoBytes[0][0] === HYPHEN && twoBytes[1][0] === HYPHEN)
-        ) {
-          // Discard any remaining data in the current buffer/chunk so we don't leak memory.
-          this.#buffer = EMPTY_BUFFER;
-          this.#chunk = EMPTY_BUFFER;
-
+        let nextTwoBytes = this.#read(2);
+        if (nextTwoBytes[0] === 45 && nextTwoBytes[1] === 45) {
+          this.#buffer = EMPTY_BUFFER; // Don't leak memory
           this.#state = MultipartParserState.Done;
           break;
         }
@@ -262,25 +252,22 @@ export class MultipartParser {
       }
 
       if (this.#state === MultipartParserState.Header) {
-        if (this.#length < 4) {
-          this.#save();
+        if (this.#bufferLength < 4) {
           break;
         }
 
-        let headerEndIndex = combinedIndexOf(
-          this.#buffer,
-          this.#chunk,
-          DOUBLE_NEWLINE,
-          DOUBLE_NEWLINE_SKIP_TABLE,
-        );
-        if (headerEndIndex === -1) break;
+        let headerEndIndex = doubleNewlineSearch.indexIn(this.#buffer);
+        if (headerEndIndex === -1) {
+          break; // No \r\n\r\n found
+        }
+
         if (headerEndIndex > this.#maxHeaderSize) {
           throw new MultipartParseError(
             `Header size exceeds maximum allowed size of ${this.#maxHeaderSize} bytes`,
           );
         }
 
-        let header = concat(this.#read(headerEndIndex));
+        let header = this.#read(headerEndIndex);
         this.#skip(4); // Skip \r\n\r\n
 
         let body = new ReadableStream({
@@ -295,28 +282,33 @@ export class MultipartParser {
       }
 
       if (this.#state === MultipartParserState.Body) {
-        if (this.#length < this.#boundaryLength) {
-          this.#save();
+        if (this.#bufferLength < this.#boundaryLength) {
           break;
         }
 
-        let boundaryIndex = combinedIndexOf(
-          this.#buffer,
-          this.#chunk,
-          this.#boundaryArray,
-          this.#boundarySkipTable,
-        );
+        let boundaryIndex = this.#boundarySearch.indexIn(this.#buffer);
 
         if (boundaryIndex === -1) {
-          // Write as much of the buffer as we can to the current body stream while still
-          // keeping enough to check if the last few bytes are part of the boundary.
-          this.#writeBody(this.#read(this.#length - this.#boundaryLength + 1));
-          this.#save();
+          // No boundary found, but we might have a partial match at the end of the buffer.
+          let endPartialIndex = this.#boundarySearch.endPartialIndexIn(this.#buffer);
+
+          if (endPartialIndex === -1) {
+            this.#writeBody(this.#buffer);
+            this.#buffer = EMPTY_BUFFER;
+            this.#bufferLength = 0;
+          } else {
+            let chunkSize = endPartialIndex - 2; // -2 to avoid \r\n before boundary
+            if (chunkSize > 0) {
+              this.#writeBody(this.#read(chunkSize));
+            }
+          }
+
           break;
         }
 
-        if (boundaryIndex > 2) {
-          this.#writeBody(this.#read(boundaryIndex - 2)); // -2 to avoid \r\n before boundary
+        let chunkSize = boundaryIndex - 2; // -2 to avoid \r\n before boundary
+        if (chunkSize > 0) {
+          this.#writeBody(this.#read(chunkSize));
         }
         this.#closeBody();
 
@@ -335,65 +327,35 @@ export class MultipartParser {
   reset(): void {
     this.#state = MultipartParserState.Start;
     this.#buffer = EMPTY_BUFFER;
-    this.#chunk = EMPTY_BUFFER;
-    this.#length = 0;
+    this.#bufferLength = 0;
     this.#bodyController = null;
     this.#bodyLength = 0;
   }
 
-  #read(size: number): Uint8Array[] {
-    this.#length -= size;
-
-    if (size > this.#buffer.length) {
-      if (this.#buffer.length > 0) {
-        let head = this.#buffer;
-        this.#buffer = EMPTY_BUFFER;
-        let tail = this.#chunk.subarray(0, size - head.length);
-        this.#chunk = this.#chunk.subarray(size - head.length);
-        return [head, tail];
-      }
-
-      let view = this.#chunk.subarray(0, size);
-      this.#chunk = this.#chunk.subarray(size);
-      return [view];
-    }
-
-    let view = this.#buffer.subarray(0, size);
-    this.#buffer = this.#buffer.subarray(size);
-    return [view];
+  #read(size: number): Uint8Array {
+    let chunk = this.#buffer.subarray(0, size);
+    this.#skip(size);
+    return chunk;
   }
 
   #skip(size: number): void {
-    this.#length -= size;
-
-    if (size > this.#buffer.length) {
-      this.#chunk = this.#chunk.subarray(size - this.#buffer.length);
-      this.#buffer = EMPTY_BUFFER;
-    } else {
-      this.#buffer = this.#buffer.subarray(size);
-    }
+    this.#buffer = this.#buffer.subarray(size);
+    this.#bufferLength -= size;
   }
 
-  #save(): void {
-    if (this.#chunk.length === 0) return;
-    this.#buffer = this.#buffer.length > 0 ? concat([this.#buffer, this.#chunk]) : this.#chunk;
-  }
+  #writeBody(chunk: Uint8Array): void {
+    if (this.#bodyLength + chunk.length > this.#maxFileSize) {
+      let error = new MultipartParseError(
+        `File size exceeds maximum allowed size of ${this.#maxFileSize} bytes`,
+      );
 
-  #writeBody(chunks: Uint8Array[]): void {
-    for (let chunk of chunks) {
-      if (this.#bodyLength + chunk.length > this.#maxFileSize) {
-        let error = new MultipartParseError(
-          `File size exceeds maximum allowed size of ${this.#maxFileSize} bytes`,
-        );
+      this.#bodyController!.error(error);
 
-        this.#bodyController!.error(error);
-
-        throw error;
-      }
-
-      this.#bodyController!.enqueue(chunk);
-      this.#bodyLength += chunk.length;
+      throw error;
     }
+
+    this.#bodyController!.enqueue(chunk);
+    this.#bodyLength += chunk.length;
   }
 
   #closeBody(): void {
@@ -460,11 +422,20 @@ export class MultipartPart {
     this.#bodyUsed = true;
 
     let chunks: Uint8Array[] = [];
+    let totalLength = 0;
     for await (let chunk of this.#body) {
       chunks.push(chunk);
+      totalLength += chunk.length;
     }
 
-    return concat(chunks);
+    let result = new Uint8Array(totalLength);
+    let offset = 0;
+    for (let chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    return result;
   }
 
   /**
