@@ -205,31 +205,43 @@ Date: YYYY-MM-DD
 
 -->
 
+## v2.11.2
+
+Date: 2024-08-15
+
+### Patch Changes
+
+- `@remix-run/react` - Fog of War: Simplify implementation now that React Router handles slug/splat edge cases and tracks previously discovered routes (see https://github.com/remix-run/react-router/pull/11883) ([#9860](https://github.com/remix-run/remix/pull/9860))
+  - ⚠️ This changes the return signature of the internal `/__manifest` endpoint since we no longer need the `notFoundPaths` field
+- `@remix-run/react` - Fog of War: Update to use renamed `unstable_patchRoutesOnNavigation` function in RR (see https://github.com/remix-run/react-router/pull/11888) ([#9860](https://github.com/remix-run/remix/pull/9860))
+- `@remix-run/server-runtime` - Single Fetch: Fix redirects when a `basename` is present ([#9848](https://github.com/remix-run/remix/pull/9848)
+- `@remix-run/server-runtime` - Single Fetch: Update `turbo-stream` to `v2.3.0` ([#9856](https://github.com/remix-run/remix/pull/9856))
+  - Stabilize object key order for serialized payloads
+  - Remove memory limitations payloads sizes
+
+### Updated Dependencies
+
+- [`react-router-dom@6.26.1`](https://github.com/remix-run/react-router/releases/tag/react-router%406.26.1)
+- [`@remix-run/router@1.19.1`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1191)
+
+### Changes by Package
+
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.11.2/packages/remix-react/CHANGELOG.md#2112)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.11.2/packages/remix-server-runtime/CHANGELOG.md#2112)
+
+**Full Changelog**: [`v2.11.1...v2.11.2`](https://github.com/remix-run/remix/compare/remix@2.X.Y...remix@2.X.Y)
+
 ## v2.11.1
 
 Date: 2024-08-05
 
 ### Patch Changes
 
-- Revert #9695, stop infinite reload ([`a7cffe57`](https://github.com/remix-run/remix/commit/a7cffe5733c8b7d0f29bd2d8606876c537d87101))
+- `@remix-run/react` - Revert #9695, stop infinite reload ([`a7cffe57`](https://github.com/remix-run/remix/commit/a7cffe5733c8b7d0f29bd2d8606876c537d87101))
 
 ### Changes by Package
 
-- [`create-remix`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/create-remix/CHANGELOG.md#2111)
-- [`@remix-run/architect`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-architect/CHANGELOG.md#2111)
-- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-cloudflare/CHANGELOG.md#2111)
-- [`@remix-run/cloudflare-pages`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-cloudflare-pages/CHANGELOG.md#2111)
-- [`@remix-run/cloudflare-workers`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-cloudflare-workers/CHANGELOG.md#2111)
-- [`@remix-run/css-bundle`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-css-bundle/CHANGELOG.md#2111)
-- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-deno/CHANGELOG.md#2111)
-- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-dev/CHANGELOG.md#2111)
-- [`@remix-run/eslint-config`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-eslint-config/CHANGELOG.md#2111)
-- [`@remix-run/express`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-express/CHANGELOG.md#2111)
-- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-node/CHANGELOG.md#2111)
 - [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-react/CHANGELOG.md#2111)
-- [`@remix-run/serve`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-serve/CHANGELOG.md#2111)
-- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-server-runtime/CHANGELOG.md#2111)
-- [`@remix-run/testing`](https://github.com/remix-run/remix/blob/remix%402.11.1/packages/remix-testing/CHANGELOG.md#2111)
 
 **Full Changelog**: [`v2.11.0...v2.11.1`](https://github.com/remix-run/remix/compare/remix@2.11.0...remix@2.11.1)
 

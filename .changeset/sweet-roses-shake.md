@@ -3,6 +3,6 @@
 "@remix-run/server-runtime": patch
 ---
 
-fix: update turbo-stream to v2.3.0
-fix: stabilize object key order for unstable_singleFetch
-fix: unstable_singleFetch can now have payloads as large as you have memory
+Single Fetch: Update `turbo-stream` to `v2.3.0`
+ - Stabilize object key order for serialized payloads
+ - Remove memory limitations payloads sizes
