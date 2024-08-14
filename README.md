@@ -144,49 +144,49 @@ Important: Benchmarking can be tricky, and results vary greatly depending on pla
 The results of running the benchmarks on my laptop:
 
 ```
-> @mjackson/multipart-parser@0.3.2 bench:node /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.4.2 bench:node /Users/michael/Projects/multipart-parser
 > node --import tsimp/import ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
-CPU: Apple M2 Pro
-Date: 8/4/2024, 9:45:08 PM
-Node.js v20.15.1
+CPU: Apple M1 Pro
+Date: 8/13/2024, 6:47:34 PM
+Node.js v22.1.0
 ┌──────────────────┬──────────────────┬──────────────────┬──────────────────┬───────────────────┐
 │ (index)          │ 1 small file     │ 1 large file     │ 100 small files  │ 5 large files     │
 ├──────────────────┼──────────────────┼──────────────────┼──────────────────┼───────────────────┤
-│ multipart-parser │ '0.02 ms ± 0.09' │ '1.04 ms ± 0.15' │ '0.32 ms ± 0.13' │ '10.39 ms ± 1.77' │
-│ busboy           │ '0.03 ms ± 0.08' │ '4.26 ms ± 0.09' │ '0.24 ms ± 0.03' │ '43.00 ms ± 0.71' │
-│ @fastify/busboy  │ '0.03 ms ± 0.07' │ '1.09 ms ± 0.06' │ '0.38 ms ± 0.03' │ '10.89 ms ± 0.14' │
+│ multipart-parser │ '0.01 ms ± 0.08' │ '1.17 ms ± 0.27' │ '0.12 ms ± 0.03' │ '10.94 ms ± 0.24' │
+│ busboy           │ '0.03 ms ± 0.08' │ '3.00 ms ± 0.09' │ '0.21 ms ± 0.03' │ '30.10 ms ± 2.73' │
+│ @fastify/busboy  │ '0.02 ms ± 0.07' │ '1.19 ms ± 0.07' │ '0.38 ms ± 0.07' │ '12.15 ms ± 2.30' │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
 
-> @mjackson/multipart-parser@0.3.2 bench:bun /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.4.2 bench:bun /Users/michael/Projects/multipart-parser
 > bun run ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
-CPU: Apple M2 Pro
-Date: 8/4/2024, 9:47:10 PM
+CPU: Apple M1 Pro
+Date: 8/13/2024, 6:49:45 PM
 Bun 1.1.21
 ┌──────────────────┬────────────────┬────────────────┬─────────────────┬─────────────────┐
 │                  │ 1 small file   │ 1 large file   │ 100 small files │ 5 large files   │
 ├──────────────────┼────────────────┼────────────────┼─────────────────┼─────────────────┤
-│ multipart-parser │ 0.01 ms ± 0.04 │ 0.85 ms ± 0.04 │ 0.13 ms ± 0.17  │ 8.31 ms ± 0.25  │
-│           busboy │ 0.02 ms ± 0.13 │ 3.29 ms ± 0.10 │ 0.34 ms ± 0.15  │ 33.09 ms ± 1.72 │
-│  @fastify/busboy │ 0.04 ms ± 0.13 │ 6.61 ms ± 0.11 │ 0.60 ms ± 0.22  │ 67.90 ms ± 4.82 │
+│ multipart-parser │ 0.01 ms ± 0.07 │ 0.95 ms ± 0.12 │ 0.13 ms ± 0.09  │ 9.13 ms ± 0.29  │
+│           busboy │ 0.03 ms ± 0.10 │ 3.55 ms ± 0.10 │ 0.35 ms ± 0.17  │ 35.54 ms ± 2.57 │
+│  @fastify/busboy │ 0.04 ms ± 0.10 │ 7.17 ms ± 0.10 │ 0.62 ms ± 0.13  │ 71.99 ms ± 3.01 │
 └──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┘
 
-> @mjackson/multipart-parser@0.3.2 bench:deno /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.4.2 bench:deno /Users/michael/Projects/multipart-parser
 > deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
-CPU: Apple M2 Pro
-Date: 8/4/2024, 9:50:01 PM
+CPU: Apple M1 Pro
+Date: 8/13/2024, 6:52:51 PM
 Deno 1.45.5
 ┌──────────────────┬──────────────────┬───────────────────┬──────────────────┬────────────────────┐
 │ (idx)            │ 1 small file     │ 1 large file      │ 100 small files  │ 5 large files      │
 ├──────────────────┼──────────────────┼───────────────────┼──────────────────┼────────────────────┤
-│ multipart-parser │ "0.02 ms ± 0.19" │ "1.01 ms ± 1.00"  │ "0.10 ms ± 0.44" │ "10.02 ms ± 0.70"  │
-│ busboy           │ "0.03 ms ± 0.25" │ "2.85 ms ± 0.99"  │ "0.27 ms ± 0.69" │ "29.03 ms ± 2.07"  │
-│ @fastify/busboy  │ "0.04 ms ± 0.29" │ "11.23 ms ± 0.98" │ "0.72 ms ± 0.96" │ "115.38 ms ± 6.64" │
+│ multipart-parser │ "0.02 ms ± 0.18" │ "1.18 ms ± 1.07"  │ "0.10 ms ± 0.43" │ "11.00 ms ± 1.18"  │
+│ busboy           │ "0.04 ms ± 0.27" │ "3.02 ms ± 1.00"  │ "0.29 ms ± 0.71" │ "30.22 ms ± 2.61"  │
+│ @fastify/busboy  │ "0.05 ms ± 0.31" │ "12.32 ms ± 0.73" │ "0.77 ms ± 0.97" │ "125.04 ms ± 8.39" │
 └──────────────────┴──────────────────┴───────────────────┴──────────────────┴────────────────────┘
 ```
 
