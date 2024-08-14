@@ -109,12 +109,12 @@ export interface MultipartParserOptions {
   maxFileSize?: number;
 }
 
-enum MultipartParserState {
-  Start = 0,
-  AfterBoundary = 1,
-  Header = 2,
-  Body = 3,
-  Done = 4,
+const enum MultipartParserState {
+  Start,
+  AfterBoundary,
+  Header,
+  Body,
+  Done,
 }
 
 /**
