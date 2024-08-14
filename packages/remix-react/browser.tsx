@@ -20,7 +20,10 @@ import {
   getSingleFetchDataStrategy,
 } from "./single-fetch";
 import invariant from "./invariant";
-import { initFogOfWar, useFogOFWarDiscovery } from "./fog-of-war";
+import {
+  getPatchRoutesOnNavigationFunction,
+  useFogOFWarDiscovery,
+} from "./fog-of-war";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -305,14 +308,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       }
     }
 
-    let { enabled: isFogOfWarEnabled, patchRoutesOnMiss } = initFogOfWar(
-      window.__remixManifest,
-      window.__remixRouteModules,
-      window.__remixContext.future,
-      window.__remixContext.isSpaMode,
-      window.__remixContext.basename
-    );
-
     // We don't use createBrowserRouter here because we need fine-grained control
     // over initialization to support synchronous `clientLoader` flows.
     router = createRouter({
@@ -337,9 +332,13 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
             window.__remixRouteModules
           )
         : undefined,
-      ...(isFogOfWarEnabled
-        ? { unstable_patchRoutesOnMiss: patchRoutesOnMiss }
-        : {}),
+      unstable_patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(
+        window.__remixManifest,
+        window.__remixRouteModules,
+        window.__remixContext.future,
+        window.__remixContext.isSpaMode,
+        window.__remixContext.basename
+      ),
     });
 
     // We can call initialize() immediately if the router doesn't have any
