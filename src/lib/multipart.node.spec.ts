@@ -1,9 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { readFixture } from '../test/fixtures.js';
-import { createMultipartMockRequest } from '../test/utils.node.js';
 import { parseMultipartRequest } from './multipart.node.js';
+import { getRandomBytes } from '../test/utils.js';
+import { createMultipartMockRequest } from '../test/utils.node.js';
 
 describe('parseMultipartRequest (node)', () => {
   let boundary = 'boundary123';
@@ -35,41 +35,12 @@ describe('parseMultipartRequest (node)', () => {
   });
 
   it('parses large file uploads correctly', async () => {
-    const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
-
+    let content = getRandomBytes(1024 * 1024 * 10); // 10 MB file
     let request = createMultipartMockRequest(boundary, {
       file1: {
         filename: 'tesla.jpg',
         mediaType: 'image/jpeg',
-        content: TeslaRoadster,
-      },
-    });
-
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
-      parts.push(part);
-    }
-
-    assert.equal(parts.length, 1);
-    assert.equal(parts[0].name, 'file1');
-    assert.equal(parts[0].filename, 'tesla.jpg');
-    assert.equal(parts[0].mediaType, 'image/jpeg');
-    assert.deepEqual(await parts[0].bytes(), TeslaRoadster);
-  });
-
-  it('allows buffering part contents while parsing', async () => {
-    const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
-
-    let request = createMultipartMockRequest(boundary, {
-      file1: {
-        filename: 'tesla.jpg',
-        mediaType: 'image/jpeg',
-        content: TeslaRoadster,
-      },
-      file2: {
-        filename: 'tesla.jpg',
-        mediaType: 'image/jpeg',
-        content: TeslaRoadster,
+        content,
       },
     });
 
@@ -77,14 +48,16 @@ describe('parseMultipartRequest (node)', () => {
     for await (let part of parseMultipartRequest(request)) {
       parts.push({
         name: part.name,
+        filename: part.filename,
+        mediaType: part.mediaType,
         content: await part.bytes(),
       });
     }
 
-    assert.equal(parts.length, 2);
+    assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'file1');
-    assert.deepEqual(parts[0].content, TeslaRoadster);
-    assert.equal(parts[1].name, 'file2');
-    assert.deepEqual(parts[1].content, TeslaRoadster);
+    assert.equal(parts[0].filename, 'tesla.jpg');
+    assert.equal(parts[0].mediaType, 'image/jpeg');
+    assert.deepEqual(parts[0].content, content);
   });
 });

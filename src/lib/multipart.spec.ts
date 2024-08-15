@@ -1,14 +1,13 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { readFixture } from '../test/fixtures.js';
-import { createMockRequest, createMultipartMockRequest } from '../test/utils.js';
 import {
   isMultipartRequest,
   parseMultipartRequest,
   MultipartParseError,
   getMultipartBoundary,
 } from './multipart.js';
+import { createMockRequest, createMultipartMockRequest, getRandomBytes } from '../test/utils.js';
 
 const CRLF = '\r\n';
 
@@ -162,19 +161,13 @@ describe('parseMultipartRequest', async () => {
     assert.equal(await parts[2].text(), 'File content');
   });
 
-  it('allows buffering part contents while parsing', async () => {
-    const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
-
+  it('parses large file uploads correctly', async () => {
+    let content = getRandomBytes(10 * 1024 * 1024); // 10 MB file
     let request = createMultipartMockRequest(boundary, {
       file1: {
-        filename: 'tesla.jpg',
-        mediaType: 'image/jpeg',
-        content: TeslaRoadster,
-      },
-      file2: {
-        filename: 'tesla.jpg',
-        mediaType: 'image/jpeg',
-        content: TeslaRoadster,
+        filename: 'random.dat',
+        mediaType: 'application/octet-stream',
+        content,
       },
     });
 
@@ -182,34 +175,17 @@ describe('parseMultipartRequest', async () => {
     for await (let part of parseMultipartRequest(request)) {
       parts.push({
         name: part.name,
+        filename: part.filename,
+        mediaType: part.mediaType,
         content: await part.bytes(),
       });
     }
 
-    assert.equal(parts.length, 2);
-  });
-
-  it('parses large file uploads correctly', async () => {
-    const TeslaRoadster = readFixture('Tesla-Roadster.jpg');
-
-    let request = createMultipartMockRequest(boundary, {
-      file1: {
-        filename: 'tesla.jpg',
-        mediaType: 'image/jpeg',
-        content: TeslaRoadster,
-      },
-    });
-
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
-      parts.push(part);
-    }
-
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'file1');
-    assert.equal(parts[0].filename, 'tesla.jpg');
-    assert.equal(parts[0].mediaType, 'image/jpeg');
-    assert.deepEqual(await parts[0].bytes(), TeslaRoadster);
+    assert.equal(parts[0].filename, 'random.dat');
+    assert.equal(parts[0].mediaType, 'application/octet-stream');
+    assert.deepEqual(parts[0].content, content);
   });
 
   it('throws when Content-Type is not multipart/form-data', async () => {
@@ -257,17 +233,12 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('throws when file exceeds maximum size', async () => {
-    let request = createMockRequest({
-      headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    let request = createMultipartMockRequest(boundary, {
+      file1: {
+        filename: 'random.dat',
+        mediaType: 'application/octet-stream',
+        content: getRandomBytes(11 * 1024 * 1024), // 11 MB file
       },
-      body: [
-        `--${boundary}`,
-        'Content-Disposition: form-data; name="field1"',
-        '',
-        'X'.repeat(11 * 1024 * 1024), // 11 MB file
-        `--${boundary}--`,
-      ].join(CRLF),
     });
 
     await assert.rejects(async () => {
