@@ -137,7 +137,7 @@ export class MultipartParser {
     boundary: string,
     {
       maxHeaderSize = 8 * 1024, // 8 KB
-      maxFileSize = 10 * 1024 * 1024, // 10 MB
+      maxFileSize = Infinity,
     }: MultipartParserOptions = {},
   ) {
     this.boundary = boundary;
@@ -216,9 +216,11 @@ export class MultipartParser {
       this.#bufferLength = chunk.length;
     }
 
+    let parts: MultipartPart[] = [];
+
     if (this.#state === MultipartParserState.Start) {
       if (this.#bufferLength < this.#boundaryLength) {
-        return [];
+        return parts;
       }
 
       let boundaryIndex = this.#boundarySearch.indexIn(this.#buffer);
@@ -230,8 +232,6 @@ export class MultipartParser {
 
       this.#state = MultipartParserState.AfterBoundary;
     }
-
-    let parts: MultipartPart[] = [];
 
     while (true) {
       if (this.#state === MultipartParserState.AfterBoundary) {

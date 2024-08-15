@@ -1,5 +1,10 @@
 # `multipart-parser` CHANGELOG
 
+## HEAD
+
+- Change default `maxFileSize` from 10 MB to `Infinity`
+- Simplify internal buffer management and search, which leads to more consistent chunk flow when handling large file uploads
+
 ## v0.4.2 (Aug 13, 2024)
 
 - Fix bug where max file size exceeded error would crash Node.js servers (https://github.com/mjackson/multipart-parser/issues/8)
