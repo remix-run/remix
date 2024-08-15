@@ -1,4 +1,4 @@
-import { MultipartParser } from '@mjackson/multipart-parser';
+import { parseMultipart } from '@mjackson/multipart-parser';
 
 import { MultipartMessage } from '../messages.js';
 
@@ -14,9 +14,9 @@ export async function parse(message: MultipartMessage): Promise<number> {
 
   let start = performance.now();
 
-  await new MultipartParser(message.boundary, { maxFileSize: Infinity }).parse(stream, (_) => {
+  for await (let _ of parseMultipart(stream, message.boundary)) {
     // Do nothing
-  });
+  }
 
   return performance.now() - start;
 }
