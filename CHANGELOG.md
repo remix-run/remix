@@ -1,6 +1,6 @@
 # `multipart-parser` CHANGELOG
 
-## HEAD
+## v0.5.0 (Aug 15, 2024)
 
 - Change default `maxFileSize` from 10 MB to `Infinity`
 - Simplify internal buffer management and search, which leads to more consistent chunk flow when handling large file uploads
