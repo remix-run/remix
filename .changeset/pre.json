@@ -26,6 +26,7 @@
     "@remix-run/testing": "2.11.1"
   },
   "changesets": [
+    "forty-lions-sing",
     "rich-teachers-warn",
     "shy-ducks-repeat",
     "sweet-roses-shake"
