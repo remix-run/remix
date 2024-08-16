@@ -97,8 +97,8 @@ export async function* parseMultipart(
   }
 }
 
-const EMPTY_BUFFER = new Uint8Array(0);
-const doubleNewlineSearch = createSearch('\r\n\r\n');
+const EmptyBuffer = new Uint8Array(0);
+const DoubleNewlineSearch = createSearch('\r\n\r\n');
 
 export class MultipartParseError extends Error {
   constructor(message: string) {
@@ -125,14 +125,14 @@ const enum MultipartParserState {
  */
 export class MultipartParser {
   boundary: string;
+  maxHeaderSize: number;
+  maxFileSize: number;
 
   #boundarySearch: BufferSearch;
   #boundaryLength: number;
-  #maxHeaderSize: number;
-  #maxFileSize: number;
 
   #state = MultipartParserState.Start;
-  #buffer: Uint8Array = EMPTY_BUFFER;
+  #buffer: Uint8Array = EmptyBuffer;
   #bufferLength = 0;
   #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
   #bodyLength = 0;
@@ -145,10 +145,10 @@ export class MultipartParser {
     }: MultipartParserOptions = {},
   ) {
     this.boundary = boundary;
+    this.maxHeaderSize = maxHeaderSize;
+    this.maxFileSize = maxFileSize;
     this.#boundarySearch = createSearch(`--${boundary}`);
     this.#boundaryLength = 2 + boundary.length; // +2 for leading "--"
-    this.#maxHeaderSize = maxHeaderSize;
-    this.#maxFileSize = maxFileSize;
   }
 
   /**
@@ -196,7 +196,7 @@ export class MultipartParser {
 
   #reset(): void {
     this.#state = MultipartParserState.Start;
-    this.#buffer = EMPTY_BUFFER;
+    this.#buffer = EmptyBuffer;
     this.#bufferLength = 0;
     this.#bodyController = null;
     this.#bodyLength = 0;
@@ -245,7 +245,7 @@ export class MultipartParser {
         // they're the \r\n after a boundary in the middle of the message and we can ignore them.
         let nextTwoBytes = this.#read(2);
         if (nextTwoBytes[0] === 45 && nextTwoBytes[1] === 45) {
-          this.#buffer = EMPTY_BUFFER; // Don't leak memory
+          this.#buffer = EmptyBuffer; // Don't leak memory
           this.#state = MultipartParserState.Done;
           break;
         }
@@ -258,19 +258,19 @@ export class MultipartParser {
           break;
         }
 
-        let headerEndIndex = doubleNewlineSearch.indexIn(this.#buffer);
+        let headerEndIndex = DoubleNewlineSearch.indexIn(this.#buffer);
         if (headerEndIndex === -1) {
           break; // No \r\n\r\n found
         }
 
-        if (headerEndIndex > this.#maxHeaderSize) {
+        if (headerEndIndex > this.maxHeaderSize) {
           throw new MultipartParseError(
-            `Header size exceeds maximum allowed size of ${this.#maxHeaderSize} bytes`,
+            `Header size exceeds maximum allowed size of ${this.maxHeaderSize} bytes`,
           );
         }
 
         let header = this.#read(headerEndIndex);
-        this.#skip(4); // Skip \r\n\r\n
+        this.#skip(4); // Skip \r\n\r\n after header
 
         let body = new ReadableStream({
           start: (controller) => {
@@ -296,7 +296,7 @@ export class MultipartParser {
 
           if (endPartialIndex === -1) {
             this.#writeBody(this.#buffer);
-            this.#buffer = EMPTY_BUFFER;
+            this.#buffer = EmptyBuffer;
             this.#bufferLength = 0;
           } else {
             let chunkSize = endPartialIndex - 2; // -2 to avoid \r\n before boundary
@@ -335,9 +335,9 @@ export class MultipartParser {
   }
 
   #writeBody(chunk: Uint8Array): void {
-    if (this.#bodyLength + chunk.length > this.#maxFileSize) {
+    if (this.#bodyLength + chunk.length > this.maxFileSize) {
       let error = new MultipartParseError(
-        `File size exceeds maximum allowed size of ${this.#maxFileSize} bytes`,
+        `File size exceeds maximum allowed size of ${this.maxFileSize} bytes`,
       );
 
       this.#bodyController!.error(error);
