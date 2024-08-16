@@ -98,14 +98,14 @@ If you're working directly with multipart boundaries and buffers/streams of mult
 import { parseMultipart } from '@mjackson/multipart-parser';
 
 // Get the data from some API, filesystem, etc.
-let multipartData = new Uint8Array();
+let multipartMessage = new Uint8Array();
 // can also be a stream or any Iterable/AsyncIterable
 // let multipartData = new ReadableStream(...);
 // let multipartData = [new Uint8Array(...), new Uint8Array(...)];
 
 let boundary = '----WebKitFormBoundary56eac3x';
 
-for await (let part of parseMultipart(multipartData, boundary)) {
+for await (let part of parseMultipart(multipartMessage, boundary)) {
   // Do whatever you want with the part...
 }
 ```
@@ -115,13 +115,13 @@ If you'd prefer a callback-based API, instantiate your own `MultipartParser` and
 ```typescript
 import { MultipartParser } from '@mjackson/multipart-parser';
 
-let multipartData = new Uint8Array(); // or ReadableStream<Uint8Array>
+let multipartMessage = new Uint8Array(); // or ReadableStream<Uint8Array>
 let boundary = '...';
 
 let parser = new MultipartParser(boundary);
 
-// parse() will resolve once all your callbacks are done
-await parser.parse(multipartData, async (part) => {
+// parser.parse() will resolve once all your callbacks are done
+await parser.parse(multipartMessage, async (part) => {
   // Do whatever you need...
 });
 ```

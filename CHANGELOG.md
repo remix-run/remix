@@ -1,5 +1,9 @@
 # `multipart-parser` CHANGELOG
 
+## HEAD
+
+- Removed some low-level API (`parser.push` and `parser.reset`) that was duplicating higher-level API. Use `parser.parse` instead.
+
 ## v0.5.0 (Aug 15, 2024)
 
 - Change default `maxFileSize` from 10 MB to `Infinity`

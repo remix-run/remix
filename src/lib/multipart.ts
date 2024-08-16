@@ -15,7 +15,7 @@ export function getMultipartBoundary(contentType: string): string | null {
  */
 export function isMultipartRequest(request: Request): boolean {
   let contentType = request.headers.get('Content-Type');
-  return contentType != null && /^multipart\//i.test(contentType);
+  return contentType != null && contentType.startsWith('multipart/');
 }
 
 /**
@@ -48,7 +48,11 @@ export async function* parseMultipartRequest(
  * building a web server, consider using `parseMultipartRequest(request)` instead.
  */
 export async function* parseMultipart(
-  data: ReadableStream<Uint8Array> | Uint8Array | Iterable<Uint8Array> | AsyncIterable<Uint8Array>,
+  message:
+    | ReadableStream<Uint8Array>
+    | Uint8Array
+    | Iterable<Uint8Array>
+    | AsyncIterable<Uint8Array>,
   boundary: string,
   options?: MultipartParserOptions,
 ): AsyncGenerator<MultipartPart> {
@@ -60,8 +64,9 @@ export async function* parseMultipart(
   let done = false;
 
   parser
-    .parse(data, (part) => {
+    .parse(message, (part) => {
       parts.push(part);
+
       if (resolveNext) {
         resolveNext();
         resolveNext = null;
@@ -129,7 +134,6 @@ export class MultipartParser {
   #state = MultipartParserState.Start;
   #buffer: Uint8Array = EMPTY_BUFFER;
   #bufferLength = 0;
-
   #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
   #bodyLength = 0;
 
@@ -148,61 +152,59 @@ export class MultipartParser {
   }
 
   /**
-   * True if the parser has finished parsing the stream and found the closing multipart boundary.
-   */
-  get done(): boolean {
-    return this.#state === MultipartParserState.Done;
-  }
-
-  /**
-   * Parse a buffer or stream of multipart data and call the given handler for each part it contains.
+   * Parse a stream/buffer multipart message and call the given handler for each part it contains.
    * Resolves when the parse is done and all handlers are finished.
    */
   async parse(
-    data:
+    message:
       | ReadableStream<Uint8Array>
       | Uint8Array
       | Iterable<Uint8Array>
       | AsyncIterable<Uint8Array>,
     handler: (part: MultipartPart) => void,
   ): Promise<void> {
-    this.reset();
+    this.#reset();
 
     let results = [];
 
-    if (data instanceof ReadableStream || isAsyncIterable(data)) {
-      for await (let chunk of data) {
-        for (let part of this.push(chunk)) {
+    if (message instanceof ReadableStream || isAsyncIterable(message)) {
+      for await (let chunk of message) {
+        for (let part of this.#write(chunk)) {
           results.push(handler(part));
         }
       }
-    } else if (data instanceof Uint8Array) {
-      for (let part of this.push(data)) {
+    } else if (message instanceof Uint8Array) {
+      for (let part of this.#write(message)) {
         results.push(handler(part));
       }
-    } else if (isIterable(data)) {
-      for (let chunk of data) {
-        for (let part of this.push(chunk)) {
+    } else if (isIterable(message)) {
+      for (let chunk of message) {
+        for (let part of this.#write(chunk)) {
           results.push(handler(part));
         }
       }
     } else {
-      throw new TypeError('Cannot parse data: expected a stream or buffer');
+      throw new TypeError('Cannot parse multipart message; expected a stream or buffer');
     }
 
-    if (!this.done) {
+    if (this.#state !== MultipartParserState.Done) {
       throw new MultipartParseError('Unexpected end of stream');
     }
 
     await Promise.all(results);
   }
 
-  /**
-   * Push a new chunk of data into the parser and return any parts it contains.
-   */
-  push(chunk: Uint8Array): MultipartPart[] {
-    if (this.done) {
-      throw new MultipartParseError('Cannot push, parser is done');
+  #reset(): void {
+    this.#state = MultipartParserState.Start;
+    this.#buffer = EMPTY_BUFFER;
+    this.#bufferLength = 0;
+    this.#bodyController = null;
+    this.#bodyLength = 0;
+  }
+
+  #write(chunk: Uint8Array): MultipartPart[] {
+    if (this.#state === MultipartParserState.Done) {
+      throw new MultipartParseError('Unexpected data after end of stream');
     }
 
     if (this.#bufferLength > 0) {
@@ -319,17 +321,6 @@ export class MultipartParser {
     }
 
     return parts;
-  }
-
-  /**
-   * Reset the internal state of the parser.
-   */
-  reset(): void {
-    this.#state = MultipartParserState.Start;
-    this.#buffer = EMPTY_BUFFER;
-    this.#bufferLength = 0;
-    this.#bodyController = null;
-    this.#bodyLength = 0;
   }
 
   #read(size: number): Uint8Array {
