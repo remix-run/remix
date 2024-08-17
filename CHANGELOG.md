@@ -1,6 +1,6 @@
 # `multipart-parser` CHANGELOG
 
-## HEAD
+## v0.6.0 (Aug 17, 2024)
 
 - BREAKING: Removed some low-level API (`parser.push()` and `parser.reset()`) that was duplicating higher-level API. Use `parser.parse()` instead.
 - Added `parser.maxHeaderSize` and `parser.maxFileSize` properties
