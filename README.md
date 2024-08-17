@@ -92,16 +92,16 @@ server.listen(8080);
 
 ## Low-level API
 
-If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a few lower-level APIs that you can use directly:
+If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a lower-level API that you can use directly:
 
 ```typescript
 import { parseMultipart } from '@mjackson/multipart-parser';
 
-// Get the data from some API, filesystem, etc.
+// Get the multipart data from some API, filesystem, etc.
 let multipartMessage = new Uint8Array();
 // can also be a stream or any Iterable/AsyncIterable
-// let multipartData = new ReadableStream(...);
-// let multipartData = [new Uint8Array(...), new Uint8Array(...)];
+// let multipartMessage = new ReadableStream(...);
+// let multipartMessage = [new Uint8Array(...), new Uint8Array(...)];
 
 let boundary = '----WebKitFormBoundary56eac3x';
 
@@ -113,17 +113,25 @@ for await (let part of parseMultipart(multipartMessage, boundary)) {
 If you'd prefer a callback-based API, instantiate your own `MultipartParser` and go for it:
 
 ```typescript
-import { MultipartParser } from '@mjackson/multipart-parser';
+import { MultipartParseError, MultipartParser } from '@mjackson/multipart-parser';
 
-let multipartMessage = new Uint8Array(); // or ReadableStream<Uint8Array>
+let multipartMessage = new Uint8Array(); // or ReadableStream<Uint8Array>, etc.
 let boundary = '...';
 
 let parser = new MultipartParser(boundary);
 
-// parser.parse() will resolve once all your callbacks are done
-await parser.parse(multipartMessage, async (part) => {
-  // Do whatever you need...
-});
+try {
+  // parse() resolves once the parse is finished and all your callbacks are done
+  await parser.parse(multipartMessage, async (part) => {
+    // Do whatever you need...
+  });
+} catch (error) {
+  if (error instanceof MultipartParseError) {
+    // The parse failed
+  } else {
+    // One of your handlers failed
+  }
+}
 ```
 
 ## Examples
