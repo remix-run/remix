@@ -55,14 +55,14 @@ async function runBenchmarks(parserName?: string): Promise<BenchmarkResults> {
   if (parserName === 'multipart-parser' || parserName === undefined) {
     results['multipart-parser'] = await runParserBenchmarks(multipartParser);
   }
+  if (parserName === 'multipasta' || parserName === undefined) {
+    results['multipasta'] = await runParserBenchmarks(multipasta);
+  }
   if (parserName === 'busboy' || parserName === undefined) {
     results.busboy = await runParserBenchmarks(busboy);
   }
   if (parserName === 'fastify-busboy' || parserName === undefined) {
     results['@fastify/busboy'] = await runParserBenchmarks(fastifyBusboy);
-  }
-  if (parserName === 'multipasta' || parserName === undefined) {
-    results['multipasta'] = await runParserBenchmarks(multipasta);
   }
 
   return results;
