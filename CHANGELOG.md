@@ -2,7 +2,9 @@
 
 ## HEAD
 
-- Removed some low-level API (`parser.push` and `parser.reset`) that was duplicating higher-level API. Use `parser.parse` instead.
+- BREAKING: Removed some low-level API (`parser.push()` and `parser.reset()`) that was duplicating higher-level API. Use `parser.parse()` instead.
+- Added `parser.maxHeaderSize` and `parser.maxFileSize` properties
+- Small performance improvements when parsing large files
 
 ## v0.5.0 (Aug 15, 2024)
 
