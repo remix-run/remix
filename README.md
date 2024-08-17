@@ -145,56 +145,56 @@ The [`examples` directory](https://github.com/mjackson/multipart-parser/tree/mai
 
 ## Benchmark
 
-`multipart-parser` is designed to be as efficient as possible, only operating on streams of data and never buffering in common usage. This design yields exceptional performance when handling multipart payloads of any size. In most benchmarks, `multipart-parser` is as fast or faster than `busboy`.
+`multipart-parser` is designed to be as efficient as possible, operating mainly on streams of data and rarely buffering in common usage. This design yields exceptional performance when handling multipart payloads of any size. In most benchmarks, `multipart-parser` is as fast or faster than `busboy`.
 
-Important: Benchmarking can be tricky, and results vary greatly depending on platform, parameters, and other factors. So take these results with a grain of salt. The main point of this library is to be portable between JavaScript runtimes. To this end, we run the benchmarks on three major open source JavaScript runtimes: Node.js, Bun, and Deno. These benchmarks are only intended to show that multipart-parser is fast enough to get the job done wherever you run it.
+Important: Benchmarking can be tricky, and results vary greatly depending on platform, parameters, and other factors. So take these results with a grain of salt. The main point of this library is to be portable between JavaScript runtimes. To this end, we run the benchmarks on three major open source JavaScript runtimes: Node.js, Bun, and Deno.
 
 The results of running the benchmarks on my laptop:
 
 ```
-> @mjackson/multipart-parser@0.4.2 bench:node /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.6.0 bench:node /Users/michael/Projects/multipart-parser
 > node --import tsimp/import ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
-CPU: Apple M1 Pro
-Date: 8/13/2024, 6:47:34 PM
-Node.js v22.1.0
+CPU: Apple M2 Pro
+Date: 8/17/2024, 11:00:59 AM
+Node.js v20.15.1
 ┌──────────────────┬──────────────────┬──────────────────┬──────────────────┬───────────────────┐
 │ (index)          │ 1 small file     │ 1 large file     │ 100 small files  │ 5 large files     │
 ├──────────────────┼──────────────────┼──────────────────┼──────────────────┼───────────────────┤
-│ multipart-parser │ '0.01 ms ± 0.08' │ '1.17 ms ± 0.27' │ '0.12 ms ± 0.03' │ '10.94 ms ± 0.24' │
-│ busboy           │ '0.03 ms ± 0.08' │ '3.00 ms ± 0.09' │ '0.21 ms ± 0.03' │ '30.10 ms ± 2.73' │
-│ @fastify/busboy  │ '0.02 ms ± 0.07' │ '1.19 ms ± 0.07' │ '0.38 ms ± 0.07' │ '12.15 ms ± 2.30' │
+│ multipart-parser │ '0.01 ms ± 0.03' │ '1.00 ms ± 0.04' │ '0.30 ms ± 0.15' │ '9.99 ms ± 0.18'  │
+│ busboy           │ '0.03 ms ± 0.07' │ '2.91 ms ± 0.08' │ '0.22 ms ± 0.03' │ '43.27 ms ± 0.47' │
+│ @fastify/busboy  │ '0.03 ms ± 0.09' │ '1.14 ms ± 0.06' │ '0.39 ms ± 0.04' │ '11.48 ms ± 0.38' │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
 
-> @mjackson/multipart-parser@0.4.2 bench:bun /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.6.0 bench:bun /Users/michael/Projects/multipart-parser
 > bun run ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
-CPU: Apple M1 Pro
-Date: 8/13/2024, 6:49:45 PM
+CPU: Apple M2 Pro
+Date: 8/17/2024, 11:03:01 AM
 Bun 1.1.21
 ┌──────────────────┬────────────────┬────────────────┬─────────────────┬─────────────────┐
 │                  │ 1 small file   │ 1 large file   │ 100 small files │ 5 large files   │
 ├──────────────────┼────────────────┼────────────────┼─────────────────┼─────────────────┤
-│ multipart-parser │ 0.01 ms ± 0.07 │ 0.95 ms ± 0.12 │ 0.13 ms ± 0.09  │ 9.13 ms ± 0.29  │
-│           busboy │ 0.03 ms ± 0.10 │ 3.55 ms ± 0.10 │ 0.35 ms ± 0.17  │ 35.54 ms ± 2.57 │
-│  @fastify/busboy │ 0.04 ms ± 0.10 │ 7.17 ms ± 0.10 │ 0.62 ms ± 0.13  │ 71.99 ms ± 3.01 │
+│ multipart-parser │ 0.01 ms ± 0.04 │ 0.81 ms ± 0.07 │ 0.11 ms ± 0.09  │ 7.87 ms ± 0.28  │
+│           busboy │ 0.02 ms ± 0.08 │ 3.36 ms ± 0.15 │ 0.34 ms ± 0.15  │ 33.28 ms ± 0.90 │
+│  @fastify/busboy │ 0.03 ms ± 0.11 │ 6.79 ms ± 0.14 │ 0.61 ms ± 0.13  │ 67.84 ms ± 0.54 │
 └──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┘
 
-> @mjackson/multipart-parser@0.4.2 bench:deno /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.6.0 bench:deno /Users/michael/Projects/multipart-parser
 > deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
-CPU: Apple M1 Pro
-Date: 8/13/2024, 6:52:51 PM
+CPU: Apple M2 Pro
+Date: 8/17/2024, 11:05:51 AM
 Deno 1.45.5
 ┌──────────────────┬──────────────────┬───────────────────┬──────────────────┬────────────────────┐
 │ (idx)            │ 1 small file     │ 1 large file      │ 100 small files  │ 5 large files      │
 ├──────────────────┼──────────────────┼───────────────────┼──────────────────┼────────────────────┤
-│ multipart-parser │ "0.02 ms ± 0.18" │ "1.18 ms ± 1.07"  │ "0.10 ms ± 0.43" │ "11.00 ms ± 1.18"  │
-│ busboy           │ "0.04 ms ± 0.27" │ "3.02 ms ± 1.00"  │ "0.29 ms ± 0.71" │ "30.22 ms ± 2.61"  │
-│ @fastify/busboy  │ "0.05 ms ± 0.31" │ "12.32 ms ± 0.73" │ "0.77 ms ± 0.97" │ "125.04 ms ± 8.39" │
+│ multipart-parser │ "0.01 ms ± 0.17" │ "1.01 ms ± 1.00"  │ "0.08 ms ± 0.39" │ "9.69 ms ± 0.74"   │
+│ busboy           │ "0.04 ms ± 0.29" │ "2.92 ms ± 1.00"  │ "0.28 ms ± 0.70" │ "29.07 ms ± 1.00"  │
+│ @fastify/busboy  │ "0.04 ms ± 0.29" │ "11.44 ms ± 2.90" │ "0.74 ms ± 0.97" │ "114.45 ms ± 1.42" │
 └──────────────────┴──────────────────┴───────────────────┴──────────────────┴────────────────────┘
 ```
 
