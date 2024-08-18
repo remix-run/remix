@@ -219,36 +219,50 @@ export class MultipartParser {
     }
 
     let index = 0;
-    let length = chunk.length;
+    let chunkLength = chunk.length;
 
     if (this.#buffer !== null) {
-      let newChunk = new Uint8Array(this.#buffer.length + length);
+      let newChunk = new Uint8Array(this.#buffer.length + chunkLength);
       newChunk.set(this.#buffer, 0);
       newChunk.set(chunk, this.#buffer.length);
       chunk = newChunk;
-      length = chunk.length;
+      chunkLength = chunk.length;
       this.#buffer = null;
     }
 
-    if (this.#state === MultipartParserState.Start) {
-      if (length < this.#openingBoundaryLength) {
-        this.#buffer = chunk;
-        return;
-      }
-
-      let boundaryIndex = this.#findOpeningBoundary(chunk);
-      if (boundaryIndex !== 0) {
-        throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
-      }
-
-      index += this.#openingBoundaryLength;
-
-      this.#state = MultipartParserState.AfterBoundary;
-    }
-
     while (true) {
+      if (this.#state === MultipartParserState.Body) {
+        if (chunkLength - index < this.#boundaryLength) {
+          this.#buffer = chunk.subarray(index);
+          break;
+        }
+
+        let boundaryIndex = this.#findBoundary(chunk, index);
+
+        if (boundaryIndex === -1) {
+          // No boundary found, but there may be a partial match at the end of the chunk.
+          let partialTailIndex = this.#findPartialTailBoundary(chunk);
+
+          if (partialTailIndex === -1) {
+            this.#writeBody(index === 0 ? chunk : chunk.subarray(index));
+          } else {
+            this.#writeBody(chunk.subarray(index, partialTailIndex));
+            this.#buffer = chunk.subarray(partialTailIndex);
+          }
+
+          break;
+        }
+
+        this.#writeBody(chunk.subarray(index, boundaryIndex));
+        this.#closeBody();
+
+        index = boundaryIndex + this.#boundaryLength;
+
+        this.#state = MultipartParserState.AfterBoundary;
+      }
+
       if (this.#state === MultipartParserState.AfterBoundary) {
-        if (length - index < 2) {
+        if (chunkLength - index < 2) {
           this.#buffer = chunk.subarray(index);
           break;
         }
@@ -264,7 +278,7 @@ export class MultipartParser {
       }
 
       if (this.#state === MultipartParserState.Header) {
-        if (length - index < 4) {
+        if (chunkLength - index < 4) {
           this.#buffer = chunk.subarray(index);
           break;
         }
@@ -272,7 +286,7 @@ export class MultipartParser {
         let headerEndIndex = findDoubleNewline(chunk, index);
 
         if (headerEndIndex === -1) {
-          if (length - index > this.maxHeaderSize) {
+          if (chunkLength - index > this.maxHeaderSize) {
             throw new MultipartParseError(
               `Header size exceeds maximum allowed size of ${this.maxHeaderSize} bytes`,
             );
@@ -303,34 +317,21 @@ export class MultipartParser {
         handler(part);
 
         this.#state = MultipartParserState.Body;
+
+        continue;
       }
 
-      if (this.#state === MultipartParserState.Body) {
-        if (length - index < this.#boundaryLength) {
-          this.#buffer = chunk.subarray(index);
+      if (this.#state === MultipartParserState.Start) {
+        if (chunkLength < this.#openingBoundaryLength) {
+          this.#buffer = chunk;
           break;
         }
 
-        let boundaryIndex = this.#findBoundary(chunk, index);
-
-        if (boundaryIndex === -1) {
-          // No boundary found, but there may be a partial match at the end of the chunk.
-          let partialTailIndex = this.#findPartialTailBoundary(chunk);
-
-          if (partialTailIndex === -1) {
-            this.#writeBody(chunk.subarray(index));
-          } else {
-            this.#writeBody(chunk.subarray(index, partialTailIndex));
-            this.#buffer = chunk.subarray(partialTailIndex);
-          }
-
-          break;
+        if (this.#findOpeningBoundary(chunk) !== 0) {
+          throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
         }
 
-        this.#writeBody(chunk.subarray(index, boundaryIndex));
-        this.#closeBody();
-
-        index = boundaryIndex + this.#boundaryLength;
+        index += this.#openingBoundaryLength;
 
         this.#state = MultipartParserState.AfterBoundary;
       }

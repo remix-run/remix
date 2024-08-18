@@ -1,5 +1,9 @@
 # `multipart-parser` CHANGELOG
 
+## HEAD
+
+- More small performance improvements
+
 ## v0.6.0 (Aug 17, 2024)
 
 - BREAKING: Removed some low-level API (`parser.push()` and `parser.reset()`) that was duplicating higher-level API. Use `parser.parse()` instead.
