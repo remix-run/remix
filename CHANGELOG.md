@@ -1,6 +1,6 @@
 # `multipart-parser` CHANGELOG
 
-## HEAD
+## v0.6.1 (Aug 18, 2024)
 
 - More small performance improvements
 
