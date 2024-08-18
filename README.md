@@ -152,52 +152,52 @@ Important: Benchmarking can be tricky, and results vary greatly depending on pla
 The results of running the benchmarks on my laptop:
 
 ```
-> @mjackson/multipart-parser@0.6.0 bench:node /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.6.1 bench:node /Users/michael/Projects/multipart-parser
 > node --import tsimp/import ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
-CPU: Apple M2 Pro
-Date: 8/17/2024, 11:26:11 AM
-Node.js v20.15.1
+CPU: Apple M1 Pro
+Date: 8/18/2024, 4:18:39 PM
+Node.js v22.1.0
 ┌──────────────────┬──────────────────┬──────────────────┬──────────────────┬───────────────────┐
 │ (index)          │ 1 small file     │ 1 large file     │ 100 small files  │ 5 large files     │
 ├──────────────────┼──────────────────┼──────────────────┼──────────────────┼───────────────────┤
-│ multipart-parser │ '0.01 ms ± 0.02' │ '1.00 ms ± 0.05' │ '0.31 ms ± 0.15' │ '9.97 ms ± 0.26'  │
-│ multipasta       │ '0.01 ms ± 0.03' │ '0.97 ms ± 0.06' │ '0.16 ms ± 0.02' │ '9.92 ms ± 1.48'  │
-│ busboy           │ '0.03 ms ± 0.08' │ '2.92 ms ± 0.08' │ '0.22 ms ± 0.03' │ '43.44 ms ± 1.83' │
-│ @fastify/busboy  │ '0.03 ms ± 0.09' │ '1.11 ms ± 0.05' │ '0.38 ms ± 0.03' │ '11.19 ms ± 0.24' │
+│ multipart-parser │ '0.01 ms ± 0.03' │ '1.06 ms ± 0.04' │ '0.10 ms ± 0.03' │ '10.60 ms ± 0.22' │
+│ multipasta       │ '0.01 ms ± 0.03' │ '1.06 ms ± 0.03' │ '0.15 ms ± 0.02' │ '10.70 ms ± 2.70' │
+│ busboy           │ '0.03 ms ± 0.09' │ '3.01 ms ± 0.08' │ '0.22 ms ± 0.03' │ '29.91 ms ± 0.91' │
+│ @fastify/busboy  │ '0.03 ms ± 0.07' │ '1.20 ms ± 0.08' │ '0.39 ms ± 0.07' │ '11.86 ms ± 0.17' │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
 
-> @mjackson/multipart-parser@0.6.0 bench:bun /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.6.1 bench:bun /Users/michael/Projects/multipart-parser
 > bun run ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
-CPU: Apple M2 Pro
-Date: 8/17/2024, 11:28:20 AM
+CPU: Apple M1 Pro
+Date: 8/18/2024, 4:20:58 PM
 Bun 1.1.21
 ┌──────────────────┬────────────────┬────────────────┬─────────────────┬─────────────────┐
 │                  │ 1 small file   │ 1 large file   │ 100 small files │ 5 large files   │
 ├──────────────────┼────────────────┼────────────────┼─────────────────┼─────────────────┤
-│ multipart-parser │ 0.01 ms ± 0.05 │ 0.79 ms ± 0.06 │ 0.11 ms ± 0.09  │ 7.76 ms ± 0.28  │
-│       multipasta │ 0.01 ms ± 0.07 │ 0.93 ms ± 0.70 │ 0.23 ms ± 0.39  │ 7.57 ms ± 0.65  │
-│           busboy │ 0.03 ms ± 0.10 │ 3.30 ms ± 0.09 │ 0.33 ms ± 0.15  │ 33.15 ms ± 2.07 │
-│  @fastify/busboy │ 0.04 ms ± 0.14 │ 6.67 ms ± 0.10 │ 0.59 ms ± 0.13  │ 67.41 ms ± 3.33 │
+│ multipart-parser │ 0.01 ms ± 0.04 │ 0.91 ms ± 0.09 │ 0.11 ms ± 0.05  │ 8.23 ms ± 0.18  │
+│       multipasta │ 0.01 ms ± 0.03 │ 0.87 ms ± 0.08 │ 0.22 ms ± 0.15  │ 8.09 ms ± 0.15  │
+│           busboy │ 0.03 ms ± 0.07 │ 3.59 ms ± 0.13 │ 0.36 ms ± 0.17  │ 35.26 ms ± 0.39 │
+│  @fastify/busboy │ 0.04 ms ± 0.11 │ 7.23 ms ± 0.15 │ 0.63 ms ± 0.15  │ 71.86 ms ± 0.53 │
 └──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┘
 
-> @mjackson/multipart-parser@0.6.0 bench:deno /Users/michael/Projects/multipart-parser
+> @mjackson/multipart-parser@0.6.1 bench:deno /Users/michael/Projects/multipart-parser
 > deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts
 
 Platform: Darwin (23.5.0)
-CPU: Apple M2 Pro
-Date: 8/17/2024, 11:31:27 AM
+CPU: Apple M1 Pro
+Date: 8/18/2024, 4:24:16 PM
 Deno 1.45.5
 ┌──────────────────┬──────────────────┬───────────────────┬──────────────────┬────────────────────┐
 │ (idx)            │ 1 small file     │ 1 large file      │ 100 small files  │ 5 large files      │
 ├──────────────────┼──────────────────┼───────────────────┼──────────────────┼────────────────────┤
-│ multipart-parser │ "0.01 ms ± 0.17" │ "1.00 ms ± 1.00"  │ "0.08 ms ± 0.39" │ "9.77 ms ± 1.02"   │
-│ multipasta       │ "0.02 ms ± 0.18" │ "1.41 ms ± 0.91"  │ "0.19 ms ± 0.58" │ "13.96 ms ± 2.40"  │
-│ busboy           │ "0.03 ms ± 0.25" │ "2.90 ms ± 0.99"  │ "0.28 ms ± 0.70" │ "29.18 ms ± 2.17"  │
-│ @fastify/busboy  │ "0.05 ms ± 0.30" │ "11.40 ms ± 1.01" │ "0.74 ms ± 0.97" │ "114.81 ms ± 6.03" │
+│ multipart-parser │ "0.01 ms ± 0.15" │ "1.00 ms ± 1.00"  │ "0.08 ms ± 0.39" │ "10.08 ms ± 0.41"  │
+│ multipasta       │ "0.01 ms ± 0.14" │ "1.02 ms ± 1.00"  │ "0.17 ms ± 0.56" │ "14.59 ms ± 0.92"  │
+│ busboy           │ "0.04 ms ± 0.28" │ "3.04 ms ± 1.00"  │ "0.30 ms ± 0.71" │ "29.86 ms ± 0.83"  │
+│ @fastify/busboy  │ "0.05 ms ± 0.31" │ "12.36 ms ± 0.78" │ "0.78 ms ± 0.98" │ "123.54 ms ± 5.04" │
 └──────────────────┴──────────────────┴───────────────────┴──────────────────┴────────────────────┘
 ```
 
