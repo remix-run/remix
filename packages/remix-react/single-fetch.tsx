@@ -320,11 +320,11 @@ export function singleFetchUrl(reqUrl: URL | string) {
 
 async function fetchAndDecode(url: URL, init: RequestInit) {
   let res = await fetch(url, init);
-  // Don't do a hard check against the header here.  We'll get `text/x-turbo`
+  // Don't do a hard check against the header here.  We'll get `text/x-script`
   // when we have a running server, but if folks want to prerender `.data` files
   // and serve them from a CDN we should let them come back with whatever
   // Content-Type their CDN provides and not force them to make sure `.data`
-  // files are served as `text/x-turbo`.  We'll throw if we can't decode anyway.
+  // files are served as `text/x-script`.  We'll throw if we can't decode anyway.
   invariant(res.body, "No response body to decode");
   try {
     let decoded = await decodeViaTurboStream(res.body, window);
