@@ -1,14 +1,11 @@
 {
-  "name": "form-data-parser",
+  "name": "@mjackson/form-data-parser",
   "version": "1.0.0",
-  "description": "",
+  "description": "A request.formData() replacement with pluggable file upload handling",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "type": "module",
   "dependencies": {
     "@mjackson/multipart-parser": "^0.6.1"
   },
@@ -17,5 +14,18 @@
     "prettier": "^3.3.3",
     "tsimp": "^2.0.11",
     "typescript": "^5.5.4"
-  }
+  },
+  "scripts": {
+    "build": "tsc --outDir dist --project tsconfig.lib.json",
+    "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
+    "prepare": "pnpm run build",
+    "version": "node scripts/version.js"
+  },
+  "packageManager": "pnpm@9.7.1",
+  "keywords": [
+    "form-data",
+    "FormData",
+    "multipart",
+    "parser"
+  ]
 }
