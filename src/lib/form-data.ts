@@ -5,17 +5,6 @@ import {
 } from "@mjackson/multipart-parser";
 
 /**
- * Returns true if the request is URL encoded.
- */
-export function isUrlEncodedRequest(request: Request): boolean {
-  let contentType = request.headers.get("Content-Type");
-  return (
-    contentType != null &&
-    contentType.startsWith("application/x-www-form-urlencoded")
-  );
-}
-
-/**
  * A function used for handling file uploads.
  */
 export interface FileUploadHandler {
@@ -23,9 +12,8 @@ export interface FileUploadHandler {
 }
 
 async function defaultFileUploadHandler(part: MultipartPart): Promise<File> {
-  return new File([await part.arrayBuffer()], part.filename ?? "", {
-    type: part.mediaType
-  });
+  let buffer = await part.arrayBuffer();
+  return new File([buffer], part.filename ?? "", { type: part.mediaType });
 }
 
 /**
@@ -40,17 +28,6 @@ export async function parseFormData(
   request: Request,
   handleFileUpload: FileUploadHandler = defaultFileUploadHandler
 ): Promise<FormData> {
-  if (isUrlEncodedRequest(request)) {
-    let formData = new FormData();
-    let params = new URLSearchParams(await request.text());
-
-    for (let [key, value] of params) {
-      formData.append(key, value);
-    }
-
-    return formData;
-  }
-
   if (isMultipartRequest(request)) {
     let formData = new FormData();
 
@@ -67,9 +44,5 @@ export async function parseFormData(
     return formData;
   }
 
-  throw new Error(
-    `Cannot parse form data from request Content-Type "${request.headers.get(
-      "Content-Type"
-    )}"`
-  );
+  return request.formData();
 }

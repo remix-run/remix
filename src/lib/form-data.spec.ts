@@ -1,22 +1,38 @@
 import * as assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { isUrlEncodedRequest, parseFormData } from "./form-data.js";
+import { parseFormData } from "./form-data.js";
 
-describe("isUrlEncodedRequest", () => {
-  it('returns true for "application/x-www-form-urlencoded" requests', () => {
-    let request = new Request("https://example.com", {
-      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+describe("parseFormData", () => {
+  it("should parse a multipart request", async () => {
+    let request = new Request("http://localhost:8080", {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW"
+      },
+      body: [
+        "------WebKitFormBoundary7MA4YWxkTrZu0gW",
+        'Content-Disposition: form-data; name="text"',
+        "",
+        "Hello, World!",
+        "------WebKitFormBoundary7MA4YWxkTrZu0gW",
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        "Content-Type: text/plain",
+        "",
+        "This is an example file.",
+        "------WebKitFormBoundary7MA4YWxkTrZu0gW--"
+      ].join("\r\n")
     });
 
-    assert.ok(isUrlEncodedRequest(request));
-  });
+    let formData = await parseFormData(request);
 
-  it('returns false for "multipart/form-data" requests', () => {
-    let request = new Request("https://example.com", {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
+    assert.equal(formData.get("text"), "Hello, World!");
 
-    assert.ok(!isUrlEncodedRequest(request));
+    let file = formData.get("file");
+    assert.ok(file instanceof File);
+    assert.equal(file.name, "example.txt");
+    assert.equal(file.type, "text/plain");
+    assert.equal(await file.text(), "This is an example file.");
   });
 });
