@@ -1,6 +1,6 @@
 {
   "name": "@mjackson/multipart-parser",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "A fast, efficient parser for multipart streams in any JavaScript environment",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
