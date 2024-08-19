@@ -1,9 +1,9 @@
-# `multipart-parser` CHANGELOG
+# multipart-parser CHANGELOG
 
 ## HEAD
 
 - Provide correct type for `part.arrayBuffer()`
-- `part.isFile` now defaults to `true` if `part.mediaType === 'application/octet-stream'`
+- `part.isFile` now correctly detects `part.mediaType === 'application/octet-stream'`
 
 ## v0.6.1 (Aug 18, 2024)
 
