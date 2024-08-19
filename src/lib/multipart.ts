@@ -386,8 +386,8 @@ export class MultipartPart {
   /**
    * The content of this part as an `ArrayBuffer`.
    */
-  async arrayBuffer(): Promise<ArrayBufferLike> {
-    return (await this.bytes()).buffer;
+  async arrayBuffer(): Promise<ArrayBuffer> {
+    return (await this.bytes()).buffer as ArrayBuffer;
   }
 
   /**
@@ -448,7 +448,7 @@ export class MultipartPart {
    * True if this part originated from a file upload.
    */
   get isFile(): boolean {
-    return this.filename !== undefined;
+    return this.filename !== undefined || this.mediaType === 'application/octet-stream';
   }
 
   /**
