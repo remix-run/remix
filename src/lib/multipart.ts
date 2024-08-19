@@ -303,8 +303,6 @@ export class MultipartParser {
         }
 
         let header = chunk.subarray(index, headerEndIndex);
-        index = headerEndIndex + 4; // Skip header + \r\n\r\n
-
         let part = new MultipartPart(
           header,
           new ReadableStream({
@@ -315,6 +313,8 @@ export class MultipartParser {
         );
 
         handler(part);
+
+        index = headerEndIndex + 4; // Skip header + \r\n\r\n
 
         this.#state = MultipartParserState.Body;
 
@@ -331,7 +331,7 @@ export class MultipartParser {
           throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
         }
 
-        index += this.#openingBoundaryLength;
+        index = this.#openingBoundaryLength;
 
         this.#state = MultipartParserState.AfterBoundary;
       }
