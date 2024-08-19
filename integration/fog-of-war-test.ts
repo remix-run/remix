@@ -1,4 +1,3 @@
-import type { Request as PlaywrightRequest } from "@playwright/test";
 import { test, expect } from "@playwright/test";
 
 import {
