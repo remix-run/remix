@@ -1,0 +1,5 @@
+.tsimp
+dist
+node_modules
+
+*.tsbuildinfo
