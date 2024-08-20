@@ -16,7 +16,11 @@ You can export an optional `handleDataRequest` function that will allow you to m
 ```tsx
 export function handleDataRequest(
   response: Response,
-  { request, params, context }: DataFunctionArgs
+  {
+    request,
+    params,
+    context,
+  }: LoaderFunctionArgs | ActionFunctionArgs
 ) {
   response.headers.set("X-Custom-Header", "value");
   return response;
@@ -30,7 +34,11 @@ By default, Remix will log encountered server-side errors to the console. If you
 ```tsx
 export function handleError(
   error: unknown,
-  { request, params, context }: DataFunctionArgs
+  {
+    request,
+    params,
+    context,
+  }: LoaderFunctionArgs | ActionFunctionArgs
 ) {
   if (!request.signal.aborted) {
     sendErrorToErrorReportingService(error);

@@ -1,5 +1,191 @@
 # `@remix-run/serve`
 
+## 2.11.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.11.2`
+  - `@remix-run/express@2.11.2`
+
+## 2.11.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.11.1`
+  - `@remix-run/express@2.11.1`
+
+## 2.11.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.11.0`
+  - `@remix-run/express@2.11.0`
+
+## 2.10.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.10.3`
+  - `@remix-run/node@2.10.3`
+
+## 2.10.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.10.2`
+  - `@remix-run/express@2.10.2`
+
+## 2.10.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.10.1`
+  - `@remix-run/node@2.10.1`
+
+## 2.10.0
+
+### Patch Changes
+
+- Upgrade `express` dependency to `^4.19.2` ([#9184](https://github.com/remix-run/remix/pull/9184))
+- Updated dependencies:
+  - `@remix-run/express@2.10.0`
+  - `@remix-run/node@2.10.0`
+
+## 2.9.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.9.2`
+  - `@remix-run/express@2.9.2`
+
+## 2.9.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.9.1`
+  - `@remix-run/node@2.9.1`
+
+## 2.9.0
+
+### Minor Changes
+
+- Put `undici` fetch polyfill behind a new `installGlobals({ nativeFetch: true })` parameter ([#9198](https://github.com/remix-run/remix/pull/9198))
+  - `remix-serve` will default to using `undici` for the fetch polyfill if `future.unstable_singleFetch` is enabled because the single fetch implementation relies on the `undici` polyfill
+  - Any users opting into Single Fetch and managing their own polyfill will need to pass the flag to `installGlobals` on their own to avoid runtime errors with Single Fetch
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.9.0`
+  - `@remix-run/express@2.9.0`
+
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.8.1`
+  - `@remix-run/node@2.8.1`
+
+## 2.8.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.8.0`
+  - `@remix-run/node@2.8.0`
+
+## 2.7.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.7.2`
+  - `@remix-run/node@2.7.2`
+
+## 2.7.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.7.1`
+  - `@remix-run/node@2.7.1`
+
+## 2.7.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.7.0`
+  - `@remix-run/node@2.7.0`
+
+## 2.6.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.6.0`
+  - `@remix-run/express@2.6.0`
+
+## 2.5.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.5.1`
+  - `@remix-run/node@2.5.1`
+
+## 2.5.0
+
+### Patch Changes
+
+- Don't try to load sourcemaps if they don't exist on disk ([#8446](https://github.com/remix-run/remix/pull/8446))
+- Updated dependencies:
+  - `@remix-run/node@2.5.0`
+  - `@remix-run/express@2.5.0`
+
+## 2.4.1
+
+### Patch Changes
+
+- Use node `fileURLToPath` to convert source map URL to path ([#8321](https://github.com/remix-run/remix/pull/8321))
+- Updated dependencies:
+  - `@remix-run/node@2.4.1`
+  - `@remix-run/express@2.4.1`
+
+## 2.4.0
+
+### Patch Changes
+
+- Fix source map loading when file has `?t=timestamp` suffix (rebuilds) ([#8174](https://github.com/remix-run/remix/pull/8174))
+- Updated dependencies:
+  - `@remix-run/node@2.4.0`
+  - `@remix-run/express@2.4.0`
+
+## 2.3.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.3.1`
+  - `@remix-run/node@2.3.1`
+
+## 2.3.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@2.3.0`
+  - `@remix-run/node@2.3.0`
+
 ## 2.2.0
 
 ### Patch Changes

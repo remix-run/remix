@@ -217,7 +217,7 @@ export function getKeyedLinksForMatches(
       let route = manifest.routes[match.route.id];
       return [
         route.css ? route.css.map((href) => ({ rel: "stylesheet", href })) : [],
-        module.links?.() || [],
+        module?.links?.() || [],
       ];
     })
     .flat(2);
@@ -425,7 +425,11 @@ export function getDataLinkHrefs(
   let path = parsePathPatch(page);
   return dedupeHrefs(
     matches
-      .filter((match) => manifest.routes[match.route.id].hasLoader)
+      .filter(
+        (match) =>
+          manifest.routes[match.route.id].hasLoader &&
+          !manifest.routes[match.route.id].hasClientLoader
+      )
       .map((match) => {
         let { pathname, search } = path;
         let searchParams = new URLSearchParams(search);

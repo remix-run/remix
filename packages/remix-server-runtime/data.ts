@@ -7,8 +7,9 @@ import {
 } from "./responses";
 import type {
   ActionFunction,
-  DataFunctionArgs,
+  ActionFunctionArgs,
   LoaderFunction,
+  LoaderFunctionArgs,
 } from "./routeModules";
 
 /**
@@ -26,18 +27,20 @@ export interface AppLoadContext {
  */
 export type AppData = unknown;
 
-export async function callRouteActionRR({
+export async function callRouteAction({
   loadContext,
   action,
   params,
   request,
   routeId,
+  singleFetch,
 }: {
   request: Request;
   action: ActionFunction;
-  params: DataFunctionArgs["params"];
+  params: ActionFunctionArgs["params"];
   loadContext: AppLoadContext;
   routeId: string;
+  singleFetch: boolean;
 }) {
   let result = await action({
     request: stripDataParam(stripIndexParam(request)),
@@ -52,21 +55,28 @@ export async function callRouteActionRR({
     );
   }
 
+  // Allow naked object returns when single fetch is enabled
+  if (singleFetch) {
+    return result;
+  }
+
   return isResponse(result) ? result : json(result);
 }
 
-export async function callRouteLoaderRR({
+export async function callRouteLoader({
   loadContext,
   loader,
   params,
   request,
   routeId,
+  singleFetch,
 }: {
   request: Request;
   loader: LoaderFunction;
-  params: DataFunctionArgs["params"];
+  params: LoaderFunctionArgs["params"];
   loadContext: AppLoadContext;
   routeId: string;
+  singleFetch: boolean;
 }) {
   let result = await loader({
     request: stripDataParam(stripIndexParam(request)),
@@ -88,6 +98,11 @@ export async function callRouteLoaderRR({
         result.init
       );
     }
+    return result;
+  }
+
+  // Allow naked object returns when single fetch is enabled
+  if (singleFetch) {
     return result;
   }
 

@@ -35,11 +35,13 @@ export async function action() {
 
 Route files can export a [`loader`][loader] function that provides data to the route component. When the user navigates to a matching route, the data is first loaded and then the page is rendered.
 
-```tsx filename=routes/account.tsx lines=[1-2,4-10]
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=routes/account.tsx lines=[1-2,4-12]
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const user = await getUser(request);
   return json({
     displayName: user.displayName,
@@ -60,12 +62,14 @@ export async function action() {
 
 The default export of the route file is the component that renders. It reads the loader data with [`useLoaderData`][use_loader_data]:
 
-```tsx lines=[3,13-28]
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[3,15-30]
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, Form } from "@remix-run/react";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const user = await getUser(request);
   return json({
     displayName: user.displayName,
@@ -76,7 +80,7 @@ export async function loader({ request }: LoaderArgs) {
 export default function Component() {
   const user = useLoaderData<typeof loader>();
   return (
-    <Form action="/account">
+    <Form method="post" action="/account">
       <h1>Settings for {user.displayName}</h1>
 
       <input
@@ -99,15 +103,17 @@ export async function action() {
 
 Finally, the action on the route matching the form's action attribute is called when the form is submitted. In this example it's the same route. The values in the form fields will be available on the standard [`request.formData()`][request_form_data] API. Note the `name` attribute on the inputs is coupled to the [`formData.get(fieldName)`][form_data_get] getter.
 
-```tsx lines=[2,33-42]
+```tsx lines=[2,35-47]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, Form } from "@remix-run/react";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const user = await getUser(request);
   return json({
     displayName: user.displayName,
@@ -118,7 +124,7 @@ export async function loader({ request }: LoaderArgs) {
 export default function Component() {
   const user = useLoaderData<typeof loader>();
   return (
-    <Form action="/account">
+    <Form method="post" action="/account">
       <h1>Settings for {user.displayName}</h1>
 
       <input
@@ -132,7 +138,9 @@ export default function Component() {
   );
 }
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const formData = await request.formData();
   const user = await getUser(request);
 
@@ -149,13 +157,23 @@ export async function action({ request }: ActionArgs) {
 
 When the user submits the form:
 
-1. Remix sends the form data to the route action.
+1. Remix sends the form data to the route action via `fetch` and pending states become available through hooks like `useNavigation` and `useFetcher`.
 2. After the action completes, loaders are revalidated to get the new server state.
-3. `useLoaderData` returns the updated values from the server.
+3. `useLoaderData` returns the updated values from the server and the pending states go back to idle.
 
 In this way, the UI is kept in sync with server state without writing any code for that synchronization.
 
 There are various ways to submit a form besides an HTML form element (like in response to drag and drop, or an onChange event). There is also a lot more to talk about around form validation, error handling, pending states, etc. We'll get to all of that later, but this is the gist of data flow in Remix.
+
+## Before JavaScript Loads
+
+When you send HTML from the server, it's best to have it work even before JavaScript loads. Typical data flows in Remix do this automatically. The flow is the same, but the browser does some of the work.
+
+When the user submits the form before JavaScript loads:
+
+1. The browser submits the form to the action (instead of `fetch`) and the browsers pending states activate (spinning favicon)
+2. After the action completes, loaders are called
+3. Remix renders the page and sends HTML to the browser
 
 [loader]: ../route/loader
 [use_loader_data]: ../hooks/use-loader-data

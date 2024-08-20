@@ -4,11 +4,25 @@ title: Route File Naming
 
 # Route File Naming
 
-While you can configure routes in [`remix.config.js`][remix_config], most routes are created with this file system convention. Add a file, get a route.
+While you can configure routes via [the "routes" plugin option][routes_config], most routes are created with this file system convention. Add a file, get a route.
 
 Please note that you can use either `.js`, `.jsx`, `.ts` or `.tsx` file extensions. We'll stick with `.tsx` in the examples to avoid duplication.
 
 <docs-info>Dilum Sanjaya made [an awesome visualization][an_awesome_visualization] of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
+
+## Disclaimer
+
+Before we go too far into the Remix convention though, we'd like to point out that file-based routing is an **incredibly** subjective idea. Some folks love the "flat" routes idea, some folks hate it and would prefer nesting routes in folders. Some folks simply hate file-based routing and would prefer to configure routes via JSON. Some folks would prefer to configure routes via JSX like they did in their React Router SPA's.
+
+The point is, we are well aware of this and from the get-go, Remix has always given you a first-class way to opt-out via the [`routes`][routes_config]/[`ignoredRouteFiles`][ignoredroutefiles_config] and [configure your routes manually][manual-route-configuration]. But, there has to be _some_ default so that folks can get up and running quickly and easily - and we think that the flat routes convention document below is a pretty good default that scales well for small-to-medium sized apps.
+
+Large applications with hundred or thousands of routes will _always_ be a bit chaotic no matter what convention you use - and the idea is that via the `routes` config, you get to build _exactly_ the convention that works best for your application/team. It would be quite literally impossible for Remix to have a default convention that made everyone happy. We'd much rather give you a fairly straightforward default, and then let the community build any number of conventions you can pick and choose from.
+
+So, before we dive into the details of the Remix default convention, here's some community alternatives you can check out if you decide that our default is not your cup of tea.
+
+- [`remix-flat-routes`][flat_routes] - The Remix default is basically a simplified version of this package. The author has continued to iterate on and evolve this package so if you generally like the "flat routes" idea but want a bit more power (including a hybrid approach of files and folders), definitely check this one out.
+- [`remix-custom-routes`][custom_routes] - If you want even more customization, this package lets you define that types of files should be treated as routes. This lets you go beyond the simple flat/nested concept and do something such as _"any file with an extension of `.route.tsx` is a route"_.
+- [`remix-json-routes`][json_routes] - If you just want to specify your routes via a config file, this is your jam - just provide Remix a JSON object with your routes and skip the flat/nested concept entirely. There's even a JSX option in there too.
 
 ## Root Route
 
@@ -84,6 +98,8 @@ Adding a `.` to a route filename will create a `/` in the URL.
 
 | URL                        | Matched Route                            |
 | -------------------------- | ---------------------------------------- |
+| `/`                        | `app/routes/_index.tsx`                  |
+| `/about`                   | `app/routes/about.tsx`                   |
 | `/concerts/trending`       | `app/routes/concerts.trending.tsx`       |
 | `/concerts/salt-lake-city` | `app/routes/concerts.salt-lake-city.tsx` |
 | `/concerts/san-diego`      | `app/routes/concerts.san-diego.tsx`      |
@@ -106,6 +122,8 @@ Usually your URLs aren't static but data-driven. Dynamic segments allow you to m
 
 | URL                        | Matched Route                      |
 | -------------------------- | ---------------------------------- |
+| `/`                        | `app/routes/_index.tsx`            |
+| `/about`                   | `app/routes/about.tsx`             |
 | `/concerts/trending`       | `app/routes/concerts.trending.tsx` |
 | `/concerts/salt-lake-city` | `app/routes/concerts.$city.tsx`    |
 | `/concerts/san-diego`      | `app/routes/concerts.$city.tsx`    |
@@ -196,6 +214,7 @@ Sometimes you want the URL to be nested, but you don't want the automatic layout
 | URL                        | Matched Route                      | Layout                    |
 | -------------------------- | ---------------------------------- | ------------------------- |
 | `/`                        | `app/routes/_index.tsx`            | `app/root.tsx`            |
+| `/about`                   | `app/routes/about.tsx`             | `app/root.tsx`            |
 | `/concerts/mine`           | `app/routes/concerts_.mine.tsx`    | `app/root.tsx`            |
 | `/concerts/trending`       | `app/routes/concerts.trending.tsx` | `app/routes/concerts.tsx` |
 | `/concerts/salt-lake-city` | `app/routes/concerts.$city.tsx`    | `app/routes/concerts.tsx` |
@@ -227,6 +246,7 @@ Sometimes you want to share a layout with a group of routes without adding any p
 | `/`                        | `app/routes/_index.tsx`         | `app/root.tsx`            |
 | `/login`                   | `app/routes/_auth.login.tsx`    | `app/routes/_auth.tsx`    |
 | `/register`                | `app/routes/_auth.register.tsx` | `app/routes/_auth.tsx`    |
+| `/concerts`                | `app/routes/concerts.tsx`       | `app/routes/concerts.tsx` |
 | `/concerts/salt-lake-city` | `app/routes/concerts.$city.tsx` | `app/routes/concerts.tsx` |
 
 Think of the `_leading` underscore as a blanket you're pulling over the filename, hiding the filename from the URL.
@@ -273,6 +293,7 @@ While [dynamic segments][dynamic_segments] match a single path segment (the stuf
 | URL                                          | Matched Route            |
 | -------------------------------------------- | ------------------------ |
 | `/`                                          | `app/routes/_index.tsx`  |
+| `/about`                                     | `app/routes/about.tsx`   |
 | `/beef/and/cheese`                           | `app/routes/$.tsx`       |
 | `/files`                                     | `app/routes/files.$.tsx` |
 | `/files/talks/remix-conf_old.pdf`            | `app/routes/files.$.tsx` |
@@ -282,7 +303,9 @@ While [dynamic segments][dynamic_segments] match a single path segment (the stuf
 Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
 
 ```tsx filename=app/routes/files.$.tsx
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const filePath = params["*"];
   return fake.getFileInfo(filePath);
 }
@@ -331,7 +354,7 @@ app/
 │   │   └── scroll-experience.tsx
 │   ├── _landing.about/
 │   │   ├── employee-profile-card.tsx
-│   │   ├── get-employee-data.server.tsx
+│   │   ├── get-employee-data.server.ts
 │   │   ├── route.tsx
 │   │   └── team-photo.jpg
 │   ├── _landing/
@@ -342,7 +365,7 @@ app/
 │   │   ├── route.tsx
 │   │   └── stats.tsx
 │   ├── app.projects/
-│   │   ├── get-projects.server.tsx
+│   │   ├── get-projects.server.ts
 │   │   ├── project-buttons.tsx
 │   │   ├── project-card.tsx
 │   │   └── route.tsx
@@ -353,7 +376,7 @@ app/
 │   ├── app_.projects.$id.roadmap/
 │   │   ├── chart.tsx
 │   │   ├── route.tsx
-│   │   └── update-timeline.server.tsx
+│   │   └── update-timeline.server.ts
 │   └── contact-us.tsx
 └── root.tsx
 ```
@@ -377,12 +400,6 @@ Our general recommendation for scale is to make every route a folder and put the
 - Easy to identify shared modules, so tread lightly when changing them
 - Easy to organize and refactor the modules for a specific route without creating "file organization fatigue" and cluttering up other parts of the app
 
-## More Flexibility
-
-While we like this file convention, we recognize that at a certain scale many organizations won't like it. You can always define your routes programmatically in [`remix.config.js`][remix_config].
-
-There's also the [`remix-flat-routes`][flat_routes] third-party package with configurable options beyond the defaults in Remix.
-
 [loader]: ../route/loader
 [action]: ../route/action
 [outlet_component]: ../components/outlet
@@ -391,8 +408,12 @@ There's also the [`remix-flat-routes`][flat_routes] third-party package with con
 [index_route]: ../discussion/routes#index-routes
 [nested_routing]: ../discussion/routes#what-is-nested-routing
 [nested_routes]: #nested-routes
-[remix_config]: ./remix-config#routes
+[routes_config]: ./vite-config#routes
+[ignoredroutefiles_config]: ./vite-config#ignoredroutefiles
 [dot_delimiters]: #dot-delimiters
 [dynamic_segments]: #dynamic-segments
-[flat_routes]: https://github.com/kiliman/remix-flat-routes
 [an_awesome_visualization]: https://interactive-remix-routing-v2.netlify.app/
+[flat_routes]: https://github.com/kiliman/remix-flat-routes
+[custom_routes]: https://github.com/jacobparis-insiders/remix-custom-routes
+[json_routes]: https://github.com/brophdawg11/remix-json-routes
+[manual-route-configuration]: ../discussion/routes#manual-route-configuration

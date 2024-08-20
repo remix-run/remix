@@ -12,7 +12,45 @@ import { Link } from "@remix-run/react";
 <Link to="/dashboard">Dashboard</Link>;
 ```
 
+<docs-info>Please see the [Splat Paths][relativesplatpath] section on the `useResolvedPath` docs for a note on the behavior of the `future.v3_relativeSplatPath` future flag for relative `<Link to>` behavior within splat routes</docs-info>
+
 ## Props
+
+### `to: string`
+
+The most basic usage takes an href string:
+
+```tsx
+<Link to="/some/path" />
+```
+
+### `to: Partial<Path>`
+
+You can also pass a `Partial<Path>` value:
+
+```tsx
+<Link
+  to={{
+    pathname: "/some/path",
+    search: "?query=string",
+    hash: "#hash",
+  }}
+/>
+```
+
+### `discover`
+
+Defines the route discovery behavior when using [`future.unstable_lazyRouteDiscovery`][lazy-route-discovery].
+
+```tsx
+<>
+  <Link /> {/* defaults to "render" */}
+  <Link discover="none" />
+</>
+```
+
+- **render** - default, discover the route when the link renders
+- **none** - don't eagerly discover, only discover if the link is clicked
 
 ### `prefetch`
 
@@ -47,7 +85,7 @@ Because of this, if you are using `nav :last-child` you will need to use `nav :l
 
 ### `preventScrollReset`
 
-If you are using [`<ScrollRestoration>`][scroll_restoration_component], this lets you prevent the scroll position from being reset to the top of the window when the link is clicked.
+If you are using [`<ScrollRestoration>`][scroll-restoration-component], this lets you prevent the scroll position from being reset to the top of the window when the link is clicked.
 
 ```tsx
 <Link to="?tab=one" preventScrollReset />
@@ -145,11 +183,11 @@ function SomeComp() {
 }
 ```
 
-This state is inaccessible on the server as it is implemented on top of [`history.state`][history_state].
+This state is inaccessible on the server as it is implemented on top of [`history.state`][history-state].
 
 ## `unstable_viewTransition`
 
-The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`:
+The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in [`document.startViewTransition()`][document-start-view-transition]:
 
 ```jsx
 <Link to={to} unstable_viewTransition>
@@ -192,7 +230,10 @@ function ImageLink(to) {
 Please note that this API is marked unstable and may be subject to breaking changes without a major release.
 </docs-warning>
 
-[scroll_restoration_component]: ./scroll-restoration
-[history_state]: https://developer.mozilla.org/en-US/docs/Web/API/History/state
-[use-view-transition-state]: ../hooks//use-view-transition-state
+[scroll-restoration-component]: ./scroll-restoration
+[history-state]: https://developer.mozilla.org/en-US/docs/Web/API/History/state
 [view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API
+[document-start-view-transition]: https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition
+[use-view-transition-state]: ../hooks/use-view-transition-state
+[relativesplatpath]: ../hooks/use-resolved-path#splat-paths
+[lazy-route-discovery]: ../guides/lazy-route-discovery

@@ -1,5 +1,237 @@
 # `@remix-run/testing`
 
+## 2.11.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.11.2`
+  - `@remix-run/node@2.11.2`
+
+## 2.11.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.11.1`
+  - `@remix-run/node@2.11.1`
+
+## 2.11.0
+
+### Minor Changes
+
+- Rename `future.unstable_fogOfWar` to `future.unstable_lazyRouteDiscovery` for clarity ([#9763](https://github.com/remix-run/remix/pull/9763))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.11.0`
+  - `@remix-run/react@2.11.0`
+
+## 2.10.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.10.3`
+  - `@remix-run/node@2.10.3`
+
+## 2.10.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.10.2`
+  - `@remix-run/node@2.10.2`
+
+## 2.10.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.10.1`
+  - `@remix-run/node@2.10.1`
+
+## 2.10.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.10.0`
+  - `@remix-run/node@2.10.0`
+
+## 2.9.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.9.2`
+  - `@remix-run/node@2.9.2`
+
+## 2.9.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.9.1`
+  - `@remix-run/node@2.9.1`
+
+## 2.9.0
+
+### Minor Changes
+
+- New `future.unstable_singleFetch` flag ([#8773](https://github.com/remix-run/remix/pull/8773))
+
+  - Naked objects returned from loaders/actions are no longer automatically converted to JSON responses. They'll be streamed as-is via `turbo-stream` so `Date`'s will become `Date` through `useLoaderData()`
+  - You can return naked objects with `Promise`'s without needing to use `defer()` - including nested `Promise`'s
+    - If you need to return a custom status code or custom response headers, you can still use the `defer` utility
+  - `<RemixServer abortDelay>` is no longer used. Instead, you should `export const streamTimeout` from `entry.server.tsx` and the remix server runtime will use that as the delay to abort the streamed response
+    - If you export your own streamTimeout, you should decouple that from aborting the react `renderToPipeableStream`. You should always ensure that react is aborted _afer_ the stream is aborted so that abort rejections can be flushed down
+  - Actions no longer automatically revalidate on 4xx/5xx responses (via RR `future.unstable_skipActionErrorRevalidation` flag) - you can return a 2xx to opt-into revalidation or use `shouldRevalidate`
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.9.0`
+  - `@remix-run/react@2.9.0`
+
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.8.1`
+  - `@remix-run/node@2.8.1`
+
+## 2.8.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.8.0`
+  - `@remix-run/node@2.8.0`
+
+## 2.7.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.7.2`
+  - `@remix-run/react@2.7.2`
+
+## 2.7.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.7.1`
+  - `@remix-run/react@2.7.1`
+
+## 2.7.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.7.0`
+  - `@remix-run/node@2.7.0`
+
+## 2.6.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.6.0`
+  - `@remix-run/node@2.6.0`
+
+## 2.5.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.5.1`
+  - `@remix-run/node@2.5.1`
+
+## 2.5.0
+
+### Minor Changes
+
+- Add unstable support for "SPA Mode" ([#8457](https://github.com/remix-run/remix/pull/8457))
+
+  You can opt into SPA Mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
+
+  ```js
+  // vite.config.ts
+  import { unstable_vitePlugin as remix } from "@remix-run/dev";
+  import { defineConfig } from "vite";
+
+  export default defineConfig({
+    plugins: [remix({ unstable_ssr: false })],
+  });
+  ```
+
+  Development in SPA Mode is just like a normal Remix app, and still uses the Remix dev server for HMR/HDR:
+
+  ```sh
+  remix vite:dev
+  ```
+
+  Building in SPA Mode will generate an `index.html` file in your client assets directory:
+
+  ```sh
+  remix vite:build
+  ```
+
+  To run your SPA, you serve your client assets directory via an HTTP server:
+
+  ```sh
+  npx http-server build/client
+  ```
+
+  For more information, please refer to the [SPA Mode docs](https://remix.run/future/spa-mode).
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.5.0`
+  - `@remix-run/node@2.5.0`
+
+## 2.4.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.4.1`
+  - `@remix-run/node@2.4.1`
+
+## 2.4.0
+
+### Minor Changes
+
+- Add support for `clientLoader`/`clientAction`/`HydrateFallback` route exports ([RFC](https://github.com/remix-run/remix/discussions/7634)). ([#8173](https://github.com/remix-run/remix/pull/8173))
+- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/release-next/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths). ([#8216](https://github.com/remix-run/remix/pull/8216))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.4.0`
+  - `@remix-run/node@2.4.0`
+
+## 2.3.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.3.1`
+  - `@remix-run/node@2.3.1`
+
+## 2.3.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.3.0`
+  - `@remix-run/node@2.3.0`
+
 ## 2.2.0
 
 ### Minor Changes

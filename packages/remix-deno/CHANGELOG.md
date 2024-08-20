@@ -1,5 +1,183 @@
 # `@remix-run/deno`
 
+## 2.11.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.2`
+
+## 2.11.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.1`
+
+## 2.11.0
+
+### Minor Changes
+
+- Single Fetch: Add a new `unstable_data()` API as a replacement for
+  `json`/`defer` when custom `status`/`headers` are needed
+  ([#9769](https://github.com/remix-run/remix/pull/9769))
+- Add a new `replace(url, init?)` alternative to `redirect(url, init?)` that
+  performs a `history.replaceState` instead of a `history.pushState` on
+  client-side navigation redirects
+  ([#9764](https://github.com/remix-run/remix/pull/9764))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.0`
+
+## 2.10.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.3`
+
+## 2.10.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.2`
+
+## 2.10.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.1`
+
+## 2.10.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.0`
+
+## 2.9.2
+
+### Patch Changes
+
+- Typesafety for single-fetch: `defineLoader`, `defineClientLoader`,
+  `defineAction`, `defineClientAction`
+  ([#9372](https://github.com/remix-run/remix/pull/9372),
+  [#9404](https://github.com/remix-run/remix/pull/9404))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.2`
+
+## 2.9.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.1`
+
+## 2.9.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.0`
+
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.1`
+
+## 2.8.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.0`
+
+## 2.7.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.7.2`
+
+## 2.7.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.7.1`
+
+## 2.7.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.7.0`
+
+## 2.6.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.6.0`
+
+## 2.5.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.5.1`
+
+## 2.5.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.5.0`
+
+## 2.4.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.4.1`
+
+## 2.4.0
+
+### Minor Changes
+
+- Deprecate `DataFunctionArgs` in favor of
+  `LoaderFunctionArgs`/`ActionFunctionArgs`
+  ([#8173](https://github.com/remix-run/remix/pull/8173))
+  - This is aimed at keeping the types aligned across server/client
+    loaders/actions now that `clientLoader`/`clientActon` functions have
+    `serverLoader`/`serverAction` parameters which differentiate
+    `ClientLoaderFunctionArgs`/`ClientActionFunctionArgs`
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.4.0`
+
+## 2.3.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.3.1`
+
+## 2.3.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.3.0`
+
 ## 2.2.0
 
 ### Patch Changes

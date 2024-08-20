@@ -3,7 +3,7 @@ import { splitCookiesString } from "set-cookie-parser";
 
 import type { ServerBuild } from "./build";
 
-export function getDocumentHeadersRR(
+export function getDocumentHeaders(
   build: ServerBuild,
   context: StaticHandlerContext
 ): Headers {

@@ -1,5 +1,274 @@
 # `@remix-run/server-runtime`
 
+## 2.11.2
+
+### Patch Changes
+
+- Single Fetch: Fix redirects when a `basename` is present ([#9848](https://github.com/remix-run/remix/pull/9848))
+- Fog of War: Simplify implementation now that React Router handles slug/splat edge cases and tracks previously discovered routes (see <https://github.com/remix-run/react-router/pull/11883>) ([#9860](https://github.com/remix-run/remix/pull/9860))
+  - This changes the return signature of the internal `__manifest` endpoint since we no longer need the `notFoundPaths` field
+- Fog of War: Update to use renamed `unstable_patchRoutesOnNavigation` function in RR (see <https://github.com/remix-run/react-router/pull/11888>) ([#9860](https://github.com/remix-run/remix/pull/9860))
+- Single Fetch: Update `turbo-stream` to `v2.3.0` ([#9856](https://github.com/remix-run/remix/pull/9856))
+  - Stabilize object key order for serialized payloads
+  - Remove memory limitations payloads sizes
+
+## 2.11.1
+
+### Patch Changes
+
+- Revert #9695, stop infinite reload ([`a7cffe57`](https://github.com/remix-run/remix/commit/a7cffe5733c8b7d0f29bd2d8606876c537d87101))
+
+## 2.11.0
+
+### Minor Changes
+
+- Single Fetch: Add a new `unstable_data()` API as a replacement for `json`/`defer` when custom `status`/`headers` are needed ([#9769](https://github.com/remix-run/remix/pull/9769))
+- Add a new `replace(url, init?)` alternative to `redirect(url, init?)` that performs a `history.replaceState` instead of a `history.pushState` on client-side navigation redirects ([#9764](https://github.com/remix-run/remix/pull/9764))
+- Rename `future.unstable_fogOfWar` to `future.unstable_lazyRouteDiscovery` for clarity ([#9763](https://github.com/remix-run/remix/pull/9763))
+- Single Fetch: Remove `responseStub` in favor of `headers` ([#9769](https://github.com/remix-run/remix/pull/9769))
+
+  - Background
+
+    - The original Single Fetch approach was based on an assumption that an eventual `middleware` implementation would require something like `ResponseStub` so users could mutate `status`/`headers` in `middleware` before/after handlers as well as during handlers
+    - We wanted to align how `headers` got merged between document and data requests
+    - So we made document requests also use `ResponseStub` and removed the usage of `headers` in Single Fetch
+    - The realization/alignment between Michael and Ryan on the recent [roadmap planning](https://www.youtube.com/watch?v=f5z_axCofW0) made us realize that the original assumption was incorrect
+    - `middleware` won't need a stub - users can just mutate the `Response` they get from `await next()` directly
+    - With that gone, and still wanting to align how `headers` get merged, it makes more sense to stick with the current `headers` API and apply that to Single Fetch and avoid introducing a totally new thing in `RepsonseStub` (that always felt a bit awkward to work with anyway)
+
+  - With this change:
+    - You are encouraged to stop returning `Response` instances in favor of returning raw data from loaders and actions:
+      - ~~`return json({ data: whatever });`~~
+      - `return { data: whatever };`
+    - In most cases, you can remove your `json()` and `defer()` calls in favor of returning raw data if they weren't setting custom `status`/`headers`
+      - We will be removing both `json` and `defer` in the next major version, but both _should_ still work in Single Fetch in v2 to allow for incremental adoption of the new behavior
+    - If you need custom `status`/`headers`:
+      - We've added a new `unstable_data({...}, responseInit)` utility that will let you send back `status`/`headers` alongside your raw data without having to encode it into a `Response`
+    - The `headers()` function will let you control header merging for both document and data requests
+
+### Patch Changes
+
+- Change initial hydration route mismatch from a URL check to a matches check to be resistant to URL inconsistencies ([#9695](https://github.com/remix-run/remix/pull/9695))
+
+## 2.10.3
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.10.3.
+
+## 2.10.2
+
+### Patch Changes
+
+- Fix bug with `immutable` headers on raw native `fetch` responses returned from loaders ([#9693](https://github.com/remix-run/remix/pull/9693))
+
+## 2.10.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.10.1.
+
+## 2.10.0
+
+### Minor Changes
+
+- Add support for Lazy Route Discovery (a.k.a. Fog of War) ([#9600](https://github.com/remix-run/remix/pull/9600))
+
+  - RFC: <https://github.com/remix-run/react-router/discussions/11113>
+  - Docs: <https://remix.run/docs/guides/fog-of-war>
+
+### Patch Changes
+
+- Properly handle thrown 4xx/5xx response stubs in single fetch ([#9501](https://github.com/remix-run/remix/pull/9501))
+- Change single fetch redirects to use a 202 status to avoid automatic caching ([#9564](https://github.com/remix-run/remix/pull/9564))
+- Fix error when returning `null` from a resource route in single fetch ([#9488](https://github.com/remix-run/remix/pull/9488))
+- Fix issues with returning or throwing a response stub from a resource route in single fetch ([#9488](https://github.com/remix-run/remix/pull/9488))
+- Update to `turbo-stream@2.2.0` for single fetch ([#9562](https://github.com/remix-run/remix/pull/9562))
+
+## 2.9.2
+
+### Patch Changes
+
+- Don't log thrown response stubs via `handleError` in Single Fetch ([#9369](https://github.com/remix-run/remix/pull/9369))
+- Automatically wrap resource route naked object returns in `json()` for back-compat in v2 (and log deprecation warning) ([#9349](https://github.com/remix-run/remix/pull/9349))
+- Typesafety for single-fetch: `defineLoader`, `defineClientLoader`, `defineAction`, `defineClientAction` ([#9372](https://github.com/remix-run/remix/pull/9372), [#9404](https://github.com/remix-run/remix/pull/9404))
+- Pass `response` stub to resource route handlers when single fetch is enabled ([#9349](https://github.com/remix-run/remix/pull/9349))
+
+## 2.9.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.9.1.
+
+## 2.9.0
+
+### Minor Changes
+
+- New `future.unstable_singleFetch` flag ([#8773](https://github.com/remix-run/remix/pull/8773))
+  - Naked objects returned from loaders/actions are no longer automatically converted to JSON responses. They'll be streamed as-is via `turbo-stream` so `Date`'s will become `Date` through `useLoaderData()`
+  - You can return naked objects with `Promise`'s without needing to use `defer()` - including nested `Promise`'s
+    - If you need to return a custom status code or custom response headers, you can still use the `defer` utility
+  - `<RemixServer abortDelay>` is no longer used. Instead, you should `export const streamTimeout` from `entry.server.tsx` and the remix server runtime will use that as the delay to abort the streamed response
+    - If you export your own streamTimeout, you should decouple that from aborting the react `renderToPipeableStream`. You should always ensure that react is aborted _afer_ the stream is aborted so that abort rejections can be flushed down
+  - Actions no longer automatically revalidate on 4xx/5xx responses (via RR `future.unstable_skipActionErrorRevalidation` flag) - you can return a 2xx to opt-into revalidation or use `shouldRevalidate`
+- Add `ResponseStub` header interface for single fetch and deprecate the `headers` export ([#9142](https://github.com/remix-run/remix/pull/9142))
+  - The `headers` export is no longer used when single fetch is enabled
+  - `loader`/`action` functions now receive a mutable `response` parameter
+    - `type ResponseStub = { status: numbers | undefined, headers: Headers }`
+  - To alter the status of a response, set the `status` field directly
+    - `response.status = 201`
+  - To set headers on the Response, you may use:
+    - `response.headers.set`
+    - `response.headers.append`
+    - `response.headers.delete`
+  - Each `loader`/`action`receives it's own unique `response` instance so you cannot see what other `loader`/`action` functions have set (which would be subject to race conditions)
+  - If all status codes are unset or have values <200, the deepest status code will be used for the HTTP response
+  - If any status codes are set to a value >=300, the highest >=300 value will be used for the HTTP Response
+  - Remix tracks header operations and will replay them in order (action if present, then loaders top-down) after all handlers have completed on a fresh `Headers` instance that will be applied to the HTTP Response
+    - `headers.set` on any child handler will overwrite values from parent handlers
+    - `headers.append` can be used to set the same header from both a parent and child handler
+    - `headers.delete` can be used to delete a value set by a parent handler, but not a value set from a child handler
+  - Because single fetch supports naked object returns, and you no longer need to return a `Response` instance to set status/headers, the `json`/`redirect`/`redirectDocument`/`defer` utilities are considered deprecated when using Single Fetch
+  - You may still continue returning normal `Response` instances and they'll apply status codes in the same way, and will apply all headers via `headers.set` - overwriting any same-named header values from parents
+    - If you need to append, you will need to switch from returning a `Response` instance to using the new `response` parameter
+
+### Patch Changes
+
+- Handle net new redirects created by handleDataRequest ([#9104](https://github.com/remix-run/remix/pull/9104))
+
+## 2.8.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.8.1.
+
+## 2.8.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.8.0.
+
+## 2.7.2
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.7.2.
+
+## 2.7.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.7.1.
+
+## 2.7.0
+
+### Minor Changes
+
+- Allow an optional `Layout` export from the root route ([#8709](https://github.com/remix-run/remix/pull/8709))
+- Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/en/main/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
+
+### Patch Changes
+
+- Add a more specific error if a user returns a `defer` response from a resource route ([#8726](https://github.com/remix-run/remix/pull/8726))
+
+## 2.6.0
+
+### Minor Changes
+
+- Add `future.v3_throwAbortReason` flag to throw `request.signal.reason` when a request is aborted instead of an `Error` such as `new Error("query() call aborted: GET /path")` ([#8251](https://github.com/remix-run/remix/pull/8251))
+
+### Patch Changes
+
+- Vite: Cloudflare Pages support ([#8531](https://github.com/remix-run/remix/pull/8531))
+
+  To get started with Cloudflare, you can use the \[`unstable-vite-cloudflare`]\[template-vite-cloudflare] template:
+
+  ```shellscript nonumber
+  npx create-remix@latest --template remix-run/remix/templates/unstable-vite-cloudflare
+  ```
+
+  Or read the new docs at [Future > Vite > Cloudflare](https://remix.run/docs/en/main/future/vite#cloudflare) and
+  [Future > Vite > Migrating > Migrating Cloudflare Functions](https://remix.run/docs/en/main/future/vite#migrating-cloudflare-functions).
+
+- Unwrap thrown `Response`'s from `entry.server` into `ErrorResponse`'s and preserve the status code ([#8577](https://github.com/remix-run/remix/pull/8577))
+
+## 2.5.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.5.1.
+
+## 2.5.0
+
+### Minor Changes
+
+- Updated `cookie` dependency to [`0.6.0`](https://github.com/jshttp/cookie/blob/master/HISTORY.md#060--2023-11-06) to inherit support for the [`Partitioned`](https://developer.mozilla.org/en-US/docs/Web/Privacy/Partitioned_cookies) attribute ([#8375](https://github.com/remix-run/remix/pull/8375))
+- Add unstable support for "SPA Mode" ([#8457](https://github.com/remix-run/remix/pull/8457))
+
+  You can opt into SPA Mode by setting `unstable_ssr: false` in your Remix Vite plugin config:
+
+  ```js
+  // vite.config.ts
+  import { unstable_vitePlugin as remix } from "@remix-run/dev";
+  import { defineConfig } from "vite";
+
+  export default defineConfig({
+    plugins: [remix({ unstable_ssr: false })],
+  });
+  ```
+
+  Development in SPA Mode is just like a normal Remix app, and still uses the Remix dev server for HMR/HDR:
+
+  ```sh
+  remix vite:dev
+  ```
+
+  Building in SPA Mode will generate an `index.html` file in your client assets directory:
+
+  ```sh
+  remix vite:build
+  ```
+
+  To run your SPA, you serve your client assets directory via an HTTP server:
+
+  ```sh
+  npx http-server build/client
+  ```
+
+  For more information, please refer to the [SPA Mode docs](https://remix.run/future/spa-mode).
+
+## 2.4.1
+
+### Patch Changes
+
+- Add optional `error` to `ServerRuntimeMetaArgs` type to align with `MetaArgs` ([#8238](https://github.com/remix-run/remix/pull/8238))
+
+## 2.4.0
+
+### Minor Changes
+
+- Add support for `clientLoader`/`clientAction`/`HydrateFallback` route exports ([RFC](https://github.com/remix-run/remix/discussions/7634)). ([#8173](https://github.com/remix-run/remix/pull/8173))
+
+  Remix now supports loaders/actions that run on the client (in addition to, or instead of the loader/action that runs on the server). While we still recommend server loaders/actions for the majority of your data needs in a Remix app - these provide some levers you can pull for more advanced use-cases such as:
+
+  - Leveraging a data source local to the browser (i.e., `localStorage`)
+  - Managing a client-side cache of server data (like `IndexedDB`)
+  - Bypassing the Remix server in a BFF setup and hitting your API directly from the browser
+  - Migrating a React Router SPA to a Remix application
+
+  By default, `clientLoader` will not run on hydration, and will only run on subsequent client side navigations.
+
+  If you wish to run your client loader on hydration, you can set `clientLoader.hydrate=true` to force Remix to execute it on initial page load. Keep in mind that Remix will still SSR your route component so you should ensure that there is no new _required_ data being added by your `clientLoader`.
+
+  If your `clientLoader` needs to run on hydration and adds data you require to render the route component, you can export a `HydrateFallback` component that will render during SSR, and then your route component will not render until the `clientLoader` has executed on hydration.
+
+  `clientAction` is simpler than `clientLoader` because it has no hydration use-cases. `clientAction` will only run on client-side navigations.
+
+  For more information, please refer to the [`clientLoader`](https://remix.run/route/client-loader) and [`clientAction`](https://remix.run/route/client-action) documentation.
+
+- Deprecate `DataFunctionArgs` in favor of `LoaderFunctionArgs`/`ActionFunctionArgs`. This is aimed at keeping the types aligned across server/client loaders/actions now that `clientLoader`/`clientActon` functions have `serverLoader`/`serverAction` parameters which differentiate `ClientLoaderFunctionArgs`/`ClientActionFunctionArgs`. ([#8173](https://github.com/remix-run/remix/pull/8173))
+
+- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/release-next/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths). ([#8216](https://github.com/remix-run/remix/pull/8216))
+
+### Patch Changes
+
+- Fix flash of unstyled content for non-Express custom servers in Vite dev ([#8076](https://github.com/remix-run/remix/pull/8076))
+- Pass request handler errors to `vite.ssrFixStacktrace` in Vite dev to ensure stack traces correctly map to the original source code ([#8066](https://github.com/remix-run/remix/pull/8066))
+
+## 2.3.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.3.1.
+
+## 2.3.0
+
+### Minor Changes
+
+- Updated `cookie` dependency from `0.4.1` to [`0.5.0`](https://github.com/jshttp/cookie/blob/v0.5.0/HISTORY.md#050--2022-04-11) to inherit support for `Priority` attribute in Chrome ([#6770](https://github.com/remix-run/remix/pull/6770))
+
 ## 2.2.0
 
 ### Minor Changes

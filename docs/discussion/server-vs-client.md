@@ -7,7 +7,7 @@ order: 5
 
 Remix runs your app on the server as well as in the browser. However, it doesn't run all of your code in both places.
 
-During the build step, the compiler creates both a server build and a client build. The server build bundles up everything into a single module, but the client build splits your app up into multiple bundles to optimize loading in the browser. It also removes server code from the bundles.
+During the build step, the compiler creates both a server build and a client build. The server build bundles up everything into a single module (or multiple modules when using [server bundles][server-bundles]), but the client build splits your app up into multiple bundles to optimize loading in the browser. It also removes server code from the bundles.
 
 The following route exports and the dependencies used within them are removed from the client build:
 
@@ -19,9 +19,9 @@ Consider this route module from the last section:
 
 ```tsx filename=routes/settings.tsx
 import type {
-  ActionArgs,
+  ActionFunctionArgs,
   HeadersFunction,
-  LoaderArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
@@ -32,7 +32,9 @@ export const headers: HeadersFunction = () => ({
   "Cache-Control": "max-age=300, s-maxage=3600",
 });
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const user = await getUser(request);
   return json({
     displayName: user.displayName,
@@ -57,7 +59,10 @@ export default function Component() {
   );
 }
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
+  const formData = await request.formData();
   const user = await getUser(request);
 
   await updateUser(user.id, {
@@ -92,15 +97,84 @@ export default function Component() {
 }
 ```
 
-## Forcing Code Out of the Browser or Server Builds
+## Splitting Up Client and Server Code
 
-You can force code out of either the client or the server with the [`*.client.tsx`][file_convention_client] and [`*.server.tsx`][file_convention_server] conventions.
+Out of the box, Vite doesn't support mixing server-only code with client-safe code in the same module.
+Remix is able to make an exception for routes because we know which exports are server-only and can remove them from the client.
 
-While rare, sometimes server code makes it to client bundles because of how the compiler determines the dependencies of a route module, or because you accidentally try to use it in code that needs to ship to the client. You can force it out by adding `*.server.tsx` on the end of the file name.
+There are a few ways to isolate server-only code in Remix.
+The simplest approach is to use [`.server`][file_convention_server] and [`.client`][file_convention_client] modules.
 
-For example, we could name a module `app/user.server.ts` instead of `app/user.ts` to ensure that the code in that module is never bundled into the client — even if you try to use it in the component.
+#### `.server` modules
 
-Additionally, you may depend on client libraries that are unsafe to even bundle on the server — maybe it tries to access [`window`][window_global] by simply being imported. You can likewise remove these modules from the server build by appending `*.client.tsx` to the file name.
+While not strictly necessary, [`.server` modules][file_convention_server] are a good way to explicitly mark entire modules as server-only.
+The build will fail if any code in a `.server` file or `.server` directory accidentally ends up in the client module graph.
+
+```txt
+app
+├── .server 👈 marks all files in this directory as server-only
+│   ├── auth.ts
+│   └── db.ts
+├── cms.server.ts 👈 marks this file as server-only
+├── root.tsx
+└── routes
+    └── _index.tsx
+```
+
+`.server` modules must be within your Remix app directory.
+
+<docs-warning>`.server` directories are only supported when using [Remix Vite][remix-vite]. The [Classic Remix Compiler][classic-remix-compiler] only supports `.server` files.</docs-warning>
+
+#### `.client` modules
+
+You may depend on client libraries that are unsafe to even bundle on the server — maybe it tries to access [`window`][window_global] by simply being imported.
+
+You can remove the contents of these modules from the server build by appending `*.client.ts` to the file name or nesting them within a `.client` directory.
+
+<docs-warning>`.client` directories are only supported when using [Remix Vite][remix-vite]. The [Classic Remix Compiler][classic-remix-compiler] only supports `.client` files.</docs-warning>
+
+#### vite-env-only
+
+If you want to mix server-only code and client-safe code in the same module, you
+can use <nobr>[vite-env-only][vite-env-only]</nobr>.
+This Vite plugin allows you to explicitly mark any expression as server-only so that it gets
+replaced with `undefined` in the client.
+
+For example, once you've added the plugin to your [Vite config][vite-config], you can wrap any server-only exports with `serverOnly$`:
+
+```tsx
+import { serverOnly$ } from "vite-env-only";
+
+import { db } from "~/.server/db";
+
+export const getPosts = serverOnly$(async () => {
+  return db.posts.findMany();
+});
+
+export const PostPreview = ({ title, description }) => {
+  return (
+    <article>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </article>
+  );
+};
+```
+
+This example would be compiled into the following code for the client:
+
+```tsx
+export const getPosts = undefined;
+
+export const PostPreview = ({ title, description }) => {
+  return (
+    <article>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </article>
+  );
+};
+```
 
 [action]: ../route/action
 [headers]: ../route/headers
@@ -108,3 +182,8 @@ Additionally, you may depend on client libraries that are unsafe to even bundle 
 [file_convention_client]: ../file-conventions/-client
 [file_convention_server]: ../file-conventions/-server
 [window_global]: https://developer.mozilla.org/en-US/docs/Web/API/Window/window
+[server-bundles]: ../guides/server-bundles
+[vite-config]: ../file-conventions/vite-config
+[vite-env-only]: https://github.com/pcattori/vite-env-only
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite

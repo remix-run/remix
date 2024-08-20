@@ -18,10 +18,11 @@ type ValidateShape<T, Shape> =
 export function createServerHandoffString<T>(serverHandoff: {
   // Don't allow StaticHandlerContext to be passed in verbatim, since then
   // we'd end up including duplicate info
-  state: ValidateShape<T, HydrationState>;
+  state?: ValidateShape<T, HydrationState>;
   criticalCss?: string;
-  url: string;
+  basename: string | undefined;
   future: FutureConfig;
+  isSpaMode: boolean;
 }): string {
   // Uses faster alternative of jsesc to escape data returned from the loaders.
   // This string is inserted directly into the HTML in the `<Scripts>` element.

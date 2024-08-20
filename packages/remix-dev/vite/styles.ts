@@ -4,6 +4,7 @@ import { matchRoutes } from "@remix-run/router";
 import { type ModuleNode, type ViteDevServer } from "vite";
 
 import { type RemixConfig as ResolvedRemixConfig } from "../config";
+import { resolveFileUrl } from "./resolve-file-url";
 
 type ServerRouteManifest = ServerBuild["routes"];
 type ServerRoute = ServerRouteManifest[string];
@@ -20,33 +21,50 @@ const cssModulesRegExp = new RegExp(`\\.module${cssFileRegExp.source}`);
 const isCssFile = (file: string) => cssFileRegExp.test(file);
 export const isCssModulesFile = (file: string) => cssModulesRegExp.test(file);
 
-const getStylesForFiles = async (
-  viteServer: ViteDevServer,
-  cssModulesManifest: Record<string, string>,
-  files: string[]
-): Promise<string | undefined> => {
+const getStylesForFiles = async ({
+  viteDevServer,
+  rootDirectory,
+  cssModulesManifest,
+  files,
+}: {
+  viteDevServer: ViteDevServer;
+  rootDirectory: string;
+  cssModulesManifest: Record<string, string>;
+  files: string[];
+}): Promise<string | undefined> => {
   let styles: Record<string, string> = {};
   let deps = new Set<ModuleNode>();
 
   try {
     for (let file of files) {
-      let normalizedPath = path.resolve(file).replace(/\\/g, "/");
-      let node = await viteServer.moduleGraph.getModuleById(normalizedPath);
-      if (!node) {
-        let absolutePath = path.resolve(file);
-        await viteServer.ssrLoadModule(absolutePath);
-        node = await viteServer.moduleGraph.getModuleByUrl(absolutePath);
+      let normalizedPath = path
+        .resolve(rootDirectory, file)
+        .replace(/\\/g, "/");
+      let node = await viteDevServer.moduleGraph.getModuleById(normalizedPath);
 
-        if (!node) {
-          console.log(`Could not resolve module for file: ${file}`);
-          continue;
+      // If the module is only present in the client module graph, the module
+      // won't have been found on the first request to the server. If so, we
+      // request the module so it's in the module graph, then try again.
+      if (!node) {
+        try {
+          await viteDevServer.transformRequest(
+            resolveFileUrl({ rootDirectory }, normalizedPath)
+          );
+        } catch (err) {
+          console.error(err);
         }
+        node = await viteDevServer.moduleGraph.getModuleById(normalizedPath);
       }
 
-      await findDeps(viteServer, node, deps);
+      if (!node) {
+        console.log(`Could not resolve module for file: ${file}`);
+        continue;
+      }
+
+      await findDeps(viteDevServer, node, deps);
     }
-  } catch (e) {
-    console.error(e);
+  } catch (err) {
+    console.error(err);
   }
 
   for (let dep of deps) {
@@ -58,7 +76,7 @@ const getStylesForFiles = async (
       try {
         let css = isCssModulesFile(dep.file)
           ? cssModulesManifest[dep.file]
-          : (await viteServer.ssrLoadModule(dep.url)).default;
+          : (await viteDevServer.ssrLoadModule(dep.url)).default;
 
         if (css === undefined) {
           throw new Error();
@@ -155,29 +173,45 @@ const createRoutes = (
   }));
 };
 
-export const getStylesForUrl = async (
-  vite: ViteDevServer,
-  config: Pick<ResolvedRemixConfig, "appDirectory" | "routes">,
-  cssModulesManifest: Record<string, string>,
-  build: ServerBuild,
-  url: string | undefined
-): Promise<string | undefined> => {
+export const getStylesForUrl = async ({
+  viteDevServer,
+  rootDirectory,
+  remixConfig,
+  entryClientFilePath,
+  cssModulesManifest,
+  build,
+  url,
+}: {
+  viteDevServer: ViteDevServer;
+  rootDirectory: string;
+  remixConfig: Pick<ResolvedRemixConfig, "appDirectory" | "routes">;
+  entryClientFilePath: string;
+  cssModulesManifest: Record<string, string>;
+  build: ServerBuild;
+  url: string | undefined;
+}): Promise<string | undefined> => {
   if (url === undefined || url.includes("?_data=")) {
     return undefined;
   }
 
   let routes = createRoutes(build.routes);
-  let appPath = path.relative(process.cwd(), config.appDirectory);
+  let appPath = path.relative(process.cwd(), remixConfig.appDirectory);
   let documentRouteFiles =
-    matchRoutes(routes, url)?.map((match) =>
-      path.join(appPath, config.routes[match.route.id].file)
+    matchRoutes(routes, url, build.basename)?.map((match) =>
+      path.resolve(appPath, remixConfig.routes[match.route.id].file)
     ) ?? [];
 
-  let styles = await getStylesForFiles(
-    vite,
+  let styles = await getStylesForFiles({
+    viteDevServer,
+    rootDirectory,
     cssModulesManifest,
-    documentRouteFiles
-  );
+    files: [
+      // Always include the client entry file when crawling the module graph for CSS
+      path.relative(rootDirectory, entryClientFilePath),
+      // Then include any styles from the matched routes
+      ...documentRouteFiles,
+    ],
+  });
 
   return styles;
 };

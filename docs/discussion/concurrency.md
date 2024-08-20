@@ -72,7 +72,7 @@ The user is now looking at different data than what is on the server. Note that 
 In UI components like combo boxes, each keystroke can trigger a network request. Managing such rapid, consecutive requests can be tricky, especially when ensuring that the displayed results match the most recent query. However, with Remix, this challenge is automatically handled, ensuring that users see the correct results without developers having to micromanage the network.
 
 ```tsx filename=app/routes/city-search.tsx
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
 export async function loader({

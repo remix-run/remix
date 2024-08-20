@@ -1,2 +1,2 @@
 import { installGlobals } from "@remix-run/node";
-installGlobals();
+installGlobals({ nativeFetch: true });

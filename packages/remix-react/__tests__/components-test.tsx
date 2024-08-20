@@ -46,18 +46,37 @@ describe("<LiveReload />", () => {
       jest.resetModules();
     });
 
+    it("defaults the origin to REMIX_DEV_ORIGIN env variable", () => {
+      let origin = "http://test-origin";
+      LiveReload = require("../components").LiveReload;
+      process.env = { ...oldEnv, REMIX_DEV_ORIGIN: origin };
+      let { container } = render(<LiveReload />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        `let LIVE_RELOAD_ORIGIN = ${JSON.stringify(origin)};`
+      );
+    });
+
+    it("can set the origin explicitly", () => {
+      let origin = "http://test-origin";
+      LiveReload = require("../components").LiveReload;
+      let { container } = render(<LiveReload origin={origin} />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        `let LIVE_RELOAD_ORIGIN = ${JSON.stringify(origin)};`
+      );
+    });
+
     it("defaults the port to 8002", () => {
       LiveReload = require("../components").LiveReload;
       let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        "url.port = undefined || (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);"
+        "url.port = undefined || (LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).port : 8002);"
       );
     });
 
     it("can set the port explicitly", () => {
       let { container } = render(<LiveReload port={4321} />);
       expect(container.querySelector("script")).toHaveTextContent(
-        "url.port = 4321 || (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);"
+        "url.port = 4321 || (LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).port : 8002);"
       );
     });
 
@@ -96,6 +115,7 @@ function itPrefetchesPageLinks<
         url: "",
         version: "",
       },
+      future: {},
     };
 
     beforeEach(() => {

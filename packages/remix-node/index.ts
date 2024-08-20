@@ -24,6 +24,9 @@ export {
 export {
   createRequestHandler,
   createSession,
+  unstable_data,
+  unstable_defineLoader,
+  unstable_defineAction,
   defer,
   broadcastDevReady,
   logDevReady,
@@ -33,6 +36,7 @@ export {
   MaxPartSizeExceededError,
   redirect,
   redirectDocument,
+  replace,
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,

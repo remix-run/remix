@@ -1,12 +1,9 @@
-export type { RemixBrowserProps } from "./browser";
-export { RemixBrowser } from "./browser";
 export type {
   ErrorResponse,
   Fetcher,
   FetcherWithComponents,
   FormEncType,
   FormMethod,
-  FormProps,
   Location,
   NavigateFunction,
   Navigation,
@@ -16,18 +13,25 @@ export type {
   ShouldRevalidateFunctionArgs,
   SubmitFunction,
   SubmitOptions,
-  unstable_Blocker,
-  unstable_BlockerFunction,
+  Blocker,
+  BlockerFunction,
 } from "react-router-dom";
 export {
   createPath,
+  createRoutesFromChildren,
+  createRoutesFromElements,
+  createSearchParams,
   generatePath,
   matchPath,
   matchRoutes,
   parsePath,
+  renderMatches,
   resolvePath,
-  Form,
+  Navigate,
+  NavigationType,
   Outlet,
+  Route,
+  Routes,
   useAsyncError,
   useAsyncValue,
   isRouteErrorResponse,
@@ -35,6 +39,8 @@ export {
   useFetchers,
   useFormAction,
   useHref,
+  useInRouterContext,
+  useLinkClickHandler,
   useLocation,
   useMatch,
   useNavigate,
@@ -46,15 +52,28 @@ export {
   useResolvedPath,
   useRevalidator,
   useRouteError,
+  useRoutes,
   useSearchParams,
   useSubmit,
-  unstable_useBlocker,
+  useBlocker,
   unstable_usePrompt,
   unstable_useViewTransitionState,
 } from "react-router-dom";
+export {
+  // For use in clientLoader/clientAction
+  defer,
+  json,
+  redirect,
+  redirectDocument,
+  replace,
+  unstable_data,
+} from "@remix-run/server-runtime";
 
+export type { RemixBrowserProps } from "./browser";
+export { RemixBrowser } from "./browser";
 export type {
   AwaitProps,
+  RemixFormProps as FormProps,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
   UIMatch,
@@ -64,6 +83,7 @@ export {
   Meta,
   Links,
   Scripts,
+  Form,
   Link,
   NavLink,
   PrefetchPageLinks,
@@ -78,7 +98,12 @@ export {
 
 export type { HtmlLinkDescriptor } from "./links";
 export type {
+  ClientActionFunction,
+  ClientActionFunctionArgs,
+  ClientLoaderFunction,
+  ClientLoaderFunctionArgs,
   MetaArgs,
+  MetaMatch as UNSAFE_MetaMatch,
   MetaDescriptor,
   MetaFunction,
   RouteModules as UNSAFE_RouteModules,
@@ -88,6 +113,14 @@ export { ScrollRestoration } from "./scroll-restoration";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";
+export type {
+  ClientAction as unstable_ClientAction,
+  ClientLoader as unstable_ClientLoader,
+} from "./single-fetch";
+export {
+  defineClientAction as unstable_defineClientAction,
+  defineClientLoader as unstable_defineClientLoader,
+} from "./single-fetch";
 
 export type {
   FutureConfig as UNSAFE_FutureConfig,

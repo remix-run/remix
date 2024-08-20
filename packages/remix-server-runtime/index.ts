@@ -4,7 +4,22 @@ export {
   composeUploadHandlers as unstable_composeUploadHandlers,
   parseMultipartFormData as unstable_parseMultipartFormData,
 } from "./formData";
-export { defer, json, redirect, redirectDocument } from "./responses";
+export { defer, json, redirect, redirectDocument, replace } from "./responses";
+
+export {
+  SingleFetchRedirectSymbol as UNSAFE_SingleFetchRedirectSymbol,
+  data as unstable_data,
+  defineLoader as unstable_defineLoader,
+  defineAction as unstable_defineAction,
+} from "./single-fetch";
+export type {
+  Loader as unstable_Loader,
+  Action as unstable_Action,
+  Serialize as unstable_Serialize,
+  SingleFetchResult as UNSAFE_SingleFetchResult,
+  SingleFetchResults as UNSAFE_SingleFetchResults,
+} from "./single-fetch";
+
 export { createRequestHandler } from "./server";
 export {
   createSession,
@@ -15,7 +30,11 @@ export { createCookieSessionStorageFactory } from "./sessions/cookieStorage";
 export { createMemorySessionStorageFactory } from "./sessions/memoryStorage";
 export { createMemoryUploadHandler as unstable_createMemoryUploadHandler } from "./upload/memoryUploadHandler";
 export { MaxPartSizeExceededError } from "./upload/errors";
-export { broadcastDevReady, logDevReady } from "./dev";
+export {
+  broadcastDevReady,
+  logDevReady,
+  setDevServerHooks as unstable_setDevServerHooks,
+} from "./dev";
 
 // Types for the Remix server runtime interface
 export type {

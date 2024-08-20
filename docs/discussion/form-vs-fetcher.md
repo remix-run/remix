@@ -67,8 +67,8 @@ As you can see, the two sets of APIs have a lot of similarities:
 
 ### Creating a New Record
 
-```tsx filename=app/routes/recipes/new.tsx lines=[16,20-21,26]
-import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=app/routes/recipes/new.tsx lines=[18,22-23,28]
+import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
   Form,
@@ -76,7 +76,9 @@ import {
   useNavigation,
 } from "@remix-run/react";
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const formData = await request.formData();
   const errors = await validateRecipeFormData(formData);
   if (errors) {
@@ -135,17 +137,19 @@ Now consider we're looking at a list of recipes that have delete buttons on each
 First consider the basic route setup to get a list of recipes on the page:
 
 ```tsx filename=app/routes/recipes/_index.tsx
-import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import type { LoaderFunctionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   return json({
     recipes: await db.recipes.findAll({ limit: 30 }),
   });
 }
 
-export function Recipes() {
+export default function Recipes() {
   const { recipes } = useLoaderData<typeof loader>();
   return (
     <ul>
@@ -159,8 +163,10 @@ export function Recipes() {
 
 Now we'll look at the action that deletes a recipe and the component that renders each recipe in the list.
 
-```tsx filename=app/routes/recipes/_index.tsx lines=[5,11,17]
-export async function action({ request }: ActionArgs) {
+```tsx filename=app/routes/recipes/_index.tsx lines=[7,13,19]
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const formData = await request.formData();
   const id = formData.get("id");
   await db.recipes.delete(id);
@@ -177,11 +183,7 @@ const RecipeListItem: FunctionComponent<{
     <li>
       <h2>{recipe.title}</h2>
       <fetcher.Form method="post">
-        <button
-          disabled={isDeleting}
-          onClick={handleDelete}
-          type="submit"
-        >
+        <button disabled={isDeleting} type="submit">
           {isDeleting ? "Deleting..." : "Delete"}
         </button>
       </fetcher.Form>

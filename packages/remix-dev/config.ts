@@ -35,6 +35,10 @@ type Dev = {
 
 interface FutureConfig {
   v3_fetcherPersist: boolean;
+  v3_relativeSplatPath: boolean;
+  v3_throwAbortReason: boolean;
+  unstable_singleFetch: boolean;
+  unstable_lazyRouteDiscovery: boolean;
 }
 
 type NodeBuiltinsPolyfillOptions = Pick<
@@ -65,7 +69,9 @@ export interface AppConfig {
    */
   routes?: (
     defineRoutes: DefineRoutesFunction
-  ) => Promise<ReturnType<DefineRoutesFunction>>;
+  ) =>
+    | ReturnType<DefineRoutesFunction>
+    | Promise<ReturnType<DefineRoutesFunction>>;
 
   /**
    * The path to the browser build, relative to `remix.config.js`. Defaults to
@@ -80,7 +86,7 @@ export interface AppConfig {
   publicPath?: string;
 
   /**
-   * Options for `remix dev`. See https://remix.run/docs/en/main/other-api/dev-v2#options-1
+   * Options for `remix dev`. See https://remix.run/other-api/dev#options-1
    */
   dev?: Dev;
 
@@ -160,8 +166,8 @@ export interface AppConfig {
   serverPlatform?: ServerPlatform;
 
   /**
-   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
-   * Defaults to `true`.
+   * Whether to support Tailwind functions and directives in CSS files if
+   * `tailwindcss` is installed. Defaults to `true`.
    */
   tailwind?: boolean;
 
@@ -173,16 +179,21 @@ export interface AppConfig {
   ignoredRouteFiles?: string[];
 
   /**
-   * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
+   * A function for defining custom directories to watch while running `remix dev`,
+   * in addition to `appDirectory`.
    */
   watchPaths?:
     | string
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  future?: Partial<FutureConfig> & {
-    [propName: string]: never;
-  };
+  /**
+   * Enabled future flags
+   */
+  future?: [keyof FutureConfig] extends [never]
+    ? // Partial<FutureConfig> doesn't work when it's empty so just prevent any keys
+      { [key: string]: never }
+    : Partial<FutureConfig>;
 }
 
 /**
@@ -245,7 +256,7 @@ export interface RemixConfig {
   publicPath: string;
 
   /**
-   * Options for `remix dev`. See https://remix.run/docs/en/main/other-api/dev-v2#options-1
+   * Options for `remix dev`. See https://remix.run/other-api/dev#options-1
    */
   dev: Dev;
 
@@ -402,9 +413,11 @@ export async function resolveConfig(
   {
     rootDirectory,
     serverMode = ServerMode.Production,
+    isSpaMode = false,
   }: {
     rootDirectory: string;
     serverMode?: ServerMode;
+    isSpaMode?: boolean;
   }
 ): Promise<RemixConfig> {
   if (!isValidServerMode(serverMode)) {
@@ -457,7 +470,17 @@ export async function resolveConfig(
   let pkgJson = await PackageJson.load(rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
-  if (userEntryServerFile) {
+  if (isSpaMode && appConfig.future?.unstable_singleFetch != true) {
+    // This is a super-simple default since we don't need streaming in SPA Mode.
+    // We can include this in a remix-spa template, but right now `npx remix reveal`
+    // will still expose the streaming template since that command doesn't have
+    // access to the `ssr:false` flag in the vite config (the streaming template
+    // works just fine so maybe instea dof having this we _only have this version
+    // in the template...).  We let users manage an entry.server file in SPA Mode
+    // so they can de ide if they want to hydrate the full document or just an
+    // embedded `<div id="app">` or whatever.
+    entryServerFile = "entry.server.spa.tsx";
+  } else if (userEntryServerFile) {
     entryServerFile = userEntryServerFile;
   } else {
     let serverRuntime = deps["@remix-run/deno"]
@@ -488,7 +511,7 @@ export async function resolveConfig(
       pkgJson.update({
         dependencies: {
           ...pkgJson.content.dependencies,
-          isbot: "latest",
+          isbot: "^4",
         },
       });
 
@@ -503,6 +526,12 @@ export async function resolveConfig(
     }
 
     entryServerFile = `entry.server.${serverRuntime}.tsx`;
+  }
+
+  if (isSpaMode && appConfig.future?.unstable_lazyRouteDiscovery === true) {
+    throw new Error(
+      "You can not use `future.unstable_lazyRouteDiscovery` in SPA Mode (`ssr: false`)"
+    );
   }
 
   let entryClientFilePath = userEntryClientFile
@@ -577,6 +606,11 @@ export async function resolveConfig(
   // typings this won't be necessary anymore.
   let future: FutureConfig = {
     v3_fetcherPersist: appConfig.future?.v3_fetcherPersist === true,
+    v3_relativeSplatPath: appConfig.future?.v3_relativeSplatPath === true,
+    v3_throwAbortReason: appConfig.future?.v3_throwAbortReason === true,
+    unstable_singleFetch: appConfig.future?.unstable_singleFetch === true,
+    unstable_lazyRouteDiscovery:
+      appConfig.future?.unstable_lazyRouteDiscovery === true,
   };
 
   if (appConfig.future) {

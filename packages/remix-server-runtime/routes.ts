@@ -4,7 +4,7 @@ import type {
   ActionFunctionArgs as RRActionFunctionArgs,
 } from "@remix-run/router";
 
-import { callRouteActionRR, callRouteLoaderRR } from "./data";
+import { callRouteAction, callRouteLoader } from "./data";
 import type { FutureConfig } from "./entry";
 import type { ServerRouteModule } from "./routeModules";
 
@@ -27,6 +27,8 @@ export interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
+  hasClientAction: boolean;
+  hasClientLoader: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
   css?: string[];
@@ -90,23 +92,25 @@ export function createStaticHandlerDataRoutes(
       loader: route.module.loader
         ? // Need to use RR's version here to permit the optional context even
           // though we know it'll always be provided in remix
-          (args: RRLoaderFunctionArgs) =>
-            callRouteLoaderRR({
+          (args: RRLoaderFunctionArgs, dataStrategyCtx?: unknown) =>
+            callRouteLoader({
               request: args.request,
               params: args.params,
               loadContext: args.context,
               loader: route.module.loader!,
               routeId: route.id,
+              singleFetch: future.unstable_singleFetch === true,
             })
         : undefined,
       action: route.module.action
-        ? (args: RRActionFunctionArgs) =>
-            callRouteActionRR({
+        ? (args: RRActionFunctionArgs, dataStrategyCtx?: unknown) =>
+            callRouteAction({
               request: args.request,
               params: args.params,
               loadContext: args.context,
               action: route.module.action!,
               routeId: route.id,
+              singleFetch: future.unstable_singleFetch === true,
             })
         : undefined,
       handle: route.module.handle,

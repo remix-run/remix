@@ -18,8 +18,22 @@ import getPort from "get-port";
 
 process.env.NODE_ENV = process.env.NODE_ENV ?? "production";
 
-sourceMapSupport.install();
-installGlobals();
+sourceMapSupport.install({
+  retrieveSourceMap: function (source) {
+    let match = source.startsWith("file://");
+    if (match) {
+      let filePath = url.fileURLToPath(source);
+      let sourceMapPath = `${filePath}.map`;
+      if (fs.existsSync(sourceMapPath)) {
+        return {
+          url: source,
+          map: fs.readFileSync(sourceMapPath, "utf8"),
+        };
+      }
+    }
+    return null;
+  },
+});
 
 run();
 
@@ -85,6 +99,8 @@ async function run() {
   }
 
   let build: ServerBuild = await reimportServer();
+
+  installGlobals({ nativeFetch: build.future.unstable_singleFetch });
 
   let onListen = () => {
     let address =

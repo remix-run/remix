@@ -56,7 +56,7 @@ app/
 └── root.tsx
 ```
 
-If `app/routes/sales.invoices.$invoiceId.tsx` exports an `ErrorBoundary` and an error is thrown in its component, `action`, or `loader`, the rest of the app renders normally and only the invoice section of the page renders the error.
+If `app/routes/sales.invoices.$invoiceId.tsx` exports an [`ErrorBoundary`][error-boundary] and an error is thrown in its component, [`action`][action], or [`loader`][loader], the rest of the app renders normally and only the invoice section of the page renders the error.
 
 ![error in a nested route where the parent route's navigation renders normally][error-in-a-nested-route-where-the-parent-route-s-navigation-renders-normally]
 
@@ -64,7 +64,7 @@ If a route doesn't have an error boundary, the error "bubbles up" to the closest
 
 ## Error Sanitization
 
-In production mode, any errors that happen on the server are automatically sanitized to prevent leaking any sensitive server information (such as stack traces) to the client. This means that the `Error` instance you receive from `useRouteError` will have a generic message and no stack trace:
+In production mode, any errors that happen on the server are automatically sanitized to prevent leaking any sensitive server information (such as stack traces) to the client. This means that the `Error` instance you receive from [`useRouteError`][use-route-error] will have a generic message and no stack trace:
 
 ```tsx
 export async function loader() {
@@ -81,7 +81,7 @@ export function ErrorBoundary() {
 }
 ```
 
-If you need to log these errors or report then to a third-party service such as [BugSnag][bugsnag] or [Sentry][sentry], then you can do this through a [`handleError`][handle-error] export in your [`app/entry.server.js`][entry-server]. This method receives the un-sanitized versions of the error since it is also running on the server.
+If you need to log these errors or report them to a third-party service such as [BugSnag][bugsnag] or [Sentry][sentry], then you can do this through a [`handleError`][handle-error] export in your [`app/entry.server.js`][entry-server]. This method receives the un-sanitized versions of the error since it is also running on the server.
 
 If you want to trigger an error boundary and display a specific message or data in the browser, then you can throw a `Response` from a `action`/`loader` with that data instead:
 
@@ -110,6 +110,9 @@ export function ErrorBoundary() {
 [meta-component]: ../components/meta
 [scripts-component]: ../components/scripts
 [error-in-a-nested-route-where-the-parent-route-s-navigation-renders-normally]: /docs-images/error-boundary.png
+[action]: ../route/action
+[loader]: ../route/loader
+[use-route-error]: ../hooks/use-route-error
 [bugsnag]: https://www.bugsnag.com/
 [sentry]: https://sentry.io/
 [handle-error]: ../file-conventions/entry.server#handleerror

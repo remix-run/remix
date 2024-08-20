@@ -1,26 +1,18 @@
 // This file allows us to dynamically require the plugin so non-Vite consumers
 // don't need to have Vite installed as a peer dependency. Only types should
-// be imported at the top level.
-import type { ViteDevServer } from "vite";
-
+// be imported at the top level, or code that doesn't import Vite.
 import type { RemixVitePlugin } from "./plugin";
-import { id } from "./vmod";
+export type {
+  BuildManifest,
+  Preset,
+  VitePluginConfig,
+  ServerBundlesFunction,
+} from "./plugin";
 
-export const unstable_vitePlugin: RemixVitePlugin = (...args) => {
+export const vitePlugin: RemixVitePlugin = (...args) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   let { remixVitePlugin } = require("./plugin") as typeof import("./plugin");
   return remixVitePlugin(...args);
 };
 
-export const unstable_createViteServer = async () => {
-  let vite = await import("vite");
-  return vite.createServer({
-    server: {
-      middlewareMode: true,
-    },
-  });
-};
-
-export const unstable_loadViteServerBuild = async (vite: ViteDevServer) => {
-  return vite.ssrLoadModule(id("server-entry"));
-};
+export { cloudflareDevProxyVitePlugin } from "./cloudflare-proxy-plugin";
