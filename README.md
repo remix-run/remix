@@ -24,6 +24,14 @@ import Headers from '@mjackson/headers';
 
 let headers = new Headers();
 
+// Accept-Language
+
+headers.acceptLanguage = 'en-US,en;q=0.9';
+
+console.log(headers.acceptLanguage.languages); // [ 'en-US', 'en' ]
+console.log(headers.acceptLanguage.entries());
+// [Map Entries] { [ 'en-US', 1 ], [ 'en', 0.9 ] }
+
 // Content-Type
 headers.contentType = 'application/json; charset=utf-8';
 
@@ -155,6 +163,7 @@ All individual header classes may be initialized with either a) the string value
 
 The following headers are currently supported:
 
+- [`Accept-Language`](#accept-language)
 - [`Cache-Control`](#cache-control)
 - [`Content-Disposition`](#content-disposition)
 - [`Content-Type`](#content-type)
@@ -162,6 +171,24 @@ The following headers are currently supported:
 - [`Set-Cookie`](#set-cookie)
 
 If you need support for a header that isn't listed here, please [send a PR](https://github.com/mjackson/headers/pulls)! The goal is to have first-class support for all common HTTP headers.
+
+### Accept-Language
+
+```ts
+let header = new AcceptLanguage('en-US,en;q=0.9');
+header.get('en-US'); // 1
+header.set('en-US', 0.8);
+header.delete('en-US');
+header.has('en'); // true
+
+// Iterate over language/quality pairs
+for (let [language, quality] of header) {
+  // ...
+}
+
+let header = new AcceptLanguage(['en-US', ['en', 0.9]]);
+let header = new AcceptLanguage({ 'en-US': 1, en: 0.9 });
+```
 
 ### Cache-Control
 

@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { AcceptLanguage } from './accept-language.js';
 import { CacheControl } from './cache-control.js';
 import { ContentDisposition } from './content-disposition.js';
 import { ContentType } from './content-type.js';
@@ -54,6 +55,13 @@ describe('SuperHeaders', () => {
     let original = new Headers({ 'Content-Type': 'text/plain' });
     let headers = new SuperHeaders(original);
     assert.equal(headers.get('Content-Type'), 'text/plain');
+  });
+
+  it('initializes with a AcceptLanguageInit', () => {
+    let headers = new SuperHeaders({
+      acceptLanguage: { 'en-US': 1, en: 0.9 },
+    });
+    assert.equal(headers.get('Accept-Language'), 'en-US,en;q=0.9');
   });
 
   it('initializes with a CacheControlInit', () => {
@@ -196,6 +204,20 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Age'), '42');
     });
 
+    it('handles Accept-Language header', () => {
+      let headers = new SuperHeaders();
+      headers.acceptLanguage = 'en-US,en;q=0.9';
+
+      assert.ok(headers.acceptLanguage instanceof AcceptLanguage);
+      assert.deepStrictEqual(headers.acceptLanguage.languages, ['en-US', 'en']);
+
+      headers.acceptLanguage.set('en', 0.8);
+      assert.equal(headers.get('Accept-Language'), 'en-US,en;q=0.8');
+
+      headers.acceptLanguage = { 'fi-FI': 1, fi: 0.9 };
+      assert.equal(headers.get('Accept-Language'), 'fi-FI,fi;q=0.9');
+    });
+
     it('handles Cache-Control header', () => {
       let headers = new SuperHeaders();
       headers.cacheControl = 'public, max-age=3600';
@@ -305,6 +327,9 @@ describe('SuperHeaders', () => {
 
     it('creates empty header objects when accessed', () => {
       let headers = new SuperHeaders();
+
+      assert.ok(headers.acceptLanguage instanceof AcceptLanguage);
+      assert.equal(headers.acceptLanguage.toString(), '');
 
       assert.ok(headers.cacheControl instanceof CacheControl);
       assert.equal(headers.cacheControl.toString(), '');
