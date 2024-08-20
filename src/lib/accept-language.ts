@@ -42,7 +42,12 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
           }
         }
       }
+      this.#sort();
     }
+  }
+
+  #sort() {
+    this.#map = new Map([...this.#map].sort(([, a], [, b]) => b - a));
   }
 
   /**
@@ -57,6 +62,7 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    */
   set(language: string, quality = 1): void {
     this.#map.set(language, quality);
+    this.#sort();
   }
 
   /**

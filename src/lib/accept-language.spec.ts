@@ -135,4 +135,20 @@ describe('Accept-Language', () => {
     assert.equal(header.get('*'), 1);
     assert.equal(header.toString(), '*');
   });
+
+  it('sorts initial value', () => {
+    let header = new AcceptLanguage('en;q=0.9,en-US');
+    assert.equal(header.toString(), 'en-US,en;q=0.9');
+    assert.deepEqual(header.languages, ['en-US', 'en']);
+  });
+
+  it('sorts updated value', () => {
+    let header = new AcceptLanguage('en-US,en;q=0.9');
+    header.set('fi');
+    assert.equal(header.toString(), 'en-US,fi,en;q=0.9');
+    assert.deepEqual(header.languages, ['en-US', 'fi', 'en']);
+    header.set('en-US', 0.8);
+    assert.equal(header.toString(), 'fi,en;q=0.9,en-US;q=0.8');
+    assert.deepEqual(header.languages, ['fi', 'en', 'en-US']);
+  });
 });
