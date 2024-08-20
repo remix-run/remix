@@ -71,6 +71,8 @@ const files = {
       };
     }
 
+    class MyClass {}
+
     export function loader({ request }) {
       if (new URL(request.url).searchParams.has("error")) {
         throw new Error("Loader Error");
@@ -78,6 +80,10 @@ const files = {
       return {
         message: "DATA",
         date: new Date("${ISO_DATE}"),
+        unserializable: {
+          function: () => {},
+          class: new MyClass(),
+        },
       };
     }
 
@@ -113,6 +119,8 @@ const files = {
       }, { status: 201, headers: { 'X-Action': 'yes' }});
     }
 
+    class MyClass {}
+
     export function loader({ request }) {
       if (new URL(request.url).searchParams.has("error")) {
         throw new Error("Loader Error");
@@ -120,6 +128,10 @@ const files = {
       return data({
         message: "DATA",
         date: new Date("${ISO_DATE}"),
+        unserializable: {
+          function: () => {},
+          class: new MyClass(),
+        },
       }, { status: 206, headers: { 'X-Loader': 'yes' }});
     }
 
@@ -175,7 +187,7 @@ test.describe("single-fetch", () => {
     expect(res.headers.get("Content-Type")).toBe("text/x-script");
 
     res = await fixture.requestSingleFetchData("/data.data");
-    expect(res.data).toEqual({
+    expect(res.data).toStrictEqual({
       root: {
         data: {
           message: "ROOT",
@@ -185,6 +197,10 @@ test.describe("single-fetch", () => {
         data: {
           message: "DATA",
           date: new Date(ISO_DATE),
+          unserializable: {
+            function: undefined,
+            class: undefined,
+          },
         },
       },
     });
@@ -255,7 +271,7 @@ test.describe("single-fetch", () => {
     let res = await fixture.requestSingleFetchData("/data-with-response.data");
     expect(res.status).toEqual(206);
     expect(res.headers.get("X-Loader")).toEqual("yes");
-    expect(res.data).toEqual({
+    expect(res.data).toStrictEqual({
       root: {
         data: {
           message: "ROOT",
@@ -265,6 +281,10 @@ test.describe("single-fetch", () => {
         data: {
           message: "DATA",
           date: new Date(ISO_DATE),
+          unserializable: {
+            function: undefined,
+            class: undefined,
+          },
         },
       },
     });

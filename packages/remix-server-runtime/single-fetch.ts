@@ -350,6 +350,7 @@ export function encodeViaTurboStream(
         }
       },
     ],
+    postPlugins: [() => ["SingleFetchFallback"]],
   });
 }
 

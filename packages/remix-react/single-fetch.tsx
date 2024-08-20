@@ -358,6 +358,11 @@ export function decodeViaTurboStream(
           return { value: { [SingleFetchRedirectSymbol]: rest[0] } };
         }
       },
+      (type) => {
+        if (type === "SingleFetchFallback") {
+          return { value: undefined };
+        }
+      },
     ],
   });
 }
