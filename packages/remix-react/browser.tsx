@@ -337,7 +337,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // Critical CSS can become stale after code changes, e.g. styles might be
   // removed from a component, but the styles will still be present in the
   // server HTML. This allows our HMR logic to clear the critical CSS state.
-   
+
   let [criticalCss, setCriticalCss] = React.useState(
     process.env.NODE_ENV === "development"
       ? window.__remixContext.criticalCss
@@ -350,10 +350,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // This is due to the short circuit return above when the pathname doesn't
   // match and we force a hard reload.  This is an exceptional scenario in which
   // we can't hydrate anyway.
-   
+
   let [location, setLocation] = React.useState(router.state.location);
 
-   
   React.useLayoutEffect(() => {
     // If we had to run clientLoaders on hydration, we delay initialization until
     // after we've hydrated to avoid hydration issues from synchronous client loaders
@@ -363,7 +362,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     }
   }, []);
 
-   
   React.useLayoutEffect(() => {
     return router.subscribe((newState) => {
       if (newState.location !== location) {
@@ -372,7 +370,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     });
   }, [location]);
 
-   
   useFogOFWarDiscovery(
     router,
     window.__remixManifest,
