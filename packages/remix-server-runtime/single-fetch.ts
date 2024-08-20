@@ -17,9 +17,9 @@ import type { AppLoadContext } from "./data";
 import { sanitizeError, sanitizeErrors } from "./errors";
 import { getDocumentHeaders } from "./headers";
 import { ServerMode } from "./mode";
-import type { TypedDeferredData, TypedResponse } from "./responses";
+import type { TypedResponse } from "./responses";
 import { isRedirectStatusCode, isResponse } from "./responses";
-import type { SerializeFrom } from "./serialize";
+import type { Jsonify } from "./jsonify";
 
 export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
 
@@ -379,6 +379,36 @@ type Serializable =
   | Set<Serializable>
   | Promise<Serializable>;
 
+// prettier-ignore
+type Serialize<T> =
+  T extends void ? undefined :
+
+  // First, let type stay as-is if its already serializable...
+  T extends Serializable ? T :
+
+  // ...then don't allow functions to be serialized...
+  T extends (...args: any[]) => unknown ? undefined :
+
+  // ...lastly handle inner types for all container types allowed by `turbo-stream`
+
+  // Promise
+  T extends Promise<infer U> ? Promise<Serialize<U>> :
+
+  // Map & Set
+  T extends Map<infer K, infer V> ? Map<Serialize<K>, Serialize<V>> :
+  T extends Set<infer U> ? Set<Serialize<U>> :
+
+  // Array
+  T extends [] ? [] :
+  T extends readonly [infer F, ...infer R] ? [Serialize<F>, ...Serialize<R>] :
+  T extends Array<infer U> ? Array<Serialize<U>> :
+  T extends readonly unknown[] ? readonly Serialize<T[number]>[] :
+
+  // Record
+  T extends Record<any, any> ? {[K in keyof T]: Serialize<T[K]>} :
+
+  undefined
+
 type Fn = (...args: any[]) => unknown;
 
 // Backwards-compatible type for Remix v2 where json/defer still use the old types,
@@ -386,8 +416,7 @@ type Fn = (...args: any[]) => unknown;
 // migration of loaders to return naked objects.  In the next major version,
 // json/defer will be removed so everything will use the new simplified typings.
 // prettier-ignore
-export type Serialize<T extends Fn> =
-  Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
-  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
-  Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? D :
-  Awaited<ReturnType<T>>;
+export type SerializeFrom<T extends Fn> =
+  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? Jsonify<T> :
+  Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? Serialize<D> :
+  Serialize<Awaited<ReturnType<T>>>;

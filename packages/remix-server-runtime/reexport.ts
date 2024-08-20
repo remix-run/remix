@@ -28,6 +28,8 @@ export type { AppLoadContext } from "./data";
 
 export type { EntryContext } from "./entry";
 
+export type { Future } from "./future";
+
 export type {
   HtmlLinkDescriptor,
   LinkDescriptor,

@@ -11,7 +11,6 @@ export {
   data as unstable_data,
 } from "./single-fetch";
 export type {
-  Serialize as unstable_Serialize,
   SingleFetchResult as UNSAFE_SingleFetchResult,
   SingleFetchResults as UNSAFE_SingleFetchResults,
 } from "./single-fetch";
@@ -60,6 +59,7 @@ export type {
   EntryContext,
   ErrorResponse,
   FlashSessionData,
+  Future,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HeadersArgs,
