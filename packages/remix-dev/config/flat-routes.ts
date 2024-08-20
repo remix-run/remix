@@ -298,17 +298,14 @@ export function flatRoutesUniversal(
 
   // At this point, `routeManifest` is ordered by the routeId length above, but
   // we want them exposed in the order they came in from the config
-  return Object.keys(routeManifest)
+  return Object.entries(routeManifest)
     .sort((a, b) => {
-      let aIdx = configRouteOrder.get(a) ?? -1;
-      let bIdx = configRouteOrder.get(b) ?? -1;
+      let aIdx = configRouteOrder.get(a[0]) ?? -1;
+      let bIdx = configRouteOrder.get(b[0]) ?? -1;
       return aIdx < bIdx ? -1 : aIdx > bIdx ? 1 : 0;
     })
     .reduce(
-      (acc, routeId) =>
-        Object.assign(acc, {
-          [routeId]: routeManifest[routeId],
-        }),
+      (acc, [routeId, route]) => Object.assign(acc, { [routeId]: route }),
       {}
     );
 }
