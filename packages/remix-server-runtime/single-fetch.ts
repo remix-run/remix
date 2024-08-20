@@ -19,7 +19,6 @@ import { getDocumentHeaders } from "./headers";
 import { ServerMode } from "./mode";
 import type { TypedDeferredData, TypedResponse } from "./responses";
 import { isRedirectStatusCode, isResponse } from "./responses";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "./routeModules";
 import type { SerializeFrom } from "./serialize";
 
 export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
@@ -361,8 +360,6 @@ export function data<D extends Serializable>(
   return routerData(value, init);
 }
 
-type MaybePromise<T> = T | Promise<T>;
-
 type Serializable =
   | undefined
   | null
@@ -381,29 +378,15 @@ type Serializable =
   | Set<Serializable>
   | Promise<Serializable>;
 
-type DataFunctionReturnValue =
-  | Serializable
-  | DataWithResponseInit<Serializable>
-  | TypedDeferredData<Record<string, unknown>>
-  | TypedResponse<Record<string, unknown>>;
+type Fn = (...args: any[]) => unknown;
 
 // Backwards-compatible type for Remix v2 where json/defer still use the old types,
 // and only non-json/defer returns use the new types.  This allows for incremental
 // migration of loaders to return naked objects.  In the next major version,
 // json/defer will be removed so everything will use the new simplified typings.
 // prettier-ignore
-export type Serialize<T extends Loader | Action> =
+export type Serialize<T extends Fn> =
   Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
   Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
   Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? D :
   Awaited<ReturnType<T>>;
-
-export type Loader = (
-  args: LoaderFunctionArgs
-) => MaybePromise<DataFunctionReturnValue>;
-export let defineLoader = <T extends Loader>(loader: T): T => loader;
-
-export type Action = (
-  args: ActionFunctionArgs
-) => MaybePromise<DataFunctionReturnValue>;
-export let defineAction = <T extends Action>(action: T): T => action;

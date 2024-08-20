@@ -9,12 +9,8 @@ export { defer, json, redirect, redirectDocument, replace } from "./responses";
 export {
   SingleFetchRedirectSymbol as UNSAFE_SingleFetchRedirectSymbol,
   data as unstable_data,
-  defineLoader as unstable_defineLoader,
-  defineAction as unstable_defineAction,
 } from "./single-fetch";
 export type {
-  Loader as unstable_Loader,
-  Action as unstable_Action,
   Serialize as unstable_Serialize,
   SingleFetchResult as UNSAFE_SingleFetchResult,
   SingleFetchResults as UNSAFE_SingleFetchResults,
