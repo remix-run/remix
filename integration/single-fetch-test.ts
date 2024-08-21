@@ -172,6 +172,7 @@ test.describe("single-fetch", () => {
         data: null,
       },
     });
+    expect(res.headers.get("Content-Type")).toBe("text/x-script");
 
     res = await fixture.requestSingleFetchData("/data.data");
     expect(res.data).toEqual({
