@@ -1,24 +1,24 @@
-import { type FileStorage } from "./file-storage.js";
+import { FileStorage } from "./file-storage.js";
 
 /**
  * A simple, in-memory implementation of the `FileStorage` interface.
  */
 export class MemoryFileStorage implements FileStorage {
-  #files = new Map<string, File>();
+  #map = new Map<string, File>();
 
   has(key: string): boolean {
-    return this.#files.has(key);
+    return this.#map.has(key);
   }
 
   put(key: string, file: File): void {
-    this.#files.set(key, file);
+    this.#map.set(key, file);
   }
 
   get(key: string): File | null {
-    return this.#files.get(key) ?? null;
+    return this.#map.get(key) ?? null;
   }
 
   remove(key: string): void {
-    this.#files.delete(key);
+    this.#map.delete(key);
   }
 }

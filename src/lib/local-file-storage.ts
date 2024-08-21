@@ -2,8 +2,8 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 
-import { type FileStorage } from "./file-storage.js";
-import { type LazyFileContent, LazyFile } from "./lazy-file.js";
+import { FileStorage } from "./file-storage.js";
+import { LazyFileContent, LazyFile } from "./lazy-file.js";
 
 type FileWithoutSize = Omit<File, "size">;
 
@@ -13,9 +13,9 @@ type FileWithoutSize = Omit<File, "size">;
  * Note: Keys have no correlation to file names on disk, so they may be any string including
  * characters that are not valid in file names. Additionally, individual `File` names have no
  * correlation to names of files on disk, so multiple files with the same name may be stored in the
- * same storage.
+ * same storage object.
  */
-export class DiskFileStorage implements FileStorage {
+export class LocalFileStorage implements FileStorage {
   #directory: string;
   #metadata: FileMetadataIndex;
 
@@ -75,8 +75,8 @@ export class DiskFileStorage implements FileStorage {
       return;
     }
 
+    let file = path.join(this.#directory, metadata.file);
     try {
-      let file = path.join(this.#directory, metadata.file);
       await fsp.unlink(file);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {

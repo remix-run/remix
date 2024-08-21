@@ -1,16 +1,21 @@
 import * as assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { after, describe, it } from "node:test";
+import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { DiskFileStorage } from "./disk-file-storage.node.js";
+import { LocalFileStorage } from "./local-file-storage.js";
 
 const __dirname = new URL(".", import.meta.url).pathname;
 
-describe("DiskFileStorage (node)", () => {
-  let directory = path.resolve(__dirname, "../../test-disk-storage");
+describe("LocalFileStorage", () => {
+  let directory = path.resolve(__dirname, "../../test-local-file-storage");
+
+  after(() => {
+    fs.rmSync(directory, { recursive: true });
+  });
 
   it("stores and retrieves files", async () => {
-    let storage = new DiskFileStorage(directory);
+    let storage = new LocalFileStorage(directory);
     let file = new File(["Hello, world!"], "hello.txt", { type: "text/plain" });
 
     await storage.put("hello", file);
@@ -24,11 +29,7 @@ describe("DiskFileStorage (node)", () => {
     assert.equal(retrieved.type, "text/plain");
     assert.equal(retrieved.size, 13);
 
-    let buffer = await retrieved.arrayBuffer();
-
-    assert.equal(buffer.byteLength, 13);
-
-    let text = new TextDecoder().decode(buffer);
+    let text = await retrieved.text();
 
     assert.equal(text, "Hello, world!");
 

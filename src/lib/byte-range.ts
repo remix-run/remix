@@ -1,29 +1,36 @@
 export interface ByteRange {
   /**
-   * The start index of the range (inclusive).
+   * The start index of the range (inclusive). If this number is negative, it represents an offset
+   * from the end of the buffer.
    */
   start: number;
   /**
-   * The end index of the range (exclusive).
+   * The end index of the range (exclusive). If this number is negative, it represents an offset
+   * from the end of the buffer. `Infinity` represents the end of the buffer.
    */
   end: number;
 }
 
-export function validateByteRange(range: ByteRange): void {
-  if (
-    (range.start < 0 &&
-      (range.end < range.start || range.end >= 0) &&
-      range.end !== Infinity) ||
-    (range.end >= 0 && range.end < range.start) ||
-    range.start === Infinity
-  ) {
-    throw new Error(`Invalid byte range: ${range.start}-${range.end}`);
-  }
+/**
+ * Returns the length of the byte range in a buffer of the given `size`.
+ */
+export function getByteLength(range: ByteRange, size: number): number {
+  let [start, end] = getIndexes(range, size);
+  return end - start;
 }
 
-export function addByteRanges(a: ByteRange, b: ByteRange): ByteRange {
-  return {
-    start: a.start + b.start,
-    end: a.end === Infinity ? b.end : a.end + b.end
-  };
+/**
+ * Resolves a byte range to absolute indexes in a buffer of the given `size`.
+ */
+export function getIndexes(range: ByteRange, size: number): [number, number] {
+  let start = Math.min(
+    Math.max(0, range.start < 0 ? size + range.start : range.start),
+    size
+  );
+  let end = Math.min(
+    Math.max(start, range.end < 0 ? size + range.end : range.end),
+    size
+  );
+
+  return [start, end];
 }

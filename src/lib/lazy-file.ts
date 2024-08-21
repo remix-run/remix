@@ -1,4 +1,4 @@
-import { ByteRange } from "./byte-range.js";
+import { ByteRange, getByteLength, getIndexes } from "./byte-range.js";
 
 export interface LazyFileContent {
   /**
@@ -40,7 +40,7 @@ export class LazyFile extends File {
    */
   get size(): number {
     return this.#range != null
-      ? this.#range.end - this.#range.start
+      ? getByteLength(this.#range, this.#content.byteLength)
       : this.#content.byteLength;
   }
 
@@ -75,27 +75,18 @@ export class LazyFile extends File {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
    */
-  slice(start = 0, end = this.size, contentType = ""): File {
-    let startIndex: number, endIndex: number;
+  slice(start = 0, end = Infinity, contentType = ""): File {
+    let range = { start, end };
+
     if (this.#range != null) {
-      startIndex = this.#range.start;
-      endIndex = this.#range.end;
-    } else {
-      startIndex = 0;
-      endIndex = this.#content.byteLength;
+      // file.slice().slice() is additive
+      range = {
+        start: this.#range.start + start,
+        end: this.#range.end === Infinity ? end : this.#range.end + end
+      };
     }
 
-    start =
-      start < 0
-        ? Math.max(endIndex + start, startIndex)
-        : Math.min(start, endIndex);
-    end = Math.max(
-      end < 0 ? Math.max(endIndex + end, startIndex) : Math.min(end, endIndex),
-      start
-    );
-
     let props = { ...this.#props, type: contentType };
-    let range = { start, end };
 
     return new LazyFile(this.#content, this.name, props, range);
   }
@@ -106,9 +97,12 @@ export class LazyFile extends File {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/stream)
    */
   stream(): ReadableStream<Uint8Array> {
-    return this.#range != null
-      ? this.#content.read(this.#range.start, this.#range.end)
-      : this.#content.read();
+    if (this.#range != null) {
+      let [start, end] = getIndexes(this.#range, this.#content.byteLength);
+      return this.#content.read(start, end);
+    }
+
+    return this.#content.read();
   }
 
   /**
