@@ -94,7 +94,7 @@ function randomFilename(): string {
 
 function createFile(
   directory: string,
-  content: ReadableStream<Uint8Array>
+  stream: ReadableStream<Uint8Array>
 ): Promise<{ name: string; size: number }> {
   let filename = randomFilename();
   let file = path.join(directory, filename);
@@ -104,7 +104,7 @@ function createFile(
       if (error) {
         if (error.code === "EEXIST") {
           // Try again with a different filename
-          return resolve(createFile(directory, content));
+          return resolve(createFile(directory, stream));
         } else {
           return reject(error);
         }
@@ -114,7 +114,7 @@ function createFile(
       let bytesWritten = 0;
 
       try {
-        for await (let chunk of content) {
+        for await (let chunk of stream) {
           writeStream.write(chunk);
           bytesWritten += chunk.length;
         }
