@@ -5,15 +5,70 @@ import {
 } from "@mjackson/multipart-parser";
 
 /**
+ * A `File` that was uploaded as part of a `multipart/form-data` request.
+ *
+ * This object is intended to be used as an intermediary for handling file uploads. The file should
+ * be saved to disk or a cloud storage service as quickly as possible to avoid buffering and
+ * backpressure building up in the input stream.
+ *
+ * Note: Although this is a `File` object its `size` is unknown, so any attempt to access
+ * `file.size` or use `file.slice()` will throw an error.
+ */
+export class FileUpload extends File {
+  #part: MultipartPart;
+
+  constructor(part: MultipartPart) {
+    super([], part.filename ?? "", { type: part.mediaType });
+    this.#part = part;
+  }
+
+  arrayBuffer(): Promise<ArrayBuffer> {
+    return this.#part.arrayBuffer();
+  }
+
+  bytes(): Promise<Uint8Array> {
+    return this.#part.bytes();
+  }
+
+  /**
+   * The name of the <input> field used to upload the file.
+   */
+  get fieldName(): string | undefined {
+    return this.#part.name;
+  }
+
+  get size(): number {
+    throw new Error(
+      "Cannot get the size of a file upload without buffering the entire file"
+    );
+  }
+
+  slice(): Blob {
+    throw new Error(
+      "Cannot slice a file upload without buffering the entire file"
+    );
+  }
+
+  stream(): ReadableStream<Uint8Array> {
+    return this.#part.body;
+  }
+
+  text(): Promise<string> {
+    return this.#part.text();
+  }
+}
+
+/**
  * A function used for handling file uploads.
  */
 export interface FileUploadHandler {
-  (part: MultipartPart): Promise<File>;
+  (file: FileUpload): File | void | Promise<File | void>;
 }
 
-async function defaultFileUploadHandler(part: MultipartPart): Promise<File> {
-  let buffer = await part.arrayBuffer();
-  return new File([buffer], part.filename ?? "", { type: part.mediaType });
+async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
+  // Do the slow thing and buffer the entire file in memory.
+  let buffer = await file.arrayBuffer();
+  return new File([buffer], file.name, { type: file.type });
 }
 
 /**
@@ -26,7 +81,7 @@ async function defaultFileUploadHandler(part: MultipartPart): Promise<File> {
  */
 export async function parseFormData(
   request: Request,
-  handleFileUpload: FileUploadHandler = defaultFileUploadHandler
+  uploadHandler: FileUploadHandler = defaultFileUploadHandler
 ): Promise<FormData> {
   if (isMultipartRequest(request)) {
     let formData = new FormData();
@@ -35,7 +90,10 @@ export async function parseFormData(
       if (!part.name) continue;
 
       if (part.isFile) {
-        formData.append(part.name, await handleFileUpload(part));
+        let file = await uploadHandler(new FileUpload(part));
+        if (file) {
+          formData.append(part.name, file);
+        }
       } else {
         formData.append(part.name, await part.text());
       }
