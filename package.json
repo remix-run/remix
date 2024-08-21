@@ -1,0 +1,41 @@
+{
+  "name": "@mjackson/file-storage",
+  "version": "0.1.0",
+  "description": "Key/value storage for JavaScript File objects",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/file-storage.git"
+  },
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/file-storage.js",
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "prettier": "^3.3.3",
+    "tsimp": "^2.0.11",
+    "typescript": "^5.5.3"
+  },
+  "scripts": {
+    "clean": "git clean -fdX .",
+    "build": "tsc --outDir dist --project tsconfig.lib.json",
+    "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
+    "prepare": "npm run build",
+    "version": "node scripts/version.js"
+  },
+  "packageManager": "pnpm@9.7.1",
+  "keywords": [
+    "file",
+    "storage",
+    "stream",
+    "fs"
+  ]
+}
