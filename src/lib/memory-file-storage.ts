@@ -10,7 +10,7 @@ export class MemoryFileStorage implements FileStorage {
     return this.#map.has(key);
   }
 
-  put(key: string, file: File): void {
+  set(key: string, file: File): void {
     this.#map.set(key, file);
   }
 

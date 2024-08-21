@@ -18,7 +18,7 @@ describe("LocalFileStorage", () => {
     let storage = new LocalFileStorage(directory);
     let file = new File(["Hello, world!"], "hello.txt", { type: "text/plain" });
 
-    await storage.put("hello", file);
+    await storage.set("hello", file);
 
     assert.ok(await storage.has("hello"));
 

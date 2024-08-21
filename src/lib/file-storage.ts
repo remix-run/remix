@@ -9,7 +9,7 @@ export interface FileStorage {
   /**
    * Puts a file in storage at the given key.
    */
-  put(key: string, file: File): void | Promise<void>;
+  set(key: string, file: File): void | Promise<void>;
   /**
    * Returns the file with the given key, or `null` if no such key exists.
    */

@@ -47,7 +47,7 @@ export class LocalFileStorage implements FileStorage {
     return this.#metadata.has(key);
   }
 
-  async put(key: string, file: FileWithoutSize): Promise<void> {
+  async set(key: string, file: FileWithoutSize): Promise<void> {
     let { name, size } = await createFile(this.#directory, file.stream());
 
     await this.#metadata.set(key, {

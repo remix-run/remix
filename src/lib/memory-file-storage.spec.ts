@@ -8,7 +8,7 @@ describe("MemoryFileStorage", () => {
     let storage = new MemoryFileStorage();
     let file = new File(["Hello, world!"], "hello.txt", { type: "text/plain" });
 
-    storage.put("hello", file);
+    storage.set("hello", file);
 
     assert.ok(storage.has("hello"));
 
