@@ -1,6 +1,6 @@
 {
-  "name": "lazy-file",
-  "version": "1.0.0",
+  "name": "@mjackson/lazy-file",
+  "version": "0.0.0",
   "description": "Lazy, streaming files for JavaScript",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
