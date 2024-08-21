@@ -4,7 +4,7 @@
 
 ## The Problem
 
-The web fetch API's built-in [`request.formData()` API](https://developer.mozilla.org/en-US/docs/Web/API/Request/formData) is not a great fit for server environments because it doesn't provide a way to stream file uploads. This means that when you call `request.formData()` in a server environment on a request that was submitted by a `<form enctype="multipart/form-data">`, any file uploads contained in the request are buffered in memory. For small files this may not be an issue, but it's a total non-starter for large files that exceed the server's memory capacity.
+The web fetch API's built-in [`request.formData()` method](https://developer.mozilla.org/en-US/docs/Web/API/Request/formData) is not a great fit for server environments because it doesn't provide a way to stream file uploads. This means that when you call `request.formData()` in a server environment on a request that was submitted by a `<form enctype="multipart/form-data">`, any file uploads contained in the request are buffered in memory. For small files this may not be an issue, but it's a total non-starter for large files that exceed the server's memory capacity.
 
 `form-data-parser` fixes this issue by providing an API to handle streaming file data.
 
