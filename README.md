@@ -30,17 +30,21 @@ async function handleRequest(request: Request) {
     if (fileUpload.fieldName === "user-avatar") {
       let storageKey = `user-${user.id}-avatar`;
 
-      // Save the file to storage
+      // FileUpload objects are not meant to stick around for very long (they are
+      // streaming data from the request.body!) so we should store them as soon as
+      // possible.
       await fileStorage.put(storageKey, fileUpload);
 
-      // Return an instance of the file from storage for the FormData object
+      // Return a File for the FormData object. This is a LazyFile that knows how
+      // to access the file's content if needed (using e.g. file.stream()) but
+      // waits until it is requested to actually read anything.
       return fileStorage.get(storageKey);
     }
 
     // Ignore any files we don't recognize the name of...
   });
 
-  let file = formData.get("user-avatar"); // File
+  let file = formData.get("user-avatar"); // File (LazyFile)
   file.name; // "my-avatar.jpg" (name of the file on the user's computer)
   file.size; // number
   file.type; // "image/jpeg"
