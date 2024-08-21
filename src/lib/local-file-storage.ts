@@ -24,8 +24,16 @@ export class LocalFileStorage implements FileStorage {
    */
   constructor(directory: string) {
     try {
-      fs.accessSync(directory);
+      let stat = fs.statSync(directory);
+
+      if (!stat.isDirectory()) {
+        throw new Error(`Path "${directory}" is not a directory`);
+      }
     } catch (error) {
+      if (!isNoEntityError(error)) {
+        throw error;
+      }
+
       fs.mkdirSync(directory, { recursive: true });
     }
 
@@ -79,7 +87,7 @@ export class LocalFileStorage implements FileStorage {
     try {
       await fsp.unlink(file);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (!isNoEntityError(error)) {
         throw error;
       }
     }
@@ -167,11 +175,11 @@ class FileMetadataIndex {
     try {
       return JSON.parse(await fsp.readFile(this.#path, { encoding: "utf-8" }));
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return {};
+      if (!isNoEntityError(error)) {
+        throw error;
       }
 
-      throw error;
+      return {};
     }
   }
 
@@ -198,4 +206,15 @@ class FileMetadataIndex {
     let info = await this.#getAll();
     await this.#save({ ...info, [key]: undefined });
   }
+}
+
+function isNoEntityError(
+  obj: unknown
+): obj is NodeJS.ErrnoException & { code: "ENOENT" } {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    "code" in obj &&
+    (obj as NodeJS.ErrnoException).code === "ENOENT"
+  );
 }
