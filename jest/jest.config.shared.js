@@ -8,11 +8,6 @@ const ignorePatterns = [
 
 /** @type {import('jest').Config} */
 module.exports = {
-  moduleNameMapper: {
-    "^@web3-storage/multipart-parser$": require.resolve(
-      "@web3-storage/multipart-parser"
-    ),
-  },
   modulePathIgnorePatterns: ignorePatterns,
   setupFiles: ["<rootDir>/__tests__/setup.ts"],
   testMatch: ["<rootDir>/**/*-test.[jt]s?(x)"],
