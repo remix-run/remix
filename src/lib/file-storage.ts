@@ -1,5 +1,5 @@
 /**
- * The `FileStorage` interface provides methods for storing and retrieving `File` objects.
+ * A key/value interface for storing `File` objects.
  */
 export interface FileStorage {
   /**
@@ -7,7 +7,7 @@ export interface FileStorage {
    */
   has(key: string): boolean | Promise<boolean>;
   /**
-   * Stores a file with the given key.
+   * Puts a file in storage at the given key.
    */
   put(key: string, file: File): void | Promise<void>;
   /**
