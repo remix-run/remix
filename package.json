@@ -28,6 +28,7 @@
     "typescript": "^5.5.4"
   },
   "scripts": {
+    "clean": "git clean -fdX .",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
     "prepare": "pnpm run build",
