@@ -1,5 +1,5 @@
 # lazy-file CHANGELOG
 
-## HEAD
+## v1.0.0 (Aug 21, 2024)
 
 - Initial release
