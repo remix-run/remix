@@ -2,6 +2,6 @@
 .wrangler
 dist
 node_modules
-test-disk-storage
+test-local-file-storage
 
 *.tsbuildinfo
