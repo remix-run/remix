@@ -829,11 +829,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     return JSON.parse(manifestContents) as Vite.Manifest;
   };
 
-  let getViteManifestFilePaths = (viteManifest: Vite.Manifest): Set<string> => {
-    let filePaths = Object.values(viteManifest).map((chunk) => chunk.file);
-    return new Set(filePaths);
-  };
-
   let getViteManifestAssetPaths = (
     viteManifest: Vite.Manifest
   ): Set<string> => {
@@ -1405,9 +1400,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           let serverBuildDirectory = getServerBuildDirectory(ctx);
 
           let ssrViteManifest = await loadViteManifest(serverBuildDirectory);
-          let clientViteManifest = await loadViteManifest(clientBuildDirectory);
-
-          let clientFilePaths = getViteManifestFilePaths(clientViteManifest);
           let ssrAssetPaths = getViteManifestAssetPaths(ssrViteManifest);
 
           // We only move assets that aren't in the client build, otherwise we
@@ -1419,8 +1411,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           let movedAssetPaths: string[] = [];
           for (let ssrAssetPath of ssrAssetPaths) {
             let src = path.join(serverBuildDirectory, ssrAssetPath);
-            if (!clientFilePaths.has(ssrAssetPath)) {
-              let dest = path.join(clientBuildDirectory, ssrAssetPath);
+            let dest = path.join(clientBuildDirectory, ssrAssetPath);
+
+            if (!fse.existsSync(dest)) {
               await fse.move(src, dest);
               movedAssetPaths.push(dest);
             } else {
