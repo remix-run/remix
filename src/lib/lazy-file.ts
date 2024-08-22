@@ -159,7 +159,7 @@ export class LazyFile extends File {
 }
 
 function streamContent(
-  content: (Uint8Array | Blob)[],
+  content: (Blob | Uint8Array)[],
   start = 0,
   end = Infinity
 ): ReadableStream<Uint8Array> {
