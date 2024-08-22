@@ -17,31 +17,55 @@ export interface LazyFileContent {
  * would be impractical to load into memory all at once.
  */
 export class LazyFile extends File {
-  #content: LazyFileContent;
-  #props?: FilePropertyBag;
-  #range?: ByteRange;
+  readonly #content: (Blob | Uint8Array)[] | LazyFileContent;
+  readonly #contentSize: number;
+  readonly #props?: FilePropertyBag;
+  readonly #range?: ByteRange;
 
   constructor(
-    content: LazyFileContent,
+    content: BlobPart[] | string | LazyFileContent,
     name: string,
     props?: FilePropertyBag,
     range?: ByteRange
   ) {
     super([], name, props);
-    this.#content = content;
+
+    if (Array.isArray(content)) {
+      this.#content = [];
+      this.#contentSize = 0;
+
+      for (let part of content) {
+        if (part instanceof Blob) {
+          this.#content.push(part);
+          this.#contentSize += part.size;
+        } else {
+          let array: Uint8Array;
+          if (typeof part === "string") {
+            array = new TextEncoder().encode(part);
+          } else if (ArrayBuffer.isView(part)) {
+            array = new Uint8Array(
+              part.buffer,
+              part.byteOffset,
+              part.byteLength
+            );
+          } else {
+            array = new Uint8Array(part);
+          }
+          this.#content.push(array);
+          this.#contentSize += array.byteLength;
+        }
+      }
+    } else if (typeof content === "string") {
+      let array = new TextEncoder().encode(content);
+      this.#content = [array];
+      this.#contentSize = array.byteLength;
+    } else {
+      this.#content = content;
+      this.#contentSize = content.byteLength;
+    }
+
     this.#props = props;
     this.#range = range;
-  }
-
-  /**
-   * The size of the file in bytes.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/size)
-   */
-  get size(): number {
-    return this.#range != null
-      ? getByteLength(this.#range, this.#content.byteLength)
-      : this.#content.byteLength;
   }
 
   /**
@@ -68,6 +92,17 @@ export class LazyFile extends File {
     }
 
     return result;
+  }
+
+  /**
+   * The size of the file in bytes.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/size)
+   */
+  get size(): number {
+    return this.#range != null
+      ? getByteLength(this.#range, this.#contentSize)
+      : this.#contentSize;
   }
 
   /**
@@ -98,11 +133,15 @@ export class LazyFile extends File {
    */
   stream(): ReadableStream<Uint8Array> {
     if (this.#range != null) {
-      let [start, end] = getIndexes(this.#range, this.#content.byteLength);
-      return this.#content.read(start, end);
+      let [start, end] = getIndexes(this.#range, this.#contentSize);
+      return Array.isArray(this.#content)
+        ? streamContent(this.#content, start, end)
+        : this.#content.read(start, end);
     }
 
-    return this.#content.read();
+    return Array.isArray(this.#content)
+      ? streamContent(this.#content)
+      : this.#content.read();
   }
 
   /**
@@ -113,4 +152,67 @@ export class LazyFile extends File {
   async text(): Promise<string> {
     return new TextDecoder("utf-8").decode(await this.bytes());
   }
+
+  [Symbol.asyncIterator](): AsyncIterableIterator<Uint8Array> {
+    return this.stream()[Symbol.asyncIterator]();
+  }
+}
+
+function streamContent(
+  content: (Uint8Array | Blob)[],
+  start = 0,
+  end = Infinity
+): ReadableStream<Uint8Array> {
+  if (end < start) {
+    throw new RangeError(
+      "The end index must be greater than or equal to the start index"
+    );
+  }
+
+  let index = 0;
+  let bytesRead = 0;
+
+  return new ReadableStream({
+    async pull(controller) {
+      if (index >= content.length) {
+        controller.close();
+        return;
+      }
+
+      let hasPushed = false;
+
+      function pushChunk(chunk: Uint8Array) {
+        let chunkLength = chunk.byteLength;
+
+        if (!(bytesRead + chunkLength < start || bytesRead >= end)) {
+          let startIndex = Math.max(start - bytesRead, 0);
+          let endIndex = Math.min(end - bytesRead, chunkLength);
+          controller.enqueue(chunk.subarray(startIndex, endIndex));
+          hasPushed = true;
+        }
+
+        bytesRead += chunkLength;
+      }
+
+      async function pushPart(part: Blob | Uint8Array) {
+        if (part instanceof Blob) {
+          if (bytesRead + part.size <= start) {
+            // We can skip this part entirely.
+            bytesRead += part.size;
+            return;
+          }
+
+          for await (let chunk of part.stream()) {
+            pushChunk(chunk);
+          }
+        } else {
+          pushChunk(part);
+        }
+      }
+
+      while (!hasPushed && index < content.length) {
+        await pushPart(content[index++]);
+      }
+    }
+  });
 }
