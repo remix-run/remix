@@ -16,6 +16,8 @@
   "type": "module",
   "exports": {
     ".": "./dist/file-storage.js",
+    "./local": "./dist/local.js",
+    "./memory": "./dist/memory.js",
     "./package.json": "./package.json"
   },
   "devDependencies": {
