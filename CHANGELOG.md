@@ -1,6 +1,6 @@
 # lazy-file CHANGELOG
 
-## HEAD
+## v1.1.0 (Aug 22, 2024)
 
 - Add ability to initialize a LazyFile with `BlobPart[]`, just like a normal `File`
 - Add async iterator support to LazyFile
