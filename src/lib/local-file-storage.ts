@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
+import { LazyFileContent, LazyFile } from "@mjackson/lazy-file";
 
 import { FileStorage } from "./file-storage.js";
-import { LazyFileContent, LazyFile } from "./lazy-file.js";
 
 type FileWithoutSize = Omit<File, "size">;
 
@@ -16,28 +16,29 @@ type FileWithoutSize = Omit<File, "size">;
  * same storage object.
  */
 export class LocalFileStorage implements FileStorage {
-  #directory: string;
+  #dirname: string;
   #metadata: FileMetadataIndex;
 
   /**
    * @param directory The directory where files are stored
    */
   constructor(directory: string) {
+    this.#dirname = path.resolve(directory);
+
     try {
-      let stat = fs.statSync(directory);
+      let stat = fs.statSync(this.#dirname);
 
       if (!stat.isDirectory()) {
-        throw new Error(`Path "${directory}" is not a directory`);
+        throw new Error(`Path "${this.#dirname}" is not a directory`);
       }
     } catch (error) {
       if (!isNoEntityError(error)) {
         throw error;
       }
 
-      fs.mkdirSync(directory, { recursive: true });
+      fs.mkdirSync(this.#dirname, { recursive: true });
     }
 
-    this.#directory = directory;
     this.#metadata = new FileMetadataIndex(
       path.join(directory, ".metadata.json")
     );
@@ -48,7 +49,7 @@ export class LocalFileStorage implements FileStorage {
   }
 
   async set(key: string, file: FileWithoutSize): Promise<void> {
-    let { name, size } = await createFile(this.#directory, file.stream());
+    let { name, size } = await createFile(this.#dirname, file.stream());
 
     await this.#metadata.set(key, {
       file: name,
@@ -65,7 +66,7 @@ export class LocalFileStorage implements FileStorage {
       return null;
     }
 
-    let file = path.join(this.#directory, metadata.file);
+    let file = path.join(this.#dirname, metadata.file);
     let content: LazyFileContent = {
       byteLength: metadata.size,
       read(start, end) {
@@ -83,7 +84,7 @@ export class LocalFileStorage implements FileStorage {
       return;
     }
 
-    let file = path.join(this.#directory, metadata.file);
+    let file = path.join(this.#dirname, metadata.file);
     try {
       await fsp.unlink(file);
     } catch (error) {

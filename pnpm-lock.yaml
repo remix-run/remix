@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@mjackson/lazy-file':
+        specifier: ^1.1.0
+        version: 1.1.0
     devDependencies:
       '@types/node':
         specifier: ^20.14.10
@@ -32,6 +36,9 @@ packages:
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
+
+  '@mjackson/lazy-file@1.1.0':
+    resolution: {integrity: sha512-QBbeLhBc14V+MIG6qNiX0iKNB6Cbfogmr3Kc4uhEkOnzxeyr5ImfzMulM4Od+IG7OYtHKGpoFJiaA59kmGErJQ==}
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -222,6 +229,8 @@ snapshots:
       strip-ansi-cjs: strip-ansi@6.0.1
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
+
+  '@mjackson/lazy-file@1.1.0': {}
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
