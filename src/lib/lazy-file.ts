@@ -1,5 +1,8 @@
 import { ByteRange, getByteLength, getIndexes } from "./byte-range.js";
 
+/**
+ * A streaming interface for file content.
+ */
 export interface LazyFileContent {
   /**
    * The total length of the content.
@@ -13,8 +16,15 @@ export interface LazyFileContent {
 }
 
 /**
- * A `File` that is backed by a stream of data. This is useful for working with large files that
+ * A `File` that may be backed by a stream of data. This is useful for working with large files that
  * would be impractical to load into memory all at once.
+ *
+ * This class is an extension of JavaScript's built-in `File` class with the following additions:
+ *
+ * - The constructor may accept a regular string or a `LazyFileContent` object
+ * - The constructor may accept a `ByteRange` object to represent a subset of the file's content
+ *
+ * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  */
 export class LazyFile extends File {
   readonly #content: (Blob | Uint8Array)[] | LazyFileContent;
@@ -113,16 +123,16 @@ export class LazyFile extends File {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
    */
-  slice(start = 0, end = Infinity, contentType = ""): LazyFile {
-    let range: ByteRange;
+  slice(start = 0, end?: number, contentType = ""): LazyFile {
+    let range: ByteRange | undefined;
     if (this.#range != null) {
       // file.slice().slice() is additive
       range = {
         start: this.#range.start + start,
-        end: this.#range.end === Infinity ? end : this.#range.end + end
+        end: this.#range.end + (end ?? 0)
       };
     } else {
-      range = { start, end };
+      range = { start, end: end ?? this.size };
     }
 
     return new LazyFile(this.#content, this.name, { type: contentType }, range);
