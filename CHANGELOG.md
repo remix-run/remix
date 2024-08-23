@@ -1,5 +1,9 @@
 # lazy-file CHANGELOG
 
+## HEAD
+
+- Small perf improvement when streaming content arrays with Blobs in them and ending early
+
 ## v1.1.0 (Aug 22, 2024)
 
 - Add ability to initialize a LazyFile with `BlobPart[]`, just like a normal `File`
