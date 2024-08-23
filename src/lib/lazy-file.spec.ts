@@ -91,21 +91,6 @@ describe("LazyFile", () => {
     assert.equal(await file.text(), "hello world");
   });
 
-  it("can be read using for await...of", async () => {
-    let file = new LazyFile(createLazyContent("hello world"), "hello.txt", {
-      type: "text/plain"
-    });
-
-    let decoder = new TextDecoder();
-    let result = "";
-    for await (let chunk of file) {
-      result += decoder.decode(chunk, { stream: true });
-    }
-    result += decoder.decode();
-
-    assert.equal(result, "hello world");
-  });
-
   describe("slice()", () => {
     it("returns a file with the same name", () => {
       let file = new LazyFile("hello world", "hello.txt", {

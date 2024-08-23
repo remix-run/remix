@@ -164,13 +164,6 @@ export class LazyFile extends File {
   async text(): Promise<string> {
     return new TextDecoder("utf-8").decode(await this.bytes());
   }
-
-  /**
-   * Iterates over the file's contents as a stream of byte arrays.
-   */
-  [Symbol.asyncIterator](): AsyncIterableIterator<Uint8Array> {
-    return this.stream()[Symbol.asyncIterator]();
-  }
 }
 
 function streamContentArray(
