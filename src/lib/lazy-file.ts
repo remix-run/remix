@@ -106,6 +106,11 @@ export class LazyFile extends File {
   /**
    * Returns a new file that contains the data in the specified range.
    *
+   * Note: The built-in Blob API does not handle streaming content or provide a way to store and
+   * retrieve the content range, so this method differs slightly from the native Blob.slice().
+   * Instead of returning a name-less Blob, this method returns a new LazyFile (which is a Blob)
+   * with the same name and the range applied.
+   *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
    */
   slice(start = 0, end = Infinity, contentType = ""): LazyFile {
