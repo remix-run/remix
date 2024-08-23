@@ -19,7 +19,6 @@ export interface LazyFileContent {
 export class LazyFile extends File {
   readonly #content: (Blob | Uint8Array)[] | LazyFileContent;
   readonly #contentSize: number;
-  readonly #props?: FilePropertyBag;
   readonly #range?: ByteRange;
 
   constructor(
@@ -64,7 +63,6 @@ export class LazyFile extends File {
       this.#contentSize = content.byteLength;
     }
 
-    this.#props = props;
     this.#range = range;
   }
 
@@ -111,19 +109,18 @@ export class LazyFile extends File {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
    */
   slice(start = 0, end = Infinity, contentType = ""): LazyFile {
-    let range = { start, end };
-
+    let range: ByteRange;
     if (this.#range != null) {
       // file.slice().slice() is additive
       range = {
         start: this.#range.start + start,
         end: this.#range.end === Infinity ? end : this.#range.end + end
       };
+    } else {
+      range = { start, end };
     }
 
-    let props = { ...this.#props, type: contentType };
-
-    return new LazyFile(this.#content, this.name, props, range);
+    return new LazyFile(this.#content, this.name, { type: contentType }, range);
   }
 
   /**
@@ -153,6 +150,9 @@ export class LazyFile extends File {
     return new TextDecoder("utf-8").decode(await this.bytes());
   }
 
+  /**
+   * Iterates over the file's contents as a stream of byte arrays.
+   */
   [Symbol.asyncIterator](): AsyncIterableIterator<Uint8Array> {
     return this.stream()[Symbol.asyncIterator]();
   }

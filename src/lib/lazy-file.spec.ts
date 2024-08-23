@@ -107,15 +107,12 @@ describe("LazyFile", () => {
   });
 
   describe("slice()", () => {
-    it("returns a file with the same name, type, and lastModified timestamp when slicing a file", () => {
-      let file = new LazyFile(createLazyContent(), "hello.txt", {
-        type: "text/plain",
-        lastModified: Date.now()
+    it("returns a file with the same name", () => {
+      let file = new LazyFile("hello world", "hello.txt", {
+        type: "text/plain"
       });
-      let slice = file.slice(0, 5, file.type);
+      let slice = file.slice(0, 5);
       assert.equal(slice.name, file.name);
-      assert.equal(slice.type, file.type);
-      assert.equal(slice.lastModified, file.lastModified);
     });
 
     it("returns a file with the same size as the original when slicing from 0 to the end", () => {
@@ -127,7 +124,7 @@ describe("LazyFile", () => {
     });
 
     it('returns a file with size 0 when the "start" index is greater than the content length', () => {
-      let file = new LazyFile(createLazyContent("hello world"), "hello.txt", {
+      let file = new LazyFile("hello world", "hello.txt", {
         type: "text/plain"
       });
       let slice = file.slice(100);
@@ -135,7 +132,7 @@ describe("LazyFile", () => {
     });
 
     it('returns a file with size 0 when the "start" index is greater than the "end" index', () => {
-      let file = new LazyFile(createLazyContent("hello world"), "hello.txt", {
+      let file = new LazyFile("hello world", "hello.txt", {
         type: "text/plain"
       });
       let slice = file.slice(5, 0);
