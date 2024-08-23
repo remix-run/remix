@@ -37,5 +37,8 @@
     "storage",
     "stream",
     "fs"
-  ]
+  ],
+  "dependencies": {
+    "@mjackson/lazy-file": "^1.1.0"
+  }
 }
