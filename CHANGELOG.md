@@ -1,6 +1,6 @@
 # lazy-file CHANGELOG
 
-## HEAD
+## v2.0.0 (Aug 23, 2024)
 
 - BREAKING: Do not automatically propagate `name` and `lastModified` in `file.slice()`. This matches the behavior of `File` more closely
 - BREAKING: Remove `LazyFile[Symbol.asyncIterator]` to match the behavior of `File` more closely
