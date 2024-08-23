@@ -106,11 +106,11 @@ export class LazyFile extends File {
   }
 
   /**
-   * Returns a new `File` object that contains the data in the specified range.
+   * Returns a new file that contains the data in the specified range.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
    */
-  slice(start = 0, end = Infinity, contentType = ""): File {
+  slice(start = 0, end = Infinity, contentType = ""): LazyFile {
     let range = { start, end };
 
     if (this.#range != null) {
@@ -135,12 +135,12 @@ export class LazyFile extends File {
     if (this.#range != null) {
       let [start, end] = getIndexes(this.#range, this.#contentSize);
       return Array.isArray(this.#content)
-        ? streamContent(this.#content, start, end)
+        ? streamContentArray(this.#content, start, end)
         : this.#content.read(start, end);
     }
 
     return Array.isArray(this.#content)
-      ? streamContent(this.#content)
+      ? streamContentArray(this.#content)
       : this.#content.read();
   }
 
@@ -158,17 +158,11 @@ export class LazyFile extends File {
   }
 }
 
-function streamContent(
+function streamContentArray(
   content: (Blob | Uint8Array)[],
   start = 0,
   end = Infinity
 ): ReadableStream<Uint8Array> {
-  if (end < start) {
-    throw new RangeError(
-      "The end index must be greater than or equal to the start index"
-    );
-  }
-
   let index = 0;
   let bytesRead = 0;
 
@@ -204,6 +198,12 @@ function streamContent(
 
           for await (let chunk of part.stream()) {
             pushChunk(chunk);
+
+            if (bytesRead >= end) {
+              // We can stop reading now.
+              controller.close();
+              break;
+            }
           }
         } else {
           pushChunk(part);

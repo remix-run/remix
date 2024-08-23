@@ -54,6 +54,18 @@ describe("LazyFile", () => {
     assert.equal("hello world", await file.text());
   });
 
+  it("can be initialized with multiple Blobs and strings as the content and can slice them correctly", async () => {
+    let content = [
+      new Blob(["  hello "], { type: "text/plain" }),
+      "world",
+      new Blob(["!", "  "], { type: "text/plain" }),
+      "extra stuff"
+    ];
+    let file = new LazyFile(content, "hello.txt", { type: "text/plain" });
+    assert.equal(file.size, 27);
+    assert.equal("hello world!", await file.slice(2, -13, "text/plain").text());
+  });
+
   it("returns the file's contents as a stream", async () => {
     let content = createLazyContent("hello world");
     let file = new LazyFile(content, "hello.txt", {
