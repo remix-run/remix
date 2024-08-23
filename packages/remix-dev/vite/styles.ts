@@ -17,9 +17,15 @@ const cssFileRegExp =
   /\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)(?:$|\?)/;
 // https://github.com/vitejs/vite/blob/d6bde8b03d433778aaed62afc2be0630c8131908/packages/vite/src/node/plugins/css.ts#L160
 const cssModulesRegExp = new RegExp(`\\.module${cssFileRegExp.source}`);
+// https://vitejs.dev/guide/features#disabling-css-injection-into-the-page
+// https://github.com/vitejs/vite/blob/561b940f6f963fbb78058a6e23b4adad53a2edb9/packages/vite/src/node/plugins/css.ts#L194
+// https://vitejs.dev/guide/features#static-assets
+// https://github.com/vitejs/vite/blob/561b940f6f963fbb78058a6e23b4adad53a2edb9/packages/vite/src/node/utils.ts#L309-L310
+const cssUrlWithoutInjectionRegExp = /[?&]inline\b|([?&])(url|raw)(?:&|$)/;
 
 const isCssFile = (file: string) => cssFileRegExp.test(file);
 export const isCssModulesFile = (file: string) => cssModulesRegExp.test(file);
+export const isCssUrlWithoutInjection = (url: string) => cssUrlWithoutInjectionRegExp.test(url);
 
 const getStylesForFiles = async ({
   viteDevServer,
@@ -71,7 +77,7 @@ const getStylesForFiles = async ({
     if (
       dep.file &&
       isCssFile(dep.file) &&
-      !dep.url.endsWith("?url") // Ignore styles that resolved as URLs, otherwise we'll end up injecting URLs into the style tag contents
+      !isCssUrlWithoutInjection(dep.url) // Ignore styles that resolved as URLs, inline or raw. These shouldn't get injected.
     ) {
       try {
         let css = isCssModulesFile(dep.file)
