@@ -22,7 +22,7 @@ export interface LazyFileContent {
  * This class is an extension of JavaScript's built-in `File` class with the following additions:
  *
  * - The constructor may accept a regular string or a `LazyFileContent` object
- * - The constructor may accept a `ByteRange` object to represent a subset of the file's content
+ * - The constructor may accept a `ByteRange` to represent a subset of the file's content
  *
  * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  */
@@ -116,10 +116,10 @@ export class LazyFile extends File {
   /**
    * Returns a new file that contains the data in the specified range.
    *
-   * Note: The built-in Blob API does not handle streaming content or provide a way to store and
-   * retrieve the content range, so this method differs slightly from the native Blob.slice().
-   * Instead of returning a name-less Blob, this method returns a new LazyFile (which is a Blob)
-   * with the same name and the range applied.
+   * Note: The built-in Blob constructor does not support streaming content or provide a way to
+   * store and retrieve the content range, so this method differs slightly from the native
+   * `Blob.slice()`. Instead of returning a name-less `Blob`, this method returns a new `LazyFile`
+   * (which is a `Blob`) of the same name with the range applied.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
    */
