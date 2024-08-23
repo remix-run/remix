@@ -24,6 +24,9 @@ export interface LazyFileContent {
  * - The constructor may accept a regular string or a `LazyFileContent` object
  * - The constructor may accept a `ByteRange` to represent a subset of the file's content
  *
+ * In normal usage you shouldn't have to manage the `ByteRange` yourself. The `slice()` method takes
+ * care of creating new `LazyFile` instances with the correct range.
+ *
  * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  */
 export class LazyFile extends File {
