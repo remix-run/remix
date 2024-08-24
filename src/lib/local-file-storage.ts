@@ -24,9 +24,9 @@ export class LocalFileStorage implements FileStorage {
     this.#dirname = path.resolve(directory);
 
     try {
-      let stat = fs.statSync(this.#dirname);
+      let stats = fs.statSync(this.#dirname);
 
-      if (!stat.isDirectory()) {
+      if (!stats.isDirectory()) {
         throw new Error(`Path "${this.#dirname}" is not a directory`);
       }
     } catch (error) {
