@@ -39,6 +39,6 @@
     "fs"
   ],
   "dependencies": {
-    "@mjackson/lazy-file": "^1.1.0"
+    "@mjackson/lazy-file": "^2.1.0"
   }
 }
