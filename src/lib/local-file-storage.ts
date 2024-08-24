@@ -1,11 +1,9 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { LazyFileContent, LazyFile } from "@mjackson/lazy-file";
+import { getFile } from "@mjackson/lazy-file/fs";
 
 import { FileStorage } from "./file-storage.js";
-
-type FileWithoutSize = Omit<File, "size">;
 
 /**
  * A `FileStorage` that is backed by the local filesystem.
@@ -48,45 +46,33 @@ export class LocalFileStorage implements FileStorage {
     return this.#metadata.has(key);
   }
 
-  async set(key: string, file: FileWithoutSize): Promise<void> {
-    let { name, size } = await createFile(this.#dirname, file.stream());
+  async set(key: string, file: File): Promise<void> {
+    let localFile = await storeFile(this.#dirname, file);
 
     await this.#metadata.set(key, {
-      file: name,
+      file: localFile.name,
       name: file.name,
-      size: size,
+      size: localFile.size,
       type: file.type
     });
   }
 
   async get(key: string): Promise<File | null> {
     let metadata = await this.#metadata.get(key);
+    if (metadata == null) return null;
 
-    if (metadata == null) {
-      return null;
-    }
-
-    let file = path.join(this.#dirname, metadata.file);
-    let content: LazyFileContent = {
-      byteLength: metadata.size,
-      read(start, end) {
-        return readFile(file, start, end);
-      }
-    };
-
-    return new LazyFile(content, metadata.name, { type: metadata.type });
+    let filename = path.join(this.#dirname, metadata.file);
+    return getFile(filename, { name: metadata.name, type: metadata.type });
   }
 
   async remove(key: string): Promise<void> {
     let metadata = await this.#metadata.get(key);
+    if (metadata == null) return;
 
-    if (metadata == null) {
-      return;
-    }
+    let filename = path.join(this.#dirname, metadata.file);
 
-    let file = path.join(this.#dirname, metadata.file);
     try {
-      await fsp.unlink(file);
+      await fsp.unlink(filename);
     } catch (error) {
       if (!isNoEntityError(error)) {
         throw error;
@@ -97,65 +83,34 @@ export class LocalFileStorage implements FileStorage {
   }
 }
 
+async function storeFile(dirname: string, file: File): Promise<File> {
+  let filename = path.join(dirname, randomFilename());
+
+  let handle: fsp.FileHandle;
+  try {
+    handle = await fsp.open(filename, "w");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      // Try again with a different filename
+      return storeFile(dirname, file);
+    } else {
+      throw error;
+    }
+  }
+
+  try {
+    for await (let chunk of file.stream()) {
+      await handle.write(chunk);
+    }
+  } finally {
+    await handle.close();
+  }
+
+  return getFile(filename);
+}
+
 function randomFilename(): string {
   return `${new Date().getTime().toString(36)}.${Math.random().toString(36).slice(2, 6)}`;
-}
-
-function createFile(
-  directory: string,
-  stream: ReadableStream<Uint8Array>
-): Promise<{ name: string; size: number }> {
-  let filename = randomFilename();
-  let file = path.join(directory, filename);
-
-  return new Promise((resolve, reject) => {
-    fs.open(file, "w", async (error, fd) => {
-      if (error) {
-        if (error.code === "EEXIST") {
-          // Try again with a different filename
-          return resolve(createFile(directory, stream));
-        } else {
-          return reject(error);
-        }
-      }
-
-      let writeStream = fs.createWriteStream(file, { fd });
-      let bytesWritten = 0;
-
-      try {
-        for await (let chunk of stream) {
-          writeStream.write(chunk);
-          bytesWritten += chunk.length;
-        }
-
-        writeStream.end();
-
-        resolve({ name: filename, size: bytesWritten });
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
-}
-
-function readFile(
-  filename: string,
-  start?: number,
-  end = Infinity
-): ReadableStream<Uint8Array> {
-  let read = fs.createReadStream(filename, { start, end: end - 1 }).iterator();
-
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      let { done, value } = await read.next();
-
-      if (done) {
-        controller.close();
-      } else {
-        controller.enqueue(value);
-      }
-    }
-  });
 }
 
 interface FileMetadata {
@@ -174,7 +129,7 @@ class FileMetadataIndex {
 
   async #getAll(): Promise<Record<string, FileMetadata>> {
     try {
-      return JSON.parse(await fsp.readFile(this.#path, { encoding: "utf-8" }));
+      return JSON.parse(await getFile(this.#path).text());
     } catch (error) {
       if (!isNoEntityError(error)) {
         throw error;
@@ -213,8 +168,7 @@ function isNoEntityError(
   obj: unknown
 ): obj is NodeJS.ErrnoException & { code: "ENOENT" } {
   return (
-    typeof obj === "object" &&
-    obj !== null &&
+    obj instanceof Error &&
     "code" in obj &&
     (obj as NodeJS.ErrnoException).code === "ENOENT"
   );

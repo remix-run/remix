@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@mjackson/lazy-file':
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^2.1.0
+        version: 2.1.0
     devDependencies:
       '@types/node':
         specifier: ^20.14.10
@@ -37,8 +37,8 @@ packages:
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
 
-  '@mjackson/lazy-file@1.1.0':
-    resolution: {integrity: sha512-QBbeLhBc14V+MIG6qNiX0iKNB6Cbfogmr3Kc4uhEkOnzxeyr5ImfzMulM4Od+IG7OYtHKGpoFJiaA59kmGErJQ==}
+  '@mjackson/lazy-file@2.1.0':
+    resolution: {integrity: sha512-HpBZfJfxLP1m0ytaytKzSaURP9OH0YQ8t5kr3/qDdaRJbrXrLHK03xmWptMMrepCbpLiKNFApQd1wYKzid6ITw==}
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -122,6 +122,10 @@ packages:
     resolution: {integrity: sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg==}
     engines: {node: '>=10'}
     hasBin: true
+
+  mrmime@2.0.0:
+    resolution: {integrity: sha512-eu38+hdgojoyq63s+yTpN4XMBdt5l8HhMhc4VKLO9KM5caLIBvUm4thi7fFaxyTmCKeNnXZ5pAlBwCUnhA09uw==}
+    engines: {node: '>=10'}
 
   package-json-from-dist@1.0.0:
     resolution: {integrity: sha512-dATvCeZN/8wQsGywez1mzHtTlP22H8OEfPrVMLNr4/eGa+ijtLn/6M5f0dY8UKNrC2O9UCU6SSoG3qRKnt7STw==}
@@ -230,7 +234,9 @@ snapshots:
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
 
-  '@mjackson/lazy-file@1.1.0': {}
+  '@mjackson/lazy-file@2.1.0':
+    dependencies:
+      mrmime: 2.0.0
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
@@ -306,6 +312,8 @@ snapshots:
   minipass@7.1.2: {}
 
   mkdirp@3.0.1: {}
+
+  mrmime@2.0.0: {}
 
   package-json-from-dist@1.0.0: {}
 
