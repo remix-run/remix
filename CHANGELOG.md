@@ -1,6 +1,6 @@
 # lazy-file CHANGELOG
 
-## HEAD
+## v2.1.0 (Aug 24, 2024)
 
 - Added `getFile` helper to `lazy-file/fs` export for reading files from the local filesystem
 
