@@ -29,6 +29,8 @@ npm install @mjackson/lazy-file
 
 ## Usage
 
+The low-level API can be used to create a `File` that streams content from anywhere:
+
 ```ts
 import { type LazyFileContent, LazyFile } from "@mjackson/lazy-file";
 
@@ -52,6 +54,19 @@ let file = new LazyFile(content, "example.txt", { type: "text/plain" });
 await file.arrayBuffer(); // ArrayBuffer of the file's content
 file.name; // "example.txt"
 file.type; // "text/plain"
+```
+
+`lazy-file` also ships with a `lazy-file/fs` export that makes it easy to get a (lazy!) `File` object from the local filesystem. These objects are very lightweight and do not attempt to actually read any data from disk until needed.
+
+```ts
+import { getFile } from "@mjackson/lazy-file/fs";
+
+// No data is read at this point, it's just a reference to a file on the local filesystem.
+let file = getFile("./path/to/file.json");
+
+// Data is read when you call file.text() (or any of the other Blob methods, like file.bytes(),
+// file.stream(), etc.)
+let json = JSON.parse(await file.text());
 ```
 
 ## License

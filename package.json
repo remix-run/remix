@@ -16,6 +16,7 @@
   "type": "module",
   "exports": {
     ".": "./dist/lazy-file.js",
+    "./fs": "./dist/fs.js",
     "./package.json": "./package.json"
   },
   "devDependencies": {
@@ -36,5 +37,8 @@
     "file",
     "buffer",
     "blob"
-  ]
+  ],
+  "dependencies": {
+    "mrmime": "^2.0.0"
+  }
 }

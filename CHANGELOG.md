@@ -1,5 +1,9 @@
 # lazy-file CHANGELOG
 
+## HEAD
+
+- Added `getFile` helper to `lazy-file/fs` export for reading files from the local filesystem
+
 ## v2.0.0 (Aug 23, 2024)
 
 - BREAKING: Do not automatically propagate `name` and `lastModified` in `file.slice()`. This matches the behavior of `File` more closely
