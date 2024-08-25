@@ -39,6 +39,45 @@ fileFromStorage.type; // 'text/plain'
 await storage.remove(key);
 ```
 
+The `FileStorage` interface allows you to implement your own file storage for custom storage
+backends:
+
+```ts
+import { type FileStorage } from "@mjackson/file-storage";
+
+class CustomFileStorage implements FileStorage {
+  /**
+   * Returns `true` if a file with the given key exists, `false` otherwise.
+   */
+  has(key: string): boolean | Promise<boolean> {
+    // ...
+  }
+  /**
+   * Puts a file in storage at the given key.
+   */
+  set(key: string, file: File): void | Promise<void> {
+    // ...
+  }
+  /**
+   * Returns the file with the given key, or `null` if no such key exists.
+   */
+  get(key: string): File | null | Promise<File | null> {
+    // ...
+  }
+  /**
+   * Removes the file with the given key from storage.
+   */
+  remove(key: string): void | Promise<void> {
+    // ...
+  }
+}
+```
+
+## Related packages
+
+- [`lazy-file`](https://github.com/mjackson/lazy-file) - The streaming `File` implementation used
+  internally to stream files from storage
+
 ## License
 
 See [LICENSE](https://github.com/mjackson/file-storage/blob/main/LICENSE)
