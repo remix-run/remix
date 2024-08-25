@@ -205,6 +205,11 @@ I encourage you to run the benchmarks yourself. You'll probably get different re
 pnpm run bench
 ```
 
+## Related Packages
+
+- [`form-data-parser`](https://github.com/mjackson/form-data-parser) - Uses `multipart-parser`
+  internally to parse multipart requests and generate `FileUpload`s for storage
+
 ## Credits
 
 Thanks to Jacob Ebey who gave me several code reviews on this project prior to publishing.
