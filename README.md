@@ -13,7 +13,7 @@
 - Built on the standard [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API)
 - Supports the entire spectrum of `multipart/*` message types
 - Memory efficient and does not buffer anything in normal usage
-- [As fast or faster than](https://github.com/mjackson/multipart-parser#benchmark) other multipart libraries
+- [As fast or faster than](https://github.com/mjackson/multipart-parser#benchmark) other popular multipart libraries
 
 ## Installation
 
