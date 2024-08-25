@@ -51,6 +51,13 @@ async function handleRequest(request: Request) {
 }
 ```
 
+## Related packages
+
+- [`multipart-parser`](https://github.com/mjackson/multipart-parser) - The parser used internally
+  for parsing `multipart/form-data` HTTP messages
+- [`file-storage`](https://github.com/mjackson/file-storage) - A simple interface for storing
+  `FileUpload` objects you get from the parser
+
 ## License
 
 See [LICENSE](https://github.com/mjackson/form-data-parser/blob/main/LICENSE)
