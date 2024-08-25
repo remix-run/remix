@@ -212,7 +212,6 @@ function streamContentArray(
 
             if (bytesRead >= end) {
               // We can stop reading now.
-              controller.close();
               break;
             }
           }
@@ -223,6 +222,11 @@ function streamContentArray(
 
       while (!hasPushed && index < content.length) {
         await pushPart(content[index++]);
+
+        if (bytesRead >= end) {
+          controller.close();
+          break;
+        }
       }
     }
   });
