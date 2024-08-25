@@ -4,6 +4,21 @@ import { lookup } from "mrmime";
 
 import { LazyFileContent, LazyFile } from "./lib/lazy-file.js";
 
+export interface GetFileOptions {
+  /**
+   * Overrides the name of the file. Default is the name of the file on disk.
+   */
+  name?: string;
+  /**
+   * Overrides the MIME type of the file. Default is determined by the file extension.
+   */
+  type?: string;
+  /**
+   * Overrides the last modified timestamp of the file. Default is the file's last modified time.
+   */
+  lastModified?: number;
+}
+
 /**
  * Returns a `File` from the local filesytem.
  *
@@ -11,7 +26,7 @@ import { LazyFileContent, LazyFile } from "./lib/lazy-file.js";
  */
 export function getFile(
   filename: string,
-  { name = path.basename(filename), type = lookup(filename) } = {}
+  { name, type, lastModified }: GetFileOptions = {}
 ): File {
   let stats = fs.statSync(filename);
 
@@ -26,7 +41,10 @@ export function getFile(
     }
   };
 
-  return new LazyFile(content, name, { type, lastModified: stats.mtimeMs });
+  return new LazyFile(content, name ?? path.basename(filename), {
+    type: type ?? lookup(filename),
+    lastModified: lastModified ?? stats.mtimeMs
+  });
 }
 
 function readFile(

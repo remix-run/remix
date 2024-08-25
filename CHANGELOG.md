@@ -1,5 +1,10 @@
 # lazy-file CHANGELOG
 
+## HEAD
+
+- Added support for `getFile(, { lastModified })` to override `file.lastModified`
+- Export `GetFileOptions` interface from `lazy-file/fs`
+
 ## v2.1.0 (Aug 24, 2024)
 
 - Added `getFile` helper to `lazy-file/fs` export for reading files from the local filesystem
