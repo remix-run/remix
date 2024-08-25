@@ -1,7 +1,7 @@
 import {
   isMultipartRequest,
   parseMultipartRequest,
-  type MultipartPart
+  MultipartPart
 } from "@mjackson/multipart-parser";
 
 /**
@@ -77,7 +77,7 @@ async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
  *
  * The major difference between this function and using the built-in `request.formData()` API is the
  * ability to customize the handling of file uploads. Instead of buffering the entire file in memory,
- * the `handleFileUpload` function allows you to store the file on disk or in a cloud storage service.
+ * the `uploadHandler` allows you to store the file on disk or in a cloud storage service.
  */
 export async function parseFormData(
   request: Request,
