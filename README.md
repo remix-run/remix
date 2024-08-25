@@ -4,9 +4,9 @@
 
 ## Features
 
-- Subclasses `File` so `lazyFile instanceof File` works
+- Subclasses `File` so `LazyFile` instances can be used anywhere you'd normally expect a `File`
 - Accepts all the same content types as [`the File() constructor`](https://developer.mozilla.org/en-US/docs/Web/API/File/File)
-- Supports [`Blob.slice(start, end)`](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice), even on streaming content
+- Supports [`Blob.slice()`](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice), even on streaming content
 - Memory efficient!
 
 ## The Problem
@@ -68,6 +68,8 @@ let file = getFile("./path/to/file.json");
 // file.stream(), etc.)
 let json = JSON.parse(await file.text());
 ```
+
+`lazy-file/fs` also serves as a good reference implementation for how to use this library effectively.
 
 ## Related Packages
 
