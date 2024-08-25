@@ -1,12 +1,13 @@
 # file-storage
 
-`file-storage` is a key/value interface for storing [`File` objects](https://developer.mozilla.org/en-US/docs/Web/API/File) in JavaScript.
+`file-storage` is a key/value interface for storing [`File` objects](https://developer.mozilla.org/en-US/docs/Web/API/File) in JavaScript. Similar to how `localStorage` allows you to store key/value pairs of strings in the browser, `file-storage` allows you to store key/value pairs of files on the server.
 
-## Goals
+## Features
 
-- Provide a `FileStorage` interface that works for various large object storage backends
 - Simple, intuitive key/value API (like [Web Storage](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API), but for `File`s instead of strings)
+- A generic `FileStorage` interface that works for various large object storage backends (can be adapted to AWS S3, Cloudflare R2, etc.)
 - Support streaming file content to and from storage
+- Preserves all `File` metadata including `file.name`, `file.type`, and `file.lastModified`
 
 ## Installation
 
