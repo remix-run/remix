@@ -1,6 +1,6 @@
 {
   "name": "@mjackson/file-storage",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Key/value storage for JavaScript File objects",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
