@@ -8,11 +8,9 @@
 
 ## Goals
 
-The goals of this project are:
-
 - Provide a JavaScript-y multipart parser that runs anywhere JavaScript runs
 - Support the entire spectrum of `multipart/*` message types
-- Be fast enough to get the job done quickly while using as little memory as possible
+- Stream everything and buffer as little as possible
 
 ## Installation
 
