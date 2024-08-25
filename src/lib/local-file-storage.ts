@@ -52,6 +52,7 @@ export class LocalFileStorage implements FileStorage {
     await this.#metadata.set(key, {
       file: localFile.name,
       name: file.name,
+      mtime: file.lastModified,
       size: localFile.size,
       type: file.type
     });
@@ -62,7 +63,12 @@ export class LocalFileStorage implements FileStorage {
     if (metadata == null) return null;
 
     let filename = path.join(this.#dirname, metadata.file);
-    return getFile(filename, { name: metadata.name, type: metadata.type });
+
+    return getFile(filename, {
+      name: metadata.name,
+      type: metadata.type,
+      lastModified: metadata.mtime
+    });
   }
 
   async remove(key: string): Promise<void> {
@@ -116,6 +122,7 @@ function randomFilename(): string {
 interface FileMetadata {
   file: string;
   name: string;
+  mtime: number;
   size: number;
   type: string;
 }

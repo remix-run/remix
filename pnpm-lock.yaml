@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@mjackson/lazy-file':
-        specifier: ^2.1.0
-        version: 2.1.0
+        specifier: ^2.2.0
+        version: 2.2.0
     devDependencies:
       '@types/node':
         specifier: ^20.14.10
@@ -37,8 +37,8 @@ packages:
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
 
-  '@mjackson/lazy-file@2.1.0':
-    resolution: {integrity: sha512-HpBZfJfxLP1m0ytaytKzSaURP9OH0YQ8t5kr3/qDdaRJbrXrLHK03xmWptMMrepCbpLiKNFApQd1wYKzid6ITw==}
+  '@mjackson/lazy-file@2.2.0':
+    resolution: {integrity: sha512-51M2TAL5eMZj5mh1e22/qBl4C5udViZqSBEqwiHSi1lTAixCp4YiAOV62VaTSqVp771OkmgNCPsh8/LpJ/A/Yw==}
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -234,7 +234,7 @@ snapshots:
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
 
-  '@mjackson/lazy-file@2.1.0':
+  '@mjackson/lazy-file@2.2.0':
     dependencies:
       mrmime: 2.0.0
 
