@@ -51,7 +51,7 @@ async function handleRequest(request: Request) {
 }
 ```
 
-## Related packages
+## Related Packages
 
 - [`multipart-parser`](https://github.com/mjackson/multipart-parser) - The parser used internally
   for parsing `multipart/form-data` HTTP messages
