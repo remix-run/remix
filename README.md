@@ -6,11 +6,14 @@
 - Parsing `multipart/mixed` messages (email attachments, API responses, etc.)
 - Parsing email messages with both plain text and HTML versions (`multipart/alternative`)
 
-## Goals
+## Features
 
-- Provide a JavaScript-y multipart parser that runs anywhere JavaScript runs
-- Support the entire spectrum of `multipart/*` message types
-- Stream everything and buffer as little as possible
+- Runs anywhere JavaScript runs (see [examples for Node.js, Bun, Deno, and Cloudflare
+  Workers](https://github.com/mjackson/multipart-parser/tree/main/examples))
+- Built on the standard [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API)
+- Supports the entire spectrum of `multipart/*` message types
+- Memory efficient and does not buffer anything in normal usage
+- [As fast or faster than](https://github.com/mjackson/multipart-parser#benchmark) other multipart libraries
 
 ## Installation
 
