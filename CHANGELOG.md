@@ -1,6 +1,6 @@
 # `file-storage` CHANGELOG
 
-## HEAD
+## v0.2.0 (Aug 26, 2024)
 
 - Moved `LocalFileStorage` to `file-storage/local` export
 - Moved `MemoryFileStorage` to `file-storage/memory` export
