@@ -6,10 +6,10 @@ It allows you to easily create [Blob](https://developer.mozilla.org/en-US/docs/W
 
 ## Features
 
+- Deferred loading of blob/file contents to minimize memory usage
 - `LazyBlob extends Blob` and `LazyFile extends File` so instances can be used anywhere you'd normally expect a regular `Blob`/`File`
 - Accepts all the same content types as the original [`Blob()`](https://developer.mozilla.org/en-US/docs/Web/API/Blob/Blob) and [`File()`](https://developer.mozilla.org/en-US/docs/Web/API/File/File) constructors
 - Supports [`Blob.slice()`](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice), even on streaming content
-- Memory efficient!
 
 ## The Problem
 
@@ -19,7 +19,16 @@ JavaScript's [File API](https://developer.mozilla.org/en-US/docs/Web/API/File) i
 let file = new File(["hello world"], "hello.txt", { type: "text/plain" });
 ```
 
-A `LazyFile` improves this model by accepting an additional content type in its constructor: `LazyContent`. All other `File` functionality works as you'd expect.
+A `LazyFile` improves this model by accepting an additional content type in its constructor: `LazyContent`.
+
+```ts
+let lazyContent: LazyContent = {
+  /* See below for usage */
+};
+let file = new File(lazyContent, "hello.txt", { type: "text/plain" });
+```
+
+All other `File` functionality works as you'd expect.
 
 ## Installation
 
