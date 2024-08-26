@@ -16,7 +16,11 @@ describe("LocalFileStorage", () => {
 
   it("stores and retrieves files", async () => {
     let storage = new LocalFileStorage(directory);
-    let file = new File(["Hello, world!"], "hello.txt", { type: "text/plain" });
+    let lastModified = Date.now();
+    let file = new File(["Hello, world!"], "hello.txt", {
+      type: "text/plain",
+      lastModified
+    });
 
     await storage.set("hello", file);
 
@@ -27,6 +31,7 @@ describe("LocalFileStorage", () => {
     assert.ok(retrieved);
     assert.equal(retrieved.name, "hello.txt");
     assert.equal(retrieved.type, "text/plain");
+    assert.equal(retrieved.lastModified, lastModified);
     assert.equal(retrieved.size, 13);
 
     let text = await retrieved.text();

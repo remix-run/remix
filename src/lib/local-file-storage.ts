@@ -47,14 +47,13 @@ export class LocalFileStorage implements FileStorage {
   }
 
   async set(key: string, file: File): Promise<void> {
-    let localFile = await storeFile(this.#dirname, file);
+    let storedFile = await storeFile(this.#dirname, file);
 
     await this.#metadata.set(key, {
-      file: localFile.name,
+      file: storedFile,
       name: file.name,
-      mtime: file.lastModified,
-      size: localFile.size,
-      type: file.type
+      type: file.type,
+      mtime: file.lastModified
     });
   }
 
@@ -89,12 +88,12 @@ export class LocalFileStorage implements FileStorage {
   }
 }
 
-async function storeFile(dirname: string, file: File): Promise<File> {
-  let filename = path.join(dirname, randomFilename());
+async function storeFile(dirname: string, file: File): Promise<string> {
+  let filename = randomFilename();
 
   let handle: fsp.FileHandle;
   try {
-    handle = await fsp.open(filename, "w");
+    handle = await fsp.open(path.join(dirname, filename), "w");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") {
       // Try again with a different filename
@@ -112,7 +111,7 @@ async function storeFile(dirname: string, file: File): Promise<File> {
     await handle.close();
   }
 
-  return getFile(filename);
+  return filename;
 }
 
 function randomFilename(): string {
@@ -122,9 +121,8 @@ function randomFilename(): string {
 interface FileMetadata {
   file: string;
   name: string;
-  mtime: number;
-  size: number;
   type: string;
+  mtime: number;
 }
 
 class FileMetadataIndex {
