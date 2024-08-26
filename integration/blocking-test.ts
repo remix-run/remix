@@ -115,9 +115,6 @@ test("handles synchronous proceeding correctly", async ({ page }) => {
   // - immediately call blocker.proceed() once we enter the blocked state
   // - and land back one history entry (/a)
   await page.goBack();
-  console.log(await app.getHtml());
-  await new Promise((r) => setTimeout(r, 1000));
-  console.log(await app.getHtml());
   await page.waitForSelector("#a");
   expect(await app.getHtml()).toContain("A");
 });
