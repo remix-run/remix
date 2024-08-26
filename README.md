@@ -20,7 +20,7 @@ npm install @mjackson/file-storage
 ## Usage
 
 ```ts
-import { LocalFileStorage } from "@mjackson/file-storage";
+import { LocalFileStorage } from "@mjackson/file-storage/local";
 
 let storage = new LocalFileStorage("./user/files");
 
@@ -40,8 +40,7 @@ fileFromStorage.type; // 'text/plain'
 await storage.remove(key);
 ```
 
-The `FileStorage` interface allows you to implement your own file storage for custom storage
-backends:
+The `FileStorage` interface allows you to implement your own file storage for custom storage backends:
 
 ```ts
 import { type FileStorage } from "@mjackson/file-storage";
