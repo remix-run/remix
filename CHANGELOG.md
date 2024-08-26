@@ -1,6 +1,6 @@
 # lazy-file CHANGELOG
 
-## HEAD
+## v3.0.0 (Aug 25, 2024)
 
 - BREAKING: Do not accept regular string argument to `LazyFile`. This more closely matches `File` behavior
 - BREAKING: Move 4th `LazyFile()` argument `range` into `options.range`
