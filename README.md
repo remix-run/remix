@@ -63,17 +63,18 @@ The `lazy-file/fs` export provides a `getFile(filename)` function that allows yo
 ```ts
 import { getFile } from "@mjackson/lazy-file/fs";
 
-// No data is read at this point, it's just a reference to a file on the local filesystem.
+// No data is read at this point, it's just a reference to a
+// file on the local filesystem.
 let file = getFile("./path/to/file.json");
 
-// Data is read when you call file.text() (or any of the other Blob methods, like file.bytes(),
-// file.stream(), etc.)
+// Data is read when you call file.text() (or any of the
+// other Blob methods, like file.bytes(), file.stream(), etc.)
 let json = JSON.parse(await file.text());
 
 let imageFile = getFile("./path/to/image.jpg");
 
-// Get a LazyBlob that omits the first 100 bytes of the file. This could be useful for serving
-// HTTP Range requests.
+// Get a LazyBlob that omits the first 100 bytes of the file.
+// This could be useful for serving HTTP Range requests.
 let blob = imageFile.slice(100);
 ```
 
