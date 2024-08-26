@@ -26,7 +26,7 @@ npm install @mjackson/form-data-parser
 ## Usage
 
 ```ts
-import { LocalFileStorage } from "@mjackson/file-storage";
+import { LocalFileStorage } from "@mjackson/file-storage/local";
 import { type FileUpload, parseFormData } from "@mjackson/form-data-parser";
 
 const fileStorage = new LocalFileStorage("/uploads/user-avatars");
@@ -62,10 +62,8 @@ async function requestHandler(request: Request) {
 
 ## Related Packages
 
-- [`multipart-parser`](https://github.com/mjackson/multipart-parser) - The parser used internally
-  for parsing `multipart/form-data` HTTP messages
-- [`file-storage`](https://github.com/mjackson/file-storage) - A simple interface for storing
-  `FileUpload` objects you get from the parser
+- [`multipart-parser`](https://github.com/mjackson/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
+- [`file-storage`](https://github.com/mjackson/file-storage) - A simple interface for storing `FileUpload` objects you get from the parser
 
 ## License
 
