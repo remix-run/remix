@@ -1,18 +1,118 @@
 import { ByteRange, getByteLength, getIndexes } from "./byte-range.js";
 
 /**
- * A streaming interface for file content.
+ * A streaming interface for blob/file content.
  */
-export interface LazyFileContent {
+export interface LazyContent {
   /**
    * The total length of the content.
    */
   byteLength: number;
   /**
-   * Returns a stream that can be used to read the content, optionally within a given `start`
-   * (inclusive) and `end` (exclusive) index.
+   * Returns a stream that can be used to read the content. When given, the `start` index is
+   * inclusive indicating the index of the first byte to read. The `end` index is exclusive
+   * indicating the index of the first byte not to read.
    */
-  read(start?: number, end?: number): ReadableStream<Uint8Array>;
+  stream(start?: number, end?: number): ReadableStream<Uint8Array>;
+}
+
+export interface LazyBlobOptions {
+  /**
+   * The range of bytes to include from the content. If not specified, all content is included.
+   */
+  range?: ByteRange;
+  /**
+   * The MIME type of the content. The default is an empty string.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/Blob#type)
+   */
+  type?: string;
+}
+
+/**
+ * A `Blob` that may be backed by a stream of data. This is useful for working with large blobs that
+ * would be impractical to load into memory all at once.
+ *
+ * This class is an extension of JavaScript's built-in `Blob` class with the following additions:
+ *
+ * - The constructor may accept a `LazyContent` object instead of a `BlobPart[]` array
+ * - The constructor may accept a `range` in the options to specify a subset of the content
+ *
+ * In normal usage you shouldn't have to specify the `range` yourself. The `slice()` method
+ * automatically takes care of creating new `LazyBlob` instances with the correct range.
+ *
+ * [MDN `Blob` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob)
+ */
+export class LazyBlob extends Blob {
+  readonly #content: BlobContent;
+
+  constructor(parts: BlobPart[] | LazyContent, options?: LazyBlobOptions) {
+    super([], options);
+    this.#content = new BlobContent(parts, options);
+  }
+
+  /**
+   * Returns the blob's contents as an `ArrayBuffer`.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/arrayBuffer)
+   */
+  async arrayBuffer(): Promise<ArrayBuffer> {
+    return this.#content.arrayBuffer();
+  }
+
+  /**
+   * Returns the blob's contents as a byte array.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/bytes)
+   */
+  async bytes(): Promise<Uint8Array> {
+    return this.#content.bytes();
+  }
+
+  /**
+   * The size of the blob in bytes.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/size)
+   */
+  get size(): number {
+    return this.#content.size;
+  }
+
+  /**
+   * Returns a new `Blob` that contains the data in the specified range.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
+   */
+  slice(start?: number, end?: number, contentType?: string): Blob {
+    return this.#content.slice(start, end, contentType);
+  }
+
+  /**
+   * Returns a stream that can be used to read the blob's contents.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/stream)
+   */
+  stream(): ReadableStream<Uint8Array> {
+    return this.#content.stream();
+  }
+
+  /**
+   * Returns the blob's contents as a string.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/text)
+   */
+  async text(): Promise<string> {
+    return this.#content.text();
+  }
+}
+
+export interface LazyFileOptions extends LazyBlobOptions {
+  /**
+   * The last modified timestamp of the file in milliseconds. Defaults to `Date.now()`.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/File/File#lastmodified)
+   */
+  lastModified?: number;
 }
 
 /**
@@ -21,35 +121,96 @@ export interface LazyFileContent {
  *
  * This class is an extension of JavaScript's built-in `File` class with the following additions:
  *
- * - The constructor may accept a regular string or a `LazyFileContent` object
- * - The constructor may accept a `ByteRange` to represent a subset of the file's content
+ * - The constructor may accept a `LazyContent` object instead of a `BlobPart[]` array
+ * - The constructor may accept a `range` in the options to specify a subset of the content
  *
- * In normal usage you shouldn't have to manage the `ByteRange` yourself. The `slice()` method takes
- * care of creating new `LazyFile` instances with the correct range.
+ * In normal usage you shouldn't have to specify the `range` yourself. The `slice()` method
+ * automatically takes care of creating new `LazyBlob` instances with the correct range.
  *
  * [MDN `File` Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  */
 export class LazyFile extends File {
-  readonly #content: (Blob | Uint8Array)[] | LazyFileContent;
-  readonly #contentSize: number;
-  readonly #range?: ByteRange;
+  readonly #content: BlobContent;
 
   constructor(
-    content: BlobPart[] | string | LazyFileContent,
+    parts: BlobPart[] | LazyContent,
     name: string,
-    props?: FilePropertyBag,
-    range?: ByteRange
+    options?: LazyFileOptions
   ) {
-    super([], name, props);
+    super([], name, options);
+    this.#content = new BlobContent(parts, options);
+  }
 
-    if (Array.isArray(content)) {
-      this.#content = [];
-      this.#contentSize = 0;
+  /**
+   * Returns the file's content as an `ArrayBuffer`.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/arrayBuffer)
+   */
+  async arrayBuffer(): Promise<ArrayBuffer> {
+    return this.#content.arrayBuffer();
+  }
 
-      for (let part of content) {
+  /**
+   * Returns the file's contents as a byte array.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/bytes)
+   */
+  async bytes(): Promise<Uint8Array> {
+    return this.#content.bytes();
+  }
+
+  /**
+   * The size of the file in bytes.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/size)
+   */
+  get size(): number {
+    return this.#content.size;
+  }
+
+  /**
+   * Returns a new `Blob` that contains the data in the specified range.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
+   */
+  slice(start?: number, end?: number, contentType?: string): Blob {
+    return this.#content.slice(start, end, contentType);
+  }
+
+  /**
+   * Returns a stream that can be used to read the file's contents.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/stream)
+   */
+  stream(): ReadableStream<Uint8Array> {
+    return this.#content.stream();
+  }
+
+  /**
+   * Returns the file's contents as a string.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/text)
+   */
+  async text(): Promise<string> {
+    return this.#content.text();
+  }
+}
+
+class BlobContent {
+  readonly source: (Blob | Uint8Array)[] | LazyContent;
+  readonly totalSize: number;
+  readonly range?: ByteRange;
+  readonly type: string;
+
+  constructor(parts: BlobPart[] | LazyContent, options?: LazyBlobOptions) {
+    if (Array.isArray(parts)) {
+      this.source = [];
+      this.totalSize = 0;
+
+      for (let part of parts) {
         if (part instanceof Blob) {
-          this.#content.push(part);
-          this.#contentSize += part.size;
+          this.source.push(part);
+          this.totalSize += part.size;
         } else {
           let array: Uint8Array;
           if (typeof part === "string") {
@@ -63,36 +224,24 @@ export class LazyFile extends File {
           } else {
             array = new Uint8Array(part);
           }
-          this.#content.push(array);
-          this.#contentSize += array.byteLength;
+
+          this.source.push(array);
+          this.totalSize += array.byteLength;
         }
       }
-    } else if (typeof content === "string") {
-      let array = new TextEncoder().encode(content);
-      this.#content = [array];
-      this.#contentSize = array.byteLength;
     } else {
-      this.#content = content;
-      this.#contentSize = content.byteLength;
+      this.source = parts;
+      this.totalSize = parts.byteLength;
     }
 
-    this.#range = range;
+    this.range = options?.range;
+    this.type = options?.type ?? "";
   }
 
-  /**
-   * Returns the file's contents as an array buffer.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/arrayBuffer)
-   */
   async arrayBuffer(): Promise<ArrayBuffer> {
     return (await this.bytes()).buffer;
   }
 
-  /**
-   * Returns the file's contents as a byte array.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/bytes)
-   */
   async bytes(): Promise<Uint8Array> {
     let result = new Uint8Array(this.size);
 
@@ -105,65 +254,35 @@ export class LazyFile extends File {
     return result;
   }
 
-  /**
-   * The size of the file in bytes.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/size)
-   */
   get size(): number {
-    return this.#range != null
-      ? getByteLength(this.#range, this.#contentSize)
-      : this.#contentSize;
+    return this.range != null
+      ? getByteLength(this.range, this.totalSize)
+      : this.totalSize;
   }
 
-  /**
-   * Returns a new file that contains the data in the specified range.
-   *
-   * Note: The built-in Blob constructor does not support streaming content or provide a way to
-   * store and retrieve the content range, so this method differs slightly from the native
-   * `Blob.slice()`. Instead of returning a name-less `Blob`, this method returns a new `LazyFile`
-   * (which is a `Blob`) of the same name with the range applied.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
-   */
-  slice(start = 0, end?: number, contentType = ""): LazyFile {
-    let range: ByteRange | undefined;
-    if (this.#range != null) {
-      // file.slice().slice() is additive
-      range = {
-        start: this.#range.start + start,
-        end: this.#range.end + (end ?? 0)
-      };
-    } else {
-      range = { start, end: end ?? this.size };
-    }
+  slice(start = 0, end?: number, contentType = ""): LazyBlob {
+    let range: ByteRange =
+      this.range != null
+        ? // file.slice().slice() is additive
+          { start: this.range.start + start, end: this.range.end + (end ?? 0) }
+        : { start, end: end ?? this.size };
 
-    return new LazyFile(this.#content, this.name, { type: contentType }, range);
+    return new LazyBlob(this.source, { range, type: contentType });
   }
 
-  /**
-   * Returns a stream that can be used to read the file's contents.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/stream)
-   */
   stream(): ReadableStream<Uint8Array> {
-    if (this.#range != null) {
-      let [start, end] = getIndexes(this.#range, this.#contentSize);
-      return Array.isArray(this.#content)
-        ? streamContentArray(this.#content, start, end)
-        : this.#content.read(start, end);
+    if (this.range != null) {
+      let [start, end] = getIndexes(this.range, this.totalSize);
+      return Array.isArray(this.source)
+        ? streamContentArray(this.source, start, end)
+        : this.source.stream(start, end);
     }
 
-    return Array.isArray(this.#content)
-      ? streamContentArray(this.#content)
-      : this.#content.read();
+    return Array.isArray(this.source)
+      ? streamContentArray(this.source)
+      : this.source.stream();
   }
 
-  /**
-   * Returns the file's contents as a string.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/text)
-   */
   async text(): Promise<string> {
     return new TextDecoder("utf-8").decode(await this.bytes());
   }

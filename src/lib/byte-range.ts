@@ -1,12 +1,12 @@
 export interface ByteRange {
   /**
    * The start index of the range (inclusive). If this number is negative, it represents an offset
-   * from the end of the buffer.
+   * from the end of the content.
    */
   start: number;
   /**
    * The end index of the range (exclusive). If this number is negative, it represents an offset
-   * from the end of the buffer. `Infinity` represents the end of the buffer.
+   * from the end of the content. `Infinity` represents the end of the content.
    */
   end: number;
 }

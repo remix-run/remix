@@ -1,5 +1,14 @@
 # lazy-file CHANGELOG
 
+## HEAD
+
+- BREAKING: Do not accept regular string argument to `LazyFile`. This more closely matches `File` behavior
+- BREAKING: Move 4th `LazyFile()` argument `range` into `options.range`
+- BREAKING: Renamed `LazyFileContent` interface to `LazyContent` and `content.read()` => `content.stream()`
+- Added `LazyBlob` (`Blob` subclass) as a complement to `LazyFile`
+- Added `LazyBlobOptions` and `LazyFileOptions` interfaces (`endings` is not supported)
+- Return a `name`-less `Blob` from `file.slice()` to more closely match native `File` behavior
+
 ## v2.2.0 (Aug 24, 2024)
 
 - Added support for `getFile(, { lastModified })` to override `file.lastModified`

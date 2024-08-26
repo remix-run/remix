@@ -1,13 +1,13 @@
 import * as assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { LazyFileContent, LazyFile } from "./lazy-file.js";
+import { LazyContent, LazyFile } from "./lazy-file.js";
 
-function createLazyContent(value = ""): LazyFileContent {
+function createLazyContent(value = ""): LazyContent {
   let buffer = new TextEncoder().encode(value);
   return {
     byteLength: buffer.byteLength,
-    read() {
+    stream() {
       return new ReadableStream({
         start(controller) {
           controller.enqueue(buffer);
@@ -32,12 +32,6 @@ describe("LazyFile", () => {
     assert.equal(file.lastModified, now);
   });
 
-  it("can be initialized with a string as the content", async () => {
-    let file = new LazyFile("hello world", "hello.txt", { type: "text/plain" });
-    assert.equal(file.size, 11);
-    assert.equal("hello world", await file.text());
-  });
-
   it("can be initialized with a [Blob] as the content", async () => {
     let content = [new Blob(["hello world"], { type: "text/plain" })];
     let file = new LazyFile(content, "hello.txt", { type: "text/plain" });
@@ -47,7 +41,7 @@ describe("LazyFile", () => {
 
   it("can be initialized with another LazyFile as the content", async () => {
     let content = [
-      new LazyFile("hello world", "hello.txt", { type: "text/plain" })
+      new LazyFile(["hello world"], "hello.txt", { type: "text/plain" })
     ];
     let file = new LazyFile(content, "hello.txt", { type: "text/plain" });
     assert.equal(file.size, 11);
@@ -55,22 +49,20 @@ describe("LazyFile", () => {
   });
 
   it("can be initialized with multiple Blobs and strings as the content and can slice them correctly", async () => {
-    let content = [
+    let parts = [
       new Blob(["  hello "], { type: "text/plain" }),
       "world",
       new Blob(["!", "  "], { type: "text/plain" }),
       "extra stuff"
     ];
-    let file = new LazyFile(content, "hello.txt", { type: "text/plain" });
+    let file = new LazyFile(parts, "hello.txt", { type: "text/plain" });
     assert.equal(file.size, 27);
-    assert.equal("hello world!", await file.slice(2, -13, "text/plain").text());
+    assert.equal(await file.slice(2, -13).text(), "hello world!");
   });
 
   it("returns the file's contents as a stream", async () => {
     let content = createLazyContent("hello world");
-    let file = new LazyFile(content, "hello.txt", {
-      type: "text/plain"
-    });
+    let file = new LazyFile(content, "hello.txt", { type: "text/plain" });
 
     let decoder = new TextDecoder();
     let result = "";
@@ -92,14 +84,6 @@ describe("LazyFile", () => {
   });
 
   describe("slice()", () => {
-    it("returns a file with the same name", () => {
-      let file = new LazyFile("hello world", "hello.txt", {
-        type: "text/plain"
-      });
-      let slice = file.slice(0, 5);
-      assert.equal(slice.name, file.name);
-    });
-
     it("returns a file with the same size as the original when slicing from 0 to the end", () => {
       let file = new LazyFile(createLazyContent("hello world"), "hello.txt", {
         type: "text/plain"
@@ -109,7 +93,7 @@ describe("LazyFile", () => {
     });
 
     it('returns a file with size 0 when the "start" index is greater than the content length', () => {
-      let file = new LazyFile("hello world", "hello.txt", {
+      let file = new LazyFile(["hello world"], "hello.txt", {
         type: "text/plain"
       });
       let slice = file.slice(100);
@@ -117,52 +101,52 @@ describe("LazyFile", () => {
     });
 
     it('returns a file with size 0 when the "start" index is greater than the "end" index', () => {
-      let file = new LazyFile("hello world", "hello.txt", {
+      let file = new LazyFile(["hello world"], "hello.txt", {
         type: "text/plain"
       });
       let slice = file.slice(5, 0);
       assert.equal(slice.size, 0);
     });
 
-    it("calls content.read() with the correct range", t => {
+    it("calls content.stream() with the correct range", t => {
       let content = createLazyContent("X".repeat(100));
-      let read = t.mock.method(content, "read");
+      let read = t.mock.method(content, "stream");
       let file = new LazyFile(content, "example.txt", { type: "text/plain" });
       file.slice(10, 20).stream();
       assert.equal(read.mock.calls.length, 1);
       assert.deepEqual(read.mock.calls[0].arguments, [10, 20]);
     });
 
-    it('calls content.read() with the correct range when slicing a file with a negative "start" index', t => {
+    it('calls content.stream() with the correct range when slicing a file with a negative "start" index', t => {
       let content = createLazyContent("X".repeat(100));
-      let read = t.mock.method(content, "read");
+      let read = t.mock.method(content, "stream");
       let file = new LazyFile(content, "example.txt", { type: "text/plain" });
       file.slice(-10).stream();
       assert.equal(read.mock.calls.length, 1);
       assert.deepEqual(read.mock.calls[0].arguments, [90, 100]);
     });
 
-    it('calls content.read() with the correct range when slicing a file with a negative "end" index', t => {
+    it('calls content.stream() with the correct range when slicing a file with a negative "end" index', t => {
       let content = createLazyContent("X".repeat(100));
-      let read = t.mock.method(content, "read");
+      let read = t.mock.method(content, "stream");
       let file = new LazyFile(content, "example.txt", { type: "text/plain" });
       file.slice(0, -10).stream();
       assert.equal(read.mock.calls.length, 1);
       assert.deepEqual(read.mock.calls[0].arguments, [0, 90]);
     });
 
-    it('calls content.read() with the correct range when slicing a file with negative "start" and "end" indexes', t => {
+    it('calls content.stream() with the correct range when slicing a file with negative "start" and "end" indexes', t => {
       let content = createLazyContent("X".repeat(100));
-      let read = t.mock.method(content, "read");
+      let read = t.mock.method(content, "stream");
       let file = new LazyFile(content, "example.txt", { type: "text/plain" });
       file.slice(-20, -10).stream();
       assert.equal(read.mock.calls.length, 1);
       assert.deepEqual(read.mock.calls[0].arguments, [80, 90]);
     });
 
-    it('calls content.read() with the correct range when slicing a file with a "start" index greater than the "end" index', t => {
+    it('calls content.stream() with the correct range when slicing a file with a "start" index greater than the "end" index', t => {
       let content = createLazyContent("X".repeat(100));
-      let read = t.mock.method(content, "read");
+      let read = t.mock.method(content, "stream");
       let file = new LazyFile(content, "example.txt", { type: "text/plain" });
       file.slice(20, 10).stream();
       assert.equal(read.mock.calls.length, 1);

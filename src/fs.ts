@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { lookup } from "mrmime";
 
-import { LazyFileContent, LazyFile } from "./lib/lazy-file.js";
+import { LazyContent, LazyFile } from "./lib/lazy-file.js";
 
 export interface GetFileOptions {
   /**
@@ -24,30 +24,27 @@ export interface GetFileOptions {
  *
  * [MDN `File` Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  */
-export function getFile(
-  filename: string,
-  { name, type, lastModified }: GetFileOptions = {}
-): File {
+export function getFile(filename: string, options?: GetFileOptions): File {
   let stats = fs.statSync(filename);
 
   if (!stats.isFile()) {
     throw new Error(`Path "${filename}" is not a file`);
   }
 
-  let content: LazyFileContent = {
+  let content: LazyContent = {
     byteLength: stats.size,
-    read(start, end) {
-      return readFile(filename, start, end);
+    stream(start, end) {
+      return streamFile(filename, start, end);
     }
   };
 
-  return new LazyFile(content, name ?? path.basename(filename), {
-    type: type ?? lookup(filename),
-    lastModified: lastModified ?? stats.mtimeMs
+  return new LazyFile(content, options?.name ?? path.basename(filename), {
+    type: options?.type ?? lookup(filename),
+    lastModified: options?.lastModified ?? stats.mtimeMs
   });
 }
 
-function readFile(
+function streamFile(
   filename: string,
   start = 0,
   end = Infinity
@@ -61,7 +58,9 @@ function readFile(
       if (done) {
         controller.close();
       } else {
-        controller.enqueue(value);
+        controller.enqueue(
+          new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+        );
       }
     }
   });
