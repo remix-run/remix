@@ -20,6 +20,9 @@
     "./memory": "./dist/memory.js",
     "./package.json": "./package.json"
   },
+  "dependencies": {
+    "@mjackson/lazy-file": "^2.2.0"
+  },
   "devDependencies": {
     "@types/node": "^20.14.10",
     "prettier": "^3.3.3",
@@ -30,17 +33,12 @@
     "clean": "git clean -fdX .",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
-    "prepare": "npm run build",
-    "version": "node scripts/version.js"
+    "prepare": "npm run build"
   },
-  "packageManager": "pnpm@9.7.1",
   "keywords": [
     "file",
     "storage",
     "stream",
     "fs"
-  ],
-  "dependencies": {
-    "@mjackson/lazy-file": "^2.2.0"
-  }
+  ]
 }
