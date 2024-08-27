@@ -1,0 +1,41 @@
+{
+  "name": "@mjackson/lazy-file",
+  "version": "3.0.0",
+  "description": "Lazy, streaming files for JavaScript",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/lazy-file.git"
+  },
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/lazy-file.js",
+    "./fs": "./dist/fs.js",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "mrmime": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "prettier": "^3.3.3",
+    "tsimp": "^2.0.11",
+    "typescript": "^5.5.4"
+  },
+  "scripts": {
+    "build": "tsc --outDir dist --project tsconfig.lib.json",
+    "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
+    "prepare": "pnpm run build"
+  },
+  "keywords": [
+    "file",
+    "buffer",
+    "blob"
+  ]
+}
