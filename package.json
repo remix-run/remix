@@ -4,5 +4,8 @@
   "scripts": {
     "clean": "git clean -fdX ."
   },
-  "packageManager": "pnpm@9.9.0"
+  "packageManager": "pnpm@9.9.0",
+  "devDependencies": {
+    "nx": "19.6.3"
+  }
 }
