@@ -1,7 +1,0 @@
-.tsimp
-.wrangler
-dist
-node_modules
-test-local-file-storage
-
-*.tsbuildinfo
