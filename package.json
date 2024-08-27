@@ -1,0 +1,8 @@
+{
+  "name": "remix-the-web",
+  "private": true,
+  "scripts": {
+    "clean": "git clean -fdX ."
+  },
+  "packageManager": "pnpm@9.9.0"
+}
