@@ -12,6 +12,7 @@ import {
 } from "@remix-run/router";
 import { encode } from "turbo-stream";
 
+import { type Expect, type Equal } from "./typecheck";
 import type { ServerBuild } from "./build";
 import type { AppLoadContext } from "./data";
 import { sanitizeError, sanitizeErrors } from "./errors";
@@ -20,6 +21,11 @@ import { ServerMode } from "./mode";
 import type { TypedResponse } from "./responses";
 import { isRedirectStatusCode, isResponse } from "./responses";
 import type { Jsonify } from "./jsonify";
+import type {
+  ClientActionFunctionArgs,
+  ClientLoaderFunctionArgs,
+  LoaderFunctionArgs,
+} from "./routeModules";
 
 export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
 
@@ -350,7 +356,18 @@ export function encodeViaTurboStream(
         }
       },
     ],
-    postPlugins: [() => ["SingleFetchFallback"]],
+    postPlugins: [
+      (value) => {
+        if (!value) return;
+        if (typeof value !== "object") return;
+
+        return [
+          "SingleFetchClassInstance",
+          Object.fromEntries(Object.entries(value)),
+        ];
+      },
+      () => ["SingleFetchFallback"],
+    ],
   });
 }
 
@@ -417,6 +434,153 @@ type Fn = (...args: any[]) => unknown;
 // json/defer will be removed so everything will use the new simplified typings.
 // prettier-ignore
 export type SerializeFrom<T extends Fn> =
+  Parameters<T> extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ?
+    ReturnType<T> extends TypedResponse<infer U> ? Jsonify<U> :
+    Awaited<ReturnType<T>>
+  :
   Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? Jsonify<T> :
   Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? Serialize<D> :
   Serialize<Awaited<ReturnType<T>>>;
+
+type ServerLoader<T> = (args: LoaderFunctionArgs) => T;
+type ClientLoader<T> = (args: ClientLoaderFunctionArgs) => T;
+
+class TestClass {
+  constructor(public a: string, public b: Date) {
+    this.a = a;
+    this.b = b;
+  }
+
+  testmethod() {}
+}
+
+interface TestInterface {
+  undefined: undefined;
+  null: null;
+  boolean: boolean;
+  string: string;
+  symbol: symbol;
+  number: number;
+  bigint: bigint;
+  Date: Date;
+  URL: URL;
+  RegExp: RegExp;
+  Error: Error;
+  Set: Set<Error>;
+  Map: Map<Date, RegExp>;
+}
+
+type Recursive = {
+  a: string;
+  b: Date;
+  recursive?: Recursive;
+};
+
+// prettier-ignore
+// eslint-disable-next-line
+type _tests = [
+  Expect<Equal<SerializeFrom<ServerLoader<void>>, undefined>>,
+  Expect<Equal<SerializeFrom<ServerLoader<{
+    undefined: undefined,
+    null: null,
+    boolean: boolean,
+    string: string,
+    symbol: symbol,
+    number: number,
+    bigint: bigint,
+    Date: Date,
+    URL: URL,
+    RegExp: RegExp,
+    Error: Error,
+    Set: Set<Error>,
+    Map: Map<Date, RegExp>,
+    TestInterface: TestInterface,
+    Recursive: Recursive
+  }>>, {
+    undefined: undefined,
+    null: null,
+    boolean: boolean,
+    string: string,
+    symbol: symbol,
+    number: number,
+    bigint: bigint,
+    Date: Date,
+    URL: URL,
+    RegExp: RegExp,
+    Error: Error,
+    Set: Set<Error>,
+    Map: Map<Date, RegExp>,
+    TestInterface: TestInterface
+    Recursive: Recursive
+  }>>,
+  Expect<Equal<SerializeFrom<ServerLoader<[
+    undefined,
+    null,
+    boolean,
+    string,
+    symbol,
+    number,
+    bigint,
+    Date,
+    URL,
+    RegExp,
+    Error
+  ]>>, [
+    undefined,
+    null,
+    boolean,
+    string,
+    symbol,
+    number,
+    bigint,
+    Date,
+    URL,
+    RegExp,
+    Error
+  ]>>,
+  Expect<Equal<SerializeFrom<ServerLoader<Promise<[
+    undefined,
+    null,
+    boolean,
+    string,
+    symbol,
+    number,
+    bigint,
+    Date,
+    URL,
+    RegExp,
+    Error
+  ]>>>, [
+    undefined,
+    null,
+    boolean,
+    string,
+    symbol,
+    number,
+    bigint,
+    Date,
+    URL,
+    RegExp,
+    Error
+  ]>>,
+
+  Expect<Equal<SerializeFrom<ServerLoader<{
+    function: () => void,
+    class: TestClass
+  }>>, {
+    function: undefined,
+    class: {
+      a: string
+      b: Date,
+      testmethod: undefined
+    },
+  }>>,
+
+  Expect<Equal<SerializeFrom<ClientLoader<{
+    function: () => void,
+    class: TestClass
+  }>>, {
+    function: () => void,
+    class: TestClass
+  }>>,
+]
