@@ -19,6 +19,9 @@
     "./fs": "./dist/fs.js",
     "./package.json": "./package.json"
   },
+  "dependencies": {
+    "mrmime": "^2.0.0"
+  },
   "devDependencies": {
     "@types/node": "^22.5.0",
     "prettier": "^3.3.3",
@@ -26,19 +29,13 @@
     "typescript": "^5.5.4"
   },
   "scripts": {
-    "clean": "git clean -fdX .",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
-    "prepare": "pnpm run build",
-    "version": "node scripts/version.js"
+    "prepare": "pnpm run build"
   },
-  "packageManager": "pnpm@9.7.1",
   "keywords": [
     "file",
     "buffer",
     "blob"
-  ],
-  "dependencies": {
-    "mrmime": "^2.0.0"
-  }
+  ]
 }
