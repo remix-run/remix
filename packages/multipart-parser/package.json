@@ -30,9 +30,9 @@
     "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
     "bench:bun": "bun run ./bench/runner.ts",
     "bench:deno": "deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts",
-    "bench:node": "node --import tsimp/import ./bench/runner.ts",
+    "bench:node": "node --import @swc-node/register/esm-register ./bench/runner.ts",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
-    "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
+    "test": "node --import @swc-node/register/esm-register --test ./src/**/*.spec.ts",
     "prepare": "pnpm run build"
   },
   "keywords": [
