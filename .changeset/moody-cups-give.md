@@ -22,7 +22,7 @@ Then you are ready for the new typesafety setup:
 
 declare module "@remix-run/server-runtime" {
   interface Future {
-    unstable_singleFetch: true // 👈 enable _types_ for single-fetch
+    unstable_singleFetch: true; // 👈 enable _types_ for single-fetch
   }
 }
 
@@ -30,11 +30,11 @@ export default defineConfig({
   plugins: [
     remix({
       future: {
-        unstable_singleFetch: true // 👈 enable single-fetch
-      }
-    })
-  ]
-})
+        unstable_singleFetch: true, // 👈 enable single-fetch
+      },
+    }),
+  ],
+});
 ```
 
 For more information, see [Guides > Single Fetch](https://remix.run/docs/en/dev/guides/single-fetch) in our docs.
