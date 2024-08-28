@@ -50,6 +50,21 @@ importers:
         specifier: ^5.5.4
         version: 5.5.4
 
+  packages/headers:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.10
+        version: 20.16.1
+      prettier:
+        specifier: ^3.3.3
+        version: 3.3.3
+      tsimp:
+        specifier: ^2.0.11
+        version: 2.0.11(typescript@5.5.4)
+      typescript:
+        specifier: ^5.5.3
+        version: 5.5.4
+
   packages/lazy-file:
     dependencies:
       mrmime:
