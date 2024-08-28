@@ -466,6 +466,7 @@ interface TestInterface {
   URL: URL;
   RegExp: RegExp;
   Error: Error;
+  Array: Array<bigint>;
   Set: Set<Error>;
   Map: Map<Date, RegExp>;
 }
@@ -492,6 +493,7 @@ type _tests = [
     URL: URL,
     RegExp: RegExp,
     Error: Error,
+    Array: Array<bigint>;
     Set: Set<Error>,
     Map: Map<Date, RegExp>,
     TestInterface: TestInterface,
@@ -508,6 +510,7 @@ type _tests = [
     URL: URL,
     RegExp: RegExp,
     Error: Error,
+    Array: Array<bigint>;
     Set: Set<Error>,
     Map: Map<Date, RegExp>,
     TestInterface: TestInterface
@@ -524,7 +527,10 @@ type _tests = [
     Date,
     URL,
     RegExp,
-    Error
+    Error,
+    Array<bigint>,
+    Set<Error>,
+    Map<Date, RegExp>,
   ]>>, [
     undefined,
     null,
@@ -536,7 +542,10 @@ type _tests = [
     Date,
     URL,
     RegExp,
-    Error
+    Error,
+    Array<bigint>,
+    Set<Error>,
+    Map<Date, RegExp>,
   ]>>,
   Expect<Equal<SerializeFrom<ServerLoader<Promise<[
     undefined,
@@ -549,7 +558,10 @@ type _tests = [
     Date,
     URL,
     RegExp,
-    Error
+    Error,
+    Array<bigint>,
+    Set<Error>,
+    Map<Date, RegExp>,
   ]>>>, [
     undefined,
     null,
@@ -561,7 +573,10 @@ type _tests = [
     Date,
     URL,
     RegExp,
-    Error
+    Error,
+    Array<bigint>,
+    Set<Error>,
+    Map<Date, RegExp>,
   ]>>,
 
   Expect<Equal<SerializeFrom<ServerLoader<{
