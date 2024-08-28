@@ -71,7 +71,17 @@ const files = {
       };
     }
 
-    class MyClass {}
+    class MyClass {
+      a: string
+      b: bigint
+
+      constructor(a: string, b: bigint) {
+        this.a = a
+        this.b = b
+      }
+
+      c() {}
+    }
 
     export function loader({ request }) {
       if (new URL(request.url).searchParams.has("error")) {
@@ -82,7 +92,7 @@ const files = {
         date: new Date("${ISO_DATE}"),
         unserializable: {
           function: () => {},
-          class: new MyClass(),
+          class: new MyClass("hello", BigInt(1)),
         },
       };
     }
@@ -119,7 +129,17 @@ const files = {
       }, { status: 201, headers: { 'X-Action': 'yes' }});
     }
 
-    class MyClass {}
+    class MyClass {
+      a: string
+      b: Date
+
+      constructor(a: string, b: Date) {
+        this.a = a
+        this.b = b
+      }
+
+      c() {}
+    }
 
     export function loader({ request }) {
       if (new URL(request.url).searchParams.has("error")) {
@@ -130,7 +150,7 @@ const files = {
         date: new Date("${ISO_DATE}"),
         unserializable: {
           function: () => {},
-          class: new MyClass(),
+          class: new MyClass("hello", BigInt(1)),
         },
       }, { status: 206, headers: { 'X-Loader': 'yes' }});
     }
@@ -199,7 +219,10 @@ test.describe("single-fetch", () => {
           date: new Date(ISO_DATE),
           unserializable: {
             function: undefined,
-            class: undefined,
+            class: {
+              a: "hello",
+              b: BigInt(1),
+            },
           },
         },
       },
@@ -283,7 +306,10 @@ test.describe("single-fetch", () => {
           date: new Date(ISO_DATE),
           unserializable: {
             function: undefined,
-            class: undefined,
+            class: {
+              a: "hello",
+              b: BigInt(1),
+            },
           },
         },
       },
