@@ -5,7 +5,8 @@
   "devDependencies": {
     "@swc-node/register": "^1.10.9",
     "prettier": "^3.3.3",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "nx": "19.6.3"
   },
   "scripts": {
     "clean": "git clean -fdX ."
