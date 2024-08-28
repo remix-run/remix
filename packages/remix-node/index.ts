@@ -52,7 +52,6 @@ export type {
   DataFunctionArgs,
   EntryContext,
   ErrorResponse,
-  Future,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HeadersArgs,

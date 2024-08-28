@@ -45,6 +45,8 @@ export type {
   RedirectFunction,
 } from "./interface";
 
+export type { Future } from "./future";
+
 // Remix server runtime packages should re-export these types
 export type {
   ActionFunction,
@@ -59,7 +61,6 @@ export type {
   EntryContext,
   ErrorResponse,
   FlashSessionData,
-  Future,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HeadersArgs,
