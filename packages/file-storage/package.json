@@ -5,7 +5,8 @@
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/file-storage.git"
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/file-storage"
   },
   "license": "MIT",
   "files": [
@@ -30,10 +31,9 @@
     "typescript": "^5.5.3"
   },
   "scripts": {
-    "clean": "git clean -fdX .",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
-    "prepare": "npm run build"
+    "prepare": "pnpm run build"
   },
   "keywords": [
     "file",

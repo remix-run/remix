@@ -5,7 +5,8 @@
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/form-data-parser.git"
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/form-data-parser"
   },
   "license": "MIT",
   "files": [
@@ -28,7 +29,6 @@
     "typescript": "^5.5.4"
   },
   "scripts": {
-    "clean": "git clean -fdX .",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
     "prepare": "pnpm run build"

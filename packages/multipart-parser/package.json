@@ -5,7 +5,8 @@
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/multipart-parser.git"
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/multipart-parser"
   },
   "license": "MIT",
   "files": [
@@ -29,17 +30,14 @@
     "typescript": "^5.5.3"
   },
   "scripts": {
-    "clean": "git clean -fdX .",
     "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
     "bench:bun": "bun run ./bench/runner.ts",
     "bench:deno": "deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts",
     "bench:node": "node --import tsimp/import ./bench/runner.ts",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
-    "prepare": "npm run build",
-    "version": "node scripts/version.js"
+    "prepare": "pnpm run build"
   },
-  "packageManager": "pnpm@9.4.0",
   "keywords": [
     "multipart",
     "parser",
