@@ -28,7 +28,7 @@ import { decode } from "turbo-stream";
 import { createRequestInit, isResponse } from "./data";
 import type { AssetsManifest, EntryContext } from "./entry";
 import { escapeHtml } from "./markup";
-import type { RouteModules } from "./routeModules";
+import { type RouteModules } from "./routeModules";
 import invariant from "./invariant";
 
 // clientLoader
@@ -143,10 +143,16 @@ export function getSingleFetchDataStrategy(
   manifest: AssetsManifest,
   routeModules: RouteModules
 ): DataStrategyFunction {
-  return async ({ request, matches }) =>
+  return async ({ request, matches, fetcherKey }) =>
     request.method !== "GET"
       ? singleFetchActionStrategy(request, matches)
-      : singleFetchLoaderStrategy(manifest, routeModules, request, matches);
+      : singleFetchLoaderStrategy(
+          manifest,
+          routeModules,
+          request,
+          matches,
+          fetcherKey
+        );
 }
 
 // Actions are simple since they're singular calls to the server
@@ -158,6 +164,9 @@ function singleFetchActionStrategy(
     matches.map(async (m) => {
       let actionStatus: number | undefined;
       let result = await m.resolve(async (handler): Promise<HandlerResult> => {
+        if (!m.shouldLoad) {
+          return { type: "data", result: undefined };
+        }
         let result = await handler(async () => {
           let url = singleFetchUrl(request.url);
           let init = await createRequestInit(request);
@@ -184,49 +193,87 @@ function singleFetchActionStrategy(
 
 // Loaders are trickier since we only want to hit the server once, so we
 // create a singular promise for all server-loader routes to latch onto.
-function singleFetchLoaderStrategy(
+async function singleFetchLoaderStrategy(
   manifest: AssetsManifest,
   routeModules: RouteModules,
   request: Request,
-  matches: DataStrategyFunctionArgs["matches"]
+  matches: DataStrategyFunctionArgs["matches"],
+  fetcherKey: string | null
 ) {
+  let optOutRoutes = new Set<string>();
+  let url = stripIndexParam(singleFetchUrl(request.url));
   let singleFetchPromise: Promise<SingleFetchResults> | undefined;
-  return Promise.all(
-    matches.map(async (m) =>
+
+  let dfds = matches.map(() => createDeferred<void>());
+  let routesLoadedPromise = Promise.all(dfds.map((d) => d.promise));
+  let init = await createRequestInit(request);
+
+  let results = await Promise.all(
+    matches.map(async (m, i) =>
       m.resolve(async (handler): Promise<HandlerResult> => {
         let result: unknown;
-        let url = stripIndexParam(singleFetchUrl(request.url));
-        let init = await createRequestInit(request);
+
+        dfds[i].resolve();
+
+        // Opt out if:
+        //   We currently have data
+        //   and we were told not to load,
+        //   and we have a loader,
+        //   and a shouldRevalidate function
+        // This implies that the user opted out via shouldRevalidate()
+        if (
+          m.data !== undefined &&
+          !m.shouldLoad &&
+          manifest.routes[m.route.id].hasLoader &&
+          routeModules[m.route.id]?.shouldRevalidate
+        ) {
+          optOutRoutes.add(m.route.id);
+          return { type: "data", result: m.data };
+        }
 
         // When a route has a client loader, it calls it's singular server loader
-        if (manifest.routes[m.route.id].hasClientLoader) {
+        if (fetcherKey || manifest.routes[m.route.id].hasClientLoader) {
+          optOutRoutes.add(m.route.id);
           result = await handler(async () => {
-            url.searchParams.set("_routes", m.route.id);
-            let { data } = await fetchAndDecode(url, init);
+            let clientLoaderUrl = new URL(url);
+            clientLoaderUrl.searchParams.set("_routes", m.route.id);
+            let { data } = await fetchAndDecode(clientLoaderUrl, init);
             return unwrapSingleFetchResults(
               data as SingleFetchResults,
               m.route.id
             );
           });
-        } else {
-          result = await handler(async () => {
-            // Otherwise we let multiple routes hook onto the same promise
-            if (!singleFetchPromise) {
-              url = addRevalidationParam(
-                manifest,
-                routeModules,
-                matches.map((m) => m.route),
-                matches.filter((m) => m.shouldLoad).map((m) => m.route),
-                url
-              );
-              singleFetchPromise = fetchAndDecode(url, init).then(
-                ({ data }) => data as SingleFetchResults
-              );
-            }
-            let results = await singleFetchPromise;
-            return unwrapSingleFetchResults(results, m.route.id);
-          });
+          return {
+            type: "data",
+            result,
+          };
         }
+
+        // Otherwise, we can lump this route with the others on a singular
+        // `singleFetchPromise`
+
+        // Wait to let other routes fill out optOutRoutes before creating the
+        // _routes param
+        await routesLoadedPromise;
+        if (optOutRoutes.size > 0) {
+          url.searchParams.set(
+            "_routes",
+            matches
+              .filter((m) => !optOutRoutes.has(m.route.id))
+              .map((m) => m.route.id)
+              .join(",")
+          );
+        }
+
+        result = await handler(async () => {
+          if (!singleFetchPromise) {
+            singleFetchPromise = fetchAndDecode(url, init).then(
+              ({ data }) => data as SingleFetchResults
+            );
+          }
+          let results = await singleFetchPromise;
+          return unwrapSingleFetchResults(results, m.route.id);
+        });
 
         return {
           type: "data",
@@ -235,6 +282,7 @@ function singleFetchLoaderStrategy(
       })
     )
   );
+  return results;
 }
 
 function stripIndexParam(url: URL) {
@@ -418,4 +466,30 @@ function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
   } else {
     throw new Error(`No response found for routeId "${routeId}"`);
   }
+}
+
+function createDeferred<T = unknown>() {
+  let resolve: (val?: any) => Promise<void>;
+  let reject: (error?: Error) => Promise<void>;
+  let promise = new Promise<T>((res, rej) => {
+    resolve = async (val: T) => {
+      res(val);
+      try {
+        await promise;
+      } catch (e) {}
+    };
+    reject = async (error?: Error) => {
+      rej(error);
+      try {
+        await promise;
+      } catch (e) {}
+    };
+  });
+  return {
+    promise,
+    //@ts-ignore
+    resolve,
+    //@ts-ignore
+    reject,
+  };
 }

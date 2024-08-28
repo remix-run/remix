@@ -333,15 +333,18 @@ test.describe("single-fetch", () => {
   test("loads proper data on client side action navigation", async ({
     page,
   }) => {
-    let fixture = await createFixture({
-      config: {
-        future: {
-          unstable_singleFetch: true,
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
         },
+        files,
       },
-      files,
-    });
-    let appFixture = await createAppFixture(fixture);
+      ServerMode.Development
+    );
+    let appFixture = await createAppFixture(fixture, ServerMode.Development);
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickSubmitButton("/data");
@@ -1668,15 +1671,16 @@ test.describe("single-fetch", () => {
   test("allows fetcher to hit resource route and return via turbo stream", async ({
     page,
   }) => {
-    let fixture = await createFixture({
-      config: {
-        future: {
-          unstable_singleFetch: true,
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
         },
-      },
-      files: {
-        ...files,
-        "app/routes/_index.tsx": js`
+        files: {
+          ...files,
+          "app/routes/_index.tsx": js`
           import { useFetcher } from "@remix-run/react";
 
           export default function Component() {
@@ -1691,7 +1695,7 @@ test.describe("single-fetch", () => {
             );
           }
         `,
-        "app/routes/resource.tsx": js`
+          "app/routes/resource.tsx": js`
           export function loader() {
             // Fetcher calls to resource routes will append ".data" and we'll go through
             // the turbo-stream flow.  If a user were to curl this endpoint they'd go
@@ -1702,9 +1706,11 @@ test.describe("single-fetch", () => {
             };
           }
         `,
+        },
       },
-    });
-    let appFixture = await createAppFixture(fixture);
+      ServerMode.Development
+    );
+    let appFixture = await createAppFixture(fixture, ServerMode.Development);
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickElement("#load");
@@ -1713,6 +1719,105 @@ test.describe("single-fetch", () => {
       "RESOURCE 2024-03-12T12:00:00.000Z"
     );
   });
+
+  test("calls reused parent routes by default", async ({ page }) => {
+    let fixture = await createFixture(
+      {
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/_index.tsx": js`
+          import { Link } from '@remix-run/react';
+          export default function Component() {
+            return <Link to="/parent/a">Go to /parent/a</Link>;
+          }
+        `,
+          "app/routes/parent.tsx": js`
+          import { Link, Outlet, useLoaderData } from '@remix-run/react';
+          let count = 0;
+          export function loader({ request }) {
+            return { count: ++count };
+          }
+          export default function Component() {
+            return (
+              <>
+                <p id="parent">Parent Count: {useLoaderData().count}</p>
+                <Link to="/parent/a">Go to /parent/a</Link>
+                <Link to="/parent/b">Go to /parent/b</Link>
+                <Outlet/>
+              </>
+            );
+          }
+        `,
+          "app/routes/parent.a.tsx": js`
+          import { useLoaderData } from '@remix-run/react';
+          let count = 0;
+          export function loader({ request }) {
+            return { count: ++count };
+          }
+          export default function Component() {
+            return <p id="a">A Count: {useLoaderData().count}</p>;
+          }
+        `,
+          "app/routes/parent.b.tsx": js`
+          import { useLoaderData } from '@remix-run/react';
+          let count = 0;
+          export function loader({ request }) {
+            return { count: ++count };
+          }
+          export default function Component() {
+            return <p id="b">B Count: {useLoaderData().count}</p>;
+          }
+        `,
+        },
+      },
+      ServerMode.Development
+    );
+    let appFixture = await createAppFixture(fixture, ServerMode.Development);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    let urls: string[] = [];
+    page.on("request", (req) => {
+      if (req.url().includes(".data")) {
+        urls.push(req.url());
+      }
+    });
+
+    await app.goto("/");
+
+    await app.clickLink("/parent/a");
+    await page.waitForSelector("#a");
+    expect(await app.getHtml("#parent")).toContain("Parent Count: 1");
+    expect(await app.getHtml("#a")).toContain("A Count: 1");
+    expect(urls).toEqual([expect.stringMatching(/\/parent\/a\.data$/)]);
+    urls = [];
+
+    await app.clickLink("/parent/b");
+    await page.waitForSelector("#b");
+    expect(await app.getHtml("#parent")).toContain("Parent Count: 2");
+    expect(await app.getHtml("#b")).toContain("B Count: 1");
+    expect(urls).toEqual([expect.stringMatching(/\/parent\/b\.data$/)]);
+    urls = [];
+
+    await app.clickLink("/parent/a");
+    await page.waitForSelector("#a");
+    expect(await app.getHtml("#parent")).toContain("Parent Count: 3");
+    expect(await app.getHtml("#a")).toContain("A Count: 2");
+    expect(urls).toEqual([expect.stringMatching(/\/parent\/a\.data$/)]);
+  });
+
+  // Calls reused parent route by default
+  // Does not call reused parent route if it opts out via shouldRevalidate
+  // Does not call reused parent route if it opts out via shouldRevalidate and has a clientLoader
+  // Action requests do not use ?_routes and do not run loaders on the server
+  // Fetcher loaders call singular routes
+  // Fetcher actions call .data routes without a param
+  // Fetcher loads revalidate by default
+  // Fetcher loaders can opt out of revalidation via shouldRevalidate
 
   test.describe("client loaders", () => {
     test("when no routes have client loaders", async ({ page }) => {
@@ -1894,10 +1999,10 @@ test.describe("single-fetch", () => {
         "C server loader (C client loader)"
       );
 
-      // A/B can be loaded together, C needs it's own call due to it's clientLoader
+      // root/A/B can be loaded together, C needs it's own call due to it's clientLoader
       expect(urls.sort()).toEqual([
         expect.stringMatching(
-          /\/a\/b\/c\.data\?_routes=routes%2Fa%2Croutes%2Fa\.b$/
+          /\/a\/b\/c\.data\?_routes=root%2Croutes%2Fa%2Croutes%2Fa\.b$/
         ),
         expect.stringMatching(/\/a\/b\/c\.data\?_routes=routes%2Fa\.b\.c$/),
       ]);
@@ -2001,10 +2106,9 @@ test.describe("single-fetch", () => {
         "C server loader (C client loader)"
       );
 
-      // B/C have client loaders so they get individual calls, which leaves A
-      // getting it's own "individual" since it's the last route standing
+      // B/C have client loaders so they get individual calls, root/A go together
       expect(urls.sort()).toEqual([
-        expect.stringMatching(/\/a\/b\/c\.data\?_routes=routes%2Fa$/),
+        expect.stringMatching(/\/a\/b\/c\.data\?_routes=root%2Croutes%2Fa$/),
         expect.stringMatching(/\/a\/b\/c\.data\?_routes=routes%2Fa\.b$/),
         expect.stringMatching(/\/a\/b\/c\.data\?_routes=routes%2Fa\.b\.c$/),
       ]);
@@ -2115,8 +2219,9 @@ test.describe("single-fetch", () => {
         "C server loader (C client loader)"
       );
 
-      // A/B/C all have client loaders so they get individual calls
+      // root/A/B/C all have client loaders so they get individual calls
       expect(urls.sort()).toEqual([
+        expect.stringMatching(/\/a\/b\/c.data\?_routes=root$/),
         expect.stringMatching(/\/a\/b\/c.data\?_routes=routes%2Fa$/),
         expect.stringMatching(/\/a\/b\/c.data\?_routes=routes%2Fa.b$/),
         expect.stringMatching(/\/a\/b\/c.data\?_routes=routes%2Fa.b.c$/),

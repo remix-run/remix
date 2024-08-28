@@ -450,6 +450,14 @@ function handleBrowserRequest(
 
 ### Revalidations
 
+#### Normal Navigation Behavior
+
+for caching purposes we call `.data` and run all loaders
+the presence of a `shoulRevalidate` will opt-into granular revalidation
+and `childLoader` will also opt into granular revalidation
+
+#### Submission Revalidation Behavior
+
 Previously, Remix would always revalidate all active loaders after _any_ action submission, regardless of the result of the action. You could opt-out of revalidation on a per-route basis via [`shouldRevalidate`][should-revalidate].
 
 With Single Fetch, if an `action` returns or throws a `Response` with a `4xx/5xx` status code, Remix will _not revalidate_ loaders by default. If an `action` returns or throws anything that is not a 4xx/5xx Response, then the revalidation behavior is unchanged. The reasoning here is that in most cases, if you return a `4xx`/`5xx` Response, you didn't actually mutate any data so there is no need to reload data.
