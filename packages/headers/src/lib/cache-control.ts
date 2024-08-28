@@ -153,7 +153,9 @@ export interface CacheControlInit {
 /**
  * The value of a `Cache-Control` HTTP header.
  *
- * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
+ * [MDN `Cache-Control` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
+ *
+ * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.2)
  */
 export class CacheControl implements HeaderValue, CacheControlInit {
   maxAge?: number;
