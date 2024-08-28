@@ -20,31 +20,31 @@ npm install @mjackson/headers
 ## Overview
 
 ```ts
-import Headers from '@mjackson/headers';
+import Headers from "@mjackson/headers";
 
 let headers = new Headers();
 
 // Accept-Language
 
-headers.acceptLanguage = 'en-US,en;q=0.9';
+headers.acceptLanguage = "en-US,en;q=0.9";
 
 console.log(headers.acceptLanguage.languages); // [ 'en-US', 'en' ]
 console.log(headers.acceptLanguage.entries());
 // [Map Entries] { [ 'en-US', 1 ], [ 'en', 0.9 ] }
 
 // Content-Type
-headers.contentType = 'application/json; charset=utf-8';
+headers.contentType = "application/json; charset=utf-8";
 
 console.log(headers.contentType.mediaType); // "application/json"
 console.log(headers.contentType.charset); // "utf-8"
 
-headers.contentType.charset = 'iso-8859-1';
+headers.contentType.charset = "iso-8859-1";
 
-console.log(headers.get('Content-Type')); // "application/json; charset=iso-8859-1"
+console.log(headers.get("Content-Type")); // "application/json; charset=iso-8859-1"
 
 // Content-Disposition
 headers.contentDisposition =
-  'attachment; filename="example.pdf"; filename*=UTF-8\'\'%E4%BE%8B%E5%AD%90.pdf';
+  "attachment; filename=\"example.pdf\"; filename*=UTF-8''%E4%BE%8B%E5%AD%90.pdf";
 
 console.log(headers.contentDisposition.type); // 'attachment'
 console.log(headers.contentDisposition.filename); // 'example.pdf'
@@ -52,16 +52,16 @@ console.log(headers.contentDisposition.filenameSplat); // 'UTF-8\'\'%E4%BE%8B%E5
 console.log(headers.contentDisposition.preferredFilename); // '例子.pdf'
 
 // Cookie
-headers.cookie = 'session_id=abc123; user_id=12345';
+headers.cookie = "session_id=abc123; user_id=12345";
 
-console.log(headers.cookie.get('session_id')); // 'abc123'
-console.log(headers.cookie.get('user_id')); // '12345'
+console.log(headers.cookie.get("session_id")); // 'abc123'
+console.log(headers.cookie.get("user_id")); // '12345'
 
-headers.cookie.set('theme', 'dark');
-console.log(headers.get('Cookie')); // 'session_id=abc123; user_id=12345; theme=dark'
+headers.cookie.set("theme", "dark");
+console.log(headers.get("Cookie")); // 'session_id=abc123; user_id=12345; theme=dark'
 
 // Set-Cookie
-headers.setCookie = 'session_id=abc123; Path=/; HttpOnly';
+headers.setCookie = "session_id=abc123; Path=/; HttpOnly";
 
 console.log(headers.setCookie.name); // 'session_id'
 console.log(headers.setCookie.value); // 'abc123'
@@ -72,11 +72,11 @@ console.log(headers.setCookie.httpOnly); // true
 headers.setCookie.maxAge = 3600;
 headers.setCookie.secure = true;
 
-console.log(headers.get('Set-Cookie'));
+console.log(headers.get("Set-Cookie"));
 // session_id=abc123; Path=/; HttpOnly; Max-Age=3600; Secure
 
 // Setting multiple cookies
-headers.append('Set-Cookie', 'user_id=12345; Path=/api; Secure');
+headers.append("Set-Cookie", "user_id=12345; Path=/api; Secure");
 
 // Accessing multiple Set-Cookie headers
 for (let cookie of headers.getSetCookie()) {
@@ -91,13 +91,13 @@ for (let cookie of headers.getSetCookie()) {
 ```ts
 let headers = new Headers({
   contentType: {
-    mediaType: 'text/html',
-    charset: 'utf-8',
+    mediaType: "text/html",
+    charset: "utf-8"
   },
   setCookie: [
-    { name: 'session', value: 'abc', path: '/' },
-    { name: 'theme', value: 'dark', expires: new Date('2021-12-31T23:59:59Z') },
-  ],
+    { name: "session", value: "abc", path: "/" },
+    { name: "theme", value: "dark", expires: new Date("2021-12-31T23:59:59Z") }
+  ]
 });
 
 console.log(`${headers}`);
@@ -109,18 +109,18 @@ console.log(`${headers}`);
 `Headers` works just like [DOM's `Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) (it's a subclass) so you can use them anywhere you need a `Headers`.
 
 ```ts
-import Headers from '@mjackson/headers';
+import Headers from "@mjackson/headers";
 
 // Use in a fetch()
-let response = await fetch('https://example.com', {
-  headers: new Headers(),
+let response = await fetch("https://example.com", {
+  headers: new Headers()
 });
 
 // Convert from DOM Headers
 let headers = new Headers(response.headers);
 
-headers.set('Content-Type', 'text/html');
-headers.get('Content-Type'); // "text/html"
+headers.set("Content-Type", "text/html");
+headers.get("Content-Type"); // "text/html"
 ```
 
 If you're familiar with using DOM `Headers`, everything works as you'd expect.
@@ -129,9 +129,9 @@ If you're familiar with using DOM `Headers`, everything works as you'd expect.
 
 ```ts
 let headers = new Headers({
-  'Content-Type': 'application/json',
-  'X-API-Key': 'secret-key',
-  'Accept-Language': 'en-US,en;q=0.9',
+  "Content-Type": "application/json",
+  "X-API-Key": "secret-key",
+  "Accept-Language": "en-US,en;q=0.9"
 });
 
 for (let [name, value] of headers) {
@@ -146,8 +146,8 @@ If you're assembling HTTP messages, you can easily convert to a multiline string
 
 ```ts
 let headers = new Headers({
-  'Content-Type': 'application/json',
-  'Accept-Language': 'en-US,en;q=0.9',
+  "Content-Type": "application/json",
+  "Accept-Language": "en-US,en;q=0.9"
 });
 
 console.log(`${headers}`);
@@ -170,32 +170,32 @@ The following headers are currently supported:
 - [`Cookie`](#cookie)
 - [`Set-Cookie`](#set-cookie)
 
-If you need support for a header that isn't listed here, please [send a PR](https://github.com/mjackson/headers/pulls)! The goal is to have first-class support for all common HTTP headers.
+If you need support for a header that isn't listed here, please [send a PR](https://github.com/mjackson/remix-the-web/pulls)! The goal is to have first-class support for all common HTTP headers.
 
 ### Accept-Language
 
 ```ts
-let header = new AcceptLanguage('en-US,en;q=0.9');
-header.get('en-US'); // 1
-header.set('en-US', 0.8);
-header.delete('en-US');
-header.has('en'); // true
+let header = new AcceptLanguage("en-US,en;q=0.9");
+header.get("en-US"); // 1
+header.set("en-US", 0.8);
+header.delete("en-US");
+header.has("en"); // true
 
 // Iterate over language/quality pairs
 for (let [language, quality] of header) {
   // ...
 }
 
-let header = new AcceptLanguage(['en-US', ['en', 0.9]]);
-let header = new AcceptLanguage({ 'en-US': 1, en: 0.9 });
+let header = new AcceptLanguage(["en-US", ["en", 0.9]]);
+let header = new AcceptLanguage({ "en-US": 1, en: 0.9 });
 ```
 
 ### Cache-Control
 
 ```ts
-import { CacheControl } from '@mjackson/headers';
+import { CacheControl } from "@mjackson/headers";
 
-let header = new CacheControl('public, max-age=3600, s-maxage=3600');
+let header = new CacheControl("public, max-age=3600, s-maxage=3600");
 header.public; // true
 header.maxAge; // 3600
 header.sMaxage; // 3600
@@ -204,9 +204,11 @@ header.sMaxage; // 3600
 ### Content-Disposition
 
 ```ts
-import { ContentDisposition } from '@mjackson/headers';
+import { ContentDisposition } from "@mjackson/headers";
 
-let header = new ContentDisposition('attachment; name=file1; filename=file1.txt');
+let header = new ContentDisposition(
+  "attachment; name=file1; filename=file1.txt"
+);
 header.type; // "attachment"
 header.name; // "file1"
 header.filename; // "file1.txt"
@@ -216,29 +218,29 @@ header.preferredFilename; // "file1.txt"
 ### Content-Type
 
 ```ts
-import { ContentType } from '@mjackson/headers';
+import { ContentType } from "@mjackson/headers";
 
-let header = new ContentType('text/html; charset=utf-8');
+let header = new ContentType("text/html; charset=utf-8");
 header.mediaType; // "text/html"
 header.boundary; // undefined
 header.charset; // "utf-8"
 
 let header = new ContentType({
-  mediaType: 'multipart/form-data',
-  boundary: '------WebKitFormBoundary12345',
+  mediaType: "multipart/form-data",
+  boundary: "------WebKitFormBoundary12345"
 });
 ```
 
 ### Cookie
 
 ```ts
-import { Cookie } from '@mjackson/headers';
+import { Cookie } from "@mjackson/headers";
 
-let header = new Cookie('theme=dark; session_id=123');
-header.get('theme'); // "dark"
-header.set('theme', 'light');
-header.delete('theme');
-header.has('session_id'); // true
+let header = new Cookie("theme=dark; session_id=123");
+header.get("theme"); // "dark"
+header.set("theme", "light");
+header.delete("theme");
+header.has("session_id"); // true
 
 // Iterate over cookie name/value pairs
 for (let [name, value] of header) {
@@ -249,9 +251,11 @@ for (let [name, value] of header) {
 ### Set-Cookie
 
 ```ts
-import { SetCookie } from '@mjackson/headers';
+import { SetCookie } from "@mjackson/headers";
 
-let header = new SetCookie('session_id=abc; Domain=example.com; Path=/; Secure; HttpOnly');
+let header = new SetCookie(
+  "session_id=abc; Domain=example.com; Path=/; Secure; HttpOnly"
+);
 header.name; // "session_id"
 header.value; // "abc"
 header.domain; // "example.com"
@@ -265,4 +269,4 @@ header.expires; // undefined
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/headers/blob/main/LICENSE)
+See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
