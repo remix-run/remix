@@ -6,7 +6,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/headers.git"
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/headers"
   },
   "files": [
     "dist",
@@ -25,13 +26,10 @@
     "typescript": "^5.5.3"
   },
   "scripts": {
-    "clean": "git clean -fdX .",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
-    "prepare": "npm run build",
-    "version": "node scripts/version.js"
+    "prepare": "pnpm run build"
   },
-  "packageManager": "pnpm@9.4.0",
   "keywords": [
     "fetch",
     "http",
