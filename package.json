@@ -3,9 +3,8 @@
   "private": true,
   "packageManager": "pnpm@9.9.0",
   "devDependencies": {
-    "nx": "19.6.3",
+    "@swc-node/register": "^1.10.9",
     "prettier": "^3.3.3",
-    "tsimp": "^2.0.11",
     "typescript": "^5.5.4"
   },
   "scripts": {
