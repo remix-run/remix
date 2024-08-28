@@ -177,7 +177,7 @@ export default function Component() {
 
 #### Functions and class instances
 
-In general, functions cannot be reliably sent over the network, so `function` got serialized as `undefined`:
+In general, functions cannot be reliably sent over the network, so they get serialized as `undefined`:
 
 ```ts
 import { useLoaderData } from "@remix-run/react";
