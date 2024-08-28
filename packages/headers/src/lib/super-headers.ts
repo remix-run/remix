@@ -12,7 +12,7 @@ const CRLF = '\r\n';
 const SetCookieKey = 'set-cookie';
 
 interface SuperHeadersPropertyInit {
-  acceptLanguage?: AcceptLanguageInit;
+  acceptLanguage?: string | AcceptLanguageInit;
   age?: string | number;
   cacheControl?: string | CacheControlInit;
   contentDisposition?: string | ContentDispositionInit;
