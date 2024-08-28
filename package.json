@@ -1,41 +1,11 @@
 {
-  "name": "@mjackson/headers",
-  "version": "0.6.1",
-  "description": "A toolkit for working with HTTP headers in JavaScript",
-  "author": "Michael Jackson <mjijackson@gmail.com>",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mjackson/headers.git"
-  },
-  "files": [
-    "dist",
-    "LICENSE",
-    "README.md"
-  ],
-  "type": "module",
-  "exports": {
-    ".": "./dist/headers.js",
-    "./package.json": "./package.json"
-  },
+  "name": "remix-the-web",
+  "private": true,
+  "packageManager": "pnpm@9.9.0",
   "devDependencies": {
-    "@types/node": "^20.14.10",
-    "prettier": "^3.3.3",
-    "tsimp": "^2.0.11",
-    "typescript": "^5.5.3"
+    "nx": "19.6.3"
   },
   "scripts": {
-    "clean": "git clean -fdX .",
-    "build": "tsc --outDir dist --project tsconfig.lib.json",
-    "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
-    "prepare": "npm run build",
-    "version": "node scripts/version.js"
-  },
-  "packageManager": "pnpm@9.4.0",
-  "keywords": [
-    "fetch",
-    "http",
-    "header",
-    "headers"
-  ]
+    "clean": "git clean -fdX ."
+  }
 }

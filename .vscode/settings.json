@@ -1,0 +1,3 @@
+{
+  "deno.enablePaths": ["./packages/multipart-parser/examples/deno"]
+}

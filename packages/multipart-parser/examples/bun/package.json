@@ -1,0 +1,15 @@
+{
+  "name": "multipart-parser-bun-example",
+  "private": true,
+  "dependencies": {
+    "@mjackson/multipart-parser": "workspace:*",
+    "tmp": "^0.2.3"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.6",
+    "@types/tmp": "^0.2.6"
+  },
+  "scripts": {
+    "start": "bun run server.ts"
+  }
+}

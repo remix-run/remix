@@ -1,0 +1,42 @@
+{
+  "name": "@mjackson/form-data-parser",
+  "version": "0.1.0",
+  "description": "A request.formData() wrapper with pluggable file upload handling",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/form-data-parser"
+  },
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/form-data-parser.js",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@mjackson/multipart-parser": "^0.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.4.1",
+    "prettier": "^3.3.3",
+    "tsimp": "^2.0.11",
+    "typescript": "^5.5.4"
+  },
+  "scripts": {
+    "build": "tsc --outDir dist --project tsconfig.lib.json",
+    "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
+    "prepare": "pnpm run build"
+  },
+  "keywords": [
+    "form-data",
+    "FormData",
+    "multipart",
+    "parser"
+  ]
+}
