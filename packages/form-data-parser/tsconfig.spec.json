@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.spec.ts"],
+  "compilerOptions": {
+    "composite": true,
+    "types": ["node"]
+  }
+}
