@@ -1,0 +1,49 @@
+{
+  "name": "@mjackson/multipart-parser",
+  "version": "0.6.2",
+  "description": "A fast, efficient parser for multipart streams in any JavaScript environment",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/multipart-parser.git"
+  },
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/multipart-parser.js",
+    "./node": "./dist/multipart-parser.node.js",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@mjackson/headers": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "prettier": "^3.3.3",
+    "tsimp": "^2.0.11",
+    "typescript": "^5.5.3"
+  },
+  "scripts": {
+    "clean": "git clean -fdX .",
+    "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
+    "bench:bun": "bun run ./bench/runner.ts",
+    "bench:deno": "deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts",
+    "bench:node": "node --import tsimp/import ./bench/runner.ts",
+    "build": "tsc --outDir dist --project tsconfig.lib.json",
+    "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
+    "prepare": "npm run build",
+    "version": "node scripts/version.js"
+  },
+  "packageManager": "pnpm@9.4.0",
+  "keywords": [
+    "multipart",
+    "parser",
+    "stream",
+    "http"
+  ]
+}
