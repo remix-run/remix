@@ -1,4 +1,4 @@
-# `file-storage` CHANGELOG
+# file-storage CHANGELOG
 
 ## v0.2.0 (Aug 26, 2024)
 

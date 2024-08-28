@@ -1,4 +1,8 @@
-# `headers` CHANGELOG
+# headers CHANGELOG
+
+## HEAD
+
+- Added support for the `Accept-Language` header
 
 ## v0.6.1 (Aug 13, 2024)
 
