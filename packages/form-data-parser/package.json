@@ -31,10 +31,8 @@
     "clean": "git clean -fdX .",
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import tsimp/import --test ./src/**/*.spec.ts",
-    "prepare": "pnpm run build",
-    "version": "node scripts/version.js"
+    "prepare": "pnpm run build"
   },
-  "packageManager": "pnpm@9.7.1",
   "keywords": [
     "form-data",
     "FormData",
