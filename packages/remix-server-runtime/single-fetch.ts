@@ -385,13 +385,14 @@ type Serializable =
   | string
   | symbol
   | number
-  | Array<Serializable>
-  | { [key: PropertyKey]: Serializable }
   | bigint
   | Date
   | URL
   | RegExp
   | Error
+  | ReadonlyArray<Serializable>
+  | Array<Serializable>
+  | { [key: PropertyKey]: Serializable }
   | Map<Serializable, Serializable>
   | Set<Serializable>
   | Promise<Serializable>;
@@ -467,6 +468,7 @@ interface TestInterface {
   RegExp: RegExp;
   Error: Error;
   Array: Array<bigint>;
+  ReadonlyArray: ReadonlyArray<bigint>;
   Set: Set<Error>;
   Map: Map<Date, RegExp>;
 }
@@ -494,6 +496,7 @@ type _tests = [
     RegExp: RegExp,
     Error: Error,
     Array: Array<bigint>;
+    ReadonlyArray: ReadonlyArray<bigint>;
     Set: Set<Error>,
     Map: Map<Date, RegExp>,
     TestInterface: TestInterface,
@@ -511,6 +514,7 @@ type _tests = [
     RegExp: RegExp,
     Error: Error,
     Array: Array<bigint>;
+    ReadonlyArray: ReadonlyArray<bigint>;
     Set: Set<Error>,
     Map: Map<Date, RegExp>,
     TestInterface: TestInterface
@@ -529,6 +533,7 @@ type _tests = [
     RegExp,
     Error,
     Array<bigint>,
+    ReadonlyArray<bigint>,
     Set<Error>,
     Map<Date, RegExp>,
   ]>>, [
@@ -544,6 +549,7 @@ type _tests = [
     RegExp,
     Error,
     Array<bigint>,
+    ReadonlyArray<bigint>,
     Set<Error>,
     Map<Date, RegExp>,
   ]>>,
@@ -560,6 +566,7 @@ type _tests = [
     RegExp,
     Error,
     Array<bigint>,
+    ReadonlyArray<bigint>,
     Set<Error>,
     Map<Date, RegExp>,
   ]>>>, [
@@ -575,6 +582,7 @@ type _tests = [
     RegExp,
     Error,
     Array<bigint>,
+    ReadonlyArray<bigint>,
     Set<Error>,
     Map<Date, RegExp>,
   ]>>,
