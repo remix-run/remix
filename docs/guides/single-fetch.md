@@ -168,8 +168,11 @@ export function loader() {
     date: new Date(),
   };
 }
-const data = useLoaderData<typeof loader>();
-//    ^? { planet: string, date: Date }
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  //    ^? { planet: string, date: Date }
+}
 ```
 
 #### Functions and class instances
@@ -186,8 +189,11 @@ export function loader() {
     notSoRandom: () => 7,
   };
 }
-const data = useLoaderData<typeof loader>();
-//    ^? { planet: string, date: Date, notSoRandom: undefined }
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  //    ^? { planet: string, date: Date, notSoRandom: undefined }
+}
 ```
 
 Methods are also not serializable, so class instances get slimmed down to just their serializable properties:
@@ -216,8 +222,11 @@ export function loader() {
     spot: new Dog("Spot", 3),
   };
 }
-const data = useLoaderData<typeof loader>();
-//    ^? { planet: string, date: Date, spot: { name: string, age: number, bark: undefined } }
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  //    ^? { planet: string, date: Date, spot: { name: string, age: number, bark: undefined } }
+}
 ```
 
 #### `clientLoader` and `clientAction`
@@ -237,7 +246,7 @@ class Dog {
 }
 
 // Make sure to annotate the types for the args! 👇
-export function clientLoader({}: ClientLoaderFunctionArgs) {
+export function clientLoader(_: ClientLoaderFunctionArgs) {
   return {
     planet: "world",
     date: new Date(),
@@ -245,8 +254,11 @@ export function clientLoader({}: ClientLoaderFunctionArgs) {
     spot: new Dog("Spot", 3),
   };
 }
-const data = useLoaderData<typeof clientLoader>();
-//    ^? { planet: string, date: Date, notSoRandom: () => number, spot: Dog }
+
+export default function Component() {
+  const data = useLoaderData<typeof clientLoader>();
+  //    ^? { planet: string, date: Date, notSoRandom: () => number, spot: Dog }
+}
 ```
 
 ### Headers
