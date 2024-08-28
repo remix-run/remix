@@ -629,6 +629,7 @@ test.describe("single-fetch", () => {
     await page.waitForSelector("#error");
     expect(urls).toEqual([]);
   });
+
   test("returns headers correctly for singular loader and action calls", async () => {
     let fixture = await createFixture({
       config: {
@@ -1758,7 +1759,6 @@ test.describe("single-fetch", () => {
             return { url: request.url };
           }
           export async function clientLoader({ request, serverLoader }) {
-            debugger;
             let serverData = await serverLoader();
             return {
               serverUrl: serverData.url,
@@ -1878,7 +1878,72 @@ test.describe("single-fetch", () => {
     ]);
   });
 
-  test.describe("revalidations", () => {
+  test.describe("revalidations/_routes param", () => {
+    test("does not make a server call if no loaders need to run", async ({
+      page,
+    }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            "app/root.tsx": js`
+            import { Link, Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+            export default function Root() {
+              return (
+                <html lang="en">
+                  <head>
+                    <Meta />
+                    <Links />
+                  </head>
+                  <body>
+                    <Link to="/">Home</Link><br/>
+                    <Link to="/a/b">/a/b</Link><br/>
+                    <Outlet />
+                    <Scripts />
+                  </body>
+                </html>
+              );
+            }
+          `,
+            "app/routes/a.tsx": js`
+            import { Outlet } from "@remix-run/react";
+
+            export default function Root() {
+              return <Outlet />;
+            }
+          `,
+            "app/routes/a.b.tsx": js`
+            export default function Root() {
+              return <h1>B</h1>;
+            }
+          `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.method() === "GET" && req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+
+      await app.clickLink("/a/b");
+      await page.waitForSelector("h1");
+      expect(await app.getHtml("h1")).toBe("<h1>B</h1>");
+      expect(urls.length).toBe(0);
+    });
+
     test("calls reused parent routes by default", async ({ page }) => {
       let fixture = await createFixture({
         config: {
@@ -2179,6 +2244,91 @@ test.describe("single-fetch", () => {
       expect(
         urls[0].endsWith("/parent/a.data?_routes=root%2Croutes%2Fparent.a")
       ).toBe(true);
+    });
+
+    test("does not add a _routes param for routes without loaders", async ({
+      page,
+    }) => {
+      let fixture = await createFixture({
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/_index.tsx": js`
+            import { Link } from '@remix-run/react';
+            export default function Component() {
+              return <Link to="/parent/a">Go to /parent/a</Link>;
+            }
+          `,
+          "app/routes/parent.tsx": js`
+            import { Link, Outlet, useLoaderData } from '@remix-run/react';
+            let count = 0;
+            export function loader({ request }) {
+              return { count: ++count };
+            }
+            export function shouldRevalidate() {
+              return false;
+            }
+            export default function Component() {
+              return (
+                <>
+                  <p id="parent">Parent Count: {useLoaderData().count}</p>
+                  <Link to="/parent/a">Go to /parent/a</Link>
+                  <Link to="/parent/b">Go to /parent/b</Link>
+                  <Outlet/>
+                </>
+              );
+            }
+          `,
+          "app/routes/parent.a.tsx": js`
+            import { useLoaderData } from '@remix-run/react';
+            let count = 0;
+            export function loader({ request }) {
+              return { count: ++count };
+            }
+            export default function Component() {
+              return <p id="a">A Count: {useLoaderData().count}</p>;
+            }
+          `,
+          "app/routes/parent.b.tsx": js`
+            export default function Component() {
+              return <p id="b">B</p>;
+            }
+          `,
+        },
+      });
+      let appFixture = await createAppFixture(fixture);
+      let app = new PlaywrightFixture(appFixture, page);
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      await app.goto("/");
+
+      await app.clickLink("/parent/a");
+      await page.waitForSelector("#a");
+      expect(await app.getHtml("#parent")).toContain("Parent Count: 1");
+      expect(await app.getHtml("#a")).toContain("A Count: 1");
+      expect(urls.length).toBe(1);
+      // Not a revalidation on the first navigation so no params
+      expect(urls[0].endsWith("/parent/a.data")).toBe(true);
+      urls = [];
+
+      await app.clickLink("/parent/b");
+      await page.waitForSelector("#b");
+      expect(await app.getHtml("#parent")).toContain("Parent Count: 1");
+      expect(await app.getHtml("#b")).toContain("B");
+      expect(urls.length).toBe(1);
+      // Don't reload the parent route
+      expect(urls[0].endsWith("/parent/b.data?_routes=root")).toBe(true);
+      urls = [];
     });
   });
 
@@ -2593,10 +2743,284 @@ test.describe("single-fetch", () => {
   });
 
   test.describe("fetchers", () => {
-    // Fetcher loaders call singular routes
-    // Fetcher actions call .data routes without a param
-    // Fetcher loads revalidate by default
-    // Fetcher loaders can opt out of revalidation via shouldRevalidate
+    test("Fetcher loaders call singular routes", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/a.tsx": js`
+              import { Outlet } from '@remix-run/react';
+              export default function Comp() {
+                return <Outlet />;
+              }
+            `,
+            "app/routes/a.b.tsx": js`
+              import { useFetcher } from '@remix-run/react';
+
+              export function loader() {
+                return { message: 'LOADER' };
+              }
+
+              export default function Comp() {
+                let fetcher = useFetcher();
+                return (
+                  <>
+                    <button id="load" onClick={() => fetcher.load('/a/b')}>Load</button>
+                    {fetcher.data ? <p id="data">{fetcher.data.message}</p> : null}
+                  </>
+                );
+              }
+            `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.method() === "GET" && req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/a/b");
+      await app.clickElement("#load");
+      await page.waitForSelector("#data");
+      expect(await app.getHtml("#data")).toContain("LOADER");
+
+      // No clientLoaders so we can make a single parameter-less fetch
+      expect(urls.length).toBe(1);
+      expect(urls[0].endsWith("/a/b.data?_routes=routes%2Fa.b")).toBe(true);
+    });
+
+    test("Fetcher actions call singular routes", async ({ page }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/a.tsx": js`
+              import { Outlet } from '@remix-run/react';
+              export default function Comp() {
+                return <Outlet />;
+              }
+            `,
+            "app/routes/a.b.tsx": js`
+              import { useFetcher } from '@remix-run/react';
+
+              export function action() {
+                return { message: 'ACTION' };
+              }
+
+              export default function Comp() {
+                let fetcher = useFetcher();
+                return (
+                  <>
+                    <button id="submit" onClick={() => {
+                      fetcher.submit({}, {
+                        method: 'post',
+                        action: '/a/b'
+                      });
+                    }}>
+                      Load
+                    </button>
+                    {fetcher.data ? <p id="data">{fetcher.data.message}</p> : null}
+                  </>
+                );
+              }
+            `,
+          },
+        },
+        ServerMode.Development
+      );
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.method() === "GET" && req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/a/b");
+      await app.clickElement("#submit");
+      await page.waitForSelector("#data");
+      expect(await app.getHtml("#data")).toContain("ACTION");
+
+      // No clientLoaders so we can make a single parameter-less fetch
+      expect(urls.length).toBe(1);
+      expect(urls[0].endsWith("/a/b.data")).toBe(true);
+    });
+
+    test("Fetcher loads do not revalidate on GET navigations by default", async ({
+      page,
+    }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/parent.tsx": js`
+            import { Link, Outlet, useFetcher } from '@remix-run/react';
+            export default function Component() {
+              let fetcher = useFetcher();
+              return (
+                <>
+                  <Link to="/parent/a">Go to /parent/a</Link>
+                  <Link to="/parent/b">Go to /parent/b</Link>
+                  <button id="load" onClick={() => fetcher.load('/fetch')}>
+                    Load Fetcher
+                  </button>
+                  {fetcher.data ? <p id="fetch">Fetch Count: {fetcher.data.count}</p> : null}
+                  <Outlet/>
+                </>
+              );
+            }
+          `,
+            "app/routes/parent.a.tsx": js`
+            export default function Component() {
+              return <p id="a">A</p>;
+            }
+          `,
+            "app/routes/parent.b.tsx": js`
+            export default function Component() {
+              return <p id="b">B</p>;
+            }
+          `,
+            "app/routes/fetch.tsx": js`
+            let count = 0;
+            export function loader({ request }) {
+              return { count: ++count };
+            }
+            export default function Component() {
+              return <h1>Fetch</h1>;
+            }
+          `,
+          },
+        },
+        ServerMode.Development
+      );
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      await app.goto("/parent/a");
+      await app.clickElement("#load");
+      await page.waitForSelector("#fetch");
+      expect(await app.getHtml("#fetch")).toContain("Fetch Count: 1");
+      expect(urls.length).toBe(1);
+      expect(urls[0].endsWith("/fetch.data?_routes=routes%2Ffetch")).toBe(true);
+      urls = [];
+
+      await app.clickLink("/parent/b");
+      await page.waitForSelector("#b");
+      expect(await app.getHtml("#fetch")).toContain("Fetch Count: 1");
+      expect(urls.length).toBe(1);
+      expect(urls[0].endsWith("/parent/b.data")).toBe(true);
+    });
+
+    test("Fetcher loads can opt into revalidation on GET navigations", async ({
+      page,
+    }) => {
+      let fixture = await createFixture(
+        {
+          config: {
+            future: {
+              unstable_singleFetch: true,
+            },
+          },
+          files: {
+            ...files,
+            "app/routes/parent.tsx": js`
+            import { Link, Outlet, useFetcher } from '@remix-run/react';
+            export default function Component() {
+              let fetcher = useFetcher();
+              return (
+                <>
+                  <Link to="/parent/a">Go to /parent/a</Link>
+                  <Link to="/parent/b">Go to /parent/b</Link>
+                  <button id="load" onClick={() => fetcher.load('/fetch')}>
+                    Load Fetcher
+                  </button>
+                  {fetcher.data ? <p id="fetch">Fetch Count: {fetcher.data.count}</p> : null}
+                  <Outlet/>
+                </>
+              );
+            }
+          `,
+            "app/routes/parent.a.tsx": js`
+            export default function Component() {
+              return <p id="a">A</p>;
+            }
+          `,
+            "app/routes/parent.b.tsx": js`
+            export default function Component() {
+              return <p id="b">B</p>;
+            }
+          `,
+            "app/routes/fetch.tsx": js`
+            let count = 0;
+            export function loader({ request }) {
+              return { count: ++count };
+            }
+            export function shouldRevalidate() {
+              return true;
+            }
+            export default function Component() {
+              return <h1>Fetch</h1>;
+            }
+          `,
+          },
+        },
+        ServerMode.Development
+      );
+      let appFixture = await createAppFixture(fixture, ServerMode.Development);
+      let app = new PlaywrightFixture(appFixture, page);
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      await app.goto("/parent/a");
+      await app.clickElement("#load");
+      await page.waitForSelector("#fetch");
+      expect(await app.getHtml("#fetch")).toContain("Fetch Count: 1");
+      expect(urls.length).toBe(1);
+      expect(urls[0].endsWith("/fetch.data?_routes=routes%2Ffetch")).toBe(true);
+      urls = [];
+
+      await app.clickLink("/parent/b");
+      await page.waitForSelector("#b");
+      expect(await app.getHtml("#fetch")).toContain("Fetch Count: 2");
+      expect(urls.length).toBe(2);
+      expect(urls[0].endsWith("/fetch.data?_routes=routes%2Ffetch")).toBe(true);
+      expect(urls[1].endsWith("/parent/b.data")).toBe(true);
+    });
   });
 
   test.describe("prefetching", () => {

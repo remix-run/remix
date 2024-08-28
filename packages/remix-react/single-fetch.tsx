@@ -4,6 +4,7 @@ import type {
   LoaderFunctionArgs as RRLoaderArgs,
   unstable_DataStrategyFunction as DataStrategyFunction,
   unstable_HandlerResult as HandlerResult,
+  unstable_DataStrategyMatch,
 } from "@remix-run/router";
 import {
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
@@ -143,19 +144,24 @@ export function getSingleFetchDataStrategy(
   manifest: AssetsManifest,
   routeModules: RouteModules
 ): DataStrategyFunction {
-  return async ({ request, matches, fetcherKey }) =>
-    request.method !== "GET"
-      ? singleFetchActionStrategy(request, matches)
-      : singleFetchLoaderStrategy(
-          manifest,
-          routeModules,
-          request,
-          matches,
-          fetcherKey
-        );
+  return async ({ request, matches, fetcherKey }) => {
+    if (request.method !== "GET") {
+      return singleFetchActionStrategy(request, matches);
+    }
+    if (fetcherKey) {
+      return singleFetchLoaderFetcherStrategy(request, matches);
+    }
+    return singleFetchLoaderNavigationStrategy(
+      manifest,
+      routeModules,
+      request,
+      matches
+    );
+  };
 }
 
-// Actions are simple since they're singular calls to the server
+// Actions are simple since they're singular calls to the server for both
+// navigations and fetchers)
 function singleFetchActionStrategy(
   request: Request,
   matches: DataStrategyFunctionArgs["matches"]
@@ -193,12 +199,11 @@ function singleFetchActionStrategy(
 
 // Loaders are trickier since we only want to hit the server once, so we
 // create a singular promise for all server-loader routes to latch onto.
-async function singleFetchLoaderStrategy(
+async function singleFetchLoaderNavigationStrategy(
   manifest: AssetsManifest,
   routeModules: RouteModules,
   request: Request,
-  matches: DataStrategyFunctionArgs["matches"],
-  fetcherKey: string | null
+  matches: DataStrategyFunctionArgs["matches"]
 ) {
   let optOutRoutes = new Set<string>();
   let url = stripIndexParam(singleFetchUrl(request.url));
@@ -232,7 +237,7 @@ async function singleFetchLoaderStrategy(
         }
 
         // When a route has a client loader, it calls it's singular server loader
-        if (fetcherKey || manifest.routes[m.route.id].hasClientLoader) {
+        if (manifest.routes[m.route.id].hasClientLoader) {
           optOutRoutes.add(m.route.id);
           result = await handler(async () => {
             let clientLoaderUrl = new URL(url);
@@ -255,11 +260,22 @@ async function singleFetchLoaderStrategy(
         // Wait to let other routes fill out optOutRoutes before creating the
         // _routes param
         await routesLoadedPromise;
+        if (optOutRoutes.size === matches.length) {
+          return { type: "data", result: m.data };
+        }
+
         if (optOutRoutes.size > 0) {
+          // When one or more routes have opted out, we add a _routes param to
+          // limit the loaders to those that have a server loader and did not
+          // opt out
           url.searchParams.set(
             "_routes",
             matches
-              .filter((m) => !optOutRoutes.has(m.route.id))
+              .filter(
+                (m) =>
+                  !optOutRoutes.has(m.route.id) &&
+                  manifest.routes[m.route.id].hasLoader
+              )
               .map((m) => m.route.id)
               .join(",")
           );
@@ -282,7 +298,49 @@ async function singleFetchLoaderStrategy(
       })
     )
   );
+
   return results;
+}
+
+// Fetcher loader calls are much simpler than navigational loader calls
+async function singleFetchLoaderFetcherStrategy(
+  request: Request,
+  matches: DataStrategyFunctionArgs["matches"]
+) {
+  let url = stripIndexParam(singleFetchUrl(request.url));
+  let init = await createRequestInit(request);
+
+  let results = await Promise.all(
+    matches.map(async (m, i) =>
+      m.resolve(async (handler): Promise<HandlerResult> => {
+        if (!m.shouldLoad) {
+          return { type: "data", result: m.data };
+        }
+        return {
+          type: "data",
+          result: await fetchSingleLoader(handler, url, init, m.route.id),
+        };
+      })
+    )
+  );
+
+  return results;
+}
+
+function fetchSingleLoader(
+  handler: Parameters<
+    NonNullable<Parameters<unstable_DataStrategyMatch["resolve"]>[0]>
+  >[0],
+  url: URL,
+  init: RequestInit,
+  routeId: string
+) {
+  return handler(async () => {
+    let singleLoaderUrl = new URL(url);
+    singleLoaderUrl.searchParams.set("_routes", routeId);
+    let { data } = await fetchAndDecode(singleLoaderUrl, init);
+    return unwrapSingleFetchResults(data as SingleFetchResults, routeId);
+  });
 }
 
 function stripIndexParam(url: URL) {
