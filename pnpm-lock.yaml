@@ -11,6 +11,15 @@ importers:
       nx:
         specifier: 19.6.3
         version: 19.6.3
+      prettier:
+        specifier: ^3.3.3
+        version: 3.3.3
+      tsimp:
+        specifier: ^2.0.11
+        version: 2.0.11(typescript@5.5.4)
+      typescript:
+        specifier: ^5.5.4
+        version: 5.5.4
 
   packages/file-storage:
     dependencies:
@@ -21,15 +30,6 @@ importers:
       '@types/node':
         specifier: ^20.14.10
         version: 20.16.1
-      prettier:
-        specifier: ^3.3.3
-        version: 3.3.3
-      tsimp:
-        specifier: ^2.0.11
-        version: 2.0.11(typescript@5.5.4)
-      typescript:
-        specifier: ^5.5.3
-        version: 5.5.4
 
   packages/form-data-parser:
     dependencies:
@@ -40,30 +40,12 @@ importers:
       '@types/node':
         specifier: ^22.4.1
         version: 22.5.0
-      prettier:
-        specifier: ^3.3.3
-        version: 3.3.3
-      tsimp:
-        specifier: ^2.0.11
-        version: 2.0.11(typescript@5.5.4)
-      typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
 
   packages/headers:
     devDependencies:
       '@types/node':
         specifier: ^20.14.10
         version: 20.16.1
-      prettier:
-        specifier: ^3.3.3
-        version: 3.3.3
-      tsimp:
-        specifier: ^2.0.11
-        version: 2.0.11(typescript@5.5.4)
-      typescript:
-        specifier: ^5.5.3
-        version: 5.5.4
 
   packages/lazy-file:
     dependencies:
@@ -74,15 +56,6 @@ importers:
       '@types/node':
         specifier: ^22.5.0
         version: 22.5.0
-      prettier:
-        specifier: ^3.3.3
-        version: 3.3.3
-      tsimp:
-        specifier: ^2.0.11
-        version: 2.0.11(typescript@5.5.4)
-      typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
 
   packages/multipart-parser:
     dependencies:
@@ -93,15 +66,6 @@ importers:
       '@types/node':
         specifier: ^20.14.10
         version: 20.16.1
-      prettier:
-        specifier: ^3.3.3
-        version: 3.3.3
-      tsimp:
-        specifier: ^2.0.11
-        version: 2.0.11(typescript@5.5.4)
-      typescript:
-        specifier: ^5.5.3
-        version: 5.5.4
 
   packages/multipart-parser/bench:
     dependencies:
