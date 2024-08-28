@@ -5,7 +5,8 @@
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mjackson/lazy-file.git"
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/lazy-file"
   },
   "license": "MIT",
   "files": [
