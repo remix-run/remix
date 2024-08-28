@@ -25,10 +25,7 @@
     "@mjackson/lazy-file": "^2.2.0"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10",
-    "prettier": "^3.3.3",
-    "tsimp": "^2.0.11",
-    "typescript": "^5.5.3"
+    "@types/node": "^20.14.10"
   },
   "scripts": {
     "build": "tsc --outDir dist --project tsconfig.lib.json",

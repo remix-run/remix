@@ -23,10 +23,7 @@
     "@mjackson/multipart-parser": "^0.6.1"
   },
   "devDependencies": {
-    "@types/node": "^22.4.1",
-    "prettier": "^3.3.3",
-    "tsimp": "^2.0.11",
-    "typescript": "^5.5.4"
+    "@types/node": "^22.4.1"
   },
   "scripts": {
     "build": "tsc --outDir dist --project tsconfig.lib.json",

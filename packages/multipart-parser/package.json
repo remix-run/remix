@@ -24,10 +24,7 @@
     "@mjackson/headers": "^0.5.0"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10",
-    "prettier": "^3.3.3",
-    "tsimp": "^2.0.11",
-    "typescript": "^5.5.3"
+    "@types/node": "^20.14.10"
   },
   "scripts": {
     "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
