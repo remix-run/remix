@@ -75,9 +75,9 @@ class CustomFileStorage implements FileStorage {
 
 ## Related Packages
 
-- [`form-data-parser`](https://github.com/mjackson/form-data-parser) - Pairs well with this library for storing `FileUpload` objects received in `multipart/form-data` requests
-- [`lazy-file`](https://github.com/mjackson/lazy-file) - The streaming `File` implementation used internally to stream files from storage
+- [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser) - Pairs well with this library for storing `FileUpload` objects received in `multipart/form-data` requests
+- [`lazy-file`](https://github.com/mjackson/remix-the-web/tree/main/packages/lazy-file) - The streaming `File` implementation used internally to stream files from storage
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/file-storage/blob/main/LICENSE)
+See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)

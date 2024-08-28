@@ -1,6 +1,6 @@
 # form-data-parser
 
-`form-data-parser` is a wrapper around `request.formData()` that provides pluggable support for file upload handling. This is useful in server contexts where large files should be streamed to disk or some cloud storage service like [AWS S3](https://aws.amazon.com/s3/) or [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) instead of being buffered in memory.
+`form-data-parser` is a wrapper around `request.formData()` that provides streaming support for handling file uploads. This is useful in server contexts where large files should be streamed to disk or some cloud storage service like [AWS S3](https://aws.amazon.com/s3/) or [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) instead of being buffered in memory.
 
 ## Features
 
@@ -62,9 +62,9 @@ async function requestHandler(request: Request) {
 
 ## Related Packages
 
-- [`multipart-parser`](https://github.com/mjackson/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
-- [`file-storage`](https://github.com/mjackson/file-storage) - A simple interface for storing `FileUpload` objects you get from the parser
+- [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
+- [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) - A simple interface for storing `FileUpload` objects you get from the parser
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/form-data-parser/blob/main/LICENSE)
+See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)

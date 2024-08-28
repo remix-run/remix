@@ -8,12 +8,11 @@
 
 ## Features
 
-- Runs anywhere JavaScript runs (see [examples for Node.js, Bun, Deno, and Cloudflare
-  Workers](https://github.com/mjackson/multipart-parser/tree/main/examples))
+- Runs anywhere JavaScript runs (see [examples for Node.js, Bun, Deno, and Cloudflare Workers](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples))
 - Built on the standard [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API)
 - Supports the entire spectrum of `multipart/*` message types
 - Memory efficient and does not buffer anything in normal usage
-- [As fast or faster than](https://github.com/mjackson/multipart-parser#benchmark) other popular multipart libraries
+- [As fast or faster than](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser#benchmark) other popular multipart libraries
 
 ## Installation
 
@@ -34,7 +33,10 @@ deno add @mjackson/multipart-parser
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It will automatically validate the request is `multipart/form-data`, extract the multipart boundary from the `Content-Type` header, parse all fields and files in the `request.body` stream, and `yield` each one to you as a `MultipartPart` object so you can save it to disk or upload it somewhere.
 
 ```typescript
-import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
+import {
+  MultipartParseError,
+  parseMultipartRequest
+} from "@mjackson/multipart-parser";
 
 async function handleMultipartRequest(request: Request): void {
   try {
@@ -51,9 +53,9 @@ async function handleMultipartRequest(request: Request): void {
     }
   } catch (error) {
     if (error instanceof MultipartParseError) {
-      console.error('Failed to parse multipart request:', error.message);
+      console.error("Failed to parse multipart request:", error.message);
     } else {
-      console.error('An unexpected error occurred:', error);
+      console.error("An unexpected error occurred:", error);
     }
   }
 }
@@ -64,11 +66,11 @@ The main module (`import from "@mjackson/multipart-parser"`) assumes you're work
 If however you're building a server for Node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
 
 ```typescript
-import * as http from 'node:http';
+import * as http from "node:http";
 
-import { MultipartParseError } from '@mjackson/multipart-parser';
+import { MultipartParseError } from "@mjackson/multipart-parser";
 // Note: Import from multipart-parser/node for node-specific APIs
-import { parseMultipartRequest } from '@mjackson/multipart-parser/node';
+import { parseMultipartRequest } from "@mjackson/multipart-parser/node";
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -81,9 +83,9 @@ const server = http.createServer(async (req, res) => {
     }
   } catch (error) {
     if (error instanceof MultipartParseError) {
-      console.error('Failed to parse multipart request:', error.message);
+      console.error("Failed to parse multipart request:", error.message);
     } else {
-      console.error('An unexpected error occurred:', error);
+      console.error("An unexpected error occurred:", error);
     }
   }
 });
@@ -96,7 +98,7 @@ server.listen(8080);
 If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a lower-level API that you can use directly:
 
 ```typescript
-import { parseMultipart } from '@mjackson/multipart-parser';
+import { parseMultipart } from "@mjackson/multipart-parser";
 
 // Get the multipart data from some API, filesystem, etc.
 let multipartMessage = new Uint8Array();
@@ -104,7 +106,7 @@ let multipartMessage = new Uint8Array();
 // let multipartMessage = new ReadableStream(...);
 // let multipartMessage = [new Uint8Array(...), new Uint8Array(...)];
 
-let boundary = '----WebKitFormBoundary56eac3x';
+let boundary = "----WebKitFormBoundary56eac3x";
 
 for await (let part of parseMultipart(multipartMessage, boundary)) {
   // Do whatever you want with the part...
@@ -114,16 +116,19 @@ for await (let part of parseMultipart(multipartMessage, boundary)) {
 If you'd prefer a callback-based API, instantiate your own `MultipartParser` and go for it:
 
 ```typescript
-import { MultipartParseError, MultipartParser } from '@mjackson/multipart-parser';
+import {
+  MultipartParseError,
+  MultipartParser
+} from "@mjackson/multipart-parser";
 
 let multipartMessage = new Uint8Array(); // or ReadableStream<Uint8Array>, etc.
-let boundary = '...';
+let boundary = "...";
 
 let parser = new MultipartParser(boundary);
 
 try {
   // parse() resolves once the parse is finished and all your callbacks are done
-  await parser.parse(multipartMessage, async (part) => {
+  await parser.parse(multipartMessage, async part => {
     // Do whatever you need...
   });
 } catch (error) {
@@ -137,12 +142,12 @@ try {
 
 ## Examples
 
-The [`examples` directory](https://github.com/mjackson/multipart-parser/tree/main/examples) contains a few working examples of how you can use this library:
+The [`examples` directory](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples) contains a few working examples of how you can use this library:
 
-- [`examples/bun`](https://github.com/mjackson/multipart-parser/tree/main/examples/bun) - using multipart-parser in Bun
-- [`examples/cf-workers`](https://github.com/mjackson/multipart-parser/tree/main/examples/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
-- [`examples/deno`](https://github.com/mjackson/multipart-parser/tree/main/examples/deno) - using multipart-parser in Deno
-- [`examples/node`](https://github.com/mjackson/multipart-parser/tree/main/examples/node) - using multipart-parser in Node.js
+- [`examples/bun`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples/bun) - using multipart-parser in Bun
+- [`examples/cf-workers`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
+- [`examples/deno`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples/deno) - using multipart-parser in Deno
+- [`examples/node`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser/examples/node) - using multipart-parser in Node.js
 
 ## Benchmark
 
@@ -210,9 +215,9 @@ pnpm run bench
 
 ## Related Packages
 
-- [`headers`](https://github.com/mjackson/headers) - Used internally to parse HTTP headers and get
+- [`headers`](https://github.com/mjackson/remix-the-web/tree/main/packages/headers) - Used internally to parse HTTP headers and get
   metadata (filename, content type) for each `MultipartPart`
-- [`form-data-parser`](https://github.com/mjackson/form-data-parser) - Uses `multipart-parser`
+- [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser) - Uses `multipart-parser`
   internally to parse multipart requests and generate `FileUpload`s for storage
 
 ## Credits
@@ -221,4 +226,4 @@ Thanks to Jacob Ebey who gave me several code reviews on this project prior to p
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/multipart-parser/blob/main/LICENSE)
+See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)

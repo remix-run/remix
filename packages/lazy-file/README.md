@@ -91,8 +91,8 @@ let blob = imageFile.slice(100);
 
 ## Related Packages
 
-- [`file-storage`](https://github.com/mjackson/file-storage) - Uses `lazy-file/fs` internally to create streaming `File` objects from storage on disk
+- [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) - Uses `lazy-file/fs` internally to create streaming `File` objects from storage on disk
 
 ## License
 
-See [LICENSE](https://github.com/mjackson/lazy-file/blob/main/LICENSE)
+See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
