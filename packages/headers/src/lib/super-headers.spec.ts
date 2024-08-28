@@ -196,26 +196,28 @@ describe('SuperHeaders', () => {
   });
 
   describe('header-specific getters and setters', () => {
-    it('handles Age header', () => {
-      let headers = new SuperHeaders();
-      headers.age = 42;
-
-      assert.equal(headers.age, 42);
-      assert.equal(headers.get('Age'), '42');
-    });
-
     it('handles Accept-Language header', () => {
-      let headers = new SuperHeaders();
-      headers.acceptLanguage = 'en-US,en;q=0.9';
+      let headers = new SuperHeaders({
+        acceptLanguage: 'en-US,en;q=0.9',
+      });
 
       assert.ok(headers.acceptLanguage instanceof AcceptLanguage);
-      assert.deepStrictEqual(headers.acceptLanguage.languages, ['en-US', 'en']);
+      assert.deepEqual(headers.acceptLanguage.languages, ['en-US', 'en']);
 
       headers.acceptLanguage.set('en', 0.8);
       assert.equal(headers.get('Accept-Language'), 'en-US,en;q=0.8');
 
       headers.acceptLanguage = { 'fi-FI': 1, fi: 0.9 };
       assert.equal(headers.get('Accept-Language'), 'fi-FI,fi;q=0.9');
+    });
+
+    it('handles Age header', () => {
+      let headers = new SuperHeaders({ age: 42 });
+      assert.equal(headers.age, 42);
+      assert.equal(headers.get('Age'), '42');
+      headers.age = 100;
+      assert.equal(headers.age, 100);
+      assert.equal(headers.get('Age'), '100');
     });
 
     it('handles Cache-Control header', () => {

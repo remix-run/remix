@@ -1,5 +1,9 @@
 # headers CHANGELOG
 
+## HEAD
+
+- Added `string` init type to `new Headers({ acceptLanguage })`
+
 ## v0.7.0 (Aug 27, 2024)
 
 - Added support for the `Accept-Language` header (https://github.com/mjackson/remix-the-web/pull/8, thanks [@ArnoSaine](https://github.com/ArnoSaine))
