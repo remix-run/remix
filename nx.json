@@ -11,12 +11,18 @@
     }
   },
   "release": {
+    "projects": ["packages/*"],
     "projectsRelationship": "independent",
     "versionPlans": true,
     "version": {
       "generatorOptions": {
         "updateDependents": "auto"
       }
+    }
+  },
+  "pluginsConfig": {
+    "@nx/js": {
+      "analyzeSourceFiles": false
     }
   }
 }
