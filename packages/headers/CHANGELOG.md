@@ -1,8 +1,8 @@
 # headers CHANGELOG
 
-## HEAD
+## v0.7.0 (Aug 27, 2024)
 
-- Added support for the `Accept-Language` header
+- Added support for the `Accept-Language` header (https://github.com/mjackson/remix-the-web/pull/8, thanks [@ArnoSaine](https://github.com/ArnoSaine))
 
 ## v0.6.1 (Aug 13, 2024)
 
