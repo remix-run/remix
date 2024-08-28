@@ -65,7 +65,9 @@ export interface SetCookieInit {
 /**
  * The value of a `Set-Cookie` HTTP header.
  *
- * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie)
+ * [MDN `Set-Cookie` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie)
+ *
+ * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.1)
  */
 export class SetCookie implements HeaderValue, SetCookieInit {
   domain?: string;

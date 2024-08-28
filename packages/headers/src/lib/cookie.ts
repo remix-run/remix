@@ -7,7 +7,9 @@ export type CookieInit = Iterable<[string, string]> | Record<string, string>;
 /**
  * The value of a `Cookie` HTTP header.
  *
- * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie)
+ * [MDN `Cookie` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie)
+ *
+ * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.2)
  */
 export class Cookie implements HeaderValue, Iterable<[string, string]> {
   #map: Map<string, string>;
@@ -87,7 +89,7 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
 
   forEach(
     callback: (value: string, key: string, map: Map<string, string>) => void,
-    thisArg?: any
+    thisArg?: any,
   ): void {
     this.#map.forEach(callback, thisArg);
   }

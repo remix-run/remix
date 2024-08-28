@@ -9,7 +9,9 @@ export type AcceptLanguageInit =
 /**
  * The value of a `Accept-Language` HTTP header.
  *
- * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language)
+ * [MDN `Accept-Language` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language)
+ *
+ * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5)
  */
 export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   #map: Map<string, number>;

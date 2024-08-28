@@ -25,7 +25,9 @@ export interface ContentTypeInit {
 /**
  * The value of a `Content-Type` HTTP header.
  *
- * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type)
+ * [MDN `Content-Type` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type)
+ *
+ * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.1.5)
  */
 export class ContentType implements HeaderValue, ContentTypeInit {
   boundary?: string;
