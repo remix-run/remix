@@ -43,7 +43,9 @@ export async function callRouteAction({
   singleFetch: boolean;
 }) {
   let result = await action({
-    request: stripDataParam(stripIndexParam(request)),
+    request: singleFetch
+      ? stripRoutesParam(stripIndexParam(request))
+      : stripDataParam(stripIndexParam(request)),
     context: loadContext,
     params,
   });
@@ -79,7 +81,9 @@ export async function callRouteLoader({
   singleFetch: boolean;
 }) {
   let result = await loader({
-    request: stripDataParam(stripIndexParam(request)),
+    request: singleFetch
+      ? stripRoutesParam(stripIndexParam(request))
+      : stripDataParam(stripIndexParam(request)),
     context: loadContext,
     params,
   });
@@ -145,6 +149,23 @@ function stripIndexParam(request: Request) {
 function stripDataParam(request: Request) {
   let url = new URL(request.url);
   url.searchParams.delete("_data");
+  let init: RequestInit = {
+    method: request.method,
+    body: request.body,
+    headers: request.headers,
+    signal: request.signal,
+  };
+
+  if (init.body) {
+    (init as { duplex: "half" }).duplex = "half";
+  }
+
+  return new Request(url.href, init);
+}
+
+function stripRoutesParam(request: Request) {
+  let url = new URL(request.url);
+  url.searchParams.delete("_routes");
   let init: RequestInit = {
     method: request.method,
     body: request.body,
