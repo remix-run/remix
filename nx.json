@@ -9,5 +9,14 @@
     "test": {
       "cache": true
     }
+  },
+  "release": {
+    "projectsRelationship": "independent",
+    "versionPlans": true,
+    "version": {
+      "generatorOptions": {
+        "updateDependents": "auto"
+      }
+    }
   }
 }
