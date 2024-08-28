@@ -1,5 +1,8 @@
-.tsimp
-dist
-node_modules
+**/.tsimp/
+**/dist/
+**/node_modules/
 
-*.tsbuildinfo
+**/*.tsbuildinfo
+
+.nx/cache
+.nx/workspace-data
