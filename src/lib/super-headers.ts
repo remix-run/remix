@@ -1,3 +1,4 @@
+import { AcceptLanguageInit, AcceptLanguage } from './accept-language.js';
 import { CacheControlInit, CacheControl } from './cache-control.js';
 import { ContentDispositionInit, ContentDisposition } from './content-disposition.js';
 import { ContentTypeInit, ContentType } from './content-type.js';
@@ -11,6 +12,7 @@ const CRLF = '\r\n';
 const SetCookieKey = 'set-cookie';
 
 interface SuperHeadersPropertyInit {
+  acceptLanguage?: AcceptLanguageInit;
   age?: string | number;
   cacheControl?: string | CacheControlInit;
   contentDisposition?: string | ContentDispositionInit;
@@ -188,6 +190,14 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
   }
 
   // Header-specific getters and setters
+
+  get acceptLanguage(): AcceptLanguage {
+    return this.#getHeaderValue('accept-language', AcceptLanguage);
+  }
+
+  set acceptLanguage(value: string | AcceptLanguageInit) {
+    this.#setHeaderValue('accept-language', AcceptLanguage, value);
+  }
 
   get age(): number | undefined {
     return this.#getNumberValue('age');
