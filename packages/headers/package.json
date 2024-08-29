@@ -32,5 +32,8 @@
     "http",
     "header",
     "headers"
-  ]
+  ],
+  "nx": {
+    "name": "headers"
+  }
 }
