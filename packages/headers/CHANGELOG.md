@@ -1,5 +1,9 @@
 # headers CHANGELOG
 
+## HEAD
+
+- Treat `Headers` as iterable in the constructor
+
 ## v0.7.1 (Aug 28, 2024)
 
 - Added `string` init type to `new Headers({ acceptLanguage })`
