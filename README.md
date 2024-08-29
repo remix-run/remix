@@ -6,7 +6,7 @@ Each package in this repository has a [single responsibility](https://en.wikiped
 
 To maximize interoperability between packages, we build on web standards. Where standards are missing or incomplete, we augment them in unobtrusive ways to minimize the chance of incompatibility.
 
-What exactly does it mean when we say "web standards"? It means we use:
+What exactly we mean by "web standards"? It means we use:
 
 - [The Web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) instead of Node.js streams
 - [`Uint8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array) instead of Node.js `Buffer`s
