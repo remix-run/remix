@@ -5,12 +5,12 @@ import * as tls from 'node:tls';
 import { TrustProxy } from './trust-proxy.js';
 
 /**
- * Returns the URL of an incoming request.
+ * Returns the origin of an incoming request.
  */
-export function getRequestUrl(req: http.IncomingMessage, trustProxy: TrustProxy): URL {
+export function getRequestOrigin(req: http.IncomingMessage, trustProxy: TrustProxy): string {
   let protocol = getProtocol(req, trustProxy);
   let hostname = getHostname(req, trustProxy);
-  return new URL(`${protocol}//${hostname}${req.url}`);
+  return `${protocol}//${hostname}`;
 }
 
 function getProtocol(req: http.IncomingMessage, trustProxy: TrustProxy): string {
