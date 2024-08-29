@@ -18,6 +18,11 @@
       "generatorOptions": {
         "updateDependents": "auto"
       }
+    },
+    "changelog": {
+      "projectChangelogs": {
+        "createRelease": "github"
+      }
     }
   }
 }
