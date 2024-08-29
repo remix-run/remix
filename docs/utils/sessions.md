@@ -218,7 +218,7 @@ Remix makes it easy to store sessions in your own database if needed. The `creat
 - `createData` will be called from `commitSession` on the initial session creation when no session ID exists in the cookie
 - `readData` will be called from `getSession` when a session ID exists in the cookie
 - `updateData` will be called from `commitSession` when a session ID already exists in the cookie
-- `deleteData` is called from `destorySession`
+- `deleteData` is called from `destroySession`
 
 The following example shows how you could do this using a generic database client:
 
