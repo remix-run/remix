@@ -1,9 +1,7 @@
-# form-data-parser CHANGELOG
-
-## v0.2.0 (Aug 28, 2024)
+## v0.2.0 (2024-08-28)
 
 - Add missing `FileUpload` export 🤦‍♂️
 
-## v0.1.0 (Aug 24, 2024)
+## v0.1.0 (2024-08-24)
 
 - Initial release
