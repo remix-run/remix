@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import * as http from 'node:http';
 
-import { getRequestUrl } from './request-url.js';
+import { getRequestOrigin } from './request-origin.js';
 import { createTrustProxy } from './trust-proxy.js';
 
 describe('getRequestUrl', () => {
@@ -16,10 +16,9 @@ describe('getRequestUrl', () => {
       headers: {
         host: 'example.com',
       },
-      url: '/path?query',
     } as unknown as http.IncomingMessage;
 
-    assert.equal(getRequestUrl(req, trustProxy).toString(), 'http://example.com/path?query');
+    assert.equal(getRequestOrigin(req, trustProxy).toString(), 'http://example.com');
   });
 
   it('returns the URL of an incoming request on a secure connection', () => {
@@ -32,10 +31,9 @@ describe('getRequestUrl', () => {
       headers: {
         host: 'example.com',
       },
-      url: '/path?query',
     } as unknown as http.IncomingMessage;
 
-    assert.equal(getRequestUrl(req, trustProxy).toString(), 'https://example.com/path?query');
+    assert.equal(getRequestOrigin(req, trustProxy).toString(), 'https://example.com');
   });
 
   it('returns the URL of an incoming request with a forwarded protocol', () => {
@@ -49,10 +47,9 @@ describe('getRequestUrl', () => {
         'x-forwarded-proto': 'https',
         host: 'example.com',
       },
-      url: '/path?query',
     } as unknown as http.IncomingMessage;
 
-    assert.equal(getRequestUrl(req, trustProxy).toString(), 'https://example.com/path?query');
+    assert.equal(getRequestOrigin(req, trustProxy).toString(), 'https://example.com');
   });
 
   it('returns the URL of an incoming request with a forwarded host', () => {
@@ -66,9 +63,8 @@ describe('getRequestUrl', () => {
         'x-forwarded-host': 'mjackson.me',
         host: 'example.com',
       },
-      url: '/path?query',
     } as unknown as http.IncomingMessage;
 
-    assert.equal(getRequestUrl(req, trustProxy).toString(), 'http://mjackson.me/path?query');
+    assert.equal(getRequestOrigin(req, trustProxy).toString(), 'http://mjackson.me');
   });
 });

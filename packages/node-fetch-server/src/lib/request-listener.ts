@@ -1,7 +1,7 @@
 import * as http from 'node:http';
 
-import { getRequestUrl } from './request-url.js';
-import { TrustArg, TrustProxy, createTrustProxy } from './trust-proxy.js';
+import { getRequestOrigin } from './request-origin.js';
+import { TrustArg, createTrustProxy } from './trust-proxy.js';
 
 /**
  * A function that handles an incoming request and returns a response.
@@ -30,6 +30,17 @@ export interface RequestListenerOptions {
    * default a 500 Internal Server Error response will be sent.
    */
   onError?: ErrorHandler;
+  /**
+   * Overrides the origin of the incoming request.
+   *
+   * Normally the request origin is derived from the `Host` header and the connection protocol.
+   * Additionally, the `X-Forwarded-Proto` and `X-Forwarded-Host` headers can be used via the
+   * `trustProxy` option to derive the origin from HTTP reverse proxy headers.
+   *
+   * If `origin` is provided, it will be used as the origin of the request and the `Host` header
+   * (along with any reverse proxy headers) will be ignored.
+   */
+  origin?: string;
   /**
    * Determines if/how the `X-Forwarded-Proto` and `X-Forwarded-Host` headers should be used to
    * derive the request URL. By default these headers are not trusted because they can easily be
@@ -92,7 +103,9 @@ export function createRequestListener(
   let trustProxy = createTrustProxy(options?.trustProxy);
 
   return async (req, res) => {
-    let request = createRequest(req, res, trustProxy);
+    let origin = options?.origin ?? getRequestOrigin(req, trustProxy);
+    let url = new URL(req.url!, origin);
+    let request = createRequest(req, res, url);
 
     try {
       let response = await handler(request);
@@ -123,17 +136,12 @@ function internalServerError(): Response {
   });
 }
 
-function createRequest(
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  trustProxy: TrustProxy,
-): Request {
+function createRequest(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Request {
   let controller = new AbortController();
   res.on('close', () => {
     controller.abort();
   });
 
-  let url = getRequestUrl(req, trustProxy);
   let init: RequestInit = {
     method: req.method,
     headers: createHeaders(req.headers),

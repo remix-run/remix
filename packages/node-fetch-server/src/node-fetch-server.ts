@@ -4,5 +4,5 @@ export {
   type RequestListenerOptions,
   createRequestListener,
 } from './lib/request-listener.js';
-export { getRequestUrl } from './lib/request-url.js';
+export { getRequestOrigin } from './lib/request-origin.js';
 export { createTrustProxy } from './lib/trust-proxy.js';
