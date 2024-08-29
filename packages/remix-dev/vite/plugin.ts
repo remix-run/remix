@@ -1075,6 +1075,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               : undefined,
           },
           optimizeDeps: {
+            entries: Object.values(ctx.remixConfig.routes).map((route) =>
+              path.join(ctx.remixConfig.appDirectory, route.file)
+            ),
             include: [
               // Pre-bundle React dependencies to avoid React duplicates,
               // even if React dependencies are not direct dependencies.
@@ -1497,7 +1500,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       name: "remix-dot-server",
       enforce: "pre",
       async resolveId(id, importer, options) {
-        if (options?.ssr) return;
+        // https://vitejs.dev/config/dep-optimization-options
+        let isOptimizeDeps =
+          viteCommand === "serve" &&
+          (options as { scan?: boolean })?.scan === true;
+
+        if (options?.ssr || isOptimizeDeps) return;
 
         let isResolving = options?.custom?.["remix-dot-server"] ?? false;
         if (isResolving) return;
