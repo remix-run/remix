@@ -14,6 +14,7 @@
   },
   "scripts": {
     "clean": "git clean -fdX .",
-    "release": "node scripts/release.js"
+    "release": "node scripts/release.js",
+    "test": "nx run-many --projects='packages/*' --target=test"
   }
 }
