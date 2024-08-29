@@ -1,7 +1,7 @@
 import * as http from 'node:http';
 
 import { getRequestUrl } from './request-url.js';
-import { TrustArg, createTrustProxy } from './trust-proxy.js';
+import { TrustArg, TrustProxy, createTrustProxy } from './trust-proxy.js';
 
 /**
  * A function that handles an incoming request and returns a response.
@@ -92,13 +92,7 @@ export function createRequestListener(
   let trustProxy = createTrustProxy(options?.trustProxy);
 
   return async (req, res) => {
-    let controller = new AbortController();
-    res.on('close', () => {
-      controller.abort();
-    });
-
-    let url = getRequestUrl(req, trustProxy);
-    let request = createRequest(req, url, controller.signal);
+    let request = createRequest(req, res, trustProxy);
 
     try {
       let response = await handler(request);
@@ -129,11 +123,21 @@ function internalServerError(): Response {
   });
 }
 
-function createRequest(req: http.IncomingMessage, url: URL, signal: AbortSignal): Request {
+function createRequest(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  trustProxy: TrustProxy,
+): Request {
+  let controller = new AbortController();
+  res.on('close', () => {
+    controller.abort();
+  });
+
+  let url = getRequestUrl(req, trustProxy);
   let init: RequestInit = {
     method: req.method,
     headers: createHeaders(req.headers),
-    signal,
+    signal: controller.signal,
   };
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
