@@ -19,10 +19,5 @@
         "updateDependents": "auto"
       }
     }
-  },
-  "pluginsConfig": {
-    "@nx/js": {
-      "analyzeSourceFiles": false
-    }
   }
 }
