@@ -165,7 +165,6 @@ async function sendResponse(res: http.ServerResponse, response: Response): Promi
   res.statusCode = response.status;
   res.statusMessage = response.statusText;
 
-  // @ts-ignore - for some reason headers.entries() is not recognized
   for (let [name, value] of response.headers.entries()) {
     res.setHeader(name, value);
   }
