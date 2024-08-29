@@ -2,3 +2,4 @@ packages:
   - packages/*
   - packages/multipart-parser/bench
   - packages/multipart-parser/examples/*
+  - packages/node-request-handler/bench
