@@ -1,8 +1,28 @@
 import * as http from 'node:http';
 
-import { RequestHandler, ErrorHandler } from './request-handler.js';
 import { getRequestUrl } from './request-url.js';
 import { TrustArg, createTrustProxy } from './trust-proxy.js';
+
+/**
+ * A function that handles an incoming request and returns a response.
+ *
+ * [MDN `Request` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Request)
+ *
+ * [MDN `Response` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+ */
+export interface FetchHandler {
+  (request: Request): Response | Promise<Response>;
+}
+
+/**
+ * A function that handles an error that occurred during request handling. May return a response to
+ * send to the client, or `undefined` to allow the server to send a default error response.
+ *
+ * [MDN `Response` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+ */
+export interface ErrorHandler {
+  (error: unknown): Response | void | Promise<Response | void>;
+}
 
 export interface RequestListenerOptions {
   /**
@@ -51,7 +71,7 @@ export interface RequestListenerOptions {
  *
  * ```ts
  * import * as http from 'node:http';
- * import { RequestHandler, createRequestListener } from '@mjackson/node-request-handler';
+ * import { RequestHandler, createRequestListener } from '@mjackson/node-fetch-server';
  *
  * let handler: RequestHandler = async (request) => {
  *   return new Response('Hello, world!');
@@ -65,7 +85,7 @@ export interface RequestListenerOptions {
  * ```
  */
 export function createRequestListener(
-  handler: RequestHandler,
+  handler: FetchHandler,
   options?: RequestListenerOptions,
 ): http.RequestListener {
   let onError = options?.onError ?? defaultErrorHandler;

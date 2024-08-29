@@ -1,9 +1,9 @@
 {
-  "name": "node-request-handler-bench",
+  "name": "node-fetch-server-bench",
   "private": true,
   "type": "module",
   "dependencies": {
-    "@mjackson/node-request-handler": "workspace:*",
+    "@mjackson/node-fetch-server": "workspace:*",
     "express": "^4.19.2"
   },
   "devDependencies": {

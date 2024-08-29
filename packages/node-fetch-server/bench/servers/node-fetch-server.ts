@@ -1,5 +1,5 @@
 import * as http from 'node:http';
-import { createRequestListener } from '@mjackson/node-request-handler';
+import { createRequestListener } from '@mjackson/node-fetch-server';
 
 let server = http.createServer(
   createRequestListener(() => {
