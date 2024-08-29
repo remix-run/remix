@@ -1,3 +1,10 @@
+## 0.7.2 (2024-08-29)
+
+
+### 🩹 Fixes
+
+- **headers:** Treat `Headers` as iterable in the constructor
+
 # headers CHANGELOG
 
 ## HEAD
