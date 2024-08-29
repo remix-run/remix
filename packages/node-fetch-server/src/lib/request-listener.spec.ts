@@ -4,13 +4,13 @@ import { describe, it, mock } from 'node:test';
 import * as http from 'node:http';
 import * as stream from 'node:stream';
 
-import { RequestHandler } from './request-handler.js';
-import { createRequestListener } from './node-request-listener.js';
+import { FetchHandler } from './fetch-handler.js';
+import { createRequestListener } from './request-listener.js';
 
 describe('createRequestListener', () => {
   it('returns a request listener', async () => {
     await new Promise<void>((resolve) => {
-      let handler: RequestHandler = async () => {
+      let handler: FetchHandler = async () => {
         return new Response('Hello, world!');
       };
 
@@ -37,7 +37,7 @@ describe('createRequestListener', () => {
 
   it('calls onError when an error is thrown in the request handler', async () => {
     await new Promise<void>((resolve) => {
-      let handler: RequestHandler = async () => {
+      let handler: FetchHandler = async () => {
         throw new Error('boom!');
       };
       let errorHandler = mock.fn();

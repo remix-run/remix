@@ -1,12 +1,12 @@
 {
-  "name": "@mjackson/node-request-handler",
+  "name": "@mjackson/node-fetch-server",
   "version": "0.1.0",
   "description": "Build servers for Node.js using the web fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mjackson/remix-the-web.git",
-    "directory": "packages/node-request-handler"
+    "directory": "packages/node-fetch-server"
   },
   "license": "MIT",
   "files": [
@@ -16,7 +16,7 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./dist/node-request-handler.js",
+    ".": "./dist/node-fetch-server.js",
     "./package.json": "./package.json"
   },
   "dependencies": {
