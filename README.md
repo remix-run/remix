@@ -2,9 +2,9 @@ This repository is a collection of packages for use with [Remix](https://remix.r
 
 ## Philosophy
 
-The packages in this repository are designed around the [single responsibility principle](https://en.wikipedia.org/wiki/Single-responsibility_principle); they each do one thing really well. Where existing web standards and APIs exist, we build on them in creative ways to expand and extend their functionality. Where new APIs are needed, we design theme to interoperate seamlessly with existing standards.
+Each package in this repository has a [single responsibility](https://en.wikipedia.org/wiki/Single-responsibility_principle); it does one thing well.
 
-The goal is that these libraries should be really useful for anyone who is building for the web. If you're using [Remix](https://remix.run), we've designed it from the start to work with web standards. If you're using some other framework, you should easily be able to integrate these tools into your workflow as well without going full-blown Remix. If you're building your own framework, we hope you'll be able to use these tools as well.
+To maximize interoperability between packages, we build on web standards. Where standards are missing or incomplete, we augment them in unobtrusive ways to minimize the chance of incompatibility.
 
 What exactly does it mean when we say "web standards"? It means we use:
 
@@ -13,7 +13,9 @@ What exactly does it mean when we say "web standards"? It means we use:
 - [The Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API) instead of the Node.js crypto library
 - [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) and [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) instead of some bespoke runtime-specific API
 
-You get the idea. The benefit of writing JavaScript like this is that it's incredibly portable between various runtimes. All of the packages in this repository work on any JavaScript runtime you might be using: Node.js, Bun, Deno, Cloudflare Workers, etc.
+You get the idea. The benefit of writing JavaScript like this is that it's portable between various runtimes. Unless explicitly noted, all packages in this repository work on any JavaScript runtime you might be using: [Node.js](https://nodejs.org/), [Bun](https://bun.sh/), [Deno](https://deno.com/), [Cloudflare Workers](https://workers.cloudflare.com/), etc.
+
+The goal is that these packages should be useful for anyone who is building for the web. If you're using [Remix](https://remix.run), we've designed it from the start to work with web standards. If you're using some other framework, you should easily be able to integrate these tools into your workflow as well without going full-blown Remix. If you're building your own framework, we hope you'll be able to build on this foundation as well.
 
 ## Packages
 
