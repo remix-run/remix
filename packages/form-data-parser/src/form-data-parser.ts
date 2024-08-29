@@ -1,1 +1,1 @@
-export { type FileUploadHandler, parseFormData } from "./lib/form-data.js";
+export { FileUpload, type FileUploadHandler, parseFormData } from './lib/form-data.js';
