@@ -31,14 +31,13 @@ export interface RequestListenerOptions {
    */
   onError?: ErrorHandler;
   /**
-   * Overrides the origin of the incoming request.
+   * Overrides the origin of the incoming request URL. By default the request URL origin is derived
+   * from the `Host` header and the connection protocol. Additionally, the `X-Forwarded-Proto` and
+   * `X-Forwarded-Host` headers can be used via the `trustProxy` option to derive the origin from
+   * HTTP reverse proxy headers.
    *
-   * Normally the request origin is derived from the `Host` header and the connection protocol.
-   * Additionally, the `X-Forwarded-Proto` and `X-Forwarded-Host` headers can be used via the
-   * `trustProxy` option to derive the origin from HTTP reverse proxy headers.
-   *
-   * If `origin` is provided, it will be used as the origin of the request and the `Host` header
-   * (along with any reverse proxy headers) will be ignored.
+   * If `origin` is provided, it will be used as the origin of the request URL and the `Host`
+   * header, along with any HTTP reverse proxy headers will be ignored.
    */
   origin?: string;
   /**
@@ -201,20 +200,13 @@ async function sendResponse(res: http.ServerResponse, response: Response): Promi
     res.setHeader(name, value);
   }
 
-  if (isEventStreamResponse(response)) {
-    res.flushHeaders();
-  }
+  res.flushHeaders();
 
-  if (response.body) {
+  if (response.body != null) {
     for await (let chunk of response.body) {
       res.write(chunk);
     }
   }
 
   res.end();
-}
-
-function isEventStreamResponse(response: Response): boolean {
-  let contentType = response.headers.get('Content-Type');
-  return contentType?.startsWith('text/event-stream') ?? false;
 }
