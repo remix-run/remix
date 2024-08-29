@@ -38,7 +38,7 @@ export type SuperHeadersInit =
  *
  * [MDN `Headers` Base Class Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
  */
-export class SuperHeaders extends Headers implements Iterable<[string, string]> {
+export class SuperHeaders extends Headers {
   #map: Map<string, string | HeaderValue>;
   #setCookieValues: (string | SetCookie)[] = [];
 
@@ -60,10 +60,6 @@ export class SuperHeaders extends Headers implements Iterable<[string, string]> 
         for (let [name, value] of init) {
           this.append(name, value);
         }
-      } else if (init instanceof Headers) {
-        init.forEach((value, name) => {
-          this.append(name, value);
-        });
       } else if (typeof init === 'object') {
         for (let name in init) {
           if (Object.prototype.hasOwnProperty.call(init, name)) {
