@@ -24,7 +24,7 @@ type SingleFetchEnabled =
  */
 export type SerializeFrom<T> =
   SingleFetchEnabled extends true ?
-    T extends (...args: []) => unknown ?
+    T extends (...args: any[]) => unknown ?
       SingleFetch_SerializeFrom<T> :
       never
   :
