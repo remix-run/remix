@@ -9,7 +9,7 @@ title: Dependency optimization
 Remix introduced automatic dependency optimization in development behind the `future.unstable_optimizeDeps` [Future Flag][future-flags].
 This allows you to opt-into this behavior which will become the default in the next major version of Remix - a.k.a. React Router v7 ([1][rr-v7], [2][rr-v7-2]).
 
-In development, Vite aims to [prebundle dependencies](https://vitejs.dev/guide/dep-pre-bundling.html) so that it can efficiently serve up those dependencies on-demand.
+In development, Vite aims to [prebundle dependencies][prebundle-dependencies] so that it can efficiently serve up those dependencies on-demand.
 To do this, Vite needs to know where to start crawling your app's module graph to look for dependencies.
 
 Previously, Remix did not inform Vite to start dependency detection at route modules nor at the client entry.
@@ -17,7 +17,7 @@ That meant that in development, Vite would encounter new dependencies as you nav
 Consequently, the development experience could feel janky at times since those errors could cause HMR to break or link navigations to be aborted.
 Navigation could also feel sluggish as processing dependencies interactively could sometimes be slow.
 
-For more information, see [Vite's Dep Optimization Options](https://vitejs.dev/config/dep-optimization-options#dep-optimization-options).
+For more information, see [Vite's Dep Optimization Options][vite-s-dep-optimization-options].
 
 ## Troubleshooting
 
@@ -28,7 +28,7 @@ For more information, see [Vite's Dep Optimization Options](https://vitejs.dev/c
 ```
 
 This is usually caused by a misconfigured dependency.
-You use [publint](https://publint.dev/) to check if the offending package is misconfigured.
+You use [publint][publint] to check if the offending package is misconfigured.
 To fix the issue, you'll need to use `npm why` or `pnpm why` to determine which of your direct dependencies to add to `optimizeDeps.exclude`.
 
 For example, let's say your app is running into this error:
@@ -37,7 +37,7 @@ For example, let's say your app is running into this error:
 ✘ [ERROR] Failed to resolve entry for package "jimp". The package may have incorrect main/module/exports specified in its package.json. [plugin vite:dep-pre-bundle]
 ```
 
-Sure enough, `publint` reports that the [`jimp` package is misconfigured](https://publint.dev/jimp@0.22.12).
+Sure enough, `publint` reports that the [`jimp` package is misconfigured][jimp-package-is-misconfigured].
 Then, you determine that `jimp` is an indirect dependency being pulled in by your `svg2img` direct dependency:
 
 ```sh
@@ -62,3 +62,7 @@ export default defineConfig({
 [future-flags]: ../guides/api-development-strategy
 [rr-v7]: https://remix.run/blog/merging-remix-and-react-router
 [rr-v7-2]: https://remix.run/blog/incremental-path-to-react-19
+[prebundle-dependencies]: https://vitejs.dev/guide/dep-pre-bundling.html
+[vite-s-dep-optimization-options]: https://vitejs.dev/config/dep-optimization-options#dep-optimization-options
+[publint]: https://publint.dev
+[jimp-package-is-misconfigured]: https://publint.dev/jimp@0.22.12
