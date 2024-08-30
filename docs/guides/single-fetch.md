@@ -148,7 +148,7 @@ With Single Fetch, naked objects will be streamed directly, so the built-in type
 #### Enable Single Fetch types
 
 To switch over to Single Fetch types, you should [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`.
-You can do this in any file covered by your `tsconfig.json` > `includes`.
+You can do this in any file covered by your `tsconfig.json` > `include`.
 We recommend you do this in your `vite.config.ts` to keep it colocated with the `future.unstable_singleFetch` future flag in the Remix plugin:
 
 ```ts
