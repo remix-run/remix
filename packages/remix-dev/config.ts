@@ -39,6 +39,7 @@ interface FutureConfig {
   v3_throwAbortReason: boolean;
   unstable_singleFetch: boolean;
   unstable_lazyRouteDiscovery: boolean;
+  unstable_optimizeDeps: boolean;
 }
 
 type NodeBuiltinsPolyfillOptions = Pick<
@@ -611,6 +612,7 @@ export async function resolveConfig(
     unstable_singleFetch: appConfig.future?.unstable_singleFetch === true,
     unstable_lazyRouteDiscovery:
       appConfig.future?.unstable_lazyRouteDiscovery === true,
+    unstable_optimizeDeps: appConfig.future?.unstable_optimizeDeps === true,
   };
 
   if (appConfig.future) {

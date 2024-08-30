@@ -1075,12 +1075,14 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               : undefined,
           },
           optimizeDeps: {
-            entries: [
-              ctx.entryClientFilePath,
-              ...Object.values(ctx.remixConfig.routes).map((route) =>
-                path.join(ctx.remixConfig.appDirectory, route.file)
-              ),
-            ],
+            entries: ctx.remixConfig.future.unstable_optimizeDeps
+              ? [
+                  ctx.entryClientFilePath,
+                  ...Object.values(ctx.remixConfig.routes).map((route) =>
+                    path.join(ctx.remixConfig.appDirectory, route.file)
+                  ),
+                ]
+              : [],
             include: [
               // Pre-bundle React dependencies to avoid React duplicates,
               // even if React dependencies are not direct dependencies.
