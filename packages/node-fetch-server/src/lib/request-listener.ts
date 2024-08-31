@@ -106,18 +106,19 @@ export function createRequestListener(
       port: req.socket.remotePort!,
     };
 
+    let response: Response;
     try {
-      let response = await handler(request, client);
-      await sendResponse(res, response);
+      response = await handler(request, client);
     } catch (error) {
       try {
-        let errorResponse = await onError(error);
-        await sendResponse(res, errorResponse ?? internalServerError());
+        response = (await onError(error)) ?? internalServerError();
       } catch (error) {
         console.error(`There was an error in the error handler: ${error}`);
-        await sendResponse(res, internalServerError());
+        response = internalServerError();
       }
     }
+
+    sendResponse(res, response);
   };
 }
 
@@ -207,9 +208,9 @@ async function sendResponse(res: http.ServerResponse, response: Response): Promi
     res.setHeader(name, value);
   }
 
-  res.flushHeaders();
-
   if (response.body != null) {
+    res.flushHeaders();
+
     for await (let chunk of response.body) {
       res.write(chunk);
     }
