@@ -1,17 +1,33 @@
 import * as http from 'node:http';
 
-import { getRequestOrigin } from './request-origin.js';
-import { TrustArg, createTrustProxy } from './trust-proxy.js';
-
 /**
- * A function that handles an incoming request and returns a response.
- *
- * [MDN `Request` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Request)
- *
- * [MDN `Response` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+ * Returns the origin of an incoming request URL.
  */
-export interface FetchHandler {
-  (request: Request): Response | Promise<Response>;
+export function getRequestOrigin(req: http.IncomingMessage): string {
+  let protocol = 'encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:';
+  let host = req.headers.host ?? 'localhost';
+  return `${protocol}//${host}`;
+}
+
+export interface ClientAddr {
+  /**
+   * The IP address of the client that sent the request.
+   *
+   * [Node.js Reference](https://nodejs.org/api/net.html#socketremoteaddress)
+   */
+  address?: string;
+  /**
+   * The family of the IP address of the client that sent the request. Either `'IPv4'` or `'IPv6'`.
+   *
+   * [Node.js Reference](https://nodejs.org/api/net.html#socketremotefamily)
+   */
+  family?: string;
+  /**
+   * The numeric representation of the remote port of the client that sent the request.
+   *
+   * [Node.js Reference](https://nodejs.org/api/net.html#socketremoteport)
+   */
+  port?: number;
 }
 
 /**
@@ -24,6 +40,17 @@ export interface ErrorHandler {
   (error: unknown): Response | void | Promise<Response | void>;
 }
 
+/**
+ * A function that handles an incoming request and returns a response.
+ *
+ * [MDN `Request` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Request)
+ *
+ * [MDN `Response` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+ */
+export interface FetchHandler {
+  (request: Request, client: ClientAddr): Response | Promise<Response>;
+}
+
 export interface RequestListenerOptions {
   /**
    * An error handler that determines the response when the request handler throws an error. By
@@ -32,47 +59,9 @@ export interface RequestListenerOptions {
   onError?: ErrorHandler;
   /**
    * Overrides the origin of the incoming request URL. By default the request URL origin is derived
-   * from the `Host` header and the connection protocol. Additionally, the `X-Forwarded-Proto` and
-   * `X-Forwarded-Host` headers can be used via the `trustProxy` option to derive the origin from
-   * HTTP reverse proxy headers.
-   *
-   * If `origin` is provided, it will be used as the origin of the request URL and the `Host`
-   * header, along with any HTTP reverse proxy headers will be ignored.
+   * from the `Host` header and the connection protocol.
    */
   origin?: string;
-  /**
-   * Determines if/how the `X-Forwarded-Proto` and `X-Forwarded-Host` headers should be used to
-   * derive the request URL. By default these headers are not trusted because they can easily be
-   * spoofed. But if you're running behind a reverse proxy, you may use this option to allow them
-   * to be trusted.
-   *
-   * To trust a specific server, pass the IP address of the server as a string:
-   *
-   * ```ts
-   * createRequestListener(handler, { trustProxy: '127.0.0.1' })
-   * ```
-   *
-   * To trust a list of servers, pass their addresses in a comma-separated list or an array:
-   *
-   * ```ts
-   * createRequestListener(handler, { trustProxy: '127.0.0.1, 169.254.0.0' })
-   * createRequestListener(handler, { trustProxy: ['127.0.0.1', '169.254.0.0'] })
-   * ```
-   *
-   * Use a subnet mask to trust a range of servers:
-   *
-   * ```ts
-   * // Trust any server on the 127.0.0.x subnet
-   * createRequestListener(handler, { trustProxy: '127.0.0.0/8' })
-   * ```
-   *
-   * To trust all proxy servers, pass `true`.
-   *
-   * ```ts
-   * createRequestListener(handler, { trustProxy: true })
-   * ```
-   */
-  trustProxy?: boolean | TrustArg;
 }
 
 /**
@@ -99,15 +88,19 @@ export function createRequestListener(
   options?: RequestListenerOptions,
 ): http.RequestListener {
   let onError = options?.onError ?? defaultErrorHandler;
-  let trustProxy = createTrustProxy(options?.trustProxy);
 
   return async (req, res) => {
-    let origin = options?.origin ?? getRequestOrigin(req, trustProxy);
+    let origin = options?.origin ?? getRequestOrigin(req);
     let url = new URL(req.url!, origin);
     let request = createRequest(req, res, url);
+    let client: ClientAddr = {
+      address: req.socket.remoteAddress,
+      family: req.socket.remoteFamily,
+      port: req.socket.remotePort,
+    };
 
     try {
-      let response = await handler(request);
+      let response = await handler(request, client);
       await sendResponse(res, response);
     } catch (error) {
       try {
