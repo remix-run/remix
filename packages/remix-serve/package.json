@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/serve",
-  "version": "2.11.2",
+  "version": "0.0.0-nightly-dc3c3e929-20240831",
   "description": "Production application server for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -18,8 +18,8 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "@remix-run/express": "workspace:*",
-    "@remix-run/node": "workspace:*",
+    "@remix-run/express": "0.0.0-nightly-dc3c3e929-20240831",
+    "@remix-run/node": "0.0.0-nightly-dc3c3e929-20240831",
     "chokidar": "^3.5.3",
     "compression": "^1.7.4",
     "express": "^4.19.2",
