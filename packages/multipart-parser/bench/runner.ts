@@ -21,8 +21,8 @@ interface Parser {
 async function runParserBenchmarks(
   parser: Parser,
   times = 1000,
-): Promise<{ [testName: string]: string }> {
-  let results: { [testName: string]: string } = {};
+): Promise<BenchmarkResults[string]> {
+  let results: BenchmarkResults[string] = {};
 
   for (let benchmark of benchmarks) {
     let measurements: number[] = [];
@@ -45,7 +45,7 @@ function getMeanAndStdDev(measurements: number[]): string {
 
 interface BenchmarkResults {
   [parserName: string]: {
-    [testName: string]: string;
+    [benchmarkName: string]: string;
   };
 }
 
