@@ -1,14 +1,21 @@
 import * as http from 'node:http';
 import { createRequestListener } from '@mjackson/node-fetch-server';
 
+const PORT = process.env.PORT || 3000;
+
 let server = http.createServer(
   createRequestListener(() => {
-    return new Response('<p>Hello, world!</p>', {
+    let stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue('<html><body><h1>Hello, world!</h1></body></html>');
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
       headers: { 'Content-Type': 'text/html' },
     });
   }),
 );
 
-server.listen(3000, () => {
-  console.log('Listening on http://localhost:3000 ...');
-});
+server.listen(PORT);
