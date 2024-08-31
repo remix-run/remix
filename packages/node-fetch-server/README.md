@@ -15,6 +15,7 @@ When you write servers using the `Request` and `Response` APIs, you maximize the
 
 - Use web standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) APIs for building servers, instead of node-specific API
 - Seamless integration with `node:http` and `node:https` modules
+- Supports custom hostnames (e.g. using `process.env.HOST` on a VPS to set the host portion of incoming request URLs)
 - Supports streaming responses using `new Response(stream)`
 - Exposes client IP info
 - It's [faster than Express](#benchmark)
@@ -36,6 +37,24 @@ let handler: FetchHandler = (request) => {
 };
 
 let server = http.createServer(createRequestListener(handler));
+
+server.listen(3000);
+```
+
+By default `request.url` is derived from the value of the `Host` HTTP header and the connection protocol being used. To support custom hostnames using e.g. a `$HOST` environment variable, you can use the `host` option:
+
+```ts
+import * as assert from 'node:assert/strict';
+import * as http from 'node:http';
+import { type FetchHandler, createRequestListener } from '@mjackson/node-fetch-server';
+
+let handler: FetchHandler = (request) => {
+  // This is now true
+  assert.equal(new URL(request.url).host, process.env.HOST);
+  return new Response('Hello, world!');
+};
+
+let server = http.createServer(createRequestListener(handler, { host: process.env.HOST }));
 
 server.listen(3000);
 ```
