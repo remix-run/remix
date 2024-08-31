@@ -95,9 +95,7 @@ export function createRequestListener(
 
   return async (req, res) => {
     let protocol =
-      (options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted))
-        ? 'https:'
-        : 'http:';
+      options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:');
     let host = options?.host ?? req.headers.host ?? 'localhost';
     let url = new URL(req.url!, `${protocol}//${host}`);
     let request = createRequest(req, res, url);
