@@ -15,19 +15,19 @@ export interface ClientAddr {
    *
    * [Node.js Reference](https://nodejs.org/api/net.html#socketremoteaddress)
    */
-  address?: string;
+  address: string;
   /**
-   * The family of the IP address of the client that sent the request. Either `'IPv4'` or `'IPv6'`.
+   * The family of the client IP address. Either `"IPv4"` or `"IPv6"`.
    *
    * [Node.js Reference](https://nodejs.org/api/net.html#socketremotefamily)
    */
-  family?: string;
+  family: string;
   /**
-   * The numeric representation of the remote port of the client that sent the request.
+   * The remote port of the client that sent the request.
    *
    * [Node.js Reference](https://nodejs.org/api/net.html#socketremoteport)
    */
-  port?: number;
+  port: number;
 }
 
 /**
@@ -94,9 +94,9 @@ export function createRequestListener(
     let url = new URL(req.url!, origin);
     let request = createRequest(req, res, url);
     let client: ClientAddr = {
-      address: req.socket.remoteAddress,
-      family: req.socket.remoteFamily,
-      port: req.socket.remotePort,
+      address: req.socket.remoteAddress!,
+      family: req.socket.remoteFamily!,
+      port: req.socket.remotePort!,
     };
 
     try {
