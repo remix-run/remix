@@ -4,8 +4,7 @@ import { describe, it, mock } from 'node:test';
 import * as http from 'node:http';
 import * as stream from 'node:stream';
 
-import { FetchHandler } from './fetch-handler.js';
-import { createRequestListener } from './request-listener.js';
+import { FetchHandler, createRequestListener } from './request-listener.js';
 
 describe('createRequestListener', () => {
   it('returns a request listener', async () => {
@@ -56,6 +55,60 @@ describe('createRequestListener', () => {
       listener(req, res);
     });
   });
+
+  it('uses the `Host` header to construct the URL by default', async () => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async (request) => {
+        assert.equal(request.url, 'http://example.com/');
+        return new Response('Hello, world!');
+      };
+
+      let listener = createRequestListener(handler);
+      assert.ok(listener);
+
+      let req = createIncomingMessage({ headers: { host: 'example.com' } });
+      let res = createServerResponse();
+
+      listener(req, res);
+      resolve();
+    });
+  });
+
+  it('uses the `host` option to override the `Host` header', async () => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async (request) => {
+        assert.equal(request.url, 'http://remix.run/');
+        return new Response('Hello, world!');
+      };
+
+      let listener = createRequestListener(handler, { host: 'remix.run' });
+      assert.ok(listener);
+
+      let req = createIncomingMessage({ headers: { host: 'example.com' } });
+      let res = createServerResponse();
+
+      listener(req, res);
+      resolve();
+    });
+  });
+
+  it('uses the `protocol` option to construct the URL', async () => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async (request) => {
+        assert.equal(request.url, 'https://example.com/');
+        return new Response('Hello, world!');
+      };
+
+      let listener = createRequestListener(handler, { protocol: 'https:' });
+      assert.ok(listener);
+
+      let req = createIncomingMessage({ headers: { host: 'example.com' } });
+      let res = createServerResponse();
+
+      listener(req, res);
+      resolve();
+    });
+  });
 });
 
 function createIncomingMessage({
@@ -95,6 +148,7 @@ function createServerResponse(): http.ServerResponse {
     statusCode: 200,
     statusMessage: 'OK',
     setHeader() {},
+    flushHeaders() {},
     write() {},
     end() {},
   }) as unknown as http.ServerResponse;
