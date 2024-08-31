@@ -19,12 +19,8 @@
     ".": "./dist/node-fetch-server.js",
     "./package.json": "./package.json"
   },
-  "dependencies": {
-    "proxy-addr": "^2.0.7"
-  },
   "devDependencies": {
-    "@types/node": "^22.5.0",
-    "@types/proxy-addr": "^2.0.3"
+    "@types/node": "^22.5.0"
   },
   "scripts": {
     "bench": "bash ./bench/runner.sh",

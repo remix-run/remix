@@ -1,8 +1,8 @@
 export {
-  type FetchHandler,
+  type ClientAddr,
   type ErrorHandler,
+  type FetchHandler,
   type RequestListenerOptions,
+  getRequestOrigin,
   createRequestListener,
 } from './lib/request-listener.js';
-export { getRequestOrigin } from './lib/request-origin.js';
-export { createTrustProxy } from './lib/trust-proxy.js';
