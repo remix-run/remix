@@ -1,14 +1,5 @@
 import * as http from 'node:http';
 
-/**
- * Returns the origin of an incoming request URL.
- */
-export function getRequestOrigin(req: http.IncomingMessage): string {
-  let protocol = 'encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:';
-  let host = req.headers.host ?? 'localhost';
-  return `${protocol}//${host}`;
-}
-
 export interface ClientAddr {
   /**
    * The IP address of the client that sent the request.
@@ -53,22 +44,28 @@ export interface FetchHandler {
 
 export interface RequestListenerOptions {
   /**
+   * Overrides the host portion of the incoming request URL. By default the request URL host is
+   * derived from the HTTP `Host` header.
+   *
+   * For example, if you have a `$HOST` environment variable that contains the hostname of your
+   * server, you can use it to set the host of all incoming request URLs like so:
+   *
+   * ```ts
+   * createRequestListener(handler, { host: process.env.HOST })
+   * ```
+   */
+  host?: string;
+  /**
    * An error handler that determines the response when the request handler throws an error. By
    * default a 500 Internal Server Error response will be sent.
    */
   onError?: ErrorHandler;
   /**
-   * Overrides the origin of the incoming request URL. By default the request URL origin is derived
-   * from the `Host` header and the connection protocol.
-   *
-   * For example, if you have a `$HOST` environment variable that contains the hostname of your
-   * server, you can use it to set the origin of all incoming request URLs like so:
-   *
-   * ```ts
-   * createRequestListener(handler, { origin: `http://${process.env.HOST}` })
-   * ```
+   * Overrides the protocol of the incoming request URL. By default the request URL protocol is
+   * derived from the connection protocol. So e.g. when serving over HTTPS (using
+   * `https.createServer()`), the request URL will begin with `https:`.
    */
-  origin?: string;
+  protocol?: string;
 }
 
 /**
@@ -97,8 +94,12 @@ export function createRequestListener(
   let onError = options?.onError ?? defaultErrorHandler;
 
   return async (req, res) => {
-    let origin = options?.origin ?? getRequestOrigin(req);
-    let url = new URL(req.url!, origin);
+    let protocol =
+      (options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted))
+        ? 'https:'
+        : 'http:';
+    let host = options?.host ?? req.headers.host ?? 'localhost';
+    let url = new URL(req.url!, `${protocol}//${host}`);
     let request = createRequest(req, res, url);
     let client: ClientAddr = {
       address: req.socket.remoteAddress!,
