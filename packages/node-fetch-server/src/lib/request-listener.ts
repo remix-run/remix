@@ -28,7 +28,7 @@ export interface ClientAddr {
  * [MDN `Response` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Response)
  */
 export interface ErrorHandler {
-  (error: unknown): Response | void | Promise<Response | void>;
+  (error: unknown): void | Response | Promise<void | Response>;
 }
 
 /**
