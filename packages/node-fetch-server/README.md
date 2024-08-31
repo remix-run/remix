@@ -10,30 +10,30 @@ A basic benchmark shows `node-fetch-server` is able to serve more requests per s
 
 Platform: Darwin (23.5.0)
 CPU: Apple M1 Pro
-Date: 8/31/2024, 12:14:41 PM
+Date: 8/31/2024, 1:55:21 PM
 
 Running benchmark for node:http@22.1.0 ...
 
 Running 30s test @ http://127.0.0.1:3000/
   12 threads and 400 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    31.70ms  109.12ms   2.00s    98.22%
-    Req/Sec     1.69k   342.98     2.99k    87.16%
-  606083 requests in 30.10s, 124.27MB read
-  Socket errors: connect 0, read 633, write 117, timeout 20
-Requests/sec:  20135.72
-Transfer/sec:      4.13MB
+    Latency    37.16ms  127.85ms   1.93s    97.71%
+    Req/Sec     1.65k   380.84     4.42k    84.81%
+  590123 requests in 30.09s, 121.00MB read
+  Socket errors: connect 0, read 432, write 224, timeout 0
+Requests/sec:  19612.18
+Transfer/sec:      4.02MB
 
 Running benchmark for node-fetch-server@0.1.0 ...
 
 Running 30s test @ http://127.0.0.1:3000/
   12 threads and 400 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    42.37ms   96.58ms   2.00s    98.66%
-    Req/Sec     0.94k   255.57     3.01k    81.37%
-  333862 requests in 30.10s, 68.46MB read
-  Socket errors: connect 0, read 419, write 10, timeout 168
-Requests/sec:  11091.24
+    Latency    44.04ms  103.32ms   1.98s    98.46%
+    Req/Sec     0.93k   175.11     1.90k    81.25%
+  332998 requests in 30.10s, 68.28MB read
+  Socket errors: connect 0, read 1394, write 115, timeout 152
+Requests/sec:  11062.58
 Transfer/sec:      2.27MB
 
 Running benchmark for express@4.19.2 ...
@@ -41,12 +41,12 @@ Running benchmark for express@4.19.2 ...
 Running 30s test @ http://127.0.0.1:3000/
   12 threads and 400 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    48.42ms   95.22ms   2.00s    98.83%
-    Req/Sec   761.93    191.11     3.98k    79.46%
-  272003 requests in 30.10s, 65.63MB read
-  Socket errors: connect 0, read 835, write 3, timeout 189
-Requests/sec:   9037.72
-Transfer/sec:      2.18MB
+    Latency    48.72ms   90.75ms   1.98s    98.88%
+    Req/Sec   746.08    249.77     4.40k    82.81%
+  266534 requests in 30.10s, 64.31MB read
+  Socket errors: connect 0, read 745, write 60, timeout 186
+Requests/sec:   8854.66
+Transfer/sec:      2.14MB
 ```
 
 I encourage you to run the benchmark yourself. To do so, you'll need to have [`wrk`](https://github.com/wg/wrk) installed. Then run:
