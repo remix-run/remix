@@ -81,7 +81,7 @@ export interface RequestListenerOptions {
  *
  * ```ts
  * import * as http from 'node:http';
- * import { RequestHandler, createRequestListener } from '@mjackson/node-fetch-server';
+ * import { type RequestHandler, createRequestListener } from '@mjackson/node-fetch-server';
  *
  * let handler: RequestHandler = async (request) => {
  *   return new Response('Hello, world!');
