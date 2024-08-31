@@ -60,6 +60,13 @@ export interface RequestListenerOptions {
   /**
    * Overrides the origin of the incoming request URL. By default the request URL origin is derived
    * from the `Host` header and the connection protocol.
+   *
+   * For example, if you have a `$HOST` environment variable that contains the hostname of your
+   * server, you can use it to set the origin of all incoming request URLs like so:
+   *
+   * ```ts
+   * createRequestListener(handler, { origin: `http://${process.env.HOST}` })
+   * ```
    */
   origin?: string;
 }
@@ -104,8 +111,8 @@ export function createRequestListener(
       await sendResponse(res, response);
     } catch (error) {
       try {
-        let response = await onError(error);
-        await sendResponse(res, response ?? internalServerError());
+        let errorResponse = await onError(error);
+        await sendResponse(res, errorResponse ?? internalServerError());
       } catch (error) {
         console.error(`There was an error in the error handler: ${error}`);
         await sendResponse(res, internalServerError());
@@ -120,12 +127,19 @@ function defaultErrorHandler(error: unknown): Response {
 }
 
 function internalServerError(): Response {
-  return new Response('Internal Server Error', {
-    status: 500,
-    headers: {
-      'Content-Type': 'text/plain',
+  return new Response(
+    // "Internal Server Error"
+    new Uint8Array([
+      73, 110, 116, 101, 114, 110, 97, 108, 32, 83, 101, 114, 118, 101, 114, 32, 69, 114, 114, 111,
+      114,
+    ]),
+    {
+      status: 500,
+      headers: {
+        'Content-Type': 'text/plain',
+      },
     },
-  });
+  );
 }
 
 function createRequest(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Request {
