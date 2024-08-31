@@ -1,5 +1,55 @@
 # node-fetch-server
 
+`node-fetch-server` allows you to build servers for Node.js that use the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) primitives (namely [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)) instead of the traditional `req`/`res` API used in libraries like [Express](https://expressjs.com/).
+
+This web standard API is already used in many places across the JavaScript ecosystem:
+
+- [`Bun.serve`](https://bun.sh/docs/api/http#bun-serve)
+- [Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/)
+- [`Deno.serve`](https://docs.deno.com/api/deno/~/Deno.serve)
+- [Fastly Compute](https://js-compute-reference-docs.edgecompute.app/docs/)
+
+When you write servers using the `Request` and `Response` APIs, you maximize the chances that your code will be portable across all these different JavaScript runtimes.
+
+## Features
+
+- Use web standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) APIs for building servers, instead of node-specific API
+- Seamless integration with `node:http` and `node:https` modules
+- Supports streaming responses using `new Response(stream)`
+- Exposes client IP info
+- It's [faster than Express](#benchmark)
+
+## Installation
+
+```sh
+npm install @mjackson/node-fetch-server
+```
+
+## Usage
+
+```ts
+import * as http from 'node:http';
+import { type FetchHandler, createRequestListener } from '@mjackson/node-fetch-server';
+
+let handler: FetchHandler = (request) => {
+  return new Response('Hello, world!');
+};
+
+let server = http.createServer(createRequestListener(handler));
+
+server.listen(3000);
+```
+
+Information about the remote client IP and port is passed as the 2nd argument to your `FetchHandler`:
+
+```ts
+import { type FetchHandler } from '@mjackson/node-fetch-server';
+
+let handler: FetchHandler = (request, client) => {
+  return new Response(`The client IP address is ${client.address}`);
+};
+```
+
 ## Benchmark
 
 A basic benchmark shows `node-fetch-server` is able to serve more requests per second (and has higher overall throughput) than Express v4. The vanilla `node:http` module is also shown as a baseline for comparison.
@@ -54,3 +104,7 @@ I encourage you to run the benchmark yourself. To do so, you'll need to have [`w
 ```sh
 pnpm run bench
 ```
+
+## License
+
+See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
