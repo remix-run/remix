@@ -23,14 +23,7 @@ export function getByteLength(range: ByteRange, size: number): number {
  * Resolves a byte range to absolute indexes in a buffer of the given `size`.
  */
 export function getIndexes(range: ByteRange, size: number): [number, number] {
-  let start = Math.min(
-    Math.max(0, range.start < 0 ? size + range.start : range.start),
-    size
-  );
-  let end = Math.min(
-    Math.max(start, range.end < 0 ? size + range.end : range.end),
-    size
-  );
-
+  let start = Math.min(Math.max(0, range.start < 0 ? size + range.start : range.start), size);
+  let end = Math.min(Math.max(start, range.end < 0 ? size + range.end : range.end), size);
   return [start, end];
 }

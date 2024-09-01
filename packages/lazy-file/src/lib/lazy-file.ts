@@ -1,4 +1,4 @@
-import { ByteRange, getByteLength, getIndexes } from "./byte-range.js";
+import { ByteRange, getByteLength, getIndexes } from './byte-range.js';
 
 /**
  * A streaming interface for blob/file content.
@@ -132,11 +132,7 @@ export interface LazyFileOptions extends LazyBlobOptions {
 export class LazyFile extends File {
   readonly #content: BlobContent;
 
-  constructor(
-    parts: BlobPart[] | LazyContent,
-    name: string,
-    options?: LazyFileOptions
-  ) {
+  constructor(parts: BlobPart[] | LazyContent, name: string, options?: LazyFileOptions) {
     super([], name, options);
     this.#content = new BlobContent(parts, options);
   }
@@ -213,14 +209,10 @@ class BlobContent {
           this.totalSize += part.size;
         } else {
           let array: Uint8Array;
-          if (typeof part === "string") {
+          if (typeof part === 'string') {
             array = new TextEncoder().encode(part);
           } else if (ArrayBuffer.isView(part)) {
-            array = new Uint8Array(
-              part.buffer,
-              part.byteOffset,
-              part.byteLength
-            );
+            array = new Uint8Array(part.buffer, part.byteOffset, part.byteLength);
           } else {
             array = new Uint8Array(part);
           }
@@ -235,7 +227,7 @@ class BlobContent {
     }
 
     this.range = options?.range;
-    this.type = options?.type ?? "";
+    this.type = options?.type ?? '';
   }
 
   async arrayBuffer(): Promise<ArrayBuffer> {
@@ -255,12 +247,10 @@ class BlobContent {
   }
 
   get size(): number {
-    return this.range != null
-      ? getByteLength(this.range, this.totalSize)
-      : this.totalSize;
+    return this.range != null ? getByteLength(this.range, this.totalSize) : this.totalSize;
   }
 
-  slice(start = 0, end?: number, contentType = ""): LazyBlob {
+  slice(start = 0, end?: number, contentType = ''): LazyBlob {
     let range: ByteRange =
       this.range != null
         ? // file.slice().slice() is additive
@@ -278,20 +268,18 @@ class BlobContent {
         : this.source.stream(start, end);
     }
 
-    return Array.isArray(this.source)
-      ? streamContentArray(this.source)
-      : this.source.stream();
+    return Array.isArray(this.source) ? streamContentArray(this.source) : this.source.stream();
   }
 
   async text(): Promise<string> {
-    return new TextDecoder("utf-8").decode(await this.bytes());
+    return new TextDecoder('utf-8').decode(await this.bytes());
   }
 }
 
 function streamContentArray(
   content: (Blob | Uint8Array)[],
   start = 0,
-  end = Infinity
+  end = Infinity,
 ): ReadableStream<Uint8Array> {
   let index = 0;
   let bytesRead = 0;
@@ -347,6 +335,6 @@ function streamContentArray(
           break;
         }
       }
-    }
+    },
   });
 }
