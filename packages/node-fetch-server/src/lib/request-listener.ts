@@ -200,15 +200,14 @@ function createBody(req: http.IncomingMessage): ReadableStream<Uint8Array> {
 }
 
 async function sendResponse(res: http.ServerResponse, response: Response): Promise<void> {
-  res.statusCode = response.status;
-
+  let headers: Record<string, string> = {};
   for (let [name, value] of response.headers.entries()) {
-    res.setHeader(name, value);
+    headers[name] = value;
   }
 
-  if (response.body != null) {
-    res.flushHeaders();
+  res.writeHead(response.status, headers);
 
+  if (response.body != null) {
     for await (let chunk of response.body) {
       res.write(chunk);
     }

@@ -4,8 +4,7 @@ import * as stream from 'node:stream';
 const PORT = process.env.PORT || 3000;
 
 let server = http.createServer((_req, res) => {
-  res.setHeader('Content-Type', 'text/html');
-  res.flushHeaders();
+  res.writeHead(200, { 'Content-Type': 'text/html' });
 
   let body = new stream.Readable({
     read() {
