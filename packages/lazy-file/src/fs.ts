@@ -24,7 +24,7 @@ export interface GetFileOptions {
  *
  * [MDN `File` Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  */
-export function getFile(filename: string, options?: GetFileOptions): File {
+export function openFile(filename: string, options?: GetFileOptions): File {
   let stats = fs.statSync(filename);
 
   if (!stats.isFile()) {
@@ -35,20 +35,16 @@ export function getFile(filename: string, options?: GetFileOptions): File {
     byteLength: stats.size,
     stream(start, end) {
       return streamFile(filename, start, end);
-    }
+    },
   };
 
   return new LazyFile(content, options?.name ?? path.basename(filename), {
     type: options?.type ?? lookup(filename),
-    lastModified: options?.lastModified ?? stats.mtimeMs
+    lastModified: options?.lastModified ?? stats.mtimeMs,
   });
 }
 
-function streamFile(
-  filename: string,
-  start = 0,
-  end = Infinity
-): ReadableStream<Uint8Array> {
+function streamFile(filename: string, start = 0, end = Infinity): ReadableStream<Uint8Array> {
   let read = fs.createReadStream(filename, { start, end: end - 1 }).iterator();
 
   return new ReadableStream({
@@ -58,10 +54,31 @@ function streamFile(
       if (done) {
         controller.close();
       } else {
-        controller.enqueue(
-          new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
-        );
+        controller.enqueue(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
       }
+    },
+  });
+}
+
+// Preserve backwards compat with v3.0
+export { openFile as getFile };
+
+/**
+ * Writes a `File` to the local filesytem with the given `filename` and resolves when the stream is
+ * finished.
+ *
+ * [MDN `File` Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
+ */
+export function writeFile(filename: string, file: File): Promise<void> {
+  return new Promise(async (resolve) => {
+    let write = fs.createWriteStream(filename);
+
+    for await (let chunk of file.stream()) {
+      write.write(chunk);
     }
+
+    write.end(() => {
+      resolve();
+    });
   });
 }
