@@ -54,40 +54,44 @@ let content: LazyContent = {
     // ... read the file contents from somewhere and return a ReadableStream
     return new ReadableStream({
       start(controller) {
-        controller.enqueue("X".repeat(100000).slice(start, end));
+        controller.enqueue('X'.repeat(100000).slice(start, end));
         controller.close();
-      }
+      },
     });
-  }
+  },
 };
 
-let file = new LazyFile(content, "example.txt", { type: "text/plain" });
+let file = new LazyFile(content, 'example.txt', { type: 'text/plain' });
 await file.arrayBuffer(); // ArrayBuffer of the file's content
 file.name; // "example.txt"
 file.type; // "text/plain"
 ```
 
-The `lazy-file/fs` export provides a `getFile(filename)` function that allows you to create `File` objects from files on the local filesystem. These objects are lightweight and do not attempt to actually read from the file on disk until contents are requested.
+The `lazy-file/fs` export provides functions for reading from and writing to the local filesystem using the `File` API.
 
 ```ts
-import { getFile } from "@mjackson/lazy-file/fs";
+import { openFile, writeFile } from '@mjackson/lazy-file/fs';
 
 // No data is read at this point, it's just a reference to a
 // file on the local filesystem.
-let file = getFile("./path/to/file.json");
+let file = openFile('./path/to/file.json');
 
 // Data is read when you call file.text() (or any of the
 // other Blob methods, like file.bytes(), file.stream(), etc.)
 let json = JSON.parse(await file.text());
 
-let imageFile = getFile("./path/to/image.jpg");
+// Write the file's contents back to the filesystem at a
+// different path.
+await writeFile('./path/to/other-file.json', file);
+
+let imageFile = openFile('./path/to/image.jpg');
 
 // Get a LazyBlob that omits the first 100 bytes of the file.
 // This could be useful for serving HTTP Range requests.
 let blob = imageFile.slice(100);
 ```
 
-`lazy-file/fs` also serves as a good reference implementation for how to use this library effectively.
+All file contents are read on-demand and nothing is ever buffered.
 
 ## Related Packages
 
