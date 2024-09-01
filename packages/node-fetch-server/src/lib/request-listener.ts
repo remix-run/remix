@@ -69,14 +69,14 @@ export interface RequestListenerOptions {
 }
 
 /**
- * Wraps a `RequestHandler` function in a Node.js `http.RequestListener` that can be used with
+ * Wraps a fetch handler in a Node.js `http.RequestListener` that can be used with
  * `http.createServer()` or `https.createServer()`.
  *
  * ```ts
  * import * as http from 'node:http';
- * import { type RequestHandler, createRequestListener } from '@mjackson/node-fetch-server';
+ * import { type FetchHandler, createRequestListener } from '@mjackson/node-fetch-server';
  *
- * let handler: RequestHandler = async (request) => {
+ * let handler: FetchHandler = async (request) => {
  *   return new Response('Hello, world!');
  * };
  *
@@ -98,7 +98,13 @@ export function createRequestListener(
       options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:');
     let host = options?.host ?? req.headers.host ?? 'localhost';
     let url = new URL(req.url!, `${protocol}//${host}`);
-    let request = createRequest(req, res, url);
+
+    let controller = new AbortController();
+    res.on('close', () => {
+      controller.abort();
+    });
+
+    let request = createRequest(req, url, controller.signal);
     let client: ClientAddr = {
       address: req.socket.remoteAddress!,
       family: req.socket.remoteFamily!,
@@ -142,16 +148,11 @@ function internalServerError(): Response {
   );
 }
 
-function createRequest(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Request {
-  let controller = new AbortController();
-  res.on('close', () => {
-    controller.abort();
-  });
-
+function createRequest(req: http.IncomingMessage, url: URL, signal: AbortSignal): Request {
   let init: RequestInit = {
     method: req.method,
-    headers: createHeaders(req.headers),
-    signal: controller.signal,
+    headers: createHeaders(req.rawHeaders),
+    signal,
   };
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -167,19 +168,11 @@ function createRequest(req: http.IncomingMessage, res: http.ServerResponse, url:
   return new Request(url, init);
 }
 
-function createHeaders(incoming: http.IncomingHttpHeaders): Headers {
+function createHeaders(rawHeaders: string[]): Headers {
   let headers = new Headers();
 
-  for (let key in incoming) {
-    let value = incoming[key];
-
-    if (Array.isArray(value)) {
-      for (let v of value) {
-        headers.append(key, v);
-      }
-    } else if (value != null) {
-      headers.set(key, value);
-    }
+  for (let i = 0; i < rawHeaders.length; i += 2) {
+    headers.append(rawHeaders[i], rawHeaders[i + 1]);
   }
 
   return headers;
