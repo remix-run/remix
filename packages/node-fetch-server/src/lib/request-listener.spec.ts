@@ -56,6 +56,37 @@ describe('createRequestListener', () => {
     });
   });
 
+  it('returns a 500 "Internal Server Error" response when an error is thrown in the request handler', async () => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async () => {
+        throw new Error('boom!');
+      };
+      let errorHandler = async () => {
+        // ignore
+      };
+
+      let listener = createRequestListener(handler, { onError: errorHandler });
+      assert.ok(listener);
+
+      let req = createIncomingMessage();
+      let res = createServerResponse();
+
+      let chunks: Uint8Array[] = [];
+      mock.method(res, 'write', (chunk: Uint8Array) => {
+        chunks.push(chunk);
+      });
+
+      mock.method(res, 'end', () => {
+        assert.equal(res.statusCode, 500);
+        let body = Buffer.concat(chunks).toString();
+        assert.equal(body, 'Internal Server Error');
+        resolve();
+      });
+
+      listener(req, res);
+    });
+  });
+
   it('uses the `Host` header to construct the URL by default', async () => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async (request) => {
