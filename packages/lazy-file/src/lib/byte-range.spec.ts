@@ -1,10 +1,10 @@
-import * as assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 
-import { ByteRange, getByteLength, getIndexes } from "./byte-range.js";
+import { ByteRange, getByteLength, getIndexes } from './byte-range.js';
 
-describe("getByteLength", () => {
-  it("returns the correct length", () => {
+describe('getByteLength', () => {
+  it('returns the correct length', () => {
     let size = 100;
 
     let range: ByteRange = { start: 10, end: 20 };
@@ -30,8 +30,8 @@ describe("getByteLength", () => {
   });
 });
 
-describe("getIndexes", () => {
-  it("returns the correct indexes", () => {
+describe('getIndexes', () => {
+  it('returns the correct indexes', () => {
     let size = 100;
 
     let range: ByteRange = { start: 10, end: 20 };

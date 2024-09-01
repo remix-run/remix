@@ -1,8 +1,8 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { lookup } from "mrmime";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { lookup } from 'mrmime';
 
-import { LazyContent, LazyFile } from "./lib/lazy-file.js";
+import { LazyContent, LazyFile } from './lib/lazy-file.js';
 
 export interface GetFileOptions {
   /**
