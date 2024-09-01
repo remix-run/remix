@@ -200,10 +200,7 @@ function createBody(req: http.IncomingMessage): ReadableStream<Uint8Array> {
 }
 
 async function sendResponse(res: http.ServerResponse, response: Response): Promise<void> {
-  let headers: Record<string, string> = {};
-  for (let [name, value] of response.headers.entries()) {
-    headers[name] = value;
-  }
+  let headers = Object.fromEntries(response.headers.entries());
 
   res.writeHead(response.status, headers);
 
