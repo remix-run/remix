@@ -201,7 +201,6 @@ function createBody(req: http.IncomingMessage): ReadableStream<Uint8Array> {
 
 async function sendResponse(res: http.ServerResponse, response: Response): Promise<void> {
   res.statusCode = response.status;
-  res.statusMessage = response.statusText;
 
   for (let [name, value] of response.headers.entries()) {
     res.setHeader(name, value);
