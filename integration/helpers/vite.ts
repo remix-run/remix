@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import dedent from "dedent";
+import execa from "execa";
 import fse from "fs-extra";
 import getPort from "get-port";
 import glob from "glob";
@@ -311,6 +312,21 @@ export const test = base.extend<Fixtures>({
     await use(async (files, template) => {
       let port = await getPort();
       let cwd = await createProject(await files({ port }), template);
+      // nasty hacks to try get windows msedge integration test to pass
+      await execa(denoBin, ["install", "--no-lock"], {
+        cwd,
+        // @ts-expect-error broken global
+        env: { DENO_FUTURE: "1" },
+        stdio: "inherit",
+      });
+      await execa(
+        process.argv[0],
+        [
+          "./scripts/copy-build-to-dist.mjs",
+          `--deno-node-modules-paths=${cwd}/node_modules`,
+        ],
+        { stdio: "inherit" }
+      );
       stop = await viteDevDeno({ cwd, port });
       return { port, cwd };
     });
@@ -386,7 +402,6 @@ function deno(
       ...process.env,
       ...colorEnv,
       ...options.env,
-      DENO_FUTURE: "1",
     },
     stdio: "pipe",
   });

@@ -5,14 +5,16 @@ import path from "node:path";
 const args = process.argv.slice(2);
 const tsc = process.env.CI || args.includes("--tsc");
 
+// pnpm workspaces do not understand Deno projects and vice versa so we need a way to specify which projects need their node_modules updating
+const denoNodeModulesPaths = args
+  .find((arg) => arg.includes("--deno-node-modules-paths="))
+  ?.split("=")[1]
+  .split(",");
+console.log("denoNodeModulesPaths", denoNodeModulesPaths);
+
 const ROOT_DIR = process.cwd();
 const PACKAGES_PATH = path.join(ROOT_DIR, "packages");
 const DEFAULT_BUILD_PATH = path.join(ROOT_DIR, "build");
-
-// pnpm workspaces do not understand Deno projects and vice versa so we need to specify which projects need their node_modules updating
-const DENO_NODE_MODULES_PATHS = [
-  path.join(ROOT_DIR, "integration/helpers/vite-deno-template/node_modules"),
-];
 
 let activeOutputDir = DEFAULT_BUILD_PATH;
 if (process.env.LOCAL_BUILD_DIRECTORY) {
@@ -64,25 +66,27 @@ async function copyBuildToDist() {
   let copyQueue = [];
   for (let pkg of packages) {
     try {
-      // Copy entire build artifact to node_modules dir for each Deno project that requires it
-      for (let denoNodeModulesPath of DENO_NODE_MODULES_PATHS) {
-        let destPath = path.join(denoNodeModulesPath, pkg.nodeModulesPath);
-        if (await fse.pathExists(destPath)) {
-          copyQueue.push(
-            (async () => {
-              console.log(
-                chalk.yellow(
-                  `  🛠 🦕  Copying ${path.relative(
-                    ROOT_DIR,
-                    pkg.build
-                  )} to ${path.relative(ROOT_DIR, destPath)}`
-                )
-              );
-              fse.copy(pkg.build, destPath, {
-                recursive: true,
-              });
-            })()
-          );
+      if (denoNodeModulesPaths) {
+        // Copy entire build artifact to node_modules dir for each Deno project that requires it
+        for (let denoNodeModulesPath of denoNodeModulesPaths) {
+          let destPath = path.join(denoNodeModulesPath, pkg.nodeModulesPath);
+          if (await fse.pathExists(destPath)) {
+            copyQueue.push(
+              (async () => {
+                console.log(
+                  chalk.yellow(
+                    `  🛠 🦕  Copying ${path.relative(
+                      ROOT_DIR,
+                      pkg.build
+                    )} to ${path.relative(ROOT_DIR, destPath)}`
+                  )
+                );
+                fse.copy(pkg.build, destPath, {
+                  recursive: true,
+                });
+              })()
+            );
+          }
         }
       }
 
