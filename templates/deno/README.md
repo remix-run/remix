@@ -18,8 +18,8 @@ For more, check out the [Remix docs](https://remix.run/docs).
   ```ts
   import { copy } from "https://deno.land/std@0.138.0/streams/conversion.ts";
   ```
-- ✅ You may use Deno and Node built-ins for both Deno modules outside `app/` and server-only
-  Remix code within `app/`.
+- ✅ You may use Deno and Node built-ins for both Deno modules outside `app/`
+  and server-only Remix code within `app/`.
   ```ts filename=app/entry.server.tsx
   Deno.env.get("DENO_DEPLOYMENT_ID");
   ```
@@ -40,7 +40,8 @@ deno task dev
 
 This starts your app in development mode, rebuilding assets on file changes.
 
-The server used for development is located in `server/development.ts`. It is an express server running Vite in middleware mode.
+The server used for development is located in `server/development.ts`. It is an
+express server running Vite in middleware mode.
 
 ## Production
 
@@ -56,7 +57,8 @@ Then run the app in production mode:
 deno task start
 ```
 
-The server used for production is located in `server/production.ts`. It is served by `deno serve` for maximum performance.
+The server used for production is located in `server/production.ts`. It is
+served by `deno serve` for maximum performance.
 
 ## Deployment
 
