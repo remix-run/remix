@@ -36,12 +36,12 @@ type DevServerHooks = {
 
 const globalDevServerHooksKey = "__remix_devServerHooks";
 
-export function setDevServerHooks(devServerHooks: DevServerHooks) {
+export function setDevServerHooks(devServerHooks: DevServerHooks, key = globalDevServerHooksKey) {
   // @ts-expect-error
-  globalThis[globalDevServerHooksKey] = devServerHooks;
+  globalThis[key] = devServerHooks;
 }
 
-export function getDevServerHooks(): DevServerHooks | undefined {
+export function getDevServerHooks(key = globalDevServerHooksKey): DevServerHooks | undefined {
   // @ts-expect-error
-  return globalThis[globalDevServerHooksKey];
+  return globalThis[key];
 }

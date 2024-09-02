@@ -237,6 +237,13 @@ export type VitePluginConfig = SupportedRemixEsbuildUserConfig & {
    * as a SPA without server-rendering. Default's to `true`.
    */
   ssr?: boolean;
+  /**
+   * Vite plugin registers some global hooks for the Remix request handler.
+   * But if you have a complex application with multiple Remix instances in one
+   * express (or other) server, you need to change the key where the hooks are
+   * stored. Use this option to change the key and avoid conflicts.
+   */
+  devServerHooksKey?: string;
 };
 
 type BuildEndHook = (args: {
@@ -1336,7 +1343,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               viteDevServer.ssrFixStacktrace(error);
             }
           },
-        });
+        }, remixUserConfig?.devServerHooksKey);
 
         // Invalidate virtual modules and update cached plugin config via file watcher
         viteDevServer.watcher.on("all", async (eventName, filepath) => {
