@@ -151,7 +151,7 @@ function internalServerError(): Response {
 function createRequest(req: http.IncomingMessage, url: URL, signal: AbortSignal): Request {
   let init: RequestInit = {
     method: req.method,
-    headers: createHeaders(req.rawHeaders),
+    headers: createHeaders(req.headers),
     signal,
   };
 
@@ -168,11 +168,19 @@ function createRequest(req: http.IncomingMessage, url: URL, signal: AbortSignal)
   return new Request(url, init);
 }
 
-function createHeaders(rawHeaders: string[]): Headers {
+function createHeaders(incoming: http.IncomingHttpHeaders): Headers {
   let headers = new Headers();
 
-  for (let i = 0; i < rawHeaders.length; i += 2) {
-    headers.append(rawHeaders[i], rawHeaders[i + 1]);
+  for (let key in incoming) {
+    let value = incoming[key];
+
+    if (Array.isArray(value)) {
+      for (let item of value) {
+        headers.append(key, item);
+      }
+    } else if (value != null) {
+      headers.append(key, value);
+    }
   }
 
   return headers;

@@ -9,7 +9,7 @@ This web standard API is already used in many places across the JavaScript ecosy
 - [`Deno.serve`](https://docs.deno.com/api/deno/~/Deno.serve)
 - [Fastly Compute](https://js-compute-reference-docs.edgecompute.app/docs/)
 
-When you write servers using the `Request` and `Response` APIs, you maximize the chances that your code will be portable across all these different JavaScript runtimes.
+When you write servers using the `Request` and `Response` APIs, you maximize the chances that your code will be portable across these different JavaScript runtimes.
 
 ## Features
 
