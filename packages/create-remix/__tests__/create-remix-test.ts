@@ -666,6 +666,42 @@ describe("create-remix CLI", () => {
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
 
+  it("runs remix.init script in a deno project", async () => {
+    let projectDir = getProjectDir("remix-init-deno");
+
+    let { status, stdout, stderr } = await execCreateRemix({
+      args: [
+        projectDir,
+        "--template",
+        path.join(__dirname, "fixtures", "successful-remix-init-deno"),
+        "--no-git-init",
+        "--package-manager",
+        "deno",
+      ],
+      interactions: [
+        {
+          question: /install dependencies/i,
+          type: ["y", ENTER],
+        },
+        {
+          question: /init script/i,
+          type: ["y", ENTER],
+        },
+      ],
+    });
+
+    expect(stderr.trim()).toBeFalsy();
+    expect(stdout).toContain(`Template's remix.init script complete`);
+    expect(stdout).toContain("`package.json` file not found.");
+    expect(status).toBe(0);
+    expect(fse.existsSync(path.join(projectDir, "deno.json"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
+    expect(fse.readFileSync(path.join(projectDir, "test.txt"), "utf8")).toBe(
+      "added via remix.init, isOdd(1): true"
+    );
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
+  });
+
   it("runs npm install by default", async () => {
     let originalUserAgent = process.env.npm_config_user_agent;
     process.env.npm_config_user_agent = undefined;

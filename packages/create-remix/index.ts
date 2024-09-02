@@ -160,9 +160,11 @@ async function getContext(argv: string[]): Promise<Context> {
     noMotion,
     pkgManager: validatePackageManager(
       pkgManager ??
-        // npm, pnpm, Yarn, and Bun set the user agent environment variable that can be used
-        // to determine which package manager ran the command.
-        (process.env.npm_config_user_agent ?? "npm").split("/")[0]
+        (process.versions.deno
+          ? "deno"
+          : // npm, pnpm, Yarn, and Bun set the user agent environment variable that can be used
+            // to determine which package manager ran the command.
+            (process.env.npm_config_user_agent ?? "npm").split("/")[0])
     ),
     projectName,
     prompt,
@@ -525,7 +527,8 @@ async function runInitScriptStep(ctx: Context) {
     return;
   }
 
-  let initCommand = `${packageManagerExecScript[ctx.pkgManager]} remix init`;
+  let packageManager = ctx.pkgManager;
+  let initCommand = `${packageManagerExecScript[packageManager]} init`;
 
   if (!ctx.install || !ctx.initScript) {
     await sleep(100);
@@ -544,16 +547,15 @@ async function runInitScriptStep(ctx: Context) {
 
   let initScriptDir = path.dirname(ctx.initScriptPath);
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-  let packageManager = ctx.pkgManager;
 
   try {
     if (await fileExists(initPackageJson)) {
       await loadingIndicator({
-        start: `Dependencies for remix.init script installing with ${ctx.pkgManager}...`,
+        start: `Dependencies for remix.init script installing with ${packageManager}...`,
         end: "Dependencies for remix.init script installed",
         while: () =>
           installDependencies({
-            pkgManager: ctx.pkgManager,
+            pkgManager: packageManager,
             cwd: initScriptDir,
             showInstallOutput: ctx.showInstallOutput,
           }),
@@ -642,13 +644,14 @@ async function doneStep(ctx: Context) {
   await sleep(200);
 }
 
-type PackageManager = "npm" | "yarn" | "pnpm" | "bun";
+type PackageManager = "npm" | "yarn" | "pnpm" | "bun" | "deno";
 
 const packageManagerExecScript: Record<PackageManager, string> = {
-  npm: "npx",
-  yarn: "yarn",
-  pnpm: "pnpm exec",
-  bun: "bunx",
+  npm: "npx remix",
+  yarn: "yarn remix",
+  pnpm: "pnpm exec remix",
+  bun: "bunx remix",
+  deno: "deno run --no-lock -A npm:@remix-run/dev",
 };
 
 function validatePackageManager(pkgManager: string): PackageManager {
@@ -667,10 +670,20 @@ async function installDependencies({
   showInstallOutput: boolean;
 }) {
   try {
-    await execa(pkgManager, ["install"], {
-      cwd,
-      stdio: showInstallOutput ? "inherit" : "ignore",
-    });
+    await execa(
+      pkgManager,
+      [
+        "install",
+        ...(pkgManager === "deno"
+          ? ["--node-modules-dir=true", "--no-lock"]
+          : []),
+      ],
+      {
+        cwd,
+        env: pkgManager === "deno" ? { DENO_FUTURE: "1" } : undefined,
+        stdio: showInstallOutput ? "inherit" : "ignore",
+      }
+    );
   } catch (err) {
     error("Oh no!", "Failed to install dependencies.");
     throw err;
@@ -681,12 +694,13 @@ async function updatePackageJSON(ctx: Context) {
   let packageJSONPath = path.join(ctx.cwd, "package.json");
   if (!fs.existsSync(packageJSONPath)) {
     let relativePath = path.relative(process.cwd(), ctx.cwd);
-    error(
-      "Oh no!",
-      "The provided template must be a Remix project with a `package.json` " +
-        `file, but that file does not exist in ${color.bold(relativePath)}.`
+    info(
+      "`package.json` file not found.",
+      "The provided template did not provide a `package.json` file in " +
+        color.bold(relativePath) +
+        ". This is expected for Deno templates."
     );
-    throw new Error(`package.json does not exist in ${ctx.cwd}`);
+    return;
   }
 
   let contents = await fs.promises.readFile(packageJSONPath, "utf-8");

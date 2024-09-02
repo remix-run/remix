@@ -3,7 +3,6 @@ import { execSync } from "node:child_process";
 import fse from "fs-extra";
 import getPort, { makeRange } from "get-port";
 import prettyMs from "pretty-ms";
-import PackageJson from "@npmcli/package-json";
 import pc from "picocolors";
 import exitHook from "exit-hook";
 
@@ -23,6 +22,7 @@ import type { Options } from "../compiler/options";
 import { createFileWatchCache } from "../compiler/fileWatchCache";
 import { logger } from "../tux";
 import * as profiler from "../vite/profiler";
+import { detectServerRuntime } from "./detectServerRuntime";
 
 type InitFlags = {
   deleteScript?: boolean;
@@ -230,11 +230,6 @@ let conjunctionListFormat = new Intl.ListFormat("en", {
   type: "conjunction",
 });
 
-let disjunctionListFormat = new Intl.ListFormat("en", {
-  style: "long",
-  type: "disjunction",
-});
-
 export async function generateEntry(
   entry: string,
   remixRoot: string,
@@ -273,31 +268,7 @@ export async function generateEntry(
     return;
   }
 
-  let pkgJson = await PackageJson.load(rootDirectory);
-  let deps = pkgJson.content.dependencies ?? {};
-
-  let serverRuntime = deps["@remix-run/deno"]
-    ? "deno"
-    : deps["@remix-run/cloudflare"]
-    ? "cloudflare"
-    : deps["@remix-run/node"]
-    ? "node"
-    : undefined;
-
-  if (!serverRuntime) {
-    let serverRuntimes = [
-      "@remix-run/deno",
-      "@remix-run/cloudflare",
-      "@remix-run/node",
-    ];
-    let formattedList = disjunctionListFormat.format(serverRuntimes);
-    console.error(
-      colors.error(
-        `Could not determine server runtime. Please install one of the following: ${formattedList}`
-      )
-    );
-    return;
-  }
+  let serverRuntime = await detectServerRuntime(rootDirectory);
 
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
   let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");

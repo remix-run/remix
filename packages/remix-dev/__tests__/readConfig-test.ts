@@ -1,17 +1,11 @@
 import path from "node:path";
 
-import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 
-const remixRoot = path.join(__dirname, "fixtures", "stack");
-
 describe("readConfig", () => {
-  let config: RemixConfig;
-  beforeEach(async () => {
-    config = await readConfig(remixRoot);
-  });
-
   it("generates a config", async () => {
+    let remixRoot = path.join(__dirname, "fixtures", "stack");
+    let config = await readConfig(remixRoot);
     expect(config).toMatchInlineSnapshot(
       {
         rootDirectory: expect.any(String),
@@ -73,6 +67,16 @@ describe("readConfig", () => {
         "watchPaths": [],
       }
     `
+    );
+  });
+
+  it("generates a config for deno project", async () => {
+    let remixRoot = path.join(__dirname, "fixtures", "deno");
+    let config = await readConfig(remixRoot);
+    expect(config).toEqual(
+      expect.objectContaining({
+        entryServerFile: "entry.server.deno.tsx",
+      })
     );
   });
 });

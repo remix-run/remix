@@ -1,0 +1,46 @@
+{
+  "tasks": {
+    "build": "deno run -A npm:@remix-run/dev@^2.11.2 vite:build",
+    "deploy": "deployctl deploy --prod --include=deno.jsonc,deno.lock,build,server --project=<your deno deploy project> ./server/production.ts",
+    "dev": "deno run -A --watch --watch-exclude='./vite.config.*.timestamp-*.mjs' ./server/development.ts",
+    "lint": "deno lint && deno run -A npm:eslint@^8.57.0 --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
+    "start": "deno serve -A --parallel ./server/production.ts",
+    "typecheck": "deno check '**/*' && deno run -A npm:typescript@^5.5.4/tsc",
+    "typegen": "deno types > ./app/deno.d.ts"
+  },
+  "exclude": [
+    "app/",
+    "build/"
+  ],
+  "nodeModulesDir": true,
+  "imports": {
+    "@remix-run/dev": "npm:@remix-run/dev@^2.11.2",
+    "@remix-run/express": "npm:@remix-run/express@^2.11.2",
+    "@remix-run/react": "npm:@remix-run/react@^2.11.2",
+    "@remix-run/server-runtime": "npm:@remix-run/server-runtime@^2.11.2",
+    "@std/http": "jsr:@std/http@^1.0.4",
+    "@std/path": "jsr:@std/path@^1.0.3",
+    "@types/express": "npm:@types/express@^4.17.21",
+    "@types/node": "npm:@types/node@^22.5.1",
+    "@types/react": "npm:@types/react@^18.3.5",
+    "@types/react-dom": "npm:@types/react-dom@^18.3.0",
+    "@typescript-eslint/eslint-plugin": "npm:@typescript-eslint/eslint-plugin@^8.3.0",
+    "@typescript-eslint/parser": "npm:@typescript-eslint/parser@^8.3.0",
+    "autoprefixer": "npm:autoprefixer@^10.4.20",
+    "eslint": "npm:eslint@^8.57.0",
+    "eslint-import-resolver-typescript": "npm:eslint-import-resolver-typescript@^3.6.3",
+    "eslint-plugin-import": "npm:eslint-plugin-import@^2.29.1",
+    "eslint-plugin-jsx-a11y": "npm:eslint-plugin-jsx-a11y@^6.9.0",
+    "eslint-plugin-react": "npm:eslint-plugin-react@^7.35.0",
+    "eslint-plugin-react-hooks": "npm:eslint-plugin-react-hooks@^4.6.2",
+    "express": "npm:express@^4.19.2",
+    "isbot": "npm:isbot@^5.1.17",
+    "postcss": "npm:postcss@^8.4.41",
+    "react": "npm:react@^18.3.1",
+    "react-dom": "npm:react-dom@^18.3.1",
+    "tailwindcss": "npm:tailwindcss@^3.4.10",
+    "typescript": "npm:typescript@^5.5.4",
+    "vite": "npm:vite@^5.4.2",
+    "vite-tsconfig-paths": "npm:vite-tsconfig-paths@^5.0.1"
+  }
+}

@@ -2,7 +2,6 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
-import PackageJson from "@npmcli/package-json";
 import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
@@ -11,6 +10,8 @@ import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
 import { detectPackageManager } from "./cli/detectPackageManager";
+import { tryLoadPackageJson } from "./cli/tryLoadPackageJson";
+import { detectServerRuntime } from "./cli/detectServerRuntime";
 import { logger } from "./tux";
 
 export interface RemixMdxConfig {
@@ -467,8 +468,8 @@ export async function resolveConfig(
   let entryServerFile: string;
   let entryClientFile = userEntryClientFile || "entry.client.tsx";
 
-  let pkgJson = await PackageJson.load(rootDirectory);
-  let deps = pkgJson.content.dependencies ?? {};
+  let pkgJson = await tryLoadPackageJson(rootDirectory);
+  let deps = pkgJson?.content.dependencies ?? {};
 
   if (isSpaMode && appConfig.future?.unstable_singleFetch != true) {
     // This is a super-simple default since we don't need streaming in SPA Mode.
@@ -483,27 +484,7 @@ export async function resolveConfig(
   } else if (userEntryServerFile) {
     entryServerFile = userEntryServerFile;
   } else {
-    let serverRuntime = deps["@remix-run/deno"]
-      ? "deno"
-      : deps["@remix-run/cloudflare"]
-      ? "cloudflare"
-      : deps["@remix-run/node"]
-      ? "node"
-      : undefined;
-
-    if (!serverRuntime) {
-      let serverRuntimes = [
-        "@remix-run/deno",
-        "@remix-run/cloudflare",
-        "@remix-run/node",
-      ];
-      let formattedList = disjunctionListFormat.format(serverRuntimes);
-      throw new Error(
-        `Could not determine server runtime. Please install one of the following: ${formattedList}`
-      );
-    }
-
-    if (!deps["isbot"]) {
+    if (pkgJson && !deps["isbot"]) {
       console.log(
         "adding `isbot` to your package.json, you should commit this change"
       );
@@ -525,6 +506,7 @@ export async function resolveConfig(
       });
     }
 
+    let serverRuntime = await detectServerRuntime(rootDirectory, deps);
     entryServerFile = `entry.server.${serverRuntime}.tsx`;
   }
 
@@ -715,35 +697,3 @@ export function findConfig(
 
   return undefined;
 }
-
-// adds types for `Intl.ListFormat` to the global namespace
-// we could also update our `tsconfig.json` to include `lib: ["es2021"]`
-declare namespace Intl {
-  type ListType = "conjunction" | "disjunction";
-
-  interface ListFormatOptions {
-    localeMatcher?: "lookup" | "best fit";
-    type?: ListType;
-    style?: "long" | "short" | "narrow";
-  }
-
-  interface ListFormatPart {
-    type: "element" | "literal";
-    value: string;
-  }
-
-  class ListFormat {
-    constructor(locales?: string | string[], options?: ListFormatOptions);
-    format(values: any[]): string;
-    formatToParts(values: any[]): ListFormatPart[];
-    supportedLocalesOf(
-      locales: string | string[],
-      options?: ListFormatOptions
-    ): string[];
-  }
-}
-
-let disjunctionListFormat = new Intl.ListFormat("en", {
-  style: "long",
-  type: "disjunction",
-});

@@ -4,74 +4,66 @@ Welcome to the Deno template for Remix! 🦕
 
 For more, check out the [Remix docs](https://remix.run/docs).
 
-## Install
-
-```sh
-npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/deno
-```
-
 ## Managing dependencies
 
-Read about
-[how we recommend to manage dependencies for Remix projects using Deno](https://github.com/remix-run/remix/blob/main/decisions/0001-use-npm-to-manage-npm-dependencies-for-deno-projects.md).
-
-- ✅ You should use `npm` to install NPM packages
+- ✅ You should use `deno add` to add packages
   ```sh
-  npm install react
+  deno add npm:react
   ```
   ```ts
   import { useState } from "react";
   ```
-- ✅ You may use inlined URL imports or
-  [deps.ts](https://deno.land/manual/examples/manage_dependencies#managing-dependencies)
-  for Deno modules.
+- ✅ You may use inlined URL imports, JSR imports or NPM imports for Deno
+  modules outside `app/`.
   ```ts
   import { copy } from "https://deno.land/std@0.138.0/streams/conversion.ts";
   ```
-- ❌ Do not use
-  [import maps](https://docs.deno.com/runtime/manual/basics/import_maps).
+- ✅ You may use Deno and Node built-ins for both Deno modules outside `app/` and server-only
+  Remix code within `app/`.
+  ```ts filename=app/entry.server.tsx
+  Deno.env.get("DENO_DEPLOYMENT_ID");
+  ```
+  ```ts filename=app/entry.server.tsx
+  import fs from "node:fs";
+  ```
+- ✅ You may use
+  [import maps](https://docs.deno.com/runtime/manual/basics/import_maps) for
+  Deno modules outside `app/`.
 
 ## Development
 
 From your terminal:
 
 ```sh
-npm run dev
+deno task dev
 ```
 
 This starts your app in development mode, rebuilding assets on file changes.
 
-### Type hints
-
-This template provides type hinting to VS Code via a
-[dedicated import map](./.vscode/resolve_npm_imports.json).
-
-To get types in another editor, use an extension for Deno that supports import
-maps and point your editor to `./.vscode/resolve_npm_imports.json`.
-
-For more, see
-[our decision doc for interop between Deno and NPM](https://github.com/remix-run/remix/blob/main/decisions/0001-use-npm-to-manage-npm-dependencies-for-deno-projects.md#vs-code-type-hints).
+The server used for development is located in `server/development.ts`. It is an express server running Vite in middleware mode.
 
 ## Production
 
 First, build your app for production:
 
 ```sh
-npm run build
+deno task build
 ```
 
 Then run the app in production mode:
 
 ```sh
-npm start
+deno task start
 ```
+
+The server used for production is located in `server/production.ts`. It is served by `deno serve` for maximum performance.
 
 ## Deployment
 
-Building the Deno app (`npm run build`) results in two outputs:
+Building the Deno app (`deno task build`) results in two outputs:
 
-- `build/` (server bundle)
-- `public/build/` (browser bundle)
+- `build/server` (server bundle)
+- `build/client` (browser bundle)
 
 You can deploy these bundles to any host that runs Deno, but here we'll focus on
 deploying to [Deno Deploy](https://deno.com/deploy).
@@ -88,7 +80,7 @@ deploying to [Deno Deploy](https://deno.com/deploy).
 ```json filename=package.json
 {
   "scripts": {
-    "deploy": "deployctl deploy --project=<your deno deploy project> --include=.cache,build,public ./build/index.js"
+    "deploy": "deployctl deploy --project=<your deno deploy project> --include=build,server-prod.ts ./server.prod.ts"
   }
 }
 ```
@@ -109,7 +101,7 @@ GitHub secret.
    [`deployctl`](https://github.com/denoland/deployctl):
 
 ```sh
-deno install --allow-read --allow-write --allow-env --allow-net --allow-run --no-check -r -f https://deno.land/x/deploy/deployctl.ts
+deno install -Arf jsr:@deno/deployctl
 ```
 
 6. If you have previously installed the Deno Deploy CLI, you should update it to
@@ -124,5 +116,5 @@ deployctl upgrade
 After you've set up Deno Deploy, run:
 
 ```sh
-npm run deploy
+deno task deploy
 ```
