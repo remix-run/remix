@@ -8,11 +8,11 @@ export interface ClientAddr {
    */
   address: string;
   /**
-   * The family of the client IP address. Either `"IPv4"` or `"IPv6"`.
+   * The family of the client IP address.
    *
    * [Node.js Reference](https://nodejs.org/api/net.html#socketremotefamily)
    */
-  family: string;
+  family: 'IPv4' | 'IPv6';
   /**
    * The remote port of the client that sent the request.
    *
@@ -105,9 +105,9 @@ export function createRequestListener(
     });
 
     let request = createRequest(req, url, controller.signal);
-    let client: ClientAddr = {
+    let client = {
       address: req.socket.remoteAddress!,
-      family: req.socket.remoteFamily!,
+      family: req.socket.remoteFamily! as ClientAddr['family'],
       port: req.socket.remotePort!,
     };
 
@@ -201,7 +201,15 @@ function createBody(req: http.IncomingMessage): ReadableStream<Uint8Array> {
 }
 
 async function sendResponse(res: http.ServerResponse, response: Response): Promise<void> {
-  res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+  // Use the rawHeaders API and iterate over response.headers so we are sure to send multiple
+  // Set-Cookie headers correctly. These would incorrectly be merged into a single header if we
+  // tried to use `Object.fromEntries(response.headers.entries())`.
+  let rawHeaders: string[] = [];
+  for (let [key, value] of response.headers) {
+    rawHeaders.push(key, value);
+  }
+
+  res.writeHead(response.status, rawHeaders);
 
   if (response.body != null) {
     for await (let chunk of response.body) {
