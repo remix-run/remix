@@ -1,7 +1,7 @@
 {
   "tasks": {
-    "build": "deno run -A npm:@remix-run/dev@* vite:build",
-    "dev": "deno run -A npm:@remix-run/dev@* vite:dev",
+    "build": "deno run -A 'npm:@remix-run/dev@*' vite:build",
+    "dev": "deno run -A 'npm:@remix-run/dev@*' vite:dev",
     "typecheck": "deno check '**/*' && deno run -A npm:typescript@^5.5.4/tsc",
     "typegen": "deno types > ./app/deno.d.ts"
   },

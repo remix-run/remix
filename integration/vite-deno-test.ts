@@ -1,20 +1,10 @@
 import { expect } from "@playwright/test";
-import dedent from "dedent";
 
 import type { Files } from "./helpers/vite.js";
 import { test, viteConfig } from "./helpers/vite.js";
 
 const files: Files = async ({ port }) => ({
-  "vite.config.ts": dedent`
-    import { vitePlugin as remix } from "@remix-run/dev";
-
-    export default {
-      ${await viteConfig.server({ port })}
-      plugins: [
-        remix(),
-      ],
-    }
-  `,
+  "vite.config.ts": await viteConfig.basic({ port }),
   "app/routes/_index.tsx": `
     import { Form, useLoaderData } from "@remix-run/react";
     import {

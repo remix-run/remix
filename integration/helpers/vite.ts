@@ -386,6 +386,7 @@ function deno(
       ...process.env,
       ...colorEnv,
       ...options.env,
+      DENO_FUTURE: "1",
     },
     stdio: "pipe",
   });
