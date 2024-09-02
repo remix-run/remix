@@ -71,13 +71,18 @@ describe('createRequestListener', () => {
       let req = createIncomingMessage();
       let res = createServerResponse();
 
+      let status: number | undefined;
+      mock.method(res, 'writeHead', (statusCode: number) => {
+        status = statusCode;
+      });
+
       let chunks: Uint8Array[] = [];
       mock.method(res, 'write', (chunk: Uint8Array) => {
         chunks.push(chunk);
       });
 
       mock.method(res, 'end', () => {
-        assert.equal(res.statusCode, 500);
+        assert.equal(status, 500);
         let body = Buffer.concat(chunks).toString();
         assert.equal(body, 'Internal Server Error');
         resolve();
@@ -140,6 +145,43 @@ describe('createRequestListener', () => {
       resolve();
     });
   });
+
+  it('sets multiple Set-Cookie headers', async () => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async () => {
+        let headers = new Headers();
+        headers.set('Content-Type', 'text/plain');
+        headers.append('Set-Cookie', 'a=1');
+        headers.append('Set-Cookie', 'b=2');
+        return new Response('Hello, world!', { headers });
+      };
+
+      let listener = createRequestListener(handler);
+      assert.ok(listener);
+
+      let req = createIncomingMessage();
+      let res = createServerResponse();
+
+      let headers: string[];
+      mock.method(res, 'writeHead', (_status: number, headersArray: string[]) => {
+        headers = headersArray;
+      });
+
+      mock.method(res, 'end', () => {
+        assert.deepEqual(headers, [
+          'content-type',
+          'text/plain',
+          'set-cookie',
+          'a=1',
+          'set-cookie',
+          'b=2',
+        ]);
+        resolve();
+      });
+
+      listener(req, res);
+    });
+  });
 });
 
 function createIncomingMessage({
@@ -176,10 +218,7 @@ function createIncomingMessage({
 
 function createServerResponse(): http.ServerResponse {
   return Object.assign(new stream.Writable(), {
-    statusCode: 200,
-    statusMessage: 'OK',
-    setHeader() {},
-    flushHeaders() {},
+    writeHead() {},
     write() {},
     end() {},
   }) as unknown as http.ServerResponse;
