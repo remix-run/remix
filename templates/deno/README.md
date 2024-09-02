@@ -40,9 +40,6 @@ deno task dev
 
 This starts your app in development mode, rebuilding assets on file changes.
 
-The server used for development is located in `server/development.ts`. It is an
-express server running Vite in middleware mode.
-
 ## Production
 
 First, build your app for production:
@@ -57,7 +54,7 @@ Then run the app in production mode:
 deno task start
 ```
 
-The server used for production is located in `server/production.ts`. It is
+The server used for production is located in `server.production.ts`. It is
 served by `deno serve` for maximum performance.
 
 ## Deployment

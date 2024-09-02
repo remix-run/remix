@@ -3,8 +3,8 @@ import { serveFile } from "@std/http/file-server";
 import { join } from "@std/path/join";
 
 const handleRequest = createRequestHandler(
-  await import("../build/server/index.js"),
-  "production",
+  await import("./build/server/index.js"),
+  "production"
 );
 
 export default {
@@ -24,7 +24,7 @@ export default {
       if (pathname.startsWith("/assets/")) {
         response.headers.set(
           "cache-control",
-          "public, max-age=31536000, immutable",
+          "public, max-age=31536000, immutable"
         );
       } else {
         response.headers.set("cache-control", "public, max-age=600");

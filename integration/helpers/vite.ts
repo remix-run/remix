@@ -1,18 +1,19 @@
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import path from "node:path";
-import fs from "node:fs/promises";
-import type { Readable } from "node:stream";
-import url from "node:url";
-import fse from "fs-extra";
-import stripIndent from "strip-indent";
-import waitOn from "wait-on";
-import getPort from "get-port";
-import shell from "shelljs";
-import glob from "glob";
-import dedent from "dedent";
 import type { Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
+import dedent from "dedent";
+import fse from "fs-extra";
+import getPort from "get-port";
+import glob from "glob";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import fs from "node:fs/promises";
+import path from "node:path";
+import type { Readable } from "node:stream";
+import url from "node:url";
+import shell from "shelljs";
+import stripIndent from "strip-indent";
+import waitOn from "wait-on";
 
+const denoBin = "deno"; // assume deno is globally installed
 const remixBin = "node_modules/@remix-run/dev/dist/cli.js";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const root = path.resolve(__dirname, "../..");
@@ -90,7 +91,10 @@ export const EXPRESS_SERVER = (args: {
     app.listen(port, () => console.log('http://localhost:' + port));
   `;
 
-type TemplateName = "vite-template" | "vite-cloudflare-template";
+type TemplateName =
+  | "vite-template"
+  | "vite-cloudflare-template"
+  | "vite-deno-template";
 
 export async function createProject(
   files: Record<string, string> = {},
@@ -134,6 +138,23 @@ export const viteBuild = ({
   let nodeBin = process.argv[0];
 
   return spawnSync(nodeBin, [remixBin, "vite:build"], {
+    cwd,
+    env: {
+      ...process.env,
+      ...colorEnv,
+      ...env,
+    },
+  });
+};
+
+export const viteBuildDeno = ({
+  cwd,
+  env = {},
+}: {
+  cwd: string;
+  env?: Record<string, string>;
+}) => {
+  return spawnSync(denoBin, ["run", "-A", remixBin, "vite:build"], {
     cwd,
     env: {
       ...process.env,
@@ -204,14 +225,16 @@ type ServerArgs = {
 };
 
 const createDev =
-  (nodeArgs: string[]) =>
+  (args: string[], runtime = node) =>
   async ({ cwd, port, env, basename }: ServerArgs): Promise<() => unknown> => {
-    let proc = node(nodeArgs, { cwd, env });
+    let proc = runtime(args, { cwd, env });
     await waitForServer(proc, { port, basename });
     return () => proc.kill();
   };
 
 export const viteDev = createDev([remixBin, "vite:dev"]);
+export const viteDevDeno = createDev(["run", "-A", remixBin, "vite:dev"], deno);
+
 export const customDev = createDev(["./server.mjs"]);
 
 // Used for testing errors thrown on build when we don't want to start and
@@ -234,6 +257,13 @@ export type Files = (args: { port: number }) => Promise<Record<string, string>>;
 type Fixtures = {
   page: Page;
   viteDev: (
+    files: Files,
+    templateName?: TemplateName
+  ) => Promise<{
+    port: number;
+    cwd: string;
+  }>;
+  viteDevDeno: (
     files: Files,
     templateName?: TemplateName
   ) => Promise<{
@@ -267,6 +297,17 @@ export const test = base.extend<Fixtures>({
       let port = await getPort();
       let cwd = await createProject(await files({ port }), template);
       stop = await viteDev({ cwd, port });
+      return { port, cwd };
+    });
+    stop?.();
+  },
+  // eslint-disable-next-line no-empty-pattern
+  viteDevDeno: async ({}, use) => {
+    let stop: (() => unknown) | undefined;
+    await use(async (files, template) => {
+      let port = await getPort();
+      let cwd = await createProject(await files({ port }), template);
+      stop = await viteDevDeno({ cwd, port });
       return { port, cwd };
     });
     stop?.();
@@ -320,6 +361,22 @@ function node(
   let nodeBin = process.argv[0];
 
   let proc = spawn(nodeBin, args, {
+    cwd: options.cwd,
+    env: {
+      ...process.env,
+      ...colorEnv,
+      ...options.env,
+    },
+    stdio: "pipe",
+  });
+  return proc;
+}
+
+function deno(
+  args: string[],
+  options: { cwd: string; env?: Record<string, string> }
+) {
+  let proc = spawn(denoBin, args, {
     cwd: options.cwd,
     env: {
       ...process.env,
