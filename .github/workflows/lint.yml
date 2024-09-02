@@ -28,6 +28,11 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "pnpm"
 
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
       - name: Disable GitHub Actions Annotations
         run: |
           echo "::remove-matcher owner=tsc::"
@@ -39,11 +44,6 @@ jobs:
 
       - name: 🔬 Lint
         run: pnpm lint
-
-      - name: 🦕 Install Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: vx.x.x
 
       - name: 🔬 Lint deno files
         run: pnpm lint:deno

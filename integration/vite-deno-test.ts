@@ -6,6 +6,8 @@ import { test, viteConfig } from "./helpers/vite.js";
 
 const files: Files = async ({ port }) => ({
   "vite.config.ts": dedent`
+    import { vitePlugin as remix } from "@remix-run/dev";
+
     export default {
       ${await viteConfig.server({ port })}
       plugins: [

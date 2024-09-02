@@ -17,6 +17,7 @@
     "playground:new": "node ./scripts/playground/new.js",
     "publish": "node ./scripts/publish.js",
     "publish:private": "node ./scripts/publish-private.js",
+    "prepare": "node ./scripts/install-deno-deps.js integration/helpers/vite-deno-template templates/deno",
     "release": "node ./scripts/release.js",
     "test": "pnpm run \"/^test:.*/\"",
     "pretest:integration": "pnpm build",

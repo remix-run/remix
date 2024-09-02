@@ -1,24 +1,21 @@
 {
   "tasks": {
-    "build": "deno run -A npm:@remix-run/dev@^2.11.2 vite:build",
-    "dev": "deno run -A npm:@remix-run/dev@^2.11.2 vite:dev",
+    "build": "deno run -A npm:@remix-run/dev@* vite:build",
+    "dev": "deno run -A npm:@remix-run/dev@* vite:dev",
     "typecheck": "deno check '**/*' && deno run -A npm:typescript@^5.5.4/tsc",
     "typegen": "deno types > ./app/deno.d.ts"
   },
   "exclude": ["app/", "build/"],
   "nodeModulesDir": true,
+  "unstable": ["kv"],
   "imports": {
-    "@remix-run/dev": "npm:@remix-run/dev@^2.11.2",
-    "@remix-run/express": "npm:@remix-run/express@^2.11.2",
-    "@remix-run/react": "npm:@remix-run/react@^2.11.2",
-    "@remix-run/server-runtime": "npm:@remix-run/server-runtime@^2.11.2",
-    "@std/http": "jsr:@std/http@^1.0.4",
-    "@std/path": "jsr:@std/path@^1.0.3",
-    "@types/node": "npm:@types/node@^22.5.1",
+    // These remix packages should be treated like workspace:* dependencies.
+    "@remix-run/dev": "npm:@remix-run/dev@*",
+    "@remix-run/react": "npm:@remix-run/react@*",
+    "@remix-run/server-runtime": "npm:@remix-run/server-runtime@*",
     "@types/react": "npm:@types/react@^18.3.5",
     "@types/react-dom": "npm:@types/react-dom@^18.3.0",
     "isbot": "npm:isbot@^5.1.17",
-    "postcss": "npm:postcss@^8.4.41",
     "react": "npm:react@^18.3.1",
     "react-dom": "npm:react-dom@^18.3.1",
     "typescript": "npm:typescript@^5.5.4",
