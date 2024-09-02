@@ -225,15 +225,19 @@ type ServerArgs = {
 };
 
 const createDev =
-  (args: string[], runtime = node) =>
+  (args: string[], runtime = node, waitOnAddress = "localhost") =>
   async ({ cwd, port, env, basename }: ServerArgs): Promise<() => unknown> => {
     let proc = runtime(args, { cwd, env });
-    await waitForServer(proc, { port, basename });
+    await waitForServer(proc, { port, basename }, waitOnAddress);
     return () => proc.kill();
   };
 
 export const viteDev = createDev([remixBin, "vite:dev"]);
-export const viteDevDeno = createDev(["run", "-A", remixBin, "vite:dev"], deno);
+export const viteDevDeno = createDev(
+  ["run", "-A", remixBin, "vite:dev"],
+  deno,
+  "127.0.0.1" // https://github.com/jeffbski/wait-on/issues/109
+);
 
 export const customDev = createDev(["./server.mjs"]);
 
@@ -390,13 +394,14 @@ function deno(
 
 async function waitForServer(
   proc: ChildProcess & { stdout: Readable; stderr: Readable },
-  args: { port: number; basename?: string }
+  args: { port: number; basename?: string },
+  waitOnAddress = "localhost"
 ) {
   let devStdout = bufferize(proc.stdout);
   let devStderr = bufferize(proc.stderr);
 
   await waitOn({
-    resources: [`http://127.0.0.1:${args.port}${args.basename ?? "/"}`],
+    resources: [`http://${waitOnAddress}:${args.port}${args.basename ?? "/"}`],
     timeout: 10000,
   }).catch((err) => {
     let stdout = devStdout();
