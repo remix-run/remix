@@ -6,11 +6,15 @@ const denoProjectPaths = process.argv
   .map((denoProjectDir) => path.join(process.cwd(), denoProjectDir));
 
 for (let denoProjectPath of denoProjectPaths) {
-  let { error } = spawnSync("deno", ["install", "--no-lock"], {
-    cwd: denoProjectPath,
-    env: { ...process.env, DENO_FUTURE: "1" },
-    stdio: "inherit",
-  });
+  let { error } = spawnSync(
+    "deno",
+    ["install", "--allow-scripts", "--no-lock"],
+    {
+      cwd: denoProjectPath,
+      env: { ...process.env, DENO_FUTURE: "1" },
+      stdio: "inherit",
+    }
+  );
 
   if (error) {
     console.warn(
