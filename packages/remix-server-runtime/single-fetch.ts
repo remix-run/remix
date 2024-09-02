@@ -371,10 +371,7 @@ export function encodeViaTurboStream(
   });
 }
 
-export function data<D extends Serializable>(
-  value: D,
-  init?: number | ResponseInit
-) {
+export function data<T>(value: T, init?: number | ResponseInit) {
   return routerData(value, init);
 }
 

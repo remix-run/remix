@@ -340,6 +340,10 @@ Opt into [Single Fetch][single-fetch] behavior (details will be expanded once th
 
 Opt into [Lazy Route Discovery][lazy-route-discovery] behavior (details will be expanded once the flag stabilizes).
 
+## unstable_optimizeDeps
+
+Opt into automatic [dependency optimization][dependency-optimization] during development.
+
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
 [relativesplatpath-changelog]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#futurev3_relativesplatpath
@@ -357,3 +361,4 @@ Opt into [Lazy Route Discovery][lazy-route-discovery] behavior (details will be 
 [vite-url-imports]: https://vitejs.dev/guide/assets.html#explicit-url-imports
 [mdx]: https://mdxjs.com
 [mdx-rollup-plugin]: https://mdxjs.com/packages/rollup
+[dependency-optimization]: ../guides/dependency-optimization

@@ -147,9 +147,11 @@ With Single Fetch, naked objects will be streamed directly, so the built-in type
 
 #### Enable Single Fetch types
 
-To switch over to Single Fetch types, you should augment Remix's `Future` interface with `unstable_singleFetch: true`:
+To switch over to Single Fetch types, you should [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`.
+You can do this in any file covered by your `tsconfig.json` > `include`.
+We recommend you do this in your `vite.config.ts` to keep it colocated with the `future.unstable_singleFetch` future flag in the Remix plugin:
 
-```ts filename=vite.config.ts
+```ts
 declare module "@remix-run/server-runtime" {
   interface Future {
     unstable_singleFetch: true;
@@ -461,3 +463,4 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [type-inference-section]: #type-inference
 [compatibility-flag]: https://developers.cloudflare.com/workers/configuration/compatibility-dates
 [data-utility]: ../utils/data
+[augment]: https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
