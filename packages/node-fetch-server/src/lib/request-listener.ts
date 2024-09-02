@@ -1,6 +1,6 @@
 import * as http from 'node:http';
 
-export interface ClientAddr {
+export interface ClientAddress {
   /**
    * The IP address of the client that sent the request.
    *
@@ -39,7 +39,7 @@ export interface ErrorHandler {
  * [MDN `Response` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Response)
  */
 export interface FetchHandler {
-  (request: Request, client: ClientAddr): Response | Promise<Response>;
+  (request: Request, client: ClientAddress): Response | Promise<Response>;
 }
 
 export interface RequestListenerOptions {
@@ -107,7 +107,7 @@ export function createRequestListener(
     let request = createRequest(req, url, controller.signal);
     let client = {
       address: req.socket.remoteAddress!,
-      family: req.socket.remoteFamily! as ClientAddr['family'],
+      family: req.socket.remoteFamily! as ClientAddress['family'],
       port: req.socket.remotePort!,
     };
 

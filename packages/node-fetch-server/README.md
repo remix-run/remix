@@ -17,8 +17,7 @@ When you write servers using the `Request` and `Response` APIs, you maximize the
 - Seamless integration with `node:http` and `node:https` modules
 - Supports custom hostnames (e.g. using `process.env.HOST` on a VPS to set the host portion of incoming request URLs)
 - Supports streaming responses using `new Response(stream)`
-- Exposes client IP info
-- It's [faster than Express](#benchmark)
+- Exposes remote client address info
 
 ## Installation
 
@@ -41,7 +40,7 @@ let server = http.createServer(createRequestListener(handler));
 server.listen(3000);
 ```
 
-By default `request.url` is derived from the value of the `Host` HTTP header and the connection protocol being used. To support custom hostnames using e.g. a `$HOST` environment variable, you can use the `host` option:
+By default `request.url` is derived from the value of the `Host` HTTP header and the connection protocol being used. To support custom hostnames using e.g. a `HOST` environment variable, you can use the `host` option:
 
 ```ts
 import * as assert from 'node:assert/strict';
@@ -71,7 +70,7 @@ let handler: FetchHandler = (request, client) => {
 
 ## Benchmark
 
-A basic benchmark shows `node-fetch-server` is able to serve more requests per second (and has higher overall throughput) than Express v4. The vanilla `node:http` module is also shown as a baseline for comparison.
+A basic "hello world" benchmark shows `node-fetch-server` introduces considerable overhead on top of a vanilla `node:http` server. However, it is still able to serve more requests per second (and has higher overall throughput) than Express v4, so the slowdown should be acceptable for most applications.
 
 ```
 > @mjackson/node-fetch-server@0.0.0 bench /Users/michael/Projects/remix-the-web/packages/node-fetch-server
@@ -116,12 +115,6 @@ Running 30s test @ http://127.0.0.1:3000/
   Socket errors: connect 0, read 1259, write 110, timeout 200
 Requests/sec:   8696.85
 Transfer/sec:      2.10MB
-```
-
-I encourage you to run the benchmark yourself. To do so, you'll need to have [`wrk`](https://github.com/wg/wrk) installed. Then run:
-
-```sh
-pnpm run bench
 ```
 
 ## License

@@ -1,5 +1,5 @@
 export {
-  type ClientAddr,
+  type ClientAddress,
   type ErrorHandler,
   type FetchHandler,
   type RequestListenerOptions,
