@@ -901,6 +901,41 @@ describe("create-remix CLI", () => {
     process.env.npm_config_user_agent = originalUserAgent;
   });
 
+  it("recognizes when Deno was used to run the command", async () => {
+    process.versions.deno = "1.46.2";
+
+    let projectDir = getProjectDir("deno-create-from-process-versions");
+
+    let execa = require("execa");
+    execa.mockImplementation(async () => {});
+
+    // Suppress terminal output
+    let stdoutMock = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
+    await createRemix([
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "blank"),
+      "--no-git-init",
+      "--yes",
+    ]);
+
+    stdoutMock.mockReset();
+
+    expect(execa).toHaveBeenCalledWith(
+      "deno",
+      expect.arrayContaining([
+        "install",
+        "--node-modules-dir=true",
+        "--no-lock",
+      ]),
+      expect.objectContaining({ env: { DENO_FUTURE: "1" } })
+    );
+    delete process.versions.deno;
+  });
+
   it("supports specifying the package manager, regardless of user agent", async () => {
     let originalUserAgent = process.env.npm_config_user_agent;
     process.env.npm_config_user_agent =

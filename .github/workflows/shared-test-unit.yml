@@ -47,6 +47,11 @@ jobs:
       - name: 📥 Install deps
         run: pnpm install --frozen-lockfile
 
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
       # It's faster to use the built `cli.js` in tests if its available and up-to-date
       - name: 🏗 Build
         run: pnpm build
