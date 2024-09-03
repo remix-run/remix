@@ -123,7 +123,23 @@ export function createRequestListener(
       }
     }
 
-    sendResponse(res, response);
+    // Use the rawHeaders API and iterate over response.headers so we are sure to send multiple
+    // Set-Cookie headers correctly. These would incorrectly be merged into a single header if we
+    // tried to use `Object.fromEntries(response.headers.entries())`.
+    let rawHeaders: string[] = [];
+    for (let [key, value] of response.headers) {
+      rawHeaders.push(key, value);
+    }
+
+    res.writeHead(response.status, rawHeaders);
+
+    if (response.body != null) {
+      for await (let chunk of response.body) {
+        res.write(chunk);
+      }
+    }
+
+    res.end();
   };
 }
 
@@ -198,24 +214,4 @@ function createBody(req: http.IncomingMessage): ReadableStream<Uint8Array> {
       });
     },
   });
-}
-
-async function sendResponse(res: http.ServerResponse, response: Response): Promise<void> {
-  // Use the rawHeaders API and iterate over response.headers so we are sure to send multiple
-  // Set-Cookie headers correctly. These would incorrectly be merged into a single header if we
-  // tried to use `Object.fromEntries(response.headers.entries())`.
-  let rawHeaders: string[] = [];
-  for (let [key, value] of response.headers) {
-    rawHeaders.push(key, value);
-  }
-
-  res.writeHead(response.status, rawHeaders);
-
-  if (response.body != null) {
-    for await (let chunk of response.body) {
-      res.write(chunk);
-    }
-  }
-
-  res.end();
 }
