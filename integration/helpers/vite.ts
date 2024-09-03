@@ -1,7 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import dedent from "dedent";
-import execa from "execa";
 import fse from "fs-extra";
 import getPort from "get-port";
 import glob from "glob";
@@ -148,23 +147,6 @@ export const viteBuild = ({
   });
 };
 
-export const viteBuildDeno = ({
-  cwd,
-  env = {},
-}: {
-  cwd: string;
-  env?: Record<string, string>;
-}) => {
-  return spawnSync(denoBin, ["run", "-A", remixBin, "vite:build"], {
-    cwd,
-    env: {
-      ...process.env,
-      ...colorEnv,
-      ...env,
-    },
-  });
-};
-
 export const viteRemixServe = async ({
   cwd,
   port,
@@ -226,21 +208,25 @@ type ServerArgs = {
 };
 
 const createDev =
-  (args: string[], runtime = node, waitOnAddress = "localhost") =>
+  (
+    runtime: typeof node | typeof deno,
+    args: string[],
+    waitOnAddress = "localhost"
+  ) =>
   async ({ cwd, port, env, basename }: ServerArgs): Promise<() => unknown> => {
     let proc = runtime(args, { cwd, env });
     await waitForServer(proc, { port, basename }, waitOnAddress);
     return () => proc.kill();
   };
 
-export const viteDev = createDev([remixBin, "vite:dev"]);
+export const viteDev = createDev(node, [remixBin, "vite:dev"]);
 export const viteDevDeno = createDev(
-  ["run", "-A", remixBin, "vite:dev"],
   deno,
+  ["run", "-A", remixBin, "vite:dev"],
   "127.0.0.1" // https://github.com/jeffbski/wait-on/issues/109
 );
 
-export const customDev = createDev(["./server.mjs"]);
+export const customDev = createDev(node, ["./server.mjs"]);
 
 // Used for testing errors thrown on build when we don't want to start and
 // wait for the server
@@ -312,21 +298,44 @@ export const test = base.extend<Fixtures>({
     await use(async (files, template) => {
       let port = await getPort();
       let cwd = await createProject(await files({ port }), template);
-      // nasty hacks to try get windows msedge integration test to pass
-      await execa(denoBin, ["install", "--no-lock"], {
+
+      // Install dependencies as late as possible so Node won't accidentally import them and cause access denied errors in Deno on Windows
+      let installProc = spawnSync(denoBin, ["install", "--no-lock"], {
         cwd,
-        // @ts-expect-error broken global
-        env: { DENO_FUTURE: "1" },
-        stdio: "inherit",
+        env: { ...process.env, DENO_FUTURE: "1" },
+        stdio: "pipe",
       });
-      await execa(
+      if (installProc.status !== 0) {
+        throw new Error(
+          [
+            "Failed to install Deno dependencies",
+            "",
+            "exit code: " + installProc.status,
+            `stdout: \n${installProc.stdout.toString("utf8")}\n`,
+            `stderr: \n${installProc.stderr.toString("utf8")}\n`,
+          ].join("\n")
+        );
+      }
+      let copyProc = spawnSync(
         process.argv[0],
         [
           "./scripts/copy-build-to-dist.mjs",
           `--deno-node-modules-paths=${cwd}/node_modules`,
         ],
-        { stdio: "inherit" }
+        { stdio: "pipe" }
       );
+      if (copyProc.status !== 0) {
+        throw new Error(
+          [
+            "Failed to copy build artifacts for Deno",
+            "",
+            "exit code: " + copyProc.status,
+            `stdout: \n${copyProc.stdout.toString("utf8")}\n`,
+            `stderr: \n${copyProc.stderr.toString("utf8")}\n`,
+          ].join("\n")
+        );
+      }
+
       stop = await viteDevDeno({ cwd, port });
       return { port, cwd };
     });

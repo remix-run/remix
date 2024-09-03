@@ -50,6 +50,41 @@ async function copyBuildToDist() {
     };
   });
 
+  if (denoNodeModulesPaths) {
+    /** @type {Promise<void>[]} */
+    let copyQueue = [];
+    for (let pkg of packages) {
+      // Copy entire build artifact to node_modules dir for each Deno project that requires it
+      for (let denoNodeModulesPath of denoNodeModulesPaths) {
+        let destPath = path.join(denoNodeModulesPath, pkg.nodeModulesPath);
+        if (await fse.pathExists(destPath)) {
+          copyQueue.push(
+            (async () => {
+              console.log(
+                chalk.yellow(
+                  `  🛠 🦕  Copying ${path.relative(
+                    ROOT_DIR,
+                    pkg.build
+                  )} to ${path.relative(ROOT_DIR, destPath)}`
+                )
+              );
+              fse.copy(pkg.build, destPath, {
+                recursive: true,
+              });
+            })()
+          );
+        }
+      }
+    }
+    await Promise.all(copyQueue);
+    console.log(
+      chalk.green(
+        "  ✅    Successfully copied build files to deno node_modules package directories!"
+      )
+    );
+    return;
+  }
+
   // Write an export shim for @remix-run/node/globals types
   let dest = path.join(
     ".",
@@ -59,37 +94,13 @@ async function copyBuildToDist() {
     "node",
     "globals.d.ts"
   );
-  console.log(chalk.yellow(`  🛠     Writing globals.d.ts shim to ${dest}`));
+  console.log(chalk.yellow(`  🛠  Writing globals.d.ts shim to ${dest}`));
   await fse.writeFile(dest, "export * from './dist/globals';");
 
   /** @type {Promise<void>[]} */
   let copyQueue = [];
   for (let pkg of packages) {
     try {
-      if (denoNodeModulesPaths) {
-        // Copy entire build artifact to node_modules dir for each Deno project that requires it
-        for (let denoNodeModulesPath of denoNodeModulesPaths) {
-          let destPath = path.join(denoNodeModulesPath, pkg.nodeModulesPath);
-          if (await fse.pathExists(destPath)) {
-            copyQueue.push(
-              (async () => {
-                console.log(
-                  chalk.yellow(
-                    `  🛠 🦕  Copying ${path.relative(
-                      ROOT_DIR,
-                      pkg.build
-                    )} to ${path.relative(ROOT_DIR, destPath)}`
-                  )
-                );
-                fse.copy(pkg.build, destPath, {
-                  recursive: true,
-                });
-              })()
-            );
-          }
-        }
-      }
-
       let srcPath = path.join(pkg.build, "dist");
       let destPath = path.join(pkg.src, "dist");
       if (!(await fse.stat(srcPath)).isDirectory()) {
@@ -99,7 +110,7 @@ async function copyBuildToDist() {
         (async () => {
           console.log(
             chalk.yellow(
-              `  🛠     Copying ${path.relative(
+              `  🛠  Copying ${path.relative(
                 ROOT_DIR,
                 srcPath
               )} to ${path.relative(ROOT_DIR, destPath)}`
@@ -150,7 +161,7 @@ async function copyBuildToDist() {
       (async () => {
         let src = path.relative(ROOT_DIR, path.join(...srcFile.split("/")));
         let dest = path.relative(ROOT_DIR, path.join(...destFile.split("/")));
-        console.log(chalk.yellow(`  🛠     Copying ${src} to ${dest}`));
+        console.log(chalk.yellow(`  🛠  Copying ${src} to ${dest}`));
         await fse.copy(src, dest);
       })()
     )
@@ -159,7 +170,7 @@ async function copyBuildToDist() {
   await Promise.all(copyQueue);
   console.log(
     chalk.green(
-      "  ✅    Successfully copied build files to package dist directories!"
+      "  ✅ Successfully copied build files to package dist directories!"
     )
   );
 }
