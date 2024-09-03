@@ -133,7 +133,7 @@ export function createRequestListener(
 
     res.writeHead(response.status, rawHeaders);
 
-    if (response.body != null) {
+    if (response.body != null && req.method !== 'HEAD') {
       for await (let chunk of response.body) {
         res.write(chunk);
       }
