@@ -182,6 +182,32 @@ describe('createRequestListener', () => {
       listener(req, res);
     });
   });
+
+  it('truncates the response body when the request method is HEAD', async () => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async () => {
+        return new Response('Hello, world!');
+      };
+
+      let listener = createRequestListener(handler);
+      assert.ok(listener);
+
+      let req = createIncomingMessage({ method: 'HEAD' });
+      let res = createServerResponse();
+
+      let chunks: Uint8Array[] = [];
+      mock.method(res, 'write', (chunk: Uint8Array) => {
+        chunks.push(chunk);
+      });
+
+      mock.method(res, 'end', () => {
+        assert.equal(chunks.length, 0);
+        resolve();
+      });
+
+      listener(req, res);
+    });
+  });
 });
 
 function createIncomingMessage({
