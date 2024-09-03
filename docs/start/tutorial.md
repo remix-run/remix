@@ -785,7 +785,7 @@ export const action = async ({
 
 Without client side routing, if a server redirected after a `POST` request, the new page would fetch the latest data and render. As we learned before, Remix emulates this model and automatically revalidates the data on the page after the `action` call. That's why the sidebar automatically updates when we save the form. The extra revalidation code doesn't exist without client side routing, so it doesn't need to exist with client side routing in Remix either!
 
-One last thing. Without JavaScript, the [`redirect`][redirect] would be a normal redirect. However, with JavaScript it's a client side redirect, so the user doesn't lose client state like scroll positions or component state.
+One last thing. Without JavaScript, the [`redirect`][redirect] would be a normal redirect. However, with JavaScript it's a client-side redirect, so the user doesn't lose client state like scroll positions or component state.
 
 ## Redirecting new records to the edit page
 
