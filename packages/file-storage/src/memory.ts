@@ -1,1 +1,1 @@
-export { MemoryFileStorage } from "./lib/memory-file-storage.js";
+export { MemoryFileStorage } from './lib/memory-file-storage.js';

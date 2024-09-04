@@ -2,5 +2,5 @@
 // by running `wrangler types`
 
 interface Env {
-	MULTIPART_UPLOADS: R2Bucket;
+  MULTIPART_UPLOADS: R2Bucket;
 }

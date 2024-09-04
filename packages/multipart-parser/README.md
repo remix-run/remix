@@ -33,10 +33,7 @@ deno add @mjackson/multipart-parser
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It will automatically validate the request is `multipart/form-data`, extract the multipart boundary from the `Content-Type` header, parse all fields and files in the `request.body` stream, and `yield` each one to you as a `MultipartPart` object so you can save it to disk or upload it somewhere.
 
 ```typescript
-import {
-  MultipartParseError,
-  parseMultipartRequest
-} from "@mjackson/multipart-parser";
+import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
 
 async function handleMultipartRequest(request: Request): void {
   try {
@@ -53,9 +50,9 @@ async function handleMultipartRequest(request: Request): void {
     }
   } catch (error) {
     if (error instanceof MultipartParseError) {
-      console.error("Failed to parse multipart request:", error.message);
+      console.error('Failed to parse multipart request:', error.message);
     } else {
-      console.error("An unexpected error occurred:", error);
+      console.error('An unexpected error occurred:', error);
     }
   }
 }
@@ -66,11 +63,11 @@ The main module (`import from "@mjackson/multipart-parser"`) assumes you're work
 If however you're building a server for Node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
 
 ```typescript
-import * as http from "node:http";
+import * as http from 'node:http';
 
-import { MultipartParseError } from "@mjackson/multipart-parser";
+import { MultipartParseError } from '@mjackson/multipart-parser';
 // Note: Import from multipart-parser/node for node-specific APIs
-import { parseMultipartRequest } from "@mjackson/multipart-parser/node";
+import { parseMultipartRequest } from '@mjackson/multipart-parser/node';
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -83,9 +80,9 @@ const server = http.createServer(async (req, res) => {
     }
   } catch (error) {
     if (error instanceof MultipartParseError) {
-      console.error("Failed to parse multipart request:", error.message);
+      console.error('Failed to parse multipart request:', error.message);
     } else {
-      console.error("An unexpected error occurred:", error);
+      console.error('An unexpected error occurred:', error);
     }
   }
 });
@@ -98,7 +95,7 @@ server.listen(8080);
 If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a lower-level API that you can use directly:
 
 ```typescript
-import { parseMultipart } from "@mjackson/multipart-parser";
+import { parseMultipart } from '@mjackson/multipart-parser';
 
 // Get the multipart data from some API, filesystem, etc.
 let multipartMessage = new Uint8Array();
@@ -106,7 +103,7 @@ let multipartMessage = new Uint8Array();
 // let multipartMessage = new ReadableStream(...);
 // let multipartMessage = [new Uint8Array(...), new Uint8Array(...)];
 
-let boundary = "----WebKitFormBoundary56eac3x";
+let boundary = '----WebKitFormBoundary56eac3x';
 
 for await (let part of parseMultipart(multipartMessage, boundary)) {
   // Do whatever you want with the part...
@@ -116,19 +113,16 @@ for await (let part of parseMultipart(multipartMessage, boundary)) {
 If you'd prefer a callback-based API, instantiate your own `MultipartParser` and go for it:
 
 ```typescript
-import {
-  MultipartParseError,
-  MultipartParser
-} from "@mjackson/multipart-parser";
+import { MultipartParseError, MultipartParser } from '@mjackson/multipart-parser';
 
 let multipartMessage = new Uint8Array(); // or ReadableStream<Uint8Array>, etc.
-let boundary = "...";
+let boundary = '...';
 
 let parser = new MultipartParser(boundary);
 
 try {
   // parse() resolves once the parse is finished and all your callbacks are done
-  await parser.parse(multipartMessage, async part => {
+  await parser.parse(multipartMessage, async (part) => {
     // Do whatever you need...
   });
 } catch (error) {

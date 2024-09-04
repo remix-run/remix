@@ -12,7 +12,7 @@ describe('SetCookie', () => {
 
   it('initializes with a string', () => {
     let header = new SetCookie(
-      'session=abc123; Domain=example.com; Path=/; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Secure; HttpOnly'
+      'session=abc123; Domain=example.com; Path=/; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Secure; HttpOnly',
     );
     assert.equal(header.name, 'session');
     assert.equal(header.value, 'abc123');
@@ -44,7 +44,7 @@ describe('SetCookie', () => {
 
   it('initializes with another SetCookie', () => {
     let header = new SetCookie(
-      new SetCookie('session=abc123; Domain=example.com; Path=/; Secure; HttpOnly')
+      new SetCookie('session=abc123; Domain=example.com; Path=/; Secure; HttpOnly'),
     );
     assert.equal(header.name, 'session');
     assert.equal(header.value, 'abc123');
@@ -108,7 +108,7 @@ describe('SetCookie', () => {
 
     assert.equal(
       header.toString(),
-      'session=abc123; Domain=example.com; Path=/; Secure; HttpOnly; SameSite=Lax'
+      'session=abc123; Domain=example.com; Path=/; Secure; HttpOnly; SameSite=Lax',
     );
   });
 

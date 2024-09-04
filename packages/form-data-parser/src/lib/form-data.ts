@@ -1,8 +1,8 @@
 import {
   isMultipartRequest,
   parseMultipartRequest,
-  MultipartPart
-} from "@mjackson/multipart-parser";
+  MultipartPart,
+} from '@mjackson/multipart-parser';
 
 /**
  * A `File` that was uploaded as part of a `multipart/form-data` request.
@@ -18,7 +18,7 @@ export class FileUpload extends File {
   #part: MultipartPart;
 
   constructor(part: MultipartPart) {
-    super([], part.filename ?? "", { type: part.mediaType });
+    super([], part.filename ?? '', { type: part.mediaType });
     this.#part = part;
   }
 
@@ -38,15 +38,11 @@ export class FileUpload extends File {
   }
 
   get size(): number {
-    throw new Error(
-      "Cannot get the size of a file upload without buffering the entire file"
-    );
+    throw new Error('Cannot get the size of a file upload without buffering the entire file');
   }
 
   slice(): Blob {
-    throw new Error(
-      "Cannot slice a file upload without buffering the entire file"
-    );
+    throw new Error('Cannot slice a file upload without buffering the entire file');
   }
 
   stream(): ReadableStream<Uint8Array> {
@@ -81,7 +77,7 @@ async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
  */
 export async function parseFormData(
   request: Request,
-  uploadHandler: FileUploadHandler = defaultFileUploadHandler
+  uploadHandler: FileUploadHandler = defaultFileUploadHandler,
 ): Promise<FormData> {
   if (isMultipartRequest(request)) {
     let formData = new FormData();
