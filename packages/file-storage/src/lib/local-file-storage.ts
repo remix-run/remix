@@ -45,6 +45,9 @@ export class LocalFileStorage implements FileStorage {
   }
 
   async set(key: string, file: File): Promise<void> {
+    // Remove any existing file with the same key.
+    await this.remove(key);
+
     let storedFile = await storeFile(this.#dirname, file);
 
     await this.#metadata.set(key, {
