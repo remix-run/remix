@@ -4,7 +4,7 @@ import type { Files } from "./helpers/vite.js";
 import { test, viteConfig } from "./helpers/vite.js";
 
 const files: Files = async ({ port }) => ({
-  "vite.config.ts": await viteConfig.basic({ port }),
+  "vite.config.mts": await viteConfig.basic({ port }),
   "app/routes/_index.tsx": `
     import { Form, useLoaderData } from "@remix-run/react";
     import {

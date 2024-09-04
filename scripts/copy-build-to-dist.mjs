@@ -10,7 +10,6 @@ const denoNodeModulesPaths = args
   .find((arg) => arg.includes("--deno-node-modules-paths="))
   ?.split("=")[1]
   .split(",");
-console.log("denoNodeModulesPaths", denoNodeModulesPaths);
 
 const ROOT_DIR = process.cwd();
 const PACKAGES_PATH = path.join(ROOT_DIR, "packages");
