@@ -1,3 +1,17 @@
+## 3.1.0 (2024-09-04)
+
+
+### 🚀 Features
+
+- Add writeFile method to lazy-file/fs and rename getFile => openFile ([f7233a8](https://github.com/mjackson/remix-the-web/commit/f7233a8))
+
+- Accept an open file descriptor or file handle in `writeFile(fd)` ([d5087ba](https://github.com/mjackson/remix-the-web/commit/d5087ba))
+
+
+### ❤️  Thank You
+
+- Michael Jackson @mjackson
+
 ## v3.0.0 (2024-08-25)
 
 - BREAKING: Do not accept regular string argument to `LazyFile`. This more closely matches `File` behavior
