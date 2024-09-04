@@ -86,6 +86,7 @@ There are a handful of breaking changes introduced with Single Fetch - some of w
   - Add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array
   - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
     - This can be done incrementally - you should have _mostly_ accurate type inference in your current state
+- [**Default revalidation behavior changes to opt-out on GET navigations**][revalidation]: Default revalidation behavior on normal navigations changes from opt-in to opt-out and your server loaders will re-run by default
 - [**Opt-in `action` revalidation**][action-revalidation]: Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 
 ## Adding a New Route with Single Fetch
@@ -429,9 +430,27 @@ function handleBrowserRequest(
 
 #### Normal Navigation Behavior
 
-for caching purposes we call `.data` and run all loaders
-the presence of a `shoulRevalidate` will opt-into granular revalidation
-and `childLoader` will also opt into granular revalidation
+In addition to the simpler mental model and the alignment of document and data requests, another benefit of Single Fetch is simpler (and hopefully better) caching behavior. Generally, Single Fetch will make fewer HTTP requests and hopefully cache those results more frequently compared to the previous multiple-fetch behavior.
+
+To reduce cache fragmentation, Single Fetch changes the default revalidation behavior on GET navigations. Previously, Remix would not re-run loaders for reused ancestor routes unless you opted-in via `shouldRevalidate`. Now, Remix _will_ re-run those by default in the simple case for a Single Fetch request like `GET /a/b/c.data`. If you do not have any `shouldRevalidate` or `clientLoader` functions, this will be the behavior for your app.
+
+Adding either a `shouldRevalidate` or a `clientLoader` to any of the active routes will trigger granular Single Fetch calls that include a `_routes` parameter specifying the subset of routes to run.
+
+If a `clientLoader` calls `serverLoader()` internally, that will trigger a separate HTTP call for that specific route, akin to the old behavior.
+
+For example, if you are on `/a/b` and you navigate to `/a/b/c`:
+
+- When no `shouldRevalidate` or `clientLoader` functions exist: `GET /a/b/c.data`
+- If all routes have loaders but `routes/a` opts out via `shouldRevalidate`:
+  - `GET /a/b/c.data?_routes=root,routes/b,routes/c`
+- If all routes have loaders but `routes/b` has a `clientLoader`:
+  - `GET /a/b/c.data?_routes=root,routes/a,routes/c`
+  - And then if B's `clientLoader` calls `serverLoader()`:
+    - `GET /a/b/c.data?_routes=routes/b`
+
+If this new behavior is sub-optimal for your application, you should be able to opt-back into the old behavior of not-revalidating by adding a `shouldRevalidate` that returns `false` in the desired scenarios to your parent routes.
+
+Another option is to leverage a server-side cache for expensive parent loader calculations.
 
 #### Submission Revalidation Behavior
 
@@ -466,9 +485,14 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [merging-remix-and-rr]: https://remix.run/blog/merging-remix-and-react-router
 [migration-guide]: #migrating-a-route-with-single-fetch
 [breaking-changes]: #breaking-changes
-[action-revalidation]: #streaming-data-format
+[revalidation]: #normal-navigation-behavior
+[action-revalidation]: #submission-revalidation-behavior
 [start]: #enabling-single-fetch
 [type-inference-section]: #type-inference
 [compatibility-flag]: https://developers.cloudflare.com/workers/configuration/compatibility-dates
 [data-utility]: ../utils/data
 [augment]: https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
+
+```
+
+```
