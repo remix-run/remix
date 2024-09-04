@@ -21,7 +21,8 @@
     },
     "changelog": {
       "projectChangelogs": {
-        "createRelease": "github"
+        "createRelease": "github",
+        "renderer": "{workspaceRoot}/scripts/changelog-renderer.cjs"
       }
     }
   }
