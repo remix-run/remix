@@ -1,1 +1,1 @@
-export { type FileStorage } from "./lib/file-storage.js";
+export { type FileStorage } from './lib/file-storage.js';

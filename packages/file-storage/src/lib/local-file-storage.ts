@@ -1,9 +1,9 @@
-import * as fs from "node:fs";
-import * as fsp from "node:fs/promises";
-import * as path from "node:path";
-import { getFile } from "@mjackson/lazy-file/fs";
+import * as fs from 'node:fs';
+import * as fsp from 'node:fs/promises';
+import * as path from 'node:path';
+import { getFile } from '@mjackson/lazy-file/fs';
 
-import { FileStorage } from "./file-storage.js";
+import { FileStorage } from './file-storage.js';
 
 /**
  * A `FileStorage` that is backed by the local filesystem.
@@ -37,9 +37,7 @@ export class LocalFileStorage implements FileStorage {
       fs.mkdirSync(this.#dirname, { recursive: true });
     }
 
-    this.#metadata = new FileMetadataIndex(
-      path.join(directory, ".metadata.json")
-    );
+    this.#metadata = new FileMetadataIndex(path.join(directory, '.metadata.json'));
   }
 
   has(key: string): Promise<boolean> {
@@ -53,7 +51,7 @@ export class LocalFileStorage implements FileStorage {
       file: storedFile,
       name: file.name,
       type: file.type,
-      mtime: file.lastModified
+      mtime: file.lastModified,
     });
   }
 
@@ -66,7 +64,7 @@ export class LocalFileStorage implements FileStorage {
     return getFile(filename, {
       name: metadata.name,
       type: metadata.type,
-      lastModified: metadata.mtime
+      lastModified: metadata.mtime,
     });
   }
 
@@ -93,9 +91,9 @@ async function storeFile(dirname: string, file: File): Promise<string> {
 
   let handle: fsp.FileHandle;
   try {
-    handle = await fsp.open(path.join(dirname, filename), "w");
+    handle = await fsp.open(path.join(dirname, filename), 'w');
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
       // Try again with a different filename
       return storeFile(dirname, file);
     } else {
@@ -169,12 +167,6 @@ class FileMetadataIndex {
   }
 }
 
-function isNoEntityError(
-  obj: unknown
-): obj is NodeJS.ErrnoException & { code: "ENOENT" } {
-  return (
-    obj instanceof Error &&
-    "code" in obj &&
-    (obj as NodeJS.ErrnoException).code === "ENOENT"
-  );
+function isNoEntityError(obj: unknown): obj is NodeJS.ErrnoException & { code: 'ENOENT' } {
+  return obj instanceof Error && 'code' in obj && (obj as NodeJS.ErrnoException).code === 'ENOENT';
 }

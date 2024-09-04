@@ -1,4 +1,4 @@
-import { FileStorage } from "./file-storage.js";
+import { FileStorage } from './file-storage.js';
 
 /**
  * A simple, in-memory implementation of the `FileStorage` interface.

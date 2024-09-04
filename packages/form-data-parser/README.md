@@ -26,14 +26,14 @@ npm install @mjackson/form-data-parser
 ## Usage
 
 ```ts
-import { LocalFileStorage } from "@mjackson/file-storage/local";
-import { type FileUpload, parseFormData } from "@mjackson/form-data-parser";
+import { LocalFileStorage } from '@mjackson/file-storage/local';
+import { type FileUpload, parseFormData } from '@mjackson/form-data-parser';
 
-const fileStorage = new LocalFileStorage("/uploads/user-avatars");
+const fileStorage = new LocalFileStorage('/uploads/user-avatars');
 
 async function uploadHandler(fileUpload: FileUpload) {
   // Is this file upload from the <input type="file" name="user-avatar"> field?
-  if (fileUpload.fieldName === "user-avatar") {
+  if (fileUpload.fieldName === 'user-avatar') {
     let storageKey = `user-${user.id}-avatar`;
 
     // FileUpload objects are not meant to stick around for very long (they are
@@ -53,7 +53,7 @@ async function uploadHandler(fileUpload: FileUpload) {
 async function requestHandler(request: Request) {
   let formData = await parseFormData(request, uploadHandler);
 
-  let file = formData.get("user-avatar"); // File (LazyFile)
+  let file = formData.get('user-avatar'); // File (LazyFile)
   file.name; // "my-avatar.jpg" (name of the file on the user's computer)
   file.size; // number
   file.type; // "image/jpeg"

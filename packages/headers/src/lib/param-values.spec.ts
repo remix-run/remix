@@ -32,7 +32,7 @@ describe('parseParams', () => {
         ['attachment', undefined],
         ['filename', 'photo.jpg'],
         ['filename*', "UTF-8''%E7%85%A7%E7%89%87.jpg"],
-      ]
+      ],
     );
     assert.deepEqual(
       parseParams('attachment; filename="photo.jpg"; filename*="UTF-8\'\'%E7%85%A7%E7%89%87.jpg"'),
@@ -40,7 +40,7 @@ describe('parseParams', () => {
         ['attachment', undefined],
         ['filename', 'photo.jpg'],
         ['filename*', "UTF-8''%E7%85%A7%E7%89%87.jpg"],
-      ]
+      ],
     );
   });
 
@@ -58,12 +58,12 @@ describe('parseParams', () => {
     ]);
     assert.deepEqual(
       parseParams(
-        'preferences={"font":"Arial","size":"12pt"}; Expires=Fri, 31 Dec 2023 23:59:59 GMT'
+        'preferences={"font":"Arial","size":"12pt"}; Expires=Fri, 31 Dec 2023 23:59:59 GMT',
       ),
       [
         ['preferences', '{"font":"Arial","size":"12pt"}'],
         ['Expires', 'Fri, 31 Dec 2023 23:59:59 GMT'],
-      ]
+      ],
     );
     assert.deepEqual(parseParams('cart_items="[\\"item1\\",\\"item2\\"]"; Path=/cart; HttpOnly'), [
       ['cart_items', '["item1","item2"]'],
@@ -84,7 +84,7 @@ describe('parseParams', () => {
         ['HttpOnly', undefined],
         ['SameSite', 'Strict'],
         ['Max-Age', '300'],
-      ]
+      ],
     );
   });
 });

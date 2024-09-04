@@ -24,7 +24,7 @@ describe('ContentDisposition', () => {
 
   it('initializes with another ContentDisposition', () => {
     let header = new ContentDisposition(
-      new ContentDisposition('attachment; filename="example.txt"')
+      new ContentDisposition('attachment; filename="example.txt"'),
     );
     assert.equal(header.type, 'attachment');
     assert.equal(header.filename, 'example.txt');
@@ -90,7 +90,7 @@ describe('ContentDisposition', () => {
 
   it('handles attribute values with special characters', () => {
     let header = new ContentDisposition(
-      'attachment; filename="file with spaces and (parentheses).txt"'
+      'attachment; filename="file with spaces and (parentheses).txt"',
     );
     assert.equal(header.filename, 'file with spaces and (parentheses).txt');
   });
@@ -123,7 +123,7 @@ describe('ContentDisposition', () => {
 
   it('prioritizes filename* over filename when both are present', () => {
     let header = new ContentDisposition(
-      'attachment; filename="fallback.txt"; filename*=UTF-8\'\'%E6%96%87%E4%BB%B6.txt'
+      'attachment; filename="fallback.txt"; filename*=UTF-8\'\'%E6%96%87%E4%BB%B6.txt',
     );
     assert.equal(header.filename, 'fallback.txt');
     assert.equal(header.filenameSplat, "UTF-8''%E6%96%87%E4%BB%B6.txt");
@@ -139,7 +139,7 @@ describe('ContentDisposition', () => {
   describe('preferredFilename', () => {
     it('returns filename* when both filename and filename* are present', () => {
       let header = new ContentDisposition(
-        'attachment; filename="old.txt"; filename*=UTF-8\'\'new.txt'
+        'attachment; filename="old.txt"; filename*=UTF-8\'\'new.txt',
       );
       assert.equal(header.preferredFilename, 'new.txt');
     });
@@ -166,7 +166,7 @@ describe('ContentDisposition', () => {
 
     it('handles filename* with spaces and other special characters', () => {
       let header = new ContentDisposition(
-        "attachment; filename*=UTF-8''hello%20world%21%20%26%20goodbye.txt"
+        "attachment; filename*=UTF-8''hello%20world%21%20%26%20goodbye.txt",
       );
       assert.equal(header.preferredFilename, 'hello world! & goodbye.txt');
     });
