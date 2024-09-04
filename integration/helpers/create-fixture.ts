@@ -364,7 +364,7 @@ export async function createFixtureProject(
     `);
   }
   contents = contents.replace(
-    "global.INJECTED_FIXTURE_REMIX_CONFIG",
+    /(global|globalThis)\.INJECTED_FIXTURE_REMIX_CONFIG/,
     `${serializeJavaScript(init.config ?? {})}`
   );
   fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);

@@ -6,6 +6,12 @@ import type {
 } from "./routeModules";
 import { expectType } from "./typecheck";
 import { type Expect, type Equal } from "./typecheck";
+import { type SerializeFrom as SingleFetch_SerializeFrom } from "./single-fetch";
+import type { Future } from "./future";
+
+// prettier-ignore
+type SingleFetchEnabled =
+  Future extends { unstable_singleFetch: infer T extends boolean } ? T : false
 
 // prettier-ignore
 /**
@@ -17,6 +23,11 @@ import { type Expect, type Equal } from "./typecheck";
  * `type LoaderData = SerializeFrom<typeof loader>`
  */
 export type SerializeFrom<T> =
+  SingleFetchEnabled extends true ?
+    T extends (...args: any[]) => unknown ?
+      SingleFetch_SerializeFrom<T> :
+      never
+  :
   T extends (...args: any[]) => infer Output ?
     Parameters<T> extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ?
       // Client data functions may not serialize
@@ -27,7 +38,6 @@ export type SerializeFrom<T> =
   :
   // Back compat: manually defined data type, not inferred from loader nor action
   Jsonify<Awaited<T>>
-;
 
 // note: cannot be inlined as logic requires union distribution
 // prettier-ignore

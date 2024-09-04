@@ -145,145 +145,122 @@ Without Single Fetch, any plain Javascript object returned from a `loader` or `a
 
 With Single Fetch, naked objects will be streamed directly, so the built-in type inference is no longer accurate once you have opted-into Single Fetch. For example, they would assume that a `Date` would be serialized to a string on the client 😕.
 
-In order to ensure you get the proper types when using Single Fetch, we've included a set of type overrides that you can include in your `tsconfig.json`'s `compilerOptions.types` array which aligns the types with the Single Fetch behavior:
+#### Enable Single Fetch types
 
-```json
-{
-  "compilerOptions": {
-    //...
-    "types": [
-      // ...
-      "@remix-run/react/future/single-fetch.d.ts"
-    ]
+To switch over to Single Fetch types, you should [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`.
+You can do this in any file covered by your `tsconfig.json` > `include`.
+We recommend you do this in your `vite.config.ts` to keep it colocated with the `future.unstable_singleFetch` future flag in the Remix plugin:
+
+```ts
+declare module "@remix-run/server-runtime" {
+  interface Future {
+    unstable_singleFetch: true;
   }
 }
 ```
 
-🚨 Make sure the single-fetch types come after any other Remix packages in `types` so that they override those existing types.
-
-#### Loader/Action Definition Utilities
-
-To enhance type-safety when defining loaders and actions with Single Fetch, you can use the new `unstable_defineLoader` and `unstable_defineAction` utilities:
+Now `useLoaderData`, `useActionData`, and any other utilities that use a `typeof loader` generic should be using Single Fetch types:
 
 ```ts
-import { unstable_defineLoader as defineLoader } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
-export const loader = defineLoader(({ request }) => {
-  //                                  ^? Request
-});
+export function loader() {
+  return {
+    planet: "world",
+    date: new Date(),
+  };
+}
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  //    ^? { planet: string, date: Date }
+}
 ```
 
-Not only does this give you types for arguments (and deprecates `LoaderFunctionArgs`), but it also ensures you are returning single-fetch compatible types:
+#### Functions and class instances
+
+In general, functions cannot be reliably sent over the network, so they get serialized as `undefined`:
 
 ```ts
-export const loader = defineLoader(() => {
-  return { hello: "world", badData: () => 1 };
-  //                       ^^^^^^^ Type error: `badData` is not serializable
-});
+import { useLoaderData } from "@remix-run/react";
 
-export const action = defineAction(() => {
-  return { hello: "world", badData: new CustomType() };
-  //                       ^^^^^^^ Type error: `badData` is not serializable
-});
+export function loader() {
+  return {
+    planet: "world",
+    date: new Date(),
+    notSoRandom: () => 7,
+  };
+}
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  //    ^? { planet: string, date: Date, notSoRandom: undefined }
+}
 ```
 
-Single-fetch supports the following return types:
+Methods are also not serializable, so class instances get slimmed down to just their serializable properties:
 
 ```ts
-type Serializable =
-  | undefined
-  | null
-  | boolean
-  | string
-  | symbol
-  | number
-  | bigint
-  | Date
-  | URL
-  | RegExp
-  | Error
-  | Array<Serializable>
-  | { [key: PropertyKey]: Serializable } // objects with serializable values
-  | Map<Serializable, Serializable>
-  | Set<Serializable>
-  | Promise<Serializable>;
-```
+import { useLoaderData } from "@remix-run/react";
 
-There are also client-side equivalents un `defineClientLoader`/`defineClientAction` that don't have the same return value restrictions because data returned from `clientLoader`/`clientAction` does not need to be serialized over the wire:
+class Dog {
+  name: string;
+  age: number;
 
-```ts
-import { unstable_defineLoader as defineLoader } from "@remix-run/node";
-import { unstable_defineClientLoader as defineClientLoader } from "@remix-run/react";
-
-export const loader = defineLoader(() => {
-  return { msg: "Hello!", date: new Date() };
-});
-
-export const clientLoader = defineClientLoader(
-  async ({ serverLoader }) => {
-    const data = await serverLoader<typeof loader>();
-    //    ^? { msg: string, date: Date }
-    return {
-      ...data,
-      client: "World!",
-    };
+  constructor(name: string, age: number) {
+    this.name = name;
+    this.age = age;
   }
-);
+
+  bark() {
+    console.log("woof");
+  }
+}
+
+export function loader() {
+  return {
+    planet: "world",
+    date: new Date(),
+    spot: new Dog("Spot", 3),
+  };
+}
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  //    ^? { planet: string, date: Date, spot: { name: string, age: number, bark: undefined } }
+}
+```
+
+#### `clientLoader` and `clientAction`
+
+<docs-warning>Make sure to include types for the `clientLoader` args and `clientAction` args as that is how our types detect client data functions.</docs-warning>
+
+Data from client-side loaders and actions are never serialized so types for those are preserved:
+
+```ts
+import {
+  useLoaderData,
+  type ClientLoaderFunctionArgs,
+} from "@remix-run/react";
+
+class Dog {
+  /* ... */
+}
+
+// Make sure to annotate the types for the args! 👇
+export function clientLoader(_: ClientLoaderFunctionArgs) {
+  return {
+    planet: "world",
+    date: new Date(),
+    notSoRandom: () => 7,
+    spot: new Dog("Spot", 3),
+  };
+}
 
 export default function Component() {
   const data = useLoaderData<typeof clientLoader>();
-  //    ^? { msg: string, date: Date, client: string }
+  //    ^? { planet: string, date: Date, notSoRandom: () => number, spot: Dog }
 }
-```
-
-<docs-info>These utilities are primarily for type inference on `useLoaderData` and its equivalents. If you have a resource route that returns a `Response` and is not consumed by Remix APIs (such as `useFetcher`), then you can just stick with your normal `loader`/`action` definitions. Converting those routes to use `defineLoader`/`defineAction` would cause type errors because `turbo-stream` cannot serialize a `Response` instance.</docs-info>
-
-#### `useLoaderData`, `useActionData`, `useRouteLoaderData`, `useFetcher`
-
-These methods do not require any code changes on your part - adding the Single Fetch types will cause their generics to deserialize correctly:
-
-```ts
-export const loader = defineLoader(async () => {
-  const data = await fetchSomeData();
-  return {
-    message: data.message, // <- string
-    date: data.date, // <- Date
-  };
-});
-
-export default function Component() {
-  // ❌ Before Single Fetch, types were serialized via JSON.stringify
-  const data = useLoaderData<typeof loader>();
-  //    ^? { message: string, date: string }
-
-  // ✅ With Single Fetch, types are serialized via turbo-stream
-  const data = useLoaderData<typeof loader>();
-  //    ^? { message: string, date: Date }
-}
-```
-
-#### `useMatches`
-
-`useMatches` requires a manual cast to specify the loader type in order to get proper type inference on a given `match.data`. When using Single Fetch, you will need to replace the `UIMatch` type with `UIMatch_SingleFetch`:
-
-```diff
-  let matches = useMatches();
-- let rootMatch = matches[0] as UIMatch<typeof loader>;
-+ let rootMatch = matches[0] as UIMatch_SingleFetch<typeof loader>;
-```
-
-#### `meta` Function
-
-`meta` functions also require a generic to indicate the current and ancestor route loader types in order to properly type the `data` and `matches` parameters. When using Single Fetch, you will need to replace the `MetaArgs` type with `MetaArgs_SingleFetch`:
-
-```diff
-  export function meta({
-    data,
-    matches,
-- }: MetaArgs<typeof loader, { root: typeof rootLoader }>) {
-+ }: MetaArgs_SingleFetch<typeof loader, { root: typeof rootLoader }>) {
-    // ...
-  }
 ```
 
 ### Headers
@@ -494,3 +471,4 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [type-inference-section]: #type-inference
 [compatibility-flag]: https://developers.cloudflare.com/workers/configuration/compatibility-dates
 [data-utility]: ../utils/data
+[augment]: https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
