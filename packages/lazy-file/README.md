@@ -73,7 +73,7 @@ The `lazy-file/fs` export provides functions for reading from and writing to the
 import { openFile, writeFile } from '@mjackson/lazy-file/fs';
 
 // No data is read at this point, it's just a reference to a
-// file on the local filesystem.
+// file on the local filesystem
 let file = openFile('./path/to/file.json');
 
 // Data is read when you call file.text() (or any of the
@@ -81,13 +81,18 @@ let file = openFile('./path/to/file.json');
 let json = JSON.parse(await file.text());
 
 // Write the file's contents back to the filesystem at a
-// different path.
+// different path
 await writeFile('./path/to/other-file.json', file);
+
+// Or write to an open file handle/descriptor
+import * as fsp from 'node:fs/promises';
+let handle = await fsp.open('./path/to/other-file.json');
+await writeFile(handle, file);
 
 let imageFile = openFile('./path/to/image.jpg');
 
 // Get a LazyBlob that omits the first 100 bytes of the file.
-// This could be useful for serving HTTP Range requests.
+// This could be useful e.g. when serving HTTP Range requests
 let blob = imageFile.slice(100);
 ```
 
