@@ -40,6 +40,16 @@ deno task dev
 
 This starts your app in development mode, rebuilding assets on file changes.
 
+## Typegen
+
+Generate types to use Deno APIs in server-only Remix code within `app/`:
+
+```sh
+deno task typegen
+```
+
+You should rerun typegen whenever you upgrade Deno version.
+
 ## Production
 
 First, build your app for production:
@@ -55,7 +65,7 @@ deno task start
 ```
 
 The server used for production is located in `server.production.ts`. It is
-served by `deno serve` for maximum performance.
+served by `deno serve --parallel` for maximum performance.
 
 ## Deployment
 
@@ -100,7 +110,7 @@ GitHub secret.
    [`deployctl`](https://github.com/denoland/deployctl):
 
 ```sh
-deno install -Arf jsr:@deno/deployctl
+deno install -Arfg jsr:@deno/deployctl
 ```
 
 6. If you have previously installed the Deno Deploy CLI, you should update it to

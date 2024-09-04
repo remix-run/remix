@@ -1,4 +1,4 @@
-import { useLoaderData, type MetaFunction } from "@remix-run/react";
+import { type MetaFunction, useLoaderData } from "@remix-run/react";
 
 export const loader = () => {
   return { denoVersion: Deno.version };

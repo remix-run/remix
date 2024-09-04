@@ -926,7 +926,7 @@ describe("create-remix CLI", () => {
 
     expect(execa).toHaveBeenCalledWith(
       "deno",
-      expect.arrayContaining(["install", "--allow-scripts", "--no-lock"]),
+      expect.arrayContaining(["install", "--no-lock"]),
       expect.objectContaining({ env: { DENO_FUTURE: "1" } })
     );
     delete process.versions.deno;

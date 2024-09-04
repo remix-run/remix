@@ -672,10 +672,7 @@ async function installDependencies({
   try {
     await execa(
       pkgManager,
-      [
-        "install",
-        ...(pkgManager === "deno" ? ["--allow-scripts", "--no-lock"] : []),
-      ],
+      ["install", ...(pkgManager === "deno" ? ["--no-lock"] : [])],
       {
         cwd,
         env: pkgManager === "deno" ? { DENO_FUTURE: "1" } : undefined,
