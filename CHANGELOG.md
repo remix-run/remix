@@ -226,7 +226,7 @@ Date: 2024-09-06
 
 #### Future Flag for Automatic Dependency Optimization (unstable)
 
-You can now opt-in to automatic dependency optimization during development by using the `future.unstable_optimizeDeps` future flag. For details, check out the docs at [`Guides` > `Dependency optimization`](https://remix.run/docs/en/main/guides/dependency-optimization). For users who were previously working around this limitation, you no longer need to explicitly add routes to Vite's `optimizeDeps.entries` nor do you need to disable the `remix-dot-server` plugin.
+You can now opt-in to automatic dependency optimization during development by using the `future.unstable_optimizeDeps` future flag. For details, check out the docs at [Guides > Dependency optimization](https://remix.run/docs/en/main/guides/dependency-optimization). For users who were previously working around this limitation, you no longer need to explicitly add routes to Vite's `optimizeDeps.entries` nor do you need to disable the `remix-dot-server` plugin.
 
 #### Improved Single Fetch Type Safety (unstable)
 
@@ -258,11 +258,11 @@ export default defineConfig({
 });
 ```
 
-For more information, see [Guides > Single Fetch](https://remix.run/docs/en/dev/guides/single-fetch) in our docs.
+For more information, see [Guides > Single Fetch](https://remix.run/docs/guides/single-fetch) in our docs.
 
 #### Updates to Single Fetch Revalidation Behavior (unstable)
 
-With Single Fetch, re-used routes will now revalidate by default on GET navigations. Please refer to [Guides > Single Fetch](https://remix.run/docs/en/dev/guides/single-fetch) in the docs for more details, but this is aimed at improving caching of Single Fetch calls in the simple case while still allowing users to opt-into the previous behavior for more advanced use cases.
+With Single Fetch, re-used routes will now revalidate by default on GET navigations. This is aimed at improving caching of Single Fetch calls in the simple case while still allowing users to opt-into the previous behavior for more advanced use cases.
 
 With this new behavior, requests do not need special query params for granular route revalidations out of the box - i.e., `GET /a/b/c.data`
 
@@ -274,6 +274,8 @@ There are two conditions that will trigger granular revalidation:
 - When one or more routes are excluded from the Single Fetch call, the remaining routes that have loaders are included as query params:
   - For example - when navigating to `/a/b/c`, if A was excluded, and the `root` route and `routes/b` had a `loader` but `routes/c` did not, the Single Fetch request would be `GET /a/b/c.data?_routes=root,routes/b`
 
+For more information, see [Guides > Single Fetch](https://remix.run/docs/guides/single-fetch) in our docs.
+
 ### Minor Changes
 
 - `@remix-run/dev` - New `future.unstable_optimizeDeps` flag for automatic dependency optimization ([#9921](https://github.com/remix-run/remix/pull/9921))
@@ -284,9 +286,9 @@ There are two conditions that will trigger granular revalidation:
 - `@remix-run/dev` - Fix `dest already exists` build errors by only moving SSR assets to the client build directory when they're not already present on disk ([#9901](https://github.com/remix-run/remix/pull/9901))
 - `@remix-run/react` - Clarify wording in default `HydrateFallback` console warning ([#9899](https://github.com/remix-run/remix/pull/9899))
 - `@remix-run/react` - Remove hydration URL check that was originally added for React 17 hydration issues and we no longer support React 17 ([#9890](https://github.com/remix-run/remix/pull/9890))
-  - Reverts the logic originally added in Remix `v1.18.0` via https://github.com/remix-run/remix/pull/6409
-  - This was added to resolve an issue that could arise when doing quick back/forward history navigations while JS was loading which would cause a mismatch between the server matches and client matches: https://github.com/remix-run/remix/issues/1757
-  - This specific hydration issue would then cause this React v17 only looping issue: https://github.com/remix-run/remix/issues/1678
+  - Reverts the logic originally added in Remix `v1.18.0` via [#6409](https://github.com/remix-run/remix/pull/6409)
+  - This was added to resolve an issue that could arise when doing quick back/forward history navigations while JS was loading which would cause a mismatch between the server matches and client matches: [#1757](https://github.com/remix-run/remix/issues/1757)
+  - This specific hydration issue would then cause this React v17 only looping issue: [#1678](https://github.com/remix-run/remix/issues/1678)
   - The URL comparison that we added in `1.18.0` turned out to be subject to false positives of it's own which could also put the user in looping scenarios
   - Remix v2 upgraded it's minimal React version to v18 which eliminated the v17 hydration error loop
   - React v18 handles this hydration error like any other error and does not result in a loop
