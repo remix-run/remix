@@ -1,6 +1,7 @@
 import {
   isMultipartRequest,
   parseMultipartRequest,
+  MultipartParserOptions,
   MultipartPart,
 } from '@mjackson/multipart-parser';
 
@@ -85,11 +86,12 @@ async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
 export async function parseFormData(
   request: Request,
   uploadHandler: FileUploadHandler = defaultFileUploadHandler,
+  parserOptions?: MultipartParserOptions,
 ): Promise<FormData> {
   if (isMultipartRequest(request)) {
     let formData = new FormData();
 
-    for await (let part of parseMultipartRequest(request)) {
+    for await (let part of parseMultipartRequest(request, parserOptions)) {
       if (!part.name) continue;
 
       if (part.isFile) {

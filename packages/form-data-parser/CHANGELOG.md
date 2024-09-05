@@ -1,3 +1,7 @@
+## HEAD
+
+- Allow passing `MultipartParserOptions` as optional 3rd arg to `parseFormData()`
+
 ## v0.3.0 (2024-09-05)
 
 - Make `FileUpload` implement the `File` interface instead of extending `File` (fixes https://github.com/mjackson/form-data-parser/issues/4)
