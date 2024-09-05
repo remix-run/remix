@@ -1,5 +1,45 @@
 # `@remix-run/cloudflare`
 
+## 2.12.0-pre.0
+
+### Patch Changes
+
+- Single Fetch: Improved typesafety ([#9893](https://github.com/remix-run/remix/pull/9893))
+
+  If you were already using single-fetch types:
+
+  - Remove `"@remix-run/react/future/single-fetch.d.ts"` override from `tsconfig.json` > `compilerOptions` > `types`
+  - Remove `defineLoader`, `defineAction`, `defineClientLoader`, `defineClientAction` helpers from your route modules
+  - Replace `UIMatch_SingleFetch` type helper with `UIMatch`
+  - Replace `MetaArgs_SingleFetch` type helper with `MetaArgs`
+
+  Then you are ready for the new typesafety setup:
+
+  ```ts
+  // vite.config.ts
+
+  declare module "@remix-run/server-runtime" {
+    interface Future {
+      unstable_singleFetch: true; // 👈 enable _types_ for single-fetch
+    }
+  }
+
+  export default defineConfig({
+    plugins: [
+      remix({
+        future: {
+          unstable_singleFetch: true, // 👈 enable single-fetch
+        },
+      }),
+    ],
+  });
+  ```
+
+  For more information, see [Guides > Single Fetch](https://remix.run/docs/en/dev/guides/single-fetch) in our docs.
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.12.0-pre.0`
+
 ## 2.11.2
 
 ### Patch Changes
