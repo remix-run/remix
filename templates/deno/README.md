@@ -83,13 +83,13 @@ deploying to [Deno Deploy](https://deno.com/deploy).
 
 2. [Create a new Deno Deploy project](https://dash.deno.com/new) for this app.
 
-3. Replace `<your deno deploy project>` in the `deploy` script in `package.json`
+3. Replace `<your deno deploy project>` in the `deploy` script in `deno.jsonc`
    with your Deno Deploy project name:
 
-```json filename=package.json
+```json filename=deno.jsonc
 {
-  "scripts": {
-    "deploy": "deployctl deploy --project=<your deno deploy project> --include=build,server-prod.ts ./server.prod.ts"
+  "tasks": {
+    "deploy": "deployctl deploy --prod --include=deno.jsonc,deno.lock,build,server.production.ts --project=<your deno deploy project> ./server.production.ts"
   }
 }
 ```
