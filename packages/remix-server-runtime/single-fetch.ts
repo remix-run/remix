@@ -430,7 +430,7 @@ export type SerializeFrom<T extends Fn> =
     ReturnType<T> extends TypedResponse<infer U> ? Jsonify<U> :
     Awaited<ReturnType<T>>
   :
-  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? Jsonify<T> :
+  Awaited<ReturnType<T>> extends TypedResponse<infer U> ? Jsonify<U> :
   Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? Serialize<D> :
   Serialize<Awaited<ReturnType<T>>>;
 
@@ -469,6 +469,8 @@ type Recursive = {
   b: Date;
   recursive?: Recursive;
 };
+
+type Pretty<T> = { [K in keyof T]: T[K] } & {};
 
 // prettier-ignore
 // eslint-disable-next-line
@@ -597,4 +599,6 @@ type _tests = [
     function: () => void,
     class: TestClass
   }>>,
+
+  Expect<Equal<Pretty<SerializeFrom<ServerLoader<TypedResponse<{a: string, b: Date}>>>>, { a: string, b: string }>>
 ]
