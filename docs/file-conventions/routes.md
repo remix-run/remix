@@ -246,7 +246,7 @@ Sometimes you want to share a layout with a group of routes without adding any p
 | `/`                        | `app/routes/_index.tsx`         | `app/root.tsx`            |
 | `/login`                   | `app/routes/_auth.login.tsx`    | `app/routes/_auth.tsx`    |
 | `/register`                | `app/routes/_auth.register.tsx` | `app/routes/_auth.tsx`    |
-| `/concerts`                | `app/routes/concerts.tsx`       | `app/routes/concerts.tsx` |
+| `/concerts`                | `app/routes/concerts.tsx`       | `app/root.tsx`            |
 | `/concerts/salt-lake-city` | `app/routes/concerts.$city.tsx` | `app/routes/concerts.tsx` |
 
 Think of the `_leading` underscore as a blanket you're pulling over the filename, hiding the filename from the URL.
