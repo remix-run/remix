@@ -1,5 +1,5 @@
 ---
-"@remix-run/dev": patch
+"@remix-run/dev": minor
 ---
 
 (unstable) Automatic dependency optimization
