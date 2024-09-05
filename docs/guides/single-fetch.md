@@ -492,7 +492,3 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [compatibility-flag]: https://developers.cloudflare.com/workers/configuration/compatibility-dates
 [data-utility]: ../utils/data
 [augment]: https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
-
-```
-
-```
