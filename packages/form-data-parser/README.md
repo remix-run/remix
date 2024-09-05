@@ -39,7 +39,7 @@ async function uploadHandler(fileUpload: FileUpload) {
     // FileUpload objects are not meant to stick around for very long (they are
     // streaming data from the request.body!) so we should store them as soon as
     // possible.
-    await fileStorage.put(storageKey, fileUpload);
+    await fileStorage.set(storageKey, fileUpload);
 
     // Return a File for the FormData object. This is a LazyFile that knows how
     // to access the file's content if needed (using e.g. file.stream()) but
@@ -53,7 +53,7 @@ async function uploadHandler(fileUpload: FileUpload) {
 async function requestHandler(request: Request) {
   let formData = await parseFormData(request, uploadHandler);
 
-  let file = formData.get('user-avatar'); // File (LazyFile)
+  let file = formData.get('user-avatar'); // File
   file.name; // "my-avatar.jpg" (name of the file on the user's computer)
   file.size; // number
   file.type; // "image/jpeg"
@@ -63,7 +63,7 @@ async function requestHandler(request: Request) {
 ## Related Packages
 
 - [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
-- [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) - A simple interface for storing `FileUpload` objects you get from the parser
+- [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
 
 ## License
 
