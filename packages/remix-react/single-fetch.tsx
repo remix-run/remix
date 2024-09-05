@@ -125,12 +125,17 @@ export function getSingleFetchDataStrategy(
   getRouter: () => RemixRouter
 ): DataStrategyFunction {
   return async ({ request, matches, fetcherKey }) => {
+    // Actions are simple and behave the same for navigations and fetchers
     if (request.method !== "GET") {
       return singleFetchActionStrategy(request, matches);
     }
+
+    // Fetcher loads are singular calls to one loader
     if (fetcherKey) {
       return singleFetchLoaderFetcherStrategy(request, matches);
     }
+
+    // Navigational loads are more complex...
     return singleFetchLoaderNavigationStrategy(
       manifest,
       routeModules,
@@ -217,26 +222,25 @@ async function singleFetchLoaderNavigationStrategy(
       m.resolve(async (handler) => {
         routeDfds[i].resolve();
 
-        // On initial load we respect `shouldLoad` for `clientLoader.hydrate` instances
-        if (!router.state.initialized && !m.shouldLoad) {
-          return;
-        }
+        if (!m.shouldLoad) {
+          // If we're not yet initialized and this is the initial load, respect
+          // `shouldLoad` because we're only dealing with `clientLoader.hydrate`
+          // routes which will fall into the `clientLoader` section below.
+          if (!router.state.initialized) {
+            return;
+          }
 
-        // Opt out if:
-        //   We currently have data
-        //   and we were told not to load,
-        //   and we have a loader,
-        //   and a shouldRevalidate function
-        // This implies that the user opted out via shouldRevalidate()
-        if (
-          router.state.initialized &&
-          m.route.id in router.state.loaderData &&
-          !m.shouldLoad &&
-          manifest.routes[m.route.id].hasLoader &&
-          routeModules[m.route.id]?.shouldRevalidate
-        ) {
-          foundOptOutRoute = true;
-          return;
+          // Otherwise, we opt out if we currently have data, a `loader`, and a
+          // `shouldRevalidate` function.  This implies that the user opted out
+          // via `shouldRevalidate`
+          if (
+            m.route.id in router.state.loaderData &&
+            manifest.routes[m.route.id].hasLoader &&
+            routeModules[m.route.id]?.shouldRevalidate
+          ) {
+            foundOptOutRoute = true;
+            return;
+          }
         }
 
         // When a route has a client loader, it opts out of the singular call and
@@ -268,9 +272,10 @@ async function singleFetchLoaderNavigationStrategy(
           return;
         }
 
+        // Otherwise, we want to load this route on the server and can lump this
+        // it in with the others on a singular promise
         routesParams.add(m.route.id);
 
-        // Otherwise, we can lump this route with the others on a singular promise
         await handler(async () => {
           try {
             let data = await singleFetchDfd.promise;
@@ -292,28 +297,26 @@ async function singleFetchLoaderNavigationStrategy(
   // Wait for all routes to resolve above before we make the HTTP call
   await routesLoadedPromise;
 
-  if (!router.state.initialized) {
-    // Don't make any single fetch server calls on initial hydration - only
-    // clientLoaders can pass through via `clientLoader.hydrate`
-    singleFetchDfd.resolve({});
-  } else if (routesParams.size === 0) {
-    // If no routes need to run on the server, then there's nothing to fetch
+  // Don't make any single fetch server calls:
+  // - On initial hydration - only clientLoaders can pass through via `clientLoader.hydrate`
+  // - If there are no routes to fetch from the server
+  if (!router.state.initialized || routesParams.size === 0) {
     singleFetchDfd.resolve({});
   } else {
-    if (routesParams.size > 0 && foundOptOutRoute) {
+    try {
       // When one or more routes have opted out, we add a _routes param to
       // limit the loaders to those that have a server loader and did not
       // opt out
-      url.searchParams.set(
-        "_routes",
-        matches
-          .filter((m) => routesParams.has(m.route.id))
-          .map((m) => m.route.id)
-          .join(",")
-      );
-    }
+      if (foundOptOutRoute && routesParams.size > 0) {
+        url.searchParams.set(
+          "_routes",
+          matches
+            .filter((m) => routesParams.has(m.route.id))
+            .map((m) => m.route.id)
+            .join(",")
+        );
+      }
 
-    try {
       let data = await fetchAndDecode(url, init);
       singleFetchDfd.resolve(data.data as SingleFetchResults);
     } catch (e) {
@@ -331,13 +334,13 @@ async function singleFetchLoaderFetcherStrategy(
   request: Request,
   matches: DataStrategyFunctionArgs["matches"]
 ) {
-  let url = stripIndexParam(singleFetchUrl(request.url));
-  let init = await createRequestInit(request);
   let fetcherMatch = matches.find((m) => m.shouldLoad);
   invariant(fetcherMatch, "No fetcher match found");
-  let result = await fetcherMatch.resolve(async (handler) =>
-    fetchSingleLoader(handler, url, init, fetcherMatch!.route.id)
-  );
+  let result = await fetcherMatch.resolve(async (handler) => {
+    let url = stripIndexParam(singleFetchUrl(request.url));
+    let init = await createRequestInit(request);
+    return fetchSingleLoader(handler, url, init, fetcherMatch!.route.id);
+  });
   return { [fetcherMatch.route.id]: result };
 }
 
