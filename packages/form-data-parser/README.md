@@ -62,8 +62,8 @@ async function requestHandler(request: Request) {
 
 ## Related Packages
 
-- [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
 - [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
+- [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
 
 ## License
 
