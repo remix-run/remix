@@ -29,9 +29,9 @@ npm install @mjackson/node-fetch-server
 
 ```ts
 import * as http from 'node:http';
-import { type FetchHandler, createRequestListener } from '@mjackson/node-fetch-server';
+import { createRequestListener } from '@mjackson/node-fetch-server';
 
-let handler: FetchHandler = (request) => {
+let handler = (request: Request) => {
   return new Response('Hello, world!');
 };
 
@@ -45,9 +45,9 @@ By default `request.url` is derived from the value of the `Host` HTTP header and
 ```ts
 import * as assert from 'node:assert/strict';
 import * as http from 'node:http';
-import { type FetchHandler, createRequestListener } from '@mjackson/node-fetch-server';
+import { createRequestListener } from '@mjackson/node-fetch-server';
 
-let handler: FetchHandler = (request) => {
+let handler = (request: Request) => {
   // This is now true
   assert.equal(new URL(request.url).host, process.env.HOST);
   return new Response('Hello, world!');
