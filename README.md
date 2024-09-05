@@ -26,6 +26,7 @@ We currently publish the following packages:
 - [headers](packages/headers): A toolkit for working with HTTP headers in JavaScript
 - [lazy-file](packages/lazy-file): Lazy, streaming `Blob`s and `File`s for JavaScript
 - [multipart-parser](packages/multipart-parser): Fast, efficient parser for multipart streams
+- [node-fetch-server](packages/node-fetch-server): Build HTTP servers for Node.js using the web fetch API
 
 ## License
 
