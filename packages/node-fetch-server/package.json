@@ -1,6 +1,6 @@
 {
   "name": "@mjackson/node-fetch-server",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Build servers for Node.js using the web fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -8,6 +8,7 @@
     "url": "git+https://github.com/mjackson/remix-the-web.git",
     "directory": "packages/node-fetch-server"
   },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server#readme",
   "license": "MIT",
   "files": [
     "dist",
