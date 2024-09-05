@@ -25,5 +25,16 @@
     "@remix-run/server-runtime": "2.11.2",
     "@remix-run/testing": "2.11.2"
   },
-  "changesets": []
+  "changesets": [
+    "bright-rabbits-attend",
+    "dirty-adults-sparkle",
+    "flat-wasps-heal",
+    "friendly-walls-brake",
+    "hot-dogs-applaud",
+    "khaki-ads-buy",
+    "moody-cups-give",
+    "popular-meals-hide",
+    "tiny-crabs-deliver",
+    "two-chicken-provide"
+  ]
 }
