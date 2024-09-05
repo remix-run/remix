@@ -9,6 +9,7 @@
     "url": "git+https://github.com/mjackson/remix-the-web.git",
     "directory": "packages/headers"
   },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/headers#readme",
   "files": [
     "dist",
     "LICENSE",

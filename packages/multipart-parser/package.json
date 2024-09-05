@@ -8,6 +8,7 @@
     "url": "git+https://github.com/mjackson/remix-the-web.git",
     "directory": "packages/multipart-parser"
   },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser#readme",
   "license": "MIT",
   "files": [
     "dist",

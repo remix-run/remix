@@ -8,6 +8,7 @@
     "url": "git+https://github.com/mjackson/remix-the-web.git",
     "directory": "packages/file-storage"
   },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage#readme",
   "license": "MIT",
   "files": [
     "dist",

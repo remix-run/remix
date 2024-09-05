@@ -8,6 +8,7 @@
     "url": "git+https://github.com/mjackson/remix-the-web.git",
     "directory": "packages/lazy-file"
   },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/lazy-file#readme",
   "license": "MIT",
   "files": [
     "dist",
