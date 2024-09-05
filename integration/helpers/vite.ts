@@ -278,7 +278,7 @@ export const customDev = createDev({ args: ["./server.mjs"] });
 // Used for testing errors thrown on build when we don't want to start and
 // wait for the server
 export const viteDevCmd = ({ cwd }: { cwd: string }) =>
-  node([remixBin, "vite:dev"], { cwd });
+  nodeSync([remixBin, "vite:dev"], { cwd });
 
 declare module "@playwright/test" {
   interface Page {
