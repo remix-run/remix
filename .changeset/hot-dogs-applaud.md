@@ -2,7 +2,7 @@
 "@remix-run/dev": minor
 ---
 
-(unstable) Automatic dependency optimization
+New `future.unstable_optimizeDeps` flag for automatic dependency optimization
 
 You can now opt-in to automatic dependency optimization during development by using the `future.unstable_optimizeDeps` future flag.
 For details, check out the docs at [`Guides` > `Dependency optimization`](https://remix.run/docs/en/main/guides/dependency-optimization).
