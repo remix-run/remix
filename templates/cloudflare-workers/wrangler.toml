@@ -10,3 +10,4 @@ bucket = "./build/client"
 
 [build]
 command = "npm run build"
+watch_dir = "./src"

@@ -5,7 +5,7 @@
   "scripts": {
     "build": "remix vite:build",
     "deploy": "wrangler deploy",
-    "dev": "remix vite:dev",
+    "dev": "wrangler dev",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "wrangler dev",
     "typegen": "wrangler types",
