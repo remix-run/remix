@@ -212,3 +212,4 @@ The above configuration parses the markdown to insert [highlight.js][highlightjs
 [mdx-bundler]: https://github.com/kentcdodds/mdx-bundler
 [classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite
 [surfacing-styles]: ../styling#surfacing-styles
+[highlightjs]: https://highlightjs.org/
