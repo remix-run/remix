@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it, mock } from 'node:test';
 
-import { type FileUploadHandler, parseFormData } from './form-data.js';
+import { FileUploadHandler, parseFormData } from './form-data.js';
 
 describe('parseFormData', () => {
   it('parses a application/x-www-form-urlencoded request', async () => {
