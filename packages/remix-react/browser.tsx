@@ -305,7 +305,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       unstable_dataStrategy: window.__remixContext.future.unstable_singleFetch
         ? getSingleFetchDataStrategy(
             window.__remixManifest,
-            window.__remixRouteModules
+            window.__remixRouteModules,
+            () => router
           )
         : undefined,
       unstable_patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(
