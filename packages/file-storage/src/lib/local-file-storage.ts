@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
-import { getFile } from '@mjackson/lazy-file/fs';
+import { openFile, writeFile } from '@mjackson/lazy-file/fs';
 
 import { FileStorage } from './file-storage.js';
 
@@ -64,7 +64,7 @@ export class LocalFileStorage implements FileStorage {
 
     let filename = path.join(this.#dirname, metadata.file);
 
-    return getFile(filename, {
+    return openFile(filename, {
       name: metadata.name,
       type: metadata.type,
       lastModified: metadata.mtime,
@@ -104,13 +104,7 @@ async function storeFile(dirname: string, file: File): Promise<string> {
     }
   }
 
-  try {
-    for await (let chunk of file.stream()) {
-      await handle.write(chunk);
-    }
-  } finally {
-    await handle.close();
-  }
+  await writeFile(handle, file);
 
   return filename;
 }
@@ -135,7 +129,7 @@ class FileMetadataIndex {
 
   async #getAll(): Promise<Record<string, FileMetadata>> {
     try {
-      return JSON.parse(await getFile(this.#path).text());
+      return JSON.parse(await openFile(this.#path).text());
     } catch (error) {
       if (!isNoEntityError(error)) {
         throw error;

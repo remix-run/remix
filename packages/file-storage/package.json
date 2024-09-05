@@ -22,7 +22,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@mjackson/lazy-file": "^2.2.0"
+    "@mjackson/lazy-file": "^3.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.10"

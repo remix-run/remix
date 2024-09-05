@@ -33,8 +33,8 @@ importers:
   packages/file-storage:
     dependencies:
       '@mjackson/lazy-file':
-        specifier: ^2.2.0
-        version: 2.2.0
+        specifier: ^3.1.0
+        version: 3.1.0
     devDependencies:
       '@types/node':
         specifier: ^20.14.10
@@ -1029,8 +1029,8 @@ packages:
   '@mjackson/headers@0.5.1':
     resolution: {integrity: sha512-sJpFgecPT/zJvwk3GRNVWNs8EkwaJoUNU2D0VMlp+gDJs6cuSTm1q/aCZi3ZtuV6CgDEQ4l2ZjUG3A9JrQlbNA==}
 
-  '@mjackson/lazy-file@2.2.0':
-    resolution: {integrity: sha512-51M2TAL5eMZj5mh1e22/qBl4C5udViZqSBEqwiHSi1lTAixCp4YiAOV62VaTSqVp771OkmgNCPsh8/LpJ/A/Yw==}
+  '@mjackson/lazy-file@3.1.0':
+    resolution: {integrity: sha512-YdlmPLtRjQotP/It1hxVsz6tBJh63e/xD40s6eBLfgFr8tQ5zE+gJtpz+t/4vbTXv4axRulDfXG2XJtVpXmkUw==}
 
   '@mjackson/multipart-parser@0.6.2':
     resolution: {integrity: sha512-xG3mINK6gFVposxu83x3n4ueJfjWoxOl3UaBADXNjh/NL84L+Zc/kmz2mTQA9GHvHFPAMlXqPSLTocIDkmhemQ==}
@@ -3611,7 +3611,7 @@ snapshots:
 
   '@mjackson/headers@0.5.1': {}
 
-  '@mjackson/lazy-file@2.2.0':
+  '@mjackson/lazy-file@3.1.0':
     dependencies:
       mrmime: 2.0.0
 

@@ -1,3 +1,7 @@
+## HEAD
+
+- Upgrade to lazy-file@3.1.0
+
 ## v0.2.1 (2024-09-04)
 
 - Automatically clean up old files in `LocalFileStorage` when new files are stored with the same key
