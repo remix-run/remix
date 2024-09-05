@@ -209,10 +209,8 @@ pnpm run bench
 
 ## Related Packages
 
-- [`headers`](https://github.com/mjackson/remix-the-web/tree/main/packages/headers) - Used internally to parse HTTP headers and get
-  metadata (filename, content type) for each `MultipartPart`
-- [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser) - Uses `multipart-parser`
-  internally to parse multipart requests and generate `FileUpload`s for storage
+- [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser) - Uses `multipart-parser` internally to parse multipart requests and generate `FileUpload`s for storage
+- [`headers`](https://github.com/mjackson/remix-the-web/tree/main/packages/headers) - Used internally to parse HTTP headers and get metadata (filename, content type) for each `MultipartPart`
 
 ## Credits
 
