@@ -65,13 +65,13 @@ export class FileUpload implements File {
  * A function used for handling file uploads.
  */
 export interface FileUploadHandler {
-  (file: FileUpload): File | void | Promise<File | void>;
+  (file: FileUpload): void | null | File | Promise<void | null | File>;
 }
 
 async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
   // Do the slow thing and buffer the entire file in memory.
   let buffer = await file.arrayBuffer();
-  return new File([buffer], file.name, { type: file.type });
+  return new File([buffer], file.name, { type: file.type, lastModified: file.lastModified });
 }
 
 /**
@@ -94,7 +94,7 @@ export async function parseFormData(
 
       if (part.isFile) {
         let file = await uploadHandler(new FileUpload(part));
-        if (file) {
+        if (file != null) {
           formData.append(part.name, file);
         }
       } else {

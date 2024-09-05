@@ -76,4 +76,27 @@ describe('parseFormData', () => {
 
     assert.equal(fileUploadHandler.mock.calls.length, 2);
   });
+
+  it('allows returning `null` from the upload handler', async () => {
+    let request = new Request('http://localhost:8080', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
+      },
+      body: [
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        'Content-Type: text/plain',
+        '',
+        'This is an example file.',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
+      ].join('\r\n'),
+    });
+
+    let formData = await parseFormData(request, (fileUpload) => {
+      return null;
+    });
+
+    assert.equal(formData.get('file'), null);
+  });
 });
