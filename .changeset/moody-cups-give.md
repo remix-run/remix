@@ -6,7 +6,7 @@
 "@remix-run/server-runtime": patch
 ---
 
-(unstable) Improved typesafety for single-fetch
+Single Fetch: Improved typesafety
 
 If you were already using single-fetch types:
 

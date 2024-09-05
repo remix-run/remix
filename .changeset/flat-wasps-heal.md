@@ -3,7 +3,7 @@
 "@remix-run/server-runtime": patch
 ---
 
-Single Fetch - fix revalidation behavior bugs
+Single Fetch: fix revalidation behavior bugs
 
 - With Single Fetch, existing routes revalidate by default
 - This means requests do not need special query params for granular route revalidations out of the box - i.e., `GET /a/b/c.data`
