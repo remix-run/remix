@@ -8,7 +8,7 @@
 
 Single Fetch: Improved typesafety
 
-If you were already using single-fetch types:
+If you were already using previously released unstable single-fetch types:
 
 - Remove `"@remix-run/react/future/single-fetch.d.ts"` override from `tsconfig.json` > `compilerOptions` > `types`
 - Remove `defineLoader`, `defineAction`, `defineClientLoader`, `defineClientAction` helpers from your route modules
