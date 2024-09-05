@@ -5,20 +5,27 @@ import {
 } from '@mjackson/multipart-parser';
 
 /**
- * A `File` that was uploaded as part of a `multipart/form-data` request.
+ * A file that was uploaded as part of a `multipart/form-data` request.
  *
  * This object is intended to be used as an intermediary for handling file uploads. The file should
  * be saved to disk or a cloud storage service as quickly as possible to avoid buffering and
  * backpressure building up in the input stream.
  *
- * Note: Although this is a `File` object its `size` is unknown, so any attempt to access
- * `file.size` or use `file.slice()` will throw an error.
+ * Note: Although `FileUpload` implements the `File` interface, its `size` is unknown, so any
+ * attempt to access `file.size` or use `file.slice()` will throw an error.
  */
-export class FileUpload extends File {
+export class FileUpload implements File {
+  readonly name: string;
+  readonly type: string;
+  readonly lastModified: number;
+  readonly webkitRelativePath = '';
+
   #part: MultipartPart;
 
   constructor(part: MultipartPart) {
-    super([], part.filename ?? '', { type: part.mediaType });
+    this.name = part.filename ?? '';
+    this.type = part.mediaType ?? '';
+    this.lastModified = Date.now();
     this.#part = part;
   }
 
