@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.12.0-pre.1
+
+### Patch Changes
+
+- [REMOVE] cleanup tests ([#9945](https://github.com/remix-run/remix/pull/9945))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.12.0-pre.1`
+
 ## 2.12.0-pre.0
 
 ### Patch Changes
