@@ -8,6 +8,7 @@
     "url": "git+https://github.com/mjackson/remix-the-web.git",
     "directory": "packages/form-data-parser"
   },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser#readme",
   "license": "MIT",
   "files": [
     "dist",
