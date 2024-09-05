@@ -1,5 +1,5 @@
-const path = require("path");
-const { execSync } = require("child_process");
+const path = require("node:path");
+const { execSync } = require("node:child_process");
 const semver = require("semver");
 const jsonfile = require("jsonfile");
 
@@ -15,7 +15,7 @@ function getTaggedVersion() {
  * @param {string} tag
  */
 function publish(dir, tag) {
-  execSync(`npm publish --tag ${tag} ${dir}`, { stdio: "inherit" });
+  execSync(`pnpm publish ${dir} --tag ${tag}`, { stdio: "inherit" });
 }
 
 async function run() {
@@ -47,8 +47,6 @@ async function run() {
     "node", // publish node before node servers
     "architect",
     "express", // publish express before serve
-    "vercel",
-    "netlify",
     "react",
     "serve",
   ]) {

@@ -1,45 +1,6 @@
-const {
-  defaultAdapterExports,
-  defaultRuntimeExports,
-  architectSpecificExports,
-  cloudflareSpecificExports,
-  cloudflarePagesSpecificExports,
-  cloudflareWorkersSpecificExports,
-  nodeSpecificExports,
-  reactSpecificExports,
-} = require("./packageExports");
-
 // const OFF = 0;
 const WARN = 1;
 const ERROR = 2;
-
-const getReplaceRemixImportsMessage = (packageName) =>
-  `All \`remix\` exports are considered deprecated as of v1.3.3. Please use \`@remix-run/${packageName}\` instead. Run \`npx @remix-run/dev@latest codemod replace-remix-magic-imports\` to automatically migrate your code.`;
-
-const replaceRemixImportsOptions = [
-  {
-    packageExports: defaultAdapterExports,
-    packageName:
-      "{architect|cloudflare-pages|cloudflare-workers|express|netlify|vercel}",
-  },
-  { packageExports: defaultRuntimeExports, packageName: "{cloudflare|node}" },
-  { packageExports: architectSpecificExports, packageName: "architect" },
-  { packageExports: cloudflareSpecificExports, packageName: "cloudflare" },
-  {
-    packageExports: cloudflarePagesSpecificExports,
-    packageName: "cloudflare-pages",
-  },
-  {
-    packageExports: cloudflareWorkersSpecificExports,
-    packageName: "cloudflare-workers",
-  },
-  { packageExports: nodeSpecificExports, packageName: "node" },
-  { packageExports: reactSpecificExports, packageName: "react" },
-].map(({ packageExports, packageName }) => ({
-  importNames: [...packageExports.value, ...packageExports.type],
-  message: getReplaceRemixImportsMessage(packageName),
-  name: "remix",
-}));
 
 module.exports = {
   "array-callback-return": WARN,
@@ -56,7 +17,6 @@ module.exports = {
   "no-duplicate-case": WARN,
   "no-empty-character-class": WARN,
   "no-empty-pattern": WARN,
-  "no-duplicate-imports": WARN,
   "no-empty": [WARN, { allowEmptyCatch: true }],
   "no-eval": ERROR,
   "no-ex-assign": WARN,
@@ -89,7 +49,6 @@ module.exports = {
   "no-new-object": WARN,
   "no-octal": WARN,
   "no-redeclare": ERROR,
-  "no-restricted-imports": [WARN, ...replaceRemixImportsOptions],
   "no-script-url": WARN,
   "no-self-assign": WARN,
   "no-self-compare": WARN,

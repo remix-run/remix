@@ -1,5 +1,5 @@
 /* eslint-disable import/no-nodejs-modules */
-const path = require("path");
+const path = require("node:path");
 const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
@@ -9,7 +9,6 @@ const {
   isBareModuleId,
   createBanner,
   copyToPlaygrounds,
-  magicExportsPlugin,
 } = require("../../rollup.utils");
 const { name: packageName, version } = require("./package.json");
 
@@ -46,7 +45,6 @@ module.exports = function rollup() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
-        magicExportsPlugin({ packageName, version }),
         copyToPlaygrounds(),
       ],
     },

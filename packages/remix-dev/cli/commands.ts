@@ -1,58 +1,28 @@
-import * as path from "path";
-import { execSync } from "child_process";
-import * as fse from "fs-extra";
-import ora from "ora";
+import * as path from "node:path";
+import { execSync } from "node:child_process";
+import fse from "fs-extra";
+import getPort, { makeRange } from "get-port";
 import prettyMs from "pretty-ms";
-import * as esbuild from "esbuild";
-import NPMCliPackageJson from "@npmcli/package-json";
-import { coerce } from "semver";
+import PackageJson from "@npmcli/package-json";
+import pc from "picocolors";
+import exitHook from "exit-hook";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
 import * as devServer from "../devServer";
-import * as devServer2 from "../devServer2";
+import * as devServer_unstable from "../devServer_unstable";
 import type { RemixConfig } from "../config";
+import type { ViteDevOptions } from "../vite/dev";
+import type { ViteBuildOptions } from "../vite/build";
 import { readConfig } from "../config";
-import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
-import { log } from "../logging";
-import { createApp } from "./create";
-import { getPreferredPackageManager } from "./getPreferredPackageManager";
-import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
-import runCodemod from "../codemod";
-import { CodemodError } from "../codemod/utils/error";
-import { TaskError } from "../codemod/utils/task";
+import { formatRoutes, type RoutesFormat } from "../config/format";
+import { loadVitePluginContext } from "../vite/plugin";
+import { detectPackageManager } from "./detectPackageManager";
 import { transpile as convertFileToJS } from "./useJavascript";
-
-export async function create({
-  appTemplate,
-  projectDir,
-  remixVersion,
-  installDeps,
-  useTypeScript,
-  githubToken,
-  debug,
-}: {
-  appTemplate: string;
-  projectDir: string;
-  remixVersion?: string;
-  installDeps: boolean;
-  useTypeScript: boolean;
-  githubToken?: string;
-  debug?: boolean;
-}) {
-  let spinner = ora("Creating your app…").start();
-  await createApp({
-    appTemplate,
-    projectDir,
-    remixVersion,
-    installDeps,
-    useTypeScript,
-    githubToken,
-    debug,
-  });
-  spinner.stop();
-  spinner.clear();
-}
+import type { Options } from "../compiler/options";
+import { createFileWatchCache } from "../compiler/fileWatchCache";
+import { logger } from "../tux";
+import * as profiler from "../vite/profiler";
 
 type InitFlags = {
   deleteScript?: boolean;
@@ -63,24 +33,14 @@ export async function init(
   { deleteScript = true }: InitFlags = {}
 ) {
   let initScriptDir = path.join(projectDir, "remix.init");
-  let initScriptTs = path.resolve(initScriptDir, "index.ts");
   let initScript = path.resolve(initScriptDir, "index.js");
 
-  if (await fse.pathExists(initScriptTs)) {
-    await esbuild.build({
-      entryPoints: [initScriptTs],
-      format: "cjs",
-      platform: "node",
-      outfile: initScript,
-    });
-  }
   if (!(await fse.pathExists(initScript))) {
     return;
   }
 
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-  let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
-  let packageManager = getPreferredPackageManager();
+  let packageManager = detectPackageManager() ?? "npm";
 
   if (await fse.pathExists(initPackageJson)) {
     execSync(`${packageManager} install`, {
@@ -94,7 +54,7 @@ export async function init(
     initFn = initFn.default;
   }
   try {
-    await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
+    await initFn({ packageManager, rootDirectory: projectDir });
 
     if (deleteScript) {
       await fse.remove(initScriptDir);
@@ -109,82 +69,108 @@ export async function init(
   }
 }
 
-export async function setup(platformArg?: string) {
-  let platform: SetupPlatform;
-  if (
-    platformArg === "cloudflare-workers" ||
-    platformArg === "cloudflare-pages"
-  ) {
-    console.warn(
-      `Using '${platformArg}' as a platform value is deprecated. Use ` +
-        "'cloudflare' instead."
-    );
-    console.log("HINT: check the `postinstall` script in `package.json`");
-    platform = SetupPlatform.Cloudflare;
-  } else {
-    platform = isSetupPlatform(platformArg) ? platformArg : SetupPlatform.Node;
-  }
-
-  await setupRemix(platform);
-
-  log(`Successfully setup Remix for ${platform}.`);
+/**
+ * Keep the function around in v2 so that users with `remix setup` in a script
+ * or postinstall hook can still run a build, but inform them that it's no
+ * longer necessary, and we can remove it in v3.
+ * @deprecated
+ */
+export function setup() {
+  console.warn(
+    "WARNING: The setup command is no longer necessary as of v2. This is a no-op. Please remove this from your dev and CI scripts, as it will be removed in v3."
+  );
 }
 
 export async function routes(
   remixRoot?: string,
-  formatArg?: string
+  flags: {
+    config?: string;
+    json?: boolean;
+  } = {}
 ): Promise<void> {
-  let config = await readConfig(remixRoot);
+  let ctx = await loadVitePluginContext({
+    root: remixRoot,
+    configFile: flags.config,
+  });
 
-  let format = isRoutesFormat(formatArg) ? formatArg : RoutesFormat.jsx;
+  let routes =
+    ctx?.remixConfig.routes ||
+    // v3 TODO: Remove this and require the presence of a Vite config
+    (await readConfig(remixRoot)).routes;
 
-  console.log(formatRoutes(config.routes, format));
+  let format: RoutesFormat = flags.json ? "json" : "jsx";
+  console.log(formatRoutes(routes, format));
 }
 
 export async function build(
   remixRoot: string,
-  modeArg?: string,
+  mode?: string,
   sourcemap: boolean = false
 ): Promise<void> {
-  let mode = compiler.parseMode(modeArg ?? "", "production");
+  mode = mode ?? "production";
 
-  log(`Building Remix app in ${mode} mode...`);
+  logger.info(`building...` + pc.gray(` (NODE_ENV=${mode})`));
 
-  if (modeArg === "production" && sourcemap) {
-    console.warn(
-      "\n⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
-    );
-    console.warn(
-      "You have enabled source maps in production. This will make your " +
-        "server-side code visible to the public and is highly discouraged! If " +
-        "you insist, please ensure you are using environment variables for " +
-        "secrets and not hard-coding them into your source!"
-    );
-    console.warn(
-      "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
-    );
+  if (mode === "production" && sourcemap) {
+    logger.warn("🚨  source maps enabled in production", {
+      details: [
+        "You are using `--sourcemap` to enable source maps in production,",
+        "making your server-side code publicly visible in the browser.",
+        "This is highly discouraged!",
+        "If you insist, ensure that you are using environment variables for secrets",
+        "and are not hard-coding them in your source.",
+      ],
+    });
   }
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
-  fse.emptyDirSync(config.assetsBuildDirectory);
-  await compiler.build(config, {
+  let options: Options = {
     mode,
     sourcemap,
-    onCompileFailure: (failure) => {
-      compiler.logCompileFailure(failure);
-      throw Error();
-    },
-  });
+  };
+  if (mode === "development") {
+    let resolved = await resolveDev(config);
+    options.REMIX_DEV_ORIGIN = resolved.REMIX_DEV_ORIGIN;
+  }
 
-  log(`Built in ${prettyMs(Date.now() - start)}`);
+  let fileWatchCache = createFileWatchCache();
+
+  fse.emptyDirSync(config.assetsBuildDirectory);
+  await compiler
+    .build({ config, options, fileWatchCache, logger })
+    .catch((thrown) => {
+      compiler.logThrown(thrown);
+      process.exit(1);
+    });
+
+  logger.info("built" + pc.gray(` (${prettyMs(Date.now() - start)})`));
+}
+
+export async function viteBuild(
+  root?: string,
+  options: ViteBuildOptions = {}
+): Promise<void> {
+  if (!root) {
+    root = process.env.REMIX_ROOT || process.cwd();
+  }
+
+  let { build } = await import("../vite/build");
+  if (options.profile) {
+    await profiler.start();
+  }
+  try {
+    await build(root, options);
+  } finally {
+    await profiler.stop(logger.info);
+  }
 }
 
 export async function watch(
   remixRootOrConfig: string | RemixConfig,
-  modeArg?: string
+  mode?: string
 ): Promise<void> {
-  let mode = compiler.parseMode(modeArg ?? "", "development");
+  mode = mode ?? "development";
   console.log(`Watching Remix app in ${mode} mode...`);
 
   let config =
@@ -192,79 +178,58 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  devServer.liveReload(config, {
-    mode,
-    onInitialBuild: (durationMs) =>
-      console.log(`💿 Built in ${prettyMs(durationMs)}`),
-  });
+  let resolved = await resolveDev(config);
+  void devServer.liveReload(config, { ...resolved, mode });
   return await new Promise(() => {});
 }
 
 export async function dev(
   remixRoot: string,
-  modeArg?: string,
-  flags: { port?: number; appServerPort?: number } = {}
+  flags: {
+    command?: string;
+    manual?: boolean;
+    port?: number;
+    tlsKey?: string;
+    tlsCert?: string;
+  } = {}
 ) {
-  let config = await readConfig(remixRoot);
-  let mode = compiler.parseMode(modeArg ?? "", "development");
+  console.log(`\n 💿  remix dev\n`);
 
-  if (config.future.unstable_dev !== false) {
-    await devServer2.serve(config, flags);
-    return await new Promise(() => {});
+  if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
+    logger.warn(`overriding NODE_ENV=${process.env.NODE_ENV} to development`);
   }
+  process.env.NODE_ENV = "development";
 
-  await devServer.serve(config, mode, flags.port);
-  return await new Promise(() => {});
+  let config = await readConfig(remixRoot);
+
+  let resolved = await resolveDevServe(config, flags);
+  devServer_unstable.serve(config, resolved);
+
+  // keep `remix dev` alive by waiting indefinitely
+  await new Promise(() => {});
 }
 
-export async function codemod(
-  codemodName?: string,
-  projectDir?: string,
-  { dry = false, force = false } = {}
-) {
-  if (!codemodName) {
-    console.error(colors.red("Error: Missing codemod name"));
-    console.log(
-      "Usage: " +
-        colors.gray(
-          `remix codemod <${colors.arg("codemod")}> [${colors.arg(
-            "projectDir"
-          )}]`
-        )
-    );
-    process.exit(1);
+export async function viteDev(root: string, options: ViteDevOptions = {}) {
+  let { dev } = await import("../vite/dev");
+  if (options.profile) {
+    await profiler.start();
   }
-  try {
-    await runCodemod(projectDir ?? process.cwd(), codemodName, {
-      dry,
-      force,
-    });
-  } catch (error: unknown) {
-    if (error instanceof CodemodError) {
-      console.error(`${colors.red("Error:")} ${error.message}`);
-      if (error.additionalInfo) console.info(colors.gray(error.additionalInfo));
-      process.exit(1);
-    }
-    if (error instanceof TaskError) {
-      process.exit(1);
-    }
-    throw error;
-  }
+  exitHook(() => profiler.stop(console.info));
+  await dev(root, options);
+
+  // keep `remix vite-dev` alive by waiting indefinitely
+  await new Promise(() => {});
 }
 
 let clientEntries = ["entry.client.tsx", "entry.client.js", "entry.client.jsx"];
 let serverEntries = ["entry.server.tsx", "entry.server.js", "entry.server.jsx"];
 let entries = ["entry.client", "entry.server"];
 
-// @ts-expect-error available in node 12+
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
 let conjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
 });
 
-// @ts-expect-error available in node 12+
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
 let disjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "disjunction",
@@ -273,14 +238,28 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
 export async function generateEntry(
   entry: string,
   remixRoot: string,
-  useTypeScript: boolean = true
+  flags: {
+    typescript?: boolean;
+    config?: string;
+  } = {}
 ) {
-  let config = await readConfig(remixRoot);
+  let ctx = await loadVitePluginContext({
+    root: remixRoot,
+    configFile: flags.config,
+  });
+
+  let { rootDirectory, appDirectory } = ctx
+    ? {
+        rootDirectory: ctx.rootDirectory,
+        appDirectory: ctx.remixConfig.appDirectory,
+      }
+    : // v3 TODO: Remove this and require the presence of a Vite config
+      await readConfig(remixRoot);
 
   // if no entry passed, attempt to create both
   if (!entry) {
-    await generateEntry("entry.client", remixRoot, useTypeScript);
-    await generateEntry("entry.server", remixRoot, useTypeScript);
+    await generateEntry("entry.client", remixRoot, flags);
+    await generateEntry("entry.server", remixRoot, flags);
     return;
   }
 
@@ -294,22 +273,8 @@ export async function generateEntry(
     return;
   }
 
-  let pkgJson = await NPMCliPackageJson.load(config.rootDirectory);
+  let pkgJson = await PackageJson.load(rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
-
-  let maybeReactVersion = coerce(deps.react);
-  if (!maybeReactVersion) {
-    let react = ["react", "react-dom"];
-    let list = conjunctionListFormat.format(react);
-    throw new Error(
-      `Could not determine React version. Please install the following packages: ${list}`
-    );
-  }
-
-  let type =
-    maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
-      ? ("stream" as const)
-      : ("string" as const);
 
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
@@ -334,49 +299,30 @@ export async function generateEntry(
     return;
   }
 
-  let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
-
-  if (!clientRenderer) {
-    console.error(
-      colors.error(
-        `Could not determine runtime. Please install the following: @remix-run/react`
-      )
-    );
-    return;
-  }
-
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
-  let defaultEntryClient = path.resolve(
-    defaultsDirectory,
-    `entry.client.${clientRenderer}-${type}.tsx`
-  );
+  let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
   let defaultEntryServer = path.resolve(
     defaultsDirectory,
-    serverRuntime,
-    `entry.server.${clientRenderer}-${type}.tsx`
+    ctx?.remixConfig.ssr === false &&
+      ctx?.remixConfig.future.unstable_singleFetch !== true
+      ? `entry.server.spa.tsx`
+      : `entry.server.${serverRuntime}.tsx`
   );
 
   let isServerEntry = entry === "entry.server";
 
   let contents = isServerEntry
-    ? await createServerEntry(
-        config.rootDirectory,
-        config.appDirectory,
-        defaultEntryServer
-      )
-    : await createClientEntry(
-        config.rootDirectory,
-        config.appDirectory,
-        defaultEntryClient
-      );
+    ? await createServerEntry(rootDirectory, appDirectory, defaultEntryServer)
+    : await createClientEntry(rootDirectory, appDirectory, defaultEntryClient);
 
+  let useTypeScript = flags.typescript ?? true;
   let outputExtension = useTypeScript ? "tsx" : "jsx";
   let outputEntry = `${entry}.${outputExtension}`;
-  let outputFile = path.resolve(config.appDirectory, outputEntry);
+  let outputFile = path.resolve(appDirectory, outputEntry);
 
   if (!useTypeScript) {
     let javascript = convertFileToJS(contents, {
-      cwd: config.rootDirectory,
+      cwd: rootDirectory,
       filename: isServerEntry ? defaultEntryServer : defaultEntryClient,
     });
     await fse.writeFile(outputFile, javascript, "utf-8");
@@ -387,7 +333,7 @@ export async function generateEntry(
   console.log(
     colors.blue(
       `Entry file ${entry} created at ${path.relative(
-        config.rootDirectory,
+        rootDirectory,
         outputFile
       )}.`
     )
@@ -429,3 +375,61 @@ async function createClientEntry(
   let contents = await fse.readFile(inputFile, "utf-8");
   return contents;
 }
+
+let findPort = async () => getPort({ port: makeRange(3001, 3100) });
+
+let resolveDev = async (
+  config: RemixConfig,
+  flags: {
+    port?: number;
+    tlsKey?: string;
+    tlsCert?: string;
+  } = {}
+) => {
+  let { dev } = config;
+
+  let port = flags.port ?? dev.port ?? (await findPort());
+
+  let tlsKey = flags.tlsKey ?? dev.tlsKey;
+  if (tlsKey) tlsKey = path.resolve(tlsKey);
+  let tlsCert = flags.tlsCert ?? dev.tlsCert;
+  if (tlsCert) tlsCert = path.resolve(tlsCert);
+  let isTLS = tlsKey && tlsCert;
+
+  let REMIX_DEV_ORIGIN = process.env.REMIX_DEV_ORIGIN;
+  if (REMIX_DEV_ORIGIN === undefined) {
+    let scheme = isTLS ? "https" : "http";
+    REMIX_DEV_ORIGIN = `${scheme}://localhost:${port}`;
+  }
+
+  return {
+    port,
+    tlsKey,
+    tlsCert,
+    REMIX_DEV_ORIGIN: new URL(REMIX_DEV_ORIGIN),
+  };
+};
+
+let resolveDevServe = async (
+  config: RemixConfig,
+  flags: {
+    command?: string;
+    manual?: boolean;
+    port?: number;
+    tlsKey?: string;
+    tlsCert?: string;
+  } = {}
+) => {
+  let { dev } = config;
+
+  let resolved = await resolveDev(config, flags);
+
+  let command = flags.command ?? dev.command;
+  let manual = flags.manual ?? dev.manual ?? false;
+
+  return {
+    ...resolved,
+    command,
+    manual,
+  };
+};

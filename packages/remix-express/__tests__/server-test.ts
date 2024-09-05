@@ -1,11 +1,11 @@
-import express from "express";
-import supertest from "supertest";
-import { createRequest, createResponse } from "node-mocks-http";
+import { Readable } from "node:stream";
 import {
+  createReadableStreamFromReadable,
   createRequestHandler as createRemixRequestHandler,
-  Response as NodeResponse,
 } from "@remix-run/node";
-import { Readable } from "stream";
+import express from "express";
+import { createRequest, createResponse } from "node-mocks-http";
+import supertest from "supertest";
 
 import {
   createRemixHeaders,
@@ -14,7 +14,7 @@ import {
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
-// puppetteer tests do), we just want to test the express adapter
+// playwright tests do), we just want to test the express adapter
 jest.mock("@remix-run/node", () => {
   let original = jest.requireActual("@remix-run/node");
   return {
@@ -35,7 +35,7 @@ function createApp() {
     // We don't have a real app to test, but it doesn't matter. We won't ever
     // call through to the real createRequestHandler
     // @ts-expect-error
-    createRequestHandler({ build: undefined })
+    createRequestHandler({ build: {} })
   );
 
   return app;
@@ -102,14 +102,13 @@ describe("express createRequestHandler", () => {
     // https://github.com/node-fetch/node-fetch/blob/4ae35388b078bddda238277142bf091898ce6fda/test/response.js#L142-L148
     it("handles body as stream", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        let stream = Readable.from("hello world");
-        return new NodeResponse(stream, { status: 200 }) as unknown as Response;
+        let readable = Readable.from("hello world");
+        let stream = createReadableStreamFromReadable(readable);
+        return new Response(stream, { status: 200 });
       });
 
       let request = supertest(createApp());
-      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
-      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
-
+      let res = await request.get("/");
       expect(res.status).toBe(200);
       expect(res.text).toBe("hello world");
     });
@@ -159,88 +158,41 @@ describe("express createRequestHandler", () => {
 describe("express createRemixHeaders", () => {
   describe("creates fetch headers from express headers", () => {
     it("handles empty headers", () => {
-      expect(createRemixHeaders({})).toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [],
-          Symbol(context): null,
-        }
-      `);
+      let headers = createRemixHeaders({});
+      expect(Object.fromEntries(headers.entries())).toMatchInlineSnapshot(`{}`);
     });
 
     it("handles simple headers", () => {
-      expect(createRemixHeaders({ "x-foo": "bar" })).toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar",
-          ],
-          Symbol(context): null,
-        }
-      `);
+      let headers = createRemixHeaders({ "x-foo": "bar" });
+      expect(headers.get("x-foo")).toBe("bar");
     });
 
     it("handles multiple headers", () => {
-      expect(createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" }))
-        .toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar",
-            "x-bar",
-            "baz",
-          ],
-          Symbol(context): null,
-        }
-      `);
+      let headers = createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" });
+      expect(headers.get("x-foo")).toBe("bar");
+      expect(headers.get("x-bar")).toBe("baz");
     });
 
     it("handles headers with multiple values", () => {
-      expect(createRemixHeaders({ "x-foo": "bar, baz" }))
-        .toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar, baz",
-          ],
-          Symbol(context): null,
-        }
-      `);
-    });
-
-    it("handles headers with multiple values and multiple headers", () => {
-      expect(createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" }))
-        .toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar, baz",
-            "x-bar",
-            "baz",
-          ],
-          Symbol(context): null,
-        }
-      `);
+      let headers = createRemixHeaders({
+        "x-foo": ["bar", "baz"],
+        "x-bar": "baz",
+      });
+      expect(headers.get("x-foo")).toEqual("bar, baz");
+      expect(headers.get("x-bar")).toBe("baz");
     });
 
     it("handles multiple set-cookie headers", () => {
-      expect(
-        createRemixHeaders({
-          "set-cookie": [
-            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
-          ],
-        })
-      ).toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [
-            "set-cookie",
-            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "set-cookie",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
-          ],
-          Symbol(context): null,
-        }
-      `);
+      let headers = createRemixHeaders({
+        "set-cookie": [
+          "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+          "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+        ],
+      });
+      expect(headers.getSetCookie()).toEqual([
+        "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+        "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+      ]);
     });
   });
 });
@@ -259,41 +211,12 @@ describe("express createRemixRequest", () => {
     });
     let expressResponse = createResponse();
 
-    expect(createRemixRequest(expressRequest, expressResponse))
-      .toMatchInlineSnapshot(`
-      NodeRequest {
-        "agent": undefined,
-        "compress": true,
-        "counter": 0,
-        "follow": 20,
-        "highWaterMark": 16384,
-        "insecureHTTPParser": false,
-        "size": 0,
-        Symbol(Body internals): Object {
-          "body": null,
-          "boundary": null,
-          "disturbed": false,
-          "error": null,
-          "size": 0,
-          "type": null,
-        },
-        Symbol(Request internals): Object {
-          "credentials": "same-origin",
-          "headers": Headers {
-            Symbol(query): Array [
-              "cache-control",
-              "max-age=300, s-maxage=3600",
-              "host",
-              "localhost:3000",
-            ],
-            Symbol(context): null,
-          },
-          "method": "GET",
-          "parsedURL": "http://localhost:3000/foo/bar",
-          "redirect": "follow",
-          "signal": AbortSignal {},
-        },
-      }
-    `);
+    let remixRequest = createRemixRequest(expressRequest, expressResponse);
+
+    expect(remixRequest.method).toBe("GET");
+    expect(remixRequest.headers.get("cache-control")).toBe(
+      "max-age=300, s-maxage=3600"
+    );
+    expect(remixRequest.headers.get("host")).toBe("localhost:3000");
   });
 });

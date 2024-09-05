@@ -1,14 +1,15 @@
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import {
   createAppFixture,
   createFixture,
   css,
   js,
-} from "./helpers/create-fixture";
+  json,
+} from "./helpers/create-fixture.js";
 
 const TEST_PADDING_VALUE = "20px";
 
@@ -27,38 +28,58 @@ async function jsonFromBase64CssContent({
   return JSON.parse(json);
 }
 
-test.describe("PostCSS", () => {
+test.describe("PostCSS enabled", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        v2_routeConvention: true,
-        unstable_cssModules: true,
-        unstable_cssSideEffectImports: true,
-        unstable_postcss: true,
-        unstable_tailwind: true,
-        unstable_vanillaExtract: true,
-      },
       files: {
+        "package.json": json({
+          name: "remix-template-remix",
+          private: true,
+          sideEffects: false,
+          type: "module",
+          dependencies: {
+            "@remix-run/css-bundle": "0.0.0-local-version",
+            "@remix-run/node": "0.0.0-local-version",
+            "@remix-run/react": "0.0.0-local-version",
+            "@remix-run/serve": "0.0.0-local-version",
+            isbot: "0.0.0-local-version",
+            react: "0.0.0-local-version",
+            "react-dom": "0.0.0-local-version",
+          },
+          devDependencies: {
+            "@remix-run/dev": "0.0.0-local-version",
+            "@types/react": "0.0.0-local-version",
+            "@types/react-dom": "0.0.0-local-version",
+            typescript: "0.0.0-local-version",
+
+            "@vanilla-extract/css": "0.0.0-local-version",
+            tailwindcss: "0.0.0-local-version",
+          },
+          engines: {
+            node: ">=18.0.0",
+          },
+        }),
+
         // We provide a test plugin that replaces the strings
         // "TEST_PADDING_VALUE" and "TEST_POSTCSS_CONTEXT".
         // This lets us assert that the plugin is being run
         // and that the correct context values are provided.
-        "postcss.config.js": js`
+        "postcss.config.cjs": js`
           module.exports = (ctx) => ({
             plugins: [
               {
                 postcssPlugin: 'replace',
                 Declaration (decl) {
                   decl.value = decl.value
-                    .replaceAll(
-                      "TEST_PADDING_VALUE",
+                    .replace(
+                      /TEST_PADDING_VALUE/g,
                       ${JSON.stringify(TEST_PADDING_VALUE)},
                     )
-                    .replaceAll(
-                      "TEST_POSTCSS_CONTEXT",
+                    .replace(
+                      /TEST_POSTCSS_CONTEXT/g,
                       Buffer.from(JSON.stringify(ctx)).toString("base64"),
                     );
                 },
@@ -67,8 +88,8 @@ test.describe("PostCSS", () => {
           });
         `,
         "tailwind.config.js": js`
-          module.exports = {
-            content: ["./app/**/*.{ts,tsx,jsx,js}"],
+          export default {
+            content: ["./app/**/{**,.client,.server}/**/*.{js,jsx,ts,tsx}"],
             theme: {
               spacing: {
                 'test': ${JSON.stringify(TEST_PADDING_VALUE)}
@@ -76,7 +97,7 @@ test.describe("PostCSS", () => {
             },
           };
         `,
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           import { Links, Outlet } from "@remix-run/react";
           import { cssBundleHref } from "@remix-run/css-bundle";
           export function links() {
@@ -110,7 +131,7 @@ test.describe("PostCSS", () => {
   test.afterAll(() => appFixture.close());
 
   let regularStylesSheetsFixture = () => ({
-    "app/routes/regular-style-sheets-test.jsx": js`
+    "app/routes/regular-style-sheets-test.tsx": js`
       import { Test, links as testLinks } from "~/test-components/regular-style-sheets";
 
       export function links() {
@@ -121,7 +142,7 @@ test.describe("PostCSS", () => {
         return <Test />;
       }
     `,
-    "app/test-components/regular-style-sheets/index.jsx": js`
+    "app/test-components/regular-style-sheets/index.tsx": js`
       import stylesHref from "./styles.css";
 
       export function links() {
@@ -165,14 +186,14 @@ test.describe("PostCSS", () => {
   });
 
   let cssModulesFixture = () => ({
-    "app/routes/css-modules-test.jsx": js`
+    "app/routes/css-modules-test.tsx": js`
       import { Test } from "~/test-components/css-modules";
 
       export default function() {
         return <Test />;
       }
     `,
-    "app/test-components/css-modules/index.jsx": js`
+    "app/test-components/css-modules/index.tsx": js`
       import styles from "./styles.module.css";
 
       export function Test() {
@@ -212,14 +233,14 @@ test.describe("PostCSS", () => {
   });
 
   let vanillaExtractFixture = () => ({
-    "app/routes/vanilla-extract-test.jsx": js`
+    "app/routes/vanilla-extract-test.tsx": js`
       import { Test } from "~/test-components/vanilla-extract";
 
       export default function() {
         return <Test />;
       }
     `,
-    "app/test-components/vanilla-extract/index.jsx": js`
+    "app/test-components/vanilla-extract/index.tsx": js`
       import * as styles from "./styles.css";
 
       export function Test() {
@@ -261,14 +282,14 @@ test.describe("PostCSS", () => {
   });
 
   let cssSideEffectImportsFixture = () => ({
-    "app/routes/css-side-effect-imports-test.jsx": js`
+    "app/routes/css-side-effect-imports-test.tsx": js`
       import { Test } from "~/test-components/css-side-effect-imports";
 
       export default function() {
         return <Test />;
       }
     `,
-    "app/test-components/css-side-effect-imports/index.jsx": js`
+    "app/test-components/css-side-effect-imports/index.tsx": js`
       import "./styles.css";
 
       export function Test() {
@@ -308,7 +329,7 @@ test.describe("PostCSS", () => {
   });
 
   let automaticTailwindPluginInsertionFixture = () => ({
-    "app/routes/automatic-tailwind-plugin-insertion-test.jsx": js`
+    "app/routes/automatic-tailwind-plugin-insertion-test.tsx": js`
       import { Test, links as testLinks } from "~/test-components/automatic-tailwind-plugin-insertion";
 
       export function links() {
@@ -319,7 +340,7 @@ test.describe("PostCSS", () => {
         return <Test />;
       }
     `,
-    "app/test-components/automatic-tailwind-plugin-insertion/index.jsx": js`
+    "app/test-components/automatic-tailwind-plugin-insertion/index.tsx": js`
       import stylesHref from "./styles.css";
 
       export function links() {
@@ -348,5 +369,89 @@ test.describe("PostCSS", () => {
     );
     let padding = await locator.evaluate((el) => getComputedStyle(el).padding);
     expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+});
+
+test.describe("PostCSS disabled", () => {
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+
+  test.beforeAll(async () => {
+    fixture = await createFixture({
+      config: {
+        postcss: false,
+      },
+      files: {
+        "postcss.config.cjs": js`
+          module.exports = (ctx) => ({
+            plugins: [
+              {
+                postcssPlugin: 'replace',
+                Declaration (decl) {
+                  decl.value = decl.value
+                    .replace(
+                      /TEST_PADDING_VALUE/g,
+                      ${JSON.stringify(TEST_PADDING_VALUE)},
+                    );
+                },
+              },
+            ],
+          });
+        `,
+        "app/root.tsx": js`
+          import { Links, Outlet } from "@remix-run/react";
+          export default function Root() {
+            return (
+              <html>
+                <head>
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                </body>
+              </html>
+            )
+          }
+        `,
+        "app/routes/postcss-disabled-test.tsx": js`
+          import { Test, links as testLinks } from "~/test-components/postcss-disabled";
+          export function links() {
+            return [...testLinks()];
+          }
+          export default function() {
+            return <Test />;
+          }
+        `,
+        "app/test-components/postcss-disabled/index.tsx": js`
+          import stylesHref from "./styles.css";
+          export function links() {
+            return [{ rel: 'stylesheet', href: stylesHref }];
+          }
+          export function Test() {
+            return (
+              <div data-testid="postcss-disabled" className="postcss-disabled-test">
+                <p>PostCSS disabled test.</p>
+              </div>
+            );
+          }
+        `,
+        "app/test-components/postcss-disabled/styles.css": css`
+          .postcss-disabled-test {
+            padding: TEST_PADDING_VALUE;
+          }
+        `,
+      },
+    });
+    appFixture = await createAppFixture(fixture);
+  });
+
+  test.afterAll(() => appFixture.close());
+
+  test("ignores PostCSS config", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/postcss-disabled-test");
+    let locator = await page.locator("[data-testid='postcss-disabled']");
+    let padding = await locator.evaluate((el) => getComputedStyle(el).padding);
+    expect(padding).not.toBe(TEST_PADDING_VALUE);
   });
 });

@@ -5,9 +5,11 @@ toc: false
 
 # `defer`
 
+To get started with streaming data, check out the [Streaming Guide][streaming_guide].
+
 This is a shortcut for creating a streaming/deferred response. It assumes you are using `utf-8` encoding. From a developer perspective it behaves just like [`json()`][json], but with the ability to transport promises to your UI components.
 
-```ts lines=[1,7-10]
+```tsx lines=[1,7-10]
 import { defer } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader = async () => {
@@ -23,7 +25,7 @@ export const loader = async () => {
 
 You can also pass a status code and headers:
 
-```ts lines=[9-14]
+```tsx lines=[9-14]
 export const loader = async () => {
   const aStillRunningPromise = loadSlowDataAsync();
 
@@ -42,4 +44,5 @@ export const loader = async () => {
 };
 ```
 
+[streaming_guide]: ../guides/streaming
 [json]: ./json

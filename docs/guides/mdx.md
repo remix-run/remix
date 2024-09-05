@@ -5,9 +5,11 @@ description: Remix makes integrating MDX into your project a breeze with built i
 
 # MDX
 
+<docs-warning>This documentation is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. Vite consumers wanting to use MDX should use the [MDX Rollup (and Vite) plugin][mdx-plugin].</docs-warning>
+
 While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX][mdx] (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
 
-<docs-warning>Rather than compiling your content at build-time like this document demonstrates, it's typically better UX and DX if you do this at runtime via something like <a href="https://github.com/kentcdodds/mdx-bundler">mdx-bundler</a>. It's also much more customizable and powerful. However, if you prefer to do this compilation at build-time, continue reading.</docs-warning>
+<docs-info>Rather than compiling your content at build-time like this document demonstrates, it's typically better UX and DX if you do this at runtime via something like <a href="https://github.com/kentcdodds/mdx-bundler">mdx-bundler</a>. It's also much more customizable and powerful. However, if you prefer to do this compilation at build-time, continue reading.</docs-info>
 
 Remix has built-in support for using MDX at build-time in two ways:
 
@@ -16,15 +18,16 @@ Remix has built-in support for using MDX at build-time in two ways:
 
 ## Routes
 
-The simplest way to get started with MDX in Remix is to create a route module. Just like `.js` and `.ts` files in your `app/routes` directory, `.mdx` (and `.md`) files will participate in automatic file system based routing.
+The simplest way to get started with MDX in Remix is to create a route module. Just like `.tsx`, `.js` and `.jsx` files in your `app/routes` directory, `.mdx` (and `.md`) files will participate in automatic file system based routing.
 
 MDX routes allow you to define both meta and headers as if they were a code based route:
 
 ```md
 ---
 meta:
-  title: My First Post
-  description: Isn't this awesome?
+  - title: My First Post
+  - name: description
+    content: Isn't this awesome?
 headers:
   Cache-Control: no-cache
 ---
@@ -51,13 +54,14 @@ import SomeComponent from "~/components/some-component";
 
 ### Example
 
-By creating a `app/routes/posts/first-post.mdx` we can start writing a blog post:
+By creating a `app/routes/posts.first-post.mdx` we can start writing a blog post:
 
 ```mdx
 ---
 meta:
-  title: My First Post
-  description: Isn't this just awesome?
+  - title: My First Post
+  - name: description
+    content: Isn't this just awesome?
 ---
 
 # Example Markdown Post
@@ -72,8 +76,9 @@ You can even export all the other things in this module that you can in regular 
 ```mdx
 ---
 meta:
-  title: My First Post
-  description: Isn't this awesome?
+  - title: My First Post
+  - name: description
+    content: Isn't this awesome?
 
 headers:
   Cache-Control: no-cache
@@ -111,7 +116,7 @@ Besides just route level MDX, you can also import these files anywhere yourself 
 
 When you `import` a `.mdx` file, the exports of the module are:
 
-- **default**: The react component for consumption
+- **default**: The React component for consumption
 - **attributes**: The frontmatter data as an object
 - **filename**: The basename of the source file (e.g. "first-post.mdx")
 
@@ -126,9 +131,7 @@ import Component, {
 
 The following example demonstrates how you might build a simple blog with MDX, including individual pages for the posts themselves and an index page that shows all posts.
 
-In `app/routes/index.jsx`:
-
-```tsx
+```tsx filename=app/routes/_index.tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { Link, useLoaderData } from "@remix-run/react";
 
@@ -182,7 +185,7 @@ Clearly this is not a scalable solution for a blog with thousands of posts. Real
 
 If you wish to configure your own remark plugins you can do so through the `remix.config.js`'s `mdx` export:
 
-```ts
+```js filename=remix.config.js
 const {
   remarkMdxFrontmatter,
 } = require("remark-mdx-frontmatter");
@@ -203,9 +206,9 @@ exports.mdx = async (filename) => {
 
 The above configuration parses the markdown to insert [highlight.js][highlightjs] friendly DOM elements. To have the syntax highlighting appear, you will also need to include the highlight.js css file. See also [surfacing styles][surfacing-styles].
 
-
+[mdx-plugin]: https://mdxjs.com/packages/rollup
 [mdx]: https://mdxjs.com
 [yaml]: https://yaml.org
 [mdx-bundler]: https://github.com/kentcdodds/mdx-bundler
-[highlightjs]: https://highlightjs.org/
+[classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite
 [surfacing-styles]: ../styling#surfacing-styles

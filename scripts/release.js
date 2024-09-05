@@ -1,6 +1,6 @@
-const { execSync } = require("child_process");
+const { execSync } = require("node:child_process");
 const chalk = require("chalk");
-const path = require("path");
+const path = require("node:path");
 const semver = require("semver");
 const { default: simpleGit } = require("simple-git");
 const git = simpleGit(path.resolve(__dirname, ".."));
@@ -69,7 +69,7 @@ async function run(args) {
     default:
       throw Error(`Invalid argument. Usage:
 
-  $ yarn release [start | bump | finish] [patch | minor | major]`);
+  $ pnpm release [start | bump | finish] [patch | minor | major]`);
   }
 
   if (versionExists(allTags, nextVersion)) {

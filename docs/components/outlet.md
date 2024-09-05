@@ -1,10 +1,35 @@
 ---
 title: Outlet
-toc: false
 ---
 
 # `<Outlet>`
 
-<docs-info>This component is simply a re-export of [React Router's `Outlet`][rr-outlet].</docs-info>
+Renders the matching child route of a parent route.
 
-[rr-outlet]: https://reactrouter.com/components/outlet
+```tsx
+import { Outlet } from "@remix-run/react";
+
+export default function SomeParent() {
+  return (
+    <div>
+      <h1>Parent Content</h1>
+
+      <Outlet />
+    </div>
+  );
+}
+```
+
+## Props
+
+### `context`
+
+Provides a context value to the element tree below the outlet. Use when the parent route needs to provide values to child routes.
+
+```tsx
+<Outlet context={myContextValue} />
+```
+
+See also: [`useOutletContext`][use-outlet-context]
+
+[use-outlet-context]: ../hooks/use-outlet-context

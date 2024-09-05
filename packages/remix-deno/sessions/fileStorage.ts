@@ -32,7 +32,7 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
 }: FileSessionStorageOptions): SessionStorage<Data, FlashData> {
   return createSessionStorage({
     cookie,
-    async createData(data, expires) {
+    createData: async (data, expires) => {
       const content = JSON.stringify({ data, expires });
 
       while (true) {
@@ -65,7 +65,7 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
         }
       }
     },
-    async readData(id) {
+    readData: async (id) => {
       try {
         const file = getFile(dir, id);
         const content = JSON.parse(await Deno.readTextFile(file));
@@ -87,13 +87,13 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
         return null;
       }
     },
-    async updateData(id, data, expires) {
+    updateData: async (id, data, expires) => {
       const content = JSON.stringify({ data, expires });
       const file = getFile(dir, id);
       await Deno.mkdir(path.dirname(file), { recursive: true }).catch(() => {});
       await Deno.writeTextFile(file, content);
     },
-    async deleteData(id) {
+    deleteData: async (id) => {
       try {
         await Deno.remove(getFile(dir, id));
       } catch (error) {

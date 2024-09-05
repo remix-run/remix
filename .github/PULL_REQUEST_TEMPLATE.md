@@ -35,7 +35,7 @@ Or
 > I opened up my windows machine and ran this script:
 >
 > ```
-> npx create-remix@0.0.0-experimental-7e420ee3 --template remix my-test
+> npx create-remix@0.0.0-experimental-7e420ee3 my-test
 > cd my-test
 > npm run dev
 > ```

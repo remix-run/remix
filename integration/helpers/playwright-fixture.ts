@@ -1,10 +1,10 @@
-import cp from "child_process";
+import cp from "node:child_process";
 import type { Page, Response, Request } from "@playwright/test";
 import { test } from "@playwright/test";
 import cheerio from "cheerio";
 import prettier from "prettier";
 
-import type { AppFixture } from "./create-fixture";
+import type { AppFixture } from "./create-fixture.js";
 
 export class PlaywrightFixture {
   readonly page: Page;
@@ -19,12 +19,21 @@ export class PlaywrightFixture {
    * Visits the href with a document request.
    *
    * @param href The href you want to visit
-   * @param waitForHydration Will wait for the network to be idle, so
-   * everything should be loaded and ready to go
+   * @param waitForHydration Wait for the page to full load/hydrate?
+   *  - `undefined` to wait for the document `load` event
+   *  - `true` wait for the network to be idle, so everything should be loaded
+   *    and ready to go
+   *  - `false` to wait only until the initial doc to be returned and the document
+   *    to start loading (mostly useful for testing deferred responses)
    */
-  async goto(href: string, waitForHydration?: true): Promise<Response> {
+  async goto(href: string, waitForHydration?: boolean): Promise<Response> {
     let response = await this.page.goto(this.app.serverUrl + href, {
-      waitUntil: waitForHydration ? "networkidle" : undefined,
+      waitUntil:
+        waitForHydration === true
+          ? "networkidle"
+          : waitForHydration === false
+          ? "commit"
+          : "load",
     });
     if (response == null)
       throw new Error(
@@ -140,12 +149,32 @@ export class PlaywrightFixture {
   }
 
   /**
+   * "Clicks" the refresh button.
+   */
+  async reload(options: { wait: boolean } = { wait: true }) {
+    if (options.wait) {
+      await doAndWait(this.page, () => this.page.reload());
+    } else {
+      await this.page.reload();
+    }
+  }
+
+  /**
    * Collects data responses from the network, usually after a link click or
    * form submission. This is useful for asserting that specific loaders
    * were called (or not).
    */
   collectDataResponses() {
-    return collectDataResponses(this.page);
+    return this.collectResponses((url) => url.searchParams.has("_data"));
+  }
+
+  /**
+   * Collects single fetch data responses from the network, usually after a
+   * link click or form submission. This is useful for asserting that specific
+   * loaders were called (or not).
+   */
+  collectSingleFetchResponses() {
+    return this.collectResponses((url) => url.pathname.endsWith(".data"));
   }
 
   /**
@@ -153,8 +182,16 @@ export class PlaywrightFixture {
    * form submission. A filter can be provided to only collect responses
    * that meet a certain criteria.
    */
-  collectResponses(filter?: UrlFilter) {
-    return collectResponses(this.page, filter);
+  collectResponses(filter?: (url: URL) => boolean) {
+    let responses: Response[] = [];
+
+    this.page.on("response", (res) => {
+      if (!filter || filter(new URL(res.url()))) {
+        responses.push(res);
+      }
+    });
+
+    return responses;
   }
 
   /**
@@ -266,13 +303,12 @@ async function doAndWait(
   page.on("requestfailed", onRequestDone);
   page.on("load", networkSettledCallback); // e.g. navigation with javascript disabled
 
-  let timeoutId: NodeJS.Timer | undefined;
-  if (DEBUG) {
-    timeoutId = setInterval(() => {
-      console.log(`${requestCounter} requests pending:`);
-      for (let request of pending) console.log(`  ${request.url()}`);
-    }, 5000);
-  }
+  let timeoutId = DEBUG
+    ? setInterval(() => {
+        console.log(`${requestCounter} requests pending:`);
+        for (let request of pending) console.log(`  ${request.url()}`);
+      }, 5000)
+    : undefined;
 
   let result = await action();
   actionDone = true;
@@ -281,6 +317,27 @@ async function doAndWait(
     console.log(`action done, ${requestCounter} requests pending`);
   }
   await networkSettledPromise;
+
+  // I wish I knew why but Safari seems to get all screwed up without this.
+  // When you run doAndWait (via clicking a blink or submitting a form) and
+  // then waitForSelector().  It finds the selector element but thinks it's
+  // hidden for some unknown reason.  It's intermittent, but waiting for the
+  // next animation frame delaying slightly before the waitForSelector() calls
+  // seems to fix it 🤷‍♂️
+  //
+  //   Test timeout of 30000ms exceeded.
+  //
+  //   Error: page.waitForSelector: Target closed
+  //   =========================== logs ===========================
+  //   waiting for locator('text=ROOT_BOUNDARY_TEXT') to be visible
+  //     locator resolved to hidden <div id="root-boundary">ROOT_BOUNDARY_TEXT</div>
+  //     locator resolved to hidden <div id="root-boundary">ROOT_BOUNDARY_TEXT</div>
+  //     ... and so on until the test times out
+  let userAgent = await page.evaluate(() => navigator.userAgent);
+  if (/Safari\//i.test(userAgent) && !/Chrome\//i.test(userAgent)) {
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(r)));
+  }
+
   if (DEBUG) {
     console.log(`action done, network settled`);
   }
@@ -295,22 +352,4 @@ async function doAndWait(
   }
 
   return result;
-}
-
-type UrlFilter = (url: URL) => boolean;
-
-function collectResponses(page: Page, filter?: UrlFilter): Response[] {
-  let responses: Response[] = [];
-
-  page.on("response", (res) => {
-    if (!filter || filter(new URL(res.url()))) {
-      responses.push(res);
-    }
-  });
-
-  return responses;
-}
-
-function collectDataResponses(page: Page) {
-  return collectResponses(page, (url) => url.searchParams.has("_data"));
 }

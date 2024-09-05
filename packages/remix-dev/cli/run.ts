@@ -1,15 +1,8 @@
-import * as path from "path";
-import os from "os";
 import arg from "arg";
-import inspector from "inspector";
-import inquirer from "inquirer";
 import semver from "semver";
-import fse from "fs-extra";
 
 import * as colors from "../colors";
 import * as commands from "./commands";
-import { validateNewProjectPath, validateTemplate } from "./create";
-import { getPreferredPackageManager } from "./getPreferredPackageManager";
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -17,64 +10,61 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
 )} ${colors.logoPink("I")} ${colors.logoRed("X")}
 
   ${colors.heading("Usage")}:
-    $ remix create <${colors.arg("projectDir")}> --template <${colors.arg(
-  "template"
-)}>
     $ remix init [${colors.arg("projectDir")}]
+    $ remix vite:build [${colors.arg("projectDir")}]
+    $ remix vite:dev [${colors.arg("projectDir")}]
     $ remix build [${colors.arg("projectDir")}]
     $ remix dev [${colors.arg("projectDir")}]
     $ remix routes [${colors.arg("projectDir")}]
     $ remix watch [${colors.arg("projectDir")}]
-    $ remix setup [${colors.arg("remixPlatform")}]
-    $ remix codemod <${colors.arg("codemod")}> [${colors.arg("projectDir")}]
 
   ${colors.heading("Options")}:
     --help, -h          Print this help message and exit
     --version, -v       Print the CLI version and exit
     --no-color          Disable ANSI colors in console output
-  \`create\` Options:
-    --template          The template to use
-    --no-install        Skip installing dependencies after creation
-    --no-typescript     Convert the template to JavaScript
-    --remix-version     The version of Remix to use
+  \`vite:build\` Options (Passed through to Vite):
+    --assetsInlineLimit Static asset base64 inline threshold in bytes (default: 4096) (number)
+    --clearScreen       Allow/disable clear screen when logging (boolean)
+    --config, -c        Use specified config file (string)
+    --emptyOutDir       Force empty outDir when it's outside of root (boolean)
+    --logLevel, -l      Info | warn | error | silent (string)
+    --minify            Enable/disable minification, or specify minifier to use (default: "esbuild") (boolean | "terser" | "esbuild")
+    --mode, -m          Set env mode (string)
+    --profile           Start built-in Node.js inspector
+    --sourcemapClient   Output source maps for client build (default: false) (boolean | "inline" | "hidden")
+    --sourcemapServer   Output source maps for server build (default: false) (boolean | "inline" | "hidden")
   \`build\` Options:
     --sourcemap         Generate source maps for production
+  \`vite:dev\` Options (Passed through to Vite):
+    --clearScreen       Allow/disable clear screen when logging (boolean)
+    --config, -c        Use specified config file (string)
+    --cors              Enable CORS (boolean)
+    --force             Force the optimizer to ignore the cache and re-bundle (boolean)
+    --host              Specify hostname (string)
+    --logLevel, -l      Info | warn | error | silent (string)
+    --mode, -m          Set env mode (string)
+    --open              Open browser on startup (boolean | string)
+    --port              Specify port (number)
+    --profile           Start built-in Node.js inspector
+    --strictPort        Exit if specified port is already in use (boolean)
   \`dev\` Options:
-    --debug             Attach Node.js inspector
-    --port, -p          Choose the port from which to run your app
+    --command, -c       Command used to run your app server
+    --manual            Enable manual mode
+    --port              Port for the dev server. Default: any open port
+    --tls-key           Path to TLS key (key.pem)
+    --tls-cert          Path to TLS certificate (cert.pem)
   \`init\` Options:
     --no-delete         Skip deleting the \`remix.init\` script
   \`routes\` Options:
+    --config, -c        Use specified Vite config file (string)
     --json              Print the routes as JSON
-  \`codemod\` Options:
-    --dry               Dry run (no changes are made to files)
-    --force             Bypass Git safety checks
+  \`reveal\` Options:
+    --config, -c        Use specified Vite config file (string)
+    --no-typescript     Generate plain JavaScript files
 
   ${colors.heading("Values")}:
     - ${colors.arg("projectDir")}        The Remix project directory
-    - ${colors.arg("template")}          The project template to use
     - ${colors.arg("remixPlatform")}     \`node\` or \`cloudflare\`
-
-  ${colors.heading("Creating a new project")}:
-
-    Remix projects are created from templates. A template can be:
-
-    - a file path to a directory of files
-    - a file path to a tarball
-    - the name of a :username/:repo on GitHub
-    - the URL of a tarball
-
-    $ remix create my-app --template /path/to/remix-template
-    $ remix create my-app --template /path/to/remix-template.tar.gz
-    $ remix create my-app --template remix-run/grunge-stack
-    $ remix create my-app --template :username/:repo
-    $ remix create my-app --template https://github.com/:username/:repo
-    $ remix create my-app --template https://github.com/:username/:repo/tree/:branch
-    $ remix create my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
-    $ remix create my-app --template https://example.com/remix-template.tar.gz
-
-    To create a new project from a template in a private GitHub repo,
-    pass the \`token\` flag with a personal access token with access to that repo.
 
   ${colors.heading("Initialize a project:")}:
 
@@ -85,19 +75,30 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
 
     $ remix init
 
-  ${colors.heading("Build your project")}:
+  ${colors.heading("Build your project (Vite)")}:
+
+    $ remix vite:build
+
+  ${colors.heading("Run your project locally in development (Vite)")}:
+
+    $ remix vite:dev
+
+  ${colors.heading("Build your project (Classic compiler)")}:
 
     $ remix build
     $ remix build --sourcemap
     $ remix build my-app
 
-  ${colors.heading("Run your project locally in development")}:
+  ${colors.heading(
+    "Run your project locally in development (Classic compiler)"
+  )}:
 
     $ remix dev
-    $ remix dev my-app
-    $ remix dev --debug
+    $ remix dev -c "node ./server.js"
 
-  ${colors.heading("Start your server separately and watch for changes")}:
+  ${colors.heading(
+    "Start your server separately and watch for changes (Classic compiler)"
+  )}:
 
     # custom server start command, for example:
     $ remix watch
@@ -110,6 +111,7 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix routes
     $ remix routes my-app
     $ remix routes --json
+    $ remix routes --config vite.remix.config.ts
 
   ${colors.heading("Reveal the used entry point")}:
 
@@ -117,35 +119,8 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix reveal entry.server
     $ remix reveal entry.client --no-typescript
     $ remix reveal entry.server --no-typescript
+    $ remix reveal entry.server --config vite.remix.config.ts
 `;
-
-const templateChoices = [
-  { name: "Remix App Server", value: "remix" },
-  { name: "Express Server", value: "express" },
-  { name: "Architect (AWS Lambda)", value: "arc" },
-  { name: "Fly.io", value: "fly" },
-  { name: "Netlify", value: "netlify" },
-  { name: "Vercel", value: "vercel" },
-  { name: "Cloudflare Pages", value: "cloudflare-pages" },
-  { name: "Cloudflare Workers", value: "cloudflare-workers" },
-  { name: "Deno", value: "deno" },
-];
-
-const npxInterop = {
-  npm: "npx",
-  yarn: "yarn",
-  pnpm: "pnpm exec",
-};
-
-async function dev(
-  projectDir: string,
-  flags: { debug?: boolean; port?: number; appServerPort?: number }
-) {
-  if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
-
-  if (flags.debug) inspector.open();
-  await commands.dev(projectDir, process.env.NODE_ENV, flags);
-}
 
 /**
  * Programmatic interface for running the Remix CLI with the given command line
@@ -154,36 +129,81 @@ async function dev(
 export async function run(argv: string[] = process.argv.slice(2)) {
   // Check the node version
   let versions = process.versions;
-  if (versions && versions.node && semver.major(versions.node) < 14) {
+  if (versions && versions.node && semver.major(versions.node) < 18) {
     throw new Error(
-      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
+      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 18.`
     );
   }
 
+  let isBooleanFlag = (arg: string) => {
+    let index = argv.indexOf(arg);
+    let nextArg = argv[index + 1];
+    return !nextArg || nextArg.startsWith("-");
+  };
+
   let args = arg(
     {
-      "--app-server-port": Number,
-      "--debug": Boolean,
       "--no-delete": Boolean,
       "--dry": Boolean,
       "--force": Boolean,
       "--help": Boolean,
       "-h": "--help",
-      "--install": Boolean,
-      "--no-install": Boolean,
-      "--interactive": Boolean,
-      "--no-interactive": Boolean,
       "--json": Boolean,
-      "--port": Number,
-      "-p": "--port",
-      "--remix-version": String,
-      "--sourcemap": Boolean,
-      "--template": String,
       "--token": String,
       "--typescript": Boolean,
       "--no-typescript": Boolean,
       "--version": Boolean,
       "-v": "--version",
+
+      // dev server
+      "--command": String,
+      "--manual": Boolean,
+      "--port": Number,
+      "-p": "--port",
+      "--tls-key": String,
+      "--tls-cert": String,
+
+      ...(argv[0].startsWith("vite:") ||
+      argv[0] === "reveal" ||
+      argv[0] === "routes"
+        ? // Handle commands that support Vite's --config flag
+          {
+            "--config": String,
+            "-c": "--config",
+          }
+        : {
+            // Handle non Vite config commands
+            "-c": "--command",
+          }),
+
+      ...(argv[0].startsWith("vite:")
+        ? {
+            // Vite commands
+            // --config, --force and --port are already defined above
+            "--assetsInlineLimit": Number,
+            "--clearScreen": Boolean,
+            "--cors": Boolean,
+            "--emptyOutDir": Boolean,
+            "--host": isBooleanFlag("--host") ? Boolean : String,
+            "--logLevel": String,
+            "-l": "--logLevel",
+            "--minify": String,
+            "--mode": String,
+            "-m": "--mode",
+            "--open": isBooleanFlag("--open") ? Boolean : String,
+            "--strictPort": Boolean,
+            "--profile": Boolean,
+            "--sourcemapClient": isBooleanFlag("--sourcemapClient")
+              ? Boolean
+              : String,
+            "--sourcemapServer": isBooleanFlag("--sourcemapServer")
+              ? Boolean
+              : String,
+          }
+        : {
+            // Non Vite commands
+            "--sourcemap": Boolean,
+          }),
     },
     {
       argv,
@@ -208,296 +228,62 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     return;
   }
 
+  if (flags["tls-key"]) {
+    flags.tlsKey = flags["tls-key"];
+    delete flags["tls-key"];
+  }
+  if (flags["tls-cert"]) {
+    flags.tlsCert = flags["tls-cert"];
+    delete flags["tls-cert"];
+  }
+
   if (args["--no-delete"]) {
     flags.delete = false;
-  }
-  if (args["--no-install"]) {
-    flags.install = false;
-  }
-  if (args["--no-interactive"]) {
-    flags.interactive = false;
   }
   flags.interactive = flags.interactive ?? require.main === module;
   if (args["--no-typescript"]) {
     flags.typescript = false;
   }
-  if (flags.template === "typescript" || flags.template === "ts") {
-    flags.template = "remix-ts";
-  }
-  flags.remixVersion = args["--remix-version"];
 
   let command = input[0];
 
   // Note: Keep each case in this switch statement small.
   switch (command) {
-    case "create":
-    // `remix new` is an alias for `remix create`
-    case "new": {
-      let projectPath = input[1];
-
-      // Flags will validate early and stop the process if invalid flags are
-      // provided. Input provided in the interactive CLI is validated by
-      // inquirer step-by-step. This not only allows us to catch issues as early
-      // as possible, but inquirer will allow users to retry input rather than
-      // stop the process.
-
-      let {
-        template,
-        token: githubToken,
-        install,
-        typescript,
-        remixVersion,
-        debug,
-      } = flags;
-
-      if (template === "typescript" || template === "ts") {
-        template = "remix-ts";
-      }
-
-      if (flags.template) {
-        await validateTemplate(flags.template, { githubToken });
-      }
-
-      if (projectPath) {
-        await validateNewProjectPath(projectPath);
-      }
-
-      let projectDir = projectPath
-        ? path.resolve(process.cwd(), projectPath)
-        : await inquirer
-            .prompt<{ dir: string }>([
-              {
-                type: "input",
-                name: "dir",
-                message: "Where would you like to create your app?",
-                default: "./my-remix-app",
-                async validate(input) {
-                  try {
-                    await validateNewProjectPath(String(input));
-                    return true;
-                  } catch (error: unknown) {
-                    if (error instanceof Error && error.message) {
-                      return error.message;
-                    }
-                    throw error;
-                  }
-                },
-              },
-            ])
-            .then(async (input) => {
-              let inputDir = input.dir.startsWith("~")
-                ? input.dir.replace("~", os.homedir())
-                : input.dir;
-              if (path.isAbsolute(inputDir)) {
-                return inputDir;
-              }
-              return path.resolve(process.cwd(), inputDir);
-            })
-            .catch((error) => {
-              if (error.isTtyError) {
-                console.log(helpText);
-                return;
-              }
-              throw error;
-            });
-
-      if (!projectDir) {
-        console.log(helpText);
-        return;
-      }
-
-      let packageManager = getPreferredPackageManager();
-      let answers = await inquirer
-        .prompt<{
-          appType: "template" | "stack";
-          appTemplate: string;
-          useTypeScript: boolean;
-          install: boolean;
-        }>([
-          {
-            name: "appType",
-            type: "list",
-            message: "What type of app do you want to create?",
-            default: "template",
-            when() {
-              return template === undefined;
-            },
-            choices: [
-              {
-                name: "Just the basics",
-                value: "template",
-              },
-              {
-                name: "A pre-configured stack ready for production",
-                value: "stack",
-              },
-            ],
-          },
-          {
-            name: "appTemplate",
-            type: "list",
-            when(answers) {
-              return answers.appType === "stack";
-            },
-            message: "Which Stack do you want? ",
-            loop: false,
-            suffix:
-              "(Learn more about these stacks: 'https://remix.run/stacks')",
-            choices: [
-              {
-                name: "Blues",
-                value: "remix-run/blues-stack",
-              },
-              {
-                name: "Indie",
-                value: "remix-run/indie-stack",
-              },
-              {
-                name: "Grunge",
-                value: "remix-run/grunge-stack",
-              },
-            ],
-          },
-          {
-            name: "appTemplate",
-            type: "list",
-            when(answers) {
-              return answers.appType === "template";
-            },
-            message:
-              "Where do you want to deploy? Choose Remix App Server if you're unsure; " +
-              "it's easy to change deployment targets.",
-            loop: false,
-            choices: templateChoices,
-          },
-          {
-            name: "useTypeScript",
-            type: "list",
-            message: "TypeScript or JavaScript?",
-            default: true,
-            when() {
-              return typescript === undefined;
-            },
-            choices: [
-              { name: "TypeScript", value: true },
-              { name: "JavaScript", value: false },
-            ],
-          },
-          {
-            name: "install",
-            type: "confirm",
-            message: `Do you want me to run \`${packageManager} install\`?`,
-            when() {
-              return install === undefined;
-            },
-            default: true,
-          },
-        ])
-        .catch((error) => {
-          if (error.isTtyError) {
-            console.warn(
-              colors.warning(
-                "🚨 Your terminal doesn't support interactivity; using default " +
-                  "configuration.\n\n" +
-                  "If you'd like to use different settings, try passing them " +
-                  `as arguments. Run \`${packageManager} create remix@latest --help\` to see ` +
-                  "available options."
-              )
-            );
-            return {
-              appType: "template",
-              appTemplate: "remix",
-              useTypeScript: true,
-              install: true,
-            };
-          }
-          throw error;
-        });
-
-      let installDeps = install !== false && answers.install !== false;
-      let useTypeScript = typescript ?? answers.useTypeScript;
-
-      await commands.create({
-        appTemplate: template || answers.appTemplate,
-        projectDir,
-        remixVersion: remixVersion,
-        installDeps,
-        useTypeScript,
-        githubToken,
-        debug,
-      });
-
-      let initScriptDir = path.join(projectDir, "remix.init");
-      let hasInitScript = await fse.pathExists(initScriptDir);
-      if (hasInitScript) {
-        if (installDeps) {
-          console.log("💿 Running remix.init script");
-          await commands.init(projectDir, { deleteScript: true });
-        } else {
-          console.log();
-          console.log(
-            colors.warning(
-              "💿 You've opted out of installing dependencies so we won't run the " +
-                path.join("remix.init", "index.js") +
-                " script for you just yet. Once you've installed " +
-                `dependencies, you can run it manually with \`${npxInterop[packageManager]} remix init\``
-            )
-          );
-          console.log();
-        }
-      }
-
-      let relProjectDir = path.relative(process.cwd(), projectDir);
-      let projectDirIsCurrentDir = relProjectDir === "";
-
-      if (projectDirIsCurrentDir) {
-        console.log(
-          `💿 That's it! Check the README for development and deploy instructions!`
-        );
-      } else {
-        console.log(
-          `💿 That's it! \`cd\` into "${path.resolve(
-            process.cwd(),
-            projectDir
-          )}" and check the README for development and deploy instructions!`
-        );
-      }
-
-      break;
-    }
     case "init":
       await commands.init(input[1] || process.env.REMIX_ROOT || process.cwd(), {
         deleteScript: flags.delete,
       });
       break;
     case "routes":
-      await commands.routes(input[1], flags.json ? "json" : "jsx");
+      await commands.routes(input[1], flags);
       break;
     case "build":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
       await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap);
+      break;
+    case "vite:build":
+      await commands.viteBuild(input[1], flags);
       break;
     case "watch":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
       await commands.watch(input[1], process.env.NODE_ENV);
       break;
     case "setup":
-      await commands.setup(input[1]);
+      commands.setup();
       break;
-    case "codemod": {
-      await commands.codemod(input[1], input[2]);
-      break;
-    }
     case "reveal": {
       // TODO: simplify getting started guide
-      await commands.generateEntry(input[1], input[2], flags.typescript);
+      await commands.generateEntry(input[1], input[2], flags);
       break;
     }
     case "dev":
-      await dev(input[1], flags);
+      await commands.dev(input[1], flags);
+      break;
+    case "vite:dev":
+      await commands.viteDev(input[1], flags);
       break;
     default:
       // `remix ./my-project` is shorthand for `remix dev ./my-project`
-      await dev(input[0], flags);
+      await commands.dev(input[0], flags);
   }
 }

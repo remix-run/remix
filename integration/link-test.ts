@@ -5,9 +5,9 @@ import {
   js,
   createFixture,
   createAppFixture,
-} from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
+} from "./helpers/create-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 const fakeGists = [
   {
@@ -32,10 +32,6 @@ test.describe("route module link export", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        v2_routeConvention: true,
-        v2_errorBoundary: true,
-      },
       files: {
         "app/favicon.ico": js``,
 
@@ -83,8 +79,7 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/root.jsx": js`
-          import { useEffect } from "react";
+        "app/root.tsx": js`
           import {
             Link,
             Links,
@@ -196,7 +191,7 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           import { useEffect } from "react";
           import { Link } from "@remix-run/react";
 
@@ -220,6 +215,9 @@ test.describe("route module link export", () => {
                     <li>
                       <Link to="/resources">Resource routes</Link>
                     </li>
+                    <li>
+                      <Link to="/parent/child">Errored child route</Link>
+                    </li>
                   </ul>
                 </nav>
               </div>
@@ -227,7 +225,7 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/routes/links.jsx": js`
+        "app/routes/links.tsx": js`
           import { useLoaderData, Link } from "@remix-run/react";
           import redTextHref from "~/redText.css";
           import blueTextHref from "~/blueText.css";
@@ -276,7 +274,7 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/routes/responsive-image-preload.jsx": js`
+        "app/routes/responsive-image-preload.tsx": js`
           import { Link } from "@remix-run/react";
           import guitar600 from "~/guitar-600.jpg";
           import guitar900 from "~/guitar-900.jpg";
@@ -309,9 +307,9 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/routes/gists.jsx": js`
+        "app/routes/gists.tsx": js`
           import { json } from "@remix-run/node";
-          import { Link, Outlet, useLoaderData, useTransition } from "@remix-run/react";
+          import { Link, Outlet, useLoaderData, useNavigation } from "@remix-run/react";
           import stylesHref from "~/gists.css";
           export function links() {
             return [{ rel: "stylesheet", href: stylesHref }];
@@ -338,7 +336,7 @@ test.describe("route module link export", () => {
             breadcrumb: () => <Link to="/gists">Gists</Link>,
           };
           export default function Gists() {
-            let locationPending = useTransition().location;
+            let locationPending = useNavigation().location;
             let { users } = useLoaderData();
             return (
               <div data-test-id="/gists">
@@ -360,7 +358,7 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/routes/gists.$username.jsx": js`
+        "app/routes/gists.$username.tsx": js`
           import { json, redirect } from "@remix-run/node";
           import { Link, useLoaderData, useParams } from "@remix-run/react";
           export async function loader({ params }) {
@@ -380,12 +378,14 @@ test.describe("route module link export", () => {
           }
           export function meta({ data, params }) {
             let { username } = params;
-            return {
-              title: data
-                ? data.length + " gists from " + username
-                : "User " + username + " not found",
-              description: "View all of the gists from " + username,
-            };
+            return [
+              {
+                title: data
+                  ? data.length + " gists from " + username
+                  : "User " + username + " not found",
+              },
+              { name: "description", content: "View all of the gists from " + username },
+            ];
           }
           export let handle = {
             breadcrumb: ({ params }) => (
@@ -416,7 +416,7 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/routes/gists._index.jsx": js`
+        "app/routes/gists._index.tsx": js`
           import { useLoaderData } from "@remix-run/react";
           export async function loader() {
             return ${JSON.stringify(fakeGists)};
@@ -427,10 +427,10 @@ test.describe("route module link export", () => {
             };
           }
           export function meta() {
-            return {
-              title: "Public Gists",
-              description: "View the latest gists from the public",
-            };
+            return [
+              { title: "Public Gists" },
+              { name: "description", content: "View the latest gists from the public" },
+            ];
           }
           export let handle = {
             breadcrumb: () => <span>Public</span>,
@@ -457,7 +457,7 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/routes/resources.theme-css.jsx": js`
+        "app/routes/resources.theme-css.tsx": js`
           import { redirect } from "@remix-run/node";
           export async function loader({ request }) {
             return new Response(":root { --nc-tx-1: #ffffff; --nc-tx-2: #eeeeee; }",
@@ -470,6 +470,42 @@ test.describe("route module link export", () => {
             );
           }
 
+        `,
+
+        "app/routes/parent.tsx": js`
+          import { Outlet } from "@remix-run/react";
+
+          export function links() {
+            return [
+              { "data-test-id": "red" },
+            ];
+          }
+
+          export default function Component() {
+            return <div data-test-id="/parent"><Outlet /></div>;
+          }
+
+          export function ErrorBoundary() {
+            return <h1 data-test-id="/parent:error-boundary">Error Boundary</h1>;
+          }
+        `,
+
+        "app/routes/parent.child.tsx": js`
+          import { Outlet } from "@remix-run/react";
+
+          export function loader() {
+            throw new Response(null, { status: 404 });
+          }
+
+          export function links() {
+            return [
+              { "data-test-id": "blue" },
+            ];
+          }
+
+          export default function Component() {
+            return <div data-test-id="/parent"><Outlet /></div>;
+          }
         `,
       },
     });
@@ -511,6 +547,17 @@ test.describe("route module link export", () => {
     expect(stylesheetResponses.length).toEqual(1);
   });
 
+  test("does not render errored child route links", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/", true);
+    await page.click('a[href="/parent/child"]');
+    await page.waitForSelector('[data-test-id="/parent:error-boundary"]');
+    await page.waitForSelector('[data-test-id="red"]', { state: "attached" });
+    await page.waitForSelector('[data-test-id="blue"]', {
+      state: "detached",
+    });
+  });
+
   test.describe("no js", () => {
     test.use({ javaScriptEnabled: false });
 
@@ -533,6 +580,16 @@ test.describe("route module link export", () => {
       await page.waitForSelector('[data-test-id="/responsive-image-preload"]');
       let locator = page.locator("link[rel=preload][as=image]");
       expect(await locator.getAttribute("imagesizes")).toBe("100vw");
+    });
+
+    test("does not render errored child route links", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/parent/child");
+      await page.waitForSelector('[data-test-id="/parent:error-boundary"]');
+      await page.waitForSelector('[data-test-id="red"]', { state: "attached" });
+      await page.waitForSelector('[data-test-id="blue"]', {
+        state: "detached",
+      });
     });
   });
 

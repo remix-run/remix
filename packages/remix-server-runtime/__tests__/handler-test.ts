@@ -3,7 +3,6 @@ import { createRequestHandler } from "../server";
 
 describe("createRequestHandler", () => {
   it("retains request headers when stripping body off for loaders", async () => {
-    // @ts-expect-error
     let handler = createRequestHandler({
       routes: {
         root: {
@@ -16,10 +15,8 @@ describe("createRequestHandler", () => {
       },
       assets: {} as any,
       entry: { module: {} as any },
-      future: {
-        v2_errorBoundary: false,
-        v2_meta: false,
-      },
+      // @ts-expect-error
+      future: {},
     });
 
     let response = await handler(

@@ -13,7 +13,7 @@ tsconfig.tsbuildinfo
 /fixtures/test
 /fixtures/my-remix-app
 /fixtures/deno-app
-/playwright-report
+/integration/playwright-report
 /test-results
 /uploads
 
@@ -23,12 +23,15 @@ tsconfig.tsbuildinfo
 /scripts/deployment-test/apps
 /scripts/deployment-test/package-lock.json
 /scripts/deployment-test/yarn.lock
+/scripts/deployment-test/pnpm-lock.yaml
 
 /.idea/
 /playground
 /scripts/playground/template.local
 /scripts/playground/template/build
 /scripts/playground/template/package-lock.json
+/scripts/playground/template/yarn.lock
+/scripts/playground/template/pnpm-lock.yaml
 
 /NOTES.md
 /RELEASENOTES.md

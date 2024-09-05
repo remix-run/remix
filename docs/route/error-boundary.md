@@ -4,27 +4,51 @@ title: ErrorBoundary
 
 # `ErrorBoundary`
 
-<docs-warning>The behaviors of `CatchBoundary` and `ErrorBoundary` are changing in v2. You can prepare for this change at your convenience with the `v2_errorBoundary` future flag. For instructions on making this change see the [v2 guide][v2guide].</docs-warning>
-
-An `ErrorBoundary` is a React component that renders whenever there is an error anywhere on the route, either during rendering or during data loading. We use the word "error" to mean an uncaught exception; something you didn't anticipate happening. You can intentionally throw a `Response` to render the `CatchBoundary`, but everything else that is thrown is handled by the `ErrorBoundary`.
-
 A Remix `ErrorBoundary` component works just like normal React [error boundaries][error-boundaries], but with a few extra capabilities. When there is an error in your route component, the `ErrorBoundary` will be rendered in its place, nested inside any parent routes. `ErrorBoundary` components also render when there is an error in the `loader` or `action` functions for a route, so all errors for that route may be handled in one spot.
 
-An `ErrorBoundary` component receives one prop: the `error` that occurred.
+The most common use-cases tend to be:
+
+- You may intentionally throw a 4xx `Response` to trigger an error UI
+  - Throwing a 400 on bad user input
+  - Throwing a 401 for unauthorized access
+  - Throwing a 404 when you can't find requested data
+- React may unintentionally throw an `Error` if it encounters a runtime error during rendering
+
+To obtain the thrown object, you can use the [`useRouteError`][use-route-error] hook. When a `Response` is thrown, it will be automatically unwrapped into an `ErrorResponse` instance with `state`/`statusText`/`data` fields so that you don't need to bother with `await response.json()` in your component. To differentiate thrown `Response`'s from thrown `Error`'s you can use the [`isRouteErrorResponse`][is-route-error-response] utility.
 
 ```tsx
-export function ErrorBoundary({ error }) {
-  return (
-    <div>
-      <h1>Error</h1>
-      <p>{error.message}</p>
-      <p>The stack trace is:</p>
-      <pre>{error.stack}</pre>
-    </div>
-  );
+import {
+  isRouteErrorResponse,
+  useRouteError,
+} from "@remix-run/react";
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  if (isRouteErrorResponse(error)) {
+    return (
+      <div>
+        <h1>
+          {error.status} {error.statusText}
+        </h1>
+        <p>{error.data}</p>
+      </div>
+    );
+  } else if (error instanceof Error) {
+    return (
+      <div>
+        <h1>Error</h1>
+        <p>{error.message}</p>
+        <p>The stack trace is:</p>
+        <pre>{error.stack}</pre>
+      </div>
+    );
+  } else {
+    return <h1>Unknown Error</h1>;
+  }
 }
 ```
 
-[error-boundaries]: https://reactjs.org/docs/error-boundaries.html
-[error-boundary-v2]: ./error-boundary-v2
-[v2guide]: ../pages/v2#catchboundary-and-errorboundary
+[error-boundaries]: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
+[use-route-error]: ../hooks/use-route-error
+[is-route-error-response]: ../utils/is-route-error-response

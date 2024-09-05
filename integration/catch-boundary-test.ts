@@ -1,10 +1,14 @@
 import { test, expect } from "@playwright/test";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
-test.describe("CatchBoundary", () => {
+test.describe("ErrorBoundary (thrown responses)", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
 
@@ -24,190 +28,189 @@ test.describe("CatchBoundary", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
-        "app/root.jsx": js`
-          import { json } from "@remix-run/node";
-          import { Links, Meta, Outlet, Scripts, useMatches } from "@remix-run/react";
+        "app/root.tsx": js`
+            import { json } from "@remix-run/node";
+            import { Links, Meta, Outlet, Scripts, useMatches } from "@remix-run/react";
 
-          export function loader() {
-            return json({ data: "ROOT LOADER" });
-          }
+            export function loader() {
+              return json({ data: "ROOT LOADER" });
+            }
 
-          export default function Root() {
-            return (
-              <html lang="en">
-                <head>
-                  <Meta />
-                  <Links />
-                </head>
-                <body>
-                  <Outlet />
-                  <Scripts />
-                </body>
-              </html>
-            );
-          }
+            export default function Root() {
+              return (
+                <html lang="en">
+                  <head>
+                    <Meta />
+                    <Links />
+                  </head>
+                  <body>
+                    <Outlet />
+                    <Scripts />
+                  </body>
+                </html>
+              );
+            }
 
-          export function CatchBoundary() {
-            let matches = useMatches()
-            return (
-              <html>
-                <head />
-                <body>
-                  <div id="root-boundary">${ROOT_BOUNDARY_TEXT}</div>
-                  <pre id="matches">{JSON.stringify(matches)}</pre>
-                  <Scripts />
-                </body>
-              </html>
-            )
-          }
-        `,
+            export function ErrorBoundary() {
+              let matches = useMatches()
+              return (
+                <html>
+                  <head />
+                  <body>
+                    <div id="root-boundary">${ROOT_BOUNDARY_TEXT}</div>
+                    <pre id="matches">{JSON.stringify(matches)}</pre>
+                    <Scripts />
+                  </body>
+                </html>
+              )
+            }
+          `,
 
-        "app/routes/_index.jsx": js`
-          import { Link, Form } from "@remix-run/react";
-          export default function() {
-            return (
-              <div>
-                <Link to="${NOT_FOUND_HREF}">${NOT_FOUND_HREF}</Link>
+        "app/routes/_index.tsx": js`
+            import { Link, Form } from "@remix-run/react";
+            export default function() {
+              return (
+                <div>
+                  <Link to="${NOT_FOUND_HREF}">${NOT_FOUND_HREF}</Link>
 
-                <Form method="post">
-                  <button formAction="${HAS_BOUNDARY_ACTION}" type="submit" />
-                  <button formAction="${NO_BOUNDARY_ACTION}" type="submit" />
-                </Form>
+                  <Form method="post">
+                    <button formAction="${HAS_BOUNDARY_ACTION}" type="submit" />
+                    <button formAction="${NO_BOUNDARY_ACTION}" type="submit" />
+                  </Form>
 
-                <Link to="${HAS_BOUNDARY_LOADER}">
-                  ${HAS_BOUNDARY_LOADER}
-                </Link>
-                <Link to="${HAS_BOUNDARY_LOADER}/child">
-                  ${HAS_BOUNDARY_LOADER}/child
-                </Link>
-                <Link to="${NO_BOUNDARY_LOADER}">
-                  ${NO_BOUNDARY_LOADER}
-                </Link>
-              </div>
-            )
-          }
-        `,
+                  <Link to="${HAS_BOUNDARY_LOADER}">
+                    ${HAS_BOUNDARY_LOADER}
+                  </Link>
+                  <Link to="${HAS_BOUNDARY_LOADER}/child">
+                    ${HAS_BOUNDARY_LOADER}/child
+                  </Link>
+                  <Link to="${NO_BOUNDARY_LOADER}">
+                    ${NO_BOUNDARY_LOADER}
+                  </Link>
+                </div>
+              )
+            }
+          `,
 
         [`app/routes${HAS_BOUNDARY_ACTION_FILE}.jsx`]: js`
-          import { Form } from "@remix-run/react";
-          export async function action() {
-            throw new Response("", { status: 401 })
-          }
-          export function CatchBoundary() {
-            return <p id="action-boundary">${OWN_BOUNDARY_TEXT}</p>
-          }
-          export default function Index() {
-            return (
-              <Form method="post">
-                <button type="submit" formAction="${HAS_BOUNDARY_ACTION}">
-                  Go
-                </button>
-              </Form>
-            );
-          }
-        `,
-
-        [`app/routes${NO_BOUNDARY_ACTION_FILE}.jsx`]: js`
-          import { Form } from "@remix-run/react";
-          export function action() {
-            throw new Response("", { status: 401 })
-          }
-          export default function Index() {
-            return (
-              <Form method="post">
-                <button type="submit" formAction="${NO_BOUNDARY_ACTION}">
-                  Go
-                </button>
-              </Form>
-            )
-          }
-        `,
-
-        [`app/routes${HAS_BOUNDARY_LOADER_FILE}.jsx`]: js`
-          import { useCatch } from '@remix-run/react';
-          export function loader() {
-            throw new Response("", { status: 401 })
-          }
-          export function CatchBoundary() {
-            let caught = useCatch();
-            return (
-              <>
-                <div id="boundary-loader">${OWN_BOUNDARY_TEXT}</div>
-                <pre id="status">{caught.status}</pre>
-              </>
-            );
-          }
-          export default function Index() {
-            return <div/>
-          }
-        `,
-
-        [`app/routes${HAS_BOUNDARY_LOADER_FILE}.child.jsx`]: js`
-          export function loader() {
-            throw new Response("", { status: 404 })
-          }
-          export default function Index() {
-            return <div/>
-          }
-        `,
-
-        [`app/routes${NO_BOUNDARY_LOADER_FILE}.jsx`]: js`
-          export function loader() {
-            throw new Response("", { status: 401 })
-          }
-          export default function Index() {
-            return <div/>
-          }
-        `,
-
-        "app/routes/action.jsx": js`
-          import { Outlet, useLoaderData } from "@remix-run/react";
-
-          export function loader() {
-            return "PARENT";
-          }
-
-          export default function () {
-            return (
-              <div>
-                <p id="parent-data">{useLoaderData()}</p>
-                <Outlet />
-              </div>
-            )
-          }
-        `,
-
-        "app/routes/action.child-catch.jsx": js`
-          import { Form, useCatch, useLoaderData } from "@remix-run/react";
-
-          export function loader() {
-            return "CHILD";
-          }
-
-          export function action() {
-            throw new Response("Caught!", { status: 400 });
-          }
-
-          export default function () {
-            return (
-              <>
-                <p id="child-data">{useLoaderData()}</p>
-                <Form method="post" reloadDocument={true}>
-                  <button type="submit" name="key" value="value">
-                    Submit
+            import { Form } from "@remix-run/react";
+            export async function action() {
+              throw new Response("", { status: 401 })
+            }
+            export function ErrorBoundary() {
+              return <p id="action-boundary">${OWN_BOUNDARY_TEXT}</p>
+            }
+            export default function Index() {
+              return (
+                <Form method="post">
+                  <button type="submit" formAction="${HAS_BOUNDARY_ACTION}">
+                    Go
                   </button>
                 </Form>
-              </>
-            )
-          }
+              );
+            }
+          `,
 
-          export function CatchBoundary() {
-            let caught = useCatch()
-            return <p id="child-catch">{caught.status} {caught.data}</p>;
-          }
-        `,
+        [`app/routes${NO_BOUNDARY_ACTION_FILE}.jsx`]: js`
+            import { Form } from "@remix-run/react";
+            export function action() {
+              throw new Response("", { status: 401 })
+            }
+            export default function Index() {
+              return (
+                <Form method="post">
+                  <button type="submit" formAction="${NO_BOUNDARY_ACTION}">
+                    Go
+                  </button>
+                </Form>
+              )
+            }
+          `,
+
+        [`app/routes${HAS_BOUNDARY_LOADER_FILE}.jsx`]: js`
+            import { useRouteError } from '@remix-run/react';
+            export function loader() {
+              throw new Response("", { status: 401 })
+            }
+            export function ErrorBoundary() {
+              let error = useRouteError();
+              return (
+                <>
+                  <div id="boundary-loader">${OWN_BOUNDARY_TEXT}</div>
+                  <pre id="status">{error.status}</pre>
+                </>
+              );
+            }
+            export default function Index() {
+              return <div/>
+            }
+          `,
+
+        [`app/routes${HAS_BOUNDARY_LOADER_FILE}.child.jsx`]: js`
+            export function loader() {
+              throw new Response("", { status: 404 })
+            }
+            export default function Index() {
+              return <div/>
+            }
+          `,
+
+        [`app/routes${NO_BOUNDARY_LOADER_FILE}.jsx`]: js`
+            export function loader() {
+              throw new Response("", { status: 401 })
+            }
+            export default function Index() {
+              return <div/>
+            }
+          `,
+
+        "app/routes/action.tsx": js`
+            import { Outlet, useLoaderData } from "@remix-run/react";
+
+            export function loader() {
+              return "PARENT";
+            }
+
+            export default function () {
+              return (
+                <div>
+                  <p id="parent-data">{useLoaderData()}</p>
+                  <Outlet />
+                </div>
+              )
+            }
+          `,
+
+        "app/routes/action.child-catch.tsx": js`
+            import { Form, useLoaderData, useRouteError } from "@remix-run/react";
+
+            export function loader() {
+              return "CHILD";
+            }
+
+            export function action() {
+              throw new Response("Caught!", { status: 400 });
+            }
+
+            export default function () {
+              return (
+                <>
+                  <p id="child-data">{useLoaderData()}</p>
+                  <Form method="post" reloadDocument={true}>
+                    <button type="submit" name="key" value="value">
+                      Submit
+                    </button>
+                  </Form>
+                </>
+              )
+            }
+
+            export function ErrorBoundary() {
+              let error = useRouteError()
+              return <p id="child-catch">{error.status} {error.data}</p>;
+            }
+          `,
       },
     });
 
@@ -219,6 +222,10 @@ test.describe("CatchBoundary", () => {
   });
 
   test("non-matching urls on document requests", async () => {
+    let oldConsoleError;
+    oldConsoleError = console.error;
+    console.error = () => {};
+
     let res = await fixture.requestDocument(NOT_FOUND_HREF);
     expect(res.status).toBe(404);
     let html = await res.text();
@@ -229,6 +236,8 @@ test.describe("CatchBoundary", () => {
       { id: "root", pathname: "", params: {} },
     ]).replace(/"/g, "&quot;");
     expect(html).toContain(`<pre id="matches">${expected}</pre>`);
+
+    console.error = oldConsoleError;
   });
 
   test("non-matching urls on client transitions", async ({ page }) => {
@@ -357,12 +366,10 @@ test.describe("CatchBoundary", () => {
   });
 });
 
-// Copy/Paste of the above tests altered to use v2_errorBoundary.  In v2 we can:
-// - delete the above tests
-// - remove this describe block
-// - remove the v2_errorBoundary flag
-test.describe("v2_errorBoundary", () => {
-  test.describe("CatchBoundary", () => {
+// Duplicate suite of the tests above running with single fetch enabled
+// TODO(v3): remove the above suite of tests and just keep these
+test.describe("single fetch", () => {
+  test.describe("ErrorBoundary (thrown responses)", () => {
     let fixture: Fixture;
     let appFixture: AppFixture;
 
@@ -382,193 +389,194 @@ test.describe("v2_errorBoundary", () => {
 
     test.beforeAll(async () => {
       fixture = await createFixture({
-        future: {
-          v2_routeConvention: true,
-          v2_errorBoundary: true,
+        config: {
+          future: {
+            unstable_singleFetch: true,
+          },
         },
         files: {
-          "app/root.jsx": js`
-            import { json } from "@remix-run/node";
-            import { Links, Meta, Outlet, Scripts, useMatches } from "@remix-run/react";
+          "app/root.tsx": js`
+              import { json } from "@remix-run/node";
+              import { Links, Meta, Outlet, Scripts, useMatches } from "@remix-run/react";
 
-            export function loader() {
-              return json({ data: "ROOT LOADER" });
-            }
+              export function loader() {
+                return json({ data: "ROOT LOADER" });
+              }
 
-            export default function Root() {
-              return (
-                <html lang="en">
-                  <head>
-                    <Meta />
-                    <Links />
-                  </head>
-                  <body>
-                    <Outlet />
-                    <Scripts />
-                  </body>
-                </html>
-              );
-            }
+              export default function Root() {
+                return (
+                  <html lang="en">
+                    <head>
+                      <Meta />
+                      <Links />
+                    </head>
+                    <body>
+                      <Outlet />
+                      <Scripts />
+                    </body>
+                  </html>
+                );
+              }
 
-            export function ErrorBoundary() {
-              let matches = useMatches()
-              return (
-                <html>
-                  <head />
-                  <body>
-                    <div id="root-boundary">${ROOT_BOUNDARY_TEXT}</div>
-                    <pre id="matches">{JSON.stringify(matches)}</pre>
-                    <Scripts />
-                  </body>
-                </html>
-              )
-            }
-          `,
+              export function ErrorBoundary() {
+                let matches = useMatches()
+                return (
+                  <html>
+                    <head />
+                    <body>
+                      <div id="root-boundary">${ROOT_BOUNDARY_TEXT}</div>
+                      <pre id="matches">{JSON.stringify(matches)}</pre>
+                      <Scripts />
+                    </body>
+                  </html>
+                )
+              }
+            `,
 
-          "app/routes/_index.jsx": js`
-            import { Link, Form } from "@remix-run/react";
-            export default function() {
-              return (
-                <div>
-                  <Link to="${NOT_FOUND_HREF}">${NOT_FOUND_HREF}</Link>
+          "app/routes/_index.tsx": js`
+              import { Link, Form } from "@remix-run/react";
+              export default function() {
+                return (
+                  <div>
+                    <Link to="${NOT_FOUND_HREF}">${NOT_FOUND_HREF}</Link>
 
-                  <Form method="post">
-                    <button formAction="${HAS_BOUNDARY_ACTION}" type="submit" />
-                    <button formAction="${NO_BOUNDARY_ACTION}" type="submit" />
-                  </Form>
+                    <Form method="post">
+                      <button formAction="${HAS_BOUNDARY_ACTION}" type="submit" />
+                      <button formAction="${NO_BOUNDARY_ACTION}" type="submit" />
+                    </Form>
 
-                  <Link to="${HAS_BOUNDARY_LOADER}">
-                    ${HAS_BOUNDARY_LOADER}
-                  </Link>
-                  <Link to="${HAS_BOUNDARY_LOADER}/child">
-                    ${HAS_BOUNDARY_LOADER}/child
-                  </Link>
-                  <Link to="${NO_BOUNDARY_LOADER}">
-                    ${NO_BOUNDARY_LOADER}
-                  </Link>
-                </div>
-              )
-            }
-          `,
+                    <Link to="${HAS_BOUNDARY_LOADER}">
+                      ${HAS_BOUNDARY_LOADER}
+                    </Link>
+                    <Link to="${HAS_BOUNDARY_LOADER}/child">
+                      ${HAS_BOUNDARY_LOADER}/child
+                    </Link>
+                    <Link to="${NO_BOUNDARY_LOADER}">
+                      ${NO_BOUNDARY_LOADER}
+                    </Link>
+                  </div>
+                )
+              }
+            `,
 
           [`app/routes${HAS_BOUNDARY_ACTION_FILE}.jsx`]: js`
-            import { Form } from "@remix-run/react";
-            export async function action() {
-              throw new Response("", { status: 401 })
-            }
-            export function ErrorBoundary() {
-              return <p id="action-boundary">${OWN_BOUNDARY_TEXT}</p>
-            }
-            export default function Index() {
-              return (
-                <Form method="post">
-                  <button type="submit" formAction="${HAS_BOUNDARY_ACTION}">
-                    Go
-                  </button>
-                </Form>
-              );
-            }
-          `,
-
-          [`app/routes${NO_BOUNDARY_ACTION_FILE}.jsx`]: js`
-            import { Form } from "@remix-run/react";
-            export function action() {
-              throw new Response("", { status: 401 })
-            }
-            export default function Index() {
-              return (
-                <Form method="post">
-                  <button type="submit" formAction="${NO_BOUNDARY_ACTION}">
-                    Go
-                  </button>
-                </Form>
-              )
-            }
-          `,
-
-          [`app/routes${HAS_BOUNDARY_LOADER_FILE}.jsx`]: js`
-            import { useRouteError } from '@remix-run/react';
-            export function loader() {
-              throw new Response("", { status: 401 })
-            }
-            export function ErrorBoundary() {
-              let error = useRouteError();
-              return (
-                <>
-                  <div id="boundary-loader">${OWN_BOUNDARY_TEXT}</div>
-                  <pre id="status">{error.status}</pre>
-                </>
-              );
-            }
-            export default function Index() {
-              return <div/>
-            }
-          `,
-
-          [`app/routes${HAS_BOUNDARY_LOADER_FILE}.child.jsx`]: js`
-            export function loader() {
-              throw new Response("", { status: 404 })
-            }
-            export default function Index() {
-              return <div/>
-            }
-          `,
-
-          [`app/routes${NO_BOUNDARY_LOADER_FILE}.jsx`]: js`
-            export function loader() {
-              throw new Response("", { status: 401 })
-            }
-            export default function Index() {
-              return <div/>
-            }
-          `,
-
-          "app/routes/action.jsx": js`
-            import { Outlet, useLoaderData } from "@remix-run/react";
-
-            export function loader() {
-              return "PARENT";
-            }
-
-            export default function () {
-              return (
-                <div>
-                  <p id="parent-data">{useLoaderData()}</p>
-                  <Outlet />
-                </div>
-              )
-            }
-          `,
-
-          "app/routes/action.child-catch.jsx": js`
-            import { Form, useLoaderData, useRouteError } from "@remix-run/react";
-
-            export function loader() {
-              return "CHILD";
-            }
-
-            export function action() {
-              throw new Response("Caught!", { status: 400 });
-            }
-
-            export default function () {
-              return (
-                <>
-                  <p id="child-data">{useLoaderData()}</p>
-                  <Form method="post" reloadDocument={true}>
-                    <button type="submit" name="key" value="value">
-                      Submit
+              import { Form } from "@remix-run/react";
+              export async function action() {
+                throw new Response("", { status: 401 })
+              }
+              export function ErrorBoundary() {
+                return <p id="action-boundary">${OWN_BOUNDARY_TEXT}</p>
+              }
+              export default function Index() {
+                return (
+                  <Form method="post">
+                    <button type="submit" formAction="${HAS_BOUNDARY_ACTION}">
+                      Go
                     </button>
                   </Form>
-                </>
-              )
-            }
+                );
+              }
+            `,
 
-            export function ErrorBoundary() {
-              let error = useRouteError()
-              return <p id="child-catch">{error.status} {error.data}</p>;
-            }
-          `,
+          [`app/routes${NO_BOUNDARY_ACTION_FILE}.jsx`]: js`
+              import { Form } from "@remix-run/react";
+              export function action() {
+                throw new Response("", { status: 401 })
+              }
+              export default function Index() {
+                return (
+                  <Form method="post">
+                    <button type="submit" formAction="${NO_BOUNDARY_ACTION}">
+                      Go
+                    </button>
+                  </Form>
+                )
+              }
+            `,
+
+          [`app/routes${HAS_BOUNDARY_LOADER_FILE}.jsx`]: js`
+              import { useRouteError } from '@remix-run/react';
+              export function loader() {
+                throw new Response("", { status: 401 })
+              }
+              export function ErrorBoundary() {
+                let error = useRouteError();
+                return (
+                  <>
+                    <div id="boundary-loader">${OWN_BOUNDARY_TEXT}</div>
+                    <pre id="status">{error.status}</pre>
+                  </>
+                );
+              }
+              export default function Index() {
+                return <div/>
+              }
+            `,
+
+          [`app/routes${HAS_BOUNDARY_LOADER_FILE}.child.jsx`]: js`
+              export function loader() {
+                throw new Response("", { status: 404 })
+              }
+              export default function Index() {
+                return <div/>
+              }
+            `,
+
+          [`app/routes${NO_BOUNDARY_LOADER_FILE}.jsx`]: js`
+              export function loader() {
+                throw new Response("", { status: 401 })
+              }
+              export default function Index() {
+                return <div/>
+              }
+            `,
+
+          "app/routes/action.tsx": js`
+              import { Outlet, useLoaderData } from "@remix-run/react";
+
+              export function loader() {
+                return "PARENT";
+              }
+
+              export default function () {
+                return (
+                  <div>
+                    <p id="parent-data">{useLoaderData()}</p>
+                    <Outlet />
+                  </div>
+                )
+              }
+            `,
+
+          "app/routes/action.child-catch.tsx": js`
+              import { Form, useLoaderData, useRouteError } from "@remix-run/react";
+
+              export function loader() {
+                return "CHILD";
+              }
+
+              export function action() {
+                throw new Response("Caught!", { status: 400 });
+              }
+
+              export default function () {
+                return (
+                  <>
+                    <p id="child-data">{useLoaderData()}</p>
+                    <Form method="post" reloadDocument={true}>
+                      <button type="submit" name="key" value="value">
+                        Submit
+                      </button>
+                    </Form>
+                  </>
+                )
+              }
+
+              export function ErrorBoundary() {
+                let error = useRouteError()
+                return <p id="child-catch">{error.status} {error.data}</p>;
+              }
+            `,
         },
       });
 
@@ -580,6 +588,10 @@ test.describe("v2_errorBoundary", () => {
     });
 
     test("non-matching urls on document requests", async () => {
+      let oldConsoleError;
+      oldConsoleError = console.error;
+      console.error = () => {};
+
       let res = await fixture.requestDocument(NOT_FOUND_HREF);
       expect(res.status).toBe(404);
       let html = await res.text();
@@ -590,6 +602,8 @@ test.describe("v2_errorBoundary", () => {
         { id: "root", pathname: "", params: {} },
       ]).replace(/"/g, "&quot;");
       expect(html).toContain(`<pre id="matches">${expected}</pre>`);
+
+      console.error = oldConsoleError;
     });
 
     test("non-matching urls on client transitions", async ({ page }) => {

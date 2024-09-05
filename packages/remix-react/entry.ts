@@ -4,43 +4,47 @@ import type { RouteManifest, EntryRoute } from "./routes";
 import type { RouteModules } from "./routeModules";
 
 // Object passed to RemixContext.Provider
+
+type SerializedError = {
+  message: string;
+  stack?: string;
+};
 export interface RemixContextObject {
   manifest: AssetsManifest;
   routeModules: RouteModules;
+  criticalCss?: string;
   serverHandoffString?: string;
   future: FutureConfig;
+  isSpaMode: boolean;
   abortDelay?: number;
-  dev?: { liveReloadPort: number };
+  serializeError?(error: Error): SerializedError;
+  renderMeta?: {
+    didRenderScripts?: boolean;
+    streamCache?: Record<
+      number,
+      Promise<void> & {
+        result?: {
+          done: boolean;
+          value: string;
+        };
+        error?: unknown;
+      }
+    >;
+  };
 }
 
 // Additional React-Router information needed at runtime, but not hydrated
 // through RemixContext
 export interface EntryContext extends RemixContextObject {
   staticHandlerContext: StaticHandlerContext;
+  serverHandoffStream?: ReadableStream<Uint8Array>;
 }
 
-type Dev = {
-  port?: number;
-  appServerPort?: number;
-  remixRequestHandlerPath?: string;
-  rebuildPollIntervalMs?: number;
-};
-
-type VanillaExtractOptions = {
-  cache?: boolean;
-};
-
 export interface FutureConfig {
-  unstable_cssModules: boolean;
-  unstable_cssSideEffectImports: boolean;
-  unstable_dev: boolean | Dev;
-  unstable_postcss: boolean;
-  unstable_tailwind: boolean;
-  unstable_vanillaExtract: boolean | VanillaExtractOptions;
-  v2_errorBoundary: boolean;
-  v2_meta: boolean;
-  v2_normalizeFormMethod: boolean;
-  v2_routeConvention: boolean;
+  v3_fetcherPersist: boolean;
+  v3_relativeSplatPath: boolean;
+  unstable_lazyRouteDiscovery: boolean;
+  unstable_singleFetch: boolean;
 }
 
 export interface AssetsManifest {
@@ -52,7 +56,7 @@ export interface AssetsManifest {
   url: string;
   version: string;
   hmr?: {
-    timestamp: number;
+    timestamp?: number;
     runtime: string;
   };
 }

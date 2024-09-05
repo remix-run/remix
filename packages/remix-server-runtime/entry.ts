@@ -1,38 +1,40 @@
 import type { StaticHandlerContext } from "@remix-run/router";
 
+import type { SerializedError } from "./errors";
 import type { RouteManifest, ServerRouteManifest, EntryRoute } from "./routes";
 import type { RouteModules, EntryRouteModule } from "./routeModules";
 
 export interface EntryContext {
   manifest: AssetsManifest;
   routeModules: RouteModules<EntryRouteModule>;
+  criticalCss?: string;
   serverHandoffString?: string;
+  serverHandoffStream?: ReadableStream<Uint8Array>;
+  renderMeta?: {
+    didRenderScripts?: boolean;
+    streamCache?: Record<
+      number,
+      Promise<void> & {
+        result?: {
+          done: boolean;
+          value: string;
+        };
+        error?: unknown;
+      }
+    >;
+  };
   staticHandlerContext: StaticHandlerContext;
   future: FutureConfig;
+  isSpaMode: boolean;
+  serializeError(error: Error): SerializedError;
 }
 
-type Dev = {
-  port?: number;
-  appServerPort?: number;
-  remixRequestHandlerPath?: string;
-  rebuildPollIntervalMs?: number;
-};
-
-type VanillaExtractOptions = {
-  cache?: boolean;
-};
-
 export interface FutureConfig {
-  unstable_cssModules: boolean;
-  unstable_cssSideEffectImports: boolean;
-  unstable_dev: boolean | Dev;
-  unstable_postcss: boolean;
-  unstable_tailwind: boolean;
-  unstable_vanillaExtract: boolean | VanillaExtractOptions;
-  v2_errorBoundary: boolean;
-  v2_meta: boolean;
-  v2_normalizeFormMethod: boolean;
-  v2_routeConvention: boolean;
+  v3_fetcherPersist: boolean;
+  v3_relativeSplatPath: boolean;
+  v3_throwAbortReason: boolean;
+  unstable_lazyRouteDiscovery: boolean;
+  unstable_singleFetch: boolean;
 }
 
 export interface AssetsManifest {

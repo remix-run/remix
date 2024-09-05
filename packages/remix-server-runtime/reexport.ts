@@ -1,6 +1,9 @@
+export type { ErrorResponse } from "@remix-run/router";
+
 export type {
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
+  HandleErrorFunction,
   ServerBuild,
   ServerEntryModule,
 } from "./build";
@@ -21,7 +24,7 @@ export type {
 
 export type { SignFunction, UnsignFunction } from "./crypto";
 
-export type { AppLoadContext, AppData } from "./data";
+export type { AppLoadContext } from "./data";
 
 export type { EntryContext } from "./entry";
 
@@ -34,22 +37,17 @@ export type {
 export type { TypedDeferredData, TypedResponse } from "./responses";
 
 export type {
-  ActionArgs,
   ActionFunction,
+  ActionFunctionArgs,
   DataFunctionArgs,
-  ErrorBoundaryComponent,
+  HeadersArgs,
   HeadersFunction,
-  HtmlMetaDescriptor,
   LinksFunction,
-  LoaderArgs,
   LoaderFunction,
-  MetaDescriptor,
-  MetaFunction,
-  RouteComponent,
-  RouteHandle,
-  V2_ServerRuntimeMetaArgs,
-  V2_ServerRuntimeMetaDescriptor,
-  V2_ServerRuntimeMetaFunction,
+  LoaderFunctionArgs,
+  ServerRuntimeMetaArgs,
+  ServerRuntimeMetaDescriptor,
+  ServerRuntimeMetaFunction,
 } from "./routeModules";
 
 export type { SerializeFrom } from "./serialize";

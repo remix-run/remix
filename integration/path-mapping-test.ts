@@ -1,13 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { createFixture, js, json, mdx } from "./helpers/create-fixture";
-import type { Fixture } from "./helpers/create-fixture";
+import { createFixture, js, json, mdx } from "./helpers/create-fixture.js";
+import type { Fixture } from "./helpers/create-fixture.js";
 
 let fixture: Fixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
       "app/components/my-lib/index.ts": js`
         export const pizza = "this is a pizza";
@@ -51,7 +50,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/components/component.jsx": js`
+      "app/components/component.tsx": js`
         export function PizzaComponent() {
           return <span>this is a pizza</span>
         }
@@ -78,19 +77,19 @@ test.beforeAll(async () => {
       "tsconfig.json": json({
         include: ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
         compilerOptions: {
-          lib: ["DOM", "DOM.Iterable", "ES2019"],
+          lib: ["DOM", "DOM.Iterable", "ES2022"],
           isolatedModules: true,
           esModuleInterop: true,
           jsx: "react-jsx",
           moduleResolution: "node",
           resolveJsonModule: true,
-          target: "ES2019",
+          target: "ES2022",
           strict: true,
           baseUrl: ".",
           paths: {
             "~/*": ["./app/*"],
             "@mylib": ["./app/components/my-lib/index"],
-            "@component": ["./app/components/component.jsx"],
+            "@component": ["./app/components/component.tsx"],
           },
 
           // Remix takes care of building everything in \`remix build\`.

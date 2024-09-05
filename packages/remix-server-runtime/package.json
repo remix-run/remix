@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/server-runtime",
-  "version": "1.15.0",
+  "version": "2.11.2",
   "description": "Server runtime for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -15,21 +15,32 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
+  "scripts": {
+    "tsc": "tsc"
+  },
   "dependencies": {
-    "@remix-run/router": "1.5.0",
-    "@types/cookie": "^0.4.0",
-    "@types/react": "^18.0.15",
+    "@remix-run/router": "1.19.1",
+    "@types/cookie": "^0.6.0",
     "@web3-storage/multipart-parser": "^1.0.0",
-    "cookie": "^0.4.1",
+    "cookie": "^0.6.0",
     "set-cookie-parser": "^2.4.8",
-    "source-map": "^0.7.3"
+    "source-map": "^0.7.3",
+    "turbo-stream": "2.3.0"
   },
   "devDependencies": {
-    "@remix-run/web-file": "^3.0.2",
-    "@types/set-cookie-parser": "^2.4.1"
+    "@types/set-cookie-parser": "^2.4.1",
+    "typescript": "^5.1.6"
+  },
+  "peerDependencies": {
+    "typescript": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/",

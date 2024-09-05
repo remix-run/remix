@@ -1,41 +1,94 @@
 ---
 title: Await
-toc: false
 ---
 
 # `<Await>`
 
-The `<Await>` component is responsible for resolving promises accessed from [`useLoaderData`][useloaderdata]. This can be thought of as a thin wrapper around React Error Boundaries with support for handling SSR that will suspend to resolve the data of a deferred loader value.
+To get started with streaming data, check out the [Streaming Guide][streaming_guide].
 
-`<Await>` can be used to resolve the deferred value in one of two ways:
-
-Directly as a render function:
+The `<Await>` component is responsible for resolving deferred loader promises accessed from [`useLoaderData`][use_loader_data].
 
 ```tsx
-<Suspense>
-  <Await resolve={deferredValue}>
-    {(data) => <p>{data}</p>}
-  </Await>
-</Suspense>
-```
+import { Await } from "@remix-run/react";
 
-Or indirectly via the `useAsyncValue` hook:
-
-```tsx
-function Accessor() {
-  const value = useAsyncValue();
-  return <p>{value}</p>;
-}
-// ...
-<Suspense>
-  <Await resolve={deferredValue}>
-    <Accessor />
+<Suspense fallback={<div>Loading...</div>}>
+  <Await resolve={somePromise}>
+    {(resolvedValue) => <p>{resolvedValue}</p>}
   </Await>
 </Suspense>;
 ```
 
-`<Await>` is paired with [`defer()`][defer] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Suspense>`. A full example can be found in the [streaming guide][streaming-guide].
+## Props
 
-[defer]: ../utils/defer
-[streaming-guide]: ../guides/streaming
-[useloaderdata]: ../hooks/use-loader-data
+### `resolve`
+
+The resolve prop takes a promise from [`useLoaderData`][use_loader_data] to resolve when the data has streamed in.
+
+```tsx
+<Await resolve={somePromise} />
+```
+
+When the promise is not resolved, a parent suspense boundary's fallback will be rendered.
+
+```tsx
+<Suspense fallback={<div>Loading...</div>}>
+  <Await resolve={somePromise} />
+</Suspense>
+```
+
+When the promise is resolved, the `children` will be rendered.
+
+### `children`
+
+The `children` can be a render callback or a React element.
+
+```tsx
+<Await resolve={somePromise}>
+  {(resolvedValue) => <p>{resolvedValue}</p>}
+</Await>
+```
+
+If the `children` props is a React element, the resolved value will be accessible through [`useAsyncValue`][use_async_value] in the subtree.
+
+```tsx
+<Await resolve={somePromise}>
+  <SomeChild />
+</Await>
+```
+
+```tsx
+import { useAsyncValue } from "@remix-run/react";
+
+function SomeChild() {
+  const value = useAsyncValue();
+  return <p>{value}</p>;
+}
+```
+
+### `errorElement`
+
+The `errorElement` prop can be used to render an error boundary when the promise rejects.
+
+```tsx
+<Await errorElement={<div>Oops!</div>} />
+```
+
+The error can be accessed in the subtree with [`useAsyncError`][use_async_error]
+
+```tsx
+<Await errorElement={<SomeChild />} />
+```
+
+```tsx
+import { useAsyncError } from "@remix-run/react";
+
+function SomeChild() {
+  const error = useAsyncError();
+  return <p>{error.message}</p>;
+}
+```
+
+[streaming_guide]: ../guides/streaming
+[use_loader_data]: ../hooks/use-loader-data
+[use_async_value]: ../hooks/use-async-value
+[use_async_error]: ../hooks/use-async-error

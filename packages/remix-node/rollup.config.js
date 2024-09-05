@@ -1,5 +1,6 @@
-const path = require("path");
+const path = require("node:path");
 const babel = require("@rollup/plugin-babel").default;
+const commonjs = require("@rollup/plugin-commonjs");
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
 
@@ -8,7 +9,6 @@ const {
   createBanner,
   getOutputDir,
   isBareModuleId,
-  magicExportsPlugin,
 } = require("../../rollup.utils");
 const { name: packageName, version } = require("./package.json");
 
@@ -38,14 +38,19 @@ module.exports = function rollup() {
           extensions: [".ts", ".tsx"],
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
+        commonjs({ ignoreDynamicRequires: true }),
         copy({
           targets: [
             { src: "LICENSE.md", dest: [outputDir, sourceDir] },
             { src: `${sourceDir}/package.json`, dest: outputDir },
             { src: `${sourceDir}/README.md`, dest: outputDir },
+            // This needs to end up in the root of the pkg but also needs to
+            // reference other compiled files. Just copying these are easier
+            // than dealing with output configuration for sharing chunks x-builds.
+            { src: `${sourceDir}/install.js`, dest: outputDir },
+            { src: `${sourceDir}/install.d.ts`, dest: outputDir },
           ],
         }),
-        magicExportsPlugin({ packageName, version }),
         copyToPlaygrounds(),
       ],
     },

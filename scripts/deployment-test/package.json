@@ -9,13 +9,11 @@
     "@architect/utils": "^3.0.4",
     "@aws-sdk/client-apigatewayv2": "^3.310.0",
     "@iarna/toml": "^2.2.5",
-    "@npmcli/package-json": "^2.0.0",
+    "@npmcli/package-json": "^4.0.1",
     "@testing-library/cypress": "^8.0.2",
     "cypress": "^9.2.0",
     "fetch-retry": "^5.0.2",
     "fs-extra": "^10.0.0",
-    "netlify": "^10.1.1",
-    "node-fetch": "^2.6.9",
     "semver": "^7.3.7",
     "start-server-and-test": "^1.14.0"
   }

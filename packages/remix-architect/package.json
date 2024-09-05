@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/architect",
-  "version": "1.15.0",
+  "version": "2.11.2",
   "description": "Architect server request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -13,17 +13,31 @@
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "scripts": {
+    "tsc": "tsc"
+  },
   "dependencies": {
     "@architect/functions": "^5.2.0",
-    "@remix-run/node": "1.15.0",
+    "@remix-run/node": "workspace:*",
+    "@remix-run/web-fetch": "^4.4.2",
     "@types/aws-lambda": "^8.10.82"
   },
   "devDependencies": {
     "@types/lambda-tester": "^3.6.1",
-    "lambda-tester": "^4.0.1"
+    "@types/node": "^18.17.1",
+    "lambda-tester": "^4.0.1",
+    "typescript": "^5.1.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/",

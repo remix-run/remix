@@ -1,14 +1,23 @@
 import * as React from "react";
-import { render, screen } from "@testing-library/react";
-import { unstable_createRemixStub } from "@remix-run/testing";
-import { Outlet, useLoaderData, useMatches } from "@remix-run/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import user from "@testing-library/user-event";
+import { createRemixStub } from "@remix-run/testing";
+import {
+  Form,
+  Outlet,
+  useActionData,
+  useFetcher,
+  useLoaderData,
+  useMatches,
+} from "@remix-run/react";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 
 test("renders a route", () => {
-  let RemixStub = unstable_createRemixStub([
+  let RemixStub = createRemixStub([
     {
       path: "/",
-      element: <div>HOME</div>,
+      Component: () => <div>HOME</div>,
     },
   ]);
 
@@ -18,18 +27,20 @@ test("renders a route", () => {
 });
 
 test("renders a nested route", () => {
-  let RemixStub = unstable_createRemixStub([
+  let RemixStub = createRemixStub([
     {
-      element: (
-        <div>
-          <h1>ROOT</h1>
-          <Outlet />
-        </div>
-      ),
+      Component() {
+        return (
+          <div>
+            <h1>ROOT</h1>
+            <Outlet />
+          </div>
+        );
+      },
       children: [
         {
           path: "/",
-          element: <div>INDEX</div>,
+          Component: () => <div>INDEX</div>,
         },
       ],
     },
@@ -42,16 +53,13 @@ test("renders a nested route", () => {
 });
 
 test("loaders work", async () => {
-  function App() {
-    let data = useLoaderData();
-    return <pre data-testid="data">Message: {data.message}</pre>;
-  }
-
-  let RemixStub = unstable_createRemixStub([
+  let RemixStub = createRemixStub([
     {
       path: "/",
-      index: true,
-      element: <App />,
+      Component() {
+        let data = useLoaderData();
+        return <pre data-testid="data">Message: {data.message}</pre>;
+      },
       loader() {
         return json({ message: "hello" });
       },
@@ -60,35 +68,148 @@ test("loaders work", async () => {
 
   render(<RemixStub />);
 
-  expect(await screen.findByTestId("data")).toHaveTextContent(
-    /message: hello/i
+  await waitFor(() => screen.findByText("Message: hello"));
+});
+
+test("actions work", async () => {
+  let RemixStub = createRemixStub([
+    {
+      path: "/",
+      Component() {
+        let data = useActionData() as { message: string } | undefined;
+        return (
+          <Form method="post">
+            <button type="submit">Submit</button>
+            {data ? <pre>Message: {data.message}</pre> : null}
+          </Form>
+        );
+      },
+      action() {
+        return json({ message: "hello" });
+      },
+    },
+  ]);
+
+  render(<RemixStub />);
+
+  user.click(screen.getByText("Submit"));
+  await waitFor(() => screen.findByText("Message: hello"));
+});
+
+test("fetchers work", async () => {
+  let count = 0;
+  let RemixStub = createRemixStub([
+    {
+      path: "/",
+      Component() {
+        let fetcher = useFetcher<{ count: number }>();
+        return (
+          <button onClick={() => fetcher.load("/api")}>
+            {fetcher.state + " " + (fetcher.data?.count || 0)}
+          </button>
+        );
+      },
+    },
+    {
+      path: "/api",
+      loader() {
+        return json({ count: ++count });
+      },
+    },
+  ]);
+
+  render(<RemixStub />);
+
+  user.click(screen.getByText("idle 0"));
+  await waitFor(() => screen.findByText("idle 1"));
+
+  user.click(screen.getByText("idle 1"));
+  await waitFor(() => screen.findByText("idle 2"));
+});
+
+test("can pass a predefined loader", () => {
+  async function loader(_args: LoaderFunctionArgs) {
+    return json({ hi: "there" });
+  }
+
+  createRemixStub([
+    {
+      path: "/example",
+      loader,
+    },
+  ]);
+});
+
+test("can pass context values", async () => {
+  let RemixStub = createRemixStub(
+    [
+      {
+        path: "/",
+        Component() {
+          let data = useLoaderData() as { context: string };
+          return (
+            <div>
+              <pre data-testid="root">Context: {data.context}</pre>
+              <Outlet />
+            </div>
+          );
+        },
+        loader({ context }) {
+          return json(context);
+        },
+        children: [
+          {
+            path: "hello",
+            Component() {
+              let data = useLoaderData() as { context: string };
+              return <pre data-testid="hello">Context: {data.context}</pre>;
+            },
+            loader({ context }) {
+              return json(context);
+            },
+          },
+        ],
+      },
+    ],
+    { context: "hello" }
+  );
+
+  render(<RemixStub initialEntries={["/hello"]} />);
+
+  expect(await screen.findByTestId("root")).toHaveTextContent(
+    /context: hello/i
+  );
+  expect(await screen.findByTestId("hello")).toHaveTextContent(
+    /context: hello/i
   );
 });
 
 test("all routes have ids", () => {
-  function Home() {
-    let matches = useMatches();
-
-    return (
-      <div>
-        <h1>HOME</h1>
-        <pre data-testid="matches">{JSON.stringify(matches, null, 2)}</pre>
-      </div>
-    );
-  }
-
-  let RemixStub = unstable_createRemixStub([
+  let RemixStub = createRemixStub([
     {
-      element: (
-        <div>
-          <h1>ROOT</h1>
-          <Outlet />
-        </div>
-      ),
+      Component() {
+        return (
+          <div>
+            <h1>ROOT</h1>
+            <Outlet />
+          </div>
+        );
+      },
       children: [
         {
           path: "/",
-          element: <Home />,
+          Component() {
+            let matches = useMatches();
+
+            return (
+              <div>
+                <h1>HOME</h1>
+                <pre data-testid="matches">
+                  {JSON.stringify(matches, null, 2)}
+                </pre>
+              </div>
+            );
+          },
         },
       ],
     },

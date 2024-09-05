@@ -174,28 +174,28 @@ export interface SessionStorage<Data = SessionData, FlashData = Data> {
    * Session. If there is no session associated with the cookie, this will
    * return a new Session with no data.
    */
-  getSession(
+  getSession: (
     cookieHeader?: string | null,
     options?: CookieParseOptions
-  ): Promise<Session<Data, FlashData>>;
+  ) => Promise<Session<Data, FlashData>>;
 
   /**
    * Stores all data in the Session and returns the Set-Cookie header to be
    * used in the HTTP response.
    */
-  commitSession(
+  commitSession: (
     session: Session<Data, FlashData>,
     options?: CookieSerializeOptions
-  ): Promise<string>;
+  ) => Promise<string>;
 
   /**
    * Deletes all data associated with the Session and returns the Set-Cookie
    * header to be used in the HTTP response.
    */
-  destroySession(
+  destroySession: (
     session: Session<Data, FlashData>,
     options?: CookieSerializeOptions
-  ): Promise<string>;
+  ) => Promise<string>;
 }
 
 /**
@@ -277,11 +277,17 @@ export const createSessionStorageFactory =
       },
       async commitSession(session, options) {
         let { id, data } = session;
+        let expires =
+          options?.maxAge != null
+            ? new Date(Date.now() + options.maxAge * 1000)
+            : options?.expires != null
+            ? options.expires
+            : cookie.expires;
 
         if (id) {
-          await updateData(id, data, cookie.expires);
+          await updateData(id, data, expires);
         } else {
-          id = await createData(data, cookie.expires);
+          id = await createData(data, expires);
         }
 
         return cookie.serialize(id, options);
@@ -290,6 +296,7 @@ export const createSessionStorageFactory =
         await deleteData(session.id);
         return cookie.serialize("", {
           ...options,
+          maxAge: undefined,
           expires: new Date(0),
         });
       },

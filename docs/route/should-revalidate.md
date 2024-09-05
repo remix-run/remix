@@ -6,7 +6,7 @@ title: shouldRevalidate
 
 This function lets apps optimize which routes data should be reloaded after actions and for client-side navigations.
 
-```ts
+```tsx
 import type { ShouldRevalidateFunction } from "@remix-run/react";
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -31,6 +31,8 @@ During client-side transitions, Remix will optimize reloading of routes that are
 
 This function lets apps further optimize by returning `false` when Remix is about to reload a route. If you define this function on a route module, Remix will defer to your function on every navigation and every revalidation after an action is called. Again, this makes it possible for your UI to get out of sync with your server if you do it wrong, so be careful.
 
+`fetcher.load` calls also revalidate, but because they load a specific URL, they don't have to worry about route param or URL search param revalidations. `fetcher.load`'s only revalidate by default after action submissions and explicit revalidation requests via [`useRevalidator`][userevalidator].
+
 ## `actionResult`
 
 When a submission causes the revalidation this will be the result of the action—either action data or an error if the action failed. It's common to include some information in the action result to instruct `shouldRevalidate` to revalidate or not.
@@ -54,7 +56,7 @@ export function shouldRevalidate({
 
 ## `defaultShouldRevalidate`
 
-By default, Remix doesn't call every loader all of the time. There are reliable optimizations it can make by default. For example, only loaders with changing params are called. Consider navigating from the following URL to the one below it:
+By default, Remix doesn't call every loader all the time. There are reliable optimizations it can make by default. For example, only loaders with changing params are called. Consider navigating from the following URL to the one below it:
 
 - `/projects/123/tasks/abc`
 - `/projects/123/tasks/def`
@@ -87,14 +89,16 @@ export function shouldRevalidate() {
 
 These are the [URL params][url-params] from the URL that can be compared to the `nextParams` to decide if you need to reload or not. Perhaps you're using only a partial piece of the param for data loading, you don't need to revalidate if a superfluous part of the param changed.
 
-For instance, consider an event slug with the id and an human-friendly title:
+For instance, consider an event slug with the id and a human-friendly title:
 
 - `/events/blink-182-united-center-saint-paul--ae3f9`
 - `/events/blink-182-little-caesars-arena-detroit--e87ad`
 
-```tsx filename=app/routes/events/$slug.tsx
-export async function loader({ params }: LoaderArgs) {
-  let id = params.slug.split("--")[1];
+```tsx filename=app/routes/events.$slug.tsx
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
+  const id = params.slug.split("--")[1];
   return loadEvent(id);
 }
 
@@ -103,10 +107,10 @@ export function shouldRevalidate({
   nextParams,
   defaultShouldRevalidate,
 }) {
-  let currentId = currentParams.slug.split("--")[1];
-  let nextID = nextParams.slug.split("--")[1];
-  if (currentId !== nextID) {
-    return true;
+  const currentId = currentParams.slug.split("--")[1];
+  const nextId = nextParams.slug.split("--")[1];
+  if (currentId === nextId) {
+    return false;
   }
 
   return defaultShouldRevalidate;
@@ -165,8 +169,8 @@ Another common case is when you've got nested routes and a child component has a
 Consider these routes:
 
 ```
-└── $projectId.tsx
-    └── activity.tsx
+├── $projectId.tsx
+└── $projectId.activity.tsx
 ```
 
 And let's say the UI looks something like this:
@@ -186,13 +190,13 @@ And let's say the UI looks something like this:
 +------------------------------+
 ```
 
-The `activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
+The `$projectId.activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
-```tsx lines=[11]
+```tsx filename=app/routes/$projectId.activity.tsx lines=[11]
 export async function loader({
   params,
   request,
-}: LoaderArgs) {
+}: LoaderFunctionArgs) {
   const url = new URL(request.url);
   return json(
     await exampleDb.activity.findAll({
@@ -211,9 +215,11 @@ This is great for the activity route, but Remix doesn't know if the parent loade
 
 In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.tsx` doesn't use the search params. Consider that our loader for `$projectId.tsx` looks something like this:
 
-```tsx
-export async function loader({ params }: LoaderArgs) {
-  let data = await fakedb.findProject(params.projectId);
+```tsx filename=app/routes/$projectId.tsx
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
+  const data = await fakedb.findProject(params.projectId);
   return json(data);
 }
 ```
@@ -221,11 +227,11 @@ export async function loader({ params }: LoaderArgs) {
 There are a lot of ways to do this, and the rest of the code in the app matters, but ideally you don't think about the UI you're trying to optimize (the search params changing) but instead look at the values your loader cares about. In our case, it only cares about the projectId, so we can check two things:
 
 - did the params stay the same?
-- was it a GET and not a mutation?
+- was it a `GET` and not a mutation?
 
-If the params didn't change, and we didn't do a POST, then we know our loader will return the same data it did last time, so we can opt-out of the revalidation when the child route changes the search params.
+If the params didn't change, and we didn't do a `POST`, then we know our loader will return the same data it did last time, so we can opt out of the revalidation when the child route changes the search params.
 
-```tsx
+```tsx filename=app/routes/$projectId.tsx
 export function shouldRevalidate({
   currentParams,
   nextParams,
@@ -243,4 +249,5 @@ export function shouldRevalidate({
 }
 ```
 
-[url-params]: ../guides/routing#dynamic-segments
+[url-params]: ../file-conventions/routes#dynamic-segments
+[userevalidator]: ../hooks/use-revalidator

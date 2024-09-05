@@ -1,10 +1,10 @@
-import {
-  Request as NodeRequest,
-  FormData as NodeFormData,
-} from "@remix-run/web-fetch";
-import { Blob, File } from "@remix-run/web-file";
-
 import { parseMultipartFormData } from "../formData";
+
+declare global {
+  interface RequestInit {
+    duplex?: "half";
+  }
+}
 
 class CustomError extends Error {
   constructor() {
@@ -14,12 +14,12 @@ class CustomError extends Error {
 
 describe("parseMultipartFormData", () => {
   it("can use a custom upload handler", async () => {
-    let formData = new NodeFormData();
+    let formData = new FormData();
     formData.set("a", "value");
     formData.set("blob", new Blob(["blob".repeat(1000)]), "blob.txt");
     formData.set("file", new File(["file".repeat(1000)], "file.txt"));
 
-    let req = new NodeRequest("https://test.com", {
+    let req = new Request("https://test.com", {
       method: "post",
       body: formData,
     });
@@ -27,7 +27,7 @@ describe("parseMultipartFormData", () => {
     let parsedFormData = await parseMultipartFormData(
       req,
       async ({ filename, data, contentType }) => {
-        let chunks = [];
+        let chunks: Uint8Array[] = [];
         for await (let chunk of data) {
           chunks.push(chunk);
         }
@@ -48,12 +48,12 @@ describe("parseMultipartFormData", () => {
   });
 
   it("can return undefined", async () => {
-    let formData = new NodeFormData();
+    let formData = new FormData();
     formData.set("a", "value");
     formData.set("blob", new Blob(["blob".repeat(1000)]), "blob.txt");
     formData.set("file", new File(["file".repeat(1000)], "file.txt"));
 
-    let req = new NodeRequest("https://test.com", {
+    let req = new Request("https://test.com", {
       method: "post",
       body: formData,
     });
@@ -69,10 +69,10 @@ describe("parseMultipartFormData", () => {
   });
 
   it("can throw errors in upload handlers", async () => {
-    let formData = new NodeFormData();
+    let formData = new FormData();
     formData.set("blob", new Blob(["blob"]), "blob.txt");
 
-    let req = new NodeRequest("https://test.com", {
+    let req = new Request("https://test.com", {
       method: "post",
       body: formData,
     });
@@ -92,12 +92,12 @@ describe("parseMultipartFormData", () => {
 
   describe("stream should propagate events", () => {
     it("when controller errors", async () => {
-      let formData = new NodeFormData();
+      let formData = new FormData();
       formData.set("a", "value");
       formData.set("blob", new Blob(["blob".repeat(1000)]), "blob.txt");
       formData.set("file", new File(["file".repeat(1000)], "file.txt"));
 
-      let underlyingRequest = new NodeRequest("https://test.com", {
+      let underlyingRequest = new Request("https://test.com", {
         method: "post",
         body: formData,
       });
@@ -113,10 +113,11 @@ describe("parseMultipartFormData", () => {
         },
       });
 
-      let req = new NodeRequest("https://test.com", {
+      let req = new Request("https://test.com", {
         method: "post",
         body,
         headers: underlyingRequest.headers,
+        duplex: "half",
       });
 
       let error: Error;
@@ -132,12 +133,12 @@ describe("parseMultipartFormData", () => {
     });
 
     it("when controller is closed", async () => {
-      let formData = new NodeFormData();
+      let formData = new FormData();
       formData.set("a", "value");
       formData.set("blob", new Blob(["blob".repeat(1000)]), "blob.txt");
       formData.set("file", new File(["file".repeat(1000)], "file.txt"));
 
-      let underlyingRequest = new NodeRequest("https://test.com", {
+      let underlyingRequest = new Request("https://test.com", {
         method: "post",
         body: formData,
       });
@@ -153,10 +154,11 @@ describe("parseMultipartFormData", () => {
         },
       });
 
-      let req = new NodeRequest("https://test.com", {
+      let req = new Request("https://test.com", {
         method: "post",
         body,
         headers: underlyingRequest.headers,
+        duplex: "half",
       });
 
       let error: Error;

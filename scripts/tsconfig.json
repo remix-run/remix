@@ -1,5 +1,4 @@
 {
-  "extends": "../tsconfig.json",
   "include": ["."],
   "exclude": ["./deployment-test", "./playground/template/**/*"],
   "compilerOptions": {
@@ -7,10 +6,10 @@
     "checkJs": true,
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "Node",
-    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "module": "ES2022",
     "noEmit": true,
     "strict": true,
-    "target": "ES2018"
+    "target": "ES2022"
   }
 }

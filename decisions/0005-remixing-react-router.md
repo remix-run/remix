@@ -201,7 +201,7 @@ The differentiation between error and catch proved to be a bit vague over time a
 
 ```tsx
 function NewErrorBoundary() {
-  let error = useRouteError();
+  const error = useRouteError();
 
   if (error instanceof Response) {
     return <MyOldCatchBoudnary error={error} />;
@@ -259,7 +259,7 @@ function OldApp() {
 
 ```tsx
 //After
-let router = createBrowserRouter([
+const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
@@ -280,12 +280,12 @@ function NewApp() {
 If folks still prefer the JSX notation, they can leverage `createRoutesFromElements` (aliased from `createRoutesFromChildren` since they are not "children" in this usage):
 
 ```tsx
-let routes = createRoutesFromElements(
+const routes = createRoutesFromElements(
   <Route path="/" element={<Layout />}>
     <Route index element={<Home />} />
   </Route>
 );
-let router = createBrowserRouter(routes);
+const router = createBrowserRouter(routes);
 
 function App() {
   return <RouterProvider router={router} />;

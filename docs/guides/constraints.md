@@ -6,7 +6,7 @@ title: Module Constraints
 
 In order for Remix to run your app in both the server and browser environments, your application modules and third-party dependencies need to be careful about **module side effects**.
 
-- **Server-only code** - Remix will remove server-only code but it can't if you have module side effects that use server-only code.
+- **Server-only code** - Remix will remove server-only code, but it can't if you have module side effects that use server-only code.
 - **Browser-only code** - Remix renders on the server so your modules can't have module side effects or first-rendering logic that call browser-only APIs
 
 ## Server Code Pruning
@@ -22,15 +22,15 @@ Consider a route module that exports `loader`, `meta`, and a component:
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db";
+import PostsView from "../PostsView";
 
 export async function loader() {
   return json(await prisma.post.findMany());
 }
 
 export function meta() {
-  return { title: "Posts" };
+  return [{ title: "Posts" }];
 }
 
 export default function Posts() {
@@ -43,11 +43,11 @@ The server needs everything in this file but the browser only needs the componen
 
 To remove the server code from the browser bundles, the Remix compiler creates a proxy module in front of your route and bundles that instead. The proxy for this route would look like:
 
-```ts
+```tsx
 export { meta, default } from "./routes/posts.tsx";
 ```
 
-The compiler will now analyze the code in `routes/posts.tsx` and only keep code that's inside of `meta` and the component. The result is something like this:
+The compiler will now analyze the code in `app/routes/posts.tsx` and only keep code that's inside of `meta` and the component. The result is something like this:
 
 ```tsx
 import { useLoaderData } from "@remix-run/react";
@@ -55,7 +55,7 @@ import { useLoaderData } from "@remix-run/react";
 import PostsView from "../PostsView";
 
 export function meta() {
-  return { title: "Posts" };
+  return [{ title: "Posts" }];
 }
 
 export default function Posts() {
@@ -80,8 +80,8 @@ Taking our code from earlier, we saw how the compiler can remove the exports and
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db";
+import PostsView from "../PostsView";
 
 console.log(prisma);
 
@@ -90,7 +90,7 @@ export async function loader() {
 }
 
 export function meta() {
-  return { title: "Posts" };
+  return [{ title: "Posts" }];
 }
 
 export default function Posts() {
@@ -101,16 +101,16 @@ export default function Posts() {
 
 That `console.log` _does something_. The module is imported and then immediately logs to the console. The compiler won't remove it because it has to run when the module is imported. It will bundle something like this:
 
-```tsx bad lines=[4,6]
+```tsx bad lines=[3,6]
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db"; //😬
+import PostsView from "../PostsView";
 
 console.log(prisma); //🥶
 
 export function meta() {
-  return { title: "Posts" };
+  return [{ title: "Posts" }];
 }
 
 export default function Posts() {
@@ -127,8 +127,8 @@ To fix this, remove the side effect by simply moving the code _into the loader_.
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db";
+import PostsView from "../PostsView";
 
 export async function loader() {
   console.log(prisma);
@@ -136,7 +136,7 @@ export async function loader() {
 }
 
 export function meta() {
-  return { title: "Posts" };
+  return [{ title: "Posts" }];
 }
 
 export default function Posts() {
@@ -208,7 +208,9 @@ import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import { removeTrailingSlash } from "~/http";
 
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   removeTrailingSlash(request.url);
   return json({ some: "data" });
 };
@@ -218,7 +220,9 @@ It reads much nicer as well when you've got a lot of these:
 
 ```tsx
 // this
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   return removeTrailingSlash(request.url, () => {
     return withSession(request, (session) => {
       return requireUser(session, (user) => {
@@ -231,7 +235,9 @@ export const loader = async ({ request }: LoaderArgs) => {
 
 ```tsx
 // vs. this
-export const loader = async ({ request }: LoaderArgs) => {
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs) => {
   removeTrailingSlash(request.url);
   const session = await getSession(request);
   const user = await requireUser(session);
@@ -239,7 +245,7 @@ export const loader = async ({ request }: LoaderArgs) => {
 };
 ```
 
-If you want to do some extra-curricular reading, google around for "push vs. pull API". The ability to throw responses changes the model from a "push" to a "pull". This is the same reason folks prefer async/await over callbacks, and React hooks over higher order components and render props.
+If you want to do some extracurricular reading, google around for "push vs. pull API". The ability to throw responses changes the model from a "push" to a "pull". This is the same reason folks prefer async/await over callbacks, and React hooks over higher order components and render props.
 
 ## Browser-Only Code on the Server
 
@@ -355,7 +361,7 @@ function useLocalStorage(key: string) {
 }
 ```
 
-Now `localStorage` is not being accessed on the initial render, which will work for the server. In the browser, that state will fill in immediately after hydration. Hopefully it doesn't cause a big content layout shift though! If it does, maybe move that state into your database or a cookie so you can access it server side.
+Now `localStorage` is not being accessed on the initial render, which will work for the server. In the browser, that state will fill in immediately after hydration. Hopefully it doesn't cause a big content layout shift though! If it does, maybe move that state into your database or a cookie, so you can access it server side.
 
 ### `useLayoutEffect`
 
@@ -368,7 +374,7 @@ This hook is great when you're setting state for things like:
 
 The point is to perform the effect at the same time as the browser paint so that you don't see the popup show up at `0,0` and then bounce into place. Layout effects let the paint and the effect happen at the same time to avoid this kind of flashing.
 
-It is **not** good for setting state that is rendered inside of elements. Just make sure you aren't using the state set in a `useLayoutEffect` in your elements and you can ignore React's warning.
+It is **not** good for setting state that is rendered inside of elements. Just make sure you aren't using the state set in a `useLayoutEffect` in your elements, and you can ignore React's warning.
 
 If you know you're calling `useLayoutEffect` correctly and just want to silence the warning, a popular solution in libraries is to create your own hook that doesn't call anything on the server. `useLayoutEffect` only runs in the browser anyway, so this should do the trick. **Please use this carefully, because the warning is there for a good reason!**
 

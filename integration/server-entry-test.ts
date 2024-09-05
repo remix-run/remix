@@ -1,8 +1,8 @@
 import { test, expect } from "@playwright/test";
 
-import { createFixture, js, json } from "./helpers/create-fixture";
-import type { Fixture } from "./helpers/create-fixture";
-import { selectHtml } from "./helpers/playwright-fixture";
+import { createFixture, js } from "./helpers/create-fixture.js";
+import type { Fixture } from "./helpers/create-fixture.js";
+import { selectHtml } from "./helpers/playwright-fixture.js";
 
 test.describe("Custom Server Entry", () => {
   let fixture: Fixture;
@@ -12,9 +12,8 @@ test.describe("Custom Server Entry", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
-        "app/entry.server.jsx": js`
+        "app/entry.server.tsx": js`
           export default function handleRequest() {
             return new Response("");
           }
@@ -25,7 +24,7 @@ test.describe("Custom Server Entry", () => {
           }
         `,
 
-        "app/routes/_index.jsx": js`
+        "app/routes/_index.tsx": js`
           export function loader() {
             return ""
           }
@@ -49,61 +48,11 @@ test.describe("Default Server Entry", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
-        "app/routes/index.jsx": js`
+        "app/routes/_index.tsx": js`
           export default function () {
             return <p>Hello World</p>
           }
         `,
-      },
-    });
-  });
-
-  test("renders", async () => {
-    let response = await fixture.requestDocument("/");
-    expect(selectHtml(await response.text(), "p")).toBe("<p>Hello World</p>");
-  });
-});
-
-test.describe("Default Server Entry (React 17)", () => {
-  let fixture: Fixture;
-
-  test.beforeAll(async () => {
-    fixture = await createFixture({
-      files: {
-        "app/routes/index.jsx": js`
-          export default function () {
-            return <p>Hello World</p>
-          }
-        `,
-        "package.json": json({
-          name: "remix-template-remix",
-          private: true,
-          sideEffects: false,
-          scripts: {
-            build:
-              "node ../../../build/node_modules/@remix-run/dev/dist/cli.js build",
-            dev: "node ../../../build/node_modules/@remix-run/dev/dist/cli.js dev",
-            start:
-              "node ../../../build/node_modules/@remix-run/serve/dist/cli.js build",
-          },
-          dependencies: {
-            "@remix-run/node": "0.0.0-local-version",
-            "@remix-run/react": "0.0.0-local-version",
-            "@remix-run/serve": "0.0.0-local-version",
-            isbot: "0.0.0-local-version",
-            react: "17.0.2",
-            "react-dom": "17.0.2",
-          },
-          devDependencies: {
-            "@remix-run/dev": "0.0.0-local-version",
-            "@types/react": "0.0.0-local-version",
-            "@types/react-dom": "0.0.0-local-version",
-            typescript: "0.0.0-local-version",
-          },
-          engines: {
-            node: ">=14",
-          },
-        }),
       },
     });
   });

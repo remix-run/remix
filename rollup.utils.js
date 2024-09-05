@@ -1,24 +1,20 @@
 const babel = require("@rollup/plugin-babel").default;
-const { camelCase, upperFirst } = require("lodash");
 const copy = require("rollup-plugin-copy");
-const fs = require("fs");
+const fs = require("node:fs");
 const fse = require("fs-extra");
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
-const path = require("path");
+const path = require("node:path");
 
 const REPO_ROOT_DIR = __dirname;
 
 let activeOutputDir = "build";
-if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-  let appDir = path.join(
-    process.cwd(),
-    process.env.REMIX_LOCAL_BUILD_DIRECTORY
-  );
+if (process.env.LOCAL_BUILD_DIRECTORY) {
+  let appDir = path.resolve(process.env.LOCAL_BUILD_DIRECTORY);
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
   } catch {
     console.error(
-      "Oops! You pointed REMIX_LOCAL_BUILD_DIRECTORY to a directory that " +
+      "Oops! You pointed LOCAL_BUILD_DIRECTORY to a directory that " +
         "does not have a node_modules/ folder. Please `npm install` in that " +
         "directory and try again."
     );
@@ -124,7 +120,7 @@ function copyToPlaygrounds() {
           await triggerLiveReload(playgroundDir);
         }
       } else {
-        // Otherwise, trigger live reload on our REMIX_LOCAL_BUILD_DIRECTORY folder
+        // Otherwise, trigger live reload on our LOCAL_BUILD_DIRECTORY folder
         await triggerLiveReload(activeOutputDir);
       }
     },
@@ -163,215 +159,9 @@ function getAdapterConfig(adapterName) {
       }),
       nodeResolve({ extensions: [".ts", ".tsx"] }),
       copyPublishFiles(packageName),
-      magicExportsPlugin({ packageName, version }),
       copyToPlaygrounds(),
     ],
   };
-}
-
-/**
- * TODO: Remove in v2
- * @param {{ packageName: ScopedRemixPackage; version: string }} buildInfo
- * @returns {import("rollup").Plugin}
- */
-function magicExportsPlugin({ packageName, version }) {
-  return {
-    name: `${packageName}:generate-magic-exports`,
-    generateBundle() {
-      let magicExports = getMagicExports(packageName);
-      if (!magicExports) {
-        return;
-      }
-
-      let banner = createBanner(packageName, version);
-      let moduleName = camelCase(packageName.slice("@remix-run/".length));
-      let esmContents = banner + "\n";
-      let tsContents = banner + "\n";
-      let cjsContents =
-        banner +
-        "\n" +
-        "'use strict';\n" +
-        "Object.defineProperty(exports, '__esModule', { value: true });\n";
-
-      if (magicExports.values) {
-        let exportList = magicExports.values.join(", ");
-        esmContents += `export { ${exportList} } from '${packageName}';\n`;
-
-        tsContents += `import * as ${moduleName} from '${packageName}';\n\n`;
-        tsContents += magicExports.values
-          .map(
-            (symbol) =>
-              `/** @deprecated Import \`${symbol}\` from \`${packageName}\` instead. */\n` +
-              `export declare const ${symbol}: typeof ${moduleName}.${symbol};\n`
-          )
-          .join("\n");
-
-        cjsContents += `var ${moduleName} = require('${packageName}');\n`;
-        cjsContents += magicExports.values
-          .map(
-            (symbol) =>
-              `/** @deprecated Import \`${symbol}\` from \`${packageName}\` instead. */\n` +
-              `exports.${symbol} = ${moduleName}.${symbol};\n`
-          )
-          .join("\n");
-      }
-
-      if (magicExports.types) {
-        let typesModuleName = `${upperFirst(moduleName)}Types`;
-
-        tsContents += `import * as ${typesModuleName} from '${packageName}';\n\n`;
-        tsContents += magicExports.types
-          .map(
-            (symbol) =>
-              `/** @deprecated Import type \`${symbol}\` from \`${packageName}\` instead. */\n` +
-              `export declare type ${symbol} = ${typesModuleName}.${symbol};\n`
-          )
-          .join("\n");
-      }
-
-      this.emitFile({
-        fileName: path.join("magicExports", "remix.d.ts"),
-        source: tsContents,
-        type: "asset",
-      });
-      this.emitFile({
-        fileName: path.join("magicExports", "remix.js"),
-        source: cjsContents,
-        type: "asset",
-      });
-      this.emitFile({
-        fileName: path.join("magicExports", "esm", "remix.js"),
-        source: esmContents,
-        type: "asset",
-      });
-    },
-  };
-}
-
-/**
- * TODO: Remove in v2
- * @param {ScopedRemixPackage} packageName
- * @returns {MagicExports | null}
- */
-function getMagicExports(packageName) {
-  // Re-export everything from packages that is available in `remix`
-  /** @type {Record<ScopedRemixPackage, MagicExports>} */
-  let magicExportsByPackageName = {
-    "@remix-run/architect": {
-      values: ["createArcTableSessionStorage"],
-    },
-    "@remix-run/cloudflare": {
-      values: [
-        "createCloudflareKVSessionStorage",
-        "createCookie",
-        "createCookieSessionStorage",
-        "createMemorySessionStorage",
-        "createSessionStorage",
-        "createWorkersKVSessionStorage",
-      ],
-    },
-    "@remix-run/node": {
-      values: [
-        "createCookie",
-        "createCookieSessionStorage",
-        "createFileSessionStorage",
-        "createMemorySessionStorage",
-        "createSessionStorage",
-        "unstable_createFileUploadHandler",
-        "unstable_createMemoryUploadHandler",
-        "unstable_parseMultipartFormData",
-      ],
-      types: ["UploadHandler", "UploadHandlerPart"],
-    },
-    "@remix-run/react": {
-      values: [
-        "Form",
-        "Link",
-        "Links",
-        "LiveReload",
-        "Meta",
-        "NavLink",
-        "PrefetchPageLinks",
-        "RemixBrowser",
-        "RemixServer",
-        "Scripts",
-        "ScrollRestoration",
-        "useActionData",
-        "useBeforeUnload",
-        "useCatch",
-        "useFetcher",
-        "useFetchers",
-        "useFormAction",
-        "useLoaderData",
-        "useMatches",
-        "useSubmit",
-        "useTransition",
-
-        // react-router-dom exports
-        "Outlet",
-        "useHref",
-        "useLocation",
-        "useNavigate",
-        "useNavigationType",
-        "useOutlet",
-        "useOutletContext",
-        "useParams",
-        "useResolvedPath",
-        "useSearchParams",
-      ],
-      types: [
-        "FormEncType",
-        "FormMethod",
-        "FormProps",
-        "LinkProps",
-        "NavLinkProps",
-        "RemixBrowserProps",
-        "RemixServerProps",
-        "SubmitFunction",
-        "SubmitOptions",
-        "ThrownResponse",
-      ],
-    },
-    "@remix-run/server-runtime": {
-      values: ["createSession", "isCookie", "isSession", "json", "redirect"],
-      types: [
-        "ActionArgs",
-        "ActionFunction",
-        "AppData",
-        "AppLoadContext",
-        "Cookie",
-        "CookieOptions",
-        "CookieParseOptions",
-        "CookieSerializeOptions",
-        "CookieSignatureOptions",
-        "EntryContext",
-        "ErrorBoundaryComponent",
-        "HandleDataRequestFunction",
-        "HandleDocumentRequestFunction",
-        "HeadersFunction",
-        "HtmlLinkDescriptor",
-        "HtmlMetaDescriptor",
-        "LinkDescriptor",
-        "LinksFunction",
-        "LoaderArgs",
-        "LoaderFunction",
-        "MetaDescriptor",
-        "MetaFunction",
-        "PageLinkDescriptor",
-        "RequestHandler",
-        "RouteComponent",
-        "RouteHandle",
-        "ServerBuild",
-        "ServerEntryModule",
-        "Session",
-        "SessionData",
-        "SessionIdStorageStrategy",
-        "SessionStorage",
-      ],
-    },
-  };
-
-  return magicExportsByPackageName[packageName] || null;
 }
 
 /**
@@ -399,6 +189,15 @@ function getCliConfig({ packageName, version }) {
         extensions: [".ts"],
       }),
       nodeResolve({ extensions: [".ts"] }),
+      {
+        name: "dynamic-import-polyfill",
+        renderDynamicImport() {
+          return {
+            left: "import(",
+            right: ")",
+          };
+        },
+      },
       copyPublishFiles(packageName),
       copyToPlaygrounds(),
     ],
@@ -430,12 +229,10 @@ module.exports = {
   getCliConfig,
   getOutputDir,
   isBareModuleId,
-  magicExportsPlugin,
 };
 
 /**
- * @typedef {Record<string, { values?: string[]; types?: string[] }>} MagicExports
- * @typedef {"architect" | "cloudflare-pages" | "cloudflare-workers" | "express" | "netlify" | "vercel"} RemixAdapter
+ * @typedef {"architect" | "cloudflare-pages" | "cloudflare-workers" | "express"} RemixAdapter
  * @typedef {"cloudflare" | "node" | "deno"} RemixRuntime
  * @typedef {`@remix-run/${RemixAdapter | RemixRuntime | "dev" | "eslint-config" | "react" | "serve" | "server-runtime"}`} ScopedRemixPackage
  * @typedef {"create-remix" | "remix" | ScopedRemixPackage} RemixPackage

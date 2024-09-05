@@ -15,10 +15,15 @@ module.exports = function rollup() {
         copy({
           targets: [
             { src: "LICENSE.md", dest: [outputDir, sourceDir] },
-            { src: `${sourceDir}/**/*`, dest: outputDir },
-            { src: `!${sourceDir}/rollup.config.js`, dest: outputDir },
+            {
+              src: [
+                `${sourceDir}/**/*`,
+                `!${sourceDir}/rollup.config.js`,
+                `!${sourceDir}/node_modules`,
+              ],
+              dest: outputDir,
+            },
           ],
-          gitignore: true,
         }),
         copyToPlaygrounds(),
       ],

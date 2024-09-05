@@ -1,14 +1,14 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
 import {
   createAppFixture,
   createFixture,
   css,
   js,
   json,
-} from "./helpers/create-fixture";
+} from "./helpers/create-fixture.js";
 
 const TEST_PADDING_VALUE = "20px";
 
@@ -18,23 +18,11 @@ test.describe("CSS side-effect imports", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      config: {
+        serverDependenciesToBundle: ["react", /@test-package/],
+      },
       files: {
-        "remix.config.js": js`
-          module.exports = {
-            serverDependenciesToBundle: [/@test-package/],
-            future: {
-              // Enable all CSS future flags to
-              // ensure features don't clash
-              unstable_cssModules: true,
-              unstable_cssSideEffectImports: true,
-              unstable_postcss: true,
-              unstable_tailwind: true,
-              unstable_vanillaExtract: true,
-              v2_routeConvention: true,
-            },
-          };
-        `,
-        "app/root.jsx": js`
+        "app/root.tsx": js`
           import { Links, Outlet } from "@remix-run/react";
           import { cssBundleHref } from "@remix-run/css-bundle";
           export function links() {
@@ -57,6 +45,8 @@ test.describe("CSS side-effect imports", () => {
         ...rootRelativeFixture(),
         ...imageUrlsFixture(),
         ...rootRelativeImageUrlsFixture(),
+        ...absoluteImageUrlsFixture(),
+        ...jsxInJsFileFixture(),
         ...commonJsPackageFixture(),
         ...esmPackageFixture(),
       },
@@ -73,7 +63,7 @@ test.describe("CSS side-effect imports", () => {
         padding: ${TEST_PADDING_VALUE};
       }
     `,
-    "app/routes/basic-side-effect-test.jsx": js`
+    "app/routes/basic-side-effect-test.tsx": js`
       import "../basicSideEffect/styles.css";
 
       export default function() {
@@ -102,7 +92,7 @@ test.describe("CSS side-effect imports", () => {
         padding: ${TEST_PADDING_VALUE};
       }
     `,
-    "app/routes/root-relative-test.jsx": js`
+    "app/routes/root-relative-test.tsx": js`
       import "~/rootRelative/styles.css";
 
       export default function() {
@@ -137,7 +127,7 @@ test.describe("CSS side-effect imports", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-test.jsx": js`
+    "app/routes/image-urls-test.tsx": js`
       import "../imageUrls/styles.css";
 
       export default function() {
@@ -177,7 +167,7 @@ test.describe("CSS side-effect imports", () => {
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/root-relative-image-urls-test.jsx": js`
+    "app/routes/root-relative-image-urls-test.tsx": js`
       import "../rootRelativeImageUrls/styles.css";
 
       export default function() {
@@ -206,6 +196,75 @@ test.describe("CSS side-effect imports", () => {
     expect(imgStatus).toBe(200);
   });
 
+  let absoluteImageUrlsFixture = () => ({
+    "app/absoluteImageUrls/styles.css": css`
+      .absoluteImageUrls {
+        background-color: peachpuff;
+        background-image: url(/absoluteImageUrls/image.svg);
+        padding: ${TEST_PADDING_VALUE};
+      }
+    `,
+    "public/absoluteImageUrls/image.svg": `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="coral" />
+      </svg>
+    `,
+    "app/routes/absolute-image-urls-test.tsx": js`
+      import "../absoluteImageUrls/styles.css";
+
+      export default function() {
+        return (
+          <div data-testid="absolute-image-urls" className="absoluteImageUrls">
+            Absolute image URLs test
+          </div>
+        )
+      }
+    `,
+  });
+  test("absolute image URLs", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let imgStatus: number | null = null;
+    app.page.on("response", (res) => {
+      if (res.url().endsWith(".svg")) imgStatus = res.status();
+    });
+    await app.goto("/absolute-image-urls-test");
+    let locator = await page.locator("[data-testid='absolute-image-urls']");
+    let backgroundImage = await locator.evaluate(
+      (element) => window.getComputedStyle(element).backgroundImage
+    );
+    expect(backgroundImage).toContain(".svg");
+    expect(imgStatus).toBe(200);
+  });
+
+  let jsxInJsFileFixture = () => ({
+    "app/jsxInJsFile/styles.css": css`
+      .jsxInJsFile {
+        background: peachpuff;
+        padding: ${TEST_PADDING_VALUE};
+      }
+    `,
+    "app/routes/jsx-in-js-file-test.js": js`
+      import "../jsxInJsFile/styles.css";
+
+      export default function() {
+        return (
+          <div data-testid="jsx-in-js-file" className="jsxInJsFile">
+            JSX in JS file test
+          </div>
+        )
+      }
+    `,
+  });
+  test("JSX in JS file", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/jsx-in-js-file-test");
+    let locator = await page.locator("[data-testid='jsx-in-js-file']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
   let commonJsPackageFixture = () => ({
     "node_modules/@test-package/commonjs/styles.css": css`
       .commonJsPackage {
@@ -228,6 +287,9 @@ test.describe("CSS side-effect imports", () => {
         );
       };
     `,
+    "node_modules/@test-package/commonjs/package.json": json({
+      main: "./index.js",
+    }),
     "app/routes/commonjs-package-test.jsx": js`
       import { Test } from "@test-package/commonjs";
       export default function() {
@@ -270,7 +332,7 @@ test.describe("CSS side-effect imports", () => {
     "node_modules/@test-package/esm/package.json": json({
       exports: "./index.mjs",
     }),
-    "app/routes/esm-package-test.jsx": js`
+    "app/routes/esm-package-test.tsx": js`
       import { Test } from "@test-package/esm";
       export default function() {
         return <Test />;

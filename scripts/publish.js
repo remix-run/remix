@@ -1,5 +1,5 @@
-const path = require("path");
-const { execSync } = require("child_process");
+const path = require("node:path");
+const { execSync } = require("node:child_process");
 const semver = require("semver");
 
 const buildDir = path.resolve(__dirname, "../build/node_modules");
@@ -15,7 +15,13 @@ function getTaggedVersion() {
  * @param {string} tag
  */
 function publish(dir, tag) {
-  execSync(`npm publish --access public --tag ${tag} ${dir}`, {
+  let args = ["--access public", `--tag ${tag}`];
+  if (["experimental", "nightly"].includes(tag)) {
+    args.push(`--no-git-checks`);
+  } else {
+    args.push("--publish-branch release-next");
+  }
+  execSync(`pnpm publish ${dir} ${args.join(" ")}`, {
     stdio: "inherit",
   });
 }
@@ -52,8 +58,6 @@ async function run() {
     "node", // publish node before node servers
     "architect",
     "express", // publish express before serve
-    "vercel",
-    "netlify",
     "react",
     "serve",
     "css-bundle",

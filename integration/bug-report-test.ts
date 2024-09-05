@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
+import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -24,31 +28,37 @@ let appFixture: AppFixture;
 // the project, run this:
 //
 //    ```
-//    yarn && yarn build
+//    pnpm install && pnpm build
 //    ```
 //
 // Now try running this test:
 //
 //    ```
-//    yarn bug-report-test
+//    pnpm bug-report-test
 //    ```
 //
 // You can add `--watch` to the end to have it re-run on file changes:
 //
 //    ```
-//    yarn bug-report-test --watch
+//    pnpm bug-report-test --watch
 //    ```
 ////////////////////////////////////////////////////////////////////////////////
 
+test.beforeEach(async ({ context }) => {
+  await context.route(/_data/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    route.continue();
+  });
+});
+
 test.beforeAll(async () => {
   fixture = await createFixture({
-    future: { v2_routeConvention: true },
     ////////////////////////////////////////////////////////////////////////////
     // 💿 Next, add files to this object, just like files in a real app,
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/_index.jsx": js`
+      "app/routes/_index.tsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
 
@@ -67,7 +77,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/burgers.jsx": js`
+      "app/routes/burgers.tsx": js`
         export default function Index() {
           return <div>cheeseburger</div>;
         }
@@ -75,7 +85,7 @@ test.beforeAll(async () => {
     },
   });
 
-  // This creates an interactive app using puppeteer.
+  // This creates an interactive app using playwright.
   appFixture = await createAppFixture(fixture);
 });
 
@@ -97,7 +107,7 @@ test("[description of what you expect it to do]", async ({ page }) => {
   // If you need to test interactivity use the `app`
   await app.goto("/");
   await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await page.waitForSelector("text=cheeseburger");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!

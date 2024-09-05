@@ -2,11 +2,12 @@ import * as React from "react";
 import type { ScrollRestorationProps as ScrollRestorationPropsRR } from "react-router-dom";
 import {
   useLocation,
+  useMatches,
   UNSAFE_useScrollRestoration as useScrollRestoration,
 } from "react-router-dom";
 
 import type { ScriptProps } from "./components";
-import { useMatches } from "./components";
+import { useRemixContext } from "./components";
 
 let STORAGE_KEY = "positions";
 
@@ -22,6 +23,7 @@ export function ScrollRestoration({
 }: ScriptProps & {
   getKey?: ScrollRestorationPropsRR["getKey"];
 }) {
+  let { isSpaMode } = useRemixContext();
   let location = useLocation();
   let matches = useMatches();
 
@@ -46,6 +48,12 @@ export function ScrollRestoration({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
+
+  // In SPA Mode, there's nothing to restore on initial render since we didn't
+  // render anything on the server
+  if (isSpaMode) {
+    return null;
+  }
 
   let restoreScroll = ((STORAGE_KEY: string, restoreKey: string) => {
     if (!window.history.state || !window.history.state.key) {

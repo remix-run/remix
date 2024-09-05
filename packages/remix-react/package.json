@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "1.15.0",
+  "version": "2.11.2",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -15,28 +15,43 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
+  "scripts": {
+    "tsc": "tsc"
+  },
   "dependencies": {
-    "@remix-run/router": "1.5.0",
-    "react-router-dom": "6.10.0",
-    "use-sync-external-store": "1.2.0"
+    "@remix-run/router": "1.19.1",
+    "@remix-run/server-runtime": "workspace:*",
+    "react-router": "6.26.1",
+    "react-router-dom": "6.26.1",
+    "turbo-stream": "2.3.0"
   },
   "devDependencies": {
-    "@remix-run/server-runtime": "1.15.0",
-    "@testing-library/jest-dom": "^5.16.2",
+    "@remix-run/node": "workspace:*",
+    "@remix-run/react": "workspace:*",
+    "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.3.0",
-    "abort-controller": "^3.0.0",
+    "@types/react": "^18.2.20",
+    "jest-environment-jsdom": "^29.6.4",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "typescript": "^5.1.6"
   },
   "peerDependencies": {
-    "react": ">=16.8",
-    "react-dom": ">=16.8"
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "typescript": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/",
+    "future/",
     "CHANGELOG.md",
     "LICENSE.md",
     "README.md"

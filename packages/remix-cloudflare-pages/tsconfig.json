@@ -2,12 +2,11 @@
   "include": ["**/*.ts"],
   "exclude": ["dist", "__tests__", "node_modules"],
   "compilerOptions": {
-    "lib": ["ES2019"],
-    "target": "ES2019",
+    "lib": ["ES2022"],
+    "target": "ES2022",
     "types": ["@cloudflare/workers-types"],
-    "composite": true,
 
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "declaration": true,

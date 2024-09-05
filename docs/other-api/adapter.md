@@ -1,6 +1,6 @@
 ---
 title: "@remix-run/{adapter}"
-order: 2
+order: 3
 ---
 
 # Server Adapters
@@ -13,10 +13,8 @@ Idiomatic Remix apps can generally be deployed anywhere because Remix adapts the
 - `@remix-run/cloudflare-pages`
 - `@remix-run/cloudflare-workers`
 - `@remix-run/express`
-- `@remix-run/netlify`
-- `@remix-run/vercel`
 
-These adapters are imported into your server's entry and are not used inside of your Remix app itself.
+These adapters are imported into your server's entry and are not used inside your Remix app itself.
 
 If you initialized your app with `npx create-remix@latest` with something other than the built-in Remix App Server, you will note a `server/index.js` file that imports and uses one of these adapters.
 
@@ -26,10 +24,15 @@ Each adapter has the same API. In the future we may have helpers specific to the
 
 ## Community Adapters
 
-- [`@fastly/remix-server-adapter`][fastly-remix-server-adapter] - For [Fastly Compute@Edge][fastly-compute-at-edge].
+- [`@fastly/remix-server-adapter`][fastly-remix-server-adapter] - For [Fastly Compute][fastly-compute].
 - [`@mcansh/remix-fastify`][remix-fastify] - For [Fastify][fastify].
-- [`@mcansh/remix-raw-http`][remix-raw-http] - For a good ol barebones Node server.
+- [`@mcansh/remix-raw-http`][remix-raw-http] - For a good old bare bones Node server.
+- [`@netlify/remix-adapter`][netlify-remix-adapter] - For [Netlify][netlify].
+- [`@netlify/remix-edge-adapter`][netlify-remix-edge-adapter] - For [Netlify][netlify] Edge.
+- [`@vercel/remix`][vercel-remix] - For [Vercel][vercel].
 - [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
+- [`partymix`][partymix] - For [PartyKit][partykit].
+- [`@scandinavianairlines/remix-azure-functions`][remix-azure-functions]: For [Azure Functions][azure-functions] and [Azure Static Web Apps][azure-static-web-apps].
 
 ## Creating an Adapter
 
@@ -46,11 +49,11 @@ createRequestHandler({ build, getLoadContext });
 
 Here's a full example with express:
 
-```ts lines=[2-4,11-22]
-const express = require("express");
+```ts lines=[1-3,11-22]
 const {
   createRequestHandler,
 } = require("@remix-run/express");
+const express = require("express");
 
 const app = express();
 
@@ -81,51 +84,6 @@ const {
 exports.handler = createRequestHandler({
   build: require("./build"),
 });
-```
-
-Here's an example with Vercel:
-
-```ts
-const {
-  createRequestHandler,
-} = require("@remix-run/vercel");
-module.exports = createRequestHandler({
-  build: require("./build"),
-});
-```
-
-Here's an example with Netlify:
-
-```ts
-const path = require("path");
-const {
-  createRequestHandler,
-} = require("@remix-run/netlify");
-
-const BUILD_DIR = path.join(process.cwd(), "netlify");
-
-function purgeRequireCache() {
-  // purge require cache on requests for "server side HMR" this won't let
-  // you have in-memory objects between requests in development,
-  // netlify typically does this for you, but we've found it to be hit or
-  // miss and some times requires you to refresh the page after it auto reloads
-  // or even have to restart your server
-  for (const key in require.cache) {
-    if (key.startsWith(BUILD_DIR)) {
-      delete require.cache[key];
-    }
-  }
-}
-
-exports.handler =
-  process.env.NODE_ENV === "production"
-    ? createRequestHandler({ build: require("./build") })
-    : (event, context) => {
-        purgeRequireCache();
-        return createRequestHandler({
-          build: require("./build"),
-        })(event, context);
-      };
 ```
 
 Here's an example with the simplified Cloudflare Workers API:
@@ -181,10 +139,20 @@ addEventListener("fetch", (event) => {
 
 [web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
 [fastly-remix-server-adapter]: https://github.com/fastly/remix-compute-js/tree/main/packages/remix-server-adapter
-[fastly-compute-at-edge]: https://developer.fastly.com/learning/compute/
+[fastly-compute]: https://developer.fastly.com/learning/compute/
 [remix-google-cloud-functions]: https://github.com/penx/remix-google-cloud-functions
 [google-cloud-functions]: https://cloud.google.com/functions
 [firebase-functions]: https://firebase.google.com/docs/functions
 [remix-fastify]: https://github.com/mcansh/remix-fastify
 [fastify]: https://www.fastify.io
 [remix-raw-http]: https://github.com/mcansh/remix-node-http-server
+[netlify-remix-adapter]: https://github.com/netlify/remix-compute/tree/main/packages/remix-adapter
+[netlify-remix-edge-adapter]: https://github.com/netlify/remix-compute/tree/main/packages/remix-edge-adapter
+[netlify]: https://netlify.com
+[vercel-remix]: https://github.com/vercel/remix/blob/main/packages/vercel-remix
+[vercel]: https://vercel.com
+[partykit]: https://partykit.io
+[partymix]: https://github.com/partykit/partykit/tree/main/packages/partymix
+[remix-azure-functions]: https://github.com/scandinavianairlines/remix-azure-functions
+[azure-functions]: https://azure.microsoft.com/en-us/products/functions/
+[azure-static-web-apps]: https://azure.microsoft.com/en-us/products/app-service/static

@@ -21,12 +21,6 @@ on:
         required: true
       TEST_FLY_TOKEN:
         required: true
-      TEST_NETLIFY_TOKEN:
-        required: true
-      TEST_VERCEL_TOKEN:
-        required: true
-      TEST_VERCEL_USER_ID:
-        required: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -39,10 +33,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
@@ -73,10 +70,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
@@ -108,10 +108,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
@@ -144,10 +147,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
@@ -183,10 +189,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3.0.0
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
@@ -211,68 +220,3 @@ jobs:
         working-directory: ./scripts/deployment-test
         env:
           FLY_API_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
-
-  netlify_deploy:
-    name: "Netlify Deploy"
-    if: github.repository == 'remix-run/remix'
-    runs-on: ubuntu-latest
-    steps:
-      - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
-
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: ".nvmrc"
-          cache: npm
-          cache-dependency-path: ./scripts/deployment-test/package.json # no lockfile, key caching off package.json
-
-      # some deployment targets require the latest version of npm
-      # TODO: remove this eventually when the default version we get
-      # is "latest" enough.
-      - name: 📦 Install latest version of npm
-        run: npm install -g npm@latest
-        working-directory: ./scripts/deployment-test
-
-      - name: 📥 Install deployment-test deps
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: 🚀 Deploy to Netlify
-        run: node ./netlify.mjs
-        working-directory: ./scripts/deployment-test
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
-
-  vercel_deploy:
-    name: "Vercel Deploy"
-    if: github.repository == 'remix-run/remix'
-    runs-on: ubuntu-latest
-    steps:
-      - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
-
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: ".nvmrc"
-          cache: npm
-          cache-dependency-path: ./scripts/deployment-test/package.json # no lockfile, key caching off package.json
-
-      # some deployment targets require the latest version of npm
-      # TODO: remove this eventually when the default version we get
-      # is "latest" enough.
-      - name: 📦 Install latest version of npm
-        run: npm install -g npm@latest
-        working-directory: ./scripts/deployment-test
-
-      - name: 📥 Install deployment-test deps
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: 🚀 Deploy to Vercel
-        run: node ./vercel.mjs
-        working-directory: ./scripts/deployment-test
-        env:
-          VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.TEST_VERCEL_USER_ID }}

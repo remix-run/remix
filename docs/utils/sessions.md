@@ -67,17 +67,19 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```tsx filename=app/routes/login.js lines=[8,11-13,15,20,24,30-32,43,48,53,58]
+```tsx filename=app/routes/login.tsx lines=[8,13-15,17,22,26,34-36,47,52,57,62]
 import type {
-  ActionArgs,
-  LoaderArgs,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
 } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { getSession, commitSession } from "../sessions";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -96,7 +98,9 @@ export async function loader({ request }: LoaderArgs) {
   });
 }
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -131,8 +135,7 @@ export async function action({ request }: ActionArgs) {
 }
 
 export default function Login() {
-  const { currentUser, error } =
-    useLoaderData<typeof loader>();
+  const { error } = useLoaderData<typeof loader>();
 
   return (
     <div>
@@ -159,7 +162,9 @@ And then a logout form might look something like this:
 ```tsx
 import { getSession, destroySession } from "../sessions";
 
-export const action = async ({ request }: ActionArgs) => {
+export const action = async ({
+  request,
+}: ActionFunctionArgs) => {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -208,7 +213,12 @@ console.log(isSession(session));
 
 ## `createSessionStorage`
 
-Remix makes it easy to store sessions in your own database if needed. The `createSessionStorage()` API requires a `cookie` (or options for creating a cookie, see [cookies][cookies]) and a set of create, read, update, and delete (CRUD) methods for managing the session data. The cookie is used to persist the session ID.
+Remix makes it easy to store sessions in your own database if needed. The `createSessionStorage()` API requires a `cookie` (for options for creating a cookie, see [cookies][cookies]) and a set of create, read, update, and delete (CRUD) methods for managing the session data. The cookie is used to persist the session ID.
+
+- `createData` will be called from `commitSession` on the initial session creation when no session ID exists in the cookie
+- `readData` will be called from `getSession` when a session ID exists in the cookie
+- `updateData` will be called from `commitSession` when a session ID already exists in the cookie
+- `deleteData` is called from `destroySession`
 
 The following example shows how you could do this using a generic database client:
 
@@ -282,6 +292,8 @@ const { getSession, commitSession, destroySession } =
     },
   });
 ```
+
+Note that other session implementations store a unique session ID in a cookie and use that ID to look up the session in the source of truth (in-memory, filesystem, DB, etc.). In a cookie session, the cookie _is_ the source of truth so there is no unique ID out of the box. If you need to track a unique ID in your cookie session you will need to add an ID value yourself via `session.set()`.
 
 ## `createMemorySessionStorage`
 
@@ -413,7 +425,9 @@ export { getSession, commitSession, destroySession };
 After retrieving a session with `getSession`, the returned session object has a handful of methods and properties:
 
 ```tsx
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -449,7 +463,7 @@ import { commitSession, getSession } from "../sessions";
 export async function action({
   params,
   request,
-}: ActionArgs) {
+}: ActionFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -485,7 +499,9 @@ import {
 
 import { getSession, commitSession } from "./sessions";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -542,7 +558,9 @@ session.unset("name");
 <docs-info>When using cookieSessionStorage, you must commit the session whenever you `unset`</docs-info>
 
 ```tsx
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   // ...
 
   return json(data, {

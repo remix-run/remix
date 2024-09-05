@@ -2,12 +2,12 @@
   "include": ["**/*.ts"],
   "exclude": ["helpers/*-template"],
   "compilerOptions": {
-    "lib": ["ES2019", "DOM", "DOM.Iterable"],
-    "target": "ES2019",
-    "module": "CommonJS",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "target": "ES2022",
+    "module": "ES2022",
     "skipLibCheck": true,
 
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "resolveJsonModule": true,
@@ -15,11 +15,5 @@
     "noEmit": true,
 
     "rootDir": "."
-  },
-  "references": [
-    { "path": "../packages/remix-dev" },
-    { "path": "../packages/remix-express" },
-    { "path": "../packages/remix-react" },
-    { "path": "../packages/remix-server-runtime" }
-  ]
+  }
 }

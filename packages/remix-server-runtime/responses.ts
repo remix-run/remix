@@ -2,6 +2,8 @@ import {
   defer as routerDefer,
   json as routerJson,
   redirect as routerRedirect,
+  replace as routerReplace,
+  redirectDocument as routerRedirectDocument,
   type UNSAFE_DeferredData as DeferredData,
   type TrackedPromise,
 } from "@remix-run/router";
@@ -9,11 +11,14 @@ import {
 import { serializeError } from "./errors";
 import type { ServerMode } from "./mode";
 
+declare const typedDeferredDataBrand: unique symbol;
+
 export type TypedDeferredData<Data extends Record<string, unknown>> = Pick<
   DeferredData,
   "init"
 > & {
   data: Data;
+  readonly [typedDeferredDataBrand]: "TypedDeferredData";
 };
 
 export type DeferFunction = <Data extends Record<string, unknown>>(
@@ -21,17 +26,14 @@ export type DeferFunction = <Data extends Record<string, unknown>>(
   init?: number | ResponseInit
 ) => TypedDeferredData<Data>;
 
-export type JsonFunction = <Data extends unknown>(
+export type JsonFunction = <Data>(
   data: Data,
   init?: number | ResponseInit
 ) => TypedResponse<Data>;
 
 // must be a type since this is a subtype of response
 // interfaces must conform to the types they extend
-export type TypedResponse<T extends unknown = unknown> = Omit<
-  Response,
-  "json"
-> & {
+export type TypedResponse<T = unknown> = Omit<Response, "json"> & {
   json(): Promise<T>;
 };
 
@@ -48,10 +50,10 @@ export const json: JsonFunction = (data, init = {}) => {
 /**
  * This is a shortcut for creating Remix deferred responses
  *
- * @see https://remix.run/docs/utils/defer
+ * @see https://remix.run/utils/defer
  */
 export const defer: DeferFunction = (data, init = {}) => {
-  return routerDefer(data, init) as TypedDeferredData<typeof data>;
+  return routerDefer(data, init) as unknown as TypedDeferredData<typeof data>;
 };
 
 export type RedirectFunction = (
@@ -67,6 +69,27 @@ export type RedirectFunction = (
  */
 export const redirect: RedirectFunction = (url, init = 302) => {
   return routerRedirect(url, init) as TypedResponse<never>;
+};
+
+/**
+ * A redirect response. Sets the status code and the `Location` header.
+ * Defaults to "302 Found".
+ *
+ * @see https://remix.run/utils/redirect
+ */
+export const replace: RedirectFunction = (url, init = 302) => {
+  return routerReplace(url, init) as TypedResponse<never>;
+};
+
+/**
+ * A redirect response that will force a document reload to the new location.
+ * Sets the status code and the `Location` header.
+ * Defaults to "302 Found".
+ *
+ * @see https://remix.run/utils/redirect
+ */
+export const redirectDocument: RedirectFunction = (url, init = 302) => {
+  return routerRedirectDocument(url, init) as TypedResponse<never>;
 };
 
 export function isDeferredData(value: any): value is DeferredData {

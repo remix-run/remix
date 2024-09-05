@@ -27,29 +27,29 @@ jobs:
       NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: dev
           # checkout using a custom token so that we can push later on
           token: ${{ secrets.NIGHTLY_PAT }}
           fetch-depth: 0
 
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v3.0.0
+
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          cache: "yarn"
+          cache: "pnpm"
 
       - name: 📥 Install deps
-        run: yarn --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 🕵️ Check for changes
         id: version
         run: |
-          # get latest commit sha
-          SHA=$(git rev-parse HEAD)
-          # get first 7 characters of sha
-          SHORT_SHA=${SHA::7}
+          SHORT_SHA=$(git rev-parse --short HEAD)
 
           # get latest nightly tag
           LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-creatordate | head -n 1)
@@ -74,12 +74,12 @@ jobs:
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
           git checkout -b nightly/${{ steps.version.outputs.NEXT_VERSION }}
-          yarn run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
+          pnpm run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
           git push origin --tags
 
       - name: 🏗 Build
         if: steps.version.outputs.NEXT_VERSION
-        run: yarn build
+        run: pnpm build
 
       - name: 🔐 Setup npm auth
         if: steps.version.outputs.NEXT_VERSION
@@ -112,9 +112,6 @@ jobs:
       TEST_CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
       TEST_DENO_DEPLOY_TOKEN: ${{ secrets.TEST_DENO_DEPLOY_TOKEN }}
       TEST_FLY_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
-      TEST_NETLIFY_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
-      TEST_VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
-      TEST_VERCEL_USER_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
 
   stacks:
     needs: [nightly]

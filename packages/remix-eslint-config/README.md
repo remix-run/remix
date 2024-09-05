@@ -40,7 +40,7 @@ Please note that because this ruleset is optional, we do not include the core li
   "dependencies": {
     "@testing-library/jest-dom": ">=5.16.0",
     "@testing-library/react": ">=12.0.0",
-    "jest": ">=26.0.0"
+    "jest": ">=28.0.0"
   }
 }
 ```

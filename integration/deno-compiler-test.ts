@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import * as fse from "fs-extra";
-import path from "path";
+import fse from "fs-extra";
+import path from "node:path";
 import shell from "shelljs";
 import glob from "glob";
 
-import { createFixtureProject, js, json } from "./helpers/create-fixture";
+import { createFixtureProject, js, json } from "./helpers/create-fixture.js";
 
 let projectDir: string;
 
@@ -34,10 +34,10 @@ const searchFiles = async (pattern: string | RegExp, files: string[]) => {
 
 test.beforeAll(async () => {
   projectDir = await createFixtureProject({
-    future: { v2_routeConvention: true },
     template: "deno-template",
     files: {
       "package.json": json({
+        name: "remix-template-deno",
         private: true,
         sideEffects: false,
         dependencies: {
@@ -46,6 +46,7 @@ test.beforeAll(async () => {
           isbot: "0.0.0-local-version",
           react: "0.0.0-local-version",
           "react-dom": "0.0.0-local-version",
+
           component: "0.0.0-local-version",
           "deno-pkg": "0.0.0-local-version",
         },
@@ -53,7 +54,8 @@ test.beforeAll(async () => {
           "@remix-run/dev": "0.0.0-local-version",
         },
       }),
-      "app/routes/_index.jsx": js`
+
+      "app/routes/_index.tsx": js`
         import fake from "deno-pkg";
         import { urlComponent } from "https://deno.land/x/component.ts";
         import { urlUtil } from "https://deno.land/x/util.ts";

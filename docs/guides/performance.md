@@ -40,6 +40,18 @@ Not only does Cloudflare run the app close to the user, they also have persisten
 
 There are other similar platforms that we've got plans to support soon.
 
+## Bundle analysis
+
+<docs-warning>This documentation is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]</docs-warning>
+
+Remix outputs metafiles to the server build directory (`build/` by default) so you can analyze your bundle size and composition.
+
+- `metafile.css.json` : Metafile for the CSS bundle
+- `metafile.js.json` : Metafile for the browser JS bundle
+- `metafile.server.json` : Metafile for the serve JS bundle
+
+Remix uses esbuild's metafile format so you can directly upload those files to [https://esbuild.github.io/analyze/][https-esbuild-github-io-analyze] to visualize your bundle.
+
 ## Other Technologies
 
 Here are some other technologies to help speed up your servers:
@@ -56,3 +68,5 @@ Here are some other technologies to help speed up your servers:
 [fauna-db]: https://fauna.com
 [lru-cache]: https://www.npmjs.com/package/lru-cache
 [redis]: https://www.npmjs.com/package/redis
+[https-esbuild-github-io-analyze]: https://esbuild.github.io/analyze
+[classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite

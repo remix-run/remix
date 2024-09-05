@@ -1,21 +1,14 @@
-const fsp = require("fs").promises;
+const fsp = require("node:fs").promises;
 const chalk = require("chalk");
-const path = require("path");
-const { execSync } = require("child_process");
+const path = require("node:path");
+const { execSync } = require("node:child_process");
 const jsonfile = require("jsonfile");
 const Confirm = require("prompt-confirm");
 
 let rootDir = path.resolve(__dirname, "..");
 
 let remixPackages = {
-  adapters: [
-    "architect",
-    "cloudflare-pages",
-    "cloudflare-workers",
-    "express",
-    "netlify",
-    "vercel",
-  ],
+  adapters: ["architect", "cloudflare-pages", "cloudflare-workers", "express"],
   runtimes: ["cloudflare", "deno", "node"],
   core: [
     "dev",
@@ -210,7 +203,13 @@ async function incrementRemixVersion(nextVersion) {
   await Promise.all(
     [
       path.join(".vscode", "deno_resolve_npm_imports.json"),
-      path.join("templates", "deno", ".vscode", "resolve_npm_imports.json"),
+      path.join(
+        "templates",
+        "classic-remix-compiler",
+        "deno",
+        ".vscode",
+        "resolve_npm_imports.json"
+      ),
     ].map((importMapPath) =>
       updateDenoImportMap(path.join(rootDir, importMapPath), nextVersion)
     )

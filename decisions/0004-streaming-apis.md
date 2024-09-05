@@ -94,7 +94,7 @@ No new APIs are needed for the "Accessing" stage 🎉. Since we've "teleported" 
 
 ```tsx
 function Component() {
-  let data = useLoaderData();
+  const data = useLoaderData();
   // data.critical is a resolved value
   // data.lazy is a Promise
 }
@@ -108,7 +108,7 @@ This examples shows the full set of render-time APIs:
 
 ```tsx
 function Component() {
-  let data = useLoaderData(); // data.lazy is a Promise
+  const data = useLoaderData(); // data.lazy is a Promise
 
   return (
     <React.Suspense fallback={<p>Loading...</p>}>
@@ -120,12 +120,12 @@ function Component() {
 }
 
 function MyData() {
-  let value = useAsyncValue(); // Get the resolved value
+  const value = useAsyncValue(); // Get the resolved value
   return <p>Resolved: {value}</p>;
 }
 
 function MyError() {
-  let error = useAsyncError(); // Get the rejected value
+  const error = useAsyncError(); // Get the rejected value
   return <p>Error: {error.message}</p>;
 }
 ```
@@ -139,21 +139,21 @@ The `<Await>` name comes from the fact that for these lazily-rendered promises, 
 <Await resolve={promiseOrValue} />;
 
 // Aims to resemble this Javascript:
-let value = await Promise.resolve(promiseOrValue);
+const value = await Promise.resolve(promiseOrValue);
 ```
 
 Just like `Promise.resolve` can accept a promise or a value, `<Await resolve>` can also accept a promise or a value. This is really useful in case you want to AB test `defer()` responses in the loader - you don't need to change the UI code to render the data.
 
 ```tsx
 export async function loader({ request }: LoaderArgs) {
-  let shouldAwait = isUserInTestGroup(request);
+  const shouldAwait = isUserInTestGroup(request);
   return {
     maybeLazy: shouldAwait ? await fetchData() : fetchData(),
   };
 }
 
 function Component() {
-  let data = useLoaderData();
+  const data = useLoaderData();
 
   // No code forks even if data.maybeLazy is not a Promise!
   return (

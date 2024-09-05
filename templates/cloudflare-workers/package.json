@@ -1,37 +1,47 @@
 {
   "private": true,
   "sideEffects": false,
+  "type": "module",
   "scripts": {
-    "build": "remix build",
-    "deploy": "wrangler publish",
-    "dev:remix": "remix watch",
-    "dev:miniflare": "cross-env NODE_ENV=development miniflare ./build/index.js --watch",
-    "dev": "npm-run-all build --parallel \"dev:*\"",
-    "start": "cross-env NODE_ENV=production miniflare ./build/index.js",
+    "build": "remix vite:build",
+    "deploy": "wrangler deploy",
+    "dev": "remix vite:dev",
+    "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
+    "start": "wrangler dev",
+    "typegen": "wrangler types",
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@cloudflare/kv-asset-handler": "^0.3.2",
     "@remix-run/cloudflare": "*",
-    "@remix-run/cloudflare-workers": "*",
     "@remix-run/react": "*",
-    "cross-env": "^7.0.3",
-    "isbot": "^3.6.8",
+    "@remix-run/server-runtime": "*",
+    "isbot": "^4.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.19.0",
+    "@cloudflare/workers-types": "^4.20240512.0",
     "@remix-run/dev": "*",
-    "@remix-run/eslint-config": "*",
-    "@types/react": "^18.0.35",
-    "@types/react-dom": "^18.0.11",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
+    "@typescript-eslint/eslint-plugin": "^6.7.4",
+    "@typescript-eslint/parser": "^6.7.4",
+    "autoprefixer": "^10.4.19",
     "eslint": "^8.38.0",
-    "miniflare": "^2.13.0",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^4.9.5",
-    "wrangler": "^2.15.1"
+    "eslint-import-resolver-typescript": "^3.6.1",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.1.6",
+    "vite": "^5.1.0",
+    "vite-tsconfig-paths": "^4.2.1",
+    "wrangler": "3.57.1"
   },
   "engines": {
-    "node": ">=16.13"
+    "node": ">=20.0.0"
   }
 }

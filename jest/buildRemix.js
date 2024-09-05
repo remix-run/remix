@@ -1,9 +1,9 @@
-import * as path from "path";
+import * as path from "node:path";
 import { spawn } from "cross-spawn";
 
 function buildRemix(dir) {
   return new Promise((accept, reject) => {
-    spawn("yarn", ["build"], {
+    spawn("pnpm", ["build"], {
       stdio: "inherit",
       cwd: dir,
     })

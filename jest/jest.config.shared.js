@@ -5,16 +5,21 @@ const ignorePatterns = [
   "\\/\\.tmp\\/",
   "\\/\\.cache\\/",
 ];
-/** @type {import('@jest/types').Config.InitialOptions} */
+
+/** @type {import('jest').Config} */
 module.exports = {
-  testEnvironment: "node",
+  moduleNameMapper: {
+    "^@web3-storage/multipart-parser$": require.resolve(
+      "@web3-storage/multipart-parser"
+    ),
+  },
   modulePathIgnorePatterns: ignorePatterns,
-  watchPathIgnorePatterns: [...ignorePatterns, "\\/node_modules\\/"],
-  testMatch: ["<rootDir>/**/*-test.[jt]s?(x)"],
   setupFiles: ["<rootDir>/__tests__/setup.ts"],
+  testMatch: ["<rootDir>/**/*-test.[jt]s?(x)"],
   transform: {
     "\\.[jt]sx?$": require.resolve("./transform"),
   },
+  watchPathIgnorePatterns: [...ignorePatterns, "\\/node_modules\\/"],
   watchPlugins: [
     require.resolve("jest-watch-select-projects"),
     require.resolve("jest-watch-typeahead/filename"),

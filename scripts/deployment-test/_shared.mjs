@@ -5,8 +5,8 @@ import crypto from "node:crypto";
 import { sync as spawnSync } from "cross-spawn";
 import PackageJson from "@npmcli/package-json";
 import jsonfile from "jsonfile";
-import fetch from "node-fetch";
 import retry from "fetch-retry";
+import { fetch } from "undici";
 
 let fetchRetry = retry(fetch);
 

@@ -1,45 +1,71 @@
 import { test, expect } from "@playwright/test";
-import fs from "fs/promises";
-import path from "path";
+import fs from "node:fs/promises";
+import path from "node:path";
+import shell from "shelljs";
+import glob from "glob";
 
-import { createFixtureProject, js, json } from "./helpers/create-fixture";
+import { createFixtureProject, js, json } from "./helpers/create-fixture.js";
+
+const searchFiles = async (pattern: string | RegExp, files: string[]) => {
+  let result = shell.grep("-l", pattern, files);
+  return result.stdout
+    .trim()
+    .split("\n")
+    .filter((line) => line.length > 0);
+};
+
+const findCodeFiles = async (directory: string) =>
+  glob.sync("**/*.@(js|jsx|ts|tsx)", {
+    cwd: directory,
+    absolute: true,
+  });
 
 test.describe("cloudflare compiler", () => {
   let projectDir: string;
 
+  let findBrowserBundle = (projectDir: string): string =>
+    path.resolve(projectDir, "public", "build");
+
   test.beforeAll(async () => {
     projectDir = await createFixtureProject({
-      future: { v2_routeConvention: true },
-      setup: "cloudflare",
       template: "cf-template",
       files: {
         "package.json": json({
           name: "remix-template-cloudflare-workers",
           private: true,
           sideEffects: false,
-          main: "build/index.js",
+          type: "module",
           dependencies: {
+            "@cloudflare/kv-asset-handler": "0.0.0-local-version",
             "@remix-run/cloudflare": "0.0.0-local-version",
-            "@remix-run/cloudflare-workers": "0.0.0-local-version",
             "@remix-run/react": "0.0.0-local-version",
             isbot: "0.0.0-local-version",
             react: "0.0.0-local-version",
             "react-dom": "0.0.0-local-version",
+
             "worker-pkg": "0.0.0-local-version",
             "browser-pkg": "0.0.0-local-version",
             "esm-only-pkg": "0.0.0-local-version",
             "cjs-only-pkg": "0.0.0-local-version",
           },
           devDependencies: {
+            "@cloudflare/workers-types": "0.0.0-local-version",
             "@remix-run/dev": "0.0.0-local-version",
-            "@remix-run/eslint-config": "0.0.0-local-version",
           },
         }),
-        "app/routes/_index.jsx": js`
+
+        "app/routes/_index.tsx": js`
           import fake from "worker-pkg";
           import { content as browserPackage } from "browser-pkg";
           import { content as esmOnlyPackage } from "esm-only-pkg";
           import { content as cjsOnlyPackage } from "cjs-only-pkg";
+          import hooks, {AsyncLocalStorage} from "node:async_hooks";
+
+          export async function loader() {
+            console.log(hooks, AsyncLocalStorage);
+
+            return null;
+          }
 
           export default function Index() {
             return (
@@ -149,58 +175,15 @@ test.describe("cloudflare compiler", () => {
     );
   });
 
-  // TODO: remove this when we get rid of that feature.
-  test("magic imports still works", async () => {
-    let magicExportsForNode = [
-      "createCloudflareKVSessionStorage",
-      "createCookie",
-      "createCookieSessionStorage",
-      "createMemorySessionStorage",
-      "createSessionStorage",
-      "createSession",
-      "createWorkersKVSessionStorage",
-      "isCookie",
-      "isSession",
-      "json",
-      "redirect",
-      "Form",
-      "Link",
-      "Links",
-      "LiveReload",
-      "Meta",
-      "NavLink",
-      "Outlet",
-      "PrefetchPageLinks",
-      "RemixBrowser",
-      "RemixServer",
-      "Scripts",
-      "ScrollRestoration",
-      "useActionData",
-      "useBeforeUnload",
-      "useCatch",
-      "useFetcher",
-      "useFetchers",
-      "useFormAction",
-      "useHref",
-      "useLoaderData",
-      "useLocation",
-      "useMatches",
-      "useNavigate",
-      "useNavigationType",
-      "useOutlet",
-      "useOutletContext",
-      "useParams",
-      "useResolvedPath",
-      "useSearchParams",
-      "useSubmit",
-      "useTransition",
-    ];
-    let magicRemix = await fs.readFile(
-      path.resolve(projectDir, "node_modules/remix/dist/index.js"),
-      "utf8"
+  test("node externals are not bundled in the browser bundle", async () => {
+    let browserBundle = findBrowserBundle(projectDir);
+    let browserCodeFiles = await findCodeFiles(browserBundle);
+
+    let asyncHooks = await searchFiles(
+      /async_hooks|AsyncLocalStorage/,
+      browserCodeFiles
     );
-    for (let name of magicExportsForNode) {
-      expect(magicRemix).toContain(name);
-    }
+
+    expect(asyncHooks).toHaveLength(0);
   });
 });

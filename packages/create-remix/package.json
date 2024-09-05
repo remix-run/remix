@@ -1,6 +1,6 @@
 {
   "name": "create-remix",
-  "version": "1.15.0",
+  "version": "2.11.2",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
   "bugs": {
@@ -16,11 +16,37 @@
   "bin": {
     "create-remix": "dist/cli.js"
   },
+  "scripts": {
+    "tsc": "tsc"
+  },
   "dependencies": {
-    "@remix-run/dev": "1.15.0"
+    "@remix-run/web-fetch": "^4.4.2",
+    "arg": "^5.0.1",
+    "chalk": "^4.1.2",
+    "execa": "5.1.1",
+    "gunzip-maybe": "^1.4.2",
+    "log-update": "^5.0.1",
+    "proxy-agent": "^6.3.0",
+    "recursive-readdir": "^2.2.3",
+    "rimraf": "^4.1.2",
+    "semver": "^7.3.7",
+    "sisteransi": "^1.0.5",
+    "sort-package-json": "^1.55.0",
+    "strip-ansi": "^6.0.1",
+    "tar-fs": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/gunzip-maybe": "^1.4.0",
+    "@types/recursive-readdir": "^2.2.1",
+    "@types/tar-fs": "^2.0.1",
+    "esbuild": "0.17.6",
+    "esbuild-register": "^3.3.2",
+    "fs-extra": "^10.0.0",
+    "msw": "^1.2.3",
+    "tiny-invariant": "^1.2.0"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/",

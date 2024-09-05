@@ -96,7 +96,7 @@ describe("cookies", () => {
     let value = await cookie.parse(getCookieFromSetCookie(setCookie));
 
     expect(value).toMatchInlineSnapshot(`
-      Object {
+      {
         "hello": "mjackson",
       }
     `);
@@ -123,7 +123,7 @@ describe("cookies", () => {
     let value = await cookie.parse(getCookieFromSetCookie(setCookie));
 
     expect(value).toMatchInlineSnapshot(`
-      Object {
+      {
         "hello": "mjackson",
       }
     `);
@@ -142,6 +142,18 @@ describe("cookies", () => {
     expect(setCookie).not.toEqual(setCookie2);
   });
 
+  it("makes the default secrets to be an empty array", async () => {
+    let cookie = createCookie("my-cookie");
+
+    expect(cookie.isSigned).toBe(false);
+
+    let cookie2 = createCookie("my-cookie2", {
+      secrets: undefined,
+    });
+
+    expect(cookie2.isSigned).toBe(false);
+  });
+
   it("makes the default path of cookies to be /", async () => {
     let cookie = createCookie("my-cookie");
 
@@ -154,6 +166,20 @@ describe("cookies", () => {
       path: "/about",
     });
     expect(setCookie2).toContain("Path=/about");
+  });
+
+  it("supports the Priority attribute", async () => {
+    let cookie = createCookie("my-cookie");
+
+    let setCookie = await cookie.serialize("hello world");
+    expect(setCookie).not.toContain("Priority");
+
+    let cookie2 = createCookie("my-cookie2");
+
+    let setCookie2 = await cookie2.serialize("hello world", {
+      priority: "high",
+    });
+    expect(setCookie2).toContain("Priority=High");
   });
 
   describe("warnings when providing options you may not want to", () => {

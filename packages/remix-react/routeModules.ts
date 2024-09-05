@@ -1,6 +1,9 @@
-import type { ComponentType } from "react";
-import type { RouterState } from "@remix-run/router";
+import type { ComponentType, ReactElement } from "react";
 import type {
+  ActionFunction as RRActionFunction,
+  ActionFunctionArgs as RRActionFunctionArgs,
+  LoaderFunction as RRLoaderFunction,
+  LoaderFunctionArgs as RRLoaderFunctionArgs,
   DataRouteMatch,
   Params,
   Location,
@@ -12,50 +15,75 @@ import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { EntryRoute } from "./routes";
 
-type RouteData = RouterState["loaderData"];
-
 export interface RouteModules {
-  [routeId: string]: RouteModule;
+  [routeId: string]: RouteModule | undefined;
 }
 
 export interface RouteModule {
-  CatchBoundary?: CatchBoundaryComponent;
-  ErrorBoundary?: ErrorBoundaryComponent | V2_ErrorBoundaryComponent;
+  clientAction?: ClientActionFunction;
+  clientLoader?: ClientLoaderFunction;
+  ErrorBoundary?: ErrorBoundaryComponent;
+  HydrateFallback?: HydrateFallbackComponent;
+  Layout?: LayoutComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
-  meta?:
-    | V1_MetaFunction
-    | V1_HtmlMetaDescriptor
-    | V2_MetaFunction
-    | V2_MetaDescriptor[];
+  meta?: MetaFunction;
   shouldRevalidate?: ShouldRevalidateFunction;
 }
 
 /**
- * A React component that is rendered when the server throws a Response.
- *
- * @deprecated Please enable the v2_errorBoundary flag
- *
- * @see https://remix.run/route/catch-boundary
+ * A function that handles data mutations for a route on the client
  */
-export type CatchBoundaryComponent = ComponentType<{}>;
+export type ClientActionFunction = (
+  args: ClientActionFunctionArgs
+) => ReturnType<RRActionFunction>;
 
 /**
- * A React component that is rendered when there is an error on a route.
- *
- * @deprecated Please enable the v2_errorBoundary flag
- *
- * @see https://remix.run/route/error-boundary
+ * Arguments passed to a route `clientAction` function
  */
-export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
+export type ClientActionFunctionArgs = RRActionFunctionArgs<undefined> & {
+  serverAction: <T = AppData>() => Promise<SerializeFrom<T>>;
+};
 
 /**
- * V2 version of the ErrorBoundary that eliminates the distinction between
- * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
- * errors with useRouteError()
+ * A function that loads data for a route on the client
  */
-export type V2_ErrorBoundaryComponent = ComponentType;
+export type ClientLoaderFunction = ((
+  args: ClientLoaderFunctionArgs
+) => ReturnType<RRLoaderFunction>) & {
+  hydrate?: boolean;
+};
+
+/**
+ * Arguments passed to a route `clientLoader` function
+ */
+export type ClientLoaderFunctionArgs = RRLoaderFunctionArgs<undefined> & {
+  serverLoader: <T = AppData>() => Promise<SerializeFrom<T>>;
+};
+
+/**
+ * ErrorBoundary to display for this route
+ */
+export type ErrorBoundaryComponent = ComponentType;
+
+/**
+ * `<Route HydrateFallback>` component to render on initial loads
+ * when client loaders are present
+ */
+export type HydrateFallbackComponent = ComponentType;
+
+/**
+ * Optional, root-only `<Route Layout>` component to wrap the root content in.
+ * Useful for defining the <html>/<head>/<body> document shell shared by the
+ * Component, HydrateFallback, and ErrorBoundary
+ */
+export type LayoutComponent = ComponentType<{
+  children: ReactElement<
+    unknown,
+    ErrorBoundaryComponent | HydrateFallbackComponent | RouteComponent
+  >;
+}>;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of
@@ -67,91 +95,60 @@ export interface LinksFunction {
   (): LinkDescriptor[];
 }
 
-/**
- * A function that returns an object of name + content pairs to use for
- * `<meta>` tags for a route. These tags will be merged with (and take
- * precedence over) tags from parent routes.
- *
- * @see https://remix.run/route/meta
- */
-export interface V1_MetaFunction {
-  (args: {
-    data: AppData;
-    parentsData: RouteData;
-    params: Params;
-    location: Location;
-  }): HtmlMetaDescriptor;
-}
-
-// TODO: Replace in v2
-export type MetaFunction = V1_MetaFunction;
-
-export interface RouteMatchWithMeta extends DataRouteMatch {
-  meta: V2_MetaDescriptor[];
-}
-
-export interface V2_MetaMatch<
+export interface MetaMatch<
   RouteId extends string = string,
   Loader extends LoaderFunction | unknown = unknown
 > {
   id: RouteId;
   pathname: DataRouteMatch["pathname"];
   data: Loader extends LoaderFunction ? SerializeFrom<Loader> : unknown;
-  handle?: unknown;
+  handle?: RouteHandle;
   params: DataRouteMatch["params"];
-  meta: V2_MetaDescriptor[];
+  meta: MetaDescriptor[];
+  error?: unknown;
 }
 
-export type V2_MetaMatches<
-  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+export type MetaMatches<
+  MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+    string,
+    unknown
+  >
 > = Array<
   {
-    [K in keyof MatchLoaders]: V2_MetaMatch<
+    [K in keyof MatchLoaders]: MetaMatch<
       Exclude<K, number | symbol>,
       MatchLoaders[K]
     >;
   }[keyof MatchLoaders]
 >;
 
-export interface V2_MetaArgs<
+export interface MetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
-  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+  MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+    string,
+    unknown
+  >
 > {
-  data: Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData;
+  data:
+    | (Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData)
+    | undefined;
   params: Params;
   location: Location;
-  matches: V2_MetaMatches<MatchLoaders>;
+  matches: MetaMatches<MatchLoaders>;
+  error?: unknown;
 }
 
-export interface V2_MetaFunction<
+export interface MetaFunction<
   Loader extends LoaderFunction | unknown = unknown,
-  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+  MatchLoaders extends Record<string, LoaderFunction | unknown> = Record<
+    string,
+    unknown
+  >
 > {
-  (args: V2_MetaArgs<Loader, MatchLoaders>): V2_MetaDescriptor[] | undefined;
+  (args: MetaArgs<Loader, MatchLoaders>): MetaDescriptor[] | undefined;
 }
 
-/**
- * A name/content pair used to render `<meta>` tags in a meta function for a
- * route. The value can be either a string, which will render a single `<meta>`
- * tag, or an array of strings that will render multiple tags with the same
- * `name` attribute.
- */
-export interface V1_HtmlMetaDescriptor {
-  charset?: "utf-8";
-  charSet?: "utf-8";
-  title?: string;
-  [name: string]:
-    | null
-    | string
-    | undefined
-    | Record<string, string>
-    | Array<Record<string, string> | string>;
-}
-
-// TODO: Replace in v2
-export type HtmlMetaDescriptor = V1_HtmlMetaDescriptor;
-
-export type V2_MetaDescriptor =
+export type MetaDescriptor =
   | { charSet: "utf-8" }
   | { title: string }
   | { name: string; content: string }
@@ -178,14 +175,14 @@ export type RouteComponent = ComponentType<{}>;
  *
  * @see https://remix.run/route/handle
  */
-export type RouteHandle = any;
+export type RouteHandle = unknown;
 
 export async function loadRouteModule(
   route: EntryRoute,
   routeModulesCache: RouteModules
 ): Promise<RouteModule> {
   if (route.id in routeModulesCache) {
-    return routeModulesCache[route.id];
+    return routeModulesCache[route.id] as RouteModule;
   }
 
   try {
@@ -193,36 +190,37 @@ export async function loadRouteModule(
     routeModulesCache[route.id] = routeModule;
     return routeModule;
   } catch (error: unknown) {
-    // User got caught in the middle of a deploy and the CDN no longer has the
-    // asset we're trying to import! Reload from the server and the user
-    // (should) get the new manifest--unless the developer purged the static
-    // assets, the manifest path, but not the documents 😬
+    // If we can't load the route it's likely one of 2 things:
+    // - User got caught in the middle of a deploy and the CDN no longer has the
+    //   asset we're trying to import! Reload from the server and the user
+    //   (should) get the new manifest--unless the developer purged the static
+    //   assets, the manifest path, but not the documents 😬
+    // - Or, the asset trying to be imported has an error (usually in vite dev
+    //   mode), so the best we can do here is log the error for visibility
+    //   (via `Preserve log`) and reload
+
+    // Log the error so it can be accessed via the `Preserve Log` setting
+    console.error(
+      `Error loading route module \`${route.module}\`, reloading page...`
+    );
+    console.error(error);
+
+    if (
+      window.__remixContext.isSpaMode &&
+      // @ts-expect-error
+      typeof import.meta.hot !== "undefined"
+    ) {
+      // In SPA Mode (which implies vite) we don't want to perform a hard reload
+      // on dev-time errors since it's a vite compilation error and a reload is
+      // just going to fail with the same issue.  Let the UI bubble to the error
+      // boundary and let them see the error in the overlay or the dev server log
+      throw error;
+    }
+
     window.location.reload();
+
     return new Promise(() => {
       // check out of this hook cause the DJs never gonna re[s]olve this
     });
   }
-}
-
-/**
- * @deprecated The `unstable_shouldReload` function has been removed, so this
- * function will never run and route data will be revalidated on every request.
- * Please update the function name to `shouldRevalidate` and use the
- * `ShouldRevalidateFunction` interface.
- */
-export interface ShouldReloadFunction {
-  (args: {
-    url: URL;
-    prevUrl: URL;
-    params: Params;
-    submission?: Submission;
-  }): boolean;
-}
-
-interface Submission {
-  action: string;
-  method: string;
-  formData: FormData;
-  encType: string;
-  key: string;
 }

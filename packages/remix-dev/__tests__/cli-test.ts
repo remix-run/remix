@@ -1,14 +1,9 @@
-import childProcess from "child_process";
-import os from "os";
-import path from "path";
-import util from "util";
+import childProcess from "node:child_process";
+import os from "node:os";
+import path from "node:path";
+import util from "node:util";
 import fse from "fs-extra";
 import semver from "semver";
-
-import { jestTimeout } from "./setupAfterEnv";
-
-let DOWN = "\x1B\x5B\x42";
-let ENTER = "\x0D";
 
 let execFile = util.promisify(childProcess.execFile);
 
@@ -37,8 +32,6 @@ async function execRemix(
       [
         "--require",
         require.resolve("esbuild-register"),
-        "--require",
-        path.join(__dirname, "./msw.ts"),
         path.resolve(__dirname, "../cli.ts"),
         ...args,
       ],
@@ -62,8 +55,6 @@ async function execRemix(
       [
         "--require",
         require.resolve("esbuild-register"),
-        "--require",
-        path.join(__dirname, "./msw.ts"),
         path.resolve(__dirname, "../cli.ts"),
         ...args,
       ],
@@ -92,62 +83,61 @@ describe("remix CLI", () => {
         "R E M I X
 
           Usage:
-            $ remix create <projectDir> --template <template>
             $ remix init [projectDir]
+            $ remix vite:build [projectDir]
+            $ remix vite:dev [projectDir]
             $ remix build [projectDir]
             $ remix dev [projectDir]
             $ remix routes [projectDir]
             $ remix watch [projectDir]
-            $ remix setup [remixPlatform]
-            $ remix codemod <codemod> [projectDir]
 
           Options:
             --help, -h          Print this help message and exit
             --version, -v       Print the CLI version and exit
             --no-color          Disable ANSI colors in console output
-          \`create\` Options:
-            --template          The template to use
-            --no-install        Skip installing dependencies after creation
-            --no-typescript     Convert the template to JavaScript
-            --remix-version     The version of Remix to use
+          \`vite:build\` Options (Passed through to Vite):
+            --assetsInlineLimit Static asset base64 inline threshold in bytes (default: 4096) (number)
+            --clearScreen       Allow/disable clear screen when logging (boolean)
+            --config, -c        Use specified config file (string)
+            --emptyOutDir       Force empty outDir when it's outside of root (boolean)
+            --logLevel, -l      Info | warn | error | silent (string)
+            --minify            Enable/disable minification, or specify minifier to use (default: "esbuild") (boolean | "terser" | "esbuild")
+            --mode, -m          Set env mode (string)
+            --profile           Start built-in Node.js inspector
+            --sourcemapClient   Output source maps for client build (default: false) (boolean | "inline" | "hidden")
+            --sourcemapServer   Output source maps for server build (default: false) (boolean | "inline" | "hidden")
           \`build\` Options:
             --sourcemap         Generate source maps for production
+          \`vite:dev\` Options (Passed through to Vite):
+            --clearScreen       Allow/disable clear screen when logging (boolean)
+            --config, -c        Use specified config file (string)
+            --cors              Enable CORS (boolean)
+            --force             Force the optimizer to ignore the cache and re-bundle (boolean)
+            --host              Specify hostname (string)
+            --logLevel, -l      Info | warn | error | silent (string)
+            --mode, -m          Set env mode (string)
+            --open              Open browser on startup (boolean | string)
+            --port              Specify port (number)
+            --profile           Start built-in Node.js inspector
+            --strictPort        Exit if specified port is already in use (boolean)
           \`dev\` Options:
-            --debug             Attach Node.js inspector
-            --port, -p          Choose the port from which to run your app
+            --command, -c       Command used to run your app server
+            --manual            Enable manual mode
+            --port              Port for the dev server. Default: any open port
+            --tls-key           Path to TLS key (key.pem)
+            --tls-cert          Path to TLS certificate (cert.pem)
           \`init\` Options:
             --no-delete         Skip deleting the \`remix.init\` script
           \`routes\` Options:
+            --config, -c        Use specified Vite config file (string)
             --json              Print the routes as JSON
-          \`codemod\` Options:
-            --dry               Dry run (no changes are made to files)
-            --force             Bypass Git safety checks
+          \`reveal\` Options:
+            --config, -c        Use specified Vite config file (string)
+            --no-typescript     Generate plain JavaScript files
 
           Values:
             - projectDir        The Remix project directory
-            - template          The project template to use
             - remixPlatform     \`node\` or \`cloudflare\`
-
-          Creating a new project:
-
-            Remix projects are created from templates. A template can be:
-
-            - a file path to a directory of files
-            - a file path to a tarball
-            - the name of a :username/:repo on GitHub
-            - the URL of a tarball
-
-            $ remix create my-app --template /path/to/remix-template
-            $ remix create my-app --template /path/to/remix-template.tar.gz
-            $ remix create my-app --template remix-run/grunge-stack
-            $ remix create my-app --template :username/:repo
-            $ remix create my-app --template https://github.com/:username/:repo
-            $ remix create my-app --template https://github.com/:username/:repo/tree/:branch
-            $ remix create my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
-            $ remix create my-app --template https://example.com/remix-template.tar.gz
-
-            To create a new project from a template in a private GitHub repo,
-            pass the \`token\` flag with a personal access token with access to that repo.
 
           Initialize a project::
 
@@ -158,19 +148,26 @@ describe("remix CLI", () => {
 
             $ remix init
 
-          Build your project:
+          Build your project (Vite):
+
+            $ remix vite:build
+
+          Run your project locally in development (Vite):
+
+            $ remix vite:dev
+
+          Build your project (Classic compiler):
 
             $ remix build
             $ remix build --sourcemap
             $ remix build my-app
 
-          Run your project locally in development:
+          Run your project locally in development (Classic compiler):
 
             $ remix dev
-            $ remix dev my-app
-            $ remix dev --debug
+            $ remix dev -c "node ./server.js"
 
-          Start your server separately and watch for changes:
+          Start your server separately and watch for changes (Classic compiler):
 
             # custom server start command, for example:
             $ remix watch
@@ -183,13 +180,15 @@ describe("remix CLI", () => {
             $ remix routes
             $ remix routes my-app
             $ remix routes --json
+            $ remix routes --config vite.remix.config.ts
 
           Reveal the used entry point:
 
             $ remix reveal entry.client
             $ remix reveal entry.server
             $ remix reveal entry.client --no-typescript
-            $ remix reveal entry.server --no-typescript"
+            $ remix reveal entry.server --no-typescript
+            $ remix reveal entry.server --config vite.remix.config.ts"
       `);
     });
   });
@@ -200,161 +199,4 @@ describe("remix CLI", () => {
       expect(!!semver.valid(stdout.trim())).toBe(true);
     });
   });
-
-  describe("create prompts", () => {
-    it("allows you to go through the prompts", async () => {
-      let projectDir = path.join(TEMP_DIR, "my-app");
-
-      let proc = childProcess.spawn(
-        "node",
-        [
-          "--require",
-          require.resolve("esbuild-register"),
-          "--require",
-          path.join(__dirname, "./msw.ts"),
-          path.resolve(__dirname, "../cli.ts"),
-          "create",
-        ],
-        { stdio: [null, null, null] }
-      );
-
-      await interactWithShell(proc, [
-        { question: /Where.*create.*app/i, type: [projectDir, ENTER] },
-        { question: /What type of app/i, answer: /basics/i },
-        { question: /Where.*deploy/i, answer: /express/i },
-        { question: /typescript or javascript/i, answer: /typescript/i },
-        { question: /install/i, type: ["n", ENTER] },
-      ]);
-    });
-
-    it("allows you to go through the prompts and convert to JS", async () => {
-      let projectDir = path.join(TEMP_DIR, "my-js-app");
-
-      let proc = childProcess.spawn(
-        "node",
-        [
-          "--require",
-          require.resolve("esbuild-register"),
-          "--require",
-          path.join(__dirname, "./msw.ts"),
-          path.resolve(__dirname, "../cli.ts"),
-          "create",
-        ],
-        { stdio: [null, null, null] }
-      );
-
-      await interactWithShell(proc, [
-        { question: /Where.*create.*app/i, type: [projectDir, ENTER] },
-        { question: /What type of app/i, answer: /basics/i },
-        { question: /Where.*deploy/i, answer: /express/i },
-        { question: /typescript or javascript/i, answer: /javascript/i },
-        { question: /install/i, type: ["n", ENTER] },
-      ]);
-
-      expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
-      expect(
-        fse.existsSync(path.join(projectDir, "app/root.jsx"))
-      ).toBeTruthy();
-    });
-  });
 });
-
-function defer() {
-  let resolve: (value: unknown) => void, reject: (reason?: any) => void;
-  let state: { current: "pending" | "resolved" | "rejected" } = {
-    current: "pending",
-  };
-  let promise = new Promise((res, rej) => {
-    resolve = (value: unknown) => {
-      state.current = "resolved";
-      return res(value);
-    };
-    reject = (reason?: any) => {
-      state.current = "rejected";
-      return rej(reason);
-    };
-  });
-  return { promise, resolve: resolve!, reject: reject!, state };
-}
-
-async function interactWithShell(
-  proc: childProcess.ChildProcessWithoutNullStreams,
-  qAndA: Array<
-    | { question: RegExp; type: Array<String>; answer?: never }
-    | { question: RegExp; answer: RegExp; type?: never }
-  >
-) {
-  proc.stdin.setDefaultEncoding("utf-8");
-
-  let deferred = defer();
-
-  let stepNumber = 0;
-
-  let stdout = "";
-  let stderr = "";
-  proc.stdout.on("data", (chunk: unknown) => {
-    if (chunk instanceof Buffer) {
-      chunk = String(chunk);
-    }
-    if (typeof chunk !== "string") {
-      console.error({ stdoutChunk: chunk });
-      throw new Error("stdout chunk is not a string");
-    }
-    stdout += chunk;
-    let step = qAndA[stepNumber];
-    if (!step) return;
-    let { question, answer, type } = step;
-    if (question.test(chunk)) {
-      if (answer) {
-        let currentSelection = chunk
-          .split("\n")
-          .slice(1)
-          .find((l) => l.includes("❯") || l.includes(">"));
-
-        if (currentSelection && answer.test(currentSelection)) {
-          proc.stdin.write(ENTER);
-          stepNumber += 1;
-        } else {
-          proc.stdin.write(DOWN);
-        }
-      } else if (type) {
-        for (let command of type) {
-          proc.stdin.write(command);
-        }
-        stepNumber += 1;
-      }
-    }
-
-    if (stepNumber === qAndA.length) {
-      proc.stdin.end();
-    }
-  });
-
-  proc.stderr.on("data", (chunk: unknown) => {
-    if (chunk instanceof Buffer) {
-      chunk = String(chunk);
-    }
-    if (typeof chunk !== "string") {
-      console.error({ stderrChunk: chunk });
-      throw new Error("stderr chunk is not a string");
-    }
-    stderr += chunk;
-  });
-
-  proc.on("close", (status) => {
-    if (status === 0) return deferred.resolve(status);
-    else return deferred.reject({ stdout, stderr });
-  });
-
-  // this ensures that if we do timeout we at least get as much useful
-  // output as possible.
-  let timeout = setTimeout(() => {
-    if (deferred.state.current === "pending") {
-      proc.kill();
-      deferred.reject({ status: "timeout", stdout, stderr });
-    }
-  }, jestTimeout);
-
-  await deferred.promise;
-  clearTimeout(timeout);
-}

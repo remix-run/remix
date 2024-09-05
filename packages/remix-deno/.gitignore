@@ -1,2 +1,0 @@
-# This file is needed for the Rollup copy plugin to ignore local node_modules/
-node_modules

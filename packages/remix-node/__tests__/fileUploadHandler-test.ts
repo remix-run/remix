@@ -1,13 +1,8 @@
-import * as fs from "fs";
-import * as path from "path";
-import { ReadableStream } from "@remix-run/web-stream";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 import { NodeOnDiskFile } from "../upload/fileUploadHandler";
 import { readableStreamToString } from "../stream";
-
-beforeAll(() => {
-  global.ReadableStream = ReadableStream;
-});
 
 describe("NodeOnDiskFile", () => {
   let filepath = path.resolve(__dirname, "assets/test.txt");

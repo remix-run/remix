@@ -1,8 +1,12 @@
 import { test } from "@playwright/test";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { AppFixture } from "./helpers/create-fixture";
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+} from "./helpers/create-fixture.js";
+import type { AppFixture } from "./helpers/create-fixture.js";
+import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
 
 test.describe(".js route files", () => {
   let appFixture: AppFixture;
@@ -10,9 +14,6 @@ test.describe(".js route files", () => {
   test.beforeAll(async () => {
     appFixture = await createAppFixture(
       await createFixture({
-        future: {
-          v2_routeConvention: true,
-        },
         files: {
           "app/routes/js.js": js`
             export default () => <div data-testid="route-js">Rendered with .js ext</div>;
