@@ -18,7 +18,7 @@ import type { AppLoadContext } from "./data";
 import { sanitizeError, sanitizeErrors } from "./errors";
 import { getDocumentHeaders } from "./headers";
 import { ServerMode } from "./mode";
-import type { TypedResponse } from "./responses";
+import type { TypedDeferredData, TypedResponse } from "./responses";
 import { isRedirectStatusCode, isResponse } from "./responses";
 import type { Jsonify } from "./jsonify";
 import type {
@@ -427,10 +427,12 @@ type Fn = (...args: any[]) => unknown;
 // prettier-ignore
 export type SerializeFrom<T extends Fn> =
   Parameters<T> extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ?
-    ReturnType<T> extends TypedResponse<infer U> ? Jsonify<U> :
+    Awaited<ReturnType<T>> extends TypedResponse<infer U> ? Jsonify<U> :
+    Awaited<ReturnType<T>> extends TypedDeferredData<infer U> ? U :
     Awaited<ReturnType<T>>
   :
-  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? Jsonify<T> :
+  Awaited<ReturnType<T>> extends TypedResponse<infer U> ? Jsonify<U> :
+  Awaited<ReturnType<T>> extends TypedDeferredData<infer U> ? Serialize<U> :
   Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? Serialize<D> :
   Serialize<Awaited<ReturnType<T>>>;
 
@@ -469,6 +471,8 @@ type Recursive = {
   b: Date;
   recursive?: Recursive;
 };
+
+type Pretty<T> = { [K in keyof T]: T[K] } & {};
 
 // prettier-ignore
 // eslint-disable-next-line
@@ -597,4 +601,7 @@ type _tests = [
     function: () => void,
     class: TestClass
   }>>,
+
+  Expect<Equal<Pretty<SerializeFrom<ServerLoader<TypedResponse<{a: string, b: Date}>>>>, { a: string, b: string }>>,
+  Expect<Equal<Pretty<SerializeFrom<ServerLoader<TypedDeferredData<{a: string, b: Promise<Date>}>>>>, { a: string, b: Promise<Date> }>>,
 ]
