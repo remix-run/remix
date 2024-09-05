@@ -144,16 +144,10 @@ export class MultipartParser {
   #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
   #bodyLength = 0;
 
-  constructor(
-    boundary: string,
-    {
-      maxHeaderSize = 8 * 1024, // 8 KB
-      maxFileSize = Infinity,
-    }: MultipartParserOptions = {},
-  ) {
+  constructor(boundary: string, options?: MultipartParserOptions) {
     this.boundary = boundary;
-    this.maxHeaderSize = maxHeaderSize;
-    this.maxFileSize = maxFileSize;
+    this.maxHeaderSize = options?.maxHeaderSize ?? 8 * 1024;
+    this.maxFileSize = options?.maxFileSize ?? Infinity;
 
     this.#findOpeningBoundary = createSearch(`--${boundary}`);
     this.#openingBoundaryLength = 2 + boundary.length; // length of '--' + boundary
