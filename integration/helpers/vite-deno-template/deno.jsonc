@@ -11,7 +11,9 @@
   "imports": {
     // These remix packages should be treated like workspace:* dependencies.
     "@remix-run/dev": "npm:@remix-run/dev@*",
+    "@remix-run/node": "npm:@remix-run/node@*",
     "@remix-run/react": "npm:@remix-run/react@*",
+    "@remix-run/serve": "npm:@remix-run/serve@*",
     "@remix-run/server-runtime": "npm:@remix-run/server-runtime@*",
     "@types/react": "npm:@types/react@^18.3.5",
     "@types/react-dom": "npm:@types/react-dom@^18.3.0",

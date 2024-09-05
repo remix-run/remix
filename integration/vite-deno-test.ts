@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
 import type { Files } from "./helpers/vite.js";
@@ -70,6 +71,15 @@ const files: Files = async ({ port }) => ({
 
 test("vite dev", async ({ page, viteDevDeno }) => {
   let { port } = await viteDevDeno(files, "vite-deno-template");
+  await workflow({ page, port });
+});
+
+test("vite build", async ({ page, viteRemixServeDeno }) => {
+  let { port } = await viteRemixServeDeno(files);
+  await workflow({ page, port });
+});
+
+async function workflow({ page, port }: { page: Page; port: number }) {
   await page.goto(`http://localhost:${port}/`, {
     waitUntil: "networkidle",
   });
@@ -79,4 +89,4 @@ test("vite dev", async ({ page, viteDevDeno }) => {
   await page.getByRole("button").click();
   await expect(page.locator("[data-text]")).toHaveText("Value: my-value");
   expect(page.errors).toEqual([]);
-});
+}

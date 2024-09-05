@@ -1,6 +1,6 @@
-import chalk from "chalk";
-import fse from "fs-extra";
 import path from "node:path";
+import fse from "fs-extra";
+import chalk from "chalk";
 
 const args = process.argv.slice(2);
 const tsc = process.env.CI || args.includes("--tsc");

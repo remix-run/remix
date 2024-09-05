@@ -1,20 +1,22 @@
-import type { Page } from "@playwright/test";
-import { test as base, expect } from "@playwright/test";
-import dedent from "dedent";
-import fse from "fs-extra";
-import getPort from "get-port";
-import glob from "glob";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import fs from "node:fs/promises";
 import path from "node:path";
+import fs from "node:fs/promises";
 import type { Readable } from "node:stream";
 import url from "node:url";
-import shell from "shelljs";
+import fse from "fs-extra";
 import stripIndent from "strip-indent";
 import waitOn from "wait-on";
+import getPort from "get-port";
+import shell from "shelljs";
+import glob from "glob";
+import dedent from "dedent";
+import type { Page } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 
 const denoBin = "deno"; // assume deno is globally installed
+const nodeBin = process.argv[0];
 const remixBin = "node_modules/@remix-run/dev/dist/cli.js";
+const remixServeBin = "node_modules/@remix-run/serve/dist/cli.js";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const root = path.resolve(__dirname, "../..");
 const TMP_DIR = path.join(root, ".tmp/integration");
@@ -120,6 +122,44 @@ export async function createProject(
   return projectDir;
 }
 
+export function installDependenciesDeno(cwd: string) {
+  let installProc = spawnSync(denoBin, ["install", "--no-lock"], {
+    cwd,
+    env: { ...process.env, DENO_FUTURE: "1" },
+    stdio: "pipe",
+  });
+  if (installProc.status !== 0) {
+    throw new Error(
+      [
+        "Failed to install Deno dependencies",
+        "",
+        "exit code: " + installProc.status,
+        `stdout: \n${installProc.stdout.toString("utf8")}\n`,
+        `stderr: \n${installProc.stderr.toString("utf8")}\n`,
+      ].join("\n")
+    );
+  }
+  let copyProc = spawnSync(
+    nodeBin,
+    [
+      "./scripts/copy-build-to-dist.mjs",
+      `--deno-node-modules-paths=${cwd}/node_modules`,
+    ],
+    { stdio: "pipe" }
+  );
+  if (copyProc.status !== 0) {
+    throw new Error(
+      [
+        "Failed to copy build artifacts for Deno",
+        "",
+        "exit code: " + copyProc.status,
+        `stdout: \n${copyProc.stdout.toString("utf8")}\n`,
+        `stderr: \n${copyProc.stderr.toString("utf8")}\n`,
+      ].join("\n")
+    );
+  }
+}
+
 // Avoid "Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env
 // being set" in vite-ecosystem-ci which breaks empty stderr assertions. To fix
 // this we always ensure that only NO_COLOR is set after spreading process.env.
@@ -134,46 +174,53 @@ export const viteBuild = ({
 }: {
   cwd: string;
   env?: Record<string, string>;
-}) => {
-  let nodeBin = process.argv[0];
+}) => nodeSync([remixBin, "vite:build"], { cwd, env });
 
-  return spawnSync(nodeBin, [remixBin, "vite:build"], {
-    cwd,
-    env: {
-      ...process.env,
-      ...colorEnv,
-      ...env,
-    },
-  });
-};
-
-export const viteRemixServe = async ({
+export const viteBuildDeno = ({
   cwd,
-  port,
-  serverBundle,
-  basename,
+  env = {},
 }: {
+  cwd: string;
+  env?: Record<string, string>;
+}) => denoSync([remixBin, "vite:build"], { cwd, env });
+
+type ServerArgs = {
   cwd: string;
   port: number;
   serverBundle?: string;
   basename?: string;
-}) => {
-  let nodeBin = process.argv[0];
-  let serveProc = spawn(
-    nodeBin,
-    [
-      "node_modules/@remix-run/serve/dist/cli.js",
-      `build/server/${serverBundle ? serverBundle + "/" : ""}index.js`,
-    ],
-    {
-      cwd,
-      stdio: "pipe",
-      env: { NODE_ENV: "production", PORT: port.toFixed(0) },
-    }
-  );
-  await waitForServer(serveProc, { port, basename });
-  return () => serveProc.kill();
 };
+
+const createRemixServe =
+  ({
+    runtime = node,
+    waitOnAddress = "localhost",
+  }: {
+    runtime?: typeof node | typeof deno;
+    waitOnAddress?: string;
+  } = {}) =>
+  async ({
+    cwd,
+    port,
+    serverBundle,
+    basename,
+  }: ServerArgs): Promise<() => unknown> => {
+    let serveProc = runtime(
+      [
+        remixServeBin,
+        `build/server/${serverBundle ? serverBundle + "/" : ""}index.js`,
+      ],
+      { cwd, env: { NODE_ENV: "production", PORT: port.toFixed(0) } }
+    );
+    await waitForServer(serveProc, { port, basename }, waitOnAddress);
+    return () => serveProc.kill();
+  };
+
+export const viteRemixServe = createRemixServe();
+export const viteRemixServeDeno = createRemixServe({
+  runtime: deno,
+  waitOnAddress: "127.0.0.1", // https://github.com/jeffbski/wait-on/issues/109
+});
 
 export const wranglerPagesDev = async ({
   cwd,
@@ -182,25 +229,17 @@ export const wranglerPagesDev = async ({
   cwd: string;
   port: number;
 }) => {
-  let nodeBin = process.argv[0];
-
   // grab wrangler bin from remix-run/remix root node_modules since its not copied into integration project's node_modules
   let wranglerBin = path.resolve("node_modules/wrangler/bin/wrangler.js");
-
-  let proc = spawn(
-    nodeBin,
+  let proc = node(
     [wranglerBin, "pages", "dev", "./build/client", "--port", String(port)],
-    {
-      cwd,
-      stdio: "pipe",
-      env: { NODE_ENV: "production" },
-    }
+    { cwd, env: { NODE_ENV: "production" } }
   );
   await waitForServer(proc, { port });
   return () => proc.kill();
 };
 
-type ServerArgs = {
+type DevServerArgs = {
   cwd: string;
   port: number;
   env?: Record<string, string>;
@@ -208,35 +247,38 @@ type ServerArgs = {
 };
 
 const createDev =
-  (
-    runtime: typeof node | typeof deno,
-    args: string[],
-    waitOnAddress = "localhost"
-  ) =>
-  async ({ cwd, port, env, basename }: ServerArgs): Promise<() => unknown> => {
+  ({
+    args = [remixBin, "vite:dev"],
+    runtime = node,
+    waitOnAddress = "localhost",
+  }: {
+    args?: string[];
+    runtime?: typeof node | typeof deno;
+    waitOnAddress?: string;
+  } = {}) =>
+  async ({
+    cwd,
+    port,
+    env,
+    basename,
+  }: DevServerArgs): Promise<() => unknown> => {
     let proc = runtime(args, { cwd, env });
     await waitForServer(proc, { port, basename }, waitOnAddress);
     return () => proc.kill();
   };
 
-export const viteDev = createDev(node, [remixBin, "vite:dev"]);
-export const viteDevDeno = createDev(
-  deno,
-  ["run", "-A", remixBin, "vite:dev"],
-  "127.0.0.1" // https://github.com/jeffbski/wait-on/issues/109
-);
+export const viteDev = createDev();
+export const viteDevDeno = createDev({
+  runtime: deno,
+  waitOnAddress: "127.0.0.1", // https://github.com/jeffbski/wait-on/issues/109
+});
 
-export const customDev = createDev(node, ["./server.mjs"]);
+export const customDev = createDev({ args: ["./server.mjs"] });
 
 // Used for testing errors thrown on build when we don't want to start and
 // wait for the server
-export const viteDevCmd = ({ cwd }: { cwd: string }) => {
-  let nodeBin = process.argv[0];
-  return spawnSync(nodeBin, [remixBin, "vite:dev"], {
-    cwd,
-    env: { ...process.env },
-  });
-};
+export const viteDevCmd = ({ cwd }: { cwd: string }) =>
+  node([remixBin, "vite:dev"], { cwd });
 
 declare module "@playwright/test" {
   interface Page {
@@ -269,6 +311,10 @@ type Fixtures = {
     port: number;
     cwd: string;
   }>;
+  viteRemixServeDeno: (files: Files) => Promise<{
+    port: number;
+    cwd: string;
+  }>;
   wranglerPagesDev: (files: Files) => Promise<{
     port: number;
     cwd: string;
@@ -298,44 +344,8 @@ export const test = base.extend<Fixtures>({
     await use(async (files, template) => {
       let port = await getPort();
       let cwd = await createProject(await files({ port }), template);
-
       // Install dependencies as late as possible so Node won't accidentally import them and cause access denied errors in Deno on Windows
-      let installProc = spawnSync(denoBin, ["install", "--no-lock"], {
-        cwd,
-        env: { ...process.env, DENO_FUTURE: "1" },
-        stdio: "pipe",
-      });
-      if (installProc.status !== 0) {
-        throw new Error(
-          [
-            "Failed to install Deno dependencies",
-            "",
-            "exit code: " + installProc.status,
-            `stdout: \n${installProc.stdout.toString("utf8")}\n`,
-            `stderr: \n${installProc.stderr.toString("utf8")}\n`,
-          ].join("\n")
-        );
-      }
-      let copyProc = spawnSync(
-        process.argv[0],
-        [
-          "./scripts/copy-build-to-dist.mjs",
-          `--deno-node-modules-paths=${cwd}/node_modules`,
-        ],
-        { stdio: "pipe" }
-      );
-      if (copyProc.status !== 0) {
-        throw new Error(
-          [
-            "Failed to copy build artifacts for Deno",
-            "",
-            "exit code: " + copyProc.status,
-            `stdout: \n${copyProc.stdout.toString("utf8")}\n`,
-            `stderr: \n${copyProc.stderr.toString("utf8")}\n`,
-          ].join("\n")
-        );
-      }
-
+      installDependenciesDeno(cwd);
       stop = await viteDevDeno({ cwd, port });
       return { port, cwd };
     });
@@ -366,6 +376,24 @@ export const test = base.extend<Fixtures>({
     stop?.();
   },
   // eslint-disable-next-line no-empty-pattern
+  viteRemixServeDeno: async ({}, use) => {
+    let stop: (() => unknown) | undefined;
+    await use(async (files) => {
+      let port = await getPort();
+      let cwd = await createProject(
+        await files({ port }),
+        "vite-deno-template"
+      );
+      // Install dependencies as late as possible so Node won't accidentally import them and cause access denied errors in Deno on Windows
+      installDependenciesDeno(cwd);
+      let { status } = viteBuildDeno({ cwd });
+      expect(status).toBe(0);
+      stop = await viteRemixServeDeno({ cwd, port });
+      return { port, cwd };
+    });
+    stop?.();
+  },
+  // eslint-disable-next-line no-empty-pattern
   wranglerPagesDev: async ({}, use) => {
     let stop: (() => unknown) | undefined;
     await use(async (files) => {
@@ -387,9 +415,7 @@ function node(
   args: string[],
   options: { cwd: string; env?: Record<string, string> }
 ) {
-  let nodeBin = process.argv[0];
-
-  let proc = spawn(nodeBin, args, {
+  return spawn(nodeBin, args, {
     cwd: options.cwd,
     env: {
       ...process.env,
@@ -398,14 +424,27 @@ function node(
     },
     stdio: "pipe",
   });
-  return proc;
+}
+
+function nodeSync(
+  args: string[],
+  options: { cwd: string; env?: Record<string, string> }
+) {
+  return spawnSync(nodeBin, args, {
+    cwd: options.cwd,
+    env: {
+      ...process.env,
+      ...colorEnv,
+      ...options.env,
+    },
+  });
 }
 
 function deno(
   args: string[],
   options: { cwd: string; env?: Record<string, string> }
 ) {
-  let proc = spawn(denoBin, args, {
+  return spawn(denoBin, ["run", "-A", ...args], {
     cwd: options.cwd,
     env: {
       ...process.env,
@@ -414,7 +453,20 @@ function deno(
     },
     stdio: "pipe",
   });
-  return proc;
+}
+
+function denoSync(
+  args: string[],
+  options: { cwd: string; env?: Record<string, string> }
+) {
+  return spawnSync(denoBin, ["run", "-A", ...args], {
+    cwd: options.cwd,
+    env: {
+      ...process.env,
+      ...colorEnv,
+      ...options.env,
+    },
+  });
 }
 
 async function waitForServer(
