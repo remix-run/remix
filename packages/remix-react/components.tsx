@@ -56,7 +56,7 @@ import type {
   MetaMatches,
   RouteHandle,
 } from "./routeModules";
-import { addRevalidationParam, singleFetchUrl } from "./single-fetch";
+import { singleFetchUrl } from "./single-fetch";
 import { getPartialManifest, isFogOfWarEnabled } from "./fog-of-war";
 
 function useDataRouterContext() {
