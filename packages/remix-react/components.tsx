@@ -491,14 +491,17 @@ function PrefetchPageLinksImpl({
   // just the manifest like the other links in here.
   let keyedPrefetchLinks = useKeyedPrefetchLinks(newMatchesForAssets);
 
-  let linksToRender = React.useMemo(() => {
-    if (!future.unstable_singleFetch) {
-      // Non-single-fetch prefetching is easy...
-      return dataHrefs.map((href) => (
-        <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
-      ));
-    }
-
+  let linksToRender: React.ReactNode[] | React.ReactNode | null;
+  if (!future.unstable_singleFetch) {
+    // Non-single-fetch prefetching is easy...
+    linksToRender = dataHrefs.map((href) => (
+      <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
+    ));
+  } else if (page === location.pathname + location.search + location.hash) {
+    // Because we opt-into revalidation, don't compute this for the current page
+    // since it would always trigger a prefetch of the existing loaders
+    linksToRender = null;
+  } else {
     // Single-fetch is harder :)
     // This parallels the logic in the single fetch data strategy
     let routesParams = new Set<string>();
@@ -521,45 +524,32 @@ function PrefetchPageLinksImpl({
       }
     });
 
-    if (routesParams.size === 0) {
-      // No single-fetch prefetching if _routes param is empty due to `clientLoader`'s
-      return null;
-    }
+    if (routesParams.size > 0) {
+      let url = singleFetchUrl(page);
+      // When one or more routes have opted out, we add a _routes param to
+      // limit the loaders to those that have a server loader and did not
+      // opt out
+      if (foundOptOutRoute && routesParams.size > 0) {
+        url.searchParams.set(
+          "_routes",
+          nextMatches
+            .filter((m) => routesParams.has(m.route.id))
+            .map((m) => m.route.id)
+            .join(",")
+        );
+      }
 
-    let url = singleFetchUrl(page);
-    // When one or more routes have opted out, we add a _routes param to
-    // limit the loaders to those that have a server loader and did not
-    // opt out
-    if (foundOptOutRoute && routesParams.size > 0) {
-      url.searchParams.set(
-        "_routes",
-        nextMatches
-          .filter((m) => routesParams.has(m.route.id))
-          .map((m) => m.route.id)
-          .join(",")
+      linksToRender = (
+        <link
+          key={url.pathname + url.search}
+          rel="prefetch"
+          as="fetch"
+          href={url.pathname + url.search}
+          {...linkProps}
+        />
       );
     }
-
-    return (
-      <link
-        key={url.pathname + url.search}
-        rel="prefetch"
-        as="fetch"
-        href={url.pathname + url.search}
-        {...linkProps}
-      />
-    );
-  }, [
-    dataHrefs,
-    future.unstable_singleFetch,
-    linkProps,
-    loaderData,
-    manifest.routes,
-    newMatchesForData,
-    nextMatches,
-    page,
-    routeModules,
-  ]);
+  }
 
   return (
     <>
