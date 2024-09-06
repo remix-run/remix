@@ -504,18 +504,20 @@ function PrefetchPageLinksImpl({
     let routesParams = new Set<string>();
     let foundOptOutRoute = false;
     nextMatches.forEach((m) => {
-      if (manifest.routes[m.route.id].hasLoader) {
-        if (
-          !newMatchesForData.some((m2) => m2.route.id === m.route.id) &&
-          m.route.id in loaderData &&
-          routeModules[m.route.id]?.shouldRevalidate
-        ) {
-          foundOptOutRoute = true;
-        } else if (manifest.routes[m.route.id].hasClientLoader) {
-          foundOptOutRoute = true;
-        } else {
-          routesParams.add(m.route.id);
-        }
+      if (!manifest.routes[m.route.id].hasLoader) {
+        return;
+      }
+
+      if (
+        !newMatchesForData.some((m2) => m2.route.id === m.route.id) &&
+        m.route.id in loaderData &&
+        routeModules[m.route.id]?.shouldRevalidate
+      ) {
+        foundOptOutRoute = true;
+      } else if (manifest.routes[m.route.id].hasClientLoader) {
+        foundOptOutRoute = true;
+      } else {
+        routesParams.add(m.route.id);
       }
     });
 
