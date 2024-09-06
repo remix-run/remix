@@ -449,7 +449,7 @@ function PrefetchPageLinksImpl({
 }) {
   let location = useLocation();
   let { future, manifest, routeModules } = useRemixContext();
-  let { matches } = useDataRouterStateContext();
+  let { loaderData, matches } = useDataRouterStateContext();
 
   let newMatchesForData = React.useMemo(
     () =>
@@ -491,37 +491,73 @@ function PrefetchPageLinksImpl({
   // just the manifest like the other links in here.
   let keyedPrefetchLinks = useKeyedPrefetchLinks(newMatchesForAssets);
 
-  let linksToRender: React.ReactNode | React.ReactNode[] | null = null;
-  if (!future.unstable_singleFetch) {
-    // Non-single-fetch prefetching
-    linksToRender = dataHrefs.map((href) => (
-      <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
-    ));
-  } else if (newMatchesForData.length > 0) {
-    // Single-fetch with routes that require data
-    let url = addRevalidationParam(
-      manifest,
-      routeModules,
-      nextMatches.map((m) => m.route),
-      newMatchesForData.map((m) => m.route),
-      singleFetchUrl(page)
-    );
-    if (url.searchParams.get("_routes") !== "") {
-      linksToRender = (
-        <link
-          key={url.pathname + url.search}
-          rel="prefetch"
-          as="fetch"
-          href={url.pathname + url.search}
-          {...linkProps}
-        />
-      );
-    } else {
-      // No single-fetch prefetching if _routes param is empty due to `clientLoader`'s
+  let linksToRender = React.useMemo(() => {
+    if (!future.unstable_singleFetch) {
+      // Non-single-fetch prefetching is easy...
+      return dataHrefs.map((href) => (
+        <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
+      ));
     }
-  } else {
-    // No single-fetch prefetching if there are no new matches for data
-  }
+
+    // Single-fetch is harder :)
+    // This parallels the logic in the single fetch data strategy
+    let routesParams = new Set<string>();
+    let foundOptOutRoute = false;
+    nextMatches.forEach((m) => {
+      if (manifest.routes[m.route.id].hasLoader) {
+        if (
+          !newMatchesForData.some((m2) => m2.route.id === m.route.id) &&
+          m.route.id in loaderData &&
+          routeModules[m.route.id]?.shouldRevalidate
+        ) {
+          foundOptOutRoute = true;
+        } else if (manifest.routes[m.route.id].hasClientLoader) {
+          foundOptOutRoute = true;
+        } else {
+          routesParams.add(m.route.id);
+        }
+      }
+    });
+
+    if (routesParams.size === 0) {
+      // No single-fetch prefetching if _routes param is empty due to `clientLoader`'s
+      return null;
+    }
+
+    let url = singleFetchUrl(page);
+    // When one or more routes have opted out, we add a _routes param to
+    // limit the loaders to those that have a server loader and did not
+    // opt out
+    if (foundOptOutRoute && routesParams.size > 0) {
+      url.searchParams.set(
+        "_routes",
+        nextMatches
+          .filter((m) => routesParams.has(m.route.id))
+          .map((m) => m.route.id)
+          .join(",")
+      );
+    }
+
+    return (
+      <link
+        key={url.pathname + url.search}
+        rel="prefetch"
+        as="fetch"
+        href={url.pathname + url.search}
+        {...linkProps}
+      />
+    );
+  }, [
+    dataHrefs,
+    future.unstable_singleFetch,
+    linkProps,
+    loaderData,
+    manifest.routes,
+    newMatchesForData,
+    nextMatches,
+    page,
+    routeModules,
+  ]);
 
   return (
     <>
