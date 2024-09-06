@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.12.0-pre.2
+
+### Patch Changes
+
+- [REMOVE] Fix HDR for single fetch ([#9954](https://github.com/remix-run/remix/pull/9954))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.12.0-pre.2`
+
 ## 2.12.0-pre.1
 
 ### Patch Changes
