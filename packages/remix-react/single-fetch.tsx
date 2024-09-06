@@ -278,7 +278,6 @@ async function singleFetchLoaderNavigationStrategy(
             type: "data",
             result,
           };
-          return result;
         } catch (e) {
           results[m.route.id] = {
             type: "error",
