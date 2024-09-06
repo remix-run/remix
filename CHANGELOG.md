@@ -296,6 +296,7 @@ For more information, see [Guides > Single Fetch](https://remix.run/docs/guides/
 - `@remix-run/react` - Lazy Route Discovery: Sort `/__manifest` query parameters for better caching ([#9888](https://github.com/remix-run/remix/pull/9888))
 - `@remix-run/react` - Single Fetch: Improved type safety ([#9893](https://github.com/remix-run/remix/pull/9893))
 - `@remix-run/react` - Single Fetch: Fix revalidation behavior bugs ([#9938](https://github.com/remix-run/remix/pull/9938))
+- `@remix-run/server-runtime` - Do not render or try to include a body for 304 responses on document requests ([#9955](https://github.com/remix-run/remix/pull/9955))
 - `@remix-run/server-runtime` - Single Fetch: Do not try to encode a `turbo-stream` body into 304 responses ([#9941](https://github.com/remix-run/remix/pull/9941))
 - `@remix-run/server-runtime` - Single Fetch: Change content type on `.data` requests to `text/x-script` to allow Cloudflare compression ([#9889](https://github.com/remix-run/remix/pull/9889))
 
