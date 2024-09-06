@@ -491,17 +491,20 @@ function PrefetchPageLinksImpl({
   // just the manifest like the other links in here.
   let keyedPrefetchLinks = useKeyedPrefetchLinks(newMatchesForAssets);
 
-  let linksToRender: React.ReactNode[] | React.ReactNode | null;
-  if (!future.unstable_singleFetch) {
-    // Non-single-fetch prefetching is easy...
-    linksToRender = dataHrefs.map((href) => (
-      <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
-    ));
-  } else if (page === location.pathname + location.search + location.hash) {
-    // Because we opt-into revalidation, don't compute this for the current page
-    // since it would always trigger a prefetch of the existing loaders
-    linksToRender = null;
-  } else {
+  let linksToRender = React.useMemo(() => {
+    if (!future.unstable_singleFetch) {
+      // Non-single-fetch prefetching is easy...
+      return dataHrefs.map((href) => (
+        <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
+      ));
+    }
+
+    if (page === location.pathname + location.search + location.hash) {
+      // Because we opt-into revalidation, don't compute this for the current page
+      // since it would always trigger a prefetch of the existing loaders
+      return null;
+    }
+
     // Single-fetch is harder :)
     // This parallels the logic in the single fetch data strategy
     let routesParams = new Set<string>();
@@ -539,7 +542,7 @@ function PrefetchPageLinksImpl({
         );
       }
 
-      linksToRender = (
+      return (
         <link
           key={url.pathname + url.search}
           rel="prefetch"
@@ -549,7 +552,20 @@ function PrefetchPageLinksImpl({
         />
       );
     }
-  }
+  }, [
+    dataHrefs,
+    future.unstable_singleFetch,
+    linkProps,
+    loaderData,
+    location.hash,
+    location.pathname,
+    location.search,
+    manifest.routes,
+    newMatchesForData,
+    nextMatches,
+    page,
+    routeModules,
+  ]);
 
   return (
     <>
