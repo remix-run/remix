@@ -1,5 +1,11 @@
 # `@remix-run/server-runtime`
 
+## 2.12.0-pre.2
+
+### Patch Changes
+
+- Support 304 responses on document requests ([#9955](https://github.com/remix-run/remix/pull/9955))
+
 ## 2.12.0-pre.1
 
 ## 2.12.0-pre.0
