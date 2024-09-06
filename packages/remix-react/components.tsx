@@ -464,45 +464,15 @@ function PrefetchPageLinksImpl({
     [page, nextMatches, matches, manifest, location]
   );
 
-  let newMatchesForAssets = React.useMemo(
-    () =>
-      getNewMatchesForLinks(
-        page,
-        nextMatches,
-        matches,
-        manifest,
-        location,
-        "assets"
-      ),
-    [page, nextMatches, matches, manifest, location]
-  );
-
-  let dataHrefs = React.useMemo(
-    () => getDataLinkHrefs(page, newMatchesForData, manifest),
-    [newMatchesForData, page, manifest]
-  );
-
-  let moduleHrefs = React.useMemo(
-    () => getModuleLinkHrefs(newMatchesForAssets, manifest),
-    [newMatchesForAssets, manifest]
-  );
-
-  // needs to be a hook with async behavior because we need the modules, not
-  // just the manifest like the other links in here.
-  let keyedPrefetchLinks = useKeyedPrefetchLinks(newMatchesForAssets);
-
-  let linksToRender = React.useMemo(() => {
+  let dataHrefs = React.useMemo(() => {
     if (!future.unstable_singleFetch) {
-      // Non-single-fetch prefetching is easy...
-      return dataHrefs.map((href) => (
-        <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
-      ));
+      return getDataLinkHrefs(page, newMatchesForData, manifest);
     }
 
     if (page === location.pathname + location.search + location.hash) {
       // Because we opt-into revalidation, don't compute this for the current page
       // since it would always trigger a prefetch of the existing loaders
-      return null;
+      return [];
     }
 
     // Single-fetch is harder :)
@@ -527,49 +497,63 @@ function PrefetchPageLinksImpl({
       }
     });
 
-    if (routesParams.size > 0) {
-      let url = singleFetchUrl(page);
-      // When one or more routes have opted out, we add a _routes param to
-      // limit the loaders to those that have a server loader and did not
-      // opt out
-      if (foundOptOutRoute && routesParams.size > 0) {
-        url.searchParams.set(
-          "_routes",
-          nextMatches
-            .filter((m) => routesParams.has(m.route.id))
-            .map((m) => m.route.id)
-            .join(",")
-        );
-      }
+    if (routesParams.size === 0) {
+      return [];
+    }
 
-      return (
-        <link
-          key={url.pathname + url.search}
-          rel="prefetch"
-          as="fetch"
-          href={url.pathname + url.search}
-          {...linkProps}
-        />
+    let url = singleFetchUrl(page);
+    // When one or more routes have opted out, we add a _routes param to
+    // limit the loaders to those that have a server loader and did not
+    // opt out
+    if (foundOptOutRoute && routesParams.size > 0) {
+      url.searchParams.set(
+        "_routes",
+        nextMatches
+          .filter((m) => routesParams.has(m.route.id))
+          .map((m) => m.route.id)
+          .join(",")
       );
     }
+
+    return [url.pathname + url.search];
   }, [
-    dataHrefs,
     future.unstable_singleFetch,
-    linkProps,
     loaderData,
-    location.hash,
-    location.pathname,
-    location.search,
-    manifest.routes,
+    location,
+    manifest,
     newMatchesForData,
     nextMatches,
     page,
     routeModules,
   ]);
 
+  let newMatchesForAssets = React.useMemo(
+    () =>
+      getNewMatchesForLinks(
+        page,
+        nextMatches,
+        matches,
+        manifest,
+        location,
+        "assets"
+      ),
+    [page, nextMatches, matches, manifest, location]
+  );
+
+  let moduleHrefs = React.useMemo(
+    () => getModuleLinkHrefs(newMatchesForAssets, manifest),
+    [newMatchesForAssets, manifest]
+  );
+
+  // needs to be a hook with async behavior because we need the modules, not
+  // just the manifest like the other links in here.
+  let keyedPrefetchLinks = useKeyedPrefetchLinks(newMatchesForAssets);
+
   return (
     <>
-      {linksToRender}
+      {dataHrefs.map((href) => (
+        <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
+      ))}
       {moduleHrefs.map((href) => (
         <link key={href} rel="modulepreload" href={href} {...linkProps} />
       ))}
