@@ -25,7 +25,7 @@ A `LazyFile` improves this model by accepting an additional content type in its 
 let lazyContent: LazyContent = {
   /* See below for usage */
 };
-let file = new File(lazyContent, 'hello.txt', { type: 'text/plain' });
+let file = new LazyFile(lazyContent, 'hello.txt', { type: 'text/plain' });
 ```
 
 All other `File` functionality works as you'd expect.
