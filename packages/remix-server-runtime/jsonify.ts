@@ -109,7 +109,7 @@ type TypedArray =
 // tests ------------------------------------------------------------
 
 // prettier-ignore
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-remix-line @typescript-eslint/no-unused-vars
 type _tests = [
   // any
   Expect<Equal<Jsonify<any>, any>>,

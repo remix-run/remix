@@ -249,7 +249,7 @@ If you're using ESM as the default module system you will need to set the `--imp
 }
 ```
 
-Next, you can use `REMIX_DEV_ORIGIN` to let MSW forward internal "dev ready" messages on `/ping`:
+Remix, you can use `REMIX_DEV_ORIGIN` to let MSW forward internal "dev ready" messages on `/ping`:
 
 ```ts
 import { http, passthrough } from "msw";

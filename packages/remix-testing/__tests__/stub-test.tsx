@@ -218,7 +218,7 @@ test("all routes have ids", () => {
   render(<RemixStub />);
 
   let matchesTextContent = screen.getByTestId("matches").textContent;
-  // eslint-disable-next-line jest-dom/prefer-in-document
+  // eslint-disable-remix-line jest-dom/prefer-in-document
   expect(matchesTextContent).toBeDefined();
   let matches = JSON.parse(matchesTextContent!);
   let matchesWithoutIds = matches.filter((match: any) => match.id == null);

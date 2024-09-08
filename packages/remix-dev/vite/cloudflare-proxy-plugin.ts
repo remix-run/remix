@@ -63,7 +63,7 @@ export const cloudflareDevProxyVitePlugin = <Env, Cf extends CfProperties>({
       let context = { cloudflare };
       return () => {
         if (!viteDevServer.config.server.middlewareMode) {
-          viteDevServer.middlewares.use(async (nodeReq, nodeRes, next) => {
+          viteDevServer.middlewares.use(async (nodeReq, nodeRes, remix) => {
             try {
               let build = (await viteDevServer.ssrLoadModule(
                 serverBuildId
@@ -77,7 +77,7 @@ export const cloudflareDevProxyVitePlugin = <Env, Cf extends CfProperties>({
               let res = await handler(req, loadContext);
               await toNodeRequest(res, nodeRes);
             } catch (error) {
-              next(error);
+              remix(error);
             }
           });
         }

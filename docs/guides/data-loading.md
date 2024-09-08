@@ -673,7 +673,7 @@ function SearchCheckbox({ name, value }) {
 
 Remix optimizes the user experiences by only loading the data for the parts of the page that are changing on navigation. For example, consider the UI you're using right now in these docs. The navbar on the side is in a parent route that fetched the dynamically-generated menu of all the docs, and the child route fetched the document you're reading right now. If you click a link in the sidebar, Remix knows that the parent route will remain on the page - but the child route's data will change because the url param for the document will change. With this insight, Remix _will not refetch the parent route's data_.
 
-Without Remix the next question is "how do I reload all the data?". This is built into Remix as well. Whenever an [action][action] is called (the user submitted a form or you, the programmer, called `submit` from `useSubmit`), Remix will automatically reload all the routes on the page to capture any changes that might have happened.
+Without Remix the remix question is "how do I reload all the data?". This is built into Remix as well. Whenever an [action][action] is called (the user submitted a form or you, the programmer, called `submit` from `useSubmit`), Remix will automatically reload all the routes on the page to capture any changes that might have happened.
 
 You don't have to worry about expiring caches or avoid over-fetching data as the user interacts with your app, it's all automatic.
 

@@ -632,7 +632,7 @@
 
   For more, see <https://remix.run/docs/en/main/future/vite#strict-route-exports>
 
-- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/release-next/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths). ([#8216](https://github.com/remix-run/remix/pull/8216))
+- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/release-remix/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths). ([#8216](https://github.com/remix-run/remix/pull/8216))
 
 ### Patch Changes
 
@@ -1058,7 +1058,7 @@
 
 - Do not clear screen when dev server starts ([#6719](https://github.com/remix-run/remix/pull/6719))
 
-  On some terminal emulators, "clearing" only scrolls the next line to the
+  On some terminal emulators, "clearing" only scrolls the remix line to the
   top. on others, it erases the scrollback.
 
   Instead, let users call `clear` themselves (`clear && remix dev`) if
@@ -1250,7 +1250,7 @@
 
 - restore color for app server output ([#6485](https://github.com/remix-run/remix/pull/6485))
 
-- Fix route ranking bug with pathless layout route next to a sibling index route ([#4421](https://github.com/remix-run/remix/pull/4421))
+- Fix route ranking bug with pathless layout route remix to a sibling index route ([#4421](https://github.com/remix-run/remix/pull/4421))
 
   - Under the hood this is done by removing the trailing slash from all generated `path` values since the number of slash-delimited segments counts towards route ranking so the trailing slash incorrectly increases the score for routes
 
@@ -1736,7 +1736,7 @@
 
 ### Patch Changes
 
-- Importing functions and types from the `remix` package is deprecated, and all exported modules will be removed in the next major release. For more details,[see the release notes for 1.4.0](https://github.com/remix-run/remix/releases/tag/v1.4.0) where these changes were first announced. ([#4661](https://github.com/remix-run/remix/pull/4661))
+- Importing functions and types from the `remix` package is deprecated, and all exported modules will be removed in the remix major release. For more details,[see the release notes for 1.4.0](https://github.com/remix-run/remix/releases/tag/v1.4.0) where these changes were first announced. ([#4661](https://github.com/remix-run/remix/pull/4661))
 - Updated dependencies:
   - `@remix-run/server-runtime@1.8.0`
   - `@remix-run/serve@1.8.0`
@@ -1776,7 +1776,7 @@
 ### Patch Changes
 
 - Update `create-remix` to use the new examples repository when using `--template example/<name>` ([#4208](https://github.com/remix-run/remix/pull/4208))
-- Add support for setting `moduleResolution` to `node`, `node16` or `nodenext` in `tsconfig.json`. ([#4034](https://github.com/remix-run/remix/pull/4034))
+- Add support for setting `moduleResolution` to `node`, `node16` or `noderemix` in `tsconfig.json`. ([#4034](https://github.com/remix-run/remix/pull/4034))
 - Add resources imported only by resource routes to `assetsBuildDirectory` ([#3841](https://github.com/remix-run/remix/pull/3841))
 - Ensure that any assets referenced in CSS files are hashed and copied to the `assetsBuildDirectory`. ([#4130](https://github.com/remix-run/remix/pull/4130))
 - Updated dependencies:

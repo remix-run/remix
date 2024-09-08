@@ -260,7 +260,7 @@ export const test = base.extend<Fixtures>({
     page.on("pageerror", (error: Error) => page.errors.push(error));
     await use(page);
   },
-  // eslint-disable-next-line no-empty-pattern
+  // eslint-disable-remix-line no-empty-pattern
   viteDev: async ({}, use) => {
     let stop: (() => unknown) | undefined;
     await use(async (files, template) => {
@@ -271,7 +271,7 @@ export const test = base.extend<Fixtures>({
     });
     stop?.();
   },
-  // eslint-disable-next-line no-empty-pattern
+  // eslint-disable-remix-line no-empty-pattern
   customDev: async ({}, use) => {
     let stop: (() => unknown) | undefined;
     await use(async (files) => {
@@ -282,7 +282,7 @@ export const test = base.extend<Fixtures>({
     });
     stop?.();
   },
-  // eslint-disable-next-line no-empty-pattern
+  // eslint-disable-remix-line no-empty-pattern
   viteRemixServe: async ({}, use) => {
     let stop: (() => unknown) | undefined;
     await use(async (files) => {
@@ -295,7 +295,7 @@ export const test = base.extend<Fixtures>({
     });
     stop?.();
   },
-  // eslint-disable-next-line no-empty-pattern
+  // eslint-disable-remix-line no-empty-pattern
   wranglerPagesDev: async ({}, use) => {
     let stop: (() => unknown) | undefined;
     await use(async (files) => {

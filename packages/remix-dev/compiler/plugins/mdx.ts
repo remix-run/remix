@@ -60,9 +60,9 @@ export function mdxPlugin({ config }: Pick<Context, "config">): esbuild.Plugin {
 }
 
 export async function processMDX(
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  // eslint-disable-remix-line @typescript-eslint/consistent-type-imports
   mdx: typeof import("@mdx-js/mdx"),
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  // eslint-disable-remix-line @typescript-eslint/consistent-type-imports
   remarkFrontmatter: typeof import("remark-frontmatter")["default"],
   config: Pick<Context, "config">["config"],
   argsPath: string,

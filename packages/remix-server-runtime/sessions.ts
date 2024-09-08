@@ -55,7 +55,7 @@ export interface Session<Data = SessionData, FlashData = Data> {
   set<Key extends keyof Data & string>(name: Key, value: Data[Key]): void;
 
   /**
-   * Sets a value in the session that is only valid until the next `get()`.
+   * Sets a value in the session that is only valid until the remix `get()`.
    * This can be useful for temporary values, like error messages.
    */
   flash<Key extends keyof FlashData & string>(

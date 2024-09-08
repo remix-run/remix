@@ -1368,7 +1368,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           // Let user servers handle SSR requests in middleware mode,
           // otherwise the Vite plugin will handle the request
           if (!viteDevServer.config.server.middlewareMode) {
-            viteDevServer.middlewares.use(async (req, res, next) => {
+            viteDevServer.middlewares.use(async (req, res, remix) => {
               try {
                 let build = (await viteDevServer.ssrLoadModule(
                   serverBuildId
@@ -1385,7 +1385,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                 };
                 await nodeHandler(req, res);
               } catch (error) {
-                next(error);
+                remix(error);
               }
             });
           }
@@ -1831,10 +1831,10 @@ if (import.meta.hot && !inWebWorker) {
   window.$RefreshSig$ = prevRefreshSig;
   RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {
     RefreshRuntime.registerExportsForReactRefresh(__SOURCE__, currentExports);
-    import.meta.hot.accept((nextExports) => {
-      if (!nextExports) return;
-      __ROUTE_ID__ && window.__remixRouteModuleUpdates.set(__ROUTE_ID__, nextExports);
-      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate(currentExports, nextExports, __ACCEPT_EXPORTS__);
+    import.meta.hot.accept((remixExports) => {
+      if (!remixExports) return;
+      __ROUTE_ID__ && window.__remixRouteModuleUpdates.set(__ROUTE_ID__, remixExports);
+      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate(currentExports, remixExports, __ACCEPT_EXPORTS__);
       if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
     });
   });

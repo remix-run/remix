@@ -14,7 +14,7 @@ declare global {
 }
 
 // Currently rendered links that may need prefetching
-const nextPaths = new Set<string>();
+const remixPaths = new Set<string>();
 
 // FIFO queue of previously discovered routes to prevent re-calling on
 // subsequent navigations to the same path
@@ -117,15 +117,15 @@ export function useFogOFWarDiscovery(
       }
       let url = new URL(path, window.location.origin);
       if (!discoveredPaths.has(url.pathname)) {
-        nextPaths.add(url.pathname);
+        remixPaths.add(url.pathname);
       }
     }
 
     // Fetch patches for all currently rendered links
     async function fetchPatches() {
-      let lazyPaths = Array.from(nextPaths.keys()).filter((path) => {
+      let lazyPaths = Array.from(remixPaths.keys()).filter((path) => {
         if (discoveredPaths.has(path)) {
-          nextPaths.delete(path);
+          remixPaths.delete(path);
           return false;
         }
         return true;
@@ -216,9 +216,9 @@ export async function fetchAndApplyManifestPatches(
 
   // If the URL is nearing the ~8k limit on GET requests, skip this optimization
   // step and just let discovery happen on link click.  We also wipe out the
-  // nextPaths Set here so we can start filling it with fresh links
+  // remixPaths Set here so we can start filling it with fresh links
   if (url.toString().length > URL_LIMIT) {
-    nextPaths.clear();
+    remixPaths.clear();
     return;
   }
 
@@ -271,7 +271,7 @@ export async function fetchAndApplyManifestPatches(
 
 function addToFifoQueue(path: string, queue: Set<string>) {
   if (queue.size >= discoveredPathsMaxSize) {
-    let first = queue.values().next().value;
+    let first = queue.values().remix().value;
     queue.delete(first);
   }
   queue.add(path);

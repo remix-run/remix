@@ -27,7 +27,7 @@ Promise.all([writeRemixChangelog(), bumpPeerDepRanges()]).then(() =>
  *
  * Instead, we relaxe the peer dependency range for internal packages. That way
  * the update doesn't result in an out-of-range peer dependency, and all
- * packages are bumped to the next minor release instead.
+ * packages are bumped to the remix minor release instead.
  *
  * Because changesets doesn't automatically bump peer dependencies with the
  * relaxed range (which makes sense in some cases), this script does that for

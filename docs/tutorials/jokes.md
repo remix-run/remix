@@ -314,7 +314,7 @@ That will watch your filesystem for changes, rebuild the site, and thanks to the
 
 ![A greeting from the index route][a-greeting-from-the-index-route]
 
-Great! Next let's handle the `/jokes` route.
+Great! Remix let's handle the `/jokes` route.
 
 💿 Create a new route at `app/routes/jokes.tsx` (keep in mind that this will be a parent route, so you'll want to use `<Outlet />` again).
 
@@ -369,7 +369,7 @@ Now if you refresh [`/jokes`][jokes], you'll get the content in the `app/routes/
 
 And notice that each of those route modules is only concerned with their part of the URL. Neat right!? Nested routing is pretty nice, and we're only just getting started. Let's keep going.
 
-💿 Next, let's handle the `/jokes/new` route. I'll bet you can figure out how to do that 😄. Remember we're going to allow people to create jokes on this page, so you'll want to render a `form` with `name` and `content` fields.
+💿 Remix, let's handle the `/jokes/new` route. I'll bet you can figure out how to do that 😄. Remember we're going to allow people to create jokes on this page, so you'll want to render a `form` with `name` and `content` fields.
 
 <details>
 
@@ -1377,7 +1377,7 @@ That gives us this output:
 
 warn You already have a .gitignore file. Don't forget to add `.env` in it to not commit any private information.
 
-Next steps:
+Remix steps:
 1. Set the DATABASE_URL in the .env file to point to your existing database. If your database has no tables yet, read https://pris.ly/d/getting-started
 2. Run prisma db pull to turn your database schema into a Prisma schema.
 3. Run prisma generate to generate the Prisma Client. You can then start querying your database.
@@ -1447,7 +1447,7 @@ node_modules
 
 <docs-warning>If your database gets messed up, you can always delete the `prisma/dev.db` file and run `npx prisma db push` again.</docs-warning>
 
-Next, we're going to write a little file that will "seed" our database with test data. Again, this isn't really remix-specific stuff, so I'll just give this to you (don't worry, we'll get back to remix soon):
+Remix, we're going to write a little file that will "seed" our database with test data. Again, this isn't really remix-specific stuff, so I'll just give this to you (don't worry, we'll get back to remix soon):
 
 💿 Copy this into a new file called `prisma/seed.ts`
 
@@ -1800,9 +1800,9 @@ With that you should be able to go to [`/jokes`][jokes] and click on a link to g
 
 ![Jokes page showing a unique joke][jokes-page-showing-a-unique-joke]
 
-We'll handle the case where someone tries to access a joke that doesn't exist in the database in the next section.
+We'll handle the case where someone tries to access a joke that doesn't exist in the database in the remix section.
 
-Next, let's handle the `/jokes` index route in `app/routes/jokes._index.tsx` that shows a random joke.
+Remix, let's handle the `/jokes` index route in `app/routes/jokes._index.tsx` that shows a random joke.
 
 Here's how you get a random joke from Prisma:
 
@@ -1918,7 +1918,7 @@ export const action = async ({
   const content = form.get("content");
   const name = form.get("name");
   // we do this type check to be extra sure and to make TypeScript happy
-  // we'll explore validation next!
+  // we'll explore validation remix!
   if (
     typeof content !== "string" ||
     typeof name !== "string"

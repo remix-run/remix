@@ -87,25 +87,25 @@ async function updatePackageConfig(packageName, transform) {
 
 /**
  * @param {string} packageName
- * @param {string} nextVersion
+ * @param {string} remixVersion
  * @param {string} [successMessage]
  */
-async function updateRemixVersion(packageName, nextVersion, successMessage) {
+async function updateRemixVersion(packageName, remixVersion, successMessage) {
   await updatePackageConfig(packageName, (config) => {
-    config.version = nextVersion;
+    config.version = remixVersion;
     for (let pkg of remixPackages.all) {
       if (config.dependencies?.[`@remix-run/${pkg}`]) {
-        config.dependencies[`@remix-run/${pkg}`] = nextVersion;
+        config.dependencies[`@remix-run/${pkg}`] = remixVersion;
       }
       if (config.devDependencies?.[`@remix-run/${pkg}`]) {
-        config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
+        config.devDependencies[`@remix-run/${pkg}`] = remixVersion;
       }
       if (config.peerDependencies?.[`@remix-run/${pkg}`]) {
         let isRelaxedPeerDep =
           config.peerDependencies[`@remix-run/${pkg}`]?.startsWith("^");
         config.peerDependencies[`@remix-run/${pkg}`] = `${
           isRelaxedPeerDep ? "^" : ""
-        }${nextVersion}`;
+        }${remixVersion}`;
       }
     }
   });
@@ -116,7 +116,7 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
     chalk.green(
       `  ${
         successMessage ||
-        `Updated ${chalk.bold(logName)} to version ${chalk.bold(nextVersion)}`
+        `Updated ${chalk.bold(logName)} to version ${chalk.bold(remixVersion)}`
       }`
     )
   );
@@ -124,17 +124,17 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
 
 /**
  *
- * @param {string} nextVersion
+ * @param {string} remixVersion
  */
-async function updateDeploymentScriptVersion(nextVersion) {
+async function updateDeploymentScriptVersion(remixVersion) {
   let file = packageJson("deployment-test", "scripts");
   let json = await jsonfile.readFile(file);
-  json.dependencies["@remix-run/dev"] = nextVersion;
+  json.dependencies["@remix-run/dev"] = remixVersion;
   await jsonfile.writeFile(file, json, { spaces: 2 });
 
   console.log(
     chalk.green(
-      `  Updated Remix to version ${chalk.bold(nextVersion)} in ${chalk.bold(
+      `  Updated Remix to version ${chalk.bold(remixVersion)} in ${chalk.bold(
         "scripts/deployment-test"
       )}`
     )
@@ -156,9 +156,9 @@ const getPackageNameFromImportSpecifier = (importSpecifier) => {
 };
 /**
  * @param {string} importMapPath
- * @param {string} nextVersion
+ * @param {string} remixVersion
  */
-const updateDenoImportMap = async (importMapPath, nextVersion) => {
+const updateDenoImportMap = async (importMapPath, remixVersion) => {
   let { imports, ...json } = await jsonfile.readFile(importMapPath);
   let remixPackagesFull = remixPackages.all.map(
     (remixPackage) => `@remix-run/${remixPackage}`
@@ -173,7 +173,7 @@ const updateDenoImportMap = async (importMapPath, nextVersion) => {
         importName !== "@remix-run/deno"
         ? [
             importName,
-            `https://esm.sh/${packageName}@${nextVersion}${
+            `https://esm.sh/${packageName}@${remixVersion}${
               importPath ? `/${importPath}` : ""
             }`,
           ]
@@ -189,14 +189,14 @@ const updateDenoImportMap = async (importMapPath, nextVersion) => {
 };
 
 /**
- * @param {string} nextVersion
+ * @param {string} remixVersion
  */
-async function incrementRemixVersion(nextVersion) {
+async function incrementRemixVersion(remixVersion) {
   // Update version numbers in package.json for all packages
-  await updateRemixVersion("remix", nextVersion);
-  await updateRemixVersion("create-remix", nextVersion);
+  await updateRemixVersion("remix", remixVersion);
+  await updateRemixVersion("create-remix", remixVersion);
   for (let name of remixPackages.all) {
-    await updateRemixVersion(`remix-${name}`, nextVersion);
+    await updateRemixVersion(`remix-${name}`, remixVersion);
   }
 
   // Update version numbers in Deno's import maps
@@ -211,17 +211,17 @@ async function incrementRemixVersion(nextVersion) {
         "resolve_npm_imports.json"
       ),
     ].map((importMapPath) =>
-      updateDenoImportMap(path.join(rootDir, importMapPath), nextVersion)
+      updateDenoImportMap(path.join(rootDir, importMapPath), remixVersion)
     )
   );
 
   // Update deployment script `@remix-run/dev` version
-  await updateDeploymentScriptVersion(nextVersion);
+  await updateDeploymentScriptVersion(remixVersion);
 
   // Commit and tag
-  execSync(`git commit --all --message="Version ${nextVersion}"`);
-  execSync(`git tag -a -m "Version ${nextVersion}" v${nextVersion}`);
-  console.log(chalk.green(`  Committed and tagged version ${nextVersion}`));
+  execSync(`git commit --all --message="Version ${remixVersion}"`);
+  execSync(`git tag -a -m "Version ${remixVersion}" v${remixVersion}`);
+  console.log(chalk.green(`  Committed and tagged version ${remixVersion}`));
 }
 
 /**

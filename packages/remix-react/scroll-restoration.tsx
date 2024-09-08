@@ -45,7 +45,7 @@ export function ScrollRestoration({
       return userKey !== location.key ? userKey : null;
     },
     // Nah, we only need this the first time for the SSR render
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-remix-line react-hooks/exhaustive-deps
     []
   );
 

@@ -260,7 +260,7 @@ import { createCookie } from "@remix-run/node";
 export const prefs = createCookie("prefs");
 ```
 
-Next we set up the server action and loader to read and write the cookie:
+Remix we set up the server action and loader to read and write the cookie:
 
 ```tsx
 import type {

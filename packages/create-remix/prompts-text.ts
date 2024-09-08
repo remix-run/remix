@@ -138,7 +138,7 @@ export class TextPrompt extends Prompt {
     this.close();
   }
 
-  next() {
+  remix() {
     if (!this.placeholder) return this.bell();
     this.value = this.initial;
     this.cursor = this.rendered.length;

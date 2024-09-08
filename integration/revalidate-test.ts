@@ -64,8 +64,8 @@ test.describe("Revalidation", () => {
               })
             };
 
-            export function shouldRevalidate({ nextUrl, formData }) {
-              if (nextUrl.searchParams.get('revalidate')?.split(',')?.includes('parent')) {
+            export function shouldRevalidate({ remixUrl, formData }) {
+              if (remixUrl.searchParams.get('revalidate')?.split(',')?.includes('parent')) {
                 return true;
               }
               if (formData?.getAll('revalidate')?.includes('parent')) {
@@ -108,8 +108,8 @@ test.describe("Revalidation", () => {
               })
             };
 
-            export function shouldRevalidate({ nextUrl, formData }) {
-              let revalidate = (nextUrl.searchParams.get('revalidate') || '').split(',')
+            export function shouldRevalidate({ remixUrl, formData }) {
+              let revalidate = (remixUrl.searchParams.get('revalidate') || '').split(',')
               if (revalidate.includes('child')) {
                 return true;
               }
@@ -358,8 +358,8 @@ test.describe("single fetch", () => {
                 })
               };
 
-              export function shouldRevalidate({ nextUrl, formData }) {
-                if (nextUrl.searchParams.get('revalidate')?.split(',')?.includes('parent')) {
+              export function shouldRevalidate({ remixUrl, formData }) {
+                if (remixUrl.searchParams.get('revalidate')?.split(',')?.includes('parent')) {
                   return true;
                 }
                 if (formData?.getAll('revalidate')?.includes('parent')) {
@@ -402,8 +402,8 @@ test.describe("single fetch", () => {
                 })
               };
 
-              export function shouldRevalidate({ nextUrl, formData }) {
-                let revalidate = (nextUrl.searchParams.get('revalidate') || '').split(',')
+              export function shouldRevalidate({ remixUrl, formData }) {
+                let revalidate = (remixUrl.searchParams.get('revalidate') || '').split(',')
                 if (revalidate.includes('child')) {
                   return true;
                 }

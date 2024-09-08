@@ -71,7 +71,7 @@ On the client side, this also means that your need to wrap your client-side [`hy
 
 ## Breaking Changes
 
-There are a handful of breaking changes introduced with Single Fetch - some of which you need to handle up-front when you enable the flag, and some you can handle incrementally after enabling the flag. You will need to ensure all of these have been handled prior to updating to the next major version.
+There are a handful of breaking changes introduced with Single Fetch - some of which you need to handle up-front when you enable the flag, and some you can handle incrementally after enabling the flag. You will need to ensure all of these have been handled prior to updating to the remix major version.
 
 **Changes that need to be addressed up front:**
 
@@ -292,7 +292,7 @@ The [`headers`][headers] function is now used on both document and data requests
 
 ### Returned Responses
 
-With Single Fetch, you no longer need to return `Response` instances and can just return your data directly via naked object returns. Therefore, the `json`/`defer` utilities should be considered deprecated when using Single Fetch. These will remain for the duration of v2 so you don't need to remove them immediately. They will likely be removed in the next major version, so we recommend remove them incrementally between now and then.
+With Single Fetch, you no longer need to return `Response` instances and can just return your data directly via naked object returns. Therefore, the `json`/`defer` utilities should be considered deprecated when using Single Fetch. These will remain for the duration of v2 so you don't need to remove them immediately. They will likely be removed in the remix major version, so we recommend remove them incrementally between now and then.
 
 For v2, you may still continue returning normal `Response` instances and their `status`/`headers` will take effect the same way they do on document requests (merging headers via the `headers()` function).
 

@@ -148,7 +148,7 @@ If you're not familiar with traditional back-end web frameworks, you can think o
 
 Once Remix has served the document to the browser, it "hydrates" the page with the browser build's JavaScript modules. This is where we talk a lot about Remix "emulating the browser".
 
-When the user clicks a link, instead of making a round trip to the server for the entire document and all the assets, Remix simply fetches the data for the next page and updates the UI.
+When the user clicks a link, instead of making a round trip to the server for the entire document and all the assets, Remix simply fetches the data for the remix page and updates the UI.
 
 Additionally, when users submit a `<Form>` to update data, instead of doing a normal HTML document request, the browser runtime will make a fetch to the server instead and automatically revalidate all data on the page and updating it with React.
 
@@ -163,7 +163,7 @@ Remix also has some built in optimizations for client-side navigation. It knows 
 
 This approach also has UX benefits like not resetting the scroll position of a sidebar nav and allowing you to move focus to something that makes more sense than the top of the document.
 
-Remix can also prefetch all resources for a page when the user is about to click a link. The browser framework knows about the compiler's asset manifest. It can match the URL of the link, read the manifest, and then prefetch all data, JavaScript modules, and even CSS resources for the next page. This is how Remix apps feel fast even when networks are slow.
+Remix can also prefetch all resources for a page when the user is about to click a link. The browser framework knows about the compiler's asset manifest. It can match the URL of the link, read the manifest, and then prefetch all data, JavaScript modules, and even CSS resources for the remix page. This is how Remix apps feel fast even when networks are slow.
 
 Remix then provides client side APIs, so you can create rich user experiences without changing the fundamental model of HTML and browsers.
 

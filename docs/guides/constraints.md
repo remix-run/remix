@@ -335,8 +335,8 @@ function useLocalStorage(key: string) {
     localStorage.getItem(key)
   );
 
-  const setWithLocalStorage = (nextState) => {
-    setState(nextState);
+  const setWithLocalStorage = (remixState) => {
+    setState(remixState);
   };
 
   return [state, setWithLocalStorage];
@@ -353,8 +353,8 @@ function useLocalStorage(key: string) {
     setState(localStorage.getItem(key));
   }, [key]);
 
-  const setWithLocalStorage = (nextState) => {
-    setState(nextState);
+  const setWithLocalStorage = (remixState) => {
+    setState(remixState);
   };
 
   return [state, setWithLocalStorage];

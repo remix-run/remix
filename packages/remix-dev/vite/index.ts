@@ -10,7 +10,7 @@ export type {
 } from "./plugin";
 
 export const vitePlugin: RemixVitePlugin = (...args) => {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  // eslint-disable-remix-line @typescript-eslint/consistent-type-imports
   let { remixVitePlugin } = require("./plugin") as typeof import("./plugin");
   return remixVitePlugin(...args);
 };

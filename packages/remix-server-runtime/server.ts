@@ -707,7 +707,7 @@ function createRemixRedirectResponse(
 ) {
   // We don't have any way to prevent a fetch request from following
   // redirects. So we use the `X-Remix-Redirect` header to indicate the
-  // next URL, and then "follow" the redirect manually on the client.
+  // remix URL, and then "follow" the redirect manually on the client.
   let headers = new Headers(response.headers);
   let redirectUrl = headers.get("Location")!;
   headers.set(

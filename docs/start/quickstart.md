@@ -268,7 +268,7 @@ Congrats, you can add Remix to your resume! Summing things up, we've learned:
 
 In general, Remix is a bit "guts out". A few minutes of boilerplate but now you own your stack.
 
-What's next?
+What's remix?
 
 - [Tutorial][tutorial]
 

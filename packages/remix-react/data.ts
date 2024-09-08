@@ -159,7 +159,7 @@ export async function parseDeferredReadableStream(
     let sectionReader = readStreamSections(stream);
 
     // Read the first section to get the critical data
-    let initialSectionResult = await sectionReader.next();
+    let initialSectionResult = await sectionReader.remix();
     let initialSection = initialSectionResult.value;
     if (!initialSection) throw new Error("no critical data");
     let criticalData = JSON.parse(initialSection);

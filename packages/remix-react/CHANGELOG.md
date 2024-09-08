@@ -36,7 +36,7 @@
     - We wanted to align how `headers` got merged between document and data requests
     - So we made document requests also use `ResponseStub` and removed the usage of `headers` in Single Fetch
     - The realization/alignment between Michael and Ryan on the recent [roadmap planning](https://www.youtube.com/watch?v=f5z_axCofW0) made us realize that the original assumption was incorrect
-    - `middleware` won't need a stub - users can just mutate the `Response` they get from `await next()` directly
+    - `middleware` won't need a stub - users can just mutate the `Response` they get from `await remix()` directly
     - With that gone, and still wanting to align how `headers` get merged, it makes more sense to stick with the current `headers` API and apply that to Single Fetch and avoid introducing a totally new thing in `RepsonseStub` (that always felt a bit awkward to work with anyway)
 
   - With this change:
@@ -44,7 +44,7 @@
       - ~~`return json({ data: whatever });`~~
       - `return { data: whatever };`
     - In most cases, you can remove your `json()` and `defer()` calls in favor of returning raw data if they weren't setting custom `status`/`headers`
-      - We will be removing both `json` and `defer` in the next major version, but both _should_ still work in Single Fetch in v2 to allow for incremental adoption of the new behavior
+      - We will be removing both `json` and `defer` in the remix major version, but both _should_ still work in Single Fetch in v2 to allow for incremental adoption of the new behavior
     - If you need custom `status`/`headers`:
       - We've added a new `unstable_data({...}, responseInit)` utility that will let you send back `status`/`headers` alongside your raw data without having to encode it into a `Response`
     - The `headers()` function will let you control header merging for both document and data requests
@@ -279,7 +279,7 @@
 
   For more information, please refer to the [`clientLoader`](https://remix.run/route/client-loader) and [`clientAction`](https://remix.run/route/client-action) documentation.
 
-- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/release-next/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths). ([#8216](https://github.com/remix-run/remix/pull/8216))
+- Add a new `future.v3_relativeSplatPath` flag to implement a breaking bug fix to relative routing when inside a splat route. For more information, please see the React Router [`6.21.0` Release Notes](https://github.com/remix-run/react-router/blob/release-remix/CHANGELOG.md#futurev7_relativesplatpath) and the [`useResolvedPath` docs](https://remix.run/hooks/use-resolved-path#splat-paths). ([#8216](https://github.com/remix-run/remix/pull/8216))
 
 ### Patch Changes
 
@@ -829,11 +829,11 @@ No significant changes to this package were made in this release. [See the relea
 
 ### Patch Changes
 
-- Fix v2 `meta` to ensure meta is rendered from the next route in the tree if no `meta` export is included in a leaf route ([#5041](https://github.com/remix-run/remix/pull/5041))
+- Fix v2 `meta` to ensure meta is rendered from the remix route in the tree if no `meta` export is included in a leaf route ([#5041](https://github.com/remix-run/remix/pull/5041))
 
 - Ensure `useFetcher` is stable across re-renders in backwards-compatibility layer ([#5118](https://github.com/remix-run/remix/pull/5118))
 
-- Added the `v2_errorBoundary` future flag to opt into the next version of Remix's `ErrorBoundary` behavior. This removes the separate `CatchBoundary` and `ErrorBoundary` and consolidates them into a single `ErrorBoundary`, following the logic used by `errorElement` in React Router. You can then use `isRouteErrorResponse` to differentiate between thrown `Response`/`Error` instances. ([#4918](https://github.com/remix-run/remix/pull/4918))
+- Added the `v2_errorBoundary` future flag to opt into the remix version of Remix's `ErrorBoundary` behavior. This removes the separate `CatchBoundary` and `ErrorBoundary` and consolidates them into a single `ErrorBoundary`, following the logic used by `errorElement` in React Router. You can then use `isRouteErrorResponse` to differentiate between thrown `Response`/`Error` instances. ([#4918](https://github.com/remix-run/remix/pull/4918))
 
   ```tsx
   // Current (Remix v1 default)
@@ -923,7 +923,7 @@ No significant changes to this package were made in this release. [See the relea
 ### Minor Changes
 
 - Importing functions and types from the `remix` package is deprecated, and all ([#3284](https://github.com/remix-run/remix/pull/3284))
-  exported modules will be removed in the next major release. For more details,
+  exported modules will be removed in the remix major release. For more details,
   [see the release notes for 1.4.0](https://github.com/remix-run/remix/releases/tag/v1.4.0)
   where these changes were first announced.
 - Added support for a new route `meta` API to handle arrays of tags instead of an object. For details, check out the [RFC](https://github.com/remix-run/remix/discussions/4462). ([#4610](https://github.com/remix-run/remix/pull/4610))

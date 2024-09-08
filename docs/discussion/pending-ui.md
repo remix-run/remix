@@ -19,13 +19,13 @@ The difference between a great user experience on the web and mediocre one is ho
 
 Use Optimistic UI:
 
-- **Next State Predictability**: The application can accurately predict the next state of the UI based on the user's action.
+- **Remix State Predictability**: The application can accurately predict the remix state of the UI based on the user's action.
 - **Error Handling**: Robust error handling mechanisms are in place to address potential errors that may occur during the process.
 - **URL Stability**: The action does not result in a change of the URL, ensuring that the user remains within the same page.
 
 Use Busy Indicators:
 
-- **Next State Uncertainty**: The outcome of the action cannot be reliably predicted, necessitating waiting for the server's response.
+- **Remix State Uncertainty**: The outcome of the action cannot be reliably predicted, necessitating waiting for the server's response.
 - **URL Change**: The action leads to a change in the URL, indicating navigation to a new page or section.
 - **Error Boundaries**: The error handling approach primarily relies on error boundaries that manage exceptions and unexpected behavior.
 - **Side Effects**: The action triggers side effects that involve critical processes, such as sending email, processing payments, etc.
@@ -79,7 +79,7 @@ export function ProjectList({ projects }) {
 }
 ```
 
-Or add a spinner next to it by inspecting params:
+Or add a spinner remix to it by inspecting params:
 
 ```tsx lines=[1,4,10-12]
 import { useParams } from "@remix-run/react";
@@ -243,7 +243,7 @@ When creating skeleton fallbacks, consider the following principles:
 - **Consistent Size:** Ensure that the skeleton fallbacks match the dimensions of the actual content. This prevents sudden layout shifts, providing a smoother and more visually cohesive loading experience. In terms of web performance, this trade-off minimizes [Cumulative Layout Shift][cumulative_layout_shift] (CLS) in favor of improving [First Contentful Paint][first_contentful_paint] (FCP). You can minimize the trade with accurate dimensions in the fallback.
 - **Critical Data:** Avoid using fallbacks for essential information—the main content of the page. This is especially important for SEO and meta tags. If you delay showing critical data, accurate meta tags can't be provided, and search engines won't correctly index your page.
 - **App-Like Feel**: For web application UI that doesn't have SEO concerns, it can be beneficial to use skeleton fallbacks more extensively. This creates an interface that resembles the behavior of a standalone app. When users click on links, they get an instantaneous transition to the skeleton fallbacks.
-- **Link Prefetching:** Using [`<Link prefetch="intent">`][link-component-prefetch] can often skip the fallbacks completely. When users hover or focus on the link, this method preloads the needed data, allowing the network a quick moment to fetch content before the user clicks. This often results in an immediate navigation to the next page.
+- **Link Prefetching:** Using [`<Link prefetch="intent">`][link-component-prefetch] can often skip the fallbacks completely. When users hover or focus on the link, this method preloads the needed data, allowing the network a quick moment to fetch content before the user clicks. This often results in an immediate navigation to the remix page.
 
 ## Conclusion
 

@@ -19,7 +19,7 @@ function publish(dir, tag) {
   if (["experimental", "nightly"].includes(tag)) {
     args.push(`--no-git-checks`);
   } else {
-    args.push("--publish-branch release-next");
+    args.push("--publish-branch release-remix");
   }
   execSync(`pnpm publish ${dir} ${args.join(" ")}`, {
     stdio: "inherit",

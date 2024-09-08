@@ -26,7 +26,7 @@ export type GetLoadContextFunction = (
 export type RequestHandler = (
   req: express.Request,
   res: express.Response,
-  next: express.NextFunction
+  remix: express.RemixFunction
 ) => Promise<void>;
 
 /**
@@ -46,7 +46,7 @@ export function createRequestHandler({
   return async (
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction
+    remix: express.RemixFunction
   ) => {
     try {
       let request = createRemixRequest(req, res);
@@ -57,8 +57,8 @@ export function createRequestHandler({
       await sendRemixResponse(res, response);
     } catch (error: unknown) {
       // Express doesn't support async functions, so we have to pass along the
-      // error manually using next().
-      next(error);
+      // error manually using remix().
+      remix(error);
     }
   };
 }

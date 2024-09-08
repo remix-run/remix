@@ -20,9 +20,9 @@ function ImportantForm() {
 
   // Block navigating elsewhere when data has been entered into the input
   const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
+    ({ currentLocation, remixLocation }) =>
       value !== "" &&
-      currentLocation.pathname !== nextLocation.pathname
+      currentLocation.pathname !== remixLocation.pathname
   );
 
   return (

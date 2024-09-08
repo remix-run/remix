@@ -137,8 +137,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
   let isBooleanFlag = (arg: string) => {
     let index = argv.indexOf(arg);
-    let nextArg = argv[index + 1];
-    return !nextArg || nextArg.startsWith("-");
+    let remixArg = argv[index + 1];
+    return !remixArg || remixArg.startsWith("-");
   };
 
   let args = arg(

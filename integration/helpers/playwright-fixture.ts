@@ -322,7 +322,7 @@ async function doAndWait(
   // When you run doAndWait (via clicking a blink or submitting a form) and
   // then waitForSelector().  It finds the selector element but thinks it's
   // hidden for some unknown reason.  It's intermittent, but waiting for the
-  // next animation frame delaying slightly before the waitForSelector() calls
+  // remix animation frame delaying slightly before the waitForSelector() calls
   // seems to fix it 🤷‍♂️
   //
   //   Test timeout of 30000ms exceeded.

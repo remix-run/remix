@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       # allows this to be used in the `comment` job below - will be undefined if there's no release necessary
-      NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
+      REMIX_VERSION: ${{ steps.version.outputs.REMIX_VERSION }}
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
@@ -63,44 +63,44 @@ jobs:
             # yyyyMMdd format (e.g. 20221207)
             DATE=$(date '+%Y%m%d')
             # v0.0.0-nightly-<short sha>-<date>
-            NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
+            REMIX_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
             # set output so it can be used in other jobs
-            echo "NEXT_VERSION=${NEXT_VERSION}" >> $GITHUB_OUTPUT
+            echo "REMIX_VERSION=${REMIX_VERSION}" >> $GITHUB_OUTPUT
           fi
 
       - name: ⤴️ Update version
-        if: steps.version.outputs.NEXT_VERSION
+        if: steps.version.outputs.REMIX_VERSION
         run: |
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
-          git checkout -b nightly/${{ steps.version.outputs.NEXT_VERSION }}
-          pnpm run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
+          git checkout -b nightly/${{ steps.version.outputs.REMIX_VERSION }}
+          pnpm run version ${{steps.version.outputs.REMIX_VERSION}} --skip-prompt
           git push origin --tags
 
       - name: 🏗 Build
-        if: steps.version.outputs.NEXT_VERSION
+        if: steps.version.outputs.REMIX_VERSION
         run: pnpm build
 
       - name: 🔐 Setup npm auth
-        if: steps.version.outputs.NEXT_VERSION
+        if: steps.version.outputs.REMIX_VERSION
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: 🚀 Publish
-        if: steps.version.outputs.NEXT_VERSION
+        if: steps.version.outputs.REMIX_VERSION
         run: npm run publish
 
   comment:
     needs: [nightly]
     name: 📝 Comment on related issues and pull requests
-    if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
+    if: github.repository == 'remix-run/remix' && needs.nightly.outputs.REMIX_VERSION
     uses: ./.github/workflows/release-comments.yml
 
   deployments:
     needs: [nightly]
     name: 🚀 Deployment Tests
-    if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
+    if: github.repository == 'remix-run/remix' && needs.nightly.outputs.REMIX_VERSION
     uses: remix-run/remix/.github/workflows/deployments.yml@main
     secrets:
       TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
@@ -116,7 +116,7 @@ jobs:
   stacks:
     needs: [nightly]
     name: 🥞 Remix Stacks Test
-    if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
+    if: github.repository == 'remix-run/remix' && needs.nightly.outputs.REMIX_VERSION
     uses: remix-run/remix/.github/workflows/stacks.yml@main
     with:
-      version: "${{ needs.nightly.outputs.NEXT_VERSION }}"
+      version: "${{ needs.nightly.outputs.REMIX_VERSION }}"

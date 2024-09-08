@@ -52,7 +52,7 @@ While multiple loaders can _read_ from the same session, _writing_ to a session 
 
 Remix loaders run in parallel, and sometimes in separate requests (client transitions call [`fetch`][fetch] for each loader). If one loader is writing to a session while another is attempting to read from it, you will hit bugs and/or non-deterministic behavior.
 
-Additionally, sessions are built on cookies which come from the browser's request. After committing a session, it goes to the browser in a [`Set-Cookie`][set_cookie_header] header which is then sent back to the server on the next request in the [`Cookie`][cookie_header] header. Regardless of parallel loaders, you can't write to a cookie with `Set-Cookie` and then attempt to read it from the original request `Cookie` and expect updated values. It needs to make a round trip to the browser first and come from the next request.
+Additionally, sessions are built on cookies which come from the browser's request. After committing a session, it goes to the browser in a [`Set-Cookie`][set_cookie_header] header which is then sent back to the server on the remix request in the [`Cookie`][cookie_header] header. Regardless of parallel loaders, you can't write to a cookie with `Set-Cookie` and then attempt to read it from the original request `Cookie` and expect updated values. It needs to make a round trip to the browser first and come from the remix request.
 
 If you need to write to a session in a loader, ensure the loader doesn't share that session with any other loaders.
 

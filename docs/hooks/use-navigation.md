@@ -58,13 +58,13 @@ In the case of a `GET` form submission, `formData` will be empty and the data wi
 
 ### `navigation.location`
 
-This tells you what the next location is going to be.
+This tells you what the remix location is going to be.
 
 ### `navigation.state`
 
 - **idle** - There is no navigation pending.
 - **submitting** - A route action is being called due to a form submission using POST, PUT, PATCH, or DELETE
-- **loading** - The loaders for the next routes are being called to render the next page
+- **loading** - The loaders for the remix routes are being called to render the remix page
 
 Normal navigations and GET form submissions transition through these states:
 

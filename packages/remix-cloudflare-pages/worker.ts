@@ -26,8 +26,8 @@ export type GetLoadContextFunction<
     Params,
     Data
   >["passThroughOnException"];
-  /** @deprecated use `context.cloudflare.next` instead */
-  next: EventContext<Env, Params, Data>["next"];
+  /** @deprecated use `context.cloudflare.remix` instead */
+  remix: EventContext<Env, Params, Data>["remix"];
   /** @deprecated use `context.cloudflare.params` instead */
   params: EventContext<Env, Params, Data>["params"];
   /** @deprecated use `context.cloudflare.data` instead */

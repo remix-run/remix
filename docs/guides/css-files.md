@@ -106,7 +106,7 @@ This is a known React issue that is fixed in their [canary release channel][reac
 }
 ```
 
-<docs-info>For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect, even though it's not something Remix provides as a default.</docs-info>
+<docs-info>For reference, this is how Remix.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect, even though it's not something Remix provides as a default.</docs-info>
 
 Again, it's worth stressing that this issue with styles that were injected by Vite only happens in development. **Production builds won't have this issue** since static CSS files are generated.
 

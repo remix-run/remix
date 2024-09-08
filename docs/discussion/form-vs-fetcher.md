@@ -33,7 +33,7 @@ These actions typically reflect significant changes to the user's context or sta
 
 - **Creating a New Record**: After creating a new record, it's common to redirect users to a page dedicated to that new record, where they can view or further modify it.
 
-- **Deleting a Record**: If a user is on a page dedicated to a specific record and decides to delete it, the logical next step is to redirect them to a general page, such as a list of all records.
+- **Deleting a Record**: If a user is on a page dedicated to a specific record and decides to delete it, the logical remix step is to redirect them to a general page, such as a list of all records.
 
 For these cases, developers should consider using a combination of [`<Form>`][form_component], [`useActionData`][use_action_data], and [`useNavigation`][use_navigation]. Each of these tools can be coordinated to handle form submission, invoke specific actions, retrieve action-related data, and manage navigation respectively.
 

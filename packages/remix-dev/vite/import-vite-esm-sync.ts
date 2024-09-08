@@ -7,7 +7,7 @@
 
 import invariant from "../invariant";
 
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+// eslint-disable-remix-line @typescript-eslint/consistent-type-imports
 type Vite = typeof import("vite");
 let vite: Vite | undefined;
 

@@ -258,7 +258,7 @@ While that's a bit of boilerplate it enables a lot:
 - Co-located styles with your components
 - The only CSS ever loaded is the CSS that's used on the current page
 - When your components aren't used by a route, their CSS is unloaded from the page
-- Remix will prefetch the CSS for the next page with [`<Link prefetch>`][link]
+- Remix will prefetch the CSS for the remix page with [`<Link prefetch>`][link]
 - When one component's styles change, browser and CDN caches for the other components won't break because they all have their own URLs.
 - When a component's JavaScript changes but its styles don't, the cache is not broken for the styles
 
@@ -297,7 +297,7 @@ export const CopyToClipboard = React.forwardRef(
 CopyToClipboard.displayName = "CopyToClipboard";
 ```
 
-Not only will this make the asset high priority in the network tab, but Remix will turn that `preload` into a `prefetch` when you link to the page with [`<Link prefetch>`][link], so the SVG background is prefetched, in parallel, with the next route's data, modules, stylesheets, and any other preloads.
+Not only will this make the asset high priority in the network tab, but Remix will turn that `preload` into a `prefetch` when you link to the page with [`<Link prefetch>`][link], so the SVG background is prefetched, in parallel, with the remix route's data, modules, stylesheets, and any other preloads.
 
 ### Link Media Queries
 

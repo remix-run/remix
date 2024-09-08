@@ -43,7 +43,7 @@ New releases should be created from release branches originating from the `dev` 
 - If needed, bump the dependencies to the correct React Router release
   - `./scripts/bump-router-versions.sh [pre|latest]`
 - Create a new release branch with the `release-` prefix
-  - `git checkout -b release-next`
+  - `git checkout -b release-remix`
   - **IMPORTANT:** The `release-` prefix is important, as this is what triggers our GitHub CI workflow that will ultimately publish the release
 - Merge `main` into the release branch
 
@@ -93,9 +93,9 @@ You may need to make changes to a pre-release prior to publishing a final stable
 - Once the release is published:
   - Pull the latest `release-*` branch containing the PR you just merged
   - Merge the `release-*` branch into `main` **using a non-fast-forward merge** and push it up to GitHub
-    - `git checkout main; git merge --no-ff release-next`
+    - `git checkout main; git merge --no-ff release-remix`
   - Merge the `release-*` branch into `dev` **using a non-fast-forward merge** and push it up to GitHub
-    - `git checkout dev; git merge --no-ff release-next`
+    - `git checkout dev; git merge --no-ff release-remix`
   - Convert the `remix@1.x.y` tag to a Release on GitHub with the name `v2.x.y` and add a deep-link to the release heading in `CHANGELOG.md`
 
 ### Hotfix releases

@@ -168,7 +168,7 @@ A -> C
 
 ### `state`
 
-Adds persistent client side routing state to the next location.
+Adds persistent client side routing state to the remix location.
 
 ```tsx
 <Link to="/somewhere/else" state={{ some: "value" }} />

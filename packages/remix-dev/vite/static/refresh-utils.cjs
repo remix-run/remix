@@ -83,21 +83,21 @@ function registerExportsForReactRefresh(filename, moduleExports) {
 
 function validateRefreshBoundaryAndEnqueueUpdate(
   prevExports,
-  nextExports,
+  remixExports,
   // non-component exports that are handled by the framework (e.g. `meta` and `links` for route modules)
   acceptExports = []
 ) {
   if (
     !predicateOnExport(
       prevExports,
-      (key) => key in nextExports || acceptExports.includes(key)
+      (key) => key in remixExports || acceptExports.includes(key)
     )
   ) {
     return "Could not Fast Refresh (export removed)";
   }
   if (
     !predicateOnExport(
-      nextExports,
+      remixExports,
       (key) => key in prevExports || acceptExports.includes(key)
     )
   ) {
@@ -106,7 +106,7 @@ function validateRefreshBoundaryAndEnqueueUpdate(
 
   let hasExports = false;
   let allExportsAreHandledOrUnchanged = predicateOnExport(
-    nextExports,
+    remixExports,
     (key, value) => {
       hasExports = true;
       // Remix can handle Remix-specific exports (e.g. `meta` and `links`)
@@ -114,7 +114,7 @@ function validateRefreshBoundaryAndEnqueueUpdate(
       // React Fast Refresh can handle component exports
       if (exports.isLikelyComponentType(value)) return true;
       // Unchanged exports are implicitly handled
-      return prevExports[key] === nextExports[key];
+      return prevExports[key] === remixExports[key];
     }
   );
   if (hasExports && allExportsAreHandledOrUnchanged) {

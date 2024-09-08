@@ -24,7 +24,7 @@ interface HtmlLinkProps {
     | "icon"
     | "manifest"
     | "modulepreload"
-    | "next"
+    | "remix"
     | "pingback"
     | "preconnect"
     | "prefetch"

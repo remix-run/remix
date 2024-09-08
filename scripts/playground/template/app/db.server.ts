@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 let prisma: PrismaClient;
 
 declare global {
-  // eslint-disable-next-line prefer-let/prefer-let
+  // eslint-disable-remix-line prefer-let/prefer-let
   var __db__: PrismaClient;
 }
 

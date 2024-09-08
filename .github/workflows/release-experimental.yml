@@ -42,9 +42,9 @@ jobs:
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
           SHORT_SHA=$(git rev-parse --short HEAD)
-          NEXT_VERSION=0.0.0-experimental-${SHORT_SHA}
-          git checkout -b experimental/${NEXT_VERSION}
-          pnpm run version ${NEXT_VERSION} --skip-prompt
+          REMIX_VERSION=0.0.0-experimental-${SHORT_SHA}
+          git checkout -b experimental/${REMIX_VERSION}
+          pnpm run version ${REMIX_VERSION} --skip-prompt
           git push origin --tags
 
       - name: 🏗 Build

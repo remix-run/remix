@@ -18,8 +18,8 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
   formData,
   formEncType,
   formMethod,
-  nextParams,
-  nextUrl,
+  remixParams,
+  remixUrl,
 }) => {
   return true;
 };
@@ -87,7 +87,7 @@ export function shouldRevalidate() {
 
 ## `currentParams`
 
-These are the [URL params][url-params] from the URL that can be compared to the `nextParams` to decide if you need to reload or not. Perhaps you're using only a partial piece of the param for data loading, you don't need to revalidate if a superfluous part of the param changed.
+These are the [URL params][url-params] from the URL that can be compared to the `remixParams` to decide if you need to reload or not. Perhaps you're using only a partial piece of the param for data loading, you don't need to revalidate if a superfluous part of the param changed.
 
 For instance, consider an event slug with the id and a human-friendly title:
 
@@ -104,12 +104,12 @@ export async function loader({
 
 export function shouldRevalidate({
   currentParams,
-  nextParams,
+  remixParams,
   defaultShouldRevalidate,
 }) {
   const currentId = currentParams.slug.split("--")[1];
-  const nextId = nextParams.slug.split("--")[1];
-  if (currentId === nextId) {
+  const remixId = remixParams.slug.split("--")[1];
+  if (currentId === remixId) {
     return false;
   }
 
@@ -121,11 +121,11 @@ export function shouldRevalidate({
 
 This is the url the navigation started from.
 
-## `nextParams`
+## `remixParams`
 
-In the case of navigation, these are the [URL params][url-params] from the next location the user is requesting. Some revalidations are not navigation, so it will simply be the same as `currentParams`.
+In the case of navigation, these are the [URL params][url-params] from the remix location the user is requesting. Some revalidations are not navigation, so it will simply be the same as `currentParams`.
 
-## `nextUrl`
+## `remixUrl`
 
 In the case of navigation, this the URL the user is requesting. Some revalidations are not navigation, so it will simply be the same as `currentUrl`.
 
@@ -234,13 +234,13 @@ If the params didn't change, and we didn't do a `POST`, then we know our loader 
 ```tsx filename=app/routes/$projectId.tsx
 export function shouldRevalidate({
   currentParams,
-  nextParams,
+  remixParams,
   formMethod,
   defaultShouldRevalidate,
 }) {
   if (
     formMethod === "GET" &&
-    currentParams.projectId === nextParams.projectId
+    currentParams.projectId === remixParams.projectId
   ) {
     return false;
   }

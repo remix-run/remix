@@ -1,5 +1,5 @@
 // Adapted from https://github.com/egoist/babel-plugin-eliminator/blob/d29859396b7708b7f7abbacdd951cbbc80902f00/src/index.ts
-// Which was originally adapted from https://github.com/vercel/next.js/blob/574fe0b582d5cc1b13663121fd47a3d82deaaa17/packages/next/build/babel/plugins/next-ssg-transform.ts
+// Which was originally adapted from https://github.com/vercel/remix.js/blob/574fe0b582d5cc1b13663121fd47a3d82deaaa17/packages/remix/build/babel/plugins/remix-ssg-transform.ts
 import type { GeneratorOptions } from "@babel/generator";
 
 import {
@@ -277,7 +277,7 @@ export const removeExports = (
       Program(path) {
         path.scope.crawl();
       },
-      // eslint-disable-next-line no-loop-func
+      // eslint-disable-remix-line no-loop-func
       VariableDeclarator(variablePath) {
         if (variablePath.node.id.type === "Identifier") {
           let local = variablePath.get("id") as NodePath<BabelTypes.Identifier>;

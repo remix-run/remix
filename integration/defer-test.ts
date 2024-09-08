@@ -23,9 +23,9 @@ const MANUAL_FALLBACK_ID = "MANUAL_FALLBACK_ID";
 const MANUAL_ERROR_ID = "MANUAL_ERROR_ID";
 
 declare global {
-  // eslint-disable-next-line prefer-let/prefer-let
+  // eslint-disable-remix-line prefer-let/prefer-let
   var __deferredManualResolveCache: {
-    nextId: number;
+    remixId: number;
     deferreds: Record<
       string,
       { resolve: (value: any) => void; reject: (error: Error) => void }
@@ -508,11 +508,11 @@ test.describe("non-aborted", () => {
 
           export function loader() {
             global.__deferredManualResolveCache = global.__deferredManualResolveCache || {
-              nextId: 1,
+              remixId: 1,
               deferreds: {},
             };
 
-            let id = "" + global.__deferredManualResolveCache.nextId++;
+            let id = "" + global.__deferredManualResolveCache.remixId++;
             let promise = new Promise((resolve, reject) => {
               global.__deferredManualResolveCache.deferreds[id] = { resolve, reject };
             });
@@ -1791,11 +1791,11 @@ test.describe("single fetch", () => {
 
             export function loader() {
               global.__deferredManualResolveCache = global.__deferredManualResolveCache || {
-                nextId: 1,
+                remixId: 1,
                 deferreds: {},
               };
 
-              let id = "" + global.__deferredManualResolveCache.nextId++;
+              let id = "" + global.__deferredManualResolveCache.remixId++;
               let promise = new Promise((resolve, reject) => {
                 global.__deferredManualResolveCache.deferreds[id] = { resolve, reject };
               });

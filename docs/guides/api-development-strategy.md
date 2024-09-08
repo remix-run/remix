@@ -30,7 +30,7 @@ export default defineConfig({
 
 <docs-info>If you are not yet using Vite, you can provide Future Flags via the [`remix.config.js` `future`][remix-config-future] option</docs-info>
 
-- Once an unstable feature reaches a stable state, we remove the special prefix and include the feature in the next minor release. At this point, the API's structure remains consistent throughout subsequent minor releases.
+- Once an unstable feature reaches a stable state, we remove the special prefix and include the feature in the remix minor release. At this point, the API's structure remains consistent throughout subsequent minor releases.
 
 - This approach allows us to refine the API collaboratively with early adopters, incorporating necessary changes in the unstable phase without affecting all users. The stable releases then benefit from these improvements without disruptions.
 
@@ -56,7 +56,7 @@ export default defineConfig({
 ```
 
 - Both the existing `v2` behavior and the new `v3_somethingDifferent` behavior coexist simultaneously.
-- Applications can adopt changes incrementally, one step at a time, instead of having to adjust to a multitude of changes all at once in the next major release.
+- Applications can adopt changes incrementally, one step at a time, instead of having to adjust to a multitude of changes all at once in the remix major release.
 - If all the `v3_*` future flags are enabled, transitioning to `v3` should ideally not necessitate any changes to your codebase.
 - Some future flags that bring about breaking changes initially start as `unstable_*` flags. These might undergo modifications during minor releases. Once they become `v3_*` future flags, the corresponding API is set and won't change further.
 

@@ -128,7 +128,7 @@ type ClientLoaderRawAndDefer<
 }: ClientLoaderFunctionArgs) => Promise<T1 | TypedDeferredData<T2>>;
 
 // prettier-ignore
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-remix-line @typescript-eslint/no-unused-vars
 type _tests = [
   // back compat: plain object
   Expect<Equal<Pretty<SerializeFrom<{a: string}>>, {a: string}>>,

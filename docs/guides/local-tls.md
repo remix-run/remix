@@ -20,7 +20,7 @@ If you are running `remix dev` without the `-c` flag, you are implicitly using `
 ## Running your app server with local TLS
 
 The first step is to get your app server running with local TLS _without_ running `remix dev`.
-That will set you up for success when you set up `remix dev` with local TLS in the next section.
+That will set you up for success when you set up `remix dev` with local TLS in the remix section.
 
 👉 Install [`mkcert`][mkcert]
 

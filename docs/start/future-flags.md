@@ -23,7 +23,7 @@ npm install @remix-run/{dev,react,node,etc.}@2
 
 Remix no longer uses its own, closed compiler (now referred to as the "Classic Compiler"), and instead uses [Vite][vite]. Vite is a powerful, performant and extensible development environment for JavaScript projects. [View the Vite docs][vite-docs] for more information on performance, troubleshooting, etc.
 
-While this is not a future flag, new features and some feature flags are only available in the Vite plugin, and the Classic Compiler will be removed in the next version of Remix.
+While this is not a future flag, new features and some feature flags are only available in the Vite plugin, and the Classic Compiler will be removed in the remix version of Remix.
 
 👉 **Install Vite**
 
@@ -89,7 +89,7 @@ Update the `types` field in `tsconfig.json` and make sure `skipLibCheck`, `modul
   "compilerOptions": {
     "types": ["@remix-run/node", "vite/client"],
     "skipLibCheck": true,
-    "module": "ESNext",
+    "module": "ESRemix",
     "moduleResolution": "Bundler"
   }
 }

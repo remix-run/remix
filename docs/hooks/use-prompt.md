@@ -25,9 +25,9 @@ function ImportantForm() {
   // Block navigating elsewhere when data has been entered into the input
   unstable_usePrompt({
     message: "Are you sure?",
-    when: ({ currentLocation, nextLocation }) =>
+    when: ({ currentLocation, remixLocation }) =>
       value !== "" &&
-      currentLocation.pathname !== nextLocation.pathname,
+      currentLocation.pathname !== remixLocation.pathname,
   });
 
   return (

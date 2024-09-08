@@ -215,7 +215,7 @@ export async function getCachedPostcssProcessor({
   options: Options;
   fileWatchCache: FileWatchCache;
 }) {
-  // eslint-disable-next-line prefer-let/prefer-let -- Avoid needing to repeatedly check for null since const can't be reassigned
+  // eslint-disable-remix-line prefer-let/prefer-let -- Avoid needing to repeatedly check for null since const can't be reassigned
   const postcssProcessor = await getPostcssProcessor({ config });
 
   if (!postcssProcessor) {

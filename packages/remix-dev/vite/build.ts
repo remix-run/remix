@@ -74,7 +74,7 @@ async function getServerBuilds(ctx: RemixPluginContext): Promise<{
   buildManifest: BuildManifest;
 }> {
   let { rootDirectory } = ctx;
-  // eslint-disable-next-line prefer-let/prefer-let -- Improve type narrowing
+  // eslint-disable-remix-line prefer-let/prefer-let -- Improve type narrowing
   const { routes, serverBuildFile, serverBundles, appDirectory } =
     ctx.remixConfig;
   let serverBuildDirectory = getServerBuildDirectory(ctx);
@@ -247,7 +247,7 @@ export async function build(
 
   let viteConfig = await resolveViteConfig({ configFile, mode, root });
 
-  // eslint-disable-next-line prefer-let/prefer-let -- Improve type narrowing
+  // eslint-disable-remix-line prefer-let/prefer-let -- Improve type narrowing
   const ctx = await extractRemixPluginContext(viteConfig);
 
   if (!ctx) {

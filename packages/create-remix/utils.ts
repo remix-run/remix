@@ -259,8 +259,8 @@ export function action(key: ActionKey, isSelect: boolean) {
   if (key.name === "delete") return "deleteForward";
   if (key.name === "abort") return "abort";
   if (key.name === "escape") return "exit";
-  if (key.name === "tab") return "next";
-  if (key.name === "pagedown") return "nextPage";
+  if (key.name === "tab") return "remix";
+  if (key.name === "pagedown") return "remixPage";
   if (key.name === "pageup") return "prevPage";
   if (key.name === "home") return "home";
   if (key.name === "end") return "end";

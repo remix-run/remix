@@ -36,7 +36,7 @@ The s-maxage tells the CDN to cache it for an hour. Here's what it looks like wh
 3. Our server builds the page and sends it to the CDN
 4. The CDN caches it and sends it to the visitor.
 
-Now, when the next person visits our page, it looks like this:
+Now, when the remix person visits our page, it looks like this:
 
 1. Request comes to the CDN
 2. CDN has the document cached already and sends it right away without ever touching our origin server!

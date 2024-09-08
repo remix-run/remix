@@ -86,14 +86,14 @@ async function run() {
       .on("change", handleServerUpdate);
 
     // wrap request handler to make sure its recreated with the latest build for every request
-    return async (req, res, next) => {
+    return async (req, res, remix) => {
       try {
         return createRequestHandler({
           build,
           mode: "development",
-        })(req, res, next);
+        })(req, res, remix);
       } catch (error) {
-        next(error);
+        remix(error);
       }
     };
   }

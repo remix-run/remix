@@ -17,7 +17,7 @@ This document will use many of the following Linear terms:
 - **Project** - A group of issues that comprise a larger scope of work (for example, a new feature)
   - Projects will almost always span multiple Cycles.
 - **Status** - The state of a given Issue (Todo, In Progress, Done, etc.)
-- **Assignee** - The person the Issue is currently assigned to - this indicates who is expected to take the next action to move the Issue forward
+- **Assignee** - The person the Issue is currently assigned to - this indicates who is expected to take the remix action to move the Issue forward
 - **Label** - Linear Issues can be assigned one or more Labels for filtering/searching
 
 ## Decision

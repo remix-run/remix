@@ -93,10 +93,10 @@ Or, if you are serving via an `express` server (although at that point you may w
 
 ```js
 app.use("/assets", express.static("build/client/assets"));
-app.get("*", (req, res, next) =>
+app.get("*", (req, res, remix) =>
   res.sendFile(
     path.join(process.cwd(), "build/client/index.html"),
-    next
+    remix
   )
 );
 ```

@@ -35,9 +35,9 @@ async function run(args) {
   /** @type {string | undefined} */
   let givenVersion;
   /** @type {string | undefined} */
-  let nextVersion;
+  let remixVersion;
 
-  // Validate args and get the next version number
+  // Validate args and get the remix version number
   if (
     args.length === 1 &&
     (releaseTypes.includes(args[0]) || semver.valid(args[0]))
@@ -55,15 +55,15 @@ async function run(args) {
 
   switch (phase) {
     case "start": {
-      nextVersion = await initStart(givenVersion, gitArgs);
+      remixVersion = await initStart(givenVersion, gitArgs);
       break;
     }
     case "bump": {
-      nextVersion = await initBump(gitArgs);
+      remixVersion = await initBump(gitArgs);
       break;
     }
     case "finish": {
-      nextVersion = await initFinish(gitArgs);
+      remixVersion = await initFinish(gitArgs);
       break;
     }
     default:
@@ -72,35 +72,35 @@ async function run(args) {
   $ pnpm release [start | bump | finish] [patch | minor | major]`);
   }
 
-  if (versionExists(allTags, nextVersion)) {
-    throw Error(`Version ${nextVersion} has already been released.`);
+  if (versionExists(allTags, remixVersion)) {
+    throw Error(`Version ${remixVersion} has already been released.`);
   }
 
   let answer = await prompt(
-    `Are you sure you want to release version ${chalk.bold(nextVersion)}? [Yn] `
+    `Are you sure you want to release version ${chalk.bold(remixVersion)}? [Yn] `
   );
   if (answer === false) return 0;
 
   switch (phase) {
     case "start": {
-      await execStart(nextVersion);
+      await execStart(remixVersion);
       break;
     }
     case "bump": {
-      await execBump(nextVersion, gitArgs);
+      await execBump(remixVersion, gitArgs);
       break;
     }
     case "finish": {
-      await execFinish(nextVersion, gitArgs);
+      await execFinish(remixVersion, gitArgs);
       break;
     }
   }
 
-  let versionTag = getVersionTag(nextVersion);
+  let versionTag = getVersionTag(remixVersion);
 
   console.log(
     chalk.green(
-      `Remix version ${nextVersion} is now ready to release. To trigger the release process, create a new release in GitHub from the ${versionTag} tag:
+      `Remix version ${remixVersion} is now ready to release. To trigger the release process, create a new release in GitHub from the ${versionTag} tag:
   - Navigate to https://github.com/remix-run/remix/releases/new
   - Select ${chalk.bold(versionTag)} from the "Choose a tag" menu
   - Draft the release notes
@@ -126,15 +126,15 @@ async function initStart(givenVersion, git) {
   }
 
   /** @type {string | null} */
-  let nextVersion = semver.valid(givenVersion);
-  if (nextVersion == null) {
-    nextVersion = getNextVersion(
+  let remixVersion = semver.valid(givenVersion);
+  if (remixVersion == null) {
+    remixVersion = getRemixVersion(
       await getPackageVersion("remix"),
       givenVersion
     );
   }
 
-  return nextVersion;
+  return remixVersion;
 }
 
 /**
@@ -147,11 +147,11 @@ async function initBump(git) {
   let currentVersion = git.tags
     .filter((tag) => tag.startsWith("v" + versionFromBranch))
     .sort((a, b) => (a > b ? -1 : a < b ? 1 : 0))[0];
-  let nextVersion = semver.inc(currentVersion, "prerelease");
-  if (!nextVersion) {
+  let remixVersion = semver.inc(currentVersion, "prerelease");
+  if (!remixVersion) {
     throw Error(`Invalid semver version: ${currentVersion}`);
   }
-  return nextVersion;
+  return remixVersion;
 }
 
 /**
@@ -160,15 +160,15 @@ async function initBump(git) {
  */
 async function initFinish(git) {
   ensureLatestReleaseBranch(git.initialBranch, git);
-  let nextVersion = getVersionFromReleaseBranch(git.initialBranch);
-  return nextVersion;
+  let remixVersion = getVersionFromReleaseBranch(git.initialBranch);
+  return remixVersion;
 }
 
 /**
- * @param {string} nextVersion
+ * @param {string} remixVersion
  */
-async function execStart(nextVersion) {
-  let releaseBranch = getReleaseBranch(nextVersion);
+async function execStart(remixVersion) {
+  let releaseBranch = getReleaseBranch(remixVersion);
 
   await gitPull("dev");
   try {
@@ -182,11 +182,11 @@ async function execStart(nextVersion) {
   }
 
   await gitMerge("main", releaseBranch, { pullFirst: true });
-  await incrementRemixVersion(nextVersion);
+  await incrementRemixVersion(remixVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
   console.log(
-    chalk.green(`Version ${nextVersion} is ready to roll.`) +
+    chalk.green(`Version ${remixVersion} is ready to roll.`) +
       "\n" +
       chalk.yellow(`Ryan says since I'm just a 👶 script you probably shouldn't trust me *too* much just yet (he's right, I know!)
 
@@ -196,16 +196,16 @@ Run ${chalk.bold(`git push origin ${releaseBranch} --follow-tags`)}`)
 }
 
 /**
- * @param {string} nextVersion
+ * @param {string} remixVersion
  * @param {GitAttributes} git
  */
-async function execBump(nextVersion, git) {
+async function execBump(remixVersion, git) {
   ensureReleaseBranch(git.initialBranch);
-  await incrementRemixVersion(nextVersion);
+  await incrementRemixVersion(remixVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
   console.log(
-    chalk.green(`Version ${nextVersion} is ready to roll.`) +
+    chalk.green(`Version ${remixVersion} is ready to roll.`) +
       "\n" +
       chalk.yellow(`Ryan says since I'm just a 👶 script you probably shouldn't trust me *too* much just yet (he's right, I know!)
 
@@ -215,13 +215,13 @@ Run ${chalk.bold(`git push origin ${git.initialBranch} --follow-tags`)}`)
 }
 
 /**
- * @param {string} nextVersion
+ * @param {string} remixVersion
  * @param {GitAttributes} git
  */
-async function execFinish(nextVersion, git) {
+async function execFinish(remixVersion, git) {
   ensureReleaseBranch(git.initialBranch);
   await gitMerge(git.initialBranch, "main");
-  await incrementRemixVersion(nextVersion);
+  await incrementRemixVersion(remixVersion);
   await gitMerge(git.initialBranch, "dev");
 }
 
@@ -292,18 +292,18 @@ async function gitPull(branch) {
  * @param {string} givenVersion
  * @param {string | undefined} [prereleaseId]
  */
-function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
+function getRemixVersion(currentVersion, givenVersion, prereleaseId = "pre") {
   if (givenVersion == null) {
     throw Error(
-      "Missing next version. Usage: node scripts/release.js start [nextVersion]"
+      "Missing remix version. Usage: node scripts/release.js start [remixVersion]"
     );
   }
   // @ts-ignore
-  let nextVersion = semver.inc(currentVersion, givenVersion, prereleaseId);
-  if (nextVersion == null) {
+  let remixVersion = semver.inc(currentVersion, givenVersion, prereleaseId);
+  if (remixVersion == null) {
     throw Error(`Invalid version specifier: ${givenVersion}`);
   }
-  return nextVersion;
+  return remixVersion;
 }
 
 function getCurrentBranch() {

@@ -33,7 +33,7 @@ interface HtmlLinkProps {
     | "icon"
     | "manifest"
     | "modulepreload"
-    | "next"
+    | "remix"
     | "pingback"
     | "preconnect"
     | "prefetch"
@@ -349,7 +349,7 @@ export async function getKeyedPrefetchLinks(
 // This is ridiculously identical to transition.ts `filterMatchesToLoad`
 export function getNewMatchesForLinks(
   page: string,
-  nextMatches: AgnosticDataRouteMatch[],
+  remixMatches: AgnosticDataRouteMatch[],
   currentMatches: AgnosticDataRouteMatch[],
   manifest: AssetsManifest,
   location: Location,
@@ -379,7 +379,7 @@ export function getNewMatchesForLinks(
     mode === "data" && location.search !== path.search
       ? // this is really similar to stuff in transition.ts, maybe somebody smarter
         // than me (or in less of a hurry) can share some of it. You're the best.
-        nextMatches.filter((match, index) => {
+        remixMatches.filter((match, index) => {
           let manifestRoute = manifest.routes[match.route.id];
           if (!manifestRoute.hasLoader) {
             return false;
@@ -396,8 +396,8 @@ export function getNewMatchesForLinks(
                 window.origin
               ),
               currentParams: currentMatches[0]?.params || {},
-              nextUrl: new URL(page, window.origin),
-              nextParams: match.params,
+              remixUrl: new URL(page, window.origin),
+              remixParams: match.params,
               defaultShouldRevalidate: true,
             });
             if (typeof routeChoice === "boolean") {
@@ -406,7 +406,7 @@ export function getNewMatchesForLinks(
           }
           return true;
         })
-      : nextMatches.filter((match, index) => {
+      : remixMatches.filter((match, index) => {
           let manifestRoute = manifest.routes[match.route.id];
           return (
             (mode === "assets" || manifestRoute.hasLoader) &&

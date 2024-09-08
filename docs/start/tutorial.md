@@ -301,7 +301,7 @@ Now the child route should be rendering through the outlet.
 
 ## Client Side Routing
 
-You may or may not have noticed, but when we click the links in the sidebar, the browser is doing a full document request for the next URL instead of client side routing.
+You may or may not have noticed, but when we click the links in the sidebar, the browser is doing a full document request for the remix URL instead of client side routing.
 
 Client side routing allows our app to update the URL without requesting another document from the server. Instead, the app can immediately render new UI. Let's make it happen with [`<Link>`][link-component].
 
@@ -363,7 +363,7 @@ There are two APIs we'll be using to load data, [`loader`][loader] and [`useLoad
 
 👉 **Export a `loader` function from `app/root.tsx` and render the data**
 
-<docs-info>The following code has a type error in it, we'll fix it in the next section</docs-info>
+<docs-info>The following code has a type error in it, we'll fix it in the remix section</docs-info>
 
 ```tsx filename=app/root.tsx lines=[2,11,15,19-22,25,34-57]
 // existing imports
@@ -466,7 +466,7 @@ These params are most often used to find a record by ID. Let's try it out.
 
 👉 **Add a `loader` function to the contact page and access data with `useLoaderData`**
 
-<docs-info>The following code has type errors in it, we'll fix them in the next section</docs-info>
+<docs-info>The following code has type errors in it, we'll fix them in the remix section</docs-info>
 
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[1-2,5,7-10,13]
 import { json } from "@remix-run/node";
@@ -515,7 +515,7 @@ export const loader = async ({
 
 First problem this highlights is we might have gotten the param's name wrong between the file name and the code (maybe you changed the name of the file!). Invariant is a handy function for throwing an error with a custom message when you anticipated a potential issue with your code.
 
-Next, the `useLoaderData<typeof loader>()` now knows that we got a contact or `null` (maybe there is no contact with that ID). This potential `null` is cumbersome for our component code and the TS errors are flying around still.
+Remix, the `useLoaderData<typeof loader>()` now knows that we got a contact or `null` (maybe there is no contact with that ID). This potential `null` is cumbersome for our component code and the TS errors are flying around still.
 
 We could account for the possibility of the contact being not found in component code, but the webby thing to do is send a proper 404. We can do that in the loader and solve all of our problems at once.
 
@@ -873,7 +873,7 @@ Note that we are passing a function to `className`. When the user is at the URL 
 
 ## Global Pending UI
 
-As the user navigates the app, Remix will _leave the old page up_ as data is loading for the next page. You may have noticed the app feels a little unresponsive as you click between the list. Let's provide the user with some feedback so the app doesn't feel unresponsive.
+As the user navigates the app, Remix will _leave the old page up_ as data is loading for the remix page. You may have noticed the app feels a little unresponsive as you click between the list. Let's provide the user with some feedback so the app doesn't feel unresponsive.
 
 Remix is managing all the state behind the scenes and reveals the pieces you need to build dynamic web apps. In this case, we'll use the [`useNavigation`][use-navigation] hook.
 
@@ -1353,7 +1353,7 @@ export default function App() {
 }
 ```
 
-When nothing is happening, `navigation.location` will be `undefined`, but when the user navigates it will be populated with the next location while data loads. Then we check if they're searching with `location.search`.
+When nothing is happening, `navigation.location` will be `undefined`, but when the user navigates it will be populated with the remix location while data loads. Then we check if they're searching with `location.search`.
 
 👉 **Add classes to search form elements using the new `searching` state**
 
@@ -1443,7 +1443,7 @@ Since the form is submitted for every keystroke, typing the characters "alex" an
 
 <img class="tutorial" loading="lazy" src="/docs-images/contacts/21.webp" />
 
-We can avoid this by _replacing_ the current entry in the history stack with the next page, instead of pushing into it.
+We can avoid this by _replacing_ the current entry in the history stack with the remix page, instead of pushing into it.
 
 👉 **Use `replace` in `submit`**
 
@@ -1558,7 +1558,7 @@ export const action = async ({
 // existing code
 ```
 
-Alright, we're ready to click the star next to the user's name!
+Alright, we're ready to click the star remix to the user's name!
 
 <img class="tutorial" loading="lazy" src="/docs-images/contacts/22.webp" />
 

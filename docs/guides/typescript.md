@@ -63,7 +63,7 @@ Remix has TypeScript type definitions built-in as well. For example, the starter
     "isolatedModules": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
-    "module": "ESNext",
+    "module": "ESRemix",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "target": "ES2022",

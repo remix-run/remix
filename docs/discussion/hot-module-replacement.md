@@ -87,7 +87,7 @@ export const myValue = "some value";
 
 ### Changing Hooks
 
-React Fast Refresh cannot track changes for a component when hooks are being added or removed from it, causing full reloads just for the next render. After the hooks have been updated, changes should result in hot updates again. For example, if you add [`useLoaderData`][use-loader-data] to your component, you may lose state local to that component for that render.
+React Fast Refresh cannot track changes for a component when hooks are being added or removed from it, causing full reloads just for the remix render. After the hooks have been updated, changes should result in hot updates again. For example, if you add [`useLoaderData`][use-loader-data] to your component, you may lose state local to that component for that render.
 
 Additionally, if you are destructuring a hook's return value, React Fast Refresh will not be able to preserve state for the component if the destructured key is removed or renamed.
 For example:
@@ -169,7 +169,7 @@ Now if you change the key `stuff` to `things`:
   }
 ```
 
-Then React Fast Refresh will preserve state for the `<input />`, though you may need to use component keys as described in the next section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
+Then React Fast Refresh will preserve state for the `<input />`, though you may need to use component keys as described in the remix section if the stateful element (e.g. `<input />`) is a sibling of the changed element.
 
 ### Component Keys
 

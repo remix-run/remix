@@ -24,7 +24,7 @@ This very website has a time to first byte that's hard to beat. For most people 
 
 We accomplished this with distributed systems. The app runs in several regions on [Fly][fly] around the world so it's close to you. Each instance has its own SQLite database. When the app boots, it fetches tarballs from the Remix source repository on GitHub, processes the markdown docs into HTML and then inserts them into the SQLite database.
 
-The code involved is actually really similar to what a Gatsby site might do at build time in `gatsby-node.js` or `getStaticProps` in Next.js. The idea is to take the slow parts (fetching docs from GitHub, processing markdown) and cache it (SSG caches into HTML, this website caches into SQLite on the server).
+The code involved is actually really similar to what a Gatsby site might do at build time in `gatsby-node.js` or `getStaticProps` in Remix.js. The idea is to take the slow parts (fetching docs from GitHub, processing markdown) and cache it (SSG caches into HTML, this website caches into SQLite on the server).
 
 When users request a page, the app queries its local SQLite database and sends the page. Our server is done with these requests in a few milliseconds. What's most interesting about this architecture is that we don't have to sacrifice speed for freshness. When we edit a doc on GitHub, a GitHub action calls a webhook on the nearest app instance, which then replays that request to all of the other instances across the world. Then they all pull the new tarball from GitHub and sync their database with the docs just like they did when they booted. The docs are updated within a minute or two across the world.
 

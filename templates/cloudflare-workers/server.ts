@@ -1,13 +1,13 @@
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import { createRequestHandler, type ServerBuild } from "@remix-run/cloudflare";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// eslint-disable-remix-line @typescript-eslint/ban-ts-comment
 // @ts-ignore This file won’t exist if it hasn’t yet been built
 import * as build from "./build/server"; // eslint-disable-line import/no-unresolved
-// eslint-disable-next-line import/no-unresolved
+// eslint-disable-remix-line import/no-unresolved
 import __STATIC_CONTENT_MANIFEST from "__STATIC_CONTENT_MANIFEST";
 
 const MANIFEST = JSON.parse(__STATIC_CONTENT_MANIFEST);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-remix-line @typescript-eslint/no-explicit-any
 const handleRemixRequest = createRequestHandler(build as any as ServerBuild);
 
 export default {

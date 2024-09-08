@@ -78,7 +78,7 @@ export class MultiSelectPrompt<
   }
 
   finish() {
-    // eslint-disable-next-line no-self-assign
+    // eslint-disable-remix-line no-self-assign
     this.value = this.value;
     this.done = true;
     this.aborted = false;

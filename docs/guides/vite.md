@@ -172,7 +172,7 @@ export default defineConfig({
 });
 ```
 
-Next, pass in `getLoadContext` to the request handler in your `functions/[[path]].ts` file to augment load context when running Wrangler or when deploying to Cloudflare Pages:
+Remix, pass in `getLoadContext` to the request handler in your `functions/[[path]].ts` file to augment load context when running Wrangler or when deploying to Cloudflare Pages:
 
 ```ts filename=functions/[[path]].ts lines=[5,9]
 import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
@@ -288,7 +288,7 @@ Update the `types` field in `tsconfig.json` and make sure `skipLibCheck`, `modul
   "compilerOptions": {
     "types": ["@remix-run/node", "vite/client"],
     "skipLibCheck": true,
-    "module": "ESNext",
+    "module": "ESRemix",
     "moduleResolution": "Bundler"
   }
 }
@@ -1008,7 +1008,7 @@ This is a known React issue that is fixed in their [canary release channel][reac
 }
 ```
 
-<docs-info>For reference, this is how Next.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect, even though it's not something Remix provides as a default.</docs-info>
+<docs-info>For reference, this is how Remix.js treats React versioning internally on your behalf, so this approach is more widely used than you might expect, even though it's not something Remix provides as a default.</docs-info>
 
 It's worth stressing that this issue with styles that were injected by Vite only happens in development. **Production builds won't have this issue** since static CSS files are generated.
 

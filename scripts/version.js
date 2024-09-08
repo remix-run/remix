@@ -27,22 +27,22 @@ async function run(args) {
 
   ensureCleanWorkingDirectory();
 
-  // Get the next version number
+  // Get the remix version number
   let currentVersion = await getPackageVersion("remix");
-  let nextVersion = semver.valid(givenVersion);
-  if (nextVersion == null) {
-    nextVersion = getNextVersion(currentVersion, givenVersion, prereleaseId);
+  let remixVersion = semver.valid(givenVersion);
+  if (remixVersion == null) {
+    remixVersion = getRemixVersion(currentVersion, givenVersion, prereleaseId);
   }
 
-  // Confirm the next version number
+  // Confirm the remix version number
   if (prereleaseId !== "--skip-prompt") {
     let answer = await prompt(
-      `Are you sure you want to bump version ${currentVersion} to ${nextVersion}? [Yn] `
+      `Are you sure you want to bump version ${currentVersion} to ${remixVersion}? [Yn] `
     );
     if (answer === false) return 0;
   }
 
-  await incrementRemixVersion(nextVersion);
+  await incrementRemixVersion(remixVersion);
 }
 
 /**
@@ -51,17 +51,17 @@ async function run(args) {
  * @param {string} [prereleaseId]
  * @returns
  */
-function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
+function getRemixVersion(currentVersion, givenVersion, prereleaseId = "pre") {
   if (givenVersion == null) {
-    console.error("Missing next version. Usage: node version.js [nextVersion]");
+    console.error("Missing remix version. Usage: node version.js [remixVersion]");
     process.exit(1);
   }
 
-  let nextVersion = semver.inc(currentVersion, givenVersion, prereleaseId);
-  if (nextVersion == null) {
+  let remixVersion = semver.inc(currentVersion, givenVersion, prereleaseId);
+  if (remixVersion == null) {
     console.error(`Invalid version specifier: ${givenVersion}`);
     process.exit(1);
   }
 
-  return nextVersion;
+  return remixVersion;
 }

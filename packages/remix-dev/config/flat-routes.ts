@@ -384,7 +384,7 @@ export function getRouteSegments(routeId: string): [string[], string[]] {
 
   while (index < routeId.length) {
     let char = routeId[index];
-    index++; //advance to next char
+    index++; //advance to remix char
 
     switch (state) {
       case "NORMAL": {

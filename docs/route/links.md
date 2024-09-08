@@ -95,7 +95,7 @@ export const links: LinksFunction = () => {
 };
 ```
 
-This loads up the JavaScript modules, loader data, and the stylesheets (defined in the `links` exports of the next routes) into the browser cache before the user even navigates there.
+This loads up the JavaScript modules, loader data, and the stylesheets (defined in the `links` exports of the remix routes) into the browser cache before the user even navigates there.
 
 <docs-warning>Be careful with this feature. You don't want to download 10MB of JavaScript and data for pages the user probably won't ever visit.</docs-warning>
 

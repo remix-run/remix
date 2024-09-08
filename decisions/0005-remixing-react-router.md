@@ -30,7 +30,7 @@ In [Remixing React Router][remixing router], Ryan gives an overview of the work 
 
 ### Move the bulk of logic to a framework-agnostic router
 
-Thankfully this decision was sort of already made by Ryan. Maybe a surprise to some, maybe not, the current transition manager doesn't import or reference `react` or `react-router` a single time. This is by design because the logic being handled has nothing to do with how to render the UI layer. It's all about "what route am I on?", "what route am I going to?", "how do I load data for the next route?", "how do I interrupt ongoing navigations?" etc. None of these decisions actually _care_ about how the route and its data will eventually be rendered. Instead, the router simply needs to know whether given routes _have_ components and/or error boundaries - but it doesn't need to know about them or how to render them.
+Thankfully this decision was sort of already made by Ryan. Maybe a surprise to some, maybe not, the current transition manager doesn't import or reference `react` or `react-router` a single time. This is by design because the logic being handled has nothing to do with how to render the UI layer. It's all about "what route am I on?", "what route am I going to?", "how do I load data for the remix route?", "how do I interrupt ongoing navigations?" etc. None of these decisions actually _care_ about how the route and its data will eventually be rendered. Instead, the router simply needs to know whether given routes _have_ components and/or error boundaries - but it doesn't need to know about them or how to render them.
 
 This is a huge advantage since it's a strict requirement in order to eventually support UI libraries other than React (namely Preact and Vue). So in the end, we have a `@remix-run/router` package with _zero_ dependencies 🔥.
 
@@ -82,7 +82,7 @@ We plan to export `useNavigation` in Remix and encourage folks to switch, but we
 In Remix, the `useTransition` hook returned a Transition object which had a `state` property of `"idle" | "loading" | "submitting"`. It also had a `type` property which represented sort of "sub-states" such as `"normalLoad" | "actionReload" | "loaderRedirect"` etc. In React Router we chose to get rid of the `type` field for 2 reasons:
 
 1. In practice, we found that the _vast_ majority of the time all you needed to reference was the `state`
-2. For scenarios in which you really do need to distinguish, we are pretty sure that in all cases, you can deduce the `type` from `state`, current location (`useLocation`), next location (`useNavigation().location`), and submission info (`useNavigation().formData`).
+2. For scenarios in which you really do need to distinguish, we are pretty sure that in all cases, you can deduce the `type` from `state`, current location (`useLocation`), remix location (`useNavigation().location`), and submission info (`useNavigation().formData`).
 
 **`useTransition().submission` is flattened**
 

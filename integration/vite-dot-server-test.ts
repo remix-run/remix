@@ -25,7 +25,7 @@ let tsconfig = (aliases: Record<string, string[]>) => `
       "isolatedModules": true,
       "esModuleInterop": true,
       "jsx": "react-jsx",
-      "module": "ESNext",
+      "module": "ESRemix",
       "moduleResolution": "Bundler",
       "resolveJsonModule": true,
       "target": "ES2022",

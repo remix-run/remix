@@ -116,7 +116,7 @@ export function SearchBox() {
 }
 ```
 
-This component doesn't need any state management. It just renders a form that submits to `/search`. When JavaScript loads, Remix will intercept the form submission and handle it client side. This allows you to add your own pending UI, or other client side behavior. Here's the next iteration:
+This component doesn't need any state management. It just renders a form that submits to `/search`. When JavaScript loads, Remix will intercept the form submission and handle it client side. This allows you to add your own pending UI, or other client side behavior. Here's the remix iteration:
 
 ```tsx lines=[1,4-6,11]
 import { useNavigation } from "@remix-run/react";

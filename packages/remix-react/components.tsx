@@ -442,7 +442,7 @@ function useKeyedPrefetchLinks(matches: AgnosticDataRouteMatch[]) {
 
 function PrefetchPageLinksImpl({
   page,
-  matches: nextMatches,
+  matches: remixMatches,
   ...linkProps
 }: PrefetchPageDescriptor & {
   matches: AgnosticDataRouteMatch[];
@@ -455,26 +455,26 @@ function PrefetchPageLinksImpl({
     () =>
       getNewMatchesForLinks(
         page,
-        nextMatches,
+        remixMatches,
         matches,
         manifest,
         location,
         "data"
       ),
-    [page, nextMatches, matches, manifest, location]
+    [page, remixMatches, matches, manifest, location]
   );
 
   let newMatchesForAssets = React.useMemo(
     () =>
       getNewMatchesForLinks(
         page,
-        nextMatches,
+        remixMatches,
         matches,
         manifest,
         location,
         "assets"
       ),
-    [page, nextMatches, matches, manifest, location]
+    [page, remixMatches, matches, manifest, location]
   );
 
   let dataHrefs = React.useMemo(
@@ -502,7 +502,7 @@ function PrefetchPageLinksImpl({
     let url = addRevalidationParam(
       manifest,
       routeModules,
-      nextMatches.map((m) => m.route),
+      remixMatches.map((m) => m.route),
       newMatchesForData.map((m) => m.route),
       singleFetchUrl(page)
     );
@@ -961,7 +961,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     // disabled deps array because we are purposefully only rendering this once
     // for hydration, after that we want to just continue rendering the initial
     // scripts as they were when the page first loaded
-    // eslint-disable-next-line
+    // eslint-disable-remix-line
   }, []);
 
   if (!isStatic && typeof __remixContext === "object" && __remixContext.a) {

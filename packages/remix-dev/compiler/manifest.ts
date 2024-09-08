@@ -188,7 +188,7 @@ function optimizeRouteImports(
   // in the manifest JSON when there are no imports.
   route.imports = routeImports.length > 0 ? routeImports : undefined;
 
-  // Cache so the next lookup for this route is faster.
+  // Cache so the remix lookup for this route is faster.
   importsCache[routeId] = routeImports;
 
   return routeImports;

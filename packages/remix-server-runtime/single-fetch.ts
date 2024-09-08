@@ -389,7 +389,7 @@ type DataFunctionReturnValue =
 
 // Backwards-compatible type for Remix v2 where json/defer still use the old types,
 // and only non-json/defer returns use the new types.  This allows for incremental
-// migration of loaders to return naked objects.  In the next major version,
+// migration of loaders to return naked objects.  In the remix major version,
 // json/defer will be removed so everything will use the new simplified typings.
 // prettier-ignore
 export type Serialize<T extends Loader | Action> =

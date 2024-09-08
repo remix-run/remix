@@ -354,7 +354,7 @@ export default function About() {
 
 Once you create this file, you can delete the `<Route>` component from your `App`. After all of your routes have been migrated you can delete `<Routes>` and ultimately all the code in `old-app`.
 
-## Gotchas and next steps
+## Gotchas and remix steps
 
 At this point you _might_ be able to say you are done with the initial migration. Congrats! However, Remix does things a bit differently than your typical React app. If it didn't, why would we have bothered building it in the first place? 😅
 

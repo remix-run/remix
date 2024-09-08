@@ -67,7 +67,7 @@ test.describe("pathless layout routes", () => {
   test("should get multiple cookies from the action", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
-    // do this after the first request so that it doesnt appear in our next assertions
+    // do this after the first request so that it doesnt appear in our remix assertions
     let responses = app.collectResponses((url) => url.pathname === "/");
     await page.click("button[type=submit]");
     await page.waitForSelector(`[data-testid="action-success"]`);

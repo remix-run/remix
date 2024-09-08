@@ -82,18 +82,18 @@ function removePreReleaseSectionFromMarkdown() {
         ) {
           if (index == null || parent == null) return false;
 
-          let nextIdx = 1;
-          let nextNode = parent.children[index + 1];
+          let remixIdx = 1;
+          let remixNode = parent.children[index + 1];
           let found = false;
 
           /** @type {import('./unist').FlowNode[]} */
-          while (nextNode && !found) {
-            if (nextNode.type === "heading" && nextNode.depth === 2) {
+          while (remixNode && !found) {
+            if (remixNode.type === "heading" && remixNode.depth === 2) {
               found = true;
               break;
             }
-            nextNode.__REMOVE__ = true;
-            nextNode = parent.children[++nextIdx + index];
+            remixNode.__REMOVE__ = true;
+            remixNode = parent.children[++remixIdx + index];
           }
           return true;
         }
