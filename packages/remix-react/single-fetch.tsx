@@ -16,10 +16,7 @@ import type {
   UNSAFE_SingleFetchResults as SingleFetchResults,
 } from "@remix-run/server-runtime";
 import { UNSAFE_SingleFetchRedirectSymbol as SingleFetchRedirectSymbol } from "@remix-run/server-runtime";
-import type {
-  DataRouteObject,
-  unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
-} from "react-router-dom";
+import type { unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs } from "react-router-dom";
 import { decode } from "turbo-stream";
 
 import { createRequestInit, isResponse } from "./data";
@@ -261,35 +258,29 @@ async function singleFetchLoaderNavigationStrategy(
             results[m.route.id] = { type: "error", result: e };
           }
           return;
-        } else if (!manifest.routes[m.route.id].hasLoader) {
-          // If we don't have a server loader, then we don't care about the HTTP
-          // call and can just send back a `null` - because we _do_ have a `loader`
-          // in the client router handling route module/styles loads
-          results[m.route.id] = {
-            type: "data",
-            result: null,
-          };
-          return;
         }
 
-        // Otherwise, we want to load this route on the server and can lump this
-        // it in with the others on a singular promise
-        routesParams.add(m.route.id);
+        // Load this route on the server if it has a loader
+        if (manifest.routes[m.route.id].hasLoader) {
+          routesParams.add(m.route.id);
+        }
 
-        await handler(async () => {
-          try {
+        // Lump this match in with the others on a singular promise
+        try {
+          let result = await handler(async () => {
             let data = await singleFetchDfd.promise;
-            results[m.route.id] = {
-              type: "data",
-              result: unwrapSingleFetchResults(data, m.route.id),
-            };
-          } catch (e) {
-            results[m.route.id] = {
-              type: "error",
-              result: e,
-            };
-          }
-        });
+            return unwrapSingleFetchResults(data, m.route.id);
+          });
+          results[m.route.id] = {
+            type: "data",
+            result,
+          };
+        } catch (e) {
+          results[m.route.id] = {
+            type: "error",
+            result: e,
+          };
+        }
       })
     )
   );
@@ -297,10 +288,17 @@ async function singleFetchLoaderNavigationStrategy(
   // Wait for all routes to resolve above before we make the HTTP call
   await routesLoadedPromise;
 
-  // Don't make any single fetch server calls:
+  // We can skip the server call:
   // - On initial hydration - only clientLoaders can pass through via `clientLoader.hydrate`
   // - If there are no routes to fetch from the server
-  if (!router.state.initialized || routesParams.size === 0) {
+  //
+  // One exception - if we are performing an HDR revalidation we have to call
+  // the server in case a new loader has shown up that the manifest doesn't yet
+  // know about
+  if (
+    (!router.state.initialized || routesParams.size === 0) &&
+    !window.__remixHdrActive
+  ) {
     singleFetchDfd.resolve({});
   } else {
     try {
@@ -373,56 +371,6 @@ function stripIndexParam(url: URL) {
     url.searchParams.append("index", toKeep);
   }
 
-  return url;
-}
-
-// Determine which routes we want to load so we can add a `?_routes` search param
-// for fine-grained revalidation if necessary. There's some nuance to this decision:
-//
-//  - The presence of `shouldRevalidate` and `clientLoader` functions are the only
-//    way to trigger fine-grained single fetch loader calls.  without either of
-//    these on the route matches we just always ask for the full `.data` request.
-//  - If any routes have a `shouldRevalidate` or `clientLoader` then we do a
-//    comparison of the routes we matched and the routes we're aiming to load
-//  - If they don't match up, then we add the `_routes` param or fine-grained
-//    loading
-//  - This is used by the single fetch implementation above and by the
-//    `<PrefetchPageLinksImpl>` component so we can prefetch routes using the
-//    same logic
-export function addRevalidationParam(
-  manifest: AssetsManifest,
-  routeModules: RouteModules,
-  matchedRoutes: DataRouteObject[],
-  loadRoutes: DataRouteObject[],
-  url: URL
-) {
-  let genRouteIds = (arr: string[]) =>
-    arr.filter((id) => manifest.routes[id].hasLoader).join(",");
-
-  // Look at the `routeModules` for `shouldRevalidate` here instead of the manifest
-  // since HDR adds a wrapper for `shouldRevalidate` even if the route didn't have one
-  // initially.
-  // TODO: We probably can get rid of that wrapper once we're strictly on on
-  // single-fetch in v3 and just leverage a needsRevalidation data structure here
-  // to determine what to fetch
-  let needsParam = matchedRoutes.some(
-    (r) =>
-      routeModules[r.id]?.shouldRevalidate ||
-      manifest.routes[r.id]?.hasClientLoader
-  );
-  if (!needsParam) {
-    return url;
-  }
-
-  let matchedIds = genRouteIds(matchedRoutes.map((r) => r.id));
-  let loadIds = genRouteIds(
-    loadRoutes
-      .filter((r) => !manifest.routes[r.id]?.hasClientLoader)
-      .map((r) => r.id)
-  );
-  if (matchedIds !== loadIds) {
-    url.searchParams.set("_routes", loadIds);
-  }
   return url;
 }
 

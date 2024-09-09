@@ -46,6 +46,7 @@ declare global {
   var __remixRouteModules: RouteModules;
   var __remixManifest: AssetsManifest;
   var __remixRevalidation: number | undefined;
+  var __remixHdrActive: boolean;
   var __remixClearCriticalCss: (() => void) | undefined;
   var $RefreshRuntime$: {
     performReactRefresh: () => void;
