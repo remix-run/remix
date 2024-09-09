@@ -1,22 +1,11 @@
 # `@remix-run/server-runtime`
 
-## 2.12.0-pre.4
-
-## 2.12.0-pre.3
-
-## 2.12.0-pre.2
-
-### Patch Changes
-
-- Support 304 responses on document requests ([#9955](https://github.com/remix-run/remix/pull/9955))
-
-## 2.12.0-pre.1
-
-## 2.12.0-pre.0
+## 2.12.0
 
 ### Patch Changes
 
 - Single Fetch: Do not try to encode a `turbo-stream` body into 304 responses ([#9941](https://github.com/remix-run/remix/pull/9941))
+
 - Single Fetch: fix revalidation behavior bugs ([#9938](https://github.com/remix-run/remix/pull/9938))
 
   - With Single Fetch, existing routes revalidate by default
@@ -29,9 +18,9 @@
 
 - Remove hydration URL check that was originally added for React 17 hydration issues and we no longer support React 17 ([#9890](https://github.com/remix-run/remix/pull/9890))
 
-  - Reverts the logic originally added in Remix `v1.18.0` via https://github.com/remix-run/remix/pull/6409
-  - This was added to resolve an issue that could arise when doing quick back/forward history navigations while JS was loading which would cause a mismatch between the server matches and client matches: https://github.com/remix-run/remix/issues/1757
-  - This specific hydration issue would then cause this React v17 only looping issue: https://github.com/remix-run/remix/issues/1678
+  - Reverts the logic originally added in Remix `v1.18.0` via <https://github.com/remix-run/remix/pull/6409>
+  - This was added to resolve an issue that could arise when doing quick back/forward history navigations while JS was loading which would cause a mismatch between the server matches and client matches: <https://github.com/remix-run/remix/issues/1757>
+  - This specific hydration issue would then cause this React v17 only looping issue: <https://github.com/remix-run/remix/issues/1678>
   - The URL comparison that we added in `1.18.0` turned out to be subject to false positives of it's own which could also put the user in looping scenarios
   - Remix v2 upgraded it's minimal React version to v18 which eliminated the v17 hydration error loop
   - React v18 handles this hydration error like any other error and does not result in a loop
@@ -39,7 +28,7 @@
 
 - Single Fetch: Improved typesafety ([#9893](https://github.com/remix-run/remix/pull/9893))
 
-  If you were already using single-fetch types:
+  If you were already using previously released unstable single-fetch types:
 
   - Remove `"@remix-run/react/future/single-fetch.d.ts"` override from `tsconfig.json` > `compilerOptions` > `types`
   - Remove `defineLoader`, `defineAction`, `defineClientLoader`, `defineClientAction` helpers from your route modules
@@ -71,6 +60,8 @@
   For more information, see [Guides > Single Fetch](https://remix.run/docs/en/dev/guides/single-fetch) in our docs.
 
 - Single Fetch: Change content type on `.data` requests to `text/x-script` to allow Cloudflare compression ([#9889](https://github.com/remix-run/remix/pull/9889))
+
+- Support 304 responses on document requests ([#9955](https://github.com/remix-run/remix/pull/9955))
 
 ## 2.11.2
 

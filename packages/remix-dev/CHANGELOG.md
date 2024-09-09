@@ -1,42 +1,10 @@
 # `@remix-run/dev`
 
-## 2.12.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.12.0-pre.4`
-  - `@remix-run/server-runtime@2.12.0-pre.4`
-
-## 2.12.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.12.0-pre.3`
-  - `@remix-run/server-runtime@2.12.0-pre.3`
-
-## 2.12.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.12.0-pre.2`
-  - `@remix-run/node@2.12.0-pre.2`
-
-## 2.12.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.12.0-pre.1`
-  - `@remix-run/server-runtime@2.12.0-pre.1`
-
-## 2.12.0-pre.0
+## 2.12.0
 
 ### Minor Changes
 
-- (unstable) Automatic dependency optimization ([#9921](https://github.com/remix-run/remix/pull/9921))
+- New `future.unstable_optimizeDeps` flag for automatic dependency optimization ([#9921](https://github.com/remix-run/remix/pull/9921))
 
   You can now opt-in to automatic dependency optimization during development by using the `future.unstable_optimizeDeps` future flag.
   For details, check out the docs at [`Guides` > `Dependency optimization`](https://remix.run/docs/en/main/guides/dependency-optimization).
@@ -48,10 +16,8 @@
 - Handle circular dependencies in modulepreload manifest generation. ([#9917](https://github.com/remix-run/remix/pull/9917))
 - Fix `dest already exists` build errors by only moving SSR assets to the client build directory when they're not already present on disk ([#9901](https://github.com/remix-run/remix/pull/9901))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.12.0-pre.0`
-  - `@remix-run/react@2.12.0-pre.0`
-  - `@remix-run/node@2.12.0-pre.0`
-  - `@remix-run/serve@2.12.0-pre.0`
+  - `@remix-run/server-runtime@2.12.0`
+  - `@remix-run/node@2.12.0`
 
 ## 2.11.2
 
