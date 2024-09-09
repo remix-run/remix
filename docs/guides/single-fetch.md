@@ -86,6 +86,7 @@ There are a handful of breaking changes introduced with Single Fetch - some of w
   - Add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array
   - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
     - This can be done incrementally - you should have _mostly_ accurate type inference in your current state
+- [**Default revalidation behavior changes to opt-out on GET navigations**][revalidation]: Default revalidation behavior on normal navigations changes from opt-in to opt-out and your server loaders will re-run by default
 - [**Opt-in `action` revalidation**][action-revalidation]: Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 
 ## Adding a New Route with Single Fetch
@@ -145,145 +146,122 @@ Without Single Fetch, any plain Javascript object returned from a `loader` or `a
 
 With Single Fetch, naked objects will be streamed directly, so the built-in type inference is no longer accurate once you have opted-into Single Fetch. For example, they would assume that a `Date` would be serialized to a string on the client 😕.
 
-In order to ensure you get the proper types when using Single Fetch, we've included a set of type overrides that you can include in your `tsconfig.json`'s `compilerOptions.types` array which aligns the types with the Single Fetch behavior:
+#### Enable Single Fetch types
 
-```json
-{
-  "compilerOptions": {
-    //...
-    "types": [
-      // ...
-      "@remix-run/react/future/single-fetch.d.ts"
-    ]
+To switch over to Single Fetch types, you should [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`.
+You can do this in any file covered by your `tsconfig.json` > `include`.
+We recommend you do this in your `vite.config.ts` to keep it colocated with the `future.unstable_singleFetch` future flag in the Remix plugin:
+
+```ts
+declare module "@remix-run/server-runtime" {
+  interface Future {
+    unstable_singleFetch: true;
   }
 }
 ```
 
-🚨 Make sure the single-fetch types come after any other Remix packages in `types` so that they override those existing types.
-
-#### Loader/Action Definition Utilities
-
-To enhance type-safety when defining loaders and actions with Single Fetch, you can use the new `unstable_defineLoader` and `unstable_defineAction` utilities:
+Now `useLoaderData`, `useActionData`, and any other utilities that use a `typeof loader` generic should be using Single Fetch types:
 
 ```ts
-import { unstable_defineLoader as defineLoader } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
-export const loader = defineLoader(({ request }) => {
-  //                                  ^? Request
-});
+export function loader() {
+  return {
+    planet: "world",
+    date: new Date(),
+  };
+}
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  //    ^? { planet: string, date: Date }
+}
 ```
 
-Not only does this give you types for arguments (and deprecates `LoaderFunctionArgs`), but it also ensures you are returning single-fetch compatible types:
+#### Functions and class instances
+
+In general, functions cannot be reliably sent over the network, so they get serialized as `undefined`:
 
 ```ts
-export const loader = defineLoader(() => {
-  return { hello: "world", badData: () => 1 };
-  //                       ^^^^^^^ Type error: `badData` is not serializable
-});
+import { useLoaderData } from "@remix-run/react";
 
-export const action = defineAction(() => {
-  return { hello: "world", badData: new CustomType() };
-  //                       ^^^^^^^ Type error: `badData` is not serializable
-});
+export function loader() {
+  return {
+    planet: "world",
+    date: new Date(),
+    notSoRandom: () => 7,
+  };
+}
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  //    ^? { planet: string, date: Date, notSoRandom: undefined }
+}
 ```
 
-Single-fetch supports the following return types:
+Methods are also not serializable, so class instances get slimmed down to just their serializable properties:
 
 ```ts
-type Serializable =
-  | undefined
-  | null
-  | boolean
-  | string
-  | symbol
-  | number
-  | bigint
-  | Date
-  | URL
-  | RegExp
-  | Error
-  | Array<Serializable>
-  | { [key: PropertyKey]: Serializable } // objects with serializable values
-  | Map<Serializable, Serializable>
-  | Set<Serializable>
-  | Promise<Serializable>;
-```
+import { useLoaderData } from "@remix-run/react";
 
-There are also client-side equivalents un `defineClientLoader`/`defineClientAction` that don't have the same return value restrictions because data returned from `clientLoader`/`clientAction` does not need to be serialized over the wire:
+class Dog {
+  name: string;
+  age: number;
 
-```ts
-import { unstable_defineLoader as defineLoader } from "@remix-run/node";
-import { unstable_defineClientLoader as defineClientLoader } from "@remix-run/react";
-
-export const loader = defineLoader(() => {
-  return { msg: "Hello!", date: new Date() };
-});
-
-export const clientLoader = defineClientLoader(
-  async ({ serverLoader }) => {
-    const data = await serverLoader<typeof loader>();
-    //    ^? { msg: string, date: Date }
-    return {
-      ...data,
-      client: "World!",
-    };
+  constructor(name: string, age: number) {
+    this.name = name;
+    this.age = age;
   }
-);
+
+  bark() {
+    console.log("woof");
+  }
+}
+
+export function loader() {
+  return {
+    planet: "world",
+    date: new Date(),
+    spot: new Dog("Spot", 3),
+  };
+}
+
+export default function Component() {
+  const data = useLoaderData<typeof loader>();
+  //    ^? { planet: string, date: Date, spot: { name: string, age: number, bark: undefined } }
+}
+```
+
+#### `clientLoader` and `clientAction`
+
+<docs-warning>Make sure to include types for the `clientLoader` args and `clientAction` args as that is how our types detect client data functions.</docs-warning>
+
+Data from client-side loaders and actions are never serialized so types for those are preserved:
+
+```ts
+import {
+  useLoaderData,
+  type ClientLoaderFunctionArgs,
+} from "@remix-run/react";
+
+class Dog {
+  /* ... */
+}
+
+// Make sure to annotate the types for the args! 👇
+export function clientLoader(_: ClientLoaderFunctionArgs) {
+  return {
+    planet: "world",
+    date: new Date(),
+    notSoRandom: () => 7,
+    spot: new Dog("Spot", 3),
+  };
+}
 
 export default function Component() {
   const data = useLoaderData<typeof clientLoader>();
-  //    ^? { msg: string, date: Date, client: string }
+  //    ^? { planet: string, date: Date, notSoRandom: () => number, spot: Dog }
 }
-```
-
-<docs-info>These utilities are primarily for type inference on `useLoaderData` and its equivalents. If you have a resource route that returns a `Response` and is not consumed by Remix APIs (such as `useFetcher`), then you can just stick with your normal `loader`/`action` definitions. Converting those routes to use `defineLoader`/`defineAction` would cause type errors because `turbo-stream` cannot serialize a `Response` instance.</docs-info>
-
-#### `useLoaderData`, `useActionData`, `useRouteLoaderData`, `useFetcher`
-
-These methods do not require any code changes on your part - adding the Single Fetch types will cause their generics to deserialize correctly:
-
-```ts
-export const loader = defineLoader(async () => {
-  const data = await fetchSomeData();
-  return {
-    message: data.message, // <- string
-    date: data.date, // <- Date
-  };
-});
-
-export default function Component() {
-  // ❌ Before Single Fetch, types were serialized via JSON.stringify
-  const data = useLoaderData<typeof loader>();
-  //    ^? { message: string, date: string }
-
-  // ✅ With Single Fetch, types are serialized via turbo-stream
-  const data = useLoaderData<typeof loader>();
-  //    ^? { message: string, date: Date }
-}
-```
-
-#### `useMatches`
-
-`useMatches` requires a manual cast to specify the loader type in order to get proper type inference on a given `match.data`. When using Single Fetch, you will need to replace the `UIMatch` type with `UIMatch_SingleFetch`:
-
-```diff
-  let matches = useMatches();
-- let rootMatch = matches[0] as UIMatch<typeof loader>;
-+ let rootMatch = matches[0] as UIMatch_SingleFetch<typeof loader>;
-```
-
-#### `meta` Function
-
-`meta` functions also require a generic to indicate the current and ancestor route loader types in order to properly type the `data` and `matches` parameters. When using Single Fetch, you will need to replace the `MetaArgs` type with `MetaArgs_SingleFetch`:
-
-```diff
-  export function meta({
-    data,
-    matches,
-- }: MetaArgs<typeof loader, { root: typeof rootLoader }>) {
-+ }: MetaArgs_SingleFetch<typeof loader, { root: typeof rootLoader }>) {
-    // ...
-  }
 ```
 
 ### Headers
@@ -450,6 +428,32 @@ function handleBrowserRequest(
 
 ### Revalidations
 
+#### Normal Navigation Behavior
+
+In addition to the simpler mental model and the alignment of document and data requests, another benefit of Single Fetch is simpler (and hopefully better) caching behavior. Generally, Single Fetch will make fewer HTTP requests and hopefully cache those results more frequently compared to the previous multiple-fetch behavior.
+
+To reduce cache fragmentation, Single Fetch changes the default revalidation behavior on GET navigations. Previously, Remix would not re-run loaders for reused ancestor routes unless you opted-in via `shouldRevalidate`. Now, Remix _will_ re-run those by default in the simple case for a Single Fetch request like `GET /a/b/c.data`. If you do not have any `shouldRevalidate` or `clientLoader` functions, this will be the behavior for your app.
+
+Adding either a `shouldRevalidate` or a `clientLoader` to any of the active routes will trigger granular Single Fetch calls that include a `_routes` parameter specifying the subset of routes to run.
+
+If a `clientLoader` calls `serverLoader()` internally, that will trigger a separate HTTP call for that specific route, akin to the old behavior.
+
+For example, if you are on `/a/b` and you navigate to `/a/b/c`:
+
+- When no `shouldRevalidate` or `clientLoader` functions exist: `GET /a/b/c.data`
+- If all routes have loaders but `routes/a` opts out via `shouldRevalidate`:
+  - `GET /a/b/c.data?_routes=root,routes/b,routes/c`
+- If all routes have loaders but `routes/b` has a `clientLoader`:
+  - `GET /a/b/c.data?_routes=root,routes/a,routes/c`
+  - And then if B's `clientLoader` calls `serverLoader()`:
+    - `GET /a/b/c.data?_routes=routes/b`
+
+If this new behavior is sub-optimal for your application, you should be able to opt-back into the old behavior of not-revalidating by adding a `shouldRevalidate` that returns `false` in the desired scenarios to your parent routes.
+
+Another option is to leverage a server-side cache for expensive parent loader calculations.
+
+#### Submission Revalidation Behavior
+
 Previously, Remix would always revalidate all active loaders after _any_ action submission, regardless of the result of the action. You could opt-out of revalidation on a per-route basis via [`shouldRevalidate`][should-revalidate].
 
 With Single Fetch, if an `action` returns or throws a `Response` with a `4xx/5xx` status code, Remix will _not revalidate_ loaders by default. If an `action` returns or throws anything that is not a 4xx/5xx Response, then the revalidation behavior is unchanged. The reasoning here is that in most cases, if you return a `4xx`/`5xx` Response, you didn't actually mutate any data so there is no need to reload data.
@@ -481,8 +485,10 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [merging-remix-and-rr]: https://remix.run/blog/merging-remix-and-react-router
 [migration-guide]: #migrating-a-route-with-single-fetch
 [breaking-changes]: #breaking-changes
-[action-revalidation]: #streaming-data-format
+[revalidation]: #normal-navigation-behavior
+[action-revalidation]: #submission-revalidation-behavior
 [start]: #enabling-single-fetch
 [type-inference-section]: #type-inference
 [compatibility-flag]: https://developers.cloudflare.com/workers/configuration/compatibility-dates
 [data-utility]: ../utils/data
+[augment]: https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation

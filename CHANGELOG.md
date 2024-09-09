@@ -13,142 +13,151 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.11.2](#v2112)
+  - [v2.12.0](#v2120)
+    - [What's Changed](#whats-changed)
+      - [Future Flag for Automatic Dependency Optimization (unstable)](#future-flag-for-automatic-dependency-optimization-unstable)
+      - [Improved Single Fetch Type Safety (unstable)](#improved-single-fetch-type-safety-unstable)
+      - [Updates to Single Fetch Revalidation Behavior (unstable)](#updates-to-single-fetch-revalidation-behavior-unstable)
+    - [Minor Changes](#minor-changes)
     - [Patch Changes](#patch-changes)
     - [Updated Dependencies](#updated-dependencies)
     - [Changes by Package](#changes-by-package)
-  - [v2.11.1](#v2111)
+  - [v2.11.2](#v2112)
     - [Patch Changes](#patch-changes-1)
+    - [Updated Dependencies](#updated-dependencies-1)
     - [Changes by Package](#changes-by-package-1)
+  - [v2.11.1](#v2111)
+    - [Patch Changes](#patch-changes-2)
+    - [Changes by Package](#changes-by-package-2)
   - [v2.11.0](#v2110)
-    - [What's Changed](#whats-changed)
+    - [What's Changed](#whats-changed-1)
       - [Renamed `unstable_fogOfWar` future flag to `unstable_lazyRouteDiscovery` (unstable)](#renamed-unstable_fogofwar-future-flag-to-unstable_lazyroutediscovery-unstable)
       - [Removed `response` stub in Single Fetch (unstable)](#removed-response-stub-in-single-fetch-unstable)
-    - [Minor Changes](#minor-changes)
-    - [Patch Changes](#patch-changes-2)
-    - [Updated Dependencies](#updated-dependencies-1)
-    - [Changes by Package](#changes-by-package-2)
-  - [v2.10.3](#v2103)
+    - [Minor Changes](#minor-changes-1)
     - [Patch Changes](#patch-changes-3)
     - [Updated Dependencies](#updated-dependencies-2)
     - [Changes by Package](#changes-by-package-3)
-  - [v2.10.2](#v2102)
+  - [v2.10.3](#v2103)
     - [Patch Changes](#patch-changes-4)
-    - [Changes by Package](#changes-by-package-4)
-  - [v2.10.1](#v2101)
-    - [Patch Changes](#patch-changes-5)
     - [Updated Dependencies](#updated-dependencies-3)
+    - [Changes by Package](#changes-by-package-4)
+  - [v2.10.2](#v2102)
+    - [Patch Changes](#patch-changes-5)
     - [Changes by Package](#changes-by-package-5)
-  - [v2.10.0](#v2100)
-    - [What's Changed](#whats-changed-1)
-      - [Lazy Route Discovery (a.k.a. "Fog of War")](#lazy-route-discovery-aka-fog-of-war)
-    - [Minor Changes](#minor-changes-1)
+  - [v2.10.1](#v2101)
     - [Patch Changes](#patch-changes-6)
     - [Updated Dependencies](#updated-dependencies-4)
     - [Changes by Package](#changes-by-package-6)
-  - [v2.9.2](#v292)
+  - [v2.10.0](#v2100)
     - [What's Changed](#whats-changed-2)
-      - [Updated Type-Safety for Single Fetch](#updated-type-safety-for-single-fetch)
+      - [Lazy Route Discovery (a.k.a. "Fog of War")](#lazy-route-discovery-aka-fog-of-war)
+    - [Minor Changes](#minor-changes-2)
     - [Patch Changes](#patch-changes-7)
     - [Updated Dependencies](#updated-dependencies-5)
     - [Changes by Package](#changes-by-package-7)
-  - [v2.9.1](#v291)
-    - [Patch Changes](#patch-changes-8)
-    - [Changes by Package](#changes-by-package-8)
-  - [v2.9.0](#v290)
+  - [v2.9.2](#v292)
     - [What's Changed](#whats-changed-3)
+      - [Updated Type-Safety for Single Fetch](#updated-type-safety-for-single-fetch)
+    - [Patch Changes](#patch-changes-8)
+    - [Updated Dependencies](#updated-dependencies-6)
+    - [Changes by Package](#changes-by-package-8)
+  - [v2.9.1](#v291)
+    - [Patch Changes](#patch-changes-9)
+    - [Changes by Package](#changes-by-package-9)
+  - [v2.9.0](#v290)
+    - [What's Changed](#whats-changed-4)
       - [Single Fetch (unstable)](#single-fetch-unstable)
       - [Undici](#undici)
-    - [Minor Changes](#minor-changes-2)
-    - [Patch Changes](#patch-changes-9)
-    - [Updated Dependencies](#updated-dependencies-6)
-    - [Changes by Package](#changes-by-package-9)
-  - [v2.8.1](#v281)
+    - [Minor Changes](#minor-changes-3)
     - [Patch Changes](#patch-changes-10)
     - [Updated Dependencies](#updated-dependencies-7)
     - [Changes by Package](#changes-by-package-10)
-  - [v2.8.0](#v280)
-    - [Minor Changes](#minor-changes-3)
+  - [v2.8.1](#v281)
     - [Patch Changes](#patch-changes-11)
     - [Updated Dependencies](#updated-dependencies-8)
     - [Changes by Package](#changes-by-package-11)
-  - [2.7.2](#272)
+  - [v2.8.0](#v280)
+    - [Minor Changes](#minor-changes-4)
     - [Patch Changes](#patch-changes-12)
-  - [2.7.1](#271)
+    - [Updated Dependencies](#updated-dependencies-9)
+    - [Changes by Package](#changes-by-package-12)
+  - [2.7.2](#272)
     - [Patch Changes](#patch-changes-13)
+  - [2.7.1](#271)
+    - [Patch Changes](#patch-changes-14)
   - [v2.7.0](#v270)
-    - [What's Changed](#whats-changed-4)
+    - [What's Changed](#whats-changed-5)
       - [Stabilized Vite Plugin](#stabilized-vite-plugin)
       - [New `Layout` Export](#new-layout-export)
       - [Basename support](#basename-support)
       - [Cloudflare Proxy as a Vite Plugin](#cloudflare-proxy-as-a-vite-plugin)
-    - [Minor Changes](#minor-changes-4)
-    - [Patch Changes](#patch-changes-14)
-    - [Updated Dependencies](#updated-dependencies-9)
-    - [Changes by Package](#changes-by-package-12)
-  - [v2.6.0](#v260)
-    - [What's Changed](#whats-changed-5)
-      - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
     - [Minor Changes](#minor-changes-5)
     - [Patch Changes](#patch-changes-15)
     - [Updated Dependencies](#updated-dependencies-10)
     - [Changes by Package](#changes-by-package-13)
-  - [v2.5.1](#v251)
+  - [v2.6.0](#v260)
+    - [What's Changed](#whats-changed-6)
+      - [Unstable Vite Plugin updates](#unstable-vite-plugin-updates)
+    - [Minor Changes](#minor-changes-6)
     - [Patch Changes](#patch-changes-16)
     - [Updated Dependencies](#updated-dependencies-11)
     - [Changes by Package](#changes-by-package-14)
-  - [v2.5.0](#v250)
-    - [What's Changed](#whats-changed-6)
-      - [SPA Mode (unstable)](#spa-mode-unstable)
-      - [Server Bundles (unstable)](#server-bundles-unstable)
-    - [Minor Changes](#minor-changes-6)
+  - [v2.5.1](#v251)
     - [Patch Changes](#patch-changes-17)
     - [Updated Dependencies](#updated-dependencies-12)
     - [Changes by Package](#changes-by-package-15)
-  - [v2.4.1](#v241)
+  - [v2.5.0](#v250)
+    - [What's Changed](#whats-changed-7)
+      - [SPA Mode (unstable)](#spa-mode-unstable)
+      - [Server Bundles (unstable)](#server-bundles-unstable)
+    - [Minor Changes](#minor-changes-7)
     - [Patch Changes](#patch-changes-18)
     - [Updated Dependencies](#updated-dependencies-13)
     - [Changes by Package](#changes-by-package-16)
-  - [v2.4.0](#v240)
-    - [What's Changed](#whats-changed-7)
-      - [Client Data](#client-data)
-      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
-      - [Vite Updates (Unstable)](#vite-updates-unstable)
-    - [Minor Changes](#minor-changes-7)
+  - [v2.4.1](#v241)
     - [Patch Changes](#patch-changes-19)
     - [Updated Dependencies](#updated-dependencies-14)
     - [Changes by Package](#changes-by-package-17)
-  - [v2.3.1](#v231)
+  - [v2.4.0](#v240)
+    - [What's Changed](#whats-changed-8)
+      - [Client Data](#client-data)
+      - [`future.v3_relativeSplatPath`](#futurev3_relativesplatpath)
+      - [Vite Updates (Unstable)](#vite-updates-unstable)
+    - [Minor Changes](#minor-changes-8)
     - [Patch Changes](#patch-changes-20)
     - [Updated Dependencies](#updated-dependencies-15)
     - [Changes by Package](#changes-by-package-18)
-  - [v2.3.0](#v230)
-    - [What's Changed](#whats-changed-8)
-      - [Stabilized `useBlocker`](#stabilized-useblocker)
-      - [`unstable_flushSync` API](#unstable_flushsync-api)
-    - [Minor Changes](#minor-changes-8)
+  - [v2.3.1](#v231)
     - [Patch Changes](#patch-changes-21)
     - [Updated Dependencies](#updated-dependencies-16)
     - [Changes by Package](#changes-by-package-19)
-  - [v2.2.0](#v220)
+  - [v2.3.0](#v230)
     - [What's Changed](#whats-changed-9)
-      - [Vite!](#vite)
-      - [New Fetcher APIs](#new-fetcher-apis)
-      - [Persistence Future Flag](#persistence-future-flag)
+      - [Stabilized `useBlocker`](#stabilized-useblocker)
+      - [`unstable_flushSync` API](#unstable_flushsync-api)
     - [Minor Changes](#minor-changes-9)
     - [Patch Changes](#patch-changes-22)
     - [Updated Dependencies](#updated-dependencies-17)
     - [Changes by Package](#changes-by-package-20)
-  - [v2.1.0](#v210)
+  - [v2.2.0](#v220)
     - [What's Changed](#whats-changed-10)
-      - [View Transitions](#view-transitions)
-      - [Stable `createRemixStub`](#stable-createremixstub)
+      - [Vite!](#vite)
+      - [New Fetcher APIs](#new-fetcher-apis)
+      - [Persistence Future Flag](#persistence-future-flag)
     - [Minor Changes](#minor-changes-10)
     - [Patch Changes](#patch-changes-23)
     - [Updated Dependencies](#updated-dependencies-18)
     - [Changes by Package](#changes-by-package-21)
-  - [v2.0.1](#v201)
+  - [v2.1.0](#v210)
+    - [What's Changed](#whats-changed-11)
+      - [View Transitions](#view-transitions)
+      - [Stable `createRemixStub`](#stable-createremixstub)
+    - [Minor Changes](#minor-changes-11)
     - [Patch Changes](#patch-changes-24)
+    - [Updated Dependencies](#updated-dependencies-19)
+    - [Changes by Package](#changes-by-package-22)
+  - [v2.0.1](#v201)
+    - [Patch Changes](#patch-changes-25)
     - [Changes by Package 🔗](#changes-by-package-)
   - [v2.0.0](#v200)
     - [Breaking Changes](#breaking-changes)
@@ -160,8 +169,8 @@ We manage release notes in this file instead of the paginated Github Releases Pa
         - [Breaking Type Changes](#breaking-type-changes)
     - [New Features](#new-features)
     - [Other Notable Changes](#other-notable-changes)
-    - [Updated Dependencies](#updated-dependencies-19)
-    - [Changes by Package](#changes-by-package-22)
+    - [Updated Dependencies](#updated-dependencies-20)
+    - [Changes by Package](#changes-by-package-23)
 
 </details>
 
@@ -208,6 +217,101 @@ Date: YYYY-MM-DD
 **Full Changelog**: [`v2.X.Y...v2.X.Y`](https://github.com/remix-run/remix/compare/remix@2.X.Y...remix@2.X.Y)
 
 -->
+
+## v2.12.0
+
+Date: 2024-09-09
+
+### What's Changed
+
+#### Future Flag for Automatic Dependency Optimization (unstable)
+
+You can now opt-in to automatic dependency optimization during development by using the `future.unstable_optimizeDeps` future flag. For details, check out the docs at [Guides > Dependency optimization](https://remix.run/docs/en/main/guides/dependency-optimization). For users who were previously working around this limitation, you no longer need to explicitly add routes to Vite's `optimizeDeps.entries` nor do you need to disable the `remix-dot-server` plugin.
+
+#### Improved Single Fetch Type Safety (unstable)
+
+- If you were already using single-fetch types:
+  - Remove the `"@remix-run/react/future/single-fetch.d.ts"` override from `tsconfig.json` > `compilerOptions` > `types`
+  - Remove `defineLoader`, `defineAction`, `defineClientLoader`, `defineClientAction` helpers from your route modules
+  - Replace `UIMatch_SingleFetch` type helper with the original `UIMatch`
+  - Replace `MetaArgs_SingleFetch` type helper with the original `MetaArgs`
+
+Then you are ready for the new type safety setup:
+
+```ts
+// vite.config.ts
+
+declare module "@remix-run/server-runtime" {
+  interface Future {
+    unstable_singleFetch: true; // 👈 enable _types_ for single-fetch
+  }
+}
+
+export default defineConfig({
+  plugins: [
+    remix({
+      future: {
+        unstable_singleFetch: true, // 👈 enable single-fetch
+      },
+    }),
+  ],
+});
+```
+
+For more information, see [Guides > Single Fetch](https://remix.run/docs/guides/single-fetch) in our docs.
+
+#### Updates to Single Fetch Revalidation Behavior (unstable)
+
+With Single Fetch, re-used routes will now revalidate by default on `GET` navigations. This is aimed at improving caching of Single Fetch calls in the simple case while still allowing users to opt-into the previous behavior for more advanced use cases.
+
+With this new behavior, requests do not need special query params for granular route revalidations out of the box - i.e., `GET /a/b/c.data`
+
+There are two conditions that will trigger granular revalidation and will exclude certain routes from the single fetch call:
+
+- If a route opts out of revalidation via `shouldRevalidate`
+- If a route defines a `clientLoader`
+  - If you call `serverLoader()` from your `clientLoader`, that will make a separate HTTP call for just that route loader - i.e., `GET /a/b/c.data?_routes=routes/a` for a `clientLoader` in `routes/a.tsx`
+
+When one or more routes are excluded from the Single Fetch call, the remaining routes that have loaders are included as query params. For example, when navigating to `/a/b/c`, if A was excluded, and the `root` route and `routes/b` had a `loader` but `routes/c` did not, the Single Fetch request would be `GET /a/b/c.data?_routes=root,routes/b`.
+
+For more information, see [Guides > Single Fetch](https://remix.run/docs/guides/single-fetch) in our docs.
+
+### Minor Changes
+
+- `@remix-run/dev` - New `future.unstable_optimizeDeps` flag for automatic dependency optimization ([#9921](https://github.com/remix-run/remix/pull/9921))
+
+### Patch Changes
+
+- `@remix-run/dev` - Handle circular dependencies in modulepreload manifest generation ([#9917](https://github.com/remix-run/remix/pull/9917))
+- `@remix-run/dev` - Fix `dest already exists` build errors by only moving SSR assets to the client build directory when they're not already present on disk ([#9901](https://github.com/remix-run/remix/pull/9901))
+- `@remix-run/react` - Clarify wording in default `HydrateFallback` console warning ([#9899](https://github.com/remix-run/remix/pull/9899))
+- `@remix-run/react` - Remove hydration URL check that was originally added for React 17 hydration issues and we no longer support React 17 ([#9890](https://github.com/remix-run/remix/pull/9890))
+  - Reverts the logic originally added in Remix `v1.18.0` via [#6409](https://github.com/remix-run/remix/pull/6409)
+  - This was added to resolve an issue that could arise when doing quick back/forward history navigations while JS was loading which would cause a mismatch between the server matches and client matches: [#1757](https://github.com/remix-run/remix/issues/1757)
+  - This specific hydration issue would then cause this React v17 only looping issue: [#1678](https://github.com/remix-run/remix/issues/1678)
+  - The URL comparison that we added in `1.18.0` turned out to be subject to false positives of it's own which could also put the user in looping scenarios
+  - Remix v2 upgraded it's minimal React version to v18 which eliminated the v17 hydration error loop
+  - React v18 handles this hydration error like any other error and does not result in a loop
+  - So we can remove our check and thus avoid the false-positive scenarios in which it may also trigger a loop
+- `@remix-run/react` - Lazy Route Discovery: Sort `/__manifest` query parameters for better caching ([#9888](https://github.com/remix-run/remix/pull/9888))
+- `@remix-run/react` - Single Fetch: Improved type safety ([#9893](https://github.com/remix-run/remix/pull/9893))
+- `@remix-run/react` - Single Fetch: Fix revalidation behavior bugs ([#9938](https://github.com/remix-run/remix/pull/9938))
+- `@remix-run/server-runtime` - Do not render or try to include a body for 304 responses on document requests ([#9955](https://github.com/remix-run/remix/pull/9955))
+- `@remix-run/server-runtime` - Single Fetch: Do not try to encode a `turbo-stream` body into 304 responses ([#9941](https://github.com/remix-run/remix/pull/9941))
+- `@remix-run/server-runtime` - Single Fetch: Change content type on `.data` requests to `text/x-script` to allow Cloudflare compression ([#9889](https://github.com/remix-run/remix/pull/9889))
+
+### Updated Dependencies
+
+- [`react-router-dom@6.26.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.26.2)
+- [`@remix-run/router@1.19.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1192)
+
+### Changes by Package
+
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.12.0/packages/remix-dev/CHANGELOG.md#2120)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.12.0/packages/remix-react/CHANGELOG.md#2120)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.12.0/packages/remix-server-runtime/CHANGELOG.md#2120)
+
+**Full Changelog**: [`v2.11.2...v2.12.0`](https://github.com/remix-run/remix/compare/remix@2.11.2...remix@2.12.0)
 
 ## v2.11.2
 

@@ -28,7 +28,6 @@ import {
 /* eslint-disable prefer-let/prefer-let */
 declare global {
   var __remixContext: {
-    url: string;
     basename?: string;
     state: HydrationState;
     criticalCss?: string;
@@ -47,6 +46,7 @@ declare global {
   var __remixRouteModules: RouteModules;
   var __remixManifest: AssetsManifest;
   var __remixRevalidation: number | undefined;
+  var __remixHdrActive: boolean;
   var __remixClearCriticalCss: (() => void) | undefined;
   var $RefreshRuntime$: {
     performReactRefresh: () => void;
@@ -197,29 +197,6 @@ if (import.meta && import.meta.hot) {
  */
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
-    // Hard reload if the path we tried to load is not the current path.
-    // This is usually the result of 2 rapid back/forward clicks from an
-    // external site into a Remix app, where we initially start the load for
-    // one URL and while the JS chunks are loading a second forward click moves
-    // us to a new URL.  Avoid comparing search params because of CDNs which
-    // can be configured to ignore certain params and only pathname is relevant
-    // towards determining the route matches.
-    let initialPathname = window.__remixContext.url;
-    let hydratedPathname = window.location.pathname;
-    if (
-      initialPathname !== hydratedPathname &&
-      !window.__remixContext.isSpaMode
-    ) {
-      let errorMsg =
-        `Initial URL (${initialPathname}) does not match URL at time of hydration ` +
-        `(${hydratedPathname}), reloading page...`;
-      console.error(errorMsg);
-      window.location.reload();
-      // Get out of here so the reload can happen - don't create the router
-      // since it'll then kick off unnecessary route.lazy() loads
-      return <></>;
-    }
-
     // When single fetch is enabled, we need to suspend until the initial state
     // snapshot is decoded into window.__remixContext.state
     if (window.__remixContext.future.unstable_singleFetch) {
@@ -329,7 +306,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       unstable_dataStrategy: window.__remixContext.future.unstable_singleFetch
         ? getSingleFetchDataStrategy(
             window.__remixManifest,
-            window.__remixRouteModules
+            window.__remixRouteModules,
+            () => router
           )
         : undefined,
       unstable_patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(
@@ -361,7 +339,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // Critical CSS can become stale after code changes, e.g. styles might be
   // removed from a component, but the styles will still be present in the
   // server HTML. This allows our HMR logic to clear the critical CSS state.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   let [criticalCss, setCriticalCss] = React.useState(
     process.env.NODE_ENV === "development"
       ? window.__remixContext.criticalCss
@@ -374,10 +352,9 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // This is due to the short circuit return above when the pathname doesn't
   // match and we force a hard reload.  This is an exceptional scenario in which
   // we can't hydrate anyway.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   let [location, setLocation] = React.useState(router.state.location);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useLayoutEffect(() => {
     // If we had to run clientLoaders on hydration, we delay initialization until
     // after we've hydrated to avoid hydration issues from synchronous client loaders
@@ -387,7 +364,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   React.useLayoutEffect(() => {
     return router.subscribe((newState) => {
       if (newState.location !== location) {
@@ -396,7 +372,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     });
   }, [location]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useFogOFWarDiscovery(
     router,
     window.__remixManifest,
