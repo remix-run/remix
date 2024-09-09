@@ -220,7 +220,7 @@ Date: YYYY-MM-DD
 
 ## v2.12.0
 
-Date: 2024-09-06
+Date: 2024-09-09
 
 ### What's Changed
 
@@ -262,17 +262,17 @@ For more information, see [Guides > Single Fetch](https://remix.run/docs/guides/
 
 #### Updates to Single Fetch Revalidation Behavior (unstable)
 
-With Single Fetch, re-used routes will now revalidate by default on GET navigations. This is aimed at improving caching of Single Fetch calls in the simple case while still allowing users to opt-into the previous behavior for more advanced use cases.
+With Single Fetch, re-used routes will now revalidate by default on `GET` navigations. This is aimed at improving caching of Single Fetch calls in the simple case while still allowing users to opt-into the previous behavior for more advanced use cases.
 
 With this new behavior, requests do not need special query params for granular route revalidations out of the box - i.e., `GET /a/b/c.data`
 
-There are two conditions that will trigger granular revalidation:
+There are two conditions that will trigger granular revalidation and will exclude certain routes from the single fetch call:
 
-- If a route opts out of revalidation via `shouldRevalidate`, it will be excluded from the single fetch call
-- If a route defines a `clientLoader` then it will be excluded from the single fetch call
+- If a route opts out of revalidation via `shouldRevalidate`
+- If a route defines a `clientLoader`
   - If you call `serverLoader()` from your `clientLoader`, that will make a separate HTTP call for just that route loader - i.e., `GET /a/b/c.data?_routes=routes/a` for a `clientLoader` in `routes/a.tsx`
-- When one or more routes are excluded from the Single Fetch call, the remaining routes that have loaders are included as query params:
-  - For example - when navigating to `/a/b/c`, if A was excluded, and the `root` route and `routes/b` had a `loader` but `routes/c` did not, the Single Fetch request would be `GET /a/b/c.data?_routes=root,routes/b`
+
+When one or more routes are excluded from the Single Fetch call, the remaining routes that have loaders are included as query params. For example, when navigating to `/a/b/c`, if A was excluded, and the `root` route and `routes/b` had a `loader` but `routes/c` did not, the Single Fetch request would be `GET /a/b/c.data?_routes=root,routes/b`.
 
 For more information, see [Guides > Single Fetch](https://remix.run/docs/guides/single-fetch) in our docs.
 
@@ -307,11 +307,11 @@ For more information, see [Guides > Single Fetch](https://remix.run/docs/guides/
 
 ### Changes by Package
 
-- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.11.3/packages/remix-dev/CHANGELOG.md#2113)
-- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.11.3/packages/remix-react/CHANGELOG.md#2113)
-- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.11.3/packages/remix-server-runtime/CHANGELOG.md#2113)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.12.0/packages/remix-dev/CHANGELOG.md#2120)
+- [`@remix-run/react`](https://github.com/remix-run/remix/blob/remix%402.12.0/packages/remix-react/CHANGELOG.md#2120)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.12.0/packages/remix-server-runtime/CHANGELOG.md#2120)
 
-**Full Changelog**: [`v2.11.2...v2.11.3`](https://github.com/remix-run/remix/compare/remix@2.11.2...remix@2.11.3)
+**Full Changelog**: [`v2.11.2...v2.12.0`](https://github.com/remix-run/remix/compare/remix@2.11.2...remix@2.12.0)
 
 ## v2.11.2
 
