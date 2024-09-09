@@ -300,7 +300,7 @@ importers:
         version: 7.0.1
       wrangler:
         specifier: ^3.72.3
-        version: 3.72.3(@cloudflare/workers-types@4.20240208.0)
+        version: 3.74.0(@cloudflare/workers-types@4.20240208.0)
 
   integration:
     dependencies:
@@ -323,8 +323,8 @@ importers:
         specifier: workspace:*
         version: link:../packages/remix-node
       '@remix-run/router':
-        specifier: 0.0.0-experimental-7d87ffb8c
-        version: 0.0.0-experimental-7d87ffb8c
+        specifier: 1.19.2
+        version: 1.19.2
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../packages/remix-server-runtime
@@ -414,7 +414,7 @@ importers:
         version: 4.3.1(typescript@5.1.6)(vite@5.1.3)
       wrangler:
         specifier: ^3.28.2
-        version: 3.72.3(@cloudflare/workers-types@4.20240208.0)
+        version: 3.74.0(@cloudflare/workers-types@4.20240208.0)
 
   integration/helpers/cf-template:
     dependencies:
@@ -457,7 +457,7 @@ importers:
         version: 5.1.6
       wrangler:
         specifier: ^3.24.0
-        version: 3.72.3(@cloudflare/workers-types@4.20240208.0)
+        version: 3.74.0(@cloudflare/workers-types@4.20240208.0)
 
   integration/helpers/deno-template:
     dependencies:
@@ -548,20 +548,20 @@ importers:
   integration/helpers/vite-cloudflare-template:
     dependencies:
       '@remix-run/cloudflare':
-        specifier: 2.11.2
+        specifier: 2.12.0
         version: link:../../../packages/remix-cloudflare
       '@remix-run/cloudflare-pages':
-        specifier: 2.11.2
+        specifier: 2.12.0
         version: link:../../../packages/remix-cloudflare-pages
       '@remix-run/react':
-        specifier: 2.11.2
+        specifier: 2.12.0
         version: link:../../../packages/remix-react
       isbot:
         specifier: ^4.1.0
         version: 4.4.0
       miniflare:
         specifier: ^3.20231030.4
-        version: 3.20240821.0
+        version: 3.20240821.1
       react:
         specifier: ^18.2.0
         version: 18.2.0
@@ -595,7 +595,7 @@ importers:
         version: 4.3.1(typescript@5.1.6)(vite@5.1.3)
       wrangler:
         specifier: ^3.24.0
-        version: 3.72.3(@cloudflare/workers-types@4.20240208.0)
+        version: 3.74.0(@cloudflare/workers-types@4.20240208.0)
 
   integration/helpers/vite-template:
     dependencies:
@@ -662,7 +662,7 @@ importers:
         version: 4.3.1(typescript@5.1.6)(vite@5.1.0)
       wrangler:
         specifier: ^3.24.0
-        version: 3.72.3(@cloudflare/workers-types@4.20240208.0)
+        version: 3.74.0(@cloudflare/workers-types@4.20240208.0)
 
   packages/create-remix:
     dependencies:
@@ -868,11 +868,11 @@ importers:
         specifier: workspace:*
         version: link:../remix-node
       '@remix-run/react':
-        specifier: ^2.11.2
+        specifier: ^2.12.0
         version: link:../remix-react
       '@remix-run/router':
-        specifier: 0.0.0-experimental-7d87ffb8c
-        version: 0.0.0-experimental-7d87ffb8c
+        specifier: 1.19.2
+        version: 1.19.2
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
@@ -1083,7 +1083,7 @@ importers:
         version: 5.1.3(@types/node@18.17.1)
       wrangler:
         specifier: ^3.28.2
-        version: 3.72.3(@cloudflare/workers-types@4.20240208.0)
+        version: 3.74.0(@cloudflare/workers-types@4.20240208.0)
 
   packages/remix-eslint-config:
     dependencies:
@@ -1217,17 +1217,17 @@ importers:
   packages/remix-react:
     dependencies:
       '@remix-run/router':
-        specifier: 0.0.0-experimental-7d87ffb8c
-        version: 0.0.0-experimental-7d87ffb8c
+        specifier: 1.19.2
+        version: 1.19.2
       '@remix-run/server-runtime':
         specifier: workspace:*
         version: link:../remix-server-runtime
       react-router:
-        specifier: 0.0.0-experimental-7d87ffb8c
-        version: 0.0.0-experimental-7d87ffb8c(react@18.2.0)
+        specifier: 6.26.2
+        version: 6.26.2(react@18.2.0)
       react-router-dom:
-        specifier: 0.0.0-experimental-7d87ffb8c
-        version: 0.0.0-experimental-7d87ffb8c(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.26.2
+        version: 6.26.2(react-dom@18.2.0)(react@18.2.0)
       turbo-stream:
         specifier: 2.4.0
         version: 2.4.0
@@ -1303,8 +1303,8 @@ importers:
   packages/remix-server-runtime:
     dependencies:
       '@remix-run/router':
-        specifier: 0.0.0-experimental-7d87ffb8c
-        version: 0.0.0-experimental-7d87ffb8c
+        specifier: 1.19.2
+        version: 1.19.2
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -1340,11 +1340,11 @@ importers:
         specifier: workspace:*
         version: link:../remix-react
       '@remix-run/router':
-        specifier: 0.0.0-experimental-7d87ffb8c
-        version: 0.0.0-experimental-7d87ffb8c
+        specifier: 1.19.2
+        version: 1.19.2
       react-router-dom:
-        specifier: 0.0.0-experimental-7d87ffb8c
-        version: 0.0.0-experimental-7d87ffb8c(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.26.2
+        version: 6.26.2(react-dom@18.2.0)(react@18.2.0)
     devDependencies:
       '@remix-run/server-runtime':
         specifier: workspace:*
@@ -2923,8 +2923,8 @@ packages:
     requiresBuild: true
     optional: true
 
-  /@cloudflare/workers-shared@0.4.0:
-    resolution: {integrity: sha512-XAFOldVQsbxQ7mjbqX2q1dNIgcLbKSytk41pwuZTn9e0p7OeTpFTosJef8uwosL6CcOAHqcW1f1HJxyjwmtGxw==}
+  /@cloudflare/workers-shared@0.4.1:
+    resolution: {integrity: sha512-nYh4r8JwOOjYIdH2zub++CmIKlkYFlpxI1nBHimoiHcytJXD/b7ldJ21TtfzUZMCgI78mxVlymMHA/ReaOxKlA==}
     engines: {node: '>=16.7.0'}
 
   /@cloudflare/workers-types@4.20240208.0:
@@ -4206,8 +4206,8 @@ packages:
       - encoding
     dev: false
 
-  /@remix-run/router@0.0.0-experimental-7d87ffb8c:
-    resolution: {integrity: sha512-Vu0Zw3Pm+/tEpE3MFI0ONEQbZEMlMddBCf8JwnYeQGwsaIXYk3oLpv1zE7n8QdF6A+Z7C2ieWMDde+wb+4060g==}
+  /@remix-run/router@1.19.2:
+    resolution: {integrity: sha512-baiMx18+IMuD1yyvOGaHM9QrVUPGGG0jC+z+IPHnRJWUAUvaKuWKyE8gjDj2rzv3sz9zOGoRSPgeBVHRhZnBlA==}
     engines: {node: '>=14.0.0'}
     dev: false
 
@@ -6589,10 +6589,6 @@ packages:
       tree-kill: 1.2.2
       yargs: 16.2.0
     dev: false
-
-  /consola@3.2.3:
-    resolution: {integrity: sha512-I5qxpzLv+sJhTVEoLYNcTW+bThDCPsit0vLNKShZx6rLtpilNpmmeTPaeqJb9ZE9dV3DGaeby6Vuhrw38WjeyQ==}
-    engines: {node: ^14.18.0 || >=16.10.0}
 
   /content-disposition@0.5.4:
     resolution: {integrity: sha512-FveZTNuGw04cxlAiWbzi6zTAL/lhehaWbTtgluJh4/E95DqMwTmha3KZN1aAWA8cFIhHzMZUvLevkw5Rqk+tSQ==}
@@ -11497,8 +11493,8 @@ packages:
     resolution: {integrity: sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==}
     engines: {node: '>=4'}
 
-  /miniflare@3.20240821.0:
-    resolution: {integrity: sha512-4BhLGpssQxM/O6TZmJ10GkT3wBJK6emFkZ3V87/HyvQmVt8zMxEBvyw5uv6kdtp+7F54Nw6IKFJjPUL8rFVQrQ==}
+  /miniflare@3.20240821.1:
+    resolution: {integrity: sha512-81qdiryDG7VXzZuoa0EwhkaIYYrn7+StRIrd/2i7SPqPUNICUBjbhFFKqTnvE1+fqIPPB6l8ShKFaFvmnZOASg==}
     engines: {node: '>=16.13'}
     hasBin: true
     dependencies:
@@ -11753,9 +11749,6 @@ packages:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
     dev: false
 
-  /node-fetch-native@1.6.4:
-    resolution: {integrity: sha512-IhOigYzAKHd244OC0JIMIUrjzctirCmPkaIfhDeGcEETWof5zKYUW7e7MYvChGWh/4CJeXEgsRyGzuF334rOOQ==}
-
   /node-fetch@2.6.9:
     resolution: {integrity: sha512-DJm/CJkZkRjKKj4Zi4BsKVZh3ValV5IR5s7LVZnW+6YMh0W1BfNA8XSs6DLMGYlId5F3KnA70uu2qepcR08Qqg==}
     engines: {node: 4.x || >=6.0.0}
@@ -11980,6 +11973,9 @@ packages:
       define-properties: 1.2.1
       es-abstract: 1.22.4
     dev: false
+
+  /ohash@1.1.3:
+    resolution: {integrity: sha512-zuHHiGTYTA1sYJ/wZN+t5HKZaH23i4yI1HMwbuXm24Nid7Dv0KcuRlKoNKS9UNfAVSBlnGLcuQrnOKWOZoEGaw==}
 
   /on-finished@2.3.0:
     resolution: {integrity: sha512-ikqdkGAAyf/X/gPhXGvfgAytDZtDbr+bkNUJ0N9h5MI/dmdgCs3l6hoHrcUv41sRKew3jIwrp4qQDXiK99Utww==}
@@ -12804,26 +12800,26 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /react-router-dom@0.0.0-experimental-7d87ffb8c(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-5l2H4fEjrfJICAUkBwpJHQV4LMYXixTAL7eLqQIoKVI3zqyh3kPhY9CHxEk+5liiVrJhxmhIt4loFycLTAS4Hg==}
+  /react-router-dom@6.26.2(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-z7YkaEW0Dy35T3/QKPYB1LjMK2R1fxnHO8kWpUMTBdfVzZrWOiY9a7CtN8HqdWtDUWd5FY6Dl8HFsqVwH4uOtQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
     dependencies:
-      '@remix-run/router': 0.0.0-experimental-7d87ffb8c
+      '@remix-run/router': 1.19.2
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      react-router: 0.0.0-experimental-7d87ffb8c(react@18.2.0)
+      react-router: 6.26.2(react@18.2.0)
     dev: false
 
-  /react-router@0.0.0-experimental-7d87ffb8c(react@18.2.0):
-    resolution: {integrity: sha512-DWE9pSHTPECV+9RHyzSJTgA1rexfR6tj0LjRzgxBxOVgmojtbNP9tXZc8UrP+5l9LxfGmLtvQu6w4EO3tyRSkw==}
+  /react-router@6.26.2(react@18.2.0):
+    resolution: {integrity: sha512-tvN1iuT03kHgOFnLPfLJ8V95eijteveqdOSk+srqfePtQvqCExB8eHOYnlilbOcyJyKnYkr1vJvf7YqotAJu1A==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
     dependencies:
-      '@remix-run/router': 0.0.0-experimental-7d87ffb8c
+      '@remix-run/router': 1.19.2
       react: 18.2.0
     dev: false
 
@@ -14480,13 +14476,11 @@ packages:
     engines: {node: '>=18.0'}
     dev: false
 
-  /unenv-nightly@1.10.0-1717606461.a117952:
-    resolution: {integrity: sha512-u3TfBX02WzbHTpaEfWEKwDijDSFAHcgXkayUZ+MVDrjhLFvgAJzFGTSTmwlEhwWi2exyRQey23ah9wELMM6etg==}
+  /unenv-nightly@2.0.0-1724863496.70db6f1:
+    resolution: {integrity: sha512-r+VIl1gnsI4WQxluruSQhy8alpAf1AsLRLm4sEKp3otCyTIVD6I6wHEYzeQnwsyWgaD4+3BD4A/eqrgOpdTzhw==}
     dependencies:
-      consola: 3.2.3
       defu: 6.1.4
-      mime: 3.0.0
-      node-fetch-native: 1.6.4
+      ohash: 1.1.3
       pathe: 1.1.2
       ufo: 1.5.4
 
@@ -15140,8 +15134,8 @@ packages:
       '@cloudflare/workerd-linux-arm64': 1.20240821.1
       '@cloudflare/workerd-windows-64': 1.20240821.1
 
-  /wrangler@3.72.3(@cloudflare/workers-types@4.20240208.0):
-    resolution: {integrity: sha512-EBlJGOcwanbzFkiJkRB47WKhvevh1AZK0ty0MyD0gptsgWnAxBfmFGiBuzOuRXbvH45ZrFrTqgi8c67EwcV1nA==}
+  /wrangler@3.74.0(@cloudflare/workers-types@4.20240208.0):
+    resolution: {integrity: sha512-wmtb+tQrgb61yN+Wa2JM98G1Gt4tKFRYPw6xwuyzUcA74L+Dum1A13w22/manl9Gq1jA3dPn+7UzT5sYEVHRog==}
     engines: {node: '>=16.17.0'}
     hasBin: true
     peerDependencies:
@@ -15151,7 +15145,7 @@ packages:
         optional: true
     dependencies:
       '@cloudflare/kv-asset-handler': 0.3.4
-      '@cloudflare/workers-shared': 0.4.0
+      '@cloudflare/workers-shared': 0.4.1
       '@cloudflare/workers-types': 4.20240208.0
       '@esbuild-plugins/node-globals-polyfill': 0.2.3(esbuild@0.17.19)
       '@esbuild-plugins/node-modules-polyfill': 0.2.2(esbuild@0.17.19)
@@ -15159,14 +15153,14 @@ packages:
       chokidar: 3.6.0
       date-fns: 3.6.0
       esbuild: 0.17.19
-      miniflare: 3.20240821.0
+      miniflare: 3.20240821.1
       nanoid: 3.3.7
       path-to-regexp: 6.2.1
       resolve: 1.22.8
       resolve.exports: 2.0.2
       selfsigned: 2.4.1
       source-map: 0.6.1
-      unenv: /unenv-nightly@1.10.0-1717606461.a117952
+      unenv: /unenv-nightly@2.0.0-1724863496.70db6f1
       workerd: 1.20240821.1
       xxhash-wasm: 1.0.2
     optionalDependencies:

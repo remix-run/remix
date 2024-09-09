@@ -23,11 +23,7 @@ type SingleFetchEnabled =
  * `type LoaderData = SerializeFrom<typeof loader>`
  */
 export type SerializeFrom<T> =
-  SingleFetchEnabled extends true ?
-    T extends (...args: any[]) => unknown ?
-      SingleFetch_SerializeFrom<T> :
-      never
-  :
+  SingleFetchEnabled extends true ? SingleFetch_SerializeFrom<T> :
   T extends (...args: any[]) => infer Output ?
     Parameters<T> extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ?
       // Client data functions may not serialize

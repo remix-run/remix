@@ -18,7 +18,7 @@ import type { AppLoadContext } from "./data";
 import { sanitizeError, sanitizeErrors } from "./errors";
 import { getDocumentHeaders } from "./headers";
 import { ServerMode } from "./mode";
-import type { TypedResponse } from "./responses";
+import type { TypedDeferredData, TypedResponse } from "./responses";
 import { isRedirectStatusCode, isResponse } from "./responses";
 import type { Jsonify } from "./jsonify";
 import type {
@@ -63,27 +63,21 @@ export function getSingleFetchDataStrategy({
   return async ({ request, matches }: DataStrategyFunctionArgs) => {
     // Don't call loaders on action data requests
     if (isActionDataRequest && request.method === "GET") {
-      return await Promise.all(
-        matches.map((m) =>
-          m.resolve(async () => ({ type: "data", result: null }))
-        )
-      );
+      return {};
     }
 
+    // Only run opt-in loaders when fine-grained revalidation is enabled
+    let matchesToLoad = loadRouteIds
+      ? matches.filter((m) => loadRouteIds.includes(m.route.id))
+      : matches;
     let results = await Promise.all(
-      matches.map(async (match) => {
-        let result = await match.resolve(async (handler) => {
-          // Only run opt-in loaders when fine-grained revalidation is enabled
-          let data =
-            loadRouteIds && !loadRouteIds.includes(match.route.id)
-              ? null
-              : await handler();
-          return { type: "data", result: data };
-        });
-        return result;
-      })
+      matchesToLoad.map((match) => match.resolve())
     );
-    return results;
+    return results.reduce(
+      (acc, result, i) =>
+        Object.assign(acc, { [matchesToLoad[i].route.id]: result }),
+      {}
+    );
   };
 }
 
@@ -424,21 +418,24 @@ type Serialize<T> =
 
   undefined
 
-type Fn = (...args: any[]) => unknown;
-
 // Backwards-compatible type for Remix v2 where json/defer still use the old types,
 // and only non-json/defer returns use the new types.  This allows for incremental
 // migration of loaders to return naked objects.  In the next major version,
 // json/defer will be removed so everything will use the new simplified typings.
 // prettier-ignore
-export type SerializeFrom<T extends Fn> =
-  Parameters<T> extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ?
-    ReturnType<T> extends TypedResponse<infer U> ? Jsonify<U> :
-    Awaited<ReturnType<T>>
+export type SerializeFrom<T> =
+  T extends (...args: infer Args) => infer Return ?
+    Args extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ?
+      Awaited<Return> extends TypedResponse<infer U> ? Jsonify<U> :
+      Awaited<Return> extends TypedDeferredData<infer U> ? U :
+      Awaited<Return>
+    :
+    Awaited<Return> extends TypedResponse<infer U> ? Jsonify<U> :
+    Awaited<Return> extends TypedDeferredData<infer U> ? Serialize<U> :
+    Awaited<Return> extends DataWithResponseInit<infer D> ? Serialize<D> :
+    Serialize<Awaited<ReturnType<T>>>
   :
-  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? Jsonify<T> :
-  Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? Serialize<D> :
-  Serialize<Awaited<ReturnType<T>>>;
+  T
 
 type ServerLoader<T> = (args: LoaderFunctionArgs) => T;
 type ClientLoader<T> = (args: ClientLoaderFunctionArgs) => T;
@@ -475,6 +472,8 @@ type Recursive = {
   b: Date;
   recursive?: Recursive;
 };
+
+type Pretty<T> = { [K in keyof T]: T[K] } & {};
 
 // prettier-ignore
 // eslint-disable-next-line
@@ -603,4 +602,10 @@ type _tests = [
     function: () => void,
     class: TestClass
   }>>,
+
+  Expect<Equal<Pretty<SerializeFrom<ServerLoader<TypedResponse<{a: string, b: Date}>>>>, { a: string, b: string }>>,
+  Expect<Equal<Pretty<SerializeFrom<ServerLoader<TypedDeferredData<{a: string, b: Promise<Date>}>>>>, { a: string, b: Promise<Date> }>>,
+
+  // non-function backcompat
+  Expect<Equal<SerializeFrom<{a: string, b: Date}>, {a: string, b: Date}>>
 ]
