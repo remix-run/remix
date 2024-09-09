@@ -1,7 +1,2 @@
-export {
-  type ClientAddress,
-  type ErrorHandler,
-  type FetchHandler,
-  type RequestListenerOptions,
-  createRequestListener,
-} from './lib/request-listener.js';
+export { type ClientAddress, type ErrorHandler, type FetchHandler } from './lib/fetch-handler.js';
+export { type RequestListenerOptions, createRequestListener } from './lib/request-listener.js';
