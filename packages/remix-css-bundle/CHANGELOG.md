@@ -1,14 +1,8 @@
 # @remix-run/css-bundle
 
-## 2.12.0-pre.4
+## 2.12.0
 
-## 2.12.0-pre.3
-
-## 2.12.0-pre.2
-
-## 2.12.0-pre.1
-
-## 2.12.0-pre.0
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.12.0.
 
 ## 2.11.2
 
