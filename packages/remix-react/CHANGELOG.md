@@ -6,8 +6,6 @@
 
 - Lazy Route Discovery: Sort `/__manifest` query parameters for better caching ([#9888](https://github.com/remix-run/remix/pull/9888))
 
-- \[REMOVE] cleanup tests ([#9945](https://github.com/remix-run/remix/pull/9945))
-
 - Single Fetch: fix revalidation behavior bugs ([#9938](https://github.com/remix-run/remix/pull/9938))
 
   - With Single Fetch, existing routes revalidate by default
@@ -18,8 +16,6 @@
   - When one or more routes are excluded from the single fetch call, the remaining routes that have loaders are included as query params:
     - For example, if A was excluded, and the `root` route and `routes/b` had a `loader` but `routes/c` did not, the single fetch request would be `GET /a/b/c.data?_routes=root,routes/a`
 
-- \[REMOVE] Align single fetch prefetchign with new revalidation logic ([#9958](https://github.com/remix-run/remix/pull/9958))
-
 - Remove hydration URL check that was originally added for React 17 hydration issues and we no longer support React 17 ([#9890](https://github.com/remix-run/remix/pull/9890))
 
   - Reverts the logic originally added in Remix `v1.18.0` via <https://github.com/remix-run/remix/pull/6409>
@@ -29,8 +25,6 @@
   - Remix v2 upgraded it's minimal React version to v18 which eliminated the v17 hydration error loop
   - React v18 handles this hydration error like any other error and does not result in a loop
   - So we can remove our check and thus avoid the false-positive scenarios in which it may also trigger a loop
-
-- \[REMOVE] Bump router ([#9963](https://github.com/remix-run/remix/pull/9963))
 
 - Single Fetch: Improved typesafety ([#9893](https://github.com/remix-run/remix/pull/9893))
 
@@ -64,8 +58,6 @@
   ```
 
   For more information, see [Guides > Single Fetch](https://remix.run/docs/en/dev/guides/single-fetch) in our docs.
-
-- \[REMOVE] Fix HDR for single fetch ([#9954](https://github.com/remix-run/remix/pull/9954))
 
 - Clarify wording in default `HydrateFallback` console warning ([#9899](https://github.com/remix-run/remix/pull/9899))
 

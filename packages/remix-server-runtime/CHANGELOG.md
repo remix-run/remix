@@ -5,9 +5,7 @@
 ### Patch Changes
 
 - Single Fetch: Do not try to encode a `turbo-stream` body into 304 responses ([#9941](https://github.com/remix-run/remix/pull/9941))
-
 - Single Fetch: fix revalidation behavior bugs ([#9938](https://github.com/remix-run/remix/pull/9938))
-
   - With Single Fetch, existing routes revalidate by default
   - This means requests do not need special query params for granular route revalidations out of the box - i.e., `GET /a/b/c.data`
   - There are two conditions that will trigger granular revalidation:
@@ -15,7 +13,6 @@
     - If a route defines a `clientLoader` then it will be excluded from the single fetch call and if you call `serverLoader()` from your `clientLoader`, that will make a separarte HTTP call for just that route loader - i.e., `GET /a/b/c.data?_routes=routes/a` for a `clientLoader` in `routes/a.tsx`
   - When one or more routes are excluded from the single fetch call, the remaining routes that have loaders are included as query params:
     - For example, if A was excluded, and the `root` route and `routes/b` had a `loader` but `routes/c` did not, the single fetch request would be `GET /a/b/c.data?_routes=root,routes/a`
-
 - Remove hydration URL check that was originally added for React 17 hydration issues and we no longer support React 17 ([#9890](https://github.com/remix-run/remix/pull/9890))
 
   - Reverts the logic originally added in Remix `v1.18.0` via <https://github.com/remix-run/remix/pull/6409>
