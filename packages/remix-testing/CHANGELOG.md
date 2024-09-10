@@ -1,5 +1,73 @@
 # `@remix-run/testing`
 
+## 2.12.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.12.0`
+  - `@remix-run/node@2.12.0`
+
+## 2.11.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.11.2`
+  - `@remix-run/node@2.11.2`
+
+## 2.11.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.11.1`
+  - `@remix-run/node@2.11.1`
+
+## 2.11.0
+
+### Minor Changes
+
+- Rename `future.unstable_fogOfWar` to `future.unstable_lazyRouteDiscovery` for clarity ([#9763](https://github.com/remix-run/remix/pull/9763))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.11.0`
+  - `@remix-run/react@2.11.0`
+
+## 2.10.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.10.3`
+  - `@remix-run/node@2.10.3`
+
+## 2.10.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.10.2`
+  - `@remix-run/node@2.10.2`
+
+## 2.10.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.10.1`
+  - `@remix-run/node@2.10.1`
+
+## 2.10.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.10.0`
+  - `@remix-run/node@2.10.0`
+
 ## 2.9.2
 
 ### Patch Changes

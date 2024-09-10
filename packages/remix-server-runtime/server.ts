@@ -21,13 +21,13 @@ import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
 import { getDocumentHeaders } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
+import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
-import type { ServerRoute } from "./routes";
+import type { EntryRoute, ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
   isRedirectResponse,
-  isRedirectStatusCode,
   isResponse,
   json,
 } from "./responses";
@@ -36,16 +36,11 @@ import { getDevServerHooks } from "./dev";
 import type { SingleFetchResult, SingleFetchResults } from "./single-fetch";
 import {
   encodeViaTurboStream,
-  getResponseStubs,
-  getSingleFetchDataStrategy,
   getSingleFetchRedirect,
-  getSingleFetchResourceRouteDataStrategy,
-  isResponseStub,
-  mergeResponseStubs,
   singleFetchAction,
   singleFetchLoaders,
   SingleFetchRedirectSymbol,
-  ResponseStubOperationsSymbol,
+  SINGLE_FETCH_REDIRECT_STATUS,
 } from "./single-fetch";
 import { resourceRouteJsonWarning } from "./deprecations";
 
@@ -118,9 +113,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     }
 
     let url = new URL(request.url);
-
-    let matches = matchServerRoutes(routes, url.pathname, _build.basename);
-    let params = matches && matches.length > 0 ? matches[0].params : {};
+    let params: RouteMatch<ServerRoute>["params"] = {};
     let handleError = (error: unknown) => {
       if (mode === ServerMode.Development) {
         getDevServerHooks()?.processRequestError?.(error);
@@ -132,6 +125,27 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         request,
       });
     };
+
+    // Manifest request for fog of war
+
+    let manifestUrl = `${_build.basename ?? "/"}/__manifest`.replace(
+      /\/+/g,
+      "/"
+    );
+    if (url.pathname === manifestUrl) {
+      try {
+        let res = await handleManifestRequest(_build, routes, url);
+        return res;
+      } catch (e) {
+        handleError(e);
+        return new Response("Unknown Server Error", { status: 500 });
+      }
+    }
+
+    let matches = matchServerRoutes(routes, url.pathname, _build.basename);
+    if (matches && matches.length > 0) {
+      Object.assign(params, matches[0].params);
+    }
 
     let response: Response;
     if (url.searchParams.has("_data")) {
@@ -200,7 +214,11 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
         if (isRedirectResponse(response)) {
           let result: SingleFetchResult | SingleFetchResults =
-            getSingleFetchRedirect(response.status, response.headers);
+            getSingleFetchRedirect(
+              response.status,
+              response.headers,
+              _build.basename
+            );
 
           if (request.method === "GET") {
             result = {
@@ -208,7 +226,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
             };
           }
           let headers = new Headers(response.headers);
-          headers.set("Content-Type", "text/x-turbo");
+          headers.set("Content-Type", "text/x-script");
 
           return new Response(
             encodeViaTurboStream(
@@ -218,7 +236,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
               serverMode
             ),
             {
-              status: 200,
+              status: SINGLE_FETCH_REDIRECT_STATUS,
               headers,
             }
           );
@@ -267,6 +285,34 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   };
 };
 
+async function handleManifestRequest(
+  build: ServerBuild,
+  routes: ServerRoute[],
+  url: URL
+) {
+  let patches: Record<string, EntryRoute> = {};
+
+  if (url.searchParams.has("p")) {
+    for (let path of url.searchParams.getAll("p")) {
+      let matches = matchServerRoutes(routes, path, build.basename);
+      if (matches) {
+        for (let match of matches) {
+          let routeId = match.route.id;
+          patches[routeId] = build.assets.routes[routeId];
+        }
+      }
+    }
+
+    return json(patches, {
+      headers: {
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    }) as Response; // Override the TypedResponse stuff from json()
+  }
+
+  return new Response("Invalid Request", { status: 400 });
+}
+
 async function handleDataRequest(
   serverMode: ServerMode,
   build: ServerBuild,
@@ -305,12 +351,12 @@ async function handleDataRequest(
 
     // Mark all successful responses with a header so we can identify in-flight
     // network errors that are missing this header
-    response.headers.set("X-Remix-Response", "yes");
+    response = safelySetHeader(response, "X-Remix-Response", "yes");
     return response;
   } catch (error: unknown) {
     if (isResponse(error)) {
-      error.headers.set("X-Remix-Catch", "yes");
-      return error;
+      let response = safelySetHeader(error, "X-Remix-Catch", "yes");
+      return response;
     }
 
     if (isRouteErrorResponse(error)) {
@@ -344,6 +390,7 @@ async function handleSingleFetchRequest(
   let { result, headers, status } =
     request.method !== "GET"
       ? await singleFetchAction(
+          build,
           serverMode,
           staticHandler,
           request,
@@ -352,6 +399,7 @@ async function handleSingleFetchRequest(
           handleError
         )
       : await singleFetchLoaders(
+          build,
           serverMode,
           staticHandler,
           request,
@@ -364,7 +412,17 @@ async function handleSingleFetchRequest(
   // network errors that are missing this header
   let resultHeaders = new Headers(headers);
   resultHeaders.set("X-Remix-Response", "yes");
-  resultHeaders.set("Content-Type", "text/x-turbo");
+
+  // 304 responses should not have a body
+  if (status === 304) {
+    return new Response(null, { status: 304, headers: resultHeaders });
+  }
+
+  // We use a less-descriptive `text/x-script` here instead of something like
+  // `text/x-turbo` to enable compression when deployed via Cloudflare.  See:
+  //  - https://github.com/remix-run/remix/issues/9884
+  //  - https://developers.cloudflare.com/speed/optimization/content/brotli/content-compression/
+  resultHeaders.set("Content-Type", "text/x-script");
 
   // Note: Deferred data is already just Promises, so we don't have to mess
   // `activeDeferreds` or anything :)
@@ -392,13 +450,9 @@ async function handleDocumentRequest(
   criticalCss?: string
 ) {
   let context;
-  let responseStubs = getResponseStubs();
   try {
     context = await staticHandler.query(request, {
       requestContext: loadContext,
-      unstable_dataStrategy: build.future.unstable_singleFetch
-        ? getSingleFetchDataStrategy(responseStubs)
-        : undefined,
     });
   } catch (error: unknown) {
     handleError(error);
@@ -409,29 +463,18 @@ async function handleDocumentRequest(
     return context;
   }
 
-  let statusCode: number;
-  let headers: Headers;
-  if (build.future.unstable_singleFetch) {
-    let merged = mergeResponseStubs(context, responseStubs);
-    statusCode = merged.statusCode;
-    headers = merged.headers;
+  let headers = getDocumentHeaders(build, context);
 
-    if (isRedirectStatusCode(statusCode) && headers.has("Location")) {
-      return new Response(null, {
-        status: statusCode,
-        headers,
-      });
-    }
-  } else {
-    statusCode = context.statusCode;
-    headers = getDocumentHeaders(build, context);
+  // 304 responses should not have a body or a content-type
+  if (context.statusCode === 304) {
+    return new Response(null, { status: 304, headers });
   }
 
   // Sanitize errors outside of development environments
   if (context.errors) {
     Object.values(context.errors).forEach((err) => {
       // @ts-expect-error `err.error` is "private" from users but intended for internal use
-      if ((!isRouteErrorResponse(err) || err.error) && !isResponseStub(err)) {
+      if (!isRouteErrorResponse(err) || err.error) {
         handleError(err);
       }
     });
@@ -452,7 +495,6 @@ async function handleDocumentRequest(
     staticHandlerContext: context,
     criticalCss,
     serverHandoffString: createServerHandoffString({
-      url: context.location.pathname,
       basename: build.basename,
       criticalCss,
       future: build.future,
@@ -479,7 +521,7 @@ async function handleDocumentRequest(
   try {
     return await handleDocumentRequestFunction(
       request,
-      statusCode,
+      context.statusCode,
       headers,
       entryContext,
       loadContext
@@ -529,7 +571,6 @@ async function handleDocumentRequest(
       ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString({
-        url: context.location.pathname,
         basename: build.basename,
         future: build.future,
         isSpaMode: build.isSpaMode,
@@ -573,25 +614,15 @@ async function handleResourceRequest(
   handleError: (err: unknown) => void
 ) {
   try {
-    let responseStubs = build.future.unstable_singleFetch
-      ? getResponseStubs()
-      : {};
     // Note we keep the routeId here to align with the Remix handling of
     // resource routes which doesn't take ?index into account and just takes
     // the leaf match
     let response = await staticHandler.queryRoute(request, {
       routeId,
       requestContext: loadContext,
-      ...(build.future.unstable_singleFetch
-        ? {
-            unstable_dataStrategy: getSingleFetchResourceRouteDataStrategy({
-              responseStubs,
-            }),
-          }
-        : null),
     });
 
-    if (typeof response === "object") {
+    if (typeof response === "object" && response !== null) {
       invariant(
         !(DEFERRED_SYMBOL in response),
         `You cannot return a \`defer()\` response from a Resource Route.  Did you ` +
@@ -599,29 +630,14 @@ async function handleResourceRequest(
       );
     }
 
-    if (build.future.unstable_singleFetch) {
-      let stub = responseStubs[routeId];
-      if (isResponse(response)) {
-        // If a response was returned, we use it's status and we merge our
-        // response stub headers onto it
-        let ops = stub[ResponseStubOperationsSymbol];
-        for (let [op, ...args] of ops) {
-          // @ts-expect-error
-          response.headers[op](...args);
-        }
-      } else {
-        console.warn(
-          resourceRouteJsonWarning(
-            request.method === "GET" ? "loader" : "action",
-            routeId
-          )
-        );
-        // Otherwise we create a json Response using the stub
-        response = json(response, {
-          status: stub.status,
-          headers: stub.headers,
-        });
-      }
+    if (build.future.unstable_singleFetch && !isResponse(response)) {
+      console.warn(
+        resourceRouteJsonWarning(
+          request.method === "GET" ? "loader" : "action",
+          routeId
+        )
+      );
+      response = json(response);
     }
 
     // callRouteLoader/callRouteAction always return responses (w/o single fetch).
@@ -635,8 +651,8 @@ async function handleResourceRequest(
     if (isResponse(error)) {
       // Note: Not functionally required but ensures that our response headers
       // match identically to what Remix returns
-      error.headers.set("X-Remix-Catch", "yes");
-      return error;
+      let response = safelySetHeader(error, "X-Remix-Catch", "yes");
+      return response;
     }
 
     if (isRouteErrorResponse(error)) {
@@ -721,4 +737,24 @@ function createRemixRedirectResponse(
     status: 204,
     headers,
   });
+}
+
+// Anytime we are setting a header on a `Response` created in the loader/action,
+// we have to so it in this manner since in an `undici` world, if the `Response`
+// came directly from a `fetch` call, the headers are immutable will throw if
+// we try to set a new header.  This is a sort of shallow clone of the `Response`
+// so we can safely set our own header.
+function safelySetHeader(
+  response: Response,
+  name: string,
+  value: string
+): Response {
+  let headers = new Headers(response.headers);
+  headers.set(name, value);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+    duplex: response.body ? "half" : undefined,
+  } as ResponseInit & { duplex?: "half" });
 }

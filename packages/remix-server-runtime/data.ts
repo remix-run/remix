@@ -11,7 +11,6 @@ import type {
   LoaderFunction,
   LoaderFunctionArgs,
 } from "./routeModules";
-import type { ResponseStub } from "./single-fetch";
 
 /**
  * An object of unknown type for route loaders and actions provided by the
@@ -35,7 +34,6 @@ export async function callRouteAction({
   request,
   routeId,
   singleFetch,
-  response,
 }: {
   request: Request;
   action: ActionFunction;
@@ -43,15 +41,13 @@ export async function callRouteAction({
   loadContext: AppLoadContext;
   routeId: string;
   singleFetch: boolean;
-  response?: ResponseStub;
 }) {
   let result = await action({
-    request: stripDataParam(stripIndexParam(request)),
+    request: singleFetch
+      ? stripRoutesParam(stripIndexParam(request))
+      : stripDataParam(stripIndexParam(request)),
     context: loadContext,
     params,
-    // Only provided when single fetch is enabled, and made available via
-    // `defineAction` types, not `ActionFunctionArgs`
-    ...(singleFetch ? { response } : null),
   });
 
   if (result === undefined) {
@@ -76,7 +72,6 @@ export async function callRouteLoader({
   request,
   routeId,
   singleFetch,
-  response,
 }: {
   request: Request;
   loader: LoaderFunction;
@@ -84,15 +79,13 @@ export async function callRouteLoader({
   loadContext: AppLoadContext;
   routeId: string;
   singleFetch: boolean;
-  response?: ResponseStub;
 }) {
   let result = await loader({
-    request: stripDataParam(stripIndexParam(request)),
+    request: singleFetch
+      ? stripRoutesParam(stripIndexParam(request))
+      : stripDataParam(stripIndexParam(request)),
     context: loadContext,
     params,
-    // Only provided when single fetch is enabled, and made available via
-    // `defineLoader` types, not `LoaderFunctionArgs`
-    ...(singleFetch ? { response } : null),
   });
 
   if (result === undefined) {
@@ -156,6 +149,23 @@ function stripIndexParam(request: Request) {
 function stripDataParam(request: Request) {
   let url = new URL(request.url);
   url.searchParams.delete("_data");
+  let init: RequestInit = {
+    method: request.method,
+    body: request.body,
+    headers: request.headers,
+    signal: request.signal,
+  };
+
+  if (init.body) {
+    (init as { duplex: "half" }).duplex = "half";
+  }
+
+  return new Request(url.href, init);
+}
+
+function stripRoutesParam(request: Request) {
+  let url = new URL(request.url);
+  url.searchParams.delete("_routes");
   let init: RequestInit = {
     method: request.method,
     body: request.body,

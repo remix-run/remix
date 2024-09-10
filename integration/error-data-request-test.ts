@@ -138,9 +138,7 @@ test.describe("ErrorBoundary", () => {
       fixture.requestData("/loader-return-json", "routes/loader-return-json", {
         method: "TRACE",
       })
-    ).rejects.toThrowError(
-      `Failed to construct 'Request': 'TRACE' HTTP method is unsupported.`
-    );
+    ).rejects.toThrow(/'TRACE' HTTP method is unsupported\./);
   });
 
   test("returns a 403 x-remix-error on a data fetch GET to a bad path", async () => {

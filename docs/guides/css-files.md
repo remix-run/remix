@@ -138,7 +138,7 @@ import {
   links as buttonLinks,
 } from "../components/Button";
 
-export const links = [...buttonLinks];
+export const links = () => [...buttonLinks];
 
 export default function HelloRoute() {
   return <Button>Hello!</Button>;

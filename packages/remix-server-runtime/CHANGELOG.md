@@ -1,5 +1,146 @@
 # `@remix-run/server-runtime`
 
+## 2.12.0
+
+### Patch Changes
+
+- Single Fetch: Do not try to encode a `turbo-stream` body into 304 responses ([#9941](https://github.com/remix-run/remix/pull/9941))
+- Single Fetch: fix revalidation behavior bugs ([#9938](https://github.com/remix-run/remix/pull/9938))
+  - With Single Fetch, existing routes revalidate by default
+  - This means requests do not need special query params for granular route revalidations out of the box - i.e., `GET /a/b/c.data`
+  - There are two conditions that will trigger granular revalidation:
+    - If a route opts out of revalidation via `shouldRevalidate`, it will be excluded from the single fetch call
+    - If a route defines a `clientLoader` then it will be excluded from the single fetch call and if you call `serverLoader()` from your `clientLoader`, that will make a separarte HTTP call for just that route loader - i.e., `GET /a/b/c.data?_routes=routes/a` for a `clientLoader` in `routes/a.tsx`
+  - When one or more routes are excluded from the single fetch call, the remaining routes that have loaders are included as query params:
+    - For example, if A was excluded, and the `root` route and `routes/b` had a `loader` but `routes/c` did not, the single fetch request would be `GET /a/b/c.data?_routes=root,routes/a`
+- Remove hydration URL check that was originally added for React 17 hydration issues and we no longer support React 17 ([#9890](https://github.com/remix-run/remix/pull/9890))
+
+  - Reverts the logic originally added in Remix `v1.18.0` via <https://github.com/remix-run/remix/pull/6409>
+  - This was added to resolve an issue that could arise when doing quick back/forward history navigations while JS was loading which would cause a mismatch between the server matches and client matches: <https://github.com/remix-run/remix/issues/1757>
+  - This specific hydration issue would then cause this React v17 only looping issue: <https://github.com/remix-run/remix/issues/1678>
+  - The URL comparison that we added in `1.18.0` turned out to be subject to false positives of it's own which could also put the user in looping scenarios
+  - Remix v2 upgraded it's minimal React version to v18 which eliminated the v17 hydration error loop
+  - React v18 handles this hydration error like any other error and does not result in a loop
+  - So we can remove our check and thus avoid the false-positive scenarios in which it may also trigger a loop
+
+- Single Fetch: Improved typesafety ([#9893](https://github.com/remix-run/remix/pull/9893))
+
+  If you were already using previously released unstable single-fetch types:
+
+  - Remove `"@remix-run/react/future/single-fetch.d.ts"` override from `tsconfig.json` > `compilerOptions` > `types`
+  - Remove `defineLoader`, `defineAction`, `defineClientLoader`, `defineClientAction` helpers from your route modules
+  - Replace `UIMatch_SingleFetch` type helper with `UIMatch`
+  - Replace `MetaArgs_SingleFetch` type helper with `MetaArgs`
+
+  Then you are ready for the new typesafety setup:
+
+  ```ts
+  // vite.config.ts
+
+  declare module "@remix-run/server-runtime" {
+    interface Future {
+      unstable_singleFetch: true; // 👈 enable _types_ for single-fetch
+    }
+  }
+
+  export default defineConfig({
+    plugins: [
+      remix({
+        future: {
+          unstable_singleFetch: true, // 👈 enable single-fetch
+        },
+      }),
+    ],
+  });
+  ```
+
+  For more information, see [Guides > Single Fetch](https://remix.run/docs/en/dev/guides/single-fetch) in our docs.
+
+- Single Fetch: Change content type on `.data` requests to `text/x-script` to allow Cloudflare compression ([#9889](https://github.com/remix-run/remix/pull/9889))
+
+- Support 304 responses on document requests ([#9955](https://github.com/remix-run/remix/pull/9955))
+
+## 2.11.2
+
+### Patch Changes
+
+- Single Fetch: Fix redirects when a `basename` is present ([#9848](https://github.com/remix-run/remix/pull/9848))
+- Fog of War: Simplify implementation now that React Router handles slug/splat edge cases and tracks previously discovered routes (see <https://github.com/remix-run/react-router/pull/11883>) ([#9860](https://github.com/remix-run/remix/pull/9860))
+  - This changes the return signature of the internal `__manifest` endpoint since we no longer need the `notFoundPaths` field
+- Fog of War: Update to use renamed `unstable_patchRoutesOnNavigation` function in RR (see <https://github.com/remix-run/react-router/pull/11888>) ([#9860](https://github.com/remix-run/remix/pull/9860))
+- Single Fetch: Update `turbo-stream` to `v2.3.0` ([#9856](https://github.com/remix-run/remix/pull/9856))
+  - Stabilize object key order for serialized payloads
+  - Remove memory limitations payloads sizes
+
+## 2.11.1
+
+### Patch Changes
+
+- Revert #9695, stop infinite reload ([`a7cffe57`](https://github.com/remix-run/remix/commit/a7cffe5733c8b7d0f29bd2d8606876c537d87101))
+
+## 2.11.0
+
+### Minor Changes
+
+- Single Fetch: Add a new `unstable_data()` API as a replacement for `json`/`defer` when custom `status`/`headers` are needed ([#9769](https://github.com/remix-run/remix/pull/9769))
+- Add a new `replace(url, init?)` alternative to `redirect(url, init?)` that performs a `history.replaceState` instead of a `history.pushState` on client-side navigation redirects ([#9764](https://github.com/remix-run/remix/pull/9764))
+- Rename `future.unstable_fogOfWar` to `future.unstable_lazyRouteDiscovery` for clarity ([#9763](https://github.com/remix-run/remix/pull/9763))
+- Single Fetch: Remove `responseStub` in favor of `headers` ([#9769](https://github.com/remix-run/remix/pull/9769))
+
+  - Background
+
+    - The original Single Fetch approach was based on an assumption that an eventual `middleware` implementation would require something like `ResponseStub` so users could mutate `status`/`headers` in `middleware` before/after handlers as well as during handlers
+    - We wanted to align how `headers` got merged between document and data requests
+    - So we made document requests also use `ResponseStub` and removed the usage of `headers` in Single Fetch
+    - The realization/alignment between Michael and Ryan on the recent [roadmap planning](https://www.youtube.com/watch?v=f5z_axCofW0) made us realize that the original assumption was incorrect
+    - `middleware` won't need a stub - users can just mutate the `Response` they get from `await next()` directly
+    - With that gone, and still wanting to align how `headers` get merged, it makes more sense to stick with the current `headers` API and apply that to Single Fetch and avoid introducing a totally new thing in `RepsonseStub` (that always felt a bit awkward to work with anyway)
+
+  - With this change:
+    - You are encouraged to stop returning `Response` instances in favor of returning raw data from loaders and actions:
+      - ~~`return json({ data: whatever });`~~
+      - `return { data: whatever };`
+    - In most cases, you can remove your `json()` and `defer()` calls in favor of returning raw data if they weren't setting custom `status`/`headers`
+      - We will be removing both `json` and `defer` in the next major version, but both _should_ still work in Single Fetch in v2 to allow for incremental adoption of the new behavior
+    - If you need custom `status`/`headers`:
+      - We've added a new `unstable_data({...}, responseInit)` utility that will let you send back `status`/`headers` alongside your raw data without having to encode it into a `Response`
+    - The `headers()` function will let you control header merging for both document and data requests
+
+### Patch Changes
+
+- Change initial hydration route mismatch from a URL check to a matches check to be resistant to URL inconsistencies ([#9695](https://github.com/remix-run/remix/pull/9695))
+
+## 2.10.3
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.10.3.
+
+## 2.10.2
+
+### Patch Changes
+
+- Fix bug with `immutable` headers on raw native `fetch` responses returned from loaders ([#9693](https://github.com/remix-run/remix/pull/9693))
+
+## 2.10.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.10.1.
+
+## 2.10.0
+
+### Minor Changes
+
+- Add support for Lazy Route Discovery (a.k.a. Fog of War) ([#9600](https://github.com/remix-run/remix/pull/9600))
+
+  - RFC: <https://github.com/remix-run/react-router/discussions/11113>
+  - Docs: <https://remix.run/docs/guides/fog-of-war>
+
+### Patch Changes
+
+- Properly handle thrown 4xx/5xx response stubs in single fetch ([#9501](https://github.com/remix-run/remix/pull/9501))
+- Change single fetch redirects to use a 202 status to avoid automatic caching ([#9564](https://github.com/remix-run/remix/pull/9564))
+- Fix error when returning `null` from a resource route in single fetch ([#9488](https://github.com/remix-run/remix/pull/9488))
+- Fix issues with returning or throwing a response stub from a resource route in single fetch ([#9488](https://github.com/remix-run/remix/pull/9488))
+- Update to `turbo-stream@2.2.0` for single fetch ([#9562](https://github.com/remix-run/remix/pull/9562))
+
 ## 2.9.2
 
 ### Patch Changes

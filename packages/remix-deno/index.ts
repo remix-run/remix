@@ -24,10 +24,10 @@ export {
   MaxPartSizeExceededError,
   redirect,
   redirectDocument,
+  replace,
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
-  unstable_defineAction,
-  unstable_defineLoader,
+  unstable_data,
   unstable_parseMultipartFormData,
 } from "@remix-run/server-runtime";
 

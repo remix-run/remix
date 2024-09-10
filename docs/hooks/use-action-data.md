@@ -5,7 +5,7 @@ toc: false
 
 # `useActionData`
 
-Returns the serialized data from the most recent route action or `undefined` if there isn't one.
+Returns the serialized data from the most recent route [action][action] or `undefined` if there isn't one. This hook only returns action data from the route in context - it can not access data from other parent or child routes.
 
 ```tsx lines=[10,14]
 import type { ActionFunctionArgs } from "@remix-run/node"; // or cloudflare/deno

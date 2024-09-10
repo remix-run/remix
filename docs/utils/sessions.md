@@ -213,12 +213,12 @@ console.log(isSession(session));
 
 ## `createSessionStorage`
 
-Remix makes it easy to store sessions in your own database if needed. The `createSessionStorage()` API requires a `cookie` (or options for creating a cookie, see [cookies][cookies]) and a set of create, read, update, and delete (CRUD) methods for managing the session data. The cookie is used to persist the session ID.
+Remix makes it easy to store sessions in your own database if needed. The `createSessionStorage()` API requires a `cookie` (for options for creating a cookie, see [cookies][cookies]) and a set of create, read, update, and delete (CRUD) methods for managing the session data. The cookie is used to persist the session ID.
 
 - `createData` will be called from `commitSession` on the initial session creation when no session ID exists in the cookie
 - `readData` will be called from `getSession` when a session ID exists in the cookie
 - `updateData` will be called from `commitSession` when a session ID already exists in the cookie
-- `deleteData` is called from `destorySession`
+- `deleteData` is called from `destroySession`
 
 The following example shows how you could do this using a generic database client:
 

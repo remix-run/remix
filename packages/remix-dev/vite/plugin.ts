@@ -37,6 +37,7 @@ import {
 import { getStylesForUrl, isCssModulesFile } from "./styles";
 import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
+import { combineURLs } from "./combine-urls";
 import { removeExports } from "./remove-exports";
 import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
 
@@ -387,13 +388,13 @@ function resolveDependantChunks(
       return;
     }
 
+    chunks.add(chunk);
+
     if (chunk.imports) {
       for (let importKey of chunk.imports) {
         walk(viteManifest[importKey]);
       }
     }
-
-    chunks.add(chunk);
   }
 
   for (let entryChunk of entryChunks) {
@@ -828,11 +829,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     return JSON.parse(manifestContents) as Vite.Manifest;
   };
 
-  let getViteManifestFilePaths = (viteManifest: Vite.Manifest): Set<string> => {
-    let filePaths = Object.values(viteManifest).map((chunk) => chunk.file);
-    return new Set(filePaths);
-  };
-
   let getViteManifestAssetPaths = (
     viteManifest: Vite.Manifest
   ): Set<string> => {
@@ -959,7 +955,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         path: route.path,
         index: route.index,
         caseSensitive: route.caseSensitive,
-        module: path.posix.join(
+        module: combineURLs(
           ctx.remixConfig.publicPath,
           `${resolveFileUrl(
             ctx,
@@ -977,18 +973,18 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
     return {
       version: String(Math.random()),
-      url: path.posix.join(
+      url: combineURLs(
         ctx.remixConfig.publicPath,
         VirtualModule.url(browserManifestId)
       ),
       hmr: {
-        runtime: path.posix.join(
+        runtime: combineURLs(
           ctx.remixConfig.publicPath,
           VirtualModule.url(injectHmrRuntimeId)
         ),
       },
       entry: {
-        module: path.posix.join(
+        module: combineURLs(
           ctx.remixConfig.publicPath,
           resolveFileUrl(ctx, ctx.entryClientFilePath)
         ),
@@ -1079,6 +1075,14 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               : undefined,
           },
           optimizeDeps: {
+            entries: ctx.remixConfig.future.unstable_optimizeDeps
+              ? [
+                  ctx.entryClientFilePath,
+                  ...Object.values(ctx.remixConfig.routes).map((route) =>
+                    path.join(ctx.remixConfig.appDirectory, route.file)
+                  ),
+                ]
+              : [],
             include: [
               // Pre-bundle React dependencies to avoid React duplicates,
               // even if React dependencies are not direct dependencies.
@@ -1404,9 +1408,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           let serverBuildDirectory = getServerBuildDirectory(ctx);
 
           let ssrViteManifest = await loadViteManifest(serverBuildDirectory);
-          let clientViteManifest = await loadViteManifest(clientBuildDirectory);
-
-          let clientFilePaths = getViteManifestFilePaths(clientViteManifest);
           let ssrAssetPaths = getViteManifestAssetPaths(ssrViteManifest);
 
           // We only move assets that aren't in the client build, otherwise we
@@ -1418,8 +1419,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           let movedAssetPaths: string[] = [];
           for (let ssrAssetPath of ssrAssetPaths) {
             let src = path.join(serverBuildDirectory, ssrAssetPath);
-            if (!clientFilePaths.has(ssrAssetPath)) {
-              let dest = path.join(clientBuildDirectory, ssrAssetPath);
+            let dest = path.join(clientBuildDirectory, ssrAssetPath);
+
+            if (!fse.existsSync(dest)) {
               await fse.move(src, dest);
               movedAssetPaths.push(dest);
             } else {
@@ -1503,7 +1505,12 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       name: "remix-dot-server",
       enforce: "pre",
       async resolveId(id, importer, options) {
-        if (options?.ssr) return;
+        // https://vitejs.dev/config/dep-optimization-options
+        let isOptimizeDeps =
+          viteCommand === "serve" &&
+          (options as { scan?: boolean })?.scan === true;
+
+        if (options?.ssr || isOptimizeDeps) return;
 
         let isResolving = options?.custom?.["remix-dot-server"] ?? false;
         if (isResolving) return;
@@ -1872,7 +1879,7 @@ async function getRouteMetadata(
     path: route.path,
     index: route.index,
     caseSensitive: route.caseSensitive,
-    url: path.posix.join(
+    url: combineURLs(
       ctx.remixConfig.publicPath,
       "/" +
         path.relative(
@@ -1880,7 +1887,7 @@ async function getRouteMetadata(
           resolveRelativeRouteFilePath(route, ctx.remixConfig)
         )
     ),
-    module: path.posix.join(
+    module: combineURLs(
       ctx.remixConfig.publicPath,
       `${resolveFileUrl(
         ctx,

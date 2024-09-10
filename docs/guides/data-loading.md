@@ -631,14 +631,16 @@ You might want to make an abstraction for checkboxes like this:
 
 function SearchCheckbox({ name, value }) {
   const [searchParams] = useSearchParams();
-  const all = searchParams.getAll(name);
+  const paramsIncludeValue = searchParams
+    .getAll(name)
+    .includes(value);
   const [checked, setChecked] = React.useState(
-    all.includes(value)
+    paramsIncludeValue
   );
 
   React.useEffect(() => {
-    setChecked(all.includes(value));
-  }, [all, searchParams, value]);
+    setChecked(paramsIncludeValue);
+  }, [paramsIncludeValue]);
 
   return (
     <input

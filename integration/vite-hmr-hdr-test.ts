@@ -10,6 +10,7 @@ import {
   EXPRESS_SERVER,
   viteConfig,
 } from "./helpers/vite.js";
+import { js } from "./helpers/create-fixture.js";
 
 const indexRoute = `
   // imports
@@ -110,6 +111,61 @@ test("Vite / HMR & HDR / mdx", async ({ page, viteDev }) => {
   await expect(page.locator("button")).toHaveText("Count: 1");
 
   expect(page.errors).toEqual([]);
+});
+
+test.describe("single fetch", () => {
+  test("Vite / HMR & HDR / vite dev", async ({
+    page,
+    browserName,
+    viteDev,
+  }) => {
+    let files: Files = async ({ port }) => ({
+      "vite.config.js": js`
+        import { vitePlugin as remix } from "@remix-run/dev";
+
+        export default {
+          ${await viteConfig.server({ port })}
+          plugins: [
+            remix({
+              future: {
+                unstable_singleFetch: true
+              },
+            })
+          ]
+        }
+      `,
+      "app/routes/_index.tsx": indexRoute,
+    });
+    let { cwd, port } = await viteDev(files);
+    await workflow({ page, browserName, cwd, port });
+  });
+
+  test("Vite / HMR & HDR / express", async ({
+    page,
+    browserName,
+    customDev,
+  }) => {
+    let files: Files = async ({ port }) => ({
+      "vite.config.js": js`
+        import { vitePlugin as remix } from "@remix-run/dev";
+
+        export default {
+          ${await viteConfig.server({ port })}
+          plugins: [
+            remix({
+              future: {
+                unstable_singleFetch: true
+              },
+            })
+          ]
+        }
+      `,
+      "server.mjs": EXPRESS_SERVER({ port }),
+      "app/routes/_index.tsx": indexRoute,
+    });
+    let { cwd, port } = await customDev(files);
+    await workflow({ page, browserName, cwd, port });
+  });
 });
 
 async function workflow({

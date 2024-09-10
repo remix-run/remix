@@ -1,5 +1,84 @@
 # `@remix-run/dev`
 
+## 2.12.0
+
+### Minor Changes
+
+- New `future.unstable_optimizeDeps` flag for automatic dependency optimization ([#9921](https://github.com/remix-run/remix/pull/9921))
+  - You can now opt-in to automatic dependency optimization during development by using the `future.unstable_optimizeDeps` future flag
+  - For details, check out the docs at [`Guides` > `Dependency optimization`](https://remix.run/docs/en/main/guides/dependency-optimization)
+  - For users who were previously working around this limitation, you no longer need to explicitly add routes to Vite's `optimizeDeps.entries` nor do you need to disable the `remix-dot-server` plugin
+
+### Patch Changes
+
+- Handle circular dependencies in modulepreload manifest generation ([#9917](https://github.com/remix-run/remix/pull/9917))
+- Fix `dest already exists` build errors by only moving SSR assets to the client build directory when they're not already present on disk ([#9901](https://github.com/remix-run/remix/pull/9901))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.12.0`
+  - `@remix-run/node@2.12.0`
+
+## 2.11.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.2`
+  - `@remix-run/node@2.11.2`
+
+## 2.11.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.1`
+  - `@remix-run/node@2.11.1`
+
+## 2.11.0
+
+### Minor Changes
+
+- Rename `future.unstable_fogOfWar` to `future.unstable_lazyRouteDiscovery` for clarity ([#9763](https://github.com/remix-run/remix/pull/9763))
+
+### Patch Changes
+
+- Handle absolute Vite base URLs ([#9700](https://github.com/remix-run/remix/pull/9700))
+- Updated dependencies:
+  - `@remix-run/node@2.11.0`
+  - `@remix-run/server-runtime@2.11.0`
+
+## 2.10.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.10.3`
+  - `@remix-run/server-runtime@2.10.3`
+
+## 2.10.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.2`
+  - `@remix-run/node@2.10.2`
+
+## 2.10.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.10.1`
+  - `@remix-run/server-runtime@2.10.1`
+
+## 2.10.0
+
+### Patch Changes
+
+- Upgrade `express` dependency to `^4.19.2` ([#9184](https://github.com/remix-run/remix/pull/9184))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.0`
+  - `@remix-run/node@2.10.0`
+
 ## 2.9.2
 
 ### Patch Changes

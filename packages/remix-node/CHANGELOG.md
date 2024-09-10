@@ -1,5 +1,99 @@
 # `@remix-run/node`
 
+## 2.12.0
+
+### Patch Changes
+
+- Single Fetch: Improved typesafety ([#9893](https://github.com/remix-run/remix/pull/9893))
+
+  If you were already using previously released unstable single-fetch types:
+
+  - Remove `"@remix-run/react/future/single-fetch.d.ts"` override from `tsconfig.json` > `compilerOptions` > `types`
+  - Remove `defineLoader`, `defineAction`, `defineClientLoader`, `defineClientAction` helpers from your route modules
+  - Replace `UIMatch_SingleFetch` type helper with `UIMatch`
+  - Replace `MetaArgs_SingleFetch` type helper with `MetaArgs`
+
+  Then you are ready for the new typesafety setup:
+
+  ```ts
+  // vite.config.ts
+
+  declare module "@remix-run/server-runtime" {
+    interface Future {
+      unstable_singleFetch: true; // 👈 enable _types_ for single-fetch
+    }
+  }
+
+  export default defineConfig({
+    plugins: [
+      remix({
+        future: {
+          unstable_singleFetch: true, // 👈 enable single-fetch
+        },
+      }),
+    ],
+  });
+  ```
+
+  For more information, see [Guides > Single Fetch](https://remix.run/docs/en/dev/guides/single-fetch) in our docs.
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.12.0`
+
+## 2.11.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.2`
+
+## 2.11.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.1`
+
+## 2.11.0
+
+### Minor Changes
+
+- Single Fetch: Add a new `unstable_data()` API as a replacement for `json`/`defer` when custom `status`/`headers` are needed ([#9769](https://github.com/remix-run/remix/pull/9769))
+- Add a new `replace(url, init?)` alternative to `redirect(url, init?)` that performs a `history.replaceState` instead of a `history.pushState` on client-side navigation redirects ([#9764](https://github.com/remix-run/remix/pull/9764))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.0`
+
+## 2.10.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.3`
+
+## 2.10.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.2`
+
+## 2.10.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.1`
+
+## 2.10.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.0`
+
 ## 2.9.2
 
 ### Patch Changes

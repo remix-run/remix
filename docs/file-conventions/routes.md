@@ -21,8 +21,8 @@ Large applications with hundred or thousands of routes will _always_ be a bit ch
 So, before we dive into the details of the Remix default convention, here's some community alternatives you can check out if you decide that our default is not your cup of tea.
 
 - [`remix-flat-routes`][flat_routes] - The Remix default is basically a simplified version of this package. The author has continued to iterate on and evolve this package so if you generally like the "flat routes" idea but want a bit more power (including a hybrid approach of files and folders), definitely check this one out.
-- [`remix-custom-routes`][custom_routes] - If you want even more customization, this package lets you define that types of files should be treated as routes. This let's you go beyond simply flat/nested and do something such as _"any file with an extension of `.route.tsx` is a route"_.
-- [`remix-json-routes`][json_routes] - If you just want to specify your routes in a config, this is your jam - just give Remix a JSON object with your routes and skip the flat/nested concept entirely. There's even a JSX option in there too.
+- [`remix-custom-routes`][custom_routes] - If you want even more customization, this package lets you define that types of files should be treated as routes. This lets you go beyond the simple flat/nested concept and do something such as _"any file with an extension of `.route.tsx` is a route"_.
+- [`remix-json-routes`][json_routes] - If you just want to specify your routes via a config file, this is your jam - just provide Remix a JSON object with your routes and skip the flat/nested concept entirely. There's even a JSX option in there too.
 
 ## Root Route
 
@@ -246,7 +246,7 @@ Sometimes you want to share a layout with a group of routes without adding any p
 | `/`                        | `app/routes/_index.tsx`         | `app/root.tsx`            |
 | `/login`                   | `app/routes/_auth.login.tsx`    | `app/routes/_auth.tsx`    |
 | `/register`                | `app/routes/_auth.register.tsx` | `app/routes/_auth.tsx`    |
-| `/concerts`                | `app/routes/concerts.tsx`       | `app/routes/concerts.tsx` |
+| `/concerts`                | `app/routes/concerts.tsx`       | `app/root.tsx`            |
 | `/concerts/salt-lake-city` | `app/routes/concerts.$city.tsx` | `app/routes/concerts.tsx` |
 
 Think of the `_leading` underscore as a blanket you're pulling over the filename, hiding the filename from the URL.
