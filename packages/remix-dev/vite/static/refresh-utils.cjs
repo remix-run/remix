@@ -13,7 +13,7 @@ function debounce(fn, delay) {
 const enqueueUpdate = debounce(async () => {
   let manifest;
   if (routeUpdates.size > 0) {
-    manifest = JSON.parse(JSON.stringify(__remixManifest));
+    manifest = structuredClone(__remixManifest);
 
     for (let route of routeUpdates.values()) {
       manifest.routes[route.id] = route;
