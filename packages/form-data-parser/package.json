@@ -21,7 +21,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@mjackson/multipart-parser": "^0.6.1"
+    "@mjackson/multipart-parser": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^22.4.1"
