@@ -41,5 +41,8 @@
     "parser",
     "stream",
     "http"
-  ]
+  ],
+  "nx": {
+    "name": "multipart-parser"
+  }
 }
