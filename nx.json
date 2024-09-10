@@ -16,7 +16,8 @@
     "versionPlans": true,
     "version": {
       "generatorOptions": {
-        "updateDependents": "auto"
+        "updateDependents": "auto",
+        "preserveLocalDependencyProtocols": true
       }
     },
     "changelog": {
