@@ -1,12 +1,12 @@
 import type {
   StaticHandler,
-  unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
-  unstable_DataStrategyFunction as DataStrategyFunction,
+  DataStrategyFunctionArgs,
+  DataStrategyFunction,
   UNSAFE_DataWithResponseInit as DataWithResponseInit,
 } from "@remix-run/router";
 import {
   isRouteErrorResponse,
-  unstable_data as routerData,
+  data as routerData,
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
   stripBasename,
 } from "@remix-run/router";
@@ -102,7 +102,7 @@ export async function singleFetchAction(
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       skipLoaderErrorBubbling: true,
-      unstable_dataStrategy: getSingleFetchDataStrategy({
+      dataStrategy: getSingleFetchDataStrategy({
         isActionDataRequest: true,
       }),
     });
@@ -190,7 +190,7 @@ export async function singleFetchLoaders(
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       skipLoaderErrorBubbling: true,
-      unstable_dataStrategy: getSingleFetchDataStrategy({
+      dataStrategy: getSingleFetchDataStrategy({
         loadRouteIds,
       }),
     });
