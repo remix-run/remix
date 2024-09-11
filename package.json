@@ -2,19 +2,12 @@
   "name": "remix-the-web",
   "private": true,
   "packageManager": "pnpm@9.9.0",
-  "type": "module",
   "devDependencies": {
-    "@nx/js": "19.7.2",
     "@swc-node/register": "^1.10.9",
-    "@swc/core": "~1.5.7",
-    "@swc/helpers": "~0.5.11",
-    "nx": "19.7.2",
     "prettier": "^3.3.3",
     "typescript": "^5.5.4"
   },
   "scripts": {
-    "clean": "git clean -fdX .",
-    "release": "node scripts/release.js",
-    "test": "nx run-many --projects='packages/*' --target=test"
+    "clean": "git clean -fdX ."
   }
 }

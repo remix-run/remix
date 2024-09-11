@@ -36,8 +36,5 @@
     "response",
     "fetch",
     "web"
-  ],
-  "nx": {
-    "name": "node-fetch-server"
-  }
+  ]
 }
