@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Change JSON.parse(JSON.stringify to structuredClone native function
+Use `structuredClone` instead of `JSON.parse(JSON.stringify())`
