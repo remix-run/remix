@@ -1,6 +1,6 @@
 {
   "name": "create-remix",
-  "version": "2.12.0",
+  "version": "0.0.0-experimental-ee1a1f9db",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
   "bugs": {
