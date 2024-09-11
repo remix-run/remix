@@ -1,16 +1,11 @@
-## 3.1.0 (2024-09-04)
+## HEAD
 
+- Export `OpenFileOptions` from `lazy-file/fs`
 
-### 🚀 Features
+## v3.1.0 (2024-09-04)
 
-- Add writeFile method to lazy-file/fs and rename getFile => openFile ([f7233a8](https://github.com/mjackson/remix-the-web/commit/f7233a8))
-
-- Accept an open file descriptor or file handle in `writeFile(fd)` ([d5087ba](https://github.com/mjackson/remix-the-web/commit/d5087ba))
-
-
-### ❤️  Thank You
-
-- Michael Jackson @mjackson
+- Add writeFile method to `lazy-file/fs` and rename `getFile` => `openFile`
+- Accept an open file descriptor or file handle in `writeFile(fd)`
 
 ## v3.0.0 (2024-08-25)
 

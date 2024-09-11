@@ -4,7 +4,7 @@ import { lookup } from 'mrmime';
 
 import { LazyContent, LazyFile } from './lib/lazy-file.js';
 
-export interface GetFileOptions {
+export interface OpenFileOptions {
   /**
    * Overrides the name of the file. Default is the name of the file on disk.
    */
@@ -28,7 +28,7 @@ export interface GetFileOptions {
  * @param options Options to override the file's metadata
  * @returns A `File` object
  */
-export function openFile(filename: string, options?: GetFileOptions): File {
+export function openFile(filename: string, options?: OpenFileOptions): File {
   let stats = fs.statSync(filename);
 
   if (!stats.isFile()) {
@@ -65,7 +65,7 @@ function streamFile(filename: string, start = 0, end = Infinity): ReadableStream
 }
 
 // Preserve backwards compat with v3.0
-export { openFile as getFile };
+export { type OpenFileOptions as GetFileOptions, openFile as getFile };
 
 /**
  * Writes a `File` to the local filesytem and resolves when the stream is finished.
