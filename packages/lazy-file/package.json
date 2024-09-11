@@ -36,8 +36,5 @@
     "file",
     "buffer",
     "blob"
-  ],
-  "nx": {
-    "name": "lazy-file"
-  }
+  ]
 }

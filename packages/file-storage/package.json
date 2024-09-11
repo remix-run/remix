@@ -38,8 +38,5 @@
     "storage",
     "stream",
     "fs"
-  ],
-  "nx": {
-    "name": "file-storage"
-  }
+  ]
 }

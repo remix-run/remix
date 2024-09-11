@@ -36,8 +36,5 @@
     "FormData",
     "multipart",
     "parser"
-  ],
-  "nx": {
-    "name": "form-data-parser"
-  }
+  ]
 }
