@@ -68,6 +68,10 @@ let handler: FetchHandler = (request, client) => {
 };
 ```
 
+## Related Packages
+
+- [`fetch-proxy`](https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+
 ## Benchmark
 
 A basic "hello world" benchmark shows `node-fetch-server` introduces considerable overhead on top of a vanilla `node:http` server. However, it is still able to serve more requests per second (and has higher overall throughput) than Express v4, so the slowdown should be acceptable for most applications.
