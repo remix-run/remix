@@ -185,24 +185,24 @@ function SomeComp() {
 
 This state is inaccessible on the server as it is implemented on top of [`history.state`][history-state].
 
-## `unstable_viewTransition`
+## `viewTransition`
 
-The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in [`document.startViewTransition()`][document-start-view-transition]:
+The `viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in [`document.startViewTransition()`][document-start-view-transition]:
 
 ```jsx
-<Link to={to} unstable_viewTransition>
+<Link to={to} viewTransition>
   Click me
 </Link>
 ```
 
-If you need to apply specific styles for this view transition, you will also need to leverage the [`unstable_useViewTransitionState()`][use-view-transition-state]:
+If you need to apply specific styles for this view transition, you will also need to leverage the [`useViewTransitionState()`][use-view-transition-state]:
 
 ```jsx
 function ImageLink(to) {
   const isTransitioning =
-    unstable_useViewTransitionState(to);
+    useViewTransitionState(to);
   return (
-    <Link to={to} unstable_viewTransition>
+    <Link to={to} viewTransition>
       <p
         style={{
           viewTransitionName: isTransitioning
