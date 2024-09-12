@@ -30,7 +30,8 @@
   "scripts": {
     "build": "tsc --outDir dist --project tsconfig.lib.json",
     "test": "node --import @swc-node/register/esm-register --test ./src/**/*.spec.ts",
-    "prepare": "pnpm run build"
+    "prepare": "pnpm run build",
+    "release": "node --import @swc-node/register/esm-register ../../scripts/release.ts"
   },
   "keywords": [
     "file",
