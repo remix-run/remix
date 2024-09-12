@@ -55,9 +55,9 @@ export {
   useRoutes,
   useSearchParams,
   useSubmit,
+  useViewTransitionState,
   useBlocker,
   unstable_usePrompt,
-  unstable_useViewTransitionState,
 } from "react-router-dom";
 export {
   // For use in clientLoader/clientAction
