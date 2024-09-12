@@ -3,11 +3,11 @@ import { describe, it } from 'node:test';
 
 import { FetchProxyOptions, createFetchProxy } from './fetch-proxy.js';
 
-async function runProxy<ResponseType extends Response>(
+async function runProxy(
   request: Request,
   target: string | URL,
   options?: FetchProxyOptions,
-): Promise<{ request: Request; response: ResponseType }> {
+): Promise<{ request: Request; response: Response }> {
   let outgoingRequest: Request;
   let proxy = createFetchProxy(target, {
     ...options,
@@ -17,7 +17,7 @@ async function runProxy<ResponseType extends Response>(
     },
   });
 
-  let proxyResponse = (await proxy(request)) as ResponseType;
+  let proxyResponse = await proxy(request);
 
   assert.ok(outgoingRequest!);
 
