@@ -46,6 +46,7 @@ declare global {
   var __remixRouteModules: RouteModules;
   var __remixManifest: AssetsManifest;
   var __remixRevalidation: number | undefined;
+  var __remixHdrActive: boolean;
   var __remixClearCriticalCss: (() => void) | undefined;
   var $RefreshRuntime$: {
     performReactRefresh: () => void;
@@ -305,7 +306,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       unstable_dataStrategy: window.__remixContext.future.unstable_singleFetch
         ? getSingleFetchDataStrategy(
             window.__remixManifest,
-            window.__remixRouteModules
+            window.__remixRouteModules,
+            () => router
           )
         : undefined,
       unstable_patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(

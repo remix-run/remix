@@ -8,6 +8,7 @@ export type {
   ServerEntryModule,
 } from "./build";
 
+export type { Future } from "./future";
 export type { UploadHandlerPart, UploadHandler } from "./formData";
 export type {
   MemoryUploadHandlerOptions,

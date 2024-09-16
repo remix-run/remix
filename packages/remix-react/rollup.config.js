@@ -51,7 +51,6 @@ module.exports = function rollup() {
           { src: "LICENSE.md", dest: [outputDir, sourceDir] },
           { src: `${sourceDir}/package.json`, dest: outputDir },
           { src: `${sourceDir}/README.md`, dest: outputDir },
-          { src: `${sourceDir}/future`, dest: outputDir },
         ],
       }),
       copyToPlaygrounds(),

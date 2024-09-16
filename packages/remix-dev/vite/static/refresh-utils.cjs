@@ -58,7 +58,13 @@ const enqueueUpdate = debounce(async () => {
     window.__remixRouteModuleUpdates.clear();
   }
 
-  await revalidate();
+  try {
+    window.__remixHdrActive = true;
+    await revalidate();
+  } finally {
+    window.__remixHdrActive = false;
+  }
+
   if (manifest) {
     Object.assign(window.__remixManifest, manifest);
   }

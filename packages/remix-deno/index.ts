@@ -28,8 +28,6 @@ export {
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
   unstable_data,
-  unstable_defineAction,
-  unstable_defineLoader,
   unstable_parseMultipartFormData,
 } from "@remix-run/server-runtime";
 
@@ -45,6 +43,7 @@ export type {
   DataFunctionArgs,
   EntryContext,
   ErrorResponse,
+  Future,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HandleErrorFunction,
