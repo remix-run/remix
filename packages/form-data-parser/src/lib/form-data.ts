@@ -66,7 +66,7 @@ export class FileUpload implements File {
  * A function used for handling file uploads.
  */
 export interface FileUploadHandler {
-  (file: FileUpload): void | null | File | Promise<void | null | File>;
+  (file: FileUpload): void | null | string | File | Promise<void | null | string | File>;
 }
 
 async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
