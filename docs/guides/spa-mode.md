@@ -86,7 +86,7 @@ To deploy, you can serve your app from any HTTP server of your choosing. The ser
 For a simple example, you could use [sirv-cli][sirv-cli]:
 
 ```shellscript
-npx sirv-cli build/client/ --single
+npx sirv-cli build/client/ --host 0.0.0.0 --port 3000 --single
 ```
 
 Or, if you are serving via an `express` server (although at that point you may want to consider just running Remix in SSR mode 😉):
