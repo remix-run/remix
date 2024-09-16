@@ -17,15 +17,36 @@ const cssFileRegExp =
   /\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)(?:$|\?)/;
 // https://github.com/vitejs/vite/blob/d6bde8b03d433778aaed62afc2be0630c8131908/packages/vite/src/node/plugins/css.ts#L160
 const cssModulesRegExp = new RegExp(`\\.module${cssFileRegExp.source}`);
+
+const isCssFile = (file: string) => cssFileRegExp.test(file);
+export const isCssModulesFile = (file: string) => cssModulesRegExp.test(file);
+
 // https://vitejs.dev/guide/features#disabling-css-injection-into-the-page
 // https://github.com/vitejs/vite/blob/561b940f6f963fbb78058a6e23b4adad53a2edb9/packages/vite/src/node/plugins/css.ts#L194
 // https://vitejs.dev/guide/features#static-assets
 // https://github.com/vitejs/vite/blob/561b940f6f963fbb78058a6e23b4adad53a2edb9/packages/vite/src/node/utils.ts#L309-L310
-const cssUrlWithoutInjectionRegExp = /[?&]inline\b|([?&])(url|raw)(?:&|$)/;
+const cssUrlParamsWithoutSideEffects = ["url", "inline", "raw", "inline-css"];
+export const isCssUrlWithoutSideEffects = (url: string) => {
+  let queryString = url.split("?")[1];
 
-const isCssFile = (file: string) => cssFileRegExp.test(file);
-export const isCssModulesFile = (file: string) => cssModulesRegExp.test(file);
-export const isCssUrlWithoutInjection = (url: string) => cssUrlWithoutInjectionRegExp.test(url);
+  if (!queryString) {
+    return false;
+  }
+
+  let params = new URLSearchParams(queryString);
+  for (let paramWithoutSideEffects of cssUrlParamsWithoutSideEffects) {
+    if (
+      // Parameter is blank and not explicitly set, i.e. "?url", not "?url="
+      params.get(paramWithoutSideEffects) === "" &&
+      !url.includes(`?${paramWithoutSideEffects}=`) &&
+      !url.includes(`&${paramWithoutSideEffects}=`)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 const getStylesForFiles = async ({
   viteDevServer,
@@ -77,7 +98,7 @@ const getStylesForFiles = async ({
     if (
       dep.file &&
       isCssFile(dep.file) &&
-      !isCssUrlWithoutInjection(dep.url) // Ignore styles that resolved as URLs, inline or raw. These shouldn't get injected.
+      !isCssUrlWithoutSideEffects(dep.url) // Ignore styles that resolved as URLs, inline or raw. These shouldn't get injected.
     ) {
       try {
         let css = isCssModulesFile(dep.file)
