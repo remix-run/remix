@@ -82,10 +82,7 @@ There are a handful of breaking changes introduced with Single Fetch - some of w
 
 - **[New streaming Data format][streaming-format]**: Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - **No more auto-serialization**: Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
-- **Updates to type inference**: To get the most accurate type inference, you should do two things:
-  - Add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array
-  - Begin using `unstable_defineLoader`/`unstable_defineAction` in your routes
-    - This can be done incrementally - you should have _mostly_ accurate type inference in your current state
+- [**Updates to type inference**][type-inference-section]: To get the most accurate type inference, you should [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`
 - [**Default revalidation behavior changes to opt-out on GET navigations**][revalidation]: Default revalidation behavior on normal navigations changes from opt-in to opt-out and your server loaders will re-run by default
 - [**Opt-in `action` revalidation**][action-revalidation]: Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 
@@ -93,15 +90,17 @@ There are a handful of breaking changes introduced with Single Fetch - some of w
 
 With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format.
 
-<docs-info>In order to get proper type inference, you first need to add `@remix-run/react/future/single-fetch.d.ts` to the end of your `tsconfig.json`'s `compilerOptions.types` array. You can read more about this in the [Type Inference section][type-inference-section].</docs-info>
+<docs-info>In order to get proper type inference, you need to [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`. You can read more about this in the [Type Inference section][type-inference-section].</docs-info>
 
 With Single Fetch you can return the following data types from your loader: `BigInt`, `Date`, `Error`, `Map`, `Promise`, `RegExp`, `Set`, `Symbol`, and `URL`.
 
 ```tsx
 // routes/blog.$slug.tsx
-import { unstable_defineLoader as defineLoader } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 
-export const loader = defineLoader(async ({ params }) => {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const { slug } = params;
 
   const comments = fetchComments(slug);
@@ -112,7 +111,7 @@ export const loader = defineLoader(async ({ params }) => {
     published: blogData.date, // <- Date
     comments, // <- Promise
   };
-});
+}
 
 export default function BlogPost() {
   const blogData = useLoaderData<typeof loader>();
@@ -359,8 +358,6 @@ The Remix v2 behavior with Single Fetch enabled is as follows:
     });
   }
   ```
-
-Note: It is _not_ recommended to use `defineLoader`/`defineAction` for externally-accessed resource routes that need to return specific `Response` instances. It's best to just stick with `loader`/`LoaderFunctionArgs` for these cases.
 
 ## Additional Details
 
