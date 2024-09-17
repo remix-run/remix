@@ -96,9 +96,11 @@ With Single Fetch you can return the following data types from your loader: `Big
 
 ```tsx
 // routes/blog.$slug.tsx
-import { unstable_defineLoader as defineLoader } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 
-export const loader = defineLoader(async ({ params }) => {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const { slug } = params;
 
   const comments = fetchComments(slug);
@@ -109,7 +111,7 @@ export const loader = defineLoader(async ({ params }) => {
     published: blogData.date, // <- Date
     comments, // <- Promise
   };
-});
+}
 
 export default function BlogPost() {
   const blogData = useLoaderData<typeof loader>();
@@ -356,8 +358,6 @@ The Remix v2 behavior with Single Fetch enabled is as follows:
     });
   }
   ```
-
-Note: It is _not_ recommended to use `defineLoader`/`defineAction` for externally-accessed resource routes that need to return specific `Response` instances. It's best to just stick with `loader`/`LoaderFunctionArgs` for these cases.
 
 ## Additional Details
 
