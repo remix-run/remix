@@ -43,7 +43,7 @@ export function fromNodeRequest(
     nodeReq.originalUrl,
     "Expected `nodeReq.originalUrl` to be defined"
   );
-  let url = new URL(nodeReq.originalUrl, origin);
+  let url = new URL(`${origin}${nodeReq.originalUrl}`);
   let init: RequestInit = {
     method: nodeReq.method,
     headers: fromNodeHeaders(nodeReq.headers),
