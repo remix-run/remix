@@ -218,6 +218,27 @@ Date: YYYY-MM-DD
 
 -->
 
+## v2.12.1
+
+Date: 2024-09-19
+
+### Patch Changes
+
+- `@remix-run/dev` - Properly abort `request.signal` during `vite dev` when the node response is closed ([#9976](https://github.com/remix-run/remix/pull/9976))
+- `@remix-run/dev` - CSS imports with `?inline`, `?inline-css` and `?raw` are no longer incorrectly injected during SSR in development ([#9910](https://github.com/remix-run/remix/pull/9910))
+- `@remix-run/server-runtime`: Single Fetch: Fix types when `loader`, `action`, `clientLoader`, or `clientAction` return a mixture of bare objects, `json(...)`, `defer(...)`, and `unstable_data(...)`. ([#9999](https://github.com/remix-run/remix/pull/9999))
+- `@remix-run/node`/`@remix-run/cloudflare`/`@remix-run/deno` - Single Fetch: Re-export `interface Future` through runtime packages so that `pnpm` doesn't complain about `@remix-run/server-runtime` not being a dependency ([#9982](https://github.com/remix-run/remix/pull/9982))
+
+### Changes by Package
+
+- [`@remix-run/cloudflare`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-cloudflare/CHANGELOG.md#2XY)
+- [`@remix-run/deno`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-deno/CHANGELOG.md#2XY)
+- [`@remix-run/dev`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-dev/CHANGELOG.md#2XY)
+- [`@remix-run/node`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-node/CHANGELOG.md#2XY)
+- [`@remix-run/server-runtime`](https://github.com/remix-run/remix/blob/remix%402.X.Y/packages/remix-server-runtime/CHANGELOG.md#2XY)
+
+**Full Changelog**: [`v2.12.0...v2.12.1`](https://github.com/remix-run/remix/compare/remix@2.12.0...remix@2.12.1)
+
 ## v2.12.0
 
 Date: 2024-09-09
