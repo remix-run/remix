@@ -1,5 +1,12 @@
 # `@remix-run/server-runtime`
 
+## 2.12.1-pre.0
+
+### Patch Changes
+
+- Fix single-fetch types when `loader`, `action`, `clientLoader`, or `clientAction` return a mixture of bare objects, `json(...)`, `defer(...)`, and `unstable_data(...)`. ([#9999](https://github.com/remix-run/remix/pull/9999))
+- Single Fetch: Re-export `interface Future` through `@remix-run/node`/`@remix-run/cloudflare`/`@remix-run/deno` packages so that `pnpm` doesn't complain about `@remix-run/server-runtime` not being a dependency ([#9982](https://github.com/remix-run/remix/pull/9982))
+
 ## 2.12.0
 
 ### Patch Changes
