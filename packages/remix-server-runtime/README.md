@@ -4,12 +4,14 @@
 
 - [Node](https://nodejs.org/en/)
 - [Cloudflare](https://developers.cloudflare.com/workers/learning/how-workers-works/)
+- [Netlify Edge Functions](https://docs.netlify.com/edge-functions/overview/)
 - [Deno](https://deno.land/) (Experimental 🧪)
 
 Support for each runtime is provided by a corresponding Remix package:
 
 - [`@remix-run/node`](https://github.com/remix-run/remix/tree/main/packages/remix-node)
 - [`@remix-run/cloudflare`](https://github.com/remix-run/remix/tree/main/packages/remix-cloudflare)
+- [`@netlify/remix-runtime`](https://github.com/netlify/remix-compute/tree/main/packages/remix-runtime)
 - [`@remix-run/deno`](https://github.com/remix-run/remix/tree/main/packages/remix-deno)
 
 This package defines a "Remix server runtime interface" that each runtime package must conform to.
