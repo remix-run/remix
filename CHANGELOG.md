@@ -231,6 +231,7 @@ Date: 2024-09-19
 - `@remix-run/dev` - CSS imports with `?inline`, `?inline-css` and `?raw` are no longer incorrectly injected during SSR in development ([#9910](https://github.com/remix-run/remix/pull/9910))
 - `@remix-run/server-runtime`: Single Fetch: Fix types when `loader`, `action`, `clientLoader`, or `clientAction` return a mixture of bare objects, `json(...)`, `defer(...)`, and `unstable_data(...)`. ([#9999](https://github.com/remix-run/remix/pull/9999))
 - `@remix-run/node`/`@remix-run/cloudflare`/`@remix-run/deno` - Single Fetch: Re-export `interface Future` through runtime packages so that `pnpm` doesn't complain about `@remix-run/server-runtime` not being a dependency ([#9982](https://github.com/remix-run/remix/pull/9982))
+  - If you've already opted into Single Fetch, you can change your [Single Fetch type augmentation](https://remix.run/docs/en/release-next/guides/single-fetch#enable-single-fetch-types) in `vite.config.ts` to augment `@remix-run/node` (or `cloudflare`/`deno`) instead of `@remix-run/server-runtime`
 
 ### Changes by Package
 
