@@ -1,12 +1,12 @@
 # `@remix-run/serve`
 
-## 2.12.1-pre.0
+## 2.12.1
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/node@2.12.1-pre.0`
-  - `@remix-run/express@2.12.1-pre.0`
+  - `@remix-run/node@2.12.1`
+  - `@remix-run/express@2.12.1`
 
 ## 2.12.0
 
