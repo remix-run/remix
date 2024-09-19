@@ -303,14 +303,14 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       },
       hydrationData,
       mapRouteProperties,
-      unstable_dataStrategy: window.__remixContext.future.unstable_singleFetch
+      dataStrategy: window.__remixContext.future.unstable_singleFetch
         ? getSingleFetchDataStrategy(
             window.__remixManifest,
             window.__remixRouteModules,
             () => router
           )
         : undefined,
-      unstable_patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(
+      patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(
         window.__remixManifest,
         window.__remixRouteModules,
         window.__remixContext.future,

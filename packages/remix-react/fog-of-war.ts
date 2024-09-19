@@ -1,7 +1,7 @@
 import type { Router } from "@remix-run/router";
 import { matchRoutes } from "@remix-run/router";
 import * as React from "react";
-import type { unstable_PatchRoutesOnNavigationFunction } from "react-router";
+import type { PatchRoutesOnNavigationFunction } from "react-router";
 
 import type { AssetsManifest, FutureConfig } from "./entry";
 import type { RouteModules } from "./routeModules";
@@ -70,7 +70,7 @@ export function getPatchRoutesOnNavigationFunction(
   future: FutureConfig,
   isSpaMode: boolean,
   basename: string | undefined
-): unstable_PatchRoutesOnNavigationFunction | undefined {
+): PatchRoutesOnNavigationFunction | undefined {
   if (!isFogOfWarEnabled(future, isSpaMode)) {
     return undefined;
   }
