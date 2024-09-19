@@ -4,7 +4,10 @@
 
 ### Patch Changes
 
-- Single Fetch: Re-export `interface Future` through `@remix-run/node`/`@remix-run/cloudflare`/`@remix-run/deno` packages so that `pnpm` doesn't complain about `@remix-run/server-runtime` not being a dependency ([#9982](https://github.com/remix-run/remix/pull/9982))
+- Single Fetch: Re-export `interface Future` through
+  `@remix-run/node`/`@remix-run/cloudflare`/`@remix-run/deno` packages so that
+  `pnpm` doesn't complain about `@remix-run/server-runtime` not being a
+  dependency ([#9982](https://github.com/remix-run/remix/pull/9982))
 - Updated dependencies:
   - `@remix-run/server-runtime@2.12.1`
 

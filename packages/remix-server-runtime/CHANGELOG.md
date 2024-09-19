@@ -14,6 +14,7 @@
 - Single Fetch: Do not try to encode a `turbo-stream` body into 304 responses ([#9941](https://github.com/remix-run/remix/pull/9941))
 
 - Single Fetch: fix revalidation behavior bugs ([#9938](https://github.com/remix-run/remix/pull/9938))
+
   - With Single Fetch, existing routes revalidate by default
   - This means requests do not need special query params for granular route revalidations out of the box - i.e., `GET /a/b/c.data`
   - There are two conditions that will trigger granular revalidation:
