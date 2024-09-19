@@ -1,5 +1,15 @@
 # `@remix-run/dev`
 
+## 2.12.1
+
+### Patch Changes
+
+- Properly abort `request.signal` during `vite dev` when the node response is closed ([#9976](https://github.com/remix-run/remix/pull/9976))
+- CSS imports with `?inline`, `?inline-css` and `?raw` are no longer incorrectly injected during SSR in development ([#9910](https://github.com/remix-run/remix/pull/9910))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.12.1`
+  - `@remix-run/node@2.12.1`
+
 ## 2.12.0
 
 ### Minor Changes
