@@ -66,6 +66,21 @@ export const meta: MetaFunction = () => {
 };
 ```
 
+The code adds a [`<link>` tag][link-element] tag for a favicon.
+
+```tsx
+export const meta: MetaFunction = () => {
+  return [
+    {
+      tagName: 'link',
+      rel: "icon",
+      href: "/favicon.png",
+      type: "image/png",
+    },
+  ];
+};
+```
+
 ## `meta` Function Parameters
 
 ### `location`
