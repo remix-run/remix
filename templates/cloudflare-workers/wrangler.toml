@@ -1,12 +1,14 @@
+#:schema node_modules/wrangler/config-schema.json
 name = "remix-cloudflare-workers-template"
 
 main = "./server.ts"
 workers_dev = true
 # https://developers.cloudflare.com/workers/platform/compatibility-dates
-compatibility_date = "2023-04-20"
+compatibility_date = "2024-09-26"
 
-[site]
-bucket = "./build/client"
+[assets]
+# https://developers.cloudflare.com/workers/static-assets/binding/
+directory = "./build/client"
 
 [build]
 command = "npm run build"

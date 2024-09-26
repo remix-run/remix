@@ -4,10 +4,13 @@ import {
   cloudflareDevProxyVitePlugin,
 } from "@remix-run/dev";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { getLoadContext } from "./load-context";
 
 export default defineConfig({
   plugins: [
-    cloudflareDevProxyVitePlugin(),
+    cloudflareDevProxyVitePlugin({
+      getLoadContext,
+    }),
     remix({
       future: {
         v3_fetcherPersist: true,
