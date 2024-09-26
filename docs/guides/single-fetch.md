@@ -152,7 +152,7 @@ You can do this in any file covered by your `tsconfig.json` > `include`.
 We recommend you do this in your `vite.config.ts` to keep it colocated with the `future.unstable_singleFetch` future flag in the Remix plugin:
 
 ```ts
-declare module "@remix-run/node" {
+declare module "@remix-run/server-runtime" {
   // or cloudflare, deno, etc.
   interface Future {
     unstable_singleFetch: true;
