@@ -118,7 +118,7 @@
     "remark-gfm": "3.0.1",
     "remark-parse": "^10.0.1",
     "remark-stringify": "^10.0.2",
-    "rollup": "^2.36.1",
+    "rollup": "^2.79.2",
     "rollup-plugin-copy": "^3.3.0",
     "semver": "^7.3.7",
     "simple-git": "^3.16.0",
