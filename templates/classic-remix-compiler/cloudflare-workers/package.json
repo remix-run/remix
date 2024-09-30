@@ -11,7 +11,6 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@cloudflare/kv-asset-handler": "^0.1.3",
     "@remix-run/cloudflare": "*",
     "@remix-run/css-bundle": "*",
     "@remix-run/react": "*",
@@ -20,7 +19,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20230518.0",
+    "@cloudflare/workers-types": "^4.20240925.0",
     "@remix-run/dev": "*",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
@@ -32,8 +31,9 @@
     "eslint-plugin-jsx-a11y": "^6.7.1",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "tailwindcss": "^3.4.4",
     "typescript": "^5.1.6",
-    "wrangler": "^3.24.0"
+    "wrangler": "3.78.12"
   },
   "engines": {
     "node": ">=18.0.0"
