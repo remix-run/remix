@@ -634,11 +634,11 @@ export default function EditContact() {
       <p>
         <span>Name</span>
         <input
-          defaultValue={contact.first}
           aria-label="First name"
+          defaultValue={contact.first}
           name="first"
-          type="text"
           placeholder="First"
+          type="text"
         />
         <input
           aria-label="Last name"
@@ -732,11 +732,11 @@ Open up `contacts.$contactId_.edit.tsx` and look at the `form` elements. Notice 
 
 ```tsx filename=app/routes/contacts.$contactId_.edit.tsx lines=[4]
 <input
-  defaultValue={contact.first}
   aria-label="First name"
+  defaultValue={contact.first}
   name="first"
-  type="text"
   placeholder="First"
+  type="text"
 />
 ```
 
