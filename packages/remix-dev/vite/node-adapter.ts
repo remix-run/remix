@@ -46,10 +46,7 @@ export function fromNodeRequest(
   );
   let url = new URL(nodeReq.originalUrl, origin);
 
-  // Abort action/loaders once we can no longer write a response
-  let controller = new AbortController();
-  nodeRes.on("close", () => controller.abort());
-
+  let controller: AbortController | null = new AbortController();
   let init: RequestInit = {
     method: nodeReq.method,
     headers: fromNodeHeaders(nodeReq.headers),
@@ -60,6 +57,13 @@ export function fromNodeRequest(
     init.body = createReadableStreamFromReadable(nodeReq);
     (init as { duplex: "half" }).duplex = "half";
   }
+
+  // Abort action/loaders once we can no longer write a response iff we have
+  // not yet sent a response (i.e., `close` without `finish`)
+  // `finish` -> done rendering the response
+  // `close` -> response can no longer be written to
+  nodeRes.on("finish", () => (controller = null));
+  nodeRes.on("close", () => controller?.abort());
 
   return new Request(url.href, init);
 }
