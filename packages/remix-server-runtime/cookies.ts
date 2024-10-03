@@ -109,17 +109,30 @@ export const createCookieFactory =
       },
       async parse(cookieHeader, parseOptions) {
         if (!cookieHeader) return null;
+        if (secrets.length > 0 && !!parseOptions?.decode)
+          throw new Error("unsign is not supported with decode option");
+        let shouldEncode = !parseOptions?.decode;
         let cookies = parse(cookieHeader, { ...options, ...parseOptions });
         return name in cookies
           ? cookies[name] === ""
             ? ""
-            : await decodeCookieValue(unsign, cookies[name], secrets)
+            : await decodeCookieValue(
+                unsign,
+                cookies[name],
+                secrets,
+                shouldEncode
+              )
           : null;
       },
       async serialize(value, serializeOptions) {
+        if (secrets.length > 0 && !!serializeOptions?.encode)
+          throw new Error("sign is not supported with encode option");
+        let shouldEncode = !serializeOptions?.encode;
         return serialize(
           name,
-          value === "" ? "" : await encodeCookieValue(sign, value, secrets),
+          value === ""
+            ? ""
+            : await encodeCookieValue(sign, value, secrets, shouldEncode),
           {
             ...options,
             ...serializeOptions,
@@ -149,9 +162,10 @@ export const isCookie: IsCookieFunction = (object): object is Cookie => {
 async function encodeCookieValue(
   sign: SignFunction,
   value: any,
-  secrets: string[]
+  secrets: string[],
+  shouldEncode: boolean
 ): Promise<string> {
-  let encoded = encodeData(value);
+  let encoded = shouldEncode ? encodeData(value) : value;
 
   if (secrets.length > 0) {
     encoded = await sign(encoded, secrets[0]);
@@ -163,7 +177,8 @@ async function encodeCookieValue(
 async function decodeCookieValue(
   unsign: UnsignFunction,
   value: string,
-  secrets: string[]
+  secrets: string[],
+  shouldDecode: boolean
 ): Promise<any> {
   if (secrets.length > 0) {
     for (let secret of secrets) {
@@ -176,7 +191,7 @@ async function decodeCookieValue(
     return null;
   }
 
-  return decodeData(value);
+  return shouldDecode ? decodeData(value) : value;
 }
 
 function encodeData(value: any): string {
