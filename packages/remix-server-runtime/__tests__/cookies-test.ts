@@ -193,6 +193,38 @@ describe("cookies", () => {
       );
     });
   });
+
+  describe("encode/decode options", () => {
+    it("Will not Base64 encode/decode the cookie if `encode` and `decode` are set to custom functions", async () => {
+      let testValue = { hello: "world" };
+      let cookie = createCookie("my-cookie", {
+        encode: (value) => JSON.stringify(value),
+        decode: (value) => JSON.parse(value),
+      });
+      let setCookie = await cookie.serialize(testValue);
+
+      expect(setCookie).toBe("my-cookie=" + JSON.stringify(testValue));
+    });
+
+    it("Will not allow `encode` and `decode` to be set at the same time as `secrets`", async () => {
+      let secrets = ["foo"];
+      let encode = (value) => JSON.stringify(value);
+
+      expect(() => {
+        createCookie("my-cookie", { secrets, encode });
+      }).toThrowErrorMatchingInlineSnapshot(
+        "sign is not supported with encode option"
+      );
+
+      let decode = (value) => JSON.parse(value);
+
+      expect(() => {
+        createCookie("my-cookie", { secrets, decode });
+      }).toThrowErrorMatchingInlineSnapshot(
+        "unsign is not supported with decode option"
+      );
+    });
+  });
 });
 
 function spyConsole() {
