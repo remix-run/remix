@@ -13,7 +13,7 @@ export type Jsonify<T> =
   IsAny<T> extends true ? any :
 
   // toJSON
-  T extends { toJSON(): infer U } ? (U extends JsonValue ? U : unknown) :
+  T extends { toJSON(): infer U } ? (U extends JsonValue ? U : Jsonify<U>) :
 
   // primitives
   T extends JsonPrimitive ? T :
@@ -49,7 +49,7 @@ export type Jsonify<T> =
 
 // value is always not JSON => true
 // value is always JSON => false
-// value is somtimes JSON, sometimes not JSON => boolean
+// value is sometimes JSON, sometimes not JSON => boolean
 // note: cannot be inlined as logic requires union distribution
 type ValueIsNotJson<T> = T extends NotJson ? true : false;
 
@@ -150,8 +150,15 @@ type _tests = [
   // toJson
   Expect<Equal<Jsonify<{ toJSON(): "stuff" }>, "stuff">>,
   Expect<Equal<Jsonify<Date>, string>>,
-  Expect<Equal<Jsonify<{ toJSON(): undefined }>, unknown>>,
-  Expect<Equal<Jsonify<{ toJSON(): Date }>, unknown>>,
+  Expect<Equal<Jsonify<{ toJSON(): any }>, any>>,
+  Expect<Equal<Jsonify<{ toJSON(): undefined }>, never>>,
+  Expect<Equal<Jsonify<{ toJSON(): Date }>, string>>,
+  Expect<Equal<Jsonify<{ toJSON(): Map<unknown, unknown> }>, EmptyObject>>,
+  Expect<Equal<Jsonify<{ toJSON(): Int8Array}>, Record<string, number>>>,
+  Expect<Equal<Jsonify<{ toJSON(): [1, "two", Date, undefined, false]}>, [1, "two", string, null, false]>>,
+  Expect<Equal<Jsonify<{ toJSON(): [unknown, 1]}>, [unknown, 1]>>,
+  // @ts-expect-error
+  Expect<Equal<Jsonify<{ toJSON(): MyClass}>, {a: string}>>,
   Expect<Equal<Jsonify<BooleanWithToJson>, string>>,
 
 
@@ -164,14 +171,31 @@ type _tests = [
 
   // object
   Expect<Equal<Pretty<Jsonify<{}>>, {}>>,
+  // @ts-expect-error
+  Expect<Equal<Pretty<Jsonify<{a: any}>>, {a: any}>>,
   Expect<Equal<Pretty<Jsonify<{a: string}>>, {a: string}>>,
+  Expect<Equal<Pretty<Jsonify<{a: Date}>>, {a: string}>>,
+  Expect<Equal<Pretty<Jsonify<{a: Map<unknown, unknown>}>>, {a: EmptyObject}>>,
+  Expect<Equal<Pretty<Jsonify<{a: Int8Array}>>, {a: Record<string, number>}>>,
+  Expect<Equal<Pretty<Jsonify<{a: [1, "two", Date, undefined, false]}>>, {a: [1, "two", string, null, false]}>>,
+  Expect<Equal<Pretty<Jsonify<{a: [unknown, 1]}>>, {a: [unknown, 1]}>>,
+  // @ts-expect-error
+  Expect<Equal<Pretty<Jsonify<{a: MyClass}>>, {a: {a: string}}>>,
   Expect<Equal<Pretty<Jsonify<{a: string | undefined}>>, {a?: string}>>,
   Expect<Equal<Pretty<Jsonify<{a?: string | undefined}>>, {a?: string}>>,
+  Expect<Equal<Pretty<Jsonify<{a?: any}>>, {a?: any}>>,
+  Expect<Equal<Pretty<Jsonify<{a?: Date}>>, {a?: string}>>,
+  Expect<Equal<Pretty<Jsonify<{a?: Map<unknown, unknown>}>>, {a?: EmptyObject}>>,
+  Expect<Equal<Pretty<Jsonify<{a?: Int8Array}>>, {a?: Record<string, number>}>>,
+  Expect<Equal<Pretty<Jsonify<{a?: [1, "two", Date, undefined, false]}>>, {a?: [1, "two", string, null, false]}>>,
+  Expect<Equal<Pretty<Jsonify<{a?: [unknown, 1]}>>, {a?: [unknown, 1]}>>,
+  // @ts-expect-error
+  Expect<Equal<Pretty<Jsonify<{a?: MyClass}>>, {a?: {a: string}}>>,
   Expect<Equal<Pretty<Jsonify<{a: string, b: string | undefined, c: undefined}>>, {a: string, b?: string}>>,
   Expect<Equal<Pretty<Jsonify<{a: undefined}>>, {}>>,
   Expect<Equal<Pretty<Jsonify<Record<string, any>>>, Record<string, any>>>,
   Expect<Equal<Pretty<Jsonify<Record<string, number>>>, Record<string, number>>>,
-  Expect<MutualExtends<Jsonify<{payload: Record<string, any>}>, { payload: Record<string, any>}>>,
+  Expect<MutualExtends<Jsonify<{payload: Record<string, any>}>, {payload: Record<string, any>}>>,
   Expect<Equal<Pretty<Jsonify<{
     // Should be kept
     requiredString: string;
