@@ -997,8 +997,8 @@ importers:
         specifier: ^5.1.0
         version: 5.1.6
       ws:
-        specifier: ^7.4.5
-        version: 7.5.9
+        specifier: ^7.5.10
+        version: 7.5.10
     devDependencies:
       '@remix-run/cloudflare':
         specifier: workspace:*
@@ -15204,8 +15204,8 @@ packages:
       imurmurhash: 0.1.4
       signal-exit: 3.0.7
 
-  /ws@7.5.9:
-    resolution: {integrity: sha512-F+P9Jil7UiSKSkppIiD94dN07AwvFixvLIj1Og1Rl9GGMuNipJnV9JzjD6XuqmAeiswGvUmNLjr5cFuXwNS77Q==}
+  /ws@7.5.10:
+    resolution: {integrity: sha512-+dbF1tHwZpXcbOJdVOkzLDxZP1ailvSxM6ZweXTegylPny803bFhA+vqBYw4s31NSAk4S2Qz+AKXK9a4wkdjcQ==}
     engines: {node: '>=8.3.0'}
     peerDependencies:
       bufferutil: ^4.0.1
