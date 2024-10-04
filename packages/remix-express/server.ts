@@ -36,12 +36,14 @@ export function createRequestHandler({
   build,
   getLoadContext,
   mode = process.env.NODE_ENV,
+  devServerHooksKey,
 }: {
   build: ServerBuild | (() => Promise<ServerBuild>);
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
+  devServerHooksKey?: string;
 }): RequestHandler {
-  let handleRequest = createRemixRequestHandler(build, mode);
+  let handleRequest = createRemixRequestHandler(build, mode, devServerHooksKey);
 
   return async (
     req: express.Request,

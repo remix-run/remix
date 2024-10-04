@@ -51,7 +51,8 @@ export type RequestHandler = (
 
 export type CreateRequestHandlerFunction = (
   build: ServerBuild | (() => ServerBuild | Promise<ServerBuild>),
-  mode?: string
+  mode?: string,
+  devServerHooksKey?: string,
 ) => RequestHandler;
 
 function derive(build: ServerBuild, mode?: string) {
@@ -87,7 +88,8 @@ function derive(build: ServerBuild, mode?: string) {
 
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
-  mode
+  mode,
+  devServerHooksKey
 ) => {
   let _build: ServerBuild;
   let routes: ServerRoute[];
@@ -116,7 +118,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     let params: RouteMatch<ServerRoute>["params"] = {};
     let handleError = (error: unknown) => {
       if (mode === ServerMode.Development) {
-        getDevServerHooks()?.processRequestError?.(error);
+        getDevServerHooks(devServerHooksKey)?.processRequestError?.(error);
       }
 
       errorHandler(error, {
@@ -259,7 +261,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     } else {
       let criticalCss =
         mode === ServerMode.Development
-          ? await getDevServerHooks()?.getCriticalCss?.(_build, url.pathname)
+          ? await getDevServerHooks(devServerHooksKey)?.getCriticalCss?.(_build, url.pathname)
           : undefined;
 
       response = await handleDocumentRequest(
