@@ -3,7 +3,10 @@ export default {
   ignoredRouteFiles: ["**/*.css"],
   server: "./server.ts",
   serverConditions: ["workerd", "worker", "browser"],
-  serverDependenciesToBundle: "all",
+  serverDependenciesToBundle: [
+    // bundle everything except the external cloudflare:workers package
+    /^(?!.*\bcloudflare:workers\b).*$/,
+  ],
   serverMainFields: ["browser", "module", "main"],
   serverMinify: true,
   serverModuleFormat: "esm",
