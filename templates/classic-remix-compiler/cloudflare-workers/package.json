@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "remix build",
-    "deploy": "wrangler deploy",
+    "deploy": "npm run build && wrangler deploy",
     "dev": "remix dev --manual -c \"npm start\"",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "wrangler dev ./build/index.js",
@@ -33,7 +33,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.1.6",
-    "wrangler": "^3.79.0"
+    "wrangler": "^3.80.0"
   },
   "engines": {
     "node": ">=18.0.0"

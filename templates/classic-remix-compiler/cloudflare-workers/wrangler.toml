@@ -6,9 +6,6 @@ main = "./build/index.js"
 # https://developers.cloudflare.com/workers/platform/compatibility-dates
 compatibility_date = "2024-09-26"
 
-[build]
-  command = "npm run build"
-
 [assets]
 directory = "./public"
 
