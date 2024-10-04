@@ -7,7 +7,7 @@
     "deploy": "npm run build && wrangler deploy",
     "dev": "remix dev --manual -c \"npm start\"",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
-    "start": "wrangler dev ./build/index.js",
+    "start": "wrangler dev --no-x-dev-env ./build/index.js",
     "typecheck": "tsc"
   },
   "dependencies": {
