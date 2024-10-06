@@ -8,7 +8,8 @@
     "dev": "remix dev --manual -c \"npm start\"",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "wrangler dev --no-x-dev-env ./build/index.js",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "typegen": "wrangler types"
   },
   "dependencies": {
     "@remix-run/cloudflare": "*",
