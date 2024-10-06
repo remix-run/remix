@@ -22,7 +22,7 @@ interface HtmlLinkProps {
   /**
    * How the element handles crossorigin requests
    */
-  crossOrigin?: "anonymous" | "use-credentials";
+  crossOrigin?: LiteralUnion<"anonymous" | "use-credentials", string>;
 
   /**
    * Relationship between the document containing the hyperlink and the destination resource
