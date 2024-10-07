@@ -49,7 +49,7 @@
 
   declare module "@remix-run/server-runtime" {
     interface Future {
-      v3_singleFetch: true; // 👈 enable _types_ for single-fetch
+      unstable_singleFetch: true; // 👈 enable _types_ for single-fetch
     }
   }
 
@@ -57,7 +57,7 @@
     plugins: [
       remix({
         future: {
-          v3_singleFetch: true, // 👈 enable single-fetch
+          unstable_singleFetch: true, // 👈 enable single-fetch
         },
       }),
     ],
@@ -196,7 +196,7 @@
 
 ### Minor Changes
 
-- New `future.v3_singleFetch` flag ([#8773](https://github.com/remix-run/remix/pull/8773))
+- New `future.unstable_singleFetch` flag ([#8773](https://github.com/remix-run/remix/pull/8773))
 
   - Naked objects returned from loaders/actions are no longer automatically converted to JSON responses. They'll be streamed as-is via `turbo-stream` so `Date`'s will become `Date` through `useLoaderData()`
   - You can return naked objects with `Promise`'s without needing to use `defer()` - including nested `Promise`'s

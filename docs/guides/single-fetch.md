@@ -10,7 +10,7 @@ Single Fetch is a new data loading strategy and streaming format. When you enabl
 
 ## Overview
 
-Remix introduced support for "Single Fetch" ([RFC][rfc]) behind the [`future.unstable_singleFetch`][future-flags] flag in [`v2.9.0`][2.9.0] (stabilized as `future.v3_singleFetch` in [`v2.13.0`][2.13.0]) which allows you to opt-into this behavior. Single Fetch will be the default in [React Router v7][merging-remix-and-rr].
+Remix introduced support for "Single Fetch" ([RFC][rfc]) behind the [`future.unstable_singleFetch`][future-flags] flag in [`v2.9.0`][2.9.0] (later stabilized as `future.v3_singleFetch` in [`v2.13.0`][2.13.0]) which allows you to opt-into this behavior. Single Fetch will be the default in [React Router v7][merging-remix-and-rr].
 
 Enabling Single Fetch is intended to be low-effort up-front, and then allow you to adopt all breaking changes iteratively over time. You can start by applying the minimal required changes to [enable Single Fetch][start], then use the [migration guide][migration-guide] to make incremental changes in your application to ensure a smooth, non-breaking upgrade to [React Router v7][merging-remix-and-rr].
 
