@@ -112,7 +112,7 @@ const files = {
   `,
 
   "app/routes/data-with-response.tsx": js`
-    import { useActionData, useLoaderData, unstable_data as data } from "@remix-run/react";
+    import { useActionData, useLoaderData, data } from "@remix-run/react";
 
     export function headers ({ actionHeaders, loaderHeaders, errorHeaders }) {
       if ([...actionHeaders].length > 0) {
