@@ -57,6 +57,7 @@ export {
   useSubmit,
   useViewTransitionState,
   useBlocker,
+  useViewTransitionState,
   unstable_usePrompt,
 } from "react-router-dom";
 export {
@@ -66,7 +67,7 @@ export {
   redirect,
   redirectDocument,
   replace,
-  unstable_data,
+  data,
 } from "@remix-run/server-runtime";
 
 export type { RemixBrowserProps } from "./browser";

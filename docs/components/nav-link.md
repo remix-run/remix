@@ -186,10 +186,6 @@ You may also use the [`className`][class-name-prop]/[`style`][style-prop] props 
 </NavLink>
 ```
 
-<docs-warning>
-Please note that this API is marked unstable and may be subject to breaking changes without a major release.
-</docs-warning>
-
 ### `<Link>` props
 
 All other props of [`<Link>`][link-component] are supported.

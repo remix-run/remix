@@ -27,7 +27,7 @@ export {
   replace,
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
-  unstable_data,
+  data,
   unstable_parseMultipartFormData,
 } from "@remix-run/server-runtime";
 
