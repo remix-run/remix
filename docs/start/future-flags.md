@@ -336,7 +336,7 @@ You likely won't need to adjust any code, unless you had custom logic inside of 
 
 Opt into [Single Fetch][single-fetch] behavior (details will be expanded once the flag stabilizes).
 
-## unstable_lazyRouteDiscovery
+## v3_lazyRouteDiscovery
 
 Opt into [Lazy Route Discovery][lazy-route-discovery] behavior (details will be expanded once the flag stabilizes).
 

@@ -40,7 +40,7 @@ You can also pass a `Partial<Path>` value:
 
 ### `discover`
 
-Defines the route discovery behavior when using [`future.unstable_lazyRouteDiscovery`][lazy-route-discovery].
+Defines the route discovery behavior when using [`future.v3_lazyRouteDiscovery`][lazy-route-discovery].
 
 ```tsx
 <>

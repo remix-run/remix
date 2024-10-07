@@ -38,7 +38,7 @@ interface FutureConfig {
   v3_relativeSplatPath: boolean;
   v3_throwAbortReason: boolean;
   v3_singleFetch: boolean;
-  unstable_lazyRouteDiscovery: boolean;
+  v3_lazyRouteDiscovery: boolean;
   unstable_optimizeDeps: boolean;
 }
 
@@ -529,9 +529,9 @@ export async function resolveConfig(
     entryServerFile = `entry.server.${serverRuntime}.tsx`;
   }
 
-  if (isSpaMode && appConfig.future?.unstable_lazyRouteDiscovery === true) {
+  if (isSpaMode && appConfig.future?.v3_lazyRouteDiscovery === true) {
     throw new Error(
-      "You can not use `future.unstable_lazyRouteDiscovery` in SPA Mode (`ssr: false`)"
+      "You can not use `future.v3_lazyRouteDiscovery` in SPA Mode (`ssr: false`)"
     );
   }
 
@@ -610,8 +610,7 @@ export async function resolveConfig(
     v3_relativeSplatPath: appConfig.future?.v3_relativeSplatPath === true,
     v3_throwAbortReason: appConfig.future?.v3_throwAbortReason === true,
     v3_singleFetch: appConfig.future?.v3_singleFetch === true,
-    unstable_lazyRouteDiscovery:
-      appConfig.future?.unstable_lazyRouteDiscovery === true,
+    v3_lazyRouteDiscovery: appConfig.future?.v3_lazyRouteDiscovery === true,
     unstable_optimizeDeps: appConfig.future?.unstable_optimizeDeps === true,
   };
 

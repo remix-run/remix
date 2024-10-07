@@ -725,7 +725,7 @@ test.describe("single fetch", () => {
       let fixture = await createFixture({
         config: {
           future: {
-            unstable_lazyRouteDiscovery: true,
+            v3_lazyRouteDiscovery: true,
             v3_singleFetch: true,
           },
         },
