@@ -452,7 +452,7 @@ async function installDependenciesStep(ctx: Context) {
 
   if (showInstallOutput) {
     log("");
-    info(`Install`, `Dependencies installing with ${pkgManager}...`);
+    info(`Install`, `Installing dependencies with ${pkgManager}...`);
     log("");
     await runInstall();
     log("");
@@ -461,8 +461,8 @@ async function installDependenciesStep(ctx: Context) {
 
   log("");
   await loadingIndicator({
-    start: `Dependencies installing with ${pkgManager}...`,
-    end: "Dependencies installed",
+    start: `Installing dependencies with ${pkgManager}...`,
+    end: "Installed dependencies",
     while: runInstall,
     ctx,
   });
