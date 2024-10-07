@@ -55,7 +55,6 @@ export {
   useRoutes,
   useSearchParams,
   useSubmit,
-  useViewTransitionState,
   useBlocker,
   useViewTransitionState,
   unstable_usePrompt,
