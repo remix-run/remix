@@ -128,7 +128,7 @@ test.describe("single fetch", () => {
           plugins: [
             remix({
               future: {
-                unstable_singleFetch: true
+                v3_singleFetch: true
               },
             })
           ]
@@ -154,7 +154,7 @@ test.describe("single fetch", () => {
           plugins: [
             remix({
               future: {
-                unstable_singleFetch: true
+                v3_singleFetch: true
               },
             })
           ]

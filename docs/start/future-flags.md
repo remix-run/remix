@@ -332,7 +332,7 @@ remix({
 
 You likely won't need to adjust any code, unless you had custom logic inside of `handleError` that was matching the previous error message to differentiate it from other errors.
 
-## unstable_singleFetch
+## v3_singleFetch
 
 Opt into [Single Fetch][single-fetch] behavior (details will be expanded once the flag stabilizes).
 

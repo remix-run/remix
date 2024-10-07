@@ -577,7 +577,7 @@ test.describe("single fetch", () => {
     return {
       config: {
         future: {
-          unstable_singleFetch: true,
+          v3_singleFetch: true,
         },
       },
       files: {
@@ -726,7 +726,7 @@ test.describe("single fetch", () => {
         config: {
           future: {
             unstable_lazyRouteDiscovery: true,
-            unstable_singleFetch: true,
+            v3_singleFetch: true,
           },
         },
         files: {
@@ -945,7 +945,7 @@ test.describe("single fetch", () => {
       fixture = await createFixture({
         config: {
           future: {
-            unstable_singleFetch: true,
+            v3_singleFetch: true,
           },
         },
         files: {
@@ -1024,7 +1024,7 @@ test.describe("single fetch", () => {
       fixture = await createFixture({
         config: {
           future: {
-            unstable_singleFetch: true,
+            v3_singleFetch: true,
           },
         },
         files: {
@@ -1107,7 +1107,7 @@ test.describe("single fetch", () => {
       fixture = await createFixture({
         config: {
           future: {
-            unstable_singleFetch: true,
+            v3_singleFetch: true,
           },
         },
         files: {

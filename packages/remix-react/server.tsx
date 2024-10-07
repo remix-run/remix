@@ -96,7 +96,7 @@ export function RemixServer({
           />
         </RemixErrorBoundary>
       </RemixContext.Provider>
-      {context.future.unstable_singleFetch && context.serverHandoffStream ? (
+      {context.future.v3_singleFetch && context.serverHandoffStream ? (
         <React.Suspense>
           <StreamTransfer
             context={context}
