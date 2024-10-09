@@ -171,11 +171,11 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 🦕 Install Deno
-        uses: denoland/setup-deno@v1
+        uses: denoland/setup-deno@v2
         with:
-          deno-version: vx.x.x
+          deno-version: v2.x
       - name: 🦕 Deno Deploy CLI
-        run: deno install --allow-read --allow-write --allow-env --allow-net --allow-run --no-check -r -f https://deno.land/x/deploy/deployctl.ts
+        run: deno install -Arf jsr:@deno/deployctl
 
       - name: 🚀 Deploy to Deno Deploy
         run: node ./deno-deploy.mjs

@@ -14,10 +14,10 @@ let PROJECT_DIR = getAppDirectory(APP_NAME);
 try {
   // create a new remix app
   spawnSync(
-    "npx",
+    "deno",
+    "-A",
     [
-      "--yes",
-      "create-remix@latest",
+      "npm:create-remix@latest",
       PROJECT_DIR,
       "--template",
       "deno",
@@ -41,8 +41,8 @@ try {
   });
 
   // install deps
-  spawnSync("npm", ["install"], spawnOpts);
-  spawnSync("npm", ["run", "build"], spawnOpts);
+  spawnSync("deno", ["install"], spawnOpts);
+  spawnSync("deno", ["task", "build"], spawnOpts);
 
   // deploy to deno deploy
   // note we dont have to install deployctl here as we do it ahead of time in the deployments workflow

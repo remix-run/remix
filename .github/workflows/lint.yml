@@ -29,9 +29,9 @@ jobs:
           cache: "pnpm"
 
       - name: 🦕 Install Deno
-        uses: denoland/setup-deno@v1
+        uses: denoland/setup-deno@v2
         with:
-          deno-version: vx.x.x
+          deno-version: v2.x
 
       - name: Disable GitHub Actions Annotations
         run: |
