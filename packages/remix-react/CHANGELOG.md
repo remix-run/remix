@@ -1,5 +1,29 @@
 # `@remix-run/react`
 
+## 2.13.0-pre.0
+
+### Minor Changes
+
+- Stabilize React Router APIs in Remix ([#9980](https://github.com/remix-run/remix/pull/9980))
+
+  - Adopt stabilized React Router APIs internally
+    - Single Fetch: `unstable_dataStrategy` -> `dataStrategy`
+    - Lazy Route Discovery: `unstable_patchRoutesOnNavigation` -> `patchRoutesOnNavigation`
+  - Stabilize public-facing APIs
+    - Single Fetch: `unstable_data()` -> `data()`
+    - `unstable_viewTransition` -> `viewTransition` (`Link`, `Form`, `navigate`, `submit`)
+    - `unstable_flushSync>` -> `<Link viewTransition>` (`Link`, `Form`, `navigate`, `submit`, `useFetcher`)
+
+- Stabilize future flags ([#10072](https://github.com/remix-run/remix/pull/10072))
+  - `future.unstable_singleFetch` -> `future.v3_singleFetch`
+  - `future.unstable_lazyRouteDiscovery` -> `future.v3_lazyRouteDiscovery`
+
+### Patch Changes
+
+- Fix bug with `clientLoader.hydrate` in a layout route when hydrating with bubbled errors ([#10063](https://github.com/remix-run/remix/pull/10063))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.13.0-pre.0`
+
 ## 2.12.1
 
 ### Patch Changes
