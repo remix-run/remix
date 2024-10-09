@@ -1,22 +1,22 @@
 import * as React from "react";
 import type {
-  unstable_DataStrategyFunction as DataStrategyFunction,
-  unstable_DataStrategyResult as DataStrategyResult,
-  unstable_DataStrategyMatch,
+  DataStrategyFunction,
+  DataStrategyFunctionArgs,
+  DataStrategyResult,
+  DataStrategyMatch,
   Router as RemixRouter,
 } from "@remix-run/router";
 import {
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
   isRouteErrorResponse,
   redirect,
-  unstable_data,
+  data,
 } from "@remix-run/router";
 import type {
   UNSAFE_SingleFetchResult as SingleFetchResult,
   UNSAFE_SingleFetchResults as SingleFetchResults,
 } from "@remix-run/server-runtime";
 import { UNSAFE_SingleFetchRedirectSymbol as SingleFetchRedirectSymbol } from "@remix-run/server-runtime";
-import type { unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs } from "react-router-dom";
 import { decode } from "turbo-stream";
 
 import { createRequestInit, isResponse } from "./data";
@@ -170,12 +170,12 @@ async function singleFetchActionStrategy(
     return { [actionMatch.route.id]: result };
   }
 
-  // For non-responses, proxy along the statusCode via unstable_data()
+  // For non-responses, proxy along the statusCode via data()
   // (most notably for skipping action error revalidation)
   return {
     [actionMatch.route.id]: {
       type: result.type,
-      result: unstable_data(result.result, actionStatus),
+      result: data(result.result, actionStatus),
     },
   };
 }
@@ -344,7 +344,7 @@ async function singleFetchLoaderFetcherStrategy(
 
 function fetchSingleLoader(
   handler: Parameters<
-    NonNullable<Parameters<unstable_DataStrategyMatch["resolve"]>[0]>
+    NonNullable<Parameters<DataStrategyMatch["resolve"]>[0]>
   >[0],
   url: URL,
   init: RequestInit,

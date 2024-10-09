@@ -846,6 +846,121 @@ test.describe("Client Data", () => {
       expect(html).not.toMatch("Should not see me");
       console.error = _consoleError;
     });
+
+    test("bubbled server loader errors are persisted for hydrating routes", async ({
+      page,
+    }) => {
+      let _consoleError = console.error;
+      console.error = () => {};
+      appFixture = await createAppFixture(
+        await createFixture(
+          {
+            files: {
+              ...getFiles({
+                parentClientLoader: false,
+                parentClientLoaderHydrate: false,
+                childClientLoader: false,
+                childClientLoaderHydrate: false,
+              }),
+              "app/routes/parent.tsx": js`
+                import { json } from '@remix-run/node'
+                import { Outlet, useLoaderData, useRouteLoaderData, useRouteError } from '@remix-run/react'
+
+                export function loader() {
+                  return json({ message: 'Parent Server Loader'});
+                }
+
+                export async function clientLoader({ serverLoader }) {
+                  console.log('running parent client loader')
+                  // Need a small delay to ensure we capture the server-rendered
+                  // fallbacks for assertions
+                  await new Promise(r => setTimeout(r, 100));
+                  let data = await serverLoader();
+                  return { message: data.message + " (mutated by client)" };
+                }
+
+                clientLoader.hydrate = true;
+
+                export default function Component() {
+                  let data = useLoaderData();
+                  return (
+                    <>
+                      <p id="parent-data">{data.message}</p>
+                      <Outlet/>
+                    </>
+                  );
+                }
+
+                export function ErrorBoundary() {
+                  let data = useRouteLoaderData("routes/parent")
+                  let error = useRouteError();
+                  return (
+                    <>
+                      <h1>Parent Error</h1>
+                      <p id="parent-data">{data?.message}</p>
+                      <p id="parent-error">{error?.data?.message}</p>
+                    </>
+                  );
+                }
+              `,
+              "app/routes/parent.child.tsx": js`
+                import { json } from '@remix-run/node'
+                import { useRouteError, useLoaderData } from '@remix-run/react'
+
+                export function loader() {
+                  throw json({ message: 'Child Server Error'});
+                }
+
+                export function clientLoader() {
+                  console.log('running child client loader')
+                  return "Should not see me";
+                }
+
+                clientLoader.hydrate = true;
+
+                export default function Component() {
+                  let data = useLoaderData()
+                  return (
+                    <>
+                      <p>Should not see me</p>
+                      <p>{data}</p>;
+                    </>
+                  );
+                }
+              `,
+            },
+          },
+          ServerMode.Development // Avoid error sanitization
+        ),
+        ServerMode.Development // Avoid error sanitization
+      );
+      let app = new PlaywrightFixture(appFixture, page);
+
+      let logs: string[] = [];
+      page.on("console", (msg) => logs.push(msg.text()));
+
+      await app.goto("/parent/child", false);
+      let html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader</p>");
+      expect(html).toMatch("Child Server Error");
+      expect(html).not.toMatch("Should not see me");
+
+      // Ensure we hydrate and remain on the boundary
+      await page.waitForSelector(
+        ":has-text('Parent Server Loader (mutated by client)')"
+      );
+      html = await app.getHtml("main");
+      expect(html).toMatch("Parent Server Loader (mutated by client)</p>");
+      expect(html).toMatch("Child Server Error");
+      expect(html).not.toMatch("Should not see me");
+
+      expect(logs).toEqual([
+        expect.stringContaining("Download the React DevTools"),
+        "running parent client loader",
+      ]);
+
+      console.error = _consoleError;
+    });
   });
 
   test.describe("clientLoader - lazy route module", () => {
@@ -1473,7 +1588,7 @@ test.describe("single fetch", () => {
           ...init,
           config: {
             future: {
-              unstable_singleFetch: true,
+              v3_singleFetch: true,
             },
           },
         },

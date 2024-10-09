@@ -55,10 +55,10 @@ a.pending {
 
 ### `.transitioning`
 
-A `transitioning` class is added to a [`<NavLink unstable_viewTransition>`][view-transition-prop] component when it is transitioning during a navigation, so you can use CSS to style it.
+A `transitioning` class is added to a [`<NavLink viewTransition>`][view-transition-prop] component when it is transitioning during a navigation, so you can use CSS to style it.
 
 ```tsx
-<NavLink to="/messages" unstable_viewTransition />
+<NavLink to="/messages" viewTransition />
 ```
 
 ```css
@@ -136,9 +136,9 @@ Adding the `caseSensitive` prop changes the matching logic to make it case-sensi
 | `<NavLink to="/SpOnGe-bOB" />`               | `/sponge-bob` | true     |
 | `<NavLink to="/SpOnGe-bOB" caseSensitive />` | `/sponge-bob` | false    |
 
-## `unstable_viewTransition`
+## `viewTransition`
 
-The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in [`document.startViewTransition()`][document-start-view-transition]. By default, during the transition a [`transitioning` class][transitioning-class] will be added to the [`<a>` element][a-element] that you can use to customize the view transition.
+The `viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in [`document.startViewTransition()`][document-start-view-transition]. By default, during the transition a [`transitioning` class][transitioning-class] will be added to the [`<a>` element][a-element] that you can use to customize the view transition.
 
 ```css
 a.transitioning p {
@@ -151,7 +151,7 @@ a.transitioning img {
 ```
 
 ```tsx
-<NavLink to={to} unstable_viewTransition>
+<NavLink to={to} viewTransition>
   <p>Image Number {idx}</p>
   <img src={src} alt={`Img ${idx}`} />
 </NavLink>
@@ -160,7 +160,7 @@ a.transitioning img {
 You may also use the [`className`][class-name-prop]/[`style`][style-prop] props or the render props passed to [`children`][children-prop] to further customize based on the `isTransitioning` value.
 
 ```tsx
-<NavLink to={to} unstable_viewTransition>
+<NavLink to={to} viewTransition>
   {({ isTransitioning }) => (
     <>
       <p
@@ -185,10 +185,6 @@ You may also use the [`className`][class-name-prop]/[`style`][style-prop] props 
   )}
 </NavLink>
 ```
-
-<docs-warning>
-Please note that this API is marked unstable and may be subject to breaking changes without a major release.
-</docs-warning>
 
 ### `<Link>` props
 

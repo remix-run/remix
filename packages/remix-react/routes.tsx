@@ -354,10 +354,13 @@ export function createClientRoutes(
 
                 // On the first call, resolve with the server result
                 if (isHydrationRequest) {
+                  if (initialData !== undefined) {
+                    return initialData;
+                  }
                   if (initialError !== undefined) {
                     throw initialError;
                   }
-                  return initialData;
+                  return null;
                 }
 
                 // Call the server loader for client-side navigations

@@ -275,7 +275,7 @@ export async function generateEntry(
   let defaultEntryServer = path.resolve(
     defaultsDirectory,
     ctx?.remixConfig.ssr === false &&
-      ctx?.remixConfig.future.unstable_singleFetch !== true
+      ctx?.remixConfig.future.v3_singleFetch !== true
       ? `entry.server.spa.tsx`
       : `entry.server.${serverRuntime}.tsx`
   );
