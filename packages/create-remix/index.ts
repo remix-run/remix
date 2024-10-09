@@ -651,7 +651,7 @@ const packageManagerExecScript: Record<PackageManager, string> = {
   yarn: "yarn remix",
   pnpm: "pnpm exec remix",
   bun: "bunx remix",
-  deno: "deno run --no-lock -A npm:@remix-run/dev",
+  deno: "deno run -A npm:@remix-run/dev",
 };
 
 function validatePackageManager(pkgManager: string): PackageManager {
@@ -670,15 +670,10 @@ async function installDependencies({
   showInstallOutput: boolean;
 }) {
   try {
-    await execa(
-      pkgManager,
-      ["install", ...(pkgManager === "deno" ? ["--no-lock"] : [])],
-      {
-        cwd,
-        env: pkgManager === "deno" ? { DENO_FUTURE: "1" } : undefined,
-        stdio: showInstallOutput ? "inherit" : "ignore",
-      }
-    );
+    await execa(pkgManager, ["install"], {
+      cwd,
+      stdio: showInstallOutput ? "inherit" : "ignore",
+    });
   } catch (err) {
     error("Oh no!", "Failed to install dependencies.");
     throw err;

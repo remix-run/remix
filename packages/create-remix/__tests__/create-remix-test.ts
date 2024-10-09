@@ -695,6 +695,7 @@ describe("create-remix CLI", () => {
     expect(stdout).toContain("`package.json` file not found.");
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "deno.json"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "deno.lock"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
     expect(fse.readFileSync(path.join(projectDir, "test.txt"), "utf8")).toBe(
       "added via remix.init, isOdd(1): true"
@@ -926,8 +927,8 @@ describe("create-remix CLI", () => {
 
     expect(execa).toHaveBeenCalledWith(
       "deno",
-      expect.arrayContaining(["install", "--no-lock"]),
-      expect.objectContaining({ env: { DENO_FUTURE: "1" } })
+      expect.arrayContaining(["install"]),
+      expect.anything()
     );
     delete process.versions.deno;
   });

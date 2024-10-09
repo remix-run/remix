@@ -123,9 +123,8 @@ export async function createProject(
 }
 
 export function installDependenciesDeno(cwd: string) {
-  let installProc = spawnSync(denoBin, ["install", "--no-lock"], {
+  let installProc = spawnSync(denoBin, ["install"], {
     cwd,
-    env: { ...process.env, DENO_FUTURE: "1" },
     stdio: "pipe",
   });
   if (installProc.status !== 0) {

@@ -1,7 +1,7 @@
 {
   "tasks": {
     "build": "deno run -A npm:@remix-run/dev@^2.11.2 vite:build",
-    "deploy": "deployctl deploy --prod --include=deno.jsonc,deno.lock,build,server.production.ts --project=<your deno deploy project> ./server.production.ts",
+    "deploy": "deployctl deploy --prod --include=deno.json,deno.lock,build,server.production.ts --project=<your deno deploy project> ./server.production.ts",
     "dev": "deno run -A npm:@remix-run/dev@^2.11.2 vite:dev",
     "lint": "deno lint && deno run -A npm:eslint@^8.57.0 --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "deno serve -A --parallel ./server.production.ts",

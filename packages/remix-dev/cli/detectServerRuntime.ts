@@ -10,7 +10,7 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
   type: "disjunction",
 });
 
-let denoConfigFilenames = ["deno.jsonc", "deno.json"];
+let denoConfigFilenames = ["deno.json", "deno.jsonc"];
 
 const isDenoProject = (dir: string) => {
   for (let configFilename of denoConfigFilenames) {
