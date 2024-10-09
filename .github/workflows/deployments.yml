@@ -171,7 +171,7 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 🦕 Install Deno
-        uses: denoland/setup-deno@v1
+        uses: denoland/setup-deno@v2
         with:
           deno-version: vx.x.x
       - name: 🦕 Deno Deploy CLI
