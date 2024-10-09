@@ -338,25 +338,30 @@ You likely won't need to adjust any code, unless you had custom logic inside of 
 
 with this flag, Remix moves to a "single fetch" approach for data requests when making SPA navigations within your app. Additional details are available in the [docs][single-fetch], but the main reason we chose to move to this approach is **Simplicity**. With Single Fetch, data requests now behave just like document requests and developers no longer need to think about the nuances of how to manage headers, caching, etc., differently between the two. For more advanced use-cases, developers can still opt into fine-grained revalidations.
 
-👉 **Enable the Flag**
+👉 **Enable the Flag (and the types)**
 
-```ts filename=vite.config.ts
-remix({
-  future: {
-    v3_singleFetch: true,
-  },
-});
-```
+```ts filename=vite.config.ts lines=[5-10,16]
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 
-👉 **Enable the Types**
-
-```ts filename=vite.config.ts
 declare module "@remix-run/node" {
   // or cloudflare, deno, etc.
   interface Future {
     v3_singleFetch: true;
   }
 }
+
+export default defineConfig({
+  plugins: [
+    remix({
+      future: {
+        v3_singleFetch: true,
+      },
+    }),
+    tsconfigPaths(),
+  ],
+});
 ```
 
 **Update your Code**
