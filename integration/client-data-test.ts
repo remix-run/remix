@@ -1588,7 +1588,7 @@ test.describe("single fetch", () => {
           ...init,
           config: {
             future: {
-              unstable_singleFetch: true,
+              v3_singleFetch: true,
             },
           },
         },

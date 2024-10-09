@@ -11,7 +11,7 @@ import type { Future } from "./future";
 
 // prettier-ignore
 type SingleFetchEnabled =
-  Future extends { unstable_singleFetch: infer T extends boolean } ? T : false
+  Future extends { v3_singleFetch: infer T extends boolean } ? T : false
 
 // prettier-ignore
 /**

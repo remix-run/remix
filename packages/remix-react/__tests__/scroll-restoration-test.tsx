@@ -32,7 +32,7 @@ describe("<ScrollRestoration />", () => {
     future: {
       v3_fetcherPersist: false,
       v3_relativeSplatPath: false,
-      unstable_singleFetch: false,
+      v3_singleFetch: false,
     },
     routeModules: { root: { default: () => null } },
     manifest: {

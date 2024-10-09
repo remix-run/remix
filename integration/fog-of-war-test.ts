@@ -105,7 +105,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -151,7 +151,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: getFiles(),
@@ -175,7 +175,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: getFiles(),
@@ -210,7 +210,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: getFiles(),
@@ -243,7 +243,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -309,7 +309,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -370,7 +370,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -421,7 +421,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -485,7 +485,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -533,7 +533,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -604,7 +604,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -720,7 +720,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -845,7 +845,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -938,7 +938,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1031,7 +1031,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1125,7 +1125,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1219,7 +1219,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1310,7 +1310,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1362,7 +1362,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1405,7 +1405,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {

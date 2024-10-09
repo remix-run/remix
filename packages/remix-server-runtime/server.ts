@@ -149,7 +149,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     let response: Response;
     if (url.searchParams.has("_data")) {
-      if (_build.future.unstable_singleFetch) {
+      if (_build.future.v3_singleFetch) {
         handleError(
           new Error(
             "Warning: Single fetch-enabled apps should not be making ?_data requests, " +
@@ -180,10 +180,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           response = createRemixRedirectResponse(response, _build.basename);
         }
       }
-    } else if (
-      _build.future.unstable_singleFetch &&
-      url.pathname.endsWith(".data")
-    ) {
+    } else if (_build.future.v3_singleFetch && url.pathname.endsWith(".data")) {
       let handlerUrl = new URL(request.url);
       handlerUrl.pathname = handlerUrl.pathname
         .replace(/\.data$/, "")
@@ -499,9 +496,9 @@ async function handleDocumentRequest(
       criticalCss,
       future: build.future,
       isSpaMode: build.isSpaMode,
-      ...(!build.future.unstable_singleFetch ? { state } : null),
+      ...(!build.future.v3_singleFetch ? { state } : null),
     }),
-    ...(build.future.unstable_singleFetch
+    ...(build.future.v3_singleFetch
       ? {
           serverHandoffStream: encodeViaTurboStream(
             state,
@@ -574,9 +571,9 @@ async function handleDocumentRequest(
         basename: build.basename,
         future: build.future,
         isSpaMode: build.isSpaMode,
-        ...(!build.future.unstable_singleFetch ? { state } : null),
+        ...(!build.future.v3_singleFetch ? { state } : null),
       }),
-      ...(build.future.unstable_singleFetch
+      ...(build.future.v3_singleFetch
         ? {
             serverHandoffStream: encodeViaTurboStream(
               state,
@@ -630,7 +627,7 @@ async function handleResourceRequest(
       );
     }
 
-    if (build.future.unstable_singleFetch && !isResponse(response)) {
+    if (build.future.v3_singleFetch && !isResponse(response)) {
       console.warn(
         resourceRouteJsonWarning(
           request.method === "GET" ? "loader" : "action",

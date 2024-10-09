@@ -26,7 +26,7 @@ const discoveredPaths = new Set<string>();
 const URL_LIMIT = 7680;
 
 export function isFogOfWarEnabled(future: FutureConfig, isSpaMode: boolean) {
-  return future.unstable_lazyRouteDiscovery === true && !isSpaMode;
+  return future.v3_lazyRouteDiscovery === true && !isSpaMode;
 }
 
 export function getPartialManifest(manifest: AssetsManifest, router: Router) {
