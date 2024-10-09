@@ -1,5 +1,13 @@
 # `@remix-run/express`
 
+## 2.13.0-pre.0
+
+### Patch Changes
+
+- Fix adapter logic for aborting `request.signal` so we don't incorrectly abort on the `close` event for successful requests ([#10046](https://github.com/remix-run/remix/pull/10046))
+- Updated dependencies:
+  - `@remix-run/node@2.13.0-pre.0`
+
 ## 2.12.1
 
 ### Patch Changes
