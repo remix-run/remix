@@ -5,5 +5,6 @@
 ---
 
 Stabilize future flags
-   - `future.unstable_singleFetch` -> `future.v3_singleFetch`
-   - `future.unstable_lazyRouteDiscovery` -> `future.v3_lazyRouteDiscovery`
+
+- `future.unstable_singleFetch` -> `future.v3_singleFetch`
+- `future.unstable_lazyRouteDiscovery` -> `future.v3_lazyRouteDiscovery`
