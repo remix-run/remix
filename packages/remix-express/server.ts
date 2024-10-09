@@ -97,10 +97,7 @@ export function createRemixRequest(
   // Use `req.originalUrl` so Remix is aware of the full path
   let url = new URL(`${req.protocol}://${resolvedHost}${req.originalUrl}`);
 
-  // Abort action/loaders once we can no longer write a response
-  let controller = new AbortController();
-  res.on("close", () => controller.abort());
-
+  let controller: AbortController | null = new AbortController();
   let init: RequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
@@ -111,6 +108,13 @@ export function createRemixRequest(
     init.body = createReadableStreamFromReadable(req);
     (init as { duplex: "half" }).duplex = "half";
   }
+
+  // Abort action/loaders once we can no longer write a response iff we have
+  // not yet sent a response (i.e., `close` without `finish`)
+  // `finish` -> done rendering the response
+  // `close` -> response can no longer be written to
+  res.on("finish", () => (controller = null));
+  res.on("close", () => controller?.abort());
 
   return new Request(url.href, init);
 }
