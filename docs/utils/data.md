@@ -1,14 +1,14 @@
 ---
-title: unstable_data
+title: data
 toc: false
 ---
 
-# `unstable_data`
+# `data`
 
 This is a utility for use with [Single Fetch][single-fetch] to return raw data accompanied with a status code or custom response headers. This avoids the need to serialize your data into a `Response` instance to provide custom status/headers. This is generally a replacement for `loader`/`action` functions that used [`json`][json] or [`defer`][defer] prior to Single Fetch.
 
 ```tsx
-import { unstable_data as data } from "@remix-run/node"; // or cloudflare/deno
+import { data } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader = async () => {
   return data(
