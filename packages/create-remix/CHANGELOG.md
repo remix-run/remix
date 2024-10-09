@@ -146,7 +146,7 @@ No significant changes to this package were made in this release. [See the relea
 
 ### Patch Changes
 
-- Allow dots in github repo shorthand notation folder names (i.e., `npx create-remix --template remix-run/examples/socket.io`) ([#7277](https://github.com/remix-run/remix/pull/7277))
+- Allow dots in github repo shorthand notation folder names (i.e., `npx create-remix@latest --template remix-run/examples/socket.io`) ([#7277](https://github.com/remix-run/remix/pull/7277))
 
 ## 1.19.3
 
