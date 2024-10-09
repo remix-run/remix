@@ -122,43 +122,6 @@ export async function createProject(
   return projectDir;
 }
 
-export function installDependenciesDeno(cwd: string) {
-  let installProc = spawnSync(denoBin, ["install"], {
-    cwd,
-    stdio: "pipe",
-  });
-  if (installProc.status !== 0) {
-    throw new Error(
-      [
-        "Failed to install Deno dependencies",
-        "",
-        "exit code: " + installProc.status,
-        `stdout: \n${installProc.stdout.toString("utf8")}\n`,
-        `stderr: \n${installProc.stderr.toString("utf8")}\n`,
-      ].join("\n")
-    );
-  }
-  let copyProc = spawnSync(
-    nodeBin,
-    [
-      "./scripts/copy-build-to-dist.mjs",
-      `--deno-node-modules-paths=${cwd}/node_modules`,
-    ],
-    { stdio: "pipe" }
-  );
-  if (copyProc.status !== 0) {
-    throw new Error(
-      [
-        "Failed to copy build artifacts for Deno",
-        "",
-        "exit code: " + copyProc.status,
-        `stdout: \n${copyProc.stdout.toString("utf8")}\n`,
-        `stderr: \n${copyProc.stderr.toString("utf8")}\n`,
-      ].join("\n")
-    );
-  }
-}
-
 // Avoid "Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env
 // being set" in vite-ecosystem-ci which breaks empty stderr assertions. To fix
 // this we always ensure that only NO_COLOR is set after spreading process.env.
@@ -343,8 +306,6 @@ export const test = base.extend<Fixtures>({
     await use(async (files, template) => {
       let port = await getPort();
       let cwd = await createProject(await files({ port }), template);
-      // Install dependencies as late as possible so Node won't accidentally import them and cause access denied errors in Deno on Windows
-      installDependenciesDeno(cwd);
       stop = await viteDevDeno({ cwd, port });
       return { port, cwd };
     });
@@ -383,8 +344,6 @@ export const test = base.extend<Fixtures>({
         await files({ port }),
         "vite-deno-template"
       );
-      // Install dependencies as late as possible so Node won't accidentally import them and cause access denied errors in Deno on Windows
-      installDependenciesDeno(cwd);
       let { status } = viteBuildDeno({ cwd });
       expect(status).toBe(0);
       stop = await viteRemixServeDeno({ cwd, port });

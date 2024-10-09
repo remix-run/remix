@@ -8,6 +8,7 @@ exec("pnpm", ["rollup", "-c"])
   .then(() =>
     exec("node", ["scripts/copy-build-to-dist.mjs", ...(tsc ? ["--tsc"] : [])])
   )
+  .then(() => exec("pnpm", ["install"])) // install again so dependenciesMeta.injected workspace packages will update
   .then(() => process.exit(0))
   .catch((err) => {
     console.error(err);

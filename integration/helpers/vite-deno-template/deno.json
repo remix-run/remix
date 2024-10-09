@@ -1,0 +1,5 @@
+{
+  "exclude": ["app/", "build/"],
+  "nodeModulesDir": "manual",
+  "unstable": ["kv"]
+}

@@ -4,6 +4,7 @@ packages:
   - "integration/helpers/cf-template"
   - "integration/helpers/deno-template"
   - "integration/helpers/vite-cloudflare-template"
+  - "integration/helpers/vite-deno-template"
   - "integration/helpers/vite-template"
   - "packages/create-remix"
   - "packages/remix"
