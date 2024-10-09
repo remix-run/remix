@@ -1,12 +1,12 @@
 {
   "tasks": {
-    "build": "deno run -A 'npm:@remix-run/dev@*' vite:build",
-    "dev": "deno run -A 'npm:@remix-run/dev@*' vite:dev",
-    "typecheck": "deno check '**/*' && deno run -A npm:typescript@^5.5.4/tsc",
+    "build": "deno run -A npm:@remix-run/dev vite:build",
+    "dev": "deno run -A npm:@remix-run/dev vite:dev",
+    "typecheck": "deno check '**/*' && deno run -A npm:typescript/tsc",
     "typegen": "deno types > ./app/deno.d.ts"
   },
   "exclude": ["app/", "build/"],
-  "nodeModulesDir": true,
+  "nodeModulesDir": "manual",
   "unstable": ["kv"],
   "imports": {
     // These remix packages should be treated like workspace:* dependencies.

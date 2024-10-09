@@ -1,5 +1,5 @@
 {
-  "nodeModulesDir": true,
+  "nodeModulesDir": "manual",
   "imports": {
     "is-odd": "npm:is-odd@3.0.1"
   }

@@ -1,18 +1,18 @@
 {
   "tasks": {
-    "build": "deno run -A npm:@remix-run/dev@^2.11.2 vite:build",
+    "build": "deno run -A npm:@remix-run/dev vite:build",
     "deploy": "deployctl deploy --prod --include=deno.json,deno.lock,build,server.production.ts --project=<your deno deploy project> ./server.production.ts",
-    "dev": "deno run -A npm:@remix-run/dev@^2.11.2 vite:dev",
-    "lint": "deno lint && deno run -A npm:eslint@^8.57.0 --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
+    "dev": "deno run -A npm:@remix-run/dev vite:dev",
+    "lint": "deno lint && deno run -A npm:eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "deno serve -A --parallel ./server.production.ts",
-    "typecheck": "deno check '**/*' && deno run -A npm:typescript@^5.5.4/tsc",
+    "typecheck": "deno check '**/*' && deno run -A npm:typescript/tsc",
     "typegen": "deno types > ./app/deno.d.ts"
   },
   "exclude": [
     "app/",
     "build/"
   ],
-  "nodeModulesDir": true,
+  "nodeModulesDir": "manual",
   "imports": {
     "@remix-run/dev": "npm:@remix-run/dev@^2.11.2",
     "@remix-run/react": "npm:@remix-run/react@^2.11.2",
