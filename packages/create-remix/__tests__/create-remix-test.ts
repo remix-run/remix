@@ -692,7 +692,6 @@ describe("create-remix CLI", () => {
 
     expect(stderr.trim()).toBeFalsy();
     expect(stdout).toContain(`Template's remix.init script complete`);
-    expect(stdout).toContain("`package.json` file not found.");
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "deno.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "deno.lock"))).toBeTruthy();
@@ -1054,11 +1053,18 @@ describe("create-remix CLI", () => {
     let packageJsonPath = path.join(projectDir, "package.json");
     let packageJson = JSON.parse(String(fse.readFileSync(packageJsonPath)));
     let dependencies = packageJson.dependencies;
-
     expect(dependencies).toMatchObject({
-      "@remix-run/react": expect.any(String),
-      remix: expect.any(String),
+      "@remix-run/react": expect.not.stringMatching(/\*/),
+      remix: expect.not.stringMatching(/\*/),
       "not-remix": "*",
+    });
+
+    let denoJsonPath = path.join(projectDir, "deno.json");
+    let denoJson = JSON.parse(String(fse.readFileSync(denoJsonPath)));
+    expect(denoJson.imports).toMatchObject({
+      "@remix-run/react": expect.not.stringMatching(/npm:@remix-run\/react@\*/),
+      remix: expect.not.stringMatching(/npm:remix@\*/),
+      "not-remix": "npm:not-remix@*",
     });
   });
 

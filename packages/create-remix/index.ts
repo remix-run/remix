@@ -389,7 +389,19 @@ async function copyTempDirToAppDirStep(ctx: Context) {
     },
   });
 
-  await updatePackageJSON(ctx);
+  let didUpdatePackageJSON = await updatePackageJSON(ctx);
+  let didUpdateDenoJSON = await updateDenoJSON(ctx);
+
+  if (!didUpdatePackageJSON && !didUpdateDenoJSON) {
+    let relativePath = path.relative(process.cwd(), ctx.cwd);
+    error(
+      "Oh no!",
+      "The provided template must be a Remix project with a `package.json` or `deno.json` " +
+        `file, but that file does not exist in ${color.bold(relativePath)}.`
+    );
+    throw new Error(`package.json or deno.json does not exist in ${ctx.cwd}`);
+  }
+
   ctx.initScriptPath = await getInitScriptPath(ctx.cwd);
 }
 
@@ -683,14 +695,7 @@ async function installDependencies({
 async function updatePackageJSON(ctx: Context) {
   let packageJSONPath = path.join(ctx.cwd, "package.json");
   if (!fs.existsSync(packageJSONPath)) {
-    let relativePath = path.relative(process.cwd(), ctx.cwd);
-    info(
-      "`package.json` file not found.",
-      "The provided template did not provide a `package.json` file in " +
-        color.bold(relativePath) +
-        ". This is expected for Deno templates."
-    );
-    return;
+    return false;
   }
 
   let contents = await fs.promises.readFile(packageJSONPath, "utf-8");
@@ -745,6 +750,62 @@ async function updatePackageJSON(ctx: Context) {
     JSON.stringify(sortPackageJSON(packageJSON), null, 2),
     "utf-8"
   );
+  return true;
+}
+
+async function updateDenoJSON(ctx: Context) {
+  let denoJSONPath = path.join(ctx.cwd, "deno.json");
+  if (!fs.existsSync(denoJSONPath)) {
+    return false;
+  }
+
+  let contents = await fs.promises.readFile(denoJSONPath, "utf-8");
+  let denoJSON: any;
+  try {
+    denoJSON = JSON.parse(contents);
+    if (!isValidJsonObject(denoJSON)) {
+      throw Error();
+    }
+  } catch (err) {
+    error(
+      "Oh no!",
+      "The provided template must be a Remix project with a `deno.json` " +
+        `file, but that file is invalid.`
+    );
+    throw err;
+  }
+
+  let dependencies = denoJSON.imports || {};
+
+  if (!isValidJsonObject(dependencies)) {
+    error(
+      "Oh no!",
+      "The provided template must be a Remix project with a `deno.json` " +
+        "file, but its imports value is invalid."
+    );
+    throw new Error(`deno.json imports are invalid`);
+  }
+
+  for (let dependency in dependencies) {
+    let version = dependencies[dependency];
+    if (
+      (dependency.startsWith("@remix-run/") || dependency === "remix") &&
+      version === `npm:${dependency}@*`
+    ) {
+      let newVersion = semver.prerelease(ctx.remixVersion)
+        ? // Templates created from prereleases should pin to a specific version
+          ctx.remixVersion
+        : "^" + ctx.remixVersion;
+      dependencies[dependency] = `npm:${dependency}@${newVersion}`;
+    }
+  }
+
+  fs.promises.writeFile(
+    denoJSONPath,
+    JSON.stringify(denoJSON, null, 2),
+    "utf-8"
+  );
+  return true;
 }
 
 async function loadingIndicator(args: {

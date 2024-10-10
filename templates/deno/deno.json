@@ -14,9 +14,9 @@
   ],
   "nodeModulesDir": "manual",
   "imports": {
-    "@remix-run/dev": "npm:@remix-run/dev@^2.11.2",
-    "@remix-run/react": "npm:@remix-run/react@^2.11.2",
-    "@remix-run/server-runtime": "npm:@remix-run/server-runtime@^2.11.2",
+    "@remix-run/dev": "npm:@remix-run/dev@*",
+    "@remix-run/react": "npm:@remix-run/react@*",
+    "@remix-run/server-runtime": "npm:@remix-run/server-runtime@*",
     "@std/http": "jsr:@std/http@^1.0.4",
     "@std/path": "jsr:@std/path@^1.0.3",
     "@types/node": "npm:@types/node@^22.5.1",
