@@ -175,7 +175,7 @@ jobs:
         with:
           deno-version: v2.x
       - name: 🦕 Deno Deploy CLI
-        run: deno install -Arf jsr:@deno/deployctl
+        run: deno install -Arfg jsr:@deno/deployctl
 
       - name: 🚀 Deploy to Deno Deploy
         run: node ./deno-deploy.mjs
