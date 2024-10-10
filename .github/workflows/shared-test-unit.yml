@@ -38,6 +38,11 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: "pnpm"
 
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Disable GitHub Actions Annotations
         run: |
           echo "::remove-matcher owner=tsc::"

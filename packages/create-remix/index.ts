@@ -160,9 +160,11 @@ async function getContext(argv: string[]): Promise<Context> {
     noMotion,
     pkgManager: validatePackageManager(
       pkgManager ??
-        // npm, pnpm, Yarn, and Bun set the user agent environment variable that can be used
-        // to determine which package manager ran the command.
-        (process.env.npm_config_user_agent ?? "npm").split("/")[0]
+        (process.versions.deno
+          ? "deno"
+          : // npm, pnpm, Yarn, and Bun set the user agent environment variable that can be used
+            // to determine which package manager ran the command.
+            (process.env.npm_config_user_agent ?? "npm").split("/")[0])
     ),
     projectName,
     prompt,
@@ -387,7 +389,19 @@ async function copyTempDirToAppDirStep(ctx: Context) {
     },
   });
 
-  await updatePackageJSON(ctx);
+  let didUpdatePackageJSON = await updatePackageJSON(ctx);
+  let didUpdateDenoJSON = await updateDenoJSON(ctx);
+
+  if (!didUpdatePackageJSON && !didUpdateDenoJSON) {
+    let relativePath = path.relative(process.cwd(), ctx.cwd);
+    error(
+      "Oh no!",
+      "The provided template must be a Remix project with a `package.json` or `deno.json` " +
+        `file, but that file does not exist in ${color.bold(relativePath)}.`
+    );
+    throw new Error(`package.json or deno.json does not exist in ${ctx.cwd}`);
+  }
+
   ctx.initScriptPath = await getInitScriptPath(ctx.cwd);
 }
 
@@ -525,7 +539,8 @@ async function runInitScriptStep(ctx: Context) {
     return;
   }
 
-  let initCommand = `${packageManagerExecScript[ctx.pkgManager]} remix init`;
+  let packageManager = ctx.pkgManager;
+  let initCommand = `${packageManagerExecScript[packageManager]} init`;
 
   if (!ctx.install || !ctx.initScript) {
     await sleep(100);
@@ -544,16 +559,15 @@ async function runInitScriptStep(ctx: Context) {
 
   let initScriptDir = path.dirname(ctx.initScriptPath);
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-  let packageManager = ctx.pkgManager;
 
   try {
     if (await fileExists(initPackageJson)) {
       await loadingIndicator({
-        start: `Dependencies for remix.init script installing with ${ctx.pkgManager}...`,
+        start: `Dependencies for remix.init script installing with ${packageManager}...`,
         end: "Dependencies for remix.init script installed",
         while: () =>
           installDependencies({
-            pkgManager: ctx.pkgManager,
+            pkgManager: packageManager,
             cwd: initScriptDir,
             showInstallOutput: ctx.showInstallOutput,
           }),
@@ -642,13 +656,14 @@ async function doneStep(ctx: Context) {
   await sleep(200);
 }
 
-type PackageManager = "npm" | "yarn" | "pnpm" | "bun";
+type PackageManager = "npm" | "yarn" | "pnpm" | "bun" | "deno";
 
 const packageManagerExecScript: Record<PackageManager, string> = {
-  npm: "npx",
-  yarn: "yarn",
-  pnpm: "pnpm exec",
-  bun: "bunx",
+  npm: "npx remix",
+  yarn: "yarn remix",
+  pnpm: "pnpm exec remix",
+  bun: "bunx remix",
+  deno: "deno run -A npm:@remix-run/dev",
 };
 
 function validatePackageManager(pkgManager: string): PackageManager {
@@ -680,13 +695,7 @@ async function installDependencies({
 async function updatePackageJSON(ctx: Context) {
   let packageJSONPath = path.join(ctx.cwd, "package.json");
   if (!fs.existsSync(packageJSONPath)) {
-    let relativePath = path.relative(process.cwd(), ctx.cwd);
-    error(
-      "Oh no!",
-      "The provided template must be a Remix project with a `package.json` " +
-        `file, but that file does not exist in ${color.bold(relativePath)}.`
-    );
-    throw new Error(`package.json does not exist in ${ctx.cwd}`);
+    return false;
   }
 
   let contents = await fs.promises.readFile(packageJSONPath, "utf-8");
@@ -741,6 +750,62 @@ async function updatePackageJSON(ctx: Context) {
     JSON.stringify(sortPackageJSON(packageJSON), null, 2),
     "utf-8"
   );
+  return true;
+}
+
+async function updateDenoJSON(ctx: Context) {
+  let denoJSONPath = path.join(ctx.cwd, "deno.json");
+  if (!fs.existsSync(denoJSONPath)) {
+    return false;
+  }
+
+  let contents = await fs.promises.readFile(denoJSONPath, "utf-8");
+  let denoJSON: any;
+  try {
+    denoJSON = JSON.parse(contents);
+    if (!isValidJsonObject(denoJSON)) {
+      throw Error();
+    }
+  } catch (err) {
+    error(
+      "Oh no!",
+      "The provided template must be a Remix project with a `deno.json` " +
+        `file, but that file is invalid.`
+    );
+    throw err;
+  }
+
+  let dependencies = denoJSON.imports || {};
+
+  if (!isValidJsonObject(dependencies)) {
+    error(
+      "Oh no!",
+      "The provided template must be a Remix project with a `deno.json` " +
+        "file, but its imports value is invalid."
+    );
+    throw new Error(`deno.json imports are invalid`);
+  }
+
+  for (let dependency in dependencies) {
+    let version = dependencies[dependency];
+    if (
+      (dependency.startsWith("@remix-run/") || dependency === "remix") &&
+      version === `npm:${dependency}@*`
+    ) {
+      let newVersion = semver.prerelease(ctx.remixVersion)
+        ? // Templates created from prereleases should pin to a specific version
+          ctx.remixVersion
+        : "^" + ctx.remixVersion;
+      dependencies[dependency] = `npm:${dependency}@${newVersion}`;
+    }
+  }
+
+  fs.promises.writeFile(
+    denoJSONPath,
+    JSON.stringify(denoJSON, null, 2),
+    "utf-8"
+  );
+  return true;
 }
 
 async function loadingIndicator(args: {

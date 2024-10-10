@@ -1,5 +1,4 @@
-import type { MetaFunction } from "@remix-run/deno";
-import * as React from "react";
+import type { MetaFunction } from "@remix-run/react";
 
 export const meta: MetaFunction = () => {
   return [

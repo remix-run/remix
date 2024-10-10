@@ -849,6 +849,7 @@ test.describe("Client Data", () => {
 
     test("bubbled server loader errors are persisted for hydrating routes", async ({
       page,
+      browserName,
     }) => {
       let _consoleError = console.error;
       console.error = () => {};
@@ -955,7 +956,9 @@ test.describe("Client Data", () => {
       expect(html).not.toMatch("Should not see me");
 
       expect(logs).toEqual([
-        expect.stringContaining("Download the React DevTools"),
+        ...(browserName === "webkit"
+          ? []
+          : [expect.stringContaining("Download the React DevTools")]),
         "running parent client loader",
       ]);
 

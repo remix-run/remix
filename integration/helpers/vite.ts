@@ -13,7 +13,10 @@ import dedent from "dedent";
 import type { Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 
+const denoBin = "deno"; // assume deno is globally installed
+const nodeBin = process.argv[0];
 const remixBin = "node_modules/@remix-run/dev/dist/cli.js";
+const remixServeBin = "node_modules/@remix-run/serve/dist/cli.js";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const root = path.resolve(__dirname, "../..");
 const TMP_DIR = path.join(root, ".tmp/integration");
@@ -90,7 +93,10 @@ export const EXPRESS_SERVER = (args: {
     app.listen(port, () => console.log('http://localhost:' + port));
   `;
 
-type TemplateName = "vite-template" | "vite-cloudflare-template";
+type TemplateName =
+  | "vite-template"
+  | "vite-cloudflare-template"
+  | "vite-deno-template";
 
 export async function createProject(
   files: Record<string, string> = {},
@@ -130,46 +136,53 @@ export const viteBuild = ({
 }: {
   cwd: string;
   env?: Record<string, string>;
-}) => {
-  let nodeBin = process.argv[0];
+}) => nodeSync([remixBin, "vite:build"], { cwd, env });
 
-  return spawnSync(nodeBin, [remixBin, "vite:build"], {
-    cwd,
-    env: {
-      ...process.env,
-      ...colorEnv,
-      ...env,
-    },
-  });
-};
-
-export const viteRemixServe = async ({
+export const viteBuildDeno = ({
   cwd,
-  port,
-  serverBundle,
-  basename,
+  env = {},
 }: {
+  cwd: string;
+  env?: Record<string, string>;
+}) => denoSync([remixBin, "vite:build"], { cwd, env });
+
+type ServerArgs = {
   cwd: string;
   port: number;
   serverBundle?: string;
   basename?: string;
-}) => {
-  let nodeBin = process.argv[0];
-  let serveProc = spawn(
-    nodeBin,
-    [
-      "node_modules/@remix-run/serve/dist/cli.js",
-      `build/server/${serverBundle ? serverBundle + "/" : ""}index.js`,
-    ],
-    {
-      cwd,
-      stdio: "pipe",
-      env: { NODE_ENV: "production", PORT: port.toFixed(0) },
-    }
-  );
-  await waitForServer(serveProc, { port, basename });
-  return () => serveProc.kill();
 };
+
+const createRemixServe =
+  ({
+    runtime = node,
+    waitOnAddress = "localhost",
+  }: {
+    runtime?: typeof node | typeof deno;
+    waitOnAddress?: string;
+  } = {}) =>
+  async ({
+    cwd,
+    port,
+    serverBundle,
+    basename,
+  }: ServerArgs): Promise<() => unknown> => {
+    let serveProc = runtime(
+      [
+        remixServeBin,
+        `build/server/${serverBundle ? serverBundle + "/" : ""}index.js`,
+      ],
+      { cwd, env: { NODE_ENV: "production", PORT: port.toFixed(0) } }
+    );
+    await waitForServer(serveProc, { port, basename }, waitOnAddress);
+    return () => serveProc.kill();
+  };
+
+export const viteRemixServe = createRemixServe();
+export const viteRemixServeDeno = createRemixServe({
+  runtime: deno,
+  waitOnAddress: "127.0.0.1", // https://github.com/jeffbski/wait-on/issues/109
+});
 
 export const wranglerPagesDev = async ({
   cwd,
@@ -178,25 +191,17 @@ export const wranglerPagesDev = async ({
   cwd: string;
   port: number;
 }) => {
-  let nodeBin = process.argv[0];
-
   // grab wrangler bin from remix-run/remix root node_modules since its not copied into integration project's node_modules
   let wranglerBin = path.resolve("node_modules/wrangler/bin/wrangler.js");
-
-  let proc = spawn(
-    nodeBin,
+  let proc = node(
     [wranglerBin, "pages", "dev", "./build/client", "--port", String(port)],
-    {
-      cwd,
-      stdio: "pipe",
-      env: { NODE_ENV: "production" },
-    }
+    { cwd, env: { NODE_ENV: "production" } }
   );
   await waitForServer(proc, { port });
   return () => proc.kill();
 };
 
-type ServerArgs = {
+type DevServerArgs = {
   cwd: string;
   port: number;
   env?: Record<string, string>;
@@ -204,25 +209,38 @@ type ServerArgs = {
 };
 
 const createDev =
-  (nodeArgs: string[]) =>
-  async ({ cwd, port, env, basename }: ServerArgs): Promise<() => unknown> => {
-    let proc = node(nodeArgs, { cwd, env });
-    await waitForServer(proc, { port, basename });
+  ({
+    args = [remixBin, "vite:dev"],
+    runtime = node,
+    waitOnAddress = "localhost",
+  }: {
+    args?: string[];
+    runtime?: typeof node | typeof deno;
+    waitOnAddress?: string;
+  } = {}) =>
+  async ({
+    cwd,
+    port,
+    env,
+    basename,
+  }: DevServerArgs): Promise<() => unknown> => {
+    let proc = runtime(args, { cwd, env });
+    await waitForServer(proc, { port, basename }, waitOnAddress);
     return () => proc.kill();
   };
 
-export const viteDev = createDev([remixBin, "vite:dev"]);
-export const customDev = createDev(["./server.mjs"]);
+export const viteDev = createDev();
+export const viteDevDeno = createDev({
+  runtime: deno,
+  waitOnAddress: "127.0.0.1", // https://github.com/jeffbski/wait-on/issues/109
+});
+
+export const customDev = createDev({ args: ["./server.mjs"] });
 
 // Used for testing errors thrown on build when we don't want to start and
 // wait for the server
-export const viteDevCmd = ({ cwd }: { cwd: string }) => {
-  let nodeBin = process.argv[0];
-  return spawnSync(nodeBin, [remixBin, "vite:dev"], {
-    cwd,
-    env: { ...process.env },
-  });
-};
+export const viteDevCmd = ({ cwd }: { cwd: string }) =>
+  nodeSync([remixBin, "vite:dev"], { cwd });
 
 declare module "@playwright/test" {
   interface Page {
@@ -240,11 +258,22 @@ type Fixtures = {
     port: number;
     cwd: string;
   }>;
+  viteDevDeno: (
+    files: Files,
+    templateName?: TemplateName
+  ) => Promise<{
+    port: number;
+    cwd: string;
+  }>;
   customDev: (files: Files) => Promise<{
     port: number;
     cwd: string;
   }>;
   viteRemixServe: (files: Files) => Promise<{
+    port: number;
+    cwd: string;
+  }>;
+  viteRemixServeDeno: (files: Files) => Promise<{
     port: number;
     cwd: string;
   }>;
@@ -267,6 +296,17 @@ export const test = base.extend<Fixtures>({
       let port = await getPort();
       let cwd = await createProject(await files({ port }), template);
       stop = await viteDev({ cwd, port });
+      return { port, cwd };
+    });
+    stop?.();
+  },
+  // eslint-disable-next-line no-empty-pattern
+  viteDevDeno: async ({}, use) => {
+    let stop: (() => unknown) | undefined;
+    await use(async (files, template) => {
+      let port = await getPort();
+      let cwd = await createProject(await files({ port }), template);
+      stop = await viteDevDeno({ cwd, port });
       return { port, cwd };
     });
     stop?.();
@@ -296,6 +336,22 @@ export const test = base.extend<Fixtures>({
     stop?.();
   },
   // eslint-disable-next-line no-empty-pattern
+  viteRemixServeDeno: async ({}, use) => {
+    let stop: (() => unknown) | undefined;
+    await use(async (files) => {
+      let port = await getPort();
+      let cwd = await createProject(
+        await files({ port }),
+        "vite-deno-template"
+      );
+      let { status } = viteBuildDeno({ cwd });
+      expect(status).toBe(0);
+      stop = await viteRemixServeDeno({ cwd, port });
+      return { port, cwd };
+    });
+    stop?.();
+  },
+  // eslint-disable-next-line no-empty-pattern
   wranglerPagesDev: async ({}, use) => {
     let stop: (() => unknown) | undefined;
     await use(async (files) => {
@@ -317,9 +373,7 @@ function node(
   args: string[],
   options: { cwd: string; env?: Record<string, string> }
 ) {
-  let nodeBin = process.argv[0];
-
-  let proc = spawn(nodeBin, args, {
+  return spawn(nodeBin, args, {
     cwd: options.cwd,
     env: {
       ...process.env,
@@ -328,18 +382,61 @@ function node(
     },
     stdio: "pipe",
   });
-  return proc;
+}
+
+function nodeSync(
+  args: string[],
+  options: { cwd: string; env?: Record<string, string> }
+) {
+  return spawnSync(nodeBin, args, {
+    cwd: options.cwd,
+    env: {
+      ...process.env,
+      ...colorEnv,
+      ...options.env,
+    },
+  });
+}
+
+function deno(
+  args: string[],
+  options: { cwd: string; env?: Record<string, string> }
+) {
+  return spawn(denoBin, ["run", "-A", ...args], {
+    cwd: options.cwd,
+    env: {
+      ...process.env,
+      ...colorEnv,
+      ...options.env,
+    },
+    stdio: "pipe",
+  });
+}
+
+function denoSync(
+  args: string[],
+  options: { cwd: string; env?: Record<string, string> }
+) {
+  return spawnSync(denoBin, ["run", "-A", ...args], {
+    cwd: options.cwd,
+    env: {
+      ...process.env,
+      ...colorEnv,
+      ...options.env,
+    },
+  });
 }
 
 async function waitForServer(
   proc: ChildProcess & { stdout: Readable; stderr: Readable },
-  args: { port: number; basename?: string }
+  args: { port: number; basename?: string },
+  waitOnAddress = "localhost"
 ) {
   let devStdout = bufferize(proc.stdout);
   let devStderr = bufferize(proc.stderr);
 
   await waitOn({
-    resources: [`http://localhost:${args.port}${args.basename ?? "/"}`],
+    resources: [`http://${waitOnAddress}:${args.port}${args.basename ?? "/"}`],
     timeout: 10000,
   }).catch((err) => {
     let stdout = devStdout();

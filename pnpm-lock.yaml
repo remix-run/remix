@@ -597,6 +597,60 @@ importers:
         specifier: ^3.24.0
         version: 3.74.0(@cloudflare/workers-types@4.20240208.0)
 
+  integration/helpers/vite-deno-template:
+    dependencies:
+      '@remix-run/dev':
+        specifier: workspace:*
+        version: file:packages/remix-dev(@remix-run/react@2.12.1)(@remix-run/serve@2.12.1)(typescript@5.1.6)(vite@5.1.3)(wrangler@3.74.0)
+      '@remix-run/node':
+        specifier: workspace:*
+        version: file:packages/remix-node(typescript@5.1.6)
+      '@remix-run/react':
+        specifier: workspace:*
+        version: file:packages/remix-react(react-dom@18.2.0)(react@18.2.0)(typescript@5.1.6)
+      '@remix-run/serve':
+        specifier: workspace:*
+        version: file:packages/remix-serve
+      '@remix-run/server-runtime':
+        specifier: workspace:*
+        version: file:packages/remix-server-runtime(typescript@5.1.6)
+      isbot:
+        specifier: ^4.1.0
+        version: 4.4.0
+      react:
+        specifier: ^18.2.0
+        version: 18.2.0
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.2.0(react@18.2.0)
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.20
+        version: 18.2.20
+      '@types/react-dom':
+        specifier: ^18.2.7
+        version: 18.2.7
+      typescript:
+        specifier: ^5.1.0
+        version: 5.1.6
+      vite:
+        specifier: 5.1.3
+        version: 5.1.3(@types/node@18.17.1)
+      vite-tsconfig-paths:
+        specifier: ^4.2.1
+        version: 4.3.1(typescript@5.1.6)(vite@5.1.3)
+    dependenciesMeta:
+      '@remix-run/dev':
+        injected: true
+      '@remix-run/node':
+        injected: true
+      '@remix-run/react':
+        injected: true
+      '@remix-run/serve':
+        injected: true
+      '@remix-run/server-runtime':
+        injected: true
+
   integration/helpers/vite-template:
     dependencies:
       '@remix-run/express':
@@ -15351,4 +15405,182 @@ packages:
 
   /zwitch@2.0.2:
     resolution: {integrity: sha512-JZxotl7SxAJH0j7dN4pxsTV6ZLXoLdGME+PsjkL/DaBrVryK9kTGq06GfKrwcSOqypP+fdXGoCHE36b99fWVoA==}
+    dev: false
+
+  file:packages/remix-dev(@remix-run/react@2.12.1)(@remix-run/serve@2.12.1)(typescript@5.1.6)(vite@5.1.3)(wrangler@3.74.0):
+    resolution: {directory: packages/remix-dev, type: directory}
+    id: file:packages/remix-dev
+    name: '@remix-run/dev'
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+    peerDependencies:
+      '@remix-run/react': ^2.12.1
+      '@remix-run/serve': ^2.12.1
+      typescript: ^5.1.0
+      vite: ^5.1.0
+      wrangler: ^3.28.2
+    peerDependenciesMeta:
+      '@remix-run/serve':
+        optional: true
+      typescript:
+        optional: true
+      vite:
+        optional: true
+      wrangler:
+        optional: true
+    dependencies:
+      '@babel/core': 7.23.7
+      '@babel/generator': 7.23.6
+      '@babel/parser': 7.23.6
+      '@babel/plugin-syntax-decorators': 7.23.3(@babel/core@7.23.7)
+      '@babel/plugin-syntax-jsx': 7.22.5(@babel/core@7.23.7)
+      '@babel/preset-typescript': 7.21.5(@babel/core@7.23.7)
+      '@babel/traverse': 7.23.7
+      '@babel/types': 7.23.6
+      '@mdx-js/mdx': 2.3.0
+      '@npmcli/package-json': 4.0.1
+      '@remix-run/node': link:packages/remix-node
+      '@remix-run/react': file:packages/remix-react(react-dom@18.2.0)(react@18.2.0)(typescript@5.1.6)
+      '@remix-run/router': 1.20.0-pre.0
+      '@remix-run/serve': file:packages/remix-serve
+      '@remix-run/server-runtime': link:packages/remix-server-runtime
+      '@types/mdx': 2.0.5
+      '@vanilla-extract/integration': 6.5.0(@types/node@18.17.1)
+      arg: 5.0.2
+      cacache: 17.1.4
+      chalk: 4.1.2
+      chokidar: 3.6.0
+      cross-spawn: 7.0.3
+      dotenv: 16.4.4
+      es-module-lexer: 1.4.1
+      esbuild: 0.17.6
+      esbuild-plugins-node-modules-polyfill: 1.6.2(esbuild@0.17.6)
+      execa: 5.1.1
+      exit-hook: 2.2.1
+      express: 4.19.2
+      fs-extra: 10.1.0
+      get-port: 5.1.1
+      gunzip-maybe: 1.4.2
+      jsesc: 3.0.2
+      json5: 2.2.3
+      lodash: 4.17.21
+      lodash.debounce: 4.0.8
+      minimatch: 9.0.3
+      ora: 5.4.1
+      picocolors: 1.0.0
+      picomatch: 2.3.1
+      pidtree: 0.6.0
+      postcss: 8.4.35
+      postcss-discard-duplicates: 5.1.0(postcss@8.4.35)
+      postcss-load-config: 4.0.2(postcss@8.4.35)
+      postcss-modules: 6.0.0(postcss@8.4.35)
+      prettier: 2.8.1
+      pretty-ms: 7.0.1
+      react-refresh: 0.14.0
+      remark-frontmatter: 4.0.1
+      remark-mdx-frontmatter: 1.1.1
+      semver: 7.5.4
+      set-cookie-parser: 2.6.0
+      tar-fs: 2.1.1
+      tsconfig-paths: 4.2.0
+      typescript: 5.1.6
+      vite: 5.1.3(@types/node@18.17.1)
+      wrangler: 3.74.0(@cloudflare/workers-types@4.20240208.0)
+      ws: 7.5.9
+    transitivePeerDependencies:
+      - '@types/node'
+      - bluebird
+      - bufferutil
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - ts-node
+      - utf-8-validate
+    dev: false
+
+  file:packages/remix-node(typescript@5.1.6):
+    resolution: {directory: packages/remix-node, type: directory}
+    id: file:packages/remix-node
+    name: '@remix-run/node'
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      typescript: ^5.1.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+    dependencies:
+      '@remix-run/server-runtime': link:packages/remix-server-runtime
+      '@remix-run/web-fetch': 4.4.2
+      '@web3-storage/multipart-parser': 1.0.0
+      cookie-signature: 1.2.1
+      source-map-support: 0.5.21
+      stream-slice: 0.1.2
+      typescript: 5.1.6
+      undici: 6.11.1
+    dev: false
+
+  file:packages/remix-react(react-dom@18.2.0)(react@18.2.0)(typescript@5.1.6):
+    resolution: {directory: packages/remix-react, type: directory}
+    id: file:packages/remix-react
+    name: '@remix-run/react'
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      react: ^18.0.0
+      react-dom: ^18.0.0
+      typescript: ^5.1.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+    dependencies:
+      '@remix-run/router': 1.20.0-pre.0
+      '@remix-run/server-runtime': link:packages/remix-server-runtime
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+      react-router: 6.27.0-pre.0(react@18.2.0)
+      react-router-dom: 6.27.0-pre.0(react-dom@18.2.0)(react@18.2.0)
+      turbo-stream: 2.4.0
+      typescript: 5.1.6
+    dev: false
+
+  file:packages/remix-serve:
+    resolution: {directory: packages/remix-serve, type: directory}
+    name: '@remix-run/serve'
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+    dependencies:
+      '@remix-run/express': link:packages/remix-express
+      '@remix-run/node': link:packages/remix-node
+      chokidar: 3.6.0
+      compression: 1.7.4
+      express: 4.19.2
+      get-port: 5.1.1
+      morgan: 1.10.0
+      source-map-support: 0.5.21
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  file:packages/remix-server-runtime(typescript@5.1.6):
+    resolution: {directory: packages/remix-server-runtime, type: directory}
+    id: file:packages/remix-server-runtime
+    name: '@remix-run/server-runtime'
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      typescript: ^5.1.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+    dependencies:
+      '@remix-run/router': 1.20.0-pre.0
+      '@types/cookie': 0.6.0
+      '@web3-storage/multipart-parser': 1.0.0
+      cookie: 0.6.0
+      set-cookie-parser: 2.6.0
+      source-map: 0.7.3
+      turbo-stream: 2.4.0
+      typescript: 5.1.6
     dev: false
