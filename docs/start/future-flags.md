@@ -474,7 +474,7 @@ You may find some usage for the new [`<Link discover>`][discover-prop] API if yo
 
 ## unstable_optimizeDeps
 
-Opt into automatic [dependency optimization][dependency-optimization] during development.
+Opt into automatic [dependency optimization][dependency-optimization] during development. This flag will remain in an "unstable" state until React Router v7 so you do not need to adopt this in your Remix v2 app prior to upgrading to React Router v7.
 
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
