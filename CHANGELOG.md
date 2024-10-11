@@ -236,7 +236,7 @@ Date: 2024-10-11
 
 #### Stabilized APIs
 
-This release stabilizes a handful of "unstable" APIs in preparation for the pending React Router v7 release (see [these](https://remix.run/blog/merging-remix-and-react-router) [posts](https://remix.run/blog/incremental-path-to-react-19) for more info):
+This release stabilizes a handful of "unstable" APIs in preparation for the [pending](https://x.com/remix_run/status/1841926034868077009) React Router v7 release (see [these](https://remix.run/blog/merging-remix-and-react-router) [posts](https://remix.run/blog/incremental-path-to-react-19) for more info):
 
 - `unstable_data` → `data` (for use with Single Fetch)
 - `unstable_flushSync` → `flushSync` (`useSubmit`, `fetcher.load`, `fetcher.submit`)
