@@ -37,9 +37,9 @@ interface FutureConfig {
   v3_fetcherPersist: boolean;
   v3_relativeSplatPath: boolean;
   v3_throwAbortReason: boolean;
-  unstable_singleFetch: boolean;
-  unstable_lazyRouteDiscovery: boolean;
-  unstable_optimizeDeps: boolean;
+  v3_singleFetch: boolean;
+  v3_lazyRouteDiscovery: boolean;
+  v3_optimizeDeps: boolean;
 }
 
 type NodeBuiltinsPolyfillOptions = Pick<
@@ -471,7 +471,7 @@ export async function resolveConfig(
   let pkgJson = await PackageJson.load(rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
-  if (isSpaMode && appConfig.future?.unstable_singleFetch != true) {
+  if (isSpaMode && appConfig.future?.v3_singleFetch != true) {
     // This is a super-simple default since we don't need streaming in SPA Mode.
     // We can include this in a remix-spa template, but right now `npx remix reveal`
     // will still expose the streaming template since that command doesn't have
@@ -527,12 +527,6 @@ export async function resolveConfig(
     }
 
     entryServerFile = `entry.server.${serverRuntime}.tsx`;
-  }
-
-  if (isSpaMode && appConfig.future?.unstable_lazyRouteDiscovery === true) {
-    throw new Error(
-      "You can not use `future.unstable_lazyRouteDiscovery` in SPA Mode (`ssr: false`)"
-    );
   }
 
   let entryClientFilePath = userEntryClientFile
@@ -609,10 +603,9 @@ export async function resolveConfig(
     v3_fetcherPersist: appConfig.future?.v3_fetcherPersist === true,
     v3_relativeSplatPath: appConfig.future?.v3_relativeSplatPath === true,
     v3_throwAbortReason: appConfig.future?.v3_throwAbortReason === true,
-    unstable_singleFetch: appConfig.future?.unstable_singleFetch === true,
-    unstable_lazyRouteDiscovery:
-      appConfig.future?.unstable_lazyRouteDiscovery === true,
-    unstable_optimizeDeps: appConfig.future?.unstable_optimizeDeps === true,
+    v3_singleFetch: appConfig.future?.v3_singleFetch === true,
+    v3_lazyRouteDiscovery: appConfig.future?.v3_lazyRouteDiscovery === true,
+    v3_optimizeDeps: appConfig.future?.v3_optimizeDeps === true,
   };
 
   if (appConfig.future) {

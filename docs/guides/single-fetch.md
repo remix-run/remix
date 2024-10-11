@@ -4,13 +4,11 @@ title: Single Fetch
 
 # Single Fetch
 
-<docs-warning>This is an unstable API and will continue to change, do not adopt in production</docs-warning>
-
 Single Fetch is a new data loading strategy and streaming format. When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). Additionally, Single Fetch also allows you to send down naked objects from your `loader` and `action`, such as `Date`, `Error`, `Promise`, `RegExp`, and more.
 
 ## Overview
 
-Remix introduced support for "Single Fetch" ([RFC][rfc]) behind the [`future.unstable_singleFetch`][future-flags] flag in [`v2.9.0`][2.9.0] which allows you to opt-into this behavior. Single Fetch will be the default in [React Router v7][merging-remix-and-rr].
+Remix introduced support for "Single Fetch" ([RFC][rfc]) behind the [`future.unstable_singleFetch`][future-flags] flag in [`v2.9.0`][2.9.0] (later stabilized as `future.v3_singleFetch` in [`v2.13.0`][2.13.0]) which allows you to opt-into this behavior. Single Fetch will be the default in [React Router v7][merging-remix-and-rr].
 
 Enabling Single Fetch is intended to be low-effort up-front, and then allow you to adopt all breaking changes iteratively over time. You can start by applying the minimal required changes to [enable Single Fetch][start], then use the [migration guide][migration-guide] to make incremental changes in your application to ensure a smooth, non-breaking upgrade to [React Router v7][merging-remix-and-rr].
 
@@ -26,7 +24,7 @@ export default defineConfig({
     remix({
       future: {
         // ...
-        unstable_singleFetch: true,
+        v3_singleFetch: true,
       },
     }),
     // ...
@@ -147,15 +145,15 @@ With Single Fetch, naked objects will be streamed directly, so the built-in type
 
 #### Enable Single Fetch types
 
-To switch over to Single Fetch types, you should [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`.
+To switch over to Single Fetch types, you should [augment][augment] Remix's `Future` interface with `v3_singleFetch: true`.
 You can do this in any file covered by your `tsconfig.json` > `include`.
-We recommend you do this in your `vite.config.ts` to keep it colocated with the `future.unstable_singleFetch` future flag in the Remix plugin:
+We recommend you do this in your `vite.config.ts` to keep it colocated with the `future.v3_singleFetch` future flag in the Remix plugin:
 
 ```ts
 declare module "@remix-run/server-runtime" {
   // or cloudflare, deno, etc.
   interface Future {
-    unstable_singleFetch: true;
+    v3_singleFetch: true;
   }
 }
 ```
@@ -277,7 +275,7 @@ For v2, you may still continue returning normal `Response` instances and their `
 Over time, you should start eliminating returned Responses from your loaders and actions.
 
 - If your `loader`/`action` was returning `json`/`defer` without setting any `status`/`headers`, then you can just remove the call to `json`/`defer` and return the data directly
-- If your `loader`/`action` was returning custom `status`/`headers` via `json`/`defer`, you should switch those to use the new [`unstable_data()`][data-utility] utility.
+- If your `loader`/`action` was returning custom `status`/`headers` via `json`/`defer`, you should switch those to use the new [`data()`][data-utility] utility.
 
 ### Client Loaders
 
@@ -465,6 +463,7 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [entry-server]: ../file-conventions/entry.server
 [client-loader]: ../route/client-loader
 [2.9.0]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#v290
+[2.13.0]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#v2130
 [rfc]: https://github.com/remix-run/remix/discussions/7640
 [turbo-stream]: https://github.com/jacob-ebey/turbo-stream
 [rendertopipeablestream]: https://react.dev/reference/react-dom/server/renderToPipeableStream

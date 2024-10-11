@@ -1,7 +1,7 @@
 import type { Router } from "@remix-run/router";
 import { matchRoutes } from "@remix-run/router";
 import * as React from "react";
-import type { unstable_PatchRoutesOnNavigationFunction } from "react-router";
+import type { PatchRoutesOnNavigationFunction } from "react-router";
 
 import type { AssetsManifest, FutureConfig } from "./entry";
 import type { RouteModules } from "./routeModules";
@@ -26,7 +26,7 @@ const discoveredPaths = new Set<string>();
 const URL_LIMIT = 7680;
 
 export function isFogOfWarEnabled(future: FutureConfig, isSpaMode: boolean) {
-  return future.unstable_lazyRouteDiscovery === true && !isSpaMode;
+  return future.v3_lazyRouteDiscovery === true && !isSpaMode;
 }
 
 export function getPartialManifest(manifest: AssetsManifest, router: Router) {
@@ -70,7 +70,7 @@ export function getPatchRoutesOnNavigationFunction(
   future: FutureConfig,
   isSpaMode: boolean,
   basename: string | undefined
-): unstable_PatchRoutesOnNavigationFunction | undefined {
+): PatchRoutesOnNavigationFunction | undefined {
   if (!isFogOfWarEnabled(future, isSpaMode)) {
     return undefined;
   }

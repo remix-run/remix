@@ -56,8 +56,8 @@ export {
   useSearchParams,
   useSubmit,
   useBlocker,
+  useViewTransitionState,
   unstable_usePrompt,
-  unstable_useViewTransitionState,
 } from "react-router-dom";
 export {
   // For use in clientLoader/clientAction
@@ -66,7 +66,7 @@ export {
   redirect,
   redirectDocument,
   replace,
-  unstable_data,
+  data,
 } from "@remix-run/server-runtime";
 
 export type { RemixBrowserProps } from "./browser";

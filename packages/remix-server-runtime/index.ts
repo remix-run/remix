@@ -8,7 +8,7 @@ export { defer, json, redirect, redirectDocument, replace } from "./responses";
 
 export {
   SingleFetchRedirectSymbol as UNSAFE_SingleFetchRedirectSymbol,
-  data as unstable_data,
+  data,
 } from "./single-fetch";
 export type {
   SingleFetchResult as UNSAFE_SingleFetchResult,

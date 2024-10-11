@@ -234,7 +234,7 @@ The fetcher lifecycle is now based on when it returns to an idle state rather th
 
 👉 **Enable the Flag**
 
-```ts
+```ts filename=vite.config.ts
 remix({
   future: {
     v3_fetcherPersist: true,
@@ -254,7 +254,7 @@ Changes the relative path matching and linking for multi-segment splats paths li
 
 👉 **Enable the Flag**
 
-```ts
+```ts filename=vite.config.ts
 remix({
   future: {
     v3_relativeSplatPath: true,
@@ -320,7 +320,7 @@ When a server-side request is aborted, such as when a user navigates away from a
 
 👉 **Enable the Flag**
 
-```ts
+```ts filename=vite.config.ts
 remix({
   future: {
     v3_throwAbortReason: true,
@@ -332,23 +332,173 @@ remix({
 
 You likely won't need to adjust any code, unless you had custom logic inside of `handleError` that was matching the previous error message to differentiate it from other errors.
 
-## unstable_singleFetch
+## v3_singleFetch
 
-Opt into [Single Fetch][single-fetch] behavior (details will be expanded once the flag stabilizes).
+**Background**
 
-## unstable_lazyRouteDiscovery
+with this flag, Remix moves to a "single fetch" approach for data requests when making SPA navigations within your app. Additional details are available in the [docs][single-fetch], but the main reason we chose to move to this approach is **Simplicity**. With Single Fetch, data requests now behave just like document requests and developers no longer need to think about the nuances of how to manage headers, caching, etc., differently between the two. For more advanced use-cases, developers can still opt into fine-grained revalidations.
 
-Opt into [Lazy Route Discovery][lazy-route-discovery] behavior (details will be expanded once the flag stabilizes).
+👉 **Enable the Flag (and the types)**
 
-## unstable_optimizeDeps
+```ts filename=vite.config.ts lines=[5-10,16]
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 
-Opt into automatic [dependency optimization][dependency-optimization] during development.
+declare module "@remix-run/node" {
+  // or cloudflare, deno, etc.
+  interface Future {
+    v3_singleFetch: true;
+  }
+}
+
+export default defineConfig({
+  plugins: [
+    remix({
+      future: {
+        v3_singleFetch: true,
+      },
+    }),
+    tsconfigPaths(),
+  ],
+});
+```
+
+**Update your Code**
+
+You should be able to mostly use your code as-is with the flag enabled, but the following changes should be made over time and will be required prior to the next major version.
+
+👉 **Remove json()/defer() in favor of raw objects**
+
+Single Fetch supports JSON objects and Promises out of the box, so you can return the raw data from your `loader`/`action` functions:
+
+```diff
+-import { json } from "@remix-run/node";
+
+export async function loader({}: LoaderFunctionArgs) {
+  let tasks = await fetchTasks();
+- return json(tasks);
++ return tasks;
+}
+```
+
+```diff
+-import { defer } from "@remix-run/node";
+
+export async function loader({}: LoaderFunctionArgs) {
+  let lazyStuff = fetchLazyStuff();
+  let tasks = await fetchTasks();
+- return defer({ tasks, lazyStuff });
++ return { tasks, lazyStuff };
+}
+```
+
+If you were using the second parameter of `json`/`defer` to set a custom status or headers on your response, you can continue doing do via the new `data` API:
+
+```diff
+-import { json } from "@remix-run/node";
++import { data } from "@remix-run/node";
+
+export async function loader({}: LoaderFunctionArgs) {
+  let tasks = await fetchTasks();
+-  return json(tasks, {
++  return data(tasks, {
+    headers: {
+      "Cache-Control": "public, max-age=604800"
+    }
+  });
+}
+```
+
+👉 **Adjust your server abort delay**
+
+If you were using a custom `ABORT_DELAY` in your `entry.server.tsx` file, you should change that to use thew new `streamTimeout` API leveraged by Single Fetch:
+
+```diff filename=entry.server.tsx
+-const ABORT_DELAY = 5000;
++// Reject/cancel all pending promises after 5 seconds
++export const streamTimeout = 5000;
+
+// ...
+
+function handleBrowserRequest(/* ... */) {
+  return new Promise((resolve, reject) => {
+    const { pipe, abort } = renderToPipeableStream(
+      <RemixServer
+        context={remixContext}
+        url={request.url}
+-        abortDelay={ABORT_DELAY}
+      />,
+      {
+        onShellReady() {
+          /* ... */
+        },
+        onShellError(error: unknown) {
+          /* ... */
+        },
+        onError(error: unknown) {
+          /* ... */
+        },
+      }
+    );
+
+-    setTimeout(abort, ABORT_DELAY);
++   // Automatically timeout the React renderer after 6 seconds, which ensures
++   // React has enough time to flush down the rejected boundary contents
++   setTimeout(abort, streamTimeout + 1000);
+  });
+}
+```
+
+## v3_lazyRouteDiscovery
+
+**Background**
+
+With this flag, Remix no longer sends the full route manifest up to the client on initial load. Instead, Remix only sends the server-rendered routes up in the manifest and then fetches the remaining routes as the user navigated around the application. Additional details are available in the [docs][lazy-route-discovery] and the [blog post][lazy-route-discovery-blog-post]
+
+👉 **Enable the Flag**
+
+```ts filename=vite.config.ts
+remix({
+  future: {
+    v3_lazyRouteDiscovery: true,
+  },
+});
+```
+
+**Update your Code**
+
+You shouldn't need to make any changes to your application code for this feature to work.
+
+You may find some usage for the new [`<Link discover>`][discover-prop] API if you wish to disable eager route discovery on certain links.
+
+## v3_optimizeDeps
+
+**Background**
+
+This flag allows you to opt-into automatic [dependency optimization][dependency-optimization] during development when using Vite.
+
+👉 **Enable the Flag**
+
+```ts filename=vite.config.ts
+remix({
+  future: {
+    v3_optimizeDeps: true,
+  },
+});
+```
+
+**Update your Code**
+
+You shouldn't need to make any changes to your application code for this feature to work.
 
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
 [relativesplatpath-changelog]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#futurev3_relativesplatpath
 [single-fetch]: ../guides/single-fetch
 [lazy-route-discovery]: ../guides/lazy-route-discovery
+[lazy-route-discovery-blog-post]: https://remix.run/blog/fog-of-war
+[discover-prop]: ../components/link#discover
 [vite]: https://vitejs.dev
 [vite-docs]: ../guides/vite
 [supported-remix-config-options]: ../file-conventions/vite-config

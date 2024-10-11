@@ -12,7 +12,7 @@ export {
 export {
   createRequestHandler,
   createSession,
-  unstable_data,
+  data,
   defer,
   broadcastDevReady,
   logDevReady,

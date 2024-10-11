@@ -199,7 +199,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
     // When single fetch is enabled, we need to suspend until the initial state
     // snapshot is decoded into window.__remixContext.state
-    if (window.__remixContext.future.unstable_singleFetch) {
+    if (window.__remixContext.future.v3_singleFetch) {
       // Note: `stateDecodingPromise` is not coupled to `router` - we'll reach this
       // code potentially many times waiting for our state to arrive, but we'll
       // then only get past here and create the `router` one time
@@ -299,18 +299,18 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         v7_relativeSplatPath: window.__remixContext.future.v3_relativeSplatPath,
         // Single fetch enables this underlying behavior
         v7_skipActionErrorRevalidation:
-          window.__remixContext.future.unstable_singleFetch === true,
+          window.__remixContext.future.v3_singleFetch === true,
       },
       hydrationData,
       mapRouteProperties,
-      unstable_dataStrategy: window.__remixContext.future.unstable_singleFetch
+      dataStrategy: window.__remixContext.future.v3_singleFetch
         ? getSingleFetchDataStrategy(
             window.__remixManifest,
             window.__remixRouteModules,
             () => router
           )
         : undefined,
-      unstable_patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(
+      patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(
         window.__remixManifest,
         window.__remixRouteModules,
         window.__remixContext.future,
@@ -409,7 +409,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         This fragment is important to ensure we match the <RemixServer> JSX
         structure so that useId values hydrate correctly
       */}
-      {window.__remixContext.future.unstable_singleFetch ? <></> : null}
+      {window.__remixContext.future.v3_singleFetch ? <></> : null}
     </>
   );
 }
