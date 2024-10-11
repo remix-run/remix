@@ -849,7 +849,6 @@ test.describe("Client Data", () => {
 
     test("bubbled server loader errors are persisted for hydrating routes", async ({
       page,
-      browserName,
     }) => {
       let _consoleError = console.error;
       console.error = () => {};
@@ -938,7 +937,17 @@ test.describe("Client Data", () => {
       let app = new PlaywrightFixture(appFixture, page);
 
       let logs: string[] = [];
-      page.on("console", (msg) => logs.push(msg.text()));
+      page.on("console", (msg) => {
+        let text = msg.text();
+        if (
+          // Ignore any dev tools messages. This may only happen locally when dev
+          // tools is installed and not in CI but either way we don't care
+          /Download the React DevTools/.test(text)
+        ) {
+          return;
+        }
+        logs.push(text);
+      });
 
       await app.goto("/parent/child", false);
       let html = await app.getHtml("main");
@@ -955,12 +964,7 @@ test.describe("Client Data", () => {
       expect(html).toMatch("Child Server Error");
       expect(html).not.toMatch("Should not see me");
 
-      expect(logs).toEqual([
-        ...(browserName === "webkit"
-          ? []
-          : [expect.stringContaining("Download the React DevTools")]),
-        "running parent client loader",
-      ]);
+      expect(logs).toEqual(["running parent client loader"]);
 
       console.error = _consoleError;
     });

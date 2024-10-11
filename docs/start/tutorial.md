@@ -168,7 +168,7 @@ export default function Contact() {
   const contact = {
     first: "Your",
     last: "Name",
-    avatar: "https://placekitten.com/200/200",
+    avatar: "https://placecats.com/200/200",
     twitter: "your_handle",
     notes: "Some notes",
     favorite: true,
@@ -634,11 +634,11 @@ export default function EditContact() {
       <p>
         <span>Name</span>
         <input
-          defaultValue={contact.first}
           aria-label="First name"
+          defaultValue={contact.first}
           name="first"
-          type="text"
           placeholder="First"
+          type="text"
         />
         <input
           aria-label="Last name"
@@ -732,11 +732,11 @@ Open up `contacts.$contactId_.edit.tsx` and look at the `form` elements. Notice 
 
 ```tsx filename=app/routes/contacts.$contactId_.edit.tsx lines=[4]
 <input
-  defaultValue={contact.first}
   aria-label="First name"
+  defaultValue={contact.first}
   name="first"
-  type="text"
   placeholder="First"
+  type="text"
 />
 ```
 
