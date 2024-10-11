@@ -4,8 +4,6 @@ title: Lazy Route Discovery
 
 # Lazy Route Discovery (a.k.a. "Fog of War")
 
-<docs-warning>This is an unstable API and will continue to change, do not adopt in production</docs-warning>
-
 Remix introduced support for Lazy Route Discovery (a.k.a. "Fog of War") ([RFC][rfc]) behind the `future.unstable_lazyRouteDiscovery` [Future Flag][future-flags] in [`v2.10.0`][2.10.0] (later stabilized as `future.v3_lazyRouteDiscovery` in [`v2.13.0`][2.13.0]). This allows you to opt-into this behavior which will become the default in the next major version of Remix - a.k.a. React Router v7 ([1][rr-v7], [2][rr-v7-2]). For more information on this feature, please check out the [blog post][blog-post].
 
 ## Current Behavior

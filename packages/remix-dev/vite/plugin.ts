@@ -1075,7 +1075,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               : undefined,
           },
           optimizeDeps: {
-            entries: ctx.remixConfig.future.unstable_optimizeDeps
+            entries: ctx.remixConfig.future.v3_optimizeDeps
               ? [
                   ctx.entryClientFilePath,
                   ...Object.values(ctx.remixConfig.routes).map((route) =>

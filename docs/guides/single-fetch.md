@@ -4,8 +4,6 @@ title: Single Fetch
 
 # Single Fetch
 
-<docs-warning>This is an unstable API and will continue to change, do not adopt in production</docs-warning>
-
 Single Fetch is a new data loading strategy and streaming format. When you enable Single Fetch, Remix will make a single HTTP call to your server on client-side transitions, instead of multiple HTTP calls in parallel (one per loader). Additionally, Single Fetch also allows you to send down naked objects from your `loader` and `action`, such as `Date`, `Error`, `Promise`, `RegExp`, and more.
 
 ## Overview
@@ -152,7 +150,7 @@ You can do this in any file covered by your `tsconfig.json` > `include`.
 We recommend you do this in your `vite.config.ts` to keep it colocated with the `future.v3_singleFetch` future flag in the Remix plugin:
 
 ```ts
-declare module "@remix-run/node" {
+declare module "@remix-run/server-runtime" {
   // or cloudflare, deno, etc.
   interface Future {
     v3_singleFetch: true;

@@ -1,5 +1,9 @@
 # `create-remix`
 
+## 2.13.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.13.0.
+
 ## 2.12.1
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.12.1.
@@ -146,7 +150,7 @@ No significant changes to this package were made in this release. [See the relea
 
 ### Patch Changes
 
-- Allow dots in github repo shorthand notation folder names (i.e., `npx create-remix --template remix-run/examples/socket.io`) ([#7277](https://github.com/remix-run/remix/pull/7277))
+- Allow dots in github repo shorthand notation folder names (i.e., `npx create-remix@latest --template remix-run/examples/socket.io`) ([#7277](https://github.com/remix-run/remix/pull/7277))
 
 ## 1.19.3
 
