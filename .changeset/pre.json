@@ -26,6 +26,8 @@
     "@remix-run/testing": "2.12.1"
   },
   "changesets": [
+    "big-buckets-pretend",
+    "hot-dingos-attend",
     "rare-shoes-enjoy",
     "short-maps-reflect",
     "silly-gifts-wash",
