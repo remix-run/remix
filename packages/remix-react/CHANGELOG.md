@@ -1,22 +1,6 @@
 # `@remix-run/react`
 
-## 2.13.0-pre.2
-
-### Patch Changes
-
-- [REMOVE] bump router ([#10095](https://github.com/remix-run/remix/pull/10095))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.13.0-pre.2`
-
-## 2.13.0-pre.1
-
-### Patch Changes
-
-- [REMOVE] bump router versions ([#10086](https://github.com/remix-run/remix/pull/10086))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.13.0-pre.1`
-
-## 2.13.0-pre.0
+## 2.13.0
 
 ### Minor Changes
 
@@ -36,9 +20,11 @@
 
 ### Patch Changes
 
+- \[REMOVE] bump router versions ([#10086](https://github.com/remix-run/remix/pull/10086))
+- \[REMOVE] bump router ([#10095](https://github.com/remix-run/remix/pull/10095))
 - Fix bug with `clientLoader.hydrate` in a layout route when hydrating with bubbled errors ([#10063](https://github.com/remix-run/remix/pull/10063))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.13.0-pre.0`
+  - `@remix-run/server-runtime@2.13.0`
 
 ## 2.12.1
 

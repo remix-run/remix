@@ -1,28 +1,10 @@
 # `@remix-run/dev`
 
-## 2.13.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.13.0-pre.2`
-  - `@remix-run/server-runtime@2.13.0-pre.2`
-
-## 2.13.0-pre.1
+## 2.13.0
 
 ### Minor Changes
 
 - Stabilize the `future.unstable_optimizeDeps` flag into `future.v3_optimizeDeps` ([#10092](https://github.com/remix-run/remix/pull/10092))
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.13.0-pre.1`
-  - `@remix-run/server-runtime@2.13.0-pre.1`
-
-## 2.13.0-pre.0
-
-### Minor Changes
 
 - Stabilize React Router APIs in Remix ([#9980](https://github.com/remix-run/remix/pull/9980))
 
@@ -48,11 +30,10 @@
   - Users can configure this abort behavior via their own `entry.server` via `remix reveal entry.server`, and the template entry.server files have been updated with an example approach for newly created Remix apps
 
 - Fix adapter logic for aborting `request.signal` so we don't incorrectly abort on the `close` event for successful requests ([#10046](https://github.com/remix-run/remix/pull/10046))
+
 - Updated dependencies:
-  - `@remix-run/react@2.13.0-pre.0`
-  - `@remix-run/server-runtime@2.13.0-pre.0`
-  - `@remix-run/node@2.13.0-pre.0`
-  - `@remix-run/serve@2.13.0-pre.0`
+  - `@remix-run/server-runtime@2.13.0`
+  - `@remix-run/node@2.13.0`
 
 ## 2.12.1
 

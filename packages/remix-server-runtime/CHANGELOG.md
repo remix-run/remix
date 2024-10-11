@@ -1,10 +1,6 @@
 # `@remix-run/server-runtime`
 
-## 2.13.0-pre.2
-
-## 2.13.0-pre.1
-
-## 2.13.0-pre.0
+## 2.13.0
 
 ### Minor Changes
 
