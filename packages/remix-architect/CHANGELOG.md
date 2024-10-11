@@ -1,5 +1,12 @@
 # `@remix-run/architect`
 
+## 2.13.0-pre.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.13.0-pre.2`
+
 ## 2.13.0-pre.1
 
 ### Patch Changes
