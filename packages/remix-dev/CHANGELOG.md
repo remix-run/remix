@@ -1,5 +1,16 @@
 # `@remix-run/dev`
 
+## 2.13.1-pre.0
+
+### Patch Changes
+
+- Revert `future.v3_optimizeDeps` back to `future.unstable_optimizeDeps` as it was not intended to stabilize in Remix v2 ([#10099](https://github.com/remix-run/remix/pull/10099))
+- Updated dependencies:
+  - `@remix-run/node@2.13.1-pre.0`
+  - `@remix-run/react@2.13.1-pre.0`
+  - `@remix-run/serve@2.13.1-pre.0`
+  - `@remix-run/server-runtime@2.13.1-pre.0`
+
 ## 2.13.0
 
 ### Minor Changes
