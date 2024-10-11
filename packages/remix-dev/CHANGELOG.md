@@ -1,15 +1,13 @@
 # `@remix-run/dev`
 
-## 2.13.1-pre.0
+## 2.13.1
 
 ### Patch Changes
 
 - Revert `future.v3_optimizeDeps` back to `future.unstable_optimizeDeps` as it was not intended to stabilize in Remix v2 ([#10099](https://github.com/remix-run/remix/pull/10099))
 - Updated dependencies:
-  - `@remix-run/node@2.13.1-pre.0`
-  - `@remix-run/react@2.13.1-pre.0`
-  - `@remix-run/serve@2.13.1-pre.0`
-  - `@remix-run/server-runtime@2.13.1-pre.0`
+  - `@remix-run/node@2.13.1`
+  - `@remix-run/server-runtime@2.13.1`
 
 ## 2.13.0
 
@@ -35,6 +33,7 @@
   - This has likely not shown up in any production scenarios because cloudflare/deno production runtimes are (correctly) not aborting the `request.signal` on successful renders
   - The built-in `entry.server` files no longer pass a `signal` to `renderToReadableStream` because adding a timeout-based abort signal to the default behavior would constitute a breaking change
   - Users can configure this abort behavior via their own `entry.server` via `remix reveal entry.server`, and the template entry.server files have been updated with an example approach for newly created Remix apps
+
 - Fix adapter logic for aborting `request.signal` so we don't incorrectly abort on the `close` event for successful requests ([#10046](https://github.com/remix-run/remix/pull/10046))
 
 - Updated dependencies:
