@@ -230,7 +230,7 @@ Date: YYYY-MM-DD
 
 ## v2.13.0
 
-Date: 2024-10-10
+Date: 2024-10-11
 
 ### What's Changed
 
@@ -241,8 +241,9 @@ This release stabilizes a handful of "unstable" APIs in preparation for the pend
 - `unstable_data` → `data` (for use with Single Fetch)
 - `unstable_flushSync` → `flushSync` (`useSubmit`, `fetcher.load`, `fetcher.submit`)
 - `unstable_viewTransition` → `viewTransition` (`<Link>`, `<Form>`, `useNavigate`, `useSubmit`)
-- `future.unstable_singleFetch` → `future.v3_singleFetch` ([Docs](https://remix.run/docs/guides/single-fetch))
+- `future.unstable_optimizeDeps` → `future.v3_optimizeDeps` ([Docs](https://remix.run/docs/en/main/guides/dependency-optimization))
 - `future.unstable_lazyRouteDiscovery` → `future.v3_lazyRouteDiscovery` ([Docs](https://remix.run/docs/guides/lazy-route-discovery))
+- `future.unstable_singleFetch` → `future.v3_singleFetch` ([Docs](https://remix.run/docs/guides/single-fetch))
 
 ### Minor Changes
 
@@ -254,9 +255,10 @@ This release stabilizes a handful of "unstable" APIs in preparation for the pend
     - Single Fetch: `unstable_data()` -> `data()`
     - `unstable_viewTransition` -> `viewTransition` (`Link`, `Form`, `navigate`, `submit`)
     - `unstable_flushSync>` -> `<Link viewTransition>` (`Link`, `Form`, `navigate`, `submit`, `useFetcher`)
-- Stabilize future flags ([#10072](https://github.com/remix-run/remix/pull/10072))
-  - `future.unstable_singleFetch` -> `future.v3_singleFetch`
+- Stabilize future flags ([#10072](https://github.com/remix-run/remix/pull/10072), [#10092](https://github.com/remix-run/remix/pull/10092))
   - `future.unstable_lazyRouteDiscovery` -> `future.v3_lazyRouteDiscovery`
+  - `future.unstable_optimizeDeps` -> `future.v3_optimizeDeps`
+  - `future.unstable_singleFetch` -> `future.v3_singleFetch`
 
 ### Patch Changes
 
