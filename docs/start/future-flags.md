@@ -472,25 +472,9 @@ You shouldn't need to make any changes to your application code for this feature
 
 You may find some usage for the new [`<Link discover>`][discover-prop] API if you wish to disable eager route discovery on certain links.
 
-## v3_optimizeDeps
+## unstable_optimizeDeps
 
-**Background**
-
-This flag allows you to opt-into automatic [dependency optimization][dependency-optimization] during development when using Vite.
-
-👉 **Enable the Flag**
-
-```ts filename=vite.config.ts
-remix({
-  future: {
-    v3_optimizeDeps: true,
-  },
-});
-```
-
-**Update your Code**
-
-You shouldn't need to make any changes to your application code for this feature to work.
+Opt into automatic [dependency optimization][dependency-optimization] during development.
 
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
