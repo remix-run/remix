@@ -601,7 +601,7 @@ importers:
     dependencies:
       '@remix-run/dev':
         specifier: workspace:*
-        version: file:packages/remix-dev(@remix-run/react@2.12.1)(@remix-run/serve@2.12.1)(typescript@5.1.6)(vite@5.1.3)(wrangler@3.74.0)
+        version: file:packages/remix-dev(@remix-run/react@2.13.0)(@remix-run/serve@2.13.0)(typescript@5.1.6)(vite@5.1.3)(wrangler@3.74.0)
       '@remix-run/node':
         specifier: workspace:*
         version: file:packages/remix-node(typescript@5.1.6)
@@ -635,7 +635,7 @@ importers:
         version: 5.1.6
       vite:
         specifier: 5.1.3
-        version: 5.1.3(@types/node@18.17.1)
+        version: 5.1.3
       vite-tsconfig-paths:
         specifier: ^4.2.1
         version: 4.3.1(typescript@5.1.6)(vite@5.1.3)
@@ -14902,6 +14902,23 @@ packages:
       - supports-color
       - terser
 
+  /vite-tsconfig-paths@4.3.1(typescript@5.1.6)(vite@5.1.3):
+    resolution: {integrity: sha512-cfgJwcGOsIxXOLU/nELPny2/LUD/lcf1IbfyeKTv2bsupVbTH/xpFtdQlBmIP1GEK2CjjLxYhFfB+QODFAx5aw==}
+    peerDependencies:
+      vite: '*'
+    peerDependenciesMeta:
+      vite:
+        optional: true
+    dependencies:
+      debug: 4.3.4(supports-color@8.1.1)
+      globrex: 0.1.2
+      tsconfck: 3.0.2(typescript@5.1.6)
+      vite: 5.1.3
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+    dev: true
+
   /vite-tsconfig-paths@4.3.1(typescript@5.1.6)(vite@5.1.8):
     resolution: {integrity: sha512-cfgJwcGOsIxXOLU/nELPny2/LUD/lcf1IbfyeKTv2bsupVbTH/xpFtdQlBmIP1GEK2CjjLxYhFfB+QODFAx5aw==}
     peerDependencies:
@@ -14917,6 +14934,40 @@ packages:
     transitivePeerDependencies:
       - supports-color
       - typescript
+
+  /vite@5.1.3:
+    resolution: {integrity: sha512-UfmUD36DKkqhi/F75RrxvPpry+9+tTkrXfMNZD+SboZqBCMsxKtO52XeGzzuh7ioz+Eo/SYDBbdb0Z7vgcDJew==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^18.0.0 || >=20.0.0
+      less: '*'
+      lightningcss: ^1.21.0
+      sass: '*'
+      stylus: '*'
+      sugarss: '*'
+      terser: ^5.4.0
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      less:
+        optional: true
+      lightningcss:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+    dependencies:
+      esbuild: 0.19.12
+      postcss: 8.4.35
+      rollup: 4.4.1
+    optionalDependencies:
+      fsevents: 2.3.3
 
   /vite@5.1.8(@types/node@18.17.1):
     resolution: {integrity: sha512-mB8ToUuSmzODSpENgvpFk2fTiU/YQ1tmcVJJ4WZbq4fPdGJkFNVcmVL5k7iDug6xzWjjuGDKAuSievIsD6H7Xw==}
@@ -15355,15 +15406,15 @@ packages:
     resolution: {integrity: sha512-JZxotl7SxAJH0j7dN4pxsTV6ZLXoLdGME+PsjkL/DaBrVryK9kTGq06GfKrwcSOqypP+fdXGoCHE36b99fWVoA==}
     dev: false
 
-  file:packages/remix-dev(@remix-run/react@2.12.1)(@remix-run/serve@2.12.1)(typescript@5.1.6)(vite@5.1.3)(wrangler@3.74.0):
+  file:packages/remix-dev(@remix-run/react@2.13.0)(@remix-run/serve@2.13.0)(typescript@5.1.6)(vite@5.1.3)(wrangler@3.74.0):
     resolution: {directory: packages/remix-dev, type: directory}
     id: file:packages/remix-dev
     name: '@remix-run/dev'
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
-      '@remix-run/react': ^2.12.1
-      '@remix-run/serve': ^2.12.1
+      '@remix-run/react': ^2.13.0
+      '@remix-run/serve': ^2.13.0
       typescript: ^5.1.0
       vite: ^5.1.0
       wrangler: ^3.28.2
@@ -15389,7 +15440,7 @@ packages:
       '@npmcli/package-json': 4.0.1
       '@remix-run/node': link:packages/remix-node
       '@remix-run/react': file:packages/remix-react(react-dom@18.2.0)(react@18.2.0)(typescript@5.1.6)
-      '@remix-run/router': 1.20.0-pre.0
+      '@remix-run/router': 1.20.0
       '@remix-run/serve': file:packages/remix-serve
       '@remix-run/server-runtime': link:packages/remix-server-runtime
       '@types/mdx': 2.0.5
@@ -15405,7 +15456,7 @@ packages:
       esbuild-plugins-node-modules-polyfill: 1.6.2(esbuild@0.17.6)
       execa: 5.1.1
       exit-hook: 2.2.1
-      express: 4.19.2
+      express: 4.20.0
       fs-extra: 10.1.0
       get-port: 5.1.1
       gunzip-maybe: 1.4.2
@@ -15432,9 +15483,9 @@ packages:
       tar-fs: 2.1.1
       tsconfig-paths: 4.2.0
       typescript: 5.1.6
-      vite: 5.1.3(@types/node@18.17.1)
+      vite: 5.1.3
       wrangler: 3.74.0(@cloudflare/workers-types@4.20240208.0)
-      ws: 7.5.9
+      ws: 7.5.10
     transitivePeerDependencies:
       - '@types/node'
       - bluebird
@@ -15484,12 +15535,12 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@remix-run/router': 1.20.0-pre.0
+      '@remix-run/router': 1.20.0
       '@remix-run/server-runtime': link:packages/remix-server-runtime
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      react-router: 6.27.0-pre.0(react@18.2.0)
-      react-router-dom: 6.27.0-pre.0(react-dom@18.2.0)(react@18.2.0)
+      react-router: 6.27.0(react@18.2.0)
+      react-router-dom: 6.27.0(react-dom@18.2.0)(react@18.2.0)
       turbo-stream: 2.4.0
       typescript: 5.1.6
     dev: false
@@ -15504,7 +15555,7 @@ packages:
       '@remix-run/node': link:packages/remix-node
       chokidar: 3.6.0
       compression: 1.7.4
-      express: 4.19.2
+      express: 4.20.0
       get-port: 5.1.1
       morgan: 1.10.0
       source-map-support: 0.5.21
@@ -15523,7 +15574,7 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@remix-run/router': 1.20.0-pre.0
+      '@remix-run/router': 1.20.0
       '@types/cookie': 0.6.0
       '@web3-storage/multipart-parser': 1.0.0
       cookie: 0.6.0
