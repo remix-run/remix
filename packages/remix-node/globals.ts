@@ -1,3 +1,5 @@
+import process from "node:process";
+
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
@@ -26,6 +28,10 @@ declare global {
 export function installGlobals({
   nativeFetch,
 }: { nativeFetch?: boolean } = {}) {
+  if (process.versions.deno) {
+    return;
+  }
+
   if (nativeFetch) {
     let {
       File: UndiciFile,

@@ -666,6 +666,42 @@ describe("create-remix CLI", () => {
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
 
+  it("runs remix.init script in a deno project", async () => {
+    let projectDir = getProjectDir("remix-init-deno");
+
+    let { status, stdout, stderr } = await execCreateRemix({
+      args: [
+        projectDir,
+        "--template",
+        path.join(__dirname, "fixtures", "successful-remix-init-deno"),
+        "--no-git-init",
+        "--package-manager",
+        "deno",
+      ],
+      interactions: [
+        {
+          question: /install dependencies/i,
+          type: ["y", ENTER],
+        },
+        {
+          question: /init script/i,
+          type: ["y", ENTER],
+        },
+      ],
+    });
+
+    expect(stderr.trim()).toBeFalsy();
+    expect(stdout).toContain(`Template's remix.init script complete`);
+    expect(status).toBe(0);
+    expect(fse.existsSync(path.join(projectDir, "deno.json"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "deno.lock"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
+    expect(fse.readFileSync(path.join(projectDir, "test.txt"), "utf8")).toBe(
+      "added via remix.init, isOdd(1): true"
+    );
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
+  });
+
   it("runs npm install by default", async () => {
     let originalUserAgent = process.env.npm_config_user_agent;
     process.env.npm_config_user_agent = undefined;
@@ -865,6 +901,37 @@ describe("create-remix CLI", () => {
     process.env.npm_config_user_agent = originalUserAgent;
   });
 
+  it("recognizes when Deno was used to run the command", async () => {
+    process.versions.deno = "1.46.2";
+
+    let projectDir = getProjectDir("deno-create-from-process-versions");
+
+    let execa = require("execa");
+    execa.mockImplementation(async () => {});
+
+    // Suppress terminal output
+    let stdoutMock = jest
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
+    await createRemix([
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "blank"),
+      "--no-git-init",
+      "--yes",
+    ]);
+
+    stdoutMock.mockReset();
+
+    expect(execa).toHaveBeenCalledWith(
+      "deno",
+      expect.arrayContaining(["install"]),
+      expect.anything()
+    );
+    delete process.versions.deno;
+  });
+
   it("supports specifying the package manager, regardless of user agent", async () => {
     let originalUserAgent = process.env.npm_config_user_agent;
     process.env.npm_config_user_agent =
@@ -986,11 +1053,18 @@ describe("create-remix CLI", () => {
     let packageJsonPath = path.join(projectDir, "package.json");
     let packageJson = JSON.parse(String(fse.readFileSync(packageJsonPath)));
     let dependencies = packageJson.dependencies;
-
     expect(dependencies).toMatchObject({
-      "@remix-run/react": expect.any(String),
-      remix: expect.any(String),
+      "@remix-run/react": expect.not.stringMatching(/\*/),
+      remix: expect.not.stringMatching(/\*/),
       "not-remix": "*",
+    });
+
+    let denoJsonPath = path.join(projectDir, "deno.json");
+    let denoJson = JSON.parse(String(fse.readFileSync(denoJsonPath)));
+    expect(denoJson.imports).toMatchObject({
+      "@remix-run/react": expect.not.stringMatching(/npm:@remix-run\/react@\*/),
+      remix: expect.not.stringMatching(/npm:remix@\*/),
+      "not-remix": "npm:not-remix@*",
     });
   });
 
