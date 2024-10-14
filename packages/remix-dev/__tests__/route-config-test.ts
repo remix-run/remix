@@ -1,3 +1,6 @@
+import path from "node:path";
+import { normalizePath } from "vite";
+
 import {
   validateRouteConfig,
   route,
@@ -6,6 +9,17 @@ import {
   prefix,
   relative,
 } from "../config/routes";
+
+function cleanPathsForSnapshot(obj: any): any {
+  return JSON.parse(
+    JSON.stringify(obj, (key, value) => {
+      if (typeof value === "string" && path.isAbsolute(value)) {
+        return normalizePath(value.replace(process.cwd(), "{{CWD}}"));
+      }
+      return value;
+    })
+  );
+}
 
 describe("route config", () => {
   describe("validateRouteConfig", () => {
@@ -460,40 +474,43 @@ describe("route config", () => {
 
     describe("relative", () => {
       it("supports relative routes", () => {
-        let { route } = relative("/path/to/dirname");
+        let { route } = relative(path.join(process.cwd(), "/path/to/dirname"));
         expect(
-          route("parent", "nested/parent.tsx", [
-            route("child", "nested/child.tsx", { id: "child" }),
-          ])
+          cleanPathsForSnapshot(
+            route("parent", "nested/parent.tsx", [
+              route("child", "nested/child.tsx", { id: "child" }),
+            ])
+          )
         ).toMatchInlineSnapshot(`
           {
             "children": [
               {
-                "children": undefined,
-                "file": "/path/to/dirname/nested/child.tsx",
+                "file": "{{CWD}}/path/to/dirname/nested/child.tsx",
                 "id": "child",
                 "path": "child",
               },
             ],
-            "file": "/path/to/dirname/nested/parent.tsx",
+            "file": "{{CWD}}/path/to/dirname/nested/parent.tsx",
             "path": "parent",
           }
         `);
       });
 
       it("supports relative index routes", () => {
-        let { index } = relative("/path/to/dirname");
-        expect([
-          index("nested/without-options.tsx"),
-          index("nested/with-options.tsx", { id: "with-options" }),
-        ]).toMatchInlineSnapshot(`
+        let { index } = relative(path.join(process.cwd(), "/path/to/dirname"));
+        expect(
+          cleanPathsForSnapshot([
+            index("nested/without-options.tsx"),
+            index("nested/with-options.tsx", { id: "with-options" }),
+          ])
+        ).toMatchInlineSnapshot(`
           [
             {
-              "file": "/path/to/dirname/nested/without-options.tsx",
+              "file": "{{CWD}}/path/to/dirname/nested/without-options.tsx",
               "index": true,
             },
             {
-              "file": "/path/to/dirname/nested/with-options.tsx",
+              "file": "{{CWD}}/path/to/dirname/nested/with-options.tsx",
               "id": "with-options",
               "index": true,
             },
@@ -502,21 +519,22 @@ describe("route config", () => {
       });
 
       it("supports relative layout routes", () => {
-        let { layout } = relative("/path/to/dirname");
+        let { layout } = relative(path.join(process.cwd(), "/path/to/dirname"));
         expect(
-          layout("nested/parent.tsx", [
-            layout("nested/child.tsx", { id: "child" }),
-          ])
+          cleanPathsForSnapshot(
+            layout("nested/parent.tsx", [
+              layout("nested/child.tsx", { id: "child" }),
+            ])
+          )
         ).toMatchInlineSnapshot(`
           {
             "children": [
               {
-                "children": undefined,
-                "file": "/path/to/dirname/nested/child.tsx",
+                "file": "{{CWD}}/path/to/dirname/nested/child.tsx",
                 "id": "child",
               },
             ],
-            "file": "/path/to/dirname/nested/parent.tsx",
+            "file": "{{CWD}}/path/to/dirname/nested/parent.tsx",
           }
         `);
       });
