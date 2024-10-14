@@ -13,11 +13,11 @@ import {
   configRouteToBranchRoute,
   getServerBuildDirectory,
 } from "./plugin";
-import type { ConfigRoute, RouteManifest } from "../config/routes";
+import type { RouteManifestEntry, RouteManifest } from "../config/routes";
 import invariant from "../invariant";
 import { preloadViteEsm } from "./import-vite-esm-sync";
 
-function getAddressableRoutes(routes: RouteManifest): ConfigRoute[] {
+function getAddressableRoutes(routes: RouteManifest): RouteManifestEntry[] {
   let nonAddressableIds = new Set<string>();
 
   for (let id in routes) {
@@ -44,11 +44,11 @@ function getAddressableRoutes(routes: RouteManifest): ConfigRoute[] {
 }
 
 function getRouteBranch(routes: RouteManifest, routeId: string) {
-  let branch: ConfigRoute[] = [];
+  let branch: RouteManifestEntry[] = [];
   let currentRouteId: string | undefined = routeId;
 
   while (currentRouteId) {
-    let route: ConfigRoute = routes[currentRouteId];
+    let route: RouteManifestEntry = routes[currentRouteId];
     invariant(route, `Missing route for ${currentRouteId}`);
     branch.push(route);
     currentRouteId = route.parentId;

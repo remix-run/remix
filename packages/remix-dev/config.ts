@@ -1,12 +1,22 @@
+import type * as Vite from "vite";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import colors from "picocolors";
 import fse from "fs-extra";
 import PackageJson from "@npmcli/package-json";
 import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
 
-import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
-import { defineRoutes } from "./config/routes";
+import type * as ViteNode from "./vite/vite-node";
+import {
+  type RouteManifest,
+  type RouteConfig,
+  type DefineRoutesFunction,
+  setAppDirectory,
+  validateRouteConfig,
+  configRoutesToRouteManifest,
+  defineRoutes,
+} from "./config/routes";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
@@ -409,16 +419,27 @@ export async function readConfig(
   });
 }
 
+let isFirstLoad = true;
+let lastValidRoutes: RouteManifest = {};
+
 export async function resolveConfig(
   appConfig: AppConfig,
   {
     rootDirectory,
     serverMode = ServerMode.Production,
     isSpaMode = false,
+    routeConfigChanged = false,
+    vite,
+    viteUserConfig,
+    routesViteNodeContext,
   }: {
     rootDirectory: string;
     serverMode?: ServerMode;
     isSpaMode?: boolean;
+    routeConfigChanged?: boolean;
+    vite?: typeof Vite;
+    viteUserConfig?: Vite.UserConfig;
+    routesViteNodeContext?: ViteNode.Context;
   }
 ): Promise<RemixConfig> {
   if (!isValidServerMode(serverMode)) {
@@ -556,10 +577,90 @@ export async function resolveConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
-    let fileRoutes = flatRoutes(appDirectory, appConfig.ignoredRouteFiles);
-    for (let route of Object.values(fileRoutes)) {
-      routes[route.id] = { ...route, parentId: route.parentId || "root" };
+  setAppDirectory(appDirectory);
+  let routeConfigFile = findEntry(appDirectory, "routes");
+  if (routesViteNodeContext && vite && routeConfigFile) {
+    class FriendlyError extends Error {}
+
+    let logger = vite.createLogger(viteUserConfig?.logLevel, {
+      prefix: "[remix]",
+    });
+
+    try {
+      if (appConfig.routes) {
+        throw new FriendlyError(
+          'The "routes" config option is not supported when a "routes.ts" file is present. You should migrate these routes into "routes.ts".'
+        );
+      }
+
+      let routeConfigExport: RouteConfig = (
+        await routesViteNodeContext.runner.executeFile(
+          path.join(appDirectory, routeConfigFile)
+        )
+      ).routes;
+
+      let routeConfig = await routeConfigExport;
+
+      let result = validateRouteConfig({
+        routeConfigFile,
+        routeConfig,
+      });
+
+      if (!result.valid) {
+        throw new FriendlyError(result.message);
+      }
+
+      routes = { ...routes, ...configRoutesToRouteManifest(routeConfig) };
+
+      lastValidRoutes = routes;
+
+      if (routeConfigChanged) {
+        logger.info(colors.green("Route config changed."), {
+          clear: true,
+          timestamp: true,
+        });
+      }
+    } catch (error: any) {
+      logger.error(
+        error instanceof FriendlyError
+          ? colors.red(error.message)
+          : [
+              colors.red(`Route config in "${routeConfigFile}" is invalid.`),
+              "",
+              error.loc?.file && error.loc?.column && error.frame
+                ? [
+                    path.relative(appDirectory, error.loc.file) +
+                      ":" +
+                      error.loc.line +
+                      ":" +
+                      error.loc.column,
+                    error.frame.trim?.(),
+                  ]
+                : error.stack,
+            ]
+              .flat()
+              .join("\n") + "\n",
+        {
+          error,
+          clear: !isFirstLoad,
+          timestamp: !isFirstLoad,
+        }
+      );
+
+      // Bail if this is the first time loading config, otherwise keep the dev server running
+      if (isFirstLoad) {
+        process.exit(1);
+      }
+
+      // Keep dev server running with the last valid routes to allow for correction
+      routes = lastValidRoutes;
+    }
+  } else {
+    if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
+      let fileRoutes = flatRoutes(appDirectory, appConfig.ignoredRouteFiles);
+      for (let route of Object.values(fileRoutes)) {
+        routes[route.id] = { ...route, parentId: route.parentId || "root" };
+      }
     }
   }
   if (appConfig.routes) {
@@ -645,6 +746,8 @@ export async function resolveConfig(
       );
     }
   }
+
+  isFirstLoad = false;
 
   return {
     appDirectory,
