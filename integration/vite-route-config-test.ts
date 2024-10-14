@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { expect } from "@playwright/test";
+import { expect, type BrowserContext, type Page } from "@playwright/test";
 
 import {
   type Files,
@@ -12,6 +12,28 @@ import {
 } from "./helpers/vite.js";
 
 const js = String.raw;
+
+// This is a workaround for caching issues in WebKit
+async function reloadPage({
+  browserName,
+  page,
+  context,
+}: {
+  browserName: string;
+  page: Page;
+  context: BrowserContext;
+}): Promise<Page> {
+  if (browserName === "webkit") {
+    let newPage = await context.newPage();
+    let url = page.url();
+    await page.close();
+    await newPage.goto(url, { waitUntil: "networkidle" });
+    return newPage;
+  }
+
+  await page.reload();
+  return page;
+}
 
 test.describe("route config", () => {
   test("fails the build if routes option is used", async () => {
@@ -91,7 +113,9 @@ test.describe("route config", () => {
   });
 
   test("supports correcting an invalid route config", async ({
+    browserName,
     page,
+    context,
     viteDev,
   }) => {
     let files: Files = async ({ port }) => ({
@@ -107,10 +131,14 @@ test.describe("route config", () => {
         ];
       `,
       "app/test-route-1.tsx": `
-        export default () => <div data-test-route>Test route 1</div>
+        export default function TestRoute1() {
+          return <div data-test-route>Test route 1</div>
+        }
       `,
       "app/test-route-2.tsx": `
-        export default () => <div data-test-route>Test route 2</div>
+        export default function TestRoute2() {
+          return <div data-test-route>Test route 2</div>
+        }
       `,
     });
     let { cwd, port } = await viteDev(files);
@@ -138,7 +166,7 @@ test.describe("route config", () => {
 
     await expect(async () => {
       // Reload to pick up new route for current path
-      await page.reload();
+      page = await reloadPage({ browserName, page, context });
       await expect(page.locator("[data-test-route]")).toHaveText(
         "Test route 2"
       );
@@ -147,6 +175,8 @@ test.describe("route config", () => {
 
   test("supports correcting an invalid route config module graph", async ({
     page,
+    context,
+    browserName,
     viteDev,
   }) => {
     let files: Files = async ({ port }) => ({
@@ -165,10 +195,14 @@ test.describe("route config", () => {
         ];
       `,
       "app/test-route-1.tsx": `
-        export default () => <div data-test-route>Test route 1</div>
+        export default function TestRoute1() {
+          return <div data-test-route>Test route 1</div>
+        }
       `,
       "app/test-route-2.tsx": `
-        export default () => <div data-test-route>Test route 2</div>
+        export default function TestRoute2() {
+          return <div data-test-route>Test route 2</div>
+        }
       `,
     });
     let { cwd, port } = await viteDev(files);
@@ -196,7 +230,7 @@ test.describe("route config", () => {
 
     await expect(async () => {
       // Reload to pick up new route for current path
-      await page.reload();
+      page = await reloadPage({ browserName, page, context });
       await expect(page.locator("[data-test-route]")).toHaveText(
         "Test route 2"
       );
@@ -204,7 +238,9 @@ test.describe("route config", () => {
   });
 
   test("supports correcting a missing route config", async ({
+    browserName,
     page,
+    context,
     viteDev,
   }) => {
     let files: Files = async ({ port }) => ({
@@ -220,13 +256,19 @@ test.describe("route config", () => {
         ];
       `,
       "app/test-route-1.tsx": `
-        export default () => <div data-test-route>Test route 1</div>
+        export default function TestRoute1() {
+          return <div data-test-route>Test route 1</div>
+        }
       `,
       "app/test-route-2.tsx": `
-        export default () => <div data-test-route>Test route 2</div>
+        export default function TestRoute2() {
+          return <div data-test-route>Test route 2</div>
+        }
       `,
       "app/routes/_index.tsx": `
-        export default () => <div data-test-route>FS route</div>
+        export default function FsRoute() {
+          return <div data-test-route>FS route</div>
+        }
       `,
     });
     let { cwd, port } = await viteDev(files);
@@ -246,7 +288,7 @@ test.describe("route config", () => {
 
     await expect(async () => {
       // Reload to pick up classic FS routes
-      await page.reload();
+      page = await reloadPage({ browserName, page, context });
       await expect(page.locator("[data-test-route]")).toHaveText("FS route");
     }).toPass();
 
@@ -271,7 +313,7 @@ test.describe("route config", () => {
 
     await expect(async () => {
       // Reload to pick up new route for current path
-      await page.reload();
+      page = await reloadPage({ browserName, page, context });
       await expect(page.locator("[data-test-route]")).toHaveText(
         "Test route 2"
       );
@@ -293,7 +335,9 @@ test.describe("route config", () => {
         ];
       `,
       "app/test-route.tsx": `
-        export default () => <div data-test-route>Test route</div>
+        export default function TestRoute() {
+          return <div data-test-route>Test route</div>
+        }
       `,
     });
     let { port } = await viteDev(files);
