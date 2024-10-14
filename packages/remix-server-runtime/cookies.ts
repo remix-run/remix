@@ -113,9 +113,9 @@ export const createCookieFactory =
         return name in cookies
           ? cookies[name] === ""
             ? ""
-            : cookies[name] !== undefined
-            ? await decodeCookieValue(unsign, cookies[name]!, secrets)
-            : null
+            : cookies[name] === undefined
+            ? null
+            : decodeCookieValue(unsign, cookies[name], secrets)
           : null;
       },
       async serialize(value, serializeOptions) {
