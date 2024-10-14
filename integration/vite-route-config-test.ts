@@ -206,8 +206,6 @@ test.describe("route config", () => {
   test("supports correcting a missing route config", async ({
     page,
     viteDev,
-    browserName,
-    context,
   }) => {
     let files: Files = async ({ port }) => ({
       "vite.config.js": await viteConfig.basic({ port }),
@@ -247,15 +245,8 @@ test.describe("route config", () => {
     );
 
     await expect(async () => {
-      // Force new page instance for webkit.
-      // Otherwise browser doesn't seem to fetch new manifest probably due to caching.
-      if (browserName === "webkit") {
-        page = await context.newPage();
-      }
-      // Reload to pick up new route for current path
-      await page.goto(`http://localhost:${port}/`, {
-        waitUntil: "networkidle",
-      });
+      // Reload to pick up classic FS routes
+      await page.reload();
       await expect(page.locator("[data-test-route]")).toHaveText("FS route");
     }).toPass();
 
@@ -279,15 +270,8 @@ test.describe("route config", () => {
     );
 
     await expect(async () => {
-      // Force new page instance for webkit.
-      // Otherwise browser doesn't seem to fetch new manifest probably due to caching.
-      if (browserName === "webkit") {
-        page = await context.newPage();
-      }
       // Reload to pick up new route for current path
-      await page.goto(`http://localhost:${port}/`, {
-        waitUntil: "networkidle",
-      });
+      await page.reload();
       await expect(page.locator("[data-test-route]")).toHaveText(
         "Test route 2"
       );
