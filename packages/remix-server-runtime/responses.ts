@@ -179,7 +179,7 @@ export function createDeferredReadableStream(
         );
       }
 
-      let unsubscribe = deferredData.subscribe((_, settledKey) => {
+      let unsubscribe = deferredData.subscribe((aborted, settledKey) => {
         if (settledKey) {
           enqueueTrackedPromise(
             controller,
