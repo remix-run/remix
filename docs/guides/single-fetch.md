@@ -53,9 +53,12 @@ Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or usin
 
 With Single Fetch enabled, there will now only be one request made on client-side navigations even when multiple loaders need to run. To handle merging headers for the handlers called, the [`headers`][headers] export will now also apply to `loader`/`action` data requests. In many cases, the logic you already have in there for document requests should be close to sufficient for your new Single Fetch data requests.
 
-**4. Add `nonce` to `<RemixServer>` (if you are using a CSP)**
+**4. Add a `nonce` (if you are using a CSP)**
 
-The `<RemixServer>` component renders inline scripts that handle the streaming data on the client side. If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you can use `<RemixServer nonce>` to pass through the nonce to these `<script>` tags.
+If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you will need to add that `nonce` to two places for the streaming Single Fetch implementation:
+
+- `<RemixServer nonce={yourNonceValue}>` - this will add the `nonce` to the inline scripts rendered by this component that handle the streaming data on the client side
+- In your `entry.server.tsx` in the `options.nonce` parameter to [`renderToPipeableStream`][rendertopipeablestream]/[`renderToReadableStream`][rendertoreadablestream]. See also the Remix [Streaming docs][streaming-nonce]
 
 **5. Replace `renderToString` (if you are using it)**
 
@@ -489,3 +492,4 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [compatibility-flag]: https://developers.cloudflare.com/workers/configuration/compatibility-dates
 [data-utility]: ../utils/data
 [augment]: https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
+[streaming-nonce]: ./streaming#streaming-with-a-content-security-policy
