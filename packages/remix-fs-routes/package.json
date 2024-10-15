@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/fs-routes",
   "version": "2.13.1",
-  "description": "File system routing conventions for Remix",
+  "description": "Config-based file system routing conventions for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
   },
