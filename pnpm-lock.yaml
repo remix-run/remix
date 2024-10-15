@@ -520,6 +520,9 @@ importers:
       '@remix-run/dev':
         specifier: workspace:*
         version: link:../../../packages/remix-dev
+      '@remix-run/fs-routes':
+        specifier: workspace:*
+        version: link:../../../packages/remix-fs-routes
       '@types/react':
         specifier: ^18.2.20
         version: 18.2.20
@@ -1182,6 +1185,19 @@ importers:
       supertest:
         specifier: ^6.3.3
         version: 6.3.4
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
+
+  packages/remix-fs-routes:
+    dependencies:
+      minimatch:
+        specifier: ^9.0.0
+        version: 9.0.3
+    devDependencies:
+      '@remix-run/dev':
+        specifier: workspace:*
+        version: link:../remix-dev
       typescript:
         specifier: ^5.1.6
         version: 5.1.6
@@ -6911,7 +6927,7 @@ packages:
       object-keys: 1.1.1
       object.assign: 4.1.5
       regexp.prototype.flags: 1.5.2
-      side-channel: 1.0.4
+      side-channel: 1.0.6
       which-boxed-primitive: 1.0.2
       which-collection: 1.0.1
       which-typed-array: 1.1.14
