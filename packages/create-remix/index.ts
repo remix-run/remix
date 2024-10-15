@@ -507,10 +507,24 @@ async function gitInitStep(ctx: Context) {
     while: async () => {
       let options = { cwd: ctx.cwd, stdio: "ignore" } as const;
       let commitMsg = "Initial commit from create-remix";
+      const commitUser = "create-remix";
+      const commitEmail = "<>"
       try {
         await execa("git", ["init"], options);
         await execa("git", ["add", "."], options);
-        await execa("git", ["commit", "-m", commitMsg], options);
+        await execa(
+          "git",
+          [
+            "-c",
+            `user.name='${commitUser}'`,
+            "-c",
+            `user.email='${commitEmail}'`,
+            "commit",
+            "-m",
+            commitMsg
+          ],
+          options
+        );
       } catch (err) {
         error("Oh no!", "Failed to initialize git.");
         throw err;
