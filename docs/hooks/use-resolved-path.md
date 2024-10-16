@@ -46,6 +46,6 @@ When you enable the flag, this "bug" is fixed so that path resolution is consist
 - [`resolvePath`][rr-resolve-path]
 
 [nav-link-component]: ../components/nav-link
-[rr-resolve-path]: https://reactrouter.com/utils/resolve-path
-[rr-use-resolved-path-splat]: https://reactrouter.com/hooks/use-resolved-path#splat-paths
+[rr-resolve-path]: https://reactrouter.com/en/main/utils/resolve-path
+[rr-use-resolved-path-splat]: https://reactrouter.com/en/main/hooks/use-resolved-path#splat-paths
 [remix-config-future]: https://remix.run/docs/en/main/file-conventions/remix-config#future

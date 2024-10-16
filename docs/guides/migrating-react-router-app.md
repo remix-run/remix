@@ -693,7 +693,7 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 - [Common "gotchas"][common-gotchas]
 
 [react-router]: https://reactrouter.com
-[react-router-docs]: https://reactrouter.com/start/concepts
+[react-router-docs]: https://reactrouter.com/en/main/start/concepts
 [migration-guide-from-v5-to-v6]: https://reactrouter.com/en/6.22.3/upgrading/v5
 [backwards-compatibility-package]: https://www.npmjs.com/package/react-router-dom-v5-compat
 [a-few-tweaks-to-improve-progressive-enhancement]: ../pages/philosophy#progressive-enhancement
