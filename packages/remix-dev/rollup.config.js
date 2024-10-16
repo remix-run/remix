@@ -25,7 +25,6 @@ module.exports = function rollup() {
       },
       input: [
         `${sourceDir}/index.ts`,
-        `${sourceDir}/routes.ts`,
         // Since we're using a dynamic require for the Vite plugin, we
         // need to tell Rollup it's an entry point
         `${sourceDir}/vite/plugin.ts`,

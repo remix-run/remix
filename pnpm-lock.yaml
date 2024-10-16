@@ -642,6 +642,9 @@ importers:
       '@remix-run/eslint-config':
         specifier: workspace:*
         version: link:../../../packages/remix-eslint-config
+      '@remix-run/route-config':
+        specifier: workspace:*
+        version: link:../../../packages/remix-route-config
       '@types/react':
         specifier: ^18.2.20
         version: 18.2.20
@@ -1281,6 +1284,25 @@ importers:
       typescript:
         specifier: ^5.1.6
         version: 5.1.6
+
+  packages/remix-route-config:
+    dependencies:
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
+    devDependencies:
+      '@remix-run/dev':
+        specifier: workspace:*
+        version: link:../remix-dev
+      '@types/lodash':
+        specifier: ^4.14.182
+        version: 4.14.182
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
+      vite:
+        specifier: 5.1.8
+        version: 5.1.8(@types/node@18.17.1)
 
   packages/remix-serve:
     dependencies:

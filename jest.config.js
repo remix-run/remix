@@ -20,6 +20,7 @@ module.exports = {
     "packages/remix-fs-routes",
     "packages/remix-node",
     "packages/remix-react",
+    "packages/remix-route-config",
     "packages/remix-serve",
     "packages/remix-server-runtime",
     "packages/remix-testing",
