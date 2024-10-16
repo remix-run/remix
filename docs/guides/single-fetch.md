@@ -476,7 +476,7 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [starttransition]: https://react.dev/reference/react/startTransition
 [headers]: ../route/headers
 [resource-routes]: ../guides/resource-routes
-[returning-response]: ../route/loader.md#returning-response-instances
+[returning-response]: ../route/loader#returning-response-instances
 [streaming-format]: #streaming-data-format
 [undici-polyfill]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#undici
 [undici]: https://github.com/nodejs/undici
