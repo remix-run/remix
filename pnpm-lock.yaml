@@ -1198,9 +1198,9 @@ importers:
         specifier: ^9.0.0
         version: 9.0.3
     devDependencies:
-      '@remix-run/dev':
+      '@remix-run/route-config':
         specifier: workspace:*
-        version: link:../remix-dev
+        version: link:../remix-route-config
       typescript:
         specifier: ^5.1.6
         version: 5.1.6

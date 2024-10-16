@@ -1,4 +1,4 @@
-import type { RouteConfigEntry } from "@remix-run/dev/routes";
+import type { RouteConfigEntry } from "@remix-run/route-config";
 
 export interface RouteManifestEntry {
   path?: string;

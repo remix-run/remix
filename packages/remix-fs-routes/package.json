@@ -27,11 +27,11 @@
     "minimatch": "^9.0.0"
   },
   "devDependencies": {
-    "@remix-run/dev": "workspace:*",
+    "@remix-run/route-config": "workspace:*",
     "typescript": "^5.1.6"
   },
   "peerDependencies": {
-    "@remix-run/dev": "workspace:^",
+    "@remix-run/route-config": "workspace:*",
     "typescript": "^5.1.0"
   },
   "peerDependenciesMeta": {

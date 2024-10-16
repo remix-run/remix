@@ -27,7 +27,7 @@ test.describe("fs-routes", () => {
           });
         `,
         "app/routes.ts": js`
-          import { type RouteConfig } from "@remix-run/dev/routes";  
+          import { type RouteConfig } from "@remix-run/route-config";  
           import { flatRoutes } from "@remix-run/fs-routes";
 
           export const routes: RouteConfig = flatRoutes({
@@ -230,7 +230,7 @@ test.describe("emits warnings for route conflicts", async () => {
           });
         `,
         "app/routes.ts": js`
-          import { type RouteConfig } from "@remix-run/dev/routes";  
+          import { type RouteConfig } from "@remix-run/route-config";  
           import { flatRoutes } from "@remix-run/fs-routes";
 
           export const routes: RouteConfig = flatRoutes({
@@ -302,7 +302,7 @@ test.describe("", () => {
           });
         `,
         "app/routes.ts": js`
-          import { type RouteConfig } from "@remix-run/dev/routes";  
+          import { type RouteConfig } from "@remix-run/route-config";  
           import { flatRoutes } from "@remix-run/fs-routes";
 
           export const routes: RouteConfig = flatRoutes({
@@ -349,7 +349,7 @@ test.describe("pathless routes and route collisions", () => {
           });
         `,
         "app/routes.ts": js`
-          import { type RouteConfig } from "@remix-run/dev/routes";  
+          import { type RouteConfig } from "@remix-run/route-config";  
           import { flatRoutes } from "@remix-run/fs-routes";
 
           export const routes: RouteConfig = flatRoutes({

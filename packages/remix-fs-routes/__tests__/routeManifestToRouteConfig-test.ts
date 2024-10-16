@@ -1,4 +1,4 @@
-import { route } from "@remix-run/dev/routes";
+import { route } from "@remix-run/route-config";
 
 import { routeManifestToRouteConfig } from "../manifest";
 

@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { type RouteConfigEntry, getAppDirectory } from "@remix-run/dev/routes";
+import {
+  type RouteConfigEntry,
+  getAppDirectory,
+} from "@remix-run/route-config";
 
 import { routeManifestToRouteConfig } from "./manifest";
 import { flatRoutes as flatRoutesImpl } from "./flatRoutes";
