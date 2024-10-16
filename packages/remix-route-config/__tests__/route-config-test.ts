@@ -1,14 +1,7 @@
 import path from "node:path";
 import { normalizePath } from "vite";
 
-import {
-  validateRouteConfig,
-  route,
-  layout,
-  index,
-  prefix,
-  relative,
-} from "../config/routes";
+import { route, layout, index, prefix, relative } from "../routes";
 
 function cleanPathsForSnapshot(obj: any): any {
   return JSON.parse(
@@ -22,107 +15,6 @@ function cleanPathsForSnapshot(obj: any): any {
 }
 
 describe("route config", () => {
-  describe("validateRouteConfig", () => {
-    it("validates a route config", () => {
-      expect(
-        validateRouteConfig({
-          routeConfigFile: "routes.ts",
-          routeConfig: prefix("prefix", [
-            route("parent", "parent.tsx", [route("child", "child.tsx")]),
-          ]),
-        }).valid
-      ).toBe(true);
-    });
-
-    it("is invalid when not an array", () => {
-      let result = validateRouteConfig({
-        routeConfigFile: "routes.ts",
-        routeConfig: route("path", "file.tsx"),
-      });
-
-      expect(result.valid).toBe(false);
-      expect(!result.valid && result.message).toMatchInlineSnapshot(
-        `"Route config in "routes.ts" must be an array."`
-      );
-    });
-
-    it("is invalid when route is a promise", () => {
-      let result = validateRouteConfig({
-        routeConfigFile: "routes.ts",
-        /* @ts-expect-error */
-        routeConfig: [route("parent", "parent.tsx", [Promise.resolve({})])],
-      });
-
-      expect(result.valid).toBe(false);
-      expect(!result.valid && result.message).toMatchInlineSnapshot(`
-        "Route config in "routes.ts" is invalid.
-
-        Path: routes.0.children.0
-        Invalid type: Expected object but received a promise. Did you forget to await?"
-      `);
-    });
-
-    it("is invalid when file is missing", () => {
-      let result = validateRouteConfig({
-        routeConfigFile: "routes.ts",
-        /* @ts-expect-error */
-        routeConfig: [route("parent", "parent.tsx", [{ id: "child" }])],
-      });
-
-      expect(result.valid).toBe(false);
-      expect(!result.valid && result.message).toMatchInlineSnapshot(`
-        "Route config in "routes.ts" is invalid.
-
-        Path: routes.0.children.0.file
-        Invalid type: Expected string but received undefined"
-      `);
-    });
-
-    it("is invalid when property is wrong type", () => {
-      let result = validateRouteConfig({
-        routeConfigFile: "routes.ts",
-        /* @ts-expect-error */
-        routeConfig: [route("parent", "parent.tsx", [{ file: 123 }])],
-      });
-
-      expect(result.valid).toBe(false);
-      expect(!result.valid && result.message).toMatchInlineSnapshot(`
-        "Route config in "routes.ts" is invalid.
-
-        Path: routes.0.children.0.file
-        Invalid type: Expected string but received 123"
-      `);
-    });
-
-    it("shows multiple error messages", () => {
-      let result = validateRouteConfig({
-        routeConfigFile: "routes.ts",
-        routeConfig: [
-          /* @ts-expect-error */
-          route("parent", "parent.tsx", [
-            { id: "child" },
-            { file: 123 },
-            Promise.resolve(),
-          ]),
-        ],
-      });
-
-      expect(result.valid).toBe(false);
-      expect(!result.valid && result.message).toMatchInlineSnapshot(`
-        "Route config in "routes.ts" is invalid.
-
-        Path: routes.0.children.0.file
-        Invalid type: Expected string but received undefined
-
-        Path: routes.0.children.1.file
-        Invalid type: Expected string but received 123
-
-        Path: routes.0.children.2
-        Invalid type: Expected object but received a promise. Did you forget to await?"
-      `);
-    });
-  });
-
   describe("route helpers", () => {
     describe("route", () => {
       it("supports basic routes", () => {

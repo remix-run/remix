@@ -12,7 +12,7 @@ import {
   type RouteManifest,
   type RouteConfig,
   type DefineRoutesFunction,
-  setAppDirectory,
+  setRouteConfigAppDirectory,
   validateRouteConfig,
   configRoutesToRouteManifest,
   defineRoutes,
@@ -577,7 +577,7 @@ export async function resolveConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  setAppDirectory(appDirectory);
+  setRouteConfigAppDirectory(appDirectory);
   let routeConfigFile = findEntry(appDirectory, "routes");
   if (routesViteNodeContext && vite && routeConfigFile) {
     class FriendlyError extends Error {}
