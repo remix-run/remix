@@ -20,10 +20,9 @@
   },
   "dependencies": {
     "@remix-run/router": "1.20.0",
-    "@types/cookie": "^0.6.0",
     "@web3-storage/multipart-parser": "^1.0.0",
-    "cookie": "^0.6.0",
-    "set-cookie-parser": "^2.4.8",
+    "cookie": "^1.0.1",
+    "set-cookie-parser": "^2.4.9",
     "source-map": "^0.7.3",
     "turbo-stream": "2.4.0"
   },
