@@ -17,6 +17,7 @@ module.exports = {
     "packages/remix-dev",
     "packages/remix-eslint-config",
     "packages/remix-express",
+    "packages/remix-fs-routes",
     "packages/remix-node",
     "packages/remix-react",
     "packages/remix-route-config",

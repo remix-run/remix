@@ -60,6 +60,7 @@ async function run() {
     "express", // publish express before serve
     "react",
     "serve",
+    "fs-routes",
     "css-bundle",
     "testing",
     "route-config",
