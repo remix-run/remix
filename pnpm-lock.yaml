@@ -523,6 +523,9 @@ importers:
       '@remix-run/fs-routes':
         specifier: workspace:*
         version: link:../../../packages/remix-fs-routes
+      '@remix-run/route-config':
+        specifier: workspace:*
+        version: link:../../../packages/remix-route-config
       '@types/react':
         specifier: ^18.2.20
         version: 18.2.20

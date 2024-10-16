@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@remix-run/dev": "workspace:*",
+    "@remix-run/route-config": "workspace:*",
     "@remix-run/fs-routes": "workspace:*",
     "@vanilla-extract/css": "^1.10.0",
     "@vanilla-extract/vite-plugin": "^3.9.2",
