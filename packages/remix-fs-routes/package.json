@@ -23,9 +23,6 @@
   "scripts": {
     "tsc": "tsc"
   },
-  "dependencies": {
-    "minimatch": "^9.0.0"
-  },
   "devDependencies": {
     "@remix-run/dev": "workspace:*",
     "@remix-run/route-config": "workspace:*",

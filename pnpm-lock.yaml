@@ -1199,10 +1199,6 @@ importers:
         version: 5.1.6
 
   packages/remix-fs-routes:
-    dependencies:
-      minimatch:
-        specifier: ^9.0.0
-        version: 9.0.3
     devDependencies:
       '@remix-run/dev':
         specifier: workspace:*

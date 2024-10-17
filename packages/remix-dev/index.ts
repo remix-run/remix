@@ -17,6 +17,7 @@ export {
   routeManifestToRouteConfig as UNSAFE_routeManifestToRouteConfig,
   getRouteConfigAppDirectory as UNSAFE_getRouteConfigAppDirectory,
 } from "./config/routes";
+export { flatRoutes as UNSAFE_flatRoutes } from "./config/flat-routes";
 export { getDependenciesToBundle } from "./dependencies";
 export type {
   BuildManifest,
