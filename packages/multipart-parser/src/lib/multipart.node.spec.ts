@@ -1,9 +1,10 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { getRandomBytes } from '../../test/utils.js';
+import { createMultipartMockRequest } from '../../test/utils.node.js';
+
 import { parseMultipartRequest } from './multipart.node.js';
-import { getRandomBytes } from '../test/utils.js';
-import { createMultipartMockRequest } from '../test/utils.node.js';
 
 describe('parseMultipartRequest (node)', () => {
   let boundary = 'boundary123';

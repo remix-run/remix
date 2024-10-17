@@ -1,13 +1,14 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { createMockRequest, createMultipartMockRequest, getRandomBytes } from '../../test/utils.js';
+
 import {
   isMultipartRequest,
   parseMultipartRequest,
   MultipartParseError,
   getMultipartBoundary,
 } from './multipart.js';
-import { createMockRequest, createMultipartMockRequest, getRandomBytes } from '../test/utils.js';
 
 const CRLF = '\r\n';
 
