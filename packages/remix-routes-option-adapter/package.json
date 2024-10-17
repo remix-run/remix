@@ -1,14 +1,14 @@
 {
-  "name": "@remix-run/route-config",
+  "name": "@remix-run/routes-option-adapter",
   "version": "2.13.1",
-  "description": "Config-based routing utilities, for use within routes.ts",
+  "description": "Adapter for Remix's \"routes\" config option, for use within routes.ts",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
-    "directory": "packages/remix-route-config"
+    "directory": "packages/remix-routes-option-adapter"
   },
   "license": "MIT",
   "main": "dist/index.js",
@@ -24,16 +24,16 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "lodash": "^4.17.21"
+    "minimatch": "^9.0.0"
   },
   "devDependencies": {
     "@remix-run/dev": "workspace:*",
-    "@types/lodash": "^4.14.182",
-    "typescript": "^5.1.6",
-    "vite": "5.1.8"
+    "@remix-run/route-config": "workspace:*",
+    "typescript": "^5.1.6"
   },
   "peerDependencies": {
-    "@remix-run/dev": "workspace:^",
+    "@remix-run/dev": "workspace:*",
+    "@remix-run/route-config": "workspace:*",
     "typescript": "^5.1.0"
   },
   "peerDependenciesMeta": {

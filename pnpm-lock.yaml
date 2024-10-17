@@ -526,6 +526,9 @@ importers:
       '@remix-run/route-config':
         specifier: workspace:*
         version: link:../../../packages/remix-route-config
+      '@remix-run/routes-option-adapter':
+        specifier: workspace:*
+        version: link:../../../packages/remix-routes-option-adapter
       '@types/react':
         specifier: ^18.2.20
         version: 18.2.20
@@ -1201,6 +1204,9 @@ importers:
         specifier: ^9.0.0
         version: 9.0.3
     devDependencies:
+      '@remix-run/dev':
+        specifier: workspace:*
+        version: link:../remix-dev
       '@remix-run/route-config':
         specifier: workspace:*
         version: link:../remix-route-config
@@ -1306,6 +1312,22 @@ importers:
       vite:
         specifier: 5.1.8
         version: 5.1.8(@types/node@18.17.1)
+
+  packages/remix-routes-option-adapter:
+    dependencies:
+      minimatch:
+        specifier: ^9.0.0
+        version: 9.0.3
+    devDependencies:
+      '@remix-run/dev':
+        specifier: workspace:*
+        version: link:../remix-dev
+      '@remix-run/route-config':
+        specifier: workspace:*
+        version: link:../remix-route-config
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
 
   packages/remix-serve:
     dependencies:

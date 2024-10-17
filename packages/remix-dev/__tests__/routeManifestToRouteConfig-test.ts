@@ -1,6 +1,4 @@
-import { route } from "@remix-run/route-config";
-
-import { routeManifestToRouteConfig } from "../manifest";
+import { type RouteConfig, routeManifestToRouteConfig } from "../config/routes";
 
 const clean = (obj: any) => cleanUndefined(cleanIds(obj));
 
@@ -43,14 +41,27 @@ describe("routeManifestToRouteConfig", () => {
         caseSensitive: true,
       },
     });
-    let routeConfig = [
-      route("/", "routes/home.js"),
-      route("inbox", "routes/inbox.js", [
-        route("/", "routes/inbox/index.js", { index: true }),
-        route(":messageId", "routes/inbox/$messageId.js", {
-          caseSensitive: true,
-        }),
-      ]),
+    let routeConfig: RouteConfig = [
+      {
+        path: "/",
+        file: "routes/home.js",
+      },
+      {
+        path: "inbox",
+        file: "routes/inbox.js",
+        children: [
+          {
+            path: "/",
+            file: "routes/inbox/index.js",
+            index: true,
+          },
+          {
+            path: ":messageId",
+            file: "routes/inbox/$messageId.js",
+            caseSensitive: true,
+          },
+        ],
+      },
     ];
 
     expect(clean(routeManifestConfig)).toEqual(clean(routeConfig));
