@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/fs-routes",
   "version": "2.13.1",
-  "description": "Config-based file system routing conventions for Remix",
+  "description": "Config-based file system routing conventions, for use within routes.ts",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
   },
@@ -27,10 +27,12 @@
     "minimatch": "^9.0.0"
   },
   "devDependencies": {
+    "@remix-run/dev": "workspace:*",
     "@remix-run/route-config": "workspace:*",
     "typescript": "^5.1.6"
   },
   "peerDependencies": {
+    "@remix-run/dev": "workspace:*",
     "@remix-run/route-config": "workspace:*",
     "typescript": "^5.1.0"
   },

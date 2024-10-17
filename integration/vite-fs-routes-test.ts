@@ -29,11 +29,22 @@ test.describe("fs-routes", () => {
         "app/routes.ts": js`
           import { type RouteConfig } from "@remix-run/route-config";  
           import { flatRoutes } from "@remix-run/fs-routes";
+          import { routesOptionAdapter } from "@remix-run/routes-option-adapter";
 
-          export const routes: RouteConfig = flatRoutes({
-            rootDirectory: "fs-routes",
-            ignoredRouteFiles: ["**/ignored-route.*"],
-          });
+          export const routes: RouteConfig = [
+            ...await flatRoutes({
+              rootDirectory: "fs-routes",
+              ignoredRouteFiles: ["**/ignored-route.*"],
+            }),
+
+            // Ensure back compat layer works
+            ...await routesOptionAdapter(async (defineRoutes) => {
+              // Ensure async routes work
+              return defineRoutes((route) => {
+                route("/routes/option/adapter/route", "routes-option-adapter-route.tsx")
+              });
+            })
+          ];
         `,
         "app/root.tsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -78,6 +89,12 @@ test.describe("fs-routes", () => {
         "app/fs-routes/flat.file.tsx": js`
           export default function () {
             return <h2>Flat File</h2>;
+          }
+        `,
+
+        "app/routes-option-adapter-route.tsx": js`
+          export default function () {
+            return <h2>Routes Option Adapter Route</h2>;
           }
         `,
 
@@ -173,6 +190,17 @@ test.describe("fs-routes", () => {
       expect(await app.getHtml("#content")).toBe(`<div id="content">
   <h1>Root</h1>
   <h2>Flat File</h2>
+</div>`);
+    });
+
+    test("renders matching routes (routes option adapter)", async ({
+      page,
+    }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/routes/option/adapter/route");
+      expect(await app.getHtml("#content")).toBe(`<div id="content">
+  <h1>Root</h1>
+  <h2>Routes Option Adapter Route</h2>
 </div>`);
     });
 
