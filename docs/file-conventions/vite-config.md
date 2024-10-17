@@ -140,6 +140,6 @@ You may also want to enable the `manifest` option since, when server bundles are
 [minimatch]: https://npm.im/minimatch
 [presets]: ../guides/presets
 [server-bundles]: ../guides/server-bundles
-[rr-basename]: https://reactrouter.com/routers/create-browser-router#basename
+[rr-basename]: https://reactrouter.com/v6/routers/create-browser-router#basename
 [vite-public-base-path]: https://vitejs.dev/config/shared-options.html#base
 [vite-base]: https://vitejs.dev/config/shared-options.html#base

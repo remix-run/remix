@@ -279,7 +279,7 @@
 ### Minor Changes
 
 - Allow an optional `Layout` export from the root route ([#8709](https://github.com/remix-run/remix/pull/8709))
-- Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/en/main/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
+- Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/v6/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
 
 ### Patch Changes
 
@@ -397,7 +397,7 @@
 
 ### Minor Changes
 
-- Remove the `unstable_` prefix from the [`useBlocker`](https://reactrouter.com/en/main/hooks/use-blocker) hook as it's been in use for enough time that we are confident in the API. We do not plan to remove the prefix from `unstable_usePrompt` due to differences in how browsers handle `window.confirm` that prevent React Router from guaranteeing consistent/correct behavior. ([#7882](https://github.com/remix-run/remix/pull/7882))
+- Remove the `unstable_` prefix from the [`useBlocker`](https://reactrouter.com/v6/hooks/use-blocker) hook as it's been in use for enough time that we are confident in the API. We do not plan to remove the prefix from `unstable_usePrompt` due to differences in how browsers handle `window.confirm` that prevent React Router from guaranteeing consistent/correct behavior. ([#7882](https://github.com/remix-run/remix/pull/7882))
 
 ### Patch Changes
 
@@ -979,10 +979,10 @@ No significant changes to this package were made in this release. [See the relea
 
   Documentation Resources (better docs specific to Remix are in the works):
 
-  - <https://reactrouter.com/en/main/utils/defer>
-  - <https://reactrouter.com/en/main/components/await>
-  - <https://reactrouter.com/en/main/hooks/use-async-value>
-  - <https://reactrouter.com/en/main/hooks/use-async-error>
+  - <https://reactrouter.com/v6/utils/defer>
+  - <https://reactrouter.com/v6/components/await>
+  - <https://reactrouter.com/v6/hooks/use-async-value>
+  - <https://reactrouter.com/v6/hooks/use-async-error>
 
 ## 1.10.1
 
@@ -997,10 +997,10 @@ No significant changes to this package were made in this release. [See the relea
 
 - Update Remix to use new data APIs introduced in React Router v6.4 ([#4900](https://github.com/remix-run/remix/pull/4900))
 - Added new hooks from React Router
-  - [`useNavigation`](https://reactrouter.com/en/main/hooks/use-navigation)
-  - [`useNavigationType`](https://reactrouter.com/en/main/hooks/use-navigation-type)
-  - [`useRevalidator`](https://reactrouter.com/en/main/hooks/use-revalidator)
-  - [`useRouteLoaderData`](https://reactrouter.com/en/main/hooks/use-route-loader-data)
+  - [`useNavigation`](https://reactrouter.com/v6/hooks/use-navigation)
+  - [`useNavigationType`](https://reactrouter.com/v6/hooks/use-navigation-type)
+  - [`useRevalidator`](https://reactrouter.com/v6/hooks/use-revalidator)
+  - [`useRouteLoaderData`](https://reactrouter.com/v6/hooks/use-route-loader-data)
 
 ## 1.9.0
 
