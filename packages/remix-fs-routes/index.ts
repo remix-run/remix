@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import { UNSAFE_routeManifestToRouteConfig as routeManifestToRouteConfig } from "@remix-run/dev";
+import {
+  UNSAFE_flatRoutes as flatRoutesImpl,
+  UNSAFE_routeManifestToRouteConfig as routeManifestToRouteConfig,
+} from "@remix-run/dev";
 import {
   type RouteConfigEntry,
   getAppDirectory,
 } from "@remix-run/route-config";
 
-import { flatRoutes as flatRoutesImpl } from "./flatRoutes";
 import { normalizeSlashes } from "./normalizeSlashes";
 
 /**
