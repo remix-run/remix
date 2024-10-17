@@ -1,6 +1,1 @@
-export {
-  TarParseError,
-  type TarHeader,
-  parseTarHeader,
-  TarEntry
-} from './lib/tar.js';
+export { TarParseError, type TarHeader, parseTarHeader, TarParser, TarEntry } from './lib/tar.js';
