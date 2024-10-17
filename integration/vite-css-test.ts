@@ -44,7 +44,7 @@ const files = {
   `,
   "app/entry.client.tsx": js`
     import "./entry.client.css";
-  
+
     import { RemixBrowser } from "@remix-run/react";
     import { startTransition, StrictMode } from "react";
     import { hydrateRoot } from "react-dom/client";
@@ -156,7 +156,18 @@ const VITE_CONFIG = async (port: number) => dedent`
 
   export default {
     ${await viteConfig.server({ port })}
-    plugins: [remix(), vanillaExtractPlugin()],
+    plugins: [
+      remix({
+        future: {
+          v3_fetcherPersist: true,
+          v3_lazyRouteDiscovery: true,
+          v3_relativeSplatPath: true,
+          v3_singleFetch: true,
+          v3_throwAbortReason: true,
+        }
+      }),
+      vanillaExtractPlugin()
+    ],
   }
 `;
 
