@@ -203,6 +203,16 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
 
+  packages/tar-parser:
+    dependencies:
+      '@mjackson/lazy-file':
+        specifier: workspace:^
+        version: link:../lazy-file
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.10
+        version: 20.16.1
+
   scripts:
     dependencies:
       '@octokit/request':
