@@ -43,9 +43,11 @@ export async function callRouteAction({
   singleFetch: boolean;
 }) {
   let result = await action({
-    request: singleFetch
-      ? stripRoutesParam(stripIndexParam(request))
-      : stripDataParam(stripIndexParam(request)),
+    request: makeRequestSignalGcSafe(
+      singleFetch
+        ? stripRoutesParam(stripIndexParam(request))
+        : stripDataParam(stripIndexParam(request))
+    ),
     context: loadContext,
     params,
   });
@@ -81,9 +83,11 @@ export async function callRouteLoader({
   singleFetch: boolean;
 }) {
   let result = await loader({
-    request: singleFetch
-      ? stripRoutesParam(stripIndexParam(request))
-      : stripDataParam(stripIndexParam(request)),
+    request: makeRequestSignalGcSafe(
+      singleFetch
+        ? stripRoutesParam(stripIndexParam(request))
+        : stripDataParam(stripIndexParam(request))
+    ),
     context: loadContext,
     params,
   });
@@ -113,6 +117,16 @@ export async function callRouteLoader({
   return isResponse(result) ? result : json(result);
 }
 
+function makeRequestSignalGcSafe(request: Request) {
+  // `undici` wraps the signal passed to the `Request` constructor. When the
+  // request object is garbage collected, the signal stops working. This is
+  // problematic when a loader or action is waiting for a signal to be aborted.
+  // To fix this, we hold a reference to the request in the signal itself so
+  // that the request isn't garbage collected while the signal is in use.
+  Object.defineProperty(request.signal, "__request", { value: request });
+  return request;
+}
+
 // TODO: Document these search params better
 // and stop stripping these in V2. These break
 // support for running in a SW and also expose
@@ -136,7 +150,7 @@ function stripIndexParam(request: Request) {
     method: request.method,
     body: request.body,
     headers: request.headers,
-    signal: request.signal,
+    signal: makeRequestSignalGcSafe(request).signal,
   };
 
   if (init.body) {
@@ -153,7 +167,7 @@ function stripDataParam(request: Request) {
     method: request.method,
     body: request.body,
     headers: request.headers,
-    signal: request.signal,
+    signal: makeRequestSignalGcSafe(request).signal,
   };
 
   if (init.body) {
@@ -170,7 +184,7 @@ function stripRoutesParam(request: Request) {
     method: request.method,
     body: request.body,
     headers: request.headers,
-    signal: request.signal,
+    signal: makeRequestSignalGcSafe(request).signal,
   };
 
   if (init.body) {
