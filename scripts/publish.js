@@ -60,8 +60,11 @@ async function run() {
     "express", // publish express before serve
     "react",
     "serve",
+    "fs-routes",
     "css-bundle",
     "testing",
+    "route-config",
+    "routes-option-adapter",
   ]) {
     publish(path.join(buildDir, "@remix-run", name), tag);
   }
