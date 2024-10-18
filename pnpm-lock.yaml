@@ -1310,10 +1310,6 @@ importers:
         version: 5.1.8(@types/node@18.17.1)
 
   packages/remix-routes-option-adapter:
-    dependencies:
-      minimatch:
-        specifier: ^9.0.0
-        version: 9.0.3
     devDependencies:
       '@remix-run/dev':
         specifier: workspace:*
