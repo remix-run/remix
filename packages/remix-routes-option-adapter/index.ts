@@ -12,7 +12,7 @@ export type { DefineRoutesFunction };
  * option](https://remix.run/docs/en/v2/file-conventions/vite-config#routes),
  * for use within `routes.ts`.
  */
-export async function routesOptionAdapter(
+export async function remixRoutesOptionAdapter(
   routes: (
     defineRoutes: DefineRoutesFunction
   ) =>

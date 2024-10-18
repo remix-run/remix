@@ -537,16 +537,16 @@ npm install --dev @remix-run/routes-option-adapter
 
 This package matches the API of React Router v7's `@react-router/remix-route-config-adapter`, making the React Router v7 migration as easy as possible.
 
-Then, update your `routes.ts` file to use the adapter, passing the value of your `routes` option to the `routesOptionAdapter` function which will return an array of configured routes.
+Then, update your `routes.ts` file to use the adapter, passing the value of your `routes` option to the `remixRoutesOptionAdapter` function which will return an array of configured routes.
 
 For example, if you were using the `routes` option to use an alternative file system routing implementation like [remix-flat-routes]:
 
 ```ts filename=app/routes.ts
 import { type RouteConfig } from "@remix-run/route-config";
-import { routesOptionAdapter } from "@remix-run/routes-option-adapter";
+import { remixRoutesOptionAdapter } from "@remix-run/routes-option-adapter";
 import { flatRoutes } from "remix-flat-routes";
 
-export const routes: RouteConfig = routesOptionAdapter(
+export const routes: RouteConfig = remixRoutesOptionAdapter(
   (defineRoutes) => flatRoutes("routes", defineRoutes)
 );
 ```
@@ -556,9 +556,9 @@ Or, if you were using the `routes` option to define config-based routes:
 ```ts filename=app/routes.ts
 import { flatRoutes } from "@remix-run/fs-routes";
 import { type RouteConfig } from "@remix-run/route-config";
-import { routesOptionAdapter } from "@remix-run/routes-option-adapter";
+import { remixRoutesOptionAdapter } from "@remix-run/routes-option-adapter";
 
-export const routes: RouteConfig = routesOptionAdapter(
+export const routes: RouteConfig = remixRoutesOptionAdapter(
   (defineRoutes) => {
     return defineRoutes((route) => {
       route("/", "home/route.tsx", { index: true });
@@ -598,12 +598,12 @@ Note that if you need to mix and match different route config approaches, they c
 import { flatRoutes } from "@remix-run/fs-routes";
 import type { RouteConfig } from "@remix-run/route-config";
 import { route } from "@remix-run/route-config";
-import { routesOptionAdapter } from "@remix-run/routes-option-adapter";
+import { remixRoutesOptionAdapter } from "@remix-run/routes-option-adapter";
 
 export const routes: RouteConfig = [
   ...(await flatRoutes({ rootDirectory: "fs-routes" })),
 
-  ...(await routesOptionAdapter(/* ... */)),
+  ...(await remixRoutesOptionAdapter(/* ... */)),
 
   route("/hello", "routes/hello.tsx"),
 ];
