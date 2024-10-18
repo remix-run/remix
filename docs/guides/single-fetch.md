@@ -80,7 +80,7 @@ There are a handful of breaking changes introduced with Single Fetch - some of w
 
 - **[New streaming Data format][streaming-format]**: Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - **No more auto-serialization**: Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
-- [**Updates to type inference**][type-inference-section]: To get the most accurate type inference, you should [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`
+- [**Updates to type inference**][type-inference-section]: To get the most accurate type inference, you should [augment][augment] Remix's `Future` interface with `v3_singleFetch: true`
 - [**Default revalidation behavior changes to opt-out on GET navigations**][revalidation]: Default revalidation behavior on normal navigations changes from opt-in to opt-out and your server loaders will re-run by default
 - [**Opt-in `action` revalidation**][action-revalidation]: Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 
@@ -88,7 +88,7 @@ There are a handful of breaking changes introduced with Single Fetch - some of w
 
 With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format.
 
-<docs-info>In order to get proper type inference, you need to [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`. You can read more about this in the [Type Inference section][type-inference-section].</docs-info>
+<docs-info>In order to get proper type inference, you need to [augment][augment] Remix's `Future` interface with `v3_singleFetch: true`. You can read more about this in the [Type Inference section][type-inference-section].</docs-info>
 
 With Single Fetch you can return the following data types from your loader: `BigInt`, `Date`, `Error`, `Map`, `Promise`, `RegExp`, `Set`, `Symbol`, and `URL`.
 
