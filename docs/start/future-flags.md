@@ -480,7 +480,7 @@ Opt into automatic [dependency optimization][dependency-optimization] during dev
 
 Config-based routing is the new default in React Router v7. Support for `routes.ts` and its related APIs in Remix are designed as a migration path to help minimize the number changes required when moving your Remix project over to React Router v7. Since React Router v7 is not yet stable, these APIs are also considered unstable.
 
-While not a future flag, the presence of an `app/routes.ts` file will disable Remix's built-in file system routing and opt your project into React Router v7's config-based routing. To opt back in to file system routing, this can be explicitly configured within `routes.ts` as we'll cover below.
+While not a future flag, the presence of an `app/routes.ts` file when using the Remix Vite plugin will disable Remix's built-in file system routing and opt your project into React Router v7's config-based routing. To opt back in to file system routing, this can be explicitly configured within `routes.ts` as we'll cover below.
 
 **Update your code**
 
