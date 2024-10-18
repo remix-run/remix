@@ -512,6 +512,10 @@ This is a good way to check that your new `routes.ts` file is being picked up su
 
 👉 **Install `@remix-run/fs-routes` and use it in `routes.ts`**
 
+```shellscript nonumber
+npm install --dev @remix-run/fs-routes
+```
+
 This package matches the API of React Router v7's `@react-router/fs-routes`, making the React Router v7 migration as easy as possible.
 
 > If you've configured `ignoredRouteFiles` to `["**/*"]`, you should skip this step since you're already opting out of Remix's file system routing.
