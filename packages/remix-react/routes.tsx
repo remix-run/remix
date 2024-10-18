@@ -315,13 +315,12 @@ export function createClientRoutes(
         ...dataRoute,
         ...getRouteComponents(route, routeModule, isSpaMode),
         handle: routeModule.handle,
-        shouldRevalidate: needsRevalidation
-          ? wrapShouldRevalidateForHdr(
-              route.id,
-              routeModule.shouldRevalidate,
-              needsRevalidation
-            )
-          : routeModule.shouldRevalidate,
+        shouldRevalidate: getShouldRevalidateFunction(
+          future,
+          routeModule,
+          route.id,
+          needsRevalidation
+        ),
       });
 
       let initialData = initialState?.loaderData?.[route.id];
@@ -486,7 +485,12 @@ export function createClientRoutes(
           ...(lazyRoute.loader ? { loader: lazyRoute.loader } : {}),
           ...(lazyRoute.action ? { action: lazyRoute.action } : {}),
           hasErrorBoundary: lazyRoute.hasErrorBoundary,
-          shouldRevalidate: lazyRoute.shouldRevalidate,
+          shouldRevalidate: getShouldRevalidateFunction(
+            future,
+            lazyRoute,
+            route.id,
+            needsRevalidation
+          ),
           handle: lazyRoute.handle,
           // No need to wrap these in layout since the root route is never
           // loaded via route.lazy()
@@ -509,6 +513,34 @@ export function createClientRoutes(
     if (children.length > 0) dataRoute.children = children;
     return dataRoute;
   });
+}
+
+function getShouldRevalidateFunction(
+  future: FutureConfig,
+  route: Partial<DataRouteObject>,
+  routeId: string,
+  needsRevalidation: Set<string> | undefined
+) {
+  let shouldRevalidateFn = route.shouldRevalidate;
+
+  // Single fetch revalidates by default, so override the RR default value which
+  // matches the multi-fetch behavior with `true`
+  if (future.v3_singleFetch && shouldRevalidateFn) {
+    let originalFn = shouldRevalidateFn;
+    shouldRevalidateFn = (opts) =>
+      originalFn({ ...opts, defaultShouldRevalidate: true });
+  }
+
+  // During HDR we force revalidation for updated routes
+  if (needsRevalidation) {
+    shouldRevalidateFn = wrapShouldRevalidateForHdr(
+      routeId,
+      shouldRevalidateFn,
+      needsRevalidation
+    );
+  }
+
+  return shouldRevalidateFn;
 }
 
 // When an HMR / HDR update happens we opt out of all user-defined
