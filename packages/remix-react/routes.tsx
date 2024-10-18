@@ -1,5 +1,8 @@
 import * as React from "react";
-import type { HydrationState } from "@remix-run/router";
+import type {
+  HydrationState,
+  ShouldRevalidateFunctionArgs,
+} from "@remix-run/router";
 import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
 import type {
   ActionFunctionArgs,
@@ -521,26 +524,24 @@ function getShouldRevalidateFunction(
   routeId: string,
   needsRevalidation: Set<string> | undefined
 ) {
-  let shouldRevalidateFn = route.shouldRevalidate;
-
-  // Single fetch revalidates by default, so override the RR default value which
-  // matches the multi-fetch behavior with `true`
-  if (future.v3_singleFetch && shouldRevalidateFn) {
-    let originalFn = shouldRevalidateFn;
-    shouldRevalidateFn = (opts) =>
-      originalFn({ ...opts, defaultShouldRevalidate: true });
-  }
-
   // During HDR we force revalidation for updated routes
   if (needsRevalidation) {
-    shouldRevalidateFn = wrapShouldRevalidateForHdr(
+    return wrapShouldRevalidateForHdr(
       routeId,
-      shouldRevalidateFn,
+      route.shouldRevalidate,
       needsRevalidation
     );
   }
 
-  return shouldRevalidateFn;
+  // Single fetch revalidates by default, so override the RR default value which
+  // matches the multi-fetch behavior with `true`
+  if (future.v3_singleFetch && route.shouldRevalidate) {
+    let fn = route.shouldRevalidate;
+    return (opts: ShouldRevalidateFunctionArgs) =>
+      fn({ ...opts, defaultShouldRevalidate: true });
+  }
+
+  return route.shouldRevalidate;
 }
 
 // When an HMR / HDR update happens we opt out of all user-defined
