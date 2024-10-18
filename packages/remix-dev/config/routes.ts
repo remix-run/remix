@@ -1,4 +1,4 @@
-import { win32 } from "node:path";
+import * as path from "node:path";
 import * as v from "valibot";
 
 import invariant from "../invariant";
@@ -386,9 +386,9 @@ export function createRouteId(file: string) {
 }
 
 export function normalizeSlashes(file: string) {
-  return file.split(win32.sep).join("/");
+  return file.split(path.win32.sep).join("/");
 }
 
-export function stripFileExtension(file: string) {
+function stripFileExtension(file: string) {
   return file.replace(/\.[a-z0-9]+$/i, "");
 }

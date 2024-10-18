@@ -9,8 +9,6 @@ import {
   getAppDirectory,
 } from "@remix-run/route-config";
 
-import { normalizeSlashes } from "./normalizeSlashes";
-
 /**
  * Creates route config from the file system that matches [Remix's default file
  * conventions](https://remix.run/docs/en/v2/file-conventions/routes), for
@@ -43,4 +41,8 @@ export async function flatRoutes(
     : {};
 
   return routeManifestToRouteConfig(routes);
+}
+
+function normalizeSlashes(file: string) {
+  return file.split(path.win32.sep).join("/");
 }

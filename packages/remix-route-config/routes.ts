@@ -13,15 +13,12 @@ export function getAppDirectory() {
   return getRouteConfigAppDirectory();
 }
 
-const createConfigRouteOptionKeys = [
+const routeOptionKeys = [
   "id",
   "index",
   "caseSensitive",
 ] as const satisfies ReadonlyArray<keyof RouteConfigEntry>;
-type CreateRouteOptions = Pick<
-  RouteConfigEntry,
-  typeof createConfigRouteOptionKeys[number]
->;
+type RouteOptions = Pick<RouteConfigEntry, typeof routeOptionKeys[number]>;
 /**
  * Helper function for creating a route config entry, for use within
  * `routes.ts`.
@@ -34,16 +31,16 @@ function route(
 function route(
   path: string | null | undefined,
   file: string,
-  options: CreateRouteOptions,
+  options: RouteOptions,
   children?: RouteConfigEntry[]
 ): RouteConfigEntry;
 function route(
   path: string | null | undefined,
   file: string,
-  optionsOrChildren: CreateRouteOptions | RouteConfigEntry[] | undefined,
+  optionsOrChildren: RouteOptions | RouteConfigEntry[] | undefined,
   children?: RouteConfigEntry[]
 ): RouteConfigEntry {
-  let options: CreateRouteOptions = {};
+  let options: RouteOptions = {};
 
   if (Array.isArray(optionsOrChildren) || !optionsOrChildren) {
     children = optionsOrChildren;
@@ -55,36 +52,30 @@ function route(
     file,
     children,
     path: path ?? undefined,
-    ...pick(options, createConfigRouteOptionKeys),
+    ...pick(options, routeOptionKeys),
   };
 }
 
-const createIndexOptionKeys = ["id"] as const satisfies ReadonlyArray<
+const indexOptionKeys = ["id"] as const satisfies ReadonlyArray<
   keyof RouteConfigEntry
 >;
-type CreateIndexOptions = Pick<
-  RouteConfigEntry,
-  typeof createIndexOptionKeys[number]
->;
+type IndexOptions = Pick<RouteConfigEntry, typeof indexOptionKeys[number]>;
 /**
  * Helper function for creating a route config entry for an index route, for use
  * within `routes.ts`.
  */
-function index(file: string, options?: CreateIndexOptions): RouteConfigEntry {
+function index(file: string, options?: IndexOptions): RouteConfigEntry {
   return {
     file,
     index: true,
-    ...pick(options, createIndexOptionKeys),
+    ...pick(options, indexOptionKeys),
   };
 }
 
-const createLayoutOptionKeys = ["id"] as const satisfies ReadonlyArray<
+const layoutOptionKeys = ["id"] as const satisfies ReadonlyArray<
   keyof RouteConfigEntry
 >;
-type CreateLayoutOptions = Pick<
-  RouteConfigEntry,
-  typeof createLayoutOptionKeys[number]
->;
+type LayoutOptions = Pick<RouteConfigEntry, typeof layoutOptionKeys[number]>;
 /**
  * Helper function for creating a route config entry for a layout route, for use
  * within `routes.ts`.
@@ -92,15 +83,15 @@ type CreateLayoutOptions = Pick<
 function layout(file: string, children?: RouteConfigEntry[]): RouteConfigEntry;
 function layout(
   file: string,
-  options: CreateLayoutOptions,
+  options: LayoutOptions,
   children?: RouteConfigEntry[]
 ): RouteConfigEntry;
 function layout(
   file: string,
-  optionsOrChildren: CreateLayoutOptions | RouteConfigEntry[] | undefined,
+  optionsOrChildren: LayoutOptions | RouteConfigEntry[] | undefined,
   children?: RouteConfigEntry[]
 ): RouteConfigEntry {
-  let options: CreateLayoutOptions = {};
+  let options: LayoutOptions = {};
 
   if (Array.isArray(optionsOrChildren) || !optionsOrChildren) {
     children = optionsOrChildren;
@@ -111,7 +102,7 @@ function layout(
   return {
     file,
     children,
-    ...pick(options, createLayoutOptionKeys),
+    ...pick(options, layoutOptionKeys),
   };
 }
 
