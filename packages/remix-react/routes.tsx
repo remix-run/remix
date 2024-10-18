@@ -476,14 +476,6 @@ export function createClientRoutes(
             });
         }
 
-        if (needsRevalidation) {
-          lazyRoute.shouldRevalidate = wrapShouldRevalidateForHdr(
-            route.id,
-            mod.shouldRevalidate,
-            needsRevalidation
-          );
-        }
-
         return {
           ...(lazyRoute.loader ? { loader: lazyRoute.loader } : {}),
           ...(lazyRoute.action ? { action: lazyRoute.action } : {}),
