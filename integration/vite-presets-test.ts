@@ -26,6 +26,13 @@ const files = {
         assetsDir: "custom-assets-dir",
       },
       plugins: [remix({
+        future: {
+          v3_fetcherPersist: true,
+          v3_lazyRouteDiscovery: true,
+          v3_relativeSplatPath: true,
+          v3_singleFetch: true,
+          v3_throwAbortReason: true,
+        },
         presets: [
           // Ensure user config is passed to remixConfig hook
           {
@@ -35,7 +42,16 @@ const files = {
                 throw new Error("Remix user config doesn't have presets array.");
               }
 
-              let expected = JSON.stringify({ appDirectory: "app"});
+              let expected = JSON.stringify({
+                future: {
+                  v3_fetcherPersist: true,
+                  v3_lazyRouteDiscovery: true,
+                  v3_relativeSplatPath: true,
+                  v3_singleFetch: true,
+                  v3_throwAbortReason: true,
+                },
+                appDirectory: "app",
+              });
               let actual = JSON.stringify(restUserConfig);
 
               if (actual !== expected) {
@@ -49,7 +65,7 @@ const files = {
               return {};
             },
           },
-          
+
           // Ensure preset config takes lower precedence than user config
           {
             name: "test-preset",

@@ -646,6 +646,8 @@ export async function resolveConfig(
     }
   }
 
+  logFutureFlagWarnings(future);
+
   return {
     appDirectory,
     cacheDirectory,
@@ -742,3 +744,53 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "disjunction",
 });
+
+function logFutureFlagWarning(args: { flag: string; message: string }) {
+  logger.warn(args.message, {
+    key: args.flag,
+    details: [
+      `You can use the \`${args.flag}\` future flag to opt-in early.`,
+      `-> https://remix.run/docs/en/2.13.1/start/future-flags#${args.flag}`,
+    ],
+  });
+}
+
+export function logFutureFlagWarnings(future: FutureConfig) {
+  if (!future.v3_fetcherPersist) {
+    logFutureFlagWarning({
+      flag: "v3_fetcherPersist",
+      message: "Fetcher persistence behavior is changing in React Router v7",
+    });
+  }
+
+  if (!future.v3_lazyRouteDiscovery) {
+    logFutureFlagWarning({
+      flag: "v3_lazyRouteDiscovery",
+      message:
+        "Route discovery/manifest behavior is changing in React Router v7",
+    });
+  }
+
+  if (!future.v3_relativeSplatPath) {
+    logFutureFlagWarning({
+      flag: "v3_relativeSplatPath",
+      message:
+        "Relative routing behavior for splat routes is changing in React Router v7",
+    });
+  }
+
+  if (!future.v3_singleFetch) {
+    logFutureFlagWarning({
+      flag: "v3_singleFetch",
+      message: "Data fetching is changing to a single fetch in React Router v7",
+    });
+  }
+
+  if (!future.v3_throwAbortReason) {
+    logFutureFlagWarning({
+      flag: "v3_throwAbortReason",
+      message:
+        "The format of errors thrown on aborted requests is changing in React Router v7",
+    });
+  }
+}
