@@ -1,17 +1,17 @@
+import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
+import fse from "fs-extra";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import fse from "fs-extra";
-import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
 
-import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
-import { defineRoutes } from "./config/routes";
-import { ServerMode, isValidServerMode } from "./config/serverModes";
+import { detectPackageManager } from "./cli/detectPackageManager";
+import { detectServerRuntime } from "./cli/detectServerRuntime";
+import { tryLoadPackageJson } from "./cli/tryLoadPackageJson";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
-import { detectPackageManager } from "./cli/detectPackageManager";
-import { tryLoadPackageJson } from "./cli/tryLoadPackageJson";
-import { detectServerRuntime } from "./cli/detectServerRuntime";
+import type { DefineRoutesFunction, RouteManifest } from "./config/routes";
+import { defineRoutes } from "./config/routes";
+import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { logger } from "./tux";
 
 export interface RemixMdxConfig {
@@ -628,6 +628,8 @@ export async function resolveConfig(
     }
   }
 
+  logFutureFlagWarnings(future);
+
   return {
     appDirectory,
     cacheDirectory,
@@ -691,4 +693,54 @@ export function findConfig(
   }
 
   return undefined;
+}
+
+function logFutureFlagWarning(args: { flag: string; message: string }) {
+  logger.warn(args.message, {
+    key: args.flag,
+    details: [
+      `You can use the \`${args.flag}\` future flag to opt-in early.`,
+      `-> https://remix.run/docs/en/2.13.1/start/future-flags#${args.flag}`,
+    ],
+  });
+}
+
+export function logFutureFlagWarnings(future: FutureConfig) {
+  if (!future.v3_fetcherPersist) {
+    logFutureFlagWarning({
+      flag: "v3_fetcherPersist",
+      message: "Fetcher persistence behavior is changing in React Router v7",
+    });
+  }
+
+  if (!future.v3_lazyRouteDiscovery) {
+    logFutureFlagWarning({
+      flag: "v3_lazyRouteDiscovery",
+      message:
+        "Route discovery/manifest behavior is changing in React Router v7",
+    });
+  }
+
+  if (!future.v3_relativeSplatPath) {
+    logFutureFlagWarning({
+      flag: "v3_relativeSplatPath",
+      message:
+        "Relative routing behavior for splat routes is changing in React Router v7",
+    });
+  }
+
+  if (!future.v3_singleFetch) {
+    logFutureFlagWarning({
+      flag: "v3_singleFetch",
+      message: "Data fetching is changing to a single fetch in React Router v7",
+    });
+  }
+
+  if (!future.v3_throwAbortReason) {
+    logFutureFlagWarning({
+      flag: "v3_throwAbortReason",
+      message:
+        "The format of errors thrown on aborted requests is changing in React Router v7",
+    });
+  }
 }
