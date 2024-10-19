@@ -11,7 +11,6 @@ pnpm-lock.yaml
 # Deno
 integration/helpers/deno-template
 packages/remix-deno
-templates/deno
 
 packages/remix-dev/config/defaults
 templates/remix-tutorial/app/data.ts
