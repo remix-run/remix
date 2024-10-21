@@ -1687,12 +1687,46 @@ test.describe("single-fetch", () => {
     });
 
     expect(warnLogs).toEqual([
-      "⚠️ REMIX FUTURE CHANGE: Resource routes will no longer be able to return " +
-        "raw JavaScript objects in v3 when Single Fetch becomes the default. You " +
-        "can prepare for this change at your convenience by wrapping the data " +
-        "returned from your `loader` function in the `routes/resource` route with " +
-        "`json()`.  For instructions on making this change see " +
-        "https://remix.run/docs/en/v2.9.2/guides/single-fetch#resource-routes",
+      "⚠️ REMIX FUTURE CHANGE: Externally-accessed resource routes will no longer be " +
+        "able to return raw JavaScript objects or `null` in React Router v7 when " +
+        "Single Fetch becomes the default. You can prepare for this change at your " +
+        `convenience by wrapping the data returned from your \`loader\` function in ` +
+        `the \`routes/resource\` route with \`json()\`.  For instructions on making this ` +
+        "change, see https://remix.run/docs/en/v2.13.1/guides/single-fetch#resource-routes",
+    ]);
+    console.warn = oldConsoleWarn;
+  });
+
+  test("wraps resource route 'null' returns in json with a deprecation warning", async () => {
+    let oldConsoleWarn = console.warn;
+    let warnLogs: unknown[] = [];
+    console.warn = (...args) => warnLogs.push(...args);
+
+    let fixture = await createFixture({
+      config: {
+        future: {
+          v3_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/resource.tsx": js`
+          export function loader() {
+            return null;
+          }
+        `,
+      },
+    });
+    let res = await fixture.requestResource("/resource");
+    expect(await res.json()).toEqual(null);
+
+    expect(warnLogs).toEqual([
+      "⚠️ REMIX FUTURE CHANGE: Externally-accessed resource routes will no longer be " +
+        "able to return raw JavaScript objects or `null` in React Router v7 when " +
+        "Single Fetch becomes the default. You can prepare for this change at your " +
+        `convenience by wrapping the data returned from your \`loader\` function in ` +
+        `the \`routes/resource\` route with \`json()\`.  For instructions on making this ` +
+        "change, see https://remix.run/docs/en/v2.13.1/guides/single-fetch#resource-routes",
     ]);
     console.warn = oldConsoleWarn;
   });
