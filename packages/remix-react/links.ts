@@ -2,7 +2,7 @@ import type { AgnosticDataRouteMatch } from "@remix-run/router";
 import type { Location } from "react-router-dom";
 import { parsePath } from "react-router-dom";
 
-import type { AssetsManifest } from "./entry";
+import type { AssetsManifest, FutureConfig } from "./entry";
 import type { RouteModules, RouteModule } from "./routeModules";
 import type { EntryRoute } from "./routes";
 import { loadRouteModule } from "./routeModules";
@@ -353,6 +353,7 @@ export function getNewMatchesForLinks(
   currentMatches: AgnosticDataRouteMatch[],
   manifest: AssetsManifest,
   location: Location,
+  future: FutureConfig,
   mode: "data" | "assets"
 ): AgnosticDataRouteMatch[] {
   let path = parsePathPatch(page);
@@ -376,7 +377,8 @@ export function getNewMatchesForLinks(
   // NOTE: keep this mostly up-to-date w/ the transition data diff, but this
   // version doesn't care about submissions
   let newMatches =
-    mode === "data" && location.search !== path.search
+    mode === "data" &&
+    (future.v3_singleFetch || location.search !== path.search)
       ? // this is really similar to stuff in transition.ts, maybe somebody smarter
         // than me (or in less of a hurry) can share some of it. You're the best.
         nextMatches.filter((match, index) => {
@@ -389,6 +391,12 @@ export function getNewMatchesForLinks(
             return true;
           }
 
+          // For reused routes on GET navigations, by default:
+          // - Single fetch always revalidates
+          // - Multi fetch revalidates if search params changed
+          let defaultShouldRevalidate =
+            future.v3_singleFetch || location.search !== path.search;
+
           if (match.route.shouldRevalidate) {
             let routeChoice = match.route.shouldRevalidate({
               currentUrl: new URL(
@@ -398,13 +406,13 @@ export function getNewMatchesForLinks(
               currentParams: currentMatches[0]?.params || {},
               nextUrl: new URL(page, window.origin),
               nextParams: match.params,
-              defaultShouldRevalidate: true,
+              defaultShouldRevalidate,
             });
             if (typeof routeChoice === "boolean") {
               return routeChoice;
             }
           }
-          return true;
+          return defaultShouldRevalidate;
         })
       : nextMatches.filter((match, index) => {
           let manifestRoute = manifest.routes[match.route.id];
