@@ -30,6 +30,11 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "pnpm"
 
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: 📥 Install deps
         run: pnpm install --frozen-lockfile
 
@@ -41,11 +46,6 @@ jobs:
 
       - name: 👔 Format
         run: pnpm format
-
-      - name: 🦕 Install Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: vx.x.x
 
       - name: 👔 Format Deno files
         run: pnpm format:deno

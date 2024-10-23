@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "@remix-run/react": "npm:@remix-run/react@*",
+    "not-remix": "npm:not-remix@*",
+    "remix": "npm:remix@*"
+  }
+}

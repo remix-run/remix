@@ -34,6 +34,9 @@ npx create-remix@latest --template remix-run/remix/templates/express
 npx create-remix@latest --template remix-run/remix/templates/remix
 npx create-remix@latest --template remix-run/remix/templates/remix-javascript
 
+## Deno
+deno -A npm:create-remix@latest --template remix-run/remix/templates/deno
+
 ## SPA Mode
 npx create-remix@latest --template remix-run/remix/templates/spa
 
@@ -41,7 +44,6 @@ npx create-remix@latest --template remix-run/remix/templates/spa
 npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/arc
 npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/cloudflare-pages
 npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/cloudflare-workers
-npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/deno
 npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/express
 npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/fly
 npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/remix
