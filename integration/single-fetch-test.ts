@@ -1687,12 +1687,46 @@ test.describe("single-fetch", () => {
     });
 
     expect(warnLogs).toEqual([
-      "⚠️ REMIX FUTURE CHANGE: Resource routes will no longer be able to return " +
-        "raw JavaScript objects in v3 when Single Fetch becomes the default. You " +
-        "can prepare for this change at your convenience by wrapping the data " +
-        "returned from your `loader` function in the `routes/resource` route with " +
-        "`json()`.  For instructions on making this change see " +
-        "https://remix.run/docs/en/v2.9.2/guides/single-fetch#resource-routes",
+      "⚠️ REMIX FUTURE CHANGE: Externally-accessed resource routes will no longer be " +
+        "able to return raw JavaScript objects or `null` in React Router v7 when " +
+        "Single Fetch becomes the default. You can prepare for this change at your " +
+        `convenience by wrapping the data returned from your \`loader\` function in ` +
+        `the \`routes/resource\` route with \`json()\`.  For instructions on making this ` +
+        "change, see https://remix.run/docs/en/v2.13.1/guides/single-fetch#resource-routes",
+    ]);
+    console.warn = oldConsoleWarn;
+  });
+
+  test("wraps resource route 'null' returns in json with a deprecation warning", async () => {
+    let oldConsoleWarn = console.warn;
+    let warnLogs: unknown[] = [];
+    console.warn = (...args) => warnLogs.push(...args);
+
+    let fixture = await createFixture({
+      config: {
+        future: {
+          v3_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/resource.tsx": js`
+          export function loader() {
+            return null;
+          }
+        `,
+      },
+    });
+    let res = await fixture.requestResource("/resource");
+    expect(await res.json()).toEqual(null);
+
+    expect(warnLogs).toEqual([
+      "⚠️ REMIX FUTURE CHANGE: Externally-accessed resource routes will no longer be " +
+        "able to return raw JavaScript objects or `null` in React Router v7 when " +
+        "Single Fetch becomes the default. You can prepare for this change at your " +
+        `convenience by wrapping the data returned from your \`loader\` function in ` +
+        `the \`routes/resource\` route with \`json()\`.  For instructions on making this ` +
+        "change, see https://remix.run/docs/en/v2.13.1/guides/single-fetch#resource-routes",
     ]);
     console.warn = oldConsoleWarn;
   });
@@ -2325,6 +2359,103 @@ test.describe("single-fetch", () => {
       expect(
         urls[0].endsWith("/parent/a.data?_routes=root%2Croutes%2Fparent.a")
       ).toBe(true);
+    });
+
+    test("provides the proper defaultShouldRevalidate value", async ({
+      page,
+    }) => {
+      let fixture = await createFixture({
+        config: {
+          future: {
+            v3_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/_index.tsx": js`
+            import { Link } from '@remix-run/react';
+            export default function Component() {
+              return <Link to="/parent/a">Go to /parent/a</Link>;
+            }
+          `,
+          "app/routes/parent.tsx": js`
+            import { Link, Outlet, useLoaderData } from '@remix-run/react';
+            let count = 0;
+            export function loader({ request }) {
+              return { count: ++count };
+            }
+            export function shouldRevalidate({ defaultShouldRevalidate }) {
+              return defaultShouldRevalidate;
+            }
+            export default function Component() {
+              return (
+                <>
+                  <p id="parent">Parent Count: {useLoaderData().count}</p>
+                  <Link to="/parent/a">Go to /parent/a</Link>
+                  <Link to="/parent/b">Go to /parent/b</Link>
+                  <Outlet/>
+                </>
+              );
+            }
+          `,
+          "app/routes/parent.a.tsx": js`
+            import { useLoaderData } from '@remix-run/react';
+            let count = 0;
+            export function loader({ request }) {
+              return { count: ++count };
+            }
+            export default function Component() {
+              return <p id="a">A Count: {useLoaderData().count}</p>;
+            }
+          `,
+          "app/routes/parent.b.tsx": js`
+            import { useLoaderData } from '@remix-run/react';
+            let count = 0;
+            export function loader({ request }) {
+              return { count: ++count };
+            }
+            export default function Component() {
+              return <p id="b">B Count: {useLoaderData().count}</p>;
+            }
+          `,
+        },
+      });
+      let appFixture = await createAppFixture(fixture);
+      let app = new PlaywrightFixture(appFixture, page);
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      await app.goto("/");
+
+      await app.clickLink("/parent/a");
+      await page.waitForSelector("#a");
+      expect(await app.getHtml("#parent")).toContain("Parent Count: 1");
+      expect(await app.getHtml("#a")).toContain("A Count: 1");
+      expect(urls.length).toBe(1);
+      expect(urls[0].endsWith("/parent/a.data")).toBe(true);
+      urls = [];
+
+      await app.clickLink("/parent/b");
+      await page.waitForSelector("#b");
+      expect(await app.getHtml("#parent")).toContain("Parent Count: 2");
+      expect(await app.getHtml("#b")).toContain("B Count: 1");
+      expect(urls.length).toBe(1);
+      // Reload the parent route
+      expect(urls[0].endsWith("/parent/b.data")).toBe(true);
+      urls = [];
+
+      await app.clickLink("/parent/a");
+      await page.waitForSelector("#a");
+      expect(await app.getHtml("#parent")).toContain("Parent Count: 3");
+      expect(await app.getHtml("#a")).toContain("A Count: 2");
+      expect(urls.length).toBe(1);
+      // Reload the parent route
+      expect(urls[0].endsWith("/parent/a.data")).toBe(true);
     });
 
     test("does not add a _routes param for routes without loaders", async ({

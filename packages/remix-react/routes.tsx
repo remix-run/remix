@@ -1,5 +1,8 @@
 import * as React from "react";
-import type { HydrationState } from "@remix-run/router";
+import type {
+  HydrationState,
+  ShouldRevalidateFunctionArgs,
+} from "@remix-run/router";
 import { UNSAFE_ErrorResponseImpl as ErrorResponse } from "@remix-run/router";
 import type {
   ActionFunctionArgs,
@@ -315,13 +318,12 @@ export function createClientRoutes(
         ...dataRoute,
         ...getRouteComponents(route, routeModule, isSpaMode),
         handle: routeModule.handle,
-        shouldRevalidate: needsRevalidation
-          ? wrapShouldRevalidateForHdr(
-              route.id,
-              routeModule.shouldRevalidate,
-              needsRevalidation
-            )
-          : routeModule.shouldRevalidate,
+        shouldRevalidate: getShouldRevalidateFunction(
+          future,
+          routeModule,
+          route.id,
+          needsRevalidation
+        ),
       });
 
       let initialData = initialState?.loaderData?.[route.id];
@@ -474,19 +476,16 @@ export function createClientRoutes(
             });
         }
 
-        if (needsRevalidation) {
-          lazyRoute.shouldRevalidate = wrapShouldRevalidateForHdr(
-            route.id,
-            mod.shouldRevalidate,
-            needsRevalidation
-          );
-        }
-
         return {
           ...(lazyRoute.loader ? { loader: lazyRoute.loader } : {}),
           ...(lazyRoute.action ? { action: lazyRoute.action } : {}),
           hasErrorBoundary: lazyRoute.hasErrorBoundary,
-          shouldRevalidate: lazyRoute.shouldRevalidate,
+          shouldRevalidate: getShouldRevalidateFunction(
+            future,
+            lazyRoute,
+            route.id,
+            needsRevalidation
+          ),
           handle: lazyRoute.handle,
           // No need to wrap these in layout since the root route is never
           // loaded via route.lazy()
@@ -509,6 +508,32 @@ export function createClientRoutes(
     if (children.length > 0) dataRoute.children = children;
     return dataRoute;
   });
+}
+
+function getShouldRevalidateFunction(
+  future: FutureConfig,
+  route: Partial<DataRouteObject>,
+  routeId: string,
+  needsRevalidation: Set<string> | undefined
+) {
+  // During HDR we force revalidation for updated routes
+  if (needsRevalidation) {
+    return wrapShouldRevalidateForHdr(
+      routeId,
+      route.shouldRevalidate,
+      needsRevalidation
+    );
+  }
+
+  // Single fetch revalidates by default, so override the RR default value which
+  // matches the multi-fetch behavior with `true`
+  if (future.v3_singleFetch && route.shouldRevalidate) {
+    let fn = route.shouldRevalidate;
+    return (opts: ShouldRevalidateFunctionArgs) =>
+      fn({ ...opts, defaultShouldRevalidate: true });
+  }
+
+  return route.shouldRevalidate;
 }
 
 // When an HMR / HDR update happens we opt out of all user-defined
