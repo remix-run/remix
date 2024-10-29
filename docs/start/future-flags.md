@@ -545,7 +545,7 @@ To get started, first install the adapter:
 npm install --dev @remix-run/routes-option-adapter
 ```
 
-This package matches the API of React Router v7's `@react-router/remix-route-config-adapter`, making the React Router v7 migration as easy as possible.
+This package matches the API of React Router v7's `@react-router/remix-routes-option-adapter`, making the React Router v7 migration as easy as possible.
 
 Then, update your `routes.ts` file to use the adapter, passing the value of your `routes` option to the `remixRoutesOptionAdapter` function which will return an array of configured routes.
 
