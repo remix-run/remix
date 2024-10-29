@@ -472,19 +472,25 @@ You shouldn't need to make any changes to your application code for this feature
 
 You may find some usage for the new [`<Link discover>`][discover-prop] API if you wish to disable eager route discovery on certain links.
 
-## unstable_optimizeDeps
+## v3_routeConfig
 
-Opt into automatic [dependency optimization][dependency-optimization] during development. This flag will remain in an "unstable" state until React Router v7 so you do not need to adopt this in your Remix v2 app prior to upgrading to React Router v7.
+Config-based routing is the new default in React Router v7, configured via the `routes.ts` file in the app directory. Support for `routes.ts` and its related APIs in Remix are designed as a migration path to help minimize the number of changes required when moving your Remix project over to React Router v7. While some new packages have been introduced within the `@remix-run` scope, these new packages only exist to keep the code in `routes.ts` as similar as possible to the equivalent code for React Router v7.
 
-## routes.ts
-
-Config-based routing is the new default in React Router v7. Support for `routes.ts` and its related APIs in Remix are designed as a migration path to help minimize the number of changes required when moving your Remix project over to React Router v7. Since React Router v7 is not yet stable, these APIs are also considered unstable.
-
-While not a future flag, the presence of an `app/routes.ts` file when using the Remix Vite plugin will disable Remix's built-in file system routing and opt your project into React Router v7's config-based routing. To opt back in to file system routing, this can be explicitly configured within `routes.ts` as we'll cover below.
+When the `v3_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opted into React Router v7's config-based routing. To opt back in to file system routing, this can be explicitly configured within `routes.ts` as we'll cover below.
 
 **Update your code**
 
 To migrate Remix's file system routing and route config to the equivalent setup in React Router v7, you can follow these steps:
+
+👉 **Enable the Flag**
+
+```ts filename=vite.config.ts
+remix({
+  future: {
+    v3_routeConfig: true,
+  },
+});
+```
 
 👉 **Install `@remix-run/route-config`**
 
@@ -613,6 +619,10 @@ export const routes: RouteConfig = [
 ];
 ```
 
+## unstable_optimizeDeps
+
+Opt into automatic [dependency optimization][dependency-optimization] during development. This flag will remain in an "unstable" state until React Router v7 so you do not need to adopt this in your Remix v2 app prior to upgrading to React Router v7.
+
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
 [relativesplatpath-changelog]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#futurev3_relativesplatpath
@@ -632,5 +642,5 @@ export const routes: RouteConfig = [
 [vite-url-imports]: https://vitejs.dev/guide/assets.html#explicit-url-imports
 [mdx]: https://mdxjs.com
 [mdx-rollup-plugin]: https://mdxjs.com/packages/rollup
-[dependency-optimization]: ../guides/dependency-optimization
 [remix-flat-routes]: https://github.com/kiliman/remix-flat-routes
+[dependency-optimization]: ../guides/dependency-optimization

@@ -22,6 +22,7 @@ import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
 import { detectPackageManager } from "./cli/detectPackageManager";
 import { logger } from "./tux";
+import invariant from "./invariant";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -49,6 +50,7 @@ interface FutureConfig {
   v3_throwAbortReason: boolean;
   v3_singleFetch: boolean;
   v3_lazyRouteDiscovery: boolean;
+  v3_routeConfig: boolean;
   unstable_optimizeDeps: boolean;
 }
 
@@ -577,9 +579,12 @@ export async function resolveConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  setRouteConfigAppDirectory(appDirectory);
-  let routeConfigFile = findEntry(appDirectory, "routes");
-  if (routesViteNodeContext && vite && routeConfigFile) {
+  if (appConfig.future?.v3_routeConfig) {
+    invariant(routesViteNodeContext);
+    invariant(vite);
+
+    let routeConfigFile = findEntry(appDirectory, "routes");
+
     class FriendlyError extends Error {}
 
     let logger = vite.createLogger(viteUserConfig?.logLevel, {
@@ -593,6 +598,16 @@ export async function resolveConfig(
         );
       }
 
+      if (!routeConfigFile) {
+        let routeConfigDisplayPath = vite.normalizePath(
+          path.relative(rootDirectory, path.join(appDirectory, "routes.ts"))
+        );
+        throw new FriendlyError(
+          `Route config file not found at "${routeConfigDisplayPath}".`
+        );
+      }
+
+      setRouteConfigAppDirectory(appDirectory);
       let routeConfigExport: RouteConfig = (
         await routesViteNodeContext.runner.executeFile(
           path.join(appDirectory, routeConfigFile)
