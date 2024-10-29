@@ -121,7 +121,9 @@ test.describe("actions", () => {
 
   test.beforeEach(({ page }) => {
     page.on("console", (msg) => {
-      logs.push(msg.text());
+      if (!msg.text().includes("React Router Future Flag Warning")) {
+        logs.push(msg.text());
+      }
     });
   });
 
@@ -333,7 +335,9 @@ test.describe("single fetch", () => {
 
     test.beforeEach(({ page }) => {
       page.on("console", (msg) => {
-        logs.push(msg.text());
+        if (!msg.text().includes("React Router Future Flag Warning")) {
+          logs.push(msg.text());
+        }
       });
     });
 
