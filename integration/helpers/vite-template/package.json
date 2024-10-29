@@ -26,6 +26,7 @@
   "devDependencies": {
     "@remix-run/dev": "workspace:*",
     "@remix-run/eslint-config": "workspace:*",
+    "@remix-run/route-config": "workspace:*",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "eslint": "^8.38.0",

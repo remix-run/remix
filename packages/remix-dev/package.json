@@ -73,6 +73,8 @@
     "set-cookie-parser": "^2.6.0",
     "tar-fs": "^2.1.1",
     "tsconfig-paths": "^4.0.0",
+    "valibot": "^0.41.0",
+    "vite-node": "^1.6.0",
     "ws": "^7.5.10"
   },
   "devDependencies": {
