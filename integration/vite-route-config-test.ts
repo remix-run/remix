@@ -36,6 +36,27 @@ async function reloadPage({
 }
 
 test.describe("route config", () => {
+  test("fails the build if route config is missing", async () => {
+    let cwd = await createProject({
+      "vite.config.js": `
+        import { vitePlugin as remix } from "@remix-run/dev";
+
+        export default {
+          plugins: [remix({
+            future: { v3_routeConfig: true },
+          })]
+        }
+      `,
+    });
+    // Ensure file is missing in case it's ever added to test fixture
+    await fs.rm(path.join(cwd, "app/routes.ts"), { force: true });
+    let buildResult = viteBuild({ cwd });
+    expect(buildResult.status).toBe(1);
+    expect(buildResult.stderr.toString()).toContain(
+      'Route config file not found at "app/routes.ts"'
+    );
+  });
+
   test("fails the build if routes option is used", async () => {
     let cwd = await createProject({
       "vite.config.js": `
@@ -43,6 +64,7 @@ test.describe("route config", () => {
 
         export default {
           plugins: [remix({
+            future: { v3_routeConfig: true },
             routes: () => {},
           })]
         }
@@ -66,6 +88,7 @@ test.describe("route config", () => {
         export default {
           ${await viteConfig.server({ port })}
           plugins: [remix({
+            future: { v3_routeConfig: true },
             routes: () => {},
           })]
         }
@@ -85,6 +108,15 @@ test.describe("route config", () => {
 
   test("fails the build if route config is invalid", async () => {
     let cwd = await createProject({
+      "vite.config.js": `
+        import { vitePlugin as remix } from "@remix-run/dev";
+
+        export default {
+          plugins: [remix({
+            future: { v3_routeConfig: true },
+          })]
+        }
+      `,
       "app/routes.ts": `export default INVALID(`,
     });
     let buildResult = viteBuild({ cwd });
@@ -98,7 +130,10 @@ test.describe("route config", () => {
     viteDev,
   }) => {
     let files: Files = async ({ port }) => ({
-      "vite.config.js": await viteConfig.basic({ port }),
+      "vite.config.js": await viteConfig.basic({
+        routeConfig: true,
+        port,
+      }),
       "app/routes.ts": `export default INVALID(`,
     });
     let devError: Error | undefined;
@@ -119,7 +154,10 @@ test.describe("route config", () => {
     viteDev,
   }) => {
     let files: Files = async ({ port }) => ({
-      "vite.config.js": await viteConfig.basic({ port }),
+      "vite.config.js": await viteConfig.basic({
+        routeConfig: true,
+        port,
+      }),
       "app/routes.ts": js`
         import { type RouteConfig, index } from "@remix-run/route-config";
 
@@ -177,7 +215,10 @@ test.describe("route config", () => {
     viteDev,
   }) => {
     let files: Files = async ({ port }) => ({
-      "vite.config.js": await viteConfig.basic({ port }),
+      "vite.config.js": await viteConfig.basic({
+        routeConfig: true,
+        port,
+      }),
       "app/routes.ts": js`
         export { routes } from "./actual-routes";
       `,
@@ -238,7 +279,10 @@ test.describe("route config", () => {
     viteDev,
   }) => {
     let files: Files = async ({ port }) => ({
-      "vite.config.js": await viteConfig.basic({ port }),
+      "vite.config.js": await viteConfig.basic({
+        routeConfig: true,
+        port,
+      }),
       "app/routes.ts": js`
         import { type RouteConfig, index } from "@remix-run/route-config";
 
@@ -254,11 +298,6 @@ test.describe("route config", () => {
       "app/test-route-2.tsx": `
         export default function TestRoute2() {
           return <div data-test-route>Test route 2</div>
-        }
-      `,
-      "app/routes/_index.tsx": `
-        export default function FsRoute() {
-          return <div data-test-route>FS route</div>
         }
       `,
     });
@@ -277,18 +316,12 @@ test.describe("route config", () => {
       path.join(cwd, INVALID_FILENAME)
     );
 
-    await expect(async () => {
-      // Reload to pick up classic FS routes
-      page = await reloadPage({ browserName, page, context });
-      await expect(page.locator("[data-test-route]")).toHaveText("FS route");
-    }).toPass();
-
-    // Ensure dev server falls back to FS routes + HMR
-    await edit("app/routes/_index.tsx", (contents) =>
-      contents.replace("FS route", "FS route updated")
+    // Ensure dev server is still running with old config + HMR
+    await edit("app/test-route-1.tsx", (contents) =>
+      contents.replace("Test route 1", "Test route 1 updated")
     );
     await expect(page.locator("[data-test-route]")).toHaveText(
-      "FS route updated"
+      "Test route 1 updated"
     );
 
     // Add new route
@@ -313,7 +346,10 @@ test.describe("route config", () => {
 
   test("supports absolute route file paths", async ({ page, viteDev }) => {
     let files: Files = async ({ port }) => ({
-      "vite.config.js": await viteConfig.basic({ port }),
+      "vite.config.js": await viteConfig.basic({
+        routeConfig: true,
+        port,
+      }),
       "app/routes.ts": js`
         import path from "node:path";
         import { type RouteConfig, index } from "@remix-run/route-config";

@@ -23,7 +23,9 @@ test.describe("fs-routes", () => {
           import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix()],
+            plugins: [remix({
+              future: { v3_routeConfig: true },
+            })],
           });
         `,
         "app/routes.ts": js`
@@ -254,7 +256,9 @@ test.describe("emits warnings for route conflicts", async () => {
           import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix()],
+            plugins: [remix({
+              future: { v3_routeConfig: true },
+            })],
           });
         `,
         "app/routes.ts": js`
@@ -326,7 +330,9 @@ test.describe("", () => {
           import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix()],
+            plugins: [remix({
+              future: { v3_routeConfig: true },
+            })],
           });
         `,
         "app/routes.ts": js`
@@ -373,7 +379,9 @@ test.describe("pathless routes and route collisions", () => {
           import { vitePlugin as remix } from "@remix-run/dev";
 
           export default defineConfig({
-            plugins: [remix()],
+            plugins: [remix({
+              future: { v3_routeConfig: true },
+            })],
           });
         `,
         "app/routes.ts": js`
