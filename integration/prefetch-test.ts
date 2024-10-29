@@ -791,7 +791,9 @@ test.describe("single fetch", () => {
 
       let consoleLogs: string[] = [];
       page.on("console", (msg) => {
-        consoleLogs.push(msg.text());
+        if (!msg.text().includes("React Router Future Flag Warning")) {
+          consoleLogs.push(msg.text());
+        }
       });
 
       let selectors = {
