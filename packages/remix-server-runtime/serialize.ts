@@ -21,6 +21,11 @@ type SingleFetchEnabled =
  *
  * For example:
  * `type LoaderData = SerializeFrom<typeof loader>`
+ *
+ * @deprecated SerializeFrom is deprecated and will be removed in React Router
+ * v7. Please use the generics on `useLoaderData`/etc. instead of manually
+ * deserializing in Remix v2.  You can convert to the generated types once you
+ * migrate to React Router v7.
  */
 export type SerializeFrom<T> =
   SingleFetchEnabled extends true ? SingleFetch_SerializeFrom<T> :
