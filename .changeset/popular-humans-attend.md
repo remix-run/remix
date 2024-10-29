@@ -15,7 +15,7 @@ remix({
   future: {
     v3_routeConfig: true,
   },
-})
+});
 ```
 
 A minimal `routes.ts` file to support Remix's built-in file system routing looks like this:
