@@ -26,7 +26,7 @@ export default {
             caches,
             env,
           },
-        }
+        },
       });
       return await handleRemixRequest(request, loadContext);
     } catch (error) {
