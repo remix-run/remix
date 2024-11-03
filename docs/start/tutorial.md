@@ -958,12 +958,12 @@ At this point you should know everything you need to know to make the delete but
 👉 **Create the "destroy" route module**
 
 ```shellscript nonumber
-touch app/routes/contacts.\$contactId.destroy.tsx
+touch app/routes/contacts.\$contactId_.destroy.tsx
 ```
 
 👉 **Add the destroy action**
 
-```tsx filename=app/routes/contacts.$contactId.destroy.tsx
+```tsx filename=app/routes/contacts.$contactId_.destroy.tsx
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import invariant from "tiny-invariant";
