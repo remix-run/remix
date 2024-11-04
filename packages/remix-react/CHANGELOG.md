@@ -1,5 +1,14 @@
 # `@remix-run/react`
 
+## 3.0.0-pre.0
+
+### Patch Changes
+
+- [REMOVE] Bump router ([#10175](https://github.com/remix-run/remix/pull/10175))
+- Fix `defaultShouldRevalidate` value when using single fetch ([#10139](https://github.com/remix-run/remix/pull/10139))
+- Updated dependencies:
+  - `@remix-run/server-runtime@3.0.0-pre.0`
+
 ## 2.13.1
 
 ### Patch Changes
