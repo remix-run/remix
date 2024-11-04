@@ -288,9 +288,9 @@ Once you've got all your routes living in their own files, you can:
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
 [runtimes]: ../discussion/runtimes
 [kent-tweet]: https://twitter.com/kentcdodds/status/1743030378334708017
-[rr-setup]: https://reactrouter.com/en/main/start/tutorial#setup
+[rr-setup]: https://reactrouter.com/v6/start/tutorial#setup
 [routes-config]: ../file-conventions/remix-config#routes
-[route-lazy]: https://reactrouter.com/en/main/route/lazy
+[route-lazy]: https://reactrouter.com/v6/route/lazy
 [meta]: ../components/meta
 [links]: ../components/links
 [migrating-rr]: https://remix.run/docs/en/main/guides/migrating-react-router-app
