@@ -1,5 +1,15 @@
 # `@remix-run/server-runtime`
 
+## 2.14.0-pre.0
+
+### Minor Changes
+
+- Deprecate `SerializeFrom` in favor of generics because it will be removed in React Router v7 ([#10173](https://github.com/remix-run/remix/pull/10173))
+
+### Patch Changes
+
+- Update externally-accessed resource routes warning to cover null usage as well ([#10145](https://github.com/remix-run/remix/pull/10145))
+
 ## 2.13.1
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.13.1.
