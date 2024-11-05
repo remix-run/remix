@@ -1,6 +1,6 @@
 # `@remix-run/eslint-config`
 
-## 3.0.0-pre.0
+## 2.14.0-pre.0
 
 ### Minor Changes
 
