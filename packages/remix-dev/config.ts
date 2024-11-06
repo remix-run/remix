@@ -50,7 +50,7 @@ interface FutureConfig {
   v3_throwAbortReason: boolean;
   v3_singleFetch: boolean;
   v3_lazyRouteDiscovery: boolean;
-  v3_routeConfig: boolean;
+  unstable_routeConfig: boolean;
   unstable_optimizeDeps: boolean;
 }
 
@@ -579,7 +579,7 @@ export async function resolveConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  if (appConfig.future?.v3_routeConfig) {
+  if (appConfig.future?.unstable_routeConfig) {
     invariant(routesViteNodeContext);
     invariant(vite);
 
@@ -721,7 +721,7 @@ export async function resolveConfig(
     v3_throwAbortReason: appConfig.future?.v3_throwAbortReason === true,
     v3_singleFetch: appConfig.future?.v3_singleFetch === true,
     v3_lazyRouteDiscovery: appConfig.future?.v3_lazyRouteDiscovery === true,
-    v3_routeConfig: appConfig.future?.v3_routeConfig === true,
+    unstable_routeConfig: appConfig.future?.unstable_routeConfig === true,
     unstable_optimizeDeps: appConfig.future?.unstable_optimizeDeps === true,
   };
 
