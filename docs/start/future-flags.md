@@ -472,11 +472,11 @@ You shouldn't need to make any changes to your application code for this feature
 
 You may find some usage for the new [`<Link discover>`][discover-prop] API if you wish to disable eager route discovery on certain links.
 
-## v3_routeConfig
+## unstable_routeConfig
 
 Config-based routing is the new default in React Router v7, configured via the `routes.ts` file in the app directory. Support for `routes.ts` and its related APIs in Remix are designed as a migration path to help minimize the number of changes required when moving your Remix project over to React Router v7. While some new packages have been introduced within the `@remix-run` scope, these new packages only exist to keep the code in `routes.ts` as similar as possible to the equivalent code for React Router v7.
 
-When the `v3_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opted into React Router v7's config-based routing. To opt back in to file system routing, this can be explicitly configured within `routes.ts` as we'll cover below.
+When the `unstable_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opted into React Router v7's config-based routing. To opt back in to file system routing, this can be explicitly configured within `routes.ts` as we'll cover below.
 
 **Update your code**
 
@@ -487,7 +487,7 @@ To migrate Remix's file system routing and route config to the equivalent setup 
 ```ts filename=vite.config.ts
 remix({
   future: {
-    v3_routeConfig: true,
+    unstable_routeConfig: true,
   },
 });
 ```
