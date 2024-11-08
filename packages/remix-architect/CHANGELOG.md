@@ -1,4 +1,4 @@
-# `@remix-run/architect`
+# @remix-run/architect
 
 ## 2.14.0
 

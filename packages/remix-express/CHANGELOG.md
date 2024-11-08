@@ -1,4 +1,4 @@
-# `@remix-run/express`
+# @remix-run/express
 
 ## 2.14.0
 

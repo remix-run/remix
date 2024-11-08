@@ -1,4 +1,4 @@
-# `@remix-run/deno`
+# @remix-run/deno
 
 ## 2.14.0
 

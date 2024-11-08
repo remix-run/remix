@@ -1,4 +1,4 @@
-# `@remix-run/dev`
+# @remix-run/dev
 
 ## 2.14.0
 
@@ -30,7 +30,7 @@
   export const routes: RouteConfig = flatRoutes();
   ```
 
-- - Log deprecation warnings for v3 future flags ([#10126](https://github.com/remix-run/remix/pull/10126))
+- Log deprecation warnings for v3 future flags ([#10126](https://github.com/remix-run/remix/pull/10126))
   - Add `@deprecated` annotations to `json`/`defer` utilities
 
 ### Patch Changes

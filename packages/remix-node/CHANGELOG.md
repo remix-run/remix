@@ -1,4 +1,4 @@
-# `@remix-run/node`
+# @remix-run/node
 
 ## 2.14.0
 

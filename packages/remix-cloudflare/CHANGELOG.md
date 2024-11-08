@@ -1,4 +1,4 @@
-# `@remix-run/cloudflare`
+# @remix-run/cloudflare
 
 ## 2.14.0
 

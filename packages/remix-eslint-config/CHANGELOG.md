@@ -1,4 +1,4 @@
-# `@remix-run/eslint-config`
+# @remix-run/eslint-config
 
 ## 2.14.0
 
