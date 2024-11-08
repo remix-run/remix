@@ -1,4 +1,11 @@
-# `@remix-run/cloudflare`
+# @remix-run/cloudflare
+
+## 2.14.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.14.0`
 
 ## 2.13.1
 
@@ -480,10 +487,10 @@
 
   Documentation Resources (better docs specific to Remix are in the works):
 
-  - <https://reactrouter.com/en/main/utils/defer>
-  - <https://reactrouter.com/en/main/components/await>
-  - <https://reactrouter.com/en/main/hooks/use-async-value>
-  - <https://reactrouter.com/en/main/hooks/use-async-error>
+  - <https://reactrouter.com/v6/utils/defer>
+  - <https://reactrouter.com/v6/components/await>
+  - <https://reactrouter.com/v6/hooks/use-async-value>
+  - <https://reactrouter.com/v6/hooks/use-async-error>
 
 - Updated dependencies:
   - `@remix-run/server-runtime@1.11.0`

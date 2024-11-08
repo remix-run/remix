@@ -12,7 +12,6 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@cloudflare/kv-asset-handler": "^0.3.2",
     "@remix-run/cloudflare": "*",
     "@remix-run/react": "*",
     "@remix-run/server-runtime": "*",
@@ -21,7 +20,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240512.0",
+    "@cloudflare/workers-types": "^4.20241022.0",
     "@remix-run/dev": "*",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
@@ -39,7 +38,7 @@
     "typescript": "^5.1.6",
     "vite": "^5.1.0",
     "vite-tsconfig-paths": "^4.2.1",
-    "wrangler": "3.57.1"
+    "wrangler": "3.84.0"
   },
   "engines": {
     "node": ">=20.0.0"

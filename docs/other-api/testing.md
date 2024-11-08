@@ -70,7 +70,7 @@ test("renders loader data", async () => {
 });
 ```
 
-[create-memory-router]: https://reactrouter.com/en/main/routers/create-memory-router
+[create-memory-router]: https://reactrouter.com/v6/routers/create-memory-router
 [use-loader-data]: ../hooks/use-loader-data
 [use-fetcher]: ../hooks/use-fetcher
 [cypress]: https://www.cypress.io
