@@ -29,7 +29,6 @@
     "@remix-run/testing": "2.13.1"
   },
   "changesets": [
-    "early-jobs-eat",
     "giant-eggs-march",
     "grumpy-llamas-leave",
     "popular-humans-attend",

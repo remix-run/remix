@@ -1,7 +1,5 @@
 # @remix-run/routes-option-adapter
 
-## 2.14.0-pre.1
-
 ## 2.14.0-pre.0
 
 ### Patch Changes
