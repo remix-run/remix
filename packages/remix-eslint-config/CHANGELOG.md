@@ -1,4 +1,10 @@
-# `@remix-run/eslint-config`
+# @remix-run/eslint-config
+
+## 2.14.0
+
+### Minor Changes
+
+- Add deprecation warning to `@remix-run/eslint-config` ([#10174](https://github.com/remix-run/remix/pull/10174))
 
 ## 2.13.1
 

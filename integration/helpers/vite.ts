@@ -32,13 +32,19 @@ export const viteConfig = {
     `;
     return text;
   },
-  basic: async (args: { port: number; fsAllow?: string[] }) => {
+  basic: async (args: {
+    port: number;
+    fsAllow?: string[];
+    routeConfig?: boolean;
+  }) => {
     return dedent`
       import { vitePlugin as remix } from "@remix-run/dev";
 
       export default {
         ${await viteConfig.server(args)}
-        plugins: [remix()]
+        plugins: [remix(${
+          args.routeConfig ? "{ future: { unstable_routeConfig: true } }" : ""
+        })]
       }
     `;
   },

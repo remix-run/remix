@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/dev",
-  "version": "2.13.1",
+  "version": "2.14.0",
   "description": "Dev tools and CLI for Remix",
   "homepage": "https://remix.run",
   "bugs": {
@@ -32,7 +32,7 @@
     "@mdx-js/mdx": "^2.3.0",
     "@npmcli/package-json": "^4.0.1",
     "@remix-run/node": "workspace:*",
-    "@remix-run/router": "1.20.0",
+    "@remix-run/router": "1.21.0",
     "@remix-run/server-runtime": "workspace:*",
     "@types/mdx": "^2.0.5",
     "@vanilla-extract/integration": "^6.2.0",
@@ -73,6 +73,8 @@
     "set-cookie-parser": "^2.6.0",
     "tar-fs": "^2.1.1",
     "tsconfig-paths": "^4.0.0",
+    "valibot": "^0.41.0",
+    "vite-node": "^1.6.0",
     "ws": "^7.5.10"
   },
   "devDependencies": {
@@ -106,8 +108,8 @@
     "wrangler": "^3.28.2"
   },
   "peerDependencies": {
-    "@remix-run/react": "^2.13.1",
-    "@remix-run/serve": "^2.13.1",
+    "@remix-run/react": "^2.14.0",
+    "@remix-run/serve": "^2.14.0",
     "typescript": "^5.1.0",
     "vite": "^5.1.0",
     "wrangler": "^3.28.2"

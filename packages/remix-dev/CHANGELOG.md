@@ -1,4 +1,43 @@
-# `@remix-run/dev`
+# @remix-run/dev
+
+## 2.14.0
+
+### Minor Changes
+
+- Add support for `routes.ts` behind `future.unstable_routeConfig` flag to assist with the migration to React Router v7. ([#10107](https://github.com/remix-run/remix/pull/10107))
+
+  Config-based routing is the new default in React Router v7, configured via the `routes.ts` file in the app directory. Support for `routes.ts` and its related APIs in Remix are designed as a migration path to help minimize the number of changes required when moving your Remix project over to React Router v7. While some new packages have been introduced within the `@remix-run` scope, these new packages only exist to keep the code in `routes.ts` as similar as possible to the equivalent code for React Router v7.
+
+  When the `unstable_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opted into React Router v7's config-based routing.
+
+  To enable the flag, in your `vite.config.ts` file:
+
+  ```ts
+  remix({
+    future: {
+      unstable_routeConfig: true,
+    },
+  });
+  ```
+
+  A minimal `routes.ts` file to support Remix's built-in file system routing looks like this:
+
+  ```ts
+  // app/routes.ts
+  import { flatRoutes } from "@remix-run/fs-routes";
+  import type { RouteConfig } from "@remix-run/route-config";
+
+  export const routes: RouteConfig = flatRoutes();
+  ```
+
+- Log deprecation warnings for v3 future flags ([#10126](https://github.com/remix-run/remix/pull/10126))
+  - Add `@deprecated` annotations to `json`/`defer` utilities
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.14.0`
+  - `@remix-run/node@2.14.0`
 
 ## 2.13.1
 

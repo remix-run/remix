@@ -1,4 +1,12 @@
-# `@remix-run/testing`
+# @remix-run/testing
+
+## 2.14.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.14.0`
+  - `@remix-run/node@2.14.0`
 
 ## 2.13.1
 

@@ -504,7 +504,11 @@ test.describe("SPA Mode", () => {
       expect(html).toMatch('<h1 data-loading="true">Loading SPA...</h1>');
 
       let logs: string[] = [];
-      page.on("console", (msg) => logs.push(msg.text()));
+      page.on("console", (msg) => {
+        if (!msg.text().includes("React Router Future Flag Warning")) {
+          logs.push(msg.text());
+        }
+      });
 
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/");

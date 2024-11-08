@@ -1,4 +1,12 @@
-# `@remix-run/react`
+# @remix-run/react
+
+## 2.14.0
+
+### Patch Changes
+
+- Fix `defaultShouldRevalidate` value when using single fetch ([#10139](https://github.com/remix-run/remix/pull/10139))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.14.0`
 
 ## 2.13.1
 

@@ -472,6 +472,153 @@ You shouldn't need to make any changes to your application code for this feature
 
 You may find some usage for the new [`<Link discover>`][discover-prop] API if you wish to disable eager route discovery on certain links.
 
+## unstable_routeConfig
+
+Config-based routing is the new default in React Router v7, configured via the `routes.ts` file in the app directory. Support for `routes.ts` and its related APIs in Remix are designed as a migration path to help minimize the number of changes required when moving your Remix project over to React Router v7. While some new packages have been introduced within the `@remix-run` scope, these new packages only exist to keep the code in `routes.ts` as similar as possible to the equivalent code for React Router v7.
+
+When the `unstable_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opted into React Router v7's config-based routing. To opt back in to file system routing, this can be explicitly configured within `routes.ts` as we'll cover below.
+
+**Update your code**
+
+To migrate Remix's file system routing and route config to the equivalent setup in React Router v7, you can follow these steps:
+
+👉 **Enable the Flag**
+
+```ts filename=vite.config.ts
+remix({
+  future: {
+    unstable_routeConfig: true,
+  },
+});
+```
+
+👉 **Install `@remix-run/route-config`**
+
+This package matches the API of React Router v7's `@react-router/dev/routes`, making the React Router v7 migration as easy as possible.
+
+```shellscript nonumber
+npm install --dev @remix-run/route-config
+```
+
+This provides the core `RouteConfig` type as well as a set of helpers for configuring routes in code.
+
+👉 **Add an `app/routes.ts` file without any configured routes**
+
+```shellscript nonumber
+touch app/routes.ts
+```
+
+```ts filename=app/routes.ts
+import type { RouteConfig } from "@remix-run/route-config";
+
+export const routes: RouteConfig = [];
+```
+
+This is a good way to check that your new `routes.ts` file is being picked up successfully. Your app should now be rendering a blank page since there aren't any routes defined yet.
+
+👉 **Install `@remix-run/fs-routes` and use it in `routes.ts`**
+
+```shellscript nonumber
+npm install --dev @remix-run/fs-routes
+```
+
+This package matches the API of React Router v7's `@react-router/fs-routes`, making the React Router v7 migration as easy as possible.
+
+> If you've configured `ignoredRouteFiles` to `["**/*"]`, you should skip this step since you're already opting out of Remix's file system routing.
+
+```ts filename=app/routes.ts
+import { flatRoutes } from "@remix-run/fs-routes";
+import type { RouteConfig } from "@remix-run/route-config";
+
+export const routes: RouteConfig = flatRoutes();
+```
+
+👉 **If you used the `routes` config option, add `@remix-run/routes-option-adapter` and use it in `routes.ts`**
+
+Remix provides a mechanism for defining routes in code and plugging in alternative file system routing conventions, available via the `routes` option on the Vite plugin.
+
+To make migration easier, an adapter package is available that converts Remix's `routes` option into React Router's `RouteConfig` array.
+
+To get started, first install the adapter:
+
+```shellscript nonumber
+npm install --dev @remix-run/routes-option-adapter
+```
+
+This package matches the API of React Router v7's `@react-router/remix-routes-option-adapter`, making the React Router v7 migration as easy as possible.
+
+Then, update your `routes.ts` file to use the adapter, passing the value of your `routes` option to the `remixRoutesOptionAdapter` function which will return an array of configured routes.
+
+For example, if you were using the `routes` option to use an alternative file system routing implementation like [remix-flat-routes]:
+
+```ts filename=app/routes.ts
+import { type RouteConfig } from "@remix-run/route-config";
+import { remixRoutesOptionAdapter } from "@remix-run/routes-option-adapter";
+import { flatRoutes } from "remix-flat-routes";
+
+export const routes: RouteConfig = remixRoutesOptionAdapter(
+  (defineRoutes) => flatRoutes("routes", defineRoutes)
+);
+```
+
+Or, if you were using the `routes` option to define config-based routes:
+
+```ts filename=app/routes.ts
+import { flatRoutes } from "@remix-run/fs-routes";
+import { type RouteConfig } from "@remix-run/route-config";
+import { remixRoutesOptionAdapter } from "@remix-run/routes-option-adapter";
+
+export const routes: RouteConfig = remixRoutesOptionAdapter(
+  (defineRoutes) => {
+    return defineRoutes((route) => {
+      route("/", "home/route.tsx", { index: true });
+      route("about", "about/route.tsx");
+      route("", "concerts/layout.tsx", () => {
+        route("trending", "concerts/trending.tsx");
+        route(":city", "concerts/city.tsx");
+      });
+    });
+  }
+);
+```
+
+If you're defining config-based routes in this way, you might want to consider migrating to the new route config API since it's more streamlined while still being very similar to the old API. For example, the routes above would look like this:
+
+```ts
+import {
+  type RouteConfig,
+  route,
+  layout,
+  index,
+} from "@remix-run/route-config";
+
+export const routes: RouteConfig = [
+  index("home/route.tsx"),
+  route("about", "about/route.tsx"),
+  layout("concerts/layout.tsx", [
+    route("trending", "concerts/trending.tsx"),
+    route(":city", "concerts/city.tsx"),
+  ]),
+];
+```
+
+Note that if you need to mix and match different route config approaches, they can be merged together into a single array of routes. The `RouteConfig` type ensures that everything is still valid.
+
+```ts
+import { flatRoutes } from "@remix-run/fs-routes";
+import type { RouteConfig } from "@remix-run/route-config";
+import { route } from "@remix-run/route-config";
+import { remixRoutesOptionAdapter } from "@remix-run/routes-option-adapter";
+
+export const routes: RouteConfig = [
+  ...(await flatRoutes({ rootDirectory: "fs-routes" })),
+
+  ...(await remixRoutesOptionAdapter(/* ... */)),
+
+  route("/hello", "routes/hello.tsx"),
+];
+```
+
 ## unstable_optimizeDeps
 
 Opt into automatic [dependency optimization][dependency-optimization] during development. This flag will remain in an "unstable" state until React Router v7 so you do not need to adopt this in your Remix v2 app prior to upgrading to React Router v7.
@@ -495,4 +642,5 @@ Opt into automatic [dependency optimization][dependency-optimization] during dev
 [vite-url-imports]: https://vitejs.dev/guide/assets.html#explicit-url-imports
 [mdx]: https://mdxjs.com
 [mdx-rollup-plugin]: https://mdxjs.com/packages/rollup
+[remix-flat-routes]: https://github.com/kiliman/remix-flat-routes
 [dependency-optimization]: ../guides/dependency-optimization
