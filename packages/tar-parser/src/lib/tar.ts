@@ -112,6 +112,7 @@ const enum TarParserState {
   Start,
   Header,
   Body,
+  AfterBody,
   Done,
 }
 
@@ -126,11 +127,11 @@ export class TarParser {
   #bodySize = 0; // The declared size of the current body
 
   /**
-   * Parse a stream/buffer multipart message and call the given handler for each part it contains.
+   * Parse a stream/buffer tar archive and call the given handler for each entry it contains.
    * Resolves when the parse is finished and all handlers resolve.
    */
   async parse(
-    message:
+    archive:
       | ReadableStream<Uint8Array>
       | Uint8Array
       | Iterable<Uint8Array>
@@ -147,14 +148,14 @@ export class TarParser {
       results.push(handler(entry));
     }
 
-    if (message instanceof ReadableStream || isAsyncIterable(message)) {
-      for await (let chunk of message) {
+    if (archive instanceof ReadableStream || isAsyncIterable(archive)) {
+      for await (let chunk of archive) {
         this.#write(chunk, handleEntry);
       }
-    } else if (message instanceof Uint8Array) {
-      this.#write(message, handleEntry);
-    } else if (isIterable(message)) {
-      for (let chunk of message) {
+    } else if (archive instanceof Uint8Array) {
+      this.#write(archive, handleEntry);
+    } else if (isIterable(archive)) {
+      for (let chunk of archive) {
         this.#write(chunk, handleEntry);
       }
     } else {
@@ -194,12 +195,67 @@ export class TarParser {
 
     while (true) {
       if (this.#state === TarParserState.Body) {
+        let remaining = this.#bodySize - this.#bodyWritten;
+
+        if (chunk.length - index < remaining) {
+          this.#writeBody(index === 0 ? chunk : chunk.subarray(index));
+          break;
+        }
+
+        this.#writeBody(chunk.subarray(index, index + remaining));
+        index += remaining;
+
+        this.#closeBody();
+
+        this.#state = TarParserState.AfterBody;
       }
 
-      if (this.#state === TarParserState.Header) {
+      if (this.#state === TarParserState.AfterBody) {
+        let padding = TarBlockSize - (this.#bodySize % TarBlockSize);
+
+        if (chunk.length - index < padding + 2 * TarBlockSize) {
+          this.#buffer = chunk.subarray(index);
+          break;
+        }
+
+        index += padding; // Skip padding
+
+        // Check for end of archive
+        if (isZeroBlock(chunk.subarray(index, index + TarBlockSize))) {
+          if (isZeroBlock(chunk.subarray(index + TarBlockSize, index + 2 * TarBlockSize))) {
+            this.#state = TarParserState.Done;
+            break;
+          } else {
+            throw new TarParseError('Invalid end of archive');
+          }
+        }
+
+        this.#state = TarParserState.Header;
       }
 
-      if (this.#state === TarParserState.Start) {
+      if (this.#state === TarParserState.Header || this.#state === TarParserState.Start) {
+        if (chunk.length - index < TarBlockSize) {
+          this.#buffer = chunk.subarray(index);
+          break;
+        }
+
+        let header = parseTarHeader(chunk.subarray(index, index + TarBlockSize));
+        index += TarBlockSize;
+
+        this.#bodySize = header.size;
+
+        let entry = new TarEntry(
+          header,
+          new ReadableStream({
+            start: (controller) => {
+              this.#bodyController = controller;
+            },
+          }),
+        );
+
+        handler(entry);
+
+        this.#state = TarParserState.Body;
       }
     }
   }
@@ -217,7 +273,6 @@ export class TarParser {
     this.#bodyController!.close();
     this.#bodyController = null;
     this.#bodyWritten = 0;
-    this.#bodySize = 0;
   }
 }
 
