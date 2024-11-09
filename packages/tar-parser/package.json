@@ -20,10 +20,8 @@
     ".": "./dist/tar-parser.js",
     "./package.json": "./package.json"
   },
-  "dependencies": {
-    "@mjackson/lazy-file": "workspace:^"
-  },
   "devDependencies": {
+    "@mjackson/lazy-file": "workspace:^",
     "@types/node": "^20.14.10"
   },
   "scripts": {
