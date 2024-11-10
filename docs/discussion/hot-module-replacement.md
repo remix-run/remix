@@ -184,3 +184,34 @@ In some cases, React cannot distinguish between existing components being change
 [meta]: ../route/meta
 [use-loader-data]: ../hooks/use-loader-data
 [react-keys]: https://react.dev/learn/rendering-lists#why-does-react-need-keys
+
+## Survive 'require' Cache Purge
+
+Remix purges the require cache on every request in development to support `<LiveReload/>`. To make sure your cache survives these purges, you need to assign it to the global object.
+
+```ts
+// utils/singleton.server.ts
+
+// since the dev server re-requires the bundle, do some shenanigans to make
+// certain things persist across that 😆
+// Borrowed/modified from https://github.com/jenseng/abuse-the-platform/blob/2993a7e846c95ace693ce61626fa072174c8d9c7/app/utils/singleton.ts
+
+export function singleton<Value>(name: string, value: () => Value): Value {
+    const yolo = global as any
+    yolo.__singletons ??= {}
+    yolo.__singletons[name] ??= value()
+    return yolo.__singletons[name]
+}
+```
+
+```ts
+// utils/prisma.server.ts
+
+import { PrismaClient } from '@prisma/client'
+import { singleton } from './singleton.server.ts'
+
+const prisma = singleton('prisma', () => new PrismaClient())
+prisma.$connect()
+
+export { prisma }
+```
