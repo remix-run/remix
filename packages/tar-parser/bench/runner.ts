@@ -1,21 +1,15 @@
 import * as os from 'node:os';
 import * as process from 'node:process';
 
-import * as messages from './messages.js';
-import * as busboy from './parsers/busboy.js';
-import * as fastifyBusboy from './parsers/fastify-busboy.js';
-import * as multipartParser from './parsers/multipart-parser.js';
-import * as multipasta from './parsers/multipasta.js';
+import { fixtures } from '../test/utils.js';
 
-const benchmarks = [
-  { name: '1 small file', message: messages.oneSmallFile },
-  { name: '1 large file', message: messages.oneLargeFile },
-  { name: '100 small files', message: messages.oneHundredSmallFiles },
-  { name: '5 large files', message: messages.fiveLargeFiles },
-];
+import * as tarParser from './parsers/tar-parser.js';
+import * as tarStream from './parsers/tar-stream.js';
+
+const benchmarks = [{ name: 'lodash npm package', filename: fixtures.lodashNpmPackage }];
 
 interface Parser {
-  parse(message: messages.MultipartMessage): Promise<number>;
+  parse(filename: string): Promise<number>;
 }
 
 async function runParserBenchmarks(
@@ -27,7 +21,7 @@ async function runParserBenchmarks(
   for (let benchmark of benchmarks) {
     let measurements: number[] = [];
     for (let i = 0; i < times; ++i) {
-      measurements.push(await parser.parse(benchmark.message));
+      measurements.push(await parser.parse(benchmark.filename));
     }
 
     results[benchmark.name] = getMeanAndStdDev(measurements);
@@ -52,17 +46,11 @@ interface BenchmarkResults {
 async function runBenchmarks(parserName?: string): Promise<BenchmarkResults> {
   let results: BenchmarkResults = {};
 
-  if (parserName === 'multipart-parser' || parserName === undefined) {
-    results['multipart-parser'] = await runParserBenchmarks(multipartParser);
+  if (parserName === 'tar-parser' || parserName === undefined) {
+    results['tar-parser'] = await runParserBenchmarks(tarParser);
   }
-  if (parserName === 'multipasta' || parserName === undefined) {
-    results['multipasta'] = await runParserBenchmarks(multipasta);
-  }
-  if (parserName === 'busboy' || parserName === undefined) {
-    results.busboy = await runParserBenchmarks(busboy);
-  }
-  if (parserName === 'fastify-busboy' || parserName === undefined) {
-    results['@fastify/busboy'] = await runParserBenchmarks(fastifyBusboy);
+  if (parserName === 'tar-stream' || parserName === undefined) {
+    results['tar-stream'] = await runParserBenchmarks(tarStream);
   }
 
   return results;
@@ -72,14 +60,7 @@ function printResults(results: BenchmarkResults) {
   console.log(`Platform: ${os.type()} (${os.release()})`);
   console.log(`CPU: ${os.cpus()[0].model}`);
   console.log(`Date: ${new Date().toLocaleString()}`);
-
-  if (typeof Bun !== 'undefined') {
-    console.log(`Bun ${Bun.version}`);
-  } else if (typeof Deno !== 'undefined') {
-    console.log(`Deno ${Deno.version.deno}`);
-  } else {
-    console.log(`Node.js ${process.version}`);
-  }
+  console.log(`Node.js ${process.version}`);
 
   console.table(results);
 }

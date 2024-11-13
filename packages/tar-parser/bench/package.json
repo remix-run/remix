@@ -1,15 +1,14 @@
 {
-  "name": "multipart-parser-bench",
+  "name": "tar-parser-bench",
   "private": true,
   "type": "module",
   "dependencies": {
-    "@fastify/busboy": "^3.0.0",
-    "@mjackson/multipart-parser": "workspace:*",
-    "busboy": "^1.6.0",
-    "multipasta": "^0.2.4"
+    "@mjackson/lazy-file": "workspace:*",
+    "@mjackson/tar-parser": "workspace:*",
+    "gunzip-maybe": "^1.4.2",
+    "tar-stream": "^3.1.7"
   },
   "devDependencies": {
-    "@types/bun": "^1.1.6",
-    "@types/busboy": "^1.5.4"
+    "@types/gunzip-maybe": "^1.4.2"
   }
 }
