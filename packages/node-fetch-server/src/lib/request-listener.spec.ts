@@ -4,7 +4,8 @@ import { describe, it, mock } from 'node:test';
 import * as http from 'node:http';
 import * as stream from 'node:stream';
 
-import { FetchHandler, createRequestListener } from './request-listener.js';
+import { FetchHandler } from './fetch-handler.js';
+import { createRequestListener } from './request-listener.js';
 
 describe('createRequestListener', () => {
   it('returns a request listener', async () => {
