@@ -497,7 +497,7 @@ remix({
 This package matches the API of React Router v7's `@react-router/dev/routes`, making the React Router v7 migration as easy as possible.
 
 ```shellscript nonumber
-npm install --dev @remix-run/route-config
+npm install -D @remix-run/route-config
 ```
 
 This provides the core `RouteConfig` type as well as a set of helpers for configuring routes in code.
@@ -519,7 +519,7 @@ This is a good way to check that your new `routes.ts` file is being picked up su
 👉 **Install `@remix-run/fs-routes` and use it in `routes.ts`**
 
 ```shellscript nonumber
-npm install --dev @remix-run/fs-routes
+npm install -D @remix-run/fs-routes
 ```
 
 This package matches the API of React Router v7's `@react-router/fs-routes`, making the React Router v7 migration as easy as possible.
@@ -542,7 +542,7 @@ To make migration easier, an adapter package is available that converts Remix's 
 To get started, first install the adapter:
 
 ```shellscript nonumber
-npm install --dev @remix-run/routes-option-adapter
+npm install -D @remix-run/routes-option-adapter
 ```
 
 This package matches the API of React Router v7's `@react-router/remix-routes-option-adapter`, making the React Router v7 migration as easy as possible.
