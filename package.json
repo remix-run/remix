@@ -3,7 +3,6 @@
   "private": true,
   "packageManager": "pnpm@9.9.0",
   "devDependencies": {
-    "@swc-node/register": "^1.10.9",
     "prettier": "^3.3.3"
   },
   "scripts": {
