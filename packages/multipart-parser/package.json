@@ -16,23 +16,61 @@
     "README.md"
   ],
   "type": "module",
+  "types": "./dist/multipart-parser.d.ts",
+  "main": "./dist/multipart-parser.js",
   "exports": {
-    ".": "./dist/multipart-parser.js",
-    "./node": "./dist/multipart-parser.node.js",
+    ".": {
+      "module-sync": {
+        "types": "./dist/multipart-parser.d.ts",
+        "default": "./dist/multipart-parser.js"
+      },
+      "import": {
+        "types": "./dist/multipart-parser.d.ts",
+        "default": "./dist/multipart-parser.js"
+      },
+      "require": {
+        "types": "./dist/multipart-parser.d.cts",
+        "default": "./dist/multipart-parser.cjs"
+      },
+      "default": {
+        "types": "./dist/multipart-parser.d.ts",
+        "default": "./dist/multipart-parser.js"
+      }
+    },
+    "./node": {
+      "module-sync": {
+        "types": "./dist/multipart-parser.node.d.ts",
+        "default": "./dist/multipart-parser.node.js"
+      },
+      "import": {
+        "types": "./dist/multipart-parser.node.d.ts",
+        "default": "./dist/multipart-parser.node.js"
+      },
+      "require": {
+        "types": "./dist/multipart-parser.node.d.cts",
+        "default": "./dist/multipart-parser.node.cjs"
+      },
+      "default": {
+        "types": "./dist/multipart-parser.node.d.ts",
+        "default": "./dist/multipart-parser.node.js"
+      }
+    },
     "./package.json": "./package.json"
   },
   "dependencies": {
     "@mjackson/headers": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10"
+    "@types/node": "^20.14.10",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
   },
   "scripts": {
     "bench": "pnpm run bench:node && pnpm run bench:bun && pnpm run bench:deno",
     "bench:bun": "bun run ./bench/runner.ts",
     "bench:deno": "deno --unstable-byonm --unstable-sloppy-imports run --allow-sys ./bench/runner.ts",
     "bench:node": "node --import @swc-node/register/esm-register ./bench/runner.ts",
-    "build": "tsc --outDir dist --project tsconfig.lib.json",
+    "build": "tsup",
     "test": "node --import @swc-node/register/esm-register --test ./src/**/*.spec.ts",
     "prepare": "pnpm run build",
     "release": "node --import @swc-node/register/esm-register ../../scripts/release.ts"
