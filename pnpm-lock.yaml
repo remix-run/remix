@@ -8,9 +8,6 @@ importers:
 
   .:
     devDependencies:
-      '@swc-node/register':
-        specifier: ^1.10.9
-        version: 1.10.9(@swc/core@1.5.29(@swc/helpers@0.5.12))(@swc/types@0.1.12)(typescript@5.6.3)
       prettier:
         specifier: ^3.3.3
         version: 3.3.3
@@ -21,6 +18,9 @@ importers:
         specifier: workspace:^
         version: link:../headers
     devDependencies:
+      '@swc-node/register':
+        specifier: ^1.10.9
+        version: 1.10.9(@swc/core@1.5.29(@swc/helpers@0.5.12))(@swc/types@0.1.12)(typescript@5.6.3)
       '@types/node':
         specifier: ^20.14.10
         version: 20.16.1
@@ -37,6 +37,9 @@ importers:
         specifier: workspace:^
         version: link:../lazy-file
     devDependencies:
+      '@swc-node/register':
+        specifier: ^1.10.9
+        version: 1.10.9(@swc/core@1.5.29(@swc/helpers@0.5.12))(@swc/types@0.1.12)(typescript@5.6.3)
       '@types/node':
         specifier: ^20.14.10
         version: 20.16.1
@@ -53,6 +56,9 @@ importers:
         specifier: workspace:^
         version: link:../multipart-parser
     devDependencies:
+      '@swc-node/register':
+        specifier: ^1.10.9
+        version: 1.10.9(@swc/core@1.5.29(@swc/helpers@0.5.12))(@swc/types@0.1.12)(typescript@5.6.3)
       '@types/node':
         specifier: ^22.4.1
         version: 22.5.0
@@ -65,6 +71,9 @@ importers:
 
   packages/headers:
     devDependencies:
+      '@swc-node/register':
+        specifier: ^1.10.9
+        version: 1.10.9(@swc/core@1.5.29(@swc/helpers@0.5.12))(@swc/types@0.1.12)(typescript@5.6.3)
       '@types/node':
         specifier: ^20.14.10
         version: 20.16.1
@@ -81,6 +90,9 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
     devDependencies:
+      '@swc-node/register':
+        specifier: ^1.10.9
+        version: 1.10.9(@swc/core@1.5.29(@swc/helpers@0.5.12))(@swc/types@0.1.12)(typescript@5.6.3)
       '@types/node':
         specifier: ^22.5.0
         version: 22.5.0
@@ -97,6 +109,9 @@ importers:
         specifier: workspace:^
         version: link:../headers
     devDependencies:
+      '@swc-node/register':
+        specifier: ^1.10.9
+        version: 1.10.9(@swc/core@1.5.29(@swc/helpers@0.5.12))(@swc/types@0.1.12)(typescript@5.6.3)
       '@types/node':
         specifier: ^20.14.10
         version: 20.16.1
@@ -204,6 +219,9 @@ importers:
 
   packages/node-fetch-server:
     devDependencies:
+      '@swc-node/register':
+        specifier: ^1.10.9
+        version: 1.10.9(@swc/core@1.5.29(@swc/helpers@0.5.12))(@swc/types@0.1.12)(typescript@5.6.3)
       '@types/node':
         specifier: ^22.5.0
         version: 22.5.0
@@ -2124,7 +2142,7 @@ snapshots:
       '@swc-node/sourcemap-support': 0.5.1
       '@swc/core': 1.5.29(@swc/helpers@0.5.12)
       colorette: 2.0.20
-      debug: 4.3.6
+      debug: 4.3.7
       oxc-resolver: 1.11.0
       pirates: 4.0.6
       tslib: 2.7.0
