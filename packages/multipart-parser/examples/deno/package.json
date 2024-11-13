@@ -6,7 +6,8 @@
     "tmp": "^0.2.3"
   },
   "devDependencies": {
-    "@types/tmp": "^0.2.6"
+    "@types/tmp": "^0.2.6",
+    "typescript": "^5.6.3"
   },
   "scripts": {
     "start": "deno --unstable-byonm run --allow-all main.ts"
