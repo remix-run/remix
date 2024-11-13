@@ -16,18 +16,40 @@
     "README.md"
   ],
   "type": "module",
+  "types": "dist/fetch-proxy.d.ts",
+  "main": "dist/fetch-proxy.js",
   "exports": {
-    ".": "./dist/fetch-proxy.js",
+    ".": {
+      "module-sync": {
+        "types": "./dist/fetch-proxy.d.ts",
+        "default": "./dist/fetch-proxy.js"
+      },
+      "import": {
+        "types": "./dist/fetch-proxy.d.ts",
+        "default": "./dist/fetch-proxy.js"
+      },
+      "require": {
+        "types": "./dist/fetch-proxy.d.cts",
+        "default": "./dist/fetch-proxy.cjs"
+      },
+      "default": {
+        "types": "./dist/fetch-proxy.d.ts",
+        "default": "./dist/fetch-proxy.js"
+      }
+    },
     "./package.json": "./package.json"
   },
   "dependencies": {
     "@mjackson/headers": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10"
+    "@swc-node/register": "^1.10.9",
+    "@types/node": "^20.14.10",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
   },
   "scripts": {
-    "build": "tsc --outDir dist --project tsconfig.lib.json",
+    "build": "tsup",
     "test": "node --import @swc-node/register/esm-register --test ./src/**/*.spec.ts",
     "prepare": "pnpm run build",
     "release": "node --import @swc-node/register/esm-register ../../scripts/release.ts"
