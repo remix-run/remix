@@ -1,4 +1,4 @@
-## HEAD
+## v3.3.0 (2024-11-14)
 
 - Added CommonJS build
 
