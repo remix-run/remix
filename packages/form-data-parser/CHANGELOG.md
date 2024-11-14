@@ -1,4 +1,4 @@
-## HEAD
+## v0.5.0 (2024-11-14)
 
 - Added CommonJS build
 
