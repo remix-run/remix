@@ -1,5 +1,6 @@
 ## HEAD
 
+- Added CommonJS build
 - Upgrade to lazy-file@3.1.0
 
 ## v0.2.1 (2024-09-04)
