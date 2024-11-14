@@ -9,6 +9,7 @@
     "tar-stream": "^3.1.7"
   },
   "devDependencies": {
-    "@types/gunzip-maybe": "^1.4.2"
+    "@types/gunzip-maybe": "^1.4.2",
+    "@types/tar-stream": "^3.1.3"
   }
 }
