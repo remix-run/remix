@@ -54,17 +54,12 @@ export function createRequestListener(
   let onError = options?.onError ?? defaultErrorHandler;
 
   return async (req, res) => {
-    let protocol =
-      options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:');
-    let host = options?.host ?? req.headers.host ?? 'localhost';
-    let url = new URL(req.url!, `${protocol}//${host}`);
-
     let controller = new AbortController();
     res.on('close', () => {
       controller.abort();
     });
 
-    let request = createRequest(req, url, controller.signal);
+    let request = createRequest(req, controller.signal, options);
     let client = {
       address: req.socket.remoteAddress!,
       family: req.socket.remoteFamily! as ClientAddress['family'],
@@ -124,15 +119,33 @@ function internalServerError(): Response {
   );
 }
 
-function createRequest(req: http.IncomingMessage, url: URL, signal: AbortSignal): Request {
-  let init: RequestInit = {
-    method: req.method,
-    headers: createHeaders(req.headers),
-    signal,
-  };
+function createRequest(
+  req: http.IncomingMessage,
+  signal: AbortSignal,
+  options?: RequestListenerOptions,
+): Request {
+  let method = req.method ?? 'GET';
+  let headers = createHeaders(req.rawHeaders);
 
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    init.body = createBody(req);
+  let protocol =
+    options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:');
+  let host = options?.host ?? headers.get('host') ?? 'localhost';
+  let url = new URL(req.url!, `${protocol}//${host}`);
+
+  let init: RequestInit = { method, headers, signal };
+
+  if (method !== 'GET' && method !== 'HEAD') {
+    init.body = new ReadableStream({
+      start(controller) {
+        req.on('data', (chunk) => {
+          controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength));
+        });
+
+        req.on('end', () => {
+          controller.close();
+        });
+      },
+    });
 
     // init.duplex = 'half' must be set when body is a ReadableStream, and Node follows the spec.
     // However, this property is not defined in the TypeScript types for RequestInit, so we have
@@ -144,34 +157,12 @@ function createRequest(req: http.IncomingMessage, url: URL, signal: AbortSignal)
   return new Request(url, init);
 }
 
-function createHeaders(incoming: http.IncomingHttpHeaders): Headers {
+function createHeaders(rawHeaders: string[]): Headers {
   let headers = new Headers();
 
-  for (let key in incoming) {
-    let value = incoming[key];
-
-    if (Array.isArray(value)) {
-      for (let item of value) {
-        headers.append(key, item);
-      }
-    } else if (value != null) {
-      headers.append(key, value);
-    }
+  for (let i = 0; i < rawHeaders.length; i += 2) {
+    headers.append(rawHeaders[i], rawHeaders[i + 1]);
   }
 
   return headers;
-}
-
-function createBody(req: http.IncomingMessage): ReadableStream<Uint8Array> {
-  return new ReadableStream({
-    start(controller) {
-      req.on('data', (chunk) => {
-        controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength));
-      });
-
-      req.on('end', () => {
-        controller.close();
-      });
-    },
-  });
 }

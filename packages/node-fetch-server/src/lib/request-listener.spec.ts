@@ -220,13 +220,15 @@ function createIncomingMessage({
 }: {
   method?: string;
   url?: string;
-  headers?: Record<string, string | string[]>;
+  headers?: Record<string, string>;
   socket?: {
     encrypted?: boolean;
     remoteAddress?: string;
   };
   body?: string | Buffer;
 } = {}): http.IncomingMessage {
+  let rawHeaders = Object.entries(headers).flatMap(([key, value]) => [key, value]);
+
   return Object.assign(
     new stream.Readable({
       read() {
@@ -237,10 +239,10 @@ function createIncomingMessage({
     {
       url,
       method,
-      headers,
+      rawHeaders,
       socket,
     },
-  ) as unknown as http.IncomingMessage;
+  ) as http.IncomingMessage;
 }
 
 function createServerResponse(): http.ServerResponse {
