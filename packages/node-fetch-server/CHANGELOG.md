@@ -1,4 +1,4 @@
-## HEAD
+## v0.2.0 (2024-11-14)
 
 - Small perf improvement from avoiding accessing `req.headers` and reading `req.rawHeaders` instead
 - Added CommonJS build
