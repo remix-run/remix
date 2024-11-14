@@ -80,45 +80,45 @@ A basic "hello world" benchmark shows `node-fetch-server` introduces considerabl
 > @mjackson/node-fetch-server@0.0.0 bench /Users/michael/Projects/remix-the-web/packages/node-fetch-server
 > bash ./bench/runner.sh
 
-Platform: Darwin (23.5.0)
+Platform: Darwin (24.0.0)
 CPU: Apple M1 Pro
-Date: 8/31/2024, 5:43:47 PM
+Date: 11/14/2024, 2:30:22 PM
 
-Running benchmark for node:http@22.1.0 ...
-
-Running 30s test @ http://127.0.0.1:3000/
-  12 threads and 400 connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    22.28ms   71.96ms   1.36s    98.37%
-    Req/Sec     2.37k   538.29     9.51k    85.30%
-  848851 requests in 30.10s, 174.05MB read
-  Socket errors: connect 0, read 544, write 27, timeout 0
-Requests/sec:  28198.41
-Transfer/sec:      5.78MB
-
-Running benchmark for node-fetch-server@0.0.0 ...
+Running benchmark for node:http@22.8.0 ...
 
 Running 30s test @ http://127.0.0.1:3000/
   12 threads and 400 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    42.57ms  109.55ms   2.00s    98.37%
-    Req/Sec     1.03k   282.58     2.78k    77.37%
-  368110 requests in 30.10s, 75.48MB read
-  Socket errors: connect 0, read 717, write 152, timeout 126
-Requests/sec:  12228.31
-Transfer/sec:      2.51MB
+    Latency     9.97ms   31.92ms 786.67ms   99.09%
+    Req/Sec     4.45k   268.33     6.38k    93.69%
+  1594257 requests in 30.02s, 326.89MB read
+  Socket errors: connect 0, read 1317, write 6, timeout 0
+Requests/sec:  53110.92
+Transfer/sec:     10.89MB
+
+Running benchmark for node-fetch-server@0.1.0 ...
+
+Running 30s test @ http://127.0.0.1:3000/
+  12 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    22.74ms   81.06ms   1.46s    98.22%
+    Req/Sec     2.42k   185.82     4.30k    91.80%
+  866347 requests in 30.03s, 177.64MB read
+  Socket errors: connect 0, read 1496, write 3, timeout 0
+Requests/sec:  28849.46
+Transfer/sec:      5.92MB
 
 Running benchmark for express@4.19.2 ...
 
 Running 30s test @ http://127.0.0.1:3000/
   12 threads and 400 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    48.76ms   87.38ms   2.00s    98.90%
-    Req/Sec   734.60    190.17     3.03k    79.08%
-  261725 requests in 30.09s, 63.15MB read
-  Socket errors: connect 0, read 1259, write 110, timeout 200
-Requests/sec:   8696.85
-Transfer/sec:      2.10MB
+    Latency    36.46ms  125.89ms   1.99s    97.89%
+    Req/Sec     1.56k   146.86     2.93k    88.25%
+  558504 requests in 30.06s, 134.76MB read
+  Socket errors: connect 0, read 1261, write 11, timeout 36
+Requests/sec:  18579.11
+Transfer/sec:      4.48MB
 ```
 
 ## License
