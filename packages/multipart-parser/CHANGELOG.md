@@ -1,3 +1,7 @@
+## HEAD
+
+- Added CommonJS build
+
 ## v0.6.3 (2024-09-05)
 
 - Moved to a new monorepo
