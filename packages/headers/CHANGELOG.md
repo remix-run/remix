@@ -1,6 +1,8 @@
-## 0.7.2 (2024-08-29)
+## HEAD
 
-### 🩹 Fixes
+- Added CommonJS build
+
+## 0.7.2 (2024-08-29)
 
 - Treat `Headers` as iterable in the constructor
 
