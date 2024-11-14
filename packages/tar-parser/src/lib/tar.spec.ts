@@ -5,8 +5,11 @@ import { fixtures, readFixture } from '../../test/utils.js';
 
 import { TarHeader, TarParser } from './tar.js';
 
-async function bufferStream(stream: ReadableStream<Uint8Array>): Promise<string> {
-  let decoder = new TextDecoder();
+async function bufferStream(
+  stream: ReadableStream<Uint8Array>,
+  encoding = 'utf-8',
+): Promise<string> {
+  let decoder = new TextDecoder(encoding);
   let string = '';
 
   for await (let chunk of stream) {
