@@ -1,3 +1,7 @@
+## HEAD
+
+- Added CommonJS build
+
 ## v0.4.0 (2024-09-05)
 
 - Allow passing `MultipartParserOptions` as optional 3rd arg to `parseFormData()`
