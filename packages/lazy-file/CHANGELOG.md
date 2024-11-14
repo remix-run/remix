@@ -1,3 +1,7 @@
+## HEAD
+
+- Added CommonJS build
+
 ## v3.2.0 (2024-09-12)
 
 - Export `OpenFileOptions` from `lazy-file/fs`
