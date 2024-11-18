@@ -24,7 +24,7 @@ test.describe("fs-routes", () => {
 
           export default defineConfig({
             plugins: [remix({
-              future: { unstable_routeConfig: true },
+              future: { v3_routeConfig: true },
             })],
           });
         `,
@@ -257,7 +257,7 @@ test.describe("emits warnings for route conflicts", async () => {
 
           export default defineConfig({
             plugins: [remix({
-              future: { unstable_routeConfig: true },
+              future: { v3_routeConfig: true },
             })],
           });
         `,
@@ -331,7 +331,7 @@ test.describe("", () => {
 
           export default defineConfig({
             plugins: [remix({
-              future: { unstable_routeConfig: true },
+              future: { v3_routeConfig: true },
             })],
           });
         `,
@@ -380,7 +380,7 @@ test.describe("pathless routes and route collisions", () => {
 
           export default defineConfig({
             plugins: [remix({
-              future: { unstable_routeConfig: true },
+              future: { v3_routeConfig: true },
             })],
           });
         `,

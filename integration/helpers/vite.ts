@@ -43,7 +43,7 @@ export const viteConfig = {
       export default {
         ${await viteConfig.server(args)}
         plugins: [remix(${
-          args.routeConfig ? "{ future: { unstable_routeConfig: true } }" : ""
+          args.routeConfig ? "{ future: { v3_routeConfig: true } }" : ""
         })]
       }
     `;
