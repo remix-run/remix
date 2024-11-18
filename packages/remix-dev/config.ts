@@ -612,7 +612,7 @@ export async function resolveConfig(
         await routesViteNodeContext.runner.executeFile(
           path.join(appDirectory, routeConfigFile)
         )
-      ).routes;
+      ).default;
 
       let routeConfig = await routeConfigExport;
 
