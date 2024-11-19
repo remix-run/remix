@@ -43,7 +43,7 @@ test.describe("route config", () => {
 
         export default {
           plugins: [remix({
-            future: { unstable_routeConfig: true },
+            future: { v3_routeConfig: true },
           })]
         }
       `,
@@ -64,7 +64,7 @@ test.describe("route config", () => {
 
         export default {
           plugins: [remix({
-            future: { unstable_routeConfig: true },
+            future: { v3_routeConfig: true },
             routes: () => {},
           })]
         }
@@ -88,7 +88,7 @@ test.describe("route config", () => {
         export default {
           ${await viteConfig.server({ port })}
           plugins: [remix({
-            future: { unstable_routeConfig: true },
+            future: { v3_routeConfig: true },
             routes: () => {},
           })]
         }
@@ -113,7 +113,7 @@ test.describe("route config", () => {
 
         export default {
           plugins: [remix({
-            future: { unstable_routeConfig: true },
+            future: { v3_routeConfig: true },
           })]
         }
       `,
