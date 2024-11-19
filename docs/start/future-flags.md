@@ -604,7 +604,7 @@ Note that if you need to mix and match different route config approaches, they c
 
 ```ts
 import { flatRoutes } from "@remix-run/fs-routes";
-import { type RouteConfig } from "@remix-run/route-config";
+import type { RouteConfig } from "@remix-run/route-config";
 import { route } from "@remix-run/route-config";
 import { remixRoutesOptionAdapter } from "@remix-run/routes-option-adapter";
 
