@@ -28,5 +28,7 @@
     "@remix-run/server-runtime": "2.14.0",
     "@remix-run/testing": "2.14.0"
   },
-  "changesets": []
+  "changesets": [
+    "sour-years-cover"
+  ]
 }
