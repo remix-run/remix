@@ -3,13 +3,15 @@ title: Future Flags
 order: 5
 ---
 
-# Future Flags
+# Future Flags and Deprecations
 
-The following future flags are stable and ready to adopt. To read more about future flags see [Development Strategy][development-strategy]
+This guide walks you through the process of adopting future flags in your Remix app. By following this strategy, you will be able to upgrade to the next major version of Remix with minimal changes. To read more about future flags see [Development Strategy][development-strategy].
+
+We highly recommend you make a commit after each step and ship it instead of doing everything all at once. Most flags can be adopted in any order, with exceptions noted below.
 
 ## Update to latest v2.x
 
-First update to the latest minor version of v2.x to have the latest future flags.
+First update to the latest minor version of v2.x to have the latest future flags. You will likely see a number of deprecation warnings as you upgrade, which we'll cover below.
 
 👉 **Update to latest v2**
 
@@ -17,7 +19,34 @@ First update to the latest minor version of v2.x to have the latest future flags
 npm install @remix-run/{dev,react,node,etc.}@2
 ```
 
-## Vite Plugin
+## Remove `installGlobals`
+
+**Background**
+
+Previously Remix required a `fetch` polyfill to be installed. This was accomplished by calling `installGlobals()`.
+
+The next major version requires a minimum of Node 20 to take advantage of the built-in `fetch` support.
+
+Note: if you are using miniflare/cloudflare worker with your remix project, ensure your [compatibility flag][compatibility-flag] is set to `2023-03-01` or later as well.
+
+👉 **Update to Node 20+**
+
+It is recommended that you upgrade to the latest even-numbered version of Node LTS.
+
+👉 **Remove `installGlobals`**
+
+```diff filename=vite.config.ts
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+
+-installGlobals();
+
+export default defineConfig({
+  plugins: [remix()],
+});
+```
+
+## Adopt the Vite Plugin
 
 **Background**
 
@@ -51,6 +80,24 @@ export default defineConfig({
   plugins: [
     remix({
       ignoredRouteFiles: ["**/*.css"],
+    }),
+  ],
+});
+```
+
+👉 **Add `unstable_optimizeDeps` (optional)**
+
+Many users found that automatically [optimizing dependencies][dependency-optimization] helped them more easily adopt the Vite plugin. For this reason we added the `unstable_optimizeDeps` flag to the Vite plugin.
+
+This flag will remain in an "unstable" state until React Router v7 so it is not critical that you adopt this in your Remix v2 app prior to upgrading to React Router v7.
+
+```ts filename=vite.config.ts lines=[4-6]
+export default defineConfig({
+  plugins: [
+    remix({
+      future: {
+        unstable_optimizeDeps: true,
+      },
     }),
   ],
 });
@@ -193,20 +240,6 @@ If you are using Tailwind CSS or Vanilla Extract, see the [full migration guide]
 }
 ```
 
-👉 **Install global Node polyfills in your Vite config**
-
-```diff filename=vite.config.ts
-import { vitePlugin as remix } from "@remix-run/dev";
-+import { installGlobals } from "@remix-run/node";
-import { defineConfig } from "vite";
-
-+installGlobals();
-
-export default defineConfig({
-  plugins: [remix()],
-});
-```
-
 👉 **Configure your Vite dev server port (optional)**
 
 ```js filename=vite.config.ts lines=[2-4]
@@ -332,11 +365,39 @@ remix({
 
 You likely won't need to adjust any code, unless you had custom logic inside of `handleError` that was matching the previous error message to differentiate it from other errors.
 
-## v3_singleFetch
+## v3_lazyRouteDiscovery
 
 **Background**
 
-with this flag, Remix moves to a "single fetch" approach for data requests when making SPA navigations within your app. Additional details are available in the [docs][single-fetch], but the main reason we chose to move to this approach is **Simplicity**. With Single Fetch, data requests now behave just like document requests and developers no longer need to think about the nuances of how to manage headers, caching, etc., differently between the two. For more advanced use-cases, developers can still opt into fine-grained revalidations.
+With this flag, Remix no longer sends the full route manifest up to the client on initial load. Instead, Remix only sends the server-rendered routes up in the manifest and then fetches the remaining routes as the user navigated around the application. Additional details are available in the [docs][lazy-route-discovery] and the [blog post][lazy-route-discovery-blog-post]
+
+👉 **Enable the Flag**
+
+```ts filename=vite.config.ts
+remix({
+  future: {
+    v3_lazyRouteDiscovery: true,
+  },
+});
+```
+
+**Update your Code**
+
+You shouldn't need to make any changes to your application code for this feature to work.
+
+You may find some usage for the new [`<Link discover>`][discover-prop] API if you wish to disable eager route discovery on certain links.
+
+## v3_singleFetch
+
+<docs-warning>
+
+This flag requires the [Vite plugin][vite-plugin].
+
+</docs-warning>
+
+**Background**
+
+With this flag, Remix uses a single fetch for data requests during client-side navigations. This simplifies data loading by treating data requests the same as document requests, eliminating the need to handle headers and caching differently. For advanced use cases, you can still opt into fine-grained revalidations. View the ["Single Fetch" docs][single-fetch] for more information.
 
 👉 **Enable the Flag (and the types)**
 
@@ -368,7 +429,7 @@ export default defineConfig({
 
 You should be able to mostly use your code as-is with the flag enabled, but the following changes should be made over time and will be required prior to the next major version.
 
-👉 **Remove json()/defer() in favor of raw objects**
+👉 **Remove `json()`/`defer()` in favor of raw objects**
 
 Single Fetch supports JSON objects and Promises out of the box, so you can return the raw data from your `loader`/`action` functions:
 
@@ -450,33 +511,17 @@ function handleBrowserRequest(/* ... */) {
 }
 ```
 
-## v3_lazyRouteDiscovery
-
-**Background**
-
-With this flag, Remix no longer sends the full route manifest up to the client on initial load. Instead, Remix only sends the server-rendered routes up in the manifest and then fetches the remaining routes as the user navigated around the application. Additional details are available in the [docs][lazy-route-discovery] and the [blog post][lazy-route-discovery-blog-post]
-
-👉 **Enable the Flag**
-
-```ts filename=vite.config.ts
-remix({
-  future: {
-    v3_lazyRouteDiscovery: true,
-  },
-});
-```
-
-**Update your Code**
-
-You shouldn't need to make any changes to your application code for this feature to work.
-
-You may find some usage for the new [`<Link discover>`][discover-prop] API if you wish to disable eager route discovery on certain links.
-
 ## unstable_routeConfig
+
+<docs-warning>
+
+This flag requires the [Vite plugin][vite-plugin].
+
+</docs-warning>
 
 Config-based routing is the new default in React Router v7, configured via the `routes.ts` file in the app directory. Support for `routes.ts` and its related APIs in Remix are designed as a migration path to help minimize the number of changes required when moving your Remix project over to React Router v7. While some new packages have been introduced within the `@remix-run` scope, these new packages only exist to keep the code in `routes.ts` as similar as possible to the equivalent code for React Router v7.
 
-When the `unstable_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opted into React Router v7's config-based routing. To opt back in to file system routing, this can be explicitly configured within `routes.ts` as we'll cover below.
+When the `unstable_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opted into React Router v7's config-based routing. If you prefer to keep using Remix's file-based routing we cover how to enable it in `routes.ts` below.
 
 **Update your code**
 
@@ -619,9 +664,41 @@ export const routes: RouteConfig = [
 ];
 ```
 
-## unstable_optimizeDeps
+## Deprecations
 
-Opt into automatic [dependency optimization][dependency-optimization] during development. This flag will remain in an "unstable" state until React Router v7 so you do not need to adopt this in your Remix v2 app prior to upgrading to React Router v7.
+### @remix-run/eslint-config
+
+The `@remix-run/eslint-config` package is deprecated and will not be included in React Router v7. We recommend moving towards a streamlined ESLint config such as the ones included in [the Remix templates][remix-template-eslint-config].
+
+### json
+
+This utility is deprecated and will be removed in React Router v7 in favor of [Single Fetch][v3_singlefetch] naked object returns.
+
+- If you were not relying on `json` to serialize your data (such as stringifying `Date` objects), you can safely remove it.
+- If you were returning `headers` or `status` via `json`, you can use the new [data util][data-api] as a drop-in replacement to set those values.
+- If you want to serialize your data to JSON, you can use the native [Response.json()][response-json] method.
+
+View the [Single Fetch][v3_singlefetch] docs for more information.
+
+### defer
+
+This utility is deprecated and will be removed in React Router v7 in favor of [Single Fetch][v3_singlefetch] naked object returns.
+
+- If you were returning `headers` or `status` via `defer`, you can use the new [data util][data-api] as a drop-in replacement to set those values.
+
+View the [Single Fetch][v3_singlefetch] docs for more information.
+
+### SerializeFrom
+
+This type is deprecated and will be removed in React Router v7 since [Single Fetch][v3_singlefetch] no longer serializes data to JSON.
+
+If you are relying on `SerializeFrom` to unwrap your `loader`/`action` data, you can use a custom type like this:
+
+```ts
+type SerializeFrom<T> = ReturnType<typeof useLoaderData<T>>;
+```
+
+In most cases, you should be able to just remove `SerializeFrom` and use the types returned from `useLoaderData`/`useActionData`, or the types of the data in `loader`/`action` functions.
 
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
@@ -644,3 +721,9 @@ Opt into automatic [dependency optimization][dependency-optimization] during dev
 [mdx-rollup-plugin]: https://mdxjs.com/packages/rollup
 [remix-flat-routes]: https://github.com/kiliman/remix-flat-routes
 [dependency-optimization]: ../guides/dependency-optimization
+[compatibility-flag]: https://developers.cloudflare.com/workers/configuration/compatibility-dates
+[vite-plugin]: #adopt-the-vite-plugin
+[v3_singlefetch]: #v3_singlefetch
+[data-api]: ../utils/data
+[response-json]: https://developer.mozilla.org/en-US/docs/Web/API/Response/json
+[remix-template-eslint-config]: https://github.com/remix-run/remix/blob/main/templates/remix/.eslintrc.cjs
