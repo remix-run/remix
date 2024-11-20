@@ -17,8 +17,8 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler);
       assert.ok(listener);
 
-      let req = createIncomingMessage();
-      let res = createServerResponse();
+      let req = createMockRequest();
+      let res = createMockResponse({ req });
 
       let chunks: Uint8Array[] = [];
       mock.method(res, 'write', (chunk: Uint8Array) => {
@@ -45,8 +45,8 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler, { onError: errorHandler });
       assert.ok(listener);
 
-      let req = createIncomingMessage();
-      let res = createServerResponse();
+      let req = createMockRequest();
+      let res = createMockResponse({ req });
 
       mock.method(res, 'end', () => {
         assert.equal(errorHandler.mock.calls.length, 1);
@@ -69,8 +69,8 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler, { onError: errorHandler });
       assert.ok(listener);
 
-      let req = createIncomingMessage();
-      let res = createServerResponse();
+      let req = createMockRequest();
+      let res = createMockResponse({ req });
 
       let status: number | undefined;
       mock.method(res, 'writeHead', (statusCode: number) => {
@@ -103,8 +103,8 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler);
       assert.ok(listener);
 
-      let req = createIncomingMessage({ headers: { host: 'example.com' } });
-      let res = createServerResponse();
+      let req = createMockRequest({ headers: { host: 'example.com' } });
+      let res = createMockResponse({ req });
 
       listener(req, res);
       resolve();
@@ -121,8 +121,8 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler, { host: 'remix.run' });
       assert.ok(listener);
 
-      let req = createIncomingMessage({ headers: { host: 'example.com' } });
-      let res = createServerResponse();
+      let req = createMockRequest({ headers: { host: 'example.com' } });
+      let res = createMockResponse({ req });
 
       listener(req, res);
       resolve();
@@ -139,8 +139,8 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler, { protocol: 'https:' });
       assert.ok(listener);
 
-      let req = createIncomingMessage({ headers: { host: 'example.com' } });
-      let res = createServerResponse();
+      let req = createMockRequest({ headers: { host: 'example.com' } });
+      let res = createMockResponse({ req });
 
       listener(req, res);
       resolve();
@@ -160,8 +160,8 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler);
       assert.ok(listener);
 
-      let req = createIncomingMessage();
-      let res = createServerResponse();
+      let req = createMockRequest();
+      let res = createMockResponse({ req });
 
       let headers: string[];
       mock.method(res, 'writeHead', (_status: number, headersArray: string[]) => {
@@ -193,8 +193,8 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler);
       assert.ok(listener);
 
-      let req = createIncomingMessage({ method: 'HEAD' });
-      let res = createServerResponse();
+      let req = createMockRequest({ method: 'HEAD' });
+      let res = createMockResponse({ req });
 
       let chunks: Uint8Array[] = [];
       mock.method(res, 'write', (chunk: Uint8Array) => {
@@ -211,7 +211,7 @@ describe('createRequestListener', () => {
   });
 });
 
-function createIncomingMessage({
+function createMockRequest({
   url = '/',
   method = 'GET',
   headers = {},
@@ -245,8 +245,13 @@ function createIncomingMessage({
   ) as http.IncomingMessage;
 }
 
-function createServerResponse(): http.ServerResponse {
+function createMockResponse({
+  req = createMockRequest(),
+}: {
+  req: http.IncomingMessage;
+}): http.ServerResponse {
   return Object.assign(new stream.Writable(), {
+    req,
     writeHead() {},
     write() {},
     end() {},

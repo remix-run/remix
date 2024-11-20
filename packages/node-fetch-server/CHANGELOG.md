@@ -1,3 +1,7 @@
+## HEAD
+
+- Added low-level `createRequest(req, options)` and `sendResponse(res, response)` exports to assist with building custom fetch servers on Node.js
+
 ## v0.2.0 (2024-11-14)
 
 - Small perf improvement from avoiding accessing `req.headers` and reading `req.rawHeaders` instead
