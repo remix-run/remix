@@ -31,9 +31,9 @@ npm install @mjackson/node-fetch-server
 import * as http from 'node:http';
 import { createRequestListener } from '@mjackson/node-fetch-server';
 
-let handler = (request: Request) => {
+function handler(request: Request) {
   return new Response('Hello, world!');
-};
+}
 
 let server = http.createServer(createRequestListener(handler));
 
@@ -47,11 +47,11 @@ import * as assert from 'node:assert/strict';
 import * as http from 'node:http';
 import { createRequestListener } from '@mjackson/node-fetch-server';
 
-let handler = (request: Request) => {
+function handler(request: Request) {
   // This is now true
   assert.equal(new URL(request.url).host, process.env.HOST);
   return new Response('Hello, world!');
-};
+}
 
 let server = http.createServer(createRequestListener(handler, { host: process.env.HOST }));
 
@@ -66,6 +66,35 @@ import { type FetchHandler } from '@mjackson/node-fetch-server';
 let handler: FetchHandler = (request, client) => {
   return new Response(`The client IP address is ${client.address}`);
 };
+```
+
+## Low-level API
+
+In addition to the high-level `createRequestListener()` API, this package also provides 2 low-level APIs that are useful when building custom `fetch`-based servers in Node.js:
+
+- `createRequest(req: http.IncomingMessage, options: RequestOptions): Request`
+- `sendResponse(res: http.ServerResponse, response: Response): Promise<void>`
+
+These two functions serve as an efficient, minimal translation layer between Node.js `req`/`res` objects and fetch `Request`/`Response` objects. You could build your own custom server like this:
+
+```ts
+import * as http from 'node:http';
+import { createRequest, sendResponse } from '@mjackson/node-fetch-server';
+
+let server = http.createServer(async (req, res) => {
+  let request = createRequest(req, { host: process.env.HOST });
+
+  try {
+    let response = await customAppLogic(request);
+    await sendResponse(res, response);
+  } catch (error) {
+    console.error(error);
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end('Internal Server Error');
+  }
+});
+
+server.listen(3000);
 ```
 
 ## Related Packages

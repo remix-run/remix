@@ -34,11 +34,11 @@ export interface RequestListenerOptions {
  *
  * ```ts
  * import * as http from 'node:http';
- * import { type FetchHandler, createRequestListener } from '@mjackson/node-fetch-server';
+ * import { createRequestListener } from '@mjackson/node-fetch-server';
  *
- * let handler: FetchHandler = async (request) => {
+ * async function handler(request) {
  *   return new Response('Hello, world!');
- * };
+ * }
  *
  * let server = http.createServer(
  *   createRequestListener(handler)
@@ -46,6 +46,10 @@ export interface RequestListenerOptions {
  *
  * server.listen(3000);
  * ```
+ *
+ * @param handler The fetch handler to use for processing incoming requests.
+ * @param options Configuration options.
+ * @returns A Node.js `http.RequestListener` that can be used with `http.createServer()` or `https.createServer()`.
  */
 export function createRequestListener(
   handler: FetchHandler,
@@ -54,12 +58,7 @@ export function createRequestListener(
   let onError = options?.onError ?? defaultErrorHandler;
 
   return async (req, res) => {
-    let controller = new AbortController();
-    res.on('close', () => {
-      controller.abort();
-    });
-
-    let request = createRequest(req, controller.signal, options);
+    let request = createRequest(req, options);
     let client = {
       address: req.socket.remoteAddress!,
       family: req.socket.remoteFamily! as ClientAddress['family'],
@@ -78,23 +77,7 @@ export function createRequestListener(
       }
     }
 
-    // Use the rawHeaders API and iterate over response.headers so we are sure to send multiple
-    // Set-Cookie headers correctly. These would incorrectly be merged into a single header if we
-    // tried to use `Object.fromEntries(response.headers.entries())`.
-    let rawHeaders: string[] = [];
-    for (let [key, value] of response.headers) {
-      rawHeaders.push(key, value);
-    }
-
-    res.writeHead(response.status, rawHeaders);
-
-    if (response.body != null && req.method !== 'HEAD') {
-      for await (let chunk of response.body) {
-        res.write(chunk);
-      }
-    }
-
-    res.end();
+    await sendResponse(res, response);
   };
 }
 
@@ -119,11 +102,20 @@ function internalServerError(): Response {
   );
 }
 
-function createRequest(
-  req: http.IncomingMessage,
-  signal: AbortSignal,
-  options?: RequestListenerOptions,
-): Request {
+export type RequestOptions = Omit<RequestListenerOptions, 'onError'>;
+
+/**
+ * Creates a `Request` object from an incoming Node.js request object.
+ * @param req The incoming request object.
+ * @param options
+ * @returns A `Request` object.
+ */
+export function createRequest(req: http.IncomingMessage, options?: RequestOptions): Request {
+  let controller = new AbortController();
+  req.on('close', () => {
+    controller.abort();
+  });
+
   let method = req.method ?? 'GET';
   let headers = createHeaders(req.rawHeaders);
 
@@ -132,7 +124,7 @@ function createRequest(
   let host = options?.host ?? headers.get('host') ?? 'localhost';
   let url = new URL(req.url!, `${protocol}//${host}`);
 
-  let init: RequestInit = { method, headers, signal };
+  let init: RequestInit = { method, headers, signal: controller.signal };
 
   if (method !== 'GET' && method !== 'HEAD') {
     init.body = new ReadableStream({
@@ -140,7 +132,6 @@ function createRequest(
         req.on('data', (chunk) => {
           controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength));
         });
-
         req.on('end', () => {
           controller.close();
         });
@@ -165,4 +156,29 @@ function createHeaders(rawHeaders: string[]): Headers {
   }
 
   return headers;
+}
+
+/**
+ * Sends a `Response` to the client using the Node.js response object.
+ * @param res The server response object.
+ * @param response The response to send.
+ */
+export async function sendResponse(res: http.ServerResponse, response: Response): Promise<void> {
+  // Use the rawHeaders API and iterate over response.headers so we are sure to send multiple
+  // Set-Cookie headers correctly. These would incorrectly be merged into a single header if we
+  // tried to use `Object.fromEntries(response.headers.entries())`.
+  let rawHeaders: string[] = [];
+  for (let [key, value] of response.headers) {
+    rawHeaders.push(key, value);
+  }
+
+  res.writeHead(response.status, rawHeaders);
+
+  if (response.body != null && res.req.method !== 'HEAD') {
+    for await (let chunk of response.body) {
+      res.write(chunk);
+    }
+  }
+
+  res.end();
 }
