@@ -1107,9 +1107,9 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           optimizeDeps: {
             entries: ctx.remixConfig.future.unstable_optimizeDeps
               ? [
-                  ctx.entryClientFilePath,
+                  importViteEsmSync().normalizePath(ctx.entryClientFilePath),
                   ...Object.values(ctx.remixConfig.routes).map((route) =>
-                    path.join(ctx.remixConfig.appDirectory, route.file)
+                    resolveRelativeRouteFilePath(route, ctx.remixConfig)
                   ),
                 ]
               : [],
