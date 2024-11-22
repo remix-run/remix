@@ -1,4 +1,23 @@
-# @remix-run/dev
+# `@remix-run/dev`
+
+## 2.15.0
+
+### Patch Changes
+
+- Stabilize the `future.v3_routeConfig` future flag, replacing `future.unstable_routeConfig`. This enables support for `routes.ts` to assist with the migration to React Router v7. ([#10236](https://github.com/remix-run/remix/pull/10236))
+
+  Note that if you had already enabled the `future.unstable_routeConfig` flag, your route config in `app/routes.ts` is no longer defined via the `routes` export and must now be defined via the default export.
+
+  ```diff
+  import { type RouteConfig } from "@remix-run/route-config";
+
+  -export const routes: RouteConfig = [];
+  +export default [] satisfies RouteConfig;
+  ```
+
+- Updated dependencies:
+  - `@remix-run/node@2.15.0`
+  - `@remix-run/server-runtime@2.15.0`
 
 ## 2.14.0
 

@@ -557,13 +557,13 @@ importers:
   integration/helpers/vite-cloudflare-template:
     dependencies:
       '@remix-run/cloudflare':
-        specifier: 2.14.0
+        specifier: 2.15.0
         version: link:../../../packages/remix-cloudflare
       '@remix-run/cloudflare-pages':
-        specifier: 2.14.0
+        specifier: 2.15.0
         version: link:../../../packages/remix-cloudflare-pages
       '@remix-run/react':
-        specifier: 2.14.0
+        specifier: 2.15.0
         version: link:../../../packages/remix-react
       isbot:
         specifier: ^4.1.0
@@ -880,7 +880,7 @@ importers:
         specifier: workspace:*
         version: link:../remix-node
       '@remix-run/react':
-        specifier: ^2.14.0
+        specifier: ^2.15.0
         version: link:../remix-react
       '@remix-run/router':
         specifier: 1.21.0
