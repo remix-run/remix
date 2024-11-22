@@ -1,6 +1,5 @@
 ---
 title: remix.config.js
-hidden: true
 ---
 
 # remix.config.js
