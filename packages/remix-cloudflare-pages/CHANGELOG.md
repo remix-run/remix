@@ -1,4 +1,4 @@
-# @remix-run/cloudflare-pages
+# `@remix-run/cloudflare-pages`
 
 ## 2.15.0
 

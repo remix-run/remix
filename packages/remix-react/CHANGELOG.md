@@ -1,4 +1,4 @@
-# @remix-run/react
+# `@remix-run/react`
 
 ## 2.15.0
 

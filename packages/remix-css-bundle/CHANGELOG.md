@@ -1,4 +1,4 @@
-# @remix-run/css-bundle
+# `@remix-run/css-bundle`
 
 ## 2.15.0
 

@@ -1,4 +1,4 @@
-# create-remix
+# `create-remix`
 
 ## 2.15.0
 

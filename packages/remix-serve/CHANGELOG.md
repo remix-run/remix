@@ -1,4 +1,4 @@
-# @remix-run/serve
+# `@remix-run/serve`
 
 ## 2.15.0
 

@@ -1,4 +1,4 @@
-# @remix-run/cloudflare-workers
+# `@remix-run/cloudflare-workers`
 
 ## 2.15.0
 
