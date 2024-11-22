@@ -511,28 +511,6 @@ function handleBrowserRequest(/* ... */) {
 }
 ```
 
-## v3_lazyRouteDiscovery
-
-**Background**
-
-With this flag, Remix no longer sends the full route manifest up to the client on initial load. Instead, Remix only sends the server-rendered routes up in the manifest and then fetches the remaining routes as the user navigated around the application. Additional details are available in the [docs][lazy-route-discovery] and the [blog post][lazy-route-discovery-blog-post]
-
-👉 **Enable the Flag**
-
-```ts filename=vite.config.ts
-remix({
-  future: {
-    v3_lazyRouteDiscovery: true,
-  },
-});
-```
-
-**Update your Code**
-
-You shouldn't need to make any changes to your application code for this feature to work.
-
-You may find some usage for the new [`<Link discover>`][discover-prop] API if you wish to disable eager route discovery on certain links.
-
 ## v3_routeConfig
 
 <docs-warning>
@@ -543,7 +521,7 @@ This flag requires the [Vite plugin][vite-plugin].
 
 Config-based routing is the new default in React Router v7, configured via the `routes.ts` file in the app directory. Support for `routes.ts` and its related APIs in Remix are designed as a migration path to help minimize the number of changes required when moving your Remix project over to React Router v7. While some new packages have been introduced within the `@remix-run` scope, these new packages only exist to keep the code in `routes.ts` as similar as possible to the equivalent code for React Router v7.
 
-When the `v3_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opted into React Router v7's config-based routing. To opt back in to file system routing, this can be explicitly configured within `routes.ts` as we'll cover below.
+When the `v3_routeConfig` future flag is enabled, Remix's built-in file system routing will be disabled and your project will opted into React Router v7's config-based routing. If you prefer to keep using Remix's file-based routing we cover how to enable it in `routes.ts` below.
 
 **Update your code**
 
@@ -597,7 +575,7 @@ This package matches the API of React Router v7's `@react-router/fs-routes`, mak
 import { flatRoutes } from "@remix-run/fs-routes";
 import type { RouteConfig } from "@remix-run/route-config";
 
-export default flatRoutes() satisfies RouteConfig;
+export const routes: RouteConfig = flatRoutes();
 ```
 
 👉 **If you used the `routes` config option, add `@remix-run/routes-option-adapter` and use it in `routes.ts`**

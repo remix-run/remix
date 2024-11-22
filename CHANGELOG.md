@@ -13,7 +13,7 @@ We manage release notes in this file instead of the paginated Github Releases Pa
   <summary>Table of Contents</summary>
 
 - [Remix Releases](#remix-releases)
-  - [v2.15.0-pre.0](#v2150-pre0)
+  - [v2.15.0](#v2150)
     - [Patch Changes](#patch-changes)
   - [v2.14.0](#v2140)
     - [Minor Changes](#minor-changes)
@@ -240,7 +240,7 @@ Date: YYYY-MM-DD
 
 -->
 
-## v2.15.0-pre.0
+## v2.15.0
 
 Date: 2025-11-19
 
