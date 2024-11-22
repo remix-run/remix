@@ -196,7 +196,17 @@ Because of nested routes, multiple loaders can be called to construct a single p
 
 ## `createSession`
 
-TODO:
+Creates a new Session object with optional initial data and session ID.
+
+```ts
+import { createSession } from "@remix-run/node"; // or cloudflare/deno
+
+const sessionData = { username: "johndoe", theme: "dark" };
+const session = createSession(sessionData, "user-session-123");
+
+console.log(session.get("username")); // "johndoe"
+console.log(session.id); // "user-session-123"
+```
 
 ## `isSession`
 
