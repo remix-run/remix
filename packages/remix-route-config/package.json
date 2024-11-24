@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/route-config",
-  "version": "2.14.0",
+  "version": "2.15.0",
   "description": "Config-based routing utilities, for use within routes.ts",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -26,7 +26,7 @@
     "vite": "5.1.8"
   },
   "peerDependencies": {
-    "@remix-run/dev": "^2.14.0",
+    "@remix-run/dev": "^2.15.0",
     "typescript": "^5.1.0"
   },
   "peerDependenciesMeta": {

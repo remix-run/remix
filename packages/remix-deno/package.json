@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/deno",
-  "version": "2.14.0",
+  "version": "2.15.0",
   "description": "Deno platform abstractions for Remix",
   "homepage": "https://remix.run",
   "main": "./index.ts",
