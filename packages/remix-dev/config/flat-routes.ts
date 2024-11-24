@@ -72,6 +72,21 @@ class PrefixLookupTrie {
   }
 }
 
+export function findRootRoute(appDirectory: string) {
+  let routeFileForFolder = findRouteModuleForFolder(
+    appDirectory,
+    path.join(appDirectory, "root"),
+    []
+  );
+  let routeFileForFile = findConfig(appDirectory, "root", routeModuleExts);
+  if (routeFileForFolder && routeFileForFile) {
+    throw new Error(
+      `Conflicting root route modules: ${routeFileForFolder}, ${routeFileForFile}`
+    );
+  }
+  return routeFileForFolder || routeFileForFile;
+}
+
 export function flatRoutes(
   appDirectory: string,
   ignoredFilePatterns: string[] = [],
@@ -82,7 +97,7 @@ export function flatRoutes(
     .filter((re: any): re is RegExp => !!re);
   let routesDir = path.join(appDirectory, prefix);
 
-  let rootRoute = findConfig(appDirectory, "root", routeModuleExts);
+  let rootRoute = findRootRoute(appDirectory);
 
   if (!rootRoute) {
     throw new Error(
