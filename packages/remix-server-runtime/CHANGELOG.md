@@ -1,5 +1,17 @@
 # `@remix-run/server-runtime`
 
+## 2.15.0
+
+## 2.14.0
+
+### Minor Changes
+
+- Deprecate `SerializeFrom` in favor of generics because it will be removed in React Router v7 ([#10173](https://github.com/remix-run/remix/pull/10173))
+
+### Patch Changes
+
+- Update externally-accessed resource routes warning to cover null usage as well ([#10145](https://github.com/remix-run/remix/pull/10145))
+
 ## 2.13.1
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.13.1.
@@ -241,7 +253,7 @@ No significant changes to this package were made in this release. [See the repo 
 ### Minor Changes
 
 - Allow an optional `Layout` export from the root route ([#8709](https://github.com/remix-run/remix/pull/8709))
-- Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/en/main/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
+- Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/v6/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
 
 ### Patch Changes
 
@@ -994,10 +1006,10 @@ No significant changes to this package were made in this release. [See the relea
 
   Documentation Resources (better docs specific to Remix are in the works):
 
-  - <https://reactrouter.com/en/main/utils/defer>
-  - <https://reactrouter.com/en/main/components/await>
-  - <https://reactrouter.com/en/main/hooks/use-async-value>
-  - <https://reactrouter.com/en/main/hooks/use-async-error>
+  - <https://reactrouter.com/v6/utils/defer>
+  - <https://reactrouter.com/v6/components/await>
+  - <https://reactrouter.com/v6/hooks/use-async-value>
+  - <https://reactrouter.com/v6/hooks/use-async-error>
 
 ## 1.10.1
 

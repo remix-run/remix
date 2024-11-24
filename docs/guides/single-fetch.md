@@ -53,9 +53,12 @@ Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or usin
 
 With Single Fetch enabled, there will now only be one request made on client-side navigations even when multiple loaders need to run. To handle merging headers for the handlers called, the [`headers`][headers] export will now also apply to `loader`/`action` data requests. In many cases, the logic you already have in there for document requests should be close to sufficient for your new Single Fetch data requests.
 
-**4. Add `nonce` to `<RemixServer>` (if you are using a CSP)**
+**4. Add a `nonce` (if you are using a CSP)**
 
-The `<RemixServer>` component renders inline scripts that handle the streaming data on the client side. If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you can use `<RemixServer nonce>` to pass through the nonce to these `<script>` tags.
+If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you will need to add that `nonce` to two places for the streaming Single Fetch implementation:
+
+- `<RemixServer nonce={yourNonceValue}>` - this will add the `nonce` to the inline scripts rendered by this component that handle the streaming data on the client side
+- In your `entry.server.tsx` in the `options.nonce` parameter to [`renderToPipeableStream`][rendertopipeablestream]/[`renderToReadableStream`][rendertoreadablestream]. See also the Remix [Streaming docs][streaming-nonce]
 
 **5. Replace `renderToString` (if you are using it)**
 
@@ -80,7 +83,7 @@ There are a handful of breaking changes introduced with Single Fetch - some of w
 
 - **[New streaming Data format][streaming-format]**: Single fetch uses a new streaming format under the hood via [`turbo-stream`][turbo-stream], which means that we can stream down more complex data than just JSON
 - **No more auto-serialization**: Naked objects returned from `loader` and `action` functions are no longer automatically converted into a JSON `Response` and are serialized as-is over the wire
-- [**Updates to type inference**][type-inference-section]: To get the most accurate type inference, you should [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`
+- [**Updates to type inference**][type-inference-section]: To get the most accurate type inference, you should [augment][augment] Remix's `Future` interface with `v3_singleFetch: true`
 - [**Default revalidation behavior changes to opt-out on GET navigations**][revalidation]: Default revalidation behavior on normal navigations changes from opt-in to opt-out and your server loaders will re-run by default
 - [**Opt-in `action` revalidation**][action-revalidation]: Revalidation after an `action` `4xx`/`5xx` `Response` is now opt-in, versus opt-out
 
@@ -88,7 +91,7 @@ There are a handful of breaking changes introduced with Single Fetch - some of w
 
 With Single Fetch enabled, you can go ahead and author routes that take advantage of the more powerful streaming format.
 
-<docs-info>In order to get proper type inference, you need to [augment][augment] Remix's `Future` interface with `unstable_singleFetch: true`. You can read more about this in the [Type Inference section][type-inference-section].</docs-info>
+<docs-info>In order to get proper type inference, you need to [augment][augment] Remix's `Future` interface with `v3_singleFetch: true`. You can read more about this in the [Type Inference section][type-inference-section].</docs-info>
 
 With Single Fetch you can return the following data types from your loader: `BigInt`, `Date`, `Error`, `Map`, `Promise`, `RegExp`, `Set`, `Symbol`, and `URL`.
 
@@ -473,7 +476,7 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [starttransition]: https://react.dev/reference/react/startTransition
 [headers]: ../route/headers
 [resource-routes]: ../guides/resource-routes
-[returning-response]: ../route/loader.md#returning-response-instances
+[returning-response]: ../route/loader#returning-response-instances
 [streaming-format]: #streaming-data-format
 [undici-polyfill]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#undici
 [undici]: https://github.com/nodejs/undici
@@ -489,3 +492,4 @@ Revalidation is handled via a `?_routes` query string parameter on the single fe
 [compatibility-flag]: https://developers.cloudflare.com/workers/configuration/compatibility-dates
 [data-utility]: ../utils/data
 [augment]: https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation
+[streaming-nonce]: ./streaming#streaming-with-a-content-security-policy

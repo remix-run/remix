@@ -48,10 +48,10 @@ interface FutureConfig {
   v3_fetcherPersist: boolean;
   v3_relativeSplatPath: boolean;
   v3_throwAbortReason: boolean;
+  v3_routeConfig: boolean;
   v3_singleFetch: boolean;
   v3_lazyRouteDiscovery: boolean;
   unstable_optimizeDeps: boolean;
-  unstable_routeConfig: boolean;
 }
 
 type NodeBuiltinsPolyfillOptions = Pick<
@@ -579,7 +579,7 @@ export async function resolveConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  if (appConfig.future?.unstable_routeConfig) {
+  if (appConfig.future?.v3_routeConfig) {
     invariant(routesViteNodeContext);
     invariant(vite);
 
@@ -612,7 +612,7 @@ export async function resolveConfig(
         await routesViteNodeContext.runner.executeFile(
           path.join(appDirectory, routeConfigFile)
         )
-      ).routes;
+      ).default;
 
       let routeConfig = await routeConfigExport;
 
@@ -719,10 +719,10 @@ export async function resolveConfig(
     v3_fetcherPersist: appConfig.future?.v3_fetcherPersist === true,
     v3_relativeSplatPath: appConfig.future?.v3_relativeSplatPath === true,
     v3_throwAbortReason: appConfig.future?.v3_throwAbortReason === true,
+    v3_routeConfig: appConfig.future?.v3_routeConfig === true,
     v3_singleFetch: appConfig.future?.v3_singleFetch === true,
     v3_lazyRouteDiscovery: appConfig.future?.v3_lazyRouteDiscovery === true,
     unstable_optimizeDeps: appConfig.future?.unstable_optimizeDeps === true,
-    unstable_routeConfig: appConfig.future?.unstable_routeConfig === true,
   };
 
   if (appConfig.future) {
@@ -732,6 +732,7 @@ export async function resolveConfig(
       "unstable_cssSideEffectImports",
       "unstable_dev",
       "unstable_postcss",
+      "unstable_routeConfig",
       "unstable_tailwind",
       "unstable_vanillaExtract",
       "v2_errorBoundary",
@@ -740,6 +741,12 @@ export async function resolveConfig(
       "v2_normalizeFormMethod",
       "v2_routeConvention",
     ];
+
+    if ("unstable_routeConfig" in userFlags) {
+      logger.warn(
+        "The `unstable_routeConfig` future flag has been stabilized as `v3_routeConfig`."
+      );
+    }
 
     if ("v2_dev" in userFlags) {
       if (userFlags.v2_dev === true) {

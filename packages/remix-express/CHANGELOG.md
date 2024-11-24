@@ -1,5 +1,19 @@
 # `@remix-run/express`
 
+## 2.15.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.15.0`
+
+## 2.14.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.14.0`
+
 ## 2.13.1
 
 ### Patch Changes
@@ -132,7 +146,7 @@
 
 ### Minor Changes
 
-- Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/en/main/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
+- Vite: Add a new `basename` option to the Vite plugin, allowing users to set the internal React Router [`basename`](https://reactrouter.com/v6/routers/create-browser-router#basename) in order to to serve their applications underneath a subpath ([#8145](https://github.com/remix-run/remix/pull/8145))
 
 ### Patch Changes
 

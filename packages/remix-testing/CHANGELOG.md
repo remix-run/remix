@@ -1,5 +1,21 @@
 # `@remix-run/testing`
 
+## 2.15.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.15.0`
+  - `@remix-run/react@2.15.0`
+
+## 2.14.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@2.14.0`
+  - `@remix-run/node@2.14.0`
+
 ## 2.13.1
 
 ### Patch Changes
@@ -536,10 +552,10 @@
 
   Documentation Resources (better docs specific to Remix are in the works):
 
-  - <https://reactrouter.com/en/main/utils/defer>
-  - <https://reactrouter.com/en/main/components/await>
-  - <https://reactrouter.com/en/main/hooks/use-async-value>
-  - <https://reactrouter.com/en/main/hooks/use-async-error>
+  - <https://reactrouter.com/v6/utils/defer>
+  - <https://reactrouter.com/v6/components/await>
+  - <https://reactrouter.com/v6/hooks/use-async-value>
+  - <https://reactrouter.com/v6/hooks/use-async-error>
 
 - Updated dependencies:
   - `@remix-run/react@1.11.0`

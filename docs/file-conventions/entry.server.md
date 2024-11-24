@@ -51,12 +51,12 @@ _Note that you generally want to avoid logging when the request was aborted, sin
 
 ### Streaming Rendering Errors
 
-When you are streaming your HTML responses via [`renderToPipeableStream`][rendertopipeablestream] or [`renderToReadableStream`][rendertoreadablestream], your own `handleError` implementation will only handle errors encountered during the initial shell render. If you encounter a rendering error during subsequent streamed rendering you will need handle these errors manually since the Remix server has already sent the Response by that point.
+When you are streaming your HTML responses via [`renderToPipeableStream`][rendertopipeablestream] or [`renderToReadableStream`][rendertoreadablestream], your own `handleError` implementation will only handle errors encountered during the initial shell render. If you encounter a rendering error during subsequent streamed rendering you will need to handle these errors manually since the Remix server has already sent the Response by that point.
 
-- For `renderToPipeableStream`, you can handle these errors in the `onError` callback function. You will need to toggle a boolean when the in `onShellReady` so you know if the error was a shell rendering error (and can be ignored) or an async rendering error (and must be handled).
-  - For an example, please see the default [`entry.server.tsx`][node-streaming-entry-server] for Node.
+- For `renderToPipeableStream`, you can handle these errors in the `onError` callback function. You will need to toggle a boolean in `onShellReady` so you know if the error was a shell rendering error (and can be ignored) or an async rendering error (and must be handled).
+  - For an example, please refer to the default [`entry.server.tsx`][node-streaming-entry-server] for Node.
 - For `renderToReadableStream`, you can handle these errors in the `onError` callback function
-  - For an example, please see the default [`entry.server.tsx`][cloudflare-streaming-entry-server] for Cloudflare
+  - For an example, please refer to the default [`entry.server.tsx`][cloudflare-streaming-entry-server] for Cloudflare
 
 ### Thrown Responses
 

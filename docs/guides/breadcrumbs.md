@@ -74,7 +74,7 @@ export default function Root() {
 }
 ```
 
-Note that we pass the `match` object to breadcrumbs, allowing us to potentially utilize `match.data` for enhancing breadcrumb content based on the route's data. This example doesn't use it, but you'll like want to use values from your loader data for the breadcrumb.
+Note that we pass the `match` object to breadcrumbs, allowing us to potentially utilize `match.data` for enhancing breadcrumb content based on the route's data. This example doesn't use it, but you'll likely want to use values from your loader data for the breadcrumb.
 
 Using `useMatches` with `handle` offers a robust way for routes to contribute to rendering processes higher up the element tree than their actual render point.
 

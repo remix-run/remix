@@ -43,7 +43,7 @@ test.describe("route config", () => {
 
         export default {
           plugins: [remix({
-            future: { unstable_routeConfig: true },
+            future: { v3_routeConfig: true },
           })]
         }
       `,
@@ -64,12 +64,12 @@ test.describe("route config", () => {
 
         export default {
           plugins: [remix({
-            future: { unstable_routeConfig: true },
+            future: { v3_routeConfig: true },
             routes: () => {},
           })]
         }
       `,
-      "app/routes.ts": `export const routes = [];`,
+      "app/routes.ts": `export default [];`,
     });
     let buildResult = viteBuild({ cwd });
     expect(buildResult.status).toBe(1);
@@ -88,12 +88,12 @@ test.describe("route config", () => {
         export default {
           ${await viteConfig.server({ port })}
           plugins: [remix({
-            future: { unstable_routeConfig: true },
+            future: { v3_routeConfig: true },
             routes: () => {},
           })]
         }
       `,
-      "app/routes.ts": `export const routes = [];`,
+      "app/routes.ts": `export default [];`,
     });
     let devError: Error | undefined;
     try {
@@ -113,7 +113,7 @@ test.describe("route config", () => {
 
         export default {
           plugins: [remix({
-            future: { unstable_routeConfig: true },
+            future: { v3_routeConfig: true },
           })]
         }
       `,
@@ -161,9 +161,9 @@ test.describe("route config", () => {
       "app/routes.ts": js`
         import { type RouteConfig, index } from "@remix-run/route-config";
 
-        export const routes: RouteConfig = [
+        export default [
           index("test-route-1.tsx"),
-        ];
+        ] satisfies RouteConfig;
       `,
       "app/test-route-1.tsx": `
         export default function TestRoute1() {
@@ -220,14 +220,14 @@ test.describe("route config", () => {
         port,
       }),
       "app/routes.ts": js`
-        export { routes } from "./actual-routes";
+        export { default } from "./actual-routes";
       `,
       "app/actual-routes.ts": js`
         import { type RouteConfig, index } from "@remix-run/route-config";
 
-        export const routes: RouteConfig = [
+        export default [
           index("test-route-1.tsx"),
-        ];
+        ] satisfies RouteConfig;
       `,
       "app/test-route-1.tsx": `
         export default function TestRoute1() {
@@ -286,9 +286,9 @@ test.describe("route config", () => {
       "app/routes.ts": js`
         import { type RouteConfig, index } from "@remix-run/route-config";
 
-        export const routes: RouteConfig = [
+        export default [
           index("test-route-1.tsx"),
-        ];
+        ] satisfies RouteConfig;
       `,
       "app/test-route-1.tsx": `
         export default function TestRoute1() {
@@ -354,9 +354,9 @@ test.describe("route config", () => {
         import path from "node:path";
         import { type RouteConfig, index } from "@remix-run/route-config";
 
-        export const routes: RouteConfig = [
+        export default [
           index(path.resolve(import.meta.dirname, "test-route.tsx")),
-        ];
+        ] satisfies RouteConfig;
       `,
       "app/test-route.tsx": `
         export default function TestRoute() {
