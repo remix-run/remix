@@ -572,10 +572,9 @@ This package matches the API of React Router v7's `@react-router/fs-routes`, mak
 > If you've configured `ignoredRouteFiles` to `["**/*"]`, you should skip this step since you're already opting out of Remix's file system routing.
 
 ```ts filename=app/routes.ts
-import { flatRoutes } from "@remix-run/fs-routes";
-import type { RouteConfig } from "@remix-run/route-config";
+import { flatRoutes } from '@remix-run/fs-routes';
 
-export const routes: RouteConfig = flatRoutes();
+export default flatRoutes();
 ```
 
 👉 **If you used the `routes` config option, add `@remix-run/routes-option-adapter` and use it in `routes.ts`**
