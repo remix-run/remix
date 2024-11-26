@@ -48,7 +48,8 @@
   "scripts": {
     "build": "tsup",
     "test": "node --import @swc-node/register/esm-register --test ./src/**/*.spec.ts",
-    "prepare": "pnpm run build"
+    "prepare": "pnpm run build",
+    "version": "node ../../scripts/version.js $npm_package_name"
   },
   "keywords": [
     "fetch",
