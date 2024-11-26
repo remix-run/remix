@@ -1,3 +1,7 @@
+# `file-storage` CHANGELOG
+
+This is the changelog for [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
+
 ## v0.3.0 (2024-11-14)
 
 - Added CommonJS build

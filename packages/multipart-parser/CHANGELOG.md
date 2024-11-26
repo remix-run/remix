@@ -1,3 +1,7 @@
+# `multipart-parser` CHANGELOG
+
+This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
+
 ## v0.7.0 (2024-11-14)
 
 - Added CommonJS build
