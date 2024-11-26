@@ -12,17 +12,21 @@ import {
 } from './utils/packages.js';
 import { getNextVersion } from './utils/semver.js';
 
-const packageName = process.argv[2];
-const releaseType = process.argv[3];
+let packageName = process.argv[2];
+let releaseType = process.argv[3];
+
+if (typeof packageName === 'string' && packageName.startsWith('@mjackson/')) {
+  packageName = packageName.slice('@mjackson/'.length);
+}
 
 if (packageName === undefined || releaseType === undefined) {
   console.error('Usage: node version.js <packageName> <releaseType>');
   process.exit(1);
 }
 
-const packageJson = readPackageJson(packageName);
-const nextVersion = getNextVersion(packageJson.version, releaseType);
-const tag = `${packageName}@${nextVersion}`;
+let packageJson = readPackageJson(packageName);
+let nextVersion = getNextVersion(packageJson.version, releaseType);
+let tag = `${packageName}@${nextVersion}`;
 
 // 1) Ensure git staging area is clean
 let status = cp.execSync('git status --porcelain').toString();
