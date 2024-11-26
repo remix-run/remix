@@ -58,7 +58,7 @@ export function createRequestListener(
   let onError = options?.onError ?? defaultErrorHandler;
 
   return async (req, res) => {
-    let request = createRequest(req, options);
+    let request = createRequest(req, res, options);
     let client = {
       address: req.socket.remoteAddress!,
       family: req.socket.remoteFamily! as ClientAddress['family'],
@@ -107,12 +107,17 @@ export type RequestOptions = Omit<RequestListenerOptions, 'onError'>;
 /**
  * Creates a `Request` object from an incoming Node.js request object.
  * @param req The incoming request object.
+ * @param res The server response object.
  * @param options
  * @returns A `Request` object.
  */
-export function createRequest(req: http.IncomingMessage, options?: RequestOptions): Request {
+export function createRequest(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  options?: RequestOptions,
+): Request {
   let controller = new AbortController();
-  req.on('close', () => {
+  res.on('close', () => {
     controller.abort();
   });
 
