@@ -1,3 +1,7 @@
+# `headers` CHANGELOG
+
+This is the changelog for [`headers`](https://github.com/mjackson/remix-the-web/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
+
 ## v0.8.0 (2024-11-14)
 
 - Added CommonJS build

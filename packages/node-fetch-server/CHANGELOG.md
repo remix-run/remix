@@ -1,3 +1,7 @@
+# `node-fetch-server` CHANGELOG
+
+This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
+
 ## v0.3.0 (2024-11-20)
 
 - Added low-level `createRequest(req, options)` and `sendResponse(res, response)` exports to assist with building custom fetch servers on Node.js
