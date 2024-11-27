@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/routes-option-adapter",
-  "version": "2.14.0",
+  "version": "2.15.0",
   "description": "Adapter for Remix's \"routes\" config option, for use within routes.ts",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -22,8 +22,8 @@
     "typescript": "^5.1.6"
   },
   "peerDependencies": {
-    "@remix-run/dev": "^2.14.0",
-    "@remix-run/route-config": "^2.14.0",
+    "@remix-run/dev": "^2.15.0",
+    "@remix-run/route-config": "^2.15.0",
     "typescript": "^5.1.0"
   },
   "peerDependenciesMeta": {

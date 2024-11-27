@@ -24,7 +24,7 @@ test.describe("fs-routes", () => {
 
           export default defineConfig({
             plugins: [remix({
-              future: { unstable_routeConfig: true },
+              future: { v3_routeConfig: true },
             })],
           });
         `,
@@ -33,7 +33,7 @@ test.describe("fs-routes", () => {
           import { flatRoutes } from "@remix-run/fs-routes";
           import { remixRoutesOptionAdapter } from "@remix-run/routes-option-adapter";
 
-          export const routes: RouteConfig = [
+          export default [
             ...await flatRoutes({
               rootDirectory: "fs-routes",
               ignoredRouteFiles: ["**/ignored-route.*"],
@@ -46,7 +46,7 @@ test.describe("fs-routes", () => {
                 route("/routes/option/adapter/route", "routes-option-adapter-route.tsx")
               });
             })
-          ];
+          ] satisfies RouteConfig;
         `,
         "app/root.tsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -257,7 +257,7 @@ test.describe("emits warnings for route conflicts", async () => {
 
           export default defineConfig({
             plugins: [remix({
-              future: { unstable_routeConfig: true },
+              future: { v3_routeConfig: true },
             })],
           });
         `,
@@ -265,9 +265,9 @@ test.describe("emits warnings for route conflicts", async () => {
           import { type RouteConfig } from "@remix-run/route-config";  
           import { flatRoutes } from "@remix-run/fs-routes";
 
-          export const routes: RouteConfig = flatRoutes({
+          export default flatRoutes({
             rootDirectory: "fs-routes",
-          });
+          }) satisfies RouteConfig;
         `,
         "fs-routes/_dashboard._index.tsx": js`
           export default function () {
@@ -331,7 +331,7 @@ test.describe("", () => {
 
           export default defineConfig({
             plugins: [remix({
-              future: { unstable_routeConfig: true },
+              future: { v3_routeConfig: true },
             })],
           });
         `,
@@ -339,9 +339,9 @@ test.describe("", () => {
           import { type RouteConfig } from "@remix-run/route-config";  
           import { flatRoutes } from "@remix-run/fs-routes";
 
-          export const routes: RouteConfig = flatRoutes({
+          export default flatRoutes({
             rootDirectory: "fs-routes",
-          });
+          }) satisfies RouteConfig;
         `,
         "app/fs-routes/_index/route.tsx": js``,
         "app/fs-routes/_index/utils.ts": js``,
@@ -380,7 +380,7 @@ test.describe("pathless routes and route collisions", () => {
 
           export default defineConfig({
             plugins: [remix({
-              future: { unstable_routeConfig: true },
+              future: { v3_routeConfig: true },
             })],
           });
         `,
@@ -388,9 +388,9 @@ test.describe("pathless routes and route collisions", () => {
           import { type RouteConfig } from "@remix-run/route-config";  
           import { flatRoutes } from "@remix-run/fs-routes";
 
-          export const routes: RouteConfig = flatRoutes({
+          export default flatRoutes({
             rootDirectory: "fs-routes",
-          });
+          }) satisfies RouteConfig;
         `,
         "app/root.tsx": js`
           import { Link, Outlet, Scripts, useMatches } from "@remix-run/react";
