@@ -2,15 +2,14 @@
   "name": "remix-the-web",
   "private": true,
   "packageManager": "pnpm@9.9.0",
-  "engines": {
-    "node": ">=22"
-  },
   "devDependencies": {
     "prettier": "^3.3.3"
   },
   "scripts": {
     "clean": "git clean -fdX .",
-    "release": "node ./scripts/release.js",
+    "publish-release": "node --env-file .env ./scripts/publish-release.js",
+    "publish-release-ci": "node ./scripts/publish-release.js",
+    "tag-release": "node ./scripts/tag-release.js",
     "test": "pnpm -r --workspace-concurrency 1 test"
   }
 }
