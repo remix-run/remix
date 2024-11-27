@@ -2,7 +2,7 @@
 
 This package is only for testing the version and publish scripts.
 
-## HEAD
+## v0.2.0 (2024-11-27)
 
 More testing.
 
