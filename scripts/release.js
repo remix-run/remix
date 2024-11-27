@@ -67,7 +67,7 @@ if (hasJsrJson(packageName)) {
 }
 
 // 5) Publish to GitHub Releases
-console.log(`Publishing tag ${tag} on GitHub Releases ...`);
+console.log(`Publishing ${tag} on GitHub Releases ...`);
 await createRelease(packageName, version);
 
 console.log();
