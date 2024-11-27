@@ -4,7 +4,7 @@ import { getChanges } from './changes.js';
 
 const token = process.env.GITHUB_TOKEN;
 
-/** @type (packageName: string, version: string) => Promise<void> */
+/** @type (packageName: string, version: string) => Promise<string> */
 export async function createRelease(packageName, version) {
   if (token === undefined) {
     console.error('GITHUB_TOKEN environment variable is required to create a release');
@@ -29,4 +29,6 @@ export async function createRelease(packageName, version) {
     console.error('Failed to create release:', response);
     process.exit(1);
   }
+
+  return response.data.html_url;
 }
