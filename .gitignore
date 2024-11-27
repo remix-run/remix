@@ -3,5 +3,4 @@
 
 **/*.tsbuildinfo
 
-.nx/cache
-.nx/workspace-data
+.env
