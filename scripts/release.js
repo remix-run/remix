@@ -8,13 +8,18 @@ import { isValidVersion } from './utils/semver.js';
 let packageName = process.argv[2];
 let version = process.argv[3];
 
+if (packageName === undefined || version === undefined) {
+  console.error('Usage: node release.js <packageName> <version>');
+  process.exit(1);
+}
+
 if (typeof packageName === 'string' && packageName.startsWith('@mjackson/')) {
   packageName = packageName.slice('@mjackson/'.length);
 }
 
 let tag = `${packageName}@${version}`;
 
-if (packageName === undefined || packageName === '' || !isValidVersion(version)) {
+if (packageName === '' || !isValidVersion(version)) {
   console.error(`Invalid tag: ${tag}`);
   process.exit(1);
 }

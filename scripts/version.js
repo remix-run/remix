@@ -16,13 +16,13 @@ import { getNextVersion } from './utils/semver.js';
 let packageName = process.argv[2];
 let releaseType = process.argv[3];
 
-if (typeof packageName === 'string' && packageName.startsWith('@mjackson/')) {
-  packageName = packageName.slice('@mjackson/'.length);
-}
-
 if (packageName === undefined || releaseType === undefined) {
   console.error('Usage: node version.js <packageName> <releaseType>');
   process.exit(1);
+}
+
+if (typeof packageName === 'string' && packageName.startsWith('@mjackson/')) {
+  packageName = packageName.slice('@mjackson/'.length);
 }
 
 let packageJson = readPackageJson(packageName);
