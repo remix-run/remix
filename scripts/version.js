@@ -10,6 +10,7 @@ import {
   readPackageJson,
   writePackageJson,
 } from './utils/packages.js';
+import { logAndExec } from './utils/process.js';
 import { getNextVersion } from './utils/semver.js';
 
 let packageName = process.argv[2];
@@ -37,12 +38,6 @@ if (status !== '') {
 
 console.log(`Releasing ${tag} ...`);
 console.log();
-
-/** @type (command: string) => void */
-function logAndExec(command) {
-  console.log(`$ ${command}`);
-  cp.execSync(command, { stdio: 'inherit' });
-}
 
 // 2) Update package.json with the new release version
 writePackageJson(packageName, { ...packageJson, version: nextVersion });
