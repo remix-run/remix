@@ -36,7 +36,7 @@ if (status !== '') {
   process.exit(1);
 }
 
-console.log(`Releasing ${tag} ...`);
+console.log(`Tagging ${tag} ...`);
 console.log();
 
 // 2) Update package.json with the new release version
