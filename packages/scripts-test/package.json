@@ -49,6 +49,6 @@
     "build": "tsup",
     "prepare": "pnpm run build",
     "version": "node ../../scripts/version.js $npm_package_name",
-    "publish": "node ../../scripts/publish.js $npm_package_name $npm_package_version"
+    "release": "node ../../scripts/release.js $npm_package_name $npm_package_version"
   }
 }
