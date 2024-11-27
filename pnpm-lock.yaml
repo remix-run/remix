@@ -245,21 +245,6 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
 
-  packages/scripts-test:
-    devDependencies:
-      '@swc-node/register':
-        specifier: ^1.10.9
-        version: 1.10.9(@swc/core@1.5.29(@swc/helpers@0.5.12))(@swc/types@0.1.12)(typescript@5.6.3)
-      '@types/node':
-        specifier: ^22.5.0
-        version: 22.5.4
-      tsup:
-        specifier: ^8.3.5
-        version: 8.3.5(@swc/core@1.5.29(@swc/helpers@0.5.12))(typescript@5.6.3)
-      typescript:
-        specifier: ^5.6.3
-        version: 5.6.3
-
   scripts:
     dependencies:
       '@octokit/request':
