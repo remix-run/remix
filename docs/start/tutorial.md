@@ -367,7 +367,6 @@ There are two APIs we'll be using to load data, [`loader`][loader] and [`useLoad
 
 ```tsx filename=app/root.tsx lines=[2,11,15,19-22,25,34-57]
 // existing imports
-import { json } from "@remix-run/node";
 import {
   Form,
   Link,
@@ -386,7 +385,7 @@ import { getContacts } from "./data";
 
 export const loader = async () => {
   const contacts = await getContacts();
-  return json({ contacts });
+  return Response.json({ contacts });
 };
 
 export default function App() {
@@ -469,7 +468,6 @@ These params are most often used to find a record by ID. Let's try it out.
 <docs-info>The following code has type errors in it, we'll fix them in the next section</docs-info>
 
 ```tsx filename=app/routes/contacts.$contactId.tsx lines=[1-2,5,7-10,13]
-import { json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 // existing imports
 
@@ -477,7 +475,7 @@ import { getContact } from "../data";
 
 export const loader = async ({ params }) => {
   const contact = await getContact(params.contactId);
-  return json({ contact });
+  return Response.json({ contact });
 };
 
 export default function Contact() {
@@ -507,7 +505,7 @@ export const loader = async ({
 }: LoaderFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   const contact = await getContact(params.contactId);
-  return json({ contact });
+  return Response.json({ contact });
 };
 
 // existing code
@@ -530,7 +528,7 @@ export const loader = async ({
   if (!contact) {
     throw new Response("Not Found", { status: 404 });
   }
-  return json({ contact });
+  return Response.json({ contact });
 };
 
 // existing code
@@ -567,7 +565,7 @@ import { createEmptyContact, getContacts } from "./data";
 
 export const action = async () => {
   const contact = await createEmptyContact();
-  return json({ contact });
+  return Response.json({ contact });
 };
 
 // existing code
@@ -609,7 +607,6 @@ Nothing we haven't seen before, feel free to copy/paste:
 
 ```tsx filename=app/routes/contacts.$contactId_.edit.tsx
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
@@ -623,7 +620,7 @@ export const loader = async ({
   if (!contact) {
     throw new Response("Not Found", { status: 404 });
   }
-  return json({ contact });
+  return Response.json({ contact });
 };
 
 export default function EditContact() {
@@ -699,7 +696,7 @@ import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
 } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 // existing imports
 
 import { getContact, updateContact } from "../data";
@@ -795,7 +792,7 @@ Now that we know how to redirect, let's update the action that creates new conta
 
 ```tsx filename=app/root.tsx lines=[2,7]
 // existing imports
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 // existing imports
 
 export const action = async () => {
@@ -1105,7 +1102,7 @@ export const loader = async ({
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
   const contacts = await getContacts(q);
-  return json({ contacts });
+  return Response.json({ contacts });
 };
 
 // existing code
@@ -1139,7 +1136,7 @@ export const loader = async ({
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
   const contacts = await getContacts(q);
-  return json({ contacts, q });
+  return Response.json({ contacts, q });
 };
 
 export default function App() {
