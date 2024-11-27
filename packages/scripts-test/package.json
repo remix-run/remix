@@ -1,6 +1,6 @@
 {
   "name": "@mjackson/scripts-test",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Test package for version/publish scripts",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
