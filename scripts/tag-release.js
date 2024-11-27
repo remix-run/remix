@@ -1,15 +1,7 @@
 import * as cp from 'node:child_process';
 
-import {
-  getPackageFile,
-  readChangelog,
-  writeChangelog,
-  hasJsrJson,
-  readJsrJson,
-  writeJsrJson,
-  readPackageJson,
-  writePackageJson,
-} from './utils/packages.js';
+import { fileExists, readFile, readJson, writeFile, writeJson } from './utils/fs.js';
+import { getPackageFile } from './utils/packages.js';
 import { logAndExec } from './utils/process.js';
 import { getNextVersion } from './utils/semver.js';
 
@@ -25,7 +17,8 @@ if (packageName.startsWith('@mjackson/')) {
   packageName = packageName.slice('@mjackson/'.length);
 }
 
-let packageJson = readPackageJson(packageName);
+let packageJsonFile = getPackageFile(packageName, 'package.json');
+let packageJson = readJson(packageJsonFile);
 let nextVersion = getNextVersion(packageJson.version, releaseType);
 let tag = `${packageName}@${nextVersion}`;
 
@@ -40,18 +33,20 @@ console.log(`Tagging release ${tag} ...`);
 console.log();
 
 // 2) Update package.json with the new release version
-writePackageJson(packageName, { ...packageJson, version: nextVersion });
-logAndExec(`git add ${getPackageFile(packageName, 'package.json')}`);
+writeJson(packageJsonFile, { ...packageJson, version: nextVersion });
+logAndExec(`git add ${packageJsonFile}`);
 
 // 4) Update jsr.json (if applicable) with the new release version
-if (hasJsrJson(packageName)) {
-  let jsrJson = readJsrJson(packageName);
-  writeJsrJson(packageName, { ...jsrJson, version: nextVersion });
-  logAndExec(`git add ${getPackageFile(packageName, 'jsr.json')}`);
+let jsrJsonFile = getPackageFile(packageName, 'jsr.json');
+if (fileExists(jsrJsonFile)) {
+  let jsrJson = readJson(jsrJsonFile);
+  writeJson(jsrJsonFile, { ...jsrJson, version: nextVersion });
+  logAndExec(`git add ${jsrJsonFile}`);
 }
 
 // 3) Swap out "## HEAD" in CHANGELOG.md with the new release version + date
-let changelog = readChangelog(packageName);
+let changelogFile = getPackageFile(packageName, 'CHANGELOG.md');
+let changelog = readFile(packageName);
 let match = /^## HEAD\n/m.exec(changelog);
 if (match) {
   let [today] = new Date().toISOString().split('T');
@@ -61,8 +56,8 @@ if (match) {
     `## v${nextVersion} (${today})\n` +
     changelog.slice(match.index + match[0].length);
 
-  writeChangelog(packageName, changelog);
-  logAndExec(`git add ${getPackageFile(packageName, 'CHANGELOG.md')}`);
+  writeFile(changelogFile, changelog);
+  logAndExec(`git add ${changelogFile}`);
 }
 
 // 5) Commit and tag

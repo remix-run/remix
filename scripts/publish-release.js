@@ -1,7 +1,8 @@
 import * as cp from 'node:child_process';
 
+import { fileExists, readJson } from './utils/fs.js';
 import { createRelease } from './utils/github-releases.js';
-import { getPackageDir, hasJsrJson, readJsrJson, readPackageJson } from './utils/packages.js';
+import { getPackageDir, getPackageFile } from './utils/packages.js';
 import { logAndExec } from './utils/process.js';
 import { isValidVersion } from './utils/semver.js';
 
@@ -50,7 +51,8 @@ console.log(`Publishing release ${tag} ...`);
 console.log();
 
 // 3) Publish to npm
-let packageJson = readPackageJson(packageName);
+let packageJsonFile = getPackageFile(packageName, 'package.json');
+let packageJson = readJson(packageJsonFile);
 if (packageJson.version !== version) {
   console.error(
     `Tag does not match package.json version: ${version} !== ${packageJson.version} (${tag})`,
@@ -65,8 +67,9 @@ logAndExec(`npm publish --access public`, {
 console.log();
 
 // 4) Publish to jsr (if applicable)
-if (hasJsrJson(packageName)) {
-  let jsrJson = readJsrJson(packageName);
+let jsrJsonFile = getPackageFile(packageName, 'jsr.json');
+if (fileExists(jsrJsonFile)) {
+  let jsrJson = readJson(jsrJsonFile);
   if (jsrJson.version !== version) {
     console.error(
       `Tag does not match jsr.json version: ${version} !== ${jsrJson.version} (${tag})`,
@@ -74,7 +77,7 @@ if (hasJsrJson(packageName)) {
     process.exit(1);
   }
 
-  logAndExec(`pnpm dlx jsr publish`, {
+  logAndExec(`npx jsr publish`, {
     cwd: getPackageDir(packageName),
     env: process.env,
   });
@@ -84,6 +87,6 @@ if (hasJsrJson(packageName)) {
 // 5) Publish to GitHub Releases
 console.log(`Publishing ${tag} on GitHub Releases ...`);
 let releaseUrl = await createRelease(packageName, version);
-console.log(`Published at: ${releaseUrl}`);
+console.log(`Done, see ${releaseUrl}`);
 
 console.log();
