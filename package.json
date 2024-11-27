@@ -6,6 +6,7 @@
     "prettier": "^3.3.3"
   },
   "scripts": {
-    "clean": "git clean -fdX ."
+    "clean": "git clean -fdX .",
+    "test": "pnpm -r --workspace-concurrency 1 test"
   }
 }
