@@ -5,14 +5,14 @@ import { getPackageDir, hasJsrJson, readJsrJson, readPackageJson } from './utils
 import { logAndExec } from './utils/process.js';
 import { isValidVersion } from './utils/semver.js';
 
-let tag = process.argv[2];
+let packageName = process.argv[2];
+let version = process.argv[3];
 
-if (tag === undefined) {
-  console.error('Usage: node publish.js <tag>');
-  process.exit(1);
+if (typeof packageName === 'string' && packageName.startsWith('@mjackson/')) {
+  packageName = packageName.slice('@mjackson/'.length);
 }
 
-let [packageName, version] = tag.split('@');
+let tag = `${packageName}@${version}`;
 
 if (packageName === undefined || packageName === '' || !isValidVersion(version)) {
   console.error(`Invalid tag: ${tag}`);
@@ -33,10 +33,7 @@ if (!currentTags.includes(tag)) {
   process.exit(1);
 }
 
-// 3) Build the package
-console.log(`Building ${packageName}@${version} ...`);
-
-// 4) Publish to npm
+// 3) Publish to npm
 let packageJson = readPackageJson(packageName);
 if (packageJson.version !== version) {
   console.error(
@@ -49,7 +46,7 @@ logAndExec(`pnpm publish --access public`, {
   cwd: getPackageDir(packageName),
 });
 
-// 5) Publish to jsr (if applicable)
+// 4) Publish to jsr (if applicable)
 if (hasJsrJson(packageName)) {
   let jsrJson = readJsrJson(packageName);
   if (jsrJson.version !== version) {
@@ -64,9 +61,8 @@ if (hasJsrJson(packageName)) {
   });
 }
 
-// 6) Publish to GitHub Releases
+// 5) Publish to GitHub Releases
 console.log(`Publishing tag ${tag} on GitHub Releases ...`);
-
 await createRelease(packageName, version);
 
 console.log();
