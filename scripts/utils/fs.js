@@ -5,10 +5,10 @@ export function fileExists(filename) {
   return fs.existsSync(filename);
 }
 
-/** @type (filename: string) => string */
-export function readFile(filename) {
+/** @type (filename: string, encoding?: BufferEncoding) => string */
+export function readFile(filename, encoding = 'utf-8') {
   try {
-    return fs.readFileSync(filename, 'utf-8');
+    return fs.readFileSync(filename, encoding);
   } catch (error) {
     if (isFsError(error) && error.code === 'ENOENT') {
       console.error(`Not found: "${filename}"`);

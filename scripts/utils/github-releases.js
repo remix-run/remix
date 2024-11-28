@@ -22,7 +22,7 @@ export async function createRelease(packageName, version) {
     repo: 'remix-the-web',
     tag_name: tagName,
     name: `${packageName} v${version}`,
-    body: changes?.changes ?? 'No changes.',
+    body: changes?.body ?? 'No changes.',
   });
 
   if (response.status !== 201) {
