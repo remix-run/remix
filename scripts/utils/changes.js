@@ -1,14 +1,18 @@
-import { hasChangelog, readChangelog } from './packages.js';
+import { getPackageFile } from './packages.js';
+import { fileExists, readFile } from './fs.js';
 
+/** @typedef {{ version: string; date?: Date; body: string }} Changes */
 /** @typedef {Record<string, Changes>} AllChanges */
 
 /** @type (packageName: string) => AllChanges | null */
 export function getAllChanges(packageName) {
-  if (!hasChangelog(packageName)) {
+  let changelogFile = getPackageFile(packageName, 'CHANGELOG.md');
+
+  if (!fileExists(changelogFile)) {
     return null;
   }
 
-  let changelog = readChangelog(packageName);
+  let changelog = readFile(changelogFile);
   let parser = /^## ([a-z\d\.\-]+)(?: \(([^)]+)\))?$/gim;
 
   /** @type {AllChanges} */
@@ -21,15 +25,13 @@ export function getAllChanges(packageName) {
     let version = versionString.startsWith('v') ? versionString.slice(1) : versionString;
     let date = dateString ? new Date(dateString) : undefined;
     let nextMatch = parser.exec(changelog);
-    let changes = changelog.slice(lastIndex, nextMatch ? nextMatch.index : undefined).trim();
-    result[version] = { version, date, changes };
+    let body = changelog.slice(lastIndex, nextMatch ? nextMatch.index : undefined).trim();
+    result[version] = { version, date, body };
     parser.lastIndex = lastIndex;
   }
 
   return result;
 }
-
-/** @typedef {{ version: string; date?: Date; changes: string }} Changes */
 
 /** @type (packageName: string, version: string) => Changes | null */
 export function getChanges(packageName, version) {
