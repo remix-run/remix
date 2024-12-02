@@ -1815,8 +1815,57 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         return modules;
       },
     },
+    {
+      name: "remix-server-change-trigger-client-hmr",
+      // hotUpdate only exists in Vite 6+, remove any after upgrading Vite to v6
+      hotUpdate(this: any, { server, modules }: any) {
+        if (this.environment.name !== "ssr" && modules.length <= 0) return;
+
+        let clientModules = uniqueNodes(
+          modules.flatMap((mod: ViteEnvironmentModuleNode) =>
+            getParentClientNodes(server.environments.client.moduleGraph, mod)
+          )
+        );
+
+        for (let clientModule of clientModules) {
+          server.environments.client.reloadModule(clientModule);
+        }
+      },
+    },
   ];
 };
+
+// replace with Vite.EnvironmentModuleGraph after upgrading Vite to v6
+type ViteEnvironmentModuleGraph = Vite.ModuleGraph
+// replace with Vite.EnvironmentModuleNode after upgrading Vite to v6
+type ViteEnvironmentModuleNode = Vite.ModuleNode
+
+function getParentClientNodes(
+  clientModuleGraph: ViteEnvironmentModuleGraph,
+  module: ViteEnvironmentModuleNode
+): ViteEnvironmentModuleNode[] {
+  if (!module.id) return [];
+
+  let clientModule = clientModuleGraph.getModuleById(module.id);
+  if (clientModule) return [clientModule];
+
+  return [...module.importers].flatMap((importer) =>
+    getParentClientNodes(clientModuleGraph, importer)
+  );
+}
+
+function uniqueNodes(
+  nodes: ViteEnvironmentModuleNode[]
+): ViteEnvironmentModuleNode[] {
+  let nodeUrls = new Set<string>();
+  let uniqued: ViteEnvironmentModuleNode[] = [];
+  for (let node of nodes) {
+    if (nodeUrls.has(node.url)) continue;
+    nodeUrls.add(node.url);
+    uniqued.push(node);
+  }
+  return uniqued;
+}
 
 function isInRemixMonorepo() {
   let devPath = path.dirname(require.resolve("@remix-run/dev/package.json"));
