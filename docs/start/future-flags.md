@@ -454,7 +454,7 @@ export async function loader({}: LoaderFunctionArgs) {
 }
 ```
 
-If you were using the second parameter of `json`/`defer` to set a custom status or headers on your response, you can continue doing do via the new `data` API:
+If you were using the second parameter of `json`/`defer` to set a custom status or headers on your response, you can continue doing so via the new `data` API:
 
 ```diff
 -import { json } from "@remix-run/node";
