@@ -7,7 +7,7 @@ const token = process.env.GITHUB_TOKEN;
 /** @type (packageName: string, version: string) => Promise<string> */
 export async function createRelease(packageName, version) {
   if (token === undefined) {
-    console.error('GITHUB_TOKEN environment variable is required to create a release');
+    console.error('GITHUB_TOKEN environment variable is required to create a GitHub release');
     process.exit(1);
   }
 
