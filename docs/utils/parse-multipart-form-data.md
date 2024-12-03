@@ -62,5 +62,7 @@ Remix has two utilities to create `uploadHandler`s for you:
 
 These are fully featured utilities for handling fairly simple use cases. It's not recommended to load anything but quite small files into memory. Saving files to disk is a reasonable solution for many use cases. But if you want to upload the file to a file hosting provider, then you'll need to write your own.
 
+Other handlers than `unstable_createMemoryUploadHandler` can't store non-file values as `string` objects. You should combine them by `unstable_composeUploadHandlers` if there're non-file entries in the request.
+
 [the-browser-file-api]: https://developer.mozilla.org/en-US/docs/Web/API/File
 [the-blob-api]: https://developer.mozilla.org/en-US/docs/Web/API/Blob
