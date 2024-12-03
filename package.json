@@ -5,6 +5,9 @@
   "devDependencies": {
     "prettier": "^3.3.3"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "clean": "git clean -fdX .",
     "publish-release": "node --env-file .env ./scripts/publish-release.js",
