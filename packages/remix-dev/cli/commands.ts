@@ -274,7 +274,9 @@ export async function generateEntry(
   }
 
   let pkgJson = await PackageJson.load(rootDirectory);
-  let deps = pkgJson.content.dependencies ?? {};
+  let prodDeps = pkgJson.content.dependencies ?? {};
+  let devDeps = pkgJson.content.devDependencies ?? {};
+  let deps = {...prodDeps, ...devDeps };
 
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
