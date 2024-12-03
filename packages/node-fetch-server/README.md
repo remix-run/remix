@@ -72,7 +72,7 @@ let handler: FetchHandler = (request, client) => {
 
 In addition to the high-level `createRequestListener()` API, this package also provides 2 low-level APIs that are useful when building custom `fetch`-based servers in Node.js:
 
-- `createRequest(req: http.IncomingMessage, options: RequestOptions): Request`
+- `createRequest(req: http.IncomingMessage, res: http.ServerResponse, options: RequestOptions): Request`
 - `sendResponse(res: http.ServerResponse, response: Response): Promise<void>`
 
 These two functions serve as an efficient, minimal translation layer between Node.js `req`/`res` objects and fetch `Request`/`Response` objects. You could build your own custom server like this:
@@ -82,7 +82,7 @@ import * as http from 'node:http';
 import { createRequest, sendResponse } from '@mjackson/node-fetch-server';
 
 let server = http.createServer(async (req, res) => {
-  let request = createRequest(req, { host: process.env.HOST });
+  let request = createRequest(req, res, { host: process.env.HOST });
 
   try {
     let response = await customAppLogic(request);
