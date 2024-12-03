@@ -2,9 +2,13 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Fix low-level API example in the README
+
 ## v0.4.0 (2024-11-26)
 
-- BREAKING: Change new low-level API `createRequest(req, options)` to `createRequest(req, res, options)` so the abort signal fires on the `res`'s "end" event instead of `req`
+- BREAKING: Change `createRequest` signature to `createRequest(req, res, options)` so the abort signal fires on the `res`'s "end" event instead of `req`
 
 ## v0.3.0 (2024-11-20)
 
