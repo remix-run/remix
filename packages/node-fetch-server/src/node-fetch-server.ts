@@ -4,5 +4,6 @@ export {
   createRequestListener,
   type RequestOptions,
   createRequest,
+  createHeaders,
   sendResponse,
 } from './lib/request-listener.js';

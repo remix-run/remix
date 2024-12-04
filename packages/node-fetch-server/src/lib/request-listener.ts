@@ -30,7 +30,10 @@ export interface RequestListenerOptions {
 
 /**
  * Wraps a fetch handler in a Node.js `http.RequestListener` that can be used with
- * `http.createServer()` or `https.createServer()`.
+ * [`http.createServer()`](https://nodejs.org/api/http.html#httpcreateserveroptions-requestlistener) or
+ * [`https.createServer()`](https://nodejs.org/api/https.html#httpscreateserveroptions-requestlistener).
+ *
+ * Example:
  *
  * ```ts
  * import * as http from 'node:http';
@@ -48,8 +51,8 @@ export interface RequestListenerOptions {
  * ```
  *
  * @param handler The fetch handler to use for processing incoming requests.
- * @param options Configuration options.
- * @returns A Node.js `http.RequestListener` that can be used with `http.createServer()` or `https.createServer()`.
+ * @param options Request listener options.
+ * @returns A Node.js request listener function.
  */
 export function createRequestListener(
   handler: FetchHandler,
@@ -105,11 +108,14 @@ function internalServerError(): Response {
 export type RequestOptions = Omit<RequestListenerOptions, 'onError'>;
 
 /**
- * Creates a `Request` object from an incoming Node.js request object.
+ * Creates a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) object from a Node.js
+ * [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage) and
+ * [`http.ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse) pair.
+ *
  * @param req The incoming request object.
  * @param res The server response object.
  * @param options
- * @returns A `Request` object.
+ * @returns A request object.
  */
 export function createRequest(
   req: http.IncomingMessage,
@@ -122,11 +128,11 @@ export function createRequest(
   });
 
   let method = req.method ?? 'GET';
-  let headers = createHeaders(req.rawHeaders);
+  let headers = createHeaders(req);
 
   let protocol =
     options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:');
-  let host = options?.host ?? headers.get('host') ?? 'localhost';
+  let host = options?.host ?? headers.get('Host') ?? 'localhost';
   let url = new URL(req.url!, `${protocol}//${host}`);
 
   let init: RequestInit = { method, headers, signal: controller.signal };
@@ -153,9 +159,17 @@ export function createRequest(
   return new Request(url, init);
 }
 
-function createHeaders(rawHeaders: string[]): Headers {
+/**
+ * Creates a [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) object from the headers
+ * in a Node.js [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage).
+ *
+ * @param req The incoming request object.
+ * @returns A headers object.
+ */
+export function createHeaders(req: http.IncomingMessage): Headers {
   let headers = new Headers();
 
+  let rawHeaders = req.rawHeaders;
   for (let i = 0; i < rawHeaders.length; i += 2) {
     headers.append(rawHeaders[i], rawHeaders[i + 1]);
   }
@@ -164,7 +178,9 @@ function createHeaders(rawHeaders: string[]): Headers {
 }
 
 /**
- * Sends a `Response` to the client using the Node.js response object.
+ * Sends a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) to the client using the
+ * Node.js [`http.ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse) object.
+ *
  * @param res The server response object.
  * @param response The response to send.
  */
