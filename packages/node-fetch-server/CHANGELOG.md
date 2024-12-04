@@ -2,6 +2,10 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Expose `createHeaders(req: http.IncomingMessage): Headers` API for creating headers from the headers of incoming request objects.
+
 ## v0.4.1 (2024-12-04)
 
 - Fix low-level API example in the README
@@ -12,7 +16,7 @@ This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remi
 
 ## v0.3.0 (2024-11-20)
 
-- Added low-level `createRequest(req, options)` and `sendResponse(res, response)` exports to assist with building custom fetch servers
+- Added `createRequest(req: http.IncomingMessage, options): Request` and `sendResponse(res: http.ServerResponse, response: Response): Promise<void>` exports to assist with building custom fetch servers
 
 ## v0.2.0 (2024-11-14)
 
