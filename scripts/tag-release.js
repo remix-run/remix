@@ -42,7 +42,7 @@ if (fileExists(jsrJsonFile)) {
 
 // 3) Swap out "## HEAD" in CHANGELOG.md with the new release version + date
 let changelogFile = getPackageFile(packageName, 'CHANGELOG.md');
-let changelog = readFile(packageName);
+let changelog = readFile(changelogFile);
 let match = /^## HEAD\n/m.exec(changelog);
 if (match) {
   let [today] = new Date().toISOString().split('T');
