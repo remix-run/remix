@@ -2,7 +2,7 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.4.1 (2024-12-04)
 
 - Fix low-level API example in the README
 
