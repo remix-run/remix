@@ -13,10 +13,6 @@ if (packageName === undefined || releaseType === undefined) {
   process.exit(1);
 }
 
-if (packageName.startsWith('@mjackson/')) {
-  packageName = packageName.slice('@mjackson/'.length);
-}
-
 let packageJsonFile = getPackageFile(packageName, 'package.json');
 let packageJson = readJson(packageJsonFile);
 let nextVersion = getNextVersion(packageJson.version, releaseType);

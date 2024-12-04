@@ -16,10 +16,6 @@ if (packageName === undefined || (!packageName.includes('@') && version === unde
   process.exit(1);
 }
 
-if (packageName.startsWith('@mjackson/')) {
-  packageName = packageName.slice('@mjackson/'.length);
-}
-
 if (packageName.includes('@')) {
   let split = packageName.split('@');
   packageName = split[0];
