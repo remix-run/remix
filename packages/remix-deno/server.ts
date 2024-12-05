@@ -11,6 +11,26 @@ function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
   }
 }
 
+type UnixAddr = {
+  transport: "unix" | "unixpacket";
+  path: string;
+};
+
+type NetAddr = {
+  transport: "tcp" | "udp";
+  hostname: string;
+  port: number;
+};
+
+type ServeUnixHandlerInfo = {
+  remoteAddr: UnixAddr;
+};
+
+type ServeHandlerInfo = {
+  remoteAddr: NetAddr;
+  completed: Promise<void>;
+};
+
 export function createRequestHandler<
   Context extends AppLoadContext | undefined = undefined,
 >({
@@ -20,13 +40,19 @@ export function createRequestHandler<
 }: {
   build: ServerBuild;
   mode?: string;
-  getLoadContext?: (request: Request) => Promise<Context> | Context;
+  getLoadContext?: (
+    request: Request,
+    info: ServeHandlerInfo | ServeUnixHandlerInfo
+  ) => Promise<Context> | Context;
 }) {
   const handleRequest = createRemixRequestHandler(build, mode);
 
-  return async (request: Request) => {
+  return async (
+    request: Request,
+    info: ServeHandlerInfo | ServeUnixHandlerInfo
+  ) => {
     try {
-      const loadContext = await getLoadContext?.(request);
+      const loadContext = await getLoadContext?.(request, info);
 
       return handleRequest(request, loadContext);
     } catch (error: unknown) {
@@ -96,7 +122,10 @@ export function createRequestHandlerWithStaticFiles<
 }: {
   build: ServerBuild;
   mode?: string;
-  getLoadContext?: (request: Request) => Promise<Context> | Context;
+  getLoadContext?: (
+    request: Request,
+    info: ServeHandlerInfo | ServeUnixHandlerInfo
+  ) => Promise<Context> | Context;
   staticFiles?: {
     cacheControl?: string | ((url: URL) => string);
     publicDir?: string;
@@ -105,7 +134,10 @@ export function createRequestHandlerWithStaticFiles<
 }) {
   const remixHandler = createRequestHandler({ build, mode, getLoadContext });
 
-  return async (request: Request) => {
+  return async (
+    request: Request,
+    info: ServeHandlerInfo | ServeUnixHandlerInfo
+  ) => {
     try {
       return await serveStaticFiles(request, staticFiles);
     } catch (error: unknown) {
@@ -114,6 +146,6 @@ export function createRequestHandlerWithStaticFiles<
       }
     }
 
-    return remixHandler(request);
+    return remixHandler(request, info);
   };
 }
