@@ -41,7 +41,8 @@
   },
   "devDependencies": {
     "@mjackson/lazy-file": "workspace:^",
-    "@types/node": "^20.14.10"
+    "@types/node": "^20.14.10",
+    "tsup": "^8.3.5"
   },
   "scripts": {
     "bench": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./bench/runner.ts",
