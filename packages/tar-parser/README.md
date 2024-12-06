@@ -20,6 +20,8 @@ npm install @mjackson/tar-parser
 
 ## Usage
 
+The main parser interface is the `parseTar(archive, handler)` function:
+
 ```ts
 import { parseTar } from '@mjackson/tar-parser';
 
@@ -32,9 +34,19 @@ await parseTar(response.body.pipeThrough(new DecompressionStream('gzip')), (entr
 });
 ```
 
+If you're parsing an archive with filename encodings other than UTF-8, use the `filenameEncoding` option:
+
+```ts
+let response = await fetch(/* ... */);
+
+await parseTar(response.body, { filenameEncoding: 'latin1' }, (entry) => {
+  console.log(entry.name, entry.size);
+});
+```
+
 ## Benchmark
 
-`tar-parser` performs on par with other popular TAR parsing libraries on Node.js.
+`tar-parser` performs on par with other popular tar parsing libraries on Node.js.
 
 ```
 > @mjackson/tar-parser@0.0.0 bench /Users/michael/Projects/remix-the-web/packages/tar-parser
