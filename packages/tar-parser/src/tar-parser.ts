@@ -3,7 +3,9 @@ export {
   type TarHeader,
   type ParseTarHeaderOptions,
   parseTarHeader,
+  type ParseTarOptions,
+  parseTar,
   type TarParserOptions,
   TarParser,
   TarEntry,
-} from './lib/tar.js';
+} from './lib/tar.ts';

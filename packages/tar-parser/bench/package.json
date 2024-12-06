@@ -6,10 +6,12 @@
     "@mjackson/lazy-file": "workspace:*",
     "@mjackson/tar-parser": "workspace:*",
     "gunzip-maybe": "^1.4.2",
+    "tar": "^7.4.3",
     "tar-stream": "^3.1.7"
   },
   "devDependencies": {
     "@types/gunzip-maybe": "^1.4.2",
+    "@types/tar": "^6.1.13",
     "@types/tar-stream": "^3.1.3"
   }
 }

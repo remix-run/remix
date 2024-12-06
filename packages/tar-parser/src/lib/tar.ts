@@ -7,7 +7,7 @@ import {
   getOctal,
   getString,
   overflow,
-} from './utils.js';
+} from './utils.ts';
 
 const TarBlockSize = 512;
 
@@ -71,8 +71,9 @@ export interface ParseTarHeaderOptions {
 
 /**
  * Parses a tar header block.
+ *
  * @param block The tar header block
- * @param options
+ * @param options Options that control how the header is parsed
  * @returns The parsed tar header
  */
 export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOptions): TarHeader {
@@ -143,6 +144,56 @@ export function parseTarHeader(block: Uint8Array, options?: ParseTarHeaderOption
   return header;
 }
 
+type TarArchiveSource =
+  | ReadableStream<Uint8Array>
+  | Uint8Array
+  | Iterable<Uint8Array>
+  | AsyncIterable<Uint8Array>;
+
+export type ParseTarOptions = ParseTarHeaderOptions;
+
+/**
+ * Parses a tar archive and calls the given handler for each entry it contains.
+ *
+ * Example:
+ *
+ * ```ts
+ * import { parseTar } from '@mjackson/tar-parser';
+ *
+ * await parseTar(archive, (entry) => {
+ *  console.log(entry.name);
+ * });
+ * ```
+ *
+ * @param archive The tar archive source data
+ * @param handler A function to call for each entry in the archive
+ * @returns A promise that resolves when the parse is finished
+ */
+export async function parseTar(
+  archive: TarArchiveSource,
+  handler: (entry: TarEntry) => void,
+): Promise<void>;
+export async function parseTar(
+  archive: TarArchiveSource,
+  options: ParseTarOptions,
+  handler: (entry: TarEntry) => void,
+): Promise<void>;
+export async function parseTar(
+  archive: TarArchiveSource,
+  options: ParseTarOptions | ((entry: TarEntry) => void),
+  handler?: (entry: TarEntry) => void,
+): Promise<void> {
+  let opts: ParseTarOptions | undefined;
+  if (typeof options === 'function') {
+    handler = options;
+  } else {
+    opts = options;
+  }
+
+  let parser = new TarParser(opts);
+  await parser.parse(archive, handler!);
+}
+
 export type TarParserOptions = ParseTarHeaderOptions;
 
 /**
@@ -161,6 +212,9 @@ export class TarParser {
 
   #options?: TarParserOptions;
 
+  /**
+   * @param options Options that control how the tar archive is parsed
+   */
   constructor(options?: TarParserOptions) {
     this.#options = options;
   }
@@ -168,15 +222,12 @@ export class TarParser {
   /**
    * Parse a stream/buffer tar archive and call the given handler for each entry it contains.
    * Resolves when the parse is finished and all handlers resolve.
+   *
+   * @param archive The tar archive source data
+   * @param handler A function to call for each entry in the archive
+   * @returns A promise that resolves when the parse is finished
    */
-  async parse(
-    archive:
-      | ReadableStream<Uint8Array>
-      | Uint8Array
-      | Iterable<Uint8Array>
-      | AsyncIterable<Uint8Array>,
-    handler: (entry: TarEntry) => void,
-  ): Promise<void> {
+  async parse(archive: TarArchiveSource, handler: (entry: TarEntry) => void): Promise<void> {
     this.#reset();
 
     let results: unknown[] = [];
@@ -375,13 +426,17 @@ export class TarEntry {
   #body: ReadableStream<Uint8Array>;
   #bodyUsed = false;
 
+  /**
+   * @param header The header info for this entry
+   * @param body The entry's content as a stream of `Uint8Array` chunks
+   */
   constructor(header: TarHeader, body: ReadableStream<Uint8Array>) {
     this.#header = header;
     this.#body = body;
   }
 
   /**
-   * The content of this entry as an `ArrayBuffer`.
+   * The content of this entry as an [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer).
    */
   async arrayBuffer(): Promise<ArrayBuffer> {
     return (await this.bytes()).buffer as ArrayBuffer;
@@ -402,7 +457,7 @@ export class TarEntry {
   }
 
   /**
-   * The content of this entry buffered into a single `Uint8Array`.
+   * The content of this entry buffered into a single typed array.
    */
   async bytes(): Promise<Uint8Array> {
     if (this.#bodyUsed) {

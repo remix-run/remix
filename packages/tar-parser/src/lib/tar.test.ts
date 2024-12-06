@@ -1,9 +1,9 @@
-import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 
-import { fixtures, readFixture } from '../../test/utils.js';
+import { fixtures, readFixture } from '../../test/utils.ts';
 
-import { TarHeader, TarParser } from './tar.js';
+import { type TarHeader, parseTar } from './tar.ts';
 
 async function bufferStream(
   stream: ReadableStream<Uint8Array>,
@@ -23,10 +23,8 @@ async function bufferStream(
 
 describe('TarParser', () => {
   it('parses express-4.21.1.tgz', async () => {
-    let parser = new TarParser();
-
     let entries: [string, number][] = [];
-    await parser.parse(readFixture(fixtures.expressNpmPackage), (entry) => {
+    await parseTar(readFixture(fixtures.expressNpmPackage), (entry) => {
       entries.push([entry.name, entry.size]);
     });
 
@@ -51,10 +49,8 @@ describe('TarParser', () => {
   });
 
   it('parses fetch-proxy-0.1.0.tar.gz', async () => {
-    let parser = new TarParser();
-
     let entries: [string, number][] = [];
-    await parser.parse(readFixture(fixtures.fetchProxyGithubArchive), (entry) => {
+    await parseTar(readFixture(fixtures.fetchProxyGithubArchive), (entry) => {
       entries.push([entry.name, entry.size]);
     });
 
@@ -62,10 +58,8 @@ describe('TarParser', () => {
   });
 
   it('parses lodash-4.17.21.tgz', async () => {
-    let parser = new TarParser();
-
     let entries: [string, number][] = [];
-    await parser.parse(readFixture(fixtures.lodashNpmPackage), (entry) => {
+    await parseTar(readFixture(fixtures.lodashNpmPackage), (entry) => {
       entries.push([entry.name, entry.size]);
     });
 
@@ -75,10 +69,8 @@ describe('TarParser', () => {
 
 describe('tar-stream test cases', () => {
   it('parses one-file.tar', async () => {
-    let parser = new TarParser();
-
     let entries: [TarHeader, string][] = [];
-    await parser.parse(readFixture(fixtures.oneFile), async (entry) => {
+    await parseTar(readFixture(fixtures.oneFile), async (entry) => {
       entries.push([entry.header, await bufferStream(entry.body)]);
     });
 
@@ -105,10 +97,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses multi-file.tar', async () => {
-    let parser = new TarParser();
-
     let entries: [TarHeader, string][] = [];
-    await parser.parse(readFixture(fixtures.multiFile), async (entry) => {
+    await parseTar(readFixture(fixtures.multiFile), async (entry) => {
       entries.push([entry.header, await bufferStream(entry.body)]);
     });
 
@@ -153,10 +143,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses pax.tar', async () => {
-    let parser = new TarParser();
-
     let entries: [TarHeader, string][] = [];
-    await parser.parse(readFixture(fixtures.pax), async (entry) => {
+    await parseTar(readFixture(fixtures.pax), async (entry) => {
       entries.push([entry.header, await bufferStream(entry.body)]);
     });
 
@@ -186,10 +174,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses types.tar', async () => {
-    let parser = new TarParser();
-
     let headers: TarHeader[] = [];
-    await parser.parse(readFixture(fixtures.types), async (entry) => {
+    await parseTar(readFixture(fixtures.types), async (entry) => {
       headers.push(entry.header);
     });
 
@@ -228,10 +214,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses long-name.tar', async () => {
-    let parser = new TarParser();
-
     let entries: [TarHeader, string][] = [];
-    await parser.parse(readFixture(fixtures.longName), async (entry) => {
+    await parseTar(readFixture(fixtures.longName), async (entry) => {
       entries.push([entry.header, await bufferStream(entry.body)]);
     });
 
@@ -258,10 +242,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses unicode-bsd.tar', async () => {
-    let parser = new TarParser();
-
     let headers: TarHeader[] = [];
-    await parser.parse(readFixture(fixtures.unicodeBsd), async (entry) => {
+    await parseTar(readFixture(fixtures.unicodeBsd), async (entry) => {
       headers.push(entry.header);
     });
 
@@ -292,10 +274,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses unicode.tar', async () => {
-    let parser = new TarParser();
-
     let headers: TarHeader[] = [];
-    await parser.parse(readFixture(fixtures.unicode), async (entry) => {
+    await parseTar(readFixture(fixtures.unicode), async (entry) => {
       headers.push(entry.header);
     });
 
@@ -319,10 +299,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses name-is-100.tar', async () => {
-    let parser = new TarParser();
-
     let entries: [number, string][] = [];
-    await parser.parse(readFixture(fixtures.nameIs100), async (entry) => {
+    await parseTar(readFixture(fixtures.nameIs100), async (entry) => {
       entries.push([entry.header.name.length, await bufferStream(entry.body)]);
     });
 
@@ -330,10 +308,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses space.tar', async () => {
-    let parser = new TarParser();
-
     let entries: [TarHeader, string][] = [];
-    await parser.parse(readFixture(fixtures.space), async (entry) => {
+    await parseTar(readFixture(fixtures.space), async (entry) => {
       entries.push([entry.header, await bufferStream(entry.body)]);
     });
 
@@ -341,10 +317,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses gnu-long-path.tar', async () => {
-    let parser = new TarParser();
-
     let entries: [TarHeader, string][] = [];
-    await parser.parse(readFixture(fixtures.gnuLongPath), async (entry) => {
+    await parseTar(readFixture(fixtures.gnuLongPath), async (entry) => {
       entries.push([entry.header, await bufferStream(entry.body)]);
     });
 
@@ -352,10 +326,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses base-256-uid-gid.tar', async () => {
-    let parser = new TarParser();
-
     let headers: TarHeader[] = [];
-    await parser.parse(readFixture(fixtures.base256UidGid), async (entry) => {
+    await parseTar(readFixture(fixtures.base256UidGid), async (entry) => {
       headers.push(entry.header);
     });
 
@@ -365,10 +337,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses base-256-size.tar', async () => {
-    let parser = new TarParser();
-
     let headers: TarHeader[] = [];
-    await parser.parse(readFixture(fixtures.base256Size), async (entry) => {
+    await parseTar(readFixture(fixtures.base256Size), async (entry) => {
       headers.push(entry.header);
     });
 
@@ -392,10 +362,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses latin1.tar', async () => {
-    let parser = new TarParser({ filenameEncoding: 'latin1' });
-
     let entries: [TarHeader, string][] = [];
-    await parser.parse(readFixture(fixtures.latin1), async (entry) => {
+    await parseTar(readFixture(fixtures.latin1), { filenameEncoding: 'latin1' }, async (entry) => {
       entries.push([entry.header, await bufferStream(entry.body)]);
     });
 
@@ -422,11 +390,9 @@ describe('tar-stream test cases', () => {
   });
 
   it('throws when parsing incomplete.tar', async () => {
-    let parser = new TarParser();
-
     await assert.rejects(
       async () => {
-        await parser.parse(readFixture(fixtures.incomplete), () => {});
+        await parseTar(readFixture(fixtures.incomplete), () => {});
       },
       {
         name: 'TarParseError',
@@ -436,10 +402,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses gnu.tar', async () => {
-    let parser = new TarParser();
-
     let entries: [TarHeader, string][] = [];
-    await parser.parse(readFixture(fixtures.gnu), async (entry) => {
+    await parseTar(readFixture(fixtures.gnu), async (entry) => {
       entries.push([entry.header, await bufferStream(entry.body)]);
     });
 
@@ -466,10 +430,8 @@ describe('tar-stream test cases', () => {
   });
 
   it('parses gnu-incremental.tar', async () => {
-    let parser = new TarParser();
-
     let entries: [TarHeader, string][] = [];
-    await parser.parse(readFixture(fixtures.gnuIncremental), async (entry) => {
+    await parseTar(readFixture(fixtures.gnuIncremental), async (entry) => {
       entries.push([entry.header, await bufferStream(entry.body)]);
     });
 
