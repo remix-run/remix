@@ -1,4 +1,4 @@
-import { TarParser } from '@mjackson/tar-parser';
+import { parseTar } from '@mjackson/tar-parser';
 import { openFile } from '@mjackson/lazy-file/fs';
 
 export async function parse(filename: string): Promise<number> {
@@ -6,7 +6,7 @@ export async function parse(filename: string): Promise<number> {
 
   let start = performance.now();
 
-  await new TarParser().parse(stream, (_file) => {
+  await parseTar(stream, (_entry) => {
     // Do nothing
   });
 

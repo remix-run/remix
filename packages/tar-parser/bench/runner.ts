@@ -1,10 +1,11 @@
 import * as os from 'node:os';
 import * as process from 'node:process';
 
-import { fixtures } from '../test/utils.js';
+import { fixtures } from '../test/utils.ts';
 
-import * as tarParser from './parsers/tar-parser.js';
-import * as tarStream from './parsers/tar-stream.js';
+import * as nodeTar from './parsers/node-tar.ts';
+import * as tarParser from './parsers/tar-parser.ts';
+import * as tarStream from './parsers/tar-stream.ts';
 
 const benchmarks = [{ name: 'lodash npm package', filename: fixtures.lodashNpmPackage }];
 
@@ -51,6 +52,9 @@ async function runBenchmarks(parserName?: string): Promise<BenchmarkResults> {
   }
   if (parserName === 'tar-stream' || parserName === undefined) {
     results['tar-stream'] = await runParserBenchmarks(tarStream);
+  }
+  if (parserName === 'node-tar' || parserName === undefined) {
+    results['node-tar'] = await runParserBenchmarks(nodeTar);
   }
 
   return results;
