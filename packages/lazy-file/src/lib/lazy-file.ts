@@ -30,8 +30,9 @@ export interface LazyBlobOptions {
 }
 
 /**
- * A `Blob` that may be backed by a stream of data. This is useful for working with large blobs that
- * would be impractical to load into memory all at once.
+ * A [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) that may be backed by a stream
+ * of data. This is useful for working with large blobs that would be impractical to load into
+ * memory all at once.
  *
  * This class is an extension of JavaScript's built-in `Blob` class with the following additions:
  *
@@ -52,7 +53,7 @@ export class LazyBlob extends Blob {
   }
 
   /**
-   * Returns the blob's contents as an `ArrayBuffer`.
+   * Returns the blob's contents as an [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer).
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/arrayBuffer)
    */
@@ -79,7 +80,7 @@ export class LazyBlob extends Blob {
   }
 
   /**
-   * Returns a new `Blob` that contains the data in the specified range.
+   * Returns a new [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) that contains the data in the specified range.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
    */
@@ -116,8 +117,9 @@ export interface LazyFileOptions extends LazyBlobOptions {
 }
 
 /**
- * A `File` that may be backed by a stream of data. This is useful for working with large files that
- * would be impractical to load into memory all at once.
+ * A [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) that may be backed by a stream
+ * of data. This is useful for working with large files that would be impractical to load into
+ * memory all at once.
  *
  * This class is an extension of JavaScript's built-in `File` class with the following additions:
  *
@@ -138,7 +140,7 @@ export class LazyFile extends File {
   }
 
   /**
-   * Returns the file's content as an `ArrayBuffer`.
+   * Returns the file's content as an [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer).
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/arrayBuffer)
    */
@@ -165,7 +167,7 @@ export class LazyFile extends File {
   }
 
   /**
-   * Returns a new `Blob` that contains the data in the specified range.
+   * Returns a new [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) that contains the data in the specified range.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice)
    */
