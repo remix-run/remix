@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
-import busboy from '@fastify/busboy';
+import * as busboy from '@fastify/busboy';
 
-import { MultipartMessage } from '../messages.js';
+import { MultipartMessage } from '../messages.ts';
 
 export function parse(message: MultipartMessage): Promise<number> {
   let stream = new Readable({

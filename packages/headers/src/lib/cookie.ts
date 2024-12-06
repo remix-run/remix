@@ -1,6 +1,6 @@
-import { HeaderValue } from './header-value.js';
-import { parseParams, quote } from './param-values.js';
-import { isIterable } from './utils.js';
+import { type HeaderValue } from './header-value.ts';
+import { parseParams, quote } from './param-values.ts';
+import { isIterable } from './utils.ts';
 
 export type CookieInit = Iterable<[string, string]> | Record<string, string>;
 

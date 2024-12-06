@@ -1,11 +1,11 @@
 import * as os from 'node:os';
 import * as process from 'node:process';
 
-import * as messages from './messages.js';
-import * as busboy from './parsers/busboy.js';
-import * as fastifyBusboy from './parsers/fastify-busboy.js';
-import * as multipartParser from './parsers/multipart-parser.js';
-import * as multipasta from './parsers/multipasta.js';
+import * as messages from './messages.ts';
+import * as busboy from './parsers/busboy.ts';
+import * as fastifyBusboy from './parsers/fastify-busboy.ts';
+import * as multipartParser from './parsers/multipart-parser.ts';
+import * as multipasta from './parsers/multipasta.ts';
 
 const benchmarks = [
   { name: '1 small file', message: messages.oneSmallFile },

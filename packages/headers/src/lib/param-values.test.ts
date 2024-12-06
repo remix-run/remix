@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseParams } from './param-values.js';
+import { parseParams } from './param-values.ts';
 
 describe('parseParams', () => {
   it('correctly parses a string of parameters for a Content-Type header', () => {

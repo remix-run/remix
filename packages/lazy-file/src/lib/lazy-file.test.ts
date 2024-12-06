@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { LazyContent, LazyFile } from './lazy-file.js';
+import { type LazyContent, LazyFile } from './lazy-file.ts';
 
 function createLazyContent(value = ''): LazyContent {
   let buffer = new TextEncoder().encode(value);

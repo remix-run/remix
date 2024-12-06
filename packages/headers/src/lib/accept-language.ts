@@ -1,6 +1,6 @@
-import { HeaderValue } from './header-value.js';
-import { parseParams } from './param-values.js';
-import { isIterable } from './utils.js';
+import { type HeaderValue } from './header-value.ts';
+import { parseParams } from './param-values.ts';
+import { isIterable } from './utils.ts';
 
 export type AcceptLanguageInit =
   | Iterable<string | [string] | [string, number | undefined]>

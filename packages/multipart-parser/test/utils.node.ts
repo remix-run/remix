@@ -1,12 +1,12 @@
-import * as http from 'node:http';
-import * as stream from 'node:stream';
+import type * as http from 'node:http';
+import { Readable } from 'node:stream';
 
-import { PartValue, createMultipartBody } from './utils.js';
+import { type PartValue, createMultipartBody } from './utils.ts';
 
-export function createReadable(content: Uint8Array, chunkSize = 16 * 1024): stream.Readable {
+export function createReadable(content: Uint8Array, chunkSize = 16 * 1024): Readable {
   let i = 0;
 
-  return new stream.Readable({
+  return new Readable({
     read() {
       if (i < content.length) {
         this.push(content.subarray(i, i + chunkSize));

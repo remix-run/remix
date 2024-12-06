@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { ContentType } from './content-type.js';
+import { ContentType } from './content-type.ts';
 
 describe('ContentType', () => {
   it('initializes with an empty string', () => {

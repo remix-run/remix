@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { ByteRange, getByteLength, getIndexes } from './byte-range.js';
+import { type ByteRange, getByteLength, getIndexes } from './byte-range.ts';
 
 describe('getByteLength', () => {
   it('returns the correct length', () => {

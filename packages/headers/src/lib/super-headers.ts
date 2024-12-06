@@ -1,12 +1,12 @@
-import { AcceptLanguageInit, AcceptLanguage } from './accept-language.js';
-import { CacheControlInit, CacheControl } from './cache-control.js';
-import { ContentDispositionInit, ContentDisposition } from './content-disposition.js';
-import { ContentTypeInit, ContentType } from './content-type.js';
-import { CookieInit, Cookie } from './cookie.js';
-import { canonicalHeaderName } from './header-names.js';
-import { HeaderValue } from './header-value.js';
-import { SetCookieInit, SetCookie } from './set-cookie.js';
-import { isIterable, isValidDate } from './utils.js';
+import { type AcceptLanguageInit, AcceptLanguage } from './accept-language.ts';
+import { type CacheControlInit, CacheControl } from './cache-control.ts';
+import { type ContentDispositionInit, ContentDisposition } from './content-disposition.ts';
+import { type ContentTypeInit, ContentType } from './content-type.ts';
+import { type CookieInit, Cookie } from './cookie.ts';
+import { canonicalHeaderName } from './header-names.ts';
+import { type HeaderValue } from './header-value.ts';
+import { type SetCookieInit, SetCookie } from './set-cookie.ts';
+import { isIterable, isValidDate } from './utils.ts';
 
 const CRLF = '\r\n';
 const SetCookieKey = 'set-cookie';

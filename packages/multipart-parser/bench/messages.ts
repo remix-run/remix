@@ -1,4 +1,4 @@
-import { concat, getRandomBytes } from './utils.js';
+import { concat, getRandomBytes } from './utils.ts';
 
 const NodeDefaultHighWaterMark = 65536;
 

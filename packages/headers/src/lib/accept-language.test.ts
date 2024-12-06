@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { AcceptLanguage } from './accept-language.js';
+import { AcceptLanguage } from './accept-language.ts';
 
 describe('Accept-Language', () => {
   it('initializes with an empty string', () => {

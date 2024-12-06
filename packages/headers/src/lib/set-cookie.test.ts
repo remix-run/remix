@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { SetCookie } from './set-cookie.js';
+import { SetCookie } from './set-cookie.ts';
 
 describe('SetCookie', () => {
   it('initializes with an empty string', () => {

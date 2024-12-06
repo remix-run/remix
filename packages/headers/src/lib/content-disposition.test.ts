@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { ContentDisposition } from './content-disposition.js';
+import { ContentDisposition } from './content-disposition.ts';
 
 describe('ContentDisposition', () => {
   it('initializes with an empty string', () => {

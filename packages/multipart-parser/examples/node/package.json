@@ -9,7 +9,7 @@
   "devDependencies": {
     "@types/node": "^20.14.10",
     "@types/tmp": "^0.2.6",
-    "typescript": "^5.6.3"
+    "typescript": "^5.7.2"
   },
   "scripts": {
     "start": "node server.js"

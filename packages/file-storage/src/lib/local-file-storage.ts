@@ -3,7 +3,7 @@ import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import { openFile, writeFile } from '@mjackson/lazy-file/fs';
 
-import { FileStorage } from './file-storage.js';
+import { type FileStorage } from './file-storage.ts';
 
 /**
  * A `FileStorage` that is backed by the local filesystem.

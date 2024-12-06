@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { canonicalHeaderName } from './header-names.js';
+import { canonicalHeaderName } from './header-names.ts';
 
 describe('normalizeHeaderName', () => {
   it('handles common headers correctly', () => {

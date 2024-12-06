@@ -1,13 +1,13 @@
-import * as http from 'node:http';
+import type * as http from 'node:http';
 import { Readable } from 'node:stream';
 
 import {
   getMultipartBoundary,
   parseMultipart as parseMultipartWeb,
   MultipartParseError,
-  MultipartParserOptions,
+  type MultipartParserOptions,
   MultipartPart,
-} from './multipart.js';
+} from './multipart.ts';
 
 /**
  * Returns true if the given request is a multipart request.
@@ -18,7 +18,7 @@ export function isMultipartRequest(request: http.IncomingMessage): boolean {
 }
 
 /**
- * Parse a multipart node.js request and yield each part as a `MultipartPart` object.
+ * Parse a multipart Node.js request and yield each part as a `MultipartPart` object.
  */
 export async function* parseMultipartRequest(
   request: http.IncomingMessage,
@@ -50,6 +50,10 @@ export async function* parseMultipart(
   if (data instanceof Readable) {
     yield* parseMultipartWeb(Readable.toWeb(data), boundary, options);
   } else {
-    yield* parseMultipartWeb(data, boundary, options);
+    yield* parseMultipartWeb(
+      data as Uint8Array | Iterable<Uint8Array> | AsyncIterable<Uint8Array>,
+      boundary,
+      options,
+    );
   }
 }

@@ -1,5 +1,5 @@
-import { HeaderValue } from './header-value.js';
-import { parseParams, quote } from './param-values.js';
+import { type HeaderValue } from './header-value.ts';
+import { parseParams, quote } from './param-values.ts';
 
 export interface ContentTypeInit {
   /**

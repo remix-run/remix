@@ -1,6 +1,6 @@
 import { MultipartParser } from '@mjackson/multipart-parser';
 
-import { MultipartMessage } from '../messages.js';
+import { MultipartMessage } from '../messages.ts';
 
 export async function parse(message: MultipartMessage): Promise<number> {
   let start = performance.now();

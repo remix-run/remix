@@ -1,7 +1,7 @@
 import {
   isMultipartRequest,
   parseMultipartRequest,
-  MultipartParserOptions,
+  type MultipartParserOptions,
   MultipartPart,
 } from '@mjackson/multipart-parser';
 

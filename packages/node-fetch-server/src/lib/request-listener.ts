@@ -1,6 +1,6 @@
-import * as http from 'node:http';
+import type * as http from 'node:http';
 
-import { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.js';
+import { type ClientAddress, type ErrorHandler, type FetchHandler } from './fetch-handler.ts';
 
 export interface RequestListenerOptions {
   /**

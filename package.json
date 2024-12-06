@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "pnpm@9.9.0",
   "devDependencies": {
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "typescript": "^5.7.2"
   },
   "engines": {
     "node": ">=22"

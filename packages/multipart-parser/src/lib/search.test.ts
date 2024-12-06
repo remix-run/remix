@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createSearch, createPartialTailSearch } from './search.js';
+import { createSearch, createPartialTailSearch } from './search.ts';
 
 function buf(string: string): Uint8Array {
   return new TextEncoder().encode(string);

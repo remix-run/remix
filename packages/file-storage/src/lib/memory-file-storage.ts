@@ -1,4 +1,4 @@
-import { FileStorage } from './file-storage.js';
+import { type FileStorage } from './file-storage.ts';
 
 /**
  * A simple, in-memory implementation of the `FileStorage` interface.

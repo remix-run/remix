@@ -1,6 +1,6 @@
 import * as Multipasta from 'multipasta';
 
-import { MultipartMessage } from '../messages.js';
+import { MultipartMessage } from '../messages.ts';
 
 export function parse(message: MultipartMessage): Promise<number> {
   return new Promise((resolve, reject) => {
