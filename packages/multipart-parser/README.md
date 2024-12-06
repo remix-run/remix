@@ -32,7 +32,7 @@ deno add @mjackson/multipart-parser
 
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It will automatically validate the request is `multipart/form-data`, extract the multipart boundary from the `Content-Type` header, parse all fields and files in the `request.body` stream, and `yield` each one to you as a `MultipartPart` object so you can save it to disk or upload it somewhere.
 
-```typescript
+```ts
 import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
 
 async function handleMultipartRequest(request: Request): void {
@@ -62,7 +62,7 @@ The main module (`import from "@mjackson/multipart-parser"`) assumes you're work
 
 If however you're building a server for Node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
 
-```typescript
+```ts
 import * as http from 'node:http';
 
 import { MultipartParseError } from '@mjackson/multipart-parser';
@@ -94,7 +94,7 @@ server.listen(8080);
 
 If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a lower-level API that you can use directly:
 
-```typescript
+```ts
 import { parseMultipart } from '@mjackson/multipart-parser';
 
 // Get the multipart data from some API, filesystem, etc.
@@ -112,7 +112,7 @@ for await (let part of parseMultipart(multipartMessage, boundary)) {
 
 If you'd prefer a callback-based API, instantiate your own `MultipartParser` and go for it:
 
-```typescript
+```ts
 import { MultipartParseError, MultipartParser } from '@mjackson/multipart-parser';
 
 let multipartMessage = new Uint8Array(); // or ReadableStream<Uint8Array>, etc.

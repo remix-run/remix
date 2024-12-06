@@ -1,4 +1,4 @@
-import { ByteRange, getByteLength, getIndexes } from './byte-range.js';
+import { type ByteRange, getByteLength, getIndexes } from './byte-range.ts';
 
 /**
  * A streaming interface for blob/file content.

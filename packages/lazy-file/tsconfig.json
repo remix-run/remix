@@ -1,8 +1,12 @@
 {
   "compilerOptions": {
-    "lib": ["DOM", "ES2020"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true
+    "strict": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true
   }
 }

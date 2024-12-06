@@ -61,14 +61,12 @@
     "mrmime": "^2.0.0"
   },
   "devDependencies": {
-    "@swc-node/register": "^1.10.9",
     "@types/node": "^22.5.0",
-    "tsup": "^8.3.5",
-    "typescript": "^5.6.3"
+    "tsup": "^8.3.5"
   },
   "scripts": {
     "build": "tsup",
-    "test": "node --import @swc-node/register/esm-register --test ./src/**/*.spec.ts",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test ./src/**/*.test.ts",
     "prepare": "pnpm run build"
   },
   "keywords": [

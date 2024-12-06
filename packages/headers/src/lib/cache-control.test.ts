@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { CacheControl } from './cache-control.js';
+import { CacheControl } from './cache-control.ts';
 
 describe('CacheControl', () => {
   it('initializes with an empty string', () => {

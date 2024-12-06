@@ -3,7 +3,7 @@ import { after, describe, it } from 'node:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { LocalFileStorage } from './local-file-storage.js';
+import { LocalFileStorage } from './local-file-storage.ts';
 
 const __dirname = new URL('.', import.meta.url).pathname;
 

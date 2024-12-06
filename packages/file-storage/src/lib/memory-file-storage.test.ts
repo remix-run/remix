@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { MemoryFileStorage } from './memory-file-storage.js';
+import { MemoryFileStorage } from './memory-file-storage.ts';
 
 describe('MemoryFileStorage', () => {
   it('stores and retrieves files', async () => {

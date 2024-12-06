@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { FetchProxyOptions, createFetchProxy } from './fetch-proxy.js';
+import { type FetchProxyOptions, createFetchProxy } from './fetch-proxy.ts';
 
 async function runProxy(
   request: Request,

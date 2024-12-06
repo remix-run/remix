@@ -7,4 +7,4 @@ export {
   type MultipartParserOptions,
   MultipartParser,
   MultipartPart,
-} from './lib/multipart.js';
+} from './lib/multipart.ts';

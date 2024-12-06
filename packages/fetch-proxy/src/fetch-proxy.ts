@@ -1,1 +1,1 @@
-export { type FetchProxyOptions, type FetchProxy, createFetchProxy } from './lib/fetch-proxy.js';
+export { type FetchProxyOptions, type FetchProxy, createFetchProxy } from './lib/fetch-proxy.ts';

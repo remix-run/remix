@@ -1,11 +1,11 @@
 import Headers from '@mjackson/headers';
 
 import {
-  SearchFunction,
+  type SearchFunction,
   createSearch,
-  PartialTailSearchFunction,
+  type PartialTailSearchFunction,
   createPartialTailSearch,
-} from './search.js';
+} from './search.ts';
 
 /**
  * Extracts the boundary string from a `multipart/*` content type.
@@ -116,13 +116,11 @@ export interface MultipartParserOptions {
   maxFileSize?: number;
 }
 
-const enum MultipartParserState {
-  Start,
-  AfterBoundary,
-  Header,
-  Body,
-  Done,
-}
+const MultipartParserStateStart = 0;
+const MultipartParserStateAfterBoundary = 1;
+const MultipartParserStateHeader = 2;
+const MultipartParserStateBody = 3;
+const MultipartParserStateDone = 4;
 
 /**
  * A parser for `multipart/*` HTTP messages.
@@ -139,7 +137,7 @@ export class MultipartParser {
   #findPartialTailBoundary: PartialTailSearchFunction;
   #boundaryLength: number;
 
-  #state = MultipartParserState.Start;
+  #state = MultipartParserStateStart;
   #buffer: Uint8Array | null = null;
   #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null;
   #bodyLength = 0;
@@ -169,7 +167,7 @@ export class MultipartParser {
       | AsyncIterable<Uint8Array>,
     handler: (part: MultipartPart) => void,
   ): Promise<void> {
-    if (this.#state !== MultipartParserState.Start) {
+    if (this.#state !== MultipartParserStateStart) {
       this.#reset();
     }
 
@@ -193,7 +191,7 @@ export class MultipartParser {
       throw new TypeError('Cannot parse multipart message; expected a stream or buffer');
     }
 
-    if (this.#state !== MultipartParserState.Done) {
+    if (this.#state !== MultipartParserStateDone) {
       throw new MultipartParseError('Unexpected end of stream');
     }
 
@@ -201,14 +199,14 @@ export class MultipartParser {
   }
 
   #reset(): void {
-    this.#state = MultipartParserState.Start;
+    this.#state = MultipartParserStateStart;
     this.#buffer = null;
     this.#bodyController = null;
     this.#bodyLength = 0;
   }
 
   #write(chunk: Uint8Array, handler: (part: MultipartPart) => void): void {
-    if (this.#state === MultipartParserState.Done) {
+    if (this.#state === MultipartParserStateDone) {
       throw new MultipartParseError('Unexpected data after end of stream');
     }
 
@@ -225,7 +223,7 @@ export class MultipartParser {
     }
 
     while (true) {
-      if (this.#state === MultipartParserState.Body) {
+      if (this.#state === MultipartParserStateBody) {
         if (chunkLength - index < this.#boundaryLength) {
           this.#buffer = chunk.subarray(index);
           break;
@@ -252,26 +250,26 @@ export class MultipartParser {
 
         index = boundaryIndex + this.#boundaryLength;
 
-        this.#state = MultipartParserState.AfterBoundary;
+        this.#state = MultipartParserStateAfterBoundary;
       }
 
-      if (this.#state === MultipartParserState.AfterBoundary) {
+      if (this.#state === MultipartParserStateAfterBoundary) {
         if (chunkLength - index < 2) {
           this.#buffer = chunk.subarray(index);
           break;
         }
 
         if (chunk[index] === 45 && chunk[index + 1] === 45) {
-          this.#state = MultipartParserState.Done;
+          this.#state = MultipartParserStateDone;
           break;
         }
 
         index += 2; // Skip \r\n after boundary
 
-        this.#state = MultipartParserState.Header;
+        this.#state = MultipartParserStateHeader;
       }
 
-      if (this.#state === MultipartParserState.Header) {
+      if (this.#state === MultipartParserStateHeader) {
         if (chunkLength - index < 4) {
           this.#buffer = chunk.subarray(index);
           break;
@@ -310,12 +308,12 @@ export class MultipartParser {
 
         index = headerEndIndex + 4; // Skip header + \r\n\r\n
 
-        this.#state = MultipartParserState.Body;
+        this.#state = MultipartParserStateBody;
 
         continue;
       }
 
-      if (this.#state === MultipartParserState.Start) {
+      if (this.#state === MultipartParserStateStart) {
         if (chunkLength < this.#openingBoundaryLength) {
           this.#buffer = chunk;
           break;
@@ -327,7 +325,7 @@ export class MultipartParser {
 
         index = this.#openingBoundaryLength;
 
-        this.#state = MultipartParserState.AfterBoundary;
+        this.#state = MultipartParserStateAfterBoundary;
       }
     }
   }

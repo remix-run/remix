@@ -1,3 +1,10 @@
 {
-  "deno.enablePaths": ["./packages/multipart-parser/examples/deno"]
+  "deno.enablePaths": ["./packages/multipart-parser/examples/deno"],
+  "nodejs-testing.extensions": [
+    {
+      "extensions": ["ts"],
+      "parameters": ["--experimental-strip-types", "--disable-warning=ExperimentalWarning"]
+    }
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib"
 }
