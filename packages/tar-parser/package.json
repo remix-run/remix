@@ -1,6 +1,6 @@
 {
   "name": "@mjackson/tar-parser",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A fast, efficient parser for tar streams in any JavaScript environment",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
