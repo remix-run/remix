@@ -3,13 +3,6 @@
   "version": "0.7.1",
   "exports": "./src/multipart-parser.ts",
   "publish": {
-    "include": [
-      "LICENSE",
-      "README.md",
-      "src/**/*.ts",
-      "!src/test/",
-      "!src/**/*.spec.ts",
-      "!src/**/*.node.ts"
-    ]
+    "include": ["LICENSE", "README.md", "src/**/*.ts", "!src/**/*.node.ts", "!src/**/*.test.ts"]
   }
 }
