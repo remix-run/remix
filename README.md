@@ -21,12 +21,14 @@ The goal is that these packages should be useful for anyone who is building for 
 
 We currently publish the following packages:
 
+- [fetch-proxy](packages/fetch-proxy): Easily build HTTP proxies using the `fetch()` API
 - [file-storage](packages/file-storage): Key/value storage for JavaScript `File` objects
 - [form-data-parser](packages/form-data-parser): A `request.formData()` wrapper with streaming file upload handling
 - [headers](packages/headers): A toolkit for working with HTTP headers in JavaScript
 - [lazy-file](packages/lazy-file): Lazy, streaming `Blob`s and `File`s for JavaScript
-- [multipart-parser](packages/multipart-parser): Fast, efficient parser for multipart streams
-- [node-fetch-server](packages/node-fetch-server): Build HTTP servers for Node.js using the web fetch API
+- [multipart-parser](packages/multipart-parser): Fast, streaming parser for multipart messages
+- [node-fetch-server](packages/node-fetch-server): Build HTTP servers for Node.js using the web `fetch()` API
+- [tar-parser](packages/tar-parser): Fast, streaming parser for tar archives
 
 ## License
 
