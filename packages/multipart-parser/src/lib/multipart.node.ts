@@ -12,8 +12,8 @@ import {
 /**
  * Returns true if the given request is a multipart request.
  */
-export function isMultipartRequest(request: http.IncomingMessage): boolean {
-  let contentType = request.headers['content-type'];
+export function isMultipartRequest(req: http.IncomingMessage): boolean {
+  let contentType = req.headers['content-type'];
   return contentType != null && /^multipart\//i.test(contentType);
 }
 
@@ -21,19 +21,19 @@ export function isMultipartRequest(request: http.IncomingMessage): boolean {
  * Parse a multipart Node.js request and yield each part as a `MultipartPart` object.
  */
 export async function* parseMultipartRequest(
-  request: http.IncomingMessage,
+  req: http.IncomingMessage,
   options?: MultipartParserOptions,
 ): AsyncGenerator<MultipartPart> {
-  if (!isMultipartRequest(request)) {
+  if (!isMultipartRequest(req)) {
     throw new MultipartParseError('Request is not a multipart request');
   }
 
-  let boundary = getMultipartBoundary(request.headers['content-type']!);
+  let boundary = getMultipartBoundary(req.headers['content-type']!);
   if (!boundary) {
     throw new MultipartParseError('Invalid Content-Type header: missing boundary');
   }
 
-  yield* parseMultipart(request, boundary, options);
+  yield* parseMultipart(req, boundary, options);
 }
 
 /**
