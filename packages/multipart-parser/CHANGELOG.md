@@ -4,9 +4,9 @@ This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix
 
 ## v0.7.1 (2024-12-07)
 
-- Re-export everything from `multipart-parser/node` because we have a separate bundle for Node.js now, so everything should be imported from there when using it.
+- Re-export everything from `multipart-parser/node`. If you're using `multipart-parser/node`, you should `import` everything from there. Don't import anything from `multipart-parser`.
 
-## v0.7.0 (2024-11-14)
+- ## v0.7.0 (2024-11-14)
 
 - Added CommonJS build
 
