@@ -2,8 +2,7 @@ import * as fs from 'node:fs';
 import * as http from 'node:http';
 import tmp from 'tmp';
 
-import { MultipartParseError } from '@mjackson/multipart-parser';
-import { parseMultipartRequest } from '@mjackson/multipart-parser/node';
+import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser/node';
 
 const PORT = 3000;
 
