@@ -2,7 +2,7 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.7.1 (2024-12-07)
 
 - Re-export everything from `multipart-parser/node` because we have a separate bundle for Node.js now, so everything should be imported from there when using it.
 
