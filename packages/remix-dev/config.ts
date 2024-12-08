@@ -6,6 +6,7 @@ import colors from "picocolors";
 import fse from "fs-extra";
 import PackageJson from "@npmcli/package-json";
 import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
+import type { PluggableList } from "unified";
 
 import type * as ViteNode from "./vite/vite-node";
 import {
@@ -25,8 +26,8 @@ import { logger } from "./tux";
 import invariant from "./invariant";
 
 export interface RemixMdxConfig {
-  rehypePlugins?: any[];
-  remarkPlugins?: any[];
+  rehypePlugins?: PluggableList;
+  remarkPlugins?: PluggableList;
 }
 
 export type RemixMdxConfigFunction = (
