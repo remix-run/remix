@@ -169,14 +169,10 @@ describe('createRequestListener', () => {
       });
 
       mock.method(res, 'end', () => {
-        assert.deepEqual(headers, [
-          'content-type',
-          'text/plain',
-          'set-cookie',
-          'a=1',
-          'set-cookie',
-          'b=2',
-        ]);
+        assert.deepEqual(headers, {
+          'content-type': 'text/plain',
+          'set-cookie': ['a=1', 'b=2'],
+        });
         resolve();
       });
 
