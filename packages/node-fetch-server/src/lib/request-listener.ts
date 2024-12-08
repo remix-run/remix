@@ -188,9 +188,17 @@ export async function sendResponse(res: http.ServerResponse, response: Response)
   // Use the rawHeaders API and iterate over response.headers so we are sure to send multiple
   // Set-Cookie headers correctly. These would incorrectly be merged into a single header if we
   // tried to use `Object.fromEntries(response.headers.entries())`.
-  let rawHeaders: string[] = [];
+  let rawHeaders: Record<string, string | string[]> = {};
   for (let [key, value] of response.headers) {
-    rawHeaders.push(key, value);
+    if (key in rawHeaders) {
+      if (Array.isArray(rawHeaders[key])) {
+        rawHeaders[key].push(value);
+      } else {
+        rawHeaders[key] = [rawHeaders[key] as string, value];
+      }
+    } else {
+      rawHeaders[key] = value;
+    }
   }
 
   res.writeHead(response.status, rawHeaders);
