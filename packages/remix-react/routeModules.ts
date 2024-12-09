@@ -175,7 +175,7 @@ export type RouteComponent = ComponentType<{}>;
  *
  * @see https://remix.run/route/handle
  */
-export type RouteHandle = unknown;
+export interface RouteHandle {}
 
 export async function loadRouteModule(
   route: EntryRoute,

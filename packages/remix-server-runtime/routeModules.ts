@@ -246,8 +246,10 @@ type LdJsonValue = LdJsonPrimitive | LdJsonObject | LdJsonArray;
 
 /**
  * An arbitrary object that is associated with a route.
+ *
+ * @see https://remix.run/route/handle
  */
-export type RouteHandle = unknown;
+export interface RouteHandle {}
 
 export interface EntryRouteModule {
   clientAction?: ClientActionFunction;
