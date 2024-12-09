@@ -1,14 +1,12 @@
 # `@remix-run/dev`
 
-## 2.15.1-pre.0
+## 2.15.1
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/node@2.15.1-pre.0`
-  - `@remix-run/react@2.15.1-pre.0`
-  - `@remix-run/serve@2.15.1-pre.0`
-  - `@remix-run/server-runtime@2.15.1-pre.0`
+  - `@remix-run/node@2.15.1`
+  - `@remix-run/server-runtime@2.15.1`
 
 ## 2.15.0
 
