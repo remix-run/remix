@@ -1,3 +1,4 @@
+import { type CacheStorage } from "@cloudflare/workers-types";
 import { type PlatformProxy } from "wrangler";
 
 type GetLoadContextArgs = {
