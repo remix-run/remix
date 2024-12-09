@@ -1,5 +1,11 @@
 # `create-remix`
 
+## 2.15.1-pre.0
+
+### Patch Changes
+
+- Set fs-extra as dependency ([#10300](https://github.com/remix-run/remix/pull/10300))
+
 ## 2.15.0
 
 ## 2.14.0
