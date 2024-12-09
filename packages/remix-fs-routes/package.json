@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/fs-routes",
-  "version": "2.15.0",
+  "version": "2.15.1",
   "description": "Config-based file system routing conventions, for use within routes.ts",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -22,8 +22,8 @@
     "typescript": "^5.1.6"
   },
   "peerDependencies": {
-    "@remix-run/dev": "^2.15.0",
-    "@remix-run/route-config": "^2.15.0",
+    "@remix-run/dev": "^2.15.1",
+    "@remix-run/route-config": "^2.15.1",
     "typescript": "^5.1.0"
   },
   "peerDependenciesMeta": {
