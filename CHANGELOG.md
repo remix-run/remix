@@ -246,7 +246,7 @@ Date: 2024-12-09
 
 ### Patch Changes
 
-- `create-remix` - Set fs-extra as dependency ([#10300](https://github.com/remix-run/remix/pull/10300))
+- `create-remix` - Move `fs-extra` from `devDependencies` to `dependencies` ([#10300](https://github.com/remix-run/remix/pull/10300))
 
 **Full Changelog**: [`v2.15.0...v2.15.1`](https://github.com/remix-run/remix/compare/remix@2.15.0...remix@2.15.1)
 
