@@ -454,7 +454,7 @@ export async function loader({}: LoaderFunctionArgs) {
 }
 ```
 
-If you were using the second parameter of `json`/`defer` to set a custom status or headers on your response, you can continue doing do via the new `data` API:
+If you were using the second parameter of `json`/`defer` to set a custom status or headers on your response, you can continue doing so via the new `data` API:
 
 ```diff
 -import { json } from "@remix-run/node";
@@ -542,7 +542,7 @@ remix({
 This package matches the API of React Router v7's `@react-router/dev/routes`, making the React Router v7 migration as easy as possible.
 
 ```shellscript nonumber
-npm install --dev @remix-run/route-config
+npm install -D @remix-run/route-config
 ```
 
 This provides the core `RouteConfig` type as well as a set of helpers for configuring routes in code.
@@ -564,7 +564,7 @@ This is a good way to check that your new `routes.ts` file is being picked up su
 👉 **Install `@remix-run/fs-routes` and use it in `routes.ts`**
 
 ```shellscript nonumber
-npm install --dev @remix-run/fs-routes
+npm install -D @remix-run/fs-routes
 ```
 
 This package matches the API of React Router v7's `@react-router/fs-routes`, making the React Router v7 migration as easy as possible.
@@ -573,9 +573,8 @@ This package matches the API of React Router v7's `@react-router/fs-routes`, mak
 
 ```ts filename=app/routes.ts
 import { flatRoutes } from "@remix-run/fs-routes";
-import type { RouteConfig } from "@remix-run/route-config";
 
-export const routes: RouteConfig = flatRoutes();
+export default flatRoutes();
 ```
 
 👉 **If you used the `routes` config option, add `@remix-run/routes-option-adapter` and use it in `routes.ts`**
@@ -587,7 +586,7 @@ To make migration easier, an adapter package is available that converts Remix's 
 To get started, first install the adapter:
 
 ```shellscript nonumber
-npm install --dev @remix-run/routes-option-adapter
+npm install -D @remix-run/routes-option-adapter
 ```
 
 This package matches the API of React Router v7's `@react-router/remix-routes-option-adapter`, making the React Router v7 migration as easy as possible.
