@@ -5,6 +5,7 @@ This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remi
 ## HEAD
 
 - Expose `createHeaders(req: http.IncomingMessage): Headers` API for creating headers from the headers of incoming request objects.
+- Update `sendResponse` to use an object to add support for libraries such as express while maintaining `node:http` and `node:https` compatibility.
 
 ## v0.4.1 (2024-12-04)
 
