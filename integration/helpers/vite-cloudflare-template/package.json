@@ -11,9 +11,9 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@remix-run/cloudflare": "2.15.0",
-    "@remix-run/cloudflare-pages": "2.15.0",
-    "@remix-run/react": "2.15.0",
+    "@remix-run/cloudflare": "2.15.1",
+    "@remix-run/cloudflare-pages": "2.15.1",
+    "@remix-run/react": "2.15.1",
     "isbot": "^4.1.0",
     "miniflare": "^3.20231030.4",
     "react": "^18.2.0",

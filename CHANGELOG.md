@@ -240,6 +240,16 @@ Date: YYYY-MM-DD
 
 -->
 
+## v2.15.1
+
+Date: 2024-12-09
+
+### Patch Changes
+
+- `create-remix` - Move `fs-extra` from `devDependencies` to `dependencies` ([#10300](https://github.com/remix-run/remix/pull/10300))
+
+**Full Changelog**: [`v2.15.0...v2.15.1`](https://github.com/remix-run/remix/compare/remix@2.15.0...remix@2.15.1)
+
 ## v2.15.0
 
 Date: 2024-11-19
@@ -296,8 +306,8 @@ Date: 2024-11-08
 
 ### Patch Changes
 
-- Fix `defaultShouldRevalidate` value when using single fetch ([#10139](https://github.com/remix-run/remix/pull/10139))
-- Update externally-accessed resource routes warning to cover null usage as well ([#10145](https://github.com/remix-run/remix/pull/10145))
+- `@remix-run/react` - Fix `defaultShouldRevalidate` value when using Single Fetch ([#10139](https://github.com/remix-run/remix/pull/10139))
+- `@remix-run/server-runtime` - Update externally-accessed resource routes warning to cover `null` usage as well ([#10145](https://github.com/remix-run/remix/pull/10145))
 
 ### Updated Dependencies
 

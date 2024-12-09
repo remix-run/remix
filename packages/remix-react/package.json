@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "2.15.0",
+  "version": "2.15.1",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
