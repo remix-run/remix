@@ -38,16 +38,34 @@ The state of the revalidation. Either `"idle"` or `"loading"`.
 Initiates a revalidation.
 
 ```tsx
-function useLivePageData() {
-  const revalidator = useRevalidator();
-  const interval = useInterval(5000);
 
-  useEffect(() => {
-    if (revalidator.state === "idle") {
-      revalidator.revalidate();
+function useLivePageData() {
+  const revalidator = useRevalidator()
+
+  useInterval(() => {
+    if (revalidator.state === 'idle') {
+      revalidator.revalidate()
     }
-  }, [interval, revalidator]);
+  }, 5000)
 }
+
+function useInterval(callback: () => void, delay?: number) {
+  useEffect(() => {
+    if (delay === undefined) return
+
+    let id: ReturnType<typeof setTimeout>
+
+    function tick() {
+      callback()
+      id = setTimeout(tick, delay)
+    }
+
+    id = setTimeout(tick, delay)
+
+    return () => clearTimeout(id)
+  }, [callback, delay])
+}
+
 ```
 
 ## Notes
