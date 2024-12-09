@@ -1,10 +1,10 @@
 # `create-remix`
 
-## 2.15.1-pre.0
+## 2.15.1
 
 ### Patch Changes
 
-- Set fs-extra as dependency ([#10300](https://github.com/remix-run/remix/pull/10300))
+- Move `fs-extra` from `devDependencies` to `dependencies` ([#10300](https://github.com/remix-run/remix/pull/10300))
 
 ## 2.15.0
 

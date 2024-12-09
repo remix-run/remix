@@ -1,11 +1,11 @@
 # `@remix-run/cloudflare-workers`
 
-## 2.15.1-pre.0
+## 2.15.1
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/cloudflare@2.15.1-pre.0`
+  - `@remix-run/cloudflare@2.15.1`
 
 ## 2.15.0
 
