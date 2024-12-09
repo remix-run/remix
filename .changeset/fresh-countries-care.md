@@ -2,4 +2,4 @@
 "create-remix": patch
 ---
 
-Set fs-extra as dependency
+Move `fs-extra` from `devDependencies` to `dependencies`

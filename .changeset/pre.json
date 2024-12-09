@@ -28,5 +28,7 @@
     "@remix-run/server-runtime": "2.15.0",
     "@remix-run/testing": "2.15.0"
   },
-  "changesets": []
+  "changesets": [
+    "fresh-countries-care"
+  ]
 }
