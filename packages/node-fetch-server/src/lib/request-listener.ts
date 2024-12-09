@@ -185,23 +185,23 @@ export function createHeaders(req: http.IncomingMessage): Headers {
  * @param response The response to send.
  */
 export async function sendResponse(res: http.ServerResponse, response: Response): Promise<void> {
-  // Use the rawHeaders API and iterate over response.headers so we are sure to send multiple
-  // Set-Cookie headers correctly. These would incorrectly be merged into a single header if we
-  // tried to use `Object.fromEntries(response.headers.entries())`.
-  let rawHeaders: Record<string, string | string[]> = {};
+  // Iterate over response.headers so we are sure to send multiple Set-Cookie headers correctly.
+  // These would incorrectly be merged into a single header if we tried to use
+  // `Object.fromEntries(response.headers.entries())`.
+  let headers: Record<string, string | string[]> = {};
   for (let [key, value] of response.headers) {
-    if (key in rawHeaders) {
-      if (Array.isArray(rawHeaders[key])) {
-        rawHeaders[key].push(value);
+    if (key in headers) {
+      if (Array.isArray(headers[key])) {
+        headers[key].push(value);
       } else {
-        rawHeaders[key] = [rawHeaders[key] as string, value];
+        headers[key] = [headers[key] as string, value];
       }
     } else {
-      rawHeaders[key] = value;
+      headers[key] = value;
     }
   }
 
-  res.writeHead(response.status, rawHeaders);
+  res.writeHead(response.status, headers);
 
   if (response.body != null && res.req.method !== 'HEAD') {
     for await (let chunk of response.body) {
