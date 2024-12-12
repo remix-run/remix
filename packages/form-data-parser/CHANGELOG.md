@@ -2,7 +2,7 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.5.1 (2024-12-12)
 
 - Fix dependency on `headers` in package.json
 

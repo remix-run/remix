@@ -1,6 +1,6 @@
 {
   "name": "@mjackson/form-data-parser",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A request.formData() wrapper with streaming file upload handling",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
