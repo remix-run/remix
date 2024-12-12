@@ -56,7 +56,7 @@ if (packageJson.version !== version) {
   process.exit(1);
 }
 
-logAndExec(`npm publish --access public`, {
+logAndExec(`pnpm publish --access public`, {
   cwd: getPackageDir(packageName),
   env: process.env,
 });
