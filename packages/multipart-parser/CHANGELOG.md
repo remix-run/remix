@@ -2,6 +2,10 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Fix dependency on `headers` in package.json
+
 ## v0.7.1 (2024-12-07)
 
 - Re-export everything from `multipart-parser/node`. If you're using `multipart-parser/node`, you should `import` everything from there. Don't import anything from `multipart-parser`.

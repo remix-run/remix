@@ -2,6 +2,10 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Fix dependency on `headers` in package.json
+
 ## v0.5.0 (2024-11-14)
 
 - Added CommonJS build
