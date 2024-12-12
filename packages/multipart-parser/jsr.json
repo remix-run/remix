@@ -1,8 +1,14 @@
 {
   "name": "@mjackson/multipart-parser",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "exports": "./src/multipart-parser.ts",
   "publish": {
-    "include": ["LICENSE", "README.md", "src/**/*.ts", "!src/**/*.node.ts", "!src/**/*.test.ts"]
+    "include": [
+      "LICENSE",
+      "README.md",
+      "src/**/*.ts",
+      "!src/**/*.node.ts",
+      "!src/**/*.test.ts"
+    ]
   }
 }
