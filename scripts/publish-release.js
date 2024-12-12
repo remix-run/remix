@@ -56,7 +56,7 @@ if (packageJson.version !== version) {
   process.exit(1);
 }
 
-logAndExec(`pnpm publish --access public`, {
+logAndExec(`pnpm publish --access public --no-git-checks`, {
   cwd: getPackageDir(packageName),
   env: process.env,
 });
