@@ -265,4 +265,5 @@ export interface ServerRouteModule extends EntryRouteModule {
   action?: ActionFunction;
   headers?: HeadersFunction | { [name: string]: string };
   loader?: LoaderFunction;
+  default?: any; // override optional as Resource Routes do not define a default
 }
