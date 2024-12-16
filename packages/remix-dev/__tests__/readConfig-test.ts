@@ -37,10 +37,10 @@ describe("readConfig", () => {
         "entryServerFilePath": Any<String>,
         "future": {
           "unstable_optimizeDeps": false,
-          "unstable_routeConfig": false,
           "v3_fetcherPersist": false,
           "v3_lazyRouteDiscovery": false,
           "v3_relativeSplatPath": false,
+          "v3_routeConfig": false,
           "v3_singleFetch": false,
           "v3_throwAbortReason": false,
         },
