@@ -5,7 +5,7 @@ order: 2
 
 # Remix Tutorial
 
-docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you can follow the same [tutorial from the React Router docs][react-router-tutorial].</docs-warning>
+<docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you can follow the same [tutorial from the React Router docs][react-router-tutorial].</docs-warning>
 
 We'll be building a small, but feature-rich app that lets you keep track of your contacts. There's no database or other "production ready" things, so we can stay focused on Remix. We expect it to take about 30m if you're following along, otherwise it's a quick read.
 

@@ -8,7 +8,7 @@ hidden: true
 
 # Remix Docs
 
-docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you should use the [React Router docs to get started][react-router-get-started].</docs-warning>
+<docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you should use the [React Router docs to get started][react-router-get-started].</docs-warning>
 
 ```shellscript nonumber
 npx create-remix@latest
