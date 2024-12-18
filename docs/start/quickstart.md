@@ -5,6 +5,8 @@ order: 1
 
 # Quick Start
 
+<docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest features, you should use the [React Router docs to get started][react-router-get-started].</docs-warning>
+
 This guide will get you familiar with the basic plumbing required to run a Remix app as quickly as possible. While there are many starter templates with different runtimes, deploy targets, and databases, we're going to create a bare-bones project from scratch.
 
 When you're ready to get serious about your Remix project, you might consider starting with a community template. They include TypeScript setups, databases, testing harnesses, authentication, and more. You can find a list of community templates on the [Remix Resources][templates] page.
@@ -284,3 +286,5 @@ What's next?
 [vite-config]: https://vitejs.dev/config
 [vite-middleware]: https://vitejs.dev/guide/ssr#setting-up-the-dev-server
 [cross-env]: https://www.npmjs.com/package/cross-env
+[remix-now-react-router]: https://remix.run/blog/incremental-path-to-react-19
+[react-router-get-started]: https://reactrouter.com/start/framework/installation
