@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/deno",
-  "version": "2.15.1",
+  "version": "0.0.0-nightly-cbabd6729-20241219",
   "description": "Deno platform abstractions for Remix",
   "homepage": "https://remix.run",
   "main": "./index.ts",
@@ -15,7 +15,7 @@
   "license": "MIT",
   "sideEffects": false,
   "dependencies": {
-    "@remix-run/server-runtime": "workspace:*",
+    "@remix-run/server-runtime": "0.0.0-nightly-cbabd6729-20241219",
     "mime": "^3.0.0"
   },
   "peerDependencies": {

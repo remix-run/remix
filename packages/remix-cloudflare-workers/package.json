@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/cloudflare-workers",
-  "version": "2.15.1",
+  "version": "0.0.0-nightly-cbabd6729-20241219",
   "description": "Cloudflare worker request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.1.3",
-    "@remix-run/cloudflare": "workspace:*"
+    "@remix-run/cloudflare": "0.0.0-nightly-cbabd6729-20241219"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230518.0",
