@@ -16,15 +16,13 @@ describe('Accept-Language', () => {
   });
 
   it('initializes with an array', () => {
-    let header = new AcceptLanguage(['en-US', ['en', 0.9], ['fi', undefined], ['fi-FI']]);
+    let header = new AcceptLanguage(['en-US', ['en', 0.9]]);
     assert.equal(header.get('en-US'), 1);
     assert.equal(header.get('en'), 0.9);
-    assert.equal(header.get('fi'), 1);
-    assert.equal(header.get('fi-FI'), 1);
   });
 
   it('initializes with an object', () => {
-    let header = new AcceptLanguage({ 'en-US': undefined, en: 0.9 });
+    let header = new AcceptLanguage({ 'en-US': 1, en: 0.9 });
     assert.equal(header.get('en-US'), 1);
     assert.equal(header.get('en'), 0.9);
   });

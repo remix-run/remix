@@ -11,6 +11,8 @@ import { isIterable, isValidDate } from './utils.ts';
 const CRLF = '\r\n';
 const SetCookieKey = 'set-cookie';
 
+type DateInit = number | Date;
+
 interface SuperHeadersPropertyInit {
   /**
    * The [`Accept-Language`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language) header value.
@@ -43,23 +45,23 @@ interface SuperHeadersPropertyInit {
   /**
    * The [`Date`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date) header value.
    */
-  date?: string | Date;
+  date?: string | DateInit;
   /**
    * The [`Expires`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires) header value.
    */
-  expires?: string | Date;
+  expires?: string | DateInit;
   /**
    * The [`If-Modified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since) header value.
    */
-  ifModifiedSince?: string | Date;
+  ifModifiedSince?: string | DateInit;
   /**
    * The [`If-Unmodified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Unmodified-Since) header value.
    */
-  ifUnmodifiedSince?: string | Date;
+  ifUnmodifiedSince?: string | DateInit;
   /**
    * The [`Last-Modified`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified) header value.
    */
-  lastModified?: string | Date;
+  lastModified?: string | DateInit;
   /**
    * The [`Set-Cookie`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie) header value(s).
    */
@@ -67,7 +69,7 @@ interface SuperHeadersPropertyInit {
 }
 
 export type SuperHeadersInit =
-  | Iterable<[string, string | HeaderValue]>
+  | Iterable<[string, string]>
   | (SuperHeadersPropertyInit & Record<string, string | HeaderValue>);
 
 /**
@@ -100,13 +102,17 @@ export class SuperHeaders extends Headers {
           this.append(name, value);
         }
       } else if (typeof init === 'object') {
-        for (let name in init) {
-          if (Object.prototype.hasOwnProperty.call(init, name)) {
-            let setter = Object.getOwnPropertyDescriptor(SuperHeaders.prototype, name)?.set;
-            if (setter) {
-              setter.call(this, init[name]);
+        for (let name of Object.getOwnPropertyNames(init)) {
+          let value = init[name];
+
+          if (typeof value === 'string') {
+            this.set(name, value);
+          } else {
+            let descriptor = Object.getOwnPropertyDescriptor(SuperHeaders.prototype, name);
+            if (descriptor?.set) {
+              descriptor.set.call(this, value);
             } else {
-              this.append(name, init[name]);
+              this.set(name, value.toString());
             }
           }
         }
@@ -120,12 +126,13 @@ export class SuperHeaders extends Headers {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/append)
    */
-  append(name: string, value: string | HeaderValue): void {
+  append(name: string, value: string): void {
     let key = name.toLowerCase();
     if (key === SetCookieKey) {
-      this.#setCookieValues.push(value as string | SetCookie);
+      this.#setCookieValues.push(value);
     } else {
       let existingValue = this.#map.get(key);
+      // TODO: check if it's an empty string
       this.#map.set(key, existingValue ? `${existingValue}, ${value}` : value);
     }
   }
@@ -152,18 +159,16 @@ export class SuperHeaders extends Headers {
   get(name: string): string | null {
     let key = name.toLowerCase();
     if (key === SetCookieKey) {
-      return this.#setCookieValues.map((value) => value.toString()).join(', ');
+      return this.getSetCookie().join(', ');
     } else {
       let value = this.#map.get(key);
       if (typeof value === 'string') {
         return value;
-      } else if (value instanceof Date) {
-        return value.toUTCString();
-      } else if (value == null) {
-        return null;
-      } else {
+      } else if (value != null) {
         let str = value.toString();
         return str === '' ? null : str;
+      } else {
+        return null;
       }
     }
   }
@@ -217,16 +222,16 @@ export class SuperHeaders extends Headers {
    */
   *entries(): IterableIterator<[string, string]> {
     for (let [key] of this.#map) {
-      let stringValue = this.get(key);
-      if (stringValue) {
-        yield [key, stringValue];
+      let str = this.get(key);
+      if (str) {
+        yield [key, str];
       }
     }
 
     for (let value of this.#setCookieValues) {
-      let stringValue = value.toString();
-      if (stringValue) {
-        yield [SetCookieKey, stringValue];
+      let str = value.toString();
+      if (str) {
+        yield [SetCookieKey, str];
       }
     }
   }
@@ -299,11 +304,7 @@ export class SuperHeaders extends Headers {
   }
 
   set acceptLanguage(value: string | AcceptLanguageInit | undefined | null) {
-    if (value != null) {
-      this.#setHeaderValue('accept-language', AcceptLanguage, value);
-    } else {
-      this.#map.delete('accept-language');
-    }
+    this.#setHeaderValue('accept-language', AcceptLanguage, value);
   }
 
   /**
@@ -318,11 +319,7 @@ export class SuperHeaders extends Headers {
   }
 
   set age(value: string | number | undefined | null) {
-    if (value != null) {
-      this.#map.set('age', value);
-    } else {
-      this.#map.delete('age');
-    }
+    this.#setNumberValue('age', value);
   }
 
   /**
@@ -337,11 +334,23 @@ export class SuperHeaders extends Headers {
   }
 
   set cacheControl(value: string | CacheControlInit | undefined | null) {
-    if (value != null) {
-      this.#setHeaderValue('cache-control', CacheControl, value);
-    } else {
-      this.#map.delete('cache-control');
-    }
+    this.#setHeaderValue('cache-control', CacheControl, value);
+  }
+
+  /**
+   * The `Connection` header controls whether the network connection stays open after the current
+   * transaction finishes.
+   *
+   * [MDN `Connection` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-6.1)
+   */
+  get connection(): string | null {
+    return this.get('connection');
+  }
+
+  set connection(value: string | undefined | null) {
+    this.#setValue('connection', value);
   }
 
   /**
@@ -356,11 +365,7 @@ export class SuperHeaders extends Headers {
   }
 
   set contentDisposition(value: string | ContentDispositionInit | undefined | null) {
-    if (value != null) {
-      this.#setHeaderValue('content-disposition', ContentDisposition, value);
-    } else {
-      this.#map.delete('content-disposition');
-    }
+    this.#setHeaderValue('content-disposition', ContentDisposition, value);
   }
 
   /**
@@ -375,11 +380,7 @@ export class SuperHeaders extends Headers {
   }
 
   set contentLength(value: string | number | undefined | null) {
-    if (value != null) {
-      this.#map.set('content-length', value);
-    } else {
-      this.#map.delete('content-length');
-    }
+    this.#setNumberValue('content-length', value);
   }
 
   /**
@@ -394,11 +395,7 @@ export class SuperHeaders extends Headers {
   }
 
   set contentType(value: string | ContentTypeInit | undefined | null) {
-    if (value != null) {
-      this.#setHeaderValue('content-type', ContentType, value);
-    } else {
-      this.#map.delete('content-type');
-    }
+    this.#setHeaderValue('content-type', ContentType, value);
   }
 
   /**
@@ -414,11 +411,7 @@ export class SuperHeaders extends Headers {
   }
 
   set cookie(value: string | CookieInit | undefined | null) {
-    if (value != null) {
-      this.#setHeaderValue('cookie', Cookie, value);
-    } else {
-      this.#map.delete('cookie');
-    }
+    this.#setHeaderValue('cookie', Cookie, value);
   }
 
   /**
@@ -432,12 +425,8 @@ export class SuperHeaders extends Headers {
     return this.#getDateValue('date');
   }
 
-  set date(value: string | Date | undefined | null) {
-    if (value != null) {
-      this.#map.set('date', value);
-    } else {
-      this.#map.delete('date');
-    }
+  set date(value: string | DateInit | undefined | null) {
+    this.#setDateValue('date', value);
   }
 
   /**
@@ -451,12 +440,23 @@ export class SuperHeaders extends Headers {
     return this.#getDateValue('expires');
   }
 
-  set expires(value: string | Date | undefined | null) {
-    if (value != null) {
-      this.#map.set('expires', value);
-    } else {
-      this.#map.delete('expires');
-    }
+  set expires(value: string | DateInit | undefined | null) {
+    this.#setDateValue('expires', value);
+  }
+
+  /**
+   * The `Host` header specifies the domain name of the server and (optionally) the TCP port number.
+   *
+   * [MDN `Host` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-5.4)
+   */
+  get host(): string | null {
+    return this.get('host');
+  }
+
+  set host(value: string | undefined | null) {
+    this.#setValue('host', value);
   }
 
   /**
@@ -471,12 +471,8 @@ export class SuperHeaders extends Headers {
     return this.#getDateValue('if-modified-since');
   }
 
-  set ifModifiedSince(value: string | Date | undefined | null) {
-    if (value != null) {
-      this.#map.set('if-modified-since', value);
-    } else {
-      this.#map.delete('if-modified-since');
-    }
+  set ifModifiedSince(value: string | DateInit | undefined | null) {
+    this.#setDateValue('if-modified-since', value);
   }
 
   /**
@@ -491,12 +487,8 @@ export class SuperHeaders extends Headers {
     return this.#getDateValue('if-unmodified-since');
   }
 
-  set ifUnmodifiedSince(value: string | Date | undefined | null) {
-    if (value != null) {
-      this.#map.set('if-unmodified-since', value);
-    } else {
-      this.#map.delete('if-unmodified-since');
-    }
+  set ifUnmodifiedSince(value: string | DateInit | undefined | null) {
+    this.#setDateValue('if-unmodified-since', value);
   }
 
   /**
@@ -510,12 +502,24 @@ export class SuperHeaders extends Headers {
     return this.#getDateValue('last-modified');
   }
 
-  set lastModified(value: string | Date | undefined | null) {
-    if (value != null) {
-      this.#map.set('last-modified', value);
-    } else {
-      this.#map.delete('last-modified');
-    }
+  set lastModified(value: string | DateInit | undefined | null) {
+    this.#setDateValue('last-modified', value);
+  }
+
+  /**
+   * The `Referer` header contains the address of the previous web page from which a link to the
+   * currently requested page was followed.
+   *
+   * [MDN `Referer` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.5.2)
+   */
+  get referer(): string | null {
+    return this.get('referer');
+  }
+
+  set referer(value: string | undefined | null) {
+    this.#setValue('referer', value);
   }
 
   /**
@@ -552,78 +556,68 @@ export class SuperHeaders extends Headers {
 
   // helpers
 
-  #getDateValue(key: string): Date | null {
+  #setValue(key: string, value: string | undefined | null): void {
+    if (value != null) {
+      this.#map.set(key, value);
+    } else {
+      this.#map.delete(key);
+    }
+  }
+
+  #getHeaderValue<T extends HeaderValue>(key: string, ctor: new (init?: any) => T): T {
     let value = this.#map.get(key);
-    if (value) {
-      if (value instanceof Date) {
-        return value;
-      }
 
+    if (value !== undefined) {
       if (typeof value === 'string') {
-        let date = new Date(value);
-        if (isValidDate(date)) {
-          this.#map.set(key, date); // cache the parsed date
-          return date;
-        } else {
-          this.#map.delete(key); // bad value, remove it
-        }
+        let obj = new ctor(value);
+        this.#map.set(key, obj); // cache the new object
+        return obj;
+      } else {
+        return value as T;
       }
-
-      this.#map.delete(key); // bad value, remove it
     }
 
-    return null;
+    let header = new ctor();
+    this.#map.set(key, header);
+    return header;
+  }
+
+  #setHeaderValue(key: string, ctor: new (init?: string) => HeaderValue, value: any): void {
+    if (value != null) {
+      this.#map.set(key, typeof value === 'string' ? value : new ctor(value));
+    } else {
+      this.#map.delete(key);
+    }
+  }
+
+  #getDateValue(key: string): Date | null {
+    let value = this.#map.get(key);
+    return value === undefined ? null : new Date(value as string);
+  }
+
+  #setDateValue(key: string, value: string | DateInit | undefined | null): void {
+    if (value != null) {
+      this.#map.set(
+        key,
+        typeof value === 'string'
+          ? value
+          : (typeof value === 'number' ? new Date(value) : value).toUTCString(),
+      );
+    } else {
+      this.#map.delete(key);
+    }
   }
 
   #getNumberValue(key: string): number | null {
     let value = this.#map.get(key);
-    if (value !== undefined) {
-      if (typeof value === 'number') {
-        return value;
-      }
-
-      if (typeof value === 'string') {
-        let num = parseInt(value, 10);
-        if (!isNaN(num)) {
-          this.#map.set(key, num); // cache the parsed number
-          return num;
-        } else {
-          this.#map.delete(key); // bad value, remove it
-        }
-      }
-
-      this.#map.delete(key); // bad value, remove it
-    }
-
-    return null;
+    return value === undefined ? null : parseInt(value as string, 10);
   }
 
-  #getHeaderValue<T extends HeaderValue>(key: string, ctor: new (init?: string) => T): T {
-    let value = this.#map.get(key);
-    if (value !== undefined) {
-      if (typeof value === 'string') {
-        let headerValue = new ctor(value);
-        this.#map.set(key, headerValue);
-        return headerValue;
-      } else {
-        return value as T;
-      }
+  #setNumberValue(key: string, value: string | number | undefined | null): void {
+    if (value != null) {
+      this.#map.set(key, typeof value === 'string' ? value : value.toString());
     } else {
-      let headerValue = new ctor();
-      this.#map.set(key, headerValue);
-      return headerValue;
-    }
-  }
-
-  #setHeaderValue<T>(
-    key: string,
-    ctor: new (init?: string | T) => HeaderValue,
-    value: string | T,
-  ): void {
-    if (typeof value === 'string' || value instanceof ctor) {
-      this.#map.set(key, value);
-    } else {
-      this.#map.set(key, new ctor(value));
+      this.#map.delete(key);
     }
   }
 }
