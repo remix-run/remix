@@ -14,6 +14,7 @@
     "@remix-run/cloudflare": "workspace:*",
     "@remix-run/cloudflare-pages": "workspace:*",
     "@remix-run/react": "workspace:*",
+    "@remix-run/server-runtime": "workspace:*",
     "isbot": "^4.1.0",
     "miniflare": "^3.20231030.4",
     "react": "^18.2.0",
