@@ -1816,7 +1816,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       },
     },
     {
-      name: "react-router-server-change-trigger-client-hmr",
+      name: "remix-server-change-trigger-client-hmr",
       // This hook is only available in Vite v6+ so this is a no-op in v5.
       // Previously the server and client modules were shared in a single module
       // graph. This meant that changes to server code automatically resulted in
