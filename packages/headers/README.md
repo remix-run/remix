@@ -61,22 +61,23 @@ headers.cookie.set('theme', 'dark');
 console.log(headers.get('Cookie')); // 'session_id=abc123; user_id=12345; theme=dark'
 
 // Set-Cookie
-headers.setCookie = 'session_id=abc123; Path=/; HttpOnly';
+headers.setCookie = ['session_id=abc123; Path=/; HttpOnly'];
 
-console.log(headers.setCookie.name); // 'session_id'
-console.log(headers.setCookie.value); // 'abc123'
-console.log(headers.setCookie.path); // '/'
-console.log(headers.setCookie.httpOnly); // true
+console.log(headers.setCookie[0].name); // 'session_id'
+console.log(headers.setCookie[0].value); // 'abc123'
+console.log(headers.setCookie[0].path); // '/'
+console.log(headers.setCookie[0].httpOnly); // true
 
 // Modifying Set-Cookie attributes
-headers.setCookie.maxAge = 3600;
-headers.setCookie.secure = true;
+headers.setCookie[0].maxAge = 3600;
+headers.setCookie[0].secure = true;
 
 console.log(headers.get('Set-Cookie'));
 // session_id=abc123; Path=/; HttpOnly; Max-Age=3600; Secure
 
-// Setting multiple cookies
-headers.append('Set-Cookie', 'user_id=12345; Path=/api; Secure');
+// Setting multiple cookies is easy, it's just an array
+headers.setCookie.push('user_id=12345; Path=/api; Secure');
+// or headers.setCookie = [...headers.setCookie, '...']
 
 // Accessing multiple Set-Cookie headers
 for (let cookie of headers.getSetCookie()) {
@@ -163,12 +164,17 @@ All individual header classes may be initialized with either a) the string value
 
 The following headers are currently supported:
 
-- [`Accept-Language`](#accept-language)
-- [`Cache-Control`](#cache-control)
-- [`Content-Disposition`](#content-disposition)
-- [`Content-Type`](#content-type)
-- [`Cookie`](#cookie)
-- [`Set-Cookie`](#set-cookie)
+- [headers](#headers)
+  - [Installation](#installation)
+  - [Overview](#overview)
+  - [Low-level API](#low-level-api)
+    - [Accept-Language](#accept-language)
+    - [Cache-Control](#cache-control)
+    - [Content-Disposition](#content-disposition)
+    - [Content-Type](#content-type)
+    - [Cookie](#cookie)
+    - [Set-Cookie](#set-cookie)
+  - [License](#license)
 
 If you need support for a header that isn't listed here, please [send a PR](https://github.com/mjackson/remix-the-web/pulls)! The goal is to have first-class support for all common HTTP headers.
 

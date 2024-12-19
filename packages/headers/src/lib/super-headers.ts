@@ -12,18 +12,57 @@ const CRLF = '\r\n';
 const SetCookieKey = 'set-cookie';
 
 interface SuperHeadersPropertyInit {
+  /**
+   * The [`Accept-Language`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language) header value.
+   */
   acceptLanguage?: string | AcceptLanguageInit;
+  /**
+   * The [`Age`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age) header value.
+   */
   age?: string | number;
+  /**
+   * The [`Cache-Control`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) header value.
+   */
   cacheControl?: string | CacheControlInit;
+  /**
+   * The [`Content-Disposition`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition) header value.
+   */
   contentDisposition?: string | ContentDispositionInit;
+  /**
+   * The [`Content-Length`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Length) header value.
+   */
   contentLength?: string | number;
+  /**
+   * The [`Content-Type`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type) header value.
+   */
   contentType?: string | ContentTypeInit;
+  /**
+   * The [`Cookie`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie) header value.
+   */
   cookie?: string | CookieInit;
+  /**
+   * The [`Date`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date) header value.
+   */
   date?: string | Date;
+  /**
+   * The [`Expires`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires) header value.
+   */
   expires?: string | Date;
+  /**
+   * The [`If-Modified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since) header value.
+   */
   ifModifiedSince?: string | Date;
+  /**
+   * The [`If-Unmodified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Unmodified-Since) header value.
+   */
   ifUnmodifiedSince?: string | Date;
+  /**
+   * The [`Last-Modified`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified) header value.
+   */
   lastModified?: string | Date;
+  /**
+   * The [`Set-Cookie`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie) header value(s).
+   */
   setCookie?: string | (string | SetCookieInit)[];
 }
 
@@ -120,10 +159,11 @@ export class SuperHeaders extends Headers {
         return value;
       } else if (value instanceof Date) {
         return value.toUTCString();
-      } else if (value != null) {
-        return value.toString();
-      } else {
+      } else if (value == null) {
         return null;
+      } else {
+        let str = value.toString();
+        return str === '' ? null : str;
       }
     }
   }
@@ -136,7 +176,9 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/getSetCookie)
    */
   getSetCookie(): string[] {
-    return this.#setCookieValues.map((value) => value.toString());
+    return this.#setCookieValues.map((value) =>
+      typeof value === 'string' ? value : value.toString(),
+    );
   }
 
   /**
@@ -159,10 +201,10 @@ export class SuperHeaders extends Headers {
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/set)
    */
-  set(name: string, value: string | HeaderValue): void {
+  set(name: string, value: string): void {
     let key = name.toLowerCase();
     if (key === SetCookieKey) {
-      this.#setCookieValues = [value as string | SetCookie];
+      this.#setCookieValues = [value];
     } else {
       this.#map.set(key, value);
     }
@@ -256,8 +298,12 @@ export class SuperHeaders extends Headers {
     return this.#getHeaderValue('accept-language', AcceptLanguage);
   }
 
-  set acceptLanguage(value: string | AcceptLanguageInit) {
-    this.#setHeaderValue('accept-language', AcceptLanguage, value);
+  set acceptLanguage(value: string | AcceptLanguageInit | undefined | null) {
+    if (value != null) {
+      this.#setHeaderValue('accept-language', AcceptLanguage, value);
+    } else {
+      this.#map.delete('accept-language');
+    }
   }
 
   /**
@@ -267,12 +313,16 @@ export class SuperHeaders extends Headers {
    *
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.1)
    */
-  get age(): number | undefined {
+  get age(): number | null {
     return this.#getNumberValue('age');
   }
 
-  set age(value: string | number) {
-    this.#map.set('age', value);
+  set age(value: string | number | undefined | null) {
+    if (value != null) {
+      this.#map.set('age', value);
+    } else {
+      this.#map.delete('age');
+    }
   }
 
   /**
@@ -286,8 +336,12 @@ export class SuperHeaders extends Headers {
     return this.#getHeaderValue('cache-control', CacheControl);
   }
 
-  set cacheControl(value: string | CacheControlInit) {
-    this.#setHeaderValue('cache-control', CacheControl, value);
+  set cacheControl(value: string | CacheControlInit | undefined | null) {
+    if (value != null) {
+      this.#setHeaderValue('cache-control', CacheControl, value);
+    } else {
+      this.#map.delete('cache-control');
+    }
   }
 
   /**
@@ -301,8 +355,12 @@ export class SuperHeaders extends Headers {
     return this.#getHeaderValue('content-disposition', ContentDisposition);
   }
 
-  set contentDisposition(value: string | ContentDispositionInit) {
-    this.#setHeaderValue('content-disposition', ContentDisposition, value);
+  set contentDisposition(value: string | ContentDispositionInit | undefined | null) {
+    if (value != null) {
+      this.#setHeaderValue('content-disposition', ContentDisposition, value);
+    } else {
+      this.#map.delete('content-disposition');
+    }
   }
 
   /**
@@ -312,12 +370,16 @@ export class SuperHeaders extends Headers {
    *
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2)
    */
-  get contentLength(): number | undefined {
+  get contentLength(): number | null {
     return this.#getNumberValue('content-length');
   }
 
-  set contentLength(value: string | number) {
-    this.#map.set('content-length', value);
+  set contentLength(value: string | number | undefined | null) {
+    if (value != null) {
+      this.#map.set('content-length', value);
+    } else {
+      this.#map.delete('content-length');
+    }
   }
 
   /**
@@ -331,8 +393,12 @@ export class SuperHeaders extends Headers {
     return this.#getHeaderValue('content-type', ContentType);
   }
 
-  set contentType(value: string | ContentTypeInit) {
-    this.#setHeaderValue('content-type', ContentType, value);
+  set contentType(value: string | ContentTypeInit | undefined | null) {
+    if (value != null) {
+      this.#setHeaderValue('content-type', ContentType, value);
+    } else {
+      this.#map.delete('content-type');
+    }
   }
 
   /**
@@ -347,8 +413,12 @@ export class SuperHeaders extends Headers {
     return this.#getHeaderValue('cookie', Cookie);
   }
 
-  set cookie(value: string | CookieInit) {
-    this.#setHeaderValue('cookie', Cookie, value);
+  set cookie(value: string | CookieInit | undefined | null) {
+    if (value != null) {
+      this.#setHeaderValue('cookie', Cookie, value);
+    } else {
+      this.#map.delete('cookie');
+    }
   }
 
   /**
@@ -358,12 +428,16 @@ export class SuperHeaders extends Headers {
    *
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.1.2)
    */
-  get date(): Date | undefined {
+  get date(): Date | null {
     return this.#getDateValue('date');
   }
 
-  set date(value: string | Date) {
-    this.#map.set('date', value);
+  set date(value: string | Date | undefined | null) {
+    if (value != null) {
+      this.#map.set('date', value);
+    } else {
+      this.#map.delete('date');
+    }
   }
 
   /**
@@ -373,12 +447,16 @@ export class SuperHeaders extends Headers {
    *
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.3)
    */
-  get expires(): Date | undefined {
+  get expires(): Date | null {
     return this.#getDateValue('expires');
   }
 
-  set expires(value: string | Date) {
-    this.#map.set('expires', value);
+  set expires(value: string | Date | undefined | null) {
+    if (value != null) {
+      this.#map.set('expires', value);
+    } else {
+      this.#map.delete('expires');
+    }
   }
 
   /**
@@ -389,12 +467,16 @@ export class SuperHeaders extends Headers {
    *
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.3)
    */
-  get ifModifiedSince(): Date | undefined {
+  get ifModifiedSince(): Date | null {
     return this.#getDateValue('if-modified-since');
   }
 
-  set ifModifiedSince(value: string | Date) {
-    this.#map.set('if-modified-since', value);
+  set ifModifiedSince(value: string | Date | undefined | null) {
+    if (value != null) {
+      this.#map.set('if-modified-since', value);
+    } else {
+      this.#map.delete('if-modified-since');
+    }
   }
 
   /**
@@ -405,12 +487,16 @@ export class SuperHeaders extends Headers {
    *
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.4)
    */
-  get ifUnmodifiedSince(): Date | undefined {
+  get ifUnmodifiedSince(): Date | null {
     return this.#getDateValue('if-unmodified-since');
   }
 
-  set ifUnmodifiedSince(value: string | Date) {
-    this.#map.set('if-unmodified-since', value);
+  set ifUnmodifiedSince(value: string | Date | undefined | null) {
+    if (value != null) {
+      this.#map.set('if-unmodified-since', value);
+    } else {
+      this.#map.delete('if-unmodified-since');
+    }
   }
 
   /**
@@ -420,12 +506,16 @@ export class SuperHeaders extends Headers {
    *
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-2.2)
    */
-  get lastModified(): Date | undefined {
+  get lastModified(): Date | null {
     return this.#getDateValue('last-modified');
   }
 
-  set lastModified(value: string | Date) {
-    this.#map.set('last-modified', value);
+  set lastModified(value: string | Date | undefined | null) {
+    if (value != null) {
+      this.#map.set('last-modified', value);
+    } else {
+      this.#map.delete('last-modified');
+    }
   }
 
   /**
@@ -446,25 +536,29 @@ export class SuperHeaders extends Headers {
     return this.#setCookieValues as SetCookie[];
   }
 
-  set setCookie(values: string | (string | SetCookieInit)[]) {
-    if (typeof values === 'string') {
-      this.#setCookieValues = [values];
+  set setCookie(values: (string | SetCookieInit)[] | string | SetCookieInit | undefined | null) {
+    if (values != null) {
+      if (Array.isArray(values)) {
+        this.#setCookieValues = values.map((value) =>
+          typeof value === 'string' || value instanceof SetCookie ? value : new SetCookie(value),
+        );
+      } else {
+        this.#setCookieValues = [new SetCookie(values)];
+      }
     } else {
-      this.#setCookieValues = values.map((value) => {
-        if (typeof value === 'string' || value instanceof SetCookie) {
-          return value;
-        } else {
-          return new SetCookie(value);
-        }
-      });
+      this.#setCookieValues = [];
     }
   }
 
   // helpers
 
-  #getDateValue(key: string): Date | undefined {
+  #getDateValue(key: string): Date | null {
     let value = this.#map.get(key);
     if (value) {
+      if (value instanceof Date) {
+        return value;
+      }
+
       if (typeof value === 'string') {
         let date = new Date(value);
         if (isValidDate(date)) {
@@ -473,36 +567,40 @@ export class SuperHeaders extends Headers {
         } else {
           this.#map.delete(key); // bad value, remove it
         }
-      } else if (value instanceof Date) {
-        return value;
-      } else {
-        this.#map.delete(key); // bad value, remove it
       }
+
+      this.#map.delete(key); // bad value, remove it
     }
+
+    return null;
   }
 
-  #getNumberValue(key: string): number | undefined {
+  #getNumberValue(key: string): number | null {
     let value = this.#map.get(key);
-    if (value) {
+    if (value !== undefined) {
+      if (typeof value === 'number') {
+        return value;
+      }
+
       if (typeof value === 'string') {
-        let v = parseInt(value, 10);
-        if (!isNaN(v)) {
-          this.#map.set(key, v); // cache the parsed number
-          return v;
+        let num = parseInt(value, 10);
+        if (!isNaN(num)) {
+          this.#map.set(key, num); // cache the parsed number
+          return num;
         } else {
           this.#map.delete(key); // bad value, remove it
         }
-      } else if (typeof value === 'number') {
-        return value;
-      } else {
-        this.#map.delete(key); // bad value, remove it
       }
+
+      this.#map.delete(key); // bad value, remove it
     }
+
+    return null;
   }
 
   #getHeaderValue<T extends HeaderValue>(key: string, ctor: new (init?: string) => T): T {
     let value = this.#map.get(key);
-    if (value) {
+    if (value !== undefined) {
       if (typeof value === 'string') {
         let headerValue = new ctor(value);
         this.#map.set(key, headerValue);
