@@ -2,9 +2,7 @@ import { type HeaderValue } from './header-value.ts';
 import { parseParams } from './param-values.ts';
 import { isIterable } from './utils.ts';
 
-export type AcceptLanguageInit =
-  | Iterable<string | [string] | [string, number | undefined]>
-  | Record<string, number | undefined>;
+export type AcceptLanguageInit = Iterable<string | [string, number]> | Record<string, number>;
 
 /**
  * The value of a `Accept-Language` HTTP header.
@@ -18,6 +16,7 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
 
   constructor(init?: string | AcceptLanguageInit) {
     this.#map = new Map();
+
     if (init) {
       if (typeof init === 'string') {
         let params = parseParams(init, ',');
@@ -31,19 +30,20 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
         }
       } else if (isIterable(init)) {
         for (let language of init) {
-          let quality;
           if (Array.isArray(language)) {
-            [language, quality] = language;
+            this.#map.set(language[0], language[1]);
+          } else {
+            this.#map.set(language, 1);
           }
-          this.#map.set(language, quality ?? 1);
         }
       } else {
         for (let language in init) {
           if (Object.prototype.hasOwnProperty.call(init, language)) {
-            this.#map.set(language, init[language] ?? 1);
+            this.#map.set(language, init[language]);
           }
         }
       }
+
       this.#sort();
     }
   }

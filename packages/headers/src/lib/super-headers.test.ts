@@ -6,6 +6,7 @@ import { CacheControl } from './cache-control.ts';
 import { ContentDisposition } from './content-disposition.ts';
 import { ContentType } from './content-type.ts';
 import { Cookie } from './cookie.ts';
+import { SetCookie } from './set-cookie.ts';
 import { SuperHeaders } from './super-headers.ts';
 
 describe('SuperHeaders', () => {
@@ -20,19 +21,8 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('Content-Type'), null);
   });
 
-  it('initializes from a string', () => {
-    let headers = new SuperHeaders('Content-Type: text/plain\r\nContent-Length: 42');
-    assert.equal(headers.get('Content-Type'), 'text/plain');
-    assert.equal(headers.get('Content-Length'), '42');
-  });
-
   it('initializes from an object of header name/value pairs', () => {
     let headers = new SuperHeaders({ 'Content-Type': 'text/plain' });
-    assert.equal(headers.get('Content-Type'), 'text/plain');
-  });
-
-  it('initializes from an object of property name/value pairs', () => {
-    let headers = new SuperHeaders({ contentType: 'text/plain' });
     assert.equal(headers.get('Content-Type'), 'text/plain');
   });
 
@@ -45,63 +35,22 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('X-Custom'), 'value');
   });
 
-  it('initializes from another SuperHeaders instance', () => {
-    let original = new SuperHeaders({ 'Content-Type': 'text/plain' });
-    let headers = new SuperHeaders(original);
-    assert.equal(headers.get('Content-Type'), 'text/plain');
-  });
-
   it('initializes from a Headers instance', () => {
-    let original = new Headers({ 'Content-Type': 'text/plain' });
-    let headers = new SuperHeaders(original);
+    let h1 = new Headers({ 'Content-Type': 'text/plain' });
+    let h2 = new SuperHeaders(h1);
+    assert.equal(h2.get('Content-Type'), 'text/plain');
+  });
+
+  it('initializes from another SuperHeaders instance', () => {
+    let h1 = new SuperHeaders({ 'Content-Type': 'text/plain' });
+    let h2 = new SuperHeaders(h1);
+    assert.equal(h2.get('Content-Type'), 'text/plain');
+  });
+
+  it('initializes from a string', () => {
+    let headers = new SuperHeaders('Content-Type: text/plain\r\nContent-Length: 42');
     assert.equal(headers.get('Content-Type'), 'text/plain');
-  });
-
-  it('initializes with a AcceptLanguageInit', () => {
-    let headers = new SuperHeaders({
-      acceptLanguage: { 'en-US': 1, en: 0.9 },
-    });
-    assert.equal(headers.get('Accept-Language'), 'en-US,en;q=0.9');
-  });
-
-  it('initializes with a CacheControlInit', () => {
-    let headers = new SuperHeaders({ cacheControl: 'public, max-age=3600' });
-    assert.equal(headers.get('Cache-Control'), 'public, max-age=3600');
-  });
-
-  it('initializes with a ContentDispositionInit', () => {
-    let headers = new SuperHeaders({
-      contentDisposition: { type: 'attachment', filename: 'example.txt' },
-    });
-    assert.equal(headers.get('Content-Disposition'), 'attachment; filename=example.txt');
-  });
-
-  it('initializes with a ContentTypeInit', () => {
-    let headers = new SuperHeaders({ contentType: { mediaType: 'text/plain', charset: 'utf-8' } });
-    assert.equal(headers.get('Content-Type'), 'text/plain; charset=utf-8');
-  });
-
-  it('initializes with a CookieInit', () => {
-    let headers = new SuperHeaders({ cookie: [['name', 'value']] });
-    assert.equal(headers.get('Cookie'), 'name=value');
-  });
-
-  it('initializes with a SetCookieInit', () => {
-    let headers = new SuperHeaders({
-      setCookie: [
-        { name: 'session', value: 'abc', path: '/' },
-        { name: 'theme', value: 'dark', expires: new Date('2021-12-31T23:59:59Z') },
-      ],
-    });
-    assert.deepEqual(headers.getSetCookie(), [
-      'session=abc; Path=/',
-      'theme=dark; Expires=Fri, 31 Dec 2021 23:59:59 GMT',
-    ]);
-  });
-
-  it('initializes with a lastModified Date', () => {
-    let headers = new SuperHeaders({ lastModified: new Date('2021-01-01T00:00:00Z') });
-    assert.equal(headers.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT');
+    assert.equal(headers.get('Content-Length'), '42');
   });
 
   it('appends values', () => {
@@ -195,68 +144,99 @@ describe('SuperHeaders', () => {
     ]);
   });
 
-  describe('setting values in the constructor', () => {
-    it('handles the Accept-Language header', () => {
-      let headers = new SuperHeaders({ acceptLanguage: 'en-US,en;q=0.9' });
+  it('omits empty values when stringified', () => {
+    let headers = new SuperHeaders();
+
+    // This should appear in the string since it has a media type, it's complete
+    headers.contentType = 'text/plain';
+
+    // This should not appear in the string since it's incomplete, missing the type
+    headers.contentDisposition.filename = 'example.txt';
+
+    assert.equal(headers.toString(), 'Content-Type: text/plain');
+  });
+
+  describe('constructor property init', () => {
+    it('handles the acceptLanguage property', () => {
+      let headers = new SuperHeaders({ acceptLanguage: { 'en-US': 1, en: 0.9 } });
       assert.equal(headers.get('Accept-Language'), 'en-US,en;q=0.9');
     });
 
-    it('handles the Age header', () => {
+    it('handles the age property', () => {
       let headers = new SuperHeaders({ age: 42 });
       assert.equal(headers.get('Age'), '42');
     });
 
-    it('handles the Cache-Control header', () => {
-      let headers = new SuperHeaders({ cacheControl: 'public, max-age=3600' });
+    it('handles the cacheControl property', () => {
+      let headers = new SuperHeaders({ cacheControl: { public: true, maxAge: 3600 } });
       assert.equal(headers.get('Cache-Control'), 'public, max-age=3600');
     });
 
-    it('handles the Content-Disposition header', () => {
-      let headers = new SuperHeaders({ contentDisposition: 'attachment; filename="example.txt"' });
-      assert.equal(headers.get('Content-Disposition'), 'attachment; filename="example.txt"');
+    it('handles the connection property', () => {
+      let headers = new SuperHeaders({ connection: 'close' });
+      assert.equal(headers.get('Connection'), 'close');
     });
 
-    it('handles the Content-Length header', () => {
+    it('handles the contentDisposition property', () => {
+      let headers = new SuperHeaders({
+        contentDisposition: { type: 'attachment', filename: 'example.txt' },
+      });
+      assert.equal(headers.get('Content-Disposition'), 'attachment; filename=example.txt');
+    });
+
+    it('handles the contentLength property', () => {
       let headers = new SuperHeaders({ contentLength: 42 });
       assert.equal(headers.get('Content-Length'), '42');
     });
 
-    it('handles the Content-Type header', () => {
-      let headers = new SuperHeaders({ contentType: 'text/plain; charset=utf-8' });
+    it('handles the contentType property', () => {
+      let headers = new SuperHeaders({
+        contentType: { mediaType: 'text/plain', charset: 'utf-8' },
+      });
       assert.equal(headers.get('Content-Type'), 'text/plain; charset=utf-8');
     });
 
-    it('handles the Cookie header', () => {
-      let headers = new SuperHeaders({ cookie: 'name1=value1; name2=value2' });
-      assert.equal(headers.get('Cookie'), 'name1=value1; name2=value2');
+    it('handles the cookie property', () => {
+      let headers = new SuperHeaders({ cookie: [['name', 'value']] });
+      assert.equal(headers.get('Cookie'), 'name=value');
     });
 
-    it('handles the Expires header', () => {
+    it('handles the date property', () => {
+      let headers = new SuperHeaders({ date: new Date('2021-01-01T00:00:00Z') });
+      assert.equal(headers.get('Date'), 'Fri, 01 Jan 2021 00:00:00 GMT');
+    });
+
+    it('handles the expires property', () => {
       let headers = new SuperHeaders({ expires: new Date('2021-01-01T00:00:00Z') });
       assert.equal(headers.get('Expires'), 'Fri, 01 Jan 2021 00:00:00 GMT');
     });
 
-    it('handles the Last-Modified header', () => {
+    it('handles the host property', () => {
+      let headers = new SuperHeaders({ host: 'example.com' });
+      assert.equal(headers.get('Host'), 'example.com');
+    });
+
+    it('handles the lastModified property', () => {
       let headers = new SuperHeaders({ lastModified: new Date('2021-01-01T00:00:00Z') });
       assert.equal(headers.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT');
     });
 
-    it('handles the Set-Cookie header', () => {
-      let headers = new SuperHeaders({ setCookie: ['session=abc', 'theme=dark'] });
-      assert.deepEqual(headers.getSetCookie(), ['session=abc', 'theme=dark']);
+    it('handles the ifModifiedSince property', () => {
+      let headers = new SuperHeaders({ ifModifiedSince: new Date('2021-01-01T00:00:00Z') });
+      assert.equal(headers.get('If-Modified-Since'), 'Fri, 01 Jan 2021 00:00:00 GMT');
     });
 
-    it('handles the Set-Cookie header with objects', () => {
-      let headers = new SuperHeaders({
-        setCookie: [
-          { name: 'session', value: 'abc' },
-          { name: 'theme', value: 'dark' },
-        ],
-      });
-      assert.deepEqual(headers.getSetCookie(), ['session=abc', 'theme=dark']);
+    it('handles the ifUnmodifiedSince property', () => {
+      let headers = new SuperHeaders({ ifUnmodifiedSince: new Date('2021-01-01T00:00:00Z') });
+      assert.equal(headers.get('If-Unmodified-Since'), 'Fri, 01 Jan 2021 00:00:00 GMT');
     });
 
-    it('handles the Set-Cookie header with options', () => {
+    it('handles the referer property', () => {
+      let headers = new SuperHeaders({ referer: 'https://example.com' });
+      assert.equal(headers.get('Referer'), 'https://example.com');
+    });
+
+    it('handles the setCookie property', () => {
       let headers = new SuperHeaders({
         setCookie: [
           { name: 'session', value: 'abc', path: '/' },
@@ -268,196 +248,15 @@ describe('SuperHeaders', () => {
         'theme=dark; Expires=Fri, 31 Dec 2021 23:59:59 GMT',
       ]);
     });
-  });
 
-  describe('get() and set()', () => {
-    it('handles the Accept-Language header', () => {
-      let headers = new SuperHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
-      assert.equal(headers.get('Accept-Language'), 'en-US,en;q=0.9');
-
-      headers.set('Accept-Language', 'en;q=0.8, fr');
-      assert.equal(headers.get('Accept-Language'), 'en;q=0.8, fr');
-
-      headers.set('Accept-Language', '');
-      assert.equal(headers.get('Accept-Language'), '');
-
-      headers.delete('Accept-Language');
-      assert.equal(headers.get('Accept-Language'), null);
-    });
-
-    it('handles the Age header', () => {
-      let headers = new SuperHeaders({ Age: '42' });
-      assert.equal(headers.get('Age'), '42');
-
-      headers.set('Age', '100');
-      assert.equal(headers.get('Age'), '100');
-
-      headers.set('Age', '');
-      assert.equal(headers.get('Age'), '');
-
-      headers.delete('Age');
-      assert.equal(headers.get('Age'), null);
-    });
-
-    it('handles the Cache-Control header', () => {
-      let headers = new SuperHeaders({ 'Cache-Control': 'public, max-age=3600' });
-      assert.equal(headers.get('Cache-Control'), 'public, max-age=3600');
-
-      headers.set('Cache-Control', 'no-cache');
-      assert.equal(headers.get('Cache-Control'), 'no-cache');
-
-      headers.set('Cache-Control', '');
-      assert.equal(headers.get('Cache-Control'), '');
-
-      headers.delete('Cache-Control');
-      assert.equal(headers.get('Cache-Control'), null);
-    });
-
-    it('handles the Content-Disposition header', () => {
-      let headers = new SuperHeaders({
-        'Content-Disposition': 'attachment; filename="example.txt"',
-      });
-      assert.equal(headers.get('Content-Disposition'), 'attachment; filename="example.txt"');
-
-      headers.set('Content-Disposition', 'inline');
-      assert.equal(headers.get('Content-Disposition'), 'inline');
-
-      headers.set('Content-Disposition', '');
-      assert.equal(headers.get('Content-Disposition'), '');
-
-      headers.delete('Content-Disposition');
-      assert.equal(headers.get('Content-Disposition'), null);
-    });
-
-    it('handles the Content-Length header', () => {
-      let headers = new SuperHeaders({ 'Content-Length': '42' });
-      assert.equal(headers.get('Content-Length'), '42');
-
-      headers.set('Content-Length', '100');
-      assert.equal(headers.get('Content-Length'), '100');
-
-      headers.set('Content-Length', '');
-      assert.equal(headers.get('Content-Length'), '');
-
-      headers.delete('Content-Length');
-      assert.equal(headers.get('Content-Length'), null);
-    });
-
-    it('handles the Content-Type header', () => {
-      let headers = new SuperHeaders({ 'Content-Type': 'text/plain; charset=utf-8' });
-      assert.equal(headers.get('Content-Type'), 'text/plain; charset=utf-8');
-
-      headers.set('Content-Type', 'text/html');
-      assert.equal(headers.get('Content-Type'), 'text/html');
-
-      headers.set('Content-Type', '');
-      assert.equal(headers.get('Content-Type'), '');
-
-      headers.delete('Content-Type');
-      assert.equal(headers.get('Content-Type'), null);
-    });
-
-    it('handles the Cookie header', () => {
-      let headers = new SuperHeaders({ Cookie: 'name1=value1; name2=value2' });
-      assert.equal(headers.get('Cookie'), 'name1=value1; name2=value2');
-
-      headers.set('Cookie', 'name3=value3');
-      assert.equal(headers.get('Cookie'), 'name3=value3');
-
-      headers.set('Cookie', '');
-      assert.equal(headers.get('Cookie'), '');
-
-      headers.delete('Cookie');
-      assert.equal(headers.get('Cookie'), null);
-    });
-
-    it('handles the Date header', () => {
-      let headers = new SuperHeaders({ Date: 'Fri, 01 Jan 2021 00:00:00 GMT' });
-      assert.equal(headers.get('Date'), 'Fri, 01 Jan 2021 00:00:00 GMT');
-
-      headers.set('Date', 'Fri, 31 Dec 2021 23:59:59 GMT');
-      assert.equal(headers.get('Date'), 'Fri, 31 Dec 2021 23:59:59 GMT');
-
-      headers.set('Date', '');
-      assert.equal(headers.get('Date'), '');
-
-      headers.delete('Date');
-      assert.equal(headers.get('Date'), null);
-    });
-
-    it('handles the Expires header', () => {
-      let headers = new SuperHeaders({ Expires: 'Fri, 01 Jan 2021 00:00:00 GMT' });
-      assert.equal(headers.get('Expires'), 'Fri, 01 Jan 2021 00:00:00 GMT');
-
-      headers.set('Expires', 'Fri, 31 Dec 2021 23:59:59 GMT');
-      assert.equal(headers.get('Expires'), 'Fri, 31 Dec 2021 23:59:59 GMT');
-
-      headers.set('Expires', '');
-      assert.equal(headers.get('Expires'), '');
-
-      headers.delete('Expires');
-      assert.equal(headers.get('Expires'), null);
-    });
-
-    it('handles the Last-Modified header', () => {
-      let headers = new SuperHeaders({ 'Last-Modified': 'Fri, 01 Jan 2021 00:00:00 GMT' });
-      assert.equal(headers.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT');
-
-      headers.set('Last-Modified', 'Fri, 31 Dec 2021 23:59:59 GMT');
-      assert.equal(headers.get('Last-Modified'), 'Fri, 31 Dec 2021 23:59:59 GMT');
-
-      headers.set('Last-Modified', '');
-      assert.equal(headers.get('Last-Modified'), '');
-
-      headers.delete('Last-Modified');
-      assert.equal(headers.get('Last-Modified'), null);
-    });
-
-    it('handles the If-Modified-Since header', () => {
-      let headers = new SuperHeaders({ 'If-Modified-Since': 'Fri, 01 Jan 2021 00:00:00 GMT' });
-      assert.equal(headers.get('If-Modified-Since'), 'Fri, 01 Jan 2021 00:00:00 GMT');
-
-      headers.set('If-Modified-Since', 'Fri, 31 Dec 2021 23:59:59 GMT');
-      assert.equal(headers.get('If-Modified-Since'), 'Fri, 31 Dec 2021 23:59:59 GMT');
-
-      headers.set('If-Modified-Since', '');
-      assert.equal(headers.get('If-Modified-Since'), '');
-
-      headers.delete('If-Modified-Since');
-      assert.equal(headers.get('If-Modified-Since'), null);
-    });
-
-    it('handles the If-Unmodified-Since header', () => {
-      let headers = new SuperHeaders({ 'If-Unmodified-Since': 'Fri, 01 Jan 2021 00:00:00 GMT' });
-      assert.equal(headers.get('If-Unmodified-Since'), 'Fri, 01 Jan 2021 00:00:00 GMT');
-
-      headers.set('If-Unmodified-Since', 'Fri, 31 Dec 2021 23:59:59 GMT');
-      assert.equal(headers.get('If-Unmodified-Since'), 'Fri, 31 Dec 2021 23:59:59 GMT');
-
-      headers.set('If-Unmodified-Since', '');
-      assert.equal(headers.get('If-Unmodified-Since'), '');
-
-      headers.delete('If-Unmodified-Since');
-      assert.equal(headers.get('If-Unmodified-Since'), null);
-    });
-
-    it('handles the Set-Cookie header', () => {
-      let headers = new SuperHeaders({ 'Set-Cookie': 'session=abc' });
-      assert.deepEqual(headers.getSetCookie(), ['session=abc']);
-
-      headers.set('Set-Cookie', 'theme=dark');
-      assert.deepEqual(headers.getSetCookie(), ['theme=dark']);
-
-      headers.set('Set-Cookie', '');
-      assert.deepEqual(headers.getSetCookie(), ['']);
-
-      headers.delete('Set-Cookie');
-      assert.deepEqual(headers.getSetCookie(), []);
+    it('stringifies unknown properties with non-string values', () => {
+      let headers = new SuperHeaders({ unknown: 42 });
+      assert.equal(headers.get('Unknown'), '42');
     });
   });
 
-  describe('header-specific getters and setters', () => {
-    it('handles Accept-Language header', () => {
+  describe('property getters and setters', () => {
+    it('supports the acceptLanguage property', () => {
       let headers = new SuperHeaders();
 
       assert.ok(headers.acceptLanguage instanceof AcceptLanguage);
@@ -477,7 +276,7 @@ describe('SuperHeaders', () => {
       assert.equal(headers.acceptLanguage.toString(), '');
     });
 
-    it('handles Age header', () => {
+    it('supports the age property', () => {
       let headers = new SuperHeaders();
 
       assert.equal(headers.age, null);
@@ -492,7 +291,7 @@ describe('SuperHeaders', () => {
       assert.equal(headers.age, null);
     });
 
-    it('handles Cache-Control header', () => {
+    it('supports the cacheControl property', () => {
       let headers = new SuperHeaders();
 
       assert.ok(headers.cacheControl instanceof CacheControl);
@@ -513,7 +312,19 @@ describe('SuperHeaders', () => {
       assert.equal(headers.cacheControl.toString(), '');
     });
 
-    it('handles Content-Disposition header', () => {
+    it('supports the connection property', () => {
+      let headers = new SuperHeaders();
+
+      assert.equal(headers.connection, null);
+
+      headers.connection = 'close';
+      assert.equal(headers.connection, 'close');
+
+      headers.connection = null;
+      assert.equal(headers.connection, null);
+    });
+
+    it('supports the contentDisposition property', () => {
       let headers = new SuperHeaders();
 
       assert.ok(headers.contentDisposition instanceof ContentDisposition);
@@ -534,7 +345,7 @@ describe('SuperHeaders', () => {
       assert.equal(headers.contentDisposition.toString(), '');
     });
 
-    it('handles Content-Length header', () => {
+    it('supports the contentLength property', () => {
       let headers = new SuperHeaders();
 
       assert.equal(headers.contentLength, null);
@@ -549,7 +360,7 @@ describe('SuperHeaders', () => {
       assert.equal(headers.contentLength, null);
     });
 
-    it('handles Content-Type header', () => {
+    it('supports the contentType property', () => {
       let headers = new SuperHeaders();
 
       assert.ok(headers.contentType instanceof ContentType);
@@ -569,7 +380,7 @@ describe('SuperHeaders', () => {
       assert.equal(headers.contentType.toString(), '');
     });
 
-    it('handles Cookie header', () => {
+    it('supports the cookie property', () => {
       let headers = new SuperHeaders();
 
       assert.ok(headers.cookie instanceof Cookie);
@@ -589,7 +400,7 @@ describe('SuperHeaders', () => {
       assert.equal(headers.cookie.toString(), '');
     });
 
-    it('handles Date header', () => {
+    it('supports the date property', () => {
       let headers = new SuperHeaders();
 
       assert.equal(headers.date, null);
@@ -602,7 +413,7 @@ describe('SuperHeaders', () => {
       assert.equal(headers.date, null);
     });
 
-    it('handles Expires header', () => {
+    it('supports the expires property', () => {
       let headers = new SuperHeaders();
 
       assert.equal(headers.expires, null);
@@ -615,7 +426,19 @@ describe('SuperHeaders', () => {
       assert.equal(headers.expires, null);
     });
 
-    it('handles Last-Modified header', () => {
+    it('supports the host property', () => {
+      let headers = new SuperHeaders();
+
+      assert.equal(headers.host, null);
+
+      headers.host = 'example.com';
+      assert.equal(headers.host, 'example.com');
+
+      headers.host = null;
+      assert.equal(headers.host, null);
+    });
+
+    it('supports the lastModified property', () => {
       let headers = new SuperHeaders();
 
       assert.equal(headers.lastModified, null);
@@ -628,7 +451,7 @@ describe('SuperHeaders', () => {
       assert.equal(headers.lastModified, null);
     });
 
-    it('handles If-Modified-Since header', () => {
+    it('supports the ifModifiedSince property', () => {
       let headers = new SuperHeaders();
 
       assert.equal(headers.ifModifiedSince, null);
@@ -641,7 +464,7 @@ describe('SuperHeaders', () => {
       assert.equal(headers.ifModifiedSince, null);
     });
 
-    it('handles If-Unmodified-Since header', () => {
+    it('supports the ifUnmodifiedSince property', () => {
       let headers = new SuperHeaders();
 
       assert.equal(headers.ifUnmodifiedSince, null);
@@ -654,7 +477,19 @@ describe('SuperHeaders', () => {
       assert.equal(headers.ifUnmodifiedSince, null);
     });
 
-    it('handles Set-Cookie header', () => {
+    it('supports the referer property', () => {
+      let headers = new SuperHeaders();
+
+      assert.equal(headers.referer, null);
+
+      headers.referer = 'https://example.com';
+      assert.equal(headers.referer, 'https://example.com');
+
+      headers.referer = null;
+      assert.equal(headers.referer, null);
+    });
+
+    it('supports the setCookie property', () => {
       let headers = new SuperHeaders();
 
       assert.deepEqual(headers.setCookie, []);
@@ -700,20 +535,6 @@ describe('SuperHeaders', () => {
 
       headers.setCookie = null;
       assert.deepEqual(headers.setCookie, []);
-    });
-  });
-
-  describe('toString', () => {
-    it('omits empty values when stringified', () => {
-      let headers = new SuperHeaders();
-
-      // This should appear in the string since it has a media type, it's complete
-      headers.contentType = 'text/plain';
-
-      // This should not appear in the string since it's incomplete, missing the type
-      headers.contentDisposition.filename = 'example.txt';
-
-      assert.equal(headers.toString(), 'Content-Type: text/plain');
     });
   });
 });

@@ -4,6 +4,32 @@ This is the changelog for [`headers`](https://github.com/mjackson/remix-the-web/
 
 ## HEAD
 
+This release tightens up the type safety and brings `SuperHeaders` more in line with the built-in `Headers` interface.
+
+- BREAKING CHANGE: The mutation methods `headers.set()` and `headers.append()` no longer accept anything other than a string as the 2nd arg. This follows the native `Headers` interface more closely.
+
+```ts
+// before
+let headers = new SuperHeaders();
+headers.set('Content-Type', { mediaType: 'text/html' }); // don't do this
+
+// after
+headers.set('Content-Type', 'text/html');
+
+// if you need the previous behavior, use the setter instead of set()
+headers.contentType = { mediaType: 'text/html' };
+```
+
+Similarly, the constructor no longer accepts non-string values in an array init value.
+
+```ts
+// before
+let headers = new SuperHeaders([['Content-Type', { mediaType: 'text/html' }]]);
+
+// if you need the previous behavior, use the object init instead
+let headers = new SuperHeaders({ contentType: 'text/html' });
+```
+
 - BREAKING CHANGE: `headers.get()` returns `null` for uninitialized custom header values instead of `undefined`. This follows the native `Headers` interface more closely.
 
 ```ts
@@ -17,21 +43,18 @@ headers.get('Host'); // null
 headers.get('Content-Type'); // null
 ```
 
-- BREAKING CHANGE: `headers.set()` no longer accepts anything other than a string as the 2nd arg. This follows the native `Headers` interface more closely.
+- BREAKING CHANGE: Removed ability to initialize `AcceptLanguage` with `undefined` quality values.
 
 ```ts
 // before
-let headers = new SuperHeaders();
-headers.set('Content-Type', { mediaType: 'text/html' });
+let h1 = new AcceptLanguage({ 'en-US': undefined });
+let h2 = new AcceptLanguage([['en-US', undefined]]);
 
 // after
-headers.set('Content-Type', 'text/html');
-
-// if you need the previous behavior, use the setter instead of set()
-headers.contentType = { mediaType: 'text/html' };
+let h3 = new AcceptLanguage({ 'en-US': 1 });
 ```
 
-- All setter methods now also accept `undefined | null` in addition to `string` and custom object values. Setting a header to `undefined | null` is the same as using `headers.delete()`.
+- All setters now also accept `undefined | null` in addition to `string` and custom object values. Setting a header to `undefined | null` is the same as using `headers.delete()`.
 
 ```ts
 // before
@@ -41,6 +64,18 @@ headers.contentType; // 'text/html'
 headers.contentType = null; // same as headers.delete('Content-Type');
 headers.contentType; // null
 ```
+
+- Allow setting date values (`date`, `expires`, `ifModifiedSince`, `ifUnmodifiedSince`, and `lastModified`) using numbers.
+
+```ts
+let ms = new Date().getTime();
+let headers = new SuperHeaders({ lastModified: ms });
+```
+
+- Adds support for
+  - `headers.connection`
+  - `headers.host`
+  - `headers.referer`
 
 ## v0.8.0 (2024-11-14)
 
