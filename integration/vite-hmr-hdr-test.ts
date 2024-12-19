@@ -9,6 +9,7 @@ import {
   createEditor,
   EXPRESS_SERVER,
   viteConfig,
+  viteMajorTemplates,
 } from "./helpers/vite.js";
 import { js } from "./helpers/create-fixture.js";
 
@@ -39,132 +40,130 @@ const indexRoute = `
   }
 `;
 
-test("Vite / HMR & HDR / vite dev", async ({ page, browserName, viteDev }) => {
-  let files: Files = async ({ port }) => ({
-    "vite.config.js": await viteConfig.basic({ port }),
-    "app/routes/_index.tsx": indexRoute,
-  });
-  let { cwd, port } = await viteDev(files);
-  await workflow({ page, browserName, cwd, port });
-});
-
-test("Vite / HMR & HDR / express", async ({ page, browserName, customDev }) => {
-  let files: Files = async ({ port }) => ({
-    "vite.config.js": await viteConfig.basic({ port }),
-    "server.mjs": EXPRESS_SERVER({ port }),
-    "app/routes/_index.tsx": indexRoute,
-  });
-  let { cwd, port } = await customDev(files);
-  await workflow({ page, browserName, cwd, port });
-});
-
-test("Vite / HMR & HDR / mdx", async ({ page, viteDev }) => {
-  let files: Files = async ({ port }) => ({
-    "vite.config.ts": `
-      import { defineConfig } from "vite";
-      import { vitePlugin as remix } from "@remix-run/dev";
-      import mdx from "@mdx-js/rollup";
-
-      export default defineConfig({
-        ${await viteConfig.server({ port })}
-        plugins: [
-          mdx(),
-          remix(),
-        ],
+test.describe("Vite HMR & HDR", () => {
+  viteMajorTemplates.forEach(({ templateName, templateDisplayName }) => {
+    test.describe(templateDisplayName, () => {
+      test("vite dev", async ({ page, browserName, viteDev }) => {
+        let files: Files = async ({ port }) => ({
+          "vite.config.js": await viteConfig.basic({ port }),
+          "app/routes/_index.tsx": indexRoute,
+        });
+        let { cwd, port } = await viteDev(files, templateName);
+        await workflow({ page, browserName, cwd, port });
       });
-    `,
-    "app/component.tsx": `
-      import {useState} from "react";
 
-      export const Counter = () => {
-        const [count, setCount] = useState(0);
-        return <button onClick={() => setCount(count => count + 1)}>Count: {count}</button>
-      }
-    `,
-    "app/routes/mdx.mdx": `
-      import { Counter } from "../component";
+      test("express", async ({ page, browserName, customDev }) => {
+        let files: Files = async ({ port }) => ({
+          "vite.config.js": await viteConfig.basic({ port }),
+          "server.mjs": EXPRESS_SERVER({ port }),
+          "app/routes/_index.tsx": indexRoute,
+        });
+        let { cwd, port } = await customDev(files, templateName);
+        await workflow({ page, browserName, cwd, port });
+      });
 
-      # MDX Title (HMR: 0)
+      test("mdx", async ({ page, viteDev }) => {
+        let files: Files = async ({ port }) => ({
+          "vite.config.ts": `
+            import { defineConfig } from "vite";
+            import { vitePlugin as remix } from "@remix-run/dev";
+            import mdx from "@mdx-js/rollup";
 
-      <Counter />
-    `,
-  });
+            export default defineConfig({
+              ${await viteConfig.server({ port })}
+              plugins: [
+                mdx(),
+                remix(),
+              ],
+            });
+          `,
+          "app/component.tsx": `
+            import {useState} from "react";
 
-  let { port, cwd } = await viteDev(files);
-  let edit = createEditor(cwd);
-  await page.goto(`http://localhost:${port}/mdx`, {
-    waitUntil: "networkidle",
-  });
+            export const Counter = () => {
+              const [count, setCount] = useState(0);
+              return <button onClick={() => setCount(count => count + 1)}>Count: {count}</button>
+            }
+          `,
+          "app/routes/mdx.mdx": `
+            import { Counter } from "../component";
 
-  await expect(page.locator("h1")).toHaveText("MDX Title (HMR: 0)");
-  let button = page.locator("button");
-  await expect(button).toHaveText("Count: 0");
-  await button.click();
-  await expect(button).toHaveText("Count: 1");
+            # MDX Title (HMR: 0)
 
-  await edit("app/routes/mdx.mdx", (contents) =>
-    contents.replace("(HMR: 0)", "(HMR: 1)")
-  );
-  await page.waitForLoadState("networkidle");
+            <Counter />
+          `,
+        });
 
-  await expect(page.locator("h1")).toHaveText("MDX Title (HMR: 1)");
-  await expect(page.locator("button")).toHaveText("Count: 1");
+        let { port, cwd } = await viteDev(files, templateName);
+        let edit = createEditor(cwd);
+        await page.goto(`http://localhost:${port}/mdx`, {
+          waitUntil: "networkidle",
+        });
 
-  expect(page.errors).toEqual([]);
-});
+        await expect(page.locator("h1")).toHaveText("MDX Title (HMR: 0)");
+        let button = page.locator("button");
+        await expect(button).toHaveText("Count: 0");
+        await button.click();
+        await expect(button).toHaveText("Count: 1");
 
-test.describe("single fetch", () => {
-  test("Vite / HMR & HDR / vite dev", async ({
-    page,
-    browserName,
-    viteDev,
-  }) => {
-    let files: Files = async ({ port }) => ({
-      "vite.config.js": js`
-        import { vitePlugin as remix } from "@remix-run/dev";
+        await edit("app/routes/mdx.mdx", (contents) =>
+          contents.replace("(HMR: 0)", "(HMR: 1)")
+        );
+        await page.waitForLoadState("networkidle");
 
-        export default {
-          ${await viteConfig.server({ port })}
-          plugins: [
-            remix({
-              future: {
-                v3_singleFetch: true
-              },
-            })
-          ]
-        }
-      `,
-      "app/routes/_index.tsx": indexRoute,
+        await expect(page.locator("h1")).toHaveText("MDX Title (HMR: 1)");
+        await expect(page.locator("button")).toHaveText("Count: 1");
+
+        expect(page.errors).toEqual([]);
+      });
+
+      test.describe("single fetch", () => {
+        test("vite dev", async ({ page, browserName, viteDev }) => {
+          let files: Files = async ({ port }) => ({
+            "vite.config.js": js`
+              import { vitePlugin as remix } from "@remix-run/dev";
+
+              export default {
+                ${await viteConfig.server({ port })}
+                plugins: [
+                  remix({
+                    future: {
+                      v3_singleFetch: true
+                    },
+                  })
+                ]
+              }
+            `,
+            "app/routes/_index.tsx": indexRoute,
+          });
+          let { cwd, port } = await viteDev(files, templateName);
+          await workflow({ page, browserName, cwd, port });
+        });
+
+        test("express", async ({ page, browserName, customDev }) => {
+          let files: Files = async ({ port }) => ({
+            "vite.config.js": js`
+              import { vitePlugin as remix } from "@remix-run/dev";
+
+              export default {
+                ${await viteConfig.server({ port })}
+                plugins: [
+                  remix({
+                    future: {
+                      v3_singleFetch: true
+                    },
+                  })
+                ]
+              }
+            `,
+            "server.mjs": EXPRESS_SERVER({ port }),
+            "app/routes/_index.tsx": indexRoute,
+          });
+          let { cwd, port } = await customDev(files, templateName);
+          await workflow({ page, browserName, cwd, port });
+        });
+      });
     });
-    let { cwd, port } = await viteDev(files);
-    await workflow({ page, browserName, cwd, port });
-  });
-
-  test("Vite / HMR & HDR / express", async ({
-    page,
-    browserName,
-    customDev,
-  }) => {
-    let files: Files = async ({ port }) => ({
-      "vite.config.js": js`
-        import { vitePlugin as remix } from "@remix-run/dev";
-
-        export default {
-          ${await viteConfig.server({ port })}
-          plugins: [
-            remix({
-              future: {
-                v3_singleFetch: true
-              },
-            })
-          ]
-        }
-      `,
-      "server.mjs": EXPRESS_SERVER({ port }),
-      "app/routes/_index.tsx": indexRoute,
-    });
-    let { cwd, port } = await customDev(files);
-    await workflow({ page, browserName, cwd, port });
   });
 });
 

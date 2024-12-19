@@ -35,7 +35,7 @@ The Remix CLI will not perform any type checking. Instead, you'll want to use Ty
     "@types/react-dom": "^18.2.7",
     "eslint": "^8.23.1",
     "typescript": "^5.1.6",
-    "vite": "^5.1.4"
+    "vite": "^6.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -53,7 +53,7 @@
     "@octokit/graphql": "^4.8.0",
     "@octokit/plugin-paginate-rest": "^2.17.0",
     "@octokit/rest": "^18.12.0",
-    "@playwright/test": "^1.33.0",
+    "@playwright/test": "^1.49.1",
     "@remix-run/architect": "workspace:*",
     "@remix-run/changelog-github": "^0.0.5",
     "@remix-run/cloudflare": "workspace:*",
@@ -129,7 +129,7 @@
     "unified": "^10.1.2",
     "unist-util-remove": "^3.1.0",
     "unist-util-visit": "^4.1.1",
-    "vite": "5.1.8",
+    "vite": "^6.0.0",
     "vite-tsconfig-paths": "^4.2.2",
     "wait-on": "^7.0.1",
     "wrangler": "^3.72.3"
