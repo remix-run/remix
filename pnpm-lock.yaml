@@ -571,9 +571,6 @@ importers:
       '@remix-run/serve':
         specifier: workspace:*
         version: link:../../../packages/remix-serve
-      '@remix-run/server-runtime':
-        specifier: workspace:*
-        version: link:../../../packages/remix-server-runtime
       '@vanilla-extract/css':
         specifier: ^1.10.0
         version: 1.14.1
@@ -644,9 +641,6 @@ importers:
       '@remix-run/serve':
         specifier: workspace:*
         version: link:../../../packages/remix-serve
-      '@remix-run/server-runtime':
-        specifier: workspace:*
-        version: link:../../../packages/remix-server-runtime
       '@vanilla-extract/css':
         specifier: ^1.10.0
         version: 1.14.1
@@ -714,9 +708,6 @@ importers:
       '@remix-run/react':
         specifier: workspace:*
         version: link:../../../packages/remix-react
-      '@remix-run/server-runtime':
-        specifier: workspace:*
-        version: link:../../../packages/remix-server-runtime
       isbot:
         specifier: ^4.1.0
         version: 4.4.0
