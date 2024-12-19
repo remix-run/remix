@@ -1,5 +1,5 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import path from "node:path";
+import path from "pathe";
 import fs from "node:fs/promises";
 import type { Readable } from "node:stream";
 import url from "node:url";
