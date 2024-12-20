@@ -1,4 +1,5 @@
 import { type AcceptInit, Accept } from './accept.ts';
+import { type AcceptEncodingInit, AcceptEncoding } from './accept-encoding.ts';
 import { type AcceptLanguageInit, AcceptLanguage } from './accept-language.ts';
 import { type CacheControlInit, CacheControl } from './cache-control.ts';
 import { type ContentDispositionInit, ContentDisposition } from './content-disposition.ts';
@@ -19,6 +20,10 @@ interface SuperHeadersPropertyInit {
    * The [`Accept`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept) header value.
    */
   accept?: string | AcceptInit;
+  /**
+   * The [`Accept-Encoding`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding) header value.
+   */
+  acceptEncoding?: string | AcceptEncodingInit;
   /**
    * The [`Accept-Language`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language) header value.
    */
@@ -307,6 +312,22 @@ export class SuperHeaders extends Headers {
 
   set accept(value: string | AcceptInit | undefined | null) {
     this.#setHeaderValue('accept', Accept, value);
+  }
+
+  /**
+   * The `Accept-Encoding` header contains information about the content encodings that the client
+   * is willing to accept in the response.
+   *
+   * [MDN `Accept-Encoding` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4)
+   */
+  get acceptEncoding(): AcceptEncoding {
+    return this.#getHeaderValue('accept-encoding', AcceptEncoding);
+  }
+
+  set acceptEncoding(value: string | AcceptEncodingInit | undefined | null) {
+    this.#setHeaderValue('accept-encoding', AcceptEncoding, value);
   }
 
   /**

@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { Accept } from './accept.ts';
+import { AcceptEncoding } from './accept-encoding.ts';
 import { AcceptLanguage } from './accept-language.ts';
 import { CacheControl } from './cache-control.ts';
 import { ContentDisposition } from './content-disposition.ts';
@@ -162,6 +163,11 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Accept'), 'text/html,application/json;q=0.9');
     });
 
+    it('handles the acceptEncoding property', () => {
+      let headers = new SuperHeaders({ acceptEncoding: { gzip: 1, deflate: 0.8 } });
+      assert.equal(headers.get('Accept-Encoding'), 'gzip,deflate;q=0.8');
+    });
+
     it('handles the acceptLanguage property', () => {
       let headers = new SuperHeaders({ acceptLanguage: { 'en-US': 1, en: 0.9 } });
       assert.equal(headers.get('Accept-Language'), 'en-us,en;q=0.9');
@@ -279,6 +285,26 @@ describe('SuperHeaders', () => {
       headers.accept = null;
       assert.ok(headers.accept instanceof Accept);
       assert.equal(headers.accept.toString(), '');
+    });
+
+    it('supports the acceptEncoding property', () => {
+      let headers = new SuperHeaders();
+
+      assert.ok(headers.acceptEncoding instanceof AcceptEncoding);
+
+      headers.acceptEncoding = 'gzip, deflate';
+      assert.deepEqual(headers.acceptEncoding.size, 2);
+      assert.deepEqual(headers.acceptEncoding.encodings, ['gzip', 'deflate']);
+      assert.deepEqual(headers.acceptEncoding.weights, [1, 1]);
+
+      headers.acceptEncoding = { gzip: 1, deflate: 0.8 };
+      assert.deepEqual(headers.acceptEncoding.size, 2);
+      assert.deepEqual(headers.acceptEncoding.encodings, ['gzip', 'deflate']);
+      assert.deepEqual(headers.acceptEncoding.weights, [1, 0.8]);
+
+      headers.acceptEncoding = null;
+      assert.ok(headers.acceptEncoding instanceof AcceptEncoding);
+      assert.equal(headers.acceptEncoding.toString(), '');
     });
 
     it('supports the acceptLanguage property', () => {

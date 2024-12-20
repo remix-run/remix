@@ -37,18 +37,16 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
           this.#map.set(language.toLowerCase(), quality);
         }
       } else if (isIterable(init)) {
-        for (let language of init) {
-          if (Array.isArray(language)) {
-            this.#map.set(language[0].toLowerCase(), language[1]);
+        for (let value of init) {
+          if (Array.isArray(value)) {
+            this.#map.set(value[0].toLowerCase(), value[1]);
           } else {
-            this.#map.set(language.toLowerCase(), 1);
+            this.#map.set(value.toLowerCase(), 1);
           }
         }
       } else {
-        for (let language in init) {
-          if (Object.prototype.hasOwnProperty.call(init, language)) {
-            this.#map.set(language.toLowerCase(), init[language]);
-          }
+        for (let language of Object.getOwnPropertyNames(init)) {
+          this.#map.set(language.toLowerCase(), init[language]);
         }
       }
 
@@ -61,14 +59,14 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * An array of all locale identifiers in the `Accept-Language` header.
+   * An array of all locale identifiers in the header.
    */
   get languages(): string[] {
     return Array.from(this.#map.keys());
   }
 
   /**
-   * An array of all quality values in the `Accept-Language` header.
+   * An array of all quality values in the header.
    */
   get qualities(): number[] {
     return Array.from(this.#map.values());
@@ -182,7 +180,7 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * The number of languages in the `Accept-Language` header.
+   * The number of languages in the header.
    */
   get size(): number {
     return this.#map.size;
