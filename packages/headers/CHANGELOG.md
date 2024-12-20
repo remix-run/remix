@@ -2,7 +2,7 @@
 
 This is the changelog for [`headers`](https://github.com/mjackson/remix-the-web/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.9.0 (2024-12-20)
 
 This release tightens up the type safety and brings `SuperHeaders` more in line with the built-in `Headers` interface.
 
