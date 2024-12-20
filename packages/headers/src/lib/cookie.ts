@@ -20,17 +20,15 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
       if (typeof init === 'string') {
         let params = parseParams(init);
         for (let [name, value] of params) {
-          this.#map.set(name, value || '');
+          this.#map.set(name, value ?? '');
         }
       } else if (isIterable(init)) {
         for (let [name, value] of init) {
           this.#map.set(name, value);
         }
       } else {
-        for (let name in init) {
-          if (Object.prototype.hasOwnProperty.call(init, name)) {
-            this.#map.set(name, init[name]);
-          }
+        for (let name of Object.getOwnPropertyNames(init)) {
+          this.#map.set(name, init[name]);
         }
       }
     }
