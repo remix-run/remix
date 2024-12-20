@@ -73,10 +73,20 @@ let headers = new SuperHeaders({ lastModified: ms });
 ```
 
 - Adds support for
+
   - `headers.accept`
   - `headers.connection`
   - `headers.host`
   - `headers.referer`
+
+- Adds low-level `Accept` API
+
+```ts
+import { Accept } from '@mjackson/headers';
+
+let header = new Accept({ 'text/html': 1, 'text/*': 0.9 });
+header.get('text/html'); // 1
+```
 
 ## v0.8.0 (2024-11-14)
 
