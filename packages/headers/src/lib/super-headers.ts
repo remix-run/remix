@@ -49,6 +49,14 @@ interface SuperHeadersPropertyInit {
    */
   contentDisposition?: string | ContentDispositionInit;
   /**
+   * The [`Content-Encoding`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding) header value.
+   */
+  contentEncoding?: string | string[];
+  /**
+   * The [`Content-Language`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language) header value.
+   */
+  contentLanguage?: string | string[];
+  /**
    * The [`Content-Length`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Length) header value.
    */
   contentLength?: string | number;
@@ -84,6 +92,10 @@ interface SuperHeadersPropertyInit {
    * The [`Last-Modified`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified) header value.
    */
   lastModified?: string | DateInit;
+  /**
+   * The [`Location`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Location) header value.
+   */
+  location?: string;
   /**
    * The [`Referer`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer) header value.
    */
@@ -435,6 +447,42 @@ export class SuperHeaders extends Headers {
   }
 
   /**
+   * The `Content-Encoding` header specifies the encoding of the resource.
+   *
+   * Note: If multiple encodings have been used, this value may be a comma-separated list. However, most often this
+   * header will only contain a single value.
+   *
+   * [MDN `Content-Encoding` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding)
+   *
+   * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-encoding)
+   */
+  get contentEncoding(): string | null {
+    return this.get('content-encoding');
+  }
+
+  set contentEncoding(value: string | string[] | undefined | null) {
+    this.#setValue('content-encoding', Array.isArray(value) ? value.join(', ') : value);
+  }
+
+  /**
+   * The `Content-Language` header describes the natural language(s) of the intended audience for the response content.
+   *
+   * Note: If the response content is intended for multiple audiences, this value may be a comma-separated list. However,
+   * most often this header will only contain a single value.
+   *
+   * [MDN `Content-Language` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language)
+   *
+   * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-language)
+   */
+  get contentLanguage(): string | null {
+    return this.get('content-language');
+  }
+
+  set contentLanguage(value: string | string[] | undefined | null) {
+    this.#setValue('content-language', Array.isArray(value) ? value.join(', ') : value);
+  }
+
+  /**
    * The `Content-Length` header indicates the size of the entity-body in bytes.
    *
    * [MDN `Content-Length` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Length)
@@ -570,6 +618,21 @@ export class SuperHeaders extends Headers {
 
   set lastModified(value: string | DateInit | undefined | null) {
     this.#setDateValue('last-modified', value);
+  }
+
+  /**
+   * The `Location` header indicates the URL to redirect to.
+   *
+   * [MDN `Location` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Location)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.2)
+   */
+  get location(): string | null {
+    return this.get('location');
+  }
+
+  set location(value: string | undefined | null) {
+    this.#setValue('location', value);
   }
 
   /**

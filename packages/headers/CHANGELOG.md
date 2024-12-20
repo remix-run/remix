@@ -132,7 +132,10 @@ header.getPreferred(['gzip', 'deflate']); // 'gzip'
   - `acceptEncoding`
   - `acceptRanges`
   - `connection`
+  - `contentEncoding`
+  - `contentLanguage`
   - `host`
+  - `location`
   - `referer`
 
 ## v0.8.0 (2024-11-14)
