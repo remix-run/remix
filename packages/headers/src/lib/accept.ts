@@ -139,7 +139,7 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * Removes a given mediaType.
+   * Removes the given media type from the header.
    * @param mediaType The media type to remove.
    */
   delete(mediaType: string): void {

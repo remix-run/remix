@@ -109,9 +109,27 @@ header.getQuality('text/plain'); // 0.9
 header.getPreferred(['text/html', 'text/plain']); // 'text/html'
 ```
 
-- Added property support (getters and setters) for
+- Added `Accept-Encoding` support
 
+```ts
+import { AcceptEncoding } from '@mjackson/headers';
+
+let header = new AcceptEncoding({ gzip: 1, deflate: 0.9 });
+
+header.accepts('gzip'); // true
+header.accepts('deflate'); // true
+header.accepts('identity'); // true
+header.accepts('br'); // false
+
+header.getQuality('gzip'); // 1
+header.getQuality('deflate'); // 0.9
+
+header.getPreferred(['gzip', 'deflate']); // 'gzip'
+```
+
+- Added `SuperHeaders.prototype` (getters and setters) for:
   - `headers.accept`
+  - `headers.acceptEncoding`
   - `headers.connection`
   - `headers.host`
   - `headers.referer`

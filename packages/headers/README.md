@@ -25,7 +25,8 @@ import Headers from '@mjackson/headers';
 let headers = new Headers();
 
 // Accept
-headers.accept = 'text/html,text/*;q=0.9';
+headers.accept = { 'text/html': 1, 'text/*': 0.9 };
+// or headers.accept = 'text/html,text/*;q=0.9';
 
 console.log(headers.accept.mediaTypes); // [ 'text/html', 'text/*' ]
 console.log(Object.fromEntries(headers.accept.entries())); // { 'text/html': 1, 'text/*': 0.9 }
@@ -41,8 +42,18 @@ headers.accept.set('text/*', 0.8);
 
 console.log(headers.get('Accept')); // "text/html,text/plain;q=0.9,text/*;q=0.8"
 
+// Accept-Encoding
+headers.acceptEncoding = { gzip: 1, deflate: 0.8 };
+// or headers.acceptEncoding = 'gzip, deflate;q=0.8';
+
+headers.acceptEncoding.accepts('gzip'); // true
+headers.acceptEncoding.accepts('br'); // false
+
+headers.acceptEncoding.getPreferred(['gzip', 'deflate']); // 'gzip'
+
 // Accept-Language
-headers.acceptLanguage = 'en-US,en;q=0.9';
+headers.acceptLanguage = { 'en-US': 1, en: 0.9 };
+// or headers.acceptLanguage = 'en-US,en;q=0.9';
 
 console.log(headers.acceptLanguage.languages); // [ 'en-us', 'en' ]
 console.log(Object.fromEntries(headers.acceptLanguage.entries())); // { 'en-us': 1, en: 0.9 }
@@ -190,6 +201,7 @@ The following headers are currently supported:
   - [Overview](#overview)
   - [Low-level API](#low-level-api)
     - [Accept](#accept)
+    - [Accept-Encoding](#accept-encoding)
     - [Accept-Language](#accept-language)
     - [Cache-Control](#cache-control)
     - [Content-Disposition](#content-disposition)
@@ -215,7 +227,6 @@ header.accepts('image/jpeg'); // false
 
 header.getPreferred(['text/html', 'text/plain']); // 'text/html'
 
-// Iterate over media type/quality pairs
 for (let [mediaType, quality] of header) {
   // ...
 }
@@ -223,6 +234,30 @@ for (let [mediaType, quality] of header) {
 // Alternative init styles
 let header = new Accept({ 'text/html': 1, 'text/*': 0.9 });
 let header = new Accept(['text/html', ['text/*', 0.9]]);
+```
+
+### Accept-Encoding
+
+```ts
+let header = new AcceptEncoding('gzip,deflate;q=0.9');
+
+header.has('gzip'); // true
+header.has('br'); // false
+
+header.accepts('gzip'); // true
+header.accepts('deflate'); // true
+header.accepts('identity'); // true
+header.accepts('br'); // true
+
+header.getPreferred(['gzip', 'deflate']); // 'gzip'
+
+for (let [encoding, weight] of header) {
+  // ...
+}
+
+// Alternative init styles
+let header = new AcceptEncoding({ gzip: 1, deflate: 0.9 });
+let header = new AcceptEncoding(['gzip', ['deflate', 0.9]]);
 ```
 
 ### Accept-Language
@@ -241,7 +276,6 @@ header.accepts('fr'); // true
 header.getPreferred(['en-US', 'en-GB']); // 'en-US'
 header.getPreferred(['en', 'fr']); // 'en'
 
-// Iterate over language/quality pairs
 for (let [language, quality] of header) {
   // ...
 }
