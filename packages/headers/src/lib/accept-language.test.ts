@@ -11,32 +11,64 @@ describe('Accept-Language', () => {
 
   it('initializes with a string', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9');
-    assert.equal(header.get('en-US'), 1);
-    assert.equal(header.get('en'), 0.9);
+    assert.equal(header.size, 2);
   });
 
   it('initializes with an array', () => {
     let header = new AcceptLanguage(['en-US', ['en', 0.9]]);
-    assert.equal(header.get('en-US'), 1);
-    assert.equal(header.get('en'), 0.9);
+    assert.equal(header.size, 2);
   });
 
   it('initializes with an object', () => {
     let header = new AcceptLanguage({ 'en-US': 1, en: 0.9 });
-    assert.equal(header.get('en-US'), 1);
-    assert.equal(header.get('en'), 0.9);
+    assert.equal(header.size, 2);
   });
 
   it('initializes with another AcceptLanguage', () => {
     let header = new AcceptLanguage(new AcceptLanguage('en-US,en;q=0.9'));
-    assert.equal(header.get('en-US'), 1);
-    assert.equal(header.get('en'), 0.9);
+    assert.equal(header.size, 2);
   });
 
   it('handles whitespace in initial value', () => {
     let header = new AcceptLanguage(' en-US ,  en;q=  0.9  ');
-    assert.equal(header.get('en-US'), 1);
-    assert.equal(header.get('en'), 0.9);
+    assert.equal(header.size, 2);
+  });
+
+  it('gets all languages', () => {
+    let header = new AcceptLanguage('en-US,en;q=0.9');
+    assert.deepEqual(header.languages, ['en-us', 'en']);
+  });
+
+  it('gets all qualities', () => {
+    let header = new AcceptLanguage('en-US,en;q=0.9');
+    assert.deepEqual(header.qualities, [1, 0.9]);
+  });
+
+  it('checks if a language is acceptable', () => {
+    let header = new AcceptLanguage('en-US,en;q=0.9,fr;q=0.8');
+    assert.equal(header.accepts('en-US'), true);
+    assert.equal(header.accepts('en'), true);
+    assert.equal(header.accepts('en-GB'), true);
+    assert.equal(header.accepts('fr'), true);
+    assert.equal(header.accepts('fi'), false);
+  });
+
+  it('gets the correct quality values', () => {
+    let header = new AcceptLanguage('en-US,en;q=0.9,fr;q=0.8');
+    assert.equal(header.getQuality('en-US'), 1);
+    assert.equal(header.getQuality('*'), 1);
+    assert.equal(header.getQuality('en'), 1);
+    assert.equal(header.getQuality('en-GB'), 0.9);
+    assert.equal(header.getQuality('fr'), 0.8);
+    assert.equal(header.getQuality('fi'), 0);
+  });
+
+  it('gets the preferred language', () => {
+    let header = new AcceptLanguage('en-US,en;q=0.9');
+    assert.equal(header.getPreferred(['en-GB', 'en-US']), 'en-US');
+    assert.equal(header.getPreferred(['en-GB', 'en']), 'en');
+    assert.equal(header.getPreferred(['fr', 'en-GB']), 'en-GB');
+    assert.equal(header.getPreferred(['fi', 'ja']), null);
   });
 
   it('sets and gets languages', () => {
@@ -47,15 +79,9 @@ describe('Accept-Language', () => {
 
   it('deletes languages', () => {
     let header = new AcceptLanguage('en-US');
-    assert.equal(header.delete('en-US'), true);
-    assert.equal(header.delete('en'), false);
-    assert.equal(header.get('en-US'), undefined);
-  });
-
-  it('checks if language exists', () => {
-    let header = new AcceptLanguage('en-US');
     assert.equal(header.has('en-US'), true);
-    assert.equal(header.has('fs'), false);
+    header.delete('en-US');
+    assert.equal(header.has('en-US'), false);
   });
 
   it('clears all languages', () => {
@@ -64,21 +90,11 @@ describe('Accept-Language', () => {
     assert.equal(header.size, 0);
   });
 
-  it('gets all languages', () => {
-    let header = new AcceptLanguage('en-US,en;q=0.9');
-    assert.deepEqual(header.languages, ['en-US', 'en']);
-  });
-
-  it('gets all qualities', () => {
-    let header = new AcceptLanguage('en-US,en;q=0.9');
-    assert.deepEqual(header.qualities, [1, 0.9]);
-  });
-
   it('iterates over entries', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9');
     let entries = Array.from(header.entries());
     assert.deepEqual(entries, [
-      ['en-US', 1],
+      ['en-us', 1],
       ['en', 0.9],
     ]);
   });
@@ -87,7 +103,7 @@ describe('Accept-Language', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9');
     let entries = Array.from(header);
     assert.deepEqual(entries, [
-      ['en-US', 1],
+      ['en-us', 1],
       ['en', 0.9],
     ]);
   });
@@ -99,7 +115,7 @@ describe('Accept-Language', () => {
       result.push([language, quality]);
     });
     assert.deepEqual(result, [
-      ['en-US', 1],
+      ['en-us', 1],
       ['en', 0.9],
     ]);
   });
@@ -111,7 +127,7 @@ describe('Accept-Language', () => {
 
   it('converts to string correctly', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9');
-    assert.equal(header.toString(), 'en-US,en;q=0.9');
+    assert.equal(header.toString(), 'en-us,en;q=0.9');
   });
 
   it('handles setting empty quality values', () => {
@@ -134,17 +150,17 @@ describe('Accept-Language', () => {
 
   it('sorts initial value', () => {
     let header = new AcceptLanguage('en;q=0.9,en-US');
-    assert.equal(header.toString(), 'en-US,en;q=0.9');
-    assert.deepEqual(header.languages, ['en-US', 'en']);
+    assert.equal(header.toString(), 'en-us,en;q=0.9');
+    assert.deepEqual(header.languages, ['en-us', 'en']);
   });
 
   it('sorts updated value', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9');
     header.set('fi');
-    assert.equal(header.toString(), 'en-US,fi,en;q=0.9');
-    assert.deepEqual(header.languages, ['en-US', 'fi', 'en']);
+    assert.equal(header.toString(), 'en-us,fi,en;q=0.9');
+    assert.deepEqual(header.languages, ['en-us', 'fi', 'en']);
     header.set('en-US', 0.8);
-    assert.equal(header.toString(), 'fi,en;q=0.9,en-US;q=0.8');
-    assert.deepEqual(header.languages, ['fi', 'en', 'en-US']);
+    assert.equal(header.toString(), 'fi,en;q=0.9,en-us;q=0.8');
+    assert.deepEqual(header.languages, ['fi', 'en', 'en-us']);
   });
 });

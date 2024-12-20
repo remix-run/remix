@@ -72,21 +72,49 @@ let ms = new Date().getTime();
 let headers = new SuperHeaders({ lastModified: ms });
 ```
 
-- Adds support for
+- Added `AcceptLanguage.prototype.accepts(language)`, `AcceptLanguage.prototype.getQuality(language)`,
+  `AcceptLanguage.prototype.getPreferred(languages)`
 
-  - `headers.accept`
-  - `headers.connection`
-  - `headers.host`
-  - `headers.referer`
+```ts
+import { AcceptLanguage } from '@mjackson/headers';
 
-- Adds low-level `Accept` API
+let header = new AcceptLanguage({ 'en-US': 1, en: 0.9 });
+
+header.accepts('en-US'); // true
+header.accepts('en-GB'); // true
+header.accepts('en'); // true
+header.accepts('fr'); // false
+
+header.getQuality('en-US'); // 1
+header.getQuality('en-GB'); // 0.9
+
+header.getPreferred(['en-GB', 'en-US']); // 'en-US'
+```
+
+- Added `Accept` support
 
 ```ts
 import { Accept } from '@mjackson/headers';
 
 let header = new Accept({ 'text/html': 1, 'text/*': 0.9 });
-header.get('text/html'); // 1
+
+header.accepts('text/html'); // true
+header.accepts('text/plain'); // true
+header.accepts('text/*'); // true
+header.accepts('image/jpeg'); // false
+
+header.getQuality('text/html'); // 1
+header.getQuality('text/plain'); // 0.9
+
+header.getPreferred(['text/html', 'text/plain']); // 'text/html'
 ```
+
+- Added property support (getters and setters) for
+
+  - `headers.accept`
+  - `headers.connection`
+  - `headers.host`
+  - `headers.referer`
 
 ## v0.8.0 (2024-11-14)
 

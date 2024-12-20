@@ -7,7 +7,7 @@ HTTP headers contain a wealth of information:
 - Who is sending this request?
 - What's in the payload and how is it encoded?
 - What is the filename of this file upload?
-- and much, much more!
+- and much more!
 
 The [built-in JavaScript `Headers` interface](https://developer.mozilla.org/en-US/docs/Web/API/Headers) accepts and gives you strings for everything, which you're probably used to parsing and stringifying manually as needed. This library aims to give you a more fluent interface for all of this information. Similar to how the DOM gives you programmatic access to HTML documents, `headers` gives you access to HTTP headers.
 
@@ -30,6 +30,12 @@ headers.accept = 'text/html,text/*;q=0.9';
 console.log(headers.accept.mediaTypes); // [ 'text/html', 'text/*' ]
 console.log(Object.fromEntries(headers.accept.entries())); // { 'text/html': 1, 'text/*': 0.9 }
 
+headers.accept.accepts('text/html'); // true
+headers.accept.accepts('text/plain'); // true
+headers.accept.accepts('image/jpeg'); // false
+
+headers.accept.getPreferred(['text/plain', 'text/html']); // 'text/html'
+
 headers.accept.set('text/plain', 0.9);
 headers.accept.set('text/*', 0.8);
 
@@ -38,8 +44,14 @@ console.log(headers.get('Accept')); // "text/html,text/plain;q=0.9,text/*;q=0.8"
 // Accept-Language
 headers.acceptLanguage = 'en-US,en;q=0.9';
 
-console.log(headers.acceptLanguage.languages); // [ 'en-US', 'en' ]
-console.log(Object.fromEntries(headers.acceptLanguage.entries())); // { 'en-US': 1, en: 0.9 }
+console.log(headers.acceptLanguage.languages); // [ 'en-us', 'en' ]
+console.log(Object.fromEntries(headers.acceptLanguage.entries())); // { 'en-us': 1, en: 0.9 }
+
+headers.acceptLanguage.accepts('en'); // true
+headers.acceptLanguage.accepts('ja'); // false
+
+headers.acceptLanguage.getPreferred(['en-US', 'en-GB']); // 'en-US'
+headers.acceptLanguage.getPreferred(['en', 'fr']); // 'en'
 
 // Content-Type
 headers.contentType = 'application/json; charset=utf-8';
@@ -192,10 +204,16 @@ If you need support for a header that isn't listed here, please [send a PR](http
 
 ```ts
 let header = new Accept('text/html;text/*;q=0.9');
-header.get('text/html'); // 1
-header.set('text/html', 0.8);
-header.delete('text/html');
-header.has('text/*'); // true
+
+header.has('text/html'); // true
+header.has('text/plain'); // false
+
+header.accepts('text/html'); // true
+header.accepts('text/plain'); // true
+header.accepts('text/*'); // true
+header.accepts('image/jpeg'); // false
+
+header.getPreferred(['text/html', 'text/plain']); // 'text/html'
 
 // Iterate over media type/quality pairs
 for (let [mediaType, quality] of header) {
@@ -211,10 +229,17 @@ let header = new Accept(['text/html', ['text/*', 0.9]]);
 
 ```ts
 let header = new AcceptLanguage('en-US,en;q=0.9');
-header.get('en-US'); // 1
-header.set('en-US', 0.8);
-header.delete('en-US');
-header.has('en'); // true
+
+header.has('en-US'); // true
+header.has('en-GB'); // false
+
+header.accepts('en-US'); // true
+header.accepts('en-GB'); // true
+header.accepts('en'); // true
+header.accepts('fr'); // true
+
+header.getPreferred(['en-US', 'en-GB']); // 'en-US'
+header.getPreferred(['en', 'fr']); // 'en'
 
 // Iterate over language/quality pairs
 for (let [language, quality] of header) {

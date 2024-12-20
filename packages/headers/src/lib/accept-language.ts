@@ -34,20 +34,20 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
             }
           }
 
-          this.#map.set(language, quality);
+          this.#map.set(language.toLowerCase(), quality);
         }
       } else if (isIterable(init)) {
         for (let language of init) {
           if (Array.isArray(language)) {
-            this.#map.set(language[0], language[1]);
+            this.#map.set(language[0].toLowerCase(), language[1]);
           } else {
-            this.#map.set(language, 1);
+            this.#map.set(language.toLowerCase(), 1);
           }
         }
       } else {
         for (let language in init) {
           if (Object.prototype.hasOwnProperty.call(init, language)) {
-            this.#map.set(language, init[language]);
+            this.#map.set(language.toLowerCase(), init[language]);
           }
         }
       }
@@ -75,36 +75,90 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * Gets the quality of a language with the given locale identifier from the `Accept-Language` header.
+   * Returns `true` if the header matches the given language (i.e. it is "acceptable").
+   * @param language The locale identifier of the language to check.
+   * @returns `true` if the language is acceptable, `false` otherwise.
    */
-  get(language: string): number | undefined {
-    return this.#map.get(language);
+  accepts(language: string): boolean {
+    return this.getQuality(language) > 0;
   }
 
   /**
-   * Sets a language with the given quality (defaults to 1) in the `Accept-Language` header.
+   * Gets the quality of a language with the given locale identifier. Performs wildcard and subtype
+   * matching, so `en` matches `en-US` and `en-GB`, and `*` matches all languages.
+   * @param language The locale identifier of the language to get.
+   * @returns The quality of the language, or `0` if it is not in the header.
+   */
+  getQuality(language: string): number {
+    let [base, subtype] = language.toLowerCase().split('-');
+
+    for (let [key, value] of this) {
+      let [b, s] = key.split('-');
+      if (
+        (b === base || b === '*' || base === '*') &&
+        (s === subtype || s === undefined || subtype === undefined)
+      ) {
+        return value;
+      }
+    }
+
+    return 0;
+  }
+
+  /**
+   * Returns the most preferred language from the given list of languages.
+   * @param languages The locale identifiers of the languages to choose from.
+   * @returns The most preferred language or `null` if none match.
+   */
+  getPreferred(languages: string[]): string | null {
+    let sorted = languages
+      .map((language) => [language, this.getQuality(language)] as const)
+      .sort((a, b) => b[1] - a[1]);
+
+    let first = sorted[0];
+
+    return first !== undefined && first[1] > 0 ? first[0] : null;
+  }
+
+  /**
+   * Gets the quality of a language with the given locale identifier. If it is not in the header
+   * verbatim, this returns `null`.
+   * @param language The locale identifier of the language to get.
+   * @returns The quality of the language, or `null` if it is not in the header.
+   */
+  get(language: string): number | null {
+    return this.#map.get(language.toLowerCase()) ?? null;
+  }
+
+  /**
+   * Sets a language with the given quality.
+   * @param language The locale identifier of the language to set.
+   * @param quality The quality of the language. Defaults to 1.
    */
   set(language: string, quality = 1): void {
-    this.#map.set(language, quality);
+    this.#map.set(language.toLowerCase(), quality);
     this.#sort();
   }
 
   /**
-   * Removes a language with the given locale identifier from the `Accept-Language` header.
+   * Removes a language with the given locale identifier.
+   * @param language The locale identifier of the language to remove.
    */
-  delete(language: string): boolean {
-    return this.#map.delete(language);
+  delete(language: string): void {
+    this.#map.delete(language.toLowerCase());
   }
 
   /**
-   * True if a language with the given locale identifier in the `Accept-Language` header.
+   * Checks if the header contains a language with the given locale identifier.
+   * @param language The locale identifier of the language to check.
+   * @returns `true` if the language is in the header, `false` otherwise.
    */
   has(language: string): boolean {
-    return this.#map.has(language);
+    return this.#map.has(language.toLowerCase());
   }
 
   /**
-   * Removes all languages from the `Accept-Language` header.
+   * Removes all languages from the header.
    */
   clear(): void {
     this.#map.clear();
