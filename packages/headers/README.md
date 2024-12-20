@@ -25,8 +25,7 @@ import Headers from '@mjackson/headers';
 let headers = new Headers();
 
 // Accept
-headers.accept = { 'text/html': 1, 'text/*': 0.9 };
-// or headers.accept = 'text/html,text/*;q=0.9';
+headers.accept = 'text/html, text/*;q=0.9';
 
 headers.accept.mediaTypes; // [ 'text/html', 'text/*' ]
 Object.fromEntries(headers.accept.entries()); // { 'text/html': 1, 'text/*': 0.9 }
@@ -43,8 +42,7 @@ headers.accept.set('text/*', 0.8);
 headers.get('Accept'); // 'text/html,text/plain;q=0.9,text/*;q=0.8'
 
 // Accept-Encoding
-headers.acceptEncoding = { gzip: 1, deflate: 0.8 };
-// or headers.acceptEncoding = 'gzip, deflate;q=0.8';
+headers.acceptEncoding = 'gzip, deflate;q=0.8';
 
 headers.acceptEncoding.accepts('gzip'); // true
 headers.acceptEncoding.accepts('br'); // false
@@ -52,8 +50,7 @@ headers.acceptEncoding.accepts('br'); // false
 headers.acceptEncoding.getPreferred(['gzip', 'deflate']); // 'gzip'
 
 // Accept-Language
-headers.acceptLanguage = { 'en-US': 1, en: 0.9 };
-// or headers.acceptLanguage = 'en-US,en;q=0.9';
+headers.acceptLanguage = 'en-US, en;q=0.9';
 
 headers.acceptLanguage.languages; // [ 'en-us', 'en' ]
 Object.fromEntries(headers.acceptLanguage.entries()); // { 'en-us': 1, en: 0.9 }
