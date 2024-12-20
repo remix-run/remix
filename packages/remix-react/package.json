@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "2.15.1",
+  "version": "2.15.2",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -21,8 +21,8 @@
   "dependencies": {
     "@remix-run/router": "1.21.0",
     "@remix-run/server-runtime": "workspace:*",
-    "react-router": "6.28.0",
-    "react-router-dom": "6.28.0",
+    "react-router": "6.28.1",
+    "react-router-dom": "6.28.1",
     "turbo-stream": "2.4.0"
   },
   "devDependencies": {

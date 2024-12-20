@@ -1,5 +1,7 @@
 # `create-remix`
 
+## 2.15.2
+
 ## 2.15.1
 
 ### Patch Changes

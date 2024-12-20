@@ -24,26 +24,26 @@ fi
 set -x
 
 cd packages/remix-dev
-pnpm add -E @remix-run/router@${ROUTER_VERSION}
+npx pnpm@8 add -E @remix-run/router@${ROUTER_VERSION}
 cd ../..
 
 cd packages/remix-server-runtime
-pnpm add -E @remix-run/router@${ROUTER_VERSION}
+npx pnpm@8 add -E @remix-run/router@${ROUTER_VERSION}
 cd ../..
 
 cd packages/remix-react
-pnpm add -E @remix-run/router@${ROUTER_VERSION} react-router@${RR_VERSION} react-router-dom@${RR_VERSION}
+npx pnpm@8 add -E @remix-run/router@${ROUTER_VERSION} react-router@${RR_VERSION} react-router-dom@${RR_VERSION}
 cd ../..
 
 cd packages/remix-testing
-pnpm add -E @remix-run/router@${ROUTER_VERSION} react-router-dom@${RR_VERSION}
+npx pnpm@8 add -E @remix-run/router@${ROUTER_VERSION} react-router-dom@${RR_VERSION}
 cd ../..
 
 cd integration
-pnpm add -E @remix-run/router@${ROUTER_VERSION}
+npx pnpm@8 add -E @remix-run/router@${ROUTER_VERSION}
 cd ..
 
 # Because deplicates...
-pnpm dedupe && rm -rf ./node_modules && pnpm install
+npx pnpm@8 dedupe && rm -rf ./node_modules && npx pnpm@8 install
 
 set +x
