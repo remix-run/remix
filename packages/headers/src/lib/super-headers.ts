@@ -1,3 +1,4 @@
+import { type AcceptInit, Accept } from './accept.ts';
 import { type AcceptLanguageInit, AcceptLanguage } from './accept-language.ts';
 import { type CacheControlInit, CacheControl } from './cache-control.ts';
 import { type ContentDispositionInit, ContentDisposition } from './content-disposition.ts';
@@ -14,6 +15,10 @@ const SetCookieKey = 'set-cookie';
 type DateInit = number | Date;
 
 interface SuperHeadersPropertyInit {
+  /**
+   * The [`Accept`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept) header value.
+   */
+  accept?: string | AcceptInit;
   /**
    * The [`Accept-Language`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language) header value.
    */
@@ -228,12 +233,13 @@ export class SuperHeaders extends Headers {
       }
     }
 
-    for (let value of this.#setCookieValues) {
-      let str = value.toString();
-      if (str) {
-        yield [SetCookieKey, str];
-      }
+    for (let value of this.getSetCookie()) {
+      yield [SetCookieKey, value];
     }
+  }
+
+  [Symbol.iterator](): IterableIterator<[string, string]> {
+    return this.entries();
   }
 
   /**
@@ -258,17 +264,13 @@ export class SuperHeaders extends Headers {
     }
   }
 
-  [Symbol.iterator](): IterableIterator<[string, string]> {
-    return this.entries();
-  }
-
   /**
    * Invokes the `callback` for each header key/value pair.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/forEach)
    */
   forEach(
-    callback: (value: string, key: string, parent: SuperHeaders) => void,
+    callback: (value: string, key: string, headers: SuperHeaders) => void,
     thisArg?: any,
   ): void {
     for (let [key, value] of this) {
@@ -290,6 +292,22 @@ export class SuperHeaders extends Headers {
   }
 
   // Header-specific getters and setters
+
+  /**
+   * The `Accept` header is used by clients to indicate the media types that are acceptable
+   * in the response.
+   *
+   * [MDN `Accept` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2)
+   */
+  get accept(): Accept {
+    return this.#getHeaderValue('accept', Accept);
+  }
+
+  set accept(value: string | AcceptInit | undefined | null) {
+    this.#setHeaderValue('accept', Accept, value);
+  }
 
   /**
    * The `Accept-Language` header contains information about preferred natural language for the

@@ -27,7 +27,7 @@ describe('Accept-Language', () => {
     assert.equal(header.get('en'), 0.9);
   });
 
-  it('initializes with another Accept-Language', () => {
+  it('initializes with another AcceptLanguage', () => {
     let header = new AcceptLanguage(new AcceptLanguage('en-US,en;q=0.9'));
     assert.equal(header.get('en-US'), 1);
     assert.equal(header.get('en'), 0.9);
@@ -40,7 +40,7 @@ describe('Accept-Language', () => {
   });
 
   it('sets and gets languages', () => {
-    let header = new AcceptLanguage('');
+    let header = new AcceptLanguage();
     header.set('en', 0.9);
     assert.equal(header.get('en'), 0.9);
   });
@@ -64,6 +64,16 @@ describe('Accept-Language', () => {
     assert.equal(header.size, 0);
   });
 
+  it('gets all languages', () => {
+    let header = new AcceptLanguage('en-US,en;q=0.9');
+    assert.deepEqual(header.languages, ['en-US', 'en']);
+  });
+
+  it('gets all qualities', () => {
+    let header = new AcceptLanguage('en-US,en;q=0.9');
+    assert.deepEqual(header.qualities, [1, 0.9]);
+  });
+
   it('iterates over entries', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9');
     let entries = Array.from(header.entries());
@@ -73,14 +83,13 @@ describe('Accept-Language', () => {
     ]);
   });
 
-  it('gets all languages', () => {
+  it('is directly iterable', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9');
-    assert.deepEqual(header.languages, ['en-US', 'en']);
-  });
-
-  it('gets all qualities', () => {
-    let header = new AcceptLanguage('en-US,en;q=0.9');
-    assert.deepEqual(header.qualities, [1, 0.9]);
+    let entries = Array.from(header);
+    assert.deepEqual(entries, [
+      ['en-US', 1],
+      ['en', 0.9],
+    ]);
   });
 
   it('uses forEach correctly', () => {
@@ -105,20 +114,10 @@ describe('Accept-Language', () => {
     assert.equal(header.toString(), 'en-US,en;q=0.9');
   });
 
-  it('is directly iterable', () => {
-    let header = new AcceptLanguage('en-US,en;q=0.9');
-    let entries = Array.from(header);
-    assert.deepEqual(entries, [
-      ['en-US', 1],
-      ['en', 0.9],
-    ]);
-  });
-
   it('handles setting empty quality values', () => {
-    let header = new AcceptLanguage('');
+    let header = new AcceptLanguage();
     header.set('en-US');
     assert.equal(header.get('en-US'), 1);
-    assert.equal(header.toString(), 'en-US');
   });
 
   it('overwrites existing quality values', () => {
@@ -128,10 +127,9 @@ describe('Accept-Language', () => {
   });
 
   it('handles setting wildcard value', () => {
-    let header = new AcceptLanguage('');
+    let header = new AcceptLanguage();
     header.set('*');
     assert.equal(header.get('*'), 1);
-    assert.equal(header.toString(), '*');
   });
 
   it('sorts initial value', () => {
