@@ -19,6 +19,8 @@ npm install @mjackson/headers
 
 ## Overview
 
+The following should give you a sense of what kinds of things you can do with this library:
+
 ```ts
 import Headers from '@mjackson/headers';
 
@@ -204,33 +206,17 @@ console.log(`${headers}`);
 // Accept-Language: en-US,en;q=0.9
 ```
 
-## Low-level API
+## Individual Header Utility Classes
 
-In addition to the high-level `Headers` API, `headers` also provides a rich set of primitives you can use to work with just about any complex HTTP header value. Each header class includes a spec-compliant parser (the constructor), stringifier (`toString`), and getters/setters for all relevant attributes. Classes for headers that contain a list of fields, like `Cookie`, are `Iterable`.
-
-All individual header classes may be initialized with either a) the string value of the header or b) an `init` object specific to that header.
-
-The following headers are currently supported:
-
-- [headers](#headers)
-  - [Installation](#installation)
-  - [Overview](#overview)
-  - [Low-level API](#low-level-api)
-    - [Accept](#accept)
-    - [Accept-Encoding](#accept-encoding)
-    - [Accept-Language](#accept-language)
-    - [Cache-Control](#cache-control)
-    - [Content-Disposition](#content-disposition)
-    - [Content-Type](#content-type)
-    - [Cookie](#cookie)
-    - [Set-Cookie](#set-cookie)
-  - [License](#license)
+In addition to the high-level `Headers` API, `headers` also provides a rich set of primitives you can use to work with just about any complex HTTP header value. Each header class includes a spec-compliant parser (the constructor), stringifier (`toString`), and getters/setters for all relevant attributes. Classes for headers that contain a list of fields, like `Cookie`, are iterable.
 
 If you need support for a header that isn't listed here, please [send a PR](https://github.com/mjackson/remix-the-web/pulls)! The goal is to have first-class support for all common HTTP headers.
 
 ### Accept
 
 ```ts
+import { Accept } from '@mjackson/headers';
+
 let header = new Accept('text/html;text/*;q=0.9');
 
 header.has('text/html'); // true
@@ -255,6 +241,8 @@ let header = new Accept(['text/html', ['text/*', 0.9]]);
 ### Accept-Encoding
 
 ```ts
+import { AcceptEncoding } from '@mjackson/headers';
+
 let header = new AcceptEncoding('gzip,deflate;q=0.9');
 
 header.has('gzip'); // true
@@ -279,6 +267,8 @@ let header = new AcceptEncoding(['gzip', ['deflate', 0.9]]);
 ### Accept-Language
 
 ```ts
+import { AcceptLanguage } from '@mjackson/headers';
+
 let header = new AcceptLanguage('en-US,en;q=0.9');
 
 header.has('en-US'); // true
@@ -402,6 +392,11 @@ let header = new SetCookie({
   httpOnly: true,
 });
 ```
+
+## Related Packages
+
+- [`fetch-proxy`](https://github.com/mjackson/remix-the-web/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+- [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server) - Build HTTP servers on Node.js using the web fetch API
 
 ## License
 
