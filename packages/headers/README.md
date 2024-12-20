@@ -28,8 +28,8 @@ let headers = new Headers();
 headers.accept = { 'text/html': 1, 'text/*': 0.9 };
 // or headers.accept = 'text/html,text/*;q=0.9';
 
-console.log(headers.accept.mediaTypes); // [ 'text/html', 'text/*' ]
-console.log(Object.fromEntries(headers.accept.entries())); // { 'text/html': 1, 'text/*': 0.9 }
+headers.accept.mediaTypes; // [ 'text/html', 'text/*' ]
+Object.fromEntries(headers.accept.entries()); // { 'text/html': 1, 'text/*': 0.9 }
 
 headers.accept.accepts('text/html'); // true
 headers.accept.accepts('text/plain'); // true
@@ -40,7 +40,7 @@ headers.accept.getPreferred(['text/plain', 'text/html']); // 'text/html'
 headers.accept.set('text/plain', 0.9);
 headers.accept.set('text/*', 0.8);
 
-console.log(headers.get('Accept')); // "text/html,text/plain;q=0.9,text/*;q=0.8"
+headers.get('Accept'); // 'text/html,text/plain;q=0.9,text/*;q=0.8'
 
 // Accept-Encoding
 headers.acceptEncoding = { gzip: 1, deflate: 0.8 };
@@ -55,8 +55,8 @@ headers.acceptEncoding.getPreferred(['gzip', 'deflate']); // 'gzip'
 headers.acceptLanguage = { 'en-US': 1, en: 0.9 };
 // or headers.acceptLanguage = 'en-US,en;q=0.9';
 
-console.log(headers.acceptLanguage.languages); // [ 'en-us', 'en' ]
-console.log(Object.fromEntries(headers.acceptLanguage.entries())); // { 'en-us': 1, en: 0.9 }
+headers.acceptLanguage.languages; // [ 'en-us', 'en' ]
+Object.fromEntries(headers.acceptLanguage.entries()); // { 'en-us': 1, en: 0.9 }
 
 headers.acceptLanguage.accepts('en'); // true
 headers.acceptLanguage.accepts('ja'); // false
@@ -73,33 +73,41 @@ headers.connection = 'close';
 // Content-Type
 headers.contentType = 'application/json; charset=utf-8';
 
-console.log(headers.contentType.mediaType); // "application/json"
-console.log(headers.contentType.charset); // "utf-8"
+headers.contentType.mediaType; // "application/json"
+headers.contentType.charset; // "utf-8"
 
 headers.contentType.charset = 'iso-8859-1';
 
-console.log(headers.get('Content-Type')); // "application/json; charset=iso-8859-1"
+headers.get('Content-Type'); // "application/json; charset=iso-8859-1"
 
 // Content-Disposition
 headers.contentDisposition =
   'attachment; filename="example.pdf"; filename*=UTF-8\'\'%E4%BE%8B%E5%AD%90.pdf';
 
-console.log(headers.contentDisposition.type); // 'attachment'
-console.log(headers.contentDisposition.filename); // 'example.pdf'
-console.log(headers.contentDisposition.filenameSplat); // 'UTF-8\'\'%E4%BE%8B%E5%AD%90.pdf'
-console.log(headers.contentDisposition.preferredFilename); // '例子.pdf'
+headers.contentDisposition.type; // 'attachment'
+headers.contentDisposition.filename; // 'example.pdf'
+headers.contentDisposition.filenameSplat; // 'UTF-8\'\'%E4%BE%8B%E5%AD%90.pdf'
+headers.contentDisposition.preferredFilename; // '例子.pdf'
 
 // Cookie
 headers.cookie = 'session_id=abc123; user_id=12345';
 
-console.log(headers.cookie.get('session_id')); // 'abc123'
-console.log(headers.cookie.get('user_id')); // '12345'
+headers.cookie.get('session_id'); // 'abc123'
+headers.cookie.get('user_id'); // '12345'
 
 headers.cookie.set('theme', 'dark');
-console.log(headers.get('Cookie')); // 'session_id=abc123; user_id=12345; theme=dark'
+headers.get('Cookie'); // 'session_id=abc123; user_id=12345; theme=dark'
 
 // Host
 headers.host = 'example.com';
+
+// Last-Modified
+headers.lastModified = new Date();
+// or headers.lastModified = new Date().getTime();
+headers.get('Last-Modified'); // 'Fri, 20 Dec 2024 08:08:05 GMT'
+
+// Location
+headers.location = 'https://example.com';
 
 // Referer
 headers.referer = 'https://example.com/';
@@ -107,17 +115,16 @@ headers.referer = 'https://example.com/';
 // Set-Cookie
 headers.setCookie = ['session_id=abc123; Path=/; HttpOnly'];
 
-console.log(headers.setCookie[0].name); // 'session_id'
-console.log(headers.setCookie[0].value); // 'abc123'
-console.log(headers.setCookie[0].path); // '/'
-console.log(headers.setCookie[0].httpOnly); // true
+headers.setCookie[0].name; // 'session_id'
+headers.setCookie[0].value; // 'abc123'
+headers.setCookie[0].path; // '/'
+headers.setCookie[0].httpOnly; // true
 
 // Modifying Set-Cookie attributes
 headers.setCookie[0].maxAge = 3600;
 headers.setCookie[0].secure = true;
 
-console.log(headers.get('Set-Cookie'));
-// session_id=abc123; Path=/; HttpOnly; Max-Age=3600; Secure
+headers.get('Set-Cookie'); // 'session_id=abc123; Path=/; HttpOnly; Max-Age=3600; Secure'
 
 // Setting multiple cookies is easy, it's just an array
 headers.setCookie.push('user_id=12345; Path=/api; Secure');

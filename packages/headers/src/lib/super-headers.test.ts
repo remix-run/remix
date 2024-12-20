@@ -200,6 +200,16 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Content-Disposition'), 'attachment; filename=example.txt');
     });
 
+    it('handles the contentEncoding property', () => {
+      let headers = new SuperHeaders({ contentEncoding: 'gzip' });
+      assert.equal(headers.get('Content-Encoding'), 'gzip');
+    });
+
+    it('handles the contentLanguage property', () => {
+      let headers = new SuperHeaders({ contentLanguage: 'en-US' });
+      assert.equal(headers.get('Content-Language'), 'en-US');
+    });
+
     it('handles the contentLength property', () => {
       let headers = new SuperHeaders({ contentLength: 42 });
       assert.equal(headers.get('Content-Length'), '42');
@@ -232,11 +242,6 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Host'), 'example.com');
     });
 
-    it('handles the lastModified property', () => {
-      let headers = new SuperHeaders({ lastModified: new Date('2021-01-01T00:00:00Z') });
-      assert.equal(headers.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT');
-    });
-
     it('handles the ifModifiedSince property', () => {
       let headers = new SuperHeaders({ ifModifiedSince: new Date('2021-01-01T00:00:00Z') });
       assert.equal(headers.get('If-Modified-Since'), 'Fri, 01 Jan 2021 00:00:00 GMT');
@@ -245,6 +250,16 @@ describe('SuperHeaders', () => {
     it('handles the ifUnmodifiedSince property', () => {
       let headers = new SuperHeaders({ ifUnmodifiedSince: new Date('2021-01-01T00:00:00Z') });
       assert.equal(headers.get('If-Unmodified-Since'), 'Fri, 01 Jan 2021 00:00:00 GMT');
+    });
+
+    it('handles the lastModified property', () => {
+      let headers = new SuperHeaders({ lastModified: new Date('2021-01-01T00:00:00Z') });
+      assert.equal(headers.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT');
+    });
+
+    it('handles the location property', () => {
+      let headers = new SuperHeaders({ location: 'https://example.com' });
+      assert.equal(headers.get('Location'), 'https://example.com');
     });
 
     it('handles the referer property', () => {
@@ -413,6 +428,36 @@ describe('SuperHeaders', () => {
       assert.equal(headers.contentDisposition.toString(), '');
     });
 
+    it('supports the contentEncoding property', () => {
+      let headers = new SuperHeaders();
+
+      assert.equal(headers.contentEncoding, null);
+
+      headers.contentEncoding = 'gzip';
+      assert.equal(headers.contentEncoding, 'gzip');
+
+      headers.contentEncoding = ['deflate', 'gzip'];
+      assert.equal(headers.contentEncoding, 'deflate, gzip');
+
+      headers.contentEncoding = null;
+      assert.equal(headers.contentEncoding, null);
+    });
+
+    it('supports the contentLanguage property', () => {
+      let headers = new SuperHeaders();
+
+      assert.equal(headers.contentLanguage, null);
+
+      headers.contentLanguage = 'en-US';
+      assert.equal(headers.contentLanguage, 'en-US');
+
+      headers.contentLanguage = ['en', 'fr'];
+      assert.equal(headers.contentLanguage, 'en, fr');
+
+      headers.contentLanguage = null;
+      assert.equal(headers.contentLanguage, null);
+    });
+
     it('supports the contentLength property', () => {
       let headers = new SuperHeaders();
 
@@ -506,19 +551,6 @@ describe('SuperHeaders', () => {
       assert.equal(headers.host, null);
     });
 
-    it('supports the lastModified property', () => {
-      let headers = new SuperHeaders();
-
-      assert.equal(headers.lastModified, null);
-
-      headers.lastModified = new Date('2021-01-01T00:00:00Z');
-      assert.ok(headers.lastModified instanceof Date);
-      assert.equal(headers.lastModified.toUTCString(), 'Fri, 01 Jan 2021 00:00:00 GMT');
-
-      headers.lastModified = null;
-      assert.equal(headers.lastModified, null);
-    });
-
     it('supports the ifModifiedSince property', () => {
       let headers = new SuperHeaders();
 
@@ -543,6 +575,31 @@ describe('SuperHeaders', () => {
 
       headers.ifUnmodifiedSince = null;
       assert.equal(headers.ifUnmodifiedSince, null);
+    });
+
+    it('supports the lastModified property', () => {
+      let headers = new SuperHeaders();
+
+      assert.equal(headers.lastModified, null);
+
+      headers.lastModified = new Date('2021-01-01T00:00:00Z');
+      assert.ok(headers.lastModified instanceof Date);
+      assert.equal(headers.lastModified.toUTCString(), 'Fri, 01 Jan 2021 00:00:00 GMT');
+
+      headers.lastModified = null;
+      assert.equal(headers.lastModified, null);
+    });
+
+    it('supports the location property', () => {
+      let headers = new SuperHeaders();
+
+      assert.equal(headers.location, null);
+
+      headers.location = 'https://example.com';
+      assert.equal(headers.location, 'https://example.com');
+
+      headers.location = null;
+      assert.equal(headers.location, null);
     });
 
     it('supports the referer property', () => {
