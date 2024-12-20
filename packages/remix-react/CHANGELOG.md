@@ -1,26 +1,12 @@
 # `@remix-run/react`
 
-## 2.15.2-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.15.2-pre.2`
-
-## 2.15.2-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.15.2-pre.1`
-
-## 2.15.2-pre.0
+## 2.15.2
 
 ### Patch Changes
 
 - Throw unwrapped single fetch redirect to align with pre-single fetch behavior ([#10317](https://github.com/remix-run/remix/pull/10317))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.15.2-pre.0`
+  - `@remix-run/server-runtime@2.15.2`
 
 ## 2.15.1
 

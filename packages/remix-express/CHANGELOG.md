@@ -1,25 +1,11 @@
 # `@remix-run/express`
 
-## 2.15.2-pre.2
+## 2.15.2
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/node@2.15.2-pre.2`
-
-## 2.15.2-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.15.2-pre.1`
-
-## 2.15.2-pre.0
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.15.2-pre.0`
+  - `@remix-run/node@2.15.2`
 
 ## 2.15.1
 
