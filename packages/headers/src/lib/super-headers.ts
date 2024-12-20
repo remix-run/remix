@@ -382,11 +382,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7233#section-2.3)
    */
   get acceptRanges(): string | null {
-    return this.get('accept-ranges');
+    return this.#getStringValue('accept-ranges');
   }
 
   set acceptRanges(value: string | undefined | null) {
-    this.#setValue('accept-ranges', value);
+    this.#setStringValue('accept-ranges', value);
   }
 
   /**
@@ -428,11 +428,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-6.1)
    */
   get connection(): string | null {
-    return this.get('connection');
+    return this.#getStringValue('connection');
   }
 
   set connection(value: string | undefined | null) {
-    this.#setValue('connection', value);
+    this.#setStringValue('connection', value);
   }
 
   /**
@@ -461,11 +461,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-encoding)
    */
   get contentEncoding(): string | null {
-    return this.get('content-encoding');
+    return this.#getStringValue('content-encoding');
   }
 
   set contentEncoding(value: string | string[] | undefined | null) {
-    this.#setValue('content-encoding', Array.isArray(value) ? value.join(', ') : value);
+    this.#setStringValue('content-encoding', Array.isArray(value) ? value.join(', ') : value);
   }
 
   /**
@@ -479,11 +479,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-language)
    */
   get contentLanguage(): string | null {
-    return this.get('content-language');
+    return this.#getStringValue('content-language');
   }
 
   set contentLanguage(value: string | string[] | undefined | null) {
-    this.#setValue('content-language', Array.isArray(value) ? value.join(', ') : value);
+    this.#setStringValue('content-language', Array.isArray(value) ? value.join(', ') : value);
   }
 
   /**
@@ -555,11 +555,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-2.3)
    */
   get etag(): string | null {
-    return this.get('etag');
+    return this.#getStringValue('etag');
   }
 
   set etag(value: string | undefined | null) {
-    this.#setValue(
+    this.#setStringValue(
       'etag',
       typeof value === 'string' && !/^(W\/)?".*"$/.test(value) ? `"${value}"` : value,
     );
@@ -588,11 +588,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-5.4)
    */
   get host(): string | null {
-    return this.get('host');
+    return this.#getStringValue('host');
   }
 
   set host(value: string | undefined | null) {
-    this.#setValue('host', value);
+    this.#setStringValue('host', value);
   }
 
   /**
@@ -650,11 +650,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.2)
    */
   get location(): string | null {
-    return this.get('location');
+    return this.#getStringValue('location');
   }
 
   set location(value: string | undefined | null) {
-    this.#setValue('location', value);
+    this.#setStringValue('location', value);
   }
 
   /**
@@ -666,11 +666,11 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.5.2)
    */
   get referer(): string | null {
-    return this.get('referer');
+    return this.#getStringValue('referer');
   }
 
   set referer(value: string | undefined | null) {
-    this.#setValue('referer', value);
+    this.#setStringValue('referer', value);
   }
 
   /**
@@ -706,14 +706,6 @@ export class SuperHeaders extends Headers {
   }
 
   // helpers
-
-  #setValue(key: string, value: string | undefined | null): void {
-    if (value != null) {
-      this.#map.set(key, value);
-    } else {
-      this.#map.delete(key);
-    }
-  }
 
   #getHeaderValue<T extends HeaderValue>(key: string, ctor: new (init?: any) => T): T {
     let value = this.#map.get(key);
@@ -767,6 +759,19 @@ export class SuperHeaders extends Headers {
   #setNumberValue(key: string, value: string | number | undefined | null): void {
     if (value != null) {
       this.#map.set(key, typeof value === 'string' ? value : value.toString());
+    } else {
+      this.#map.delete(key);
+    }
+  }
+
+  #getStringValue(key: string): string | null {
+    let value = this.#map.get(key);
+    return value === undefined ? null : (value as string);
+  }
+
+  #setStringValue(key: string, value: string | undefined | null): void {
+    if (value != null) {
+      this.#map.set(key, value);
     } else {
       this.#map.delete(key);
     }
