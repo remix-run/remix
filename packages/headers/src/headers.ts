@@ -1,3 +1,4 @@
+export { type AcceptInit, Accept } from './lib/accept.ts';
 export { type AcceptLanguageInit, AcceptLanguage } from './lib/accept-language.ts';
 export { type CacheControlInit, CacheControl } from './lib/cache-control.ts';
 export { type ContentDispositionInit, ContentDisposition } from './lib/content-disposition.ts';
