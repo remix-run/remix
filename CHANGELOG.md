@@ -251,6 +251,7 @@ Date: 2024-12-20
 
 ### Patch Changes
 
+- `@remix-run/dev` - Allow suppression of future flag warnings by setting them to `false` ([#10358](https://github.com/remix-run/remix/pull/10358))
 - `@remix-run/react` - Throw unwrapped Single Fetch `redirect` to align with pre-Single Fetch behavior ([#10317](https://github.com/remix-run/remix/pull/10317))
 
 ### Updated Dependencies
