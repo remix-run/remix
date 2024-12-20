@@ -24,17 +24,17 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
           if (params.length < 1) continue;
 
           let mediaType = params[0][0];
-          let quality = 1;
+          let weight = 1;
 
           for (let i = 1; i < params.length; i++) {
             let [key, value] = params[i];
             if (key === 'q') {
-              quality = Number(value);
+              weight = Number(value);
               break;
             }
           }
 
-          this.#map.set(mediaType.toLowerCase(), quality);
+          this.#map.set(mediaType.toLowerCase(), weight);
         }
       } else if (isIterable(init)) {
         for (let mediaType of init) {
@@ -59,16 +59,16 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * An array of all media types in the `Accept` header.
+   * An array of all media types in the header.
    */
   get mediaTypes(): string[] {
     return Array.from(this.#map.keys());
   }
 
   /**
-   * An array of quality values in the `Accept` header.
+   * An array of weight values in the header.
    */
-  get qualities(): number[] {
+  get weights(): number[] {
     return Array.from(this.#map.values());
   }
 
@@ -78,15 +78,15 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
    * @returns `true` if the media type is acceptable, `false` otherwise.
    */
   accepts(mediaType: string): boolean {
-    return this.getQuality(mediaType) > 0;
+    return this.getWeight(mediaType) > 0;
   }
 
   /**
-   * Gets the quality of a given media type. Also supports wildcards, so e.g. `text/*` will match `text/html`.
-   * @param mediaType The media type to get the quality of.
-   * @returns The quality of the media type.
+   * Gets the weight of a given media type. Also supports wildcards, so e.g. `text/*` will match `text/html`.
+   * @param mediaType The media type to get the weight of.
+   * @returns The weight of the media type.
    */
-  getQuality(mediaType: string): number {
+  getWeight(mediaType: string): number {
     let [type, subtype] = mediaType.toLowerCase().split('/');
 
     for (let [key, value] of this) {
@@ -109,7 +109,7 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
    */
   getPreferred(mediaTypes: string[]): string | null {
     let sorted = mediaTypes
-      .map((mediaType) => [mediaType, this.getQuality(mediaType)] as const)
+      .map((mediaType) => [mediaType, this.getWeight(mediaType)] as const)
       .sort((a, b) => {
         return b[1] - a[1];
       });
@@ -120,21 +120,21 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * Returns the quality of a media type. If it is not in the header verbatim, this returns `null`.
-   * @param mediaType The media type to get the quality of.
-   * @returns The quality of the media type, or `null` if it is not in the header.
+   * Returns the weight of a media type. If it is not in the header verbatim, this returns `null`.
+   * @param mediaType The media type to get the weight of.
+   * @returns The weight of the media type, or `null` if it is not in the header.
    */
   get(mediaType: string): number | null {
     return this.#map.get(mediaType.toLowerCase()) ?? null;
   }
 
   /**
-   * Sets a media type with the given quality.
+   * Sets a media type with the given weight.
    * @param mediaType The media type to set.
-   * @param quality The quality of the media type. Defaults to 1.
+   * @param weight The weight of the media type. Defaults to 1.
    */
-  set(mediaType: string, quality = 1): void {
-    this.#map.set(mediaType.toLowerCase(), quality);
+  set(mediaType: string, weight = 1): void {
+    this.#map.set(mediaType.toLowerCase(), weight);
     this.#sort();
   }
 
@@ -171,11 +171,11 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   }
 
   forEach(
-    callback: (mediaType: string, quality: number, header: Accept) => void,
+    callback: (mediaType: string, weight: number, header: Accept) => void,
     thisArg?: any,
   ): void {
-    for (let [mediaType, quality] of this) {
-      callback.call(thisArg, mediaType, quality, this);
+    for (let [mediaType, weight] of this) {
+      callback.call(thisArg, mediaType, weight, this);
     }
   }
 
@@ -189,8 +189,8 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   toString(): string {
     let pairs: string[] = [];
 
-    for (let [mediaType, quality] of this.#map) {
-      pairs.push(`${mediaType}${quality === 1 ? '' : `;q=${quality}`}`);
+    for (let [mediaType, weight] of this.#map) {
+      pairs.push(`${mediaType}${weight === 1 ? '' : `;q=${weight}`}`);
     }
 
     return pairs.join(',');

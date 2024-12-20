@@ -39,9 +39,9 @@ describe('Accept-Language', () => {
     assert.deepEqual(header.languages, ['en-us', 'en']);
   });
 
-  it('gets all qualities', () => {
+  it('gets all weights', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9');
-    assert.deepEqual(header.qualities, [1, 0.9]);
+    assert.deepEqual(header.weights, [1, 0.9]);
   });
 
   it('checks if a language is acceptable', () => {
@@ -53,14 +53,14 @@ describe('Accept-Language', () => {
     assert.equal(header.accepts('fi'), false);
   });
 
-  it('gets the correct quality values', () => {
+  it('gets the correct weight values', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9,fr;q=0.8');
-    assert.equal(header.getQuality('en-US'), 1);
-    assert.equal(header.getQuality('*'), 1);
-    assert.equal(header.getQuality('en'), 1);
-    assert.equal(header.getQuality('en-GB'), 0.9);
-    assert.equal(header.getQuality('fr'), 0.8);
-    assert.equal(header.getQuality('fi'), 0);
+    assert.equal(header.getWeight('en-US'), 1);
+    assert.equal(header.getWeight('*'), 1);
+    assert.equal(header.getWeight('en'), 1);
+    assert.equal(header.getWeight('en-GB'), 0.9);
+    assert.equal(header.getWeight('fr'), 0.8);
+    assert.equal(header.getWeight('fi'), 0);
   });
 
   it('gets the preferred language', () => {
@@ -112,8 +112,8 @@ describe('Accept-Language', () => {
   it('uses forEach correctly', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9');
     let result: [string, number][] = [];
-    header.forEach((language, quality) => {
-      result.push([language, quality]);
+    header.forEach((language, weight) => {
+      result.push([language, weight]);
     });
     assert.deepEqual(result, [
       ['en-us', 1],
@@ -131,13 +131,13 @@ describe('Accept-Language', () => {
     assert.equal(header.toString(), 'en-us,en;q=0.9');
   });
 
-  it('handles setting empty quality values', () => {
+  it('handles setting empty weight values', () => {
     let header = new AcceptLanguage();
     header.set('en-US');
     assert.equal(header.get('en-US'), 1);
   });
 
-  it('overwrites existing quality values', () => {
+  it('overwrites existing weight values', () => {
     let header = new AcceptLanguage('en;q=0.9');
     header.set('en', 1);
     assert.equal(header.get('en'), 1);
