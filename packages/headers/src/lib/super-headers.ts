@@ -7,7 +7,7 @@ import { type CookieInit, Cookie } from './cookie.ts';
 import { canonicalHeaderName } from './header-names.ts';
 import { type HeaderValue } from './header-value.ts';
 import { type SetCookieInit, SetCookie } from './set-cookie.ts';
-import { isIterable, isValidDate } from './utils.ts';
+import { isIterable } from './utils.ts';
 
 const CRLF = '\r\n';
 const SetCookieKey = 'set-cookie';
@@ -595,9 +595,9 @@ export class SuperHeaders extends Headers {
       }
     }
 
-    let header = new ctor();
-    this.#map.set(key, header);
-    return header;
+    let obj = new ctor();
+    this.#map.set(key, obj); // cache the new object
+    return obj;
   }
 
   #setHeaderValue(key: string, ctor: new (init?: string) => HeaderValue, value: any): void {

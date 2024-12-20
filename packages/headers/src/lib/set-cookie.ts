@@ -95,8 +95,10 @@ export class SetCookie implements HeaderValue, SetCookieInit {
                 break;
               case 'expires': {
                 if (typeof value === 'string') {
-                  let v = new Date(value);
-                  if (isValidDate(v)) this.expires = v;
+                  let date = new Date(value);
+                  if (isValidDate(date)) {
+                    this.expires = date;
+                  }
                 }
                 break;
               }
