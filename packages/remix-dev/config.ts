@@ -770,7 +770,7 @@ export async function resolveConfig(
     }
   }
 
-  logFutureFlagWarnings(future);
+  logFutureFlagWarnings(appConfig.future || {});
 
   isFirstLoad = false;
 
@@ -881,7 +881,7 @@ function logFutureFlagWarning(args: { flag: string; message: string }) {
   });
 }
 
-export function logFutureFlagWarnings(future: FutureConfig) {
+export function logFutureFlagWarnings(future: Partial<FutureConfig>) {
   if (future.v3_fetcherPersist === undefined) {
     logFutureFlagWarning({
       flag: "v3_fetcherPersist",
