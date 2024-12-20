@@ -11,7 +11,7 @@ This release tightens up the type safety and brings `SuperHeaders` more in line 
 ```ts
 // before
 let headers = new SuperHeaders();
-headers.set('Content-Type', { mediaType: 'text/html' }); // don't do this
+headers.set('Content-Type', { mediaType: 'text/html' });
 
 // after
 headers.set('Content-Type', 'text/html');
@@ -57,7 +57,6 @@ let h3 = new AcceptLanguage({ 'en-US': 1 });
 - All setters now also accept `undefined | null` in addition to `string` and custom object values. Setting a header to `undefined | null` is the same as using `headers.delete()`.
 
 ```ts
-// before
 let headers = new SuperHeaders({ 'Content-Type': 'text/html' });
 headers.contentType; // 'text/html'
 
