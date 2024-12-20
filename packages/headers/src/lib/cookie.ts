@@ -37,42 +37,45 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
   }
 
   /**
-   * Gets the value of a cookie with the given name from the `Cookie` header.
+   * Gets the value of a cookie with the given name from the header.
+   * @param name The name of the cookie.
+   * @returns The value of the cookie, or `null` if the cookie does not exist.
    */
-  get(name: string): string | undefined {
-    return this.#map.get(name);
+  get(name: string): string | null {
+    return this.#map.get(name) ?? null;
   }
 
   /**
-   * Sets a cookie with the given name and value in the `Cookie` header.
+   * Sets a cookie with the given name and value in the header.
+   * @param name The name of the cookie.
+   * @param value The value of the cookie.
    */
   set(name: string, value: string): void {
     this.#map.set(name, value);
   }
 
   /**
-   * Removes a cookie with the given name from the `Cookie` header.
+   * Removes a cookie with the given name from the header.
+   * @param name The name of the cookie.
    */
-  delete(name: string): boolean {
-    return this.#map.delete(name);
+  delete(name: string): void {
+    this.#map.delete(name);
   }
 
   /**
-   * True if a cookie with the given name exists in the `Cookie` header.
+   * True if a cookie with the given name exists in the header.
+   * @param name The name of the cookie.
+   * @returns True if a cookie with the given name exists in the header.
    */
   has(name: string): boolean {
     return this.#map.has(name);
   }
 
   /**
-   * Removes all cookies from the `Cookie` header.
+   * Removes all cookies from the header.
    */
   clear(): void {
     this.#map.clear();
-  }
-
-  entries(): IterableIterator<[string, string]> {
-    return this.#map.entries();
   }
 
   names(): IterableIterator<string> {
@@ -83,19 +86,22 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     return this.#map.values();
   }
 
+  entries(): IterableIterator<[string, string]> {
+    return this.#map.entries();
+  }
+
   [Symbol.iterator](): IterableIterator<[string, string]> {
     return this.entries();
   }
 
-  forEach(
-    callback: (value: string, key: string, map: Map<string, string>) => void,
-    thisArg?: any,
-  ): void {
-    this.#map.forEach(callback, thisArg);
+  forEach(callback: (name: string, value: string, header: Cookie) => void, thisArg?: any): void {
+    for (let [name, value] of this) {
+      callback.call(thisArg, name, value, this);
+    }
   }
 
   /**
-   * The number of cookies in the `Cookie` header.
+   * The number of cookies in the header.
    */
   get size(): number {
     return this.#map.size;
