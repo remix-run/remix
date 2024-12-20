@@ -73,11 +73,11 @@ let h3 = new AcceptLanguage({ 'en-US': 1 });
 - All setters now also accept `undefined | null` in addition to `string` and custom object values. Setting a header to `undefined | null` is the same as using `headers.delete()`.
 
 ```ts
-let headers = new SuperHeaders({ 'Content-Type': 'text/html' });
-headers.contentType; // 'text/html'
+let headers = new SuperHeaders({ contentType: 'text/html' });
+headers.get('Content-Type'); // 'text/html'
 
 headers.contentType = null; // same as headers.delete('Content-Type');
-headers.contentType; // null
+headers.get('Content-Type'); // null
 ```
 
 - Allow setting date headers (`date`, `expires`, `ifModifiedSince`, `ifUnmodifiedSince`, and `lastModified`) using numbers.
