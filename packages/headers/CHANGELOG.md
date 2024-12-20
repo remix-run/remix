@@ -4,8 +4,19 @@ This is the changelog for [`headers`](https://github.com/mjackson/remix-the-web/
 
 ## HEAD
 
-- BREAKING CHANGE: `cookie.delete(name)` returns `void` instead of `boolean`
+This release contains several improvements to `Cookie` that bring it more in line with other headers like `Accept`, `AcceptEncoding`, and `AcceptLanguage`.
+
+- BREAKING CHANGE: `cookie.names()` and `cookie.values()` are now getters that return `string[]` instead of methods that return `IterableIterator<string>`
 - BREAKING CHANGE: `cookie.forEach()` calls its callback with `(name, value, cookie)` instead of `(value, name, map)`
+- BREAKING CHANGE: `cookie.delete(name)` returns `void` instead of `boolean`
+
+```ts
+// before
+let cookieNames = Array.from(headers.cookie.names());
+
+// after
+let cookieNames = headers.cookie.names;
+```
 
 ## v0.9.0 (2024-12-20)
 

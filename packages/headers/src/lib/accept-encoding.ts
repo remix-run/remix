@@ -55,7 +55,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
   }
 
   #sort() {
-    this.#map = new Map([...this.#map].sort(([, a], [, b]) => b - a));
+    this.#map = new Map([...this.#map].sort((a, b) => b[1] - a[1]));
   }
 
   /**
@@ -70,6 +70,13 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
    */
   get weights(): number[] {
     return Array.from(this.#map.values());
+  }
+
+  /**
+   * The number of encodings in the header.
+   */
+  get size(): number {
+    return this.#map.size;
   }
 
   /**
@@ -171,13 +178,6 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
     for (let [encoding, weight] of this) {
       callback.call(thisArg, encoding, weight, this);
     }
-  }
-
-  /**
-   * The number of encodings in the header.
-   */
-  get size(): number {
-    return this.#map.size;
   }
 
   toString(): string {

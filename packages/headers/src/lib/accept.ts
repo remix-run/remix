@@ -55,7 +55,7 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   }
 
   #sort() {
-    this.#map = new Map([...this.#map].sort(([, a], [, b]) => b - a));
+    this.#map = new Map([...this.#map].sort((a, b) => b[1] - a[1]));
   }
 
   /**
@@ -66,10 +66,17 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * An array of weight values in the header.
+   * An array of all weights (q values) in the header.
    */
   get weights(): number[] {
     return Array.from(this.#map.values());
+  }
+
+  /**
+   * The number of media types in the `Accept` header.
+   */
+  get size(): number {
+    return this.#map.size;
   }
 
   /**
@@ -110,9 +117,7 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   getPreferred(mediaTypes: string[]): string | null {
     let sorted = mediaTypes
       .map((mediaType) => [mediaType, this.getWeight(mediaType)] as const)
-      .sort((a, b) => {
-        return b[1] - a[1];
-      });
+      .sort((a, b) => b[1] - a[1]);
 
     let first = sorted[0];
 
@@ -177,13 +182,6 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
     for (let [mediaType, weight] of this) {
       callback.call(thisArg, mediaType, weight, this);
     }
-  }
-
-  /**
-   * The number of media types in the `Accept` header.
-   */
-  get size(): number {
-    return this.#map.size;
   }
 
   toString(): string {
