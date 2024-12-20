@@ -11,57 +11,27 @@ describe('Accept', () => {
 
   it('initializes with a string', () => {
     let header = new Accept('text/html,application/json;q=0.9');
-    assert.equal(header.get('text/html'), 1);
-    assert.equal(header.get('application/json'), 0.9);
+    assert.equal(header.size, 2);
   });
 
   it('initializes with an array', () => {
     let header = new Accept(['text/html', ['application/json', 0.9]]);
-    assert.equal(header.get('text/html'), 1);
-    assert.equal(header.get('application/json'), 0.9);
+    assert.equal(header.size, 2);
   });
 
   it('initializes with an object', () => {
     let header = new Accept({ 'text/html': 1, 'application/json': 0.9 });
-    assert.equal(header.get('text/html'), 1);
-    assert.equal(header.get('application/json'), 0.9);
+    assert.equal(header.size, 2);
   });
 
   it('initializes with another Accept', () => {
     let header = new Accept(new Accept('text/html,application/json;q=0.9'));
-    assert.equal(header.get('text/html'), 1);
-    assert.equal(header.get('application/json'), 0.9);
+    assert.equal(header.size, 2);
   });
 
   it('handles whitespace in initial value', () => {
     let header = new Accept(' text/html ,  application/json;q=  0.9  ');
-    assert.equal(header.get('text/html'), 1);
-    assert.equal(header.get('application/json'), 0.9);
-  });
-
-  it('sets and gets media types', () => {
-    let header = new Accept();
-    header.set('application/json', 0.9);
-    assert.equal(header.get('application/json'), 0.9);
-  });
-
-  it('deletes media types', () => {
-    let header = new Accept('text/html');
-    assert.equal(header.delete('text/html'), true);
-    assert.equal(header.delete('application/json'), false);
-    assert.equal(header.get('text/html'), undefined);
-  });
-
-  it('checks if media type exists', () => {
-    let header = new Accept('text/html');
-    assert.equal(header.has('text/html'), true);
-    assert.equal(header.has('application/json'), false);
-  });
-
-  it('clears all media types', () => {
-    let header = new Accept('text/html,application/json;q=0.9');
-    header.clear();
-    assert.equal(header.size, 0);
+    assert.equal(header.size, 2);
   });
 
   it('gets all media types', () => {
@@ -72,6 +42,51 @@ describe('Accept', () => {
   it('gets all qualities', () => {
     let header = new Accept('text/html,application/json;q=0.9');
     assert.deepEqual(header.qualities, [1, 0.9]);
+  });
+
+  it('checks if a media type is acceptable', () => {
+    let header = new Accept('text/html,text/*;q=0.9,application/json;q=0.8');
+    assert.equal(header.accepts('text/html'), true);
+    assert.equal(header.accepts('text/*'), true);
+    assert.equal(header.accepts('text/plain'), true);
+    assert.equal(header.accepts('application/json'), true);
+    assert.equal(header.accepts('image/jpeg'), false);
+  });
+
+  it('gets the correct quality values', () => {
+    let header = new Accept('text/html,text/*;q=0.9,application/json;q=0.8');
+    assert.equal(header.getQuality('text/html'), 1);
+    assert.equal(header.getQuality('*/*'), 1);
+    assert.equal(header.getQuality('text/*'), 1);
+    assert.equal(header.getQuality('text/plain'), 0.9);
+    assert.equal(header.getQuality('application/json'), 0.8);
+    assert.equal(header.getQuality('image/jpeg'), 0);
+  });
+
+  it('gets the preferred media type', () => {
+    let header = new Accept('text/html,text/*;q=0.9,application/json;q=0.8');
+    assert.equal(header.getPreferred(['text/html', 'application/json']), 'text/html');
+    assert.equal(header.getPreferred(['text/plain', 'text/html']), 'text/html');
+    assert.equal(header.getPreferred(['image/jpeg']), null);
+  });
+
+  it('sets and gets media types', () => {
+    let header = new Accept();
+    header.set('application/json', 0.9);
+    assert.equal(header.get('application/json'), 0.9);
+  });
+
+  it('deletes media types', () => {
+    let header = new Accept('text/html');
+    assert.equal(header.has('text/html'), true);
+    header.delete('text/html');
+    assert.equal(header.has('text/html'), false);
+  });
+
+  it('clears all media types', () => {
+    let header = new Accept('text/html,application/json;q=0.9');
+    header.clear();
+    assert.equal(header.size, 0);
   });
 
   it('iterates over entries', () => {

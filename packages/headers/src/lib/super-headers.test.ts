@@ -164,7 +164,7 @@ describe('SuperHeaders', () => {
 
     it('handles the acceptLanguage property', () => {
       let headers = new SuperHeaders({ acceptLanguage: { 'en-US': 1, en: 0.9 } });
-      assert.equal(headers.get('Accept-Language'), 'en-US,en;q=0.9');
+      assert.equal(headers.get('Accept-Language'), 'en-us,en;q=0.9');
     });
 
     it('handles the age property', () => {
@@ -288,12 +288,12 @@ describe('SuperHeaders', () => {
 
       headers.acceptLanguage = 'en-US,en;q=0.9';
       assert.deepEqual(headers.acceptLanguage.size, 2);
-      assert.deepEqual(headers.acceptLanguage.languages, ['en-US', 'en']);
+      assert.deepEqual(headers.acceptLanguage.languages, ['en-us', 'en']);
       assert.deepEqual(headers.acceptLanguage.qualities, [1, 0.9]);
 
       headers.acceptLanguage = { en: 1, 'en-US': 0.8 };
       assert.deepEqual(headers.acceptLanguage.size, 2);
-      assert.deepEqual(headers.acceptLanguage.languages, ['en', 'en-US']);
+      assert.deepEqual(headers.acceptLanguage.languages, ['en', 'en-us']);
       assert.deepEqual(headers.acceptLanguage.qualities, [1, 0.8]);
 
       headers.acceptLanguage = null;

@@ -34,19 +34,19 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
             }
           }
 
-          this.#map.set(mediaType, quality);
+          this.#map.set(mediaType.toLowerCase(), quality);
         }
       } else if (isIterable(init)) {
         for (let mediaType of init) {
           if (Array.isArray(mediaType)) {
-            this.#map.set(mediaType[0], mediaType[1]);
+            this.#map.set(mediaType[0].toLowerCase(), mediaType[1]);
           } else {
-            this.#map.set(mediaType, 1);
+            this.#map.set(mediaType.toLowerCase(), 1);
           }
         }
       } else {
         for (let mediaType of Object.getOwnPropertyNames(init)) {
-          this.#map.set(mediaType, init[mediaType]);
+          this.#map.set(mediaType.toLowerCase(), init[mediaType]);
         }
       }
 
@@ -59,7 +59,7 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * An array of media types in the `Accept` header.
+   * An array of all media types in the `Accept` header.
    */
   get mediaTypes(): string[] {
     return Array.from(this.#map.keys());
@@ -73,36 +73,90 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * Gets the quality of a given media type from the `Accept` header.
+   * Returns `true` if the header matches the given media type (i.e. it is "acceptable").
+   * @param mediaType The media type to check.
+   * @returns `true` if the media type is acceptable, `false` otherwise.
    */
-  get(mediaType: string): number | undefined {
-    return this.#map.get(mediaType);
+  accepts(mediaType: string): boolean {
+    return this.getQuality(mediaType) > 0;
   }
 
   /**
-   * Sets a media type with the given quality (defaults to 1) in the `Accept` header.
+   * Gets the quality of a given media type. Also supports wildcards, so e.g. `text/*` will match `text/html`.
+   * @param mediaType The media type to get the quality of.
+   * @returns The quality of the media type.
+   */
+  getQuality(mediaType: string): number {
+    let [type, subtype] = mediaType.toLowerCase().split('/');
+
+    for (let [key, value] of this) {
+      let [t, s] = key.split('/');
+      if (
+        (t === type || t === '*' || type === '*') &&
+        (s === subtype || s === '*' || subtype === '*')
+      ) {
+        return value;
+      }
+    }
+
+    return 0;
+  }
+
+  /**
+   * Returns the most preferred media type from the given list of media types.
+   * @param mediaTypes The list of media types to choose from.
+   * @returns The most preferred media type or `null` if none match.
+   */
+  getPreferred(mediaTypes: string[]): string | null {
+    let sorted = mediaTypes
+      .map((mediaType) => [mediaType, this.getQuality(mediaType)] as const)
+      .sort((a, b) => {
+        return b[1] - a[1];
+      });
+
+    let first = sorted[0];
+
+    return first !== undefined && first[1] > 0 ? first[0] : null;
+  }
+
+  /**
+   * Returns the quality of a media type. If it is not in the header verbatim, this returns `null`.
+   * @param mediaType The media type to get the quality of.
+   * @returns The quality of the media type, or `null` if it is not in the header.
+   */
+  get(mediaType: string): number | null {
+    return this.#map.get(mediaType.toLowerCase()) ?? null;
+  }
+
+  /**
+   * Sets a media type with the given quality.
+   * @param mediaType The media type to set.
+   * @param quality The quality of the media type. Defaults to 1.
    */
   set(mediaType: string, quality = 1): void {
-    this.#map.set(mediaType, quality);
+    this.#map.set(mediaType.toLowerCase(), quality);
     this.#sort();
   }
 
   /**
-   * Removes a given mediaType from the `Accept` header.
+   * Removes a given mediaType.
+   * @param mediaType The media type to remove.
    */
-  delete(mediaType: string): boolean {
-    return this.#map.delete(mediaType);
+  delete(mediaType: string): void {
+    this.#map.delete(mediaType.toLowerCase());
   }
 
   /**
-   * True if a given media type is present in the `Accept` header.
+   * Checks if a media type is in the header.
+   * @param mediaType The media type to check.
+   * @returns `true` if the media type is in the header (verbatim), `false` otherwise.
    */
   has(mediaType: string): boolean {
-    return this.#map.has(mediaType);
+    return this.#map.has(mediaType.toLowerCase());
   }
 
   /**
-   * Removes all media types from the `Accept` header.
+   * Removes all media types from the header.
    */
   clear(): void {
     this.#map.clear();
