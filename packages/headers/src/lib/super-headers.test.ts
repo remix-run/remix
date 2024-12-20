@@ -275,12 +275,12 @@ describe('SuperHeaders', () => {
       headers.accept = 'text/html,application/json;q=0.9';
       assert.deepEqual(headers.accept.size, 2);
       assert.deepEqual(headers.accept.mediaTypes, ['text/html', 'application/json']);
-      assert.deepEqual(headers.accept.qualities, [1, 0.9]);
+      assert.deepEqual(headers.accept.weights, [1, 0.9]);
 
       headers.accept = { 'application/json': 0.8, 'text/html': 1 };
       assert.deepEqual(headers.accept.size, 2);
       assert.deepEqual(headers.accept.mediaTypes, ['text/html', 'application/json']);
-      assert.deepEqual(headers.accept.qualities, [1, 0.8]);
+      assert.deepEqual(headers.accept.weights, [1, 0.8]);
 
       headers.accept = null;
       assert.ok(headers.accept instanceof Accept);
@@ -315,12 +315,12 @@ describe('SuperHeaders', () => {
       headers.acceptLanguage = 'en-US,en;q=0.9';
       assert.deepEqual(headers.acceptLanguage.size, 2);
       assert.deepEqual(headers.acceptLanguage.languages, ['en-us', 'en']);
-      assert.deepEqual(headers.acceptLanguage.qualities, [1, 0.9]);
+      assert.deepEqual(headers.acceptLanguage.weights, [1, 0.9]);
 
       headers.acceptLanguage = { en: 1, 'en-US': 0.8 };
       assert.deepEqual(headers.acceptLanguage.size, 2);
       assert.deepEqual(headers.acceptLanguage.languages, ['en', 'en-us']);
-      assert.deepEqual(headers.acceptLanguage.qualities, [1, 0.8]);
+      assert.deepEqual(headers.acceptLanguage.weights, [1, 0.8]);
 
       headers.acceptLanguage = null;
       assert.ok(headers.acceptLanguage instanceof AcceptLanguage);

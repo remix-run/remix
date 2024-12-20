@@ -72,7 +72,7 @@ let ms = new Date().getTime();
 let headers = new SuperHeaders({ lastModified: ms });
 ```
 
-- Added `AcceptLanguage.prototype.accepts(language)`, `AcceptLanguage.prototype.getQuality(language)`,
+- Added `AcceptLanguage.prototype.accepts(language)`, `AcceptLanguage.prototype.getWeight(language)`,
   `AcceptLanguage.prototype.getPreferred(languages)`
 
 ```ts
@@ -85,8 +85,8 @@ header.accepts('en-GB'); // true
 header.accepts('en'); // true
 header.accepts('fr'); // false
 
-header.getQuality('en-US'); // 1
-header.getQuality('en-GB'); // 0.9
+header.getWeight('en-US'); // 1
+header.getWeight('en-GB'); // 0.9
 
 header.getPreferred(['en-GB', 'en-US']); // 'en-US'
 ```
@@ -103,8 +103,8 @@ header.accepts('text/plain'); // true
 header.accepts('text/*'); // true
 header.accepts('image/jpeg'); // false
 
-header.getQuality('text/html'); // 1
-header.getQuality('text/plain'); // 0.9
+header.getWeight('text/html'); // 1
+header.getWeight('text/plain'); // 0.9
 
 header.getPreferred(['text/html', 'text/plain']); // 'text/html'
 ```
@@ -121,8 +121,8 @@ header.accepts('deflate'); // true
 header.accepts('identity'); // true
 header.accepts('br'); // false
 
-header.getQuality('gzip'); // 1
-header.getQuality('deflate'); // 0.9
+header.getWeight('gzip'); // 1
+header.getWeight('deflate'); // 0.9
 
 header.getPreferred(['gzip', 'deflate']); // 'gzip'
 ```

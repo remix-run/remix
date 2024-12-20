@@ -39,9 +39,9 @@ describe('Accept', () => {
     assert.deepEqual(header.mediaTypes, ['text/html', 'application/json']);
   });
 
-  it('gets all qualities', () => {
+  it('gets all weights', () => {
     let header = new Accept('text/html,application/json;q=0.9');
-    assert.deepEqual(header.qualities, [1, 0.9]);
+    assert.deepEqual(header.weights, [1, 0.9]);
   });
 
   it('checks if a media type is acceptable', () => {
@@ -53,14 +53,14 @@ describe('Accept', () => {
     assert.equal(header.accepts('image/jpeg'), false);
   });
 
-  it('gets the correct quality values', () => {
+  it('gets the correct weight values', () => {
     let header = new Accept('text/html,text/*;q=0.9,application/json;q=0.8');
-    assert.equal(header.getQuality('text/html'), 1);
-    assert.equal(header.getQuality('*/*'), 1);
-    assert.equal(header.getQuality('text/*'), 1);
-    assert.equal(header.getQuality('text/plain'), 0.9);
-    assert.equal(header.getQuality('application/json'), 0.8);
-    assert.equal(header.getQuality('image/jpeg'), 0);
+    assert.equal(header.getWeight('text/html'), 1);
+    assert.equal(header.getWeight('*/*'), 1);
+    assert.equal(header.getWeight('text/*'), 1);
+    assert.equal(header.getWeight('text/plain'), 0.9);
+    assert.equal(header.getWeight('application/json'), 0.8);
+    assert.equal(header.getWeight('image/jpeg'), 0);
   });
 
   it('gets the preferred media type', () => {
@@ -110,8 +110,8 @@ describe('Accept', () => {
   it('uses forEach correctly', () => {
     let header = new Accept('text/html,application/json;q=0.9');
     let result: [string, number][] = [];
-    header.forEach((mediaType, quality) => {
-      result.push([mediaType, quality]);
+    header.forEach((mediaType, weight) => {
+      result.push([mediaType, weight]);
     });
     assert.deepEqual(result, [
       ['text/html', 1],
@@ -129,13 +129,13 @@ describe('Accept', () => {
     assert.equal(header.toString(), 'text/html,application/json;q=0.9');
   });
 
-  it('handles setting empty quality values', () => {
+  it('handles setting empty weight values', () => {
     let header = new Accept();
     header.set('text/html');
     assert.equal(header.get('text/html'), 1);
   });
 
-  it('overwrites existing quality values', () => {
+  it('overwrites existing weight values', () => {
     let header = new Accept('text/html,application/json;q=0.9');
     header.set('application/json', 0.8);
     assert.equal(header.get('application/json'), 0.8);

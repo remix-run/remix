@@ -24,17 +24,17 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
           if (params.length < 1) continue;
 
           let language = params[0][0];
-          let quality = 1;
+          let weight = 1;
 
           for (let i = 1; i < params.length; i++) {
             let [key, value] = params[i];
             if (key === 'q') {
-              quality = Number(value);
+              weight = Number(value);
               break;
             }
           }
 
-          this.#map.set(language.toLowerCase(), quality);
+          this.#map.set(language.toLowerCase(), weight);
         }
       } else if (isIterable(init)) {
         for (let value of init) {
@@ -66,9 +66,9 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * An array of all quality values in the header.
+   * An array of all weight values in the header.
    */
-  get qualities(): number[] {
+  get weights(): number[] {
     return Array.from(this.#map.values());
   }
 
@@ -78,16 +78,16 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    * @returns `true` if the language is acceptable, `false` otherwise.
    */
   accepts(language: string): boolean {
-    return this.getQuality(language) > 0;
+    return this.getWeight(language) > 0;
   }
 
   /**
-   * Gets the quality of a language with the given locale identifier. Performs wildcard and subtype
+   * Gets the weight of a language with the given locale identifier. Performs wildcard and subtype
    * matching, so `en` matches `en-US` and `en-GB`, and `*` matches all languages.
    * @param language The locale identifier of the language to get.
-   * @returns The quality of the language, or `0` if it is not in the header.
+   * @returns The weight of the language, or `0` if it is not in the header.
    */
-  getQuality(language: string): number {
+  getWeight(language: string): number {
     let [base, subtype] = language.toLowerCase().split('-');
 
     for (let [key, value] of this) {
@@ -110,7 +110,7 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    */
   getPreferred(languages: string[]): string | null {
     let sorted = languages
-      .map((language) => [language, this.getQuality(language)] as const)
+      .map((language) => [language, this.getWeight(language)] as const)
       .sort((a, b) => b[1] - a[1]);
 
     let first = sorted[0];
@@ -119,22 +119,22 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * Gets the quality of a language with the given locale identifier. If it is not in the header
+   * Gets the weight of a language with the given locale identifier. If it is not in the header
    * verbatim, this returns `null`.
    * @param language The locale identifier of the language to get.
-   * @returns The quality of the language, or `null` if it is not in the header.
+   * @returns The weight of the language, or `null` if it is not in the header.
    */
   get(language: string): number | null {
     return this.#map.get(language.toLowerCase()) ?? null;
   }
 
   /**
-   * Sets a language with the given quality.
+   * Sets a language with the given weight.
    * @param language The locale identifier of the language to set.
-   * @param quality The quality of the language. Defaults to 1.
+   * @param weight The weight of the language. Defaults to 1.
    */
-  set(language: string, quality = 1): void {
-    this.#map.set(language.toLowerCase(), quality);
+  set(language: string, weight = 1): void {
+    this.#map.set(language.toLowerCase(), weight);
     this.#sort();
   }
 
@@ -171,11 +171,11 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   }
 
   forEach(
-    callback: (language: string, quality: number, header: AcceptLanguage) => void,
+    callback: (language: string, weight: number, header: AcceptLanguage) => void,
     thisArg?: any,
   ): void {
-    for (let [language, quality] of this) {
-      callback.call(thisArg, language, quality, this);
+    for (let [language, weight] of this) {
+      callback.call(thisArg, language, weight, this);
     }
   }
 
@@ -189,8 +189,8 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   toString(): string {
     let pairs: string[] = [];
 
-    for (let [language, quality] of this.#map) {
-      pairs.push(`${language}${quality === 1 ? '' : `;q=${quality}`}`);
+    for (let [language, weight] of this.#map) {
+      pairs.push(`${language}${weight === 1 ? '' : `;q=${weight}`}`);
     }
 
     return pairs.join(',');
