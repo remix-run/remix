@@ -1,5 +1,14 @@
 # `@remix-run/dev`
 
+## 2.15.2-pre.1
+
+### Patch Changes
+
+- Allow supression of future flag warnings by setting them to `false` ([#10358](https://github.com/remix-run/remix/pull/10358))
+- Updated dependencies:
+  - `@remix-run/node@2.15.2-pre.1`
+  - `@remix-run/server-runtime@2.15.2-pre.1`
+
 ## 2.15.2-pre.0
 
 ### Patch Changes
