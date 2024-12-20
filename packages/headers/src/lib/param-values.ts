@@ -2,14 +2,17 @@ export function parseParams(
   input: string,
   delimiter: ';' | ',' = ';',
 ): [string, string | undefined][] {
-  let regex = /(?:^|;)\s*([^=;\s]+)(\s*=\s*(?:"((?:[^"\\]|\\.)*)"|((?:[^;]|\\\;)+))?)?/g;
-  if (delimiter === ',') {
-    regex = /(?:^|,)\s*([^=,\s]+)(\s*=\s*(?:"((?:[^"\\]|\\.)*)"|((?:[^,]|\\\,)+))?)?/g;
-  }
+  // This parser splits on the delimiter and unquotes any quoted values
+  // like `filename="the\\ filename.txt"`.
+  let parser =
+    delimiter === ';'
+      ? /(?:^|;)\s*([^=;\s]+)(\s*=\s*(?:"((?:[^"\\]|\\.)*)"|((?:[^;]|\\\;)+))?)?/g
+      : /(?:^|,)\s*([^=,\s]+)(\s*=\s*(?:"((?:[^"\\]|\\.)*)"|((?:[^,]|\\\,)+))?)?/g;
+
   let params: [string, string | undefined][] = [];
 
   let match;
-  while ((match = regex.exec(input)) !== null) {
+  while ((match = parser.exec(input)) !== null) {
     let key = match[1].trim();
 
     let value: string | undefined;

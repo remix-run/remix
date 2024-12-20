@@ -19,14 +19,22 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
 
     if (init) {
       if (typeof init === 'string') {
-        let params = parseParams(init, ',');
-        for (let [language, quality] of params) {
-          if (typeof quality === 'string') {
-            language = language.slice(0, -2).trim();
-          } else {
-            quality = '1';
+        for (let piece of init.split(/\s*,\s*/)) {
+          let params = parseParams(piece);
+          if (params.length < 1) continue;
+
+          let language = params[0][0];
+          let quality = 1;
+
+          for (let i = 1; i < params.length; i++) {
+            let [key, value] = params[i];
+            if (key === 'q') {
+              quality = Number(value);
+              break;
+            }
           }
-          this.#map.set(language, Number(quality));
+
+          this.#map.set(language, quality);
         }
       } else if (isIterable(init)) {
         for (let language of init) {
@@ -53,6 +61,20 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
+   * An array of all locale identifiers in the `Accept-Language` header.
+   */
+  get languages(): string[] {
+    return Array.from(this.#map.keys());
+  }
+
+  /**
+   * An array of all quality values in the `Accept-Language` header.
+   */
+  get qualities(): number[] {
+    return Array.from(this.#map.values());
+  }
+
+  /**
    * Gets the quality of a language with the given locale identifier from the `Accept-Language` header.
    */
   get(language: string): number | undefined {
@@ -60,7 +82,7 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * Sets a language with the given quality in the `Accept-Language` header.
+   * Sets a language with the given quality (defaults to 1) in the `Accept-Language` header.
    */
   set(language: string, quality = 1): void {
     this.#map.set(language, quality);
@@ -92,23 +114,17 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
     return this.#map.entries();
   }
 
-  get languages(): string[] {
-    return Array.from(this.#map.keys());
-  }
-
-  get qualities(): number[] {
-    return Array.from(this.#map.values());
-  }
-
   [Symbol.iterator](): IterableIterator<[string, number]> {
     return this.entries();
   }
 
   forEach(
-    callback: (language: string, quality: number, map: Map<string, number>) => void,
+    callback: (language: string, quality: number, header: AcceptLanguage) => void,
     thisArg?: any,
   ): void {
-    this.#map.forEach((quality, language, map) => callback(language, quality, map), thisArg);
+    for (let [language, quality] of this) {
+      callback.call(thisArg, language, quality, this);
+    }
   }
 
   /**

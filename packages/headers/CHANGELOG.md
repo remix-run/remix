@@ -73,6 +73,7 @@ let headers = new SuperHeaders({ lastModified: ms });
 ```
 
 - Adds support for
+  - `headers.accept`
   - `headers.connection`
   - `headers.host`
   - `headers.referer`

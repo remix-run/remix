@@ -1,12 +1,12 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { Accept } from './accept.ts';
 import { AcceptLanguage } from './accept-language.ts';
 import { CacheControl } from './cache-control.ts';
 import { ContentDisposition } from './content-disposition.ts';
 import { ContentType } from './content-type.ts';
 import { Cookie } from './cookie.ts';
-import { SetCookie } from './set-cookie.ts';
 import { SuperHeaders } from './super-headers.ts';
 
 describe('SuperHeaders', () => {
@@ -157,6 +157,11 @@ describe('SuperHeaders', () => {
   });
 
   describe('constructor property init', () => {
+    it('handles the accept property', () => {
+      let headers = new SuperHeaders({ accept: { 'text/html': 1, 'application/json': 0.9 } });
+      assert.equal(headers.get('Accept'), 'text/html,application/json;q=0.9');
+    });
+
     it('handles the acceptLanguage property', () => {
       let headers = new SuperHeaders({ acceptLanguage: { 'en-US': 1, en: 0.9 } });
       assert.equal(headers.get('Accept-Language'), 'en-US,en;q=0.9');
@@ -256,6 +261,26 @@ describe('SuperHeaders', () => {
   });
 
   describe('property getters and setters', () => {
+    it('supports the accept property', () => {
+      let headers = new SuperHeaders();
+
+      assert.ok(headers.accept instanceof Accept);
+
+      headers.accept = 'text/html,application/json;q=0.9';
+      assert.deepEqual(headers.accept.size, 2);
+      assert.deepEqual(headers.accept.mediaTypes, ['text/html', 'application/json']);
+      assert.deepEqual(headers.accept.qualities, [1, 0.9]);
+
+      headers.accept = { 'application/json': 0.8, 'text/html': 1 };
+      assert.deepEqual(headers.accept.size, 2);
+      assert.deepEqual(headers.accept.mediaTypes, ['text/html', 'application/json']);
+      assert.deepEqual(headers.accept.qualities, [1, 0.8]);
+
+      headers.accept = null;
+      assert.ok(headers.accept instanceof Accept);
+      assert.equal(headers.accept.toString(), '');
+    });
+
     it('supports the acceptLanguage property', () => {
       let headers = new SuperHeaders();
 

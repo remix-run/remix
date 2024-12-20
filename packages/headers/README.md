@@ -24,13 +24,22 @@ import Headers from '@mjackson/headers';
 
 let headers = new Headers();
 
-// Accept-Language
+// Accept
+headers.accept = 'text/html,text/*;q=0.9';
 
+console.log(headers.accept.mediaTypes); // [ 'text/html', 'text/*' ]
+console.log(Object.fromEntries(headers.accept.entries())); // { 'text/html': 1, 'text/*': 0.9 }
+
+headers.accept.set('text/plain', 0.9);
+headers.accept.set('text/*', 0.8);
+
+console.log(headers.get('Accept')); // "text/html,text/plain;q=0.9,text/*;q=0.8"
+
+// Accept-Language
 headers.acceptLanguage = 'en-US,en;q=0.9';
 
 console.log(headers.acceptLanguage.languages); // [ 'en-US', 'en' ]
-console.log(headers.acceptLanguage.entries());
-// [Map Entries] { [ 'en-US', 1 ], [ 'en', 0.9 ] }
+console.log(Object.fromEntries(headers.acceptLanguage.entries())); // { 'en-US': 1, en: 0.9 }
 
 // Content-Type
 headers.contentType = 'application/json; charset=utf-8';
@@ -168,6 +177,7 @@ The following headers are currently supported:
   - [Installation](#installation)
   - [Overview](#overview)
   - [Low-level API](#low-level-api)
+    - [Accept](#accept)
     - [Accept-Language](#accept-language)
     - [Cache-Control](#cache-control)
     - [Content-Disposition](#content-disposition)
@@ -177,6 +187,25 @@ The following headers are currently supported:
   - [License](#license)
 
 If you need support for a header that isn't listed here, please [send a PR](https://github.com/mjackson/remix-the-web/pulls)! The goal is to have first-class support for all common HTTP headers.
+
+### Accept
+
+```ts
+let header = new Accept('text/html;text/*;q=0.9');
+header.get('text/html'); // 1
+header.set('text/html', 0.8);
+header.delete('text/html');
+header.has('text/*'); // true
+
+// Iterate over media type/quality pairs
+for (let [mediaType, quality] of header) {
+  // ...
+}
+
+// Alternative init styles
+let header = new Accept({ 'text/html': 1, 'text/*': 0.9 });
+let header = new Accept(['text/html', ['text/*', 0.9]]);
+```
 
 ### Accept-Language
 
