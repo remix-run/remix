@@ -29,6 +29,10 @@ interface SuperHeadersPropertyInit {
    */
   acceptLanguage?: string | AcceptLanguageInit;
   /**
+   * The [`Accept-Ranges`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Ranges) header value.
+   */
+  acceptRanges?: string;
+  /**
    * The [`Age`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age) header value.
    */
   age?: string | number;
@@ -36,6 +40,10 @@ interface SuperHeadersPropertyInit {
    * The [`Cache-Control`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) header value.
    */
   cacheControl?: string | CacheControlInit;
+  /**
+   * The [`Connection`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection) header value.
+   */
+  connection?: string;
   /**
    * The [`Content-Disposition`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition) header value.
    */
@@ -61,6 +69,10 @@ interface SuperHeadersPropertyInit {
    */
   expires?: string | DateInit;
   /**
+   * The [`Host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host) header value.
+   */
+  host?: string;
+  /**
    * The [`If-Modified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since) header value.
    */
   ifModifiedSince?: string | DateInit;
@@ -72,6 +84,10 @@ interface SuperHeadersPropertyInit {
    * The [`Last-Modified`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified) header value.
    */
   lastModified?: string | DateInit;
+  /**
+   * The [`Referer`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer) header value.
+   */
+  referer?: string;
   /**
    * The [`Set-Cookie`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie) header value(s).
    */
@@ -115,15 +131,11 @@ export class SuperHeaders extends Headers {
         for (let name of Object.getOwnPropertyNames(init)) {
           let value = init[name];
 
-          if (typeof value === 'string') {
-            this.set(name, value);
+          let descriptor = Object.getOwnPropertyDescriptor(SuperHeaders.prototype, name);
+          if (descriptor?.set) {
+            descriptor.set.call(this, value);
           } else {
-            let descriptor = Object.getOwnPropertyDescriptor(SuperHeaders.prototype, name);
-            if (descriptor?.set) {
-              descriptor.set.call(this, value);
-            } else {
-              this.set(name, value.toString());
-            }
+            this.set(name, value.toString());
           }
         }
       }
@@ -344,6 +356,21 @@ export class SuperHeaders extends Headers {
 
   set acceptLanguage(value: string | AcceptLanguageInit | undefined | null) {
     this.#setHeaderValue('accept-language', AcceptLanguage, value);
+  }
+
+  /**
+   * The `Accept-Ranges` header indicates the server's acceptance of range requests.
+   *
+   * [MDN `Accept-Ranges` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Ranges)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7233#section-2.3)
+   */
+  get acceptRanges(): string | null {
+    return this.get('accept-ranges');
+  }
+
+  set acceptRanges(value: string | undefined | null) {
+    this.#setValue('accept-ranges', value);
   }
 
   /**

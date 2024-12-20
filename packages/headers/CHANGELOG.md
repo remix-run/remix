@@ -128,11 +128,12 @@ header.getPreferred(['gzip', 'deflate']); // 'gzip'
 ```
 
 - Added `SuperHeaders.prototype` (getters and setters) for:
-  - `headers.accept`
-  - `headers.acceptEncoding`
-  - `headers.connection`
-  - `headers.host`
-  - `headers.referer`
+  - `accept`
+  - `acceptEncoding`
+  - `acceptRanges`
+  - `connection`
+  - `host`
+  - `referer`
 
 ## v0.8.0 (2024-11-14)
 

@@ -64,6 +64,12 @@ headers.acceptLanguage.accepts('ja'); // false
 headers.acceptLanguage.getPreferred(['en-US', 'en-GB']); // 'en-US'
 headers.acceptLanguage.getPreferred(['en', 'fr']); // 'en'
 
+// Accept-Ranges
+headers.acceptRanges = 'bytes';
+
+// Connection
+headers.connection = 'close';
+
 // Content-Type
 headers.contentType = 'application/json; charset=utf-8';
 
@@ -91,6 +97,12 @@ console.log(headers.cookie.get('user_id')); // '12345'
 
 headers.cookie.set('theme', 'dark');
 console.log(headers.get('Cookie')); // 'session_id=abc123; user_id=12345; theme=dark'
+
+// Host
+headers.host = 'example.com';
+
+// Referer
+headers.referer = 'https://example.com/';
 
 // Set-Cookie
 headers.setCookie = ['session_id=abc123; Path=/; HttpOnly'];
