@@ -173,6 +173,11 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Accept-Language'), 'en-us,en;q=0.9');
     });
 
+    it('handles the acceptRanges property', () => {
+      let headers = new SuperHeaders({ acceptRanges: 'bytes' });
+      assert.equal(headers.get('Accept-Ranges'), 'bytes');
+    });
+
     it('handles the age property', () => {
       let headers = new SuperHeaders({ age: 42 });
       assert.equal(headers.get('Age'), '42');
@@ -325,6 +330,18 @@ describe('SuperHeaders', () => {
       headers.acceptLanguage = null;
       assert.ok(headers.acceptLanguage instanceof AcceptLanguage);
       assert.equal(headers.acceptLanguage.toString(), '');
+    });
+
+    it('supports the acceptRanges property', () => {
+      let headers = new SuperHeaders();
+
+      assert.equal(headers.acceptRanges, null);
+
+      headers.acceptRanges = 'bytes';
+      assert.equal(headers.acceptRanges, 'bytes');
+
+      headers.acceptRanges = null;
+      assert.equal(headers.acceptRanges, null);
     });
 
     it('supports the age property', () => {
