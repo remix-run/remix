@@ -29,6 +29,7 @@
     "@remix-run/testing": "2.15.1"
   },
   "changesets": [
+    "curly-comics-bake",
     "unlucky-melons-promise"
   ]
 }
