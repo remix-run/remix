@@ -146,7 +146,7 @@ const SetCookieKey = 'set-cookie';
  */
 export class SuperHeaders extends Headers {
   #map: Map<string, string | HeaderValue>;
-  #setCookieValues: (string | SetCookie)[] = [];
+  #setCookies: (string | SetCookie)[] = [];
 
   constructor(init?: string | SuperHeadersInit | Headers) {
     super();
@@ -190,10 +190,9 @@ export class SuperHeaders extends Headers {
   append(name: string, value: string): void {
     let key = name.toLowerCase();
     if (key === SetCookieKey) {
-      this.#setCookieValues.push(value);
+      this.#setCookies.push(value);
     } else {
       let existingValue = this.#map.get(key);
-      // TODO: check if it's an empty string
       this.#map.set(key, existingValue ? `${existingValue}, ${value}` : value);
     }
   }
@@ -206,7 +205,7 @@ export class SuperHeaders extends Headers {
   delete(name: string): void {
     let key = name.toLowerCase();
     if (key === SetCookieKey) {
-      this.#setCookieValues = [];
+      this.#setCookies = [];
     } else {
       this.#map.delete(key);
     }
@@ -242,9 +241,7 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/getSetCookie)
    */
   getSetCookie(): string[] {
-    return this.#setCookieValues.map((value) =>
-      typeof value === 'string' ? value : value.toString(),
-    );
+    return this.#setCookies.map((value) => (typeof value === 'string' ? value : value.toString()));
   }
 
   /**
@@ -255,7 +252,7 @@ export class SuperHeaders extends Headers {
   has(name: string): boolean {
     let key = name.toLowerCase();
     if (key === SetCookieKey) {
-      return this.#setCookieValues.length > 0;
+      return this.#setCookies.length > 0;
     } else {
       return this.#map.has(key);
     }
@@ -270,7 +267,7 @@ export class SuperHeaders extends Headers {
   set(name: string, value: string): void {
     let key = name.toLowerCase();
     if (key === SetCookieKey) {
-      this.#setCookieValues = [value];
+      this.#setCookies = [value];
     } else {
       this.#map.set(key, value);
     }
@@ -698,27 +695,25 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.1)
    */
   get setCookie(): SetCookie[] {
-    for (let i = 0; i < this.#setCookieValues.length; ++i) {
-      let value = this.#setCookieValues[i];
+    for (let i = 0; i < this.#setCookies.length; ++i) {
+      let value = this.#setCookies[i];
       if (typeof value === 'string') {
-        this.#setCookieValues[i] = new SetCookie(value);
+        this.#setCookies[i] = new SetCookie(value);
       }
     }
 
-    return this.#setCookieValues as SetCookie[];
+    return this.#setCookies as SetCookie[];
   }
 
-  set setCookie(values: (string | SetCookieInit)[] | string | SetCookieInit | undefined | null) {
-    if (values != null) {
-      if (Array.isArray(values)) {
-        this.#setCookieValues = values.map((value) =>
-          typeof value === 'string' || value instanceof SetCookie ? value : new SetCookie(value),
-        );
+  set setCookie(value: (string | SetCookieInit)[] | string | SetCookieInit | undefined | null) {
+    if (value != null) {
+      if (Array.isArray(value)) {
+        this.#setCookies = value.map((v) => (typeof v === 'string' ? v : new SetCookie(v)));
       } else {
-        this.#setCookieValues = [new SetCookie(values)];
+        this.#setCookies = [typeof value === 'string' ? value : new SetCookie(value)];
       }
     } else {
-      this.#setCookieValues = [];
+      this.#setCookies = [];
     }
   }
 
