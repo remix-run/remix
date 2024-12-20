@@ -27,7 +27,7 @@ Similarly, the constructor no longer accepts non-string values in an array init 
 let headers = new SuperHeaders([['Content-Type', { mediaType: 'text/html' }]]);
 
 // if you need the previous behavior, use the object init instead
-let headers = new SuperHeaders({ contentType: 'text/html' });
+let headers = new SuperHeaders({ contentType: { mediaType: 'text/html' } });
 ```
 
 - BREAKING CHANGE: `headers.get()` returns `null` for uninitialized custom header values instead of `undefined`. This follows the native `Headers` interface more closely.
@@ -43,7 +43,7 @@ headers.get('Host'); // null
 headers.get('Content-Type'); // null
 ```
 
-- BREAKING CHANGE: Removed ability to initialize `AcceptLanguage` with `undefined` quality values.
+- BREAKING CHANGE: Removed ability to initialize `AcceptLanguage` with `undefined` weight values.
 
 ```ts
 // before
@@ -65,11 +65,12 @@ headers.contentType = null; // same as headers.delete('Content-Type');
 headers.contentType; // null
 ```
 
-- Allow setting date values (`date`, `expires`, `ifModifiedSince`, `ifUnmodifiedSince`, and `lastModified`) using numbers.
+- Allow setting date headers (`date`, `expires`, `ifModifiedSince`, `ifUnmodifiedSince`, and `lastModified`) using numbers.
 
 ```ts
 let ms = new Date().getTime();
 let headers = new SuperHeaders({ lastModified: ms });
+headers.date = ms;
 ```
 
 - Added `AcceptLanguage.prototype.accepts(language)`, `AcceptLanguage.prototype.getWeight(language)`,
