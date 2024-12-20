@@ -37,6 +37,27 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
   }
 
   /**
+   * An array of the names of the cookies in the header.
+   */
+  get names(): string[] {
+    return Array.from(this.#map.keys());
+  }
+
+  /**
+   * An array of the values of the cookies in the header.
+   */
+  get values(): string[] {
+    return Array.from(this.#map.values());
+  }
+
+  /**
+   * The number of cookies in the header.
+   */
+  get size(): number {
+    return this.#map.size;
+  }
+
+  /**
    * Gets the value of a cookie with the given name from the header.
    * @param name The name of the cookie.
    * @returns The value of the cookie, or `null` if the cookie does not exist.
@@ -78,14 +99,6 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     this.#map.clear();
   }
 
-  names(): IterableIterator<string> {
-    return this.#map.keys();
-  }
-
-  values(): IterableIterator<string> {
-    return this.#map.values();
-  }
-
   entries(): IterableIterator<[string, string]> {
     return this.#map.entries();
   }
@@ -98,13 +111,6 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
     for (let [name, value] of this) {
       callback.call(thisArg, name, value, this);
     }
-  }
-
-  /**
-   * The number of cookies in the header.
-   */
-  get size(): number {
-    return this.#map.size;
   }
 
   toString(): string {

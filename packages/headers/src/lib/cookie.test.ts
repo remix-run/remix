@@ -42,6 +42,16 @@ describe('Cookie', () => {
     assert.equal(header.get('name2'), 'value2');
   });
 
+  it('gets all names', () => {
+    let header = new Cookie('name1=value1; name2=value2');
+    assert.deepEqual(header.names, ['name1', 'name2']);
+  });
+
+  it('gets all values', () => {
+    let header = new Cookie('name1=value1; name2=value2');
+    assert.deepEqual(header.values, ['value1', 'value2']);
+  });
+
   it('sets and gets values', () => {
     let header = new Cookie();
     header.set('name', 'value');
@@ -71,18 +81,6 @@ describe('Cookie', () => {
     assert.equal(header.size, 2);
     header.clear();
     assert.equal(header.size, 0);
-  });
-
-  it('iterates over names', () => {
-    let header = new Cookie('name1=value1; name2=value2');
-    let names = Array.from(header.names());
-    assert.deepEqual(names, ['name1', 'name2']);
-  });
-
-  it('iterates over values', () => {
-    let header = new Cookie('name1=value1; name2=value2');
-    let values = Array.from(header.values());
-    assert.deepEqual(values, ['value1', 'value2']);
   });
 
   it('iterates over entries', () => {

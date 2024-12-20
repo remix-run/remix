@@ -55,21 +55,28 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
   }
 
   #sort() {
-    this.#map = new Map([...this.#map].sort(([, a], [, b]) => b - a));
+    this.#map = new Map([...this.#map].sort((a, b) => b[1] - a[1]));
   }
 
   /**
-   * An array of all locale identifiers in the header.
+   * An array of all languages in the header.
    */
   get languages(): string[] {
     return Array.from(this.#map.keys());
   }
 
   /**
-   * An array of all weight values in the header.
+   * An array of all weights (q values) in the header.
    */
   get weights(): number[] {
     return Array.from(this.#map.values());
+  }
+
+  /**
+   * The number of languages in the header.
+   */
+  get size(): number {
+    return this.#map.size;
   }
 
   /**
@@ -177,13 +184,6 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
     for (let [language, weight] of this) {
       callback.call(thisArg, language, weight, this);
     }
-  }
-
-  /**
-   * The number of languages in the header.
-   */
-  get size(): number {
-    return this.#map.size;
   }
 
   toString(): string {
