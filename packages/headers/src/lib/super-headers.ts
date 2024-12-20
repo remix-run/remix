@@ -277,6 +277,24 @@ export class SuperHeaders extends Headers {
   }
 
   /**
+   * Returns an iterator of all header keys (lowercase).
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/keys)
+   */
+  *keys(): IterableIterator<string> {
+    for (let [key] of this) yield key;
+  }
+
+  /**
+   * Returns an iterator of all header values.
+   *
+   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/values)
+   */
+  *values(): IterableIterator<string> {
+    for (let [, value] of this) yield value;
+  }
+
+  /**
    * Returns an iterator of all header key/value pairs.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/entries)
@@ -284,9 +302,7 @@ export class SuperHeaders extends Headers {
   *entries(): IterableIterator<[string, string]> {
     for (let [key] of this.#map) {
       let str = this.get(key);
-      if (str) {
-        yield [key, str];
-      }
+      if (str) yield [key, str];
     }
 
     for (let value of this.getSetCookie()) {
@@ -296,28 +312,6 @@ export class SuperHeaders extends Headers {
 
   [Symbol.iterator](): IterableIterator<[string, string]> {
     return this.entries();
-  }
-
-  /**
-   * Returns an iterator of all header keys (lowercase).
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/keys)
-   */
-  *keys(): IterableIterator<string> {
-    for (let [key] of this) {
-      yield key;
-    }
-  }
-
-  /**
-   * Returns an iterator of all header values.
-   *
-   * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/values)
-   */
-  *values(): IterableIterator<string> {
-    for (let [, value] of this) {
-      yield value;
-    }
   }
 
   /**
@@ -728,7 +722,7 @@ export class SuperHeaders extends Headers {
     }
   }
 
-  // helpers
+  // Helpers
 
   #getHeaderValue<T extends HeaderValue>(key: string, ctor: new (init?: any) => T): T {
     let value = this.#map.get(key);
