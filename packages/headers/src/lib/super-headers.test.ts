@@ -232,6 +232,11 @@ describe('SuperHeaders', () => {
       assert.equal(headers.get('Date'), 'Fri, 01 Jan 2021 00:00:00 GMT');
     });
 
+    it('handles the etag property', () => {
+      let headers = new SuperHeaders({ etag: 'abc' });
+      assert.equal(headers.get('ETag'), '"abc"');
+    });
+
     it('handles the expires property', () => {
       let headers = new SuperHeaders({ expires: new Date('2021-01-01T00:00:00Z') });
       assert.equal(headers.get('Expires'), 'Fri, 01 Jan 2021 00:00:00 GMT');
@@ -524,6 +529,30 @@ describe('SuperHeaders', () => {
 
       headers.date = null;
       assert.equal(headers.date, null);
+    });
+
+    it('supports the etag property', () => {
+      let headers = new SuperHeaders();
+
+      assert.equal(headers.etag, null);
+
+      headers.etag = 'abc';
+      assert.equal(headers.etag, '"abc"');
+
+      headers.etag = '"def"';
+      assert.equal(headers.etag, '"def"');
+
+      headers.etag = 'W/"def"';
+      assert.equal(headers.etag, 'W/"def"');
+
+      headers.etag = '';
+      assert.equal(headers.etag, '""');
+
+      headers.etag = '""';
+      assert.equal(headers.etag, '""');
+
+      headers.etag = null;
+      assert.equal(headers.etag, null);
     });
 
     it('supports the expires property', () => {

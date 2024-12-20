@@ -134,6 +134,7 @@ header.getPreferred(['gzip', 'deflate']); // 'gzip'
   - `connection`
   - `contentEncoding`
   - `contentLanguage`
+  - `etag`
   - `host`
   - `location`
   - `referer`

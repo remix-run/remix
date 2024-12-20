@@ -73,6 +73,10 @@ interface SuperHeadersPropertyInit {
    */
   date?: string | DateInit;
   /**
+   * The [`ETag`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) header value.
+   */
+  etag?: string;
+  /**
    * The [`Expires`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires) header value.
    */
   expires?: string | DateInit;
@@ -541,6 +545,24 @@ export class SuperHeaders extends Headers {
 
   set date(value: string | DateInit | undefined | null) {
     this.#setDateValue('date', value);
+  }
+
+  /**
+   * The `ETag` header provides a unique identifier for the current version of the resource.
+   *
+   * [MDN `ETag` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-2.3)
+   */
+  get etag(): string | null {
+    return this.get('etag');
+  }
+
+  set etag(value: string | undefined | null) {
+    this.#setValue(
+      'etag',
+      typeof value === 'string' && !/^(W\/)?".*"$/.test(value) ? `"${value}"` : value,
+    );
   }
 
   /**
