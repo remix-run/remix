@@ -1,5 +1,14 @@
 # `@remix-run/dev`
 
+## 2.15.2-pre.2
+
+### Patch Changes
+
+- [REMOVE] Fix implementation of flag warning supression ([`9c35c5fbc`](https://github.com/remix-run/remix/commit/9c35c5fbc7cba221b4c67c9ea27e6afb308dd3e5))
+- Updated dependencies:
+  - `@remix-run/node@2.15.2-pre.2`
+  - `@remix-run/server-runtime@2.15.2-pre.2`
+
 ## 2.15.2-pre.1
 
 ### Patch Changes

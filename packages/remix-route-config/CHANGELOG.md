@@ -1,5 +1,7 @@
 # `@remix-run/route-config`
 
+## 2.15.2-pre.2
+
 ## 2.15.2-pre.1
 
 ## 2.15.2-pre.0
