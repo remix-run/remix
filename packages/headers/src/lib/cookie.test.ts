@@ -43,16 +43,21 @@ describe('Cookie', () => {
   });
 
   it('sets and gets values', () => {
-    let header = new Cookie('');
+    let header = new Cookie();
     header.set('name', 'value');
     assert.equal(header.get('name'), 'value');
   });
 
+  it('returns `null` for nonexistent values', () => {
+    let header = new Cookie();
+    assert.equal(header.get('name'), null);
+  });
+
   it('deletes values', () => {
     let header = new Cookie('name=value');
-    assert.equal(header.delete('name'), true);
-    assert.equal(header.delete('nonexistent'), false);
-    assert.equal(header.get('name'), undefined);
+    assert.equal(header.has('name'), true);
+    header.delete('name');
+    assert.equal(header.has('name'), false);
   });
 
   it('checks if value exists', () => {
@@ -63,17 +68,9 @@ describe('Cookie', () => {
 
   it('clears all values', () => {
     let header = new Cookie('name1=value1; name2=value2');
+    assert.equal(header.size, 2);
     header.clear();
     assert.equal(header.size, 0);
-  });
-
-  it('iterates over entries', () => {
-    let header = new Cookie('name1=value1; name2=value2');
-    let entries = Array.from(header.entries());
-    assert.deepEqual(entries, [
-      ['name1', 'value1'],
-      ['name2', 'value2'],
-    ]);
   });
 
   it('iterates over names', () => {
@@ -88,10 +85,19 @@ describe('Cookie', () => {
     assert.deepEqual(values, ['value1', 'value2']);
   });
 
+  it('iterates over entries', () => {
+    let header = new Cookie('name1=value1; name2=value2');
+    let entries = Array.from(header.entries());
+    assert.deepEqual(entries, [
+      ['name1', 'value1'],
+      ['name2', 'value2'],
+    ]);
+  });
+
   it('uses forEach correctly', () => {
     let header = new Cookie('name1=value1; name2=value2');
     let result: [string, string][] = [];
-    header.forEach((value, name) => {
+    header.forEach((name, value) => {
       result.push([name, value]);
     });
     assert.deepEqual(result, [
