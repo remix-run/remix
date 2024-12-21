@@ -1,0 +1,6 @@
+{
+  "version": "0.1.0",
+  "command": "./node_modules/.bin/tsc",
+  "args": ["-v"],
+  "echoCommand": true
+}
