@@ -6,5 +6,5 @@
       "parameters": ["--experimental-strip-types", "--disable-warning=ExperimentalWarning"]
     }
   ],
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "./node_modules/typescript/lib"
 }
