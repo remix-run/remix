@@ -695,23 +695,22 @@ export class SuperHeaders extends Headers {
    * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.1)
    */
   get setCookie(): SetCookie[] {
-    for (let i = 0; i < this.#setCookies.length; ++i) {
-      let value = this.#setCookies[i];
-      if (typeof value === 'string') {
-        this.#setCookies[i] = new SetCookie(value);
+    let setCookies = this.#setCookies;
+
+    for (let i = 0; i < setCookies.length; ++i) {
+      if (typeof setCookies[i] === 'string') {
+        setCookies[i] = new SetCookie(setCookies[i]);
       }
     }
 
-    return this.#setCookies as SetCookie[];
+    return setCookies as SetCookie[];
   }
 
   set setCookie(value: (string | SetCookieInit)[] | string | SetCookieInit | undefined | null) {
     if (value != null) {
-      if (Array.isArray(value)) {
-        this.#setCookies = value.map((v) => (typeof v === 'string' ? v : new SetCookie(v)));
-      } else {
-        this.#setCookies = [typeof value === 'string' ? value : new SetCookie(value)];
-      }
+      this.#setCookies = (Array.isArray(value) ? value : [value]).map((v) =>
+        typeof v === 'string' ? v : new SetCookie(v),
+      );
     } else {
       this.#setCookies = [];
     }
