@@ -241,7 +241,7 @@ export class SuperHeaders extends Headers {
    * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/getSetCookie)
    */
   getSetCookie(): string[] {
-    return this.#setCookies.map((value) => (typeof value === 'string' ? value : value.toString()));
+    return this.#setCookies.map((v) => (typeof v === 'string' ? v : v.toString()));
   }
 
   /**
@@ -251,11 +251,7 @@ export class SuperHeaders extends Headers {
    */
   has(name: string): boolean {
     let key = name.toLowerCase();
-    if (key === SetCookieKey) {
-      return this.#setCookies.length > 0;
-    } else {
-      return this.#map.has(key);
-    }
+    return key === SetCookieKey ? this.#setCookies.length > 0 : this.#map.has(key);
   }
 
   /**
