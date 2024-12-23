@@ -225,3 +225,83 @@ test("all routes have ids", () => {
 
   expect(matchesWithoutIds).toHaveLength(0);
 });
+
+test.only("test", async () => {
+  function useNewFetcher<TLoadData>(...args: Parameters<typeof useFetcher>) {
+    let fetcher = useFetcher(...args);
+    console.log(`fetcher state: ${fetcher.state}`);
+    let pendingLoadRef = React.useRef<{
+      resolve: (data: TLoadData) => void;
+      reject: () => void;
+    } | null>(null);
+
+    let pendingLoad = pendingLoadRef.current;
+    React.useLayoutEffect(() => {
+      if (fetcher.state === "idle" && fetcher.data && pendingLoad) {
+        pendingLoad.resolve(fetcher.data as TLoadData);
+        pendingLoadRef.current = null;
+      }
+    }, [pendingLoad, fetcher.data, fetcher.state]);
+
+    let memoizedFetcher = React.useMemo(() => {
+      return {
+        ...fetcher,
+        load: (...args: Parameters<typeof fetcher["load"]>) => {
+          console.log("calling remix fetcher.load");
+          fetcher.load(...args);
+          return new Promise<TLoadData>((resolve, reject) => {
+            pendingLoadRef.current = { resolve, reject };
+          });
+        },
+      };
+    }, [fetcher]);
+
+    return memoizedFetcher;
+  }
+
+  let RemixStub = createRemixStub([
+    {
+      path: "/",
+      Component() {
+        let loaderData = useLoaderData();
+        let [textToShow, setTextToShow] = React.useState(loaderData.message);
+        let fetcher = useNewFetcher<{ message: string }>();
+
+        return (
+          <div>
+            <div id="output">{textToShow}</div>
+            <button
+              type="button"
+              id="button"
+              onClick={async () => {
+                console.log("clicking");
+                let data = await fetcher.load(".?action=buttonClick");
+                setTextToShow(data.message);
+              }}
+            >
+              First load
+            </button>
+          </div>
+        );
+      },
+      loader({ request }: LoaderFunctionArgs) {
+        let searchParams = new URL(request.url).searchParams;
+        switch (searchParams.get("action")) {
+          case "buttonClick": {
+            console.log("returning data from the loader");
+            return json({ message: "buttonClick" });
+          }
+          default: {
+            return json({ message: "initialLoad" });
+          }
+        }
+      },
+    },
+  ]);
+
+  render(<RemixStub />);
+  await waitFor(() => screen.findByText("initialLoad"));
+
+  user.click(screen.getByRole("button"));
+  await waitFor(() => screen.findByText("buttonClick"));
+});
