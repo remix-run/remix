@@ -4,6 +4,8 @@ title: "create-remix (CLI)"
 
 # `create-remix`
 
+<docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you should use the [`create-react-router` CLI to start a new project][create-react-router].</docs-warning>
+
 The `create-remix` CLI will create a new Remix project. Without passing arguments, this command will launch an interactive CLI to configure the new project and set it up in a given directory.
 
 ```sh
@@ -86,3 +88,5 @@ If `create-remix` detects any file collisions between the template and the direc
 [templates]: ../guides/templates
 [remix-app-server]: ./serve
 [template-flag-hash-link]: #create-remix---template
+[remix-now-react-router]: https://remix.run/blog/incremental-path-to-react-19
+[create-react-router]: https://reactrouter.com/start/framework/installation
