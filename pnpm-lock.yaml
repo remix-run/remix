@@ -549,7 +549,7 @@ importers:
         version: 3.2.1
       postcss-import:
         specifier: ^15.1.0
-        version: 15.1.0(postcss@8.4.35)
+        version: 15.1.0(postcss@8.4.49)
       tailwindcss:
         specifier: ^3.3.0
         version: 3.4.1
@@ -571,9 +571,6 @@ importers:
       '@remix-run/serve':
         specifier: workspace:*
         version: link:../../../packages/remix-serve
-      '@remix-run/server-runtime':
-        specifier: workspace:*
-        version: link:../../../packages/remix-server-runtime
       '@vanilla-extract/css':
         specifier: ^1.10.0
         version: 1.14.1
@@ -644,9 +641,6 @@ importers:
       '@remix-run/serve':
         specifier: workspace:*
         version: link:../../../packages/remix-serve
-      '@remix-run/server-runtime':
-        specifier: workspace:*
-        version: link:../../../packages/remix-server-runtime
       '@vanilla-extract/css':
         specifier: ^1.10.0
         version: 1.14.1
@@ -714,9 +708,6 @@ importers:
       '@remix-run/react':
         specifier: workspace:*
         version: link:../../../packages/remix-react
-      '@remix-run/server-runtime':
-        specifier: workspace:*
-        version: link:../../../packages/remix-server-runtime
       isbot:
         specifier: ^4.1.0
         version: 4.4.0
@@ -12906,6 +12897,18 @@ packages:
       postcss-value-parser: 4.2.0
       read-cache: 1.0.0
       resolve: 1.22.8
+
+  /postcss-import@15.1.0(postcss@8.4.49):
+    resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      postcss: ^8.0.0
+    dependencies:
+      postcss: 8.4.49
+      postcss-value-parser: 4.2.0
+      read-cache: 1.0.0
+      resolve: 1.22.8
+    dev: true
 
   /postcss-js@4.0.1(postcss@8.4.35):
     resolution: {integrity: sha512-dDLF8pEO191hJMtlHFPRa8xsizHaM82MLfNkUHdUtVEV3tgTp5oj+8qbEqYM57SLfc74KSbw//4SeJma2LRVIw==}
