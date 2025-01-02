@@ -77,6 +77,9 @@ test.describe(async () => {
       return contents.replace(/export const loader.*/, "");
     });
 
+    // Wait enough time for the manifest to be updated via HMR
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     // After browser reload, client should be aware that there's no loader on the other route
     if (browserName === "webkit") {
       // Force new page instance for webkit.
