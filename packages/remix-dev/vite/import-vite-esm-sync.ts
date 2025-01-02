@@ -5,14 +5,25 @@
 // hook, which then unlocks "importViteEsmSync" for use anywhere in the plugin
 // and its utils. This file won't be needed when this package is ESM only.
 
+import path from "pathe";
+
 import invariant from "../invariant";
+import { isInRemixMonorepo } from "./is-in-remix-monorepo";
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 type Vite = typeof import("vite");
 let vite: Vite | undefined;
 
 export async function preloadViteEsm(): Promise<void> {
-  vite = await import("vite");
+  vite = isInRemixMonorepo()
+    ? await import(
+        `file:///${path.normalize(
+          require
+            .resolve("vite/package.json", { paths: [process.cwd()] })
+            .replace("package.json", "dist/node/index.js")
+        )}`
+      )
+    : await import("vite");
 }
 
 export function importViteEsmSync(): Vite {

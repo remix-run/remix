@@ -39,6 +39,7 @@ import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
 import { combineURLs } from "./combine-urls";
 import { removeExports } from "./remove-exports";
+import { isInRemixMonorepo } from "./is-in-remix-monorepo";
 import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
 import * as ViteNode from "./vite-node";
 
@@ -51,7 +52,7 @@ export async function resolveViteConfig({
   mode?: string;
   root: string;
 }) {
-  let vite = await import("vite");
+  let vite = importViteEsmSync();
 
   let viteConfig = await vite.resolveConfig(
     { mode, configFile, root },
@@ -1873,16 +1874,6 @@ function uniqueNodes(
     unique.push(node);
   }
   return unique;
-}
-
-function isInRemixMonorepo() {
-  try {
-    let devPath = path.dirname(require.resolve("@remix-run/node/package.json"));
-    let devParentDir = path.basename(path.resolve(devPath, ".."));
-    return devParentDir === "packages";
-  } catch {
-    return false;
-  }
 }
 
 function isEqualJson(v1: unknown, v2: unknown) {

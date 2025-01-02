@@ -57,6 +57,7 @@
     "lodash.debounce": "^4.0.8",
     "minimatch": "^9.0.0",
     "ora": "^5.4.1",
+    "pathe": "^1.1.2",
     "picocolors": "^1.0.0",
     "picomatch": "^2.3.1",
     "pidtree": "^0.6.0",
@@ -80,6 +81,7 @@
   "devDependencies": {
     "@remix-run/cloudflare": "workspace:*",
     "@remix-run/deno": "workspace:*",
+    "@remix-run/react": "workspace:*",
     "@remix-run/serve": "workspace:*",
     "@remix-run/testing": "workspace:*",
     "@types/babel__core": "^7.20.5",

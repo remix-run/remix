@@ -15,7 +15,7 @@ import {
 } from "./plugin";
 import type { RouteManifestEntry, RouteManifest } from "../config/routes";
 import invariant from "../invariant";
-import { preloadViteEsm } from "./import-vite-esm-sync";
+import { preloadViteEsm, importViteEsmSync } from "./import-vite-esm-sync";
 
 function getAddressableRoutes(routes: RouteManifest): RouteManifestEntry[] {
   let nonAddressableIds = new Set<string>();
@@ -257,7 +257,7 @@ export async function build(
 
   let { remixConfig } = ctx;
 
-  let vite = await import("vite");
+  let vite = importViteEsmSync();
 
   async function viteBuild({
     ssr,

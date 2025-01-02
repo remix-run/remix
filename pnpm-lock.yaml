@@ -961,9 +961,6 @@ importers:
       '@remix-run/node':
         specifier: workspace:*
         version: link:../remix-node
-      '@remix-run/react':
-        specifier: ^2.15.1
-        version: link:../remix-react
       '@remix-run/router':
         specifier: 1.21.0
         version: 1.21.0
@@ -1039,6 +1036,9 @@ importers:
       ora:
         specifier: ^5.4.1
         version: 5.4.1
+      pathe:
+        specifier: ^1.1.2
+        version: 1.1.2
       picocolors:
         specifier: ^1.0.0
         version: 1.0.0
@@ -1109,6 +1109,9 @@ importers:
       '@remix-run/deno':
         specifier: workspace:*
         version: link:../remix-deno
+      '@remix-run/react':
+        specifier: workspace:*
+        version: link:../remix-react
       '@remix-run/serve':
         specifier: workspace:*
         version: link:../remix-serve
