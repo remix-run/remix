@@ -127,9 +127,8 @@ const getStylesForFiles = async ({
         }
 
         styles[dep.url] = css;
-      } catch (err) {
+      } catch {
         console.warn(`Could not load ${dep.file}`);
-        console.error(err);
         // this can happen with dynamically imported modules, I think
         // because the Vite module graph doesn't distinguish between
         // static and dynamic imports? TODO investigate, submit fix
