@@ -40,7 +40,7 @@ import { resolveFileUrl } from "./resolve-file-url";
 import { combineURLs } from "./combine-urls";
 import { removeExports } from "./remove-exports";
 import { isInRemixMonorepo } from "./is-in-remix-monorepo";
-import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
+import { getVite, preloadVite } from "./vite";
 import * as ViteNode from "./vite-node";
 
 export async function resolveViteConfig({
@@ -52,7 +52,7 @@ export async function resolveViteConfig({
   mode?: string;
   root: string;
 }) {
-  let vite = importViteEsmSync();
+  let vite = getVite();
 
   let viteConfig = await vite.resolveConfig(
     { mode, configFile, root },
@@ -301,7 +301,7 @@ const resolveRelativeRouteFilePath = (
   route: RouteManifestEntry,
   remixConfig: ResolvedVitePluginConfig
 ) => {
-  let vite = importViteEsmSync();
+  let vite = getVite();
   let file = route.file;
   let fullPath = path.resolve(remixConfig.appDirectory, file);
 
@@ -331,7 +331,7 @@ const resolveChunk = (
   viteManifest: Vite.Manifest,
   absoluteFilePath: string
 ) => {
-  let vite = importViteEsmSync();
+  let vite = getVite();
   let rootRelativeFilePath = vite.normalizePath(
     path.relative(ctx.rootDirectory, absoluteFilePath)
   );
@@ -709,7 +709,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       {
         rootDirectory,
         isSpaMode,
-        vite: importViteEsmSync(),
+        vite: getVite(),
         routeConfigChanged,
         viteUserConfig,
         routesViteNodeContext,
@@ -1038,10 +1038,10 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       name: "remix",
       config: async (_viteUserConfig, _viteConfigEnv) => {
         // Preload Vite's ESM build up-front as soon as we're in an async context
-        await preloadViteEsm();
+        await preloadVite();
 
         // Ensure sync import of Vite works after async preload
-        let vite = importViteEsmSync();
+        let vite = getVite();
 
         viteUserConfig = _viteUserConfig;
         viteConfigEnv = _viteConfigEnv;
@@ -1235,7 +1235,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           );
         }
 
-        let vite = importViteEsmSync();
+        let vite = getVite();
 
         let childCompilerConfigFile = await vite.loadConfigFromFile(
           {
@@ -1374,7 +1374,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
 
         // Invalidate virtual modules and update cached plugin config via file watcher
         viteDevServer.watcher.on("all", async (eventName, rawFilepath) => {
-          let { normalizePath } = importViteEsmSync();
+          let { normalizePath } = getVite();
           let filepath = normalizePath(rawFilepath);
 
           let appFileAddedOrRemoved =
@@ -1577,7 +1577,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           return;
         }
 
-        let vite = importViteEsmSync();
+        let vite = getVite();
         let importerShort = vite.normalizePath(
           path.relative(ctx.rootDirectory, importer)
         );
@@ -1946,7 +1946,7 @@ function getRoute(
   pluginConfig: ResolvedVitePluginConfig,
   file: string
 ): RouteManifestEntry | undefined {
-  let vite = importViteEsmSync();
+  let vite = getVite();
   let routePath = vite.normalizePath(
     path.relative(pluginConfig.appDirectory, file)
   );
