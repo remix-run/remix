@@ -19,6 +19,7 @@ module.exports = {
     "packages/remix-express",
     "packages/remix-node",
     "packages/remix-react",
+    "packages/remix-route-config",
     "packages/remix-serve",
     "packages/remix-server-runtime",
     "packages/remix-testing",

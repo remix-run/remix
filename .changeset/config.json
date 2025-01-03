@@ -15,8 +15,11 @@
       "@remix-run/dev",
       "@remix-run/eslint-config",
       "@remix-run/express",
+      "@remix-run/fs-routes",
       "@remix-run/node",
       "@remix-run/react",
+      "@remix-run/route-config",
+      "@remix-run/routes-option-adapter",
       "@remix-run/serve",
       "@remix-run/server-runtime",
       "@remix-run/testing"

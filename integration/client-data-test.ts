@@ -940,9 +940,10 @@ test.describe("Client Data", () => {
       page.on("console", (msg) => {
         let text = msg.text();
         if (
+          text.includes("React Router Future Flag Warning") ||
           // Ignore any dev tools messages. This may only happen locally when dev
           // tools is installed and not in CI but either way we don't care
-          /Download the React DevTools/.test(text)
+          text.includes("Download the React DevTools")
         ) {
           return;
         }

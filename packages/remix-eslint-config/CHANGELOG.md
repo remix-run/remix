@@ -1,5 +1,17 @@
 # `@remix-run/eslint-config`
 
+## 2.15.2
+
+## 2.15.1
+
+## 2.15.0
+
+## 2.14.0
+
+### Minor Changes
+
+- Add deprecation warning to `@remix-run/eslint-config` ([#10174](https://github.com/remix-run/remix/pull/10174))
+
 ## 2.13.1
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.13.1.

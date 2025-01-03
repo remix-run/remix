@@ -2620,7 +2620,9 @@ async function ensureInteractivity(page: Page, id: string, expect: number = 1) {
 function monitorConsole(page: Page) {
   let messages: ConsoleMessage[] = [];
   page.on("console", (message) => {
-    messages.push(message);
+    if (!message.text().includes("React Router Future Flag Warning")) {
+      messages.push(message);
+    }
   });
 
   return async () => {

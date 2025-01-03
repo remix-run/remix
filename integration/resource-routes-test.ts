@@ -247,7 +247,11 @@ test.describe("loader in an app", async () => {
     page,
   }) => {
     let logs: string[] = [];
-    page.on("console", (msg) => logs.push(msg.text()));
+    page.on("console", (msg) => {
+      if (!msg.text().includes("React Router Future Flag Warning")) {
+        logs.push(msg.text());
+      }
+    });
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickSubmitButton("/no-action");

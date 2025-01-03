@@ -5,7 +5,15 @@ order: 3
 
 # Remix App Server
 
-Remix is designed for you to own your server, but if you don't want to set one up you can use the Remix App Server instead. It's a production-ready, but basic Node.js server built with Express. If you find you want to customize it, use the `@remix-run/express` adapter instead.
+Remix is designed for you to own your server, but if you don't want to set one up you can use the Remix App Server instead. It's a production-ready, but basic Node.js server built with Express.
+
+By design, we do not provide options to customize the Remix App Server because if you need to customize the underlying `express` server, we'd rather you manage the server completely instead of creating an abstraction to handle all of the possible customizations you may require. If you find you want to customize it, you should use the `@remix-run/express` adapter instead.
+
+You can see the underlying `express` server configuration in [packages/remix-serve/cli.ts][remix-serve-code]. By default it uses the following Express middlewares (please refer to their documentation for default behaviors):
+
+- [`compression`][compression]
+- [`express.static`][express-static] (and thus [`serve-static`][serve-static])
+- [`morgan`][morgan]
 
 ## `HOST` environment variable
 
@@ -83,3 +91,8 @@ In production this doesn't happen. The server boots up and that's the end of it.
 [remix-run-express]: ./adapter#createrequesthandler
 [singleton]: ../guides/manual-mode#keeping-in-memory-server-state-across-rebuilds
 [express-listen]: https://expressjs.com/en/api.html#app.listen
+[remix-serve-code]: https://github.com/remix-run/remix/blob/main/packages/remix-serve/cli.ts
+[compression]: https://expressjs.com/en/resources/middleware/compression.html
+[express-static]: https://expressjs.com/en/4x/api.html#express.static
+[serve-static]: https://expressjs.com/en/resources/middleware/serve-static.html
+[morgan]: https://expressjs.com/en/resources/middleware/morgan.html

@@ -1,17 +1,28 @@
+import type * as Vite from "vite";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import colors from "picocolors";
 import fse from "fs-extra";
 import PackageJson from "@npmcli/package-json";
 import type { NodePolyfillsOptions as EsbuildPluginsNodeModulesPolyfillOptions } from "esbuild-plugins-node-modules-polyfill";
 
-import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
-import { defineRoutes } from "./config/routes";
+import type * as ViteNode from "./vite/vite-node";
+import {
+  type RouteManifest,
+  type RouteConfig,
+  type DefineRoutesFunction,
+  setRouteConfigAppDirectory,
+  validateRouteConfig,
+  configRoutesToRouteManifest,
+  defineRoutes,
+} from "./config/routes";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
 import { detectPackageManager } from "./cli/detectPackageManager";
 import { logger } from "./tux";
+import invariant from "./invariant";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -37,6 +48,7 @@ interface FutureConfig {
   v3_fetcherPersist: boolean;
   v3_relativeSplatPath: boolean;
   v3_throwAbortReason: boolean;
+  v3_routeConfig: boolean;
   v3_singleFetch: boolean;
   v3_lazyRouteDiscovery: boolean;
   unstable_optimizeDeps: boolean;
@@ -409,16 +421,27 @@ export async function readConfig(
   });
 }
 
+let isFirstLoad = true;
+let lastValidRoutes: RouteManifest = {};
+
 export async function resolveConfig(
   appConfig: AppConfig,
   {
     rootDirectory,
     serverMode = ServerMode.Production,
     isSpaMode = false,
+    routeConfigChanged = false,
+    vite,
+    viteUserConfig,
+    routesViteNodeContext,
   }: {
     rootDirectory: string;
     serverMode?: ServerMode;
     isSpaMode?: boolean;
+    routeConfigChanged?: boolean;
+    vite?: typeof Vite;
+    viteUserConfig?: Vite.UserConfig;
+    routesViteNodeContext?: ViteNode.Context;
   }
 ): Promise<RemixConfig> {
   if (!isValidServerMode(serverMode)) {
@@ -556,10 +579,103 @@ export async function resolveConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
-    let fileRoutes = flatRoutes(appDirectory, appConfig.ignoredRouteFiles);
-    for (let route of Object.values(fileRoutes)) {
-      routes[route.id] = { ...route, parentId: route.parentId || "root" };
+  if (appConfig.future?.v3_routeConfig) {
+    invariant(routesViteNodeContext);
+    invariant(vite);
+
+    let routeConfigFile = findEntry(appDirectory, "routes");
+
+    class FriendlyError extends Error {}
+
+    let logger = vite.createLogger(viteUserConfig?.logLevel, {
+      prefix: "[remix]",
+    });
+
+    try {
+      if (appConfig.routes) {
+        throw new FriendlyError(
+          'The "routes" config option is not supported when a "routes.ts" file is present. You should migrate these routes into "routes.ts".'
+        );
+      }
+
+      if (!routeConfigFile) {
+        let routeConfigDisplayPath = vite.normalizePath(
+          path.relative(rootDirectory, path.join(appDirectory, "routes.ts"))
+        );
+        throw new FriendlyError(
+          `Route config file not found at "${routeConfigDisplayPath}".`
+        );
+      }
+
+      setRouteConfigAppDirectory(appDirectory);
+      let routeConfigExport: RouteConfig = (
+        await routesViteNodeContext.runner.executeFile(
+          path.join(appDirectory, routeConfigFile)
+        )
+      ).default;
+
+      let routeConfig = await routeConfigExport;
+
+      let result = validateRouteConfig({
+        routeConfigFile,
+        routeConfig,
+      });
+
+      if (!result.valid) {
+        throw new FriendlyError(result.message);
+      }
+
+      routes = { ...routes, ...configRoutesToRouteManifest(routeConfig) };
+
+      lastValidRoutes = routes;
+
+      if (routeConfigChanged) {
+        logger.info(colors.green("Route config changed."), {
+          clear: true,
+          timestamp: true,
+        });
+      }
+    } catch (error: any) {
+      logger.error(
+        error instanceof FriendlyError
+          ? colors.red(error.message)
+          : [
+              colors.red(`Route config in "${routeConfigFile}" is invalid.`),
+              "",
+              error.loc?.file && error.loc?.column && error.frame
+                ? [
+                    path.relative(appDirectory, error.loc.file) +
+                      ":" +
+                      error.loc.line +
+                      ":" +
+                      error.loc.column,
+                    error.frame.trim?.(),
+                  ]
+                : error.stack,
+            ]
+              .flat()
+              .join("\n") + "\n",
+        {
+          error,
+          clear: !isFirstLoad,
+          timestamp: !isFirstLoad,
+        }
+      );
+
+      // Bail if this is the first time loading config, otherwise keep the dev server running
+      if (isFirstLoad) {
+        process.exit(1);
+      }
+
+      // Keep dev server running with the last valid routes to allow for correction
+      routes = lastValidRoutes;
+    }
+  } else {
+    if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
+      let fileRoutes = flatRoutes(appDirectory, appConfig.ignoredRouteFiles);
+      for (let route of Object.values(fileRoutes)) {
+        routes[route.id] = { ...route, parentId: route.parentId || "root" };
+      }
     }
   }
   if (appConfig.routes) {
@@ -603,6 +719,7 @@ export async function resolveConfig(
     v3_fetcherPersist: appConfig.future?.v3_fetcherPersist === true,
     v3_relativeSplatPath: appConfig.future?.v3_relativeSplatPath === true,
     v3_throwAbortReason: appConfig.future?.v3_throwAbortReason === true,
+    v3_routeConfig: appConfig.future?.v3_routeConfig === true,
     v3_singleFetch: appConfig.future?.v3_singleFetch === true,
     v3_lazyRouteDiscovery: appConfig.future?.v3_lazyRouteDiscovery === true,
     unstable_optimizeDeps: appConfig.future?.unstable_optimizeDeps === true,
@@ -615,6 +732,7 @@ export async function resolveConfig(
       "unstable_cssSideEffectImports",
       "unstable_dev",
       "unstable_postcss",
+      "unstable_routeConfig",
       "unstable_tailwind",
       "unstable_vanillaExtract",
       "v2_errorBoundary",
@@ -623,6 +741,12 @@ export async function resolveConfig(
       "v2_normalizeFormMethod",
       "v2_routeConvention",
     ];
+
+    if ("unstable_routeConfig" in userFlags) {
+      logger.warn(
+        "The `unstable_routeConfig` future flag has been stabilized as `v3_routeConfig`."
+      );
+    }
 
     if ("v2_dev" in userFlags) {
       if (userFlags.v2_dev === true) {
@@ -645,6 +769,10 @@ export async function resolveConfig(
       );
     }
   }
+
+  logFutureFlagWarnings(appConfig.future || {});
+
+  isFirstLoad = false;
 
   return {
     appDirectory,
@@ -742,3 +870,53 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "disjunction",
 });
+
+function logFutureFlagWarning(args: { flag: string; message: string }) {
+  logger.warn(args.message, {
+    key: args.flag,
+    details: [
+      `You can use the \`${args.flag}\` future flag to opt-in early.`,
+      `-> https://remix.run/docs/en/2.13.1/start/future-flags#${args.flag}`,
+    ],
+  });
+}
+
+export function logFutureFlagWarnings(future: Partial<FutureConfig>) {
+  if (future.v3_fetcherPersist === undefined) {
+    logFutureFlagWarning({
+      flag: "v3_fetcherPersist",
+      message: "Fetcher persistence behavior is changing in React Router v7",
+    });
+  }
+
+  if (future.v3_lazyRouteDiscovery === undefined) {
+    logFutureFlagWarning({
+      flag: "v3_lazyRouteDiscovery",
+      message:
+        "Route discovery/manifest behavior is changing in React Router v7",
+    });
+  }
+
+  if (future.v3_relativeSplatPath === undefined) {
+    logFutureFlagWarning({
+      flag: "v3_relativeSplatPath",
+      message:
+        "Relative routing behavior for splat routes is changing in React Router v7",
+    });
+  }
+
+  if (future.v3_singleFetch === undefined) {
+    logFutureFlagWarning({
+      flag: "v3_singleFetch",
+      message: "Data fetching is changing to a single fetch in React Router v7",
+    });
+  }
+
+  if (future.v3_throwAbortReason === undefined) {
+    logFutureFlagWarning({
+      flag: "v3_throwAbortReason",
+      message:
+        "The format of errors thrown on aborted requests is changing in React Router v7",
+    });
+  }
+}

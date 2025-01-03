@@ -459,9 +459,10 @@ function PrefetchPageLinksImpl({
         matches,
         manifest,
         location,
+        future,
         "data"
       ),
-    [page, nextMatches, matches, manifest, location]
+    [page, nextMatches, matches, manifest, location, future]
   );
 
   let dataHrefs = React.useMemo(() => {
@@ -535,9 +536,10 @@ function PrefetchPageLinksImpl({
         matches,
         manifest,
         location,
+        future,
         "assets"
       ),
-    [page, nextMatches, matches, manifest, location]
+    [page, nextMatches, matches, manifest, location, future]
   );
 
   let moduleHrefs = React.useMemo(
