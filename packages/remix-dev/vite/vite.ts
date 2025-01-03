@@ -1,11 +1,3 @@
-// This file serves two purposes. First, it's used to avoid CJS deprecation
-// warnings in Vite since `@remix-run/dev` currently compiles to CJS. We do this
-// by dynamically importing Vite, forcing it to use the ESM build. Second, it's
-// used to allow us to test against different versions of Vite by ensuring that
-// Vite is resolved from the current working directory when running within this
-// repo. If we don't do this, Vite will always be imported relative to this
-// package, which means that it will always resolve to Vite 6.
-
 import path from "pathe";
 
 import invariant from "../invariant";
@@ -15,15 +7,21 @@ import { isInRemixMonorepo } from "./is-in-remix-monorepo";
 type Vite = typeof import("vite");
 let vite: Vite | undefined;
 
-const viteImportSpecifier = !isInRemixMonorepo()
-  ? "vite"
-  : `file:///${path
+const viteImportSpecifier = isInRemixMonorepo()
+  ? // Support testing against different versions of Vite by ensuring that Vite
+    // is resolved from the current working directory when running within this
+    // repo. If we don't do this, Vite will always be imported relative to this
+    // file, which means that it will always resolve to Vite 6.
+    `file:///${path
       .normalize(
         require.resolve("vite/package.json", { paths: [process.cwd()] })
       )
-      .replace("package.json", "dist/node/index.js")}`;
+      .replace("package.json", "dist/node/index.js")}`
+  : "vite";
 
 export async function preloadVite(): Promise<void> {
+  // Use a dynamic import to force Vite to use the ESM build. If we don't do
+  // this, Vite logs CJS deprecation warnings.
   vite = await import(viteImportSpecifier);
 }
 
