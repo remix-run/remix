@@ -17,6 +17,7 @@ export const fixtures = {
   lodashNpmPackage: path.resolve(fixturesDir, 'lodash-4.17.21.tgz'),
   longName: path.resolve(fixturesDir, 'long-name.tar'),
   multiFile: path.resolve(fixturesDir, 'multi-file.tar'),
+  npmNpmPackage: path.resolve(fixturesDir, 'npm-11.0.0.tgz'),
   nameIs100: path.resolve(fixturesDir, 'name-is-100.tar'),
   oneFile: path.resolve(fixturesDir, 'one-file.tar'),
   pax: path.resolve(fixturesDir, 'pax.tar'),
