@@ -343,13 +343,19 @@ export class TarParser {
     }
 
     if (this.#header.size === 0 || this.#header.type === 'directory') {
-      handler(new TarEntry(this.#header, new ReadableStream<Uint8Array>()));
+      let emptyBody = new ReadableStream({
+        start(controller) {
+          controller.close();
+        },
+      });
+
+      handler(new TarEntry(this.#header, emptyBody));
       this.#bodyController = null;
       this.#missing = 0;
       return;
     }
 
-    let body = new ReadableStream<Uint8Array>({
+    let body = new ReadableStream({
       start: (controller) => {
         this.#bodyController = controller;
       },
