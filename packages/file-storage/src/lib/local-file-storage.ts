@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import { openFile, writeFile } from '@mjackson/lazy-file/fs';
+import * as crypto from 'node:crypto';
 
 import { type FileStorage } from './file-storage.ts';
 
@@ -15,7 +16,6 @@ import { type FileStorage } from './file-storage.ts';
  */
 export class LocalFileStorage implements FileStorage {
   #dirname: string;
-  #metadata: FileMetadataIndex;
 
   /**
    * @param directory The directory where files are stored
@@ -36,132 +36,89 @@ export class LocalFileStorage implements FileStorage {
 
       fs.mkdirSync(this.#dirname, { recursive: true });
     }
-
-    this.#metadata = new FileMetadataIndex(path.join(directory, '.metadata.json'));
   }
 
-  has(key: string): Promise<boolean> {
-    return this.#metadata.has(key);
+  async has(key: string): Promise<boolean> {
+    let { metaPath } = this.#getFilePaths(key);
+    try {
+      await fsp.access(metaPath);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async set(key: string, file: File): Promise<void> {
     // Remove any existing file with the same key.
     await this.remove(key);
 
-    let storedFile = await storeFile(this.#dirname, file);
+    let { directory, filePath, metaPath } = this.#getFilePaths(key);
 
-    await this.#metadata.set(key, {
-      file: storedFile,
+    // Ensure directory exists
+    await fsp.mkdir(directory, { recursive: true });
+
+    let handle = await fsp.open(filePath, 'w');
+    await writeFile(handle, file);
+
+    let metadata: FileMetadata = {
       name: file.name,
       type: file.type,
       mtime: file.lastModified,
-    });
+    };
+    await fsp.writeFile(metaPath, JSON.stringify(metadata));
   }
 
   async get(key: string): Promise<File | null> {
-    let metadata = await this.#metadata.get(key);
-    if (metadata == null) return null;
+    let { filePath, metaPath } = this.#getFilePaths(key);
 
-    let filename = path.join(this.#dirname, metadata.file);
+    try {
+      let metadataContent = await fsp.readFile(metaPath, 'utf-8');
+      let metadata: FileMetadata = JSON.parse(metadataContent);
 
-    return openFile(filename, {
-      name: metadata.name,
-      type: metadata.type,
-      lastModified: metadata.mtime,
-    });
+      return openFile(filePath, {
+        name: metadata.name,
+        type: metadata.type,
+        lastModified: metadata.mtime,
+      });
+    } catch (error) {
+      if (!isNoEntityError(error)) {
+        throw error;
+      }
+      return null;
+    }
   }
 
   async remove(key: string): Promise<void> {
-    let metadata = await this.#metadata.get(key);
-    if (metadata == null) return;
-
-    let filename = path.join(this.#dirname, metadata.file);
+    let { filePath, metaPath } = this.#getFilePaths(key);
 
     try {
-      await fsp.unlink(filename);
+      await Promise.all([fsp.unlink(filePath), fsp.unlink(metaPath)]);
     } catch (error) {
       if (!isNoEntityError(error)) {
         throw error;
       }
     }
-
-    await this.#metadata.remove(key);
-  }
-}
-
-async function storeFile(dirname: string, file: File): Promise<string> {
-  let filename = randomFilename();
-
-  let handle: fsp.FileHandle;
-  try {
-    handle = await fsp.open(path.join(dirname, filename), 'w');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-      // Try again with a different filename
-      return storeFile(dirname, file);
-    } else {
-      throw error;
-    }
   }
 
-  await writeFile(handle, file);
+  #getFilePaths(key: string): { directory: string; filePath: string; metaPath: string } {
+    let hash = crypto.createHash('sha256').update(key).digest('hex');
+    let shardDir = hash.slice(0, 8);
+    let directory = path.join(this.#dirname, shardDir);
+    let filename = `${hash}.bin`;
+    let metaname = `${hash}.meta.json`;
 
-  return filename;
-}
-
-function randomFilename(): string {
-  return `${new Date().getTime().toString(36)}.${Math.random().toString(36).slice(2, 6)}`;
+    return {
+      directory,
+      filePath: path.join(directory, filename),
+      metaPath: path.join(directory, metaname),
+    };
+  }
 }
 
 interface FileMetadata {
-  file: string;
   name: string;
   type: string;
   mtime: number;
-}
-
-class FileMetadataIndex {
-  #path: string;
-
-  constructor(path: string) {
-    this.#path = path;
-  }
-
-  async #getAll(): Promise<Record<string, FileMetadata>> {
-    try {
-      return JSON.parse(await openFile(this.#path).text());
-    } catch (error) {
-      if (!isNoEntityError(error)) {
-        throw error;
-      }
-
-      return {};
-    }
-  }
-
-  async #save(info: Record<string, FileMetadata | undefined>): Promise<void> {
-    await fsp.writeFile(this.#path, JSON.stringify(info));
-  }
-
-  async has(key: string): Promise<boolean> {
-    let info = await this.#getAll();
-    return key in info;
-  }
-
-  async set(key: string, metadata: FileMetadata): Promise<void> {
-    let info = await this.#getAll();
-    await this.#save({ ...info, [key]: metadata });
-  }
-
-  async get(key: string): Promise<FileMetadata | null> {
-    let info = await this.#getAll();
-    return info[key] ?? null;
-  }
-
-  async remove(key: string): Promise<void> {
-    let info = await this.#getAll();
-    await this.#save({ ...info, [key]: undefined });
-  }
 }
 
 function isNoEntityError(obj: unknown): obj is NodeJS.ErrnoException & { code: 'ENOENT' } {
