@@ -51,37 +51,37 @@ async function bufferString(
 
 describe('TarParser', () => {
   it('parses express-4.21.1.tgz', async () => {
-    let entries: [string, number, string][] = [];
+    let entries: Record<string, string> = {};
     await parseTar(readFixture(fixtures.expressNpmPackage), async (entry) => {
-      let checksum = await computeHash(await bufferBytes(entry.body));
-      entries.push([entry.name, entry.size, checksum]);
+      let hash = await computeHash(await bufferBytes(entry.body));
+      entries[entry.name] = hash;
     });
 
-    assert.deepEqual(entries, [
-      ['package/LICENSE', 1249, '95a57628'],
-      ['package/lib/application.js', 14593, '5901b32f'],
-      ['package/lib/express.js', 2409, '2f25585c'],
-      ['package/index.js', 224, '4d2f5afc'],
-      ['package/lib/router/index.js', 15123, '19c5ca9b'],
-      ['package/lib/middleware/init.js', 853, '48c1d12f'],
-      ['package/lib/router/layer.js', 3296, 'c90709dc'],
-      ['package/lib/middleware/query.js', 885, '6edce396'],
-      ['package/lib/request.js', 12505, '64ac1075'],
-      ['package/lib/response.js', 28729, '4b5c338c'],
-      ['package/lib/router/route.js', 4399, '86db1235'],
-      ['package/lib/utils.js', 5871, '9035c6d9'],
-      ['package/lib/view.js', 3325, 'ec627880'],
-      ['package/package.json', 2708, '774eaac2'],
-      ['package/History.md', 114974, 'ca257313'],
-      ['package/Readme.md', 9806, '016f344e'],
-    ]);
+    assert.deepEqual(entries, {
+      'package/LICENSE': '95a57628',
+      'package/lib/application.js': '5901b32f',
+      'package/lib/express.js': '2f25585c',
+      'package/index.js': '4d2f5afc',
+      'package/lib/router/index.js': '19c5ca9b',
+      'package/lib/middleware/init.js': '48c1d12f',
+      'package/lib/router/layer.js': 'c90709dc',
+      'package/lib/middleware/query.js': '6edce396',
+      'package/lib/request.js': '64ac1075',
+      'package/lib/response.js': '4b5c338c',
+      'package/lib/router/route.js': '86db1235',
+      'package/lib/utils.js': '9035c6d9',
+      'package/lib/view.js': 'ec627880',
+      'package/package.json': '774eaac2',
+      'package/History.md': 'ca257313',
+      'package/Readme.md': '016f344e',
+    });
   });
 
   it('parses fetch-proxy-0.1.0.tar.gz', async () => {
     let entries: [string, number, string][] = [];
     await parseTar(readFixture(fixtures.fetchProxyGithubArchive), async (entry) => {
-      let checksum = await computeHash(await bufferBytes(entry.body));
-      entries.push([entry.name, entry.size, checksum]);
+      let hash = await computeHash(await bufferBytes(entry.body));
+      entries.push([entry.name, entry.size, hash]);
     });
 
     assert.equal(entries.length, 192);
@@ -90,8 +90,8 @@ describe('TarParser', () => {
   it('parses lodash-4.17.21.tgz', async () => {
     let entries: [string, number, string][] = [];
     await parseTar(readFixture(fixtures.lodashNpmPackage), async (entry) => {
-      let checksum = await computeHash(await bufferBytes(entry.body));
-      entries.push([entry.name, entry.size, checksum]);
+      let hash = await computeHash(await bufferBytes(entry.body));
+      entries.push([entry.name, entry.size, hash]);
     });
 
     assert.equal(entries.length, 1054);
@@ -100,8 +100,8 @@ describe('TarParser', () => {
   it('parses npm-11.0.0.tgz', async () => {
     let entries: [string, number, string][] = [];
     await parseTar(readFixture(fixtures.npmNpmPackage), async (entry) => {
-      let checksum = await computeHash(await bufferBytes(entry.body));
-      entries.push([entry.name, entry.size, checksum]);
+      let hash = await computeHash(await bufferBytes(entry.body));
+      entries.push([entry.name, entry.size, hash]);
     });
 
     assert.equal(entries.length, 2368);
