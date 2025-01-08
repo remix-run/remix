@@ -2,9 +2,14 @@ import * as fs from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import { openFile, writeFile } from '@mjackson/lazy-file/fs';
-import * as crypto from 'node:crypto';
 
 import { type FileStorage } from './file-storage.ts';
+
+interface FileMetadata {
+  name: string;
+  type: string;
+  mtime: number;
+}
 
 /**
  * A `FileStorage` that is backed by the local filesystem.
@@ -39,7 +44,8 @@ export class LocalFileStorage implements FileStorage {
   }
 
   async has(key: string): Promise<boolean> {
-    let { metaPath } = this.#getFilePaths(key);
+    let { metaPath } = await this.#getPaths(key);
+
     try {
       await fsp.access(metaPath);
       return true;
@@ -52,13 +58,12 @@ export class LocalFileStorage implements FileStorage {
     // Remove any existing file with the same key.
     await this.remove(key);
 
-    let { directory, filePath, metaPath } = this.#getFilePaths(key);
+    let { directory, filePath, metaPath } = await this.#getPaths(key);
 
     // Ensure directory exists
     await fsp.mkdir(directory, { recursive: true });
 
-    let handle = await fsp.open(filePath, 'w');
-    await writeFile(handle, file);
+    await writeFile(filePath, file);
 
     let metadata: FileMetadata = {
       name: file.name,
@@ -69,7 +74,7 @@ export class LocalFileStorage implements FileStorage {
   }
 
   async get(key: string): Promise<File | null> {
-    let { filePath, metaPath } = this.#getFilePaths(key);
+    let { filePath, metaPath } = await this.#getPaths(key);
 
     try {
       let metadataContent = await fsp.readFile(metaPath, 'utf-8');
@@ -84,12 +89,13 @@ export class LocalFileStorage implements FileStorage {
       if (!isNoEntityError(error)) {
         throw error;
       }
+
       return null;
     }
   }
 
   async remove(key: string): Promise<void> {
-    let { filePath, metaPath } = this.#getFilePaths(key);
+    let { filePath, metaPath } = await this.#getPaths(key);
 
     try {
       await Promise.all([fsp.unlink(filePath), fsp.unlink(metaPath)]);
@@ -100,11 +106,11 @@ export class LocalFileStorage implements FileStorage {
     }
   }
 
-  #getFilePaths(key: string): { directory: string; filePath: string; metaPath: string } {
-    let hash = crypto.createHash('sha256').update(key).digest('hex');
+  async #getPaths(key: string): Promise<{ directory: string; filePath: string; metaPath: string }> {
+    let hash = await computeHash(key);
     let shardDir = hash.slice(0, 8);
     let directory = path.join(this.#dirname, shardDir);
-    let filename = `${hash}.bin`;
+    let filename = `${hash.slice(8)}.bin`;
     let metaname = `${hash}.meta.json`;
 
     return {
@@ -115,10 +121,11 @@ export class LocalFileStorage implements FileStorage {
   }
 }
 
-interface FileMetadata {
-  name: string;
-  type: string;
-  mtime: number;
+async function computeHash(key: string, algorithm = 'SHA-256'): Promise<string> {
+  let digest = await crypto.subtle.digest(algorithm, new TextEncoder().encode(key));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 function isNoEntityError(obj: unknown): obj is NodeJS.ErrnoException & { code: 'ENOENT' } {

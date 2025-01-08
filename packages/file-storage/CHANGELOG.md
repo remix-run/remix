@@ -2,7 +2,7 @@
 
 This is the changelog for [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
-## v0.3.1
+## HEAD
 
 - Fixes race conditions with concurrent calls to `set`
 - Shards storage directories for more scalable file systems
