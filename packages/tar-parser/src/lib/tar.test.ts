@@ -25,10 +25,12 @@ async function bufferBytes(stream: ReadableStream<Uint8Array>): Promise<Uint8Arr
   return result;
 }
 
-async function computeChecksum(buffer: Uint8Array, algorithm = 'SHA-256'): Promise<string> {
+async function computeHash(buffer: Uint8Array, algorithm = 'SHA-256'): Promise<string> {
   let digest = await crypto.subtle.digest(algorithm, buffer);
-  let hash = btoa(String.fromCharCode(...new Uint8Array(digest)));
-  return hash;
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 8);
 }
 
 async function bufferString(
@@ -51,34 +53,34 @@ describe('TarParser', () => {
   it('parses express-4.21.1.tgz', async () => {
     let entries: [string, number, string][] = [];
     await parseTar(readFixture(fixtures.expressNpmPackage), async (entry) => {
-      let checksum = await computeChecksum(await bufferBytes(entry.body));
+      let checksum = await computeHash(await bufferBytes(entry.body));
       entries.push([entry.name, entry.size, checksum]);
     });
 
     assert.deepEqual(entries, [
-      ['package/LICENSE', 1249, 'laV2KJDlwcmAiSHO8JVmH8SCxeHwu6MURqyFWV32I3w='],
-      ['package/lib/application.js', 14593, 'WQGzL2Cbo0k1G/dAbb3AxMV7d85vchXqZ8zKWsKijog='],
-      ['package/lib/express.js', 2409, 'LyVYXAPDBQd5yPXwBZf4ZT9PuKl0SO+O+Msh5luk0V0='],
-      ['package/index.js', 224, 'TS9a/BkheMWw3EGNLaWCbVKotpmHcbARrt5/26kRgUA='],
-      ['package/lib/router/index.js', 15123, 'GcXKmwJTlmEtvkZNB/vnEE/5FwxNahx+VQffTbv01cs='],
-      ['package/lib/middleware/init.js', 853, 'SMHRLxSUsgN3/N7skFYnLv+E7YwIHh5W3CrqOV930Zw='],
-      ['package/lib/router/layer.js', 3296, 'yQcJ3LqNmmz9HytO9teiLYM+MX8Mh22IQ0LO5alvigI='],
-      ['package/lib/middleware/query.js', 885, 'btzjljWItC5BlCkAskIY5mW5ffDAscdAkLK5NPpoygg='],
-      ['package/lib/request.js', 12505, 'ZKwQdSwFFteJywaYu0M1htTOO0b38G7jyyiAdiuL2kA='],
-      ['package/lib/response.js', 28729, 'S1wzjLZutTsH75ALrPTNUg8FeuU5lkAihvQzTgKAbVY='],
-      ['package/lib/router/route.js', 4399, 'htsSNXCBWmPcI6qI1z4bPc6QhpKsLjzyD6NQ1p3mMzc='],
-      ['package/lib/utils.js', 5871, 'kDXG2Ubs5RHnSQQ8yCPjLT7+Zye4qdUqrIlknplYTwk='],
-      ['package/lib/view.js', 3325, '7GJ4gMG0Ou5YhxZKwunFjwHk7oCG4jqCnt3xrzhYwCE='],
-      ['package/package.json', 2708, 'd06qwvupH1v8/UepkcjZjQ3nuntgVxdzEnenxQpXGv4='],
-      ['package/History.md', 114974, 'yiVzE+b51p5Ysuzx296S1oFIRkiXo2JfoJtdSMrO7f0='],
-      ['package/Readme.md', 9806, 'AW80TvZrgbvgPIUW5UFJgiRFmf7GQB8PzBzLESEj03A='],
+      ['package/LICENSE', 1249, '95a57628'],
+      ['package/lib/application.js', 14593, '5901b32f'],
+      ['package/lib/express.js', 2409, '2f25585c'],
+      ['package/index.js', 224, '4d2f5afc'],
+      ['package/lib/router/index.js', 15123, '19c5ca9b'],
+      ['package/lib/middleware/init.js', 853, '48c1d12f'],
+      ['package/lib/router/layer.js', 3296, 'c90709dc'],
+      ['package/lib/middleware/query.js', 885, '6edce396'],
+      ['package/lib/request.js', 12505, '64ac1075'],
+      ['package/lib/response.js', 28729, '4b5c338c'],
+      ['package/lib/router/route.js', 4399, '86db1235'],
+      ['package/lib/utils.js', 5871, '9035c6d9'],
+      ['package/lib/view.js', 3325, 'ec627880'],
+      ['package/package.json', 2708, '774eaac2'],
+      ['package/History.md', 114974, 'ca257313'],
+      ['package/Readme.md', 9806, '016f344e'],
     ]);
   });
 
   it('parses fetch-proxy-0.1.0.tar.gz', async () => {
     let entries: [string, number, string][] = [];
     await parseTar(readFixture(fixtures.fetchProxyGithubArchive), async (entry) => {
-      let checksum = await computeChecksum(await bufferBytes(entry.body));
+      let checksum = await computeHash(await bufferBytes(entry.body));
       entries.push([entry.name, entry.size, checksum]);
     });
 
@@ -88,7 +90,7 @@ describe('TarParser', () => {
   it('parses lodash-4.17.21.tgz', async () => {
     let entries: [string, number, string][] = [];
     await parseTar(readFixture(fixtures.lodashNpmPackage), async (entry) => {
-      let checksum = await computeChecksum(await bufferBytes(entry.body));
+      let checksum = await computeHash(await bufferBytes(entry.body));
       entries.push([entry.name, entry.size, checksum]);
     });
 
@@ -98,7 +100,7 @@ describe('TarParser', () => {
   it('parses npm-11.0.0.tgz', async () => {
     let entries: [string, number, string][] = [];
     await parseTar(readFixture(fixtures.npmNpmPackage), async (entry) => {
-      let checksum = await computeChecksum(await bufferBytes(entry.body));
+      let checksum = await computeHash(await bufferBytes(entry.body));
       entries.push([entry.name, entry.size, checksum]);
     });
 
