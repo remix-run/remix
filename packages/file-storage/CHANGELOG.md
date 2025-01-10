@@ -2,7 +2,7 @@
 
 This is the changelog for [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.4.1 (2025-01-10)
 
 - Fix missing types for `file-storage/local` in npm package
 
