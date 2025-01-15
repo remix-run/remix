@@ -93,9 +93,7 @@ describe('parseFormData', () => {
       ].join('\r\n'),
     });
 
-    let formData = await parseFormData(request, (fileUpload) => {
-      return null;
-    });
+    let formData = await parseFormData(request, () => null);
 
     assert.equal(formData.get('file'), null);
   });
@@ -116,10 +114,36 @@ describe('parseFormData', () => {
       ].join('\r\n'),
     });
 
-    let formData = await parseFormData(request, (fileUpload) => {
-      return fileUpload.text();
-    });
+    let formData = await parseFormData(request, (upload) => upload.text());
 
     assert.equal(formData.get('file'), 'This is an example file.');
+  });
+
+  it('allows returning files from the upload handler', async () => {
+    let request = new Request('http://localhost:8080', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW',
+      },
+      body: [
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        'Content-Type: text/plain',
+        '',
+        'This is an example file.',
+        '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
+      ].join('\r\n'),
+    });
+
+    let formData = await parseFormData(request, async (upload) => {
+      return new File([await upload.text()], 'example.txt', { type: 'text/plain' });
+    });
+
+    let file = formData.get('file');
+
+    assert.ok(file instanceof File);
+    assert.equal(file.name, 'example.txt');
+    assert.equal(file.type, 'text/plain');
+    assert.equal(await file.text(), 'This is an example file.');
   });
 });
