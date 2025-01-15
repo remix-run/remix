@@ -1,12 +1,14 @@
-This repository is a collection of packages for use with [Remix](https://remix.run) or any web framework you choose.
+This is a collection of packages for use with [Remix](https://remix.run), or any web framework you choose.
+
+It is laying the foundation for the next major release of Remix.
 
 ## Philosophy
 
-Each package in this repository has a [single responsibility](https://en.wikipedia.org/wiki/Single-responsibility_principle); it does one thing well.
+Each package in this repository has a [single responsibility](https://en.wikipedia.org/wiki/Single-responsibility_principle).
 
 To maximize interoperability between packages, we build on web standards. Where standards are missing or incomplete, we augment them in unobtrusive ways to minimize the chance of incompatibility.
 
-What exactly we mean by "web standards"? It means we use:
+A few examples of web APIs that we use on the server include:
 
 - [The Web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) instead of Node.js streams
 - [`Uint8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array) instead of Node.js `Buffer`s
