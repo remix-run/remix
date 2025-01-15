@@ -25,14 +25,6 @@ async function bufferBytes(stream: ReadableStream<Uint8Array>): Promise<Uint8Arr
   return result;
 }
 
-async function computeHash(buffer: Uint8Array, algorithm = 'SHA-256'): Promise<string> {
-  let digest = await crypto.subtle.digest(algorithm, buffer);
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-    .slice(0, 8);
-}
-
 async function bufferString(
   stream: ReadableStream<Uint8Array>,
   encoding = 'utf-8',
@@ -47,6 +39,14 @@ async function bufferString(
   string += decoder.decode();
 
   return string;
+}
+
+async function computeHash(buffer: Uint8Array, algorithm = 'SHA-256'): Promise<string> {
+  let digest = await crypto.subtle.digest(algorithm, buffer);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 8);
 }
 
 describe('TarParser', () => {
