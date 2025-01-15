@@ -88,41 +88,41 @@ export async function parseFormData(
   uploadHandler: FileUploadHandler = defaultFileUploadHandler,
   parserOptions?: MultipartParserOptions,
 ): Promise<FormData> {
-  if (isMultipartRequest(request)) {
-    let formData = new FormData();
-    let promises: Promise<void | null | string | File>[] = [];
-
-    for await (let part of parseMultipartRequest(request, parserOptions)) {
-      if (!part.name) continue;
-
-      if (part.isFile) {
-        let value = uploadHandler(new FileUpload(part));
-
-        if (value != null) {
-          if (isPromise(value)) {
-            let fieldName = part.name;
-            promises.push(
-              value.then((file) => {
-                if (file != null) {
-                  formData.append(fieldName, file);
-                }
-              }),
-            );
-          } else {
-            formData.append(part.name, value);
-          }
-        }
-      } else {
-        formData.append(part.name, await part.text());
-      }
-    }
-
-    await Promise.all(promises);
-
-    return formData;
+  if (!isMultipartRequest(request)) {
+    return request.formData();
   }
 
-  return request.formData();
+  let formData = new FormData();
+  let promises: Promise<void | null | string | File>[] = [];
+
+  for await (let part of parseMultipartRequest(request, parserOptions)) {
+    if (!part.name) continue;
+
+    if (part.isFile) {
+      let value = uploadHandler(new FileUpload(part));
+
+      if (value != null) {
+        if (isPromise(value)) {
+          let fieldName = part.name;
+          promises.push(
+            value.then((file) => {
+              if (file != null) {
+                formData.append(fieldName, file);
+              }
+            }),
+          );
+        } else {
+          formData.append(part.name, value);
+        }
+      }
+    } else {
+      formData.append(part.name, await part.text());
+    }
+  }
+
+  await Promise.all(promises);
+
+  return formData;
 }
 
 function isPromise<T>(obj: unknown): obj is Promise<T> {
