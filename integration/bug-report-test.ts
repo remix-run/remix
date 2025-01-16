@@ -1,15 +1,15 @@
 import { test, expect } from "@playwright/test";
+import type { Readable } from "node:stream";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import getPort from "get-port";
+import waitOn from "wait-on";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture.js";
-import type { Fixture, AppFixture } from "./helpers/create-fixture.js";
-import {
-  createAppFixture,
-  createFixture,
-  js,
-} from "./helpers/create-fixture.js";
+import { createFixtureProject, js } from "./helpers/create-fixture.js";
+import { killtree } from "./helpers/killtree.js";
 
-let fixture: Fixture;
-let appFixture: AppFixture;
+let projectDir: string;
+let devProc: ChildProcessWithoutNullStreams;
+let devPort: number;
 
 ////////////////////////////////////////////////////////////////////////////////
 // 💿 👋 Hola! It's me, Dora the Remix Disc, I'm here to help you write a great
@@ -52,28 +52,44 @@ test.beforeEach(async ({ context }) => {
 });
 
 test.beforeAll(async () => {
-  fixture = await createFixture({
+  devPort = await getPort();
+  projectDir = await createFixtureProject({
     ////////////////////////////////////////////////////////////////////////////
     // 💿 Next, add files to this object, just like files in a real app,
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
+    compiler: "vite",
     files: {
-      "app/routes/_index.tsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+      "vite.config.ts": js`
+        import { defineConfig } from "vite";
+        import { vitePlugin as remix } from "@remix-run/dev";
+        export default defineConfig({
+          server: {
+            port: ${devPort},
+            strictPort: true,
+          },
+          plugins: [
+            remix({
+              future: {
+                v3_lazyRouteDiscovery: true,
+              }
+            }),
+          ],
+        });
+      `,
 
-        export function loader() {
-          return json("pizza");
-        }
+      "app/routes/_index.tsx": js`
+        import { useNavigate } from "@remix-run/react";
+        import { useEffect } from "react";
 
         export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
+          let navigate = useNavigate();
+
+          useEffect(() => {
+            navigate("/burgers");
+          }, [navigate]);
+
+          return null;
         }
       `,
 
@@ -85,12 +101,36 @@ test.beforeAll(async () => {
     },
   });
 
-  // This creates an interactive app using playwright.
-  appFixture = await createAppFixture(fixture);
+  let nodeBin = process.argv[0];
+  let remixBin = "node_modules/@remix-run/dev/dist/cli.js";
+  devProc = spawn(nodeBin, [remixBin, "vite:dev"], {
+    cwd: projectDir,
+    env: process.env,
+    stdio: "pipe",
+  });
+  let devStdout = bufferize(devProc.stdout);
+  let devStderr = bufferize(devProc.stderr);
+
+  await waitOn({
+    resources: [`http://localhost:${devPort}/`],
+    timeout: 10000,
+  }).catch((err) => {
+    let stdout = devStdout();
+    let stderr = devStderr();
+    throw new Error(
+      [
+        err.message,
+        "",
+        "exit code: " + devProc.exitCode,
+        "stdout: " + stdout ? `\n${stdout}\n` : "<empty>",
+        "stderr: " + stderr ? `\n${stderr}\n` : "<empty>",
+      ].join("\n")
+    );
+  });
 });
 
-test.afterAll(() => {
-  appFixture.close();
+test.afterAll(async () => {
+  devProc.pid && (await killtree(devProc.pid));
 });
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -98,24 +138,23 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+test("should successfully navigate to the burgers route on load", async ({
+  page,
+}) => {
+  await page.goto(`http://localhost:${devPort}/`, {
+    waitUntil: "networkidle",
+  });
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
+  await expect(page.getByText("404 Not Found")).not.toBeVisible();
   await page.waitForSelector("text=cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
 });
 
 ////////////////////////////////////////////////////////////////////////////////
 // 💿 Finally, push your changes to your fork of Remix and open a pull request!
 ////////////////////////////////////////////////////////////////////////////////
+
+let bufferize = (stream: Readable): (() => string) => {
+  let buffer = "";
+  stream.on("data", (data) => (buffer += data.toString()));
+  return () => buffer;
+};
