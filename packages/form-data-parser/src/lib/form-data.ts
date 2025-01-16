@@ -12,8 +12,9 @@ import {
  * be saved to disk or a cloud storage service as quickly as possible to avoid buffering and
  * backpressure building up in the input stream.
  *
- * Note: Although `FileUpload` implements the `File` interface, its `size` is unknown, so any
- * attempt to access `file.size` or use `file.slice()` will throw an error.
+ * Note: Although `FileUpload` implements the [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File)
+ * interface, its `size` is unknown, so any attempt to access `file.size` or use `file.slice()` will
+ * throw an error.
  */
 export class FileUpload implements File {
   readonly name: string;
