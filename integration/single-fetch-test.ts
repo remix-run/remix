@@ -1977,6 +1977,14 @@ test.describe("single-fetch", () => {
       }
     });
 
+    // Document requests
+    let documentRes = await fixture.requestDocument("/?index", {
+      method: "post",
+    });
+    expect(documentRes.status).toBe(204);
+    expect(await documentRes.text()).toBe("");
+
+    // Data requests
     await app.goto("/", true);
     (await page.$("[data-submit]"))?.click();
     await page.waitForSelector("[data-active]");
