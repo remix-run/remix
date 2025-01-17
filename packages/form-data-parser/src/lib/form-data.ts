@@ -108,9 +108,9 @@ export async function parseFormData(
       if (value != null) {
         if (isPromise(value)) {
           promises.push(
-            value.then((file) => {
-              if (file != null) {
-                formData.append(fieldName, file);
+            value.then((asyncValue) => {
+              if (asyncValue != null) {
+                formData.append(fieldName, asyncValue);
               }
             }),
           );
