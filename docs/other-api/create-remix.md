@@ -41,7 +41,7 @@ yarn create remix@latest <projectDir>
 # or
 pnpm create remix@latest <projectDir>
 # or
-bunx create-remix@latest <projectDir>
+bunx create remix@latest <projectDir>
 ```
 
 ### `create-remix --template`
