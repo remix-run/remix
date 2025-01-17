@@ -95,7 +95,7 @@ export async function parseFormData(
   }
 
   let formData = new FormData();
-  let promises: Promise<void | null | string | File>[] = [];
+  let promises: Promise<void>[] = [];
 
   for await (let part of parseMultipartRequest(request, parserOptions)) {
     let fieldName = part.name;
