@@ -62,8 +62,8 @@ importers:
         specifier: ^18.12.0
         version: 18.12.0
       '@playwright/test':
-        specifier: ^1.49.1
-        version: 1.49.1
+        specifier: ^1.41.2
+        version: 1.41.2
       '@remix-run/architect':
         specifier: workspace:*
         version: link:packages/remix-architect
@@ -4254,14 +4254,6 @@ packages:
     hasBin: true
     dependencies:
       playwright: 1.41.2
-    dev: false
-
-  /@playwright/test@1.49.1:
-    resolution: {integrity: sha512-Ky+BVzPz8pL6PQxHqNRW1k3mIyv933LML7HktS8uik0bUXNCdPhoS/kLihiO1tMf/egaJb4IutXd7UywvXEW+g==}
-    engines: {node: '>=18'}
-    hasBin: true
-    dependencies:
-      playwright: 1.49.1
     dev: false
 
   /@remix-run/changelog-github@0.0.5:
@@ -12386,28 +12378,12 @@ packages:
     hasBin: true
     dev: false
 
-  /playwright-core@1.49.1:
-    resolution: {integrity: sha512-BzmpVcs4kE2CH15rWfzpjzVGhWERJfmnXmniSyKeRZUs9Ws65m+RGIi7mjJK/euCegfn3i7jvqWeWyHe9y3Vgg==}
-    engines: {node: '>=18'}
-    hasBin: true
-    dev: false
-
   /playwright@1.41.2:
     resolution: {integrity: sha512-v0bOa6H2GJChDL8pAeLa/LZC4feoAMbSQm1/jF/ySsWWoaNItvrMP7GEkvEEFyCTUYKMxjQKaTSg5up7nR6/8A==}
     engines: {node: '>=16'}
     hasBin: true
     dependencies:
       playwright-core: 1.41.2
-    optionalDependencies:
-      fsevents: 2.3.2
-    dev: false
-
-  /playwright@1.49.1:
-    resolution: {integrity: sha512-VYL8zLoNTBxVOrJBbDuRgDWa3i+mfQgDTrL8Ah9QXZ7ax4Dsj0MSq5bYgytRnDVVe+njoKnfsYkH3HzqVj5UZA==}
-    engines: {node: '>=18'}
-    hasBin: true
-    dependencies:
-      playwright-core: 1.49.1
     optionalDependencies:
       fsevents: 2.3.2
     dev: false
