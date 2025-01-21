@@ -389,13 +389,33 @@ export function singleFetchUrl(reqUrl: URL | string) {
   return url;
 }
 
-async function fetchAndDecode(url: URL, init: RequestInit) {
+async function fetchAndDecode(
+  url: URL,
+  init: RequestInit
+): Promise<{ status: number; data: unknown }> {
   let res = await fetch(url, init);
   // Don't do a hard check against the header here.  We'll get `text/x-script`
   // when we have a running server, but if folks want to prerender `.data` files
   // and serve them from a CDN we should let them come back with whatever
   // Content-Type their CDN provides and not force them to make sure `.data`
   // files are served as `text/x-script`.  We'll throw if we can't decode anyway.
+
+  // some status codes are not permitted to have bodies, so we want to just
+  // treat those as "no data" instead of throwing an exception.
+  // 304 is not included here because the browser should fill those responses
+  // with the cached body content.
+  let NO_BODY_STATUS_CODES = new Set([100, 101, 204, 205]);
+  if (NO_BODY_STATUS_CODES.has(res.status)) {
+    if (!init.method || init.method === "GET") {
+      // SingleFetchResults can just have no routeId keys which will result
+      // in no data for all routes
+      return { status: res.status, data: {} };
+    } else {
+      // SingleFetchResult is for a singular route and can specify no data
+      return { status: res.status, data: { data: null } };
+    }
+  }
+
   invariant(res.body, "No response body to decode");
   try {
     let decoded = await decodeViaTurboStream(res.body, window);
