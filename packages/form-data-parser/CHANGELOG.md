@@ -2,6 +2,10 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Expand `FileUploadHandler` interface to support returning `Blob` from the upload handler, which is the superclass of `File`
+
 ## v0.6.0 (2025-01-15)
 
 - Allow upload handlers to run in parallel. Fixes #44
