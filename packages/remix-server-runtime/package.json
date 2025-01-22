@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/server-runtime",
-  "version": "2.15.2",
+  "version": "0.0.0-nightly-1afe78c3e-20250122",
   "description": "Server runtime for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
