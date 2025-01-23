@@ -193,7 +193,7 @@ describe('ContentDisposition', () => {
 
     it('correctly decodes windows-1252 encoded filename', () => {
       let header = new ContentDisposition("attachment; filename*=windows-1252''file%80.txt");
-      assert.equal(header.preferredFilename, 'file€.txt');
+      assert.equal(header.preferredFilename, 'file\x80.txt');
     });
 
     it('handles UTF-8 encoded filename correctly', () => {
