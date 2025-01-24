@@ -2,6 +2,61 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+This release improves error handling and simplifies some of the internals of the parser.
+
+- BREAKING CHANGE: Change `parseMultipartRequest` and `parseMultipart` interfaces from `for await...of` to `await` + callback API.
+
+```ts
+import { parseMultipartRequest } from '@mjackson/multipart-parser';
+
+// before
+for await (let part of parseMultipartRequest(request)) {
+  // ...
+}
+
+// after
+await parseMultipartRequest(request, (part) => {
+  // ...
+});
+```
+
+This change greatly simplifies the implementation of `parseMultipartRequest`/`parseMultipart` and fixes a subtle bug that did not properly catch parse errors when `maxFileSize` was exceeded (see #28).
+
+- Add `MaxHeaderSizeExceededError` and `MaxFileSizeExceededError` to make it easier to have finer-grained error handling.
+
+```ts
+import * as http from 'node:http';
+import {
+  MultipartParseError,
+  MaxFileSizeExceededError,
+  parseMultipartRequest,
+} from '@mjackson/multipart-parser/node';
+
+const tenMb = 10 * Math.pow(2, 20);
+
+const server = http.createServer(async (req, res) => {
+  try {
+    await parseMultipartRequest(req, { maxFileSize: tenMb }, (part) => {
+      // ...
+    });
+  } catch (error) {
+    if (error instanceof MaxFileSizeExceededError) {
+      res.writeHead(413);
+      res.end(error.message);
+    } else if (error instanceof MultipartParseError) {
+      res.writeHead(400);
+      res.end('Invalid multipart request');
+    } else {
+      console.error(error);
+      res.writeHead(500);
+      res.end('Internal Server Error');
+    }
+  }
+});
+```
+
 ## v0.7.3 (2025-01-24)
 
 - Add support for environments that do not support `ReadableStream.prototype[Symbol.asyncIterator]` (i.e. Safari), see #46

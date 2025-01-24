@@ -6,13 +6,42 @@ import {
   createSearch,
   type PartialTailSearchFunction,
   createPartialTailSearch,
-} from './search.ts';
+} from './buffer-search.ts';
+
+export class MultipartParseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MultipartParseError';
+  }
+}
+
+export class MaxHeaderSizeExceededError extends MultipartParseError {
+  constructor(maxHeaderSize: number) {
+    super(`Multipart header size exceeds maximum allowed size of ${maxHeaderSize} bytes`);
+    this.name = 'MaxHeaderSizeExceededError';
+  }
+}
+
+export class MaxFileSizeExceededError extends MultipartParseError {
+  constructor(maxFileSize: number) {
+    super(`File size exceeds maximum allowed size of ${maxFileSize} bytes`);
+    this.name = 'MaxFileSizeExceededError';
+  }
+}
 
 type MultipartMessageSource =
   | ReadableStream<Uint8Array>
   | Uint8Array
   | Iterable<Uint8Array>
   | AsyncIterable<Uint8Array>;
+
+export type MultipartPartHandler = (part: MultipartPart) => void;
+
+export interface ParseMultipartOptions {
+  boundary: string;
+  maxHeaderSize?: number;
+  maxFileSize?: number;
+}
 
 /**
  * Parse a `multipart/*` buffer or stream and yield each part it finds as a `MultipartPart` object.
@@ -22,9 +51,10 @@ type MultipartMessageSource =
  *
  * let boundary = '----WebKitFormBoundaryzv5Z4JY8k9lG0yQW';
  *
- * for await (let part of parseMultipart(message, boundary)) {
+ * await parseMultipart(message, { boundary }, async (part) => {
  *   if (part.isFile) {
  *     console.log(part.filename);
+ *
  *     if (part.mediaType.startsWith('text/')) {
  *       let text = await part.text();
  *       // ...
@@ -36,71 +66,28 @@ type MultipartMessageSource =
  *     let text = await part.text();
  *     // ...
  *   }
- * }
+ * });
  * ```
  *
  * Note: This is a low-level API that requires manual handling of the stream and boundary. If you're
  * building a web server, consider using `parseMultipartRequest(request)` instead.
  */
-export async function* parseMultipart(
+export async function parseMultipart(
   message: MultipartMessageSource,
-  boundary: string,
-  options?: MultipartParserOptions,
-): AsyncGenerator<MultipartPart> {
-  let parser = new MultipartParser(boundary, options);
+  options: ParseMultipartOptions,
+  handler: MultipartPartHandler,
+): Promise<void> {
+  let parser = new MultipartParser(options.boundary, {
+    maxHeaderSize: options.maxHeaderSize,
+    maxFileSize: options.maxFileSize,
+  });
 
-  let parts: MultipartPart[] = [];
-  let resolveNext: (() => void) | null = null;
-  let parseError: Error | null = null;
-  let done = false;
-
-  parser
-    .parse(message, (part) => {
-      parts.push(part);
-
-      if (resolveNext) {
-        resolveNext();
-        resolveNext = null;
-      }
-    })
-    .catch((error) => {
-      parseError = error;
-    })
-    .finally(() => {
-      done = true;
-      if (resolveNext) resolveNext();
-    });
-
-  while (!done) {
-    if (parts.length === 0) {
-      await new Promise<void>((resolve) => {
-        resolveNext = resolve;
-      });
-    }
-
-    while (parts.length > 0) {
-      yield parts.shift()!;
-    }
-  }
-
-  if (parseError) {
-    throw parseError;
-  }
+  await parser.parse(message, handler);
 }
 
 const findDoubleNewline = createSearch('\r\n\r\n');
 
-export class MultipartParseError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'MultipartParseError';
-  }
-}
-
-export interface MultipartParserOptions {
-  maxHeaderSize?: number;
-  maxFileSize?: number;
-}
+export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>;
 
 const MultipartParserStateStart = 0;
 const MultipartParserStateAfterBoundary = 1;
@@ -145,18 +132,22 @@ export class MultipartParser {
    * Parse a stream/buffer multipart message and call the given handler for each part it contains.
    * Resolves when the parse is finished and all handlers resolve.
    */
-  async parse(
-    message: MultipartMessageSource,
-    handler: (part: MultipartPart) => void,
-  ): Promise<void> {
+  async parse(message: MultipartMessageSource, handler: MultipartPartHandler): Promise<void> {
     if (this.#state !== MultipartParserStateStart) {
       this.#reset();
     }
 
-    let results: unknown[] = [];
+    let promises: Promise<unknown>[] = [];
 
     function handlePart(part: MultipartPart): void {
-      results.push(handler(part));
+      let result = handler(part);
+      if (isPromise(result)) {
+        promises.push(result);
+
+        // This hack marks the promise as "handled" in Node.js to suppress
+        // "unhandledRejection" warnings and avoid crashing the process.
+        result.catch(() => {});
+      }
     }
 
     if (message instanceof ReadableStream) {
@@ -181,7 +172,7 @@ export class MultipartParser {
       throw new MultipartParseError('Unexpected end of stream');
     }
 
-    await Promise.all(results);
+    await Promise.all(promises);
   }
 
   #reset(): void {
@@ -191,7 +182,7 @@ export class MultipartParser {
     this.#bodyLength = 0;
   }
 
-  #write(chunk: Uint8Array, handler: (part: MultipartPart) => void): void {
+  #write(chunk: Uint8Array, handler: MultipartPartHandler): void {
     if (this.#state === MultipartParserStateDone) {
       throw new MultipartParseError('Unexpected data after end of stream');
     }
@@ -265,9 +256,7 @@ export class MultipartParser {
 
         if (headerEndIndex === -1) {
           if (chunkLength - index > this.maxHeaderSize) {
-            throw new MultipartParseError(
-              `Header size exceeds maximum allowed size of ${this.maxHeaderSize} bytes`,
-            );
+            throw new MaxHeaderSizeExceededError(this.maxHeaderSize);
           }
 
           this.#buffer = chunk.subarray(index);
@@ -275,9 +264,7 @@ export class MultipartParser {
         }
 
         if (headerEndIndex - index > this.maxHeaderSize) {
-          throw new MultipartParseError(
-            `Header size exceeds maximum allowed size of ${this.maxHeaderSize} bytes`,
-          );
+          throw new MaxHeaderSizeExceededError(this.maxHeaderSize);
         }
 
         let header = chunk.subarray(index, headerEndIndex);
@@ -286,6 +273,7 @@ export class MultipartParser {
           new ReadableStream({
             start: (controller) => {
               this.#bodyController = controller;
+              this.#bodyLength = 0;
             },
           }),
         );
@@ -318,12 +306,8 @@ export class MultipartParser {
 
   #writeBody(chunk: Uint8Array): void {
     if (this.#bodyLength + chunk.length > this.maxFileSize) {
-      let error = new MultipartParseError(
-        `File size exceeds maximum allowed size of ${this.maxFileSize} bytes`,
-      );
-
+      let error = new MaxFileSizeExceededError(this.maxFileSize);
       this.#bodyController!.error(error);
-
       throw error;
     }
 
@@ -334,7 +318,6 @@ export class MultipartParser {
   #closeBody(): void {
     this.#bodyController!.close();
     this.#bodyController = null;
-    this.#bodyLength = 0;
   }
 }
 
@@ -344,6 +327,10 @@ function isIterable<T>(value: unknown): value is Iterable<T> {
 
 function isAsyncIterable<T>(value: unknown): value is AsyncIterable<T> {
   return typeof value === 'object' && value != null && Symbol.asyncIterator in value;
+}
+
+function isPromise<T>(value: unknown): value is Promise<T> {
+  return typeof value === 'object' && value != null && typeof (value as any).then === 'function';
 }
 
 /**

@@ -33,7 +33,7 @@ const server = Bun.serve({
       try {
         let parts: any[] = [];
 
-        for await (let part of parseMultipartRequest(request)) {
+        await parseMultipartRequest(request, async (part) => {
           if (part.isFile) {
             let tmpfile = tmp.fileSync();
             let bytesWritten = await writeFile(Bun.file(tmpfile.name), part.body);
@@ -51,7 +51,7 @@ const server = Bun.serve({
               value: await part.text(),
             });
           }
-        }
+        });
 
         return new Response(JSON.stringify({ parts }, null, 2), {
           headers: { 'Content-Type': 'application/json' },
@@ -77,12 +77,14 @@ async function writeFile(file: BunFile, stream: ReadableStream<Uint8Array>): Pro
   let writer = file.writer();
   let bytesWritten = 0;
 
-  for await (let chunk of stream) {
-    writer.write(chunk);
-    bytesWritten += chunk.byteLength;
+  try {
+    for await (let chunk of stream) {
+      writer.write(chunk);
+      bytesWritten += chunk.byteLength;
+    }
+  } finally {
+    await writer.end();
   }
-
-  await writer.end();
 
   return bytesWritten;
 }

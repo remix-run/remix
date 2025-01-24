@@ -3,7 +3,12 @@ import { describe, it } from 'node:test';
 
 import { createMockRequest, createMultipartMockRequest, getRandomBytes } from '../../test/utils.ts';
 
-import { MultipartParseError } from './multipart.ts';
+import {
+  MultipartParseError,
+  MaxHeaderSizeExceededError,
+  MaxFileSizeExceededError,
+  type MultipartPart,
+} from './multipart.ts';
 import {
   getMultipartBoundary,
   isMultipartRequest,
@@ -59,9 +64,9 @@ describe('parseMultipartRequest', async () => {
     let request = createMultipartMockRequest(boundary);
 
     let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    await parseMultipartRequest(request, (part) => {
       parts.push(part);
-    }
+    });
 
     assert.equal(parts.length, 0);
   });
@@ -71,10 +76,10 @@ describe('parseMultipartRequest', async () => {
       field1: 'value1',
     });
 
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    let parts: MultipartPart[] = [];
+    await parseMultipartRequest(request, (part) => {
       parts.push(part);
-    }
+    });
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'field1');
@@ -87,10 +92,10 @@ describe('parseMultipartRequest', async () => {
       field2: 'value2',
     });
 
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    let parts: MultipartPart[] = [];
+    await parseMultipartRequest(request, (part) => {
       parts.push(part);
-    }
+    });
 
     assert.equal(parts.length, 2);
     assert.equal(parts[0].name, 'field1');
@@ -104,10 +109,10 @@ describe('parseMultipartRequest', async () => {
       empty: '',
     });
 
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    let parts: MultipartPart[] = [];
+    await parseMultipartRequest(request, (part) => {
       parts.push(part);
-    }
+    });
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'empty');
@@ -123,10 +128,10 @@ describe('parseMultipartRequest', async () => {
       },
     });
 
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    let parts: MultipartPart[] = [];
+    await parseMultipartRequest(request, (part) => {
       parts.push(part);
-    }
+    });
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'file1');
@@ -146,10 +151,10 @@ describe('parseMultipartRequest', async () => {
       },
     });
 
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    let parts: MultipartPart[] = [];
+    await parseMultipartRequest(request, (part) => {
       parts.push(part);
-    }
+    });
 
     assert.equal(parts.length, 3);
     assert.equal(parts[0].name, 'field1');
@@ -172,15 +177,15 @@ describe('parseMultipartRequest', async () => {
       },
     });
 
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    let parts: { name?: string; filename?: string; mediaType?: string; content: Uint8Array }[] = [];
+    await parseMultipartRequest(request, async (part) => {
       parts.push({
         name: part.name,
         filename: part.filename,
         mediaType: part.mediaType,
         content: await part.bytes(),
       });
-    }
+    });
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'file1');
@@ -195,7 +200,7 @@ describe('parseMultipartRequest', async () => {
     });
 
     await assert.rejects(async () => {
-      await parseMultipartRequest(request).next();
+      await parseMultipartRequest(request, () => {});
     }, MultipartParseError);
   });
 
@@ -205,7 +210,7 @@ describe('parseMultipartRequest', async () => {
     });
 
     await assert.rejects(async () => {
-      await parseMultipartRequest(request).next();
+      await parseMultipartRequest(request, () => {});
     }, MultipartParseError);
   });
 
@@ -225,15 +230,11 @@ describe('parseMultipartRequest', async () => {
     });
 
     await assert.rejects(async () => {
-      for await (let part of parseMultipartRequest(request, { maxHeaderSize: 4 * 1024 })) {
-        for await (let _ of part.body) {
-          // Consume all parts
-        }
-      }
-    }, MultipartParseError);
+      await parseMultipartRequest(request, { maxHeaderSize: 4 * 1024 }, () => {});
+    }, MaxHeaderSizeExceededError);
   });
 
-  it('throws when file exceeds maximum size', async () => {
+  it('throws when a file exceeds maximum size', async () => {
     let request = createMultipartMockRequest(boundary, {
       file1: {
         filename: 'random.dat',
@@ -243,12 +244,36 @@ describe('parseMultipartRequest', async () => {
     });
 
     await assert.rejects(async () => {
-      for await (let part of parseMultipartRequest(request, { maxFileSize: 10 * 1024 * 1024 })) {
-        for await (let _ of part.body) {
-          // Consume all parts
-        }
-      }
-    }, MultipartParseError);
+      await parseMultipartRequest(request, { maxFileSize: 10 * 1024 * 1024 }, () => {});
+    }, MaxFileSizeExceededError);
+  });
+
+  it('errors the stream when a file exceeds maximum size', async () => {
+    let request = createMultipartMockRequest(boundary, {
+      file1: {
+        filename: 'random.dat',
+        mediaType: 'application/octet-stream',
+        content: getRandomBytes(11 * 1024 * 1024), // 11 MB file
+      },
+    });
+
+    let parts: MultipartPart[] = [];
+    try {
+      await parseMultipartRequest(request, { maxFileSize: 10 * 1024 * 1024 }, (part) => {
+        parts.push(part);
+      });
+    } catch (error) {
+      // Ignore the parse error.
+    }
+
+    assert.equal(parts.length, 1);
+    assert.equal(parts[0].name, 'file1');
+    assert.equal(parts[0].filename, 'random.dat');
+    assert.equal(parts[0].mediaType, 'application/octet-stream');
+
+    await assert.rejects(async () => {
+      await parts[0].bytes();
+    }, MaxFileSizeExceededError);
   });
 
   it('parses malformed parts', async () => {
@@ -259,10 +284,10 @@ describe('parseMultipartRequest', async () => {
       body: [`--${boundary}`, 'Invalid-Header', '', 'Some content', `--${boundary}--`].join(CRLF),
     });
 
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    let parts: MultipartPart[] = [];
+    await parseMultipartRequest(request, (part) => {
       parts.push(part);
-    }
+    });
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].headers.get('Invalid-Header'), null);
@@ -284,11 +309,7 @@ describe('parseMultipartRequest', async () => {
     });
 
     await assert.rejects(async () => {
-      for await (let part of parseMultipartRequest(request)) {
-        for await (let _ of part.body) {
-          // Consume all parts
-        }
-      }
+      await parseMultipartRequest(request, () => {});
     }, MultipartParseError);
   });
 });

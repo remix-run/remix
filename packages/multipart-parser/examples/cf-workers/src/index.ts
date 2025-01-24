@@ -29,9 +29,9 @@ export default {
     if (request.method === 'POST') {
       try {
         let bucket = env.MULTIPART_UPLOADS;
-        let parts = [];
+        let parts: any[] = [];
 
-        for await (let part of parseMultipartRequest(request)) {
+        await parseMultipartRequest(request, async (part) => {
           if (part.isFile) {
             let uniqueKey = `upload-${new Date().getTime()}-${Math.random()
               .toString(36)
@@ -66,7 +66,7 @@ export default {
               value: await part.text(),
             });
           }
-        }
+        });
 
         return new Response(JSON.stringify({ parts }, null, 2), {
           headers: { 'Content-Type': 'application/json' },

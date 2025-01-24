@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { getRandomBytes } from '../../test/utils.ts';
 import { createMultipartMockRequest } from '../../test/utils.node.ts';
 
+import { type MultipartPart } from './multipart.ts';
 import { parseMultipartRequest } from './multipart.node.ts';
 
 describe('parseMultipartRequest (node)', () => {
@@ -13,9 +14,9 @@ describe('parseMultipartRequest (node)', () => {
     let request = createMultipartMockRequest(boundary);
 
     let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    await parseMultipartRequest(request, (part) => {
       parts.push(part);
-    }
+    });
 
     assert.equal(parts.length, 0);
   });
@@ -25,10 +26,10 @@ describe('parseMultipartRequest (node)', () => {
       field1: 'value1',
     });
 
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    let parts: MultipartPart[] = [];
+    await parseMultipartRequest(request, (part) => {
       parts.push(part);
-    }
+    });
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'field1');
@@ -45,15 +46,15 @@ describe('parseMultipartRequest (node)', () => {
       },
     });
 
-    let parts = [];
-    for await (let part of parseMultipartRequest(request)) {
+    let parts: { name?: string; filename?: string; mediaType?: string; content: Uint8Array }[] = [];
+    await parseMultipartRequest(request, async (part) => {
       parts.push({
         name: part.name,
         filename: part.filename,
         mediaType: part.mediaType,
         content: await part.bytes(),
       });
-    }
+    });
 
     assert.equal(parts.length, 1);
     assert.equal(parts[0].name, 'file1');

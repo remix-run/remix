@@ -1,11 +1,11 @@
-import { MultipartParser } from '@mjackson/multipart-parser';
+import { parseMultipart } from '@mjackson/multipart-parser';
 
 import { MultipartMessage } from '../messages.ts';
 
 export async function parse(message: MultipartMessage): Promise<number> {
   let start = performance.now();
 
-  await new MultipartParser(message.boundary).parse(message.generateChunks(), (_part) => {
+  await parseMultipart(message.generateChunks(), { boundary: message.boundary }, (_part) => {
     // Do nothing
   });
 
