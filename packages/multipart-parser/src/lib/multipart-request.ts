@@ -1,8 +1,8 @@
 import {
-  type MultipartParserOptions,
-  type MultipartPart,
-  parseMultipart,
   MultipartParseError,
+  type MultipartPartHandler,
+  type MultipartParserOptions,
+  parseMultipart,
 } from './multipart.ts';
 
 /**
@@ -25,10 +25,25 @@ export function isMultipartRequest(request: Request): boolean {
  * Parse a multipart [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and yield each part as
  * a `MultipartPart` object. Useful in HTTP server contexts for handling incoming `multipart/*` requests.
  */
-export async function* parseMultipartRequest(
+export async function parseMultipartRequest(
   request: Request,
-  options?: MultipartParserOptions,
-): AsyncGenerator<MultipartPart> {
+  handler: MultipartPartHandler,
+): Promise<void>;
+export async function parseMultipartRequest(
+  request: Request,
+  options: MultipartParserOptions,
+  handler: MultipartPartHandler,
+): Promise<void>;
+export async function parseMultipartRequest(
+  request: Request,
+  options: MultipartParserOptions | MultipartPartHandler,
+  handler?: MultipartPartHandler,
+): Promise<void> {
+  if (typeof options === 'function') {
+    handler = options;
+    options = {};
+  }
+
   if (!isMultipartRequest(request)) {
     throw new MultipartParseError('Request is not a multipart request');
   }
@@ -41,5 +56,9 @@ export async function* parseMultipartRequest(
     throw new MultipartParseError('Invalid Content-Type header: missing boundary');
   }
 
-  yield* parseMultipart(request.body, boundary, options);
+  await parseMultipart(
+    request.body,
+    { boundary, maxHeaderSize: options.maxHeaderSize, maxFileSize: options.maxFileSize },
+    handler!,
+  );
 }

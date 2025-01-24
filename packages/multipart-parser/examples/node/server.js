@@ -30,9 +30,10 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'POST') {
     try {
+      /** @type any[] */
       let parts = [];
 
-      for await (let part of parseMultipartRequest(req)) {
+      await parseMultipartRequest(req, async (part) => {
         if (part.isFile) {
           let tmpfile = tmp.fileSync();
           let byteLength = await writeFile(tmpfile.name, part.body);
@@ -55,7 +56,7 @@ const server = http.createServer(async (req, res) => {
             value: await part.text(),
           });
         }
-      }
+      });
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ parts }, null, 2));
@@ -88,12 +89,14 @@ async function writeFile(filename, stream) {
   let file = fs.createWriteStream(filename);
   let bytesWritten = 0;
 
-  for await (let chunk of stream) {
-    file.write(chunk);
-    bytesWritten += chunk.byteLength;
+  try {
+    for await (let chunk of stream) {
+      file.write(chunk);
+      bytesWritten += chunk.byteLength;
+    }
+  } finally {
+    file.end();
   }
-
-  file.end();
 
   return bytesWritten;
 }

@@ -1,6 +1,9 @@
 export {
-  parseMultipart,
   MultipartParseError,
+  MaxHeaderSizeExceededError,
+  MaxFileSizeExceededError,
+  type ParseMultipartOptions,
+  parseMultipart,
   type MultipartParserOptions,
   MultipartParser,
   MultipartPart,

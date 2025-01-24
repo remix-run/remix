@@ -35,10 +35,9 @@ The most common use case for `multipart-parser` is handling file uploads when yo
 ```ts
 import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
 
-async function handleMultipartRequest(request: Request): void {
+async function handleRequest(request: Request): void {
   try {
-    // The parser `yield`s each MultipartPart as it becomes available
-    for await (let part of parseMultipartRequest(request)) {
+    await parseMultipartRequest(request, (part) => {
       console.log(part.name);
       console.log(part.filename);
 
@@ -47,7 +46,7 @@ async function handleMultipartRequest(request: Request): void {
       } else {
         // TODO: part.body is a ReadableStream<Uint8Array>, stream it to a file
       }
-    }
+    });
   } catch (error) {
     if (error instanceof MultipartParseError) {
       console.error('Failed to parse multipart request:', error.message);
@@ -64,20 +63,17 @@ If however you're building a server for Node.js that relies on node-specific API
 
 ```ts
 import * as http from 'node:http';
-
-import { MultipartParseError } from '@mjackson/multipart-parser';
-// Note: Import from multipart-parser/node for node-specific APIs
-import { parseMultipartRequest } from '@mjackson/multipart-parser/node';
+import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser/node';
 
 const server = http.createServer(async (req, res) => {
   try {
-    for await (let part of parseMultipartRequest(req)) {
+    await parseMultipartRequest(req, (part) => {
       console.log(part.name);
       console.log(part.filename);
       console.log(part.mediaType);
 
       // ...
-    }
+    });
   } catch (error) {
     if (error instanceof MultipartParseError) {
       console.error('Failed to parse multipart request:', error.message);
@@ -90,9 +86,44 @@ const server = http.createServer(async (req, res) => {
 server.listen(8080);
 ```
 
+## Limiting File Upload Size
+
+A common use case when handling file uploads is limiting the size of uploaded files to prevent malicious users from sending very large files that may overload your server's memory and/or storage capacity. You can set a file upload size limit using the `maxFileSize` option, and return a 413 "Payload Too Large" response when you receive a request that exceeds the limit.
+
+```ts
+import * as http from 'node:http';
+import {
+  MultipartParseError,
+  MaxFileSizeExceededError,
+  parseMultipartRequest,
+} from '@mjackson/multipart-parser/node';
+
+const tenMb = 10 * Math.pow(2, 20);
+
+const server = http.createServer(async (req, res) => {
+  try {
+    await parseMultipartRequest(req, { maxFileSize: tenMb }, (part) => {
+      // ...
+    });
+  } catch (error) {
+    if (error instanceof MaxFileSizeExceededError) {
+      res.writeHead(413);
+      res.end(error.message);
+    } else if (error instanceof MultipartParseError) {
+      res.writeHead(400);
+      res.end('Invalid multipart request');
+    } else {
+      console.error(error);
+      res.writeHead(500);
+      res.end('Internal Server Error');
+    }
+  }
+});
+```
+
 ## Low-level API
 
-If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a lower-level API that you can use directly:
+If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a low-level `parseMultipart()` API that you can use directly:
 
 ```ts
 import { parseMultipart } from '@mjackson/multipart-parser';
@@ -105,33 +136,9 @@ let multipartMessage = new Uint8Array();
 
 let boundary = '----WebKitFormBoundary56eac3x';
 
-for await (let part of parseMultipart(multipartMessage, boundary)) {
-  // Do whatever you want with the part...
-}
-```
-
-If you'd prefer a callback-based API, instantiate your own `MultipartParser` and go for it:
-
-```ts
-import { MultipartParseError, MultipartParser } from '@mjackson/multipart-parser';
-
-let multipartMessage = new Uint8Array(); // or ReadableStream<Uint8Array>, etc.
-let boundary = '...';
-
-let parser = new MultipartParser(boundary);
-
-try {
-  // parse() resolves once the parse is finished and all your callbacks are done
-  await parser.parse(multipartMessage, async (part) => {
-    // Do whatever you need...
-  });
-} catch (error) {
-  if (error instanceof MultipartParseError) {
-    // The parse failed
-  } else {
-    // One of your handlers failed
-  }
-}
+await parseMultipart(multipartMessage, { boundary }, (part) => {
+  // ...
+});
 ```
 
 ## Examples

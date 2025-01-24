@@ -1,6 +1,9 @@
 // Re-export all core functionality
 export {
   MultipartParseError,
+  MaxHeaderSizeExceededError,
+  MaxFileSizeExceededError,
+  type ParseMultipartOptions,
   type MultipartParserOptions,
   MultipartParser,
   MultipartPart,

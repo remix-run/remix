@@ -2,10 +2,11 @@ import type * as http from 'node:http';
 import { Readable } from 'node:stream';
 
 import {
-  parseMultipart as parseMultipartWeb,
   MultipartParseError,
+  type MultipartPartHandler,
+  type ParseMultipartOptions,
+  parseMultipart as parseMultipartWeb,
   type MultipartParserOptions,
-  MultipartPart,
 } from './multipart.ts';
 import { getMultipartBoundary } from './multipart-request.ts';
 
@@ -20,10 +21,25 @@ export function isMultipartRequest(req: http.IncomingMessage): boolean {
 /**
  * Parse a multipart Node.js request and yield each part as a `MultipartPart` object.
  */
-export async function* parseMultipartRequest(
+export async function parseMultipartRequest(
   req: http.IncomingMessage,
-  options?: MultipartParserOptions,
-): AsyncGenerator<MultipartPart> {
+  handler: MultipartPartHandler,
+): Promise<void>;
+export async function parseMultipartRequest(
+  req: http.IncomingMessage,
+  options: MultipartParserOptions,
+  handler: MultipartPartHandler,
+): Promise<void>;
+export async function parseMultipartRequest(
+  req: http.IncomingMessage,
+  options: MultipartParserOptions | MultipartPartHandler,
+  handler?: MultipartPartHandler,
+): Promise<void> {
+  if (typeof options === 'function') {
+    handler = options;
+    options = {};
+  }
+
   if (!isMultipartRequest(req)) {
     throw new MultipartParseError('Request is not a multipart request');
   }
@@ -33,7 +49,11 @@ export async function* parseMultipartRequest(
     throw new MultipartParseError('Invalid Content-Type header: missing boundary');
   }
 
-  yield* parseMultipart(req, boundary, options);
+  await parseMultipart(
+    req,
+    { boundary, maxHeaderSize: options.maxHeaderSize, maxFileSize: options.maxFileSize },
+    handler!,
+  );
 }
 
 /**
@@ -42,18 +62,18 @@ export async function* parseMultipartRequest(
  * Note: This is a low-level API that requires manual handling of the stream and boundary. If you're
  * building a web server, consider using `parseMultipartRequest(request)` instead.
  */
-export async function* parseMultipart(
-  data: Readable | Buffer | Iterable<Buffer> | AsyncIterable<Buffer>,
-  boundary: string,
-  options?: MultipartParserOptions,
-): AsyncGenerator<MultipartPart> {
-  if (data instanceof Readable) {
-    yield* parseMultipartWeb(Readable.toWeb(data), boundary, options);
+export async function parseMultipart(
+  message: Readable | Buffer | Iterable<Buffer> | AsyncIterable<Buffer>,
+  options: ParseMultipartOptions,
+  handler: MultipartPartHandler,
+): Promise<void> {
+  if (message instanceof Readable) {
+    await parseMultipartWeb(Readable.toWeb(message), options, handler);
   } else {
-    yield* parseMultipartWeb(
-      data as Uint8Array | Iterable<Uint8Array> | AsyncIterable<Uint8Array>,
-      boundary,
+    await parseMultipartWeb(
+      message as Uint8Array | Iterable<Uint8Array> | AsyncIterable<Uint8Array>,
       options,
+      handler,
     );
   }
 }

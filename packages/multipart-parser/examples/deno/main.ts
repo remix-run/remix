@@ -35,7 +35,7 @@ async function requestHandler(request: Request): Promise<Response> {
       // deno-lint-ignore no-explicit-any
       let parts: any[] = [];
 
-      for await (let part of parseMultipartRequest(request)) {
+      await parseMultipartRequest(request, async (part) => {
         if (part.isFile) {
           let tmpfile = tmp.fileSync();
           await Deno.writeFile(tmpfile.name, part.body);
@@ -53,7 +53,7 @@ async function requestHandler(request: Request): Promise<Response> {
             value: await part.text(),
           });
         }
-      }
+      });
 
       return new Response(JSON.stringify({ parts }, null, 2), {
         headers: { 'Content-Type': 'application/json' },
