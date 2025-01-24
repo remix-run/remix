@@ -1,6 +1,6 @@
 {
   "name": "@mjackson/multipart-parser",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "exports": "./src/multipart-parser.ts",
   "publish": {
     "include": [
