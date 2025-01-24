@@ -1,3 +1,4 @@
+import { readStream } from './read-stream.ts';
 import {
   buffersEqual,
   concatChunks,
@@ -153,9 +154,7 @@ type TarArchiveSource =
 export type ParseTarOptions = ParseTarHeaderOptions;
 
 /**
- * Parses a tar archive and calls the given handler for each entry it contains.
- *
- * Example:
+ * Parse a tar archive and call the given handler for each entry it contains.
  *
  * ```ts
  * import { parseTar } from '@mjackson/tar-parser';
@@ -236,7 +235,11 @@ export class TarParser {
       results.push(handler(entry));
     }
 
-    if (archive instanceof ReadableStream || isAsyncIterable(archive)) {
+    if (archive instanceof ReadableStream) {
+      for await (let chunk of readStream(archive)) {
+        this.#write(chunk, handleEntry);
+      }
+    } else if (isAsyncIterable(archive)) {
       for await (let chunk of archive) {
         this.#write(chunk, handleEntry);
       }
@@ -474,7 +477,7 @@ export class TarEntry {
 
     let result = new Uint8Array(this.size);
     let offset = 0;
-    for await (let chunk of this.#body) {
+    for await (let chunk of readStream(this.#body)) {
       result.set(chunk, offset);
       offset += chunk.length;
     }
