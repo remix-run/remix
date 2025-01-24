@@ -1,5 +1,6 @@
 import Headers from '@mjackson/headers';
 
+import { readStream } from './read-stream.ts';
 import {
   type SearchFunction,
   createSearch,
@@ -46,18 +47,42 @@ export async function* parseMultipartRequest(
   yield* parseMultipart(request.body, boundary, options);
 }
 
+type MultipartMessageSource =
+  | ReadableStream<Uint8Array>
+  | Uint8Array
+  | Iterable<Uint8Array>
+  | AsyncIterable<Uint8Array>;
+
 /**
  * Parse a `multipart/*` buffer or stream and yield each part it finds as a `MultipartPart` object.
+ *
+ * ```ts
+ * import { parseMultipart } from '@mjackson/multipart-parser';
+ *
+ * let boundary = '----WebKitFormBoundaryzv5Z4JY8k9lG0yQW';
+ *
+ * for await (let part of parseMultipart(message, boundary)) {
+ *   if (part.isFile) {
+ *     console.log(part.filename);
+ *     if (part.mediaType.startsWith('text/')) {
+ *       let text = await part.text();
+ *       // ...
+ *     } else {
+ *       let buffer = await part.bytes();
+ *       // ...
+ *     }
+ *   } else {
+ *     let text = await part.text();
+ *     // ...
+ *   }
+ * }
+ * ```
  *
  * Note: This is a low-level API that requires manual handling of the stream and boundary. If you're
  * building a web server, consider using `parseMultipartRequest(request)` instead.
  */
 export async function* parseMultipart(
-  message:
-    | ReadableStream<Uint8Array>
-    | Uint8Array
-    | Iterable<Uint8Array>
-    | AsyncIterable<Uint8Array>,
+  message: MultipartMessageSource,
   boundary: string,
   options?: MultipartParserOptions,
 ): AsyncGenerator<MultipartPart> {
@@ -160,11 +185,7 @@ export class MultipartParser {
    * Resolves when the parse is finished and all handlers resolve.
    */
   async parse(
-    message:
-      | ReadableStream<Uint8Array>
-      | Uint8Array
-      | Iterable<Uint8Array>
-      | AsyncIterable<Uint8Array>,
+    message: MultipartMessageSource,
     handler: (part: MultipartPart) => void,
   ): Promise<void> {
     if (this.#state !== MultipartParserStateStart) {
@@ -177,7 +198,11 @@ export class MultipartParser {
       results.push(handler(part));
     }
 
-    if (message instanceof ReadableStream || isAsyncIterable(message)) {
+    if (message instanceof ReadableStream) {
+      for await (let chunk of readStream(message)) {
+        this.#write(chunk, handlePart);
+      }
+    } else if (isAsyncIterable(message)) {
       for await (let chunk of message) {
         this.#write(chunk, handlePart);
       }
@@ -410,7 +435,7 @@ export class MultipartPart {
 
     let chunks: Uint8Array[] = [];
     let totalLength = 0;
-    for await (let chunk of this.#body) {
+    for await (let chunk of readStream(this.#body)) {
       chunks.push(chunk);
       totalLength += chunk.length;
     }
