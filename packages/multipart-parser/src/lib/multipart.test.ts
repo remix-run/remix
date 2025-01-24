@@ -3,12 +3,12 @@ import { describe, it } from 'node:test';
 
 import { createMockRequest, createMultipartMockRequest, getRandomBytes } from '../../test/utils.ts';
 
+import { MultipartParseError } from './multipart.ts';
 import {
+  getMultipartBoundary,
   isMultipartRequest,
   parseMultipartRequest,
-  MultipartParseError,
-  getMultipartBoundary,
-} from './multipart.ts';
+} from './multipart-request.ts';
 
 const CRLF = '\r\n';
 

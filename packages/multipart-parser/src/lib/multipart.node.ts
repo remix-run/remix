@@ -2,12 +2,12 @@ import type * as http from 'node:http';
 import { Readable } from 'node:stream';
 
 import {
-  getMultipartBoundary,
   parseMultipart as parseMultipartWeb,
   MultipartParseError,
   type MultipartParserOptions,
   MultipartPart,
 } from './multipart.ts';
+import { getMultipartBoundary } from './multipart-request.ts';
 
 /**
  * Returns true if the given request is a multipart request.
