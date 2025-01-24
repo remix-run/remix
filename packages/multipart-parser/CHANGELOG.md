@@ -2,7 +2,7 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.7.3 (2025-01-24)
 
 - Add support for environments that do not support `ReadableStream.prototype[Symbol.asyncIterator]` (i.e. Safari), see #46
 
