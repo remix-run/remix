@@ -151,6 +151,8 @@ type TarArchiveSource =
   | Iterable<Uint8Array>
   | AsyncIterable<Uint8Array>;
 
+type TarEntryHandler = (entry: TarEntry) => void;
+
 export type ParseTarOptions = ParseTarHeaderOptions;
 
 /**
@@ -168,19 +170,16 @@ export type ParseTarOptions = ParseTarHeaderOptions;
  * @param handler A function to call for each entry in the archive
  * @returns A promise that resolves when the parse is finished
  */
-export async function parseTar(
-  archive: TarArchiveSource,
-  handler: (entry: TarEntry) => void,
-): Promise<void>;
+export async function parseTar(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void>;
 export async function parseTar(
   archive: TarArchiveSource,
   options: ParseTarOptions,
-  handler: (entry: TarEntry) => void,
+  handler: TarEntryHandler,
 ): Promise<void>;
 export async function parseTar(
   archive: TarArchiveSource,
-  options: ParseTarOptions | ((entry: TarEntry) => void),
-  handler?: (entry: TarEntry) => void,
+  options: ParseTarOptions | TarEntryHandler,
+  handler?: TarEntryHandler,
 ): Promise<void> {
   let opts: ParseTarOptions | undefined;
   if (typeof options === 'function') {
@@ -226,7 +225,7 @@ export class TarParser {
    * @param handler A function to call for each entry in the archive
    * @returns A promise that resolves when the parse is finished
    */
-  async parse(archive: TarArchiveSource, handler: (entry: TarEntry) => void): Promise<void> {
+  async parse(archive: TarArchiveSource, handler: TarEntryHandler): Promise<void> {
     this.#reset();
 
     let results: unknown[] = [];
@@ -272,7 +271,7 @@ export class TarParser {
     this.#pax = null;
   }
 
-  #write(chunk: Uint8Array, handler: (entry: TarEntry) => void): void {
+  #write(chunk: Uint8Array, handler: TarEntryHandler): void {
     if (this.#buffer !== null) {
       this.#buffer = concatChunks(this.#buffer, chunk);
     } else {
@@ -307,7 +306,7 @@ export class TarParser {
     }
   }
 
-  #parseHeader(handler: (entry: TarEntry) => void): void {
+  #parseHeader(handler: TarEntryHandler): void {
     let block = this.#read(TarBlockSize);
 
     if (isZeroBlock(block)) {
