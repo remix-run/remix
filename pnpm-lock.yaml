@@ -54,6 +54,28 @@ importers:
         specifier: ^8.3.5
         version: 8.3.5(@swc/core@1.5.29(@swc/helpers@0.5.12))(typescript@5.7.2)
 
+  packages/form-data-parser/examples/node:
+    dependencies:
+      '@mjackson/file-storage':
+        specifier: workspace:*
+        version: link:../../../file-storage
+      '@mjackson/form-data-parser':
+        specifier: workspace:*
+        version: link:../..
+      '@mjackson/multipart-parser':
+        specifier: workspace:*
+        version: link:../../../multipart-parser
+      '@mjackson/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../../node-fetch-server
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.10
+        version: 20.16.1
+      typescript:
+        specifier: ^5.7.2
+        version: 5.7.2
+
   packages/headers:
     devDependencies:
       '@types/node':

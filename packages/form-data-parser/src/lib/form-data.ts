@@ -87,47 +87,44 @@ async function defaultFileUploadHandler(file: FileUpload): Promise<File> {
  */
 export async function parseFormData(
   request: Request,
-  uploadHandler: FileUploadHandler = defaultFileUploadHandler,
-  parserOptions?: MultipartParserOptions,
+  handler?: FileUploadHandler,
+): Promise<FormData>;
+export async function parseFormData(
+  request: Request,
+  parserOptions: MultipartParserOptions,
+  handler?: FileUploadHandler,
+): Promise<FormData>;
+export async function parseFormData(
+  request: Request,
+  parserOptions?: MultipartParserOptions | FileUploadHandler,
+  handler: FileUploadHandler = defaultFileUploadHandler,
 ): Promise<FormData> {
+  if (typeof parserOptions === 'function') {
+    handler = parserOptions;
+    parserOptions = {};
+  } else if (parserOptions == null) {
+    parserOptions = {};
+  }
+
   if (!isMultipartRequest(request)) {
     return request.formData();
   }
 
   let formData = new FormData();
-  let promises: Promise<void>[] = [];
 
-  for await (let part of parseMultipartRequest(request, parserOptions)) {
+  await parseMultipartRequest(request, parserOptions, async (part) => {
     let fieldName = part.name;
-
-    if (!fieldName) continue;
+    if (!fieldName) return;
 
     if (part.isFile) {
-      let value = uploadHandler(new FileUpload(part));
-
+      let value = await handler(new FileUpload(part));
       if (value != null) {
-        if (isPromise(value)) {
-          promises.push(
-            value.then((asyncValue) => {
-              if (asyncValue != null) {
-                formData.append(fieldName, asyncValue);
-              }
-            }),
-          );
-        } else {
-          formData.append(fieldName, value);
-        }
+        formData.append(fieldName, value);
       }
     } else {
       formData.append(fieldName, await part.text());
     }
-  }
-
-  await Promise.all(promises);
+  });
 
   return formData;
-}
-
-function isPromise<T>(obj: unknown): obj is Promise<T> {
-  return obj != null && typeof (obj as any).then === 'function';
 }
