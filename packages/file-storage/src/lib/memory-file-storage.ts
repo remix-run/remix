@@ -18,6 +18,11 @@ export class MemoryFileStorage implements FileStorage {
     return this.#map.get(key) ?? null;
   }
 
+  put(key: string, file: File): File {
+    this.set(key, file);
+    return this.get(key)!;
+  }
+
   remove(key: string): void {
     this.#map.delete(key);
   }
