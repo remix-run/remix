@@ -77,18 +77,24 @@ export { type OpenFileOptions as GetFileOptions, openFile as getFile };
  * @returns A promise that resolves when the file is written
  */
 export function writeFile(to: string | number | fs.promises.FileHandle, file: File): Promise<void> {
-  return new Promise(async (resolve) => {
+  return new Promise(async (resolve, reject) => {
     let writeStream =
       typeof to === 'string'
         ? fs.createWriteStream(to)
         : fs.createWriteStream('ignored', { fd: to });
 
-    for await (let chunk of file.stream()) {
-      writeStream.write(chunk);
-    }
+    try {
+      for await (let chunk of file.stream()) {
+        writeStream.write(chunk);
+      }
 
-    writeStream.end(() => {
-      resolve();
-    });
+      writeStream.end(() => {
+        resolve();
+      });
+    } catch (error) {
+      writeStream.end(() => {
+        reject(error);
+      });
+    }
   });
 }
