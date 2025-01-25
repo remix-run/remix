@@ -47,12 +47,11 @@ const server = http.createServer(
         let text1 = formData.get('text1');
         let image1 = formData.get('image1');
 
-        let imgSrc = '';
+        let dataUrl = '';
         if (image1) {
           let imageFile = /** @type File */ (image1);
-          let buffer = await imageFile.arrayBuffer();
-          let base64 = Buffer.from(buffer).toString('base64');
-          imgSrc = `data:${imageFile.type};base64,${base64}`;
+          let buffer = Buffer.from(await imageFile.arrayBuffer());
+          dataUrl = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
         }
 
         return new Response(
@@ -64,7 +63,7 @@ const server = http.createServer(
   <body>
     <h1>form-data-parser Submitted Data</h1>
     ${text1 ? `<p>You entered this text: ${text1}</p>` : '<p>You did not enter any text.</p>'}
-    ${image1 ? `<p>You uploaded this image:</p><p><img src="${imgSrc}" /></p>` : '<p>You did not upload an image.</p>'}
+    ${image1 ? `<p>You uploaded this image:</p><p><img src="${dataUrl}" /></p>` : '<p>You did not upload an image.</p>'}
   </body>
 </html>`,
           {
