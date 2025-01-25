@@ -6,7 +6,8 @@ import { MultipartParseError, MaxFileSizeExceededError } from '@mjackson/multipa
 import { createRequestListener } from '@mjackson/node-fetch-server';
 
 const PORT = 3000;
-const maxFileSize = 1000;
+
+const oneMb = 1024 * 1024;
 
 const fileStorage = new LocalFileStorage(os.tmpdir());
 
@@ -23,7 +24,7 @@ const server = http.createServer(
     <h1>form-data-parser Node Example</h1>
     <form method="post" enctype="multipart/form-data">
       <p>Enter some text: <input name="text1" type="text" /></p>
-      <p>Select an image: <input name="image1" type="file" accept="image/*" /></p>
+      <p>Select an image (max size 10MB): <input name="image1" type="file" accept="image/*" /></p>
       <p><button type="submit">Submit</button></p>
     </form>
   </body>
@@ -38,12 +39,16 @@ const server = http.createServer(
 
     if (request.method === 'POST') {
       try {
-        let formData = await parseFormData(request, { maxFileSize }, async (fileUpload) => {
-          let key = 'image-upload';
-          await fileStorage.set(key, fileUpload);
-          let file = await fileStorage.get(key);
-          return file && file.size === 0 ? null : file;
-        });
+        let formData = await parseFormData(
+          request,
+          { maxFileSize: 10 * oneMb },
+          async (fileUpload) => {
+            let key = 'image-upload';
+            await fileStorage.set(key, fileUpload);
+            let file = await fileStorage.get(key);
+            return file && file.size === 0 ? null : file;
+          },
+        );
 
         let text1 = formData.get('text1');
         let image1 = formData.get('image1');
