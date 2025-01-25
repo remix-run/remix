@@ -1,5 +1,6 @@
 packages:
   - packages/*
+  - packages/form-data-parser/examples/*
   - packages/multipart-parser/bench
   - packages/multipart-parser/examples/*
   - packages/node-fetch-server/bench
