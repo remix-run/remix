@@ -2,7 +2,7 @@
 
 This is the changelog for [`lazy-file`](https://github.com/mjackson/remix-the-web/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v3.3.1 (2025-01-25)
 
 - Handle stream errors in `lazy-file/fs`' `writeFile`. When there is an error in the stream, call `writeStream.end()` on the underlying file stream before rejecting the promise.
 
