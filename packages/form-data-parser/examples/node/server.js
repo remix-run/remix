@@ -39,16 +39,10 @@ const server = http.createServer(
 
     if (request.method === 'POST') {
       try {
-        let formData = await parseFormData(
-          request,
-          { maxFileSize: 10 * oneMb },
-          async (fileUpload) => {
-            let key = 'image-upload';
-            await fileStorage.set(key, fileUpload);
-            let file = await fileStorage.get(key);
-            return file && file.size === 0 ? null : file;
-          },
-        );
+        let formData = await parseFormData(request, { maxFileSize: 10 * oneMb }, async (upload) => {
+          let file = await fileStorage.put('image-upload', upload);
+          return file.size === 0 ? null : file;
+        });
 
         let text1 = formData.get('text1');
         let image1 = formData.get('image1');
