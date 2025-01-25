@@ -94,6 +94,11 @@ export class LocalFileStorage implements FileStorage {
     }
   }
 
+  async put(key: string, file: File): Promise<File> {
+    await this.set(key, file);
+    return (await this.get(key))!;
+  }
+
   async remove(key: string): Promise<void> {
     let { filePath, metaPath } = await this.#getPaths(key);
 

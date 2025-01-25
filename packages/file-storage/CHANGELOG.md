@@ -2,6 +2,19 @@
 
 This is the changelog for [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Add `fileStorage.put(key, file)` method as a convenience around `fileStorage.set(key, file)` + `fileStorage.get(key)`, which is a very common pattern when you need immediate access to the file you just put in storage
+
+```ts
+// before
+await fileStorage.set(key, file);
+let newFile = await fileStorage.get(key)!;
+
+// after
+let newFile = await fileStorage.put(key, file);
+```
+
 ## v0.4.1 (2025-01-10)
 
 - Fix missing types for `file-storage/local` in npm package
