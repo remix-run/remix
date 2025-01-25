@@ -2,6 +2,10 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Iterate manually over response bodies in `sendResponse` instead of using `for await...of`. This seems to avoid an issue where the iterator tries to read from a stream after the lock has been released.
+
 ## v0.5.0 (2024-12-09)
 
 - Expose `createHeaders(req: http.IncomingMessage): Headers` API for creating headers from the headers of incoming request objects.

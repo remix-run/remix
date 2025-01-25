@@ -1,6 +1,7 @@
 import type * as http from 'node:http';
 
 import { type ClientAddress, type ErrorHandler, type FetchHandler } from './fetch-handler.ts';
+import { readStream } from './read-stream.ts';
 
 export interface RequestListenerOptions {
   /**
@@ -204,7 +205,7 @@ export async function sendResponse(res: http.ServerResponse, response: Response)
   res.writeHead(response.status, headers);
 
   if (response.body != null && res.req.method !== 'HEAD') {
-    for await (let chunk of response.body) {
+    for await (let chunk of readStream(response.body)) {
       res.write(chunk);
     }
   }
