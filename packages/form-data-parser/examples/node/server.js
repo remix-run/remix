@@ -14,6 +14,12 @@ const fileStorage = new LocalFileStorage(
   await fsp.mkdtemp(path.join(os.tmpdir(), 'form-data-parser-')),
 );
 
+/** @type (file: File) => Promise<string> */
+async function getDataUrl(file) {
+  let buffer = Buffer.from(await file.arrayBuffer());
+  return `data:${file.type};base64,${buffer.toString('base64')}`;
+}
+
 const server = http.createServer(
   createRequestListener(async (request) => {
     if (request.method === 'GET') {
@@ -47,15 +53,8 @@ const server = http.createServer(
           return file.size === 0 ? null : file;
         });
 
-        let text1 = formData.get('text1');
-        let image1 = formData.get('image1');
-
-        let dataUrl = '';
-        if (image1) {
-          let imageFile = /** @type File */ (image1);
-          let buffer = Buffer.from(await imageFile.arrayBuffer());
-          dataUrl = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
-        }
+        let text = /** @type string */ (formData.get('text1'));
+        let image = /** @type File | null */ (formData.get('image1'));
 
         return new Response(
           `<!DOCTYPE html>
@@ -65,8 +64,8 @@ const server = http.createServer(
   </head>
   <body>
     <h1>form-data-parser Submitted Data</h1>
-    ${text1 ? `<p>You entered this text: ${text1}</p>` : '<p>You did not enter any text.</p>'}
-    ${image1 ? `<p>You uploaded this image:</p><p><img src="${dataUrl}" /></p>` : '<p>You did not upload an image.</p>'}
+    ${text ? `<p>You entered this text: ${text}</p>` : '<p>You did not enter any text.</p>'}
+    ${image ? `<p>You uploaded this image:</p><p><img src="${await getDataUrl(image)}" /></p>` : '<p>You did not upload an image.</p>'}
   </body>
 </html>`,
           {
