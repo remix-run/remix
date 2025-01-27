@@ -233,8 +233,14 @@ describe('SuperHeaders', () => {
     });
 
     it('handles the etag property', () => {
-      let headers = new SuperHeaders({ etag: 'abc' });
+      let headers = new SuperHeaders({ etag: '"abc"' });
       assert.equal(headers.get('ETag'), '"abc"');
+
+      let headers2 = new SuperHeaders({ etag: 'abc' });
+      assert.equal(headers2.get('ETag'), '"abc"');
+
+      let headers3 = new SuperHeaders({ etag: 'W/"abc"' });
+      assert.equal(headers3.get('ETag'), 'W/"abc"');
     });
 
     it('handles the expires property', () => {
@@ -536,14 +542,14 @@ describe('SuperHeaders', () => {
 
       assert.equal(headers.etag, null);
 
+      headers.etag = '"abc"';
+      assert.equal(headers.etag, '"abc"');
+
       headers.etag = 'abc';
       assert.equal(headers.etag, '"abc"');
 
-      headers.etag = '"def"';
-      assert.equal(headers.etag, '"def"');
-
-      headers.etag = 'W/"def"';
-      assert.equal(headers.etag, 'W/"def"');
+      headers.etag = 'W/"abc"';
+      assert.equal(headers.etag, 'W/"abc"');
 
       headers.etag = '';
       assert.equal(headers.etag, '""');
