@@ -28,4 +28,67 @@ describe('MemoryFileStorage', () => {
     assert.ok(!storage.has('hello'));
     assert.equal(storage.get('hello'), null);
   });
+
+  it('lists files with pagination', async () => {
+    let storage = new MemoryFileStorage();
+    let allKeys = ['a', 'b', 'c', 'd', 'e'];
+
+    allKeys.forEach((key) => {
+      storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' }));
+    });
+
+    let { cursor, files } = storage.list();
+    assert.equal(cursor, undefined);
+    assert.equal(files.length, 5);
+    assert.deepEqual(files.map((f) => f.key).sort(), allKeys);
+
+    let { cursor: cursor1, files: files1 } = storage.list({ limit: 0 });
+    assert.equal(cursor1, undefined);
+    assert.equal(files1.length, 0);
+
+    let { cursor: cursor2, files: files2 } = storage.list({ limit: 2 });
+    assert.notEqual(cursor2, undefined);
+    assert.equal(files2.length, 2);
+
+    let { cursor: cursor3, files: files3 } = storage.list({ cursor: cursor2 });
+    assert.equal(cursor3, undefined);
+    assert.equal(files3.length, 3);
+
+    assert.deepEqual([...files2, ...files3].map((f) => f.key).sort(), allKeys);
+  });
+
+  it('lists files by key prefix', async () => {
+    let storage = new MemoryFileStorage();
+    let allKeys = ['a', 'b', 'b/c', 'c', 'd'];
+
+    allKeys.forEach((key) => {
+      storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' }));
+    });
+
+    let { cursor, files } = storage.list({ prefix: 'b' });
+
+    assert.equal(cursor, undefined);
+    assert.equal(files.length, 2);
+    assert.equal(files[0].key, 'b');
+    assert.equal(files[1].key, 'b/c');
+  });
+
+  it('lists files with metadata', async () => {
+    let storage = new MemoryFileStorage();
+    let allKeys = ['a', 'b', 'c', 'd', 'e'];
+
+    allKeys.forEach((key) => {
+      storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' }));
+    });
+
+    let { cursor, files } = storage.list({ includeMetadata: true });
+
+    assert.equal(cursor, undefined);
+    assert.equal(files.length, 5);
+    assert.deepEqual(files.map((f) => f.key).sort(), allKeys);
+    files.forEach((f) => assert.ok('lastModified' in f));
+    files.forEach((f) => assert.ok('name' in f));
+    files.forEach((f) => assert.ok('size' in f));
+    files.forEach((f) => assert.ok('type' in f));
+  });
 });

@@ -2,17 +2,42 @@
 
 This is the changelog for [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Add `storage.list(options)` for listing files in storage.
+
+The following `options` are available:
+
+- `cursor`: An opaque string that allows you to paginate over the keys in storage
+- `includeMetadata`: If `true`, include file metadata in the result
+- `limit`: The maximum number of files to return
+- `prefix`: Only return keys that start with this string
+
+Pagination is done via an opaque `cursor` property in the list result object. If it is not `undefined`, there are more files to list. You can list them by passing the `cursor` back in the `options` object on the next call.
+
+```ts
+let result = await storage.list();
+
+console.log(result.files);
+
+if (result.cursor !== undefined) {
+  let result2 = await storage.list({ cursor: result.cursor });
+}
+```
+
+Objects in the `files` array have only a `key` property by default. If you pass `includeMetadata: true` in the options, they will also have `lastModified`, `name`, `size`, and `type` properties.
+
 ## v0.5.0 (2025-01-25)
 
-- Add `fileStorage.put(key, file)` method as a convenience around `fileStorage.set(key, file)` + `fileStorage.get(key)`, which is a very common pattern when you need immediate access to the file you just put in storage
+- Add `storage.put(key, file)` method as a convenience around `storage.set(key, file)` + `storage.get(key)`, which is a very common pattern when you need immediate access to the file you just put in storage
 
 ```ts
 // before
-await fileStorage.set(key, file);
-let newFile = await fileStorage.get(key)!;
+await storage.set(key, file);
+let newFile = await storage.get(key)!;
 
 // after
-let newFile = await fileStorage.put(key, file);
+let newFile = await storage.put(key, file);
 ```
 
 ## v0.4.1 (2025-01-10)
