@@ -13,6 +13,35 @@ The following `options` are available:
 - `limit`: The maximum number of files to return
 - `prefix`: Only return keys that start with this string
 
+For example, to list all files under keys that start with `user123/`:
+
+```ts
+let result = await storage.list({ prefix: 'user123/' });
+console.log(result.files);
+// [
+//   { key: "user123/..." },
+//   { key: "user123/..." },
+//   ...
+// ]
+```
+
+`result.files` will be an array of `{ key: string }` objects. To include metadata about each file, use `includeMetadata: true` in your `options`:
+
+```ts
+let result = await storage.list({ prefix: 'user123/', includeMetadata: true });
+console.log(result.files);
+// [
+//   {
+//     key: "user123/..."
+//     lastModified: 1737955705270,
+//     name: "hello.txt"
+//     size: 16,
+//     type: "text/plain"
+//   },
+//   ...
+// ]
+```
+
 Pagination is done via an opaque `cursor` property in the list result object. If it is not `undefined`, there are more files to list. You can list them by passing the `cursor` back in the `options` object on the next call.
 
 ```ts
@@ -25,7 +54,7 @@ if (result.cursor !== undefined) {
 }
 ```
 
-Objects in the `files` array have only a `key` property by default. If you pass `includeMetadata: true` in the options, they will also have `lastModified`, `name`, `size`, and `type` properties.
+Use the `limit` option to limit how many results you get back in the `files` array.
 
 ## v0.5.0 (2025-01-25)
 
