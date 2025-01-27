@@ -4,6 +4,7 @@ This is the changelog for [`file-storage`](https://github.com/mjackson/remix-the
 
 ## HEAD
 
+- BREAKING CHANGE: `LocalFileStorage` now uses 2 characters for shard directory names instead of 8.
 - Add `storage.list(options)` for listing files in storage.
 
 The following `options` are available:
