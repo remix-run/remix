@@ -25,16 +25,16 @@ console.log(result.files);
 // ]
 ```
 
-`result.files` will be an array of `{ key: string }` objects. To include metadata about each file, use `includeMetadata: true` in your `options`:
+`result.files` will be an array of `{ key: string }` objects. To include metadata about each file, use `includeMetadata: true`.
 
 ```ts
 let result = await storage.list({ prefix: 'user123/', includeMetadata: true });
 console.log(result.files);
 // [
 //   {
-//     key: "user123/..."
+//     key: "user123/...",
 //     lastModified: 1737955705270,
-//     name: "hello.txt"
+//     name: "hello.txt",
 //     size: 16,
 //     type: "text/plain"
 //   },
