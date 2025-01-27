@@ -9,6 +9,7 @@ import { ContentDisposition } from './content-disposition.ts';
 import { ContentType } from './content-type.ts';
 import { Cookie } from './cookie.ts';
 import { SuperHeaders } from './super-headers.ts';
+import { IfNoneMatch } from './if-none-match.ts';
 
 describe('SuperHeaders', () => {
   it('is an instance of Headers', () => {
@@ -77,7 +78,11 @@ describe('SuperHeaders', () => {
   it('checks if a header exists', () => {
     let headers = new SuperHeaders({ 'X-Custom': 'value' });
     assert.equal(headers.has('X-Custom'), true);
-    assert.equal(headers.has('Nonexistent'), false);
+    assert.equal(headers.has('Content-Type'), false);
+
+    // Accessing this property should not change the result of has()
+    let _ = headers.contentType;
+    assert.equal(headers.has('Content-Type'), false);
   });
 
   it('iterates over entries', () => {
@@ -233,14 +238,14 @@ describe('SuperHeaders', () => {
     });
 
     it('handles the etag property', () => {
-      let headers = new SuperHeaders({ etag: '"abc"' });
-      assert.equal(headers.get('ETag'), '"abc"');
+      let headers = new SuperHeaders({ etag: '"67ab43"' });
+      assert.equal(headers.get('ETag'), '"67ab43"');
 
-      let headers2 = new SuperHeaders({ etag: 'abc' });
-      assert.equal(headers2.get('ETag'), '"abc"');
+      let headers2 = new SuperHeaders({ etag: '67ab43' });
+      assert.equal(headers2.get('ETag'), '"67ab43"');
 
-      let headers3 = new SuperHeaders({ etag: 'W/"abc"' });
-      assert.equal(headers3.get('ETag'), 'W/"abc"');
+      let headers3 = new SuperHeaders({ etag: 'W/"67ab43"' });
+      assert.equal(headers3.get('ETag'), 'W/"67ab43"');
     });
 
     it('handles the expires property', () => {
@@ -256,6 +261,11 @@ describe('SuperHeaders', () => {
     it('handles the ifModifiedSince property', () => {
       let headers = new SuperHeaders({ ifModifiedSince: new Date('2021-01-01T00:00:00Z') });
       assert.equal(headers.get('If-Modified-Since'), 'Fri, 01 Jan 2021 00:00:00 GMT');
+    });
+
+    it('handles the ifNoneMatch property', () => {
+      let headers = new SuperHeaders({ ifNoneMatch: ['67ab43', '54ed21'] });
+      assert.equal(headers.get('If-None-Match'), '"67ab43", "54ed21"');
     });
 
     it('handles the ifUnmodifiedSince property', () => {
@@ -542,14 +552,14 @@ describe('SuperHeaders', () => {
 
       assert.equal(headers.etag, null);
 
-      headers.etag = '"abc"';
-      assert.equal(headers.etag, '"abc"');
+      headers.etag = '"67ab43"';
+      assert.equal(headers.etag, '"67ab43"');
 
-      headers.etag = 'abc';
-      assert.equal(headers.etag, '"abc"');
+      headers.etag = '67ab43';
+      assert.equal(headers.etag, '"67ab43"');
 
-      headers.etag = 'W/"abc"';
-      assert.equal(headers.etag, 'W/"abc"');
+      headers.etag = 'W/"67ab43"';
+      assert.equal(headers.etag, 'W/"67ab43"');
 
       headers.etag = '';
       assert.equal(headers.etag, '""');
@@ -597,6 +607,25 @@ describe('SuperHeaders', () => {
 
       headers.ifModifiedSince = null;
       assert.equal(headers.ifModifiedSince, null);
+    });
+
+    it('supports the ifNoneMatch property', () => {
+      let headers = new SuperHeaders();
+
+      assert.ok(headers.ifNoneMatch instanceof IfNoneMatch);
+
+      headers.ifNoneMatch = '"67ab43", "54ed21"';
+      assert.deepEqual(headers.ifNoneMatch.tags, ['"67ab43"', '"54ed21"']);
+
+      headers.ifNoneMatch = ['67ab43', '54ed21'];
+      assert.deepEqual(headers.ifNoneMatch.tags, ['"67ab43"', '"54ed21"']);
+
+      headers.ifNoneMatch = { tags: ['67ab43', '54ed21'] };
+      assert.deepEqual(headers.ifNoneMatch.tags, ['"67ab43"', '"54ed21"']);
+
+      headers.ifNoneMatch = null;
+      assert.ok(headers.ifNoneMatch instanceof IfNoneMatch);
+      assert.equal(headers.ifNoneMatch.toString(), '');
     });
 
     it('supports the ifUnmodifiedSince property', () => {

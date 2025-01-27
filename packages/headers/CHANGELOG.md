@@ -18,6 +18,25 @@ let cookieNames = Array.from(headers.cookie.names());
 let cookieNames = headers.cookie.names;
 ```
 
+Additionally, this release adds support for the `If-None-Match` header. This is useful for conditional GET requests where you want to return a response with content only if the ETag has changed.
+
+```ts
+import { SuperHeaders } from '@mjackson/headers';
+
+function requestHandler(request: Request): Promise<Response> {
+  let response = await callDownstreamService(request);
+
+  if (request.method === 'GET' && response.headers.has('ETag')) {
+    let headers = new SuperHeaders(request.headers);
+    if (headers.ifNoneMatch.matches(response.headers.get('ETag'))) {
+      return new Response(null, { status: 304 });
+    }
+  }
+
+  return response;
+}
+```
+
 ## v0.9.0 (2024-12-20)
 
 This release tightens up the type safety and brings `SuperHeaders` more in line with the built-in `Headers` interface.

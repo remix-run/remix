@@ -5,6 +5,7 @@ export { type CacheControlInit, CacheControl } from './lib/cache-control.ts';
 export { type ContentDispositionInit, ContentDisposition } from './lib/content-disposition.ts';
 export { type ContentTypeInit, ContentType } from './lib/content-type.ts';
 export { type CookieInit, Cookie } from './lib/cookie.ts';
+export { type IfNoneMatchInit, IfNoneMatch } from './lib/if-none-match.ts';
 export { type SetCookieInit, SetCookie } from './lib/set-cookie.ts';
 
 export {
