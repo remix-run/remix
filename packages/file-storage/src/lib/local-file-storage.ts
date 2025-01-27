@@ -3,16 +3,19 @@ import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import { openFile, writeFile } from '@mjackson/lazy-file/fs';
 
-import { type FileStorage } from './file-storage.ts';
-
-interface FileMetadata {
-  name: string;
-  type: string;
-  mtime: number;
-}
+import {
+  type FileStorage,
+  type FileKey,
+  type FileMetadata,
+  type ListOptions,
+  type ListResult,
+} from './file-storage.ts';
 
 /**
- * A `FileStorage` that is backed by the local filesystem.
+ * A `FileStorage` that is backed by a directory on the local filesystem.
+ *
+ * Important: No attempt is made to avoid overwriting existing files, so the directory used should
+ * be a new directory solely dedicated to this storage object.
  *
  * Note: Keys have no correlation to file names on disk, so they may be any string including
  * characters that are not valid in file names. Additionally, individual `File` names have no
@@ -43,6 +46,26 @@ export class LocalFileStorage implements FileStorage {
     }
   }
 
+  async get(key: string): Promise<File | null> {
+    let { filePath, metaPath } = await this.#getPaths(key);
+
+    try {
+      let meta = await readMetadata(metaPath);
+
+      return openFile(filePath, {
+        lastModified: meta.lastModified,
+        name: meta.name,
+        type: meta.type,
+      });
+    } catch (error) {
+      if (!isNoEntityError(error)) {
+        throw error;
+      }
+
+      return null;
+    }
+  }
+
   async has(key: string): Promise<boolean> {
     let { metaPath } = await this.#getPaths(key);
 
@@ -54,44 +77,51 @@ export class LocalFileStorage implements FileStorage {
     }
   }
 
-  async set(key: string, file: File): Promise<void> {
-    // Remove any existing file with the same key.
-    await this.remove(key);
+  async list<T extends ListOptions>(options?: T): Promise<ListResult<T>> {
+    let { cursor, includeMetadata = false, limit = 32, prefix } = options ?? {};
 
-    let { directory, filePath, metaPath } = await this.#getPaths(key);
+    let files = [];
+    let foundCursor = cursor === undefined;
+    let nextCursor: string | undefined;
+    let lastHash: string | undefined;
 
-    // Ensure directory exists
-    await fsp.mkdir(directory, { recursive: true });
+    outerLoop: for await (let subdir of await fsp.opendir(this.#dirname)) {
+      if (!subdir.isDirectory()) continue;
 
-    await writeFile(filePath, file);
+      for await (let file of await fsp.opendir(path.join(this.#dirname, subdir.name))) {
+        if (!file.isFile() || !file.name.endsWith('.meta.json')) continue;
 
-    let metadata: FileMetadata = {
-      name: file.name,
-      type: file.type,
-      mtime: file.lastModified,
-    };
-    await fsp.writeFile(metaPath, JSON.stringify(metadata));
-  }
+        let hash = file.name.slice(0, -10); // Remove ".meta.json"
 
-  async get(key: string): Promise<File | null> {
-    let { filePath, metaPath } = await this.#getPaths(key);
+        if (foundCursor) {
+          let meta = await readMetadata(path.join(this.#dirname, subdir.name, file.name));
 
-    try {
-      let metadataContent = await fsp.readFile(metaPath, 'utf-8');
-      let metadata: FileMetadata = JSON.parse(metadataContent);
+          if (prefix != null && !meta.key.startsWith(prefix)) {
+            continue;
+          }
 
-      return openFile(filePath, {
-        name: metadata.name,
-        type: metadata.type,
-        lastModified: metadata.mtime,
-      });
-    } catch (error) {
-      if (!isNoEntityError(error)) {
-        throw error;
+          if (files.length >= limit) {
+            nextCursor = lastHash;
+            break outerLoop;
+          }
+
+          if (includeMetadata) {
+            files.push(meta);
+          } else {
+            files.push({ key: meta.key });
+          }
+        } else if (hash === cursor) {
+          foundCursor = true;
+        }
+
+        lastHash = hash;
       }
-
-      return null;
     }
+
+    return {
+      cursor: nextCursor,
+      files: files as any,
+    };
   }
 
   async put(key: string, file: File): Promise<File> {
@@ -111,11 +141,32 @@ export class LocalFileStorage implements FileStorage {
     }
   }
 
+  async set(key: string, file: File): Promise<void> {
+    // Remove any existing file with the same key.
+    await this.remove(key);
+
+    let { directory, filePath, metaPath } = await this.#getPaths(key);
+
+    // Ensure directory exists
+    await fsp.mkdir(directory, { recursive: true });
+
+    await writeFile(filePath, file);
+
+    let meta: FileMetadata = {
+      key,
+      lastModified: file.lastModified,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    };
+    await fsp.writeFile(metaPath, JSON.stringify(meta));
+  }
+
   async #getPaths(key: string): Promise<{ directory: string; filePath: string; metaPath: string }> {
     let hash = await computeHash(key);
-    let shardDir = hash.slice(0, 8);
+    let shardDir = hash.slice(0, 2);
     let directory = path.join(this.#dirname, shardDir);
-    let filename = `${hash.slice(8)}.bin`;
+    let filename = `${hash}.dat`;
     let metaname = `${hash}.meta.json`;
 
     return {
@@ -124,6 +175,10 @@ export class LocalFileStorage implements FileStorage {
       metaPath: path.join(directory, metaname),
     };
   }
+}
+
+async function readMetadata(metaPath: string): Promise<FileMetadata> {
+  return JSON.parse(await fsp.readFile(metaPath, 'utf-8'));
 }
 
 async function computeHash(key: string, algorithm = 'SHA-256'): Promise<string> {
