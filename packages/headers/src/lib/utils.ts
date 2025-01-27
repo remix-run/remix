@@ -9,3 +9,7 @@ export function isIterable<T>(value: any): value is Iterable<T> {
 export function isValidDate(date: unknown): boolean {
   return date instanceof Date && !isNaN(date.getTime());
 }
+
+export function quoteEtag(tag: string): string {
+  return tag === '*' ? tag : /^(W\/)?".*"$/.test(tag) ? tag : `"${tag}"`;
+}

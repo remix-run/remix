@@ -7,8 +7,9 @@ import { type ContentTypeInit, ContentType } from './content-type.ts';
 import { type CookieInit, Cookie } from './cookie.ts';
 import { canonicalHeaderName } from './header-names.ts';
 import { type HeaderValue } from './header-value.ts';
+import { type IfNoneMatchInit, IfNoneMatch } from './if-none-match.ts';
 import { type SetCookieInit, SetCookie } from './set-cookie.ts';
-import { isIterable } from './utils.ts';
+import { isIterable, quoteEtag } from './utils.ts';
 
 type DateInit = number | Date;
 
@@ -86,6 +87,10 @@ interface SuperHeadersPropertyInit {
    */
   ifModifiedSince?: string | DateInit;
   /**
+   * The [`If-None-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match) header value.
+   */
+  ifNoneMatch?: string | string[] | IfNoneMatchInit;
+  /**
    * The [`If-Unmodified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Unmodified-Since) header value.
    */
   ifUnmodifiedSince?: string | DateInit;
@@ -131,6 +136,7 @@ const ETagKey = 'etag';
 const ExpiresKey = 'expires';
 const HostKey = 'host';
 const IfModifiedSinceKey = 'if-modified-since';
+const IfNoneMatchKey = 'if-none-match';
 const IfUnmodifiedSinceKey = 'if-unmodified-since';
 const LastModifiedKey = 'last-modified';
 const LocationKey = 'location';
@@ -251,7 +257,7 @@ export class SuperHeaders extends Headers {
    */
   has(name: string): boolean {
     let key = name.toLowerCase();
-    return key === SetCookieKey ? this.#setCookies.length > 0 : this.#map.has(key);
+    return key === SetCookieKey ? this.#setCookies.length > 0 : this.get(key) != null;
   }
 
   /**
@@ -569,10 +575,7 @@ export class SuperHeaders extends Headers {
   }
 
   set etag(value: string | undefined | null) {
-    this.#setStringValue(
-      ETagKey,
-      typeof value === 'string' && !/^(W\/)?".*"$/.test(value) ? `"${value}"` : value,
-    );
+    this.#setStringValue(ETagKey, typeof value === 'string' ? quoteEtag(value) : value);
   }
 
   /**
@@ -619,6 +622,21 @@ export class SuperHeaders extends Headers {
 
   set ifModifiedSince(value: string | DateInit | undefined | null) {
     this.#setDateValue(IfModifiedSinceKey, value);
+  }
+
+  /**
+   * The `If-None-Match` header makes a request conditional on the absence of a matching ETag.
+   *
+   * [MDN `If-None-Match` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match)
+   *
+   * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.2)
+   */
+  get ifNoneMatch(): IfNoneMatch {
+    return this.#getHeaderValue(IfNoneMatchKey, IfNoneMatch);
+  }
+
+  set ifNoneMatch(value: string | string[] | IfNoneMatchInit | undefined | null) {
+    this.#setHeaderValue(IfNoneMatchKey, IfNoneMatch, value);
   }
 
   /**

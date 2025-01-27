@@ -100,6 +100,10 @@ headers.get('Cookie'); // 'session_id=abc123; user_id=12345; theme=dark'
 // Host
 headers.host = 'example.com';
 
+// If-None-Match
+headers.ifNoneMatch = ['67ab43', '54ed21'];
+headers.get('If-None-Match'); // '"67ab43", "54ed21"'
+
 // Last-Modified
 headers.lastModified = new Date();
 // or headers.lastModified = new Date().getTime();
@@ -364,6 +368,25 @@ let header = new Cookie([
   ['theme', 'dark'],
   ['session_id', '123'],
 ]);
+```
+
+### If-None-Match
+
+```ts
+import { IfNoneMatch } from '@mjackson/headers';
+
+let header = new IfNoneMatch('"67ab43", "54ed21"');
+
+header.has('67ab43'); // true
+header.has('21ba69'); // false
+
+header.matches('"67ab43"'); // true
+
+// Alternative init style
+let header = new IfNoneMatch(['67ab43', '54ed21']);
+let header = new IfNoneMatch({
+  tags: ['67ab43', '54ed21'],
+});
 ```
 
 ### Set-Cookie
