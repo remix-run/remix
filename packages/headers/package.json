@@ -1,6 +1,6 @@
 {
   "name": "@mjackson/headers",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "A toolkit for working with HTTP headers in JavaScript",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
