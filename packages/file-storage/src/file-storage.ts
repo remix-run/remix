@@ -1,1 +1,7 @@
-export { type FileStorage } from './lib/file-storage.ts';
+export type {
+  FileStorage,
+  FileKey,
+  FileMetadata,
+  ListOptions,
+  ListResult,
+} from './lib/file-storage.ts';
