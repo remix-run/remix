@@ -38,16 +38,17 @@ export interface FileStorage {
    * // ]
    * ```
    *
-   * `result.files` will be an array of `{ key: string }` objects. To include metadata about each file, use `includeMetadata: true` in your `options`:
+   * `result.files` will be an array of `{ key: string }` objects. To include metadata about each
+   * file, use `includeMetadata: true`.
    *
    * ```ts
    * let result = await storage.list({ prefix: 'user123/', includeMetadata: true });
    * console.log(result.files);
    * // [
    * //   {
-   * //     key: "user123/..."
+   * //     key: "user123/...",
    * //     lastModified: 1737955705270,
-   * //     name: "hello.txt"
+   * //     name: "hello.txt",
    * //     size: 16,
    * //     type: "text/plain"
    * //   },
@@ -55,7 +56,9 @@ export interface FileStorage {
    * // ]
    * ```
    *
-   * Pagination is done via an opaque `cursor` property in the list result object. If it is not `undefined`, there are more files to list. You can list them by passing the `cursor` back in the `options` object on the next call.
+   * Pagination is done via an opaque `cursor` property in the list result object. If it is not
+   * `undefined`, there are more files to list. You can list them by passing the `cursor` back in
+   * the `options` object on the next call.
    *
    * ```ts
    * let result = await storage.list();
