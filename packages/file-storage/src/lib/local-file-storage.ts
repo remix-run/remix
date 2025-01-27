@@ -5,7 +5,6 @@ import { openFile, writeFile } from '@mjackson/lazy-file/fs';
 
 import {
   type FileStorage,
-  type FileKey,
   type FileMetadata,
   type ListOptions,
   type ListResult,
@@ -164,15 +163,12 @@ export class LocalFileStorage implements FileStorage {
 
   async #getPaths(key: string): Promise<{ directory: string; filePath: string; metaPath: string }> {
     let hash = await computeHash(key);
-    let shardDir = hash.slice(0, 2);
-    let directory = path.join(this.#dirname, shardDir);
-    let filename = `${hash}.dat`;
-    let metaname = `${hash}.meta.json`;
+    let directory = path.join(this.#dirname, hash.slice(0, 2));
 
     return {
       directory,
-      filePath: path.join(directory, filename),
-      metaPath: path.join(directory, metaname),
+      filePath: path.join(directory, `${hash}.dat`),
+      metaPath: path.join(directory, `${hash}.meta.json`),
     };
   }
 }
