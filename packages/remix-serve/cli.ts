@@ -126,10 +126,16 @@ async function run() {
   app.disable("x-powered-by");
   app.use(compression());
   app.use(
-    build.publicPath,
-    express.static(build.assetsBuildDirectory, {
+    path.posix.join(build.publicPath, "./assets"),
+    express.static(path.posix.join(build.assetsBuildDirectory, "./assets"), {
       immutable: true,
       maxAge: "1y",
+    })
+  );
+  app.use(
+    build.publicPath,
+    express.static(build.assetsBuildDirectory, {
+      maxAge: "1h",
     })
   );
   app.use(express.static("public", { maxAge: "1h" }));
