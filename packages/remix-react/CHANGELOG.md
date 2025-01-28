@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.15.3-pre.0
+
+### Patch Changes
+
+- Properly handle status codes that cannot have a body in single fetch responses (204, etc.) ([#10410](https://github.com/remix-run/remix/pull/10410))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.3-pre.0`
+
 ## 2.15.2
 
 ### Patch Changes
