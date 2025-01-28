@@ -1,5 +1,12 @@
 # `@remix-run/server-runtime`
 
+## 2.15.3-pre.0
+
+### Patch Changes
+
+- Avoid duplication of `Set-Cookie` headers could be duplicated if also returned from `headers` ([#10424](https://github.com/remix-run/remix/pull/10424))
+- Properly handle status codes that cannot have a body in single fetch responses (204, etc.) ([#10410](https://github.com/remix-run/remix/pull/10410))
+
 ## 2.15.2
 
 ## 2.15.1
