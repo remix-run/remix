@@ -1253,11 +1253,11 @@ importers:
         specifier: workspace:*
         version: link:../remix-server-runtime
       react-router:
-        specifier: 6.28.3-pre-v6.0
-        version: 6.28.3-pre-v6.0(react@18.2.0)
+        specifier: 6.28.3-pre-v6.1
+        version: 6.28.3-pre-v6.1(react@18.2.0)
       react-router-dom:
-        specifier: 6.28.3-pre-v6.0
-        version: 6.28.3-pre-v6.0(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.28.3-pre-v6.1
+        version: 6.28.3-pre-v6.1(react-dom@18.2.0)(react@18.2.0)
       turbo-stream:
         specifier: 2.4.0
         version: 2.4.0
@@ -1404,8 +1404,8 @@ importers:
         specifier: 1.21.2-pre-v6.0
         version: 1.21.2-pre-v6.0
       react-router-dom:
-        specifier: 6.28.3-pre-v6.0
-        version: 6.28.3-pre-v6.0(react-dom@18.2.0)(react@18.2.0)
+        specifier: 6.28.3-pre-v6.1
+        version: 6.28.3-pre-v6.1(react-dom@18.2.0)(react@18.2.0)
     devDependencies:
       '@remix-run/server-runtime':
         specifier: workspace:*
@@ -12840,8 +12840,8 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /react-router-dom@6.28.3-pre-v6.0(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-qi5u63EBsuRQSlSCV9mii+UoFYuopB7HZGwZRMOnDbK6w7Qd+w3tjm0mKcwJ1BsMQw76/1R/Y9+goZWd2Ie4ug==}
+  /react-router-dom@6.28.3-pre-v6.1(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-qPrKJZ8VX83vQZ5RxIh+GKbeA1ZV3aR7zEOCBewFnexMdiQBwmDGiq+39NZ6ts7KuyAqFTSsRtiPznTopeQ0Ow==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
@@ -12850,11 +12850,11 @@ packages:
       '@remix-run/router': 1.21.2-pre-v6.0
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      react-router: 6.28.3-pre-v6.0(react@18.2.0)
+      react-router: 6.28.3-pre-v6.1(react@18.2.0)
     dev: false
 
-  /react-router@6.28.3-pre-v6.0(react@18.2.0):
-    resolution: {integrity: sha512-EgOGhP3mGO03BXB0IBDVlG+MAPwGj5Z6sYWMBaLvxcDaWveAgR7nAhuoMFgON/Y5f6glQ5srkr51Nvdcf7NGOQ==}
+  /react-router@6.28.3-pre-v6.1(react@18.2.0):
+    resolution: {integrity: sha512-CqBA2PYs4m6CbVZ18pm3fpq/Jww4M1L9UODnxnthZe5c5/23QAwS6PU9EWLTa5WWATrO83+GK4qOpZjV98Y6cA==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
