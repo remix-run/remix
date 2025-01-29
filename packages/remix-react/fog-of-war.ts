@@ -5,7 +5,7 @@ import type { PatchRoutesOnNavigationFunction } from "react-router";
 
 import type { AssetsManifest, FutureConfig } from "./entry";
 import type { RouteModules } from "./routeModules";
-import { RouteManifest, createClientRoutes } from "./routes";
+import { createClientRoutes } from "./routes";
 
 declare global {
   interface Navigator {
