@@ -1,28 +1,14 @@
 # `@remix-run/react`
 
-## 2.15.3-pre.2
-
-### Patch Changes
-
-- REMOVE: bump router ([#10451](https://github.com/remix-run/remix/pull/10451))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.15.3-pre.2`
-
-## 2.15.3-pre.1
+## 2.15.3
 
 ### Patch Changes
 
 - Properly handle interrupted \_\_manifest requests in lazy route discovery ([#10447](https://github.com/remix-run/remix/pull/10447))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.15.3-pre.1`
-
-## 2.15.3-pre.0
-
-### Patch Changes
-
 - Properly handle status codes that cannot have a body in single fetch responses (204, etc.) ([#10410](https://github.com/remix-run/remix/pull/10410))
+- REMOVE: bump router ([#10451](https://github.com/remix-run/remix/pull/10451))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.15.3-pre.0`
+  - `@remix-run/server-runtime@2.15.3`
 
 ## 2.15.2
 
