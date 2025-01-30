@@ -30,6 +30,7 @@
   },
   "changesets": [
     "blue-mirrors-shout",
+    "dull-files-warn",
     "giant-dolls-wonder"
   ]
 }

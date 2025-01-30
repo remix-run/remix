@@ -1,5 +1,7 @@
 # `@remix-run/route-config`
 
+## 2.15.3-pre.1
+
 ## 2.15.3-pre.0
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.15.3-pre.1
+
+### Patch Changes
+
+- Properly handle interrupted \_\_manifest requests in lazy route discovery ([#10447](https://github.com/remix-run/remix/pull/10447))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.3-pre.1`
+
 ## 2.15.3-pre.0
 
 ### Patch Changes
