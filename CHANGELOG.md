@@ -250,7 +250,7 @@ Date: YYYY-MM-DD
 
 ## v2.15.3
 
-Date: 2025-01-29
+Date: 2025-01-30
 
 ### Patch Changes
 
@@ -259,7 +259,7 @@ Date: 2025-01-29
 
 ### Updated Dependencies
 
-- [`react-router-dom@6.28.3`](https://github.com/remix-run/react-router/releases/tag/react-router%406.28.3)
+- [`react-router-dom@6.29.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.29.0)
 
 **Full Changelog**: [`v2.15.2...v2.15.3`](https://github.com/remix-run/remix/compare/remix@2.15.2...remix@2.15.3)
 
