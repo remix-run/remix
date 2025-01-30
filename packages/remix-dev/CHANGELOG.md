@@ -12,8 +12,7 @@
 
 ### Patch Changes
 
-- Allow supression of future flag warnings by setting them to `false` ([#10358](https://github.com/remix-run/remix/pull/10358))
-- \[REMOVE] Fix implementation of flag warning supression ([`9c35c5fbc`](https://github.com/remix-run/remix/commit/9c35c5fbc7cba221b4c67c9ea27e6afb308dd3e5))
+- Allow suppression of future flag warnings by setting them to `false` ([#10358](https://github.com/remix-run/remix/pull/10358))
 - Updated dependencies:
   - `@remix-run/node@2.15.2`
   - `@remix-run/server-runtime@2.15.2`
