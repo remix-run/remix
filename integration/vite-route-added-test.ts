@@ -69,7 +69,7 @@ test.describe(async () => {
     await expect
       .poll(async () => {
         await page.goto(`http://localhost:${port}/new`);
-          return page.getByText("new route").isVisible();
+        return page.getByText("new route").isVisible();
       })
       .toBe(true);
   });
