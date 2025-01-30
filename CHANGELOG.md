@@ -250,16 +250,17 @@ Date: YYYY-MM-DD
 
 ## v2.15.3
 
-Date: 2025-01-29
+Date: 2025-01-30
 
 ### Patch Changes
 
+- `@remix-run/react` - Properly handle interrupted manifest requests in lazy route discovery ([#10447](https://github.com/remix-run/remix/pull/10447))
 - `@remix-run/server-runtime` - Avoid duplication of `Set-Cookie` headers if also returned from `headers` ([#10424](https://github.com/remix-run/remix/pull/10424))
 - `@remix-run/server-runtime` - Properly handle status codes that cannot have a body in single fetch responses (204, etc.) ([#10410](https://github.com/remix-run/remix/pull/10410))
 
 ### Updated Dependencies
 
-- [`react-router-dom@6.28.3`](https://github.com/remix-run/react-router/releases/tag/react-router%406.28.3)
+- [`react-router-dom@6.29.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.29.0)
 
 **Full Changelog**: [`v2.15.2...v2.15.3`](https://github.com/remix-run/remix/compare/remix@2.15.2...remix@2.15.3)
 
