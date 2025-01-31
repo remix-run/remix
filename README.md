@@ -32,6 +32,10 @@ We currently publish the following packages:
 - [node-fetch-server](packages/node-fetch-server): Build HTTP servers for Node.js using the web `fetch()` API
 - [tar-parser](packages/tar-parser): Fast, streaming parser for tar archives
 
+## Using with Remix v2
+
+If you're trying to use these libraries with Remix v2, you'll need to [enable "Single Fetch"](https://remix.run/docs/en/main/guides/single-fetch#enabling-single-fetch) first. This tells Remix to use Node's built-in fetch primitives (`Request`, `Response`, `Headers`, etc.) instead of a broken polyfill we shipped in earlier versions of Remix.
+
 ## License
 
 See [LICENSE](https://github.com/mjackson/remix-the-web/blob/main/LICENSE)
