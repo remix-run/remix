@@ -53,7 +53,7 @@ const server = http.createServer(
           return file.size === 0 ? null : file;
         });
 
-        let text = /** @type string */ (formData.get('text1'));
+        let text = /** @type string | null */ (formData.get('text1'));
         let image = /** @type File | null */ (formData.get('image1'));
 
         return new Response(
