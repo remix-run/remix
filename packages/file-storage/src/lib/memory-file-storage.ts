@@ -17,7 +17,7 @@ export class MemoryFileStorage implements FileStorage {
   list<T extends ListOptions>(options?: T): ListResult<T> {
     let { cursor, includeMetadata = false, limit = Infinity, prefix } = options ?? {};
 
-    let files = [];
+    let files: any[] = [];
     let foundCursor = cursor === undefined;
     let nextCursor: string | undefined;
 
@@ -50,7 +50,7 @@ export class MemoryFileStorage implements FileStorage {
 
     return {
       cursor: nextCursor,
-      files: files as any,
+      files,
     };
   }
 
