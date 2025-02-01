@@ -79,7 +79,7 @@ export class LocalFileStorage implements FileStorage {
   async list<T extends ListOptions>(options?: T): Promise<ListResult<T>> {
     let { cursor, includeMetadata = false, limit = 32, prefix } = options ?? {};
 
-    let files = [];
+    let files: any[] = [];
     let foundCursor = cursor === undefined;
     let nextCursor: string | undefined;
     let lastHash: string | undefined;
@@ -119,7 +119,7 @@ export class LocalFileStorage implements FileStorage {
 
     return {
       cursor: nextCursor,
-      files: files as any,
+      files,
     };
   }
 
