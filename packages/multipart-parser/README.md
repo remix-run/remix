@@ -30,7 +30,7 @@ deno add @mjackson/multipart-parser
 
 ## Usage
 
-The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It will automatically validate the request is `multipart/form-data`, extract the multipart boundary from the `Content-Type` header, parse all fields and files in the `request.body` stream, and `yield` each one to you as a `MultipartPart` object so you can save it to disk or upload it somewhere.
+The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It will automatically validate the request is `multipart/form-data`, extract the multipart boundary from the `Content-Type` header, parse all fields and files in the `request.body` stream, and give each one to you as a `MultipartPart` object so you can save it to disk or upload it somewhere.
 
 ```ts
 import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-parser';
@@ -38,13 +38,14 @@ import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-
 async function handleRequest(request: Request): void {
   try {
     await parseMultipartRequest(request, (part) => {
-      console.log(part.name);
-      console.log(part.filename);
-
-      if (/^text\//.test(part.mediaType)) {
-        console.log(await part.text());
+      if (part.isFile) {
+        let buffer = await part.bytes(); // Uint8Array
+        console.log(`File received: ${part.filename} (${buffer.length} bytes)`);
+        console.log(`Content type: ${part.mediaType}`);
+        console.log(`Field name: ${part.name}`);
       } else {
-        // TODO: part.body is a ReadableStream<Uint8Array>, stream it to a file
+        let text = await part.text(); // string
+        console.log(`Field received: ${part.name} = ${JSON.stringify(text)}`);
       }
     });
   } catch (error) {
@@ -57,6 +58,39 @@ async function handleRequest(request: Request): void {
 }
 ```
 
+## Limiting File Upload Size
+
+A common use case when handling file uploads is limiting the size of uploaded files to prevent malicious users from sending very large files that may overload your server's memory and/or storage capacity. You can set a file upload size limit using the `maxFileSize` option, and return a 413 "Payload Too Large" response when you receive a request that exceeds the limit.
+
+```ts
+import {
+  MultipartParseError,
+  MaxFileSizeExceededError,
+  parseMultipartRequest,
+} from '@mjackson/multipart-parser/node';
+
+const oneMb = Math.pow(2, 20);
+
+async function handleRequest(request: Request): Promise<Response> {
+  try {
+    await parseMultipartRequest(request, { maxFileSize: 10 * oneMb }, (part) => {
+      // ...
+    });
+  } catch (error) {
+    if (error instanceof MaxFileSizeExceededError) {
+      return new Response('File size limit exceeded', { status: 413 });
+    } else if (error instanceof MultipartParseError) {
+      return new Response('Failed to parse multipart request', { status: 400 });
+    } else {
+      console.error(error);
+      return new Response('Internal Server Error', { status: 500 });
+    }
+  }
+}
+```
+
+## Node.js Support
+
 The main module (`import from "@mjackson/multipart-parser"`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to Node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
 
 If however you're building a server for Node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
@@ -68,10 +102,6 @@ import { MultipartParseError, parseMultipartRequest } from '@mjackson/multipart-
 const server = http.createServer(async (req, res) => {
   try {
     await parseMultipartRequest(req, (part) => {
-      console.log(part.name);
-      console.log(part.filename);
-      console.log(part.mediaType);
-
       // ...
     });
   } catch (error) {
@@ -84,41 +114,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(8080);
-```
-
-## Limiting File Upload Size
-
-A common use case when handling file uploads is limiting the size of uploaded files to prevent malicious users from sending very large files that may overload your server's memory and/or storage capacity. You can set a file upload size limit using the `maxFileSize` option, and return a 413 "Payload Too Large" response when you receive a request that exceeds the limit.
-
-```ts
-import * as http from 'node:http';
-import {
-  MultipartParseError,
-  MaxFileSizeExceededError,
-  parseMultipartRequest,
-} from '@mjackson/multipart-parser/node';
-
-const tenMb = 10 * Math.pow(2, 20);
-
-const server = http.createServer(async (req, res) => {
-  try {
-    await parseMultipartRequest(req, { maxFileSize: tenMb }, (part) => {
-      // ...
-    });
-  } catch (error) {
-    if (error instanceof MaxFileSizeExceededError) {
-      res.writeHead(413);
-      res.end(error.message);
-    } else if (error instanceof MultipartParseError) {
-      res.writeHead(400);
-      res.end('Invalid multipart request');
-    } else {
-      console.error(error);
-      res.writeHead(500);
-      res.end('Internal Server Error');
-    }
-  }
-});
 ```
 
 ## Low-level API
