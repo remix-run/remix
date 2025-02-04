@@ -2,7 +2,7 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.8.2 (2025-02-04)
 
 - Add `Promise<void>` to `MultipartPartHandler` return type
 
