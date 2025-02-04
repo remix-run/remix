@@ -10,9 +10,7 @@ import { createRequestListener } from '@mjackson/node-fetch-server';
 const PORT = 3000;
 const oneMb = 1024 * 1024;
 
-const fileStorage = new LocalFileStorage(
-  await fsp.mkdtemp(path.join(os.tmpdir(), 'form-data-parser-')),
-);
+const fileStorage = new LocalFileStorage(await fsp.mkdtemp(path.join(os.tmpdir(), 'uploads-')));
 
 /** @type (file: File) => Promise<string> */
 async function getDataUrl(file) {
