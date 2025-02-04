@@ -44,15 +44,15 @@ console.log(result.files);
 // ]
 ```
 
-Pagination is done via an opaque `cursor` property in the list result object. If it is not `undefined`, there are more files to list. You can list them by passing the `cursor` back in the `options` object on the next call.
+Pagination is done via an opaque `cursor` property in the list result object. If it is not `undefined`, there are more files to list. You can list them by passing the `cursor` back in the `options` object on the next call. For example, to list all items in storage, you could do something like this:
 
 ```ts
 let result = await storage.list();
-
 console.log(result.files);
 
-if (result.cursor !== undefined) {
-  let result2 = await storage.list({ cursor: result.cursor });
+while (result.cursor !== undefined) {
+  result = await storage.list({ cursor: result.cursor });
+  console.log(result.files);
 }
 ```
 
