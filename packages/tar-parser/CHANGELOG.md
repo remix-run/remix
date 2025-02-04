@@ -2,7 +2,7 @@
 
 This is the changelog for [`tar-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/tar-parser). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.2.2 (2025-02-04)
 
 - Add `Promise<void>` to `TarEntryHandler` return type
 
