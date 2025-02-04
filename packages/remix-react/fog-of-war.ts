@@ -74,7 +74,7 @@ export function getPatchRoutesOnNavigationFunction(
   if (!isFogOfWarEnabled(future, isSpaMode)) {
     return undefined;
   }
-  return async ({ path, patch }) => {
+  return async ({ path, patch, signal }) => {
     if (discoveredPaths.has(path)) {
       return;
     }
@@ -85,7 +85,8 @@ export function getPatchRoutesOnNavigationFunction(
       future,
       isSpaMode,
       basename,
-      patch
+      patch,
+      signal
     );
   };
 }
@@ -207,7 +208,8 @@ export async function fetchAndApplyManifestPatches(
   future: FutureConfig,
   isSpaMode: boolean,
   basename: string | undefined,
-  patchRoutes: Router["patchRoutes"]
+  patchRoutes: Router["patchRoutes"],
+  signal?: AbortSignal
 ): Promise<void> {
   let manifestPath = `${basename ?? "/"}/__manifest`.replace(/\/+/g, "/");
   let url = new URL(manifestPath, window.location.origin);
@@ -222,15 +224,21 @@ export async function fetchAndApplyManifestPatches(
     return;
   }
 
-  let res = await fetch(url);
+  let serverPatches: AssetsManifest["routes"];
+  try {
+    let res = await fetch(url, { signal });
 
-  if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}`);
-  } else if (res.status >= 400) {
-    throw new Error(await res.text());
+    if (!res.ok) {
+      throw new Error(`${res.status} ${res.statusText}`);
+    } else if (res.status >= 400) {
+      throw new Error(await res.text());
+    }
+
+    serverPatches = (await res.json()) as AssetsManifest["routes"];
+  } catch (e) {
+    if (signal?.aborted) return;
+    throw e;
   }
-
-  let serverPatches = (await res.json()) as AssetsManifest["routes"];
 
   // Patch routes we don't know about yet into the manifest
   let knownRoutes = new Set(Object.keys(manifest.routes));
