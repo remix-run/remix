@@ -151,7 +151,7 @@ type TarArchiveSource =
   | Iterable<Uint8Array>
   | AsyncIterable<Uint8Array>;
 
-type TarEntryHandler = (entry: TarEntry) => void;
+type TarEntryHandler = (entry: TarEntry) => void | Promise<void>;
 
 export type ParseTarOptions = ParseTarHeaderOptions;
 

@@ -35,7 +35,7 @@ type MultipartMessageSource =
   | Iterable<Uint8Array>
   | AsyncIterable<Uint8Array>;
 
-export type MultipartPartHandler = (part: MultipartPart) => void;
+export type MultipartPartHandler = (part: MultipartPart) => void | Promise<void>;
 
 export interface ParseMultipartOptions {
   boundary: string;
