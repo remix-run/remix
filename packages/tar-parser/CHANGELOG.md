@@ -2,6 +2,10 @@
 
 This is the changelog for [`tar-parser`](https://github.com/mjackson/remix-the-web/tree/main/packages/tar-parser). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Add `Promise<void>` to `TarEntryHandler` return type
+
 ## v0.2.1 (2025-01-24)
 
 - Add support for environments that do not support `ReadableStream.prototype[Symbol.asyncIterator]` (i.e. Safari), see #46
