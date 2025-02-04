@@ -8,7 +8,7 @@ describe('MemoryFileStorage', () => {
     let storage = new MemoryFileStorage();
     let file = new File(['Hello, world!'], 'hello.txt', { type: 'text/plain' });
 
-    storage.set('hello', file);
+    await storage.set('hello', file);
 
     assert.ok(storage.has('hello'));
 
@@ -33,9 +33,11 @@ describe('MemoryFileStorage', () => {
     let storage = new MemoryFileStorage();
     let allKeys = ['a', 'b', 'c', 'd', 'e'];
 
-    allKeys.forEach((key) => {
-      storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' }));
-    });
+    await Promise.all(
+      allKeys.map((key) =>
+        storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' })),
+      ),
+    );
 
     let { cursor, files } = storage.list();
     assert.equal(cursor, undefined);
@@ -61,9 +63,11 @@ describe('MemoryFileStorage', () => {
     let storage = new MemoryFileStorage();
     let allKeys = ['a', 'b', 'b/c', 'c', 'd'];
 
-    allKeys.forEach((key) => {
-      storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' }));
-    });
+    await Promise.all(
+      allKeys.map((key) =>
+        storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' })),
+      ),
+    );
 
     let { cursor, files } = storage.list({ prefix: 'b' });
 
@@ -77,9 +81,11 @@ describe('MemoryFileStorage', () => {
     let storage = new MemoryFileStorage();
     let allKeys = ['a', 'b', 'c', 'd', 'e'];
 
-    allKeys.forEach((key) => {
-      storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' }));
-    });
+    await Promise.all(
+      allKeys.map((key) =>
+        storage.set(key, new File([`Hello ${key}!`], `hello.txt`, { type: 'text/plain' })),
+      ),
+    );
 
     let { cursor, files } = storage.list({ includeMetadata: true });
 
