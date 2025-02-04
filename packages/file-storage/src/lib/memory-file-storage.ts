@@ -2,6 +2,9 @@ import { type FileStorage, type ListOptions, type ListResult } from './file-stor
 
 /**
  * A simple, in-memory implementation of the `FileStorage` interface.
+ *
+ * Note: Any files you put in storage will have their entire contents buffered in memory, so this is not suitable for large files
+ * in production scenarios.
  */
 export class MemoryFileStorage implements FileStorage {
   #map = new Map<string, File>();
@@ -54,8 +57,8 @@ export class MemoryFileStorage implements FileStorage {
     };
   }
 
-  put(key: string, file: File): File {
-    this.set(key, file);
+  async put(key: string, file: File): Promise<File> {
+    await this.set(key, file);
     return this.get(key)!;
   }
 
@@ -63,7 +66,13 @@ export class MemoryFileStorage implements FileStorage {
     this.#map.delete(key);
   }
 
-  set(key: string, file: File): void {
-    this.#map.set(key, file);
+  async set(key: string, file: File): Promise<void> {
+    let buffer = await file.arrayBuffer();
+    let newFile = new File([buffer], file.name, {
+      lastModified: file.lastModified,
+      type: file.type,
+    });
+
+    this.#map.set(key, newFile);
   }
 }
