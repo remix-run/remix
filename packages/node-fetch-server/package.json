@@ -1,6 +1,6 @@
 {
   "name": "@mjackson/node-fetch-server",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Build servers for Node.js using the web fetch API",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
