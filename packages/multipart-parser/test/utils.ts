@@ -24,10 +24,10 @@ export function createMultipartMessage(
   }
 
   if (parts) {
-    for (let [name, part] of Object.entries(parts)) {
+    for (let [name, value] of Object.entries(parts)) {
       pushLine(`--${boundary}`);
 
-      if (typeof part === 'string') {
+      if (typeof value === 'string') {
         let headers = new SuperHeaders({
           contentDisposition: {
             type: 'form-data',
@@ -37,27 +37,27 @@ export function createMultipartMessage(
 
         pushLine(`${headers}`);
         pushLine();
-        pushLine(part);
+        pushLine(value);
       } else {
         let headers = new SuperHeaders({
           contentDisposition: {
             type: 'form-data',
             name,
-            filename: part.filename,
-            filenameSplat: part.filenameSplat,
+            filename: value.filename,
+            filenameSplat: value.filenameSplat,
           },
         });
 
-        if (part.mediaType) {
-          headers.contentType = part.mediaType;
+        if (value.mediaType) {
+          headers.contentType = value.mediaType;
         }
 
         pushLine(`${headers}`);
         pushLine();
-        if (typeof part.content === 'string') {
-          pushLine(part.content);
+        if (typeof value.content === 'string') {
+          pushLine(value.content);
         } else {
-          chunks.push(part.content);
+          chunks.push(value.content);
           pushLine();
         }
       }
