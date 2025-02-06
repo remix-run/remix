@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { parseFormData } from '@mjackson/form-data-parser';
 
 import { LocalFileStorage } from './local-file-storage.ts';
 
@@ -135,5 +136,42 @@ describe('LocalFileStorage', () => {
     let retrieved2 = await storage.get('two');
     assert.ok(retrieved2);
     assert.equal(await retrieved2.text(), 'Hello, universe!');
+  });
+
+  describe('integration with form-data-parser', () => {
+    it('stores and lists file uploads', async () => {
+      let storage = new LocalFileStorage(directory);
+
+      let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW';
+      let request = new Request('http://example.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="hello"; filename="hello.txt"',
+          'Content-Type: text/plain',
+          '',
+          'Hello, world!',
+          `--${boundary}--`,
+        ].join('\r\n'),
+      });
+
+      await parseFormData(request, async (file) => {
+        await storage.set('hello', file);
+      });
+
+      assert.ok(await storage.has('hello'));
+
+      let { files } = await storage.list({ includeMetadata: true });
+
+      assert.equal(files.length, 1);
+      assert.equal(files[0].key, 'hello');
+      assert.equal(files[0].name, 'hello.txt');
+      assert.equal(files[0].size, 13);
+      assert.equal(files[0].type, 'text/plain');
+      assert.ok(files[0].lastModified);
+    });
   });
 });

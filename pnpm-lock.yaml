@@ -34,6 +34,9 @@ importers:
         specifier: workspace:^
         version: link:../lazy-file
     devDependencies:
+      '@mjackson/form-data-parser':
+        specifier: workspace:^
+        version: link:../form-data-parser
       '@types/node':
         specifier: ^20.14.10
         version: 20.16.1

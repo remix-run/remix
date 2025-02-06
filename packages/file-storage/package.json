@@ -79,6 +79,7 @@
     "@mjackson/lazy-file": "workspace:^"
   },
   "devDependencies": {
+    "@mjackson/form-data-parser": "workspace:^",
     "@types/node": "^20.14.10",
     "tsup": "^8.3.5"
   },

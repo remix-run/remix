@@ -3,12 +3,7 @@ import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import { openFile, writeFile } from '@mjackson/lazy-file/fs';
 
-import {
-  type FileStorage,
-  type FileMetadata,
-  type ListOptions,
-  type ListResult,
-} from './file-storage.ts';
+import type { FileStorage, FileMetadata, ListOptions, ListResult } from './file-storage.ts';
 
 /**
  * A `FileStorage` that is backed by a directory on the local filesystem.
@@ -105,7 +100,8 @@ export class LocalFileStorage implements FileStorage {
           }
 
           if (includeMetadata) {
-            files.push(meta);
+            let size = (await fsp.stat(path.join(this.#dirname, subdir.name, `${hash}.dat`))).size;
+            files.push({ ...meta, size });
           } else {
             files.push({ key: meta.key });
           }
@@ -151,11 +147,10 @@ export class LocalFileStorage implements FileStorage {
 
     await writeFile(filePath, file);
 
-    let meta: FileMetadata = {
+    let meta: Omit<FileMetadata, 'size'> = {
       key,
       lastModified: file.lastModified,
       name: file.name,
-      size: file.size,
       type: file.type,
     };
     await fsp.writeFile(metaPath, JSON.stringify(meta));
