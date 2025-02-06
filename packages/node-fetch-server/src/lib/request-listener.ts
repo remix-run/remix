@@ -172,6 +172,7 @@ export function createHeaders(req: http.IncomingMessage): Headers {
 
   let rawHeaders = req.rawHeaders;
   for (let i = 0; i < rawHeaders.length; i += 2) {
+    if (rawHeaders[i].startsWith(":")) continue;
     headers.append(rawHeaders[i], rawHeaders[i + 1]);
   }
 
