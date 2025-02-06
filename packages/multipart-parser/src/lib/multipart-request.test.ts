@@ -34,7 +34,10 @@ describe('getMultipartBoundary', async () => {
 describe('isMultipartRequest', async () => {
   it('returns true for multipart/form-data requests', async () => {
     let request = new Request('https://example.com', {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
 
     assert.ok(isMultipartRequest(request));
@@ -42,7 +45,10 @@ describe('isMultipartRequest', async () => {
 
   it('returns true for multipart/mixed requests', async () => {
     let request = new Request('https://example.com', {
-      headers: { 'Content-Type': 'multipart/mixed' },
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/mixed',
+      },
     });
 
     assert.ok(isMultipartRequest(request));
@@ -50,7 +56,10 @@ describe('isMultipartRequest', async () => {
 
   it('returns false for other content types', async () => {
     let request = new Request('https://example.com', {
-      headers: { 'Content-Type': 'text/plain' },
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+      },
     });
 
     assert.ok(!isMultipartRequest(request));
@@ -290,14 +299,13 @@ describe('parseMultipartRequest', async () => {
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
-      body: [
-        `--${boundary}`,
-        'Content-Disposition: form-data; name="file1"; filename="random.dat"',
-        'Content-Type: application/octet-stream',
-        '',
-        getRandomBytes(11 * 1024 * 1024), // 11 MB file
-        `--${boundary}--`,
-      ].join(CRLF),
+      body: createMultipartMessage(boundary, {
+        file1: {
+          filename: 'random.dat',
+          mediaType: 'application/octet-stream',
+          content: getRandomBytes(11 * 1024 * 1024), // 11 MB file
+        },
+      }),
     });
 
     await assert.rejects(async () => {
