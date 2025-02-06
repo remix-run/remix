@@ -4,7 +4,7 @@ This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remi
 
 ## v0.6.0 (2025-02-06)
 
-- Add http/2 support with an example
+- Add http/2 support
 
 ```ts
 import * as http2 from 'node:http2';
@@ -19,7 +19,9 @@ server.on(
 
     if (url.pathname === '/') {
       return new Response('Hello HTTP/2!', {
-        headers: { 'content-type': 'text/plain' },
+        headers: {
+          'Content-Type': 'text/plain',
+        },
       });
     }
 
