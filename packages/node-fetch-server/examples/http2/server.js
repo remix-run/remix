@@ -20,7 +20,9 @@ server.on(
 
     if (url.pathname === '/') {
       return new Response('Hello HTTP/2!', {
-        headers: { 'content-type': 'text/plain' },
+        headers: {
+          'Content-Type': 'text/plain',
+        },
       });
     }
 
