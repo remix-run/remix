@@ -2,7 +2,7 @@
 
 This is the changelog for [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
-## HEAD
+## v0.6.1 (2025-02-06)
 
 - Fix regression when using `LocalFileStorage` together with `form-data-parser` (see #53)
 
