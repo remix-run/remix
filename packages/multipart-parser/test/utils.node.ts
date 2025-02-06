@@ -1,7 +1,21 @@
 import type * as http from 'node:http';
 import { Readable } from 'node:stream';
 
-import { type PartValue, createMultipartBody } from './utils.ts';
+import { type PartValue, createMultipartMessage } from './utils.ts';
+
+export function createMultipartRequest(
+  boundary: string,
+  parts?: { [name: string]: PartValue },
+): http.IncomingMessage {
+  let body = createMultipartMessage(boundary, parts);
+
+  let request = createReadable(body) as http.IncomingMessage;
+  request.headers = {
+    'content-type': `multipart/form-data; boundary=${boundary}`,
+  };
+
+  return request;
+}
 
 export function createReadable(content: Uint8Array, chunkSize = 16 * 1024): Readable {
   let i = 0;
@@ -16,18 +30,4 @@ export function createReadable(content: Uint8Array, chunkSize = 16 * 1024): Read
       }
     },
   });
-}
-
-export function createMultipartMockRequest(
-  boundary: string,
-  parts?: { [name: string]: PartValue },
-): http.IncomingMessage {
-  let body = createMultipartBody(boundary, parts);
-
-  let request = createReadable(body) as http.IncomingMessage;
-  request.headers = {
-    'content-type': `multipart/form-data; boundary=${boundary}`,
-  };
-
-  return request;
 }
