@@ -1,4 +1,4 @@
-import { type FileStorage, type ListOptions, type ListResult } from './file-storage.ts';
+import type { FileStorage, ListOptions, ListResult } from './file-storage.ts';
 
 /**
  * A simple, in-memory implementation of the `FileStorage` interface.

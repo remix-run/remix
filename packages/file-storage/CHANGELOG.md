@@ -2,6 +2,10 @@
 
 This is the changelog for [`file-storage`](https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Fix regression when using `LocalFileStorage` together with `form-data-parser` (see #53)
+
 ## v0.6.0 (2025-02-04)
 
 - BREAKING CHANGE: `LocalFileStorage` now uses 2 characters for shard directory names instead of 8.
