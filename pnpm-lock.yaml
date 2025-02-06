@@ -225,6 +225,12 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
 
+  packages/node-fetch-server/examples/http2:
+    dependencies:
+      '@mjackson/node-fetch-server':
+        specifier: workspace:^
+        version: link:../..
+
   packages/tar-parser:
     devDependencies:
       '@mjackson/lazy-file':

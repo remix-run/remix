@@ -4,5 +4,6 @@ packages:
   - packages/multipart-parser/bench
   - packages/multipart-parser/examples/*
   - packages/node-fetch-server/bench
+  - packages/node-fetch-server/examples/*
   - packages/tar-parser/bench
   - scripts

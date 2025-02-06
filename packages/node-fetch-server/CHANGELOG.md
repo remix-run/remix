@@ -2,6 +2,32 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Add http/2 support with an example
+
+```ts
+import * as http2 from 'node:http2';
+import { createRequestListener } from '@mjackson/node-fetch-server';
+
+let server = http2.createSecureServer(options);
+
+server.on(
+  'request',
+  createRequestListener((request) => {
+    let url = new URL(request.url);
+
+    if (url.pathname === '/') {
+      return new Response('Hello HTTP/2!', {
+        headers: { 'content-type': 'text/plain' },
+      });
+    }
+
+    return new Response('Not Found', { status: 404 });
+  }),
+);
+```
+
 ## v0.5.1 (2025-01-25)
 
 - Iterate manually over response bodies in `sendResponse` instead of using `for await...of`. This seems to avoid an issue where the iterator tries to read from a stream after the lock has been released.
