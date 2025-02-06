@@ -2,16 +2,16 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { getRandomBytes } from '../../test/utils.ts';
-import { createMultipartMockRequest } from '../../test/utils.node.ts';
+import { createMultipartRequest } from '../../test/utils.node.ts';
 
 import { type MultipartPart } from './multipart.ts';
 import { parseMultipartRequest } from './multipart.node.ts';
 
 describe('parseMultipartRequest (node)', () => {
-  let boundary = 'boundary123';
+  let boundary = '----WebKitFormBoundaryzv5f5B2cY6tjQ0Rn';
 
   it('parses an empty multipart message', async () => {
-    let request = createMultipartMockRequest(boundary);
+    let request = createMultipartRequest(boundary);
 
     let parts = [];
     await parseMultipartRequest(request, (part) => {
@@ -22,7 +22,7 @@ describe('parseMultipartRequest (node)', () => {
   });
 
   it('parses a simple multipart form', async () => {
-    let request = createMultipartMockRequest(boundary, {
+    let request = createMultipartRequest(boundary, {
       field1: 'value1',
     });
 
@@ -38,7 +38,7 @@ describe('parseMultipartRequest (node)', () => {
 
   it('parses large file uploads correctly', async () => {
     let content = getRandomBytes(1024 * 1024 * 10); // 10 MB file
-    let request = createMultipartMockRequest(boundary, {
+    let request = createMultipartRequest(boundary, {
       file1: {
         filename: 'tesla.jpg',
         mediaType: 'image/jpeg',

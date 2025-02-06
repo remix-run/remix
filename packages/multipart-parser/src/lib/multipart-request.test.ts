@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createMockRequest, createMultipartMockRequest, getRandomBytes } from '../../test/utils.ts';
+import { createMultipartMessage, getRandomBytes } from '../../test/utils.ts';
 
 import {
   MultipartParseError,
@@ -33,7 +33,7 @@ describe('getMultipartBoundary', async () => {
 
 describe('isMultipartRequest', async () => {
   it('returns true for multipart/form-data requests', async () => {
-    let request = createMockRequest({
+    let request = new Request('https://example.com', {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
@@ -41,7 +41,7 @@ describe('isMultipartRequest', async () => {
   });
 
   it('returns true for multipart/mixed requests', async () => {
-    let request = createMockRequest({
+    let request = new Request('https://example.com', {
       headers: { 'Content-Type': 'multipart/mixed' },
     });
 
@@ -49,7 +49,7 @@ describe('isMultipartRequest', async () => {
   });
 
   it('returns false for other content types', async () => {
-    let request = createMockRequest({
+    let request = new Request('https://example.com', {
       headers: { 'Content-Type': 'text/plain' },
     });
 
@@ -58,10 +58,16 @@ describe('isMultipartRequest', async () => {
 });
 
 describe('parseMultipartRequest', async () => {
-  let boundary = 'boundary123';
+  let boundary = '----WebKitFormBoundaryz8Zv2UxQ7f4a0Z3H';
 
   it('parses an empty multipart message', async () => {
-    let request = createMultipartMockRequest(boundary);
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: `--${boundary}--`,
+    });
 
     let parts = [];
     await parseMultipartRequest(request, (part) => {
@@ -72,8 +78,14 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('parses a simple multipart form', async () => {
-    let request = createMultipartMockRequest(boundary, {
-      field1: 'value1',
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        field1: 'value1',
+      }),
     });
 
     let parts: MultipartPart[] = [];
@@ -87,9 +99,15 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('parses multiple parts correctly', async () => {
-    let request = createMultipartMockRequest(boundary, {
-      field1: 'value1',
-      field2: 'value2',
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        field1: 'value1',
+        field2: 'value2',
+      }),
     });
 
     let parts: MultipartPart[] = [];
@@ -105,8 +123,14 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('parses empty parts correctly', async () => {
-    let request = createMultipartMockRequest(boundary, {
-      empty: '',
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        empty: '',
+      }),
     });
 
     let parts: MultipartPart[] = [];
@@ -120,12 +144,18 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('parses file uploads correctly', async () => {
-    let request = createMultipartMockRequest(boundary, {
-      file1: {
-        filename: 'test.txt',
-        mediaType: 'text/plain',
-        content: 'File content',
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
+      body: createMultipartMessage(boundary, {
+        file1: {
+          filename: 'test.txt',
+          mediaType: 'text/plain',
+          content: 'File content',
+        },
+      }),
     });
 
     let parts: MultipartPart[] = [];
@@ -141,14 +171,20 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('parses multiple fields and a file upload', async () => {
-    let request = createMultipartMockRequest(boundary, {
-      field1: 'value1',
-      field2: 'value2',
-      file1: {
-        filename: 'test.txt',
-        mediaType: 'text/plain',
-        content: 'File content',
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
+      body: createMultipartMessage(boundary, {
+        field1: 'value1',
+        field2: 'value2',
+        file1: {
+          filename: 'test.txt',
+          mediaType: 'text/plain',
+          content: 'File content',
+        },
+      }),
     });
 
     let parts: MultipartPart[] = [];
@@ -169,12 +205,18 @@ describe('parseMultipartRequest', async () => {
 
   it('parses large file uploads correctly', async () => {
     let content = getRandomBytes(10 * 1024 * 1024); // 10 MB file
-    let request = createMultipartMockRequest(boundary, {
-      file1: {
-        filename: 'random.dat',
-        mediaType: 'application/octet-stream',
-        content,
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
+      body: createMultipartMessage(boundary, {
+        file1: {
+          filename: 'random.dat',
+          mediaType: 'application/octet-stream',
+          content,
+        },
+      }),
     });
 
     let parts: { name?: string; filename?: string; mediaType?: string; content: Uint8Array }[] = [];
@@ -195,8 +237,11 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('throws when Content-Type is not multipart/form-data', async () => {
-    let request = createMockRequest({
-      headers: { 'Content-Type': 'text/plain' },
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+      },
     });
 
     await assert.rejects(async () => {
@@ -204,9 +249,13 @@ describe('parseMultipartRequest', async () => {
     }, MultipartParseError);
   });
 
-  it('throws when boundary is missing', async () => {
-    let request = createMockRequest({
-      headers: { 'Content-Type': 'multipart/form-data' },
+  it('throws when initial boundary is missing', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      body: 'Content-Disposition: form-data; name="field1"\r\n\r\nvalue1',
     });
 
     await assert.rejects(async () => {
@@ -215,7 +264,8 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('throws when header exceeds maximum size', async () => {
-    let request = createMockRequest({
+    let request = new Request('https://example.com', {
+      method: 'POST',
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -235,12 +285,19 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('throws when a file exceeds maximum size', async () => {
-    let request = createMultipartMockRequest(boundary, {
-      file1: {
-        filename: 'random.dat',
-        mediaType: 'application/octet-stream',
-        content: getRandomBytes(11 * 1024 * 1024), // 11 MB file
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file1"; filename="random.dat"',
+        'Content-Type: application/octet-stream',
+        '',
+        getRandomBytes(11 * 1024 * 1024), // 11 MB file
+        `--${boundary}--`,
+      ].join(CRLF),
     });
 
     await assert.rejects(async () => {
@@ -249,12 +306,18 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('errors the stream when a file exceeds maximum size', async () => {
-    let request = createMultipartMockRequest(boundary, {
-      file1: {
-        filename: 'random.dat',
-        mediaType: 'application/octet-stream',
-        content: getRandomBytes(11 * 1024 * 1024), // 11 MB file
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
+      body: createMultipartMessage(boundary, {
+        file1: {
+          filename: 'random.dat',
+          mediaType: 'application/octet-stream',
+          content: getRandomBytes(11 * 1024 * 1024), // 11 MB file
+        },
+      }),
     });
 
     let parts: MultipartPart[] = [];
@@ -277,7 +340,8 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('parses malformed parts', async () => {
-    let request = createMockRequest({
+    let request = new Request('https://example.com', {
+      method: 'POST',
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -295,7 +359,8 @@ describe('parseMultipartRequest', async () => {
   });
 
   it('throws error when final boundary is missing', async () => {
-    let request = createMockRequest({
+    let request = new Request('https://example.com', {
+      method: 'POST',
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
