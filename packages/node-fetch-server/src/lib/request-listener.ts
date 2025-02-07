@@ -1,6 +1,7 @@
 import type * as http from 'node:http';
+import type * as http2 from 'node:http2';
 
-import { type ClientAddress, type ErrorHandler, type FetchHandler } from './fetch-handler.ts';
+import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts';
 import { readStream } from './read-stream.ts';
 
 export interface RequestListenerOptions {
@@ -30,9 +31,12 @@ export interface RequestListenerOptions {
 }
 
 /**
- * Wraps a fetch handler in a Node.js `http.RequestListener` that can be used with
- * [`http.createServer()`](https://nodejs.org/api/http.html#httpcreateserveroptions-requestlistener) or
- * [`https.createServer()`](https://nodejs.org/api/https.html#httpscreateserveroptions-requestlistener).
+ * Wraps a fetch handler in a Node.js request listener that can be used with:
+ *
+ * - [`http.createServer()`](https://nodejs.org/api/http.html#httpcreateserveroptions-requestlistener)
+ * - [`https.createServer()`](https://nodejs.org/api/https.html#httpscreateserveroptions-requestlistener)
+ * - [`http2.createServer()`](https://nodejs.org/api/http2.html#http2createserveroptions-onrequesthandler)
+ * - [`http2.createSecureServer()`](https://nodejs.org/api/http2.html#http2createsecureserveroptions-onrequesthandler)
  *
  * Example:
  *
@@ -109,9 +113,10 @@ function internalServerError(): Response {
 export type RequestOptions = Omit<RequestListenerOptions, 'onError'>;
 
 /**
- * Creates a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) object from a Node.js
- * [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage) and
- * [`http.ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse) pair.
+ * Creates a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) object from
+ *
+ * - a [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage)/[`http.ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse) pair
+ * - a [`http2.Http2ServerRequest`](https://nodejs.org/api/http2.html#class-http2http2serverrequest)/[`http2.Http2ServerResponse`](https://nodejs.org/api/http2.html#class-http2http2serverresponse) pair
  *
  * @param req The incoming request object.
  * @param res The server response object.
@@ -119,8 +124,8 @@ export type RequestOptions = Omit<RequestListenerOptions, 'onError'>;
  * @returns A request object.
  */
 export function createRequest(
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  res: http.ServerResponse | http2.Http2ServerResponse,
   options?: RequestOptions,
 ): Request {
   let controller = new AbortController();
@@ -161,18 +166,18 @@ export function createRequest(
 }
 
 /**
- * Creates a [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) object from the headers
- * in a Node.js [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage).
+ * Creates a [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) object from the headers in a Node.js
+ * [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage)/[`http2.Http2ServerRequest`](https://nodejs.org/api/http2.html#class-http2http2serverrequest).
  *
  * @param req The incoming request object.
  * @returns A headers object.
  */
-export function createHeaders(req: http.IncomingMessage): Headers {
+export function createHeaders(req: http.IncomingMessage | http2.Http2ServerRequest): Headers {
   let headers = new Headers();
 
   let rawHeaders = req.rawHeaders;
   for (let i = 0; i < rawHeaders.length; i += 2) {
-    if (rawHeaders[i].startsWith(":")) continue;
+    if (rawHeaders[i].startsWith(':')) continue;
     headers.append(rawHeaders[i], rawHeaders[i + 1]);
   }
 
@@ -180,13 +185,17 @@ export function createHeaders(req: http.IncomingMessage): Headers {
 }
 
 /**
- * Sends a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) to the client using the
- * Node.js [`http.ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse) object.
+ * Sends a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) to the client using a Node.js
+ * [`http.ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse)/[`http2.Http2ServerResponse`](https://nodejs.org/api/http2.html#class-http2http2serverresponse)
+ * object.
  *
  * @param res The server response object.
  * @param response The response to send.
  */
-export async function sendResponse(res: http.ServerResponse, response: Response): Promise<void> {
+export async function sendResponse(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  response: Response,
+): Promise<void> {
   // Iterate over response.headers so we are sure to send multiple Set-Cookie headers correctly.
   // These would incorrectly be merged into a single header if we tried to use
   // `Object.fromEntries(response.headers.entries())`.
@@ -207,6 +216,7 @@ export async function sendResponse(res: http.ServerResponse, response: Response)
 
   if (response.body != null && res.req.method !== 'HEAD') {
     for await (let chunk of readStream(response.body)) {
+      // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
       res.write(chunk);
     }
   }
