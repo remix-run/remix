@@ -2,6 +2,10 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/mjackson/remix-the-web/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## HEAD
+
+- Update typings and docs for http2 support
+
 ## v0.6.0 (2025-02-06)
 
 - Add http/2 support
