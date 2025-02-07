@@ -5,6 +5,8 @@ import { openFile, writeFile } from '@mjackson/lazy-file/fs';
 
 import type { FileStorage, FileMetadata, ListOptions, ListResult } from './file-storage.ts';
 
+type MetadataJson = Omit<FileMetadata, 'size'>;
+
 /**
  * A `FileStorage` that is backed by a directory on the local filesystem.
  *
@@ -147,7 +149,7 @@ export class LocalFileStorage implements FileStorage {
 
     await writeFile(filePath, file);
 
-    let meta: Omit<FileMetadata, 'size'> = {
+    let meta: MetadataJson = {
       key,
       lastModified: file.lastModified,
       name: file.name,
@@ -168,7 +170,7 @@ export class LocalFileStorage implements FileStorage {
   }
 }
 
-async function readMetadata(metaPath: string): Promise<FileMetadata> {
+async function readMetadata(metaPath: string): Promise<MetadataJson> {
   return JSON.parse(await fsp.readFile(metaPath, 'utf-8'));
 }
 
