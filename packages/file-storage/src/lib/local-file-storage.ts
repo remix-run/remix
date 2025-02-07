@@ -139,9 +139,6 @@ export class LocalFileStorage implements FileStorage {
   }
 
   async set(key: string, file: File): Promise<void> {
-    // Remove any existing file with the same key.
-    await this.remove(key);
-
     let { directory, filePath, metaPath } = await this.#getPaths(key);
 
     // Ensure directory exists
