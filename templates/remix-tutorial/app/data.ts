@@ -79,6 +79,7 @@ export async function createEmptyContact() {
 }
 
 export async function getContact(id: string) {
+  await new Promise((resolve) => setTimeout(resolve, 500));
   return fakeContacts.get(id);
 }
 
