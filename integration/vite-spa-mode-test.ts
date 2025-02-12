@@ -590,6 +590,73 @@ test.describe("SPA Mode", () => {
       expect(html.match(/window.__remixContext =/g)?.length).toBe(1);
       expect(html.match(/💿 Hey developer 👋/g)?.length).toBe(1);
     });
+
+    test("does not inherit single fetch revalidation behavior", async ({
+      page,
+    }) => {
+      fixture = await createFixture({
+        compiler: "vite",
+        spaMode: true,
+        files: {
+          "vite.config.ts": js`
+            import { defineConfig } from "vite";
+            import { vitePlugin as remix } from "@remix-run/dev";
+
+            export default defineConfig({
+              plugins: [remix({
+                ssr: false,
+                future: {
+                  v3_singleFetch: true,
+                }
+              })],
+            });
+          `,
+          "app/routes/_index.tsx": js`
+            import { Link } from '@remix-run/react';
+            export default function Component() {
+              return <Link to="/parent">Go to parent</Link>;
+            }
+          `,
+          "app/routes/parent.tsx": js`
+            import { Link, Outlet, useLoaderData } from '@remix-run/react';
+            let count = 0;
+            export function clientLoader() {
+              return ++count;
+            }
+            export default function Component() {
+              let data = useLoaderData();
+              return (
+                <>
+                  <h1>Parent: {data}</h1>
+                  <Link to="./child">Go to child</Link>
+                  <pre>{JSON.stringify(window.__remixContext)}</pre>
+                  <Outlet />
+                </>
+              )
+            }
+          `,
+          "app/routes/parent.child.tsx": js`
+            import { Link } from '@remix-run/react';
+            export default function Component() {
+              return <h2>Child</h2>;
+            }
+          `,
+        },
+      });
+      appFixture = await createAppFixture(fixture);
+
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/", true);
+      await page.waitForSelector('a[href="/parent"]');
+      await app.clickLink("/parent");
+      await page.waitForSelector("h1");
+      expect(await page.locator("h1").textContent()).toBe("Parent: 1");
+
+      await app.clickLink("/parent/child");
+      await page.waitForSelector("h2");
+      expect(await page.locator("h1").textContent()).toBe("Parent: 1");
+      expect(await page.locator("h2").textContent()).toBe("Child");
+    });
   });
 
   test.describe("normal apps", () => {
