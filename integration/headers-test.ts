@@ -418,4 +418,54 @@ test.describe("headers export", () => {
       ])
     );
   });
+
+  test("does not duplicate set-cookie headers also returned via headers() function", async () => {
+    let fixture = await createFixture(
+      {
+        files: {
+          "app/root.tsx": js`
+            import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+            export default function Root() {
+              return (
+                <html lang="en">
+                  <head>
+                    <Meta />
+                    <Links />
+                  </head>
+                  <body>
+                    <Outlet />
+                    <Scripts />
+                  </body>
+                </html>
+              );
+            }
+          `,
+
+          "app/routes/_index.tsx": js`
+            export function headers({ loaderHeaders }) {
+              return loaderHeaders;
+            }
+            export function loader() {
+              return new Response(null, {
+                headers: {
+                  "X-Test": "value",
+                  "Set-Cookie": "cookie=yum"
+                }
+              })
+            }
+            export default function Index() {
+              return <div>Heyo!</div>
+            }
+          `,
+        },
+      },
+      ServerMode.Test
+    );
+    let response = await fixture.requestDocument("/");
+    expect([...response.headers.entries()]).toEqual([
+      ["content-type", "text/html"],
+      ["set-cookie", "cookie=yum"],
+      ["x-test", "value"],
+    ]);
+  });
 });
