@@ -14,7 +14,7 @@ tsconfig.tsbuildinfo
 /fixtures/my-remix-app
 /fixtures/deno-app
 /integration/playwright-report
-test-results
+/integration/test-results
 /uploads
 
 .eslintcache

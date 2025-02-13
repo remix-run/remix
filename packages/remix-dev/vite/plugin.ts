@@ -1513,6 +1513,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       },
       async buildEnd() {
         await viteChildCompiler?.close();
+        await routesViteNodeContext?.devServer.close();
       },
     },
     {

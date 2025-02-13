@@ -454,11 +454,17 @@ export async function loader({}: LoaderFunctionArgs) {
 }
 ```
 
-If you were using the second parameter of `json`/`defer` to set a custom status or headers on your response, you can continue doing so via the new `data` API:
+If you were using the second parameter of `json`/`defer` to set a custom status or headers on your response, you can continue doing so via the new `data` API (please note that you will need a `headers` export to apply those headers to Single Fetch data requests):
 
 ```diff
 -import { json } from "@remix-run/node";
 +import { data } from "@remix-run/node";
+
+// This example assumes you already have a headers function to handle header
+// merging for your document requests
+export function headers() {
+  // ...
+}
 
 export async function loader({}: LoaderFunctionArgs) {
   let tasks = await fetchTasks();

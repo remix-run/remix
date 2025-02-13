@@ -53,6 +53,29 @@ Single Fetch requires using [`undici`][undici] as your `fetch` polyfill, or usin
 
 With Single Fetch enabled, there will now only be one request made on client-side navigations even when multiple loaders need to run. To handle merging headers for the handlers called, the [`headers`][headers] export will now also apply to `loader`/`action` data requests. In many cases, the logic you already have in there for document requests should be close to sufficient for your new Single Fetch data requests.
 
+```diff
+-import { json } from "@remix-run/node";
++import { data } from "@remix-run/node";
+
+// This example assumes you already have a headers function to handle header
+// merging for your document requests
+export function headers() {
+  // ...
+}
+
+export async function loader({}: LoaderFunctionArgs) {
+  let tasks = await fetchTasks();
+-  return json(tasks, {
++  return data(tasks, {
+    headers: {
+      "Cache-Control": "public, max-age=604800"
+    }
+  });
+}
+```
+
+⚠️ This is especially important to review for caching behaviors. Prior to Single Fetch, a given loader could choose it's own cache duration and it would apply to the singular HTTP response from that loader. But document requests would call multiple loaders and required an application to implement the `headers` method to intelligently merge headers returned from loaders across multiple routes. With Single fetch, document and data requests now behave the same so your `headers` function needs to return the proper headers/caching behavior for _all_ routes.
+
 **4. Add a `nonce` (if you are using a CSP)**
 
 If you have a [content security policy for scripts][csp] with [nonce-sources][csp-nonce], you will need to add that `nonce` to two places for the streaming Single Fetch implementation:
