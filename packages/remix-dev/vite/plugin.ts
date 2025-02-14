@@ -52,6 +52,7 @@ export async function resolveViteConfig({
   mode?: string;
   root: string;
 }) {
+  await preloadVite();
   let vite = getVite();
 
   let viteConfig = await vite.resolveConfig(
