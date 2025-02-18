@@ -129,7 +129,7 @@
     "unified": "^10.1.2",
     "unist-util-remove": "^3.1.0",
     "unist-util-visit": "^4.1.1",
-    "vite": "5.1.8",
+    "vite": "^6.0.0",
     "vite-tsconfig-paths": "^4.2.2",
     "wait-on": "^7.0.1",
     "wrangler": "^3.72.3"
