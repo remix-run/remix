@@ -1,5 +1,20 @@
 # `@remix-run/dev`
 
+## 2.16.0-pre.0
+
+### Minor Changes
+
+- Add Vite v6 support ([#10351](https://github.com/remix-run/remix/pull/10351))
+
+### Patch Changes
+
+- Clean up vite-node dev server when build finishes ([#10477](https://github.com/remix-run/remix/pull/10477))
+- Updated dependencies:
+  - `@remix-run/react@2.16.0-pre.0`
+  - `@remix-run/node@2.16.0-pre.0`
+  - `@remix-run/serve@2.16.0-pre.0`
+  - `@remix-run/server-runtime@2.16.0-pre.0`
+
 ## 2.15.3
 
 ### Patch Changes

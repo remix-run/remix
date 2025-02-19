@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.16.0-pre.0
+
+### Patch Changes
+
+- Don't apply Single Fetch revalidation de-optimization when in SPA mode since there is no server HTTP request ([#10479](https://github.com/remix-run/remix/pull/10479))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.0-pre.0`
+
 ## 2.15.3
 
 ### Patch Changes
