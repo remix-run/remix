@@ -289,6 +289,7 @@ Date: 2025-01-30
 ### Updated Dependencies
 
 - [`react-router-dom@6.29.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.29.0)
+- [`@remix-run/router@1.22.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#1220)
 
 **Full Changelog**: [`v2.15.2...v2.15.3`](https://github.com/remix-run/remix/compare/remix@2.15.2...remix@2.15.3)
 
