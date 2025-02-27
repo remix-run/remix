@@ -1,5 +1,7 @@
 # `@remix-run/routes-option-adapter`
 
+## 2.16.0-pre.2
+
 ## 2.16.0-pre.1
 
 ## 2.16.0-pre.0
