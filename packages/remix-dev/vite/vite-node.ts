@@ -3,7 +3,7 @@ import { ViteNodeRunner } from "vite-node/client";
 import { installSourcemapsSupport } from "vite-node/source-map";
 import type * as Vite from "vite";
 
-import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
+import { getVite, preloadVite } from "./vite";
 
 export type Context = {
   devServer: Vite.ViteDevServer;
@@ -14,8 +14,8 @@ export type Context = {
 export async function createContext(
   viteConfig: Vite.InlineConfig = {}
 ): Promise<Context> {
-  await preloadViteEsm();
-  let vite = importViteEsmSync();
+  await preloadVite();
+  let vite = getVite();
 
   let devServer = await vite.createServer(
     vite.mergeConfig(
