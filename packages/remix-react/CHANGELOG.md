@@ -1,16 +1,12 @@
 # `@remix-run/react`
 
-## 2.16.0-pre.2
+## 2.16.0
 
 ### Patch Changes
 
-- [REMOVE] Bump router ([#10505](https://github.com/remix-run/remix/pull/10505))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.16.0-pre.2`
+- Don't apply Single Fetch revalidation de-optimization when in SPA mode since there is no server HTTP request ([#10479](https://github.com/remix-run/remix/pull/10479))
 
-## 2.16.0-pre.1
-
-### Patch Changes
+- \[REMOVE] Bump router ([#10505](https://github.com/remix-run/remix/pull/10505))
 
 - When using Lazy Route Disscovery (`future.v3_lazyRouteDiscovery`), Remix will now detect manifest version mismatches after a new deploy and trigger a document reload to sync up any active client sessions with the newly deployed version ([#10498](https://github.com/remix-run/remix/pull/10498))
 
@@ -19,15 +15,7 @@
   - While performing Eager Route Discovery on rendered `<Link>` components, mismatches will result in a no-op
 
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.16.0-pre.1`
-
-## 2.16.0-pre.0
-
-### Patch Changes
-
-- Don't apply Single Fetch revalidation de-optimization when in SPA mode since there is no server HTTP request ([#10479](https://github.com/remix-run/remix/pull/10479))
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.16.0-pre.0`
+  - `@remix-run/server-runtime@2.16.0`
 
 ## 2.15.3
 

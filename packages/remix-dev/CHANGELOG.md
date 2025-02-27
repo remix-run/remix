@@ -1,22 +1,6 @@
 # `@remix-run/dev`
 
-## 2.16.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@2.16.0-pre.2`
-  - `@remix-run/server-runtime@2.16.0-pre.2`
-
-## 2.16.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@2.16.0-pre.1`
-  - `@remix-run/node@2.16.0-pre.1`
-
-## 2.16.0-pre.0
+## 2.16.0
 
 ### Minor Changes
 
@@ -26,10 +10,8 @@
 
 - Clean up vite-node dev server when build finishes ([#10477](https://github.com/remix-run/remix/pull/10477))
 - Updated dependencies:
-  - `@remix-run/react@2.16.0-pre.0`
-  - `@remix-run/node@2.16.0-pre.0`
-  - `@remix-run/serve@2.16.0-pre.0`
-  - `@remix-run/server-runtime@2.16.0-pre.0`
+  - `@remix-run/server-runtime@2.16.0`
+  - `@remix-run/node@2.16.0`
 
 ## 2.15.3
 
