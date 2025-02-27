@@ -6,9 +6,7 @@
 
 - Don't apply Single Fetch revalidation de-optimization when in SPA mode since there is no server HTTP request ([#10479](https://github.com/remix-run/remix/pull/10479))
 
-- \[REMOVE] Bump router ([#10505](https://github.com/remix-run/remix/pull/10505))
-
-- When using Lazy Route Disscovery (`future.v3_lazyRouteDiscovery`), Remix will now detect manifest version mismatches after a new deploy and trigger a document reload to sync up any active client sessions with the newly deployed version ([#10498](https://github.com/remix-run/remix/pull/10498))
+- When using Lazy Route Discovery (`future.v3_lazyRouteDiscovery`), Remix will now detect manifest version mismatches after a new deploy and trigger a document reload to sync up any active client sessions with the newly deployed version ([#10498](https://github.com/remix-run/remix/pull/10498))
 
   - On navigations to undiscovered routes, this mismatch will trigger a document reload of the destination path
   - On `fetcher` calls to undiscovered routes, this mismatch will trigger a document reload of the current path
