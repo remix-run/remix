@@ -36,7 +36,11 @@ module.exports = function rollup() {
         }),
         nodeResolve({ extensions: [".ts"] }),
         copy({
-          targets: [{ src: "LICENSE.md", dest: sourceDir }],
+          targets: [
+            { src: "LICENSE.md", dest: sourceDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
+          ],
         }),
         copyToPlaygrounds(),
       ],
