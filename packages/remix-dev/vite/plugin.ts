@@ -39,7 +39,7 @@ import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
 import { combineURLs } from "./combine-urls";
 import { removeExports } from "./remove-exports";
-import { isInRemixMonorepo } from "./is-in-remix-monorepo";
+import { ssrExternals } from "./ssr-externals";
 import { getVite, preloadVite } from "./vite";
 import * as ViteNode from "./vite-node";
 
@@ -619,27 +619,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
   let viteChildCompiler: Vite.ViteDevServer | null = null;
   let routesViteNodeContext: ViteNode.Context | null = null;
 
-  let ssrExternals = isInRemixMonorepo()
-    ? [
-        // This is only needed within the Remix repo because these
-        // packages are linked to a directory outside of node_modules
-        // so Vite treats them as internal code by default.
-        "@remix-run/architect",
-        "@remix-run/cloudflare-pages",
-        "@remix-run/cloudflare-workers",
-        "@remix-run/cloudflare",
-        "@remix-run/css-bundle",
-        "@remix-run/deno",
-        "@remix-run/dev",
-        "@remix-run/express",
-        "@remix-run/netlify",
-        "@remix-run/node",
-        "@remix-run/react",
-        "@remix-run/serve",
-        "@remix-run/server-runtime",
-      ]
-    : undefined;
-
   // This is initialized by `updateRemixPluginContext` during Vite's `config`
   // hook, so most of the code can assume this defined without null check.
   // During dev, `updateRemixPluginContext` is called again on every config file
@@ -1051,12 +1030,6 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         routesViteNodeContext = await ViteNode.createContext({
           root: viteUserConfig.root,
           mode: viteConfigEnv.mode,
-          server: {
-            watch: viteCommand === "build" ? null : undefined,
-          },
-          ssr: {
-            external: ssrExternals,
-          },
         });
 
         await updateRemixPluginContext();
