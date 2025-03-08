@@ -1,4 +1,5 @@
 import type { IncomingHttpHeaders, ServerResponse } from "node:http";
+import { TLSSocket } from "node:tls";
 import { once } from "node:events";
 import { Readable } from "node:stream";
 import { splitCookiesString } from "set-cookie-parser";
@@ -35,10 +36,14 @@ export function fromNodeRequest(
   nodeReq: Vite.Connect.IncomingMessage,
   nodeRes: ServerResponse<Vite.Connect.IncomingMessage>
 ): Request {
+  const protocol =
+    nodeReq.socket instanceof TLSSocket && nodeReq.socket.encrypted
+      ? "https"
+      : "http";
   let origin =
     nodeReq.headers.origin && "null" !== nodeReq.headers.origin
       ? nodeReq.headers.origin
-      : `http://${nodeReq.headers.host}`;
+      : `${protocol}://${nodeReq.headers.host}`;
   // Use `req.originalUrl` so Remix is aware of the full path
   invariant(
     nodeReq.originalUrl,
