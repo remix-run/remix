@@ -16,14 +16,14 @@
   "scripts": {
     "tsc": "tsc"
   },
-  "devDependencies": {
+  "dependencies": {
     "@remix-run/dev": "workspace:*",
-    "@remix-run/route-config": "workspace:*",
+    "@remix-run/route-config": "workspace:*"
+  },
+  "devDependencies": {
     "typescript": "^5.1.6"
   },
   "peerDependencies": {
-    "@remix-run/dev": "^2.16.0",
-    "@remix-run/route-config": "^2.16.0",
     "typescript": "^5.1.0"
   },
   "peerDependenciesMeta": {

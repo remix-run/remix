@@ -17,6 +17,7 @@
     "tsc": "tsc"
   },
   "dependencies": {
+    "@remix-run/dev": "workspace:*",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
@@ -26,7 +27,6 @@
     "vite": "^6.0.0"
   },
   "peerDependencies": {
-    "@remix-run/dev": "^2.16.0",
     "typescript": "^5.1.0"
   },
   "peerDependenciesMeta": {

@@ -1275,13 +1275,14 @@ importers:
         version: 5.1.6
 
   packages/remix-fs-routes:
-    devDependencies:
+    dependencies:
       '@remix-run/dev':
         specifier: workspace:*
         version: link:../remix-dev
       '@remix-run/route-config':
         specifier: workspace:*
         version: link:../remix-route-config
+    devDependencies:
       typescript:
         specifier: ^5.1.6
         version: 5.1.6
@@ -1368,13 +1369,13 @@ importers:
 
   packages/remix-route-config:
     dependencies:
+      '@remix-run/dev':
+        specifier: workspace:*
+        version: link:../remix-dev
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
     devDependencies:
-      '@remix-run/dev':
-        specifier: workspace:*
-        version: link:../remix-dev
       '@types/lodash':
         specifier: ^4.14.182
         version: 4.14.182
