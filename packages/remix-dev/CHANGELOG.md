@@ -1,5 +1,16 @@
 # `@remix-run/dev`
 
+## 2.16.1-pre.0
+
+### Patch Changes
+
+- Remove unused Vite file system watcher ([#10510](https://github.com/remix-run/remix/pull/10510))
+- Updated dependencies:
+  - `@remix-run/node@2.16.1-pre.0`
+  - `@remix-run/react@2.16.1-pre.0`
+  - `@remix-run/serve@2.16.1-pre.0`
+  - `@remix-run/server-runtime@2.16.1-pre.0`
+
 ## 2.16.0
 
 ### Minor Changes

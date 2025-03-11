@@ -29,5 +29,7 @@
     "@remix-run/server-runtime": "2.16.0",
     "@remix-run/testing": "2.16.0"
   },
-  "changesets": []
+  "changesets": [
+    "metal-candles-complain"
+  ]
 }
