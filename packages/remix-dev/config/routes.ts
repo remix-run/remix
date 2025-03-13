@@ -8,7 +8,7 @@ declare global {
   var __remixAppDirectory: string;
 }
 
-export function setAppDirectory(directory: string) {
+export function setRouteConfigAppDirectory(directory: string) {
   globalThis.__remixAppDirectory = directory;
 }
 
@@ -16,7 +16,7 @@ export function setAppDirectory(directory: string) {
  * Provides the absolute path to the app directory, for use within `routes.ts`.
  * This is designed to support resolving file system routes.
  */
-export function getAppDirectory() {
+export function getRouteConfigAppDirectory() {
   invariant(globalThis.__remixAppDirectory);
   return globalThis.__remixAppDirectory;
 }
