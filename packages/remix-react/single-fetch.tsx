@@ -227,15 +227,19 @@ async function singleFetchLoaderNavigationStrategy(
             return;
           }
 
-          // Otherwise, we opt out if we currently have data, a `loader`, and a
+          // Otherwise, we opt out if we currently have data and a
           // `shouldRevalidate` function.  This implies that the user opted out
           // via `shouldRevalidate`
           if (
             m.route.id in router.state.loaderData &&
-            manifest.routes[m.route.id].hasLoader &&
+            manifest.routes[m.route.id] &&
             routeModules[m.route.id]?.shouldRevalidate
           ) {
-            foundOptOutRoute = true;
+            if (manifest.routes[m.route.id].hasLoader) {
+              // If we have a server loader, make sure we don't include it in the
+              // single fetch .data request
+              foundOptOutRoute = true;
+            }
             return;
           }
         }
