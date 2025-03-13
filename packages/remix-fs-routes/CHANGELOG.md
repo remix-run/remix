@@ -1,5 +1,7 @@
 # `@remix-run/fs-routes`
 
+## 2.16.1-pre.1
+
 ## 2.16.1-pre.0
 
 ### Patch Changes
