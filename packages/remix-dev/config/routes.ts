@@ -3,19 +3,22 @@ import * as v from "valibot";
 
 import invariant from "../invariant";
 
-let routeConfigAppDirectory: string;
+declare global {
+  // eslint-disable-next-line prefer-let/prefer-let
+  var __remixAppDirectory: string;
+}
 
-export function setRouteConfigAppDirectory(directory: string) {
-  routeConfigAppDirectory = directory;
+export function setAppDirectory(directory: string) {
+  globalThis.__remixAppDirectory = directory;
 }
 
 /**
  * Provides the absolute path to the app directory, for use within `routes.ts`.
  * This is designed to support resolving file system routes.
  */
-export function getRouteConfigAppDirectory() {
-  invariant(routeConfigAppDirectory);
-  return routeConfigAppDirectory;
+export function getAppDirectory() {
+  invariant(globalThis.__remixAppDirectory);
+  return globalThis.__remixAppDirectory;
 }
 
 export interface RouteManifestEntry {
