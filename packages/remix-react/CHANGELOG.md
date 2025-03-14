@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 2.16.1-pre.2
+
+### Patch Changes
+
+- Fix Vite import analysis of `@remix-run/react` failing when the package is not marked as external ([#10528](https://github.com/remix-run/remix/pull/10528))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.1-pre.2`
+
 ## 2.16.1-pre.1
 
 ### Patch Changes
