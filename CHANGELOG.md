@@ -261,6 +261,8 @@ Date: 2025-03-12
 ### Patch Changes
 
 - `@remix-run/dev` - Remove unused Vite file system watcher ([#10510](https://github.com/remix-run/remix/pull/10510))
+- `@remix-run/dev` - When `future.v3_routeConfig` is enabled, fix errors evaluating `routes.ts` when multiple copies of `@remix-run/dev` are present ([#10524](https://github.com/remix-run/remix/pull/10524))
+- `@remix-run/dev` - Fix Vite import analysis of `@remix-run/react` failing when the package is not marked as external ([#10528](https://github.com/remix-run/remix/pull/10528))
 
 **Full Changelog**: [`v2.16.0...v2.16.1`](https://github.com/remix-run/remix/compare/remix@2.16.0...remix@2.16.1)
 
