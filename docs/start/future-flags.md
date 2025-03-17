@@ -479,7 +479,7 @@ export async function loader({}: LoaderFunctionArgs) {
 
 👉 **Adjust your server abort delay**
 
-If you were using a custom `ABORT_DELAY` in your `entry.server.tsx` file, you should change that to use thew new `streamTimeout` API leveraged by Single Fetch:
+If you were using a custom `ABORT_DELAY` in your `entry.server.tsx` file, you should change that to use the new `streamTimeout` API leveraged by Single Fetch:
 
 ```diff filename=entry.server.tsx
 -const ABORT_DELAY = 5000;
