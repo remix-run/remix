@@ -1,33 +1,15 @@
 # `@remix-run/dev`
 
-## 2.16.1-pre.2
-
-### Patch Changes
-
-- Fix Vite import analysis of `@remix-run/react` failing when the package is not marked as external ([#10528](https://github.com/remix-run/remix/pull/10528))
-- Updated dependencies:
-  - `@remix-run/node@2.16.1-pre.2`
-  - `@remix-run/server-runtime@2.16.1-pre.2`
-
-## 2.16.1-pre.1
+## 2.16.1
 
 ### Patch Changes
 
 - When `future.v3_routeConfig` is enabled, fix errors evaluating `routes.ts` when multiple copies of `@remix-run/dev` are present ([#10524](https://github.com/remix-run/remix/pull/10524))
-- Updated dependencies:
-  - `@remix-run/node@2.16.1-pre.1`
-  - `@remix-run/server-runtime@2.16.1-pre.1`
-
-## 2.16.1-pre.0
-
-### Patch Changes
-
 - Remove unused Vite file system watcher ([#10510](https://github.com/remix-run/remix/pull/10510))
+- Fix Vite import analysis of `@remix-run/react` failing when the package is not marked as external ([#10528](https://github.com/remix-run/remix/pull/10528))
 - Updated dependencies:
-  - `@remix-run/node@2.16.1-pre.0`
-  - `@remix-run/react@2.16.1-pre.0`
-  - `@remix-run/serve@2.16.1-pre.0`
-  - `@remix-run/server-runtime@2.16.1-pre.0`
+  - `@remix-run/node@2.16.1`
+  - `@remix-run/server-runtime@2.16.1`
 
 ## 2.16.0
 
