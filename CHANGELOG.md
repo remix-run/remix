@@ -258,7 +258,7 @@ Date: YYYY-MM-DD
 
 ## v2.16.2
 
-Date: 2025-03-18
+Date: 2025-03-19
 
 ### Patch Changes
 

@@ -1,10 +1,10 @@
 # `@remix-run/server-runtime`
 
-## 2.16.2-pre.0
+## 2.16.2
 
 ### Patch Changes
 
-- Load ancestor pathless/index routes in lazy route discovery for upwards non-eager-discoery routing ([#10535](https://github.com/remix-run/remix/pull/10535))
+- Load ancestor pathless/index routes in lazy route discovery for upwards non-eager-discovery routing ([#10535](https://github.com/remix-run/remix/pull/10535))
 
 ## 2.16.1
 
