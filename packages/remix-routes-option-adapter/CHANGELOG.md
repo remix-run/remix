@@ -1,12 +1,6 @@
 # `@remix-run/routes-option-adapter`
 
-## 2.16.2-pre.0
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/dev@2.16.2-pre.0`
-  - `@remix-run/route-config@2.16.2-pre.0`
+## 2.16.2
 
 ## 2.16.1
 

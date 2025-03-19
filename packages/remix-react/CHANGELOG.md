@@ -1,12 +1,12 @@
 # `@remix-run/react`
 
-## 2.16.2-pre.0
+## 2.16.2
 
 ### Patch Changes
 
 - Fix `shouldRevalidate` behavior for `clientLoader`-only routes in `ssr:true` apps ([#10527](https://github.com/remix-run/remix/pull/10527))
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.16.2-pre.0`
+  - `@remix-run/server-runtime@2.16.2`
 
 ## 2.16.1
 
