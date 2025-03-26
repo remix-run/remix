@@ -256,6 +256,16 @@ Date: YYYY-MM-DD
 
 -->
 
+## v2.16.3
+
+Date: 2025-03-28
+
+### Patch Changes
+
+- `@remix-run/express` - Better validation of `x-forwarded-host` header to prevent potential security issues ([#10553](https://github.com/remix-run/remix/pull/10553))
+
+**Full Changelog**: [`v2.16.2...v2.16.3`](https://github.com/remix-run/remix/compare/remix@2.16.2...remix@2.16.3)
+
 ## v2.16.2
 
 Date: 2025-03-19
