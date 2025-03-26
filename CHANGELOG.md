@@ -260,6 +260,10 @@ Date: YYYY-MM-DD
 
 Date: 2025-03-28
 
+### Secrity Notice
+
+Fixed a security vulnerability that allowed URL manipulation and potential cache pollution via the 'Host' and 'X-Forwarded-Host' headers due to inadequate port sanitization.
+
 ### Patch Changes
 
 - `@remix-run/express` - Better validation of `x-forwarded-host` header to prevent potential security issues ([#10553](https://github.com/remix-run/remix/pull/10553))
