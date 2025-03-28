@@ -1,12 +1,12 @@
 # `@remix-run/express`
 
-## 2.16.3-pre.0
+## 2.16.3
 
 ### Patch Changes
 
 - Better validation of `x-forwarded-host` header to preent potential security issues. ([#10553](https://github.com/remix-run/remix/pull/10553))
 - Updated dependencies:
-  - `@remix-run/node@2.16.3-pre.0`
+  - `@remix-run/node@2.16.3`
 
 ## 2.16.2
 
