@@ -43,8 +43,14 @@ export type TypedResponse<T = unknown> = Omit<Response, "json"> & {
  *
  * @deprecated This utility is deprecated in favor of opting into Single Fetch
  * via `future.v3_singleFetch` and returning raw objects.  This method will be
- * removed in React Router v7.  If you need to return a JSON Response, you can
- * use `Response.json()`. If you need to add headers or status codes, use `data()`: https://remix.run/docs/en/main/utils/data
+ * removed in React Router v7.
+ * 
+ * If you need to return custom headers or status code, you can use the new `data`
+ * utility, see: (https://remix.run/docs/en/main/utils/data).
+ * 
+ * If you need to return a JSON Response from a resource route, you can use 
+ * `Response.json`, see: https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static
+ * 
  *
  * @see https://remix.run/utils/json
  */
