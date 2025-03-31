@@ -1307,8 +1307,8 @@ importers:
         specifier: ^0.1.2
         version: 0.1.2
       undici:
-        specifier: ^6.11.1
-        version: 6.11.1
+        specifier: ^6.21.2
+        version: 6.21.2
     devDependencies:
       '@types/cookie-signature':
         specifier: ^1.0.3
@@ -14898,9 +14898,9 @@ packages:
     dependencies:
       '@fastify/busboy': 2.1.0
 
-  /undici@6.11.1:
-    resolution: {integrity: sha512-KyhzaLJnV1qa3BSHdj4AZ2ndqI0QWPxYzaIOio0WzcEJB9gvuysprJSLtpvc2D9mhR9jPDUk7xlJlZbH2KR5iw==}
-    engines: {node: '>=18.0'}
+  /undici@6.21.2:
+    resolution: {integrity: sha512-uROZWze0R0itiAKVPsYhFov9LxrPMHLMEQFszeI2gCN6bnIIZ8twzBCJcN2LJrBBLfrP0t1FW0g+JmKVl8Vk1g==}
+    engines: {node: '>=18.17'}
     dev: false
 
   /unenv-nightly@2.0.0-1724863496.70db6f1:
