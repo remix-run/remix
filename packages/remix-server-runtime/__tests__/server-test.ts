@@ -164,11 +164,11 @@ describe("shared server runtime", () => {
           loader() {
             let headers = new Headers({ "x-test": "yes" });
             let headersProxy = new Proxy(headers, {
-              get(target, prop, receiver) {
+              get(target, prop) {
                 if (prop === "set") {
                   throw new TypeError("immutable");
                 }
-                return Reflect.get(target, prop, receiver);
+                return target[prop].bind(target);
               },
             });
             // Mock a "response" that will pass the `isResponse` check
@@ -665,11 +665,11 @@ describe("shared server runtime", () => {
           loader() {
             let headers = new Headers({ "x-test": "yes" });
             let headersProxy = new Proxy(headers, {
-              get(target, prop, receiver) {
+              get(target, prop) {
                 if (prop === "set") {
                   throw new TypeError("immutable");
                 }
-                return Reflect.get(target, prop, receiver);
+                return target[prop].bind(target);
               },
             });
             // Mock a "response" that will pass the `isResponse` check
@@ -707,11 +707,11 @@ describe("shared server runtime", () => {
           loader() {
             let headers = new Headers({ "x-test": "yes" });
             let headersProxy = new Proxy(headers, {
-              get(target, prop, receiver) {
+              get(target, prop) {
                 if (prop === "set") {
                   throw new TypeError("immutable");
                 }
-                return Reflect.get(target, prop, receiver);
+                return target[prop].bind(target);
               },
             });
             // Mock a "response" that will pass the `isResponse` check
