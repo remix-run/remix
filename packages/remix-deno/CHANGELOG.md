@@ -1,11 +1,11 @@
 # `@remix-run/deno`
 
-## 2.16.4-pre.0
+## 2.16.4
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/server-runtime@2.16.4-pre.0`
+  - `@remix-run/server-runtime@2.16.4`
 
 ## 2.16.3
 
