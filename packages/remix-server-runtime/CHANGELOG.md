@@ -1,5 +1,11 @@
 # `@remix-run/server-runtime`
 
+## 2.16.4-pre.0
+
+### Patch Changes
+
+- Bumps `cookie` dependency from `^0.6.0 -> ^0.7.2` to fix [security advisory](https://github.com/advisories/GHSA-pxg6-pf52-xh8x) ([#10547](https://github.com/remix-run/remix/pull/10547))
+
 ## 2.16.3
 
 ## 2.16.2
