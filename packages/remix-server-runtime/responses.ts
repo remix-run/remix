@@ -46,10 +46,10 @@ export type TypedResponse<T = unknown> = Omit<Response, "json"> & {
  * removed in React Router v7.
  * 
  * If you need to return custom headers or status code, you can use the new `data`
- * utility, see: (https://remix.run/docs/en/main/utils/data).
+ * utility (https://remix.run/docs/en/main/utils/data).
  * 
  * If you need to return a JSON Response from a resource route, you can use 
- * `Response.json`, see: https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static
+ * `Response.json` (https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static).
  * 
  *
  * @see https://remix.run/utils/json
