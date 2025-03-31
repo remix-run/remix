@@ -50,7 +50,6 @@ export type TypedResponse<T = unknown> = Omit<Response, "json"> & {
  * 
  * If you need to return a JSON Response from a resource route, you can use 
  * `Response.json` (https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static).
- * 
  *
  * @see https://remix.run/utils/json
  */
