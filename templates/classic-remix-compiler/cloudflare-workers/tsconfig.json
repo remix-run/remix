@@ -1,7 +1,13 @@
 {
-  "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": [
+    "worker-configuration.d.ts",
+    "remix.env.d.ts",
+    "**/*.ts",
+    "**/*.tsx"
+  ],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "types": ["@remix-run/cloudflare", "@cloudflare/workers-types"],
     "isolatedModules": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
