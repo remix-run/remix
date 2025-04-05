@@ -36,8 +36,8 @@ export type Jsonify<T> =
 
   // tuple & array
   T extends [] ? [] :
-  T extends readonly [infer F, ...infer R] ? [NeverToNull<Jsonify<F>>, ...Jsonify<R>] :
-  T extends readonly unknown[] ? Array<NeverToNull<Jsonify<T[number]>>>:
+  T extends readonly [infer F, ...infer R] ? [NeverToNull<Jsonify<UndefinedToNull<F>>>, ...Jsonify<R>] :
+  T extends readonly unknown[] ? Array<NeverToNull<UndefinedToNull<Jsonify<UndefinedToNull<T[number]>>>>>:
 
   // object
   T extends Record<keyof unknown, unknown> ? JsonifyObject<T> :
@@ -158,7 +158,7 @@ type _tests = [
   // tuple & array
   Expect<Equal<Jsonify<[]>, []>>,
   Expect<Equal<Jsonify<[1, 'two', Date, undefined, false]>, [1, 'two', string, null, false]>>,
-  Expect<Equal<Jsonify<(string | number | undefined)[]>, (string | number)[]>>,
+  Expect<Equal<Jsonify<(string | number | undefined)[]>, (string | number | null)[]>>,
   Expect<Equal<Jsonify<undefined[]>, null[]>>,
   Expect<Equal<Jsonify<readonly [1,2,3]>, [1,2,3]>>,
 
@@ -259,3 +259,5 @@ export type EmptyObject = { [emptyObjectSymbol]?: never };
 
 // adapted from https://github.com/type-challenges/type-challenges/blob/main/utils/index.d.ts
 type IsAny<T> = 0 extends 1 & T ? true : false;
+
+type UndefinedToNull<T> = T extends undefined ? null : T;
