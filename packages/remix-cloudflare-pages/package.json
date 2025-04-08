@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/cloudflare-pages",
-  "version": "2.16.4",
+  "version": "0.0.0-nightly-070ab7676-20250408",
   "description": "Cloudflare Pages request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -18,7 +18,7 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "@remix-run/cloudflare": "workspace:*"
+    "@remix-run/cloudflare": "0.0.0-nightly-070ab7676-20250408"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230518.0",
