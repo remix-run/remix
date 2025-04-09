@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@types/cookie-signature": "^1.0.3",
+    "@types/node": "^18.19.86",
     "@types/source-map-support": "^0.5.4",
     "typescript": "^5.1.6"
   },

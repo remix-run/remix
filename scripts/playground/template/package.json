@@ -36,7 +36,7 @@
     "@faker-js/faker": "^6.3.1",
     "@remix-run/dev": "*",
     "@types/bcryptjs": "^2.4.2",
-    "@types/node": "^18.17.1",
+    "@types/node": "^18.19.86",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "autoprefixer": "^10.4.8",

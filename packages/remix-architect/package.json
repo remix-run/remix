@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@types/lambda-tester": "^3.6.1",
-    "@types/node": "^18.17.1",
+    "@types/node": "^18.19.86",
     "lambda-tester": "^4.0.1",
     "typescript": "^5.1.0"
   },

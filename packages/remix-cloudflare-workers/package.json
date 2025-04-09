@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230518.0",
-    "@types/node": "^18.17.1",
+    "@types/node": "^18.19.86",
     "typescript": "^5.1.6"
   },
   "peerDependencies": {
