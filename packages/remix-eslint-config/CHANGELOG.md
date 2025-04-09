@@ -1,6 +1,6 @@
 # `@remix-run/eslint-config`
 
-## 2.16.5-pre.0
+## 2.16.5
 
 ## 2.16.4
 
