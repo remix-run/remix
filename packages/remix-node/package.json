@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/node",
-  "version": "2.16.4",
+  "version": "2.16.5",
   "description": "Node.js platform abstractions for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -26,7 +26,7 @@
     "cookie-signature": "^1.1.0",
     "source-map-support": "^0.5.21",
     "stream-slice": "^0.1.2",
-    "undici": "^6.11.1"
+    "undici": "^6.21.2"
   },
   "devDependencies": {
     "@types/cookie-signature": "^1.0.3",
