@@ -1,7 +1,6 @@
 import { promises as fsp } from "node:fs";
 import * as path from "node:path";
 import type * as esbuild from "esbuild";
-import { remarkMdxFrontmatter } from "remark-mdx-frontmatter";
 
 import { getLoaderForFile } from "../utils/loaders";
 import { createMatchPath } from "../utils/tsconfig";
@@ -70,6 +69,7 @@ export async function processMDX(
 ) {
   try {
     let fileContents = await fsp.readFile(absolutePath, "utf-8");
+    let remarkMdxFrontmatter = (await import("remark-mdx-frontmatter")).default;
 
     let rehypePlugins = [];
     let remarkPlugins: any[] = [
