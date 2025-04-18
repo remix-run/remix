@@ -69,7 +69,7 @@
     "pretty-ms": "^7.0.1",
     "react-refresh": "^0.14.0",
     "remark-frontmatter": "4.0.1",
-    "remark-mdx-frontmatter": "^1.0.1",
+    "remark-mdx-frontmatter": "^5.1.0",
     "semver": "^7.3.7",
     "set-cookie-parser": "^2.6.0",
     "tar-fs": "^2.1.1",
