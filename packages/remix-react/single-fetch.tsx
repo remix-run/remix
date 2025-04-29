@@ -381,7 +381,14 @@ function stripIndexParam(url: URL) {
 export function singleFetchUrl(reqUrl: URL | string) {
   let url =
     typeof reqUrl === "string"
-      ? new URL(reqUrl, window.location.origin)
+      ? new URL(
+          reqUrl,
+          // This can be called during the SSR flow via PrefetchPageLinksImpl so
+          // don't assume window is available
+          typeof window === "undefined"
+            ? "server://singlefetch/"
+            : window.location.origin
+        )
       : reqUrl;
 
   if (url.pathname === "/") {
