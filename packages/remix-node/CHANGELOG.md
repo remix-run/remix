@@ -1,5 +1,69 @@
 # `@remix-run/node`
 
+## 2.16.5
+
+### Patch Changes
+
+- Bump `undici` to version `6.21.2` to address [security advisory](https://github.com/nodejs/undici/security/advisories/GHSA-c76h-2ccp-4975) ([#10562](https://github.com/remix-run/remix/pull/10562))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.5`
+
+## 2.16.4
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.4`
+
+## 2.16.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.3`
+
+## 2.16.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.2`
+
+## 2.16.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.1`
+
+## 2.16.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.0`
+
+## 2.15.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.3`
+
+## 2.15.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.2`
+
+## 2.15.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.1`
+
 ## 2.15.0
 
 ### Patch Changes

@@ -74,18 +74,20 @@ export function getPatchRoutesOnNavigationFunction(
   if (!isFogOfWarEnabled(future, isSpaMode)) {
     return undefined;
   }
-  return async ({ path, patch }) => {
+  return async ({ path, patch, signal, fetcherKey }) => {
     if (discoveredPaths.has(path)) {
       return;
     }
     await fetchAndApplyManifestPatches(
       [path],
+      fetcherKey ? window.location.href : path,
       manifest,
       routeModules,
       future,
       isSpaMode,
       basename,
-      patch
+      patch,
+      signal
     );
   };
 }
@@ -138,6 +140,7 @@ export function useFogOFWarDiscovery(
       try {
         await fetchAndApplyManifestPatches(
           lazyPaths,
+          null,
           manifest,
           routeModules,
           future,
@@ -200,14 +203,18 @@ export function useFogOFWarDiscovery(
   }, [future, isSpaMode, manifest, routeModules, router]);
 }
 
+const MANIFEST_VERSION_STORAGE_KEY = "remix-manifest-version";
+
 export async function fetchAndApplyManifestPatches(
   paths: string[],
+  errorReloadPath: string | null,
   manifest: AssetsManifest,
   routeModules: RouteModules,
   future: FutureConfig,
   isSpaMode: boolean,
   basename: string | undefined,
-  patchRoutes: Router["patchRoutes"]
+  patchRoutes: Router["patchRoutes"],
+  signal?: AbortSignal
 ): Promise<void> {
   let manifestPath = `${basename ?? "/"}/__manifest`.replace(/\/+/g, "/");
   let url = new URL(manifestPath, window.location.origin);
@@ -222,15 +229,59 @@ export async function fetchAndApplyManifestPatches(
     return;
   }
 
-  let res = await fetch(url);
+  let serverPatches: AssetsManifest["routes"];
+  try {
+    let res = await fetch(url, { signal });
 
-  if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}`);
-  } else if (res.status >= 400) {
-    throw new Error(await res.text());
+    if (!res.ok) {
+      throw new Error(`${res.status} ${res.statusText}`);
+    } else if (
+      res.status === 204 &&
+      res.headers.has("X-Remix-Reload-Document")
+    ) {
+      if (!errorReloadPath) {
+        // No-op during eager route discovery so we will trigger a hard reload
+        // of the destination during the next navigation instead of reloading
+        // while the user is sitting on the current page.  Slightly more
+        // disruptive on fetcher calls because we reload the current page, but
+        // it's better than the `React.useContext` error that occurs without
+        // this detection.
+        console.warn(
+          "Detected a manifest version mismatch during eager route discovery. " +
+            "The next navigation/fetch to an undiscovered route will result in " +
+            "a new document navigation to sync up with the latest manifest."
+        );
+        return;
+      }
+
+      // This will hard reload the destination path on navigations, or the
+      // current path on fetcher calls
+      if (
+        sessionStorage.getItem(MANIFEST_VERSION_STORAGE_KEY) ===
+        manifest.version
+      ) {
+        // We've already tried fixing for this version, don' try again to
+        // avoid loops - just let this navigation/fetch 404
+        console.error(
+          "Unable to discover routes due to manifest version mismatch."
+        );
+        return;
+      }
+
+      sessionStorage.setItem(MANIFEST_VERSION_STORAGE_KEY, manifest.version);
+      window.location.href = errorReloadPath;
+      throw new Error("Detected manifest version mismatch, reloading...");
+    } else if (res.status >= 400) {
+      throw new Error(await res.text());
+    }
+
+    // Reset loop-detection on a successful response
+    sessionStorage.removeItem(MANIFEST_VERSION_STORAGE_KEY);
+    serverPatches = (await res.json()) as AssetsManifest["routes"];
+  } catch (e) {
+    if (signal?.aborted) return;
+    throw e;
   }
-
-  let serverPatches = (await res.json()) as AssetsManifest["routes"];
 
   // Patch routes we don't know about yet into the manifest
   let knownRoutes = new Set(Object.keys(manifest.routes));

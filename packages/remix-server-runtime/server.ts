@@ -54,6 +54,17 @@ export type CreateRequestHandlerFunction = (
   mode?: string
 ) => RequestHandler;
 
+// Do not include a response body if the status code is one of these,
+// otherwise `undici` will throw an error when constructing the Response:
+//   https://github.com/nodejs/undici/blob/bd98a6303e45d5e0d44192a93731b1defdb415f3/lib/web/fetch/response.js#L522-L528
+//
+// Specs:
+//   https://datatracker.ietf.org/doc/html/rfc9110#name-informational-1xx
+//   https://datatracker.ietf.org/doc/html/rfc9110#name-204-no-content
+//   https://datatracker.ietf.org/doc/html/rfc9110#name-205-reset-content
+//   https://datatracker.ietf.org/doc/html/rfc9110#name-304-not-modified
+const NO_BODY_STATUS_CODES = new Set([100, 101, 204, 205, 304]);
+
 function derive(build: ServerBuild, mode?: string) {
   let routes = createRoutes(build.routes);
   let dataRoutes = createStaticHandlerDataRoutes(build.routes, build.future);
@@ -287,10 +298,40 @@ async function handleManifestRequest(
   routes: ServerRoute[],
   url: URL
 ) {
+  if (build.assets.version !== url.searchParams.get("version")) {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "X-Remix-Reload-Document": "true",
+      },
+    });
+  }
+
   let patches: Record<string, EntryRoute> = {};
 
   if (url.searchParams.has("p")) {
-    for (let path of url.searchParams.getAll("p")) {
+    let paths = new Set<string>();
+
+    // In addition to responding with the patches for the requested paths, we
+    // need to include patches for each partial path so that we pick up any
+    // pathless/index routes below ancestor segments.  So if we
+    // get a request for `/parent/child`, we need to look for a match on `/parent`
+    // so that if a `parent._index` route exists we return it so it's available
+    // for client side matching if the user routes back up to `/parent`.
+    // This is the same thing we do on initial load in <Scripts> via
+    // `getPartialManifest()`
+    url.searchParams.getAll("p").forEach((path) => {
+      if (!path.startsWith("/")) {
+        path = `/${path}`;
+      }
+      let segments = path.split("/").slice(1);
+      segments.forEach((_, i) => {
+        let partialPath = segments.slice(0, i + 1).join("/");
+        paths.add(`/${partialPath}`);
+      });
+    });
+
+    for (let path of paths) {
       let matches = matchServerRoutes(routes, path, build.basename);
       if (matches) {
         for (let match of matches) {
@@ -410,9 +451,9 @@ async function handleSingleFetchRequest(
   let resultHeaders = new Headers(headers);
   resultHeaders.set("X-Remix-Response", "yes");
 
-  // 304 responses should not have a body
-  if (status === 304) {
-    return new Response(null, { status: 304, headers: resultHeaders });
+  // Skip response body for unsupported status codes
+  if (NO_BODY_STATUS_CODES.has(status)) {
+    return new Response(null, { status, headers: resultHeaders });
   }
 
   // We use a less-descriptive `text/x-script` here instead of something like
@@ -462,9 +503,9 @@ async function handleDocumentRequest(
 
   let headers = getDocumentHeaders(build, context);
 
-  // 304 responses should not have a body or a content-type
-  if (context.statusCode === 304) {
-    return new Response(null, { status: 304, headers });
+  // Skip response body for unsupported status codes
+  if (NO_BODY_STATUS_CODES.has(context.statusCode)) {
+    return new Response(null, { status: context.statusCode, headers });
   }
 
   // Sanitize errors outside of development environments

@@ -454,11 +454,17 @@ export async function loader({}: LoaderFunctionArgs) {
 }
 ```
 
-If you were using the second parameter of `json`/`defer` to set a custom status or headers on your response, you can continue doing so via the new `data` API:
+If you were using the second parameter of `json`/`defer` to set a custom status or headers on your response, you can continue doing so via the new `data` API (please note that you will need a `headers` export to apply those headers to Single Fetch data requests):
 
 ```diff
 -import { json } from "@remix-run/node";
 +import { data } from "@remix-run/node";
+
+// This example assumes you already have a headers function to handle header
+// merging for your document requests
+export function headers() {
+  // ...
+}
 
 export async function loader({}: LoaderFunctionArgs) {
   let tasks = await fetchTasks();
@@ -473,7 +479,7 @@ export async function loader({}: LoaderFunctionArgs) {
 
 👉 **Adjust your server abort delay**
 
-If you were using a custom `ABORT_DELAY` in your `entry.server.tsx` file, you should change that to use thew new `streamTimeout` API leveraged by Single Fetch:
+If you were using a custom `ABORT_DELAY` in your `entry.server.tsx` file, you should change that to use the new `streamTimeout` API leveraged by Single Fetch:
 
 ```diff filename=entry.server.tsx
 -const ABORT_DELAY = 5000;
@@ -697,6 +703,19 @@ type SerializeFrom<T> = ReturnType<typeof useLoaderData<T>>;
 
 In most cases, you should be able to just remove `SerializeFrom` and use the types returned from `useLoaderData`/`useActionData`, or the types of the data in `loader`/`action` functions.
 
+### Multipart Form Data and File Upload utilities
+
+The following utilities are deprecated and will be removed in React Router v7:
+
+- `unstable_parseMultipartFormData`
+- `unstable_composeUploadHandlers`
+- `unstable_createFileUploadHandler`
+- `unstable_createMemoryUploadHandler`
+
+We recommend using [`@mjackson/form-data-parser`][form-data-parser] and [`@mjackson/file-storage`][file-storage] to handle multipart form data and file uploads.
+
+You can also checkout the [React Router "File Uploads" doc][react-router-file-uploads] or ["File uploads with Remix"][file-uploads-with-remix] blog post for guides on using these libraries.
+
 [development-strategy]: ../guides/api-development-strategy
 [fetcherpersist-rfc]: https://github.com/remix-run/remix/discussions/7698
 [relativesplatpath-changelog]: https://github.com/remix-run/remix/blob/main/CHANGELOG.md#futurev3_relativesplatpath
@@ -724,3 +743,7 @@ In most cases, you should be able to just remove `SerializeFrom` and use the typ
 [data-api]: ../utils/data
 [response-json]: https://developer.mozilla.org/en-US/docs/Web/API/Response/json
 [remix-template-eslint-config]: https://github.com/remix-run/remix/blob/main/templates/remix/.eslintrc.cjs
+[form-data-parser]: https://github.com/mjackson/remix-the-web/tree/main/packages/form-data-parser
+[file-storage]: https://github.com/mjackson/remix-the-web/tree/main/packages/file-storage
+[file-uploads-with-remix]: https://programmingarehard.com/2024/09/06/remix-file-uploads-updated.html/
+[react-router-file-uploads]: https://reactrouter.com/how-to/file-uploads

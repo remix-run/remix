@@ -1,5 +1,86 @@
 # `@remix-run/dev`
 
+## 2.16.5
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.16.5`
+  - `@remix-run/server-runtime@2.16.5`
+
+## 2.16.4
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.4`
+  - `@remix-run/node@2.16.4`
+
+## 2.16.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.16.3`
+  - `@remix-run/server-runtime@2.16.3`
+
+## 2.16.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.2`
+  - `@remix-run/node@2.16.2`
+
+## 2.16.1
+
+### Patch Changes
+
+- When `future.v3_routeConfig` is enabled, fix errors evaluating `routes.ts` when multiple copies of `@remix-run/dev` are present ([#10524](https://github.com/remix-run/remix/pull/10524))
+- Remove unused Vite file system watcher ([#10510](https://github.com/remix-run/remix/pull/10510))
+- Fix Vite import analysis of `@remix-run/react` failing when the package is not marked as external ([#10528](https://github.com/remix-run/remix/pull/10528))
+- Updated dependencies:
+  - `@remix-run/node@2.16.1`
+  - `@remix-run/server-runtime@2.16.1`
+
+## 2.16.0
+
+### Minor Changes
+
+- Add Vite v6 support ([#10351](https://github.com/remix-run/remix/pull/10351))
+
+### Patch Changes
+
+- Clean up vite-node dev server when build finishes ([#10477](https://github.com/remix-run/remix/pull/10477))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.0`
+  - `@remix-run/node@2.16.0`
+
+## 2.15.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.3`
+  - `@remix-run/node@2.15.3`
+
+## 2.15.2
+
+### Patch Changes
+
+- Allow suppression of future flag warnings by setting them to `false` ([#10358](https://github.com/remix-run/remix/pull/10358))
+- Updated dependencies:
+  - `@remix-run/node@2.15.2`
+  - `@remix-run/server-runtime@2.15.2`
+
+## 2.15.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@2.15.1`
+  - `@remix-run/server-runtime@2.15.1`
+
 ## 2.15.0
 
 ### Patch Changes

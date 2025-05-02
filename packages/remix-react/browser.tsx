@@ -79,10 +79,23 @@ let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
   return undefined;
 });
 
-// @ts-expect-error
-if (import.meta && import.meta.hot) {
+if (
+  import.meta &&
   // @ts-expect-error
-  import.meta.hot.accept(
+  import.meta.hot &&
+  // This HMR code is only valid in the classic compiler
+  // @ts-expect-error
+  import.meta.hot.__remixCompiler
+) {
+  // NOTE: The use of ["accept"] here is a minimal workaround to prevent Vite
+  // from attempting to resolve the "remix:manifest" module ID (and failing)
+  // during its import analysis phase. This happens if this package is not
+  // marked as external, e.g. when running the code in a non-Node environment
+  // like workerd. Even with the runtime check above, Vite will still attempt to
+  // resolve the "remix:manifest" module ID if it's used in a call to
+  // `import.meta.hot.accept`.
+  // @ts-expect-error
+  import.meta.hot["accept"](
     "remix:manifest",
     async ({
       assetsManifest,
@@ -303,13 +316,15 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       },
       hydrationData,
       mapRouteProperties,
-      dataStrategy: window.__remixContext.future.v3_singleFetch
-        ? getSingleFetchDataStrategy(
-            window.__remixManifest,
-            window.__remixRouteModules,
-            () => router
-          )
-        : undefined,
+      dataStrategy:
+        window.__remixContext.future.v3_singleFetch &&
+        !window.__remixContext.isSpaMode
+          ? getSingleFetchDataStrategy(
+              window.__remixManifest,
+              window.__remixRouteModules,
+              () => router
+            )
+          : undefined,
       patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(
         window.__remixManifest,
         window.__remixRouteModules,

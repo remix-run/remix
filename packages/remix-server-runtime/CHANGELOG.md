@@ -1,6 +1,57 @@
 # `@remix-run/server-runtime`
 
+## 2.16.5
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.5.
+
+## 2.16.4
+
+### Patch Changes
+
+- Bumps `cookie` dependency from `^0.6.0 -> ^0.7.2` to fix [security advisory](https://github.com/advisories/GHSA-pxg6-pf52-xh8x) ([#10547](https://github.com/remix-run/remix/pull/10547))
+
+## 2.16.3
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.3.
+
+## 2.16.2
+
+### Patch Changes
+
+- Load ancestor pathless/index routes in lazy route discovery for upwards non-eager-discovery routing ([#10535](https://github.com/remix-run/remix/pull/10535))
+
+## 2.16.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.1.
+
+## 2.16.0
+
+### Patch Changes
+
+- When using Lazy Route Discovery (`future.v3_lazyRouteDiscovery`), Remix will now detect manifest version mismatches after a new deploy and trigger a document reload to sync up any active client sessions with the newly deployed version ([#10498](https://github.com/remix-run/remix/pull/10498))
+
+  - On navigations to undiscovered routes, this mismatch will trigger a document reload of the destination path
+  - On `fetcher` calls to undiscovered routes, this mismatch will trigger a document reload of the current path
+  - While performing Eager Route Discovery on rendered `<Link>` components, mismatches will result in a no-op
+
+## 2.15.3
+
+### Patch Changes
+
+- Avoid duplication of `Set-Cookie` headers could be duplicated if also returned from `headers` ([#10424](https://github.com/remix-run/remix/pull/10424))
+- Properly handle status codes that cannot have a body in single fetch responses (204, etc.) ([#10410](https://github.com/remix-run/remix/pull/10410))
+
+## 2.15.2
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.15.2.
+
+## 2.15.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.15.1.
+
 ## 2.15.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.15.0.
 
 ## 2.14.0
 

@@ -5,6 +5,8 @@ order: 2
 
 # Remix Tutorial
 
+<docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you can follow the same [tutorial from the React Router docs][react-router-tutorial].</docs-warning>
+
 We'll be building a small, but feature-rich app that lets you keep track of your contacts. There's no database or other "production ready" things, so we can stay focused on Remix. We expect it to take about 30m if you're following along, otherwise it's a quick read.
 
 <img class="tutorial" src="/docs-images/contacts/01.webp" />
@@ -1639,3 +1641,5 @@ That's it! Thanks for giving Remix a shot. We hope this tutorial gives you a sol
 [quickstart]: ./quickstart
 [http-localhost-5173]: http://localhost:5173
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/fetch
+[remix-now-react-router]: https://remix.run/blog/incremental-path-to-react-19
+[react-router-tutorial]: https://reactrouter.com/tutorials/address-book

@@ -1931,6 +1931,72 @@ test.describe("single-fetch", () => {
     ]);
   });
 
+  test("does not try to encode a turbo-stream body into 204 responses", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          v3_singleFetch: true,
+        },
+      },
+      files: {
+        ...files,
+        "app/routes/_index.tsx": js`
+          import { data, Form, useActionData, useNavigation } from "@remix-run/react";
+          export async function action({ request }) {
+            await new Promise(r => setTimeout(r, 500));
+            return data(null, { status: 204 });
+          };
+          export default function Index() {
+            const navigation = useNavigation();
+            const actionData = useActionData();
+            return (
+              <Form method="post">
+                {navigation.state === "idle" ? <p data-idle>idle</p> : <p data-active>active</p>}
+                <button data-submit type="submit">{actionData ?? 'no content!'}</button>
+              </Form>
+            );
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+
+    let app = new PlaywrightFixture(appFixture, page);
+
+    let requests: [string, number, string][] = [];
+    page.on("request", async (req) => {
+      if (req.url().includes(".data")) {
+        let url = new URL(req.url());
+        requests.push([
+          req.method(),
+          (await req.response())!.status(),
+          url.pathname + url.search,
+        ]);
+      }
+    });
+
+    // Document requests
+    let documentRes = await fixture.requestDocument("/?index", {
+      method: "post",
+    });
+    expect(documentRes.status).toBe(204);
+    expect(await documentRes.text()).toBe("");
+
+    // Data requests
+    await app.goto("/", true);
+    (await page.$("[data-submit]"))?.click();
+    await page.waitForSelector("[data-active]");
+    await page.waitForSelector("[data-idle]");
+
+    expect(await page.innerText("[data-submit]")).toEqual("no content!");
+    expect(requests).toEqual([
+      ["POST", 204, "/_root.data?index"],
+      ["GET", 200, "/_root.data"],
+    ]);
+  });
+
   test("does not try to encode a turbo-stream body into 304 responses", async () => {
     let fixture = await createFixture({
       config: {
@@ -2359,6 +2425,102 @@ test.describe("single-fetch", () => {
       expect(
         urls[0].endsWith("/parent/a.data?_routes=root%2Croutes%2Fparent.a")
       ).toBe(true);
+    });
+
+    test("allows reused routes to opt out via shouldRevalidate (w/only clientLoader)", async ({
+      page,
+    }) => {
+      let fixture = await createFixture({
+        config: {
+          future: {
+            v3_singleFetch: true,
+          },
+        },
+        files: {
+          ...files,
+          "app/routes/_index.tsx": js`
+            import { Link } from "@remix-run/react";
+            export default function Component() {
+              return <Link to="/parent/a">Go to /parent/a</Link>;
+            }
+          `,
+          "app/routes/parent.tsx": js`
+            import { Link, Outlet, useLoaderData } from "@remix-run/react";
+            let count = 0;
+            export function clientLoader({ request }) {
+              return { count: ++count };
+            }
+            export function shouldRevalidate() {
+              return false;
+            }
+            export default function Component() {
+              return (
+                <>
+                  <p id="parent">Parent Count: {useLoaderData().count}</p>
+                  <Link to="/parent/a">Go to /parent/a</Link>
+                  <Link to="/parent/b">Go to /parent/b</Link>
+                  <Outlet/>
+                </>
+              );
+            }
+          `,
+          "app/routes/parent.a.tsx": js`
+            import { useLoaderData } from "@remix-run/react";
+            let count = 0;
+            export function loader({ request }) {
+              return { count: ++count };
+            }
+            export default function Component() {
+              return <p id="a">A Count: {useLoaderData().count}</p>;
+            }
+          `,
+          "app/routes/parent.b.tsx": js`
+            import { useLoaderData } from "@remix-run/react";
+            let count = 0;
+            export function loader({ request }) {
+              return { count: ++count };
+            }
+            export default function Component() {
+              return <p id="b">B Count: {useLoaderData().count}</p>;
+            }
+          `,
+        },
+      });
+      let appFixture = await createAppFixture(fixture);
+      let app = new PlaywrightFixture(appFixture, page);
+
+      let urls: string[] = [];
+      page.on("request", (req) => {
+        if (req.url().includes(".data")) {
+          urls.push(req.url());
+        }
+      });
+
+      await app.goto("/");
+
+      await app.clickLink("/parent/a");
+      await page.waitForSelector("#a");
+      expect(await app.getHtml("#parent")).toContain("Parent Count: 1");
+      expect(await app.getHtml("#a")).toContain("A Count: 1");
+      expect(urls.length).toBe(1);
+      // Client loader triggers 2 requests on the first navigation
+      expect(urls[0].endsWith("/parent/a.data")).toBe(true);
+      urls = [];
+
+      await app.clickLink("/parent/b");
+      await page.waitForSelector("#b");
+      expect(await app.getHtml("#parent")).toContain("Parent Count: 1");
+      expect(await app.getHtml("#b")).toContain("B Count: 1");
+      expect(urls.length).toBe(1);
+      expect(urls[0].endsWith("/parent/b.data")).toBe(true);
+      urls = [];
+
+      await app.clickLink("/parent/a");
+      await page.waitForSelector("#a");
+      expect(await app.getHtml("#parent")).toContain("Parent Count: 1");
+      expect(await app.getHtml("#a")).toContain("A Count: 2");
+      expect(urls.length).toBe(1);
+      expect(urls[0].endsWith("/parent/a.data")).toBe(true);
     });
 
     test("provides the proper defaultShouldRevalidate value", async ({

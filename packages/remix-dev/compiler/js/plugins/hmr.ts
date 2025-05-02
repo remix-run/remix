@@ -58,6 +58,7 @@ export function createHotContext(id: string): ImportMetaHot {
   let disposed = false;
 
   let hot = {
+    __remixCompiler: true,
     accept: (dep, cb) => {
       if (typeof dep !== "string") {
         cb = dep;
