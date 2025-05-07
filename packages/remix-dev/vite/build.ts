@@ -13,11 +13,11 @@ import {
   configRouteToBranchRoute,
   getServerBuildDirectory,
 } from "./plugin";
-import type { ConfigRoute, RouteManifest } from "../config/routes";
+import type { RouteManifestEntry, RouteManifest } from "../config/routes";
 import invariant from "../invariant";
-import { preloadViteEsm } from "./import-vite-esm-sync";
+import { preloadVite, getVite } from "./vite";
 
-function getAddressableRoutes(routes: RouteManifest): ConfigRoute[] {
+function getAddressableRoutes(routes: RouteManifest): RouteManifestEntry[] {
   let nonAddressableIds = new Set<string>();
 
   for (let id in routes) {
@@ -44,11 +44,11 @@ function getAddressableRoutes(routes: RouteManifest): ConfigRoute[] {
 }
 
 function getRouteBranch(routes: RouteManifest, routeId: string) {
-  let branch: ConfigRoute[] = [];
+  let branch: RouteManifestEntry[] = [];
   let currentRouteId: string | undefined = routeId;
 
   while (currentRouteId) {
-    let route: ConfigRoute = routes[currentRouteId];
+    let route: RouteManifestEntry = routes[currentRouteId];
     invariant(route, `Missing route for ${currentRouteId}`);
     branch.push(route);
     currentRouteId = route.parentId;
@@ -242,8 +242,8 @@ export async function build(
   }: ViteBuildOptions
 ) {
   // Ensure Vite's ESM build is preloaded at the start of the process
-  // so it can be accessed synchronously via `importViteEsmSync`
-  await preloadViteEsm();
+  // so it can be accessed synchronously via `getVite`
+  await preloadVite();
 
   let viteConfig = await resolveViteConfig({ configFile, mode, root });
 
@@ -257,7 +257,7 @@ export async function build(
 
   let { remixConfig } = ctx;
 
-  let vite = await import("vite");
+  let vite = getVite();
 
   async function viteBuild({
     ssr,

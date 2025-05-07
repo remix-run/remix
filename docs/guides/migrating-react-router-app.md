@@ -693,13 +693,13 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 - [Common "gotchas"][common-gotchas]
 
 [react-router]: https://reactrouter.com
-[react-router-docs]: https://reactrouter.com/start/concepts
+[react-router-docs]: https://reactrouter.com/v6/start/concepts
 [migration-guide-from-v5-to-v6]: https://reactrouter.com/en/6.22.3/upgrading/v5
 [backwards-compatibility-package]: https://www.npmjs.com/package/react-router-dom-v5-compat
 [a-few-tweaks-to-improve-progressive-enhancement]: ../pages/philosophy#progressive-enhancement
 [routing-conventions]: ./routing
 [a-catch-all-route]: ../file-conventions/routes#splat-routes
-[hydration-mismatch]: https://reactjs.org/docs/react-dom.html#hydrate
+[hydration-mismatch]: https://react.dev/reference/react-dom/client/hydrateRoot
 [loader-data]: ../route/loader
 [client-only-component]: https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx
 [remix-utils]: https://www.npmjs.com/package/remix-utils

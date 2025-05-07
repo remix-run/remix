@@ -1,4 +1,3 @@
-import type { Request as PlaywrightRequest } from "@playwright/test";
 import { test, expect } from "@playwright/test";
 
 import {
@@ -106,7 +105,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -152,7 +151,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: getFiles(),
@@ -176,7 +175,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: getFiles(),
@@ -211,7 +210,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: getFiles(),
@@ -244,7 +243,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -310,7 +309,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -371,7 +370,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -422,7 +421,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -486,7 +485,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -534,7 +533,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -605,7 +604,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -721,7 +720,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -836,9 +835,7 @@ test.describe("Fog of War", () => {
     expect(await app.getHtml("#parent")).toMatch(`Parent`);
     expect(await app.getHtml("#child2")).toMatch(`Child 2`);
     expect(manifestRequests).toEqual([
-      expect.stringMatching(
-        /\/__manifest\?version=[a-z0-9]{8}&p=%2Fparent%2Fchild2/
-      ),
+      expect.stringMatching(/\/__manifest\?p=%2Fparent%2Fchild2/),
     ]);
   });
 
@@ -848,7 +845,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -912,7 +909,7 @@ test.describe("Fog of War", () => {
       )
     ).toEqual(["root", "routes/_index", "routes/$slug"]);
     expect(manifestRequests).toEqual([
-      expect.stringMatching(/\/__manifest\?version=[a-z0-9]{8}&p=%2Fsomething/),
+      expect.stringMatching(/\/__manifest\?p=%2Fsomething/),
     ]);
     manifestRequests = [];
 
@@ -926,7 +923,7 @@ test.describe("Fog of War", () => {
     await page.waitForSelector("#static");
     expect(await app.getHtml("#static")).toMatch("Static");
     expect(manifestRequests).toEqual([
-      expect.stringMatching(/\/__manifest\?version=[a-z0-9]{8}&p=%2Fstatic/),
+      expect.stringMatching(/\/__manifest\?p=%2Fstatic/),
     ]);
     expect(
       await page.evaluate(() =>
@@ -941,7 +938,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1005,7 +1002,7 @@ test.describe("Fog of War", () => {
       )
     ).toEqual(["root", "routes/_index", "routes/$"]);
     expect(manifestRequests).toEqual([
-      expect.stringMatching(/\/__manifest\?version=[a-z0-9]{8}&p=%2Fsomething/),
+      expect.stringMatching(/\/__manifest\?p=%2Fsomething/),
     ]);
     manifestRequests = [];
 
@@ -1019,7 +1016,7 @@ test.describe("Fog of War", () => {
     await page.waitForSelector("#static");
     expect(await app.getHtml("#static")).toMatch("Static");
     expect(manifestRequests).toEqual([
-      expect.stringMatching(/\/__manifest\?version=[a-z0-9]{8}&p=%2Fstatic/),
+      expect.stringMatching(/\/__manifest\?p=%2Fstatic/),
     ]);
     expect(
       await page.evaluate(() =>
@@ -1034,7 +1031,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1097,7 +1094,7 @@ test.describe("Fog of War", () => {
     await page.waitForSelector("#slug");
     expect(await app.getHtml("#slug")).toMatch("Slug: a");
     expect(manifestRequests).toEqual([
-      expect.stringMatching(/\/__manifest\?version=[a-z0-9]{8}&p=%2Fa/),
+      expect.stringMatching(/\/__manifest\?p=%2Fa/),
     ]);
     manifestRequests = [];
 
@@ -1118,7 +1115,7 @@ test.describe("Fog of War", () => {
     await page.waitForSelector("#slug");
     expect(await app.getHtml("#slug")).toMatch("Slug: b");
     expect(manifestRequests).toEqual([
-      expect.stringMatching(/\/__manifest\?version=[a-z0-9]{8}&p=%2Fb/),
+      expect.stringMatching(/\/__manifest\?p=%2Fb/),
     ]);
   });
 
@@ -1128,7 +1125,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1191,7 +1188,7 @@ test.describe("Fog of War", () => {
     await page.waitForSelector("#splat");
     expect(await app.getHtml("#splat")).toMatch("Splat: a");
     expect(manifestRequests).toEqual([
-      expect.stringMatching(/\/__manifest\?version=[a-z0-9]{8}&p=%2Fa/),
+      expect.stringMatching(/\/__manifest\?p=%2Fa/),
     ]);
     manifestRequests = [];
 
@@ -1212,7 +1209,7 @@ test.describe("Fog of War", () => {
     await page.waitForSelector("#splat");
     expect(await app.getHtml("#splat")).toMatch("Splat: b/c");
     expect(manifestRequests).toEqual([
-      expect.stringMatching(/\/__manifest\?version=[a-z0-9]{8}&p=%2Fb%2Fc/),
+      expect.stringMatching(/\/__manifest\?p=%2Fb%2Fc/),
     ]);
   });
 
@@ -1222,7 +1219,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1291,9 +1288,7 @@ test.describe("Fog of War", () => {
     await app.clickLink("/not/a/path");
     await page.waitForSelector("#error");
     expect(manifestRequests).toEqual([
-      expect.stringMatching(
-        /\/__manifest\?version=[a-z0-9]{8}&p=%2Fnot%2Fa%2Fpath/
-      ),
+      expect.stringMatching(/\/__manifest\?p=%2Fnot%2Fa%2Fpath/),
     ]);
     manifestRequests = [];
 
@@ -1301,7 +1296,7 @@ test.describe("Fog of War", () => {
     await app.clickLink("/something");
     await page.waitForSelector("#slug");
     expect(manifestRequests).toEqual([
-      expect.stringMatching(/\/__manifest\?version=[a-z0-9]{8}&p=%2Fsomething/),
+      expect.stringMatching(/\/__manifest\?p=%2Fsomething/),
     ]);
     manifestRequests = [];
 
@@ -1315,7 +1310,7 @@ test.describe("Fog of War", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_lazyRouteDiscovery: true,
+          v3_lazyRouteDiscovery: true,
         },
       },
       files: {
@@ -1340,10 +1335,10 @@ test.describe("Fog of War", () => {
     let appFixture = await createAppFixture(fixture);
     let app = new PlaywrightFixture(appFixture, page);
 
-    let manifestRequests: PlaywrightRequest[] = [];
+    let manifestRequests: string[] = [];
     page.on("request", (req) => {
       if (req.url().includes("/__manifest")) {
-        manifestRequests.push(req);
+        manifestRequests.push(req.url());
       }
     });
 
@@ -1359,5 +1354,239 @@ test.describe("Fog of War", () => {
         Object.keys((window as any).__remixManifest.routes)
       )
     ).toEqual(["root", "routes/_index", "routes/a"]);
+  });
+
+  test("includes a version query parameter as a cachebuster", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          v3_lazyRouteDiscovery: true,
+        },
+      },
+      files: {
+        ...getFiles(),
+        "app/routes/_index.tsx": js`
+          import { Link } from "@remix-run/react";
+          export default function Index() {
+            return (
+              <>
+                <h1 id="index">Index</h1>
+                <Link to="/a">/a</Link>
+                <Link to="/b">/b</Link>
+              </>
+            );
+
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    let manifestRequests: string[] = [];
+    page.on("request", (req) => {
+      if (req.url().includes("/__manifest")) {
+        manifestRequests.push(req.url());
+      }
+    });
+
+    await app.goto("/", true);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(manifestRequests).toEqual([
+      expect.stringMatching(
+        /\/__manifest\?p=%2F&p=%2Fa&p=%2Fb&version=[a-z0-9]{8}/
+      ),
+    ]);
+  });
+
+  test("sorts url parameters", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          v3_lazyRouteDiscovery: true,
+        },
+      },
+      files: {
+        ...getFiles(),
+        "app/routes/_index.tsx": js`
+          import { Link } from "@remix-run/react";
+          export default function Index() {
+            return (
+              <>
+                <h1 id="index">Index</h1>
+                <Link to="/a">/a</Link>
+                <Link to="/c">/c</Link>
+                <Link to="/e">/e</Link>
+                <Link to="/g">/g</Link>
+                <Link to="/f">/f</Link>
+                <Link to="/d">/d</Link>
+                <Link to="/b">/b</Link>
+              </>
+            );
+
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    let manifestRequests: string[] = [];
+    page.on("request", (req) => {
+      if (req.url().includes("/__manifest")) {
+        manifestRequests.push(req.url());
+      }
+    });
+
+    await app.goto("/", true);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(manifestRequests).toEqual([
+      expect.stringMatching(
+        /\/__manifest\?p=%2F&p=%2Fa&p=%2Fb&p=%2Fc&p=%2Fd&p=%2Fe&p=%2Ff&p=%2F/
+      ),
+    ]);
+  });
+
+  test("handles interruptions from back to back navigations", async ({
+    page,
+  }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          v3_lazyRouteDiscovery: true,
+        },
+      },
+      files: {
+        ...getFiles(),
+        "app/routes/a.tsx": js`
+          import { Link, Outlet, useLoaderData, useNavigate } from "@remix-run/react";
+
+          export function loader({ request }) {
+            return { message: "A LOADER" };
+          }
+
+          export default function Index() {
+            let data = useLoaderData();
+            let navigate = useNavigate();
+            return (
+              <>
+                <h1 id="a">A: {data.message}</h1>
+                <button data-link onClick={async () => {
+                  navigate('/a/b');
+                  setTimeout(() => navigate('/a/b'), 0)
+                }}>
+                  /a/b
+                </button>
+                <Outlet/>
+              </>
+            )
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/a", true);
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/a", "routes/_index"]);
+
+    // /a/b gets discovered on click
+    await app.clickElement("[data-link]");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    expect(await (await page.$("body"))?.textContent()).not.toContain(
+      "Not Found"
+    );
+    await page.waitForSelector("#b");
+
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/a", "routes/_index", "routes/a.b"]);
+  });
+
+  test("loads ancestor index routes on navigations", async ({ page }) => {
+    let fixture = await createFixture({
+      config: {
+        future: {
+          v3_lazyRouteDiscovery: true,
+        },
+      },
+      files: {
+        ...getFiles(),
+        "app/root.tsx": js`
+          import * as React from "react";
+          import { Link, Links, Meta, Outlet, Scripts } from "@remix-run/react";
+          export default function Root() {
+            let [showLink, setShowLink] = React.useState(false);
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Link to="/" discover="none">Home</Link><br/>
+                  <Link to="/a" discover="none">/a</Link><br/>
+                  <Link to="/a/b" discover="none">/a/b</Link><br/>
+                  <Link to="/a/b/c" discover="none">/a/b/c</Link><br/>
+                  <Outlet />
+                  <Scripts />
+                </body>
+              </html>
+            );
+          }
+        `,
+        "app/routes/a._index.tsx": js`
+          export default function Index() {
+            return <h3 id="a-index">A INDEX</h3>;
+          }
+        `,
+        "app/routes/a.b._index.tsx": js`
+          export default function Index() {
+            return <h3 id="b-index">B INDEX</h3>;
+          }
+        `,
+      },
+    });
+    let appFixture = await createAppFixture(fixture);
+    let app = new PlaywrightFixture(appFixture, page);
+
+    await app.goto("/", true);
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual(["root", "routes/_index"]);
+
+    await app.clickLink("/a/b/c");
+    await page.waitForSelector("#c");
+
+    // /a/b is not discovered yet even thought it's rendered
+    expect(
+      await page.evaluate(() =>
+        Object.keys((window as any).__remixManifest.routes)
+      )
+    ).toEqual([
+      "root",
+      "routes/_index",
+      "routes/a",
+      "routes/a._index",
+      "routes/a.b",
+      "routes/a.b._index",
+      "routes/a.b.c",
+    ]);
+
+    await app.clickLink("/a/b");
+    await page.waitForSelector("#b-index");
+
+    await app.clickLink("/a");
+    await page.waitForSelector("#a-index");
   });
 });

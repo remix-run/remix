@@ -5,6 +5,8 @@ order: 1
 
 # Quick Start
 
+<docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest features, you should use the [React Router docs to get started][react-router-get-started].</docs-warning>
+
 This guide will get you familiar with the basic plumbing required to run a Remix app as quickly as possible. While there are many starter templates with different runtimes, deploy targets, and databases, we're going to create a bare-bones project from scratch.
 
 When you're ready to get serious about your Remix project, you might consider starting with a community template. They include TypeScript setups, databases, testing harnesses, authentication, and more. You can find a list of community templates on the [Remix Resources][templates] page.
@@ -25,7 +27,7 @@ cd my-remix-app
 npm init -y
 
 # install runtime dependencies
-npm i @remix-run/node @remix-run/react @remix-run/serve isbot@4 react react-dom
+npm i @remix-run/node @remix-run/react @remix-run/serve isbot@4 react@18 react-dom@18
 
 # install dev dependencies
 npm i -D @remix-run/dev vite
@@ -117,12 +119,12 @@ npx remix-serve build/server/index.js
 
 You should be able to open up [http://localhost:3000][http-localhost-3000] and see the "hello world" page.
 
-Aside from the unholy amount of code in `node_modules`, our Remix app is just one file:
+Aside from the unholy amount of code in `node_modules`, our Remix app is just three files:
 
 ```
 ├── app/
 │   └── root.jsx
-└── package.json
+├── package.json
 └── vite.config.js
 ```
 
@@ -137,7 +139,7 @@ Just for kicks, let's stop using `remix-serve` and use express instead.
 👉 **Install Express, the Remix Express adapter, and [cross-env] for running in production mode**
 
 ```shellscript nonumber
-npm i express @remix-run/express cross-env
+npm i express@4 @remix-run/express cross-env
 
 # not going to use this anymore
 npm uninstall @remix-run/serve
@@ -284,3 +286,5 @@ What's next?
 [vite-config]: https://vitejs.dev/config
 [vite-middleware]: https://vitejs.dev/guide/ssr#setting-up-the-dev-server
 [cross-env]: https://www.npmjs.com/package/cross-env
+[remix-now-react-router]: https://remix.run/blog/incremental-path-to-react-19
+[react-router-get-started]: https://reactrouter.com/start/framework/installation

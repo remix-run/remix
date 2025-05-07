@@ -6,6 +6,12 @@ import type {
 } from "./routeModules";
 import { expectType } from "./typecheck";
 import { type Expect, type Equal } from "./typecheck";
+import { type SerializeFrom as SingleFetch_SerializeFrom } from "./single-fetch";
+import type { Future } from "./future";
+
+// prettier-ignore
+type SingleFetchEnabled =
+  Future extends { v3_singleFetch: infer T extends boolean } ? T : false
 
 // prettier-ignore
 /**
@@ -15,8 +21,14 @@ import { type Expect, type Equal } from "./typecheck";
  *
  * For example:
  * `type LoaderData = SerializeFrom<typeof loader>`
+ *
+ * @deprecated SerializeFrom is deprecated and will be removed in React Router
+ * v7. Please use the generics on `useLoaderData`/etc. instead of manually
+ * deserializing in Remix v2.  You can convert to the generated types once you
+ * migrate to React Router v7.
  */
 export type SerializeFrom<T> =
+  SingleFetchEnabled extends true ? SingleFetch_SerializeFrom<T> :
   T extends (...args: any[]) => infer Output ?
     Parameters<T> extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ?
       // Client data functions may not serialize
@@ -27,7 +39,6 @@ export type SerializeFrom<T> =
   :
   // Back compat: manually defined data type, not inferred from loader nor action
   Jsonify<Awaited<T>>
-;
 
 // note: cannot be inlined as logic requires union distribution
 // prettier-ignore

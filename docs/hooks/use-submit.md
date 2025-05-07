@@ -76,9 +76,9 @@ Options for the submission, the same as [`<Form>`][form-component] props. All op
 - **preventScrollReset**: Prevents the scroll position from being reset to the top of the window when the data is submitted. Default is `false`.
 - **replace**: Replaces the current entry in the history stack, instead of pushing the new entry. Default is `false`.
 - **relative**: Defines relative route resolution behavior. Either `"route"` (relative to the route hierarchy) or `"path"` (relative to the URL).
-- **unstable_flushSync**: Wraps the initial state update for this navigation in a [`ReactDOM.flushSync`][flush-sync] call instead of the default [`React.startTransition`][start-transition]
-- **unstable_viewTransition**: Enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`
-  - If you need to apply specific styles for this view transition, you will also need to leverage the [`unstable_useViewTransitionState()`][use-view-transition-state]
+- **flushSync**: Wraps the initial state update for this navigation in a [`ReactDOM.flushSync`][flush-sync] call instead of the default [`React.startTransition`][start-transition]
+- **viewTransition**: Enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`
+  - If you need to apply specific styles for this view transition, you will also need to leverage the [`useViewTransitionState()`][use-view-transition-state]
 
 ```tsx
 submit(data, {

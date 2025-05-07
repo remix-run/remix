@@ -1,17 +1,18 @@
 import type {
   StaticHandler,
-  unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
-  unstable_DataStrategyFunction as DataStrategyFunction,
+  DataStrategyFunctionArgs,
+  DataStrategyFunction,
   UNSAFE_DataWithResponseInit as DataWithResponseInit,
 } from "@remix-run/router";
 import {
   isRouteErrorResponse,
-  unstable_data as routerData,
+  data as routerData,
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
   stripBasename,
 } from "@remix-run/router";
 import { encode } from "turbo-stream";
 
+import { type Expect, type Equal } from "./typecheck";
 import type { ServerBuild } from "./build";
 import type { AppLoadContext } from "./data";
 import { sanitizeError, sanitizeErrors } from "./errors";
@@ -19,8 +20,12 @@ import { getDocumentHeaders } from "./headers";
 import { ServerMode } from "./mode";
 import type { TypedDeferredData, TypedResponse } from "./responses";
 import { isRedirectStatusCode, isResponse } from "./responses";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "./routeModules";
-import type { SerializeFrom } from "./serialize";
+import type { Jsonify } from "./jsonify";
+import type {
+  ClientActionFunctionArgs,
+  ClientLoaderFunctionArgs,
+  LoaderFunctionArgs,
+} from "./routeModules";
 
 export const SingleFetchRedirectSymbol = Symbol("SingleFetchRedirect");
 
@@ -58,27 +63,21 @@ export function getSingleFetchDataStrategy({
   return async ({ request, matches }: DataStrategyFunctionArgs) => {
     // Don't call loaders on action data requests
     if (isActionDataRequest && request.method === "GET") {
-      return await Promise.all(
-        matches.map((m) =>
-          m.resolve(async () => ({ type: "data", result: null }))
-        )
-      );
+      return {};
     }
 
+    // Only run opt-in loaders when fine-grained revalidation is enabled
+    let matchesToLoad = loadRouteIds
+      ? matches.filter((m) => loadRouteIds.includes(m.route.id))
+      : matches;
     let results = await Promise.all(
-      matches.map(async (match) => {
-        let result = await match.resolve(async (handler) => {
-          // Only run opt-in loaders when fine-grained revalidation is enabled
-          let data =
-            loadRouteIds && !loadRouteIds.includes(match.route.id)
-              ? null
-              : await handler();
-          return { type: "data", result: data };
-        });
-        return result;
-      })
+      matchesToLoad.map((match) => match.resolve())
     );
-    return results;
+    return results.reduce(
+      (acc, result, i) =>
+        Object.assign(acc, { [matchesToLoad[i].route.id]: result }),
+      {}
+    );
   };
 }
 
@@ -103,7 +102,7 @@ export async function singleFetchAction(
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       skipLoaderErrorBubbling: true,
-      unstable_dataStrategy: getSingleFetchDataStrategy({
+      dataStrategy: getSingleFetchDataStrategy({
         isActionDataRequest: true,
       }),
     });
@@ -191,7 +190,7 @@ export async function singleFetchLoaders(
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       skipLoaderErrorBubbling: true,
-      unstable_dataStrategy: getSingleFetchDataStrategy({
+      dataStrategy: getSingleFetchDataStrategy({
         loadRouteIds,
       }),
     });
@@ -351,17 +350,24 @@ export function encodeViaTurboStream(
         }
       },
     ],
+    postPlugins: [
+      (value) => {
+        if (!value) return;
+        if (typeof value !== "object") return;
+
+        return [
+          "SingleFetchClassInstance",
+          Object.fromEntries(Object.entries(value)),
+        ];
+      },
+      () => ["SingleFetchFallback"],
+    ],
   });
 }
 
-export function data<D extends Serializable>(
-  value: D,
-  init?: number | ResponseInit
-) {
+export function data<T>(value: T, init?: number | ResponseInit) {
   return routerData(value, init);
 }
-
-type MaybePromise<T> = T | Promise<T>;
 
 type Serializable =
   | undefined
@@ -370,40 +376,255 @@ type Serializable =
   | string
   | symbol
   | number
-  | Array<Serializable>
-  | { [key: PropertyKey]: Serializable }
   | bigint
   | Date
   | URL
   | RegExp
   | Error
+  | ReadonlyArray<Serializable>
+  | Array<Serializable>
+  | { [key: PropertyKey]: Serializable }
   | Map<Serializable, Serializable>
   | Set<Serializable>
   | Promise<Serializable>;
 
-type DataFunctionReturnValue =
-  | Serializable
-  | DataWithResponseInit<Serializable>
-  | TypedDeferredData<Record<string, unknown>>
-  | TypedResponse<Record<string, unknown>>;
+// prettier-ignore
+type Serialize<T> =
+  T extends void ? undefined :
+
+  // First, let type stay as-is if its already serializable...
+  T extends Serializable ? T :
+
+  // ...then don't allow functions to be serialized...
+  T extends (...args: any[]) => unknown ? undefined :
+
+  // ...lastly handle inner types for all container types allowed by `turbo-stream`
+
+  // Promise
+  T extends Promise<infer U> ? Promise<Serialize<U>> :
+
+  // Map & Set
+  T extends Map<infer K, infer V> ? Map<Serialize<K>, Serialize<V>> :
+  T extends Set<infer U> ? Set<Serialize<U>> :
+
+  // Array
+  T extends [] ? [] :
+  T extends readonly [infer F, ...infer R] ? [Serialize<F>, ...Serialize<R>] :
+  T extends Array<infer U> ? Array<Serialize<U>> :
+  T extends readonly unknown[] ? readonly Serialize<T[number]>[] :
+
+  // Record
+  T extends Record<any, any> ? {[K in keyof T]: Serialize<T[K]>} :
+
+  undefined
+
+// prettier-ignore
+type ClientData<T> =
+  T extends TypedResponse<infer U> ? Jsonify<U> :
+  T extends TypedDeferredData<infer U> ? U :
+  T
+
+// prettier-ignore
+type ServerData<T> =
+  T extends TypedResponse<infer U> ? Jsonify<U> :
+  T extends TypedDeferredData<infer U> ? Serialize<U> :
+  T extends DataWithResponseInit<infer U> ? Serialize<U> :
+  Serialize<T>
 
 // Backwards-compatible type for Remix v2 where json/defer still use the old types,
 // and only non-json/defer returns use the new types.  This allows for incremental
 // migration of loaders to return naked objects.  In the next major version,
 // json/defer will be removed so everything will use the new simplified typings.
 // prettier-ignore
-export type Serialize<T extends Loader | Action> =
-  Awaited<ReturnType<T>> extends TypedDeferredData<infer D> ? D :
-  Awaited<ReturnType<T>> extends TypedResponse<Record<string, unknown>> ? SerializeFrom<T> :
-  Awaited<ReturnType<T>> extends DataWithResponseInit<infer D> ? D :
-  Awaited<ReturnType<T>>;
+export type SerializeFrom<T> =
+  T extends (...args: infer Args) => infer Return ?
+    Args extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ? ClientData<Awaited<Return>> :
+    ServerData<Awaited<Return>>
+  :
+  T
 
-export type Loader = (
-  args: LoaderFunctionArgs
-) => MaybePromise<DataFunctionReturnValue>;
-export let defineLoader = <T extends Loader>(loader: T): T => loader;
+type ServerLoader<T> = (args: LoaderFunctionArgs) => T;
+type ClientLoader<T> = (args: ClientLoaderFunctionArgs) => T;
 
-export type Action = (
-  args: ActionFunctionArgs
-) => MaybePromise<DataFunctionReturnValue>;
-export let defineAction = <T extends Action>(action: T): T => action;
+class TestClass {
+  constructor(public a: string, public b: Date) {
+    this.a = a;
+    this.b = b;
+  }
+
+  testmethod() {}
+}
+
+interface TestInterface {
+  undefined: undefined;
+  null: null;
+  boolean: boolean;
+  string: string;
+  symbol: symbol;
+  number: number;
+  bigint: bigint;
+  Date: Date;
+  URL: URL;
+  RegExp: RegExp;
+  Error: Error;
+  Array: Array<bigint>;
+  ReadonlyArray: ReadonlyArray<bigint>;
+  Set: Set<Error>;
+  Map: Map<Date, RegExp>;
+}
+
+type Recursive = {
+  a: string;
+  b: Date;
+  recursive?: Recursive;
+};
+
+type Pretty<T> = { [K in keyof T]: T[K] } & {};
+
+// prettier-ignore
+// eslint-disable-next-line
+type _tests = [
+  Expect<Equal<SerializeFrom<ServerLoader<void>>, undefined>>,
+  Expect<Equal<SerializeFrom<ServerLoader<{
+    undefined: undefined,
+    null: null,
+    boolean: boolean,
+    string: string,
+    symbol: symbol,
+    number: number,
+    bigint: bigint,
+    Date: Date,
+    URL: URL,
+    RegExp: RegExp,
+    Error: Error,
+    Array: Array<bigint>;
+    ReadonlyArray: ReadonlyArray<bigint>;
+    Set: Set<Error>,
+    Map: Map<Date, RegExp>,
+    TestInterface: TestInterface,
+    Recursive: Recursive
+  }>>, {
+    undefined: undefined,
+    null: null,
+    boolean: boolean,
+    string: string,
+    symbol: symbol,
+    number: number,
+    bigint: bigint,
+    Date: Date,
+    URL: URL,
+    RegExp: RegExp,
+    Error: Error,
+    Array: Array<bigint>;
+    ReadonlyArray: ReadonlyArray<bigint>;
+    Set: Set<Error>,
+    Map: Map<Date, RegExp>,
+    TestInterface: TestInterface
+    Recursive: Recursive
+  }>>,
+  Expect<Equal<SerializeFrom<ServerLoader<[
+    undefined,
+    null,
+    boolean,
+    string,
+    symbol,
+    number,
+    bigint,
+    Date,
+    URL,
+    RegExp,
+    Error,
+    Array<bigint>,
+    ReadonlyArray<bigint>,
+    Set<Error>,
+    Map<Date, RegExp>,
+  ]>>, [
+    undefined,
+    null,
+    boolean,
+    string,
+    symbol,
+    number,
+    bigint,
+    Date,
+    URL,
+    RegExp,
+    Error,
+    Array<bigint>,
+    ReadonlyArray<bigint>,
+    Set<Error>,
+    Map<Date, RegExp>,
+  ]>>,
+  Expect<Equal<SerializeFrom<ServerLoader<Promise<[
+    undefined,
+    null,
+    boolean,
+    string,
+    symbol,
+    number,
+    bigint,
+    Date,
+    URL,
+    RegExp,
+    Error,
+    Array<bigint>,
+    ReadonlyArray<bigint>,
+    Set<Error>,
+    Map<Date, RegExp>,
+  ]>>>, [
+    undefined,
+    null,
+    boolean,
+    string,
+    symbol,
+    number,
+    bigint,
+    Date,
+    URL,
+    RegExp,
+    Error,
+    Array<bigint>,
+    ReadonlyArray<bigint>,
+    Set<Error>,
+    Map<Date, RegExp>,
+  ]>>,
+
+  Expect<Equal<SerializeFrom<ServerLoader<{
+    function: () => void,
+    class: TestClass
+  }>>, {
+    function: undefined,
+    class: {
+      a: string
+      b: Date,
+      testmethod: undefined
+    },
+  }>>,
+
+  Expect<Equal<SerializeFrom<ClientLoader<{
+    function: () => void,
+    class: TestClass
+  }>>, {
+    function: () => void,
+    class: TestClass
+  }>>,
+
+  Expect<Equal<Pretty<SerializeFrom<ServerLoader<TypedResponse<{a: string, b: Date}>>>>, { a: string, b: string }>>,
+  Expect<Equal<Pretty<SerializeFrom<ServerLoader<TypedDeferredData<{a: string, b: Promise<Date>}>>>>, { a: string, b: Promise<Date> }>>,
+
+  // non-function backcompat
+  Expect<Equal<SerializeFrom<{a: string, b: Date}>, {a: string, b: Date}>>,
+
+  Expect<Equal<
+    SerializeFrom<ServerLoader<
+    | { a: string; b: Date }
+    | TypedResponse<{ c: string; d: Date }>
+    | TypedDeferredData<{ e: string; f: Promise<Date> }>
+    | DataWithResponseInit<{ g: string; h: Date }>
+    >>,
+    | { a: string; b: Date }
+    | Jsonify<{ c: string; d: Date }>
+    | { e: string; f: Promise<Date> }
+    | { g: string; h: Date }
+  >>,
+]

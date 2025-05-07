@@ -138,12 +138,13 @@ export async function createFixture(init: FixtureInit, mode?: ServerMode) {
     let url = new URL(href, "test://test");
     let request = new Request(url.toString(), init);
     let response = await handler(request);
-    let decoded = await decodeViaTurboStream(response.body!, global);
     return {
       status: response.status,
       statusText: response.statusText,
       headers: response.headers,
-      data: decoded.value,
+      data: response.body
+        ? (await decodeViaTurboStream(response.body!, global)).value
+        : null,
     };
   };
 
@@ -364,7 +365,7 @@ export async function createFixtureProject(
     `);
   }
   contents = contents.replace(
-    "global.INJECTED_FIXTURE_REMIX_CONFIG",
+    /(global|globalThis)\.INJECTED_FIXTURE_REMIX_CONFIG/,
     `${serializeJavaScript(init.config ?? {})}`
   );
   fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);

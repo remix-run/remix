@@ -54,6 +54,17 @@ export type CreateRequestHandlerFunction = (
   mode?: string
 ) => RequestHandler;
 
+// Do not include a response body if the status code is one of these,
+// otherwise `undici` will throw an error when constructing the Response:
+//   https://github.com/nodejs/undici/blob/bd98a6303e45d5e0d44192a93731b1defdb415f3/lib/web/fetch/response.js#L522-L528
+//
+// Specs:
+//   https://datatracker.ietf.org/doc/html/rfc9110#name-informational-1xx
+//   https://datatracker.ietf.org/doc/html/rfc9110#name-204-no-content
+//   https://datatracker.ietf.org/doc/html/rfc9110#name-205-reset-content
+//   https://datatracker.ietf.org/doc/html/rfc9110#name-304-not-modified
+const NO_BODY_STATUS_CODES = new Set([100, 101, 204, 205, 304]);
+
 function derive(build: ServerBuild, mode?: string) {
   let routes = createRoutes(build.routes);
   let dataRoutes = createStaticHandlerDataRoutes(build.routes, build.future);
@@ -149,7 +160,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     let response: Response;
     if (url.searchParams.has("_data")) {
-      if (_build.future.unstable_singleFetch) {
+      if (_build.future.v3_singleFetch) {
         handleError(
           new Error(
             "Warning: Single fetch-enabled apps should not be making ?_data requests, " +
@@ -180,10 +191,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           response = createRemixRedirectResponse(response, _build.basename);
         }
       }
-    } else if (
-      _build.future.unstable_singleFetch &&
-      url.pathname.endsWith(".data")
-    ) {
+    } else if (_build.future.v3_singleFetch && url.pathname.endsWith(".data")) {
       let handlerUrl = new URL(request.url);
       handlerUrl.pathname = handlerUrl.pathname
         .replace(/\.data$/, "")
@@ -226,7 +234,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
             };
           }
           let headers = new Headers(response.headers);
-          headers.set("Content-Type", "text/x-turbo");
+          headers.set("Content-Type", "text/x-script");
 
           return new Response(
             encodeViaTurboStream(
@@ -290,10 +298,40 @@ async function handleManifestRequest(
   routes: ServerRoute[],
   url: URL
 ) {
+  if (build.assets.version !== url.searchParams.get("version")) {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "X-Remix-Reload-Document": "true",
+      },
+    });
+  }
+
   let patches: Record<string, EntryRoute> = {};
 
   if (url.searchParams.has("p")) {
-    for (let path of url.searchParams.getAll("p")) {
+    let paths = new Set<string>();
+
+    // In addition to responding with the patches for the requested paths, we
+    // need to include patches for each partial path so that we pick up any
+    // pathless/index routes below ancestor segments.  So if we
+    // get a request for `/parent/child`, we need to look for a match on `/parent`
+    // so that if a `parent._index` route exists we return it so it's available
+    // for client side matching if the user routes back up to `/parent`.
+    // This is the same thing we do on initial load in <Scripts> via
+    // `getPartialManifest()`
+    url.searchParams.getAll("p").forEach((path) => {
+      if (!path.startsWith("/")) {
+        path = `/${path}`;
+      }
+      let segments = path.split("/").slice(1);
+      segments.forEach((_, i) => {
+        let partialPath = segments.slice(0, i + 1).join("/");
+        paths.add(`/${partialPath}`);
+      });
+    });
+
+    for (let path of paths) {
       let matches = matchServerRoutes(routes, path, build.basename);
       if (matches) {
         for (let match of matches) {
@@ -412,7 +450,17 @@ async function handleSingleFetchRequest(
   // network errors that are missing this header
   let resultHeaders = new Headers(headers);
   resultHeaders.set("X-Remix-Response", "yes");
-  resultHeaders.set("Content-Type", "text/x-turbo");
+
+  // Skip response body for unsupported status codes
+  if (NO_BODY_STATUS_CODES.has(status)) {
+    return new Response(null, { status, headers: resultHeaders });
+  }
+
+  // We use a less-descriptive `text/x-script` here instead of something like
+  // `text/x-turbo` to enable compression when deployed via Cloudflare.  See:
+  //  - https://github.com/remix-run/remix/issues/9884
+  //  - https://developers.cloudflare.com/speed/optimization/content/brotli/content-compression/
+  resultHeaders.set("Content-Type", "text/x-script");
 
   // Note: Deferred data is already just Promises, so we don't have to mess
   // `activeDeferreds` or anything :)
@@ -455,6 +503,11 @@ async function handleDocumentRequest(
 
   let headers = getDocumentHeaders(build, context);
 
+  // Skip response body for unsupported status codes
+  if (NO_BODY_STATUS_CODES.has(context.statusCode)) {
+    return new Response(null, { status: context.statusCode, headers });
+  }
+
   // Sanitize errors outside of development environments
   if (context.errors) {
     Object.values(context.errors).forEach((err) => {
@@ -480,14 +533,13 @@ async function handleDocumentRequest(
     staticHandlerContext: context,
     criticalCss,
     serverHandoffString: createServerHandoffString({
-      url: context.location.pathname,
       basename: build.basename,
       criticalCss,
       future: build.future,
       isSpaMode: build.isSpaMode,
-      ...(!build.future.unstable_singleFetch ? { state } : null),
+      ...(!build.future.v3_singleFetch ? { state } : null),
     }),
-    ...(build.future.unstable_singleFetch
+    ...(build.future.v3_singleFetch
       ? {
           serverHandoffStream: encodeViaTurboStream(
             state,
@@ -557,13 +609,12 @@ async function handleDocumentRequest(
       ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString({
-        url: context.location.pathname,
         basename: build.basename,
         future: build.future,
         isSpaMode: build.isSpaMode,
-        ...(!build.future.unstable_singleFetch ? { state } : null),
+        ...(!build.future.v3_singleFetch ? { state } : null),
       }),
-      ...(build.future.unstable_singleFetch
+      ...(build.future.v3_singleFetch
         ? {
             serverHandoffStream: encodeViaTurboStream(
               state,
@@ -617,7 +668,7 @@ async function handleResourceRequest(
       );
     }
 
-    if (build.future.unstable_singleFetch && !isResponse(response)) {
+    if (build.future.v3_singleFetch && !isResponse(response)) {
       console.warn(
         resourceRouteJsonWarning(
           request.method === "GET" ? "loader" : "action",

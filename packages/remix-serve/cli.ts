@@ -100,7 +100,7 @@ async function run() {
 
   let build: ServerBuild = await reimportServer();
 
-  installGlobals({ nativeFetch: build.future.unstable_singleFetch });
+  installGlobals({ nativeFetch: build.future.v3_singleFetch });
 
   let onListen = () => {
     let address =

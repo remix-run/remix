@@ -16,7 +16,7 @@ Before we go too far into the Remix convention though, we'd like to point out th
 
 The point is, we are well aware of this and from the get-go, Remix has always given you a first-class way to opt-out via the [`routes`][routes_config]/[`ignoredRouteFiles`][ignoredroutefiles_config] and [configure your routes manually][manual-route-configuration]. But, there has to be _some_ default so that folks can get up and running quickly and easily - and we think that the flat routes convention document below is a pretty good default that scales well for small-to-medium sized apps.
 
-Large applications with hundred or thousands of routes will _always_ be a bit chaotic no matter what convention you use - and the idea is that via the `routes` config, you get to build _exactly_ the convention that works best for your application/team. It would be quite literally impossible for Remix to have a default convention that made everyone happy. We'd much rather give you a fairly straightforward default, and then let the community build any number of conventions you can pick and choose from.
+Large applications with hundreds or thousands of routes will _always_ be a bit chaotic no matter what convention you use - and the idea is that via the `routes` config, you get to build _exactly_ the convention that works best for your application/team. It would be quite literally impossible for Remix to have a default convention that made everyone happy. We'd much rather give you a fairly straightforward default, and then let the community build any number of conventions you can pick and choose from.
 
 So, before we dive into the details of the Remix default convention, here's some community alternatives you can check out if you decide that our default is not your cup of tea.
 
@@ -246,7 +246,7 @@ Sometimes you want to share a layout with a group of routes without adding any p
 | `/`                        | `app/routes/_index.tsx`         | `app/root.tsx`            |
 | `/login`                   | `app/routes/_auth.login.tsx`    | `app/routes/_auth.tsx`    |
 | `/register`                | `app/routes/_auth.register.tsx` | `app/routes/_auth.tsx`    |
-| `/concerts`                | `app/routes/concerts.tsx`       | `app/routes/concerts.tsx` |
+| `/concerts`                | `app/routes/concerts.tsx`       | `app/root.tsx`            |
 | `/concerts/salt-lake-city` | `app/routes/concerts.$city.tsx` | `app/routes/concerts.tsx` |
 
 Think of the `_leading` underscore as a blanket you're pulling over the filename, hiding the filename from the URL.
