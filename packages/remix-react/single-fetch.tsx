@@ -1,22 +1,22 @@
 import * as React from "react";
 import type {
-  unstable_DataStrategyFunction as DataStrategyFunction,
-  unstable_DataStrategyResult as DataStrategyResult,
-  unstable_DataStrategyMatch,
+  DataStrategyFunction,
+  DataStrategyFunctionArgs,
+  DataStrategyResult,
+  DataStrategyMatch,
   Router as RemixRouter,
 } from "@remix-run/router";
 import {
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
   isRouteErrorResponse,
   redirect,
-  unstable_data,
+  data,
 } from "@remix-run/router";
 import type {
   UNSAFE_SingleFetchResult as SingleFetchResult,
   UNSAFE_SingleFetchResults as SingleFetchResults,
 } from "@remix-run/server-runtime";
 import { UNSAFE_SingleFetchRedirectSymbol as SingleFetchRedirectSymbol } from "@remix-run/server-runtime";
-import type { unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs } from "react-router-dom";
 import { decode } from "turbo-stream";
 
 import { createRequestInit, isResponse } from "./data";
@@ -170,12 +170,12 @@ async function singleFetchActionStrategy(
     return { [actionMatch.route.id]: result };
   }
 
-  // For non-responses, proxy along the statusCode via unstable_data()
+  // For non-responses, proxy along the statusCode via data()
   // (most notably for skipping action error revalidation)
   return {
     [actionMatch.route.id]: {
       type: result.type,
-      result: unstable_data(result.result, actionStatus),
+      result: data(result.result, actionStatus),
     },
   };
 }
@@ -227,15 +227,19 @@ async function singleFetchLoaderNavigationStrategy(
             return;
           }
 
-          // Otherwise, we opt out if we currently have data, a `loader`, and a
+          // Otherwise, we opt out if we currently have data and a
           // `shouldRevalidate` function.  This implies that the user opted out
           // via `shouldRevalidate`
           if (
             m.route.id in router.state.loaderData &&
-            manifest.routes[m.route.id].hasLoader &&
+            manifest.routes[m.route.id] &&
             routeModules[m.route.id]?.shouldRevalidate
           ) {
-            foundOptOutRoute = true;
+            if (manifest.routes[m.route.id].hasLoader) {
+              // If we have a server loader, make sure we don't include it in the
+              // single fetch .data request
+              foundOptOutRoute = true;
+            }
             return;
           }
         }
@@ -344,7 +348,7 @@ async function singleFetchLoaderFetcherStrategy(
 
 function fetchSingleLoader(
   handler: Parameters<
-    NonNullable<Parameters<unstable_DataStrategyMatch["resolve"]>[0]>
+    NonNullable<Parameters<DataStrategyMatch["resolve"]>[0]>
   >[0],
   url: URL,
   init: RequestInit,
@@ -377,7 +381,14 @@ function stripIndexParam(url: URL) {
 export function singleFetchUrl(reqUrl: URL | string) {
   let url =
     typeof reqUrl === "string"
-      ? new URL(reqUrl, window.location.origin)
+      ? new URL(
+          reqUrl,
+          // This can be called during the SSR flow via PrefetchPageLinksImpl so
+          // don't assume window is available
+          typeof window === "undefined"
+            ? "server://singlefetch/"
+            : window.location.origin
+        )
       : reqUrl;
 
   if (url.pathname === "/") {
@@ -389,13 +400,33 @@ export function singleFetchUrl(reqUrl: URL | string) {
   return url;
 }
 
-async function fetchAndDecode(url: URL, init: RequestInit) {
+async function fetchAndDecode(
+  url: URL,
+  init: RequestInit
+): Promise<{ status: number; data: unknown }> {
   let res = await fetch(url, init);
   // Don't do a hard check against the header here.  We'll get `text/x-script`
   // when we have a running server, but if folks want to prerender `.data` files
   // and serve them from a CDN we should let them come back with whatever
   // Content-Type their CDN provides and not force them to make sure `.data`
   // files are served as `text/x-script`.  We'll throw if we can't decode anyway.
+
+  // some status codes are not permitted to have bodies, so we want to just
+  // treat those as "no data" instead of throwing an exception.
+  // 304 is not included here because the browser should fill those responses
+  // with the cached body content.
+  let NO_BODY_STATUS_CODES = new Set([100, 101, 204, 205]);
+  if (NO_BODY_STATUS_CODES.has(res.status)) {
+    if (!init.method || init.method === "GET") {
+      // SingleFetchResults can just have no routeId keys which will result
+      // in no data for all routes
+      return { status: res.status, data: {} };
+    } else {
+      // SingleFetchResult is for a singular route and can specify no data
+      return { status: res.status, data: { data: null } };
+    }
+  }
+
   invariant(res.body, "No response body to decode");
   try {
     let decoded = await decodeViaTurboStream(res.body, window);
@@ -491,7 +522,7 @@ function unwrapSingleFetchResult(result: SingleFetchResult, routeId: string) {
     if (result.replace) {
       headers["X-Remix-Replace"] = "yes";
     }
-    return redirect(result.redirect, { status: result.status, headers });
+    throw redirect(result.redirect, { status: result.status, headers });
   } else if ("data" in result) {
     return result.data;
   } else {

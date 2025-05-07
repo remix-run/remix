@@ -1,4 +1,3 @@
-import "@remix-run/node/install";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -100,7 +99,7 @@ async function run() {
 
   let build: ServerBuild = await reimportServer();
 
-  installGlobals({ nativeFetch: build.future.unstable_singleFetch });
+  installGlobals({ nativeFetch: build.future.v3_singleFetch });
 
   let onListen = () => {
     let address =

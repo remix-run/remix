@@ -1373,7 +1373,7 @@ test.describe("single fetch", () => {
         {
           config: {
             future: {
-              unstable_singleFetch: true,
+              v3_singleFetch: true,
             },
           },
           files: {
@@ -1835,7 +1835,7 @@ test.describe("single fetch", () => {
         fixture = await createFixture({
           config: {
             future: {
-              unstable_singleFetch: true,
+              v3_singleFetch: true,
             },
           },
           files: {
@@ -2016,7 +2016,7 @@ test.describe("single fetch", () => {
       fixture = await createFixture({
         config: {
           future: {
-            unstable_singleFetch: true,
+            v3_singleFetch: true,
           },
         },
         files: {
@@ -2379,7 +2379,7 @@ test.describe("single fetch", () => {
           {
             config: {
               future: {
-                unstable_singleFetch: true,
+                v3_singleFetch: true,
               },
             },
             files: getFiles({ includeRootErrorBoundary: false }),
@@ -2455,7 +2455,7 @@ test.describe("single fetch", () => {
           {
             config: {
               future: {
-                unstable_singleFetch: true,
+                v3_singleFetch: true,
               },
             },
             files: getFiles({ includeRootErrorBoundary: true }),
@@ -2525,7 +2525,7 @@ test.describe("single fetch", () => {
         fixture = await createFixture({
           config: {
             future: {
-              unstable_singleFetch: true,
+              v3_singleFetch: true,
             },
           },
           files: getFiles({
@@ -2614,7 +2614,7 @@ test.describe("single fetch", () => {
     let fixture = await createFixture({
       config: {
         future: {
-          unstable_singleFetch: true,
+          v3_singleFetch: true,
         },
       },
       files: {

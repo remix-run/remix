@@ -459,13 +459,14 @@ function PrefetchPageLinksImpl({
         matches,
         manifest,
         location,
+        future,
         "data"
       ),
-    [page, nextMatches, matches, manifest, location]
+    [page, nextMatches, matches, manifest, location, future]
   );
 
   let dataHrefs = React.useMemo(() => {
-    if (!future.unstable_singleFetch) {
+    if (!future.v3_singleFetch) {
       return getDataLinkHrefs(page, newMatchesForData, manifest);
     }
 
@@ -517,7 +518,7 @@ function PrefetchPageLinksImpl({
 
     return [url.pathname + url.search];
   }, [
-    future.unstable_singleFetch,
+    future.v3_singleFetch,
     loaderData,
     location,
     manifest,
@@ -535,9 +536,10 @@ function PrefetchPageLinksImpl({
         matches,
         manifest,
         location,
+        future,
         "assets"
       ),
-    [page, nextMatches, matches, manifest, location]
+    [page, nextMatches, matches, manifest, location, future]
   );
 
   let moduleHrefs = React.useMemo(
@@ -822,7 +824,7 @@ export function Scripts(props: ScriptProps) {
 
   let deferredScripts: any[] = [];
   let initialScripts = React.useMemo(() => {
-    let streamScript = future.unstable_singleFetch
+    let streamScript = future.v3_singleFetch
       ? // prettier-ignore
         "window.__remixContext.stream = new ReadableStream({" +
           "start(controller){" +
@@ -836,7 +838,7 @@ export function Scripts(props: ScriptProps) {
       : " ";
 
     // When single fetch is enabled, deferred is handled by turbo-stream
-    let activeDeferreds = future.unstable_singleFetch
+    let activeDeferreds = future.v3_singleFetch
       ? undefined
       : staticContext?.activeDeferreds;
 

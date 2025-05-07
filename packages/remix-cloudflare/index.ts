@@ -12,7 +12,7 @@ export {
 export {
   createRequestHandler,
   createSession,
-  unstable_data,
+  data,
   defer,
   broadcastDevReady,
   logDevReady,
@@ -40,6 +40,7 @@ export type {
   DataFunctionArgs,
   EntryContext,
   ErrorResponse,
+  Future,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HeadersArgs,

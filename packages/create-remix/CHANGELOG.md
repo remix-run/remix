@@ -1,5 +1,63 @@
 # `create-remix`
 
+## 2.16.5
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.5.
+
+## 2.16.4
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.4.
+
+## 2.16.3
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.3.
+
+## 2.16.2
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.2.
+
+## 2.16.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.1.
+
+## 2.16.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.0.
+
+## 2.15.3
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.15.3.
+
+## 2.15.2
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.15.2.
+
+## 2.15.1
+
+### Patch Changes
+
+- Move `fs-extra` from `devDependencies` to `dependencies` ([#10300](https://github.com/remix-run/remix/pull/10300))
+
+## 2.15.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.15.0.
+
+## 2.14.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.14.0.
+
+## 2.13.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.13.1.
+
+## 2.13.0
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.13.0.
+
+## 2.12.1
+
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.12.1.
+
 ## 2.12.0
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.12.0.
@@ -142,7 +200,7 @@ No significant changes to this package were made in this release. [See the relea
 
 ### Patch Changes
 
-- Allow dots in github repo shorthand notation folder names (i.e., `npx create-remix --template remix-run/examples/socket.io`) ([#7277](https://github.com/remix-run/remix/pull/7277))
+- Allow dots in github repo shorthand notation folder names (i.e., `npx create-remix@latest --template remix-run/examples/socket.io`) ([#7277](https://github.com/remix-run/remix/pull/7277))
 
 ## 1.19.3
 

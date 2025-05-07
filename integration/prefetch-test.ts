@@ -577,7 +577,7 @@ test.describe("single fetch", () => {
     return {
       config: {
         future: {
-          unstable_singleFetch: true,
+          v3_singleFetch: true,
         },
       },
       files: {
@@ -725,8 +725,8 @@ test.describe("single fetch", () => {
       let fixture = await createFixture({
         config: {
           future: {
-            unstable_lazyRouteDiscovery: true,
-            unstable_singleFetch: true,
+            v3_lazyRouteDiscovery: true,
+            v3_singleFetch: true,
           },
         },
         files: {
@@ -791,7 +791,9 @@ test.describe("single fetch", () => {
 
       let consoleLogs: string[] = [];
       page.on("console", (msg) => {
-        consoleLogs.push(msg.text());
+        if (!msg.text().includes("React Router Future Flag Warning")) {
+          consoleLogs.push(msg.text());
+        }
       });
 
       let selectors = {
@@ -945,7 +947,7 @@ test.describe("single fetch", () => {
       fixture = await createFixture({
         config: {
           future: {
-            unstable_singleFetch: true,
+            v3_singleFetch: true,
           },
         },
         files: {
@@ -1024,7 +1026,7 @@ test.describe("single fetch", () => {
       fixture = await createFixture({
         config: {
           future: {
-            unstable_singleFetch: true,
+            v3_singleFetch: true,
           },
         },
         files: {
@@ -1107,7 +1109,7 @@ test.describe("single fetch", () => {
       fixture = await createFixture({
         config: {
           future: {
-            unstable_singleFetch: true,
+            v3_singleFetch: true,
           },
         },
         files: {

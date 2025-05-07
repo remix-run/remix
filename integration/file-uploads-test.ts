@@ -157,7 +157,7 @@ test.describe("single fetch", () => {
       fixture = await createFixture({
         config: {
           future: {
-            unstable_singleFetch: true,
+            v3_singleFetch: true,
           },
         },
         files: {

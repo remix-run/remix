@@ -19,7 +19,7 @@ export function SomeComponent() {
 
 ### `key`
 
-By default, `useFetcher` generate a unique fetcher scoped to that component (however, it may be looked up in [`useFetchers()`][use_fetchers] while in-flight). If you want to identify a fetcher with your own key such that you can access it from elsewhere in your app, you can do that with the `key` option:
+By default, `useFetcher` generates a unique fetcher scoped to that component (however, it may be looked up in [`useFetchers()`][use_fetchers] while in-flight). If you want to identify a fetcher with your own key such that you can access it from elsewhere in your app, you can do that with the `key` option:
 
 ```tsx lines=[2,8]
 function AddToBagButton() {
@@ -119,9 +119,9 @@ fetcher.load("/some/route?foo=bar");
 
 `fetcher.load`'s revalidate by default after action submissions and explicit revalidation requests via [`useRevalidator`][userevalidator]. Because `fetcher.load` loads a specific URL they don't revalidate on changes to route param or URL search param. You can use [`shouldRevalidate`][shouldrevalidate] to optimize which data should be reloaded.
 
-#### `options.unstable_flushSync`
+#### `options.flushSync`
 
-The `unstable_flushSync` option tells React Router DOM to wrap the initial state update for this `fetcher.load` in a [`ReactDOM.flushSync`][flush-sync] call instead of the default [`React.startTransition`][start-transition]. This allows you to perform synchronous DOM actions immediately after the update is flushed to the DOM.
+The `flushSync` option tells React Router DOM to wrap the initial state update for this `fetcher.load` in a [`ReactDOM.flushSync`][flush-sync] call instead of the default [`React.startTransition`][start-transition]. This allows you to perform synchronous DOM actions immediately after the update is flushed to the DOM.
 
 <docs-warning>`ReactDOM.flushSync` de-optimizes React and can hurt the performance of your app.</docs-warning>
 

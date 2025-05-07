@@ -150,7 +150,7 @@ Once Remix has served the document to the browser, it "hydrates" the page with t
 
 When the user clicks a link, instead of making a round trip to the server for the entire document and all the assets, Remix simply fetches the data for the next page and updates the UI.
 
-Additionally, when users submit a `<Form>` to update data, instead of doing a normal HTML document request, the browser runtime will make a fetch to the server instead and automatically revalidate all data on the page and updating it with React.
+Additionally, when users submit a `<Form>` to update data, instead of doing a normal HTML document request, the browser runtime will make a fetch to the server instead and automatically revalidate all data on the page and update it with React.
 
 This has many performance benefits over making a full-document request:
 

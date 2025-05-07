@@ -1,12 +1,12 @@
 import type {
   StaticHandler,
-  unstable_DataStrategyFunctionArgs as DataStrategyFunctionArgs,
-  unstable_DataStrategyFunction as DataStrategyFunction,
+  DataStrategyFunctionArgs,
+  DataStrategyFunction,
   UNSAFE_DataWithResponseInit as DataWithResponseInit,
 } from "@remix-run/router";
 import {
   isRouteErrorResponse,
-  unstable_data as routerData,
+  data as routerData,
   UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
   stripBasename,
 } from "@remix-run/router";
@@ -102,7 +102,7 @@ export async function singleFetchAction(
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       skipLoaderErrorBubbling: true,
-      unstable_dataStrategy: getSingleFetchDataStrategy({
+      dataStrategy: getSingleFetchDataStrategy({
         isActionDataRequest: true,
       }),
     });
@@ -190,7 +190,7 @@ export async function singleFetchLoaders(
     let result = await staticHandler.query(handlerRequest, {
       requestContext: loadContext,
       skipLoaderErrorBubbling: true,
-      unstable_dataStrategy: getSingleFetchDataStrategy({
+      dataStrategy: getSingleFetchDataStrategy({
         loadRouteIds,
       }),
     });
@@ -418,6 +418,19 @@ type Serialize<T> =
 
   undefined
 
+// prettier-ignore
+type ClientData<T> =
+  T extends TypedResponse<infer U> ? Jsonify<U> :
+  T extends TypedDeferredData<infer U> ? U :
+  T
+
+// prettier-ignore
+type ServerData<T> =
+  T extends TypedResponse<infer U> ? Jsonify<U> :
+  T extends TypedDeferredData<infer U> ? Serialize<U> :
+  T extends DataWithResponseInit<infer U> ? Serialize<U> :
+  Serialize<T>
+
 // Backwards-compatible type for Remix v2 where json/defer still use the old types,
 // and only non-json/defer returns use the new types.  This allows for incremental
 // migration of loaders to return naked objects.  In the next major version,
@@ -425,15 +438,8 @@ type Serialize<T> =
 // prettier-ignore
 export type SerializeFrom<T> =
   T extends (...args: infer Args) => infer Return ?
-    Args extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ?
-      Awaited<Return> extends TypedResponse<infer U> ? Jsonify<U> :
-      Awaited<Return> extends TypedDeferredData<infer U> ? U :
-      Awaited<Return>
-    :
-    Awaited<Return> extends TypedResponse<infer U> ? Jsonify<U> :
-    Awaited<Return> extends TypedDeferredData<infer U> ? Serialize<U> :
-    Awaited<Return> extends DataWithResponseInit<infer D> ? Serialize<D> :
-    Serialize<Awaited<ReturnType<T>>>
+    Args extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs] ? ClientData<Awaited<Return>> :
+    ServerData<Awaited<Return>>
   :
   T
 
@@ -607,5 +613,18 @@ type _tests = [
   Expect<Equal<Pretty<SerializeFrom<ServerLoader<TypedDeferredData<{a: string, b: Promise<Date>}>>>>, { a: string, b: Promise<Date> }>>,
 
   // non-function backcompat
-  Expect<Equal<SerializeFrom<{a: string, b: Date}>, {a: string, b: Date}>>
+  Expect<Equal<SerializeFrom<{a: string, b: Date}>, {a: string, b: Date}>>,
+
+  Expect<Equal<
+    SerializeFrom<ServerLoader<
+    | { a: string; b: Date }
+    | TypedResponse<{ c: string; d: Date }>
+    | TypedDeferredData<{ e: string; f: Promise<Date> }>
+    | DataWithResponseInit<{ g: string; h: Date }>
+    >>,
+    | { a: string; b: Date }
+    | Jsonify<{ c: string; d: Date }>
+    | { e: string; f: Promise<Date> }
+    | { g: string; h: Date }
+  >>,
 ]

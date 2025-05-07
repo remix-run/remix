@@ -83,9 +83,9 @@ navigate(".", {
   - `"route"` will use the route hierarchy so `".."` will remove all URL segments of the current route pattern while `"path"` will use the URL path so `".."` will remove one URL segment
 - **state**: any - adds persistent client side routing state to the next location
 - **preventScrollReset**: boolean - if you are using [`<ScrollRestoration>`][scroll-restoration], prevent the scroll position from being reset to the top of the window when navigating
-- **unstable_flushSync**: boolean - wraps the initial state update for this navigation in a [`ReactDOM.flushSync`][flush-sync] call instead of the default [`React.startTransition`][start-transition]
-- **unstable_viewTransition**: boolean - enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`
-  - If you need to apply specific styles for this view transition, you will also need to leverage the [`unstable_useViewTransitionState()`][use-view-transition-state]
+- **flushSync**: boolean - wraps the initial state update for this navigation in a [`ReactDOM.flushSync`][flush-sync] call instead of the default [`React.startTransition`][start-transition]
+- **viewTransition**: boolean - enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`
+  - If you need to apply specific styles for this view transition, you will also need to leverage the [`useViewTransitionState()`][use-view-transition-state]
 
 [redirect]: ../utils/redirect
 [flush-sync]: https://react.dev/reference/react-dom/flushSync
