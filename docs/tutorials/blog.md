@@ -361,7 +361,7 @@ Instead of creating a route for every single one of our posts, we can use a "dyn
 💿 Create a dynamic route at `app/routes/posts.$slug.tsx`
 
 ```shellscript nonumber
-touch app/routes/posts.$slug.tsx
+touch app/routes/posts.\$slug.tsx
 ```
 
 ```tsx filename=app/routes/posts.$slug.tsx

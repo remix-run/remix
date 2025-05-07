@@ -20,7 +20,7 @@ Let's talk about what each part does.
 
 ## JavaScript Runtimes
 
-Remix can be deployed to any JavaScript runtime like Node.js, Shopify Oxygen, Cloudflare Workers/Pages, Fastly Functions, Deno, Bun, etc.
+Remix can be deployed to any JavaScript runtime like Node.js, Shopify Oxygen, Cloudflare Workers/Pages, Fastly Compute, Deno, Bun, etc.
 
 Each runtime has varying support for the standard Web APIs that Remix is built on, so Remix runtime package is required to polyfill any missing features of the runtime. These polyfills include web standard APIs like Request, Response, crypto, and more. This allows you to use the same APIs on the server as in the browser.
 

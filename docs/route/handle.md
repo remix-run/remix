@@ -4,7 +4,7 @@ title: handle
 
 # `handle`
 
-Exporting a handle allows you to create application conventions with the `useMatches()` hook. You can put whatever values you want on it:
+Exporting a handle allows you to create application conventions with the [`useMatches`][use-matches] hook. You can put whatever values you want on it:
 
 ```tsx
 export const handle = {

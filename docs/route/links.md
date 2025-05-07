@@ -4,7 +4,7 @@ title: links
 
 # `links`
 
-The links function defines which `<link>` elements to add to the page when the user visits a route.
+The links function defines which [`<link>` element][link-element]s to add to the page when the user visits a route.
 
 ```tsx
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
@@ -34,7 +34,7 @@ There are two types of link descriptors you can return:
 
 #### `HtmlLinkDescriptor`
 
-This is an object representation of a normal `<link {...props} />` element. [View the MDN docs for the link API][link tag].
+This is an object representation of a normal `<link {...props} />` element. [View the MDN docs for the link API][link-element].
 
 The `links` export from a route should return an array of `HtmlLinkDescriptor` objects.
 
@@ -58,7 +58,7 @@ export const links: LinksFunction = () => {
     {
       rel: "stylesheet",
       href: "https://example.com/some/styles.css",
-      crossOrigin: "true",
+      crossOrigin: "anonymous",
     },
 
     // add a local stylesheet, remix will fingerprint the file name for
@@ -99,4 +99,4 @@ This loads up the JavaScript modules, loader data, and the stylesheets (defined 
 
 <docs-warning>Be careful with this feature. You don't want to download 10MB of JavaScript and data for pages the user probably won't ever visit.</docs-warning>
 
-[link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
+[link-element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link

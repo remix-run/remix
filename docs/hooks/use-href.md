@@ -26,6 +26,8 @@ useHref(to, options)
 
 Optional. The path to append to the resolved URL.
 
+<docs-info>Please see the [Splat Paths][relativesplatpath] section on the `useResolvedPath` docs for a note on the behavior of the `future.v3_relativeSplatPath` future flag for relative `useHref()` behavior within splat routes</docs-info>
+
 ### `options`
 
 The only option is `{ relative: "route" | "path"}`, which defines the behavior when resolving relative URLs.
@@ -35,3 +37,4 @@ The only option is `{ relative: "route" | "path"}`, which defines the behavior w
 
 [anchor_element_href_attribute]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link#href
 [anchor_element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
+[relativesplatpath]: ./use-resolved-path#splat-paths

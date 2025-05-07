@@ -41,7 +41,7 @@ test("renders loader data", async () => {
 });
 ```
 
-If your loaders rely on the `getLoadContext` method, you can provide a stubbed context via the second parameter to `createRemixStub`:
+If your [`loader`][loader]s rely on the `getLoadContext` method, you can provide a stubbed context via the second parameter to `createRemixStub`:
 
 ```tsx
 const RemixStub = createRemixStub(
@@ -82,3 +82,5 @@ render(
 // Test the app rendered with given future flags enabled
 render(<RemixStub future={{ v3_coolFeature: true }} />);
 ```
+
+[loader]: ../route/loader

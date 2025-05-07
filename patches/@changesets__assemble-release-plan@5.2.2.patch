@@ -1,0 +1,39 @@
+diff --git a/dist/assemble-release-plan.cjs.dev.js b/dist/assemble-release-plan.cjs.dev.js
+index 3a37c62c975518f975c22e1b4b3974d9b325a5da..63e91f23a79765dfe42ebccabe1187d8a046936d 100644
+--- a/dist/assemble-release-plan.cjs.dev.js
++++ b/dist/assemble-release-plan.cjs.dev.js
+@@ -251,7 +251,7 @@ function shouldBumpMajor({
+   // we check if it is a peerDependency because if it is, our dependent bump type might need to be major.
+   return depType === "peerDependencies" && nextRelease.type !== "none" && nextRelease.type !== "patch" && ( // 1. If onlyUpdatePeerDependentsWhenOutOfRange set to true, bump major if the version is leaving the range.
+   // 2. If onlyUpdatePeerDependentsWhenOutOfRange set to false, bump major regardless whether or not the version is leaving the range.
+-  !onlyUpdatePeerDependentsWhenOutOfRange || !semver__default['default'].satisfies(incrementVersion(nextRelease, preInfo), versionRange)) && ( // bump major only if the dependent doesn't already has a major release.
++  !onlyUpdatePeerDependentsWhenOutOfRange || !semver__default['default'].satisfies(incrementVersion(nextRelease, preInfo), versionRange, { includePrerelease: true })) && ( // bump major only if the dependent doesn't already has a major release.
+   !releases.has(dependent) || releases.has(dependent) && releases.get(dependent).type !== "major");
+ }
+ 
+diff --git a/dist/assemble-release-plan.cjs.prod.js b/dist/assemble-release-plan.cjs.prod.js
+index 87b4c104bf3fa53ba498ced6f81eda0ed4c86436..004a81572079d2c8fd1fdc74b00cc063be07a4ef 100644
+--- a/dist/assemble-release-plan.cjs.prod.js
++++ b/dist/assemble-release-plan.cjs.prod.js
+@@ -130,7 +130,7 @@ function getDependencyVersionRanges(dependentPkgJSON, dependencyRelease) {
+ }
+ 
+ function shouldBumpMajor({dependent: dependent, depType: depType, versionRange: versionRange, releases: releases, nextRelease: nextRelease, preInfo: preInfo, onlyUpdatePeerDependentsWhenOutOfRange: onlyUpdatePeerDependentsWhenOutOfRange}) {
+-  return "peerDependencies" === depType && "none" !== nextRelease.type && "patch" !== nextRelease.type && (!onlyUpdatePeerDependentsWhenOutOfRange || !semver__default.default.satisfies(incrementVersion(nextRelease, preInfo), versionRange)) && (!releases.has(dependent) || releases.has(dependent) && "major" !== releases.get(dependent).type);
++  return "peerDependencies" === depType && "none" !== nextRelease.type && "patch" !== nextRelease.type && (!onlyUpdatePeerDependentsWhenOutOfRange || !semver__default.default.satisfies(incrementVersion(nextRelease, preInfo), versionRange, { includePrerelease: true })) && (!releases.has(dependent) || releases.has(dependent) && "major" !== releases.get(dependent).type);
+ }
+ 
+ function flattenReleases(changesets, packagesByName, ignoredPackages) {
+diff --git a/dist/assemble-release-plan.esm.js b/dist/assemble-release-plan.esm.js
+index c29c008dd709f07cabcb07feff86012c35a01ce5..c27ae1f124702fb278a3e62181c610d4d8402988 100644
+--- a/dist/assemble-release-plan.esm.js
++++ b/dist/assemble-release-plan.esm.js
+@@ -243,7 +243,7 @@ function shouldBumpMajor({
+   // we check if it is a peerDependency because if it is, our dependent bump type might need to be major.
+   return depType === "peerDependencies" && nextRelease.type !== "none" && nextRelease.type !== "patch" && ( // 1. If onlyUpdatePeerDependentsWhenOutOfRange set to true, bump major if the version is leaving the range.
+   // 2. If onlyUpdatePeerDependentsWhenOutOfRange set to false, bump major regardless whether or not the version is leaving the range.
+-  !onlyUpdatePeerDependentsWhenOutOfRange || !semver.satisfies(incrementVersion(nextRelease, preInfo), versionRange)) && ( // bump major only if the dependent doesn't already has a major release.
++  !onlyUpdatePeerDependentsWhenOutOfRange || !semver.satisfies(incrementVersion(nextRelease, preInfo), versionRange, { includePrerelease: true })) && ( // bump major only if the dependent doesn't already has a major release.
+   !releases.has(dependent) || releases.has(dependent) && releases.get(dependent).type !== "major");
+ }
+ 

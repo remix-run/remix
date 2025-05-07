@@ -4,7 +4,11 @@ title: Form
 
 # `<Form>`
 
-A progressively enhanced HTML [`<form>`][form_element] wrapper, useful for submissions that should also change the URL or otherwise add an entry to the browser history stack. For forms that shouldn't manipulate the browser history stack, use [`<fetcher.Form>`][fetcher_form].
+A progressively enhanced HTML [`<form>`][form_element] that submits data to actions via `fetch`, activating pending states in `useNavigation` which enables advanced user interfaces beyond a basic HTML form. After a form's action completes, all data on the page is automatically revalidated from the server to keep the UI in sync with the data.
+
+Because it uses the HTML form API, server rendered pages are interactive at a basic level before JavaScript loads. Instead of Remix managing the submission, the browser manages the submission as well as the pending states (like the spinning favicon). After JavaScript loads, Remix takes over enabling web application user experiences.
+
+Form is most useful for submissions that should also change the URL or otherwise add an entry to the browser history stack. For forms that shouldn't manipulate the browser history stack, use [`<fetcher.Form>`][fetcher_form].
 
 ```tsx
 import { Form } from "@remix-run/react";
@@ -26,6 +30,8 @@ function NewEvent() {
 The URL to submit the form data to.
 
 If `undefined`, this defaults to the closest route in context. If a parent route renders a `<Form>` but the URL matches deeper child routes, the form will post to the parent route. Likewise, a form inside the child route will post to the child route. This differs from a native [`<form>`][form_element] that will always point to the full URL.
+
+<docs-info>Please see the [Splat Paths][relativesplatpath] section on the `useResolvedPath` docs for a note on the behavior of the `future.v3_relativeSplatPath` future flag for relative `<Form action>` behavior within splat routes</docs-info>
 
 ### `method`
 
@@ -89,13 +95,9 @@ If true, it will submit the form with the browser instead of client side routing
 
 This is recommended over [`<form>`][form_element]. When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is since `<form>` uses the current URL as the default, but `<Form>` uses the URL for the route the form is rendered in.
 
-### `unstable_viewTransition`
+### `viewTransition`
 
-The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in `document.startViewTransition()`. If you need to apply specific styles for this view transition, you will also need to leverage the [`unstable_useViewTransitionState()`][use-view-transition-state].
-
-<docs-warning>
-Please note that this API is marked unstable and may be subject to breaking changes without a major release.
-</docs-warning>
+The `viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in [`document.startViewTransition()`][document-start-view-transition]. If you need to apply specific styles for this view transition, you will also need to leverage the [`useViewTransitionState()`][use-view-transition-state].
 
 ## Notes
 
@@ -153,5 +155,7 @@ See also:
 [use_fetchers]: ../hooks/use-fetchers
 [fetcher_form]: ../hooks/use-fetcher#fetcherform
 [progressive_enhancement]: ../discussion/progressive-enhancement
-[use-view-transition-state]: ../hooks//use-view-transition-state
 [view-transitions]: https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API
+[document-start-view-transition]: https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition
+[use-view-transition-state]: ../hooks/use-view-transition-state
+[relativesplatpath]: ../hooks/use-resolved-path#splat-paths

@@ -29,14 +29,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          cache: "yarn"
+          cache: "pnpm"
 
       - name: 📥 Install deps
-        run: yarn --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 🔐 Setup npm auth
         run: |
@@ -52,10 +55,10 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          version: yarn run changeset:version
+          version: pnpm run changeset:version
           commit: "chore: Update version for release"
           title: "chore: Update version for release"
-          publish: yarn run changeset:release
+          publish: pnpm run changeset:release
           createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -72,11 +75,14 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
 
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
 
       - id: find_package_version
         run: |
@@ -92,26 +98,26 @@ jobs:
     needs: [release, find_package_version]
     uses: ./.github/workflows/release-comments.yml
 
-  deployments:
-    name: 🚀 Deployment Tests
-    if: github.repository == 'remix-run/remix'
-    needs: [release, find_package_version]
-    uses: ./.github/workflows/deployments.yml
-    secrets:
-      TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
-      TEST_AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
-      TEST_CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
-      TEST_CF_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
-      TEST_CF_EMAIL: ${{ secrets.TEST_CF_EMAIL }}
-      TEST_CF_PAGES_API_TOKEN: ${{ secrets.TEST_CF_PAGES_API_TOKEN }}
-      TEST_CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
-      TEST_DENO_DEPLOY_TOKEN: ${{ secrets.TEST_DENO_DEPLOY_TOKEN }}
-      TEST_FLY_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
+  # deployments:
+  #   name: 🚀 Deployment Tests
+  #   if: github.repository == 'remix-run/remix'
+  #   needs: [release, find_package_version]
+  #   uses: ./.github/workflows/deployments.yml
+  #   secrets:
+  #     TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
+  #     TEST_AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
+  #     TEST_CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
+  #     TEST_CF_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
+  #     TEST_CF_EMAIL: ${{ secrets.TEST_CF_EMAIL }}
+  #     TEST_CF_PAGES_API_TOKEN: ${{ secrets.TEST_CF_PAGES_API_TOKEN }}
+  #     TEST_CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
+  #     TEST_DENO_DEPLOY_TOKEN: ${{ secrets.TEST_DENO_DEPLOY_TOKEN }}
+  #     TEST_FLY_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
 
-  stacks:
-    name: 🥞 Remix Stacks Test
-    if: github.repository == 'remix-run/remix'
-    needs: [release, find_package_version]
-    uses: ./.github/workflows/stacks.yml
-    with:
-      version: ${{ needs.find_package_version.outputs.package_version }}
+  # stacks:
+  #   name: 🥞 Remix Stacks Test
+  #   if: github.repository == 'remix-run/remix'
+  #   needs: [release, find_package_version]
+  #   uses: ./.github/workflows/stacks.yml
+  #   with:
+  #     version: ${{ needs.find_package_version.outputs.package_version }}

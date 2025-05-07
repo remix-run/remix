@@ -58,6 +58,7 @@ export function createHotContext(id: string): ImportMetaHot {
   let disposed = false;
 
   let hot = {
+    __remixCompiler: true,
     accept: (dep, cb) => {
       if (typeof dep !== "string") {
         cb = dep;
@@ -108,8 +109,16 @@ declare global {
         return { loader: "ts", contents, resolveDir: config.appDirectory };
       });
 
+      // This is only needed within the Remix repo because the symlink to the
+      // `packages/remix-react` folder doesn't match the regex below
+      let remixReactPath = require.resolve(
+        "@remix-run/react/dist/esm/browser.js",
+        { paths: [config.rootDirectory] }
+      );
+
       build.onLoad({ filter: /.*/, namespace: "file" }, async (args) => {
         if (
+          args.path !== remixReactPath &&
           !args.path.match(
             /@remix-run[/\\]react[/\\]dist[/\\]esm[/\\]browser.js$/
           ) &&

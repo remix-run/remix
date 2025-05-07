@@ -14,7 +14,7 @@ The most common use-cases tend to be:
   - Throwing a 404 when you can't find requested data
 - React may unintentionally throw an `Error` if it encounters a runtime error during rendering
 
-To obtain the thrown object, you can use the [`useRouteError`][use-route-error] hook. When a `Response` is thrown, it will be automatically unwrapped into an `ErrorResponse` instance with `state`/`statusText`/`data` fields so that you don't need to bother with `await response.json()` in your component. To differentiate thrown `Response`'s from thrown `Error`'s' you can use the [`isRouteErrorResponse`][is-route-error-response] utility.
+To obtain the thrown object, you can use the [`useRouteError`][use-route-error] hook. When a `Response` is thrown, it will be automatically unwrapped into an `ErrorResponse` instance with `state`/`statusText`/`data` fields so that you don't need to bother with `await response.json()` in your component. To differentiate thrown `Response`'s from thrown `Error`'s you can use the [`isRouteErrorResponse`][is-route-error-response] utility.
 
 ```tsx
 import {

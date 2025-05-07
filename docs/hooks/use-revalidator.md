@@ -25,13 +25,13 @@ function WindowFocusRevalidator() {
 }
 ```
 
-Remix already revalidates the data on the page automatically when actions are called. If you find yourself using this for normal CRUD operations on your data in response to user interactions, you're probably not taking advantage of the other APIs like [`<Form>`][form], [`useSubmit`][usesubmit], or [`useFetcher`][usefetcher] that do this automatically.
+Remix already revalidates the data on the page automatically when actions are called. If you find yourself using this for normal CRUD operations on your data in response to user interactions, you're probably not taking advantage of the other APIs like [`<Form>`][form-component], [`useSubmit`][use-submit], or [`useFetcher`][use-fetcher] that do this automatically.
 
 ## Properties
 
 ### `revalidator.state`
 
-The state the revalidation. Either `"idle"` or `"loading"`.
+The state of the revalidation. Either `"idle"` or `"loading"`.
 
 ### `revalidator.revalidate()`
 
@@ -58,6 +58,6 @@ Race conditions are automatically handled when calling `revalidate()` when a rev
 
 If a navigation happens while a revalidation is in flight, the revalidation will be cancelled and fresh data will be requested from all loaders for the next page.
 
-[form]: ../components/form
-[usefetcher]: ./use-fetcher
-[usesubmit]: ./use-submit
+[form-component]: ../components/form
+[use-fetcher]: ./use-fetcher
+[use-submit]: ./use-submit

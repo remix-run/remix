@@ -17,8 +17,10 @@ const enqueueUpdate = debounce(async () => {
 
     for (let route of routeUpdates.values()) {
       manifest.routes[route.id] = route;
-
-      let imported = await __hmr_import(route.url + "?t=" + Date.now());
+      let imported = window.__remixRouteModuleUpdates.get(route.id);
+      if (!imported) {
+        throw Error(`[remix:hmr] No module update found for route ${route.id}`);
+      }
       let routeModule = {
         ...imported,
         // react-refresh takes care of updating these in-place,
@@ -30,13 +32,17 @@ const enqueueUpdate = debounce(async () => {
           ? window.__remixRouteModules[route.id]?.ErrorBoundary ??
             imported.ErrorBoundary
           : imported.ErrorBoundary,
+        HydrateFallback: imported.HydrateFallback
+          ? window.__remixRouteModules[route.id]?.HydrateFallback ??
+            imported.HydrateFallback
+          : imported.HydrateFallback,
       };
       window.__remixRouteModules[route.id] = routeModule;
     }
 
     let needsRevalidation = new Set(
       Array.from(routeUpdates.values())
-        .filter((route) => route.hasLoader)
+        .filter((route) => route.hasLoader || route.hasClientLoader)
         .map((route) => route.id)
     );
 
@@ -44,13 +50,21 @@ const enqueueUpdate = debounce(async () => {
       needsRevalidation,
       manifest.routes,
       window.__remixRouteModules,
-      window.__remixContext.future
+      window.__remixContext.future,
+      window.__remixContext.isSpaMode
     );
     __remixRouter._internalSetRoutes(routes);
     routeUpdates.clear();
+    window.__remixRouteModuleUpdates.clear();
   }
 
-  await revalidate();
+  try {
+    window.__remixHdrActive = true;
+    await revalidate();
+  } finally {
+    window.__remixHdrActive = false;
+  }
+
   if (manifest) {
     Object.assign(window.__remixManifest, manifest);
   }
@@ -133,6 +147,7 @@ function __hmr_import(module) {
 }
 
 const routeUpdates = new Map();
+window.__remixRouteModuleUpdates = new Map();
 
 async function revalidate() {
   let { promise, resolve } = channel();

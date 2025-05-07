@@ -1,10 +1,11 @@
 ---
 title: Templates
 description: The quickest way to get rocking and rolling with Remix
-order: 3
 ---
 
 # Templates and Stacks
+
+<docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you should create your project using a [React Router template][react-router-templates].</docs-warning>
 
 When using [`create-remix`][create_remix] to generate a new project, you can choose a Template or a Stack to quickly get up and running. Templates are minimal starting points to get you up and running. "Stacks" are templates that are more-complete and closer to production ready architectures (potentially including aspects such as testing, database, CI, and deployment configurations).
 
@@ -29,12 +30,24 @@ This is a great place to start if you're just looking to try out Remix for the f
 If you want more control over your server or wish to deploy to a non-node runtime—such as [Arc][arc], [Cloudflare][cloudflare], or [Deno][deno]—then you can try one of our [official templates][official_templates] from the Remix repository:
 
 ```shellscript nonumber
-npx create-remix@latest --template remix-run/remix/templates/arc
-npx create-remix@latest --template remix-run/remix/templates/cloudflare-pages
+npx create-remix@latest --template remix-run/remix/templates/cloudflare
 npx create-remix@latest --template remix-run/remix/templates/cloudflare-workers
-npx create-remix@latest --template remix-run/remix/templates/deno
 npx create-remix@latest --template remix-run/remix/templates/express
-npx create-remix@latest --template remix-run/remix/templates/fly
+npx create-remix@latest --template remix-run/remix/templates/remix
+npx create-remix@latest --template remix-run/remix/templates/remix-javascript
+
+## SPA Mode
+npx create-remix@latest --template remix-run/remix/templates/spa
+
+## Classic Remix Compiler
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/arc
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/cloudflare-pages
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/cloudflare-workers
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/deno
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/express
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/fly
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/remix
+npx create-remix@latest --template remix-run/remix/templates/classic-remix-compiler/remix-javascript
 ```
 
 ### Third-Party Templates
@@ -76,7 +89,7 @@ What you're left with is everything completely set up for you to just get to wor
 - [The Indie Stack][indie_stack]: Deployed to a long-running Node.js server with a persistent SQLite database. This stack is great for websites with dynamic data that you control (blogs, marketing, content sites). It's also a perfect, low-complexity bootstrap for MVPs, prototypes, and proof-of-concepts that can later be updated to the Blues stack easily.
 - [The Grunge Stack][grunge_stack]: Deployed to a serverless function running Node.js with DynamoDB for persistence. Intended for folks who want to deploy a production-grade application on AWS infrastructure serving millions of users.
 
-You can use these stacks by proving the `--template` option when running `create-remix`, for example:
+You can use these stacks by providing the `--template` option when running `create-remix`, for example:
 
 ```shellscript nonumber
 npx create-remix@latest --template remix-run/blues-stack
@@ -159,3 +172,5 @@ After the init script has been run, the `remix.init` folder gets deleted, so you
 [arc]: https://arc.codes/docs/en/get-started/quickstart
 [deno]: https://deno.com
 [cloudflare]: https://www.cloudflare.com
+[remix-now-react-router]: https://remix.run/blog/incremental-path-to-react-19
+[react-router-templates]: https://github.com/remix-run/react-router-templates

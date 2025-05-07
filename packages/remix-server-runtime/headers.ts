@@ -3,7 +3,7 @@ import { splitCookiesString } from "set-cookie-parser";
 
 import type { ServerBuild } from "./build";
 
-export function getDocumentHeadersRR(
+export function getDocumentHeaders(
   build: ServerBuild,
   context: StaticHandlerContext
 ): Headers {
@@ -92,8 +92,12 @@ function prependCookies(parentHeaders: Headers, childHeaders: Headers): void {
 
   if (parentSetCookieString) {
     let cookies = splitCookiesString(parentSetCookieString);
+    // @ts-expect-error This is not available in the polyfill or Node 18 and below
+    let childCookies = new Set(childHeaders.getSetCookie?.());
     cookies.forEach((cookie) => {
-      childHeaders.append("Set-Cookie", cookie);
+      if (!childCookies.has(cookie)) {
+        childHeaders.append("Set-Cookie", cookie);
+      }
     });
   }
 }

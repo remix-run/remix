@@ -1,0 +1,4 @@
+packages:
+  - "integration"
+  - "integration/helpers/*"
+  - "packages/*"

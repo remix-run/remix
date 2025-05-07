@@ -9,13 +9,32 @@ export interface EntryContext {
   routeModules: RouteModules<EntryRouteModule>;
   criticalCss?: string;
   serverHandoffString?: string;
+  serverHandoffStream?: ReadableStream<Uint8Array>;
+  renderMeta?: {
+    didRenderScripts?: boolean;
+    streamCache?: Record<
+      number,
+      Promise<void> & {
+        result?: {
+          done: boolean;
+          value: string;
+        };
+        error?: unknown;
+      }
+    >;
+  };
   staticHandlerContext: StaticHandlerContext;
   future: FutureConfig;
+  isSpaMode: boolean;
   serializeError(error: Error): SerializedError;
 }
 
 export interface FutureConfig {
   v3_fetcherPersist: boolean;
+  v3_relativeSplatPath: boolean;
+  v3_throwAbortReason: boolean;
+  v3_lazyRouteDiscovery: boolean;
+  v3_singleFetch: boolean;
 }
 
 export interface AssetsManifest {

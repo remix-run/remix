@@ -32,7 +32,7 @@ produces this HTML:
 <meta name="description" content="This app is the best" />
 ```
 
-By default, meta descriptors will render a `<meta>` tag in most cases. The two exceptions are:
+By default, meta descriptors will render a [`<meta>` tag][meta-element] in most cases. The two exceptions are:
 
 - `{ title }` renders a `<title>` tag
 - `{ "script:ld+json" }` renders a `<script type="application/ld+json">` tag, and its value should be a serializable object that is stringified and injected into the tag.
@@ -52,7 +52,7 @@ export const meta: MetaFunction = () => {
 };
 ```
 
-A meta descriptor can also render a `<link>` tag by setting the `tagName` property to `"link"`. This is useful for `<link>` tags associated with SEO like `canonical` URLs. For asset links like stylesheets and favicons, you should use the [`links` export][links-export] instead.
+A meta descriptor can also render a [`<link>` tag][link-element] by setting the `tagName` property to `"link"`. This is useful for `<link>` tags associated with SEO like `canonical` URLs. For asset links like stylesheets and favicons, you should use the [`links` export][links] instead.
 
 ```tsx
 export const meta: MetaFunction = () => {
@@ -89,7 +89,7 @@ The interface for `matches` is similar to the return value of [`useMatches`][use
 
 ### `data`
 
-This is the data from your route's loader.
+This is the data from your route's [`loader`][loader].
 
 ```tsx
 export async function loader({
@@ -123,7 +123,7 @@ export const meta: MetaFunction = ({ error }) => {
 
 ## Accessing Data from Parent Route Loaders
 
-In addition to the current route's data, often you'll want to access data from a route higher up in the route hierarchy. You can look it up by its route ID in `matches`.
+In addition to the current route's data, often you'll want to access data from a route higher up in the route hierarchy. You can look it up by its route ID in [`matches`][matches].
 
 ```tsx filename=app/routes/project.$pid.tasks.$tid.tsx
 import type { loader as projectDetailsLoader } from "./project.$pid";
@@ -140,7 +140,7 @@ export const meta: MetaFunction<
 > = ({ data, matches }) => {
   const project = matches.find(
     (match) => match.id === "routes/project.$pid"
-  ).project;
+  ).data.project;
   const task = data.task;
   return [{ title: `${project.name}: ${task.name}` }];
 };
@@ -186,24 +186,24 @@ With this code, we will lose the `viewport` meta tag at `/projects` and `/projec
 
 ### Global `meta`
 
-Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal `<meta>` tags inside the [root route][root_route] instead of the `meta` export, so you simply don't have to deal with merging:
+Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal [`<meta>` tags][meta-element] inside the [root route][root-route] instead of the `meta` export, so you simply don't have to deal with merging:
 
 ```tsx filename=app/root.tsx lines=[12-16]
 import {
-  Meta,
   Links,
-  Scripts,
+  Meta,
   Outlet,
+  Scripts,
 } from "@remix-run/react";
 
-export default function Root() {
+export default function App() {
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta
           name="viewport"
-          content="width=device-width,initial-scale=1"
+          content="width=device-width, initial-scale=1"
         />
         <Meta />
         <Links />
@@ -219,11 +219,11 @@ export default function Root() {
 
 ### Avoid `meta` in Parent Routes
 
-You can also avoid the merge problem by simply not exporting meta that you want to override from parent routes. Instead of defining meta on the parent route, use the [index route][index_route]. This way you can avoid complex merge logic for things like the title. Otherwise, you will need to find the parent title descriptor and replace it with the child's title. It's much easier to simply not need to override by using index routes.
+You can also avoid the merge problem by simply not exporting `meta` that you want to override from parent routes. Instead of defining `meta` on the parent route, use the [index route][index-route]. This way you can avoid complex merge logic for things like the title. Otherwise, you will need to find the parent title descriptor and replace it with the child's title. It's much easier to simply not need to override by using index routes.
 
 ### Merging with Parent `meta`
 
-Usually you only need to add meta to what the parent has already defined. You can merge parent meta with the spread operator and the [`matches`][matches] arg:
+Usually you only need to add `meta` to what the parent has already defined. You can merge parent `meta` with the spread operator and the [`matches`][matches] argument:
 
 ```tsx
 export const meta: MetaFunction = ({ matches }) => {
@@ -234,7 +234,7 @@ export const meta: MetaFunction = ({ matches }) => {
 };
 ```
 
-Note that this _will not_ override something like `title`. This is only additive. If the inherited route meta includes a `title` tag, you can override with `Array.prototype.filter`:
+Note that this _will not_ override something like `title`. This is only additive. If the inherited route meta includes a `title` tag, you can override with [`Array.prototype.filter`][array-filter]:
 
 ```tsx
 export const meta: MetaFunction = ({ matches }) => {
@@ -251,11 +251,15 @@ If you can't avoid the merge problem with global meta or index routes, we've cre
 
 - [View Gist for `merge-meta.ts`][merge-meta]
 
-[links-export]: ./links
+[meta-element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta
+[link-element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
+[links]: ./links
 [use-matches]: ../hooks/use-matches
 [merging-metadata-across-the-route-hierarchy]: #merging-with-parent-meta
+[loader]: ./loader
 [url-params]: ../file-conventions/routes#dynamic-segments
-[root_route]: ../file-conventions/root
-[index_route]: ../discussion/routes#index-routes
 [matches]: #matches
+[root-route]: ../file-conventions/root
+[index-route]: ../discussion/routes#index-routes
+[array-filter]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
 [merge-meta]: https://gist.github.com/ryanflorence/ec1849c6d690cfbffcb408ecd633e069

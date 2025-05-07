@@ -4,11 +4,11 @@ title: Breadcrumbs Guide
 
 # Breadcrumbs Guide
 
-In Remix, you can easily build dynamic breadcrumbs based on your route hierarchy. This guide will take you through the process using the `useMatches` and `handle` features.
+In Remix, you can easily build dynamic breadcrumbs based on your route hierarchy. This guide will take you through the process using the [`useMatches`][use-matches] and [`handle`][handle] features.
 
 ## Understanding the Basics
 
-Remix provides access to all route matches and related data at the top of the React element tree. This enables components like `<Meta />`, `<Links />`, and `<Scripts />` to obtain values from nested routes and render them at the top of the document.
+Remix provides access to all route matches and related data at the top of the React element tree. This enables components like [`<Meta />`][meta-component], [`<Links />`][links-component], and [`<Scripts />`][scripts-component] to obtain values from nested routes and render them at the top of the document.
 
 You can use a similar strategy using the `useMatches` and `handle` functions. While we're focusing on breadcrumbs, the principles demonstrated here are applicable to a range of scenarios.
 
@@ -36,7 +36,7 @@ export const handle = {
 
 Now, bring everything together in your root route using `useMatches`:
 
-```tsx filename=root.tsx lines=[5,9,19-28]
+```tsx filename=app/root.tsx lines=[5,9,19-28]
 import {
   Links,
   Scripts,
@@ -74,7 +74,7 @@ export default function Root() {
 }
 ```
 
-Note that we pass the `match` object to breadcrumbs, allowing us to potentially utilize `match.data` for enhancing breadcrumb content based on the route's data. This example doesn't use it, but you'll like want to use values from your loader data for the breadcrumb.
+Note that we pass the `match` object to breadcrumbs, allowing us to potentially utilize `match.data` for enhancing breadcrumb content based on the route's data. This example doesn't use it, but you'll likely want to use values from your loader data for the breadcrumb.
 
 Using `useMatches` with `handle` offers a robust way for routes to contribute to rendering processes higher up the element tree than their actual render point.
 
@@ -85,3 +85,6 @@ Using `useMatches` with `handle` offers a robust way for routes to contribute to
 
 [use-matches]: ../hooks/use-matches
 [handle]: ../route/handle
+[meta-component]: ../components/meta
+[links-component]: ../components/links
+[scripts-component]: ../components/scripts
