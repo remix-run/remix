@@ -20,11 +20,11 @@ import pick from "lodash/pick";
 import omit from "lodash/omit";
 import colors from "picocolors";
 
-import { type ConfigRoute, type RouteManifest } from "../config/routes";
+import { type RouteManifestEntry, type RouteManifest } from "../config/routes";
 import {
   type AppConfig as RemixEsbuildUserConfig,
   type RemixConfig as ResolvedRemixEsbuildConfig,
-  resolveConfig as resolveRemixEsbuildConfig,
+  resolveConfig as resolveCommonConfig,
   findConfig,
 } from "../config";
 import { type Manifest as RemixManifest } from "../manifest";
@@ -39,7 +39,9 @@ import * as VirtualModule from "./vmod";
 import { resolveFileUrl } from "./resolve-file-url";
 import { combineURLs } from "./combine-urls";
 import { removeExports } from "./remove-exports";
-import { importViteEsmSync, preloadViteEsm } from "./import-vite-esm-sync";
+import { ssrExternals } from "./ssr-externals";
+import { getVite, preloadVite } from "./vite";
+import * as ViteNode from "./vite-node";
 
 export async function resolveViteConfig({
   configFile,
@@ -50,7 +52,8 @@ export async function resolveViteConfig({
   mode?: string;
   root: string;
 }) {
-  let vite = await import("vite");
+  await preloadVite();
+  let vite = getVite();
 
   let viteConfig = await vite.resolveConfig(
     { mode, configFile, root },
@@ -143,11 +146,14 @@ const branchRouteProperties = [
   "path",
   "file",
   "index",
-] as const satisfies ReadonlyArray<keyof ConfigRoute>;
-type BranchRoute = Pick<ConfigRoute, typeof branchRouteProperties[number]>;
+] as const satisfies ReadonlyArray<keyof RouteManifestEntry>;
+type BranchRoute = Pick<
+  RouteManifestEntry,
+  typeof branchRouteProperties[number]
+>;
 
 export const configRouteToBranchRoute = (
-  configRoute: ConfigRoute
+  configRoute: RouteManifestEntry
 ): BranchRoute => pick(configRoute, branchRouteProperties);
 
 export type ServerBundlesFunction = (args: {
@@ -293,10 +299,10 @@ let hmrRuntimeId = VirtualModule.id("hmr-runtime");
 let injectHmrRuntimeId = VirtualModule.id("inject-hmr-runtime");
 
 const resolveRelativeRouteFilePath = (
-  route: ConfigRoute,
+  route: RouteManifestEntry,
   remixConfig: ResolvedVitePluginConfig
 ) => {
-  let vite = importViteEsmSync();
+  let vite = getVite();
   let file = route.file;
   let fullPath = path.resolve(remixConfig.appDirectory, file);
 
@@ -326,7 +332,7 @@ const resolveChunk = (
   viteManifest: Vite.Manifest,
   absoluteFilePath: string
 ) => {
-  let vite = importViteEsmSync();
+  let vite = getVite();
   let rootRelativeFilePath = vite.normalizePath(
     path.relative(ctx.rootDirectory, absoluteFilePath)
   );
@@ -611,6 +617,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
   let viteConfig: Vite.ResolvedConfig | undefined;
   let cssModulesManifest: Record<string, string> = {};
   let viteChildCompiler: Vite.ViteDevServer | null = null;
+  let routesViteNodeContext: ViteNode.Context | null = null;
 
   // This is initialized by `updateRemixPluginContext` during Vite's `config`
   // hook, so most of the code can assume this defined without null check.
@@ -619,7 +626,11 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
   let ctx: RemixPluginContext;
 
   /** Mutates `ctx` as a side-effect */
-  let updateRemixPluginContext = async (): Promise<void> => {
+  let updateRemixPluginContext = async ({
+    routeConfigChanged = false,
+  }: {
+    routeConfigChanged?: boolean;
+  } = {}): Promise<void> => {
     let remixConfigPresets: VitePluginConfig[] = (
       await Promise.all(
         (remixUserConfig.presets ?? []).map(async (preset) => {
@@ -665,6 +676,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
     let isSpaMode = !ssr;
 
     // Only select the Remix esbuild config options that the Vite plugin uses
+    invariant(routesViteNodeContext);
     let {
       appDirectory,
       entryClientFilePath,
@@ -672,9 +684,16 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       future,
       routes,
       serverModuleFormat,
-    } = await resolveRemixEsbuildConfig(
+    } = await resolveCommonConfig(
       pick(resolvedRemixUserConfig, supportedRemixEsbuildConfigKeys),
-      { rootDirectory, isSpaMode }
+      {
+        rootDirectory,
+        isSpaMode,
+        vite: getVite(),
+        routeConfigChanged,
+        viteUserConfig,
+        routesViteNodeContext,
+      }
     );
 
     let buildDirectory = path.resolve(
@@ -999,14 +1018,19 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       name: "remix",
       config: async (_viteUserConfig, _viteConfigEnv) => {
         // Preload Vite's ESM build up-front as soon as we're in an async context
-        await preloadViteEsm();
+        await preloadVite();
 
         // Ensure sync import of Vite works after async preload
-        let vite = importViteEsmSync();
+        let vite = getVite();
 
         viteUserConfig = _viteUserConfig;
         viteConfigEnv = _viteConfigEnv;
         viteCommand = viteConfigEnv.command;
+
+        routesViteNodeContext = await ViteNode.createContext({
+          root: viteUserConfig.root,
+          mode: viteConfigEnv.mode,
+        });
 
         await updateRemixPluginContext();
 
@@ -1053,26 +1077,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
               : "custom",
 
           ssr: {
-            external: isInRemixMonorepo()
-              ? [
-                  // This is only needed within the Remix repo because these
-                  // packages are linked to a directory outside of node_modules
-                  // so Vite treats them as internal code by default.
-                  "@remix-run/architect",
-                  "@remix-run/cloudflare-pages",
-                  "@remix-run/cloudflare-workers",
-                  "@remix-run/cloudflare",
-                  "@remix-run/css-bundle",
-                  "@remix-run/deno",
-                  "@remix-run/dev",
-                  "@remix-run/express",
-                  "@remix-run/netlify",
-                  "@remix-run/node",
-                  "@remix-run/react",
-                  "@remix-run/serve",
-                  "@remix-run/server-runtime",
-                ]
-              : undefined,
+            external: ssrExternals,
           },
           optimizeDeps: {
             entries: ctx.remixConfig.future.unstable_optimizeDeps
@@ -1204,7 +1209,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           );
         }
 
-        let vite = importViteEsmSync();
+        let vite = getVite();
 
         let childCompilerConfigFile = await vite.loadConfigFromFile(
           {
@@ -1342,24 +1347,38 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         });
 
         // Invalidate virtual modules and update cached plugin config via file watcher
-        viteDevServer.watcher.on("all", async (eventName, filepath) => {
-          let { normalizePath } = importViteEsmSync();
+        viteDevServer.watcher.on("all", async (eventName, rawFilepath) => {
+          let { normalizePath } = getVite();
+          let filepath = normalizePath(rawFilepath);
 
           let appFileAddedOrRemoved =
             (eventName === "add" || eventName === "unlink") &&
-            normalizePath(filepath).startsWith(
-              normalizePath(ctx.remixConfig.appDirectory)
-            );
+            filepath.startsWith(normalizePath(ctx.remixConfig.appDirectory));
 
           invariant(viteConfig?.configFile);
           let viteConfigChanged =
             eventName === "change" &&
-            normalizePath(filepath) === normalizePath(viteConfig.configFile);
+            filepath === normalizePath(viteConfig.configFile);
 
-          if (appFileAddedOrRemoved || viteConfigChanged) {
+          let routeConfigChanged = Boolean(
+            routesViteNodeContext?.devServer?.moduleGraph.getModuleById(
+              filepath
+            )
+          );
+
+          if (routeConfigChanged || appFileAddedOrRemoved) {
+            routesViteNodeContext?.devServer?.moduleGraph.invalidateAll();
+            routesViteNodeContext?.runner?.moduleCache.clear();
+          }
+
+          if (
+            appFileAddedOrRemoved ||
+            viteConfigChanged ||
+            routeConfigChanged
+          ) {
             let lastRemixConfig = ctx.remixConfig;
 
-            await updateRemixPluginContext();
+            await updateRemixPluginContext({ routeConfigChanged });
 
             if (!isEqualJson(lastRemixConfig, ctx.remixConfig)) {
               invalidateVirtualModules(viteDevServer);
@@ -1382,7 +1401,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
                   nodeReq,
                   nodeRes
                 ) => {
-                  let req = fromNodeRequest(nodeReq);
+                  let req = fromNodeRequest(nodeReq, nodeRes);
                   let res = await handler(req, await remixDevLoadContext(req));
                   await toNodeRequest(res, nodeRes);
                 };
@@ -1468,6 +1487,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
       },
       async buildEnd() {
         await viteChildCompiler?.close();
+        await routesViteNodeContext?.devServer.close();
       },
     },
     {
@@ -1532,7 +1552,7 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
           return;
         }
 
-        let vite = importViteEsmSync();
+        let vite = getVite();
         let importerShort = vite.normalizePath(
           path.relative(ctx.rootDirectory, importer)
         );
@@ -1771,13 +1791,64 @@ export const remixVitePlugin: RemixVitePlugin = (remixUserConfig = {}) => {
         return modules;
       },
     },
+    {
+      name: "remix-server-change-trigger-client-hmr",
+      // This hook is only available in Vite v6+ so this is a no-op in v5.
+      // Previously the server and client modules were shared in a single module
+      // graph. This meant that changes to server code automatically resulted in
+      // client HMR updates. In Vite v6+ these module graphs are separate from
+      // each other so we need to manually trigger client HMR updates if server
+      // code has changed.
+      hotUpdate(this, { server, modules }) {
+        if (this.environment.name !== "ssr" && modules.length <= 0) {
+          return;
+        }
+
+        let clientModules = uniqueNodes(
+          modules.flatMap((mod) =>
+            getParentClientNodes(server.environments.client.moduleGraph, mod)
+          )
+        );
+
+        for (let clientModule of clientModules) {
+          server.environments.client.reloadModule(clientModule);
+        }
+      },
+    },
   ];
 };
 
-function isInRemixMonorepo() {
-  let devPath = path.dirname(require.resolve("@remix-run/dev/package.json"));
-  let devParentDir = path.basename(path.resolve(devPath, ".."));
-  return devParentDir === "packages";
+function getParentClientNodes(
+  clientModuleGraph: Vite.EnvironmentModuleGraph,
+  module: Vite.EnvironmentModuleNode
+): Vite.EnvironmentModuleNode[] {
+  if (!module.id) {
+    return [];
+  }
+
+  let clientModule = clientModuleGraph.getModuleById(module.id);
+  if (clientModule) {
+    return [clientModule];
+  }
+
+  return [...module.importers].flatMap((importer) =>
+    getParentClientNodes(clientModuleGraph, importer)
+  );
+}
+
+function uniqueNodes(
+  nodes: Vite.EnvironmentModuleNode[]
+): Vite.EnvironmentModuleNode[] {
+  let nodeUrls = new Set<string>();
+  let unique: Vite.EnvironmentModuleNode[] = [];
+  for (let node of nodes) {
+    if (nodeUrls.has(node.url)) {
+      continue;
+    }
+    nodeUrls.add(node.url);
+    unique.push(node);
+  }
+  return unique;
 }
 
 function isEqualJson(v1: unknown, v2: unknown) {
@@ -1849,8 +1920,8 @@ if (import.meta.hot && !inWebWorker) {
 function getRoute(
   pluginConfig: ResolvedVitePluginConfig,
   file: string
-): ConfigRoute | undefined {
-  let vite = importViteEsmSync();
+): RouteManifestEntry | undefined {
+  let vite = getVite();
   let routePath = vite.normalizePath(
     path.relative(pluginConfig.appDirectory, file)
   );
@@ -1863,7 +1934,7 @@ function getRoute(
 async function getRouteMetadata(
   ctx: RemixPluginContext,
   viteChildCompiler: Vite.ViteDevServer | null,
-  route: ConfigRoute,
+  route: RouteManifestEntry,
   readRouteFile?: () => string | Promise<string>
 ) {
   let sourceExports = await getRouteModuleExports(

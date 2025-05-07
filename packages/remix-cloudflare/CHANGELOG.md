@@ -1,5 +1,104 @@
 # `@remix-run/cloudflare`
 
+## 2.16.5
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.5`
+
+## 2.16.4
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.4`
+
+## 2.16.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.3`
+
+## 2.16.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.2`
+
+## 2.16.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.1`
+
+## 2.16.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.0`
+
+## 2.15.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.3`
+
+## 2.15.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.2`
+
+## 2.15.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.1`
+
+## 2.15.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.0`
+
+## 2.14.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.14.0`
+
+## 2.13.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.13.1`
+
+## 2.13.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.13.0`
+
+## 2.12.1
+
+### Patch Changes
+
+- Single Fetch: Re-export `interface Future` through `@remix-run/node`/`@remix-run/cloudflare`/`@remix-run/deno` packages so that `pnpm` doesn't complain about `@remix-run/server-runtime` not being a dependency ([#9982](https://github.com/remix-run/remix/pull/9982))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.12.1`
+
 ## 2.12.0
 
 ### Patch Changes
@@ -458,10 +557,10 @@
 
   Documentation Resources (better docs specific to Remix are in the works):
 
-  - <https://reactrouter.com/en/main/utils/defer>
-  - <https://reactrouter.com/en/main/components/await>
-  - <https://reactrouter.com/en/main/hooks/use-async-value>
-  - <https://reactrouter.com/en/main/hooks/use-async-error>
+  - <https://reactrouter.com/v6/utils/defer>
+  - <https://reactrouter.com/v6/components/await>
+  - <https://reactrouter.com/v6/hooks/use-async-value>
+  - <https://reactrouter.com/v6/hooks/use-async-error>
 
 - Updated dependencies:
   - `@remix-run/server-runtime@1.11.0`

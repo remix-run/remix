@@ -13,7 +13,9 @@ export default async function handleRequest(
   const body = await renderToReadableStream(
     <RemixServer context={remixContext} url={request.url} />,
     {
-      signal: request.signal,
+      // If you wish to abort the rendering process, you can pass a signal here.
+      // Please refer to the templates for example son how to configure this.
+      // signal: controller.signal,
       onError(error: unknown) {
         // Log streaming rendering errors from inside the shell
         console.error(error);

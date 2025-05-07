@@ -5,6 +5,8 @@ order: 2
 
 # Remix Tutorial
 
+<docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you can follow the same [tutorial from the React Router docs][react-router-tutorial].</docs-warning>
+
 We'll be building a small, but feature-rich app that lets you keep track of your contacts. There's no database or other "production ready" things, so we can stay focused on Remix. We expect it to take about 30m if you're following along, otherwise it's a quick read.
 
 <img class="tutorial" src="/docs-images/contacts/01.webp" />
@@ -168,7 +170,7 @@ export default function Contact() {
   const contact = {
     first: "Your",
     last: "Name",
-    avatar: "https://placekitten.com/200/200",
+    avatar: "https://placecats.com/200/200",
     twitter: "your_handle",
     notes: "Some notes",
     favorite: true,
@@ -365,9 +367,8 @@ There are two APIs we'll be using to load data, [`loader`][loader] and [`useLoad
 
 <docs-info>The following code has a type error in it, we'll fix it in the next section</docs-info>
 
-```tsx filename=app/root.tsx lines=[2,11,15,19-22,25,34-57]
+```tsx filename=app/root.tsx lines=[10,14,18-21,24,33-56]
 // existing imports
-import { json } from "@remix-run/node";
 import {
   Form,
   Link,
@@ -386,7 +387,7 @@ import { getContacts } from "./data";
 
 export const loader = async () => {
   const contacts = await getContacts();
-  return json({ contacts });
+  return { contacts };
 };
 
 export default function App() {
@@ -468,8 +469,7 @@ These params are most often used to find a record by ID. Let's try it out.
 
 <docs-info>The following code has type errors in it, we'll fix them in the next section</docs-info>
 
-```tsx filename=app/routes/contacts.$contactId.tsx lines=[1-2,5,7-10,13]
-import { json } from "@remix-run/node";
+```tsx filename=app/routes/contacts.$contactId.tsx lines=[1,4,6-9,12]
 import { Form, useLoaderData } from "@remix-run/react";
 // existing imports
 
@@ -477,7 +477,7 @@ import { getContact } from "../data";
 
 export const loader = async ({ params }) => {
   const contact = await getContact(params.contactId);
-  return json({ contact });
+  return { contact };
 };
 
 export default function Contact() {
@@ -507,7 +507,7 @@ export const loader = async ({
 }: LoaderFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   const contact = await getContact(params.contactId);
-  return json({ contact });
+  return { contact };
 };
 
 // existing code
@@ -530,7 +530,7 @@ export const loader = async ({
   if (!contact) {
     throw new Response("Not Found", { status: 404 });
   }
-  return json({ contact });
+  return { contact };
 };
 
 // existing code
@@ -567,7 +567,7 @@ import { createEmptyContact, getContacts } from "./data";
 
 export const action = async () => {
   const contact = await createEmptyContact();
-  return json({ contact });
+  return { contact };
 };
 
 // existing code
@@ -609,7 +609,6 @@ Nothing we haven't seen before, feel free to copy/paste:
 
 ```tsx filename=app/routes/contacts.$contactId_.edit.tsx
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
@@ -623,7 +622,7 @@ export const loader = async ({
   if (!contact) {
     throw new Response("Not Found", { status: 404 });
   }
-  return json({ contact });
+  return { contact };
 };
 
 export default function EditContact() {
@@ -634,11 +633,11 @@ export default function EditContact() {
       <p>
         <span>Name</span>
         <input
-          defaultValue={contact.first}
           aria-label="First name"
+          defaultValue={contact.first}
           name="first"
-          type="text"
           placeholder="First"
+          type="text"
         />
         <input
           aria-label="Last name"
@@ -699,7 +698,7 @@ import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
 } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 // existing imports
 
 import { getContact, updateContact } from "../data";
@@ -732,11 +731,11 @@ Open up `contacts.$contactId_.edit.tsx` and look at the `form` elements. Notice 
 
 ```tsx filename=app/routes/contacts.$contactId_.edit.tsx lines=[4]
 <input
-  defaultValue={contact.first}
   aria-label="First name"
+  defaultValue={contact.first}
   name="first"
-  type="text"
   placeholder="First"
+  type="text"
 />
 ```
 
@@ -795,7 +794,7 @@ Now that we know how to redirect, let's update the action that creates new conta
 
 ```tsx filename=app/root.tsx lines=[2,7]
 // existing imports
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 // existing imports
 
 export const action = async () => {
@@ -958,12 +957,12 @@ At this point you should know everything you need to know to make the delete but
 👉 **Create the "destroy" route module**
 
 ```shellscript nonumber
-touch app/routes/contacts.\$contactId.destroy.tsx
+touch app/routes/contacts.\$contactId_.destroy.tsx
 ```
 
 👉 **Add the destroy action**
 
-```tsx filename=app/routes/contacts.$contactId.destroy.tsx
+```tsx filename=app/routes/contacts.$contactId_.destroy.tsx
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import invariant from "tiny-invariant";
@@ -986,7 +985,7 @@ Alright, navigate to a record and click the "Delete" button. It works!
 When the user clicks the submit button:
 
 1. `<Form>` prevents the default browser behavior of sending a new document `POST` request to the server, but instead emulates the browser by creating a `POST` request with client side routing and [`fetch`][fetch]
-2. The `<Form action="destroy">` matches the new route at `"contacts.$contactId.destroy"` and sends it the request
+2. The `<Form action="destroy">` matches the new route at `contacts.$contactId_.destroy.tsx` and sends it the request
 3. After the `action` redirects, Remix calls all the `loader`s for the data on the page to get the latest values (this is "revalidation"). `useLoaderData` returns new values and causes the components to update!
 
 Add a `Form`, add an `action`, Remix does the rest.
@@ -1105,7 +1104,7 @@ export const loader = async ({
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
   const contacts = await getContacts(q);
-  return json({ contacts });
+  return { contacts };
 };
 
 // existing code
@@ -1139,7 +1138,7 @@ export const loader = async ({
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
   const contacts = await getContacts(q);
-  return json({ contacts, q });
+  return { contacts, q };
 };
 
 export default function App() {
@@ -1642,3 +1641,5 @@ That's it! Thanks for giving Remix a shot. We hope this tutorial gives you a sol
 [quickstart]: ./quickstart
 [http-localhost-5173]: http://localhost:5173
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/fetch
+[remix-now-react-router]: https://remix.run/blog/incremental-path-to-react-19
+[react-router-tutorial]: https://reactrouter.com/tutorials/address-book

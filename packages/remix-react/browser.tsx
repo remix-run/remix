@@ -79,10 +79,23 @@ let hmrRouterReadyPromise = new Promise<Router>((resolve) => {
   return undefined;
 });
 
-// @ts-expect-error
-if (import.meta && import.meta.hot) {
+if (
+  import.meta &&
   // @ts-expect-error
-  import.meta.hot.accept(
+  import.meta.hot &&
+  // This HMR code is only valid in the classic compiler
+  // @ts-expect-error
+  import.meta.hot.__remixCompiler
+) {
+  // NOTE: The use of ["accept"] here is a minimal workaround to prevent Vite
+  // from attempting to resolve the "remix:manifest" module ID (and failing)
+  // during its import analysis phase. This happens if this package is not
+  // marked as external, e.g. when running the code in a non-Node environment
+  // like workerd. Even with the runtime check above, Vite will still attempt to
+  // resolve the "remix:manifest" module ID if it's used in a call to
+  // `import.meta.hot.accept`.
+  // @ts-expect-error
+  import.meta.hot["accept"](
     "remix:manifest",
     async ({
       assetsManifest,
@@ -199,7 +212,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
     // When single fetch is enabled, we need to suspend until the initial state
     // snapshot is decoded into window.__remixContext.state
-    if (window.__remixContext.future.unstable_singleFetch) {
+    if (window.__remixContext.future.v3_singleFetch) {
       // Note: `stateDecodingPromise` is not coupled to `router` - we'll reach this
       // code potentially many times waiting for our state to arrive, but we'll
       // then only get past here and create the `router` one time
@@ -299,18 +312,20 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         v7_relativeSplatPath: window.__remixContext.future.v3_relativeSplatPath,
         // Single fetch enables this underlying behavior
         v7_skipActionErrorRevalidation:
-          window.__remixContext.future.unstable_singleFetch === true,
+          window.__remixContext.future.v3_singleFetch === true,
       },
       hydrationData,
       mapRouteProperties,
-      unstable_dataStrategy: window.__remixContext.future.unstable_singleFetch
-        ? getSingleFetchDataStrategy(
-            window.__remixManifest,
-            window.__remixRouteModules,
-            () => router
-          )
-        : undefined,
-      unstable_patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(
+      dataStrategy:
+        window.__remixContext.future.v3_singleFetch &&
+        !window.__remixContext.isSpaMode
+          ? getSingleFetchDataStrategy(
+              window.__remixManifest,
+              window.__remixRouteModules,
+              () => router
+            )
+          : undefined,
+      patchRoutesOnNavigation: getPatchRoutesOnNavigationFunction(
         window.__remixManifest,
         window.__remixRouteModules,
         window.__remixContext.future,
@@ -409,7 +424,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         This fragment is important to ensure we match the <RemixServer> JSX
         structure so that useId values hydrate correctly
       */}
-      {window.__remixContext.future.unstable_singleFetch ? <></> : null}
+      {window.__remixContext.future.v3_singleFetch ? <></> : null}
     </>
   );
 }

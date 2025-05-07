@@ -5,6 +5,7 @@ import { type ModuleNode, type ViteDevServer } from "vite";
 
 import { type RemixConfig as ResolvedRemixConfig } from "../config";
 import { resolveFileUrl } from "./resolve-file-url";
+import { getVite } from "./vite";
 
 type ServerRouteManifest = ServerBuild["routes"];
 type ServerRoute = ServerRouteManifest[string];
@@ -21,6 +22,36 @@ const cssModulesRegExp = new RegExp(`\\.module${cssFileRegExp.source}`);
 const isCssFile = (file: string) => cssFileRegExp.test(file);
 export const isCssModulesFile = (file: string) => cssModulesRegExp.test(file);
 
+// https://vitejs.dev/guide/features#disabling-css-injection-into-the-page
+// https://github.com/vitejs/vite/blob/561b940f6f963fbb78058a6e23b4adad53a2edb9/packages/vite/src/node/plugins/css.ts#L194
+// https://vitejs.dev/guide/features#static-assets
+// https://github.com/vitejs/vite/blob/561b940f6f963fbb78058a6e23b4adad53a2edb9/packages/vite/src/node/utils.ts#L309-L310
+const cssUrlParamsWithoutSideEffects = ["url", "inline", "raw", "inline-css"];
+export const isCssUrlWithoutSideEffects = (url: string) => {
+  let queryString = url.split("?")[1];
+
+  if (!queryString) {
+    return false;
+  }
+
+  let params = new URLSearchParams(queryString);
+  for (let paramWithoutSideEffects of cssUrlParamsWithoutSideEffects) {
+    if (
+      // Parameter is blank and not explicitly set, i.e. "?url", not "?url="
+      params.get(paramWithoutSideEffects) === "" &&
+      !url.includes(`?${paramWithoutSideEffects}=`) &&
+      !url.includes(`&${paramWithoutSideEffects}=`)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const injectQuery = (url: string, query: string) =>
+  url.includes("?") ? url.replace("?", `?${query}&`) : `${url}?${query}`;
+
 const getStylesForFiles = async ({
   viteDevServer,
   rootDirectory,
@@ -32,6 +63,9 @@ const getStylesForFiles = async ({
   cssModulesManifest: Record<string, string>;
   files: string[];
 }): Promise<string | undefined> => {
+  let vite = getVite();
+  let viteMajor = parseInt(vite.version.split(".")[0], 10);
+
   let styles: Record<string, string> = {};
   let deps = new Set<ModuleNode>();
 
@@ -71,12 +105,22 @@ const getStylesForFiles = async ({
     if (
       dep.file &&
       isCssFile(dep.file) &&
-      !dep.url.endsWith("?url") // Ignore styles that resolved as URLs, otherwise we'll end up injecting URLs into the style tag contents
+      !isCssUrlWithoutSideEffects(dep.url) // Ignore styles that resolved as URLs, inline or raw. These shouldn't get injected.
     ) {
       try {
         let css = isCssModulesFile(dep.file)
           ? cssModulesManifest[dep.file]
-          : (await viteDevServer.ssrLoadModule(dep.url)).default;
+          : (
+              await viteDevServer.ssrLoadModule(
+                // We need the ?inline query in Vite v6 when loading CSS in SSR
+                // since it does not expose the default export for CSS in a
+                // server environment. This is to align with non-SSR
+                // environments. For backwards compatibility with v5 we keep
+                // using the URL without ?inline query because the HMR code was
+                // relying on the implicit SSR-client module graph relationship.
+                viteMajor >= 6 ? injectQuery(dep.url, "inline") : dep.url
+              )
+            ).default;
 
         if (css === undefined) {
           throw new Error();

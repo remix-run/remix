@@ -5,6 +5,8 @@ description: The quickest way to get rocking and rolling with Remix
 
 # Templates and Stacks
 
+<docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you should create your project using a [React Router template][react-router-templates].</docs-warning>
+
 When using [`create-remix`][create_remix] to generate a new project, you can choose a Template or a Stack to quickly get up and running. Templates are minimal starting points to get you up and running. "Stacks" are templates that are more-complete and closer to production ready architectures (potentially including aspects such as testing, database, CI, and deployment configurations).
 
 ## Templates
@@ -170,3 +172,5 @@ After the init script has been run, the `remix.init` folder gets deleted, so you
 [arc]: https://arc.codes/docs/en/get-started/quickstart
 [deno]: https://deno.com
 [cloudflare]: https://www.cloudflare.com
+[remix-now-react-router]: https://remix.run/blog/incremental-path-to-react-19
+[react-router-templates]: https://github.com/remix-run/react-router-templates

@@ -43,8 +43,8 @@ export interface EntryContext extends RemixContextObject {
 export interface FutureConfig {
   v3_fetcherPersist: boolean;
   v3_relativeSplatPath: boolean;
-  unstable_lazyRouteDiscovery: boolean;
-  unstable_singleFetch: boolean;
+  v3_lazyRouteDiscovery: boolean;
+  v3_singleFetch: boolean;
 }
 
 export interface AssetsManifest {

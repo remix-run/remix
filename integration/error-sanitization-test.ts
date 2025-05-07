@@ -680,7 +680,7 @@ test.describe("single fetch", () => {
           {
             config: {
               future: {
-                unstable_singleFetch: true,
+                v3_singleFetch: true,
               },
             },
             files: routeFiles,
@@ -857,7 +857,7 @@ test.describe("single fetch", () => {
           {
             config: {
               future: {
-                unstable_singleFetch: true,
+                v3_singleFetch: true,
               },
             },
             files: routeFiles,
@@ -1038,7 +1038,7 @@ test.describe("single fetch", () => {
           {
             config: {
               future: {
-                unstable_singleFetch: true,
+                v3_singleFetch: true,
               },
             },
             files: {

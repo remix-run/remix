@@ -16,6 +16,7 @@ export {
 export {
   broadcastDevReady,
   createSession,
+  data,
   defer,
   isCookie,
   isSession,
@@ -27,7 +28,6 @@ export {
   replace,
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
-  unstable_data,
   unstable_parseMultipartFormData,
 } from "@remix-run/server-runtime";
 
@@ -43,6 +43,7 @@ export type {
   DataFunctionArgs,
   EntryContext,
   ErrorResponse,
+  Future,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HandleErrorFunction,

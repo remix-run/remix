@@ -95,13 +95,9 @@ If true, it will submit the form with the browser instead of client side routing
 
 This is recommended over [`<form>`][form_element]. When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is since `<form>` uses the current URL as the default, but `<Form>` uses the URL for the route the form is rendered in.
 
-### `unstable_viewTransition`
+### `viewTransition`
 
-The `unstable_viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in [`document.startViewTransition()`][document-start-view-transition]. If you need to apply specific styles for this view transition, you will also need to leverage the [`unstable_useViewTransitionState()`][use-view-transition-state].
-
-<docs-warning>
-Please note that this API is marked unstable and may be subject to breaking changes without a major release.
-</docs-warning>
+The `viewTransition` prop enables a [View Transition][view-transitions] for this navigation by wrapping the final state update in [`document.startViewTransition()`][document-start-view-transition]. If you need to apply specific styles for this view transition, you will also need to leverage the [`useViewTransitionState()`][use-view-transition-state].
 
 ## Notes
 

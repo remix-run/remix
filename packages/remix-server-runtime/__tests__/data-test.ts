@@ -25,7 +25,7 @@ describe("loaders", () => {
       future: {
         v3_fetcherPersist: false,
         v3_relativeSplatPath: false,
-        unstable_singleFetch: false,
+        v3_singleFetch: false,
       },
     } as unknown as ServerBuild;
 
@@ -69,7 +69,7 @@ describe("loaders", () => {
       future: {
         v3_fetcherPersist: false,
         v3_relativeSplatPath: false,
-        unstable_singleFetch: false,
+        v3_singleFetch: false,
       },
     } as unknown as ServerBuild;
 
@@ -113,7 +113,7 @@ describe("loaders", () => {
       future: {
         v3_fetcherPersist: false,
         v3_relativeSplatPath: false,
-        unstable_singleFetch: false,
+        v3_singleFetch: false,
       },
     } as unknown as ServerBuild;
 
@@ -160,7 +160,7 @@ describe("loaders", () => {
       future: {
         v3_fetcherPersist: false,
         v3_relativeSplatPath: false,
-        unstable_singleFetch: false,
+        v3_singleFetch: false,
       },
     } as unknown as ServerBuild;
 
@@ -206,7 +206,7 @@ describe("loaders", () => {
       future: {
         v3_fetcherPersist: false,
         v3_relativeSplatPath: false,
-        unstable_singleFetch: false,
+        v3_singleFetch: false,
       },
     } as unknown as ServerBuild;
 
@@ -250,7 +250,7 @@ describe("loaders", () => {
       future: {
         v3_fetcherPersist: false,
         v3_relativeSplatPath: false,
-        unstable_singleFetch: false,
+        v3_singleFetch: false,
       },
     } as unknown as ServerBuild;
 
@@ -292,7 +292,7 @@ describe("loaders", () => {
       future: {
         v3_fetcherPersist: false,
         v3_relativeSplatPath: false,
-        unstable_singleFetch: false,
+        v3_singleFetch: false,
       },
     } as unknown as ServerBuild;
 
@@ -331,7 +331,7 @@ describe("loaders", () => {
       future: {
         v3_fetcherPersist: false,
         v3_relativeSplatPath: false,
-        unstable_singleFetch: false,
+        v3_singleFetch: false,
       },
     } as unknown as ServerBuild;
 
