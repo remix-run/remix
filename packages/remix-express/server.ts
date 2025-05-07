@@ -37,7 +37,7 @@ export function createRequestHandler({
   getLoadContext,
   mode = process.env.NODE_ENV,
 }: {
-  build: ServerBuild;
+  build: ServerBuild | (() => Promise<ServerBuild>);
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): RequestHandler {
@@ -87,12 +87,23 @@ export function createRemixRequest(
   req: express.Request,
   res: express.Response
 ): Request {
-  let url = new URL(`${req.protocol}://${req.get("host")}${req.url}`);
+  // req.hostname doesn't include port information so grab that from
+  // `X-Forwarded-Host` or `Host`
+  let [, hostnamePortStr] = req.get("X-Forwarded-Host")?.split(":") ?? [];
+  let [, hostPortStr] = req.get("host")?.split(":") ?? [];
+  let hostnamePort = Number.parseInt(hostnamePortStr, 10);
+  let hostPort = Number.parseInt(hostPortStr, 10);
+  let port = Number.isSafeInteger(hostnamePort)
+    ? hostnamePort
+    : Number.isSafeInteger(hostPort)
+    ? hostPort
+    : "";
+  // Use req.hostname here as it respects the "trust proxy" setting
+  let resolvedHost = `${req.hostname}${port ? `:${port}` : ""}`;
+  // Use `req.originalUrl` so Remix is aware of the full path
+  let url = new URL(`${req.protocol}://${resolvedHost}${req.originalUrl}`);
 
-  // Abort action/loaders once we can no longer write a response
-  let controller = new AbortController();
-  res.on("close", () => controller.abort());
-
+  let controller: AbortController | null = new AbortController();
   let init: RequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
@@ -103,6 +114,13 @@ export function createRemixRequest(
     init.body = createReadableStreamFromReadable(req);
     (init as { duplex: "half" }).duplex = "half";
   }
+
+  // Abort action/loaders once we can no longer write a response iff we have
+  // not yet sent a response (i.e., `close` without `finish`)
+  // `finish` -> done rendering the response
+  // `close` -> response can no longer be written to
+  res.on("finish", () => (controller = null));
+  res.on("close", () => controller?.abort());
 
   return new Request(url.href, init);
 }

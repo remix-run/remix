@@ -5,6 +5,8 @@ order: 2
 
 # Remix Tutorial
 
+<docs-warning>Just getting started with Remix? The latest version of [Remix is now React Router v7][remix-now-react-router]. If you want to use the latest framework features, you can follow the same [tutorial from the React Router docs][react-router-tutorial].</docs-warning>
+
 We'll be building a small, but feature-rich app that lets you keep track of your contacts. There's no database or other "production ready" things, so we can stay focused on Remix. We expect it to take about 30m if you're following along, otherwise it's a quick read.
 
 <img class="tutorial" src="/docs-images/contacts/01.webp" />
@@ -18,7 +20,7 @@ The rest is just there for your information and deeper understanding. Let's get 
 👉 **Generate a basic template**
 
 ```shellscript nonumber
-npx create-remix@latest --template ryanflorence/remix-tutorial-template
+npx create-remix@latest --template remix-run/remix/templates/remix-tutorial
 ```
 
 This uses a pretty bare-bones template but includes our css and data model, so we can focus on Remix. The [Quick Start][quickstart] can familiarize you with the basic setup of a Remix project if you'd like to learn more.
@@ -36,7 +38,7 @@ npm install
 npm run dev
 ```
 
-You should be able to open up [http://localhost:3000][http-localhost-3000] and see an unstyled screen that looks like this:
+You should be able to open up [http://localhost:5173][http-localhost-5173] and see an unstyled screen that looks like this:
 
 <img class="tutorial" src="/docs-images/contacts/03.webp" />
 
@@ -52,7 +54,6 @@ Note the file at `app/root.tsx`. This is what we call the "Root Route". It's the
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   Scripts,
   ScrollRestoration,
@@ -106,7 +107,6 @@ export default function App() {
 
         <ScrollRestoration />
         <Scripts />
-        <LiveReload />
       </body>
     </html>
   );
@@ -119,7 +119,7 @@ export default function App() {
 
 While there are multiple ways to style your Remix app, we're going to use a plain stylesheet that's already been written to keep things focused on Remix.
 
-You can import CSS files directly into JavaScript modules. The compiler will fingerprint the asset, save it to your [`assetsBuildDirectory`][assets-build-directory], and provide your module with the publicly accessible href.
+You can import CSS files directly into JavaScript modules. Vite will fingerprint the asset, save it to your build's client directory, and provide your module with the publicly accessible href.
 
 👉 **Import the app styles**
 
@@ -127,7 +127,7 @@ You can import CSS files directly into JavaScript modules. The compiler will fin
 import type { LinksFunction } from "@remix-run/node";
 // existing imports
 
-import appStylesHref from "./app.css";
+import appStylesHref from "./app.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: appStylesHref },
@@ -170,7 +170,7 @@ export default function Contact() {
   const contact = {
     first: "Your",
     last: "Name",
-    avatar: "https://placekitten.com/g/200/200",
+    avatar: "https://placecats.com/200/200",
     twitter: "your_handle",
     notes: "Some notes",
     favorite: true,
@@ -268,12 +268,11 @@ Since Remix is built on top of React Router, it supports nested routing. In orde
 
 👉 **Render an [`<Outlet />`][outlet-component]**
 
-```tsx filename=app/root.tsx lines=[7,20-22]
+```tsx filename=app/root.tsx lines=[6,19-21]
 // existing imports
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   Outlet,
   Scripts,
@@ -310,13 +309,12 @@ Client side routing allows our app to update the URL without requesting another 
 
 👉 **Change the sidebar `<a href>` to `<Link to>`**
 
-```tsx filename=app/root.tsx lines=[4,25,28]
+```tsx filename=app/root.tsx lines=[4,24,27]
 // existing imports
 import {
   Form,
   Link,
   Links,
-  LiveReload,
   Meta,
   Outlet,
   Scripts,
@@ -367,14 +365,14 @@ There are two APIs we'll be using to load data, [`loader`][loader] and [`useLoad
 
 👉 **Export a `loader` function from `app/root.tsx` and render the data**
 
-```tsx filename=app/root.tsx lines=[2,12,16,20-23,26,35-58]
+<docs-info>The following code has a type error in it, we'll fix it in the next section</docs-info>
+
+```tsx filename=app/root.tsx lines=[10,14,18-21,24,33-56]
 // existing imports
-import { json } from "@remix-run/node";
 import {
   Form,
   Link,
   Links,
-  LiveReload,
   Meta,
   Outlet,
   Scripts,
@@ -389,7 +387,7 @@ import { getContacts } from "./data";
 
 export const loader = async () => {
   const contacts = await getContacts();
-  return json({ contacts });
+  return { contacts };
 };
 
 export default function App() {
@@ -469,8 +467,9 @@ These params are most often used to find a record by ID. Let's try it out.
 
 👉 **Add a `loader` function to the contact page and access data with `useLoaderData`**
 
-```tsx filename=app/routes/contacts.$contactId.tsx lines=[1-2,5,7-10,13]
-import { json } from "@remix-run/node";
+<docs-info>The following code has type errors in it, we'll fix them in the next section</docs-info>
+
+```tsx filename=app/routes/contacts.$contactId.tsx lines=[1,4,6-9,12]
 import { Form, useLoaderData } from "@remix-run/react";
 // existing imports
 
@@ -478,7 +477,7 @@ import { getContact } from "../data";
 
 export const loader = async ({ params }) => {
   const contact = await getContact(params.contactId);
-  return json({ contact });
+  return { contact };
 };
 
 export default function Contact() {
@@ -508,7 +507,7 @@ export const loader = async ({
 }: LoaderFunctionArgs) => {
   invariant(params.contactId, "Missing contactId param");
   const contact = await getContact(params.contactId);
-  return json({ contact });
+  return { contact };
 };
 
 // existing code
@@ -531,7 +530,7 @@ export const loader = async ({
   if (!contact) {
     throw new Response("Not Found", { status: 404 });
   }
-  return json({ contact });
+  return { contact };
 };
 
 // existing code
@@ -568,7 +567,7 @@ import { createEmptyContact, getContacts } from "./data";
 
 export const action = async () => {
   const contact = await createEmptyContact();
-  return json({ contact });
+  return { contact };
 };
 
 // existing code
@@ -610,7 +609,6 @@ Nothing we haven't seen before, feel free to copy/paste:
 
 ```tsx filename=app/routes/contacts.$contactId_.edit.tsx
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
@@ -624,22 +622,22 @@ export const loader = async ({
   if (!contact) {
     throw new Response("Not Found", { status: 404 });
   }
-  return json({ contact });
+  return { contact };
 };
 
 export default function EditContact() {
   const { contact } = useLoaderData<typeof loader>();
 
   return (
-    <Form id="contact-form" method="post">
+    <Form key={contact.id} id="contact-form" method="post">
       <p>
         <span>Name</span>
         <input
-          defaultValue={contact.first}
           aria-label="First name"
+          defaultValue={contact.first}
           name="first"
-          type="text"
           placeholder="First"
+          type="text"
         />
         <input
           aria-label="Last name"
@@ -700,7 +698,7 @@ import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
 } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 // existing imports
 
 import { getContact, updateContact } from "../data";
@@ -733,11 +731,11 @@ Open up `contacts.$contactId_.edit.tsx` and look at the `form` elements. Notice 
 
 ```tsx filename=app/routes/contacts.$contactId_.edit.tsx lines=[4]
 <input
-  defaultValue={contact.first}
   aria-label="First name"
+  defaultValue={contact.first}
   name="first"
-  type="text"
   placeholder="First"
+  type="text"
 />
 ```
 
@@ -745,7 +743,7 @@ Without JavaScript, when a form is submitted, the browser will create [`FormData
 
 Each field in the `form` is accessible with `formData.get(name)`. For example, given the input field from above, you could access the first and last names like this:
 
-```tsx lines=[3,4] nocopy
+```tsx filename=app/routes/contacts.$contactId_.edit.tsx lines=[6,7] nocopy
 export const action = async ({
   params,
   request,
@@ -759,7 +757,7 @@ export const action = async ({
 
 Since we have a handful of form fields, we used [`Object.fromEntries`][object-from-entries] to collect them all into an object, which is exactly what our `updateContact` function wants.
 
-```tsx nocopy
+```tsx filename=app/routes/contacts.$contactId_.edit.tsx nocopy
 const updates = Object.fromEntries(formData);
 updates.first; // "Some"
 updates.last; // "Name"
@@ -786,7 +784,7 @@ export const action = async ({
 
 Without client side routing, if a server redirected after a `POST` request, the new page would fetch the latest data and render. As we learned before, Remix emulates this model and automatically revalidates the data on the page after the `action` call. That's why the sidebar automatically updates when we save the form. The extra revalidation code doesn't exist without client side routing, so it doesn't need to exist with client side routing in Remix either!
 
-One last thing. Without JavaScript, the [`redirect`][redirect] would be a normal redirect. However, with JavaScript it's a clientside redirect, so the user doesn't lose client state like scroll positions or component state.
+One last thing. Without JavaScript, the [`redirect`][redirect] would be a normal redirect. However, with JavaScript it's a client-side redirect, so the user doesn't lose client state like scroll positions or component state.
 
 ## Redirecting new records to the edit page
 
@@ -796,7 +794,7 @@ Now that we know how to redirect, let's update the action that creates new conta
 
 ```tsx filename=app/root.tsx lines=[2,7]
 // existing imports
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 // existing imports
 
 export const action = async () => {
@@ -817,12 +815,11 @@ Now that we have a bunch of records, it's not clear which one we're looking at i
 
 👉 **Replace `<Link>` with `<NavLink>` in the sidebar**
 
-```tsx filename=app/root.tsx lines=[7,28-37,39]
+```tsx filename=app/root.tsx lines=[6,27-36,38]
 // existing imports
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   NavLink,
   Outlet,
@@ -881,12 +878,11 @@ Remix is managing all the state behind the scenes and reveals the pieces you nee
 
 👉 **Use `useNavigation` to add global pending UI**
 
-```tsx filename=app/root.tsx lines=[12,19,27-29]
+```tsx filename=app/root.tsx lines=[11,18,26-28]
 // existing imports
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   NavLink,
   Outlet,
@@ -932,7 +928,7 @@ In our case, we add a `"loading"` class to the main part of the app if we're not
 
 If we review code in the contact route, we can find the delete button looks like this:
 
-```tsx filename=src/routes/contact.$contactId.tsx lines=[2]
+```tsx filename=app/routes/contact.$contactId.tsx lines=[2]
 <Form
   action="destroy"
   method="post"
@@ -961,12 +957,12 @@ At this point you should know everything you need to know to make the delete but
 👉 **Create the "destroy" route module**
 
 ```shellscript nonumber
-touch app/routes/contacts.\$contactId.destroy.tsx
+touch app/routes/contacts.\$contactId_.destroy.tsx
 ```
 
 👉 **Add the destroy action**
 
-```tsx filename=app/routes/contacts.$contactId.destroy.tsx
+```tsx filename=app/routes/contacts.$contactId_.destroy.tsx
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import invariant from "tiny-invariant";
@@ -989,7 +985,7 @@ Alright, navigate to a record and click the "Delete" button. It works!
 When the user clicks the submit button:
 
 1. `<Form>` prevents the default browser behavior of sending a new document `POST` request to the server, but instead emulates the browser by creating a `POST` request with client side routing and [`fetch`][fetch]
-2. The `<Form action="destroy">` matches the new route at `"contacts.$contactId.destroy"` and sends it the request
+2. The `<Form action="destroy">` matches the new route at `contacts.$contactId_.destroy.tsx` and sends it the request
 3. After the `action` redirects, Remix calls all the `loader`s for the data on the page to get the latest values (this is "revalidation"). `useLoaderData` returns new values and causes the components to update!
 
 Add a `Form`, add an `action`, Remix does the rest.
@@ -1004,7 +1000,7 @@ When a route has children, and you're at the parent route's path, the `<Outlet>`
 
 👉 **Create an index route for the root route**
 
-```
+```shellscript nonumber
 touch app/routes/_index.tsx
 ```
 
@@ -1053,7 +1049,7 @@ export default function EditContact() {
   const navigate = useNavigate();
 
   return (
-    <Form id="contact-form" method="post">
+    <Form key={contact.id} id="contact-form" method="post">
       {/* existing elements */}
       <p>
         <button type="submit">Save</button>
@@ -1085,7 +1081,7 @@ Let's see what happens when we submit the search form:
 Note the browser's URL now contains your query in the URL as [`URLSearchParams`][url-search-params]:
 
 ```
-http://localhost:3000/?q=ryan
+http://localhost:5173/?q=ryan
 ```
 
 Since it's not `<Form method="post">`, Remix emulates the browser by serializing the [`FormData`][form-data] into the [`URLSearchParams`][url-search-params] instead of the request body.
@@ -1108,7 +1104,7 @@ export const loader = async ({
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
   const contacts = await getContacts(q);
-  return json({ contacts });
+  return { contacts };
 };
 
 // existing code
@@ -1142,7 +1138,7 @@ export const loader = async ({
   const url = new URL(request.url);
   const q = url.searchParams.get("q");
   const contacts = await getContacts(q);
-  return json({ contacts, q });
+  return { contacts, q };
 };
 
 export default function App() {
@@ -1275,12 +1271,11 @@ We've got a product decision to make here. Sometimes you want the user to submit
 
 We've seen `useNavigate` already, we'll use its cousin, [`useSubmit`][use-submit], for this.
 
-```tsx filename=app/root.tsx lines=[13,20,33-35]
+```tsx filename=app/root.tsx lines=[12,19,32-34]
 // existing imports
 import {
   Form,
   Links,
-  LiveReload,
   Meta,
   NavLink,
   Outlet,
@@ -1641,5 +1636,7 @@ That's it! Thanks for giving Remix a shot. We hope this tutorial gives you a sol
 [links]: ../route/links
 [routes-file-conventions]: ../file-conventions/routes
 [quickstart]: ./quickstart
-[http-localhost-3000]: http://localhost:3000
+[http-localhost-5173]: http://localhost:5173
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/fetch
+[remix-now-react-router]: https://remix.run/blog/incremental-path-to-react-19
+[react-router-tutorial]: https://reactrouter.com/tutorials/address-book

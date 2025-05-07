@@ -1,6 +1,5 @@
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
-  ignoredRouteFiles: ["**/.*"],
   server: "./server.ts",
   serverConditions: ["deno", "worker"],
   serverDependenciesToBundle: "all",
@@ -14,5 +13,5 @@ module.exports = {
 
   // !!! Don't adjust this without changing the code that overwrites this
   // in createFixtureProject()
-  ...global.INJECTED_FIXTURE_REMIX_CONFIG,
+  ...globalThis.INJECTED_FIXTURE_REMIX_CONFIG,
 };

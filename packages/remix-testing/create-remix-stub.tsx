@@ -103,7 +103,12 @@ export function createRemixStub(
 
     if (routerRef.current == null) {
       remixContextRef.current = {
-        future: { ...future },
+        future: {
+          v3_fetcherPersist: future?.v3_fetcherPersist === true,
+          v3_relativeSplatPath: future?.v3_relativeSplatPath === true,
+          v3_lazyRouteDiscovery: future?.v3_lazyRouteDiscovery === true,
+          v3_singleFetch: future?.v3_singleFetch === true,
+        },
         manifest: {
           routes: {},
           entry: { imports: [], module: "" },
@@ -111,6 +116,7 @@ export function createRemixStub(
           version: "",
         },
         routeModules: {},
+        isSpaMode: false,
       };
 
       // Update the routes to include context in the loader/action and populate
@@ -177,6 +183,11 @@ function processRoutes(
       parentId,
       hasAction: route.action != null,
       hasLoader: route.loader != null,
+      // When testing routes, you should just be stubbing loader/action, not
+      // trying to re-implement the full loader/clientLoader/SSR/hydration flow.
+      // That is better tested via E2E tests.
+      hasClientAction: false,
+      hasClientLoader: false,
       hasErrorBoundary: route.ErrorBoundary != null,
       module: "build/stub-path-to-module.js", // any need for this?
     };

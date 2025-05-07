@@ -1,6 +1,6 @@
 import type { AppLoadContext, EntryContext } from "@remix-run/deno";
 import { RemixServer } from "@remix-run/react";
-import isbot from "isbot";
+import * as isbotModule from "isbot";
 import { renderToReadableStream } from "react-dom/server";
 
 export default async function handleRequest(
@@ -13,7 +13,9 @@ export default async function handleRequest(
   const body = await renderToReadableStream(
     <RemixServer context={remixContext} url={request.url} />,
     {
-      signal: request.signal,
+      // If you wish to abort the rendering process, you can pass a signal here.
+      // Please refer to the templates for example son how to configure this.
+      // signal: controller.signal,
       onError(error: unknown) {
         // Log streaming rendering errors from inside the shell
         console.error(error);
@@ -22,7 +24,7 @@ export default async function handleRequest(
     }
   );
 
-  if (isbot(request.headers.get("user-agent"))) {
+  if (isBotRequest(request.headers.get("user-agent"))) {
     await body.allReady;
   }
 
@@ -31,4 +33,25 @@ export default async function handleRequest(
     headers: responseHeaders,
     status: responseStatusCode,
   });
+}
+
+// We have some Remix apps in the wild already running with isbot@3 so we need
+// to maintain backwards compatibility even though we want new apps to use
+// isbot@4.  That way, we can ship this as a minor Semver update to @remix-run/dev.
+function isBotRequest(userAgent: string | null) {
+  if (!userAgent) {
+    return false;
+  }
+
+  // isbot >= 3.8.0, >4
+  if ("isbot" in isbotModule && typeof isbotModule.isbot === "function") {
+    return isbotModule.isbot(userAgent);
+  }
+
+  // isbot < 3.8.0
+  if ("default" in isbotModule && typeof isbotModule.default === "function") {
+    return isbotModule.default(userAgent);
+  }
+
+  return false;
 }

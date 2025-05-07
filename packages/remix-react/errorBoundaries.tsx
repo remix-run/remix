@@ -2,8 +2,11 @@ import * as React from "react";
 import type { Location } from "@remix-run/router";
 import { isRouteErrorResponse } from "react-router-dom";
 
+import { Scripts, useRemixContext } from "./components";
+
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;
+  isOutsideRemixApp?: boolean;
   error?: Error;
 }>;
 
@@ -51,7 +54,12 @@ export class RemixErrorBoundary extends React.Component<
 
   render() {
     if (this.state.error) {
-      return <RemixRootDefaultErrorBoundary error={this.state.error} />;
+      return (
+        <RemixRootDefaultErrorBoundary
+          error={this.state.error}
+          isOutsideRemixApp={true}
+        />
+      );
     } else {
       return this.props.children;
     }
@@ -61,15 +69,34 @@ export class RemixErrorBoundary extends React.Component<
 /**
  * When app's don't provide a root level ErrorBoundary, we default to this.
  */
-export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
+export function RemixRootDefaultErrorBoundary({
+  error,
+  isOutsideRemixApp,
+}: {
+  error: unknown;
+  isOutsideRemixApp?: boolean;
+}) {
   console.error(error);
+
+  let heyDeveloper = (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+        console.log(
+          "💿 Hey developer 👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
+        );
+      `,
+      }}
+    />
+  );
 
   if (isRouteErrorResponse(error)) {
     return (
       <BoundaryShell title="Unhandled Thrown Response!">
-        <h1 style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
+        <h1 style={{ fontSize: "24px" }}>
           {error.status} {error.statusText}
         </h1>
+        {heyDeveloper}
       </BoundaryShell>
     );
   }
@@ -88,31 +115,59 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
   }
 
   return (
-    <BoundaryShell title="Application Error!">
-      <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-        <h1 style={{ fontSize: "24px" }}>Application Error</h1>
-        <pre
-          style={{
-            padding: "2rem",
-            background: "hsla(10, 50%, 50%, 0.1)",
-            color: "red",
-            overflow: "auto",
-          }}
-        >
-          {errorInstance.stack}
-        </pre>
-      </main>
+    <BoundaryShell
+      title="Application Error!"
+      isOutsideRemixApp={isOutsideRemixApp}
+    >
+      <h1 style={{ fontSize: "24px" }}>Application Error</h1>
+      <pre
+        style={{
+          padding: "2rem",
+          background: "hsla(10, 50%, 50%, 0.1)",
+          color: "red",
+          overflow: "auto",
+        }}
+      >
+        {errorInstance.stack}
+      </pre>
+      {heyDeveloper}
     </BoundaryShell>
   );
 }
 
-function BoundaryShell({
+export function BoundaryShell({
   title,
+  renderScripts,
+  isOutsideRemixApp,
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  renderScripts?: boolean;
+  isOutsideRemixApp?: boolean;
+  children: React.ReactNode | React.ReactNode[];
 }) {
+  let { routeModules } = useRemixContext();
+
+  // Generally speaking, when the root route has a Layout we want to use that
+  // as the app shell instead of the default `BoundaryShell` wrapper markup below.
+  // This is true for `loader`/`action` errors, most render errors, and
+  // `HydrateFallback` scenarios.
+
+  // However, render errors thrown from the `Layout` present a bit of an issue
+  // because if the `Layout` itself throws during the `ErrorBoundary` pass and
+  // we bubble outside the `RouterProvider` to the wrapping `RemixErrorBoundary`,
+  // by returning only `children` here we'll be trying to append a `<div>` to
+  // the `document` and the DOM will throw, putting React into an error/hydration
+  // loop.
+
+  // Instead, if we're ever rendering from the outermost `RemixErrorBoundary`
+  // during hydration that wraps `RouterProvider`, then we can't trust the
+  // `Layout` and should fallback to the default app shell so we're always
+  // returning an `<html>` document.
+  if (routeModules.root?.Layout && !isOutsideRemixApp) {
+    return children;
+  }
+
   return (
     <html lang="en">
       <head>
@@ -124,16 +179,10 @@ function BoundaryShell({
         <title>{title}</title>
       </head>
       <body>
-        {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              console.log(
-                "💿 Hey developer👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
-              );
-            `,
-          }}
-        />
+        <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
+          {children}
+          {renderScripts ? <Scripts /> : null}
+        </main>
       </body>
     </html>
   );

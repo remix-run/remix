@@ -28,6 +28,12 @@ import "@testing-library/jest-dom/extend-expect";
 describe("<Scripts /> with activeDeferreds", () => {
   it("should pass custom props", () => {
     let context: EntryContext = {
+      future: {
+        v3_throwAbortReason: false,
+        v3_fetcherPersist: false,
+        v3_relativeSplatPath: false,
+        v3_singleFetch: false,
+      },
       routeModules: { root: { default: () => null } },
       manifest: {
         routes: {

@@ -6,6 +6,8 @@ hidden: true
 
 # Jokes App Tutorial
 
+<docs-warning>This tutorial currently assumes you are using the[Classic Remix Compiler][classic-remix-compiler] rather than [Remix Vite][remix-vite].</docs-warning>
+
 You want to learn Remix? You're in the right place. Let's build [Remix Jokes][remix-jokes]!
 
 <docs-info><a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v=hsIWJpuxNj0">Work through this tutorial with Kent in this live stream</a></docs-info>
@@ -4907,7 +4909,7 @@ export function ErrorBoundary() {
 
 Meta tags are useful for SEO and social media. The tricky bit is that often the part of the code that has access to the data you need is in components that request/use the data.
 
-This is why Remix has the [`meta`][meta] export. Why don't you go through and add a useful few meta tags to the following routes:
+This is why Remix has the [`meta`][meta] export. Why don't you go through and add a few useful meta tags to the following routes:
 
 - `app/routes/login.tsx`
 - `app/routes/jokes.$jokeId.tsx` - (this one you can reference the joke's name in the title which is fun)
@@ -7782,6 +7784,8 @@ Any time you make a change, simply run `fly deploy` again to redeploy.
 
 Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success][tweet-your-success])! There's a lot to Remix, and we've only gotten you started. Good luck on the rest of your Remix journey!
 
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
 [remix-jokes]: https://remix-jokes.lol
 [mdn]: https://developer.mozilla.org/en-US
 [prisma]: https://www.prisma.io

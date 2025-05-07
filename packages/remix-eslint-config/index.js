@@ -14,6 +14,13 @@ const reactSettings = require("./settings/react");
  */
 require("@rushstack/eslint-patch/modern-module-resolution");
 
+console.warn(
+  "⚠️ REMIX FUTURE CHANGE: The `@remix-run/eslint-config` package is deprecated " +
+    "and will not be included in React Router v7.  We recommend moving towards a " +
+    "streamlined ESLint config such as the ones included in the Remix templates. " +
+    "See https://github.com/remix-run/remix/blob/main/templates/remix/.eslintrc.cjs."
+);
+
 const OFF = 0;
 // const WARN = 1;
 // const ERROR = 2;

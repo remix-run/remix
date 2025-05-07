@@ -1,10 +1,13 @@
+import { createStaticHandler } from "@remix-run/router";
+import { act, fireEvent, render } from "@testing-library/react";
 import * as React from "react";
-import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { fireEvent, render, act } from "@testing-library/react";
+import { createMemoryRouter, Outlet, RouterProvider } from "react-router-dom";
 
+import { RemixBrowser } from "../browser";
 import type { LiveReload as ActualLiveReload } from "../components";
 import { Link, NavLink, RemixContext } from "../components";
-
+import invariant from "../invariant";
+import { RemixServer } from "../server";
 import "@testing-library/jest-dom/extend-expect";
 
 // TODO: Every time we touch LiveReload (without changing the API) these tests
@@ -43,18 +46,37 @@ describe("<LiveReload />", () => {
       jest.resetModules();
     });
 
+    it("defaults the origin to REMIX_DEV_ORIGIN env variable", () => {
+      let origin = "http://test-origin";
+      LiveReload = require("../components").LiveReload;
+      process.env = { ...oldEnv, REMIX_DEV_ORIGIN: origin };
+      let { container } = render(<LiveReload />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        `let LIVE_RELOAD_ORIGIN = ${JSON.stringify(origin)};`
+      );
+    });
+
+    it("can set the origin explicitly", () => {
+      let origin = "http://test-origin";
+      LiveReload = require("../components").LiveReload;
+      let { container } = render(<LiveReload origin={origin} />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        `let LIVE_RELOAD_ORIGIN = ${JSON.stringify(origin)};`
+      );
+    });
+
     it("defaults the port to 8002", () => {
       LiveReload = require("../components").LiveReload;
       let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        "url.port = undefined || (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);"
+        "url.port = undefined || (LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).port : 8002);"
       );
     });
 
     it("can set the port explicitly", () => {
       let { container } = render(<LiveReload port={4321} />);
       expect(container.querySelector("script")).toHaveTextContent(
-        "url.port = 4321 || (REMIX_DEV_ORIGIN ? new URL(REMIX_DEV_ORIGIN).port : 8002);"
+        "url.port = 4321 || (LIVE_RELOAD_ORIGIN ? new URL(LIVE_RELOAD_ORIGIN).port : 8002);"
       );
     });
 
@@ -93,6 +115,7 @@ function itPrefetchesPageLinks<
         url: "",
         version: "",
       },
+      future: {},
     };
 
     beforeEach(() => {
@@ -198,4 +221,127 @@ describe("<Link />", () => {
 
 describe("<NavLink />", () => {
   itPrefetchesPageLinks(NavLink);
+});
+
+describe("<RemixServer>", () => {
+  it("handles empty default export objects from the compiler", async () => {
+    let staticHandlerContext = await createStaticHandler([{ path: "/" }]).query(
+      new Request("http://localhost/")
+    );
+    invariant(
+      !(staticHandlerContext instanceof Response),
+      "Expected a context"
+    );
+
+    let context = {
+      manifest: {
+        routes: {
+          root: {
+            hasLoader: false,
+            hasAction: false,
+            hasErrorBoundary: false,
+            id: "root",
+            module: "root.js",
+            path: "/",
+          },
+          empty: {
+            hasLoader: false,
+            hasAction: false,
+            hasErrorBoundary: false,
+            id: "empty",
+            module: "empty.js",
+            index: true,
+            parentId: "root",
+          },
+        },
+        entry: { imports: [], module: "" },
+        url: "",
+        version: "",
+      },
+      routeModules: {
+        root: {
+          default: () => {
+            return (
+              <>
+                <h1>Root</h1>
+                <Outlet />
+              </>
+            );
+          },
+        },
+        empty: { default: {} },
+      },
+      staticHandlerContext,
+      future: {},
+    };
+
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    jest.spyOn(console, "error");
+
+    let { container } = render(
+      <RemixServer context={context} url="http://localhost/" />
+    );
+
+    expect(console.warn).toHaveBeenCalledWith(
+      'Matched leaf route at location "/" does not have an element or Component. This means it will render an <Outlet /> with a null value by default resulting in an "empty" page.'
+    );
+    expect(console.error).not.toHaveBeenCalled();
+    expect(container.innerHTML).toMatch("<h1>Root</h1>");
+  });
+});
+
+describe("<RemixBrowser>", () => {
+  it("handles empty default export objects from the compiler", () => {
+    window.__remixContext = {
+      url: "/",
+      state: {
+        loaderData: {},
+      },
+      future: {},
+    };
+    window.__remixRouteModules = {
+      root: {
+        default: () => {
+          return (
+            <>
+              <h1>Root</h1>
+              <Outlet />
+            </>
+          );
+        },
+      },
+      empty: { default: {} },
+    };
+    window.__remixManifest = {
+      routes: {
+        root: {
+          hasLoader: false,
+          hasAction: false,
+          hasErrorBoundary: false,
+          id: "root",
+          module: "root.js",
+          path: "/",
+        },
+        empty: {
+          hasLoader: false,
+          hasAction: false,
+          hasErrorBoundary: false,
+          id: "empty",
+          module: "empty.js",
+          index: true,
+          parentId: "root",
+        },
+      },
+      entry: { imports: [], module: "" },
+      url: "",
+      version: "",
+    };
+
+    jest.spyOn(console, "error");
+
+    let { container } = render(<RemixBrowser />);
+
+    expect(console.error).not.toHaveBeenCalled();
+    expect(container.innerHTML).toMatch("<h1>Root</h1>");
+  });
 });

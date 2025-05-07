@@ -35,7 +35,7 @@ function createApp() {
     // We don't have a real app to test, but it doesn't matter. We won't ever
     // call through to the real createRequestHandler
     // @ts-expect-error
-    createRequestHandler({ build: undefined })
+    createRequestHandler({ build: {} })
   );
 
   return app;
@@ -178,7 +178,7 @@ describe("express createRemixHeaders", () => {
         "x-foo": ["bar", "baz"],
         "x-bar": "baz",
       });
-      expect(headers.getAll("x-foo")).toEqual(["bar", "baz"]);
+      expect(headers.get("x-foo")).toEqual("bar, baz");
       expect(headers.get("x-bar")).toBe("baz");
     });
 
@@ -189,7 +189,7 @@ describe("express createRemixHeaders", () => {
           "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
         ],
       });
-      expect(headers.getAll("set-cookie")).toEqual([
+      expect(headers.getSetCookie()).toEqual([
         "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
         "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
       ]);
@@ -218,5 +218,29 @@ describe("express createRemixRequest", () => {
       "max-age=300, s-maxage=3600"
     );
     expect(remixRequest.headers.get("host")).toBe("localhost:3000");
+  });
+
+  it("validates parsed port", async () => {
+    let expressRequest = createRequest({
+      url: "/foo/bar",
+      method: "GET",
+      protocol: "http",
+      hostname: "localhost",
+      headers: {
+        "Cache-Control": "max-age=300, s-maxage=3600",
+        Host: "localhost:3000",
+        "x-forwarded-host": ":/spoofed",
+      },
+    });
+    let expressResponse = createResponse();
+
+    let remixRequest = createRemixRequest(expressRequest, expressResponse);
+
+    expect(remixRequest.method).toBe("GET");
+    expect(remixRequest.headers.get("cache-control")).toBe(
+      "max-age=300, s-maxage=3600"
+    );
+    expect(remixRequest.headers.get("host")).toBe("localhost:3000");
+    expect(remixRequest.url).toBe("http://localhost:3000/foo/bar");
   });
 });

@@ -16,6 +16,7 @@ export {
 export {
   broadcastDevReady,
   createSession,
+  data,
   defer,
   isCookie,
   isSession,
@@ -24,6 +25,7 @@ export {
   MaxPartSizeExceededError,
   redirect,
   redirectDocument,
+  replace,
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
@@ -41,6 +43,7 @@ export type {
   DataFunctionArgs,
   EntryContext,
   ErrorResponse,
+  Future,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HandleErrorFunction,

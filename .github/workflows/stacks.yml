@@ -60,7 +60,7 @@ jobs:
         run: zip ${{ matrix.stack.name }}.zip ./${{ matrix.stack.name }} -r -x "**/node_modules/*"
 
       - name: 🗄️ Archive ${{ matrix.stack.name }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.stack.name }}-archive
           path: ${{ matrix.stack.name }}.zip
@@ -82,7 +82,7 @@ jobs:
             name: "grunge"
     steps:
       - name: 🗄️ Restore ${{ matrix.stack.name }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.stack.name }}-archive
 
@@ -122,7 +122,7 @@ jobs:
             name: "grunge"
     steps:
       - name: 🗄️ Restore ${{ matrix.stack.name }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.stack.name }}-archive
 
@@ -162,7 +162,7 @@ jobs:
             name: "grunge"
     steps:
       - name: 🗄️ Restore ${{ matrix.stack.name }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.stack.name }}-archive
 
@@ -205,7 +205,7 @@ jobs:
             cypress: "npm run dev"
     steps:
       - name: 🗄️ Restore ${{ matrix.stack.name }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.stack.name }}-archive
 

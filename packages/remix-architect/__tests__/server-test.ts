@@ -1,6 +1,7 @@
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node";
+import { Headers as RemixHeaders } from "@remix-run/web-fetch";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import lambdaTester from "lambda-tester";
 
@@ -217,7 +218,7 @@ describe("architect createRemixHeaders", () => {
         "x-foo": "bar, baz",
         "x-bar": "baz",
       });
-      expect(headers.getAll("x-foo")).toEqual(["bar, baz"]);
+      expect(headers.get("x-foo")).toEqual("bar, baz");
       expect(headers.get("x-bar")).toBe("baz");
     });
 
@@ -226,9 +227,21 @@ describe("architect createRemixHeaders", () => {
         "__session=some_value",
         "__other=some_other_value",
       ]);
-      expect(headers.getAll("cookie")).toEqual([
-        "__session=some_value; __other=some_other_value",
-      ]);
+      expect(headers.get("cookie")).toEqual(
+        "__session=some_value; __other=some_other_value"
+      );
+    });
+
+    it("handles multiple request cookies when using @remix-run/web-fetch", () => {
+      let headers = createRemixHeaders(
+        {},
+        ["__session=some_value", "__other=some_other_value"],
+        // @ts-expect-error types don't align since it's not fully spec compliant
+        RemixHeaders
+      );
+      expect(headers.get("cookie")).toEqual(
+        "__session=some_value; __other=some_other_value"
+      );
     });
   });
 });

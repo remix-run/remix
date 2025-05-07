@@ -2,8 +2,9 @@ import type { AgnosticDataRouteMatch } from "@remix-run/router";
 import type { Location } from "react-router-dom";
 import { parsePath } from "react-router-dom";
 
-import type { AssetsManifest } from "./entry";
+import type { AssetsManifest, FutureConfig } from "./entry";
 import type { RouteModules, RouteModule } from "./routeModules";
+import type { EntryRoute } from "./routes";
 import { loadRouteModule } from "./routeModules";
 
 type Primitive = null | undefined | string | number | boolean | symbol | bigint;
@@ -211,22 +212,31 @@ export function getKeyedLinksForMatches(
   manifest: AssetsManifest
 ): KeyedLinkDescriptor[] {
   let descriptors = matches
-    .map((match): LinkDescriptor[] => {
+    .map((match): LinkDescriptor[][] => {
       let module = routeModules[match.route.id];
-      return module.links?.() || [];
+      let route = manifest.routes[match.route.id];
+      return [
+        route.css ? route.css.map((href) => ({ rel: "stylesheet", href })) : [],
+        module?.links?.() || [],
+      ];
     })
-    .flat(1);
+    .flat(2);
 
   let preloads = getCurrentPageModulePreloadHrefs(matches, manifest);
   return dedupeLinkDescriptors(descriptors, preloads);
 }
 
 export async function prefetchStyleLinks(
+  route: EntryRoute,
   routeModule: RouteModule
 ): Promise<void> {
-  if (!routeModule.links || !isPreloadSupported()) return;
-  let descriptors = routeModule.links();
-  if (!descriptors) return;
+  if ((!route.css && !routeModule.links) || !isPreloadSupported()) return;
+
+  let descriptors = [
+    route.css?.map((href) => ({ rel: "stylesheet", href })) ?? [],
+    routeModule.links?.() ?? [],
+  ].flat(1);
+  if (descriptors.length === 0) return;
 
   let styleLinks: HtmlLinkDescriptor[] = [];
   for (let descriptor of descriptors) {
@@ -343,6 +353,7 @@ export function getNewMatchesForLinks(
   currentMatches: AgnosticDataRouteMatch[],
   manifest: AssetsManifest,
   location: Location,
+  future: FutureConfig,
   mode: "data" | "assets"
 ): AgnosticDataRouteMatch[] {
   let path = parsePathPatch(page);
@@ -366,7 +377,8 @@ export function getNewMatchesForLinks(
   // NOTE: keep this mostly up-to-date w/ the transition data diff, but this
   // version doesn't care about submissions
   let newMatches =
-    mode === "data" && location.search !== path.search
+    mode === "data" &&
+    (future.v3_singleFetch || location.search !== path.search)
       ? // this is really similar to stuff in transition.ts, maybe somebody smarter
         // than me (or in less of a hurry) can share some of it. You're the best.
         nextMatches.filter((match, index) => {
@@ -379,6 +391,12 @@ export function getNewMatchesForLinks(
             return true;
           }
 
+          // For reused routes on GET navigations, by default:
+          // - Single fetch always revalidates
+          // - Multi fetch revalidates if search params changed
+          let defaultShouldRevalidate =
+            future.v3_singleFetch || location.search !== path.search;
+
           if (match.route.shouldRevalidate) {
             let routeChoice = match.route.shouldRevalidate({
               currentUrl: new URL(
@@ -388,13 +406,13 @@ export function getNewMatchesForLinks(
               currentParams: currentMatches[0]?.params || {},
               nextUrl: new URL(page, window.origin),
               nextParams: match.params,
-              defaultShouldRevalidate: true,
+              defaultShouldRevalidate,
             });
             if (typeof routeChoice === "boolean") {
               return routeChoice;
             }
           }
-          return true;
+          return defaultShouldRevalidate;
         })
       : nextMatches.filter((match, index) => {
           let manifestRoute = manifest.routes[match.route.id];
@@ -415,7 +433,11 @@ export function getDataLinkHrefs(
   let path = parsePathPatch(page);
   return dedupeHrefs(
     matches
-      .filter((match) => manifest.routes[match.route.id].hasLoader)
+      .filter(
+        (match) =>
+          manifest.routes[match.route.id].hasLoader &&
+          !manifest.routes[match.route.id].hasClientLoader
+      )
       .map((match) => {
         let { pathname, search } = path;
         let searchParams = new URLSearchParams(search);

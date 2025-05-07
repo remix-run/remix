@@ -34,22 +34,22 @@ jobs:
           token: ${{ secrets.NIGHTLY_PAT }}
           fetch-depth: 0
 
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          cache: "yarn"
+          cache: "pnpm"
 
       - name: 📥 Install deps
-        run: yarn --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 🕵️ Check for changes
         id: version
         run: |
-          # get latest commit sha
-          SHA=$(git rev-parse HEAD)
-          # get first 7 characters of sha
-          SHORT_SHA=${SHA::7}
+          SHORT_SHA=$(git rev-parse --short HEAD)
 
           # get latest nightly tag
           LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-creatordate | head -n 1)
@@ -74,12 +74,12 @@ jobs:
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
           git checkout -b nightly/${{ steps.version.outputs.NEXT_VERSION }}
-          yarn run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
+          pnpm run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
           git push origin --tags
 
       - name: 🏗 Build
         if: steps.version.outputs.NEXT_VERSION
-        run: yarn build
+        run: pnpm build
 
       - name: 🔐 Setup npm auth
         if: steps.version.outputs.NEXT_VERSION

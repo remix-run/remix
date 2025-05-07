@@ -47,7 +47,7 @@ export default function Products() {
 
 The component renders on the server and in the browser. The loader _only runs on the server_. That means our hard-coded products array doesn't get included in the browser bundles, and it's safe to use server-only for APIs and SDKs for things like database, payment processing, content management systems, etc.
 
-If your server-side modules end up in client bundles, move the imports for those modules to a file named `{something}.server.ts` with the `.server.ts` suffix to ensure they are excluded.
+If your server-side modules end up in client bundles, refer to our guide on [server vs. client code execution][server-vs-client-code].
 
 ## Route Params
 
@@ -631,14 +631,16 @@ You might want to make an abstraction for checkboxes like this:
 
 function SearchCheckbox({ name, value }) {
   const [searchParams] = useSearchParams();
-  const all = searchParams.getAll(name);
+  const paramsIncludeValue = searchParams
+    .getAll(name)
+    .includes(value);
   const [checked, setChecked] = React.useState(
-    all.includes(value)
+    paramsIncludeValue
   );
 
   React.useEffect(() => {
-    setChecked(all.includes(value));
-  }, [all, searchParams, value]);
+    setChecked(paramsIncludeValue);
+  }, [paramsIncludeValue]);
 
   return (
     <input
@@ -764,3 +766,4 @@ export default function RouteComp() {
 [url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
 [use-submit]: ../hooks/use-submit
 [useloaderdata]: ../hooks/use-loader-data
+[server-vs-client-code]: ../discussion/server-vs-client

@@ -5,7 +5,7 @@ new: true
 
 # `useRouteError`
 
-Accesses the error thrown during an action, loader, or rendering to be used in an ErrorBoundary.
+Accesses the error thrown during an [`action`][action], [`loader`][loader], or rendering to be used in an [`ErrorBoundary`][error-boundary].
 
 ```jsx filename=routes/some-route.tsx
 export function ErrorBoundary() {
@@ -24,5 +24,7 @@ export function ErrorBoundary() {
 
 - [`ErrorBoundary`][error-boundary]
 
-[error-handling-guide]: ../guides/errors
+[action]: ../route/action
+[loader]: ../route/loader
 [error-boundary]: ../route/error-boundary
+[error-handling-guide]: ../guides/errors

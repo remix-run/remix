@@ -14,6 +14,9 @@ let remixPackages = {
     "dev",
     "server-runtime",
     "react",
+    "fs-routes",
+    "route-config",
+    "routes-option-adapter",
     "eslint-config",
     "css-bundle",
     "testing",
@@ -203,7 +206,13 @@ async function incrementRemixVersion(nextVersion) {
   await Promise.all(
     [
       path.join(".vscode", "deno_resolve_npm_imports.json"),
-      path.join("templates", "deno", ".vscode", "resolve_npm_imports.json"),
+      path.join(
+        "templates",
+        "classic-remix-compiler",
+        "deno",
+        ".vscode",
+        "resolve_npm_imports.json"
+      ),
     ].map((importMapPath) =>
       updateDenoImportMap(path.join(rootDir, importMapPath), nextVersion)
     )

@@ -1,8 +1,11 @@
 ---
 title: remix.config.js
+hidden: true
 ---
 
 # remix.config.js
+
+<docs-warning>`remix.config.js` is only relevant when using the [Classic Remix Compiler][classic-remix-compiler]. When using [Remix Vite][remix-vite], this file should not be present in your project. Instead, Remix configuration should be provided to the Remix plugin in your [Vite config][vite-config].</docs-warning>
 
 This file has a few build and development configuration options, but does not actually run on your server.
 
@@ -11,7 +14,10 @@ This file has a few build and development configuration options, but does not ac
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
-  ignoredRouteFiles: ["**/.*"],
+  future: {
+    /* any enabled future flags */
+  },
+  ignoredRouteFiles: ["**/*.css"],
   publicPath: "/build/",
   routes(defineRoutes) {
     return defineRoutes((route) => {
@@ -42,16 +48,19 @@ The path to the browser build, relative to remix.config.js. Defaults to
 
 ## browserNodeBuiltinsPolyfill
 
-The Node.js polyfills to include in the browser build. Polyfills are provided by [JSPM][jspm] and configured via \[esbuild-plugins-node-modules-polyfill].
+The Node.js polyfills to include in the browser build. Polyfills are provided by [JSPM][jspm] and configured via [esbuild-plugins-node-modules-polyfill].
 
 ```js filename=remix.config.js
-exports.browserNodeBuiltinsPolyfill = {
-  modules: {
-    buffer: true, // Provide a JSPM polyfill
-    fs: "empty", // Provide an empty polyfill
-  },
-  globals: {
-    Buffer: true,
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  browserNodeBuiltinsPolyfill: {
+    modules: {
+      buffer: true, // Provide a JSPM polyfill
+      fs: "empty", // Provide an empty polyfill
+    },
+    globals: {
+      Buffer: true,
+    },
   },
 };
 ```
@@ -63,17 +72,37 @@ When using this option and targeting non-Node.js server platforms, you may also 
 The path to a directory Remix can use for caching things in development,
 relative to `remix.config.js`. Defaults to `".cache"`.
 
+## future
+
+The `future` config lets you opt-into future breaking changes via [Future Flags][future-flags]. Please see the [Current Future Flags][current-future-flags] section for a list of all available Future Flags.
+
 ## ignoredRouteFiles
 
 This is an array of globs (via [minimatch][minimatch]) that Remix will match to
 files while reading your `app/routes` directory. If a file matches, it will be
 ignored rather than treated like a route module. This is useful for ignoring
-dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
+CSS/test files you wish to colocate.
 
 ## publicPath
 
 The URL prefix of the browser build with a trailing slash. Defaults to
 `"/build/"`. This is the path the browser will use to find assets.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  publicPath: "/assets/",
+};
+```
+
+If you wish to serve static assets from a separate domain you may also specify an absolute path:
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  publicPath: "https://static.example.com/assets/",
+};
+```
 
 ## postcss
 
@@ -149,7 +178,7 @@ module.exports = {
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
   serverBuildPath: "build/index.js",
-  ignoredRouteFiles: ["**/.*"],
+  ignoredRouteFiles: ["**/*.css"],
   serverDependenciesToBundle: [
     /^rehype.*/,
     /^remark.*/,
@@ -179,7 +208,7 @@ Defaults to `"esm"`.
 
 ## serverNodeBuiltinsPolyfill
 
-The Node.js polyfills to include in the server build when targeting non-Node.js server platforms. Polyfills are provided by [JSPM][jspm] and configured via [esbuild_plugins_node_modules_polyfill][esbuild_plugins_node_modules_polyfill].
+The Node.js polyfills to include in the server build when targeting non-Node.js server platforms. Polyfills are provided by [JSPM][jspm] and configured via [esbuild-plugins-node-modules-polyfill].
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
@@ -189,9 +218,9 @@ module.exports = {
       buffer: true, // Provide a JSPM polyfill
       fs: "empty", // Provide an empty polyfill
     },
-  },
-  globals: {
-    Buffer: true,
+    globals: {
+      Buffer: true,
+    },
   },
 };
 ```
@@ -237,12 +266,16 @@ There are a few conventions that Remix uses you should be aware of.
 [dilum_sanjaya]: https://twitter.com/DilumSanjaya
 [an_awesome_visualization]: https://interactive-remix-routing-v2.netlify.app
 [remix_dev]: ../other-api/dev#remix-dev
-[app_directory]: #appDirectory
+[app_directory]: #appdirectory
 [css_side_effect_imports]: ../styling/css-imports
 [postcss]: https://postcss.org
 [tailwind_functions_and_directives]: https://tailwindcss.com/docs/functions-and-directives
 [jspm]: https://github.com/jspm/jspm-core
-[esbuild_plugins_node_modules_polyfill]: https://npm.im/esbuild-plugins-node-modules-polyfill
-[port]: ../other-api/dev#options-1
+[esbuild-plugins-node-modules-polyfill]: https://npm.im/esbuild-plugins-node-modules-polyfill
 [browser-node-builtins-polyfill]: #browsernodebuiltinspolyfill
 [server-node-builtins-polyfill]: #servernodebuiltinspolyfill
+[future-flags]: ../start/future-flags
+[current-future-flags]: ../start/future-flags#current-future-flags
+[classic-remix-compiler]: ../guides/vite#classic-remix-compiler-vs-remix-vite
+[remix-vite]: ../guides/vite
+[vite-config]: ./vite-config

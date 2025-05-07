@@ -2,6 +2,7 @@
 **/tests/__snapshots/
 **/node_modules/
 .tmp
+pnpm-lock.yaml
 /playground
 **/__tests__/fixtures
 **/__tests__/**/*/fixtures
@@ -13,3 +14,5 @@ packages/remix-deno
 templates/deno
 
 packages/remix-dev/config/defaults
+templates/remix-tutorial/app/data.ts
+templates/cloudflare-workers/worker-configuration.d.ts

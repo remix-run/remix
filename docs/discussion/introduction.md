@@ -14,10 +14,10 @@ Built on top of [React Router][react_router], Remix is four things:
 
 ## Compiler
 
-Everything in Remix starts with the compiler: `remix build`. Using [esbuild][esbuild], this creates a few things:
+Everything in Remix starts with the compiler: `remix vite:build`. Using [Vite], this creates a few things:
 
-1. A server HTTP handler, usually in `server/build/index.js` (it's configurable) that includes all routes and modules together to be able to render on the server and handle any other server-side requests for resources.
-2. A browser build, usually in `public/build/*`. This includes automatic code splitting by route, fingerprinted asset imports (like CSS and images), etc. Anything needed to run an application in the browser.
+1. A server HTTP handler, usually in `build/server/index.js` (it's configurable) that includes all routes and modules together to be able to render on the server and handle any other server-side requests for resources.
+2. A browser build, usually in `build/client/*`. This includes automatic code splitting by route, fingerprinted asset imports (like CSS and images), etc. Anything needed to run an application in the browser.
 3. An asset manifest. Both the client and the server use this manifest to know the entire dependency graph. This is useful for preloading resources in the initial server render as well as prefetching them for client-side transitions. This is how Remix is able to eliminate the render+fetch waterfalls so common in web apps today.
 
 With these build artifacts, an application can be deployed to any hosting service that runs JavaScript.
@@ -38,7 +38,9 @@ const app = express();
 
 app.all(
   "*",
-  remix.createRequestHandler({ build: require("./build") })
+  remix.createRequestHandler({
+    build: require("./build/server"),
+  })
 );
 ```
 
@@ -146,11 +148,16 @@ If you're not familiar with traditional back-end web frameworks, you can think o
 
 Once Remix has served the document to the browser, it "hydrates" the page with the browser build's JavaScript modules. This is where we talk a lot about Remix "emulating the browser".
 
-When the user clicks a link, instead of making a round trip to the server for the entire document and all the assets, Remix simply fetches the data for the next page and updates the UI. This has many performance benefits over making a full-document request:
+When the user clicks a link, instead of making a round trip to the server for the entire document and all the assets, Remix simply fetches the data for the next page and updates the UI.
+
+Additionally, when users submit a `<Form>` to update data, instead of doing a normal HTML document request, the browser runtime will make a fetch to the server instead and automatically revalidate all data on the page and update it with React.
+
+This has many performance benefits over making a full-document request:
 
 1. Assets don't need to be re-downloaded (or pulled from cache)
 2. Assets don't need to be parsed by the browser again
 3. The data fetched is much smaller than the entire document (sometimes orders of magnitude)
+4. Because Remix enhances HTML APIs (`<a>` and `<form>`), your app tends to work even before JavaScript has loaded on the page
 
 Remix also has some built in optimizations for client-side navigation. It knows which layouts will persist between the two URLs, so it only fetches the data for the ones that are changing. A full document request would require all data to be fetched on the server, wasting resources on your back end and slowing down your app.
 
@@ -207,17 +214,17 @@ export default function Projects() {
 }
 ```
 
-What's most interesting about this code sample is that it is **only additive**. The entire interaction is still fundamentally the same thing.
+What's most interesting about this code sample is that it is **only additive**. The entire interaction is still fundamentally the same thing and even works at a basic level before JavaScript loads, the only difference is the user feedback will be provided by the browser (spinning favicon, etc.) instead of the app (`useNavigation().state`).
 
 Because Remix reaches into the controller level of the backend, it can do this seamlessly.
 
 And while it doesn't reach as far back into the stack as server-side frameworks like Rails and Laravel, it does reach way farther up the stack into the browser to make the transition from the back end to the front end seamless.
 
-For example. Building a plain HTML form and server-side handler in a back-end heavy web framework is just as easy to do as it is in Remix. But as soon as you want to cross over into an experience with animated validation messages, focus management, and pending UI, it requires a fundamental change in the code. Typically, people build an API route and then bring in a splash of client-side JavaScript to connect the two. With Remix, you simply add some code around the existing "server side view" without changing how it works fundamentally.
+For example. Building a plain HTML form and server-side handler in a back-end heavy web framework is just as easy to do as it is in Remix. But as soon as you want to cross over into an experience with animated validation messages, focus management, and pending UI, it requires a fundamental change in the code. Typically, people build an API route and then bring in a splash of client-side JavaScript to connect the two. With Remix, you simply add some code around the existing "server side view" without changing how it works fundamentally. The browser runtime takes over the server communication to provide an enhanced user experience beyond the default browser behaviors.
 
 We borrowed an old term and called this Progressive Enhancement in Remix. Start small with a plain HTML form (Remix scales down) and then scale the UI up when you have the time and ambition.
 
-[esbuild]: https://esbuild.github.io/
+[vite]: https://vitejs.dev
 [cf]: https://workers.cloudflare.com/
 [deno]: https://deno.com/deploy/docs
 [fetch]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API

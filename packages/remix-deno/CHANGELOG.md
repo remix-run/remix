@@ -1,5 +1,337 @@
 # `@remix-run/deno`
 
+## 2.16.5
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.5`
+
+## 2.16.4
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.4`
+
+## 2.16.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.3`
+
+## 2.16.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.2`
+
+## 2.16.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.1`
+
+## 2.16.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.0`
+
+## 2.15.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.3`
+
+## 2.15.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.2`
+
+## 2.15.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.1`
+
+## 2.15.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.15.0`
+
+## 2.14.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.14.0`
+
+## 2.13.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.13.1`
+
+## 2.13.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.13.0`
+
+## 2.12.1
+
+### Patch Changes
+
+- Single Fetch: Re-export `interface Future` through
+  `@remix-run/node`/`@remix-run/cloudflare`/`@remix-run/deno` packages so that
+  `pnpm` doesn't complain about `@remix-run/server-runtime` not being a
+  dependency ([#9982](https://github.com/remix-run/remix/pull/9982))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.12.1`
+
+## 2.12.0
+
+### Patch Changes
+
+- Single Fetch: Improved typesafety
+  ([#9893](https://github.com/remix-run/remix/pull/9893))
+
+  If you were already using previously released unstable single-fetch types:
+
+  - Remove `"@remix-run/react/future/single-fetch.d.ts"` override from
+    `tsconfig.json` > `compilerOptions` > `types`
+  - Remove `defineLoader`, `defineAction`, `defineClientLoader`,
+    `defineClientAction` helpers from your route modules
+  - Replace `UIMatch_SingleFetch` type helper with `UIMatch`
+  - Replace `MetaArgs_SingleFetch` type helper with `MetaArgs`
+
+  Then you are ready for the new typesafety setup:
+
+  ```ts
+  // vite.config.ts
+
+  declare module "@remix-run/server-runtime" {
+    interface Future {
+      unstable_singleFetch: true; // 👈 enable _types_ for single-fetch
+    }
+  }
+
+  export default defineConfig({
+    plugins: [
+      remix({
+        future: {
+          unstable_singleFetch: true, // 👈 enable single-fetch
+        },
+      }),
+    ],
+  });
+  ```
+
+  For more information, see
+  [Guides > Single Fetch](https://remix.run/docs/en/dev/guides/single-fetch) in
+  our docs.
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.12.0`
+
+## 2.11.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.2`
+
+## 2.11.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.1`
+
+## 2.11.0
+
+### Minor Changes
+
+- Single Fetch: Add a new `unstable_data()` API as a replacement for
+  `json`/`defer` when custom `status`/`headers` are needed
+  ([#9769](https://github.com/remix-run/remix/pull/9769))
+- Add a new `replace(url, init?)` alternative to `redirect(url, init?)` that
+  performs a `history.replaceState` instead of a `history.pushState` on
+  client-side navigation redirects
+  ([#9764](https://github.com/remix-run/remix/pull/9764))
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.11.0`
+
+## 2.10.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.3`
+
+## 2.10.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.2`
+
+## 2.10.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.1`
+
+## 2.10.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.10.0`
+
+## 2.9.2
+
+### Patch Changes
+
+- Typesafety for single-fetch: `defineLoader`, `defineClientLoader`,
+  `defineAction`, `defineClientAction`
+  ([#9372](https://github.com/remix-run/remix/pull/9372),
+  [#9404](https://github.com/remix-run/remix/pull/9404))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.2`
+
+## 2.9.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.1`
+
+## 2.9.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.9.0`
+
+## 2.8.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.1`
+
+## 2.8.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.8.0`
+
+## 2.7.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.7.2`
+
+## 2.7.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.7.1`
+
+## 2.7.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.7.0`
+
+## 2.6.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.6.0`
+
+## 2.5.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.5.1`
+
+## 2.5.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.5.0`
+
+## 2.4.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.4.1`
+
+## 2.4.0
+
+### Minor Changes
+
+- Deprecate `DataFunctionArgs` in favor of
+  `LoaderFunctionArgs`/`ActionFunctionArgs`
+  ([#8173](https://github.com/remix-run/remix/pull/8173))
+  - This is aimed at keeping the types aligned across server/client
+    loaders/actions now that `clientLoader`/`clientActon` functions have
+    `serverLoader`/`serverAction` parameters which differentiate
+    `ClientLoaderFunctionArgs`/`ClientActionFunctionArgs`
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.4.0`
+
+## 2.3.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.3.1`
+
+## 2.3.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.3.0`
+
+## 2.2.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.2.0`
+
 ## 2.1.0
 
 ### Patch Changes
@@ -256,10 +588,10 @@
 
   Documentation Resources (better docs specific to Remix are in the works):
 
-  - <https://reactrouter.com/en/main/utils/defer>
-  - <https://reactrouter.com/en/main/components/await>
-  - <https://reactrouter.com/en/main/hooks/use-async-value>
-  - <https://reactrouter.com/en/main/hooks/use-async-error>
+  - <https://reactrouter.com/v6/utils/defer>
+  - <https://reactrouter.com/v6/components/await>
+  - <https://reactrouter.com/v6/hooks/use-async-value>
+  - <https://reactrouter.com/v6/hooks/use-async-error>
 
 - Updated dependencies:
   - `@remix-run/server-runtime@1.11.0`
