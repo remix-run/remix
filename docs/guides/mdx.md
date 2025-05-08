@@ -204,8 +204,12 @@ exports.mdx = async (filename) => {
 };
 ```
 
+The above configuration parses the markdown to insert [highlight.js][highlightjs] friendly DOM elements. To have the syntax highlighting appear, you will also need to include the highlight.js css file. See also [surfacing styles][surfacing-styles].
+
 [mdx-plugin]: https://mdxjs.com/packages/rollup
 [mdx]: https://mdxjs.com
 [yaml]: https://yaml.org
 [mdx-bundler]: https://github.com/kentcdodds/mdx-bundler
 [classic-remix-compiler]: ./vite#classic-remix-compiler-vs-remix-vite
+[surfacing-styles]: ../styling#surfacing-styles
+[highlightjs]: https://highlightjs.org/

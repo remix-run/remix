@@ -112,6 +112,8 @@ fetcher.submit(
 
 Loads data from a route loader. While multiple nested routes can match a URL, only the leaf route will be called.
 
+Note that when calling `load` on an index route's loader, you must include an [`?index` query param][index-query-param] in order to disambiguate between the `index.tsx` layout and the `root.tsx` route.
+
 ```ts
 fetcher.load("/some/route");
 fetcher.load("/some/route?foo=bar");
@@ -180,3 +182,4 @@ The form method of the submission.
 [use-submit]: ./use-submit
 [userevalidator]: ./use-revalidator
 [shouldrevalidate]: ../route/should-revalidate#shouldrevalidate
+[index-query-param]: ../guides/index-query-param
