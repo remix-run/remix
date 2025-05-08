@@ -1335,8 +1335,8 @@ importers:
         specifier: 6.30.0
         version: 6.30.0(react-dom@18.2.0)(react@18.2.0)
       turbo-stream:
-        specifier: 2.4.0
-        version: 2.4.0
+        specifier: 2.4.1
+        version: 2.4.1
     devDependencies:
       '@remix-run/node':
         specifier: workspace:*
@@ -1458,8 +1458,8 @@ importers:
         specifier: ^0.7.3
         version: 0.7.3
       turbo-stream:
-        specifier: 2.4.0
-        version: 2.4.0
+        specifier: 2.4.1
+        version: 2.4.1
     devDependencies:
       '@types/set-cookie-parser':
         specifier: ^2.4.1
@@ -8750,6 +8750,7 @@ packages:
 
   /formidable@2.1.2:
     resolution: {integrity: sha512-CM3GuJ57US06mlpQ47YcunuUZ9jpm8Vx+P2CGt2j7HpgkKZO/DJYQ0Bobim8G6PFQmK5lOqOOdUXboU+h73A4g==}
+    deprecated: 'ACTION REQUIRED: SWITCH TO v3 - v1 and v2 are VULNERABLE! v1 is DEPRECATED FOR OVER 2 YEARS! Use formidable@latest or try formidable-mini for fresh projects'
     dependencies:
       dezalgo: 1.0.4
       hexoid: 1.0.0
@@ -14758,8 +14759,8 @@ packages:
       safe-buffer: 5.2.1
     dev: false
 
-  /turbo-stream@2.4.0:
-    resolution: {integrity: sha512-FHncC10WpBd2eOmGwpmQsWLDoK4cqsA/UT/GqNoaKOQnT8uzhtCbg3EoUDMvqpOSAI0S26mr0rkjzbOO6S3v1g==}
+  /turbo-stream@2.4.1:
+    resolution: {integrity: sha512-v8kOJXpG3WoTN/+at8vK7erSzo6nW6CIaeOvNOkHQVDajfz1ZVeSxCbc6tOH4hrGZW7VUCV0TOXd8CPzYnYkrw==}
     dev: false
 
   /tweetnacl@0.14.5:
