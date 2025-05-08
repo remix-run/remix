@@ -40,15 +40,16 @@ Initiates a revalidation.
 ```tsx
 function useLivePageData() {
   const revalidator = useRevalidator();
-  const interval = useInterval(5000);
 
-  useEffect(() => {
+  useInterval(() => {
     if (revalidator.state === "idle") {
       revalidator.revalidate();
     }
-  }, [interval, revalidator]);
+  }, 5000);
 }
 ```
+
+See [here][here] for a sample `useInterval` implementation.
 
 ## Notes
 
@@ -61,3 +62,4 @@ If a navigation happens while a revalidation is in flight, the revalidation will
 [form-component]: ../components/form
 [use-fetcher]: ./use-fetcher
 [use-submit]: ./use-submit
+[here]: https://overreacted.io/making-setinterval-declarative-with-react-hooks

@@ -12,17 +12,16 @@ Remix comes with several pre-built session storage options for common scenarios,
 
 - `createCookieSessionStorage`
 - `createMemorySessionStorage`
-- `createFileSessionStorage` (node)
-- `createWorkersKVSessionStorage` (Cloudflare Workers)
-- `createArcTableSessionStorage` (architect, Amazon DynamoDB)
+- `createFileSessionStorage` (Node.js, Deno)
+- `createWorkersKVSessionStorage` (Cloudflare)
+- `createArcTableSessionStorage` (Architect, Amazon DynamoDB)
 - custom storage with `createSessionStorage`
 
 ## Using Sessions
 
 This is an example of a cookie session storage:
 
-```ts filename=app/sessions.ts
-// app/sessions.ts
+```ts filename=app/sessions.server.ts
 import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
 
 type SessionData = {
@@ -59,7 +58,7 @@ const { getSession, commitSession, destroySession } =
 export { getSession, commitSession, destroySession };
 ```
 
-We recommend setting up your session storage object in `app/sessions.ts` so all routes that need to access session data can import from the same spot (also, see our [Route Module Constraints][constraints]).
+We recommend setting up your session storage object in `app/sessions.server.ts` so all routes that need to access session data can import from the same spot (also, see our [Route Module Constraints][constraints]).
 
 The input/output to a session storage object are HTTP cookies. `getSession()` retrieves the current session from the incoming request's `Cookie` header, and `commitSession()`/`destroySession()` provide the `Set-Cookie` header for the outgoing response.
 
@@ -67,7 +66,7 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```tsx filename=app/routes/login.tsx lines=[8,13-15,17,22,26,34-36,47,52,57,62]
+```tsx filename=app/routes/login.js lines=[8,13-15,17,23-24,29-30,38-40,51-52,57,62,67]
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -75,7 +74,10 @@ import type {
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import { getSession, commitSession } from "../sessions";
+import {
+  getSession,
+  commitSession,
+} from "../sessions.server";
 
 export async function loader({
   request,
@@ -89,10 +91,14 @@ export async function loader({
     return redirect("/");
   }
 
-  const data = { error: session.get("error") };
+  const data = {
+    // Read and unset the flash message set by the route action.
+    error: session.get("error"),
+  };
 
   return json(data, {
     headers: {
+      // Commit the updated session data.
       "Set-Cookie": await commitSession(session),
     },
   });
@@ -114,6 +120,7 @@ export async function action({
   );
 
   if (userId == null) {
+    // Set a single-use flash message to be read by the route loader.
     session.flash("error", "Invalid username/password");
 
     // Redirect back to the login page with errors.
@@ -160,7 +167,10 @@ export default function Login() {
 And then a logout form might look something like this:
 
 ```tsx
-import { getSession, destroySession } from "../sessions";
+import {
+  getSession,
+  destroySession,
+} from "../sessions.server";
 
 export const action = async ({
   request,
@@ -192,7 +202,9 @@ export default function LogoutRoute() {
 
 ## Session Gotchas
 
-Because of nested routes, multiple loaders can be called to construct a single page. When using `session.flash()` or `session.unset()`, you need to be sure no other loaders in the request are going to want to read that, otherwise you'll get race conditions. Typically if you're using flash, you'll want to have a single loader read it, if another loader wants a flash message, use a different key for that loader.
+- Because of nested routes, multiple loaders can be called to construct a single page. When using `session.flash()` or `session.unset()`, you need to be sure no other loaders in the request are going to want to read that, otherwise you'll get race conditions. Typically if you're using flash, you'll want to have a single loader read it; if another loader wants a flash message, use a different key for that loader.
+
+- Every time you modify session data, you must `commitSession()` or your changes will be lost. This is different than what you might be used to, where some type of middleware automatically commits session data for you.
 
 ## `createSession`
 
@@ -275,9 +287,11 @@ The `expires` argument to `createData` and `updateData` is the same `Date` at wh
 
 For purely cookie-based sessions (where the session data itself is stored in the session cookie with the browser, see [cookies][cookies]) you can use `createCookieSessionStorage()`.
 
-The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load-balanced scenarios. However, cookie-based sessions may not exceed the browser's max-allowed cookie length (typically 4kb).
+The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load-balanced scenarios.
 
-The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
+However, cookie-based sessions may not exceed browser cookie size limits of 4k bytes. If your cookie size exceeds this limit, `commitSession()` will throw an error.
+
+The other downside is that you need to update the `Set-Cookie` header in every loader and action that modifies the session (this includes reading a flashed session value). With other strategies you only need to set the session cookie once, because it doesn't actually store any session data, just the key to find it elsewhere.
 
 ```ts
 import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
@@ -301,7 +315,7 @@ This storage keeps all the cookie information in your server's memory.
 
 <docs-error>This should only be used in development. Use one of the other methods in production.</docs-error>
 
-```ts filename=app/sessions.ts
+```ts filename=app/sessions.server.ts
 import {
   createCookie,
   createMemorySessionStorage,
@@ -321,15 +335,15 @@ const { getSession, commitSession, destroySession } =
 export { getSession, commitSession, destroySession };
 ```
 
-## `createFileSessionStorage` (node)
+## `createFileSessionStorage` (Node.js, Deno)
 
 For file-backed sessions, use `createFileSessionStorage()`. File session storage requires a file system, but this should be readily available on most cloud providers that run express, maybe with some extra configuration.
 
-The advantage of file-backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a regular file on disk, ideal for sessions with more than 4kb of data.
+The advantage of file-backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a regular file on disk, ideal for sessions with more than 4k bytes of data.
 
 <docs-info>If you are deploying to a serverless function, ensure you have access to a persistent file system. They usually don't have one without extra configuration.</docs-info>
 
-```ts filename=app/sessions.ts
+```ts filename=app/sessions.server.ts
 import {
   createCookie,
   createFileSessionStorage,
@@ -352,11 +366,11 @@ const { getSession, commitSession, destroySession } =
 export { getSession, commitSession, destroySession };
 ```
 
-## `createWorkersKVSessionStorage` (Cloudflare Workers)
+## `createWorkersKVSessionStorage` (Cloudflare)
 
 For [Cloudflare Workers KV][cloudflare-kv] backed sessions, use `createWorkersKVSessionStorage()`.
 
-The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally-replicated, low-latency data store with exceptionally high-read volumes with low-latency.
+The advantage of KV-backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store supporting exceptionally high read volumes.
 
 ```ts filename=app/sessions.server.ts
 import {
@@ -380,11 +394,11 @@ const { getSession, commitSession, destroySession } =
 export { getSession, commitSession, destroySession };
 ```
 
-## `createArcTableSessionStorage` (architect, Amazon DynamoDB)
+## `createArcTableSessionStorage` (Architect, Amazon DynamoDB)
 
 For [Amazon DynamoDB][amazon-dynamo-db] backed sessions, use `createArcTableSessionStorage()`.
 
-The advantage of DynamoDB backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
+The advantage of DynamoDB-backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store supporting exceptionally high read volumes.
 
 ```
 # app.arc
@@ -422,7 +436,7 @@ export { getSession, commitSession, destroySession };
 
 ## Session API
 
-After retrieving a session with `getSession`, the returned session object has a handful of methods and properties:
+After retrieving a session with `getSession()`, the returned session object has a handful of methods to read and update the retrieved session data:
 
 ```tsx
 export async function action({
@@ -431,11 +445,18 @@ export async function action({
   const session = await getSession(
     request.headers.get("Cookie")
   );
+
   session.get("foo");
-  session.has("bar");
+  session.unset("bar");
   // etc.
+
+  await commitSession(session);
 }
 ```
+
+<docs-warning>Every time you modify session data, you must `commitSession()` or your changes will be lost.</docs-warning>
+
+<docs-warning>When using cookie session storage, you must `Set-Cookie` every time you `commitSession()` or your changes will be lost.</docs-warning>
 
 ### `session.has(key)`
 
@@ -455,91 +476,16 @@ session.set("userId", "1234");
 
 ### `session.flash(key, value)`
 
-Sets a session value that will be unset the first time it is read. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
+Sets a session value that will be unset the first time it is read in a subsequent request. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
 
-```tsx
-import { commitSession, getSession } from "../sessions";
-
-export async function action({
-  params,
-  request,
-}: ActionFunctionArgs) {
-  const session = await getSession(
-    request.headers.get("Cookie")
-  );
-  const deletedProject = await archiveProject(
-    params.projectId
-  );
-
-  session.flash(
-    "globalMessage",
-    `Project ${deletedProject.name} successfully archived`
-  );
-
-  return redirect("/dashboard", {
-    headers: {
-      "Set-Cookie": await commitSession(session),
-    },
-  });
-}
+```ts
+session.flash(
+  "globalMessage",
+  "Project successfully archived"
+);
 ```
 
-Now we can read the message in a loader.
-
-<docs-info>You must commit the session whenever you read a `flash`. This is different than what you might be used to, where some type of middleware automatically sets the cookie header for you.</docs-info>
-
-```tsx
-import { json } from "@remix-run/node"; // or cloudflare/deno
-import {
-  Meta,
-  Links,
-  Scripts,
-  Outlet,
-} from "@remix-run/react";
-
-import { getSession, commitSession } from "./sessions";
-
-export async function loader({
-  request,
-}: LoaderFunctionArgs) {
-  const session = await getSession(
-    request.headers.get("Cookie")
-  );
-  const message = session.get("globalMessage") || null;
-
-  return json(
-    { message },
-    {
-      headers: {
-        // only necessary with cookieSessionStorage
-        "Set-Cookie": await commitSession(session),
-      },
-    }
-  );
-}
-
-export default function App() {
-  const { message } = useLoaderData<typeof loader>();
-
-  return (
-    <html>
-      <head>
-        <Meta />
-        <Links />
-      </head>
-      <body>
-        {message ? (
-          <div className="flash">{message}</div>
-        ) : null}
-        <Outlet />
-        <Scripts />
-      </body>
-    </html>
-  );
-}
-```
-
-### `session.get()`
+### `session.get(key)`
 
 Accesses a session value from a previous request:
 
@@ -547,28 +493,12 @@ Accesses a session value from a previous request:
 session.get("name");
 ```
 
-### `session.unset()`
+### `session.unset(key)`
 
 Removes a value from the session.
 
 ```ts
 session.unset("name");
-```
-
-<docs-info>When using cookieSessionStorage, you must commit the session whenever you `unset`</docs-info>
-
-```tsx
-export async function loader({
-  request,
-}: LoaderFunctionArgs) {
-  // ...
-
-  return json(data, {
-    headers: {
-      "Set-Cookie": await commitSession(session),
-    },
-  });
-}
 ```
 
 [cookies]: ./cookies
