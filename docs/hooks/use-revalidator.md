@@ -39,16 +39,17 @@ Initiates a revalidation.
 
 ```tsx
 function useLivePageData() {
-  const revalidator = useRevalidator();
-  const interval = useInterval(5000);
+  const revalidator = useRevalidator()
 
-  useEffect(() => {
-    if (revalidator.state === "idle") {
-      revalidator.revalidate();
+  useInterval(() => {
+    if (revalidator.state === 'idle') {
+      revalidator.revalidate()
     }
-  }, [interval, revalidator]);
+  }, 5000)
 }
 ```
+
+See [here](https://overreacted.io/making-setinterval-declarative-with-react-hooks/) for a sample `useInterval` implementation.
 
 ## Notes
 
