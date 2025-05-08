@@ -1210,8 +1210,8 @@ You could certainly do this as a controlled component. You will have more synchr
 <summary>Expand this to see what it would look like</summary>
 
 ```tsx filename=app/root.tsx lines=[2,9-10,12-16,30-33,36-37]
-// existing imports
-import { useEffect, useState } from "react";
+// We no longer need useEffect 
+import { useState } from "react";
 
 // existing imports & exports
 
@@ -1219,13 +1219,16 @@ export default function App() {
   const { contacts, q } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   // the query now needs to be kept in state
+  const [prevQ, setPrevQ] = useState(q);
   const [query, setQuery] = useState(q || "");
 
-  // we still have a `useEffect` to synchronize the query
-  // to the component state on back/forward button clicks
-  useEffect(() => {
+  // We can avoid using `useEffect` to synchronize the query
+  // by using a separate piece of state to store the previous
+  // value
+  if (q !== prevQ) {
+    setPrevQ(q);
     setQuery(q || "");
-  }, [q]);
+  }
 
   return (
     <html lang="en">
