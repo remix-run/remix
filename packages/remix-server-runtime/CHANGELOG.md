@@ -1,5 +1,11 @@
 # `@remix-run/server-runtime`
 
+## 2.16.6-pre.0
+
+### Patch Changes
+
+- upgrate turbo-stream to 2.4.1 ([#9973](https://github.com/remix-run/remix/pull/9973))
+
 ## 2.16.5
 
 No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.5.

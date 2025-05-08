@@ -1,5 +1,14 @@
 # `@remix-run/serve`
 
+## 2.16.6-pre.0
+
+### Patch Changes
+
+- Remove redundant '@remix-run/node/install' import from `remix-serve` because it manually calls `installGlobals` separately ([#10306](https://github.com/remix-run/remix/pull/10306))
+- Updated dependencies:
+  - `@remix-run/node@2.16.6-pre.0`
+  - `@remix-run/express@2.16.6-pre.0`
+
 ## 2.16.5
 
 ### Patch Changes
