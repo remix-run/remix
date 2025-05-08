@@ -1,0 +1,33 @@
+{
+  "mode": "pre",
+  "tag": "pre",
+  "initialVersions": {
+    "integration": "0.0.0",
+    "integration-cf-template": "0.0.0",
+    "integration-deno-template": "0.0.0",
+    "integration-node-template": "0.0.0",
+    "integration-vite-5-template": "0.0.0",
+    "integration-vite-6-template": "0.0.0",
+    "integration-vite-cloudflare-template": "0.0.0",
+    "create-remix": "2.16.5",
+    "remix": "2.16.5",
+    "@remix-run/architect": "2.16.5",
+    "@remix-run/cloudflare": "2.16.5",
+    "@remix-run/cloudflare-pages": "2.16.5",
+    "@remix-run/cloudflare-workers": "2.16.5",
+    "@remix-run/css-bundle": "2.16.5",
+    "@remix-run/deno": "2.16.5",
+    "@remix-run/dev": "2.16.5",
+    "@remix-run/eslint-config": "2.16.5",
+    "@remix-run/express": "2.16.5",
+    "@remix-run/fs-routes": "2.16.5",
+    "@remix-run/node": "2.16.5",
+    "@remix-run/react": "2.16.5",
+    "@remix-run/route-config": "2.16.5",
+    "@remix-run/routes-option-adapter": "2.16.5",
+    "@remix-run/serve": "2.16.5",
+    "@remix-run/server-runtime": "2.16.5",
+    "@remix-run/testing": "2.16.5"
+  },
+  "changesets": []
+}
