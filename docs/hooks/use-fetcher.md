@@ -110,7 +110,9 @@ fetcher.submit(
 
 ### `fetcher.load(href, options)`
 
-Loads data from a route loader. While multiple nested routes can match a URL, only the leaf route will be called.
+Loads data from a route loader. While multiple nested routes can match a URL, only the leaf route will be called. 
+
+Note that when calling `load` on an index route's loader, you must include an [`?index` query param](../guides/index-query-param) in order to disambiguate between the `index.tsx` layout and the `root.tsx` route.
 
 ```ts
 fetcher.load("/some/route");
