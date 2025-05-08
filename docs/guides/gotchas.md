@@ -8,6 +8,18 @@ Rendering your app on the server and in the browser with React has some inherent
 
 This document should help you get over these bumps.
 
+## `typeof window` checks
+
+Because the same JavaScript code can run in the browser as well as the server, sometimes you need to have a part of your code that only runs in one context or the other:
+
+```ts bad
+if (typeof window === "undefined") {
+  // running in a server environment
+} else {
+  // running in a browser environment
+}
+```
+
 ## Browser extensions injecting code
 
 You may run into this warning in the browser:
