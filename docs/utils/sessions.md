@@ -74,7 +74,10 @@ import type {
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import { getSession, commitSession } from "../sessions.server";
+import {
+  getSession,
+  commitSession,
+} from "../sessions.server";
 
 export async function loader({
   request,
@@ -164,7 +167,10 @@ export default function Login() {
 And then a logout form might look something like this:
 
 ```tsx
-import { getSession, destroySession } from "../sessions.server";
+import {
+  getSession,
+  destroySession,
+} from "../sessions.server";
 
 export const action = async ({
   request,
@@ -473,7 +479,10 @@ session.set("userId", "1234");
 Sets a session value that will be unset the first time it is read in a subsequent request. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
 
 ```ts
-session.flash("globalMessage", "Project successfully archived");
+session.flash(
+  "globalMessage",
+  "Project successfully archived"
+);
 ```
 
 ### `session.get(key)`
