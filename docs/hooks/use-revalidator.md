@@ -39,17 +39,17 @@ Initiates a revalidation.
 
 ```tsx
 function useLivePageData() {
-  const revalidator = useRevalidator()
+  const revalidator = useRevalidator();
 
   useInterval(() => {
-    if (revalidator.state === 'idle') {
-      revalidator.revalidate()
+    if (revalidator.state === "idle") {
+      revalidator.revalidate();
     }
-  }, 5000)
+  }, 5000);
 }
 ```
 
-See [here](https://overreacted.io/making-setinterval-declarative-with-react-hooks/) for a sample `useInterval` implementation.
+See [here][here] for a sample `useInterval` implementation.
 
 ## Notes
 
@@ -62,3 +62,4 @@ If a navigation happens while a revalidation is in flight, the revalidation will
 [form-component]: ../components/form
 [use-fetcher]: ./use-fetcher
 [use-submit]: ./use-submit
+[here]: https://overreacted.io/making-setinterval-declarative-with-react-hooks

@@ -1210,7 +1210,7 @@ You could certainly do this as a controlled component. You will have more synchr
 <summary>Expand this to see what it would look like</summary>
 
 ```tsx filename=app/root.tsx lines=[2,9-10,12-16,30-33,36-37]
-// We no longer need useEffect 
+// We no longer need useEffect
 import { useState } from "react";
 
 // existing imports & exports
