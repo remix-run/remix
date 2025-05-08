@@ -20,6 +20,18 @@ if (typeof window === "undefined") {
 }
 ```
 
+This works fine in a Node.js environment, however, some environments might actually support `window` (like Deno v1), so if you really want to check whether you're running in the browser, it's better to check for `document` instead:
+
+```ts good
+if (typeof document === "undefined") {
+  // running in a server environment
+} else {
+  // running in a browser environment
+}
+```
+
+This will work for all JS environments (Node.js, Deno, Workers, etc.).
+
 ## Browser extensions injecting code
 
 You may run into this warning in the browser:
