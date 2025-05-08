@@ -1,5 +1,14 @@
 # `@remix-run/react`
 
+## 2.16.6-pre.0
+
+### Patch Changes
+
+- Fix `window is not defined` error in Single Fetch when server-rendering `<PrefetchPageLinks>` ([#10601](https://github.com/remix-run/remix/pull/10601))
+- upgrate turbo-stream to 2.4.1 ([#9973](https://github.com/remix-run/remix/pull/9973))
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.16.6-pre.0`
+
 ## 2.16.5
 
 ### Patch Changes
