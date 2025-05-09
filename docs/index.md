@@ -1,4 +1,3 @@
-# I have added Hello, world! as a heading 1 at the very top HAHAHAHAHAHAHAHAHAHAHAHAHAHA!
 # Hello, world!
 ---
 title: Remix Docs Home
