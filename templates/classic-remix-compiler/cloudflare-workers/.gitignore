@@ -5,3 +5,4 @@ node_modules
 /build
 /public/build
 .env
+.dev.vars
