@@ -2,6 +2,9 @@ name: 🚪 Close v2 Issues
 
 on:
   workflow_dispatch:
+    inputs:
+      prior_to_date:
+        required: true
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -11,6 +14,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     env:
+      CI: "true"
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: ⬇️ Checkout repo
@@ -29,6 +33,4 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: 🚪 Close Issues
-        run: |
-          node -e "console.log('GH_TOKEN defined?', process.env.GH_TOKEN != null)"
-          node ./scripts/close-v2-issues.mjs
+        run: node ./scripts/close-v2-issues.mjs --date ${{ github.event.inputs.prior_to_date }}
