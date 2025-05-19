@@ -1,12 +1,8 @@
 # `@remix-run/routes-option-adapter`
 
-## 2.16.7-pre.0
+## 2.16.7
 
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/dev@2.16.7-pre.0`
-  - `@remix-run/route-config@2.16.7-pre.0`
+No significant changes to this package were made in this release. [See the repo `CHANGELOG.md`](https://github.com/remix-run/remix/blob/main/CHANGELOG.md) for an overview of all changes in v2.16.7.
 
 ## 2.16.6
 
